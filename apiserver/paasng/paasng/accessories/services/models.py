@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 import logging
 from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Set
@@ -26,6 +25,7 @@ from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
 from paasng.core.core.storages.object_storage import service_logo_storage
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import ImageField, UuidAuditedModel
 
 if TYPE_CHECKING:
@@ -35,8 +35,9 @@ logger = logging.getLogger(__name__)
 
 
 class ServiceCategory(models.Model):
-    """
-    Service Category
+    """Service Category
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     name = TranslatedField(models.CharField("分类名称", max_length=64, unique=True))
@@ -47,17 +48,17 @@ class ServiceCategory(models.Model):
 
 
 class ServiceManager(models.Manager):
-    def get_by_natural_key(self, region, name):
-        return self.get(region=region, name=name)
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
 
 
 class Service(UuidAuditedModel):
-    """
-    Service model for PaaS
+    """Service model for PaaS
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
-    region = models.CharField(max_length=32)
-    name = models.CharField(verbose_name="服务名称", max_length=64)
+    name = models.CharField(verbose_name="服务名称", max_length=64, unique=True)
     display_name = TranslatedFieldWithFallback(models.CharField(verbose_name="服务全称", max_length=128))
     logo = ImageField(storage=service_logo_storage, upload_to="service-logo", verbose_name="服务logo", null=True)
     logo_b64 = models.TextField(verbose_name="服务 logo 的地址, 支持base64格式", null=True, blank=True)
@@ -75,14 +76,11 @@ class Service(UuidAuditedModel):
 
     objects = ServiceManager()
 
-    class Meta:
-        unique_together = ("region", "name")
-
     def natural_key(self):
-        return (self.region, self.name)
+        return (self.name,)
 
     def __str__(self):
-        return "{name}-{region}".format(name=self.name, region=self.region)
+        return self.name
 
     def _get_service_vendor_instance(self, plan: "Plan") -> "BaseProvider":
         from paasng.accessories.services.providers import get_provider_cls_by_provider_name
@@ -122,11 +120,16 @@ class Service(UuidAuditedModel):
         credentials = self.format_credentials(
             raw_credentials, prefix=self.name, protected_keys=service_handler_instance.protected_keys
         )
-        service_instance_param = {"service": self, "credentials": json.dumps(credentials), "plan": plan}
+        service_instance_param = {
+            "service": self,
+            "credentials": json.dumps(credentials),
+            "plan": plan,
+            "tenant_id": plan.tenant_id,
+        }
         if config:
             service_instance_param["config"] = config
 
-        service_instance, _ = ServiceInstance.objects.get_or_create(**service_instance_param)
+        service_instance, _ = ServiceInstance.objects.get_or_create(**service_instance_param)  # noqa: F811
         return service_instance
 
     def delete_service_instance(self, service_instance: "ServiceInstance") -> None:
@@ -169,6 +172,7 @@ class ServiceInstance(UuidAuditedModel):
     config = JSONField(default={})
     credentials = EncryptField(default="")
     to_be_deleted = models.BooleanField(default=False)
+    tenant_id = tenant_id_field_factory()
 
     def __str__(self):
         return "{service}-{plan}-{id}".format(service=repr(self.service), plan=repr(self.plan), id=self.uuid)
@@ -181,6 +185,7 @@ class PreCreatedInstance(UuidAuditedModel):
     config = JSONField(default=dict, help_text="same of ServiceInstance.config")
     credentials = EncryptField(default="", help_text="same of ServiceInstance.credentials")
     is_allocated = models.BooleanField(default=False, help_text="实例是否已被分配")
+    tenant_id = tenant_id_field_factory()
 
     def acquire(self):
         self.is_allocated = True
@@ -205,9 +210,10 @@ class Plan(UuidAuditedModel):
     description = models.CharField(verbose_name="方案简介", max_length=1024, blank=True)
     config = EncryptField(verbose_name="方案配置", default="")
     is_active = models.BooleanField(verbose_name="是否可用", default=True)
+    tenant_id = tenant_id_field_factory(db_index=False)
 
     class Meta:
-        unique_together = ("service", "name")
+        unique_together = ("tenant_id", "service", "name")
 
     @property
     def is_eager(self):
@@ -215,9 +221,7 @@ class Plan(UuidAuditedModel):
         return False
 
     def __str__(self):
-        return "{name}-{service}-{region}".format(
-            name=self.name, service=self.service.name, region=self.service.region
-        )
+        return "{name}-{service}".format(name=self.name, service=self.service.name)
 
     def get_config(self) -> Dict:
         config = json.loads(self.config)
@@ -226,6 +230,8 @@ class Plan(UuidAuditedModel):
 
 
 class ResourceId(models.Model):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     namespace = models.CharField(max_length=32)
     uid = models.CharField(max_length=64, null=False, unique=True, db_index=True)
 
@@ -239,5 +245,8 @@ class ResourceId(models.Model):
 class InstanceData(NamedTuple):
     credentials: Dict
     # NOTE: config
-    # - if admin_url in config, will show admin entrance to developer
+    # admin_url: will show admin entrance to developer
+    # is_pre_created: whether this instance is pre-created（PreCreatedInstance）
+    # provider_name: the provider name of this instance（service.provider_name / mysql / rabbitmq ...)
+    # enable_tls: whether this instance enable tls (must deploy with tls cert secrets)
     config: Optional[Dict] = None

@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """Serializer for third-party api"""
+
+from typing import Optional
+
 from rest_framework import serializers
 
 from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus, PluginRole
@@ -33,6 +35,13 @@ class PluginTemplateSLZ(serializers.Serializer):
     repository = serializers.CharField()
 
 
+class PluginVVisibleRangeAPIRequestSLZ(serializers.Serializer):
+    plugin_id = serializers.CharField(help_text="插件id")
+    operator = serializers.CharField(help_text="操作人")
+    bkci_project = serializers.JSONField(help_text="蓝盾项目 ID")
+    organization = serializers.JSONField(help_text="组织架构")
+
+
 @i18n
 class PluginRequestSLZ(serializers.Serializer):
     """同步插件信息至第三方系统的请求体格式"""
@@ -44,9 +53,29 @@ class PluginRequestSLZ(serializers.Serializer):
     repository = serializers.CharField(help_text="源码仓库")
     operator = serializers.SerializerMethodField()
     logo_url = serializers.CharField(source="get_logo_url", required=False)
+    publisher = serializers.CharField(required=False)
+    # 租户相关信息
+    plugin_tenant_mode = serializers.CharField(help_text="租户模式")
+    plugin_tenant_id = serializers.CharField(help_text="租户 ID")
+    tenant_id = serializers.CharField(help_text="所属租户")
 
     def get_operator(self, obj) -> str:
         return self.context["operator"]
+
+
+@i18n
+class PluginRequestCreateSLZ(PluginRequestSLZ):
+    """创建插件的时候需要初始化可见范围，所以需要将可见范围一起同步"""
+
+    visible_range = serializers.SerializerMethodField()
+
+    def get_visible_range(self, obj) -> Optional[dict]:
+        if not hasattr(obj, "visible_range"):
+            return None
+        return {
+            "bkci_project": obj.visible_range.bkci_project,
+            "organization": obj.visible_range.organization,
+        }
 
 
 @i18n
@@ -85,6 +114,10 @@ class PluginReleaseVersionSLZ(serializers.Serializer):
     source_version_name = serializers.CharField(help_text="代码分支名/tag名")
     source_hash = serializers.CharField(help_text="代码提交哈希")
 
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginReleaseVersionSLZ__thirdparty"
+
 
 class PluginReleaseStageSLZ(serializers.Serializer):
     """插件发布版本-步骤的结构"""
@@ -92,6 +125,12 @@ class PluginReleaseStageSLZ(serializers.Serializer):
     stage_id = serializers.CharField(help_text="阶段标识")
     stage_name = serializers.CharField(help_text="阶段名称")
     status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices(), help_text="阶段状态")
+
+
+class PluginStrategySLZ(serializers.Serializer):
+    strategy = serializers.CharField(help_text="灰度策略")
+    bkci_project = serializers.JSONField(help_text="蓝盾项目ID")
+    organization = serializers.JSONField(help_text="组织")
 
 
 class PluginReleaseAPIRequestSLZ(serializers.Serializer):
@@ -102,6 +141,8 @@ class PluginReleaseAPIRequestSLZ(serializers.Serializer):
     operator = serializers.CharField(help_text="操作人")
     current_stage = PluginReleaseStageSLZ()
     status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices(), help_text="插件版本状态")
+    is_rolled_back = serializers.BooleanField(help_text="是否回滚")
+    latest_release_strategy = PluginStrategySLZ(allow_null=True, required=False)
 
 
 class DeployPluginRequestSLZ(serializers.Serializer):
@@ -156,3 +197,10 @@ class PluginBuildInfoSLZ(serializers.Serializer):
     version = serializers.CharField(help_text="版本号")
     version_with_underscores = serializers.CharField(help_text="将版本号中点(.)替换为下划线(_)")
     bk_username = serializers.CharField(help_text="操作人")
+
+
+class PluginVisibleRangeAPIRequestSLZ(serializers.Serializer):
+    plugin_id = serializers.CharField(help_text="插件id")
+    operator = serializers.CharField(help_text="操作人")
+    bkci_project = serializers.JSONField(help_text="蓝盾项目 ID")
+    organization = serializers.JSONField(help_text="组织架构")

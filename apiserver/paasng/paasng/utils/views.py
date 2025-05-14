@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import functools
 import logging
 from pathlib import Path
@@ -240,51 +239,3 @@ def unwrap_partial(func):
     while isinstance(func, functools.partial):
         func = func.func
     return func
-
-
-def permission_classes(permission_classes, policy: str = "replace"):
-    """A decorator that gives support for having action-based permission_classes
-
-    usage:
-    from django.utils.decorators import method_decorator
-    _permission_classes = <this decorator>
-
-    @method_decorator(
-        _permission_classes([]),
-        name="action_c"
-    )
-    class ViewSet:
-        permission_classes = [Baz]
-
-        @_permission_classes([Foo])
-        def action_a(self, request):
-            assert self.permission_classes == [Foo]
-
-        @_permission_classes([Bar], policy="merge")
-        def action_b(self, request):
-            assert self.permission_classes == [Bar, Baz]
-
-        def action_c(self, request):
-            assert self.permission_classes == []
-    """
-
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapped(*args, **kwargs):
-            # try to unwrap partial from method_decorator
-            bound_method = unwrap_partial(func)
-            if hasattr(bound_method, "__self__"):
-                # when use permission_classes with django method_decorator, we can only get self from bound_method
-                self = bound_method.__self__
-            else:
-                # when use permission_classes as a normal decorator, we can only get self from args[0]
-                self = args[0]
-            if policy == "merge":
-                self.permission_classes = getattr(self, "permission_classes", []) + permission_classes
-            else:
-                self.permission_classes = permission_classes
-            return func(*args, **kwargs)
-
-        return wrapped
-
-    return decorator

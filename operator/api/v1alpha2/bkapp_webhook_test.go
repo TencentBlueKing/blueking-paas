@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
@@ -37,8 +38,10 @@ import (
 )
 
 var _ = Describe("test webhook.Defaulter", func() {
-	It("normal case", func() {
-		bkapp := &paasv1alpha2.BkApp{
+	var bkapp *paasv1alpha2.BkApp
+
+	BeforeEach(func() {
+		bkapp = &paasv1alpha2.BkApp{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       paasv1alpha2.KindBkApp,
 				APIVersion: paasv1alpha2.GroupVersion.String(),
@@ -55,13 +58,37 @@ var _ = Describe("test webhook.Defaulter", func() {
 				},
 			},
 		}
+	})
 
+	It("normal case", func() {
 		bkapp.Default()
 		Expect(bkapp.Spec.Build.ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
 
 		web := bkapp.Spec.GetWebProcess()
 		Expect(web.TargetPort).To(Equal(int32(5000)))
 		Expect(web.ResQuotaPlan).To(Equal(paasv1alpha2.ResQuotaPlanDefault))
+
+		_, ok := bkapp.Annotations[paasv1alpha2.ProcServicesFeatureEnabledAnnoKey]
+		Expect(ok).To(BeFalse())
+	})
+
+	It("default process services", func() {
+		bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+			{Name: "web", TargetPort: 5000, Port: 80},
+			{Name: "metric", TargetPort: 5001},
+		}
+
+		bkapp.Default()
+
+		// 功能注解设置为 true，表示启用该特性
+		Expect(bkapp.IsProcServicesFeatureEnabled()).To(BeTrue())
+
+		procServices := bkapp.Spec.Processes[0].Services
+		// 测试 Protocol 默认赋值为 TCP
+		Expect(procServices[0].Protocol).To(Equal(corev1.ProtocolTCP))
+		Expect(procServices[1].Protocol).To(Equal(corev1.ProtocolTCP))
+		// 测试 Port 默认赋值为 targetPort
+		Expect(procServices[1].Port).To(Equal(int32(5001)))
 	})
 })
 
@@ -258,6 +285,247 @@ var _ = Describe("test webhook.Validator", func() {
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\""))
+		})
+	})
+
+	Context("Test process probes", func() {
+		It("standard", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Liveness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						TCPSocket: &corev1.TCPSocketAction{
+							Port: intstr.FromInt(80),
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+				},
+				Readiness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/healthz",
+							Port: intstr.FromInt(80),
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+				},
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    3,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("invalid probe", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Liveness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("at least one probe type must be specified"))
+		})
+
+		It("exec empty command", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Liveness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{},
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("command must not be empty"))
+		})
+
+		It("httpGet empty path", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Readiness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "",
+							Port: intstr.FromInt(80),
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("path must not be empty"))
+		})
+
+		It("invalid httpGet port", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Readiness: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/ping",
+							Port: intstr.FromInt(98765),
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("port must be between 1 and 65535"))
+		})
+
+		It("invalid tcpSocket port", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						TCPSocket: &corev1.TCPSocketAction{
+							Port: intstr.FromInt(98765),
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("port must be between 1 and 65535"))
+		})
+
+		It("multiple probe kinds", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						TCPSocket: &corev1.TCPSocketAction{
+							Port: intstr.FromInt(56789),
+						},
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("only one probe type can be specified"))
+		})
+
+		It("invalid initialDelaySeconds", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 301,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			substr := "initialDelaySeconds must be between 0 and 300"
+			Expect(err.Error()).To(ContainSubstring(substr))
+
+			bkapp.Spec.Processes[0].Probes.Startup.InitialDelaySeconds = -1
+			err = bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(substr))
+		})
+
+		It("invalid timeoutSeconds", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      0,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			substr := "timeoutSeconds must be between 1 and 60"
+			Expect(err.Error()).To(ContainSubstring(substr))
+
+			bkapp.Spec.Processes[0].Probes.Startup.TimeoutSeconds = 61
+			err = bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(substr))
+		})
+
+		It("invalid periodSeconds", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       1,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			substr := "periodSeconds must be between 2 and 300"
+			Expect(err.Error()).To(ContainSubstring(substr))
+
+			bkapp.Spec.Processes[0].Probes.Startup.PeriodSeconds = 301
+			err = bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(substr))
+		})
+
+		It("invalid successThreshold", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       3,
+					SuccessThreshold:    0,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			substr := "successThreshold must be between 1 and 3"
+			Expect(err.Error()).To(ContainSubstring(substr))
+
+			bkapp.Spec.Processes[0].Probes.Startup.SuccessThreshold = 4
+			err = bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(substr))
+		})
+
+		It("invalid failureThreshold", func() {
+			bkapp.Spec.Processes[0].Probes = &paasv1alpha2.ProbeSet{
+				Startup: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{"echo", "I'm ready!"},
+						},
+					},
+					InitialDelaySeconds: 10,
+					TimeoutSeconds:      60,
+					PeriodSeconds:       3,
+					SuccessThreshold:    1,
+					FailureThreshold:    0,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			substr := "failureThreshold must be between 1 and 50"
+			Expect(err.Error()).To(ContainSubstring(substr))
+
+			bkapp.Spec.Processes[0].Probes.Startup.FailureThreshold = 51
+			err = bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(substr))
 		})
 	})
 
@@ -593,6 +861,32 @@ var _ = Describe("test webhook.Validator", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
 		})
+		It("[mountOverlay] secret normal", func() {
+			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "nginx-tls-mount",
+						MountPath: "/etc/tls/nginx",
+						Source: &paasv1alpha2.VolumeSource{
+							Secret: &paasv1alpha2.SecretSource{Name: "nginx-tls-certs"},
+						},
+					},
+					EnvName: paasv1alpha2.StagEnv,
+				},
+				{
+					Mount: paasv1alpha2.Mount{
+						Name:      "etcd-tls-mount",
+						MountPath: "/etc/tls/etcd",
+						Source: &paasv1alpha2.VolumeSource{
+							Secret: &paasv1alpha2.SecretSource{Name: "etcd-tls-certs"},
+						},
+					},
+					EnvName: paasv1alpha2.ProdEnv,
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
 		It("[mountOverlay] persistentStorage normal", func() {
 			bkapp.Spec.EnvOverlay.Mounts = []paasv1alpha2.MountOverlay{
 				{
@@ -783,6 +1077,176 @@ var _ = Describe("test webhook.Validator", func() {
 	})
 })
 
+var _ = Describe("test webhook.Validator validate process services", func() {
+	var bkapp *paasv1alpha2.BkApp
+
+	BeforeEach(func() {
+		bkapp = &paasv1alpha2.BkApp{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bkapp-sample",
+				Namespace: "default",
+				Annotations: map[string]string{
+					paasv1alpha2.BkAppCodeKey:  "bkapp-sample",
+					paasv1alpha2.ModuleNameKey: paasv1alpha2.DefaultModuleName,
+				},
+			},
+			Spec: paasv1alpha2.AppSpec{Build: paasv1alpha2.BuildConfig{
+				Image:           "nginx:latest",
+				ImagePullPolicy: corev1.PullIfNotPresent,
+			}, Processes: []paasv1alpha2.Process{
+				{
+					Name:         "web",
+					Replicas:     paasv1alpha2.ReplicasTwo,
+					ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+					TargetPort:   80,
+				},
+			}},
+		}
+	})
+
+	It("Normal", func() {
+		bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+			{Name: "web", TargetPort: 5000, Port: 80, ExposedType: &paasv1alpha2.ExposedType{
+				Name: paasv1alpha2.ExposedTypeNameBkHttp,
+			}, Protocol: corev1.ProtocolTCP},
+			{Name: "metric", TargetPort: 5001, Port: 5000, Protocol: corev1.ProtocolTCP},
+		}
+
+		err := bkapp.ValidateCreate()
+		Expect(err).To(BeNil())
+	})
+
+	It("Invalid protocol", func() {
+		bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+			{
+				Name:       "web",
+				TargetPort: 5000,
+				Port:       80,
+				Protocol:   "FakeProtocol",
+				ExposedType: &paasv1alpha2.ExposedType{
+					Name: paasv1alpha2.ExposedTypeNameBkHttp,
+				},
+			},
+		}
+		err := bkapp.ValidateCreate()
+		Expect(err.Error()).To(ContainSubstring("unsupported protocol"))
+	})
+
+	It("Invalid port", func() {
+		bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+			{
+				Name:       "web",
+				TargetPort: 5000,
+				Port:       -1,
+				Protocol:   corev1.ProtocolTCP,
+				ExposedType: &paasv1alpha2.ExposedType{
+					Name: paasv1alpha2.ExposedTypeNameBkHttp,
+				},
+			},
+		}
+		err := bkapp.ValidateCreate()
+		Expect(err.Error()).To(ContainSubstring("port must be between 1 and 65535"))
+	})
+
+	It("Invalid exposed type", func() {
+		bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+			{
+				Name:       "web",
+				TargetPort: 5000,
+				Port:       80,
+				Protocol:   corev1.ProtocolTCP,
+				ExposedType: &paasv1alpha2.ExposedType{
+					Name: "fake/http",
+				},
+			},
+		}
+		err := bkapp.ValidateCreate()
+		Expect(err.Error()).To(ContainSubstring("unsupported exposed type"))
+	})
+
+	It("Duplicate name", func() {
+		bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+			{Name: "web", TargetPort: 5000, Port: 80, ExposedType: &paasv1alpha2.ExposedType{
+				Name: paasv1alpha2.ExposedTypeNameBkHttp,
+			}, Protocol: corev1.ProtocolTCP},
+			{Name: "web", TargetPort: 5001, Port: 5000, Protocol: corev1.ProtocolTCP},
+		}
+		err := bkapp.ValidateCreate()
+		Expect(err.Error()).To(ContainSubstring("Duplicate value"))
+	})
+
+	It("Duplicate targetPort", func() {
+		bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+			{Name: "web", TargetPort: 5000, Port: 80, ExposedType: &paasv1alpha2.ExposedType{
+				Name: paasv1alpha2.ExposedTypeNameBkHttp,
+			}, Protocol: corev1.ProtocolTCP},
+			{Name: "metric", TargetPort: 5000, Port: 5000, Protocol: corev1.ProtocolTCP},
+		}
+		err := bkapp.ValidateCreate()
+		Expect(err.Error()).To(ContainSubstring("Duplicate value"))
+	})
+
+	Context("Duplicate exposed type", func() {
+		It("Duplicate in one process", func() {
+			bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+				{Name: "web", TargetPort: 5000, Port: 80, ExposedType: &paasv1alpha2.ExposedType{
+					Name: paasv1alpha2.ExposedTypeNameBkHttp,
+				}, Protocol: corev1.ProtocolTCP},
+				{
+					Name:       "metric",
+					TargetPort: 5001,
+					Port:       5001,
+					Protocol:   corev1.ProtocolTCP,
+					ExposedType: &paasv1alpha2.ExposedType{
+						Name: paasv1alpha2.ExposedTypeNameBkHttp,
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(`Duplicate value: "bk/http"`))
+		})
+		It("Duplicate in multi processes", func() {
+			bkapp.Spec.Processes = []paasv1alpha2.Process{
+				{
+					Name:         "web",
+					Replicas:     paasv1alpha2.ReplicasTwo,
+					ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+					Services: []paasv1alpha2.ProcService{
+						{
+							Name:        "web",
+							TargetPort:  5000,
+							Port:        80,
+							Protocol:    corev1.ProtocolTCP,
+							ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+						},
+					},
+				},
+				{
+					Name:         "metric",
+					Replicas:     paasv1alpha2.ReplicasTwo,
+					ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+					Services: []paasv1alpha2.ProcService{
+						{
+							Name:        "web",
+							TargetPort:  5000,
+							Port:        80,
+							Protocol:    corev1.ProtocolTCP,
+							ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+						},
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring(`Duplicate value: "bk/http"`))
+		})
+	})
+})
+
 var _ = Describe("Integrated tests for webhooks, v1alpha1 version", func() {
 	var suffix string
 
@@ -912,5 +1376,23 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 			Processes: []paasv1alpha2.Process{{Name: "web", Replicas: paasv1alpha2.ReplicasOne}},
 		})
 		Expect(k8sClient.Create(ctx, bkapp)).To(HaveOccurred())
+	})
+
+	It("Create BkApp with duplicate name in process services", func() {
+		bkapp := buildApp(paasv1alpha2.AppSpec{
+			Build: paasv1alpha2.BuildConfig{Image: "nginx:latest"},
+			Processes: []paasv1alpha2.Process{
+				{
+					Name:     "web",
+					Replicas: paasv1alpha2.ReplicasOne,
+					Services: []paasv1alpha2.ProcService{
+						{Name: "web", TargetPort: 5000},
+						{Name: "web", TargetPort: 5001},
+					},
+				},
+			},
+		})
+
+		Expect(k8sClient.Create(ctx, bkapp).Error()).To(ContainSubstring("Duplicate value"))
 	})
 })

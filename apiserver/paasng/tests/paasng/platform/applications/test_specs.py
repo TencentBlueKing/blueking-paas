@@ -1,28 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import pytest
 
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
-from tests.utils.helpers import override_region_configs
 
 pytestmark = pytest.mark.django_db
 
@@ -42,32 +40,26 @@ class TestAppSpecs:
         assert AppSpecs(bk_app).engine_enabled is value
 
     @pytest.mark.parametrize(
-        ("region_creation_allowed", "is_smart_app", "is_plugin_app", "type", "value"),
+        ("is_smart_app", "is_plugin_app", "type", "value"),
         [
-            (True, False, False, ApplicationType.DEFAULT, True),
-            (True, False, False, ApplicationType.CLOUD_NATIVE, True),
-            (True, False, False, ApplicationType.ENGINELESS_APP, False),
-            # 通过 region 可限制普通应用、云原生应用不能创建模块
-            (False, False, False, ApplicationType.DEFAULT, False),
-            (False, False, False, ApplicationType.CLOUD_NATIVE, False),
+            (False, False, ApplicationType.DEFAULT, True),
+            (False, False, ApplicationType.CLOUD_NATIVE, True),
+            (False, False, ApplicationType.ENGINELESS_APP, False),
             # 普通应用、云原生应用的 S-mart 应用，都不能创建模块
-            (True, True, False, ApplicationType.DEFAULT, False),
-            (True, True, False, ApplicationType.CLOUD_NATIVE, False),
+            (True, False, ApplicationType.DEFAULT, False),
+            (True, False, ApplicationType.CLOUD_NATIVE, False),
             # 普通应用、云原生应用的插件应用，都不能创建模块
-            # (True, False, True, ApplicationType.DEFAULT, False),
-            # (True, False, True, ApplicationType.CLOUD_NATIVE, False),
+            (False, True, ApplicationType.DEFAULT, False),
+            (False, True, ApplicationType.CLOUD_NATIVE, False),
         ],
     )
-    def test_can_create_extra_modules(self, region_creation_allowed, is_smart_app, is_plugin_app, type, value, bk_app):
+    def test_can_create_extra_modules(self, is_smart_app, is_plugin_app, type, value, bk_app):
         bk_app.type = type
         bk_app.is_smart_app = is_smart_app
-        bk_app.save(update_fields=["type", "is_smart_app"])
+        bk_app.is_plugin_app = is_plugin_app
+        bk_app.save(update_fields=["type", "is_smart_app", "is_plugin_app"])
 
-        def update_region_hook(config):
-            config["mul_modules_config"] = {"creation_allowed": region_creation_allowed}
-
-        with override_region_configs(bk_app.region, update_region_hook):
-            assert AppSpecs(bk_app).can_create_extra_modules is value
+        assert AppSpecs(bk_app).can_create_extra_modules is value
 
     def test_confirm_required_when_publish_with_no_template(self, bk_app):
         confirm_required_when_publish = AppSpecs(bk_app).confirm_required_when_publish

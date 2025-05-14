@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict, Optional, Type
 
 import arrow
@@ -29,26 +28,35 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.bk_plugins.pluginscenter.constants import (
+    ActionTypes,
     LogTimeChoices,
     PluginReleaseStatus,
-    PluginReleaseStrategy,
     PluginReleaseType,
     PluginReleaseVersionRule,
+    PluginRevisionType,
     PluginRole,
+    ReleaseStrategy,
     SemverAutomaticType,
+    SubjectTypes,
 )
 from paasng.bk_plugins.pluginscenter.definitions import FieldSchema, PluginConfigColumnDefinition
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as iam_api
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
+    PluginBasicInfoDefinition,
     PluginDefinition,
     PluginInstance,
     PluginMarketInfo,
     PluginRelease,
     PluginReleaseStage,
+    PluginReleaseStrategy,
+    PluginVisibleRange,
 )
+from paasng.bk_plugins.pluginscenter.shim import get_source_hash_by_plugin_version
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.utils.es_log.time_range import SmartTimeRange
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n, to_translated_field
@@ -125,11 +133,19 @@ class PluginRoleSLZ(serializers.Serializer):
     name = serializers.CharField(read_only=True, help_text="角色名称")
     id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
 
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginRoleSLZ__pluginscenter"
+
 
 class PluginMemberSLZ(serializers.Serializer):
     username = serializers.CharField(help_text="用户名")
     role = PluginRoleSLZ(help_text="角色")
     avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginMemberSLZ__pluginscenter"
 
     def get_avatar(self, obj):
         return get_user_avatar(obj.username)
@@ -159,6 +175,31 @@ class PluginDefinitionSLZ(serializers.ModelSerializer):
             "test_release_revision",
             "test_release_stages",
             "log_config",
+        )
+
+
+class PluginBasicInfoDefinitionSLZ(serializers.ModelSerializer):
+    description = TranslatedCharField()
+    publisher_description = TranslatedCharField()
+
+    class Meta:
+        model = PluginBasicInfoDefinition
+        exclude = (
+            "id",
+            "pd",
+            "created",
+            "updated",
+            "id_schema",
+            "name_schema",
+            "init_templates",
+            "release_method",
+            "repository_group",
+            "api",
+            "sync_members",
+            "extra_fields",
+            "extra_fields_en",
+            "extra_fields_order",
+            "overview_page",
         )
 
 
@@ -193,11 +234,63 @@ class PlainPluginReleaseVersionSLZ(serializers.Serializer):
     creator = serializers.CharField(help_text="部署人")
     created = serializers.DateTimeField(help_text="部署时间")
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data["creator"]:
+            user = get_user_by_user_id(data["creator"])
+            data["creator"] = user.username
+        return data
+
+
+class ReleaseStrategyCreateSLZ(serializers.Serializer):
+    strategy = serializers.ChoiceField(choices=ReleaseStrategy.get_choices(), help_text="发布策略")
+    bkci_project = serializers.ListField(required=False, allow_null=True, help_text="蓝盾项目ID")
+    organization = serializers.ListField(required=False, allow_null=True, help_text="组织架构")
+
+
+class PluginReleaseStrategySLZ(serializers.ModelSerializer):
+    ticket_info = serializers.SerializerMethodField()
+
+    def get_ticket_info(self, obj):
+        if not obj.itsm_detail:
+            return None
+
+        ticket_info = get_ticket_status(obj.itsm_detail.sn)
+        return ticket_info
+
+    class Meta:
+        model = PluginReleaseStrategy
+        exclude = ["itsm_detail"]
+
 
 class PluginReleaseVersionSLZ(serializers.ModelSerializer):
     current_stage = PluginReleaseStageSLZ()
     all_stages = PlainReleaseStageSLZ(many=True, source="stages_shortcut")
     complete_time = serializers.ReadOnlyField()
+    report_url = serializers.SerializerMethodField(read_only=True)
+    release_result_url = serializers.SerializerMethodField(read_only=True)
+    latest_release_strategy = PluginReleaseStrategySLZ()
+    display_status = serializers.CharField(source="gray_status", read_only=True)
+
+    def get_report_url(self, instance) -> Optional[str]:
+        release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)
+        if release_definition.reportFormat:
+            return release_definition.reportFormat.format(
+                plugin_id=instance.plugin.id,
+                version_id=instance.version,
+                source_version_name=instance.source_version_name,
+            )
+        return None
+
+    def get_release_result_url(self, instance) -> Optional[str]:
+        release_definition = instance.plugin.pd.get_release_revision_by_type(instance.type)
+        if release_definition.releaseResultFormat:
+            return release_definition.releaseResultFormat.format(
+                plugin_id=instance.plugin.id,
+                version_id=instance.version,
+                source_version_name=instance.source_version_name,
+            )
+        return None
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -214,6 +307,7 @@ class PluginReleaseVersionSLZ(serializers.ModelSerializer):
 class overviewPageSLZ(serializers.Serializer):
     top_url = serializers.CharField(default=None, source="topUrl")
     bottom_url = serializers.CharField(default=None, source="bottomUrl")
+    ignored_url = serializers.CharField(default=None, source="ignoredUrl")
 
 
 class PluginInstanceSLZ(serializers.ModelSerializer):
@@ -233,15 +327,17 @@ class PluginInstanceSLZ(serializers.ModelSerializer):
     can_reactivate = serializers.ReadOnlyField()
     has_test_version = serializers.ReadOnlyField()
 
+    class Meta:
+        model = PluginInstance
+        exclude = ("pd", "uuid")
+
+
+class PluginInstanceDetailSLZ(PluginInstanceSLZ):
     def to_representation(self, instance):
         # 注入当前用户的角色信息
         if (request := self.context.get("request")) and request.user.is_authenticated:
             setattr(instance, "role", iam_api.fetch_user_main_role(instance, username=request.user.username))
         return super().to_representation(instance)
-
-    class Meta:
-        model = PluginInstance
-        exclude = ("pd", "uuid")
 
 
 class PluginInstanceLogoSLZ(serializers.ModelSerializer):
@@ -358,6 +454,9 @@ def make_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> Type[
         fields["template"] = TemplateChoiceField(
             choices=[(template.id, template) for template in pd.basic_info_definition.init_templates]
         )
+        fields["plugin_tenant_mode"] = serializers.ChoiceField(
+            help_text="租户模式", choices=AppTenantMode.get_choices(), default=AppTenantMode.GLOBAL
+        )
     return i18n(type("DynamicPluginSerializer", (serializers.Serializer,), fields))
 
 
@@ -378,6 +477,9 @@ class StubCreatePluginSLZ(serializers.Serializer):
     name = serializers.CharField(help_text="插件名称")
     template = serializers.CharField(help_text="模板id")
     extra_fields = serializers.DictField(help_text="额外字段")
+    plugin_tenant_mode = serializers.ChoiceField(
+        help_text="租户模式，运营租户时需要传参", choices=AppTenantMode.get_choices(), default=None
+    )
 
 
 class StubUpdatePluginSLZ(serializers.Serializer):
@@ -390,14 +492,12 @@ class StubUpdatePluginSLZ(serializers.Serializer):
     extra_fields = serializers.DictField(help_text="额外字段")
 
 
-class ReleaseStrategySLZ(serializers.Serializer):
-    strategy = serializers.ChoiceField(choices=PluginReleaseStrategy.get_choices(), help_text="发布策略")
-    bkci_project = serializers.ListField(required=False, allow_null=True, help_text="蓝盾项目ID")
-    organization = serializers.ListField(required=False, allow_null=True, help_text="组织架构")
-
-
 def make_release_validator(  # noqa: C901
-    plugin: PluginInstance, version_rule: PluginReleaseVersionRule, release_type: str, revision_policy: Optional[str]
+    plugin: PluginInstance,
+    version_rule: PluginReleaseVersionRule,
+    release_type: str,
+    revision_policy: str,
+    revision_type: str,
 ):
     """make a validator to validate ReleaseVersion object"""
 
@@ -428,30 +528,42 @@ def make_release_validator(  # noqa: C901
     ):
         """Plugin version release rules, e.g., cannot release already published versions."""
         policy = REVISION_POLICIES.get(revision_policy)
-        if policy:
-            source_version_exists = PluginRelease.objects.filter(
-                plugin=plugin, source_version_name=source_version_name, type=release_type, **policy["filter"]
-            ).exists()
-            if source_version_exists:
-                raise policy["error"]  # type: ignore[misc]
+        if not policy:
+            return True
+
+        source_version_exists = PluginRelease.objects.filter(
+            plugin=plugin, source_version_name=source_version_name, type=release_type, **policy["filter"]
+        ).exists()
+        if source_version_exists:
+            raise policy["error"]  # type: ignore[misc]
         return True
 
     def validator(self, attrs: Dict):
+        if revision_type == PluginRevisionType.TESTED_VERSION and (not attrs["release_id"]):
+            raise ValidationError(_("使用测试版本发布时必须传参数: release_id"))
+
         version = attrs["version"]
+        source_version_type = attrs["source_version_type"]
+        source_version_name = attrs["source_version_name"]
+        source_hash = get_source_hash_by_plugin_version(
+            plugin, source_version_type, source_version_name, revision_type, attrs["release_id"]
+        )
+
         if version_rule == PluginReleaseVersionRule.AUTOMATIC:
             validate_semver(version, self.context["previous_version"], SemverAutomaticType(attrs["semver_type"]))
-        elif version_rule == PluginReleaseVersionRule.REVISION:
-            if version != attrs["source_version_name"]:
-                raise ValidationError(_("版本号必须与代码分支一致"))
-        elif version_rule == PluginReleaseVersionRule.COMMIT_HASH:  # noqa: SIM102
-            if version != self.context["source_hash"]:
-                raise ValidationError(_("版本号必须与提交哈希一致"))
-        elif version_rule == PluginReleaseVersionRule.BRANCH_TIMESTAMP:  # noqa: SIM102
-            if not version.startswith(attrs["source_version_name"]):
-                raise ValidationError(_("版本号必须以代码分支开头"))
+        elif version_rule == PluginReleaseVersionRule.REVISION and version != source_version_name:
+            raise ValidationError(_("版本号必须与代码分支一致"))
+        elif version_rule == PluginReleaseVersionRule.COMMIT_HASH and version != source_hash:  # noqa: SIM102
+            raise ValidationError(_("版本号必须与提交哈希一致"))
+        elif version_rule == PluginReleaseVersionRule.BRANCH_TIMESTAMP and (
+            not version.startswith(source_version_name)
+        ):  # noqa: SIM102
+            raise ValidationError(_("版本号必须以代码分支开头"))
 
         if revision_policy:
-            validate_release_policy(plugin, release_type, revision_policy, attrs["source_version_name"])
+            validate_release_policy(plugin, release_type, revision_policy, source_version_name)
+        attrs["source_hash"] = source_hash
+        attrs.pop("release_id")
         return attrs
 
     return validator
@@ -471,10 +583,11 @@ def make_create_release_version_slz_class(plugin: PluginInstance, release_type: 
         ),
         "source_version_type": serializers.CharField(help_text="代码版本类型(branch/tag)"),
         "source_version_name": source_version_field,
+        "release_id": serializers.CharField(required=False, default=""),
         "version": serializers.CharField(help_text="版本号"),
         "comment": serializers.CharField(help_text="版本日志"),
         "extra_fields": make_extra_fields_slz(release_definition.extraFields)(default=dict),
-        "release_strategy": ReleaseStrategySLZ(required=False, allow_null=True, help_text="发布策略"),
+        "release_strategy": ReleaseStrategyCreateSLZ(required=False, allow_null=True, help_text="发布策略"),
     }
     if release_definition.versionNo == PluginReleaseVersionRule.AUTOMATIC:
         fields["semver_type"] = serializers.ChoiceField(
@@ -492,6 +605,7 @@ def make_create_release_version_slz_class(plugin: PluginInstance, release_type: 
                 PluginReleaseVersionRule(release_definition.versionNo),
                 release_type,
                 release_definition.revisionPolicy,
+                release_definition.revisionType,
             ),
         },
     )
@@ -662,6 +776,7 @@ class ItsmApprovalSLZ(serializers.Serializer):
     current_status = serializers.ChoiceField(label="单据当前状态", choices=ItsmTicketStatus.get_choices())
     approve_result = serializers.BooleanField(label="审批结果")
     token = serializers.CharField(label="回调token", help_text="可用于验证请求是否来自于 ITSM")
+    updated_by = serializers.CharField(label="申请更新人")
 
 
 class PluginConfigColumnSLZ(serializers.Serializer):
@@ -720,10 +835,19 @@ class StubConfigSLZ(serializers.Serializer):
 
 class OperationRecordSLZ(serializers.ModelSerializer):
     display_text = serializers.CharField(source="get_display_text", read_only=True)
+    operator = serializers.CharField(source="operator_username", read_only=True)
 
     class Meta:
         model = OperationRecord
         fields = "__all__"
+
+
+class OperationRecordFilterSLZ(serializers.Serializer):
+    subject = serializers.ChoiceField(choices=SubjectTypes.get_choices(), help_text="操作对象", required=False)
+    action = serializers.ChoiceField(choices=ActionTypes.get_choices(), help_text="操作类型", required=False)
+    operator = serializers.CharField(required=False, help_text="操作人")
+    start_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
+    end_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
 
 
 class CodeCommitSearchSLZ(serializers.Serializer):
@@ -742,9 +866,11 @@ class CodeCommitSearchSLZ(serializers.Serializer):
 
 
 class PluginReleaseFilterSLZ(serializers.Serializer):
+    gray_status = serializers.ListField(required=False)
     status = serializers.ListField(required=False)
     type = serializers.ChoiceField(choices=PluginReleaseType.get_choices(), default=PluginReleaseType.PROD)
     creator = serializers.CharField(required=False)
+    is_rolled_back = serializers.BooleanField(required=False)
 
     def validate(self, attrs):
         if "creator" in attrs:
@@ -756,6 +882,7 @@ class PluginListFilterSlZ(serializers.Serializer):
     status = serializers.ListField(required=False)
     language = serializers.ListField(required=False)
     pd__identifier = serializers.ListField(required=False)
+    order_by = serializers.CharField(default="id")
 
 
 class CodeCheckInfoSLZ(serializers.Serializer):
@@ -784,3 +911,31 @@ class PluginReleaseTypeSLZ(serializers.Serializer):
     """插件发布类型"""
 
     type = serializers.ChoiceField(choices=PluginReleaseType.get_choices(), default=PluginReleaseType.PROD)
+
+
+class PluginStageStatusSLZ(serializers.Serializer):
+    """插件状态"""
+
+    status = serializers.ChoiceField(choices=PluginReleaseStatus.get_choices())
+    message = serializers.CharField(default="")
+
+
+class PluginPublisher(serializers.Serializer):
+    """插件发布者"""
+
+    publisher = serializers.CharField(help_text="插件发布者")
+
+
+class PluginVisibleRangeSLZ(serializers.ModelSerializer):
+    itsm_detail = ItsmDetailSLZ()
+
+    class Meta:
+        model = PluginVisibleRange
+        fields = "__all__"
+
+
+class PluginVisibleRangeUpdateSLZ(serializers.Serializer):
+    bkci_project = serializers.ListField(
+        child=serializers.CharField(), help_text="格式：['1111', '222222']", required=False, allow_null=True
+    )
+    organization = serializers.ListField(child=serializers.DictField(), required=False, allow_null=True)

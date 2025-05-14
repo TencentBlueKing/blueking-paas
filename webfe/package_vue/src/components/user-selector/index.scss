@@ -126,12 +126,18 @@
                             white-space: nowrap;
                             vertical-align: top;
                         }
-                        .delete-depart-icon {
+                        .delete-depart-icon,
+                        .disabled-del {
                             display: block;
                             width: 16px;
-                            margin: 4px 6px 0 0;
+                            margin-right: 6px;
                             cursor: pointer;
                             float: right;
+                        }
+                        .disabled-del {
+                            cursor: not-allowed;
+                            color: #e3e3e3;
+                            transform: rotate(45deg);
                         }
                     }
                     .folder-icon {

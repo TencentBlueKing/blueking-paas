@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Optional
 
@@ -29,7 +28,6 @@ logger = logging.getLogger(__name__)
 @define
 class StandardOutputLogLine(LogLine):
     """标准输出日志结构
-    :param region: [deprecated] app region
     :param app_code: [deprecated] app_code
     :param module_name: [deprecated] module_name
     :param environment: [deprecated] runtime environment(stag/prod)
@@ -38,7 +36,6 @@ class StandardOutputLogLine(LogLine):
     :param pod_name: [required] pod_name, The name of the pod that logs are generated from.
     """
 
-    region: Optional[str] = extra_field(converter=converters.optional(str))
     app_code: Optional[str] = extra_field(converter=converters.optional(str))
     module_name: Optional[str] = extra_field(converter=converters.optional(str))
     environment: Optional[str] = extra_field(converter=converters.optional(str))
@@ -52,7 +49,6 @@ class StandardOutputLogLine(LogLine):
 @define
 class StructureLogLine(LogLine):
     """结构化日志结构
-    :param region: [deprecated] app region
     :param app_code: [deprecated] app_code
     :param module_name: [deprecated] module_name
     :param environment: [deprecated] runtime environment(stag/prod)
@@ -60,7 +56,6 @@ class StructureLogLine(LogLine):
     :param stream: stream, such as "django", "celery", "stdout"
     """
 
-    region: Optional[str] = extra_field(converter=converters.optional(str))
     app_code: Optional[str] = extra_field(converter=converters.optional(str))
     module_name: Optional[str] = extra_field(converter=converters.optional(str))
     environment: Optional[str] = extra_field(converter=converters.optional(str))

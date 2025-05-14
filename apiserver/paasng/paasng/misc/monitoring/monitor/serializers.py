@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import re
 from typing import Optional
@@ -24,6 +24,7 @@ from rest_framework import serializers
 
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import RUN_ENVS
+from paasng.platform.applications.serializers import ApplicationWithLogoMinimalSLZ
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import HumanizeTimestampField
 
@@ -71,7 +72,8 @@ class ListAlertsSLZ(serializers.Serializer):
 
     def to_internal_value(self, data) -> QueryAlertsParams:
         data = super().to_internal_value(data)
-        return QueryAlertsParams(app_code=self.context["app_code"], **data)
+        params = QueryAlertsParams.create_by_app_codes(**data, app_codes=self.context.get("app_codes", []))
+        return params
 
     def validate(self, data: QueryAlertsParams):
         if data.start_time > data.end_time:
@@ -113,12 +115,31 @@ class AlertSLZ(serializers.Serializer):
 
     def get_env(self, instance) -> Optional[str]:
         """从 labels 中获取运行环境信息"""
-        labels = set(instance.get("labels", []))
-        run_envs = set(RUN_ENVS)
-        env = labels & run_envs
+        labels = instance.get("labels") or []
+        env = set(labels) & set(RUN_ENVS)
         if len(env) == 1:
             return list(env)[0]
+
         return None
+
+
+class AlertListByUserSLZ(serializers.Serializer):
+    application = ApplicationWithLogoMinimalSLZ(help_text="应用基础信息", read_only=True)
+    alerts = serializers.SerializerMethodField(help_text="应用告警")
+    count = serializers.SerializerMethodField(help_text="应用告警数")
+    slow_query_count = serializers.SerializerMethodField(help_text="应用慢查询数")
+
+    def get_count(self, obj):
+        return len(obj.get("alerts") or [])
+
+    def get_slow_query_count(self, obj):
+        return sum(1 for alert in (obj.get("alerts") or []) if "gcs_mysql_slow_query" in (alert.get("labels") or []))
+
+    def get_alerts(self, obj):
+        alerts = obj.get("alerts") or []
+        # 慢查询告警排在前面，即 labels 中包含 gcs_mysql_slow_query 的排在前面
+        sorted_alerts = sorted(alerts, key=lambda alert: "gcs_mysql_slow_query" not in (alert.get("labels") or []))
+        return AlertSLZ(sorted_alerts, many=True).data
 
 
 class ListAlarmStrategiesSLZ(serializers.Serializer):
@@ -174,3 +195,14 @@ class AlarmStrategySLZ(serializers.Serializer):
     strategy_config_list = serializers.ListField(child=StrategyConfigSLZ(), help_text="策略配置列表")
     user_group_list = serializers.ListField(child=UserGroupSLZ(), help_text="通知组列表")
     strategy_config_link = serializers.CharField(help_text="策略配置链接")
+
+
+class AppDashboardSLZ(serializers.Serializer):
+    name = serializers.CharField()
+    display_name = serializers.CharField()
+    language = serializers.CharField()
+    dashboard_url = serializers.SerializerMethodField()
+
+    def get_dashboard_url(self, instance):
+        bk_biz_id = self.context["bk_biz_id"]
+        return f"{settings.BK_MONITORV3_URL}/grafana/dashboard?bizId={bk_biz_id}&dashName={instance.name}&pure=1"

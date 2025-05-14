@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Dict, List, Optional, Type, Union
 
@@ -30,7 +29,10 @@ from paasng.bk_plugins.pluginscenter.bk_devops.client import PipelineController
 from paasng.bk_plugins.pluginscenter.bk_devops.constants import PipelineBuildStatus
 from paasng.bk_plugins.pluginscenter.definitions import ReleaseStageDefinition, find_stage_by_id
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
-from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_online_approval_ticket
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
+    get_ticket_status,
+    submit_online_approval_ticket,
+)
 from paasng.bk_plugins.pluginscenter.models import PluginReleaseStage
 from paasng.bk_plugins.pluginscenter.serializers import ItsmTicketInfoSlz, PluginMarketInfoSLZ
 from paasng.bk_plugins.pluginscenter.sourcectl import get_plugin_repo_accessor
@@ -130,6 +132,7 @@ class BaseStageController:
             "status": self.stage.status,
             "fail_message": self.stage.fail_message,
             "invoke_method": self.stage.invoke_method,
+            "status_polling_method": self.stage.status_polling_method,
         }
         return basic_info
 
@@ -358,10 +361,15 @@ class SubPageStage(BaseStageController):
 
         page_url = self.format_page_url(stage_def)
 
-        # 计算平台 UDC 插件，刷新页面时更新测试阶段状态，不做异步轮询
-        can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release, self.stage)
-        if can_proceed:
-            self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+        if self.stage.status != constants.PluginReleaseStatus.SUCCESSFUL:
+            # 计算平台 UDC 插件，刷新页面时更新测试阶段状态，不做异步轮询
+            can_proceed = can_enter_next_stage(self.pd, self.plugin, self.release, self.stage)
+            if can_proceed:
+                # 如果可以进入下一个阶段，则更新当前阶段的状态为成功
+                self.stage.update_status(constants.PluginReleaseStatus.SUCCESSFUL)
+        else:
+            can_proceed = True
+
         return {
             **basic_info,
             "detail": {

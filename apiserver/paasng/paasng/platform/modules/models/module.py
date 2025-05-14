@@ -1,27 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import uuid
 from typing import TYPE_CHECKING, Callable, Optional
 
 from django.db import models
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.models import BkUserField, OwnerTimestampedModel
 
@@ -53,6 +53,7 @@ class Module(OwnerTimestampedModel):
     user_preferred_root_domain = models.CharField(max_length=255, verbose_name="用户偏好的根域名", null=True)
 
     last_deployed_date = models.DateTimeField(verbose_name="最近部署时间", null=True)  # 范围：模块下的所有环境
+    tenant_id = tenant_id_field_factory()
     creator = BkUserField(null=True)
 
     class Meta:

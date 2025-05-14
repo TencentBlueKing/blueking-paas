@@ -32,16 +32,21 @@
         <li class="item">
           <div class="label">{{ $t('联系人员') }}：</div>
           <div class="value" v-bk-overflow-tips="{ content: curPluginData.contact?.join() }">
-            <user
-              v-if="curPluginData.contact.length"
-              ref="member_selector"
-              v-model="curPluginData.contact"
-              :disabled="true"
-              placeholder=""
-              class="disabled-plugin-member-cls"
-            />
-            <span v-else>--</span>
-            <!-- {{ curPluginData.contact.join() || '--' }} -->
+            <!-- 区分环境 -->
+            <span v-if="!curPluginData.contact?.length">--</span>
+            <template v-else>
+              <span v-if="GLOBAL.USERS_URL">
+                {{ curPluginData.contact?.join() }}
+              </span>
+              <user
+                v-else
+                ref="member_selector"
+                v-model="curPluginData.contact"
+                :disabled="true"
+                placeholder=""
+                class="disabled-plugin-member-cls"
+              />
+            </template>
           </div>
         </li>
         <li class="item">
@@ -78,15 +83,23 @@
           </div>
         </li>
         <li class="item">
-          <div class="label">{{ $t('插件使用方') }}：</div>
+          <div class="label">
+            <span
+              v-bk-tooltips.bottom="$t('如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过API网关）调用插件的API、并将插件能力集成到自己的系统中。')"
+              v-dashed>{{ $t('插件使用方') }}</span>：
+          </div>
           <div
             class="value"
             v-bk-overflow-tips
           >
-            {{ pluginUsers.length ? pluginUsers.join(',') : '--' }}
+            {{ pluginUsers.length ? pluginUsers.map(v => v.name).join(',') : '--' }}
           </div>
         </li>
       </ul>
+      <div class="plugin-tips">
+        <i class="paasng-icon paasng-info-line"></i>
+        {{ $t('只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。除了创建时注明的“插件使用方”之外，插件默认不授权给任何其他使用方。') }}
+      </div>
     </section>
     <!-- 编辑态 -->
     <section
@@ -244,7 +257,7 @@ export default {
       this.pluginformData.introduction = this.curPluginData.introduction;
       this.pluginformData.contact = this.curPluginData.contact;
       this.pluginformData.tag = this.curPluginData.tag;
-      this.pluginformData.distributors = this.pluginUsers;
+      this.pluginformData.distributors = this.pluginUsers.map(item => item.code_name);
     },
     // 取消
     handleCancel() {
@@ -284,7 +297,7 @@ export default {
         const res = await this.$store.dispatch('plugin/getAuthorizedPlugins', {
           appCode: this.appCode,
         });
-        this.pluginUsers = res.map(item => item.code_name);
+        this.pluginUsers = res || [];
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -309,9 +322,6 @@ export default {
       this.pluginInfoConfig.isLoading = true;
       const data = cloneDeep(this.pluginformData);
       data.contact = data.contact.join();
-      if (!data.distributors.length) {
-        delete data.distributors;
-      }
 
       try {
         await this.$store.dispatch('plugin/updatePluginBseInfo', {
@@ -410,6 +420,12 @@ export default {
   border-radius: 2px;
   background: #fafbfd;
   cursor: not-allowed;
+}
+.plugin-tips {
+  margin-left: 130px;
+  font-size: 12px;
+  color: #979BA5;
+  line-height: 20px;
 }
 </style>
 

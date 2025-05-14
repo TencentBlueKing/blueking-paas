@@ -1,34 +1,31 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-from django.conf.urls import url
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 from paasng.utils.basic import make_app_pattern, re_path
 
 from . import views
 
 urlpatterns = [
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/modules/$",
         views.ModuleViewSet.as_view({"get": "list", "post": "create"}),
         name="modules",
     ),
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/$",
         views.ModuleViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
         name="module.actions",
@@ -38,18 +35,18 @@ urlpatterns = [
         views.ModuleViewSet.as_view({"post": "set_as_default"}),
         name="module.set_default",
     ),
-    url(
+    re_path(
         r"^api/bkapps/cloud-native/(?P<code>[^/]+)/modules/$",
         views.ModuleViewSet.as_view({"post": "create_cloud_native_module"}),
         name="module.create.cloud_native",
     ),
     # BuildPack Runtime(Deprecated: using ModuleBuildConfigViewSet)
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/runtime/list/$",
         views.ModuleRuntimeViewSet.as_view({"get": "list_available"}),
         name="api.modules.runtime.available_list",
     ),
-    url(
+    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/runtime/$",
         views.ModuleRuntimeViewSet.as_view({"get": "retrieve", "post": "bind"}),
         name="api.modules.runtime",
@@ -65,7 +62,7 @@ urlpatterns = [
         views.ModuleBuildConfigViewSet.as_view({"get": "retrieve", "post": "modify"}),
         name="api.modules.build_config",
     ),
-    url(
+    re_path(
         make_app_pattern("/bp_runtimes/$", include_envs=False),
         views.ModuleBuildConfigViewSet.as_view({"get": "list_available_bp_runtimes"}),
         name="api.modules.bp_runtime.available_list",

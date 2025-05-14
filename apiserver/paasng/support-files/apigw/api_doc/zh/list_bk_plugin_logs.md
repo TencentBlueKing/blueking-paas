@@ -6,7 +6,7 @@
 #### 1、路径参数：
 |   参数名称   |    参数类型  |  必须  |     参数说明     |
 | ------------ | ------------ | ------ | ---------------- |
-| code | string | 否 | 位置参数，待查询插件的 code |
+| code | string | 是 | 位置参数，待查询插件的 code |
 
 #### 2、接口参数：
 | 字段 |   类型 |  是否必填 | 描述 |
@@ -20,48 +20,108 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_
 ```
 
 ### 返回结果示例
+#### 正常返回
 ```javascript
 {
-    "scroll_id": "FGluY2x1Z...",
     "logs": [
         {
-            "plugin_code": "bk-plugin-demo",
-            "environment": "stag",
-            "process_id": "web",
-            "stream": "component",
-            "message": "A log message",
-            "detail": {
-                "json.asctime": "2021-08-26 11:06:44,325",
-                "json.funcName": "foo_function",
-                "json.levelname": "INFO",
-                "json.lineno": 16,
-                "json.message": "A log message",
-                "json.pathname": "/app/foo.py",
-                "json.process": 30,
-                "json.thread": 140625517852824,
-                "json.trace_id": "[bk-mark]2c1f0c1ae2c84505b1ed14ad8e924a12[/bk-mark]"
+            "timestamp": 1724152930,
+            "message": "[execute] plugin execute failed",
+            "raw": {
+                "otelServiceName": null,
+                "pathname": "/app/.heroku/python/lib/python3.6/site-packages/bk_plugin_framework/runtime/executor.py",
+                "otelTraceID": null,
+                "otelSpanID": null,
+                "message": "[execute] plugin execute failed",
+                "__ext_json.lineno": 99,
+                "__ext_json.process": 6368,
+                "__ext_json.thread": 139939413554944,
+                "__ext_json.trace_id": "88d9254695094eb09851f261cda8d5e6",
+                "__ext_json.exc_info": "Traceback (most recent call last):\n  File ...",
+                "funcName": "execute",
+                "levelname": "ERROR",
+                "region": "ieod",
+                "app_code": "example",
+                "module_name": "default",
+                "environment": "prod",
+                "process_id": "web",
+                "pod_name": "bkapp-example-prod--web-865dddfdcc-fxg8p",
+                "stream": null,
+                "ts": "2024-08-20 19:22:10",
+                "json.levelname": "ERROR",
+                "json.funcName": "execute",
+                "json.message": "[execute] plugin execute failed"
             },
-            "ts": "2021-08-26 11:06:44"
+            "detail": {
+                "otelServiceName": null,
+                "pathname": "/app/.heroku/python/lib/python3.6/site-packages/bk_plugin_framework/runtime/executor.py",
+                "otelTraceID": null,
+                "otelSpanID": null,
+                "message": "[execute] plugin execute failed",
+                "__ext_json.lineno": 99,
+                "__ext_json.process": 6368,
+                "__ext_json.thread": 139939413554944,
+                "__ext_json.trace_id": "88d9254695094eb09851f261cda8d5e6",
+                "__ext_json.exc_info": "Traceback (most recent call last):\n ...",
+                "funcName": "execute",
+                "levelname": "ERROR",
+                "region": "ieod",
+                "app_code": "example",
+                "module_name": "default",
+                "environment": "prod",
+                "process_id": "web",
+                "pod_name": "bkapp-example-prod--web-865dddfdcc-fxg8p",
+                "stream": null,
+                "ts": "2024-08-20 19:22:10",
+                "json.levelname": "ERROR",
+                "json.funcName": "execute",
+                "json.message": "[execute] plugin execute failed"
+            },
+            "plugin_code": "example",
+            "environment": "prod",
+            "process_id": "web",
+            "stream": "<object object at 0x7f144e63a540>",
+            "ts": "2024-08-20 19:22:10"
         }
     ],
-    "total": 1
+    "total": 11,
+    "dsl": "{\"query\": {\"bool\": {\"filter\": ...",
+    "scroll_id": "FGluY2x1ZGVfY29udG..."
+}
+```
+
+#### 异常返回
+```json
+{
+    "code": "VALIDATION_ERROR",
+    "detail": "trace_id: 该字段是必填项。",
+    "fields_detail": {
+        "trace_id": [
+            "该字段是必填项。"
+        ]
+    }
 }
 ```
 
 ### 返回结果参数说明
 |   参数名称   |  参数类型  |           参数说明             |
 | ------------ | ---------- | ------------------------------ |
-|  scroll_id | str | 翻页标识字段，获取下一页时传入该值 |
-|  logs | list[objects] | 日志对象列表，按创建时间从新到旧排序 |
-|  total | int | 日志总数 |
+  scroll_id    | str        | 翻页标识字段，获取下一页时传入该值 |
+| logs         | list[objects] | 日志对象列表，按创建时间从新到旧排序 |
+| total        | int        | 日志总数 |
+| dsl          | string     | DSL查询语句 |
 
 `logs` 内对象字段说明：
 
 |   参数名称   |  参数类型  |           参数说明             |
 | ------------ | ---------- | ------------------------------ |
-|  plugin_code | str | 插件标识符 |
-|  environment | str | 产生日志的部署环境，`stag` -> 预发布环境，`prod` -> 生产环境 |
-|  message | str | 日志信息 |
-|  detail | object | 结构化日志详情 |
+| plugin_code | str       | 插件标识符 |
+| environment | str       | 产生日志的部署环境，`stag` -> 预发布环境，`prod` -> 生产环境 |
+| message     | str       | 日志信息 |
+| raw         | object    | 原生log  |
+| detail      | object    | 结构化日志详情 |
+| process_id  | string    | 进程唯一类型  |
+| stream      | string    | 流对象 |
+| ts          | string    | 时间戳 |
 
 **注意**：`detail.json.trace_id` 字段里，有用来标示字段高亮的 `[bk-mark]...[/bk-mark]` 标记字符，如需用于前端展示，请妥善处理。

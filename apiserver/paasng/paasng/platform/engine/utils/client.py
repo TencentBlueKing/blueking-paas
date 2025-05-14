@@ -1,27 +1,27 @@
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""Engine services module"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""Engine services module
-"""
 from typing import Dict
 
 from django.utils.functional import cached_property
 
 from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.workloads.images.models import AppImageCredential
@@ -45,6 +45,7 @@ class EngineDeployClient:
         image: str,
         extra_envs: Dict[str, str],
         artifact_type: ArtifactType = ArtifactType.NONE,
+        artifact_metadata: BuildArtifactMetadata | None = None,
     ) -> str:
         """Create the **fake** build for Image Type App"""
         build = Build.objects.create(
@@ -52,6 +53,8 @@ class EngineDeployClient:
             env_variables=extra_envs,
             image=image,
             artifact_type=artifact_type,
+            artifact_metadata=artifact_metadata or BuildArtifactMetadata(),
+            tenant_id=self.wl_app.tenant_id,
         )
         return str(build.uuid)
 
@@ -60,5 +63,5 @@ class EngineDeployClient:
         AppImageCredential.objects.update_or_create(
             app=self.wl_app,
             registry=registry,
-            defaults={"username": username, "password": password},
+            defaults={"username": username, "password": password, "tenant_id": self.wl_app.tenant_id},
         )

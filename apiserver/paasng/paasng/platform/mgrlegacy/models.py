@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 from operator import itemgetter
@@ -24,9 +23,11 @@ from typing import Any, Dict
 from django.db import models
 from jsonfield import JSONField
 
-from paasng.platform.applications.models import Application
+from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
-from paasng.utils.models import OwnerTimestampedModel, make_json_field
+from paasng.utils.models import OwnerTimestampedModel, TimestampedModel, make_json_field
 
 from .entities import DefaultAppLegacyData, MigrationResult, ProcessDetails, RollbackResult
 
@@ -64,6 +65,7 @@ class MigrationProcessManager(models.Manager):
                 legacy_app_is_already_online=legacy_app.is_already_online,
                 legacy_app_state=legacy_app.state,
                 legacy_app_has_all_deployed=legacy_app_proxy.has_prod_deployed(),
+                tenant_id=getattr(legacy_app, "tenant_id", DEFAULT_TENANT_ID),
             )
             created = True
         return migration_process, created
@@ -92,6 +94,8 @@ class MigrationProcess(OwnerTimestampedModel):
     legacy_app_is_already_online = models.BooleanField(default=True)
     legacy_app_state = models.IntegerField(default=4)
     legacy_app_has_all_deployed = models.BooleanField(default=True)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = MigrationProcessManager()
 
@@ -230,6 +234,8 @@ ProcessDetailsField = make_json_field("ProcessDetailsField", ProcessDetails)
 
 
 class CNativeMigrationProcess(OwnerTimestampedModel):
+    """cloud-native app migration process"""
+
     app = models.ForeignKey(Application, on_delete=models.CASCADE, db_constraint=False)
     status = models.CharField(
         choices=CNativeMigrationStatus.get_choices(), default=CNativeMigrationStatus.DEFAULT.value, max_length=20
@@ -243,9 +249,11 @@ class CNativeMigrationProcess(OwnerTimestampedModel):
 
     details: ProcessDetails = ProcessDetailsField(default=ProcessDetails, help_text="迁移过程详情")
 
+    tenant_id = tenant_id_field_factory()
+
     class Meta:
         get_latest_by = "created_at"
-        ordering = ["-created_at"]
+        ordering = ["created_at"]
 
     @classmethod
     def create_migration_process(cls, app, owner) -> "CNativeMigrationProcess":
@@ -319,3 +327,13 @@ class MigrationRegister(type):
     @classmethod
     def get_class(cls, name):
         return cls.classes_map[name]
+
+
+class WlAppBackupRel(TimestampedModel):
+    """WlApp 的备份关系表"""
+
+    app_environment = models.OneToOneField(ApplicationEnvironment, on_delete=models.CASCADE, db_constraint=False)
+    original_id = models.UUIDField(verbose_name="原 WlApp uuid")
+    backup_id = models.UUIDField(verbose_name="对应备份的 WlApp uuid")
+
+    tenant_id = tenant_id_field_factory()

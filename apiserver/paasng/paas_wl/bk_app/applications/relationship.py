@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """This module provides manual relational queries"""
+
 from typing import Optional, Type, Union, overload
 
 from paasng.platform.applications.models import ModuleEnvironment
@@ -29,12 +29,10 @@ class ModuleAttrFromID:
     key_field = "module_id"
 
     @overload
-    def __get__(self, instance: None, owner: None) -> "ModuleAttrFromID":
-        ...
+    def __get__(self, instance: None, owner: None) -> "ModuleAttrFromID": ...
 
     @overload
-    def __get__(self, instance: object, owner: Type) -> Module:
-        ...
+    def __get__(self, instance: object, owner: Type) -> Module: ...
 
     def __get__(self, instance, owner: Optional[Type] = None) -> Union["ModuleAttrFromID", Module]:
         """Read module value
@@ -55,12 +53,10 @@ class ModuleEnvAttrFromID:
     key_field = "environment_id"
 
     @overload
-    def __get__(self, instance: None, owner: None) -> "ModuleEnvAttrFromID":
-        ...
+    def __get__(self, instance: None, owner: None) -> "ModuleEnvAttrFromID": ...
 
     @overload
-    def __get__(self, instance: object, owner: Type) -> ModuleEnvironment:
-        ...
+    def __get__(self, instance: object, owner: Type) -> ModuleEnvironment: ...
 
     def __get__(self, instance, owner: Optional[Type] = None) -> Union["ModuleEnvAttrFromID", ModuleEnvironment]:
         """Read environment value
@@ -85,12 +81,10 @@ class ModuleEnvAttrFromName:
     module_key_field = "module_id"
 
     @overload
-    def __get__(self, instance: None, owner: None) -> "ModuleEnvAttrFromName":
-        ...
+    def __get__(self, instance: None, owner: None) -> "ModuleEnvAttrFromName": ...
 
     @overload
-    def __get__(self, instance: object, owner: Type) -> ModuleEnvironment:
-        ...
+    def __get__(self, instance: object, owner: Type) -> ModuleEnvironment: ...
 
     def __get__(self, instance, owner: Optional[Type] = None) -> Union["ModuleEnvAttrFromName", ModuleEnvironment]:
         """Read environment value

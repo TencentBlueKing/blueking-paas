@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import base64
 import json
 import time
@@ -24,6 +23,7 @@ from unittest import mock
 
 import pytest
 
+from paas_wl.bk_app.applications.entities import BuildMetadata
 from paasng.infras.bk_ci import entities
 from paasng.infras.bk_ci.constants import PipelineBuildStatus
 from paasng.platform.engine.constants import BuildStatus
@@ -42,7 +42,7 @@ class TestDefaultBuildProcessExecutor:
         attach_all_phases(sender=bk_deployment_full.app_environment, deployment=bk_deployment_full)
 
         bpe = DefaultBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
-        build_instance = bpe.create_and_bind_build_instance(dict(procfile=["sth"], image=""))
+        build_instance = bpe.create_and_bind_build_instance(BuildMetadata(image=""))
         assert str(build_proc.build_id) == str(build_instance.uuid), "绑定 build instance 失败"
         assert build_instance.owner == bk_deployment_full.operator, "build instance 绑定 owner 异常"
         assert build_proc.status == BuildStatus.SUCCESSFUL, "build_process status 未设置为 SUCCESSFUL"
@@ -52,12 +52,15 @@ class TestDefaultBuildProcessExecutor:
 
         bpe = DefaultBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
         # TODO: Too much mocks, both tests and codes need refactor
-        with mock.patch(
-            "paasng.platform.engine.deploy.bg_build.executors.DefaultBuildProcessExecutor.start_slugbuilder"
-        ), mock.patch("paasng.platform.engine.deploy.bg_build.executors.BuildHandler"), mock.patch(
-            "paasng.platform.engine.deploy.bg_build.executors.NamespacesHandler"
-        ), mock.patch("paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"):
-            bpe.execute({"image": ""})
+        with (
+            mock.patch(
+                "paasng.platform.engine.deploy.bg_build.executors.DefaultBuildProcessExecutor.start_slugbuilder"
+            ),
+            mock.patch("paasng.platform.engine.deploy.bg_build.executors.BuildHandler"),
+            mock.patch("paasng.platform.engine.deploy.bg_build.executors.NamespacesHandler"),
+            mock.patch("paasng.platform.engine.deploy.bg_build.utils.get_schedule_config"),
+        ):
+            bpe.execute(BuildMetadata(image=""))
         assert build_proc.status == BuildStatus.SUCCESSFUL, "部署失败"
 
 
@@ -112,13 +115,7 @@ class TestPipelineBuildProcessExecutor:
             "paasng.platform.engine.deploy.bg_build.executors.BkCIPipelineClient", new=StubBkCIPipelineClient
         ):
             bpe = PipelineBuildProcessExecutor(bk_deployment_full, build_proc, NullStream())
-            bpe.execute(
-                {
-                    "image": "busybox:latest",
-                    "image_repository": "dockerhub.com",
-                    "use_dockerfile": True,
-                }
-            )
+            bpe.execute(BuildMetadata(image="busybox:latest", image_repository="dockerhub.com", use_dockerfile=True))
 
         assert build_proc.status == BuildStatus.SUCCESSFUL
 

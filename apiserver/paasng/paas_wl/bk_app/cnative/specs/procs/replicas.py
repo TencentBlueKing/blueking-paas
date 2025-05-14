@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """Process controller"""
+
 import copy
 import logging
 from typing import Dict, List, Optional, Tuple
@@ -63,7 +63,10 @@ class BkAppProcScaler:
         counts = ReplicasReader(bkapp_res).read_all(AppEnvName(self.env.environment))
         if proc_type not in counts:
             raise ProcNotFoundInRes(proc_type)
-        return counts[proc_type][0]
+
+        cnt = counts[proc_type][0]
+        assert cnt is not None, "Replicas in the live environment can not be None"
+        return cnt
 
     def set_replicas(self, proc_type: str, count: int):
         """Set the replicas to a fixed value by process type.
@@ -215,7 +218,7 @@ class ReplicasReader:
     def __init__(self, res: BkAppResource):
         self.res = res
 
-    def read_all(self, env_name: AppEnvName) -> Dict[str, Tuple[int, bool]]:
+    def read_all(self, env_name: AppEnvName) -> Dict[str, Tuple[Optional[int], bool]]:
         """Read all replicas count defined
 
         :param env_name: Environment name

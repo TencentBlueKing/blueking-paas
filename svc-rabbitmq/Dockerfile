@@ -1,4 +1,4 @@
-FROM python:3.8.13-slim-buster
+FROM python:3.11.10-slim-bullseye
 USER root
 
 RUN apt-get update && apt-get install gcc curl procps -y
@@ -8,20 +8,19 @@ RUN mkdir ~/.pip &&  printf '[global]\nindex-url = https://mirrors.cloud.tencent
 ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
-RUN pip install --upgrade pip
-RUN pip install poetry==1.1.11
+RUN pip install --upgrade 'pip<24.1'
+
+RUN pip install poetry==2.1.1
 
 # Change security level of openssl to lower value in order to avoid "CA_MD_TOO_WEAK" error
 # See https://stackoverflow.com/questions/52218876/how-to-fix-ssl-issue-ssl-ctx-use-certificate-ca-md-too-weak-on-python-zeep?rq=1
 RUN sed -i "s/DEFAULT@SECLEVEL=2/DEFAULT@SECLEVEL=0/g" /etc/ssl/openssl.cnf
 
-
 # Install dependencies first
 ADD ./pyproject.toml .
 ADD ./poetry.lock .
 # Install dependecies in system
-# Disable "new installer" to fix https://github.com/python-poetry/poetry/issues/6301
-RUN poetry config virtualenvs.create false && poetry config experimental.new-installer false && poetry install --no-root -vvv
+RUN poetry config virtualenvs.create false && poetry install --no-root -vvv
 
 ADD ./data ./data
 ADD ./docs ./docs
@@ -32,7 +31,6 @@ ADD ./tasks ./tasks
 ADD ./templates ./templates
 ADD ./vendor ./vendor
 ADD ./manage.py .
-ADD ./migrate.sh .
 ADD ./start.sh .
 
 CMD ["/bin/bash", "./start.sh"]

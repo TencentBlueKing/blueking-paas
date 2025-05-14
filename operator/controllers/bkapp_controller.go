@@ -130,8 +130,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if bkapp.Generation > bkapp.Status.ObservedGeneration {
 		bkapp.Status.Phase = paasv1alpha2.AppPending
 		if err = r.updateStatus(ctx, bkapp, originalBkApp, nil); err != nil {
-			log.Error(err, "Unable to update bkapp status when generation changed")
-			return reconcile.Result{}, err
+			return reconcile.Result{}, errors.Wrap(err, "update bkapp status when generation changed")
 		}
 	}
 
@@ -139,7 +138,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	for _, reconciler := range []base.Reconciler{
 		// NOTE: The order of these reconcilers is important.
 		bkappctrl.NewBkappFinalizer(r.client),
-		// Check if a new deploy action has been issued.
+		// Check if a new deployment action has been issued.
 		bkappctrl.NewDeployActionReconciler(r.client),
 		// Make sure the "pre-release" hook has been finished if specified.
 		hooks.NewHookReconciler(r.client),
@@ -179,7 +178,7 @@ func (r *BkAppReconciler) updateStatus(
 	}
 
 	if err := r.client.Status().Patch(ctx, after, client.MergeFrom(before)); err != nil {
-		syncErr := errors.Wrap(err, "failed to update bkapp status")
+		syncErr := errors.Wrap(err, "update bkapp status")
 		if reconcileErr == nil {
 			return syncErr
 		} else {

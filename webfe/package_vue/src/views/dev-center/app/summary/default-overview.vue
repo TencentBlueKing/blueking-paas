@@ -26,9 +26,7 @@
       />
       <div class="overview-middle">
         <template v-if="!loading">
-          <div
-            class="summary-content"
-          >
+          <div class="summary-content">
             <!-- 访问日志，云原生不展示 -->
             <bk-collapse
               v-if="!isCloudNativeApp"
@@ -133,20 +131,22 @@
                             :ref="k + key"
                             :options="envChartOption[k]"
                             auto-resize
-                            style="width: 100%; height: 220px;"
+                            style="width: 100%; height: 220px"
                           />
                           <ul class="chart-legend">
                             <li
-                              :class="{ 'active': chartFilterType.pv }"
+                              :class="{ active: chartFilterType.pv }"
                               @click="handleChartFilte('pv', k)"
                             >
-                              <span class="dot warning" /> PV
+                              <span class="dot warning" />
+                              PV
                             </li>
                             <li
-                              :class="{ 'active': chartFilterType.uv }"
+                              :class="{ active: chartFilterType.uv }"
                               @click="handleChartFilte('uv', k)"
                             >
-                              <span class="dot primary" /> UV
+                              <span class="dot primary" />
+                              UV
                             </li>
                           </ul>
                         </div>
@@ -172,15 +172,11 @@
               class="paas-module-warp mt20"
               :class="{ 'resource-usage': isCloudNativeApp }"
             >
-              <div
-                v-if="isProcessDataReady && !isChartLoading"
-                class="search-chart-wrap"
-              >
+              <div class="search-chart-wrap">
                 <!-- 进程列表 -->
                 <bk-select
-                  v-if="curEnvProcesses.length"
                   v-model="curProcessName"
-                  style="width: 116px; font-weight: normal;"
+                  style="width: 116px; font-weight: normal"
                   class="fr collapse-select mb10 mr10"
                   :clearable="false"
                   behavior="simplicity"
@@ -195,9 +191,8 @@
                 </bk-select>
                 <!-- 环境列表，该环境没有模块信息，不需要显示 -->
                 <bk-select
-                  v-if="curProcessEnvList.length"
                   v-model="curEnvName"
-                  style="width: 116px; font-weight: normal;"
+                  style="width: 116px; font-weight: normal"
                   class="fr collapse-select mb10 mr10"
                   :clearable="false"
                   behavior="simplicity"
@@ -210,9 +205,10 @@
                     :name="option.label"
                   />
                 </bk-select>
+                <!-- 模块列表 -->
                 <bk-select
                   v-model="curModuleName"
-                  style="width: 116px; font-weight: normal;"
+                  style="width: 116px; font-weight: normal"
                   class="fr collapse-select mb10 mr10"
                   :clearable="false"
                   behavior="simplicity"
@@ -243,7 +239,7 @@
                 <div
                   slot="content"
                   class="middle pl10 pr10"
-                  :class="{ 'pb20': isCloudNativeApp }"
+                  :class="{ pb20: isCloudNativeApp }"
                 >
                   <div data-test-id="summary_box_cpuCharts">
                     <!-- 使用v-show是因为需要及时获取ref并调用 -->
@@ -256,13 +252,13 @@
                         <div class="type-title">
                           {{ $t('CPU使用率') }}
                         </div>
-                        <strong class="title"> {{ $t('单位：核') }} </strong>
+                        <strong class="title">{{ $t('单位：核') }}</strong>
                         <chart
                           v-show="isResourceChartLine"
                           ref="cpuLine"
                           :options="cpuLine"
                           auto-resize
-                          style="width: 100%; height: 235px;"
+                          style="width: 100%; height: 235px"
                         />
                         <div
                           v-if="!isResourceChartLine && !isChartLoading"
@@ -275,14 +271,14 @@
                         <div class="type-title">
                           {{ $t('内存使用量') }}
                         </div>
-                        <strong class="title"> {{ $t('单位：MB') }} </strong>
+                        <strong class="title">{{ $t('单位：MB') }}</strong>
                         <!-- 未部署展示无数据 -->
                         <chart
                           v-show="isResourceChartLine"
                           ref="memLine"
                           :options="memLine"
                           auto-resize
-                          style="width: 100%; height: 235px;"
+                          style="width: 100%; height: 235px"
                         />
                         <div
                           v-if="!isResourceChartLine && !isChartLoading"
@@ -306,12 +302,10 @@
 
           <div
             class="overview-sub-fright"
-            :class="{ 'mt20': isCloudNativeApp }"
+            :class="{ mt20: isCloudNativeApp }"
             data-test-id="summary_content_detail"
           >
-            <dynamic-state
-              :operations-list="operationsList"
-            />
+            <dynamic-state :operations-list="operationsList" />
           </div>
         </template>
       </div>
@@ -319,7 +313,8 @@
   </div>
 </template>
 
-<script>import ECharts from 'vue-echarts/components/ECharts.vue';
+<script>
+import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import overviewTopInfo from './comps/overview-top-info';
@@ -332,6 +327,7 @@ import appTopBar from '@/components/paas-app-bar';
 import { formatDate } from '@/common/tools';
 import dynamicState from './comps/dynamic-state';
 import { cloneDeep } from 'lodash';
+import { mapState } from 'vuex';
 
 const timeMap = {
   '1d': '24h',
@@ -420,7 +416,10 @@ export default {
       },
       engineEnabled: true,
       backendType: 'ingress',
-      envData: [{ name: 'prod', label: i18n.t('生产环境') }, { name: 'stag', label: i18n.t('预发布环境') }],
+      envData: [
+        { name: 'prod', label: i18n.t('生产环境') },
+        { name: 'stag', label: i18n.t('预发布环境') },
+      ],
       activeResource: '1',
       curModuleName: '',
       curEnvName: 'prod',
@@ -439,6 +438,7 @@ export default {
     };
   },
   computed: {
+    ...mapState(['userFeature', 'localLanguage', 'platformFeature']),
     dateFormat() {
       let isInDay = false; // 是否在一天内
       if (this.dateRange.startTime && this.dateRange.endTime) {
@@ -446,8 +446,7 @@ export default {
         const end = this.dateRange.endTime;
 
         const endSeconds = moment(end).valueOf();
-        const oneEndSeconds = moment(start).add(1, 'days')
-          .valueOf(); // 一天后
+        const oneEndSeconds = moment(start).add(1, 'days').valueOf(); // 一天后
         if (oneEndSeconds > endSeconds) {
           isInDay = true;
         }
@@ -455,12 +454,14 @@ export default {
 
       if (this.defaultRange === '1d') {
         return 'MM-DD';
-      } if (this.defaultRange === '1h') {
+      }
+      if (this.defaultRange === '1h') {
         if (isInDay) {
           return 'HH:mm';
         }
         return 'MM-DD HH:mm';
-      } if (this.defaultRange === '5m') {
+      }
+      if (this.defaultRange === '5m') {
         if (isInDay) {
           return 'HH:mm';
         }
@@ -477,7 +478,7 @@ export default {
         if (curProcesses.length) {
           moduleList.push({ name: moduleName });
         }
-      };
+      }
       return moduleList;
     },
     curEnvProcesses() {
@@ -487,7 +488,7 @@ export default {
         if (this.curModuleName === moduleName) {
           processes = this.overViewData[moduleName].envs[this.curEnvName].processes;
         }
-      };
+      }
       if (processes.length) {
         processes = processes.map((process) => {
           const key = Object.keys(process)[0];
@@ -496,21 +497,15 @@ export default {
       }
       return processes;
     },
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
     isCloudApp() {
       return this.curAppInfo.application.type === 'cloud_native';
     },
-    userFeature() {
-      return this.$store.state.userFeature;
-    },
     isResourceMetrics() {
-      return this.curAppInfo.feature.RESOURCE_METRICS;
+      return this.platformFeature.RESOURCE_METRICS;
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
       this.initTopText();
     },
@@ -524,7 +519,7 @@ export default {
             this.userFeature.ANALYTICS && this.showInstanceChart(this.activeModuleId);
             // 资源用量
             this.isResourceMetrics && this.showProcessResource();
-            this.userFeature.PHALANX && this.getAlarmData();
+            this.userFeature.MONITORING && this.getAlarmData();
             this.init();
           });
         }
@@ -543,11 +538,21 @@ export default {
     curModuleName(moduleName) {
       // 当前模块下的环境列表
       this.curProcessEnvList = this.getProcessList();
-      const curEnvData = this.curProcessEnvList.filter(env => env.name === this.curEnvName);
+      const curEnvData = this.curProcessEnvList.filter((env) => env.name === this.curEnvName);
       // 若当前模块没有对应环境的进程，默认选中第一个
       if (!curEnvData.length) {
         this.curEnvName = this.curProcessEnvList.length !== 0 ? this.curProcessEnvList[0].name : 'stag';
       }
+    },
+    curAppModuleList: {
+      handler(modules) {
+        const isProcessListPresent = modules.find((module) => module.name === this.curModuleName);
+        // 当前模块没有运行中的进程处理
+        if (!isProcessListPresent) {
+          this.curModuleName = modules[0].name;
+        }
+      },
+      deep: true,
     },
   },
   created() {
@@ -573,7 +578,7 @@ export default {
         this.trunkUrl = this.curAppModule.repo.trunk_url || '';
         this.sourceType = this.curAppModule.repo.source_type || '';
       }
-      if (this.userFeature.PHALANX) {
+      if (this.userFeature.MONITORING) {
         this.getAlarmData();
       }
     },
@@ -587,7 +592,9 @@ export default {
     initTopText() {
       if (this.isCloudApp) {
         this.topInfo.type = this.$t('云原生应用');
-        this.topInfo.description = this.$t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力');
+        this.topInfo.description = this.$t(
+          '基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力'
+        );
       } else {
         this.topInfo.type = this.$t('普通应用');
         this.topInfo.description = this.$t('平台为该类应用提供应用引擎、增强服务、云API 权限、应用市场等功能');
@@ -595,14 +602,15 @@ export default {
     },
     // 最新动态
     getModuleOperations() {
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/operations/?limit=6`).then((response) => {
-        this.operationsList = [];
-        for (const item of response.results) {
-          item.at_friendly = moment(item.at).startOf('minute')
-            .fromNow();
-          this.operationsList.push(item);
-        }
-      });
+      this.$http
+        .get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/audit/records/?limit=6`)
+        .then((response) => {
+          this.operationsList = [];
+          for (const item of response.results) {
+            item.at_friendly = moment(item.at).startOf('minute').fromNow();
+            this.operationsList.push(item);
+          }
+        });
     },
     getPrcessData() {
       this.$nextTick(() => {
@@ -624,35 +632,37 @@ export default {
     },
 
     /**
-             * 切换process时回调
-             */
+     * 切换process时回调
+     */
     handlerProcessSelecte(type) {
       this.showProcessResource();
     },
 
     /**
-             * 显示图表加载进度
-             */
+     * 显示图表加载进度
+     */
     showProcessLoading() {
       const chart = this.$refs.cpuLine;
       const memChart = this.$refs.memLine;
 
-      chart && chart.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [],
-      });
-      memChart && memChart.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [],
-      });
+      chart &&
+        chart.mergeOptions({
+          xAxis: [
+            {
+              data: [],
+            },
+          ],
+          series: [],
+        });
+      memChart &&
+        memChart.mergeOptions({
+          xAxis: [
+            {
+              data: [],
+            },
+          ],
+          series: [],
+        });
       if (chart) {
         chart.showLoading({
           text: this.$t('正在加载'),
@@ -679,8 +689,8 @@ export default {
     },
 
     /**
-             * 隐藏图表加载进度
-             */
+     * 隐藏图表加载进度
+     */
     hideProcessLoading() {
       const cpuRef = this.$refs.cpuLine;
       const memoryRef = this.$refs.memLine;
@@ -689,10 +699,10 @@ export default {
     },
 
     /**
-             * 显示进程指标数据
-             */
+     * 显示进程指标数据
+     */
     showProcessResource() {
-      const process = this.curEnvProcesses.find(item => item.name === this.curProcessName);
+      const process = this.curEnvProcesses.find((item) => item.name === this.curProcessName);
 
       if (process) {
         this.showProcessLoading();
@@ -714,10 +724,10 @@ export default {
     },
 
     /**
-             * 从接口获取Metric 数据
-             * @param {Object} conf 配置参数
-             * @param {String} type
-             */
+     * 从接口获取Metric 数据
+     * @param {Object} conf 配置参数
+     * @param {String} type
+     */
     async getProcessMetric(conf, type = 'all') {
       this.isResourceChartLine = true;
       const fetchData = (metricType) => {
@@ -761,7 +771,7 @@ export default {
             }
           });
         });
-        limitDatas && (datas.unshift(limitDatas));
+        limitDatas && datas.unshift(limitDatas);
         return datas;
       };
       try {
@@ -802,11 +812,11 @@ export default {
     },
 
     /**
-             * 资源用量图表初始化
-             * @param  {Object} instanceData 数据
-             * @param  {String} type 类型
-             * @param  {Object} ref 图表对象
-             */
+     * 资源用量图表初始化
+     * @param  {Object} instanceData 数据
+     * @param  {String} type 类型
+     * @param  {Object} ref 图表对象
+     */
     renderChart(instanceData, type, ref) {
       this.isResourceChartLine = true;
       const series = [];
@@ -871,8 +881,8 @@ export default {
     },
 
     /**
-             * 清空图表数据
-             */
+     * 清空图表数据
+     */
     clearChart() {
       const cpuRef = this.$refs.cpuLine;
       const memRef = this.$refs.memLine;
@@ -947,32 +957,35 @@ export default {
     },
 
     /**
-             * 显示实例指标数据
-             */
+     * 显示实例指标数据
+     */
     showInstanceChart(module) {
       // 获取对应模块chart实例
       const chartRef = this.getEnvChrtRefs();
-      chartRef && chartRef.forEach((refItem) => {
-        refItem && refItem.mergeOptions({
-          xAxis: [
-            {
-              data: [],
-            },
-          ],
-          series: [],
+      if (chartRef) {
+        chartRef.forEach((refItem) => {
+          if (refItem) {
+            refItem.mergeOptions({
+              xAxis: [
+                {
+                  data: [],
+                },
+              ],
+              series: [],
+            });
+            refItem.showLoading({
+              text: this.$t('正在加载'),
+              color: '#30d878',
+              textColor: '#fff',
+              maskColor: 'rgba(255, 255, 255, 0.8)',
+            });
+            // 避免首次加载出现宽度丢失问题
+            setTimeout(() => {
+              refItem.resize();
+            }, 50);
+          }
         });
-
-        refItem && refItem.showLoading({
-          text: this.$t('正在加载'),
-          color: '#30d878',
-          textColor: '#fff',
-          maskColor: 'rgba(255, 255, 255, 0.8)',
-        });
-        // 避免首次加载出现宽度丢失问题
-        setTimeout(() => {
-          refItem && refItem.resize();
-        }, 50);
-      });
+      }
       // 获取已部署环境的图表数据
       if (this.overViewData[module]) {
         this.envData.forEach((item) => {
@@ -1013,24 +1026,26 @@ export default {
         this.renderEnvChart(env);
       } catch (e) {
         const chartRef = this.getEnvChrtRefs();
-        chartRef && chartRef.forEach((refItem) => {
-          refItem && refItem.hideLoading();
-          if (e.detail && e.detail !== this.$t('未找到。')) {
-            this.$paasMessage({
-              theme: 'error',
-              message: e.detail,
-            });
-          }
-        });
+        if (chartRef) {
+          chartRef.forEach((refItem) => {
+            refItem && refItem.hideLoading();
+            if (e.detail && e.detail !== this.$t('未找到。')) {
+              this.$paasMessage({
+                theme: 'error',
+                message: e.detail,
+              });
+            }
+          });
+        }
       }
     },
 
     /**
-             * 图表初始化
-             * @param  {Object} chartData 数据
-             * @param  {String} type 类型
-             * @param  {Object} ref 图表对象
-             */
+     * 图表初始化
+     * @param  {Object} chartData 数据
+     * @param  {String} type 类型
+     * @param  {Object} ref 图表对象
+     */
     renderEnvChart(env) {
       const series = [];
       const xAxisData = [];
@@ -1096,11 +1111,13 @@ export default {
       setTimeout(() => {
         // 获取对应模块下对应环境的图表实例
         const chartRef = this.getEnvChrtRefs(env);
-        chartRef && chartRef.forEach((chartItem) => {
-          chartItem && chartItem.mergeOptions(this.envChartOption[env], true);
-          chartItem && chartItem.resize();
-          chartItem && chartItem.hideLoading();
-        });
+        if (chartRef) {
+          chartRef.forEach((chartItem) => {
+            chartItem && chartItem.mergeOptions(this.envChartOption[env], true);
+            chartItem && chartItem.resize();
+            chartItem && chartItem.hideLoading();
+          });
+        }
       }, 1000);
     },
 
@@ -1110,7 +1127,7 @@ export default {
       let envs = envMap;
       // 获取对应环境的图表
       if (chartEnv !== 'all') {
-        envs = envMap.filter(env => env === chartEnv);
+        envs = envMap.filter((env) => env === chartEnv);
       }
       envs.forEach((env) => {
         if (this.$refs[env + this.activeModuleId]) {
@@ -1125,7 +1142,10 @@ export default {
     releaseInfoText(env) {
       const appDeployInfo = this.getEnvData(env);
       appDeployInfo.deployment = appDeployInfo.deployment || {};
-      return `${appDeployInfo.deployment.operator} ${this.$t('于')} ${this.smartTime(appDeployInfo.deployment.deploy_time, 'smartShorten')} 
+      return `${appDeployInfo.deployment.operator} ${this.$t('于')} ${this.smartTime(
+        appDeployInfo.deployment.deploy_time,
+        'smartShorten'
+      )} 
                 ${appDeployInfo.is_deployed ? this.$t('部署') : this.$t('下架')}`;
     },
 
@@ -1141,20 +1161,23 @@ export default {
     handleItemClick(env, type, moduleName, $event) {
       $event && $event.stopPropagation();
 
-      const appRouterInfo = env === 'stag' ? {
-        name: 'appDeploy',
-        params: {
-          id: this.appCode,
-        },
-      } : {
-        name: 'appDeployForProd',
-        params: {
-          id: this.appCode,
-        },
-        query: {
-          focus: 'prod',
-        },
-      };
+      const appRouterInfo =
+        env === 'stag'
+          ? {
+              name: 'appDeploy',
+              params: {
+                id: this.appCode,
+              },
+            }
+          : {
+              name: 'appDeployForProd',
+              params: {
+                id: this.appCode,
+              },
+              query: {
+                focus: 'prod',
+              },
+            };
       // 访问
       if (type === 'access') {
         const { url } = this.overViewData[moduleName].envs[env].exposed_link;
@@ -1164,7 +1187,7 @@ export default {
           // 应用编排
           this.toAppOrchestration(env);
         } else {
-          const toModule = this.curAppModuleList.find(module => module.name === moduleName);
+          const toModule = this.curAppModuleList.find((module) => module.name === moduleName);
           if (toModule) {
             // 切换对应模块
             this.$refs.appTopBarRef.handleModuleSelect(toModule);
@@ -1197,7 +1220,7 @@ export default {
         startTime: date[0],
         endTime: date[1],
       };
-      this.curTime = this.dateShortCut.find(t => t.id === id) || {};
+      this.curTime = this.dateShortCut.find((t) => t.id === id) || {};
       this.resourceUsageRange = timeMap[this.curTime.id];
     },
 
@@ -1261,8 +1284,8 @@ export default {
               const targetReplicas = stagProcess[nameStag].target_replicas;
               cpuStag += stagProcess[nameStag].resource_limit_quota.cpu * targetReplicas;
               memStag += stagProcess[nameStag].resource_limit_quota.memory * targetReplicas;
-            };
-          };
+            }
+          }
         }
 
         // 获取 prod processes
@@ -1274,10 +1297,10 @@ export default {
               const targetReplicas = prodProcess[nameProd].target_replicas;
               cpuProd += prodProcess[nameProd].resource_limit_quota.cpu * targetReplicas;
               memProd += prodProcess[nameProd].resource_limit_quota.memory * targetReplicas;
-            };
-          };
+            }
+          }
         }
-      };
+      }
 
       // 转为显示单位
       return {
@@ -1298,7 +1321,7 @@ export default {
       for (const key in data) {
         processesLen += data[key].envs.stag.processes.length;
         processesLen += data[key].envs.prod.processes.length;
-      };
+      }
       return processesLen;
     },
   },
@@ -1307,23 +1330,23 @@ export default {
 
 <style scoped lang="scss">
 @import './overview.scss';
-.ps-default-container{
+.ps-default-container {
   margin: 0px 24px 30px 24px !important;
 }
 </style>
 
 <!-- 折叠板内部样式 -->
 <style lang="scss">
-.paas-module-warp{
+.paas-module-warp {
   .paas-module-item {
     margin-top: 16px;
     border: solid 1px #e6e9ea;
     background: #fff;
-    .icon-angle-right{
+    .icon-angle-right {
       display: none;
     }
   }
-  .collapse-select{
+  .collapse-select {
     background: F5F7FA !important;
   }
   .search-chart-wrap .bk-select .bk-select-name {

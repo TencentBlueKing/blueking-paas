@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 # type: ignore
 """PaaS apiserver service settings
 
@@ -40,23 +39,33 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量比 YAML 配置的优先级更高
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
+
 import copy
 import os
+import ssl
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
+import pymysql
+import urllib3
 from bkpaas_auth.core.constants import ProviderType
 from django.contrib import messages
+from django.db.backends.mysql.features import DatabaseFeatures
 from django.utils.encoding import force_bytes, force_str
+from django.utils.functional import cached_property
+from django.utils.translation import gettext_lazy as _
 from dynaconf import LazySettings, Validator
 from environ import Env
+from moby_distribution.registry.utils import parse_image
 
 from .utils import (
+    cache_redis_sentinel_url,
     get_database_conf,
     get_default_keepalive_options,
     get_paas_service_jwt_clients,
     get_service_remote_endpoints,
+    is_in_celery_worker,
     is_redis_backend,
     is_redis_sentinel_backend,
 )
@@ -74,12 +83,34 @@ settings = LazySettings(
         # Configure minimal required settings
         Validator("BKKRILL_ENCRYPT_SECRET_KEY", must_exist=True),
     ],
-    # Envvar name configs
+    # Env var name configs
     ENVVAR_PREFIX_FOR_DYNACONF="PAAS",
     ENVVAR_FOR_DYNACONF="PAAS_SETTINGS",
 )
 
 _notset = object()
+
+# Patch the SSL module for compatibility with legacy CA credentials.
+# https://stackoverflow.com/questions/72479812/how-to-change-tweak-python-3-10-default-ssl-settings-for-requests-sslv3-alert
+urllib3.util.ssl_.DEFAULT_CIPHERS = "ALL:@SECLEVEL=1"
+
+
+class PatchFeatures:
+    """Patched Django Features"""
+
+    @cached_property
+    def minimum_database_version(self):
+        if self.connection.mysql_is_mariadb:  # noqa
+            return (10, 4)
+        else:
+            return (5, 7)
+
+
+# Django 4.2+ 不再官方支持 Mysql 5.7，但目前 Django 仅是对 5.7 做了软性的不兼容改动，
+# 在没有使用 8.0 特异的功能时，对 5.7 版本的使用无影响，为兼容存量的 Mysql 5.7 DB 做此 Patch
+DatabaseFeatures.minimum_database_version = PatchFeatures.minimum_database_version  # noqa
+
+pymysql.install_as_MySQLdb()
 
 # 蓝鲸数据库内容加密私钥
 # 使用 `from cryptography.fernet import Fernet; Fernet.generate_key()` 生成随机秘钥
@@ -113,8 +144,9 @@ INSTALLED_APPS = [
     "corsheaders",
     "webpack_loader",
     "django_prometheus",
-    "paasng.misc.feature_flags",
+    "paasng.misc.plat_config",
     "paasng.infras.accounts",
+    "paasng.infras.sysapi_client",
     "paasng.platform.applications",
     "paasng.accessories.log",
     "paasng.platform.modules",
@@ -131,6 +163,8 @@ INSTALLED_APPS = [
     "paasng.platform.sourcectl",
     "paasng.accessories.servicehub",
     "paasng.accessories.services",
+    # dev_sandbox
+    "paasng.accessories.dev_sandbox",
     "paasng.platform.templates",
     "paasng.plat_admin.api_doc",
     "paasng.plat_admin.admin42",
@@ -146,7 +180,6 @@ INSTALLED_APPS = [
     "paasng.infras.iam.members",
     "paasng.infras.bkmonitorv3",
     "paasng.platform.declarative",
-    "paasng.platform.scene_app",
     "paasng.platform.smart_app",
     "paasng.bk_plugins.bk_plugins",
     "paasng.bk_plugins.pluginscenter",
@@ -157,6 +190,7 @@ INSTALLED_APPS = [
     "paasng.plat_admin.initialization",
     # Put "scheduler" in the last position so models in other apps can be ready
     "paasng.platform.scheduler",
+    "paasng.misc.audit",
     "revproxy",
     # workloads apps
     "paas_wl.bk_app.applications",
@@ -180,6 +214,11 @@ INSTALLED_APPS = [
 EXTRA_INSTALLED_APPS = settings.get("EXTRA_INSTALLED_APPS", [])
 INSTALLED_APPS += EXTRA_INSTALLED_APPS
 
+# The "perm_insure" module helps us to make sure that the permission is configured
+# correctly, put it at the end of the list to make sure that all URL confs have been
+# added to the root url before the perm checking starts.
+INSTALLED_APPS.append("paasng.infras.perm_insure")
+
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "paasng.infras.accounts.middlewares.RequestIDProvider",  # 注入 RequestID
@@ -196,7 +235,7 @@ MIDDLEWARE = [
     "paasng.utils.middlewares.WhiteNoiseRespectPrefixMiddleware",
     "bkpaas_auth.middlewares.CookieLoginMiddleware",
     "paasng.infras.accounts.middlewares.SiteAccessControlMiddleware",
-    "paasng.infras.accounts.middlewares.PrivateTokenAuthenticationMiddleware",
+    "paasng.infras.sysapi_client.middlewares.PrivateTokenAuthenticationMiddleware",
     # API Gateway related
     "apigw_manager.apigw.authentication.ApiGatewayJWTGenericMiddleware",  # JWT 认证
     "apigw_manager.apigw.authentication.ApiGatewayJWTAppMiddleware",  # JWT 透传的应用信息
@@ -205,10 +244,7 @@ MIDDLEWARE = [
     "paasng.infras.accounts.middlewares.WrapUsernameAsUserMiddleware",
     "apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware",  # JWT 透传的用户信息
     # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
-    "paasng.infras.accounts.middlewares.AuthenticatedAppAsUserMiddleware",
-    # Internal service authentication related
-    "blue_krill.auth.client.VerifiedClientMiddleware",
-    "paasng.infras.accounts.internal.user.SysUserFromVerifiedClientMiddleware",
+    "paasng.infras.sysapi_client.middlewares.AuthenticatedAppAsClientMiddleware",
     # Other utilities middlewares
     "paasng.utils.middlewares.AutoDisableCSRFMiddleware",
     "paasng.utils.middlewares.APILanguageMiddleware",
@@ -253,7 +289,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-# https://docs.djangoproject.com/en/1.10/topics/i18n/
+# https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = "zh-cn"
 LANGUAGES = (
@@ -276,7 +312,7 @@ LOCALE_PATHS = (os.path.join(BASE_DIR, "locale"),)
 CHANGELOG_PATH = os.path.join(BASE_DIR, "changelog")
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.10/howto/static-files/
+# https://docs.djangoproject.com/en/4.2/howto/static-files/
 SITE_URL = "/"
 STATIC_ROOT = str(BASE_DIR / "public" / "static")
 
@@ -352,87 +388,146 @@ MESSAGE_TAGS = {messages.ERROR: "danger"}
 
 LOG_LEVEL = settings.get("LOG_LEVEL", default="INFO")
 
-# 配置该 handler 后，所有日志等将被送往该 Redis 管道
-LOGGING_REDIS_HANDLER = settings.get("LOGGING_REDIS_HANDLER")
+# Get the logging directory config, if configured the logs will be written to local directory
+# in the configured format(json/text).
+#
+# 存放日志文件的目录，默认不打印任何日志文件
+LOGGING_DIRECTORY = settings.get("LOGGING_DIRECTORY", default=None)
+# 日志文件格式，可选值为：json/text
+LOGGING_FILE_FORMAT = settings.get("LOGGING_FILE_FORMAT", default="json")
 
-if not LOGGING_REDIS_HANDLER:
-    _redis_handler = {"level": "DEBUG", "class": "logging.NullHandler"}
+if LOGGING_DIRECTORY is None:
+    logging_to_console = True
+    logging_directory = None
 else:
-    _redis_handler = LOGGING_REDIS_HANDLER
+    logging_to_console = False
+    # The dir allows both absolute and relative path, when it's relative, combine
+    # the value with project's base directory
+    logging_directory = Path(BASE_DIR) / Path(LOGGING_DIRECTORY)
+    logging_directory.mkdir(exist_ok=True)
 
-_default_handlers = ["console", "logstash_redis"]
+# 是否总是打印日志到控制台，默认关闭
+LOGGING_ALWAYS_CONSOLE = settings.get("LOGGING_ALWAYS_CONSOLE", default=False)
+if LOGGING_ALWAYS_CONSOLE:
+    logging_to_console = True
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "%(levelname)s [%(asctime)s] [%(request_id)s] %(name)s(ln:%(lineno)d): %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
-        "simple": {"format": "%(levelname)s %(message)s"},
-    },
-    "filters": {
-        "request_id": {"()": "paasng.utils.logging.RequestIDFilter"},
-    },
-    "handlers": {
-        "null": {"level": LOG_LEVEL, "class": "logging.NullHandler"},
-        "mail_admins": {"level": LOG_LEVEL, "class": "django.utils.log.AdminEmailHandler"},
+
+def build_logging_config(log_level: str, to_console: bool, file_directory: Optional[Path], file_format: str) -> Dict:
+    """Build the global logging config dict.
+
+    :param log_level: The log level.
+    :param to_console: If True, output the logs to the console.
+    :param file_directory: If the value is not None, output the logs to the given directory.
+    :param file_format: The format of the logging file, "json" or "text".
+    :return: The logging config dict.
+    """
+
+    def _build_file_handler(log_path: Path, filename: str, format: str) -> Dict:
+        formatter = "verbose_json" if format == "json" else "verbose"
+        return {
+            "class": "concurrent_log_handler.ConcurrentRotatingFileHandler",
+            "level": log_level,
+            "formatter": formatter,
+            "filename": str(log_path / filename),
+            # Set max file size to 100MB
+            "maxBytes": 100 * 1024 * 1024,
+            "backupCount": 5,
+            "filters": ["request_id"],
+        }
+
+    handlers = []
+    handlers_config: Dict[str, Any] = {
+        "null": {"level": log_level, "class": "logging.NullHandler"},
+        "mail_admins": {"level": log_level, "class": "django.utils.log.AdminEmailHandler"},
         "console": {
-            "level": LOG_LEVEL,
+            "level": log_level,
             "class": "logging.StreamHandler",
             "formatter": "verbose",
             "filters": ["request_id"],
         },
-        "logstash_redis": _redis_handler,
-    },
-    "root": {"handlers": _default_handlers, "level": LOG_LEVEL, "propagate": False},
-    "loggers": {
-        "django": {"handlers": ["null"], "level": LOG_LEVEL, "propagate": False},
-        "django.request": {"handlers": _default_handlers, "level": "ERROR", "propagate": False},
-        "django.security": {"level": "INFO"},
-        # 常用模块日志级别
-        "paasng": {"level": "NOTSET"},
-        "commands": {"handlers": _default_handlers, "level": LOG_LEVEL, "propagate": False},
-        # 设置第三方模块日志级别，避免日志过多
-        "bkpaas_auth": {"level": "WARNING"},
-        "apscheduler": {"level": "WARNING"},
-        "requests": {"level": "ERROR"},
-        "urllib3.connectionpool": {"level": "ERROR", "handlers": ["console"], "propagate": False},
-        "boto3": {"level": "WARNING", "handlers": ["console"], "propagate": False},
-        "botocore": {"level": "WARNING", "handlers": ["console"], "propagate": False},
-        "console": {"level": "WARNING", "handlers": ["console"], "propagate": False},
-        "iam": {"level": settings.get("IAM_LOG_LEVEL", "ERROR"), "handlers": _default_handlers, "propagate": False},
-    },
-}
-
-if settings.get("LOGGING_ENABLE_SQL_QUERIES", False):
-    LOGGING["loggers"]["django.db.backends"] = {  # type: ignore
-        "handlers": _default_handlers,
-        "level": LOG_LEVEL,
-        "propagate": True,
     }
+    if to_console:
+        handlers.append("console")
+
+    if file_directory:
+        if file_format in ("json", "text"):
+            base_filename = "main-celery" if is_in_celery_worker() else "main"
+            filename = f"{base_filename}-{file_format}.log"
+            handlers.append("file")
+            handlers_config["file"] = _build_file_handler(file_directory, filename, file_format)
+        else:
+            raise ValueError(f"Invalid file_format: {file_format}")
+
+    logging_dict = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "verbose": {
+                "format": "%(levelname)s [%(asctime)s] [%(request_id)s] %(name)s(ln:%(lineno)d): %(message)s",
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+            },
+            "verbose_json": {
+                "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+                "fmt": (
+                    "%(levelname)s %(asctime)s %(pathname)s %(lineno)d %(funcName)s %(process)d %(thread)d %(message)s"
+                ),
+            },
+            "simple": {"format": "%(levelname)s %(message)s"},
+        },
+        "filters": {
+            "request_id": {"()": "paasng.utils.logging.RequestIDFilter"},
+        },
+        "handlers": handlers_config,
+        "root": {"handlers": handlers, "level": log_level, "propagate": False},
+        "loggers": {
+            "django": {"handlers": ["null"], "level": log_level, "propagate": False},
+            "django.request": {"handlers": handlers, "level": "ERROR", "propagate": False},
+            "django.security": {"level": "INFO"},
+            # 常用模块日志级别
+            "paasng": {"level": "NOTSET"},
+            "commands": {"handlers": handlers, "level": log_level, "propagate": False},
+            # 设置第三方模块日志级别，避免日志过多
+            "bkpaas_auth": {"level": "WARNING"},
+            "apscheduler": {"level": "WARNING"},
+            "requests": {"level": "ERROR"},
+            "urllib3.connectionpool": {"level": "ERROR", "handlers": ["console"], "propagate": False},
+            "boto3": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+            "botocore": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+            "console": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+            "iam": {
+                "level": settings.get("IAM_LOG_LEVEL", "ERROR"),
+                "handlers": handlers,
+                "propagate": False,
+            },
+        },
+    }
+    if settings.get("LOGGING_ENABLE_SQL_QUERIES", False):
+        logging_dict["loggers"]["django.db.backends"] = {  # type: ignore
+            "handlers": handlers,
+            "level": log_level,
+            "propagate": True,
+        }
+    return logging_dict
 
 
-# 通知插件
-NOTIFICATION_PLUGIN_CLASSES = settings.get(
-    "NOTIFICATION_PLUGIN_CLASSES",
-    {
-        "mail": "paasng.utils.notification_plugins.MailNotificationPlugin",
-        "sms": "paasng.utils.notification_plugins.SMSNotificationPlugin",
-        "wechat": "paasng.utils.notification_plugins.WeChatNotificationPlugin",
-    },
-)
+LOGGING = build_logging_config(LOG_LEVEL, logging_to_console, logging_directory, LOGGING_FILE_FORMAT)
 
+# 发送通知的渠道，如果没有配置，则仅记录日志并不调用发送通知的 API
+BK_CMSI_ENABLED_METHODS = settings.get("BK_CMSI_ENABLED_METHODS", ["send_mail", "send_sms", "send_weixin"])
 
 # ------------------------
 # Django 基础配置（自定义）
 # ------------------------
 
-DATABASES = {
-    "default": get_database_conf(settings),
-    "workloads": get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"),
-}
+DATABASES = {}
+
+# When running "collectstatic" command, the database config is not available, so we
+# make it optional.
+if default_db_conf := get_database_conf(settings):
+    DATABASES["default"] = default_db_conf
+if wl_db_conf := get_database_conf(settings, encrypted_url_var="WL_DATABASE_URL", env_var_prefix="WL_"):
+    DATABASES["workloads"] = wl_db_conf
+
 DATABASE_ROUTERS = ["paasng.core.core.storages.dbrouter.WorkloadsDBRouter"]
 
 # == Redis 相关配置项，该 Redis 服务将被用于：缓存
@@ -452,12 +547,19 @@ REDIS_CONNECTION_OPTIONS = {
 }
 
 # == 缓存相关配置项
-# DEFAULT_CACHE_CONFIG 优先级最高，若无该配置则检查是否配置 Redis，若存在则作为缓存，否则使用临时文件作为缓存
+# DEFAULT_CACHE_CONFIG 优先级最高，若无该配置则检查是否配置 Redis，若存在则作为缓存, 否则使用临时文件作为缓存(仅适用于本地开发)
+# WARNING: 生产环境请配置远程服务缓存, 如 RedisCache, DatabaseCache 等, 以保证多副本多 worker 时, 缓存数据一致, 否则可能无法正常工作
 DEFAULT_CACHE_CONFIG = settings.get("DEFAULT_CACHE_CONFIG")
 if DEFAULT_CACHE_CONFIG:
     CACHES = {"default": DEFAULT_CACHE_CONFIG}
 elif REDIS_URL:
-    CACHES = {"default": Env.cache_url_config(REDIS_URL)}
+    CACHES = {
+        "default": (
+            cache_redis_sentinel_url(REDIS_URL, SENTINEL_MASTER_NAME, SENTINEL_PASSWORD)
+            if is_redis_sentinel_backend(REDIS_URL)
+            else Env.cache_url_config(REDIS_URL)
+        )
+    }
 else:
     CACHES = {
         "default": {"BACKEND": "django.core.cache.backends.filebased.FileBasedCache", "LOCATION": "/tmp/django_cache"}
@@ -470,15 +572,23 @@ CSRF_COOKIE_NAME = "bk_paas3_csrftoken"
 FORCE_SCRIPT_NAME = settings.get("FORCE_SCRIPT_NAME")
 CSRF_COOKIE_DOMAIN = settings.get("CSRF_COOKIE_DOMAIN")
 SESSION_COOKIE_DOMAIN = settings.get("SESSION_COOKIE_DOMAIN")
+# Django 4.0 会参考 Origin Header，如果使用了 CSRF_COOKIE_NAME，就需要在 settings 中额外配置 CSRF_TRUSTED_ORIGINS
+# 且必须配置协议和域名
+# https://docs.djangoproject.com/en/dev/releases/4.0/#format-change
+BK_COOKIE_DOMAIN = settings.get("BK_COOKIE_DOMAIN")
+# 正式环境 CSRF_COOKIE_DOMAIN 并未设置，所以默认值直接用通配符
+CSRF_TRUSTED_ORIGINS = settings.get(
+    "CSRF_TRUSTED_ORIGINS", [f"http://*{BK_COOKIE_DOMAIN}", f"https://*{BK_COOKIE_DOMAIN}"]
+)
 
-# 蓝鲸登录票据在Cookie中的名称，权限中心 API 未接入 APIGW，访问时需要提供登录态信息
+# 蓝鲸登录票据在 Cookie 中的名称，权限中心 API 未接入 APIGW，访问时需要提供登录态信息
 BK_COOKIE_NAME = settings.get("BK_COOKIE_NAME", "bk_token")
 
 # 允许通过什么域名访问服务，详见：https://docs.djangoproject.com/zh-hans/3.2/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = settings.get("ALLOWED_HOSTS", ["*"])
 
-# == CORS 请求跨域相关配置
-#
+# CORS 请求跨域相关配置
+
 # CORS 允许的来源
 CORS_ORIGIN_REGEX_WHITELIST = settings.get("CORS_ORIGIN_REGEX_WHITELIST", [])
 
@@ -487,7 +597,11 @@ CORS_ORIGIN_ALLOW_ALL = settings.get("CORS_ORIGIN_ALLOW_ALL", False)
 # 默认允许通过通过跨域请求传递 Cookie，默认允许
 CORS_ALLOW_CREDENTIALS = True
 
-# == Celery 相关配置
+# 跨域请求弹窗策略
+# https://docs.djangoproject.com/en/4.2/topics/security/#cross-origin-opener-policy
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "unsafe-none"
+
+# ============================ Celery 相关配置 ============================
 
 CELERY_BROKER_URL = settings.get("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = settings.get("CELERY_RESULT_BACKEND", REDIS_URL)
@@ -496,7 +610,7 @@ if settings.get("CELERY_BROKER_HEARTBEAT", _notset) != _notset:
     CELERY_BROKER_HEARTBEAT = settings.get("CELERY_BROKER_HEARTBEAT")
 
 # Celery 格式 / 时区相关配置
-CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Asia/Shanghai"
@@ -523,6 +637,18 @@ if is_redis_sentinel_backend(CELERY_RESULT_BACKEND):
         "sentinel_kwargs": {"password": settings.get("CELERY_RESULT_BACKEND_SENTINEL_PASSWORD", SENTINEL_PASSWORD)},
     }
 
+# Celery TLS 证书配置
+CELERY_BROKER_USE_SSL = settings.get("CELERY_BROKER_USE_SSL") or None
+
+if CELERY_BROKER_USE_SSL and isinstance(CELERY_BROKER_USE_SSL, dict):
+    for k, v in CELERY_BROKER_USE_SSL.items():
+        # 环境变量中只会将其设置为 bool 值，这里需要手动转换成 ssl 的枚举类值
+        # 兼容 amqp -> cert_reqs, redis -> ssl_cert_reqs 两种 key
+        # ref: https://docs.celeryq.dev/en/stable/userguide/configuration.html#broker-use-ssl
+        if k in ["cert_reqs", "ssl_cert_reqs"]:
+            # 只有显式指定为 False，才允许跳过证书检查
+            CELERY_BROKER_USE_SSL[k] = ssl.CERT_NONE if v is False else ssl.CERT_REQUIRED
+
 # Celery 队列名称
 CELERY_TASK_DEFAULT_QUEUE = os.environ.get("CELERY_TASK_DEFAULT_QUEUE", "celery")
 
@@ -536,6 +662,9 @@ UNIQUE_ID_GEN_FUNC = "paasng.accessories.services.utils.gen_unique_id"
 # 调用蓝鲸 API 的鉴权信息（BK_APP_CODE 用固定值）
 BK_APP_CODE = settings.get("BK_APP_CODE", "bk_paas3")
 BK_APP_SECRET = settings.get("BK_APP_SECRET", "")
+
+# 是否启用多租户模式，本配置项仅支持在初次部署时配置，部署后不支持动态调整
+ENABLE_MULTI_TENANT_MODE = settings.get("ENABLE_MULTI_TENANT_MODE", False)
 
 # PaaS 2.0 在权限中心注册的系统ID （并非是平台的 Code）
 IAM_SYSTEM_ID = settings.get("IAM_SYSTEM_ID", default="bk_paas")
@@ -554,7 +683,12 @@ BK_IAM_MIGRATION_APP_NAME = "bkpaas_iam_migration"
 # 跳过初始化已有应用数据到权限中心（注意：仅跳过初始化数据，所有权限相关的操作还是依赖权限中心）
 BK_IAM_SKIP = settings.get("BK_IAM_SKIP", False)
 
-BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get("BKAUTH_DEFAULT_PROVIDER_TYPE", "BK")
+# IAM 权限生效时间（单位：秒）
+# 权限中心的用户组授权是异步行为，即创建用户组，添加用户，对组授权后需要等待一段时间（10-20秒左右）才能鉴权
+# 因此需要在应用创建后的一定的时间内，对创建者（拥有应用最高权限）的操作进行权限豁免以保证功能可正常使用
+# 退出用户组同理，因此在退出的一定时间内，需要先 exclude 掉避免退出后还可以看到应用的问题
+IAM_PERM_EFFECTIVE_TIMEDELTA = settings.get("BK_IAM_PERM_EFFECTIVE_TIMEDELTA", 5 * 60)
+
 
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项
 BK_COMPONENT_API_URL = settings.get("BK_COMPONENT_API_URL", "")
@@ -581,20 +715,8 @@ METRIC_CLIENT_TOKEN_DICT = settings.get("METRIC_CLIENT_TOKEN_DICT", {})
 # 是否默认允许创建 Smart 应用
 IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT", True)
 
-# 是否默认允许创建云原生应用
-IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT = settings.get("IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT", False)
-
-# 云原生应用的默认集群名称
-CLOUD_NATIVE_APP_DEFAULT_CLUSTER = settings.get("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", "")
-
-# 新建的 lesscode 应用是否为云原生应用
-LESSCODE_APP_USE_CLOUD_NATIVE_TYPE = settings.get("LESSCODE_APP_USE_CLOUD_NATIVE_TYPE", True)
-
-# 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
-SOURCE_PACKAGE_APP_CLOUD_NATIVE = settings.get("SOURCE_PACKAGE_APP_CLOUD_NATIVE", True)
-
-# 新建插件应用是否为云原生应用，包括开发者中心页面创建的，插件开发者中心 API 创建的
-PLUGIN_APP_USE_CLOUD_NATIVE_TYPE = settings.get("PLUGIN_APP_USE_CLOUD_NATIVE_TYPE", True)
+# 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称
+MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER = settings.get("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER", "")
 
 # 开发者中心使用的 k8s 集群组件（helm chart 名称）
 BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(
@@ -606,6 +728,9 @@ BKPAAS_K8S_CLUSTER_COMPONENTS = settings.get(
         "bcs-general-pod-autoscaler",
     ],
 )
+
+# 开发者安装的集群组件 Helm 仓库名（默认为 BCS 的公共仓库 -> public-repo）
+CLUSTER_COMPONENT_HELM_REPO = settings.get("CLUSTER_COMPONENT_HELM_REPO", "public-repo")
 
 # ---------------
 # HealthZ 配置
@@ -675,6 +800,11 @@ RGW_STORAGE_BUCKET_NAME = "app-logo"
 
 # 当配置该项时，使用 BK-Repo 而不是 S3 作为 BlobStore 存储
 BLOBSTORE_BKREPO_CONFIG = settings.get("BLOBSTORE_BKREPO_CONFIG")
+# bkrepo 项目名称，仅在创建项目时使用。bkrepo 的项目 ID 在 BLOBSTORE_BKREPO_CONFIG["PROJECT"] 中定义
+# NOTE: 按目前 bkrepo 的规则，启用/关闭多租户模式的情况下:
+# 关闭多租户: 项目 ID == 项目名称
+# 启用多租户: 项目 ID == f"{租户 ID}_{项目名称}"
+BLOBSTORE_BKREPO_PROJECT_NAME = settings.get("BLOBSTORE_BKREPO_PROJECT_NAME", "bkpaas")
 
 # 增强服务 LOGO bucket
 SERVICE_LOGO_BUCKET = settings.get("SERVICE_LOGO_BUCKET", "bkpaas3-platform-assets")
@@ -741,16 +871,31 @@ BK_CI_URL = settings.get("BK_CI_URL", "")
 BK_CODECC_URL = settings.get("BK_CODECC_URL", "")
 BK_TURBO_URL = settings.get("BK_TURBO_URL", "")
 BK_PIPELINE_URL = settings.get("BK_PIPELINE_URL", "")
+BK_NODEMAN_URL = settings.get("BK_NODEMAN_URL", "")
+BK_BCS_URL = settings.get("BK_BCS_URL", "")
+BK_BSCP_URL = settings.get("BK_BSCP_URL", "")
+BK_AUDIT_URL = settings.get("BK_AUDIT_URL", "")
+# 蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径
+BK_SHARED_RES_URL = settings.get("BK_SHARED_RES_URL", "")
 
-BK_PLATFORM_URLS = settings.get(
-    "BK_PLATFORM_URLS",
+# 兼容 PaaS 2.0 注入的内置环境变量，确保应用迁移到 PaaS 3.0 后内置系统环境变量仍然有效
+BK_PAAS2_PLATFORM_ENVS = settings.get(
+    "BK_PAAS2_PLATFORM_ENVS",
     {
-        # 旧版 IAM 地址，目前已废弃
-        "BK_IAM_INNER_HOST": settings.get("BK_IAM_INNER_URL", "http://:"),
-        "BK_IAM_V3_APP_CODE": settings.get("BK_IAM_V3_APP_CODE", "bk_iam"),
-        "BK_IAM_V3_INNER_HOST": BK_IAM_V3_INNER_URL,
-        "BK_CC_HOST": BK_CC_URL,
-        "BK_JOB_HOST": BK_JOB_URL,
+        "BK_IAM_INNER_HOST": {
+            "value": settings.get("BK_IAM_INNER_URL", "http://:"),
+            "description": _("蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"),
+        },
+        "BK_IAM_V3_APP_CODE": {
+            "value": settings.get("BK_IAM_V3_APP_CODE", "bk_iam"),
+            "description": _("蓝鲸权限中心的应用ID"),
+        },
+        "BK_IAM_V3_INNER_HOST": {
+            "value": BK_IAM_V3_INNER_URL,
+            "description": _("蓝鲸权限中心内网访问地址，建议切换为 BKPAAS_IAM_URL"),
+        },
+        "BK_CC_HOST": {"value": BK_CC_URL, "description": _("蓝鲸配置平台访问地址，建议切换为 BKPAAS_CC_URL")},
+        "BK_JOB_HOST": {"value": BK_JOB_URL, "description": _("蓝鲸作业平台访问地址，建议切换为 BKPAAS_JOB_URL")},
     },
 )
 
@@ -790,9 +935,7 @@ DEFAULT_REGION_TEMPLATE = {
     "basic_info": {
         "description": "默认版",
         "link_production_app": BK_CONSOLE_URL + "?app={code}",
-        "link_engine_app": "http://example.com/{region}-{name}/",
         "extra_logo_bucket_info": {},
-        "deploy_ver_for_update_svn_account": "default",
         "legacy_deploy_version": "default",
         "built_in_config_var": {
             "LOGIN_URL": {
@@ -805,37 +948,42 @@ DEFAULT_REGION_TEMPLATE = {
             },
         },
     },
-    "entrance_config": {
-        # - 1: 子路径模式
-        # - 2: 子域名模式
-        "exposed_url_type": 1,
-        "manually_upgrade_to_subdomain_allowed": False,
-    },
-    "mul_modules_config": {"creation_allowed": True},
     "enabled_feature_flags": [],
     # 应用是否需要写入蓝鲸体系其他系统访问地址的环境变量
     "provide_env_vars_platform": True,
-    # 是否允许部署“蓝鲸运维开发平台提供源码包”
-    "allow_deploy_app_by_lesscode": True,
 }
 
 REGION_CONFIGS = settings.get("REGION_CONFIGS", {"regions": [copy.deepcopy(DEFAULT_REGION_TEMPLATE)]})
 
 # 蓝鲸 OAuth 服务地址（用于纳管蓝鲸应用 bk_app_code/bk_app_secret/）
-ENABLE_BK_OAUTH = settings.get("ENABLE_BK_OAUTH", False)
 BK_OAUTH_API_URL = settings.get("BK_OAUTH_API_URL", "http://localhost:8080")
+
 
 # --------
 # 用户鉴权模块 bkpaas_auth SDK 相关配置
 # --------
+
 # 解析通过 API Gateway 的请求，该值为空时跳过解析
 APIGW_PUBLIC_KEY = settings.get("APIGW_PUBLIC_KEY", "")
 
+# 是否启用多租户模式, 需要和 ENABLE_MULTI_TENANT_MODE 保持一致
+BKAUTH_ENABLE_MULTI_TENANT_MODE = ENABLE_MULTI_TENANT_MODE
+
+BKAUTH_DEFAULT_PROVIDER_TYPE = settings.get("BKAUTH_DEFAULT_PROVIDER_TYPE", "BK")
 BKAUTH_BACKEND_TYPE = settings.get("BKAUTH_BACKEND_TYPE", "bk_token")
 BKAUTH_TOKEN_APP_CODE = settings.get("BKAUTH_TOKEN_APP_CODE", BK_APP_CODE)
 BKAUTH_TOKEN_SECRET_KEY = settings.get("BKAUTH_TOKEN_SECRET_KEY", BK_APP_SECRET)
 
+# 如果当前环境没有 bk-login 网关，则设置 BKAUTH_USER_INFO_APIGW_URL 为空字符串, bkpaas_auth 将使用 BKAUTH_USER_COOKIE_VERIFY_URL
+# 如果设置了有效的 BKAUTH_USER_INFO_APIGW_URL, BKAUTH_USER_COOKIE_VERIFY_URL 配置将被忽略, 使用网关进行用户身份校验
+# 多租户模式下(BKAUTH_ENABLE_MULTI_TENANT_MODE=True)必须设置有效的 BKAUTH_USER_INFO_APIGW_URL, 否则无法使用租户功能
+BKAUTH_BK_LOGIN_APIGW_STAGE = settings.get("BKAUTH_BK_LOGIN_APIGW_STAGE", "prod")
+BKAUTH_USER_INFO_APIGW_URL = settings.get(
+    "BKAUTH_USER_INFO_APIGW_URL",
+    f"{BK_API_URL_TMPL.format(api_name='bk-login')}/{BKAUTH_BK_LOGIN_APIGW_STAGE}/login/api/v3/open/bk-tokens/userinfo/",
+)
 BKAUTH_USER_COOKIE_VERIFY_URL = settings.get("BKAUTH_USER_COOKIE_VERIFY_URL", f"{BK_LOGIN_API_URL}/api/v3/is_login/")
+
 BKAUTH_TOKEN_USER_INFO_ENDPOINT = settings.get(
     "BKAUTH_TOKEN_USER_INFO_ENDPOINT", f"{BK_COMPONENT_API_URL}/api/c/compapi/v2/bk_login/get_user/"
 )
@@ -873,13 +1021,12 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = settings.get("IS_ALLOW_CREATE_BK_PLUGIN_APP", Fa
 # 是否开启插件开发功能
 IS_ALLOW_PLUGIN_CENTER = settings.get("IS_ALLOW_PLUGIN_CENTER", False)
 
-# [region-aware] 是否允许用户创建插件应用
-BK_PLUGIN_CONFIG = settings.get("BK_PLUGIN_CONFIG", {"allow_creation": IS_ALLOW_CREATE_BK_PLUGIN_APP})
-
 # 管理插件应用的 API 网关时所使用的配置：
 BK_PLUGIN_APIGW_SERVICE_STAGE = settings.get("BK_PLUGIN_APIGW_SERVICE_STAGE", "prod")  # 环境（stage）
 BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE = settings.get("BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE", "default")  # 用户类型
 
+# 插件仓库的可见范围:私有项目 visibility_level = 0; 公共项目 visibility_level = 10
+PLUGIN_VISIBILTY_LEVEL = settings.get("PLUGIN_VISIBILTY_LEVEL", 10)
 
 # -------------
 # 引擎相关配置项
@@ -943,12 +1090,21 @@ ENGINE_OFFLINE_RESUMABLE_SECS = 60
 # == 应用运行时相关配置
 #
 # 默认运行时镜像名称
-DEFAULT_RUNTIME_IMAGES = settings.get("DEFAULT_RUNTIME_IMAGES", {DEFAULT_REGION_NAME: "blueking"})
+DEFAULT_RUNTIME_IMAGES = settings.get("DEFAULT_RUNTIME_IMAGES", "blueking")
+
+# ------------------
+# CI 相关配置
+# ------------------
+
+# 代码检查配置
+CODE_CHECK_CONFIGS = settings.get("CODE_CHECK_CONFIGS", {})
 
 # 开发者中心在蓝盾的项目 ID
 BK_CI_PAAS_PROJECT_ID = settings.get("BK_CI_PAAS_PROJECT_ID", "bk_paas3")
 # 云原生应用构建流水线 ID
 BK_CI_BUILD_PIPELINE_ID = settings.get("BK_CI_BUILD_PIPELINE_ID", "")
+# 云原生应用构建流水线调用用户（应使用虚拟账号）
+BK_CI_CLIENT_USERNAME = settings.get("BK_CI_CLIENT_USERNAME", "blueking")
 
 # ------------
 # 增强服务相关
@@ -971,14 +1127,6 @@ SERVICE_REMOTE_ENDPOINTS: List[Dict] = get_service_remote_endpoints(settings)
 if hasattr(SERVICE_REMOTE_ENDPOINTS, "to_list"):
     SERVICE_REMOTE_ENDPOINTS = SERVICE_REMOTE_ENDPOINTS.to_list()
 
-# 无须用户关心的保留服务规格
-SERVICE_PROTECTED_SPEC_NAMES = ["app_zone"]
-
-# 集群名与 app_zone 的映射，app_zone 会在应用申请增强服务实例时用到
-# 其默认值为 universal。如果你需要为集群配置特殊值，也可修改该配置项，
-# 比如 APP_ZONE_CLUSTER_MAPPINGS = {"main-cluster": "another-zone"}
-APP_ZONE_CLUSTER_MAPPINGS = settings.get("APP_ZONE_CLUSTER_MAPPINGS", {})
-
 # ---------------
 # 应用市场相关配置
 # ---------------
@@ -989,17 +1137,6 @@ BK_CONSOLE_DBCONF = get_database_conf(
 
 # 是否需要填写应用联系人
 APP_REQUIRE_CONTACTS = settings.get("APP_REQUIRE_CONTACTS", False)
-
-# ------------------
-# 应用监控服务相关配置
-# ------------------
-
-# 监控服务 phalanx 地址
-PHALANX_URL = settings.get("PHALANX_URL", "http://localhost:8080")
-
-# 监控服务 phalanx 访问 token
-PHALANX_AUTH_TOKEN = settings.get("PHALANX_AUTH_TOKEN", "")
-
 
 # --------------
 # 平台日志相关配置
@@ -1036,7 +1173,9 @@ BKLOG_CONFIG = settings.get(
 )
 
 # 日志 ES 服务地址
-ELASTICSEARCH_HOSTS = settings.get("ELASTICSEARCH_HOSTS", [{"host": "localhost", "port": "9200"}])
+ELASTICSEARCH_HOSTS = settings.get(
+    "ELASTICSEARCH_HOSTS", [{"host": "localhost", "port": "9200", "http_auth": "admin:blueking"}]
+)
 
 # 日志 ES 搜索超时时间
 DEFAULT_ES_SEARCH_TIMEOUT = 30
@@ -1101,10 +1240,6 @@ MK_SEARCH_API_PRIVATE_TOKEN = settings.get("MK_SEARCH_API_PRIVATE_TOKEN", "")
 # ---------------
 # 应用一键迁移配置
 # ---------------
-
-# 是否开启应用迁移相关功能
-ENABLE_MANAGE_LEGACY_APP = settings.get("ENABLE_MANAGE_LEGACY_APP", False)
-
 # 一键迁移超时时间
 LEGACY_APP_MIGRATION_PROCESS_TIMEOUT = 600
 
@@ -1117,12 +1252,6 @@ MIGRATION_REMIND_DAYS = 7
 # 迁移时，是否 patch 用户代码
 IS_PATCH_CODE_IN_MGRLEGACY = settings.get("IS_PATCH_CODE_IN_MGRLEGACY", True)
 
-# ------------------
-# 蓝盾代码检查相关配置
-# ------------------
-
-# 蓝鲸 CI 相关配置项
-CI_CONFIGS = settings.get("CI_CONFIGS", {})
 
 # ------------------
 # 蓝鲸文档中心配置
@@ -1133,13 +1262,16 @@ BKDOC_URL = settings.get("BKDOC_URL", "http://localhost:8080")
 # 文档应用的应用ID
 BK_DOC_APP_ID = settings.get("BK_DOC_APP_ID", "bk_docs_center")
 
-# 蓝鲸官网文档中心地址
-BK_DOCS_URL_PREFIX = settings.get(
-    "BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs/markdown/PaaS/DevelopTools/BaseGuide"
-)
+BK_DOCS_URL_PREFIX = settings.get("BK_DOCS_URL_PREFIX", "https://bk.tencent.com/docs")
+
+# PaaS 产品文档版本号，社区版年度大版本更新后需要更新对应的文档版本号
+BK_PAAS_DOCS_VER = settings.get("BK_PAAS_DOCS_VER", "1.5")
+
+# PaaS 产品文档前缀，蓝鲸文档中心最新的方案需要各个产品自己添加语言、版本号
+PAAS_DOCS_URL_PREFIX = f"{BK_DOCS_URL_PREFIX}/markdown/ZH/PaaS/{BK_PAAS_DOCS_VER}"
 
 # 平台FAQ 地址
-PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{BK_DOCS_URL_PREFIX}/markdown/PaaS/DevelopTools/BaseGuide/faq")
+PLATFORM_FAQ_URL = settings.get("PLATFORM_FAQ_URL", f"{PAAS_DOCS_URL_PREFIX}/BaseGuide/faq")
 
 # 是否有人工客服
 SUPPORT_LIVE_AGENT = settings.get("SUPPORT_LIVE_AGENT", False)
@@ -1162,8 +1294,11 @@ SMART_DOCKER_REGISTRY_USERNAME = settings.get("SMART_DOCKER_USERNAME", "bkpaas")
 # 用于访问 Registry 的密码
 SMART_DOCKER_REGISTRY_PASSWORD = settings.get("SMART_DOCKER_PASSWORD", "blueking")
 # S-Mart 基础镜像信息
+_SMART_TAG_SUFFIX = "smart"
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
-SMART_IMAGE_TAG = "heroku-18-v1.6.1"
+SMART_IMAGE_TAG = f"{parse_image(settings.get('APP_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
+SMART_CNB_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic"
+SMART_CNB_IMAGE_TAG = f"{parse_image(settings.get('HEROKU_RUNNER_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
 
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
@@ -1173,6 +1308,8 @@ BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))
 # ------------------
 # App 镜像仓库的 Registry 的域名
 APP_DOCKER_REGISTRY_HOST = settings.get("APP_DOCKER_REGISTRY_ADDR", "index.docker.io")
+# 是否跳过校验 App 镜像仓库的证书
+APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY = settings.get("APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY", False)
 # App 镜像仓库的命名空间, 即在 Registry 中的项目名
 APP_DOCKER_REGISTRY_NAMESPACE = settings.get("APP_DOCKER_NAMESPACE", "bkpaas/docker")
 # 用于访问 Registry 的账号
@@ -1180,16 +1317,15 @@ APP_DOCKER_REGISTRY_USERNAME = settings.get("APP_DOCKER_USERNAME", "bkpaas")
 # 用于访问 Registry 的密码
 APP_DOCKER_REGISTRY_PASSWORD = settings.get("APP_DOCKER_PASSWORD", "blueking")
 
-
 # ------------------
 # bk-lesscode 相关配置
 # ------------------
+# 是否允许创建 LessCode 应用
+ENABLE_BK_LESSCODE = settings.get("ENABLE_BK_LESSCODE", True)
 # bk_lesscode 注册在 APIGW 上的环境
 BK_LESSCODE_APIGW_STAGE = settings.get("BK_LESSCODE_APIGW_STAGE", "prod")
 # bk_lesscode 平台访问地址
 BK_LESSCODE_URL = settings.get("BK_LESSCODE_URL", "")
-# bk_lesscode API 是否已经注册在 APIGW 网关上
-ENABLE_BK_LESSCODE_APIGW = settings.get("ENABLE_BK_LESSCODE_APIGW", False)
 BK_LESSCODE_TIPS = settings.get("BK_LESSCODE_TIPS", "")
 
 # -----------------
@@ -1199,8 +1335,6 @@ BK_LESSCODE_TIPS = settings.get("BK_LESSCODE_TIPS", "")
 DOCKER_REGISTRY_CONFIG = settings.get(
     "DOCKER_REGISTRY_CONFIG", {"DEFAULT_REGISTRY": "https://hub.docker.com", "ALLOW_THIRD_PARTY_REGISTRY": False}
 )
-
-ENABLE_IMAGE_APP_BIND_REPO = settings.get("ENABLE_IMAGE_APP_BIND_REPO", False)
 
 # -----------------
 # 插件开发中心配置项
@@ -1236,6 +1370,10 @@ BKMONITOR_METRIC_RELABELINGS = settings.get("BKMONITOR_METRIC_RELABELINGS", [])
 ENABLE_BK_MONITOR_APIGW = settings.get("ENABLE_BK_MONITOR_APIGW", True)
 # Rabbitmq 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'rabbitmq'}
 RABBITMQ_MONITOR_CONF = settings.get("RABBITMQ_MONITOR_CONF", {})
+# Bkrepo 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'bkrepo'}
+BKREPO_MONITOR_CONF = settings.get("BKREPO_MONITOR_CONF", {})
+# Gcs_mysql 监控配置项, 格式如 {'enabled': True, 'metric_name_prefix': '', 'service_name': 'gcs_mysql'}
+GCS_MYSQL_MONITOR_CONF = settings.get("GCS_MYSQL_MONITOR_CONF", {})
 # 蓝鲸监控网关的环境
 BK_MONITOR_APIGW_SERVICE_STAGE = settings.get("BK_MONITOR_APIGW_SERVICE_STAGE", "stage")
 
@@ -1255,6 +1393,33 @@ BK_NOTICE = {
     "BK_API_APP_CODE": BK_APP_CODE,  # 用于调用 apigw 认证
     "BK_API_SECRET_KEY": BK_APP_SECRET,  # 用于调用 apigw 认证
 }
+
+# ---------------------------------------------
+# 蓝鲸审计中心配置
+# ---------------------------------------------
+# 审计中心-审计配置-接入-数据上报中获取这两项配置信息的值
+BK_AUDIT_DATA_TOKEN = settings.get("BK_AUDIT_DATA_TOKEN", "")
+BK_AUDIT_ENDPOINT = settings.get("BK_AUDIT_ENDPOINT", "")
+
+ENABLE_BK_AUDIT = bool(BK_AUDIT_DATA_TOKEN)
+BK_AUDIT_SETTINGS = {
+    "log_queue_limit": 50000,
+    "exporters": ["bk_audit.contrib.opentelemetry.exporters.OTLogExporter"],
+    "service_name_handler": "bk_audit.contrib.opentelemetry.utils.ServiceNameHandler",
+    "ot_endpoint": BK_AUDIT_ENDPOINT,
+    "bk_data_token": BK_AUDIT_DATA_TOKEN,
+}
+
+# ---------------------------------------------
+# 蓝鲸容器服务配置
+# ---------------------------------------------
+# 是否部署了 BCS，影响访问控制台等功能
+ENABLE_BCS = settings.get("ENABLE_BCS", True)
+
+# BCS 集群 Server URL 模板（用于 API 访问/ kubectl 配置）
+BCS_CLUSTER_SERVER_URL_TMPL = settings.get(
+    "BCS_CLUSTER_SERVER_URL_TMPL", f"http://bcs-api.{BK_DOMAIN}/clusters/{{cluster_id}}/"
+)
 
 # ---------------------------------------------
 # （internal）内部配置，仅开发项目与特殊环境下使用
@@ -1299,12 +1464,19 @@ THIRD_APP_INIT_CODES = settings.get("THIRD_APP_INIT_CODES", "")
 ALLOW_THIRD_APP_SYS_IDS = settings.get("ALLOW_THIRD_APP_SYS_IDS", "")
 ALLOW_THIRD_APP_SYS_ID_LIST = ALLOW_THIRD_APP_SYS_IDS.split(",") if ALLOW_THIRD_APP_SYS_IDS else []
 
+# ---------------------------------------------
+# 平台通知配置相关
+# ---------------------------------------------
+
 # 开发者中心管理员，主要用于应用运营报告通知
 BKPAAS_PLATFORM_MANAGERS = settings.get("BKPAAS_PLATFORM_MANAGERS", [])
 # 是否向平台管理员发送应用运营报告邮件
 ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE = settings.get(
     "ENABLE_SEND_OPERATION_REPORT_EMAIL_TO_PLAT_MANAGE", False
 )
+
+# 发送验证码，没有配置通知渠道的版本可以关闭该功能
+ENABLE_VERIFICATION_CODE = settings.get("ENABLE_VERIFICATION_CODE", False)
 
 # 引入 workloads 相关配置
 # fmt: off
@@ -1328,3 +1500,30 @@ DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = settings.get("DEFAULT_PERSISTENT_STORAGE
 
 # 持久存储默认存储大小
 DEFAULT_PERSISTENT_STORAGE_SIZE = settings.get("DEFAULT_PERSISTENT_STORAGE_SIZE", "1Gi")
+
+
+# ---------------------------------------------
+#  前端特性配置
+# ---------------------------------------------
+# 应用市场可见范围
+FE_FEATURE_SETTINGS_MARKET_VISIBILITY = settings.get("FE_FEATURE_SETTINGS_MARKET_VISIBILITY", True)
+# 聚合搜索
+FE_FEATURE_SETTINGS_AGGREGATE_SEARCH = settings.get("FE_FEATURE_SETTINGS_AGGREGATE_SEARCH", False)
+# 文档管理功能
+FE_FEATURE_SETTINGS_DOCUMENT_MANAGEMENT = settings.get("FE_FEATURE_SETTINGS_DOCUMENT_MANAGEMENT", False)
+# 记录本地开发时长，部分版本的普通应用还有该功能
+FE_FEATURE_SETTINGS_DEVELOPMENT_TIME_RECORD = settings.get("FE_FEATURE_SETTINGS_DEVELOPMENT_TIME_RECORD", False)
+# 显示应用版本
+FE_FEATURE_SETTINGS_REGION_DISPLAY = settings.get("FE_FEATURE_SETTINGS_REGION_DISPLAY", False)
+# 用于控制前端页面是否展示访问统计功能
+FE_FEATURE_SETTINGS_ANALYTICS = settings.get("FE_FEATURE_SETTINGS_ANALYTICS", False)
+# 镜像应用绑定源码仓库，仅用于代码检查
+FE_FEATURE_SETTINGS_IMAGE_APP_BIND_REPO = settings.get("FE_FEATURE_SETTINGS_IMAGE_APP_BIND_REPO", False)
+# 是否开启应用迁移相关功能
+FE_FEATURE_SETTINGS_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_MGRLEGACY", False)
+# 是否开启迁移至云原生应用的相关功能（注：启用该特性需要配置 MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER）
+FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY = settings.get("FE_FEATURE_SETTINGS_CNATIVE_MGRLEGACY", False)
+# 应用令牌，用于 APP 调用用户态的云 API
+FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN = settings.get("FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN", False)
+# 是否显示沙箱
+FE_FEATURE_SETTINGS_DEV_SANDBOX = settings.get("FE_FEATURE_SETTINGS_DEV_SANDBOX", False)

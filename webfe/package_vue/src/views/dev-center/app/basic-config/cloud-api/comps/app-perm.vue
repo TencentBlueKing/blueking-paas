@@ -1,49 +1,33 @@
 <template>
   <div class="paasng-api-panel">
-    <div class="search-wrapper">
-      <bk-button
-        theme="primary"
-        :disabled="isApplyDisabled"
-        @click="handleBatchApply"
-      >
-        {{ $t('批量申请') }}
-      </bk-button>
-      <bk-button
-        style="margin-left: 6px;"
-        theme="primary"
-        :disabled="isRenewalDisabled"
-        @click="handleBatchRenewal"
-      >
-        {{ $t('批量续期') }}
-      </bk-button>
-      <section class="fr">
-        <div class="label mr15">
-          {{ $t('类型') }}
-        </div>
-        <div class="select-wrapper">
+    <div class="search-wrapper flex-row justify-content-between">
+      <div class="left-btns flex-row flex-shrink-0">
+        <!-- 续期：支持跨网关/组件续期 -->
+        <bk-button
+          class="flex-shrink-0"
+          theme="primary"
+          :disabled="isRenewalDisabled"
+          @click="handleBatchRenewal"
+        >
+          {{ $t('批量续期') }}
+        </bk-button>
+      </div>
+      <section class="right-wrapper flex-row align-items-center">
+        <div class="flex-row align-items-center">
+          <div class="label mr15">{{ $t('类型') }}</div>
           <bk-select
             v-model="typeValue"
-            searchable
+            style="width: 180px"
             :clearable="false"
-            @selected="handleSelect"
+            @change="handleSelect"
           >
             <bk-option
               v-for="option in typeList"
-              :id="option.id"
               :key="option.id"
+              :id="option.id"
               :name="option.name"
-            />
+            ></bk-option>
           </bk-select>
-        </div>
-        <div class="checkbox-wrapper">
-          <bk-checkbox
-            v-model="isRenewalPerm"
-            :true-value="true"
-            :false-value="false"
-            @change="handleChange"
-          >
-            {{ $t('可续期权限') }}
-          </bk-checkbox>
         </div>
         <div class="input-wrapper">
           <bk-input
@@ -53,14 +37,6 @@
             right-icon="paasng-icon paasng-search"
             @input="handleSearch"
           />
-        </div>
-        <div class="search-button">
-          <bk-button
-            theme="primary"
-            @click="handlePageSearch"
-          >
-            {{ $t('查询') }}
-          </bk-button>
         </div>
       </section>
     </div>
@@ -73,7 +49,7 @@
       <div>
         <paasng-alert
           :title="$t('若有效期限不足180天，但应用仍在访问 API，有效期限将自动延长至 180 天（不限次数）。')"
-          style="margin-bottom: 16px;width: 100%"
+          style="margin-bottom: 16px; width: 100%"
         />
         <bk-table
           ref="permRef"
@@ -84,6 +60,7 @@
           :pagination="pagination"
           :show-pagination-info="true"
           :header-border="false"
+          :outer-border="false"
           @filter-change="filterChange"
           @page-change="pageChange"
           @page-limit-change="limitChange"
@@ -102,56 +79,7 @@
             type="selection"
             :selectable="selectable"
             width="60"
-          >
-          </bk-table-column>
-          <bk-table-column
-            :label="$t('API类型')"
-            :render-header="$renderHeader"
-          >
-            <template slot-scope="props">
-              {{ typeMap[props.row.type] }}
-            </template>
-          </bk-table-column>
-          <template v-if="tableList.length > 0">
-            <bk-table-column
-              :label="isComponentApi ? $t('系统') : $t('网关')"
-              min-width="100"
-              :prop="isComponentApi ? 'system_name' : 'api_name'"
-              :column-key="isComponentApi ? 'system_name' : 'api_name'"
-              :filters="nameFilters"
-              :filter-method="nameFilterMethod"
-              :filter-multiple="true"
-            >
-              <template slot-scope="props">
-                <template v-if="isComponentApi">
-                  {{ props.row.system_name }}
-                </template>
-                <template v-else>
-                  {{ props.row.api_name }}
-                </template>
-              </template>
-            </bk-table-column>
-          </template>
-          <template v-else>
-            <bk-table-column
-              :label="isComponentApi ? $t('系统') : $t('网关')"
-              min-width="100"
-            >
-              <template slot-scope="props">
-                <template v-if="isComponentApi">
-                  {{ props.row.system_name }}
-                  <template v-if="!!props.row.tag">
-                    <span :class="[{ inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) }, { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) }]">
-                      {{ props.row.tag }}
-                    </span>
-                  </template>
-                </template>
-                <template v-else>
-                  {{ props.row.api_name }}
-                </template>
-              </template>
-            </bk-table-column>
-          </template>
+          ></bk-table-column>
           <bk-table-column
             label="API"
             min-width="120"
@@ -174,6 +102,50 @@
               </template>
             </template>
           </bk-table-column>
+          <template v-if="tableList.length > 0">
+            <bk-table-column
+              :label="isComponentApi ? $t('系统') : $t('网关')"
+              min-width="100"
+              :prop="isComponentApi ? 'system_name' : 'api_name'"
+              :column-key="isComponentApi ? 'system_name' : 'api_name'"
+              :filters="nameFilters"
+              :filter-multiple="true"
+            >
+              <template slot-scope="props">
+                <template v-if="isComponentApi">
+                  {{ props.row.system_name || '--' }}
+                </template>
+                <template v-else>
+                  {{ props.row.api_name || '--' }}
+                </template>
+              </template>
+            </bk-table-column>
+          </template>
+          <template v-else>
+            <bk-table-column
+              :label="isComponentApi ? $t('系统') : $t('网关')"
+              min-width="100"
+            >
+              <template slot-scope="props">
+                <template v-if="isComponentApi">
+                  {{ props.row.system_name }}
+                  <template v-if="!!props.row.tag">
+                    <span
+                      :class="[
+                        { inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) },
+                        { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) },
+                      ]"
+                    >
+                      {{ props.row.tag }}
+                    </span>
+                  </template>
+                </template>
+                <template v-else>
+                  {{ props.row.api_name }}
+                </template>
+              </template>
+            </bk-table-column>
+          </template>
           <bk-table-column
             :label="$t('描述')"
             min-width="120"
@@ -190,7 +162,9 @@
             :render-header="$renderHeader"
           >
             <template slot-scope="props">
-              <span :class="['special', 'sensitive'].includes(props.row.permission_level)">{{ levelMap[props.row.permission_level] }}</span>
+              <span :class="['special', 'sensitive'].includes(props.row.permission_level)">
+                {{ levelMap[props.row.permission_level] }}
+              </span>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -207,28 +181,33 @@
               prop="permission_status"
               column-key="status"
               :filters="statusFilters"
-              :filter-method="statusFilterMethod"
               :filter-multiple="true"
               :render-header="$renderHeader"
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
-                  <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
+                  <span class="paasng-icon paasng-pass" />
+                  {{ $t('已拥有') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'unlimited'">
-                  <span class="paasng-icon paasng-pass" /> {{ $t('无限制') }}
+                  <span class="paasng-icon paasng-pass" />
+                  {{ $t('无限制') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'need_apply'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('未申请') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('未申请') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'expired'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('已过期') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('已过期') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'rejected'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('已拒绝') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('已拒绝') }}
                 </template>
                 <template v-else>
-                  <round-loading ext-cls="applying" /> {{ $t('申请中') }}
+                  <round-loading ext-cls="applying" />
+                  {{ $t('申请中') }}
                 </template>
               </template>
             </bk-table-column>
@@ -240,22 +219,28 @@
             >
               <template slot-scope="props">
                 <template v-if="props.row.permission_status === 'owned'">
-                  <span class="paasng-icon paasng-pass" /> {{ $t('已拥有') }}
+                  <span class="paasng-icon paasng-pass" />
+                  {{ $t('已拥有') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'unlimited'">
-                  <span class="paasng-icon paasng-pass" /> {{ $t('无限制') }}
+                  <span class="paasng-icon paasng-pass" />
+                  {{ $t('无限制') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'need_apply'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('未申请') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('未申请') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'expired'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('已过期') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('已过期') }}
                 </template>
                 <template v-else-if="props.row.permission_status === 'rejected'">
-                  <span class="paasng-icon paasng-reject" /> {{ $t('已拒绝') }}
+                  <span class="paasng-icon paasng-reject" />
+                  {{ $t('已拒绝') }}
                 </template>
                 <template v-else>
-                  <round-loading ext-cls="applying" /> {{ $t('申请中') }}
+                  <round-loading ext-cls="applying" />
+                  {{ $t('申请中') }}
                 </template>
               </template>
             </bk-table-column>
@@ -267,21 +252,7 @@
             <template slot-scope="{ row }">
               <div class="table-operate-buttons">
                 <bk-button
-                  style="padding: 0 0 0 10px;"
-                  theme="primary"
-                  :disabled="row.applyDisabled"
-                  size="small"
-                  text
-                  @click="handleApply(row)"
-                >
-                  <span
-                    v-bk-tooltips="{
-                      content: $t(row.applyTips),
-                      disabled: !row.applyDisabled
-                    }"> {{ $t('申请') }} </span>
-                </bk-button>
-                <bk-button
-                  style="padding: 0 0 0 10px;"
+                  style="padding: 0 0 0 10px"
                   theme="primary"
                   :disabled="row.renewDisabled"
                   size="small"
@@ -291,8 +262,11 @@
                   <span
                     v-bk-tooltips="{
                       content: $t(row.renewTips),
-                      disabled: !row.renewDisabled
-                    }"> {{ $t('续期') }} </span>
+                      disabled: !row.renewDisabled,
+                    }"
+                  >
+                    {{ $t('续期') }}
+                  </span>
                 </bk-button>
               </div>
             </template>
@@ -327,10 +301,10 @@
   </div>
 </template>
 
-<script>import RenewalDialog from './batch-renewal-dialog';
+<script>
+import RenewalDialog from './batch-renewal-dialog';
 import BatchDialog from './batch-apply-dialog';
 import PaasngAlert from './paasng-alert';
-import { clearFilter } from '@/common/utils';
 import { formatRenewFun, formatApplyFun } from '@/common/cloud-api';
 
 export default {
@@ -339,6 +313,12 @@ export default {
     RenewalDialog,
     PaasngAlert,
     BatchDialog,
+  },
+  props: {
+    typeList: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     return {
@@ -361,22 +341,7 @@ export default {
         rows: [],
         name: '',
       },
-      typeList: [
-        {
-          id: 'gateway',
-          name: this.$t('网关API'),
-        },
-        {
-          id: 'component',
-          name: this.$t('组件API'),
-        },
-      ],
-      typeMap: {
-        component: this.$t('组件API'),
-        gateway: this.$t('网关API'),
-      },
       typeValue: 'gateway',
-      isRenewalPerm: false,
       levelMap: {
         normal: this.$t('普通'),
         special: this.$t('特殊'),
@@ -408,6 +373,9 @@ export default {
         superiorId: '',
         superiorName: '',
       },
+      statusFilterValues: [],
+      nameFilterValues: [],
+      filterAllList: [],
     };
   },
   computed: {
@@ -417,26 +385,22 @@ export default {
     appCode() {
       return this.$route.params.id;
     },
-    isPageDisabled() {
-      return this.tableList.every(item => !item.permission_action) || !this.tableList.length;
-    },
     curDispatchMethod() {
       return this.typeValue === 'component' ? 'getSysAppPermissions' : 'getAppPermissions';
     },
     localLanguage() {
       return this.$store.state.localLanguage;
     },
-    // 是否允许批量申请
-    isApplyDisabled() {
-      return !this.selectedList.some(item => item.applyDisabled === false);
-    },
     // 是否允许批量续期
     isRenewalDisabled() {
-      return !this.selectedList.some(item => item.renewDisabled === false);
+      return !this.selectedList.some((item) => item.renewDisabled === false);
+    },
+    isSesetTableList() {
+      return !this.nameFilterValues.length && !this.statusFilterValues.length;
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
     searchValue(newVal, oldVal) {
@@ -453,18 +417,24 @@ export default {
         this.updateTableEmptyConfig();
       }
     },
-    allData(value) {
+    allData() {
       this.tableKey = +new Date();
+    },
+    nameFilterValues() {
+      this.filterApiList(this.isComponentApi ? 'system_name' : 'api_name');
+    },
+    statusFilterValues() {
+      this.filterApiList('permission_status');
     },
   },
   created() {
     this.init();
-    this.compare = p => (m, n) => {
+    this.compare = (p) => (m, n) => {
       const a = m[p] ? m[p] : 0;
       const b = n[p] ? n[p] : 0;
       return this.is_up ? a - b : b - a;
     };
-    this.compareName = p => (m, n) => {
+    this.compareName = (p) => (m, n) => {
       const a = m[p].slice(0, 1).charCodeAt();
       const b = n[p].slice(0, 1).charCodeAt();
       return a - b;
@@ -480,16 +450,6 @@ export default {
       this.renewalDialog.rows = [...this.selectedList];
     },
 
-    // 批量申请权限
-    handleBatchApply() {
-      if (!this.selectedList.length) {
-        return;
-      }
-      this.applyDialog.visiable = true;
-      this.applyDialog.title = this.$t('批量申请权限');
-      this.applyDialog.rows = [...this.selectedList];
-    },
-
     nameFilterMethod(value, row, column) {
       const { property } = column;
       return row[property] === value;
@@ -499,8 +459,48 @@ export default {
       const { property } = column;
       return row[property] === value;
     },
+    // 设置对应筛选条件值
+    setFilterValues(filters) {
+      let target;
+      const fieldName = Object.keys(filters)[0];
+      switch (fieldName) {
+        case 'api_name':
+        case 'system_name':
+          target = 'nameFilterValues';
+          break;
+        case 'status':
+          target = 'statusFilterValues';
+          break;
+        default:
+          return;
+      }
+      // 设置目标变量的值
+      this[target] = filters[fieldName]?.length ? filters[fieldName] : [];
+    },
+
+    // 表格多选无数据时筛选项丢失处理
+    handleTableFilterOptionMissing() {
+      if (!this.$refs.permRef?.$refs?.tableHeader) return;
+      const filterPanelsRef = this.$refs.permRef?.$refs?.tableHeader?.filterPanels || {};
+      const filterKeys = ['api_name', 'system_name'];
+
+      Object.keys(filterPanelsRef).forEach((key) => {
+        const { selected, column } = filterPanelsRef[key] || {};
+        // 根据组件中的数据更新本地数据
+        if (filterKeys.includes(column?.key)) {
+          this.nameFilterValues = selected || [];
+        } else {
+          this.statusFilterValues = selected || [];
+        }
+      });
+    },
 
     filterChange(filters) {
+      if (!this.isSesetTableList && !Object.keys(filters).length) {
+        this.handleTableFilterOptionMissing();
+        return;
+      }
+      this.setFilterValues(filters);
       Object.entries(filters).forEach((item) => {
         const [name, value] = item;
         this.allFilterData[name] = value;
@@ -509,15 +509,17 @@ export default {
     },
 
     handleSelect(value, option) {
-      this.pagination = Object.assign({}, {
-        current: 1,
-        limit: 10,
-        count: 0,
-      });
+      this.pagination = Object.assign(
+        {},
+        {
+          current: 1,
+          limit: 10,
+          count: 0,
+        }
+      );
       this.nameFilters = [];
       this.selectedList = [];
       this.fetchList();
-      this.fetchFilterList();
     },
 
     sortTable() {
@@ -555,7 +557,7 @@ export default {
               src: '/static/images/sort-icon.png',
             },
           }),
-        ],
+        ]
       );
     },
 
@@ -563,32 +565,25 @@ export default {
       this.renewalDialog.visiable = false;
       this.allChecked = false;
       this.indeterminate = false;
+      this.selectedList = [];
       this.fetchList(this.id);
     },
 
     handleRenewalAfterLeave() {
-      this.renewalDialog = Object.assign({}, {
-        visiable: false,
-        title: '',
-        rows: [],
-        name: '',
-      });
-    },
-
-    handleChange(newVal, oldVal, val) {
-      if (newVal) {
-        this.allData = this.apiList.filter(item => item.permission_action === 'renew');
-      } else {
-        this.allData = this.apiList;
-      }
-      this.initPageConf();
-      this.tableList = this.getDataByPage();
-      this.updateTableEmptyConfig();
+      this.renewalDialog = Object.assign(
+        {},
+        {
+          visiable: false,
+          title: '',
+          rows: [],
+          name: '',
+        }
+      );
     },
 
     /**
-             * 初始化弹层翻页条
-             */
+     * 初始化弹层翻页条
+     */
     initPageConf() {
       this.pagination.current = 1;
       const total = this.allData.length;
@@ -596,10 +591,10 @@ export default {
     },
 
     /**
-             * 翻页回调
-             *
-             * @param {number} page 当前页
-             */
+     * 翻页回调
+     *
+     * @param {number} page 当前页
+     */
     pageChange(page = 1) {
       this.allChecked = false;
       this.indeterminate = false;
@@ -614,13 +609,18 @@ export default {
     },
 
     /**
-             * 获取当前这一页的数据
-             *
-             * @param {number} page 当前页
-             *
-             * @return {Array} 当前页数据
-             */
+     * 获取当前这一页的数据
+     *
+     * @param {number} page 当前页
+     *
+     * @return {Array} 当前页数据
+     */
     getDataByPage(page) {
+      let dataSource = this.allData;
+      // 存在筛选条件更改数据源为已筛选后的列表
+      if (this.nameFilterValues.length || this.statusFilterValues.length) {
+        dataSource = this.filterAllList;
+      }
       if (!page) {
         this.pagination.current = page = 1;
       }
@@ -629,10 +629,10 @@ export default {
       if (startIndex < 0) {
         startIndex = 0;
       }
-      if (endIndex > this.allData.length) {
-        endIndex = this.allData.length;
+      if (endIndex > dataSource.length) {
+        endIndex = dataSource.length;
       }
-      return this.allData.slice(startIndex, endIndex);
+      return dataSource.slice(startIndex, endIndex);
     },
 
     limitChange(currentLimit, prevLimit) {
@@ -663,11 +663,7 @@ export default {
       try {
         await this.fetchList();
         this.handleSearch();
-        if (this.isRenewalPerm) {
-          this.allData = this.apiList.filter(item => item.permission_action === 'renew');
-        } else {
-          this.allData = this.apiList;
-        }
+        this.allData = this.apiList;
         this.initPageConf();
         this.tableList = this.getDataByPage();
         this.handleSearch();
@@ -681,7 +677,11 @@ export default {
         return;
       }
       this.isFilter = true;
-      this.allData = [...this.apiList.filter(api => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1)];
+      this.allData = [
+        ...this.apiList.filter(
+          (api) => api.name.indexOf(this.searchValue) !== -1 || api.description.indexOf(this.searchValue) !== -1
+        ),
+      ];
       this.pagination.count = this.allData.length;
 
       this.pagination.current = 1;
@@ -699,8 +699,8 @@ export default {
     async fetchList() {
       this.loading = true;
       try {
-        const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, { appCode: this.appCode })
-                    ;(res.data || []).forEach((item) => {
+        const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, { appCode: this.appCode });
+        (res.data || []).forEach((item) => {
           item.type = this.typeValue;
         });
         // 权限续期处理
@@ -709,7 +709,7 @@ export default {
             // 申请
             const apply = formatApplyFun(v.permission_status);
             // 续期
-            const renew = formatRenewFun(v.permission_status);
+            const renew = formatRenewFun(v.permission_status, v);
             return {
               ...v,
               applyDisabled: apply.disabled,
@@ -723,14 +723,14 @@ export default {
         this.apiList = Object.freeze(res.data);
         this.apiList.forEach((item) => {
           if (this.isComponentApi) {
-            if (!this.nameFilters.map(_ => _.value).includes(item.system_name)) {
+            if (!this.nameFilters.map((_) => _.value).includes(item.system_name)) {
               this.nameFilters.push({
                 text: item.system_name,
                 value: item.system_name,
               });
             }
           } else {
-            if (!this.nameFilters.map(_ => _.value).includes(item.api_name)) {
+            if (!this.nameFilters.map((_) => _.value).includes(item.api_name)) {
               this.nameFilters.push({
                 text: item.api_name,
                 value: item.api_name,
@@ -738,11 +738,7 @@ export default {
             }
           }
         });
-        if (this.isRenewalPerm) {
-          this.allData = res.data.filter(item => item.permission_action === 'renew');
-        } else {
-          this.allData = res.data;
-        }
+        this.allData = res.data;
         this.initPageConf();
         this.tableList = this.getDataByPage();
         this.indeterminate = false;
@@ -791,21 +787,18 @@ export default {
       return description || '--';
     },
     clearFilterKey() {
+      this.nameFilterValues = [];
+      this.statusFilterValues = [];
       this.searchValue = '';
-      this.isRenewalPerm = false;
       this.allFilterData = {};
-      this.$refs.permRef.clearFilter();
-      if (this.$refs.permRef && this.$refs.permRef.$refs.tableHeader) {
-        const { tableHeader } = this.$refs.permRef.$refs;
-        clearFilter(tableHeader);
-      }
+      this.$refs.permRef?.clearFilter();
       this.fetchList();
     },
 
     updateTableEmptyConfig() {
       const isTableFilter = this.isFilterCriteria();
 
-      if (this.searchValue || this.isRenewalPerm || isTableFilter) {
+      if (this.searchValue || isTableFilter) {
         this.tableEmptyConf.keyword = 'placeholder';
         return;
       }
@@ -819,7 +812,7 @@ export default {
         if (this.allFilterData[key].length) {
           isFilter = true;
         }
-      };
+      }
       return isFilter;
     },
 
@@ -833,110 +826,132 @@ export default {
       this.selectedList = selected;
     },
 
-    // 申请权限弹窗
-    handleApply(item) {
-      const id = this.isComponentApi ? 'system_id' : 'gateway_id';
-      const name = this.isComponentApi ? 'system_name' : 'api_name';
-      // 获取对应权限的网关、组件数据
-      this.applyDialog.superiorId = item[id];
-      this.applyDialog.superiorName = item[name];
-      this.applyDialog.visiable = true;
-      this.applyDialog.title = this.$t('申请权限');
-      this.applyDialog.rows = [item];
-    },
-
     // 申请
     handleSuccessApply() {
       this.applyDialog.visiable = false;
       this.allChecked = false;
+      this.selectedList = [];
       // 获取列表
       this.fetchList(this.id);
     },
 
     // 取消
     handleAfterLeave() {
-      this.applyDialog = Object.assign({}, {
-        visiable: false,
-        title: '',
-        rows: [],
-        superiorId: '',
-        superiorName: '',
-      });
+      this.applyDialog = Object.assign(
+        {},
+        {
+          visiable: false,
+          title: '',
+          rows: [],
+          superiorId: '',
+          superiorName: '',
+        }
+      );
+    },
+
+    // 通用筛选逻辑
+    getFilterAllList(data, fields, key) {
+      return data.filter((v) => fields.includes(v[key]));
+    },
+
+    // 重置TableList
+    updateTableList(isReset) {
+      this.tableList = this.getDataByPage(1);
+      this.pagination.current = 1;
+      this.pagination.count = isReset ? this.allData.length : this.filterAllList.length;
+    },
+
+    // 根据条件筛选已申请权限
+    filterApiList(key) {
+      // 无筛选条件数据重置处理
+      if (this.isSesetTableList) {
+        this.updateTableList(true);
+        return;
+      }
+      const filterFields = key === 'permission_status' ? this.statusFilterValues : this.nameFilterValues;
+      // 多筛选条件处理
+      if (this.statusFilterValues.length && this.nameFilterValues.length) {
+        const curFilterList = this.getFilterAllList(
+          this.allData,
+          this.nameFilterValues,
+          this.isComponentApi ? 'system_name' : 'api_name'
+        );
+        this.filterAllList = this.getFilterAllList(curFilterList, this.statusFilterValues, 'permission_status');
+      } else {
+        // 当前筛选条件重置，但存在另外一组筛选条件
+        if (!filterFields.length) {
+          if (key === 'permission_status' && this.nameFilterValues.length) {
+            const fieldKey = this.isComponentApi ? 'system_name' : 'api_name';
+            this.filterAllList = this.getFilterAllList(this.allData, this.nameFilterValues, fieldKey);
+          } else if (key !== 'permission_status' && this.statusFilterValues.length) {
+            this.filterAllList = this.getFilterAllList(this.allData, this.statusFilterValues, 'permission_status');
+          }
+        } else {
+          this.filterAllList = this.getFilterAllList(this.allData, filterFields, key);
+        }
+      }
+      this.updateTableList();
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-    .search-wrapper {
-        margin-bottom: 16px;
-        .label,
-        .select-wrapper,
-        .checkbox-wrapper,
-        .search-button,
-        .input-wrapper {
-            display: inline-block;
-            vertical-align: top;
-        }
-        .label {
-            line-height: 32px;
-        }
-        .select-wrapper {
-            width: 200px;
-        }
-        .checkbox-wrapper {
-            margin: 0 15px;
-            line-height: 32px;
-        }
-        .input-wrapper {
-            width: 300px;
-        }
-        .search-button {
-            margin-left: 10px;
-        }
-    }
+.search-wrapper {
+  margin-bottom: 16px;
+  .left-btns,
+  .right-wrapper {
+    gap: 12px;
+  }
+  .label {
+    line-height: 32px;
+  }
+  .input-wrapper {
+    width: 420px;
+  }
+}
 
-    .table-operate-buttons {
-        position: relative;
-        left: -12px;
-    }
+.table-operate-buttons {
+  position: relative;
+  left: -12px;
+}
 
-    span.sensitive {
-        color: #ff0000;
-    }
+span.sensitive {
+  color: #ff0000;
+}
 
-    span.inner {
-        color: rgb(58, 171, 255);
-        opacity: .7;
-    }
+span.inner {
+  color: rgb(58, 171, 255);
+  opacity: 0.7;
+}
 
-    span.clound {
-        color: #45e35f;
-    }
+span.clound {
+  color: #45e35f;
+}
 
-    span.paasng-pass {
-        position: relative;
-        top: 1px;
-        color: #2dcb56;
-        font-size: 14px;
-    }
+span.paasng-pass {
+  position: relative;
+  top: 1px;
+  color: #2dcb56;
+  font-size: 14px;
+}
 
-    span.paasng-reject {
-        position: relative;
-        top: 1px;
-        color: #ea3636;
-        font-size: 14px;
-    }
+span.paasng-reject {
+  position: relative;
+  top: 1px;
+  color: #ea3636;
+  font-size: 14px;
+}
 
-    .applying {
-        position: relative;
-        top: -1px;
-    }
+.applying {
+  position: relative;
+  top: -1px;
+}
 </style>
 
 <style>
-    marked {
-        background: yellow;
-        color: black;
-    }
+marked {
+  background: yellow;
+  color: black;
+}
 </style>

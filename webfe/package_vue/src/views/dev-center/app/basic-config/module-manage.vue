@@ -13,12 +13,12 @@
       :is-loading="isLoading"
       placeholder="module-manage-loading"
       :offset-top="25"
-      class="app-container middle module-container"
+      class="app-container middle module-container card-style"
     >
       <section v-if="!isLoading">
         <div class="module-info-item mt15">
           <div class="title">
-            {{ $t('基本信息-title') }}
+            {{ $t('基本信息') }}
           </div>
           <div class="info">
             {{ $t('模块的基本信息') }}
@@ -68,7 +68,7 @@
                 <td>
                   {{ initTemplateDesc || '--' }}
                   <a
-                    v-if="!curAppModule.repo.linked_to_internal_svn && initTemplateDesc !== '--'"
+                    v-if="!curAppModule.repo.linked_to_internal_svn && initTemplateDesc"
                     class="ml5"
                     href="javascript: void(0);"
                     @click="handleDownloadTemplate"
@@ -455,11 +455,6 @@
                     {{ nodeIp.internal_ip_address }}
                   </div>
                 </template>
-                <template v-else-if="!curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP">
-                  <div class="no-ip">
-                    <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
-                  </div>
-                </template>
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
@@ -505,11 +500,6 @@
                     class="ip-item"
                   >
                     {{ nodeIp.internal_ip_address }}
-                  </div>
-                </template>
-                <template v-else-if="!curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP">
-                  <div class="no-ip">
-                    <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
                   </div>
                 </template>
                 <template v-else>
@@ -701,6 +691,7 @@ import gitExtend from '@/components/ui/git-extend';
 import repoInfo from '@/components/ui/repo-info.vue';
 import appTopBar from '@/components/paas-app-bar';
 import appBaseMixin from '@/mixins/app-base-mixin';
+import { fileDownload } from '@/common/utils';
 
 export default {
   components: {
@@ -955,8 +946,8 @@ export default {
         // 总是允许关闭出口 IP
         return false;
       }
-      // 如果应用未支持开关出口IP管理或者当前环境的集群不支持该特性, 则不允许打开出口IP
-      return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
+      // 如果应用未支持开关出口IP管理, 则不允许打开出口IP
+      return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING;
     },
     curProdDisabled() {
       if (this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing) {
@@ -967,8 +958,8 @@ export default {
         // 总是允许关闭出口 IP
         return false;
       }
-      // 如果应用未支持开关出口IP管理或者当前环境的集群不支持该特性, 则不允许打开出口IP
-      return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
+      // 如果应用未支持开关出口IP管理, 则不允许打开出口IP
+      return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING;
     },
     entranceConfig() {
       return this.$store.state.region.entrance_config;
@@ -983,17 +974,17 @@ export default {
   watch: {
     appInfo() {
       // 云原生应用无需请求模块接口
-      if (this.curAppModule.repo && this.curAppModule.repo.type) {
+      if (!this.isCloudNativeApp) {
         this.init();
       }
     },
     '$route'() {
       this.resetParams();
-      if (this.curAppModule.repo && this.curAppModule.repo.type) {
+      if (!this.isCloudNativeApp) {
         this.init();
       }
     },
-    'curAppModule.name'(val) {
+    'curAppModule.name'() {
       this.getLessCode();
     },
     'curAppModule.repo'(repo) {
@@ -1350,12 +1341,9 @@ export default {
         const res = await this.$store.dispatch('module/getLanguageInfo');
         const { region } = this.curAppModule;
 
-        this.initTemplateDesc = '';
-        if (res[region] && res[region].languages) {
-          const languages = res[region].languages[this.initLanguage] || [];
-          const lanObj = languages.find(item => item.display_name === this.initTemplateType) || {};
-          this.initTemplateDesc = lanObj.description || '--';
-        }
+        const languages = res[region]?.languages?.[this.initLanguage] || [];
+        const lanObj = languages.find(item => item.display_name === this.initTemplateType);
+        this.initTemplateDesc = lanObj?.description || '';
       } catch (res) {
         this.$paasMessage({
           limit: 1,
@@ -1646,22 +1634,20 @@ export default {
         });
     },
 
-    handleDownloadTemplate() {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/sourcectl/init_template/`;
-      this.$http.post(url).then((resp) => {
-        const s3Address = resp.downloadable_address;
-        const a = document.createElement('a');
-        a.href = s3Address;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }, (resp) => {
+    async handleDownloadTemplate() {
+      try {
+        const res = await this.$store.dispatch('getAppInitTemplateUrl', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        fileDownload(res.downloadable_address);
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
           message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
         });
-      });
+      }
     },
     changeSelectedSourceControl(sourceControlType) {
       // bk svn禁止切换
@@ -1694,8 +1680,6 @@ export default {
 
       this.sourceControlChangeForm.sourceRepoUrl = data.url;
       this.sourceControlChangeForm.sourceDir = data.sourceDir;
-
-      console.log('change', this.sourceControlChangeForm);
 
       match.selectedRepoUrl = data.url;
       match.authInfo = {

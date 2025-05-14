@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 # flake8: noqa
 """Utilities for django models and fields"""
+
 import os
 import sys
 import uuid
@@ -29,7 +29,6 @@ from bkpaas_auth import get_user_by_user_id
 from cattr._compat import is_bare as _is_bare
 from cattr._compat import is_mapping as _is_mapping
 from cattr._compat import is_sequence as _is_sequence
-from django.conf import settings
 from django.core.files import File
 from django.db import models
 from django.db.models.fields.files import ImageFieldFile
@@ -38,9 +37,7 @@ from imagekit.models import ProcessedImageField as OrigProcessedImageField
 from imagekit.utils import suggest_extension
 from jsonfield import JSONField
 
-from paasng.core.region.models import RegionList, filter_region_by_name, get_region
 from paasng.core.region.states import RegionType
-from paasng.utils.validators import RegionListValidator
 
 
 def is_mapping(type: Any) -> bool:
@@ -172,40 +169,6 @@ class SimpleUserIDWrapper(str):
         return get_user_by_user_id(self, username_only=True).username
 
 
-class RegionListField(models.CharField):
-    """Field for storing region list
-    receive region object list or 'ieod;tencent;clouds'
-    return region object list
-    save as 'ieod;tencent;clouds'
-    """
-
-    description = "DB field for storing region list"
-
-    def __init__(self, *args, **kwargs):
-        kwargs["default"] = self._default_value
-        kwargs["max_length"] = 128
-        kwargs["blank"] = True
-        kwargs["null"] = True
-        kwargs["validators"] = [
-            RegionListValidator(),
-        ]
-        kwargs.setdefault("db_index", False)
-        super().__init__(*args, **kwargs)
-
-    @staticmethod
-    def _default_value() -> RegionList:
-        return RegionList([get_region(settings.DEFAULT_REGION_NAME)])
-
-    def get_db_prep_value(self, value, connection, prepared=False):
-        return self.get_prep_value(value)
-
-    def from_db_value(self, value, expression, connection):
-        if value is None:
-            return value
-
-        return RegionList(filter_region_by_name(value.split(";")))
-
-
 class TimestampedModel(models.Model):
     """Model with 'created' and 'updated' fields."""
 
@@ -307,7 +270,7 @@ def _make_json_field(
         raise NotImplementedError(f"Unsupported type: {py_model}")
 
     def is_pymodel_instance(value):
-        """should unstructure value to string?"""
+        """should unstructured value to string?"""
         if is_sequence(py_model):
             elem_type = py_model.__args__[0]  # type: ignore
             return all(isinstance(v, elem_type) for v in value)
@@ -325,6 +288,15 @@ def _make_json_field(
 
     def get_prep_value(self, value):
         """Convert `py_model` object to a string"""
+        # Django 4.2 中对字段转换逻辑做了调整，会导致直接
+        # 传递 Cast 给到 get_prep_value，需要做特殊处理
+        # ref:
+        # - https://code.djangoproject.com/ticket/35167
+        # - https://code.djangoproject.com/ticket/34539
+        # - https://code.djangoproject.com/ticket/35381
+        if hasattr(value, "as_sql"):
+            return value
+
         if value is not None and is_pymodel_instance(value):
             value = cattr.unstructure(value)
         return base_class.get_prep_value(self, value)

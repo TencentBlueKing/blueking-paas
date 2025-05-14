@@ -1,32 +1,34 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-from typing import List
+from typing import Dict, List
 
 import rest_framework.request
 import xlwt
 from django.db.models import Q
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
+from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
+from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
@@ -35,26 +37,30 @@ from paasng.infras.iam.helpers import (
     add_role_members,
     fetch_application_members,
     fetch_role_members,
+    fetch_user_roles,
     remove_user_all_roles,
 )
+from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.application import (
     ApplicationDetailSLZ,
     ApplicationSLZ,
+    AppOperationReportCollectionTaskOutputSLZ,
     AppOperationReportListInputSLZ,
     AppOperationReportOutputSLZ,
     BindEnvClusterSLZ,
 )
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
+from paasng.plat_admin.admin42.views.bk_plugins import is_plugin_instance_exist, is_user_plugin_admin
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag
 from paasng.platform.applications.serializers import ApplicationFeatureFlagSLZ, ApplicationMemberSLZ
 from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import cal_app_resource_quotas, sync_developers_to_sentry
-from paasng.platform.engine.constants import ClusterType
 from paasng.platform.evaluation.constants import OperationIssueType
-from paasng.platform.evaluation.models import AppOperationReport
+from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.utils.error_codes import error_codes
 
 
@@ -154,6 +160,12 @@ class ApplicationOperationEvaluationView(ApplicationOperationReportMixin, Generi
         self.paginator.default_limit = 10
 
         kwargs = super().get_context_data(**kwargs)
+
+        kwargs["latest_collect_task"] = None
+        # 获取最近一次同步任务
+        if latest_collect_task := AppOperationReportCollectionTask.objects.order_by("-start_at").first():
+            kwargs["latest_collect_task"] = AppOperationReportCollectionTaskOutputSLZ(latest_collect_task).data
+
         kwargs["usage_report_list"] = AppOperationReportOutputSLZ(
             self.paginate_queryset(self.get_queryset()), many=True
         ).data
@@ -202,7 +214,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
             "最新操作人",
             "最新操作时间",
             "问题类型",
-            "问题详情",
+            "问题描述",
             "应用管理员",
         ]
 
@@ -229,7 +241,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
                     rp.latest_operator if rp.latest_operator else "--",
                     rp.latest_operated_at.strftime("%Y-%m-%d %H:%M:%S") if rp.latest_operated_at else "--",
                     str(OperationIssueType.get_choice_label(rp.issue_type)),
-                    ", ".join(rp.issues),
+                    ", ".join(rp.evaluate_result["issues"]) if rp.evaluate_result else "--",
                     administrators,
                 ]
             )
@@ -237,7 +249,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
         return rows
 
 
-class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin):
+class ApplicationDetailBaseView(GenericTemplateView):
     """Application详情概览页"""
 
     template_name = "admin42/applications/detail/base.html"
@@ -248,16 +260,22 @@ class ApplicationDetailBaseView(GenericTemplateView, ApplicationCodeInPathMixin)
     def get_context_data(self, **kwargs):
         if "view" not in kwargs:
             kwargs["view"] = self
-        application = ApplicationDetailSLZ(self.get_application()).data
-        kwargs["application"] = application
+
+        application = self.get_application()
+        kwargs["application"] = ApplicationDetailSLZ(application).data
         return kwargs
 
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
+    def get_application(self) -> Application:
+        """Get the application object from the URL path."""
+        code = self.kwargs["code"]
+        return get_object_or_404(Application, code=code)
+
 
 class ApplicationOverviewView(ApplicationDetailBaseView):
-    """Application详情概览页"""
+    """应用详情概览页"""
 
     queryset = Application.objects.all()
     serializer_class = ApplicationSLZ
@@ -270,23 +288,63 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
         kwargs["USER_IS_ADMIN_IN_APP"] = self.request.user.username in fetch_role_members(
             application.code, ApplicationRole.ADMINISTRATOR
         )
-        kwargs["cluster_choices"] = [
-            {"id": cluster.name, "name": f"{cluster.name} -- {ClusterType.get_choice_label(cluster.type)}"}
-            for cluster in RegionClusterService(application.region).list_clusters()
-        ]
+        kwargs["ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP"] = application.is_plugin_app and is_plugin_instance_exist(
+            self.kwargs["code"]
+        )
+        if kwargs["ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP"]:
+            kwargs["USER_IS_ADMIN_IN_PLUGIN"] = is_user_plugin_admin(self.kwargs["code"], self.request.user.username)
+
+        # 注：不同模块 / 环境可选的集群可能是不同的 -> {module_name-environment [available_clusters]}
+        cluster_choices: Dict[str, List[Dict[str, str]]] = {}
+        for env in application.envs.all():
+            ctx = AllocationContext.from_module_env(env)
+            ctx.username = self.request.user.username
+            cluster_choices[f"{env.module.name}-{env.environment}"] = [
+                {"id": cluster.name, "name": cluster.name} for cluster in ClusterAllocator(ctx).list()
+            ]
+
+        kwargs["cluster_choices"] = cluster_choices
+
+        # Get the exposed URL for all environments
+        env_urls: Dict[int, str] = {}
+        for env in application.envs.all():
+            if url_obj := get_exposed_url(env):
+                env_urls[env.id] = url_obj.address
+
+        kwargs["env_urls"] = env_urls
+
         return kwargs
 
 
-class AppEnvConfManageView(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
+class AppEnvConfManageView(viewsets.GenericViewSet):
     """应用部署环境配置管理"""
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def bind_cluster(self, request, code, module_name, environment):
-        slz = BindEnvClusterSLZ(data=request.data)
+        """切换环境所绑定的集群"""
+        # Get the environment object
+        application = get_object_or_404(Application, code=code)
+        env = application.get_module(module_name).envs.get(environment=environment)
+
+        slz = BindEnvClusterSLZ(data=request.data, context={"module_env": env, "operator": request.user.username})
         slz.is_valid(raise_exception=True)
 
-        EnvClusterService(env=self.get_env_via_path()).bind_cluster(cluster_name=slz.validated_data["cluster_name"])
+        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=EnvClusterService(env=env).get_cluster_name())
+        EnvClusterService(env=env).bind_cluster(cluster_name=slz.validated_data["cluster_name"])
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.BIND_CLUSTER,
+            target=OperationTarget.APP,
+            app_code=code,
+            module_name=module_name,
+            environment=environment,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=constants.DataType.RAW_DATA, data=EnvClusterService(env=env).get_cluster_name()
+            ),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -313,34 +371,66 @@ class ApplicationMembersManageView(ApplicationDetailBaseView):
         return kwargs
 
 
-class ApplicationMembersManageViewSet(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
+class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
     """Application应用成员 CRUD 接口"""
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
+    @staticmethod
+    def _gen_data_detail(code: str, username: str) -> DataDetail:
+        return DataDetail(
+            type=constants.DataType.RAW_DATA,
+            data={
+                "username": username,
+                "roles": [ApplicationRole(role).name.lower() for role in fetch_user_roles(code, username)],
+            },
+        )
+
     def list(self, request, *args, **kwargs):
-        members = fetch_application_members(self.get_application().code)
+        application = get_object_or_404(Application, code=kwargs["code"])
+        members = fetch_application_members(application.code)
         return Response(ApplicationMemberSLZ(members, many=True).data)
 
-    def destroy(self, request, code):
-        application = self.get_application()
+    def destroy(self, request, code, username):
+        application = get_object_or_404(Application, code=code)
+        data_before = self._gen_data_detail(code, username)
         try:
-            remove_user_all_roles(application.code, request.query_params["username"])
+            remove_user_all_roles(application.code, username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.APP_MEMBER,
+            app_code=code,
+            attribute="member",
+            data_before=data_before,
+            data_after=self._gen_data_detail(application.code, username),
+        )
 
         self.sync_membership(application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def update(self, request, code):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         username, role = request.data["username"], request.data["role"]
+        data_before = self._gen_data_detail(application.code, username)
 
         try:
             remove_user_all_roles(application.code, username)
             add_role_members(application.code, ApplicationRole(role), username)
         except BKIAMGatewayServiceError as e:
             raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.APP_MEMBER,
+            app_code=code,
+            data_before=data_before,
+            data_after=self._gen_data_detail(application.code, username),
+        )
 
         self.sync_membership(application)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -358,9 +448,8 @@ class ApplicationFeatureFlagsView(ApplicationDetailBaseView):
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
-        application_features = ApplicationFeatureFlag.objects.get_application_features(
-            application=self.get_application()
-        )
+        application = self.get_application()
+        application_features = ApplicationFeatureFlag.objects.get_application_features(application=application)
         kwargs["APP_FEATUREFLAG_CHOICES"] = dict(AppFeatureFlag.get_django_choices())
         kwargs["feature_flag_list"] = ApplicationFeatureFlagSLZ(
             [{"name": key, "effect": value} for key, value in application_features.items()], many=True
@@ -368,16 +457,15 @@ class ApplicationFeatureFlagsView(ApplicationDetailBaseView):
         return kwargs
 
 
-class ApplicationFeatureFlagsViewset(ApplicationCodeInPathMixin, viewsets.GenericViewSet):
+class ApplicationFeatureFlagsViewset(viewsets.GenericViewSet):
     """Application应用特性 CRUD 接口"""
 
     serializer_class = ApplicationFeatureFlagSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def list(self, request, code):
-        application_features = ApplicationFeatureFlag.objects.get_application_features(
-            application=self.get_application()
-        )
+        application = get_object_or_404(Application, code=code)
+        application_features = ApplicationFeatureFlag.objects.get_application_features(application=application)
         return Response(
             ApplicationFeatureFlagSLZ(
                 [{"name": key, "effect": value} for key, value in application_features.items()], many=True
@@ -385,6 +473,19 @@ class ApplicationFeatureFlagsViewset(ApplicationCodeInPathMixin, viewsets.Generi
         )
 
     def update(self, request, code):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
+        data_before = DataDetail(
+            type=constants.DataType.RAW_DATA, data=application.feature_flag.get_application_features()
+        )
         application.feature_flag.set_feature(request.data["name"], request.data["effect"])
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.FEATURE_FLAG,
+            app_code=application.code,
+            data_after=DataDetail(
+                type=constants.DataType.RAW_DATA, data=application.feature_flag.get_application_features()
+            ),
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

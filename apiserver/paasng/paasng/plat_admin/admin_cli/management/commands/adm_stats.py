@@ -1,4 +1,21 @@
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
 """An admin tool that helps viewing platform and application stats."""
+
 import logging
 from enum import Enum
 from operator import attrgetter
@@ -29,7 +46,7 @@ class Command(BaseCommand, CommandBasicMixin):
         if options["type"] == CommandType.RES_MAPPER_V1.value:
             self.handle_res_mapper_v1(options)
         else:
-            self.exit_with_error(f'Invalid command type: {options["type"]}')
+            self.exit_with_error(f"Invalid command type: {options['type']}")
 
     def handle_res_mapper_v1(self, options):
         """Print applications that still use resource mapper "v1" version."""

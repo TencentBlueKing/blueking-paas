@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+from typing import Dict, List
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from rest_framework import serializers
 
+from paas_wl.bk_app.processes.serializers import InstanceListSLZ, ProcessListSLZ
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 from paasng.utils.i18n.serializers import DjangoTranslatedCharField
@@ -70,6 +72,8 @@ class LegacyAppSLZ(serializers.Serializer):
             "has_prod_deployed_before_migration",
             "created",
             "migration_finished_date",
+            "stag_exposed_link",
+            "prod_exposed_link",
         )
 
 
@@ -131,10 +135,11 @@ class ApplicationMigrationInfoSLZ(serializers.Serializer):
 
 class CNativeMigrationProcessSLZ(serializers.ModelSerializer):
     error_msg = serializers.SerializerMethodField(help_text="错误信息")
+    details = serializers.SerializerMethodField(help_text="详情")
 
     class Meta:
         model = CNativeMigrationProcess
-        fields = ("status", "error_msg", "created_at", "confirm_at")
+        fields = ("id", "status", "error_msg", "details", "created_at", "confirm_at", "is_active")
 
     def get_error_msg(self, obj: CNativeMigrationProcess) -> str:
         if obj.status == CNativeMigrationStatus.MIGRATION_FAILED.value:
@@ -144,3 +149,43 @@ class CNativeMigrationProcessSLZ(serializers.ModelSerializer):
             # 仅有一个有效的错误信息
             return next((m.error_msg for m in obj.details.rollbacks if m.error_msg), "")
         return ""
+
+    def get_details(self, obj: CNativeMigrationProcess) -> Dict[str, List]:
+        return {
+            "migrations": [
+                {"migrator_name": m.migrator_name, "is_succeeded": m.is_succeeded, "error_msg": m.error_msg}
+                for m in obj.details.migrations
+            ]
+        }
+
+
+class ListProcessesSLZ(serializers.Serializer):
+    processes = ProcessListSLZ()
+    instances = InstanceListSLZ()
+    process_packages = serializers.ListField(required=False, child=serializers.DictField())
+
+
+class ChecklistInfoSLZ(serializers.Serializer):
+    """普通应用迁移云原生应用前的差异化数据"""
+
+    class RootDomainsDiffSLZ(serializers.Serializer):
+        """迁移前后的差异化子域名"""
+
+        legacy = serializers.ListField(help_text="迁移前旧普通应用的子域名", child=serializers.CharField())
+        cnative = serializers.ListField(help_text="迁移后云原生应用的子域名", child=serializers.CharField())
+
+    class NamespacesDiffSLZ(serializers.Serializer):
+        """迁移前后的差异化命名空间"""
+
+        legacy = serializers.ListField(help_text="迁移前旧普通应用的命名空间", child=serializers.DictField())
+        cnative = serializers.ListField(help_text="迁移后云原生应用的命名空间", child=serializers.DictField())
+
+    class RCSBindingsDiffSLZ(serializers.Serializer):
+        """迁移前后的差异化绑定出口"""
+
+        legacy = serializers.ListField(help_text="迁移前旧普通应用的绑定出口信息", child=serializers.DictField())
+        cnative = serializers.DictField(help_text="迁移后云原生应用的绑定出口信息")
+
+    root_domains = RootDomainsDiffSLZ(read_only=True, help_text="迁移前后差异化的子域名")
+    namespaces = NamespacesDiffSLZ(read_only=True, help_text="迁移前后差异化的命名空间. None 表示无差异")
+    rcs_bindings = RCSBindingsDiffSLZ(read_only=True, help_text="迁移前后差异化的出口 IP 信息. None 表示未绑定出口 IP")

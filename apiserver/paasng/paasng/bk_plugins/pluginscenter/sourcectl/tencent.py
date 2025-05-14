@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from pathlib import Path
 from textwrap import dedent
@@ -33,6 +32,7 @@ from requests.models import Response
 
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate
+from paasng.bk_plugins.pluginscenter.features import PluginFeatureFlag, PluginFeatureFlagsManager
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
 from paasng.bk_plugins.pluginscenter.sourcectl.base import AlternativeVersion, TemplateRender, generate_context
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import (
@@ -110,7 +110,7 @@ class PluginRepoAccessor:
         """
         if ":" not in smart_revision:
             return smart_revision
-        version_type, version_name = smart_revision.split(":")
+        _, version_name = smart_revision.split(":")
         commit = self.get_last_commit(self.project, version_name)
         return commit["id"]
 
@@ -135,7 +135,7 @@ class PluginRepoAccessor:
         _id = quote(self.project.path_with_namespace, safe="")
         _url = f"api/v3/projects/{_id}/tloc/daily/count"
         # 指定你的当前时区，默认是 0 时区，范围 (-11,11)
-        time_zone_num = int(timezone.localtime().tzinfo._utcoffset.seconds / 3600)
+        time_zone_num = int(timezone.localtime().tzinfo.utcoffset(timezone.now()).seconds / 3600)
 
         params: Dict[str, Union[str, int]] = dict(begin_date=begin_time, end_date=end_time, timezone=time_zone_num)
         resp = self._session.get(urljoin(self._api_url, _url), params=params)
@@ -253,16 +253,18 @@ class PluginRepoInitializer:
 
     def create_project(self, plugin: PluginInstance):
         """为插件在 VCS 服务创建源码项目"""
+        repo_name = plugin.id
+        if PluginFeatureFlagsManager(plugin).has_feature(PluginFeatureFlag.LOWER_REPO_NAME):
+            repo_name = repo_name.lower()
+
         _url = "api/v3/projects"
         resp = self._session.post(
             urljoin(self._api_url, _url),
             data={
-                "name": plugin.id,
+                "name": repo_name,
                 "namespace_id": self._get_namespace_id(),
                 "description": plugin.name,
-                # 私有项目 visibility_level = 0
-                # 公共项目 visibility_level = 10
-                "visibility_level": 10,
+                "visibility_level": settings.PLUGIN_VISIBILTY_LEVEL,
             },
         )
         validate_response(resp)
@@ -314,8 +316,8 @@ class PluginRepoInitializer:
                 dedent(
                     f"""
             [user]
-                email = {settings.PLUGIN_REPO_CONF['email']}
-                name = {settings.PLUGIN_REPO_CONF['username']}
+                email = {settings.PLUGIN_REPO_CONF["email"]}
+                name = {settings.PLUGIN_REPO_CONF["username"]}
             """
                 )
             )

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from collections import namedtuple
 from unittest.mock import Mock, patch
 
@@ -81,11 +80,13 @@ class TestBuildHandler:
         )
         kpod_create_or_update = Mock(return_value=(create_pod_body, True))
 
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", namespace_create), patch(
-            "paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa", namespace_check
-        ), patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
-            "paas_wl.infras.resources.base.kres.NameBasedOperations.create_or_update", kpod_create_or_update
-        ), patch("paas_wl.bk_app.deploy.app_res.controllers.WaitPodDelete.wait"):
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", namespace_create),
+            patch("paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa", namespace_check),
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.create_or_update", kpod_create_or_update),
+            patch("paas_wl.bk_app.deploy.app_res.controllers.WaitPodDelete.wait"),
+        ):
             build_handler.build_slug(template=pod_template)
             assert kpod_get.called
             assert kpod_create_or_update.called
@@ -112,19 +113,22 @@ class TestBuildHandler:
         )
         kpod_get = Mock(return_value=pod_body)
 
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", namespace_create), patch(  # noqa: SIM117
-            "paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa", namespace_check
-        ), patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get):
-            with pytest.raises(ResourceDuplicate):
-                build_handler.build_slug(template=pod_template)
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", namespace_create),
+            patch("paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa", namespace_check),
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
+            pytest.raises(ResourceDuplicate),
+        ):
+            build_handler.build_slug(template=pod_template)
 
     def test_delete_builder_pod(self, build_handler):
         pod_body = ResourceInstance(None, {"kind": "Pod", "status": {"phase": "Completed"}})
         kpod_get = Mock(return_value=pod_body)
         kpod_delete = Mock(return_value=None)
 
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
-            "paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete),
         ):
             build_handler.delete_builder(namespace="bkapp-foo-stag", name="slug-builder")
 
@@ -138,8 +142,9 @@ class TestBuildHandler:
         kpod_get = Mock(side_effect=ResourceMissing("bkapp-foo-stag-slug-pod", "bkapp-foo-stag"))
         kpod_delete = Mock(return_value=None)
 
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
-            "paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete),
         ):
             build_handler.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
 
@@ -151,8 +156,9 @@ class TestBuildHandler:
         kpod_get = Mock(return_value=pod_body)
         kpod_delete = Mock(return_value=None)
 
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get), patch(
-            "paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete),
         ):
             build_handler.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
 
@@ -160,7 +166,7 @@ class TestBuildHandler:
             assert not kpod_delete.called
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestBuildHandlerWithNS:
     """New test cases using pytest"""
 

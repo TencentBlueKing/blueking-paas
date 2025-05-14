@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from unittest import mock
 
 import pytest
@@ -23,8 +22,7 @@ import pytest
 from paas_wl.bk_app.applications.models import Build
 from paasng.platform.engine.configurations.image import (
     RuntimeImageInfo,
-    generate_image_repository,
-    get_image_repository_template,
+    generate_image_repository_by_env,
     update_image_runtime_config,
 )
 from paasng.platform.engine.constants import RuntimeType
@@ -50,33 +48,33 @@ class TestRuntimeInfo:
 
             assert runtime_info.generate_image(version_info=version) == "docker.io/library/python:foo"
 
-    @pytest.mark.parametrize(
-        ("is_cnb_runtime", "expected"), [(True, f"{get_image_repository_template()}:{{tag}}"), (False, "")]
-    )
-    def test_buildpack_runtime(self, bk_module_full, version, is_cnb_runtime, expected):
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_buildpack_runtime(self, bk_cnative_app, bk_module_full, version):
         bk_module_full.source_origin = SourceOrigin.AUTHORIZED_VCS
         bk_module_full.save()
         bk_module_full.build_config.build_method = RuntimeType.BUILDPACK
         bk_module_full.build_config.save()
-        runtime_info = RuntimeImageInfo(bk_module_full.get_envs("prod").get_engine_app())
-        with mock.patch(
-            "paasng.platform.engine.configurations.image.ModuleRuntimeManager.is_cnb_runtime", new=is_cnb_runtime
-        ):
-            assert runtime_info.generate_image(
-                version_info=version, special_tag=version.version_name
-            ) == expected.format(
-                app_code=bk_module_full.application.code, module_name=bk_module_full.name, tag=version.version_name
+
+        module_env = bk_module_full.get_envs("prod")
+        runtime_info = RuntimeImageInfo(module_env.get_engine_app())
+        with mock.patch("paasng.platform.engine.configurations.image.ModuleRuntimeManager.is_cnb_runtime", new=True):
+            assert (
+                runtime_info.generate_image(version_info=version, special_tag=version.version_name)
+                == f"{generate_image_repository_by_env(module_env)}:{version.version_name}"
             )
 
-    def test_dockerfile_runtime(self, bk_module_full, version):
+    @pytest.mark.usefixtures("_with_wl_apps")
+    def test_dockerfile_runtime(self, bk_cnative_app, bk_module_full, version):
         bk_module_full.source_origin = SourceOrigin.AUTHORIZED_VCS
         bk_module_full.save()
         bk_module_full.build_config.build_method = RuntimeType.DOCKERFILE
         bk_module_full.build_config.save()
-        runtime_info = RuntimeImageInfo(bk_module_full.get_envs("prod").get_engine_app())
+
+        module_env = bk_module_full.get_envs("prod")
+        runtime_info = RuntimeImageInfo(module_env.get_engine_app())
         assert (
             runtime_info.generate_image(version_info=version, special_tag=version.version_name)
-            == f"{generate_image_repository(bk_module_full)}:{version.version_name}"
+            == f"{generate_image_repository_by_env(module_env)}:{version.version_name}"
         )
 
     @pytest.mark.parametrize(
@@ -123,6 +121,6 @@ class TestUpdateImageRuntimeConfig:
             "revision": "1",
             "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
         }
-        wl_build = Build.objects.create(**build_params)
+        wl_build = Build.objects.create(tenant_id=bk_module.tenant_id, **build_params)
         bk_deployment.update_fields(build_id=wl_build.pk)
         update_image_runtime_config(bk_deployment)

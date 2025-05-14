@@ -1,10 +1,13 @@
 <template lang="html">
   <div class="cloud-wrapper">
     <!-- 云原生应用没有头部导航 -->
-    <div :class="['ps-top-bar','cloud-api-permission', { 'plugin-top-bar': isPlugin }]">
+    <div :class="['ps-top-bar', 'cloud-api-permission', { 'plugin-top-bar': isPlugin }]">
       <div class="header-title">
         {{ $t('云 API 权限') }}
-        <div class="guide-wrapper">
+        <div
+          class="guide-wrapper"
+          v-if="frontendFeature.APP_ACCESS_TOKEN"
+        >
           <bk-button
             class="f12"
             theme="primary"
@@ -15,7 +18,6 @@
               width: 220,
               extCls: 'create-token-tips-cls',
             }"
-            style="margin-right: 10px"
             @click="handleShowDialogCreateToken"
           >
             {{ $t('创建新令牌') }}
@@ -24,15 +26,6 @@
       </div>
     </div>
     <div class="tab-container-cls">
-      <bk-button
-        class="f12 gateway-guide"
-        :style="{ right: isPlugin ? '100px' : '48px' }"
-        text
-        theme="primary"
-        @click="toLink('gateway')"
-      >
-        {{ $t('API 网关接入指引') }}
-      </bk-button>
       <section class="app-container middle cloud-container">
         <paas-content-loader
           :key="pageKey"
@@ -41,40 +34,52 @@
           :offset-top="12"
           :delay="1000"
         >
+          <bk-button
+            class="gateway-guide"
+            text
+            theme="primary"
+            @click="toLink('gateway')"
+          >
+            {{ $t('API 调用指引') }}
+            <i class="paasng-icon paasng-jump-link"></i>
+          </bk-button>
           <bk-tab
             :active.sync="active"
             type="unborder-card"
+            ext-cls="paas-custom-tab-card-grid"
             @tab-change="handleTabChange"
           >
             <bk-tab-panel
-              v-for="(panel, index) in panels"
+              v-for="(panel, index) in displayPanels"
               :key="index"
               v-bind="panel"
             />
+            <div class="cloud-type-item">
+              <render-api
+                v-if="active === 'gatewayApi'"
+                :key="comKey"
+                :app-code="appCode"
+                @data-ready="handlerDataReady"
+              />
+              <render-api
+                v-if="active === 'componentApi'"
+                :key="comKey"
+                api-type="component"
+                :app-code="appCode"
+                @data-ready="handlerDataReady"
+              />
+              <app-perm
+                v-if="active === 'appPerm'"
+                :type-list="typeList"
+                @data-ready="handlerDataReady"
+              />
+              <apply-record
+                v-if="active === 'applyRecord'"
+                :type-list="typeList"
+                @data-ready="handlerDataReady"
+              />
+            </div>
           </bk-tab>
-          <div class="cloud-type-item">
-            <render-api
-              v-if="active === 'gatewayApi'"
-              :key="comKey"
-              :app-code="appCode"
-              @data-ready="handlerDataReady"
-            />
-            <render-api
-              v-if="active === 'componentApi'"
-              :key="comKey"
-              api-type="component"
-              :app-code="appCode"
-              @data-ready="handlerDataReady"
-            />
-            <app-perm
-              v-if="active === 'appPerm'"
-              @data-ready="handlerDataReady"
-            />
-            <apply-record
-              v-if="active === 'applyRecord'"
-              @data-ready="handlerDataReady"
-            />
-          </div>
         </paas-content-loader>
       </section>
     </div>
@@ -84,10 +89,13 @@
       v-model="createTokenCofig.visible"
       theme="primary"
       :mask-close="false"
-      width="640"
+      width="680"
       @after-leave="handleCancel"
     >
-      <div class="header-wrapper" slot="header">
+      <div
+        class="header-wrapper"
+        slot="header"
+      >
         {{ $t('创建新令牌') }}
       </div>
       <div class="steps-wrapper">
@@ -106,9 +114,18 @@
           type="error"
           :show-icon="false"
         >
-          <div slot="title" class="alert-wrapper">
+          <div
+            slot="title"
+            class="alert-wrapper"
+          >
             <i class="paasng-icon paasng-remind error" />
             {{ $t('创建新令牌( access_token)，会导致原来的 access_token 会失效，该操作不可撤销，请谨慎操作。') }}
+            <a
+              target="_blank"
+              :href="GLOBAL.DOC.ACCESS_TOKEN_USAGE_GUIDE"
+            >
+              {{ $t('使用指引') }}
+            </a>
           </div>
         </bk-alert>
         <div class="content">
@@ -127,14 +144,20 @@
           type="success"
           :show-icon="false"
         >
-          <div slot="title" class="alert-wrapper">
+          <div
+            slot="title"
+            class="alert-wrapper"
+          >
             <i class="paasng-icon paasng-pass success" />
             {{ $t('令牌（access_token）创建成功！请复制该令牌，关闭弹窗后将无法再次看到它。') }}
           </div>
         </bk-alert>
         <div class="content">
-          <p class="title" v-if="tokenUrl">
-            {{ localLanguage === 'en' ? 'Access_token': '令牌（access_token）' }}
+          <p
+            class="title"
+            v-if="tokenUrl"
+          >
+            {{ localLanguage === 'en' ? 'Access_token' : '令牌（access_token）' }}
           </p>
           <div
             :class="['access-token-url', { error: !tokenUrl }]"
@@ -142,7 +165,10 @@
           >
             <span v-if="tokenUrl">{{ tokenUrl }}</span>
             <span v-else>{{ errorObject?.message }}</span>
-            <div class="copy" v-if="tokenUrl">
+            <div
+              class="copy"
+              v-if="tokenUrl"
+            >
               <i class="paasng-icon paasng-general-copy" />
               {{ $t('复制') }}
             </div>
@@ -183,7 +209,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import RenderApi from './comps/render-api';
 import AppPerm from './comps/app-perm';
 import ApplyRecord from './comps/apply-record';
@@ -201,14 +228,7 @@ export default {
       linkMap: {
         gateway: this.GLOBAL.DOC.APIGW_QUICK_START,
         API: this.GLOBAL.DOC.APIGW_USER_API,
-        FAQ: this.GLOBAL.DOC.APIGW_FAQ,
       },
-      panels: [
-        { name: 'gatewayApi', label: this.$t('网关API') },
-        { name: 'componentApi', label: this.$t('组件API') },
-        { name: 'appPerm', label: this.$t('已申请的权限') },
-        { name: 'applyRecord', label: this.$t('申请记录') },
-      ],
       active: 'gatewayApi',
       comKey: -1,
       pageKey: -1,
@@ -234,6 +254,26 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    frontendFeature() {
+      return this.$store.state.userFeature;
+    },
+    platformFeature() {
+      return this.$store.state.platformFeature;
+    },
+    displayPanels() {
+      return [
+        { name: 'gatewayApi', label: this.$t('网关API') },
+        { name: 'componentApi', label: this.$t('组件API') },
+        { name: 'appPerm', label: this.$t('已申请的权限') },
+        { name: 'applyRecord', label: this.$t('申请记录') },
+      ].filter((item) => item.name !== 'componentApi' || this.platformFeature?.ESB_API);
+    },
+    typeList() {
+      return [
+        { id: 'gateway', name: this.$t('网关API') },
+        { id: 'component', name: this.$t('组件API') },
+      ].filter((item) => item.id !== 'component' || this.platformFeature?.ESB_API);
     },
   },
   watch: {
@@ -299,7 +339,9 @@ export default {
     // 错误信息转换处理
     formatErrorString(message) {
       // 将错误字符串转换为一个格式正确的JSON字符串
-      const jsonString = message.replace(/detail: /, '').replace(/'/g, '"')
+      const jsonString = message
+        .replace(/detail: /, '')
+        .replace(/'/g, '"')
         .replace(/None/g, 'null')
         .replace(/False/g, 'false')
         .replace(/True/g, 'true');
@@ -360,14 +402,20 @@ export default {
   .ps-top-bar {
     padding: 0px 24px;
   }
+  /deep/ .bk-tab-section {
+    padding: 16px 0 0 0;
+    background: #fff;
+    box-shadow: 0 2px 4px 0 #1919290d;
+  }
 }
 
 .cloud-container {
+  position: relative;
   background: #fff;
   margin-top: 16px;
   padding-top: 0px;
   .cloud-type-item {
-    padding: 0 24px 16px 24px;
+    padding: 0 24px 24px 24px;
   }
   .cloud-class {
     padding-top: 16px;
@@ -404,10 +452,6 @@ export default {
 
 .ps-top-bar.cloud-api-permission {
   box-shadow: 0 3px 4px 0 #0000000a;
-}
-
-.cloud-wrapper /deep/ .bk-tab-section {
-  padding: 16px 0 0 0;
 }
 
 .steps-wrapper {
@@ -449,8 +493,8 @@ export default {
     line-height: 22px;
 
     &.error {
-      background: #FFEDED;
-      color: #63656E;
+      background: #ffeded;
+      color: #63656e;
       margin-top: 24px;
     }
 
@@ -467,9 +511,12 @@ export default {
   position: relative;
   .gateway-guide {
     position: absolute;
-    right: 48px;
-    top: 13px;
+    right: 0px;
+    top: 10px;
     z-index: 99;
+    i {
+      font-size: 16px;
+    }
   }
 }
 
@@ -487,23 +534,23 @@ export default {
 
 .guide-wrapper {
   .bk-button:hover {
-    background: #E1ECFF;
-    color: #1768EF;
-    border-color: #1768EF;
+    background: #e1ecff;
+    color: #1768ef;
+    border-color: #1768ef;
   }
 }
 
 .alert-wrapper {
   font-size: 12px;
-  color: #63656E;
+  color: #63656e;
   i {
     transform: translateY(0px);
     font-size: 14px;
     &.error {
-      color: #EA3636;
+      color: #ea3636;
     }
     &.success {
-      color: #2DCB56;
+      color: #2dcb56;
     }
   }
 }
@@ -512,6 +559,6 @@ export default {
 .create-token-tips-cls .tippy-content {
   font-family: MicrosoftYaHei;
   font-size: 12px;
-  color: #63656E;
+  color: #63656e;
 }
 </style>

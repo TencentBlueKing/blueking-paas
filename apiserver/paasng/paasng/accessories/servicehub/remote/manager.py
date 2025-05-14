@@ -1,30 +1,30 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""The universal services module, handles both services from database and remote REST API"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""The universal services module, handles both services from database and remote REST API
-"""
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, List, Optional, cast
+from dataclasses import asdict, dataclass, field
+from typing import TYPE_CHECKING, Any, Dict, Generator, Iterable, Iterator, List, Optional, cast
 
 import arrow
+import cattrs
 from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.utils.functional import cached_property
@@ -33,11 +33,21 @@ from django.utils.translation import gettext_lazy as _
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.egress.shim import get_cluster_egress_info
 from paasng.accessories.servicehub import constants, exceptions
-from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
+from paasng.accessories.servicehub.binding_policy.selector import PlanSelector, get_plan_by_env
+from paasng.accessories.servicehub.exceptions import (
+    BindServicePlanError,
+    UnboundSvcAttachmentDoesNotExist,
+)
+from paasng.accessories.servicehub.models import (
+    RemoteServiceEngineAppAttachment,
+    RemoteServiceModuleAttachment,
+    UnboundRemoteServiceEngineAppAttachment,
+)
 from paasng.accessories.servicehub.remote.client import RemoteServiceClient
-from paasng.accessories.servicehub.remote.collector import RemoteSpecDefinitionUpdateSLZ, refresh_remote_service
+from paasng.accessories.servicehub.remote.collector import refresh_remote_service
 from paasng.accessories.servicehub.remote.exceptions import (
     GetClusterEgressInfoError,
+    RClientResponseError,
     ServiceNotFound,
     UnsupportedOperationError,
 )
@@ -47,17 +57,14 @@ from paasng.accessories.servicehub.services import (
     BasePlanMgr,
     BaseServiceMgr,
     EngineAppInstanceRel,
-    ModuleSpecificationsHelper,
     PlainInstanceMgr,
     PlanObj,
     ServiceInstanceObj,
     ServiceObj,
-    ServicePlansHelper,
-    ServiceSpecificationDefinition,
-    ServiceSpecificationHelper,
+    UnboundEngineAppInstanceRel,
 )
 from paasng.accessories.services.models import ServiceCategory
-from paasng.core.region.models import get_all_regions
+from paasng.core.tenant.user import get_init_tenant_id
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
@@ -111,41 +118,41 @@ class RemotePlanObj(PlanObj):
         data.setdefault("is_active", True)
         properties = data.get("properties") or {}
         is_eager = data.pop("is_eager", False)
-        region = data.pop("region", "")
         config = data.pop("config", {})
-        return cls(
-            is_eager=properties.get("is_eager", is_eager),
-            region=properties.get("region", region),
-            config=config,
-            **data,
+        # Handle malformed config data used by some legacy services
+        if config == "不支持":
+            config = {}
+        # Configure a default tenant_id for the planObj when the remote service is not upgraded.
+        # NOTE: If the remote service is not upgraded to support multi-tenancy, the planObj must be under the default tenant.
+        default_tenant_id = get_init_tenant_id()
+        tenant_id = data.pop("tenant_id", default_tenant_id)
+        return cattrs.structure(
+            {"is_eager": properties.get("is_eager", is_eager), "config": config, "tenant_id": tenant_id} | data, cls
         )
 
 
 @dataclass
 class RemoteServiceObj(ServiceObj):
     plans: List[RemotePlanObj] = field(default_factory=list)
-    meta_info: MetaInfo = DEFAULT_META_INFO
+    meta_info: MetaInfo = field(default_factory=lambda: MetaInfo(version=None))
 
     _data = None
     category_id = None
 
     @classmethod
-    def from_data(cls, service: Dict, region=None) -> "RemoteServiceObj":
+    def from_data(cls, service: Dict) -> "RemoteServiceObj":
         field_names = list(cls.__dataclass_fields__.keys())  # type: ignore
         fields: Dict[str, Any] = {k: service.get(k) for k in field_names if k in service}
-        fields["region"] = region
-
-        fields["specifications"] = [ServiceSpecificationDefinition(**i) for i in fields.get("specifications") or ()]
-        fields["plans"] = [RemotePlanObj.from_data(i) for i in fields.get("plans") or ()]
+        fields["plans"] = [asdict(RemotePlanObj.from_data(i)) for i in fields.get("plans") or ()]
 
         # Set up meta info
         meta_info_data = service.get("_meta_info")
         if not meta_info_data:
-            fields["meta_info"] = DEFAULT_META_INFO
+            fields["meta_info"] = {"version": None}
         else:
-            fields["meta_info"] = MetaInfo(version=meta_info_data["version"])
+            fields["meta_info"] = {"version": meta_info_data["version"]}
 
-        result = cls(**fields)
+        result = cattrs.structure(fields, cls)
         result._data = service
         result.category_id = service["category"]
         return result
@@ -158,6 +165,10 @@ class RemoteServiceObj(ServiceObj):
 
     def get_plans(self, is_active=True) -> List["PlanObj"]:
         return [plan.with_service(self) for plan in self.plans if (plan.is_active == is_active or is_active is NOTSET)]
+
+    def get_plans_by_tenant_id(self, tenant_id: str, is_active=True) -> List["PlanObj"]:
+        all_plans = self.get_plans(is_active=is_active)
+        return [plan for plan in all_plans if (plan.tenant_id == tenant_id)]
 
     def supports_inst_config(self) -> bool:
         """Check if current service supports Feature: InstanceConfig"""
@@ -206,10 +217,8 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         self.remote_config = self.store.get_source_config(str(self.db_obj.service_id))
         self.remote_client = RemoteServiceClient(self.remote_config)
 
-        self.region = self.db_application.region
-
     def get_service(self) -> RemoteServiceObj:
-        return self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
+        return self.mgr.get(str(self.db_obj.service_id))
 
     def is_provisioned(self) -> bool:
         return self.db_obj.service_instance_id is not None
@@ -284,6 +293,16 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             except Exception as e:
                 logger.exception("Error occurs during recycling")
                 raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
+
+            if self.remote_client.config.prefer_async_delete:
+                UnboundRemoteServiceEngineAppAttachment.objects.create(
+                    owner=self.db_obj.owner,
+                    engine_app=self.db_engine_app,
+                    service_id=self.db_obj.service_id,
+                    service_instance_id=self.db_obj.service_instance_id,
+                    tenant_id=self.db_obj.tenant_id,
+                )
+
         self.db_obj.service_instance_id = None
         self.db_obj.save()
 
@@ -300,10 +319,12 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
 
         svc_obj = self.get_service()
         create_time = arrow.get(instance_data.get("created"))  # type: ignore
+        default_tenant_id = get_init_tenant_id()
         return create_svc_instance_obj_from_remote(
             uuid=str(self.db_obj.service_instance_id),
             credentials=instance_data["credentials"],
             config=instance_data["config"],
+            tenant_id=instance_data.get("tenant_id", default_tenant_id),
             field_prefix=svc_obj.name,
             create_time=create_time.datetime,
         )
@@ -348,12 +369,76 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         if plan_id == str(constants.LEGACY_PLAN_ID):
             return RemotePlanObj.from_data(constants.LEGACY_PLAN_INSTANCE)
 
-        svc_data = self.store.get(str(self.db_obj.service_id), region=self.db_application.region)
+        svc_data = self.store.get(str(self.db_obj.service_id))
         for d in svc_data["plans"]:
             if d["uuid"] == plan_id:
                 return RemotePlanObj.from_data(d)
 
         raise RuntimeError("Plan not found")
+
+
+class UnboundRemoteEngineAppInstanceRel(UnboundEngineAppInstanceRel):
+    """Unbound relationship between EngineApp and remote provisioned instance"""
+
+    def __init__(
+        self, db_obj: UnboundRemoteServiceEngineAppAttachment, mgr: "RemoteServiceMgr", store: RemoteServiceStore
+    ):
+        self.store = store
+        self.mgr = mgr
+
+        # Database objects
+        self.db_obj = db_obj
+        self.db_env = ModuleEnvironment.objects.get(engine_app=self.db_obj.engine_app)
+        self.db_application = self.db_env.application
+
+        # Client components
+        self.remote_config = self.store.get_source_config(str(self.db_obj.service_id))
+        self.remote_client = RemoteServiceClient(self.remote_config)
+
+    def _retrieve_instance_to_be_deleted(self) -> dict:
+        try:
+            instance_data = self.remote_client.retrieve_instance_to_be_deleted(str(self.db_obj.service_instance_id))
+        except RClientResponseError as e:
+            # If not found service instance by instance id, which means it has been recycled, remote will return 404.
+            if e.status_code == 404:
+                self.db_obj.delete()
+                return {}
+            raise
+        return instance_data
+
+    def get_instance(self) -> Optional[ServiceInstanceObj]:
+        """Get service instance object"""
+        instance_data = self._retrieve_instance_to_be_deleted()
+        if not instance_data:
+            return None
+        svc_obj = self.mgr.get(str(self.db_obj.service_id))
+        create_time = arrow.get(instance_data.get("created"))  # type: ignore
+        default_tenant_id = get_init_tenant_id()
+        return create_svc_instance_obj_from_remote(
+            uuid=str(self.db_obj.service_instance_id),
+            credentials=instance_data["credentials"],
+            config=instance_data["config"],
+            tenant_id=instance_data.get("tenant_id", default_tenant_id),
+            field_prefix=svc_obj.name,
+            create_time=create_time.datetime,
+        )
+
+    def recycle_resource(self) -> None:
+        """Recycle unbound service instance resource synchronously"""
+        try:
+            self.remote_client.delete_instance_synchronously(instance_id=str(self.db_obj.service_instance_id))
+        except RClientResponseError as e:
+            # If not found service instance by instance id, which means it has been recycled, remote will return 404.
+            if e.status_code == 404:
+                pass
+            else:
+                logger.exception("Error occurs during recycling")
+                raise exceptions.SvcInstanceDeleteError("unable to delete instance") from e
+
+        self.db_obj.delete()
+        logger.info(
+            f"Manually recycled unbound remote service instance, service_id: {self.db_obj.service_id}, service_instance_id: {self.db_obj.service_instance_id}"
+        )
 
 
 class RemotePlainInstanceMgr(PlainInstanceMgr):
@@ -371,7 +456,7 @@ class RemotePlainInstanceMgr(PlainInstanceMgr):
         self.remote_client = self.get_remote_client()
 
     def get_service(self) -> RemoteServiceObj:
-        return self.mgr.get(str(self.db_obj.service_id), region=self.db_application.region)
+        return self.mgr.get(str(self.db_obj.service_id))
 
     def get_remote_client(self):
         remote_config = self.mgr.store.get_source_config(str(self.db_obj.service_id))
@@ -441,19 +526,23 @@ class RemotePlainInstanceMgr(PlainInstanceMgr):
 
 
 def create_svc_instance_obj_from_remote(
-    uuid: str, credentials: Dict, config: Dict, field_prefix: str, create_time: "datetime.datetime"
+    uuid: str, credentials: Dict, config: Dict, field_prefix: str, create_time: "datetime.datetime", tenant_id: str
 ) -> ServiceInstanceObj:
     """Create a Service Instance object for remote service
 
     special fields:
 
     - `config.__meta__`: if "should_hidden_fields" or "should_remove_fields" was included in this
-        field, the value will be popped for instance intializing.
+        field, the value will be popped for instance initializing.
     """
 
     def _format_key(val):
-        """Turn credential keys in to upper case and with prefix"""
-        return f"{field_prefix}_{val}".upper()
+        """
+        Turn credential keys in to upper case and add prefix (svc name),
+        also replace '-' with '_' to match the unix environment variable name format
+        """
+        key = f"{field_prefix}_{val}".upper()
+        return key.replace("-", "_")
 
     _credentials = {_format_key(key): value for key, value in credentials.items()}
 
@@ -461,7 +550,9 @@ def create_svc_instance_obj_from_remote(
     meta_config = config.pop("__meta__", {})
     should_hidden_fields = list(map(_format_key, meta_config.get("should_hidden_fields", [])))
     should_remove_fields = list(map(_format_key, meta_config.get("should_remove_fields", [])))
-    return ServiceInstanceObj(uuid, _credentials, config, should_hidden_fields, should_remove_fields, create_time)
+    return ServiceInstanceObj(
+        uuid, _credentials, config, tenant_id, should_hidden_fields, should_remove_fields, create_time
+    )
 
 
 class RemoteServiceMgr(BaseServiceMgr):
@@ -472,64 +563,55 @@ class RemoteServiceMgr(BaseServiceMgr):
     def __init__(self, store: RemoteServiceStore):
         self.store = store
 
-    def get(self, uuid: str, region: str) -> RemoteServiceObj:
+    def get(self, uuid: str) -> RemoteServiceObj:
         """Get a single service by given uuid
 
         :raises: ServiceObjNotFound
         """
         try:
-            obj = self.store.get(uuid, region)
+            obj = self.store.get(uuid)
         except (ServiceNotFound, RuntimeError) as e:
             raise exceptions.ServiceObjNotFound(f"Service with id={uuid} not found in remote") from e
-        return RemoteServiceObj.from_data(obj, region=region)
+        return RemoteServiceObj.from_data(obj)
 
-    def find_by_name(self, name: str, region: str) -> RemoteServiceObj:
+    def find_by_name(self, name: str) -> RemoteServiceObj:
         """Find a single service by service name
 
         :raises: ServiceObjNotFound
         """
-        objs = self.store.filter(region, conditions={"name": name})
+        objs = self.store.filter(conditions={"name": name})
         if not objs:
             raise exceptions.ServiceObjNotFound(f"Service with name={name} not found in remote")
         # Use the first matched services objects
-        return RemoteServiceObj.from_data(objs[0], region=region)
+        return RemoteServiceObj.from_data(objs[0])
 
-    def list_by_category(
-        self, region: str, category_id: int, include_hidden=False
-    ) -> Generator[ServiceObj, None, None]:
+    def list_by_category(self, category_id: int, include_hidden=False) -> Generator[ServiceObj, None, None]:
         """query a list of services by category"""
-        items = self.store.filter(region, conditions={"category": category_id})
+        items = self.store.filter(conditions={"category": category_id})
         for svc in items:
-            obj = RemoteServiceObj.from_data(svc, region=region)
+            obj = RemoteServiceObj.from_data(svc)
             # Ignore services which is_visible field is False
             if not include_hidden and not svc["is_visible"]:
                 continue
             yield obj
 
-    def list_by_region(self, region: str, include_hidden=False) -> Generator[ServiceObj, None, None]:
-        """query a list of services by region"""
-        items = self.store.filter(region)
-        for svc in items:
-            # Ignore services which is_visible field is False
-            if not include_hidden and not svc["is_visible"]:
-                continue
-
-            yield RemoteServiceObj.from_data(svc, region=region)
-
-    def list(self) -> Generator[ServiceObj, None, None]:
-        """query all list of services"""
+    def list_visible(self) -> Iterable[ServiceObj]:
+        """list visible services."""
         items = self.store.all()
         for svc in items:
-            yield RemoteServiceObj.from_data(svc, region=None)
+            if not svc["is_visible"]:
+                continue
+            yield RemoteServiceObj.from_data(svc)
+
+    def list(self) -> Iterable[ServiceObj]:
+        """List all services"""
+        items = self.store.all()
+        for svc in items:
+            yield RemoteServiceObj.from_data(svc)
 
     def _handle_service_data(self, data: Dict) -> Dict:
         # 由于远程增强服务在存储 category_id 的字段命名为 category, 因此这里需要做个重命名
         data["category"] = data.pop("category_id")
-
-        # 远程增强服务的 specification 中的 display_name 是 TranslatedField
-        # 但本地增强服务并无 specification 字段, 仅将这些额外属性存储在 config 字段中
-        # specification.displayname 的国际化目前是由前端来处理
-        data["specifications"] = RemoteSpecDefinitionUpdateSLZ(data["specifications"], many=True).data
         return data
 
     def update(self, service: ServiceObj, data: Dict):
@@ -553,20 +635,28 @@ class RemoteServiceMgr(BaseServiceMgr):
         """List application's bound services"""
         attachments = RemoteServiceModuleAttachment.objects.filter(module=module).values("service_id")
         service_ids = [str(obj["service_id"]) for obj in attachments]
-        for svc in self.store.bulk_get(service_ids, region=module.region):
+        for svc in self.store.bulk_get(service_ids):
             if svc:
-                obj = RemoteServiceObj.from_data(svc, region=module.region)
+                obj = RemoteServiceObj.from_data(svc)
                 if category_id and category_id != obj.category_id:
                     continue
                 yield obj
 
-    def bind_service(self, service: ServiceObj, module: Module, specs: Optional[Dict[str, str]] = None) -> str:
+    def bind_service(
+        self,
+        service: ServiceObj,
+        module: Module,
+        plan_id: str | None = None,
+        env_plan_id_map: Dict[str, str] | None = None,
+    ) -> str:
         """Bind a service to module"""
-        helper = ModuleSpecificationsHelper(service=service, module=module, specs=specs or {})
-        helper.fill_protected_specs()
-
         binder = RemoteServiceBinder(service)
-        return binder.bind(module, helper.specs).pk
+        return binder.bind(module, plan_id, env_plan_id_map).pk
+
+    def bind_service_use_first_plan(self, service: ServiceObj, module: Module) -> str:
+        """Bind a service to module, use the first plan when multiple plans are available"""
+        binder = RemoteServiceBinder(service)
+        return binder.bind_use_first_plan(module).pk
 
     def bind_service_partial(self, service: ServiceObj, module: Module) -> str:
         """Bind a service to module, without binding to engine app"""
@@ -611,6 +701,16 @@ class RemoteServiceMgr(BaseServiceMgr):
         for attachment in qs:
             yield self.transform_rel_db_obj(attachment)
 
+    def list_unbound_instance_rels(
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
+    ) -> Generator[UnboundRemoteEngineAppInstanceRel, None, None]:
+        """Return all unbound remote service instances, filter by specific service (None for all)"""
+        qs = engine_app.unbound_remote_service_attachment.all()
+        if service:
+            qs = qs.filter(service_id=service.uuid)
+        for attachment in qs:
+            yield UnboundRemoteEngineAppInstanceRel(attachment, self, self.store)
+
     def get_attachment_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
         try:
             return RemoteServiceEngineAppAttachment.objects.get(
@@ -627,13 +727,6 @@ class RemoteServiceMgr(BaseServiceMgr):
         modules = Module.objects.filter(application_id__in=application_ids)
         return RemoteServiceModuleAttachment.objects.filter(
             service_id=service.uuid,
-            module__in=modules,
-        )
-
-    def get_provisioned_queryset_by_services(self, services: List[ServiceObj], application_ids: List[str]) -> QuerySet:
-        modules = Module.objects.filter(application_id__in=application_ids)
-        return RemoteServiceModuleAttachment.objects.filter(
-            service_id__in=[service.uuid for service in services],
             module__in=modules,
         )
 
@@ -659,16 +752,15 @@ class RemoteServiceMgr(BaseServiceMgr):
         """Get all remote mysql services"""
         service_objects = []
         seen_uuids = set()
-        for region in get_all_regions():
-            for service_name in ["gcs_mysql", "mysql"]:
-                try:
-                    svc = self.find_by_name(name=service_name, region=region)
-                except exceptions.ServiceObjNotFound:
-                    continue
-                if svc.uuid in seen_uuids:
-                    continue
-                seen_uuids.add(svc.uuid)
-                service_objects.append(svc)
+        for service_name in ["gcs_mysql", "mysql"]:
+            try:
+                svc = self.find_by_name(name=service_name)
+            except exceptions.ServiceObjNotFound:
+                continue
+            if svc.uuid in seen_uuids:
+                continue
+            seen_uuids.add(svc.uuid)
+            service_objects.append(svc)
         return service_objects
 
     def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
@@ -677,6 +769,17 @@ class RemoteServiceMgr(BaseServiceMgr):
             return RemoteServiceEngineAppAttachment.objects.get(service_id=service.uuid, engine_app=engine_app)
         except RemoteServiceEngineAppAttachment.DoesNotExist as e:
             raise exceptions.SvcAttachmentDoesNotExist from e
+
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        """Return a unbound remote service instances, filter by specific service and service instance id"""
+        try:
+            instance = UnboundRemoteServiceEngineAppAttachment.objects.get(
+                service_id=service.uuid,
+                service_instance_id=service_instance_id,
+            )
+        except UnboundRemoteServiceEngineAppAttachment.DoesNotExist as e:
+            raise UnboundSvcAttachmentDoesNotExist from e
+        return UnboundRemoteEngineAppInstanceRel(instance, self, self.store)
 
 
 class RemotePlanMgr(BasePlanMgr):
@@ -688,12 +791,16 @@ class RemotePlanMgr(BasePlanMgr):
         self.store = store
         self.service_mgr = RemoteServiceMgr(self.store)
 
-    def list_plans(self, service: Optional[ServiceObj] = None) -> Generator[PlanObj, None, None]:
+    def list_plans(
+        self, service: Optional[ServiceObj] = None, tenant_id: Optional[str] = None
+    ) -> Generator[PlanObj, None, None]:
         for svc in self.service_mgr.list():
             if service and svc.uuid != service.uuid:
                 continue
-
-            yield from svc.get_plans(is_active=NOTSET)
+            plans = svc.get_plans(is_active=NOTSET)
+            if tenant_id:
+                plans = [plan for plan in plans if plan.tenant_id == tenant_id]
+            yield from plans
 
     def create_plan(self, service: ServiceObj, plan_data: Dict):
         if not isinstance(service, RemoteServiceObj) or not service.supports_rest_upsert():
@@ -731,22 +838,49 @@ class RemoteServiceBinder:
         self.service = service
 
     @atomic()
-    def bind(self, module: Module, specs: Optional[Dict[str, str]] = None):
-        """Create the binding relationship in local database"""
-        specs_helper = ServiceSpecificationHelper(
-            self.service.specifications,
-            list(ServicePlansHelper.from_service(self.service).get_by_region(module.region)),
-        )
-        plans = specs_helper.filter_plans(specs)
+    def bind(self, module: Module, plan_id: str | None = None, env_plan_id_map: Dict[str, str] | None = None):
+        """Create the binding relationship in local database.
 
+        :raises BindServicePlanError: When no appropriate plans can be found.
+        """
         svc_module_attachment, _ = RemoteServiceModuleAttachment.objects.get_or_create(
             module=module,
             service_id=self.service.uuid,
+            defaults={"tenant_id": module.tenant_id},
         )
 
         # bind plans to each engineApp without creating
-        for env in module.envs.all():  # type: ModuleEnvironment
-            plan = cast(RemotePlanObj, self._get_plan_by_env(env, plans))
+        for env in module.envs.all():
+            try:
+                plan = get_plan_by_env(self.service, env, plan_id, env_plan_id_map)
+            except ValueError as e:
+                raise BindServicePlanError(str(e))
+
+            plan = cast(RemotePlanObj, plan)
+            self._bind_for_env(env, plan)
+        return svc_module_attachment
+
+    @atomic()
+    def bind_use_first_plan(self, module: Module):
+        """Create the binding relationship in local database. Use the first plan
+        if multiple plans are available.
+
+        :raises BindServicePlanError: When no appropriate plans can be found.
+        """
+        svc_module_attachment, _ = RemoteServiceModuleAttachment.objects.get_or_create(
+            module=module,
+            service_id=self.service.uuid,
+            defaults={"tenant_id": module.tenant_id},
+        )
+
+        # bind plans to each environment
+        for env in module.envs.all():
+            plans = PlanSelector().list(self.service, env)
+            if not plans:
+                raise BindServicePlanError("no plans found")
+
+            # Use the first plan
+            plan = cast(RemotePlanObj, plans[0])
             self._bind_for_env(env, plan)
         return svc_module_attachment
 
@@ -754,25 +888,15 @@ class RemoteServiceBinder:
     def bind_without_plan(self, module: Module):
         """bind the Service to Module, without binding any RemoteServiceEngineAppAttachment"""
         attachment, _ = RemoteServiceModuleAttachment.objects.get_or_create(
-            service_id=self.service.uuid, module=module
+            service_id=self.service.uuid, module=module, defaults={"tenant_id": module.tenant_id}
         )
         return attachment
-
-    @staticmethod
-    def _get_plan_by_env(env: ModuleEnvironment, plans: List[PlanObj]) -> PlanObj:
-        """Return the first plan which matching the given env."""
-        plans = sorted(plans, key=lambda i: ("restricted_envs" in i.properties), reverse=True)
-
-        for plan in plans:
-            if "restricted_envs" not in plan.properties or env.environment in plan.properties["restricted_envs"]:
-                return plan
-        raise RuntimeError("can not bind a plan")
 
     def _bind_for_env(self, env: ModuleEnvironment, plan: RemotePlanObj):
         attachment, created = RemoteServiceEngineAppAttachment.objects.get_or_create(
             engine_app=env.engine_app,
             service_id=self.service.uuid,
-            defaults={"plan_id": plan.uuid},
+            defaults={"plan_id": plan.uuid, "tenant_id": env.tenant_id},
         )
 
         if created or attachment.plan_id == constants.LEGACY_PLAN_ID:

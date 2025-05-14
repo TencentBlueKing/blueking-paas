@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import shlex
 from typing import TYPE_CHECKING, Dict, List, Optional
 
@@ -26,6 +25,7 @@ from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.applications.models.misc import OutputStream
 from paas_wl.utils.constants import CommandStatus, CommandType
 from paas_wl.utils.models import UuidAuditedModel
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models.build import Build
@@ -74,6 +74,7 @@ class CommandManager(models.Manager):
             output_stream=OutputStream.objects.create(),
             build=build,
             config=cfg,
+            tenant_id=app.tenant_id,
         )
         return obj
 
@@ -96,6 +97,8 @@ class Command(UuidAuditedModel):
     build = models.ForeignKey("api.Build", on_delete=models.CASCADE, null=True, db_constraint=False)
     config = models.ForeignKey("api.Config", on_delete=models.CASCADE, db_constraint=False)
     operator = models.CharField(max_length=64, help_text="操作者(被编码的 username), 目前该字段无意义")
+
+    tenant_id = tenant_id_field_factory()
 
     objects = CommandManager()
 
@@ -144,6 +147,5 @@ class Command(UuidAuditedModel):
         """Check if current command allows interruptions"""
         if CommandStatus(self.status) in CommandStatus.get_finished_states():
             return False
-        if not self.logs_was_ready_at:
-            return False
-        return True
+
+        return bool(self.logs_was_ready_at)

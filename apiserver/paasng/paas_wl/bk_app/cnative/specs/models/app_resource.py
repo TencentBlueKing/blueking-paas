@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict, List, Optional, Tuple
 
 import yaml
@@ -37,6 +36,7 @@ from paas_wl.core.env import EnvIsRunningHub
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.utils.basic import to_error_string
 from paas_wl.utils.models import BkUserField, TimestampedModel
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -50,25 +50,24 @@ class AppModelResourceManager(models.Manager):
         """Get the JSON value of app model resource by application"""
         return AppModelResource.objects.get(application_id=application.id, module_id=module.id).revision.json_value
 
-    def create_from_resource(self, region: str, application_id: str, module_id: str, resource: "BkAppResource"):
+    def create_from_resource(self, application: Application, module_id: str, resource: "BkAppResource"):
         """Create a model resource object from `BkAppResource` object
 
-        :param region: Application region
-        :param application_id: ID of bk application object
+        :param application: bk application object
         :param module_id: ID of Module object
         :param resource: `BkAppResource` object
         """
         json_value = resource.to_deployable()
         revision = AppModelRevision.objects.create(
-            region=region,
-            application_id=application_id,
+            application_id=application.id,
             module_id=module_id,
             version=resource.apiVersion,
             json_value=json_value,
             yaml_value=yaml.dump(json_value, allow_unicode=True, default_flow_style=False),
+            tenant_id=application.tenant_id,
         )
         model_resource = AppModelResource.objects.create(
-            region=region, application_id=application_id, module_id=module_id, revision=revision
+            application_id=application.id, module_id=module_id, revision=revision, tenant_id=application.tenant_id
         )
         return model_resource
 
@@ -79,7 +78,7 @@ class AppModelResourceManager(models.Manager):
             # 原逻辑: 创建云原生应用的模块时, 会创建 AppModelResource 用于占位
             res_name = generate_bkapp_name(module)
             resource = create_app_resource(res_name, image="stub")
-            return self.create_from_resource(module.region, module.application.id, module.id, resource), True
+            return self.create_from_resource(module.application, module.id, resource), True
 
 
 class AppModelResource(TimestampedModel):
@@ -89,6 +88,8 @@ class AppModelResource(TimestampedModel):
     module_id = models.UUIDField(verbose_name=_("所属模块"), unique=True, null=False)
     module = ModuleAttrFromID()
     revision = models.OneToOneField(verbose_name="当前 revision", to="AppModelRevision", on_delete=models.CASCADE)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = AppModelResourceManager()
 
@@ -101,13 +102,14 @@ class AppModelResource(TimestampedModel):
         :param resource: `BkAppResource` object
         """
         json_value = resource.to_deployable()
+        app = Application.objects.get(id=self.application_id)
         self.revision = AppModelRevision.objects.create(
-            region=self.region,
             application_id=self.application_id,
             module_id=self.module_id,
             version=resource.apiVersion,
             json_value=json_value,
             yaml_value=yaml.dump(json_value, allow_unicode=True, default_flow_style=False),
+            tenant_id=app.tenant_id,
         )
         self.save(update_fields=["revision"])
 
@@ -130,6 +132,8 @@ class AppModelRevision(TimestampedModel):
     has_deployed = models.BooleanField(verbose_name=_("是否已部署"), default=False)
     is_draft = models.BooleanField(verbose_name=_("是否草稿"), default=False)
     is_deleted = models.BooleanField(verbose_name=_("是否已删除"), default=False)
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         indexes = [models.Index(fields=["application_id", "module_id"])]
@@ -187,6 +191,8 @@ class AppModelDeploy(TimestampedModel):
 
     operator = BkUserField(verbose_name=_("操作者"))
 
+    tenant_id = tenant_id_field_factory()
+
     objects = AppModelDeployQuerySet.as_manager()
 
     class Meta:
@@ -242,8 +248,11 @@ def update_app_resource(app: Application, module: Module, payload: Dict):
     :raise: `ValidationError` when payload is invalid
     :raise: `ValueError` if model resource has not been initialized for given application
     """
-    # force replace metadata.name with app_code to avoid user modify
-    payload["metadata"]["name"] = generate_bkapp_name(module)
+    try:
+        # force replace metadata.name with app_code to avoid user modify
+        payload["metadata"]["name"] = generate_bkapp_name(module)
+    except KeyError as e:
+        raise ValidationError(f"Missing field in manifest: {e}")
 
     try:
         obj = BkAppResource(**payload)

@@ -1,32 +1,34 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Dict, List, Literal
 
 import cattr
 import semver
+from bkpaas_auth.models import user_id_encoder
+from django.conf import settings
+from django.db.models import Case, IntegerField, Value, When
 from django.db.transaction import atomic
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
+from elasticsearch.exceptions import RequestError
 from rest_framework import mixins, status
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import LimitOffsetPagination
@@ -45,8 +47,17 @@ from paasng.bk_plugins.pluginscenter.features import PluginFeatureFlag, PluginFe
 from paasng.bk_plugins.pluginscenter.filters import PluginInstancePermissionFilter
 from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissionActions as Actions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
-from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions import plugin_action_permission_class
-from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import submit_create_approval_ticket
+from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions import (
+    plugin_action_permission_class,
+    plugin_view_actions_perm,
+)
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import (
+    is_itsm_ticket_closed,
+    submit_canary_release_ticket,
+    submit_create_approval_ticket,
+    submit_visible_range_ticket,
+)
+from paasng.bk_plugins.pluginscenter.log.exceptions import BkLogApiError
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
     PluginBasicInfoDefinition,
@@ -55,6 +66,7 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginMarketInfo,
     PluginRelease,
     PluginReleaseStrategy,
+    PluginVisibleRange,
 )
 from paasng.bk_plugins.pluginscenter.permissions import IsPluginCreator, PluginCenterFeaturePermission
 from paasng.bk_plugins.pluginscenter.releases.executor import PluginReleaseExecutor, init_stage_controller
@@ -66,12 +78,13 @@ from paasng.bk_plugins.pluginscenter.sourcectl import (
 )
 from paasng.bk_plugins.pluginscenter.thirdparty import instance as instance_api
 from paasng.bk_plugins.pluginscenter.thirdparty import market as market_api
+from paasng.bk_plugins.pluginscenter.thirdparty import release as release_api
 from paasng.bk_plugins.pluginscenter.thirdparty.configuration import sync_config
 from paasng.bk_plugins.pluginscenter.thirdparty.instance import update_instance
 from paasng.bk_plugins.pluginscenter.thirdparty.members import sync_members
+from paasng.platform.applications.tenant import validate_app_tenant_params
 from paasng.utils.api_docs import openapi_empty_schema
 from paasng.utils.i18n import to_translated_field
-from paasng.utils.views import permission_classes as _permission_classes
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +94,11 @@ class SchemaViewSet(ViewSet):
     def get_plugins_schema(self, request):
         """get plugin basic info schema for given PluginType"""
         schemas = []
-        for pd in PluginDefinition.objects.all():
+        for pd in PluginDefinition.objects.all().order_by("created"):
             basic_info_definition = pd.basic_info_definition
             pd_data = serializers.PluginDefinitionSLZ(pd).data
+            basic_info = serializers.PluginBasicInfoDefinitionSLZ(basic_info_definition).data
+
             extra_fields = basic_info_definition.extra_fields
             # 当前语言为英文，且定义了英文字段则返回英文字段的定义
             if get_language() == "en" and basic_info_definition.extra_fields:
@@ -91,13 +106,16 @@ class SchemaViewSet(ViewSet):
             schemas.append(
                 {
                     "plugin_type": pd_data,
+                    "basic_info": basic_info,
                     "schema": {
                         "id": basic_info_definition.id_schema.dict(exclude_unset=True),
                         "name": basic_info_definition.name_schema.dict(exclude_unset=True),
                         "init_templates": cattr.unstructure(basic_info_definition.init_templates),
                         "release_method": basic_info_definition.release_method,
                         "repository_group": basic_info_definition.repository_group,
-                        "repository_template": shim.build_repository_template(basic_info_definition.repository_group),
+                        "repository_template": shim.build_repository_template(
+                            pd, basic_info_definition.repository_group
+                        ),
                         "extra_fields": cattr.unstructure(extra_fields),
                         "extra_fields_order": cattr.unstructure(basic_info_definition.extra_fields_order),
                     },
@@ -176,13 +194,32 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
     queryset = PluginInstance.objects.all()
     serializer_class = serializers.PluginInstanceSLZ
     pagination_class = LimitOffsetPagination
-    filter_backends = [PluginInstancePermissionFilter, OrderingFilter, SearchFilter]
+    filter_backends = [PluginInstancePermissionFilter, SearchFilter]
     search_fields = ["id", "name_zh_cn", "name_en"]
+
     permission_classes = [
         IsAuthenticated,
         PluginCenterFeaturePermission,
-        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
+        plugin_view_actions_perm(
+            {
+                "create": [],
+                "update": [Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN],
+                "update_extra_fields": [Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN],
+                "update_publisher": [Actions.EDIT_PLUGIN],
+                "update_logo": [Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN],
+                "retrieve": [Actions.BASIC_DEVELOPMENT],
+                "archive": [Actions.DELETE_PLUGIN],
+                "reactivate": [Actions.DELETE_PLUGIN],
+            },
+            default_actions=[Actions.BASIC_DEVELOPMENT],
+        ),
     ]
+
+    def get_permissions(self):
+        if self.action == "destroy":
+            # Only the creator can delete the plugin
+            return [IsAuthenticated(), PluginCenterFeaturePermission(), IsPluginCreator()]
+        return super().get_permissions()
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
@@ -198,29 +235,45 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
         if pd__identifier_list := query_params.get("pd__identifier", []):
             queryset = queryset.filter(pd__identifier__in=pd__identifier_list)
+
+        queryset = queryset.annotate(
+            is_archived=Case(
+                When(status="archived", then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        ).order_by("is_archived", query_params.get("order_by"))
         return queryset
 
     @atomic
     @swagger_auto_schema(request_body=serializers.StubCreatePluginSLZ)
-    @_permission_classes([IsAuthenticated, PluginCenterFeaturePermission])
     def create(self, request, pd_id, **kwargs):
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         slz = serializers.make_plugin_slz_class(pd, creation=True)(data=request.data, context={"pd": pd})
         slz.is_valid(raise_exception=True)
         validated_data = slz.validated_data
+        raw_tenant_mode = validated_data.pop("plugin_tenant_mode")
+        plugin_tenant_mode, plugin_tenant_id, tenant = validate_app_tenant_params(request.user, raw_tenant_mode)
 
         plugin_status = (
             constants.PluginStatus.WAITING_APPROVAL
             if pd.approval_config.enabled
             else constants.PluginStatus.DEVELOPING
         )
+
         plugin = PluginInstance(
             pd=pd,
             language=validated_data["template"].language,
             **validated_data,
             creator=request.user.pk,
+            # 插件发布者默认是工具创建者
+            publisher=request.user.username,
             # 如果插件不需要审批，则状态设置为开发中
             status=plugin_status,
+            # 写入租户相关信息
+            plugin_tenant_mode=plugin_tenant_mode.value,
+            plugin_tenant_id=plugin_tenant_id,
+            tenant_id=tenant.id,
         )
         plugin.save()
         plugin.refresh_from_db()
@@ -237,6 +290,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.CREATE,
             subject=constants.SubjectTypes.PLUGIN,
+            tenant_id=tenant.id,
         )
         return Response(
             data=self.get_serializer(plugin).data,
@@ -245,17 +299,10 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
     def retrieve(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance(allow_archive=True)
-        return Response(data=self.get_serializer(plugin).data)
+        return Response(data=serializers.PluginInstanceDetailSLZ(plugin).data)
 
     @atomic
     @swagger_auto_schema(request_body=serializers.StubUpdatePluginSLZ)
-    @_permission_classes(
-        [
-            IsAuthenticated,
-            PluginCenterFeaturePermission,
-            plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN]),
-        ]
-    )
     def update(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
@@ -282,18 +329,12 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.BASIC_INFO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(plugin).data)
 
     @atomic
     @swagger_auto_schema(request_body=serializers.StubUpdatePluginSLZ)
-    @_permission_classes(
-        [
-            IsAuthenticated,
-            PluginCenterFeaturePermission,
-            plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN]),
-        ]
-    )
     def update_extra_fields(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
@@ -315,18 +356,39 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.BASIC_INFO,
+            tenant_id=plugin.tenant_id,
+        )
+        return Response(data=self.get_serializer(plugin).data)
+
+    @atomic
+    @swagger_auto_schema(request_body=serializers.PluginPublisher)
+    def update_publisher(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+        slz = serializers.PluginPublisher(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        plugin.publisher = validated_data["publisher"]
+        plugin.save()
+
+        if pd.basic_info_definition.api.update:
+            api_call_success = update_instance(pd, plugin, operator=request.user.pk)
+            if not api_call_success:
+                raise error_codes.THIRD_PARTY_API_ERROR
+
+        # 操作记录: 修改发布者
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.PUBLISHER,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(plugin).data)
 
     @atomic
     @swagger_auto_schema(request_body=serializers.PluginInstanceLogoSLZ)
-    @_permission_classes(
-        [
-            IsAuthenticated,
-            PluginCenterFeaturePermission,
-            plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.EDIT_PLUGIN]),
-        ]
-    )
     def update_logo(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
@@ -345,11 +407,11 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.LOGO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(plugin).data)
 
     @atomic
-    @_permission_classes([IsAuthenticated, PluginCenterFeaturePermission, IsPluginCreator])
     def destroy(self, request, pd_id, plugin_id):
         """仅创建审批失败的插件可删除"""
         plugin = self.get_plugin_instance()
@@ -362,9 +424,6 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @atomic
-    @_permission_classes(
-        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.DELETE_PLUGIN])]
-    )
     def archive(self, request, pd_id, plugin_id):
         """插件下架"""
         plugin = self.get_plugin_instance()
@@ -381,13 +440,11 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.ARCHIVE,
             subject=constants.SubjectTypes.PLUGIN,
+            tenant_id=plugin.tenant_id,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @atomic
-    @_permission_classes(
-        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.DELETE_PLUGIN])]
-    )
     def reactivate(self, request, pd_id, plugin_id):
         """插件重新上架"""
         plugin = self.get_plugin_instance()
@@ -407,6 +464,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
             operator=request.user.pk,
             action=constants.ActionTypes.REACTIVATE,
             subject=constants.SubjectTypes.PLUGIN,
+            tenant_id=plugin.tenant_id,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -456,6 +514,14 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
 
         return Response(data=serializers.MetricsSummarySLZ(summary).data)
 
+    def get_basic_info(self, request, pd_id, plugin_id):
+        """插件的基本信息"""
+        plugin = self.get_plugin_instance()
+        stage = plugin.pd.basic_info_definition.api.create.stage
+        client = BkDevopsClient(request.user.username, stage=stage)
+        data = client.get_codecc_plugin_basic_info(plugin_id)
+        return Response(data=data.dict())
+
 
 class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
     queryset = OperationRecord.objects.all().order_by("-created")
@@ -471,13 +537,30 @@ class OperationRecordViewSet(PluginInstanceMixin, mixins.ListModelMixin, Generic
         plugin = self.get_plugin_instance()
         return self.queryset.filter(plugin=plugin)
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        slz = serializers.OperationRecordFilterSLZ(data=self.request.query_params)
+        slz.is_valid(raise_exception=True)
+        query_params = slz.validated_data
 
-@method_decorator(
-    _permission_classes(
-        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
-    ),
-    name="list",
-)
+        if subject := query_params.get("subject"):
+            queryset = queryset.filter(subject=subject)
+        if action := query_params.get("action"):
+            queryset = queryset.filter(action=action)
+        if operator_username := query_params.get("operator"):
+            operator = user_id_encoder.encode(settings.USER_TYPE, operator_username)
+            queryset = queryset.filter(operator=operator)
+        if start_time := query_params.get("start_time"):
+            queryset = queryset.filter(created__gte=start_time)
+        if end_time := query_params.get("end_time"):
+            queryset = queryset.filter(created__lte=end_time)
+        return queryset
+
+    @swagger_auto_schema(query_serializer=serializers.OperationRecordFilterSLZ)
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+
 class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericViewSet):
     serializer_class = serializers.PluginReleaseVersionSLZ
     pagination_class = LimitOffsetPagination
@@ -485,7 +568,12 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
     permission_classes = [
         IsAuthenticated,
         PluginCenterFeaturePermission,
-        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
+        plugin_view_actions_perm(
+            {
+                "create": [Actions.BASIC_DEVELOPMENT, Actions.RELEASE_VERSION],
+            },
+            default_actions=[Actions.BASIC_DEVELOPMENT],
+        ),
     ]
     search_fields = ["version", "source_version_name"]
     ordering = ("-created",)
@@ -499,8 +587,12 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         queryset = queryset.filter(type=query_params["type"])
         if status_list := query_params.get("status", []):
             queryset = queryset.filter(status__in=status_list)
+        if gray_status_list := query_params.get("gray_status", []):
+            queryset = queryset.filter(gray_status__in=gray_status_list)
         if creator := query_params.get("creator"):
             queryset = queryset.filter(creator=creator)
+        if is_rolled_back := query_params.get("is_rolled_back"):
+            queryset = queryset.filter(is_rolled_back=is_rolled_back)
         return queryset
 
     def retrieve(self, request, pd_id, plugin_id, release_id):
@@ -518,13 +610,6 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         request_body=serializers.StubCreatePluginReleaseVersionSLZ,
         responses={201: serializers.PluginReleaseVersionSLZ},
     )
-    @_permission_classes(
-        [
-            IsAuthenticated,
-            PluginCenterFeaturePermission,
-            plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.RELEASE_VERSION]),
-        ]
-    )
     def create(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance()
 
@@ -533,15 +618,10 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         if type == constants.PluginReleaseType.PROD and plugin.prod_releasing_versions.exists():
             raise error_codes.CANNOT_RELEASE_ONGOING_EXISTS
 
-        version_type = request.data["source_version_type"]
-        version_name = request.data["source_version_name"]
-        source_hash = get_plugin_repo_accessor(plugin).extract_smart_revision(f"{version_type}:{version_name}")
-
         slz = serializers.make_create_release_version_slz_class(plugin, type)(
             data=request.data,
             context={
-                "source_hash": source_hash,
-                "previous_version": getattr(plugin.all_versions.get_latest_succeeded(), "version", None),
+                "previous_version": getattr(plugin.all_versions.get_latest_succeeded(type=type), "version", None),
             },
         )
         slz.is_valid(raise_exception=True)
@@ -549,10 +629,16 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
 
         release_strategy = data.pop("release_strategy", None)
         release = PluginRelease.objects.create(
-            plugin=plugin, source_location=plugin.repository, source_hash=source_hash, creator=request.user.pk, **data
+            plugin=plugin,
+            source_location=plugin.repository,
+            creator=request.user.pk,
+            tenant_id=plugin.tenant_id,
+            **data,
         )
-        if release_strategy:
-            PluginReleaseStrategy.objects.create(release=release, **release_strategy)
+
+        release_definition = plugin.pd.get_release_revision_by_type(type)
+        if release_definition.revisionType == constants.PluginRevisionType.TESTED_VERSION:
+            PluginReleaseStrategy.objects.create(release=release, tenant_id=plugin.tenant_id, **release_strategy)
         PluginReleaseExecutor(release).initial(operator=request.user.username)
 
         # 操作记录: 新建 xx 版本
@@ -570,6 +656,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             action=constants.ActionTypes.ADD,
             specific=release.version,
             subject=subject,
+            tenant_id=plugin.tenant_id,
         )
         release.refresh_from_db()
         return Response(data=self.get_serializer(release).data, status=status.HTTP_201_CREATED)
@@ -615,6 +702,7 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             action=constants.ActionTypes.RE_RELEASE,
             specific=release.version,
             subject=constants.SubjectTypes.VERSION,
+            tenant_id=plugin.tenant_id,
         )
         release.refresh_from_db()
         return Response(data=self.get_serializer(release).data)
@@ -638,8 +726,39 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
             action=constants.ActionTypes.TERMINATE,
             specific=release.version,
             subject=constants.SubjectTypes.VERSION,
+            tenant_id=plugin.tenant_id,
         )
         release.refresh_from_db()
+        return Response(data=self.get_serializer(release).data)
+
+    @atomic
+    def rollback_release(self, request, pd_id, plugin_id, release_id):
+        """回滚发布"""
+        plugin = self.get_plugin_instance()
+        release = self.get_queryset().get(pk=release_id)
+        # 如果版本已经回滚过，则不允许再回滚
+        if release.is_rolled_back:
+            raise error_codes.CANNOT_ROLLBACK_RELEASE.f(_("当前版本已回滚，不可再次回滚"))
+        if not release.is_latest:
+            raise error_codes.CANNOT_ROLLBACK_RELEASE.f(_("只允许最新版本回滚"))
+
+        release.is_rolled_back = True
+        release.gray_status = constants.GrayReleaseStatus.ROLLED_BACK
+        release.save()
+
+        api_call_success = release_api.rollback_release(plugin.pd, plugin, release, operator=request.user.username)
+        if not api_call_success:
+            raise error_codes.THIRD_PARTY_API_ERROR
+
+        # 操作记录: 回滚版本
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.ROLLBACK,
+            subject=constants.SubjectTypes.VERSION,
+            specific=release.version,
+            tenant_id=plugin.tenant_id,
+        )
         return Response(data=self.get_serializer(release).data)
 
     @swagger_auto_schema(responses={200: openapi_docs.create_release_schema})
@@ -652,19 +771,21 @@ class PluginReleaseViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericVi
         pd = get_object_or_404(PluginDefinition, identifier=pd_id)
         plugin = self.get_plugin_instance()
         release_definition = pd.get_release_revision_by_type(type)
-        if release_definition.revisionType == "master":
+        if release_definition.revisionType == constants.PluginRevisionType.MASTER:
             versions = [build_master_placeholder()]
-        elif release_definition.revisionType == "tag":
+        elif release_definition.revisionType == constants.PluginRevisionType.TAG:
             versions = get_plugin_repo_accessor(plugin).list_alternative_versions(
                 include_branch=False, include_tag=True
             )
+        elif release_definition.revisionType == constants.PluginRevisionType.TESTED_VERSION:
+            versions = shim.get_tested_versions(plugin)
         else:
             versions = get_plugin_repo_accessor(plugin).list_alternative_versions(
                 include_branch=True, include_tag=True
             )
 
         semver_choices = None
-        current_release = plugin.all_versions.get_latest_succeeded()
+        current_release = plugin.all_versions.get_latest_succeeded(type=type)
         if release_definition.versionNo == constants.PluginReleaseVersionRule.AUTOMATIC:
             current_version_no = semver.VersionInfo.parse(getattr(current_release, "version", "0.0.0"))
             semver_choices = {
@@ -736,6 +857,24 @@ class PluginReleaseStageViewSet(PluginInstanceMixin, GenericViewSet):
         stage = release.all_stages.get(stage_id=stage_id)
         return Response(data=init_stage_controller(stage).render_to_view())
 
+    @swagger_auto_schema(
+        request_body=serializers.PluginStageStatusSLZ, responses={200: serializers.PluginReleaseVersionSLZ}
+    )
+    def update_stage_status(self, request, pd_id, plugin_id, release_id, stage_id):
+        """更新步骤状态"""
+        slz = serializers.PluginStageStatusSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        plugin = self.get_plugin_instance()
+        release = plugin.all_versions.get(pk=release_id)
+        if release.current_stage.stage_id != stage_id:
+            raise error_codes.CANNOT_RERUN_ONGOING_STEPS.f(_("仅支持更新当前阶段状态"))
+
+        stage = release.all_stages.get(stage_id=stage_id)
+        stage.update_status(data["status"], data["message"])
+        return Response(data=init_stage_controller(stage).render_to_view())
+
 
 class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
     permission_classes = [
@@ -767,6 +906,7 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
+        data["tenant_id"] = plugin.tenant_id
         market_info, created = PluginMarketInfo.objects.update_or_create(
             defaults=data,
             plugin=plugin,
@@ -790,6 +930,7 @@ class PluginMarketViewSet(PluginInstanceMixin, GenericViewSet):
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.MARKET_INFO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(data=self.get_serializer(market_info).data)
 
@@ -798,22 +939,22 @@ class PluginMembersViewSet(PluginInstanceMixin, GenericViewSet):
     permission_classes = [
         IsAuthenticated,
         PluginCenterFeaturePermission,
-        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT, Actions.MANAGE_MEMBERS]),
+        plugin_view_actions_perm(
+            {
+                "list": [Actions.BASIC_DEVELOPMENT],
+                "leave": [Actions.BASIC_DEVELOPMENT],
+            },
+            default_actions=[Actions.BASIC_DEVELOPMENT, Actions.MANAGE_MEMBERS],
+        ),
     ]
     serializer_class = serializers.PluginMemberSLZ
 
-    @_permission_classes(
-        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
-    )
     def list(self, request, pd_id, plugin_id):
         plugin = self.get_plugin_instance(allow_archive=True)
         members = members_api.fetch_plugin_members(plugin)
         return Response(data=self.get_serializer(members, many=True).data)
 
     @swagger_auto_schema(request_body=openapi_empty_schema)
-    @_permission_classes(
-        [IsAuthenticated, PluginCenterFeaturePermission, plugin_action_permission_class([Actions.BASIC_DEVELOPMENT])]
-    )
     def leave(self, request, pd_id, plugin_id):
         """用户主动退出插件成员的API"""
         plugin = self.get_plugin_instance()
@@ -936,15 +1077,23 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        logs = log_api.query_standard_output_logs(
-            pd=plugin.pd,
-            instance=plugin,
-            operator=request.user.username,
-            time_range=query_params["smart_time_range"],
-            query_string=data["query"]["query_string"],
-            limit=query_params["limit"],
-            offset=query_params["offset"],
-        )
+        try:
+            logs = log_api.query_standard_output_logs(
+                pd=plugin.pd,
+                instance=plugin,
+                operator=request.user.username,
+                time_range=query_params["smart_time_range"],
+                query_string=data["query"]["query_string"],
+                limit=query_params["limit"],
+                offset=query_params["offset"],
+            )
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when querying stdout log: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("Failed to query stdout log")
+            raise error_codes.QUERY_LOG_FAILED.f(_("查询标准输出日志失败，请稍后再试。"))
         return Response(data=serializers.StandardOutputLogsSLZ(logs).data)
 
     @swagger_auto_schema(
@@ -964,17 +1113,25 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        logs = log_api.query_structure_logs(
-            pd=plugin.pd,
-            instance=plugin,
-            operator=request.user.username,
-            time_range=query_params["smart_time_range"],
-            query_string=data["query"]["query_string"],
-            terms=data["query"]["terms"],
-            exclude=data["query"]["exclude"],
-            limit=query_params["limit"],
-            offset=query_params["offset"],
-        )
+        try:
+            logs = log_api.query_structure_logs(
+                pd=plugin.pd,
+                instance=plugin,
+                operator=request.user.username,
+                time_range=query_params["smart_time_range"],
+                query_string=data["query"]["query_string"],
+                terms=data["query"]["terms"],
+                exclude=data["query"]["exclude"],
+                limit=query_params["limit"],
+                offset=query_params["offset"],
+            )
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when querying structure log: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("Failed to query structure log")
+            raise error_codes.QUERY_LOG_FAILED.f(_("查询结构化日志失败，请稍后再试。"))
         return Response(data=serializers.StructureLogsSLZ(logs).data)
 
     @swagger_auto_schema(
@@ -994,15 +1151,23 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        logs = log_api.query_ingress_logs(
-            pd=plugin.pd,
-            instance=plugin,
-            operator=request.user.username,
-            time_range=query_params["smart_time_range"],
-            query_string=data["query"]["query_string"],
-            limit=query_params["limit"],
-            offset=query_params["offset"],
-        )
+        try:
+            logs = log_api.query_ingress_logs(
+                pd=plugin.pd,
+                instance=plugin,
+                operator=request.user.username,
+                time_range=query_params["smart_time_range"],
+                query_string=data["query"]["query_string"],
+                limit=query_params["limit"],
+                offset=query_params["offset"],
+            )
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when querying ingress log: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("Failed to query ingress log")
+            raise error_codes.QUERY_LOG_FAILED.f(_("查询访问日志失败，请稍后再试。"))
         return Response(data=serializers.IngressLogSLZ(logs).data)
 
     @swagger_auto_schema(
@@ -1024,14 +1189,22 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        date_histogram = log_api.aggregate_date_histogram(
-            pd=plugin.pd,
-            instance=plugin,
-            log_type=log_type,
-            operator=request.user.username,
-            time_range=query_params["smart_time_range"],
-            query_string=data["query"]["query_string"],
-        )
+        try:
+            date_histogram = log_api.aggregate_date_histogram(
+                pd=plugin.pd,
+                instance=plugin,
+                log_type=log_type,
+                operator=request.user.username,
+                time_range=query_params["smart_time_range"],
+                query_string=data["query"]["query_string"],
+            )
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("failed to aggregate time-based histogram: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("failed to aggregate time-based histogram")
+            raise error_codes.QUERY_LOG_FAILED.f(_("聚合时间直方图失败，请稍后再试。"))
         return Response(data=serializers.DateHistogramSLZ(date_histogram).data)
 
     @swagger_auto_schema(
@@ -1042,7 +1215,7 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
     def aggregate_fields_filters(
         self, request, pd_id, plugin_id, log_type: Literal["standard_output", "structure", "ingress"]
     ):
-        """查询日志基于时间分布的直方图"""
+        """统计日志的字段分布"""
         plugin = self.get_plugin_instance()
 
         slz = serializers.PluginLogQueryBodySLZ(data=request.data)
@@ -1053,16 +1226,24 @@ class PluginLogViewSet(PluginInstanceMixin, GenericViewSet):
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
-        fields_filters = log_api.aggregate_fields_filters(
-            pd=plugin.pd,
-            instance=plugin,
-            log_type=log_type,
-            operator=request.user.username,
-            time_range=query_params["smart_time_range"],
-            query_string=data["query"]["query_string"],
-            terms=data["query"]["terms"],
-            exclude=data["query"]["exclude"],
-        )
+        try:
+            fields_filters = log_api.aggregate_fields_filters(
+                pd=plugin.pd,
+                instance=plugin,
+                log_type=log_type,
+                operator=request.user.username,
+                time_range=query_params["smart_time_range"],
+                query_string=data["query"]["query_string"],
+                terms=data["query"]["terms"],
+                exclude=data["query"]["exclude"],
+            )
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when aggregating log fields: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("Failed to aggregate log fields")
+            raise error_codes.QUERY_LOG_FAILED.f(_("统计日志的字段失败，请稍后再试。"))
         return Response(data=serializers.LogFieldFilterSLZ(fields_filters, many=True).data)
 
 
@@ -1103,6 +1284,7 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.CONFIG_INFO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(status=status.HTTP_200_OK)
 
@@ -1121,5 +1303,105 @@ class PluginConfigViewSet(PluginInstanceMixin, GenericViewSet):
             operator=request.user.pk,
             action=constants.ActionTypes.MODIFY,
             subject=constants.SubjectTypes.CONFIG_INFO,
+            tenant_id=plugin.tenant_id,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PluginVisibleRangeViewSet(PluginInstanceMixin, mixins.RetrieveModelMixin, GenericViewSet):
+    serializer_class = serializers.PluginVisibleRangeSLZ
+    permission_classes = [
+        IsAuthenticated,
+        PluginCenterFeaturePermission,
+        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
+    ]
+
+    def retrieve(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        visible_range_obj = get_object_or_404(PluginVisibleRange, plugin=plugin)
+        return Response(data=self.get_serializer(visible_range_obj).data)
+
+    @atomic
+    @swagger_auto_schema(request_body=serializers.PluginVisibleRangeUpdateSLZ)
+    def update(self, request, pd_id, plugin_id):
+        plugin = self.get_plugin_instance()
+        pd = get_object_or_404(PluginDefinition, identifier=pd_id)
+
+        visible_range_obj = PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
+        if visible_range_obj.is_in_approval:
+            raise error_codes.VISIBLE_RANGE_UPDATE_FAIELD.f(_("可见范围修改失败：正在审批中"))
+
+        slz = serializers.PluginVisibleRangeUpdateSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        # 仅创建 ITSM 审批单据并将状态设置为审批中，单据审批成功后才将可见范围的数据同步到 DB
+        itsm_detail = submit_visible_range_ticket(
+            pd,
+            plugin,
+            request.user.username,
+            visible_range_obj,
+            validated_data["bkci_project"],
+            validated_data["organization"],
+        )
+
+        # 更新可见范围状态
+        visible_range_obj.is_in_approval = True
+        visible_range_obj.itsm_detail = itsm_detail
+        visible_range_obj.save()
+
+        # 操作记录: 修改发布者
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.VISIBLE_RANGE,
+            tenant_id=plugin.tenant_id,
+        )
+        return Response(data=self.get_serializer(visible_range_obj).data)
+
+
+class PluginReleaseStrategyViewSet(PluginInstanceMixin, GenericViewSet):
+    permission_classes = [
+        IsAuthenticated,
+        PluginCenterFeaturePermission,
+        plugin_action_permission_class([Actions.BASIC_DEVELOPMENT]),
+    ]
+
+    def list(self, request, pd_id, plugin_id, release_id):
+        plugin = self.get_plugin_instance()
+        release = plugin.all_versions.get(pk=release_id)
+        # 获取所有的灰度发布策略
+        release_strategy_list = release.release_strategies.all()
+        return Response(serializers.PluginReleaseStrategySLZ(release_strategy_list).data, many=True)
+
+    def update(self, request, pd_id, plugin_id, release_id):
+        plugin = self.get_plugin_instance()
+        release = plugin.all_versions.get(pk=release_id)
+        # 版本发布流程已经结束，则不允许在添加发布策略
+        if release.status in constants.PluginReleaseStatus.terminated_status():
+            raise error_codes.RELEASE_COMPLETED
+
+        latest_release_strategy = plugin.all_versions.get(pk=release_id).latest_release_strategy
+        # 版本最近一条发布策略的审批流程未结束时，不允许添加发布策略
+        if latest_release_strategy.itsm_detail and not is_itsm_ticket_closed(latest_release_strategy.itsm_detail.sn):
+            raise error_codes.LAST_GRAY_RELEASE_NOT_APPROVED
+
+        slz = serializers.ReleaseStrategyCreateSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+        # 更新灰度策略，同时发起审批流程
+        release_strategy = PluginReleaseStrategy.objects.create(
+            release=release, tenant_id=plugin.tenant_id, **validated_data
+        )
+        submit_canary_release_ticket(plugin.pd, plugin, release, request.user.username)
+
+        # 操作记录: 修改发布策略
+        OperationRecord.objects.create(
+            plugin=plugin,
+            operator=request.user.pk,
+            action=constants.ActionTypes.MODIFY,
+            subject=constants.SubjectTypes.RELEASE_STRATEGY,
+            tenant_id=plugin.tenant_id,
+        )
+        return Response(serializers.PluginReleaseStrategySLZ(release_strategy).data)

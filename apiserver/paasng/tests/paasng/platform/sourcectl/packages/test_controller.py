@@ -1,27 +1,28 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+import tarfile
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import pytest
 import yaml
 from blue_krill.contextlib import nullcontext as does_not_raise
 
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
-from paasng.platform.smart_app.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.sourcectl.controllers.package import PackageController
 from paasng.platform.sourcectl.exceptions import GetProcfileError
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, SPStoragePolicy, VersionInfo
@@ -148,12 +149,16 @@ class TestPackageRepoController:
             ),
         ],
     )
-    def test_list_alternative_versions(self, package_module, versions, expected):
+    def test_list_alternative_versions(self, package_module, versions, expected, tmp_path):
+        # Write an empty tarfile to avoid file format exception when the reader is trying to
+        # parse the file.
+        file_path = tmp_path / "foo.tgz"
+        with tarfile.open(file_path, "w:gz"):
+            pass
+
         for idx, version_info in enumerate(versions):
-            with generate_temp_file() as file_path:
-                file_path.write_text("")
-                stat = SourcePackageStatReader(file_path).read()
-                stat.version = version_info.revision
+            stat = SourcePackageStatReader(file_path).read()
+            stat.version = version_info.revision
             package = SourcePackage.objects.store(
                 package_module,
                 SPStoragePolicy(
@@ -166,7 +171,6 @@ class TestPackageRepoController:
             package.refresh_from_db()
             expected[idx]["url"] = package.storage_url
             expected[idx]["last_update"] = package.updated
-            expected[idx]["name"] = str(file_path.name)
             expected[idx]["extra"]["package_size"] = package.package_size
             expected[idx]["extra"]["is_deleted"] = package.is_deleted
 

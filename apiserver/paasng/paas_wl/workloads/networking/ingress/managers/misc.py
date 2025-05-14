@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Iterable, List, NamedTuple, Optional
 
@@ -54,9 +53,16 @@ class AppDefaultIngresses:
         yield SubPathAppIngressMgr(self.app)
 
         # Independent domain managers
-        env = ModuleEnvironment.objects.get(engine_app_id=self.app.pk)
-        for domain in Domain.objects.filter(module_id=env.module_id, environment_id=env.id):
-            yield CustomDomainIngressMgr(domain)
+        try:
+            env = ModuleEnvironment.objects.get(engine_app_id=self.app.pk)
+        except ModuleEnvironment.DoesNotExist:
+            logger.warning(
+                f"app({self.app.name}) has no ModuleEnvironment queryset, "
+                f"skip custom domain ingress managers. Check whether the app was backup data"
+            )
+        else:
+            for domain in Domain.objects.filter(module_id=env.module_id, environment_id=env.id):
+                yield CustomDomainIngressMgr(domain)
 
     def sync_ignore_empty(self, default_service_name: Optional[str] = None):
         """Sync current ingress resources to apiserver,

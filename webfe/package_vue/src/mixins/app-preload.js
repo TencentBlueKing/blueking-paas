@@ -75,7 +75,6 @@ export default {
 
     if (!store.state.appInfo[appCode]) {
       await store.dispatch('getAppInfo', { appCode, moduleId });
-      console.log('beforeRouteEnter: getAppInfo');
     } else {
       store.commit('updateCurAppByCode', { appCode, moduleId });
     }
@@ -90,7 +89,6 @@ export default {
 
     if (!store.state.appInfo[appCode]) {
       await store.dispatch('getAppInfo', { appCode, moduleId });
-      console.log('beforeRouteUpdate: getAppInfo');
     } else {
       store.commit('updateCurAppByCode', { appCode, moduleId });
     }

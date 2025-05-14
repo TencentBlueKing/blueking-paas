@@ -1,28 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from unittest import mock
 
 import pytest
 from rest_framework import serializers
 
 from paasng.platform.applications.exceptions import AppFieldValidationError
-from paasng.platform.applications.serializers import AppIDField, AppNameField
+from paasng.platform.applications.serializers import AppIDField, AppIDSMartField, AppNameField
 from paasng.platform.applications.signals import prepare_use_application_code, prepare_use_application_name
 from tests.utils.helpers import create_app
 
@@ -37,6 +36,10 @@ class TestAppIDField:
     def test_create_normal(self, random_name):
         slz = AppCodeSLZ(data={"code": random_name})
         assert slz.is_valid() is True
+
+    def test_forbid_underscore(self):
+        slz = AppCodeSLZ(data={"code": "foo_bar"})
+        assert slz.is_valid() is False
 
     def test_create_existed_found(self, bk_app):
         slz = AppCodeSLZ(data={"code": bk_app.code})
@@ -60,6 +63,23 @@ class TestAppIDField:
     def test_update_random_is_forbidden(self, bk_app, random_name):
         slz = AppCodeSLZ(data={"code": random_name}, instance=bk_app)
         assert slz.is_valid() is False
+
+
+class AppIDSMartSLZ(serializers.Serializer):
+    id = AppIDSMartField()
+
+
+class TestAppIDSMartField:
+    def test_max_length_is_20(self):
+        slz = AppIDSMartSLZ(data={"id": "s" * 20})
+        assert slz.is_valid() is True
+
+        slz = AppIDSMartSLZ(data={"id": "s" * 21})
+        assert slz.is_valid() is False
+
+    def test_allow_underscore(self):
+        slz = AppIDSMartSLZ(data={"id": "foo_bar"})
+        assert slz.is_valid() is True
 
 
 class AppNameSLZ(serializers.Serializer):

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 import re
@@ -27,13 +26,12 @@ from urllib.parse import urlparse
 from bkpaas_auth.models import User
 from blue_krill.models.fields import EncryptField
 from django.db import models
-from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 from typing_extensions import Protocol
 
-from paasng.infras.accounts.oauth.utils import get_available_backends
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.exceptions import PackageAlreadyExists
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
@@ -108,6 +106,7 @@ class SvnRepository(OwnerTimestampedModel, RepositoryMixin):
     server_name = models.CharField(verbose_name="SVN 服务名称", max_length=32)
     repo_url = models.CharField(verbose_name="项目地址", max_length=2048)
     source_dir = models.CharField(verbose_name="源码目录", max_length=2048, null=True)
+    tenant_id = tenant_id_field_factory()
 
     def get_repo_fullname(self) -> str:
         """返回当前源码库的全称
@@ -122,7 +121,7 @@ class SvnRepository(OwnerTimestampedModel, RepositoryMixin):
 
         if isinstance(get_sourcectl_type(self.server_name), BkSvnSourceTypeSpec):
             parse_result = urlparse(self.repo_url)
-            if parse_result.scheme == "http" and get_bksvn_config(self.region, name=self.server_name).need_security:
+            if parse_result.scheme == "http" and get_bksvn_config(name=self.server_name).need_security:
                 return "https://" + parse_result.netloc + parse_result.path
             return self.repo_url
         else:
@@ -144,29 +143,11 @@ class SvnAccountManager(models.Manager):
     def generate_account_by_user(username):
         return username
 
-    @atomic
-    def create_account(self, user, region):
-        account = self.generate_account_by_user(user.username)
-
-        svn_auth_manager_cls = get_svn_authorization_manager_cls(region)
-        data = svn_auth_manager_cls.create_svn_client().add_user(
-            account=account,
-        )
-
-        instance = self.create(user=user.pk, account=account, region=region)
-        return {
-            "password": data["password"],
-            "user": user.username,
-            "account": instance.account,
-            "region": instance.region,
-            "id": instance.id,
-        }
-
-    def reset_account(self, instance, user, region):
+    def reset_account(self, instance, user):
         if instance.user != user.pk:
             raise ValueError(user.pk)
 
-        svn_auth_manager_cls = get_svn_authorization_manager_cls(region)
+        svn_auth_manager_cls = get_svn_authorization_manager_cls()
         data = svn_auth_manager_cls.create_svn_client().reset_user(
             account=user.username,
         )
@@ -176,13 +157,18 @@ class SvnAccountManager(models.Manager):
             "password": data["password"],
             "user": user.username,
             "account": instance.account,
-            "region": instance.region,
             "id": instance.id,
         }
 
 
 class SvnAccount(TimestampedModel):
-    """svn account for developer"""
+    """svn account for developer
+
+    [multi-tenancy] This model is not tenant-aware. Should add tenant_id field if
+    it's more convenient to get tenant_id from user.
+
+    NOTE: 平台 bk_svn 仓库(非 bare_svn)的支持逐步废弃, 因此不需要再支持多租户功能
+    """
 
     account = models.CharField(max_length=64, help_text="目前仅支持固定格式", unique=True)
     user = BkUserField()
@@ -200,6 +186,7 @@ class GitRepository(OwnerTimestampedModel, RepositoryMixin):
     server_name = models.CharField(verbose_name="GIT 服务名称", max_length=32)
     repo_url = models.CharField(verbose_name="项目地址", max_length=2048)
     source_dir = models.CharField(verbose_name="源码目录", max_length=2048, null=True)
+    tenant_id = tenant_id_field_factory()
 
     def get_repo_fullname(self) -> str:
         try:
@@ -228,6 +215,7 @@ class DockerRepository(OwnerTimestampedModel, RepositoryMixin):
         help_text="形如 registry.hub.docker.com/library/python, 也可省略 registry 地址",
     )
     source_dir = models.CharField(verbose_name="源码目录", max_length=2048, null=True)
+    tenant_id = tenant_id_field_factory()
 
     @property
     def display_name(self):
@@ -300,6 +288,7 @@ class SourcePackageManager(models.Manager):
                 storage_path=policy.path,
                 storage_url=policy.url,
                 owner=getattr(operator, "pk", None),
+                tenant_id=module.tenant_id,
             ),
             module=module,
             version=policy.stat.version,
@@ -334,6 +323,7 @@ class SourcePackage(OwnerTimestampedModel):
         verbose_name="源码包是否已被清理",
         help_text="如果 SourcePackage 指向的源码包已被清理, 则设置该值为 True",
     )
+    tenant_id = tenant_id_field_factory()
 
     objects = SourcePackageManager()
     default_objects = models.Manager()
@@ -344,7 +334,11 @@ class SourcePackage(OwnerTimestampedModel):
 
 @dataclass
 class SPStat:
-    """Stat info ob SourcePackage"""
+    """SourcePackage stats.
+
+    :param name: The package file name, e.g. 'foo-1.0.0.tar.gz'.
+    :param version: The version number parsed from the package, e.g. '1.0.0'.
+    """
 
     name: str
     version: str
@@ -445,6 +439,31 @@ class VersionInfo:
 
         样例数据: VersionInfo(revision="2.2.1", version_name="2.2.1", version_type="package")
 
+    对于采用了镜像模式的 S-Mart 应用:
+        revision 是当前包的 semver
+        version_name 是镜像的 tag
+        version_type 是 Literal[tag]
+
+        样例数据: VersionInfo(revision="2.2.1", version_name="2.2.1", version_type="tag")
+
+    对于云原生镜像而言:
+        revision 为空串
+        version_name 是镜像的 tag
+        version_type 是 Literal[tag]
+
+        样例数据: VersionInfo(revision="", version_name="v1", version_type="tag")
+
+    对于云原生应用选择已构建的镜像部署时(模块本身非镜像):
+        revision 当前的 sha256 digest
+        version_name 是镜像的 tag
+        version_type 是 Literal[image]
+
+        样例数据:
+        VersionInfo(revision="sha256:a2c6683598be55e2ddd7be53acd820b68cf8db95f84e38cd511f0683feb114a8",
+        version_name="master-2404091749", version_type="image")
+        返回给前端时, 会进行源码构建追溯成:
+        VersionInfo(revision="1304382d8c60220869624cc6b", version_name="master", version_type="branch")
+
     对于镜像仓库而言(旧的镜像应用)
         revision 是镜像的 tag *注: 这里没有实现成 存储镜像hash 是因为暂时没有地方用到*
         version_name 是镜像的 tag
@@ -453,6 +472,7 @@ class VersionInfo:
         样例数据: VersionInfo(revision="2.2.1", version_name="2.2.1", version_type="tag")
     """
 
+    # TODO 在 VersionInfo 构建阶段增加值校验, 同时增加 source_origin 表示来源类型 ?
     revision: str
     version_name: str
     version_type: str
@@ -519,32 +539,28 @@ class GitProject:
         namespace, name = path_with_namespace.rsplit("/", 1)
         return cls(name=name, namespace=namespace, type=sourcectl_type)
 
-    @staticmethod
-    def _find_source_type_by_hostname(hostname: str) -> Optional[str]:
-        """Try find source type by comparing hostname with configured backends
-
-        :param hostname: hostname of Git repo url, such as "x.git.com"
-        """
-        for sourcectl_name, backend in get_available_backends():
-            # 根据 backend 类型的域名判断 Git项目对应的源码仓库类型
-            if urlparse(backend.authorization_base_url).hostname == hostname:
-                return sourcectl_name
-        return None
-
-    @staticmethod
-    def _find_source_type_by_exitsted_data(repo_url: str) -> Optional[str]:
-        """Find source type by querying existed data in database
-
-        :param repo_url: git repo URL address
-        """
-        types = GitRepository.objects.filter(repo_url=repo_url).values_list("server_name", flat=True)
-        if len(set(types)) > 1:
-            raise RuntimeError(f'More than one sourcectl name can be found with "{repo_url}"')
-        return types[0] if types else None
-
     @property
     def path_with_namespace(self):
         return f"{self.namespace}/{self.name}"
+
+
+@dataclass
+class ChangedFile:
+    """被修改的文件详情"""
+
+    path: str
+    content: str
+
+
+@dataclass
+class CommitInfo:
+    """提交数据"""
+
+    branch: str
+    message: str
+    add_files: List[ChangedFile] = field(default_factory=list)
+    edit_files: List[ChangedFile] = field(default_factory=list)
+    delete_files: List[ChangedFile] = field(default_factory=list)
 
 
 class BasicAuthHolderManager(models.Manager):
@@ -569,6 +585,7 @@ class RepoBasicAuthHolder(TimestampedModel):
 
     # 不同 module 相同 repo，保存多份账号密码
     module = models.ForeignKey("modules.Module", on_delete=models.CASCADE, verbose_name="蓝鲸应用模块")
+    tenant_id = tenant_id_field_factory()
 
     objects = BasicAuthHolderManager()
 
@@ -591,7 +608,10 @@ class SourceTypeSpecConfigMgr(models.Manager):
 
 
 class SourceTypeSpecConfig(AuditedModel):
-    """SourceTypeSpec 数据存储"""
+    """SourceTypeSpec 数据存储
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     # Source Type Spec 配置
     name = models.CharField(verbose_name=_("服务名称"), unique=True, max_length=32)

@@ -1,34 +1,34 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
-from paasng.utils.structure import register
+from paasng.bk_plugins.pluginscenter import constants
+from paasng.utils.structure import prepare_json_field
 
 if TYPE_CHECKING:
     from paasng.bk_plugins.pluginscenter.models import PluginDefinition as PluginDefinitionModel
     from paasng.bk_plugins.pluginscenter.models import PluginRelease
 
 
-@register
+@prepare_json_field
 class UIComponent(BaseModel):
     """ui组件"""
 
@@ -36,14 +36,14 @@ class UIComponent(BaseModel):
     props: Dict = Field(default_factory=dict)
 
 
-@register
+@prepare_json_field
 class UIProps(BaseModel):
     """ui属性"""
 
     tips: str
 
 
-@register(exclude_none=True)
+@prepare_json_field(exclude_none=True)
 class FieldSchema(BaseModel):
     """字段定义"""
 
@@ -61,7 +61,7 @@ class FieldSchema(BaseModel):
     items: Optional[Dict] = Field(alias="items")
 
 
-@register
+@prepare_json_field
 class PluginBackendAPIResource(BaseModel):
     """插件后台操作接口"""
 
@@ -74,16 +74,17 @@ class PluginBackendAPIResource(BaseModel):
         frozen = True
 
 
-@register
+@prepare_json_field
 class PluginBackendAPI(BaseModel):
     create: Optional[PluginBackendAPIResource]
     read: Optional[PluginBackendAPIResource]
     update: Optional[PluginBackendAPIResource]
     delete: Optional[PluginBackendAPIResource]
     reactivate: Optional[PluginBackendAPIResource]
+    rollback: Optional[PluginBackendAPIResource]
 
 
-@register
+@prepare_json_field
 class PluginReleaseAPI(BaseModel):
     """插件发布操作集"""
 
@@ -95,7 +96,7 @@ class PluginReleaseAPI(BaseModel):
     preCommand: Optional[PluginBackendAPIResource] = Field(description="前置命令，进入当前阶段后会先执行")
 
 
-@register
+@prepare_json_field
 class PluginCodeTemplate(BaseModel):
     id: str = Field(description="模板id")
     name: str = Field(description="模板名称")
@@ -112,26 +113,34 @@ class PluginCodeTemplate(BaseModel):
         return source_dir
 
 
-@register
+@prepare_json_field
 class PluginoverviewPage(BaseModel):
     topUrl: Optional[str] = Field(default=None, description="概览页面顶部嵌入地址")
     bottomUrl: Optional[str] = Field(default=None, description="概览页面底部嵌入地址")
+    ignoredUrl: Optional[str] = Field(default=None, description="Codecc 概览页面误报列表地址")
 
 
-@register
+@prepare_json_field
 class PluginFeature(BaseModel):
     name: str = Field(description="功能特性名称")
     value: bool = Field(default=False, description="功能特性开关")
 
 
-@register
+@prepare_json_field
 class PluginBasicInfoDefinition(BaseModel):
     """插件基础信息定义"""
 
     id: FieldSchema = Field(description="插件 ID")
     name: FieldSchema = Field(description="插件名称")
-    releaseMethod: Literal["code", "sourcePackage", "image"] = Field(description="插件发布方式")
+    releaseMethod: Literal[
+        constants.PluginReleaseMethod.CODE,
+        constants.PluginReleaseMethod.SOURCE_PACKAGE,
+        constants.PluginReleaseMethod.IMAGE,
+    ] = Field(description="插件发布方式")
     initTemplates: List[PluginCodeTemplate] = Field(description="插件初始化模板")
+    accessMode: Literal[
+        constants.PluginBasicInfoAccessMode.READONLY, constants.PluginBasicInfoAccessMode.READWRITE
+    ] = Field(default=constants.PluginBasicInfoAccessMode.READWRITE, description="插件基本信息查看模式")
     repositoryGroup: str = Field(description="插件代码初始化仓库组")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
     extraFieldsEn: Dict[str, FieldSchema] = Field(
@@ -143,27 +152,30 @@ class PluginBasicInfoDefinition(BaseModel):
     api: PluginBackendAPI = Field(description="基础信息操作接口集")
     syncMembers: PluginBackendAPIResource = Field(description="人员同步接口")
     overviewPage: Optional[PluginoverviewPage] = Field(description="概览页面嵌入地址")
+    description: str = Field(description="基本信息页面的提示信息", default="")
+    publisher_description: str = Field(description="基本信息页面-发布者的提示信息", default="")
 
 
-@register
+@prepare_json_field
 class PluginVisibleRangeLevel(BaseModel):
-    """插件可见范围级别"""
+    """插件可见范围填写的字段"""
 
     name: str
     id: str
     type: Literal["department"]
+    tof_id: Optional[str]
 
 
-@register
+@prepare_json_field
 class PluginVisibleRangeDefinition(BaseModel):
     """插件可见范围"""
 
     description: str = Field(default="", description="可见范围描述")
-    scope: List[str] = Field(default_factory=list, description="可见范围授权范围类型")
-    topLevel: Optional[PluginVisibleRangeLevel]
+    initial: Optional[List[PluginVisibleRangeLevel]] = Field(description="创建插件时给的初始值")
+    api: Optional[PluginBackendAPI] = Field(description="可见范围 API")
 
 
-@register
+@prepare_json_field
 class PluginMarketInfoDefinition(BaseModel):
     """插件市场信息定义"""
 
@@ -173,7 +185,7 @@ class PluginMarketInfoDefinition(BaseModel):
         "platform(仅存储在插件开发中心)、"
         "both(插件开发中心和第三方系统都存储, 需提供 create/update API)"
     )
-    category: PluginBackendAPIResource = Field(description="市场类型分类查询接口")
+    category: Optional[PluginBackendAPIResource] = Field(description="市场类型分类查询接口")
     api: Optional[PluginBackendAPI] = Field(description="插件市场信息操作接口集")
     extraFields: Dict[str, FieldSchema] = Field(default_factory=dict)
     extraFieldsEn: Dict[str, FieldSchema] = Field(
@@ -184,19 +196,24 @@ class PluginMarketInfoDefinition(BaseModel):
     )
 
 
-@register
+@prepare_json_field
 class ReleaseRevisionDefinition(BaseModel):
     """发布版本定义"""
 
-    revisionType: Literal["all", "master", "tag", "tested_version"] = Field(
-        description="代码版本类型(all, 不限制; master 仅可选择主分支发布; tag Tag发布)"
-    )
+    revisionType: Literal[
+        constants.PluginRevisionType.ALL,
+        constants.PluginRevisionType.MASTER,
+        constants.PluginRevisionType.TAG,
+        constants.PluginRevisionType.TESTED_VERSION,
+    ] = Field(description="代码版本类型(all, 不限制; master 仅可选择主分支发布; tag Tag发布)")
     revisionPattern: Optional[str] = Field(description="代码版本正则表达式模板, 留空则不校验")
     revisionPolicy: Optional[Literal["disallow_released_source_version", "disallow_releasing_source_version"]] = Field(
         description="代码版本选择策略, 留空则不校验"
         "disallow_released_source_version(不允许选择已经发布过的代码分支)，"
         "disallow_releasing_source_version(不允许选择正在发布的代码分支)"
     )
+    reportFormat: Optional[str] = Field(description="发布报告地址格式, 留空则不展示")
+    releaseResultFormat: Optional[str] = Field(description="发布结果地址格式, 留空则不展示")
     docs: Optional[str] = Field(description="代码版本校验失败的指引文档")
     versionNo: Literal["automatic", "revision", "commit-hash", "self-fill", "branch-timestamp"] = Field(
         description="版本号生成规则"
@@ -205,20 +222,28 @@ class ReleaseRevisionDefinition(BaseModel):
     api: Optional[PluginBackendAPI] = Field(
         description="发布版本-操作接口集, 如需要回调至第三方系统, 则需要提供 create 接口"
     )
-    gradualReleaseEnabled: bool = Field(default=False, description="是否灰度发布")
-    gradualReleaseStrategy: List[str] = Field(default_factory=list, description="灰度发布发布策略")
 
 
-@register
+@prepare_json_field
 class ReleaseStageDefinition(BaseModel):
     """发布阶段定义"""
 
     id: str
     name: str
-    invokeMethod: Literal["deployAPI", "pipeline", "subpage", "itsm", "builtin", "canaryWithItsm"] = Field(
-        description="触发方式"
+    invokeMethod: Literal[
+        constants.ReleaseStageInvokeMethod.DEPLOY_API,
+        constants.ReleaseStageInvokeMethod.PIPELINE,
+        constants.ReleaseStageInvokeMethod.SUBPAGE,
+        constants.ReleaseStageInvokeMethod.ITSM,
+        constants.ReleaseStageInvokeMethod.CANARY_WITH_ITSM,
+        constants.ReleaseStageInvokeMethod.BUILTIN,
+    ] = Field(description="触发方式")
+    statusPollingMethod: Literal[constants.StatusPollingMethod.API, constants.StatusPollingMethod.FRONTEND] = Field(
+        default="api", description="阶段的状态轮询方式"
     )
-    api: Optional[PluginReleaseAPI] = Field(description="类型为 api/subpage 时必填")
+    api: Optional[PluginReleaseAPI] = Field(
+        description="invokeMethod 为 deployAPI 时必填，invokeMethod 为 subpage 且 statusPollingMethod 为 api 时必填"
+    )
     pipelineId: Optional[str] = Field(description="类型为 pipeline 时必填")
     pageUrl: Optional[str] = Field(description="类型为 subpage 时必填")
     pipelineParams: Optional[Dict] = Field(description="蓝盾流水线调用参数模板")
@@ -231,7 +256,7 @@ class ReleaseStageDefinition(BaseModel):
     link: Optional[str] = Field(description="online 步骤使用")
 
 
-@register
+@prepare_json_field
 class PluginConfigColumnDefinition(BaseModel):
     """插件配置-列信息定义"""
 
@@ -244,7 +269,7 @@ class PluginConfigColumnDefinition(BaseModel):
     unique: bool = Field(False, description="该列是否唯一(多列同时标记唯一时仅支持 unique_together)")
 
 
-@register
+@prepare_json_field
 class PluginConfigDefinition(BaseModel):
     """插件配置定义"""
 
@@ -255,7 +280,7 @@ class PluginConfigDefinition(BaseModel):
     columns: List[PluginConfigColumnDefinition] = Field(default_factory=list, min_items=1)
 
 
-@register
+@prepare_json_field
 class PluginInstanceSpec(BaseModel):
     """插件实例相关属性"""
 
@@ -265,7 +290,7 @@ class PluginInstanceSpec(BaseModel):
     configInfo: Optional[PluginConfigDefinition] = Field(description="「配置管理」功能相关配置")
 
 
-@register
+@prepare_json_field
 class ElasticSearchHost(BaseModel):
     """ES 配置"""
 
@@ -276,7 +301,7 @@ class ElasticSearchHost(BaseModel):
     use_ssl: bool = Field(False, alias="useSSL")
 
 
-@register
+@prepare_json_field
 class ElasticSearchParams(BaseModel):
     """ES 搜索相关配置"""
 
@@ -314,7 +339,7 @@ class BKLogConfig(BaseModel):
     bkLogApiStage: str = Field(default="prod", description="日志平台 API 的环境信息，默认为正式环境")
 
 
-@register
+@prepare_json_field
 class PluginLogConfig(BaseModel):
     """插件日志配置"""
 
@@ -328,7 +353,7 @@ class PluginLogConfig(BaseModel):
     json_: Optional[ElasticSearchParams] = Field(alias="json")
 
 
-@register
+@prepare_json_field
 class PluginCreateApproval(BaseModel):
     """创建插件审批配置"""
 
@@ -338,7 +363,12 @@ class PluginCreateApproval(BaseModel):
     itsmServiceName: str = Field(default="", description="审批流程 itsm 服务名称")
 
 
-@register
+@prepare_json_field
+class PluginOptions(BaseModel):
+    shouldAddAdmins: bool = Field(default=False, description="是否将插件的平台管理员默认添加到插件实例的成员中")
+
+
+@prepare_json_field
 class PluginDefinition(BaseModel):
     """插件模板定义"""
 
@@ -357,6 +387,7 @@ class PluginDefinition(BaseModel):
 
     logConfig: Optional[PluginLogConfig] = Field(description="插件运行过程的日志配置")
     features: List[PluginFeature] = Field(default_factory=list)
+    options: PluginOptions = Field(description="插件额外配置项")
 
 
 def find_stage_by_id(

@@ -41,6 +41,26 @@
         </bk-container>
     </div>
 
+    <div class="panel" v-if="ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP">
+        <h4>蓝鲸应用插件</h4>
+        <bk-container :col="2">
+            <bk-row>
+                <bk-col>
+                    当前状态: <b>$[ USER_IS_ADMIN_IN_PLUGIN ? '你已是该插件的管理员' : '你不具有管理员权限']</b>
+                    <bk-button :theme="'primary'" type="submit" :title="'成为管理员'" @click="bePluginAdmin" v-if="!USER_IS_ADMIN_IN_PLUGIN">
+                        成为插件管理员
+                    </bk-button>
+                    <bk-button :theme="'danger'" :title="'退出管理员'" @click="beNotPluginAdmin" v-else>
+                        退出插件管理员
+                    </bk-button>
+                </bk-col>
+                <bk-col>
+                    <a :href="appPluginFrontendUrl">访问插件</a>
+                </bk-col>
+            </bk-row>
+        </bk-container>
+    </div>
+
     <div class="panel">
         <h4>应用市场</h4>
         <bk-container :col="2">
@@ -75,13 +95,16 @@
                     <bk-collapse v-bind:value="module.envs.map(env=>env.environment)">
                         <bk-collapse-item v-for="(env, index) in module.envs" :name="env.environment">
                             $[ env.environment ] 环境
-                            <div slot="content" style="margin-bottom: 20px">
-                                <div style="margin-bottom: 5px" >部署集群：</div>
+                            <div slot="content" class="mb20">
+                                <div class="mb5">部署集群：
+                                    <span v-bk-tooltips="{content: '下拉框数据为当前模块环境 & 操作人可选集群，如有特殊需求，可在平台管理处按 Username.In 规则添加分配策略'}">❔</span>
+                                </div>
                                 <bk-select
+                                    allow-create
                                     v-model="env.cluster_name"
                                     style="width: 250px;"
                                     @change="bindAppEnvCluster(module.name, env.environment, env.cluster_name)">
-                                   <bk-option v-for="choice in cluster_choices"
+                                   <bk-option v-for="choice in getClusterChoices(module.name, env.environment)"
                                         :key="choice.id"
                                         :id="choice.id"
                                         :name="choice.name">
@@ -101,6 +124,9 @@
                                             </template>
                                             <template v-else>
                                                 <b style="color: #2dcb56;">在运行</b>
+                                                <span style="margin-left: 13px" v-if="envUrls[env.id]">
+                                                    <a :href="envUrls[env.id]" target="_blank">[访问]</a>
+                                                </span>
                                             </template>
                                         </bk-col>
                                         <bk-col>
@@ -149,13 +175,18 @@
 
 {% block main_script %}
 <script>
-    const data = {{ application | to_json }}
-    const cluster_choices = {{ cluster_choices | to_json }}
+    const application = {{ application | to_json }}
+    const clusterChoices = {{ cluster_choices | to_json }}
+    const envUrls = {{ env_urls | to_json }}
     const USER_IS_ADMIN_IN_APP = {{ USER_IS_ADMIN_IN_APP | to_json }}
+    const ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP = {{ ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP | to_json }}
+    const USER_IS_ADMIN_IN_PLUGIN = {{ USER_IS_ADMIN_IN_PLUGIN | to_json }}
 
     const URLRouter = {
         memberManage: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code %}"),
-        bindCluster: decodeURI("{% url 'admin.applications.engine.env_conf.bind_cluster' application.code '${module}' '${env}' %}")
+        exitApp: decodeURI("{% url 'admin.applications.detail.base_info.members.api' application.code request.user.username %}"),
+        bindCluster: decodeURI("{% url 'admin.applications.engine.env_conf.bind_cluster' application.code '${module}' '${env}' %}"),
+        pluginMemberManage: decodeURI("{% url 'admin.applications.detail.base_info.plugin.members.api' application.code %}"),
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -164,13 +195,20 @@
             delimiters: ['$[', ']'],
             data: function () {
                 return {
-                    application: data,
+                    application: application,
+                    clusterChoices: clusterChoices,
+                    envUrls: envUrls,
                     USER_IS_ADMIN_IN_APP,
+                    ALLOW_CREATE_PLUGIN_AND_IS_PLUGIN_APP,
+                    USER_IS_ADMIN_IN_PLUGIN,
                 }
             },
             computed: {
               appFrontendUrl: function () {
                   return `{{ BKPAAS_URL }}/developer-center/apps/${this.application.code}/`
+              },
+              appPluginFrontendUrl: function () {
+                  return `{{ BKPAAS_URL }}/plugin-center/plugin/bk-saas/${this.application.code}/summary`
               }
             },
             methods: {
@@ -188,15 +226,37 @@
                 },
                 exitApp: function () {
                     this.$http.delete(
-                        URLRouter.memberManage,
-                        {
-                            params: {
-                                username: '{{ request.user.username }}'
-                            }
-                        }
+                        URLRouter.exitApp
                     ).then(resp => {
                         this.USER_IS_ADMIN_IN_APP = false
                     })
+                },
+                bePluginAdmin: function () {
+                    this.$http.post(
+                        URLRouter.pluginMemberManage,
+                        {
+                            // 成为管理员
+                            action: 'add',
+                            role: 2
+                        }
+                    ).then(resp => {
+                        this.USER_IS_ADMIN_IN_PLUGIN = true
+                    })
+                },
+                beNotPluginAdmin: function () {
+                    this.$http.post(
+                        URLRouter.pluginMemberManage,
+                        {
+                            // 取消成为管理员
+                            action: 'delete',
+                            role: 2
+                        }
+                    ).then(resp => {
+                        this.USER_IS_ADMIN_IN_PLUGIN = false
+                    })
+                },
+                getClusterChoices: function (module, env) {
+                    return this.clusterChoices[`${module}-${env}`]
                 },
                 bindAppEnvCluster: function (module, env, clusterName) {
                     let url = URLRouter.bindCluster.replace("${module}", module).replace("${env}", env)
@@ -220,8 +280,7 @@
                                     this.$bkMessage({theme: 'success', message: `绑定 ${module} 模块 ${env} 环境部署集群为 ${clusterName} 成功，配置将在下次部署时生效`})
                                 })
                             } catch (e) {
-                                this.$bkMessage({theme: 'error', message: `更换应用部署环境绑定集群失败`})
-                                location.reload()
+                                this.$bkMessage({theme: 'error', message: e.message})
                             }
                         },
                         cancelFn: async () => {

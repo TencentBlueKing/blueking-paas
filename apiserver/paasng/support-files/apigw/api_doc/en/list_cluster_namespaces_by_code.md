@@ -7,7 +7,7 @@ Query the cluster and namespace information of the application based on the appl
 
 | Parameter Name | Parameter Type | Required | Description |
 | -------------- | -------------- | -------- | ----------- |
-| app_code       | string         | Yes      | Application ID, e.g. "apigw-api-test" |
+| code       | string         | Yes      | Application ID, e.g. "apigw-api-test" |
 
 #### 2. API Parameters:
 None.

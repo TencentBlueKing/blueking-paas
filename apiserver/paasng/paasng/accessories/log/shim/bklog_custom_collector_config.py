@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 from typing import List, Literal
 
@@ -25,6 +23,7 @@ from paasng.accessories.log.models import CustomCollectorConfig as CustomCollect
 from paasng.infras.bk_log.client import make_bk_log_management_client
 from paasng.infras.bk_log.definitions import CustomCollectorConfig
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.platform.modules.models import Module
 
 
@@ -39,7 +38,8 @@ def get_or_create_custom_collector_config(
     :return: CustomCollectorConfigModel
     """
     monitor_space, _ = get_or_create_bk_monitor_space(module.application)
-    client = make_bk_log_management_client()
+    tenant_id = get_tenant_id_for_app(module.application.code)
+    client = make_bk_log_management_client(tenant_id)
     collector_config_in_bk_log = client.get_custom_collector_config_by_name_en(
         biz_or_space_id=monitor_space.iam_resource_id, collector_config_name_en=collector_config.name_en
     )
@@ -60,6 +60,7 @@ def get_or_create_custom_collector_config(
             "bk_data_id": collector_config.bk_data_id,
             "log_paths": log_paths,
             "log_type": log_type,
+            "tenant_id": module.tenant_id,
         },
     )
     return collector_config
@@ -82,7 +83,8 @@ def update_or_create_custom_collector_config(
     :return: CustomCollectorConfigModel
     """
     monitor_space, _ = get_or_create_bk_monitor_space(module.application)
-    client = make_bk_log_management_client()
+    tenant_id = get_tenant_id_for_app(module.application.code)
+    client = make_bk_log_management_client(tenant_id)
     if not collector_config.id and not skip_query_bk_log:
         collector_config_in_bk_log = client.get_custom_collector_config_by_name_en(
             biz_or_space_id=monitor_space.iam_resource_id, collector_config_name_en=collector_config.name_en
@@ -111,6 +113,7 @@ def update_or_create_custom_collector_config(
                 "log_type": log_type,
                 "is_builtin": True,
                 "is_enabled": True,
+                "tenant_id": module.tenant_id,
             },
         )
 

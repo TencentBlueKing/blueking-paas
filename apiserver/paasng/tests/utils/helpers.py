@@ -1,55 +1,62 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import copy
 import datetime
-import random
 import uuid
 from contextlib import ExitStack, contextmanager
 from typing import Any, Callable, ContextManager, Dict, List, Optional
 from unittest import mock
 
 from django.conf import settings
-from django.test import TestCase
 from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
-from paas_wl.bk_app.applications.api import CreatedAppInfo
+from paas_wl.bk_app.applications.api import CreatedAppInfo, create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
+from paas_wl.bk_app.cnative.specs.constants import ApiVersion
+from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
+from paasng.accessories.log.shim import setup_env_log_model
+from paasng.accessories.log.shim.setup_elk import ClusterElasticSearchConfig
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.core.storages.sqlalchemy import filter_field_values, has_column, legacy_db
 from paasng.core.region.states import load_regions_from_settings
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.applications.signals import post_create_application
 from paasng.platform.applications.utils import create_default_module
-from paasng.platform.bkapp_model.services import initialize_simple
-from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.models import EngineApp
+from paasng.platform.modules.constants import ExposedURLType, SourceOrigin
 from paasng.platform.modules.handlers import setup_module_log_model
-from paasng.platform.modules.manager import ModuleInitializer
-from paasng.platform.modules.models import BuildConfig
+from paasng.platform.modules.manager import ModuleInitializer, make_engine_app_name
+from paasng.platform.modules.models import BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.configs import RegionAwareConfig
 
-from .auth import create_user
+from . import auth
+from .basic import generate_random_string
 
 try:
     from paasng.infras.legacydb_te.models import LApplication, LApplicationTag
@@ -60,13 +67,12 @@ except ImportError:
 def initialize_application(application, *args, **kwargs):
     """Initialize an application"""
     module = create_default_module(application)
-    create_oauth2_client(application.code, application.region)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
     initialize_module(module, *args, **kwargs)
 
     # Disable market config by default
     MarketConfig.objects.create(
-        region=application.region,
         application=application,
         enabled=False,
         source_module=module,
@@ -127,35 +133,6 @@ def initialize_module(module, repo_type=None, repo_url="", additional_modules=No
         setup_module_log_model(module_id=module.pk)
 
 
-class BaseTestCaseWithApp(TestCase):
-    """Base class with an application was pre-created"""
-
-    application: Application
-    app_region = settings.DEFAULT_REGION_NAME
-    app_code = "utest-app"
-    app_extra_fields: Dict[str, Any] = {}
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.user = create_user()
-
-        name = cls.app_code.replace("-", "")
-        fields = dict(name=name, language="Python", region=cls.app_region)
-        fields.update(cls.app_extra_fields)
-
-        cls.application = G(Application, owner=cls.user.pk, code=cls.app_code, **fields)
-        cls.default_repo_url = "svn://svn.localhost:1773/app"
-        initialize_application(cls.application, repo_url=cls.default_repo_url)
-        cls.module = cls.application.get_default_module()
-
-        # Update the region field after initialize to avoide exceptions
-        cls.application.region = cls.app_region
-        cls.application.save()
-        cls.module.region = cls.app_region
-        cls.module.save()
-
-
 def create_app(
     owner_username: Optional[str] = None,
     additional_modules: Optional[List] = None,
@@ -172,9 +149,9 @@ def create_app(
         additional_modules = []
 
     if owner_username:
-        user = create_user(username=owner_username)
+        user = auth.create_user(username=owner_username)
     else:
-        user = create_user()
+        user = auth.create_user()
 
     region = region or settings.DEFAULT_REGION_NAME
 
@@ -183,7 +160,18 @@ def create_app(
     name = app_code.replace("-", "")
     fields = dict(name=name, name_en=name, language="Python", region=region)
 
-    application = G(Application, owner=user.pk, creator=user.pk, code=app_code, logo=None, **fields)
+    # 默认为全租户应用
+    application = G(
+        Application,
+        owner=user.pk,
+        creator=user.pk,
+        code=app_code,
+        logo=None,
+        app_tenant_mode=AppTenantMode.GLOBAL,
+        app_tenant_id="",
+        tenant_id=DEFAULT_TENANT_ID,
+        **fields,
+    )
 
     # First try Svn, then GitLab, then Default
     if not repo_type:
@@ -337,7 +325,10 @@ def override_region_configs(region: str, update_conf_func: Callable):
 
 @contextmanager
 def configure_regions(regions: List[str]):
-    """Configure multi regions with default template"""
+    """Configure multi regions with default template.
+
+    :param regions: A list of region names, the first item will be set as the default region.
+    """
     new_region_configs: Dict[str, List] = {"regions": []}
     for region in regions:
         config = copy.deepcopy(settings.DEFAULT_REGION_TEMPLATE)
@@ -358,27 +349,12 @@ def configure_regions(regions: List[str]):
             value["data"][region] = _tmpl_value
         region_aware_changes[name] = value
 
-    with override_settings(REGION_CONFIGS=new_region_configs, DEFAULT_REGION=regions[0], **region_aware_changes):
+    with override_settings(REGION_CONFIGS=new_region_configs, DEFAULT_REGION_NAME=regions[0], **region_aware_changes):
         load_regions_from_settings()
         yield
 
     # Restore original settings
     load_regions_from_settings()
-
-
-DFT_RANDOM_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" "0123456789"
-
-
-def generate_random_string(length=30, chars=DFT_RANDOM_CHARACTER_SET):
-    """Generates a non-guessable OAuth token
-
-    OAuth (1 and 2) does not specify the format of tokens except that they
-    should be strings of random characters. Tokens should not be guessable
-    and entropy when generating the random characters is important. Which is
-    why SystemRandom is used instead of the default random.choice method.
-    """
-    rand = random.SystemRandom()
-    return "".join(rand.choice(chars) for x in range(length))
 
 
 # Stores pending actions related with workloads during app creation
@@ -391,11 +367,11 @@ def _mock_wl_services_in_creation():
     mocked will be stored and can be used for restoring data later.
     """
 
-    def fake_create_app_ignore_duplicated(region: str, name: str, type_: str):
+    def fake_create_app_ignore_duplicated(region: str, name: str, type_: str, tenant_id: str):
         obj = CreatedAppInfo(uuid=uuid.uuid4(), name=name, type=WlAppType(type_))
 
         # Store params in global, so we can manually create the objects later.
-        _faked_wl_apps[obj.uuid] = (region, name, type_)
+        _faked_wl_apps[obj.uuid] = (region, name, type_, tenant_id)
         return obj
 
     def fake_update_metadata_by_env(env, metadata_part):
@@ -405,18 +381,24 @@ def _mock_wl_services_in_creation():
         else:
             _faked_env_metadata[env.id].update(metadata_part)
 
-    with mock.patch(
-        "paasng.platform.modules.manager.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
-    ), mock.patch(
-        "paasng.platform.modules.manager.update_metadata_by_env", new=fake_update_metadata_by_env
-    ), mock.patch(
-        "paasng.platform.bkapp_model.services.update_metadata_by_env", new=fake_update_metadata_by_env
-    ), mock.patch("paasng.platform.modules.manager.EnvClusterService"), mock.patch(
-        "paasng.platform.bkapp_model.services.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
-    ), mock.patch("paasng.platform.bkapp_model.services.create_cnative_app_model_resource"), mock.patch(
-        "paasng.platform.bkapp_model.services.EnvClusterService"
-    ), mock.patch("paasng.accessories.log.shim.EnvClusterService") as fake_log:
+    mock_cluster_setup_elk = mock.Mock()
+    mock_cluster_setup_elk.uuid = uuid.uuid4()
+    mock_cluster_es_config_queryset = mock.Mock()
+    mock_cluster_es_config_queryset.first.return_value = None
+    with (
+        mock.patch(
+            "paasng.platform.modules.manager.create_app_ignore_duplicated", new=fake_create_app_ignore_duplicated
+        ),
+        mock.patch("paasng.platform.modules.manager.update_metadata_by_env", new=fake_update_metadata_by_env),
+        mock.patch("paasng.platform.modules.manager.EnvClusterService"),
+        mock.patch("paasng.platform.modules.manager.get_exposed_url_type", return_value=ExposedURLType.SUBPATH),
+        mock.patch("paasng.accessories.log.shim.EnvClusterService") as fake_log,
+        mock.patch("paasng.accessories.log.shim.setup_elk.EnvClusterService") as fake_setup_elk,
+        mock.patch.object(ClusterElasticSearchConfig.objects, "filter") as mock_filter,
+    ):
         fake_log().get_cluster().has_feature_flag.return_value = False
+        fake_setup_elk.return_value.get_cluster.return_value = mock_cluster_setup_elk
+        mock_filter.return_value = mock_cluster_es_config_queryset
         yield
 
 
@@ -425,8 +407,6 @@ def create_pending_wl_apps(bk_app: Application, cluster_name: str):
 
     should have been created during application creation, but weren't because the
     `create_app_ignore_duplicated` function was mocked out.
-
-    :param bk_app: Application object.
     """
     from paas_wl.bk_app.applications.api import update_metadata_by_env
     from paas_wl.bk_app.applications.models import WlApp
@@ -435,84 +415,17 @@ def create_pending_wl_apps(bk_app: Application, cluster_name: str):
         for env in module.envs.all():
             # Create WlApps and update metadata
             if args := _faked_wl_apps.get(env.engine_app_id):
-                region, name, type_ = args
+                region, name, type_, tenant_id = args
                 if WlApp.objects.filter(name=name).exists():
                     continue
-                wl_app = WlApp.objects.create(uuid=env.engine_app_id, region=region, name=name, type=type_)
+                wl_app = WlApp.objects.create(
+                    uuid=env.engine_app_id, region=region, name=name, type=type_, tenant_id=tenant_id
+                )
                 latest_config = wl_app.latest_config
                 latest_config.cluster = cluster_name
                 latest_config.save()
             if metadata := _faked_env_metadata.get(env.id):
                 update_metadata_by_env(env, metadata)
-
-
-def create_scene_tmpls():
-    """创建单元测试用的场景 SaaS 模板"""
-    from paasng.platform.templates.constants import TemplateType
-    from paasng.platform.templates.models import Template
-
-    repo_url = "http://git.com/owner/scene_tmpl_proj"
-    blob_url = f"file://{settings.BASE_DIR}/tests/paasng/platform/scene_app/contents/scene-tmpl.tar.gz"
-
-    Template.objects.get_or_create(
-        name="scene_tmpl1",
-        defaults={
-            "type": TemplateType.SCENE,
-            "display_name_zh_cn": "场景模板1",
-            "display_name_en": "scene_tmpl1",
-            "description_zh_cn": "场景模板1描述",
-            "description_en": "scene_tmpl1_desc",
-            "language": "Python",
-            "market_ready": True,
-            "preset_services_config": {},
-            "blob_url": {settings.DEFAULT_REGION_NAME: blob_url},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
-            "required_buildpacks": [],
-            "processes": {},
-            "tags": ["Python"],
-            "repo_url": repo_url,
-        },
-    )
-
-    Template.objects.get_or_create(
-        name="scene_tmpl2",
-        defaults={
-            "type": TemplateType.SCENE,
-            "display_name_zh_cn": "场景模板2",
-            "display_name_en": "scene_tmpl2",
-            "description_zh_cn": "场景模板2描述",
-            "description_en": "scene_tmpl2_desc",
-            "language": "Go",
-            "market_ready": True,
-            "preset_services_config": {},
-            "blob_url": {settings.DEFAULT_REGION_NAME: blob_url},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
-            "required_buildpacks": [],
-            "processes": {},
-            "tags": ["Go"],
-            "repo_url": repo_url,
-        },
-    )
-
-    Template.objects.get_or_create(
-        name="scene_tmpl3",
-        defaults={
-            "type": TemplateType.SCENE,
-            "display_name_zh_cn": "场景模板3",
-            "display_name_en": "scene_tmpl3",
-            "description_zh_cn": "场景模板3描述",
-            "description_en": "scene_tmpl3_desc",
-            "language": "PHP",
-            "market_ready": True,
-            "preset_services_config": {},
-            "blob_url": {settings.DEFAULT_REGION_NAME: blob_url},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
-            "required_buildpacks": [],
-            "processes": {},
-            "tags": ["PHP", "legacy"],
-            "repo_url": repo_url,
-        },
-    )
 
 
 def create_cnative_app(
@@ -522,14 +435,11 @@ def create_cnative_app(
     force_info: Optional[dict] = None,
     cluster_name: Optional[str] = None,
 ):
-    """Create a cloud-native application, for testing purpose only
-
-    :param owner_username: username of owner
-    """
+    """Create a cloud-native application, for testing purpose only"""
     if owner_username:
-        user = create_user(username=owner_username)
+        user = auth.create_user(username=owner_username)
     else:
-        user = create_user()
+        user = auth.create_user()
     region = region or settings.DEFAULT_REGION_NAME
 
     # Create the Application object
@@ -546,8 +456,12 @@ def create_cnative_app(
         logo=None,
         name=name,
         name_en=name,
+        # 默认为全租户应用
+        app_tenant_mode=AppTenantMode.GLOBAL,
+        app_tenant_id="",
+        tenant_id=DEFAULT_TENANT_ID,
     )
-    create_oauth2_client(application.code, application.region)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
     # First try Svn, then GitLab, then Default
     if not repo_type:
@@ -568,7 +482,7 @@ def create_cnative_app(
     # TODO: 使用新的创建模块逻辑
     with contextmanager(_mock_wl_services_in_creation)():
         module = application.get_default_module()
-        initialize_simple(module, "", cluster_name=cluster_name)
+        initialize_simple_cnative(module, "", cluster_name=cluster_name)
         module_initializer = ModuleInitializer(module)
         # Set-up the repository data
         module.source_origin = SourceOrigin.AUTHORIZED_VCS
@@ -588,15 +502,19 @@ def register_iam_after_create_application(application: Application):
     """
     from paasng.infras.iam.constants import NEVER_EXPIRE_DAYS
     from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
+    from paasng.platform.applications.tenant import get_tenant_id_for_app
     from paasng.utils.basic import get_username_by_bkpaas_user_id
     from tests.utils.mocks.iam import StubBKIAMClient
 
-    cli = StubBKIAMClient()
+    tenant_id = get_tenant_id_for_app(application.code)
+    cli = StubBKIAMClient(tenant_id)
     creator = get_username_by_bkpaas_user_id(application.creator or application.owner)
 
     # 1. 创建分级管理员，并记录分级管理员 ID
     grade_manager_id = cli.create_grade_managers(application.code, application.name, creator)
-    ApplicationGradeManager.objects.create(app_code=application.code, grade_manager_id=grade_manager_id)
+    ApplicationGradeManager.objects.create(
+        app_code=application.code, grade_manager_id=grade_manager_id, tenant_id=tenant_id
+    )
 
     # 2. 将创建者，添加为分级管理员的成员
     cli.add_grade_manager_members(grade_manager_id, [creator])
@@ -605,7 +523,9 @@ def register_iam_after_create_application(application: Application):
     user_groups = cli.create_builtin_user_groups(grade_manager_id, application.code)
     ApplicationUserGroup.objects.bulk_create(
         [
-            ApplicationUserGroup(app_code=application.code, role=group["role"], user_group_id=group["id"])
+            ApplicationUserGroup(
+                app_code=application.code, role=group["role"], user_group_id=group["id"], tenant_id=tenant_id
+            )
             for group in user_groups
         ]
     )
@@ -615,3 +535,91 @@ def register_iam_after_create_application(application: Application):
 
     # 5. 将创建者添加到管理者用户组，返回数据中第一个即为管理者用户组信息
     cli.add_user_group_members(user_groups[0]["id"], [creator], NEVER_EXPIRE_DAYS)
+
+
+def initialize_simple_cnative(
+    module: Module,
+    image: str,
+    cluster_name: str | None = None,
+    api_version: str = ApiVersion.V1ALPHA2,
+    command: List[str] | None = None,
+    args: List[str] | None = None,
+    target_port: int | None = None,
+) -> Dict:
+    """Initialize a cloud-native application, return the initialized object
+
+    :param module: Module object, a module can only be initialized once
+    :param image: The container image of main process
+    :param cluster_name: The name of cluster to deploy BkApp.
+    :param command: Custom command
+    :param args: Custom args
+    :param target_port: Custom target port
+    """
+    model_res = create_cnative_app_model_resource(module, image, api_version, command, args, target_port)
+    create_engine_apps(module.application, module, [AppEnvName.STAG, AppEnvName.PROD], cluster_name)
+    return model_res
+
+
+def create_cnative_app_model_resource(
+    module: Module,
+    image: str,
+    api_version: str = ApiVersion.V1ALPHA2,
+    command: List[str] | None = None,
+    args: List[str] | None = None,
+    target_port: int | None = None,
+) -> Dict:
+    """Create a cloud-native AppModelResource object"""
+    from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
+
+    application = module.application
+    resource = create_app_resource(
+        name=generate_bkapp_name(module),
+        image=image,
+        api_version=api_version,
+        command=command,
+        args=args,
+        target_port=target_port,
+    )
+    model_resource = AppModelResource.objects.create_from_resource(application, str(module.id), resource)
+    return {
+        "application_id": model_resource.application_id,
+        "module_id": model_resource.module_id,
+        "manifest": model_resource.revision.json_value,
+    }
+
+
+def create_engine_apps(app: Application, module: Module, environments: List[str], cluster_name: str | None):
+    """Create engine app instances for application"""
+    for environment in environments:
+        engine_app_name = make_engine_app_name(module, app.code, environment)
+        # 先创建 EngineApp，再更新相关的配置（比如 cluster_name）
+        info = create_app_ignore_duplicated(
+            app.region,
+            engine_app_name,
+            WlAppType.CLOUD_NATIVE,
+            app.tenant_id,
+        )
+        engine_app = EngineApp.objects.create(
+            id=info.uuid,
+            name=engine_app_name,
+            owner=app.owner,
+            region=app.region,
+            tenant_id=app.tenant_id,
+        )
+        env = ModuleEnvironment.objects.create(
+            application=app,
+            module=module,
+            engine_app_id=engine_app.id,
+            environment=environment,
+            tenant_id=app.tenant_id,
+        )
+        if not cluster_name:
+            ctx = AllocationContext.from_module_env(env)
+            cluster_name = ClusterAllocator(ctx).get_default().name
+
+        EnvClusterService(env).bind_cluster(cluster_name)
+        setup_env_log_model(env)
+
+        # Update metadata
+        engine_app_meta_info = ModuleInitializer(module).make_engine_meta_info(env)
+        update_metadata_by_env(env, engine_app_meta_info)

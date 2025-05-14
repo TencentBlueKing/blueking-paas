@@ -1,40 +1,41 @@
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 import arrow
-from django.conf import settings
 
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs.credentials import split_image
 from paas_wl.bk_app.processes.models import ProcessSpec
+from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paas_wl.workloads.images.entities import ImageCredentialRef
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import Deployment
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.smart_app.conf import bksmart_settings
-from paasng.platform.smart_app.utils import SMartImageManager
+from paasng.platform.smart_app.services.image_mgr import SMartImageManager
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepoBasicAuthHolder
 
 if TYPE_CHECKING:
@@ -42,16 +43,16 @@ if TYPE_CHECKING:
     from paasng.platform.sourcectl.models import VersionInfo
 
 
-def get_image_repository_template() -> str:
-    """Get the image repository template"""
-    system_prefix = f"{settings.APP_DOCKER_REGISTRY_HOST}/{settings.APP_DOCKER_REGISTRY_NAMESPACE}"
-    return f"{system_prefix}/{{app_code}}/{{module_name}}"
+def generate_image_repositories_by_module(module: Module) -> Dict[str, str]:
+    """获取应用模块的镜像仓库地址（按环境划分）"""
+    return {env.environment: generate_image_repository_by_env(env) for env in module.get_envs()}
 
 
-def generate_image_repository(module: Module) -> str:
-    """Get the image repository for storing container image"""
-    application = module.application
-    return get_image_repository_template().format(app_code=application.code, module_name=module.name)
+def generate_image_repository_by_env(env: ModuleEnvironment) -> str:
+    """通过部署环境来获取镜像仓库地址"""
+    reg = get_image_registry_by_app(env.wl_app)
+    tmpl = f"{reg.host}/{reg.namespace}/{{app_code}}/{{module_name}}"
+    return tmpl.format(app_code=env.application.code, module_name=env.module.name)
 
 
 def generate_image_tag(module: Module, version: "VersionInfo") -> str:
@@ -67,7 +68,13 @@ def generate_image_tag(module: Module, version: "VersionInfo") -> str:
         parts.append(arrow.now().format("YYMMDDHHmm"))
     if options.with_commit_id:
         parts.append(version.revision)
-    return "-".join(parts)
+    tag = "-".join(parts)
+    # 不符合 tag 正则的字符, 替换为 '-'
+    tag_regex = re.compile("[^a-zA-Z0-9_.-]")
+    tag = tag_regex.sub("-", tag)
+    # 去掉开头的 '-'
+    tag = re.sub("^-+", "", tag)
+    return tag
 
 
 def get_credential_refs(module: Module) -> List[ImageCredentialRef]:
@@ -153,18 +160,20 @@ class RuntimeImageInfo:
             reference = version_info.revision
             return f"{repo_url}:{reference}"
         elif self.type == RuntimeType.DOCKERFILE:
-            app_image_repository = generate_image_repository(self.module)
+            app_image_repository = generate_image_repository_by_env(self.engine_app.env)
             app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
-        elif self.module.get_source_origin() == SourceOrigin.S_MART and version_info.version_type == "image":
-            from paasng.platform.smart_app.utils import SMartImageManager
+        elif (
+            self.application.is_smart_app and version_info.version_type != VersionType.PACKAGE.value
+        ):  # version_type 为 package 时, 表示采用二进制 slug.tgz 方案; image(已废弃) 和 tag 时, 表示镜像层方案
+            from paasng.platform.smart_app.services.image_mgr import SMartImageManager
 
             named = SMartImageManager(self.module).get_image_info(version_info.revision)
             return f"{named.domain}/{named.name}:{named.tag}"
         mgr = ModuleRuntimeManager(self.module)
         slug_runner = mgr.get_slug_runner(raise_exception=False)
         if mgr.is_cnb_runtime:
-            app_image_repository = generate_image_repository(self.module)
+            app_image_repository = generate_image_repository_by_env(self.engine_app.env)
             app_image_tag = special_tag or generate_image_tag(module=self.module, version=version_info)
             return f"{app_image_repository}:{app_image_tag}"
         return getattr(slug_runner, "full_image", "")
@@ -185,7 +194,7 @@ def update_image_runtime_config(deployment: Deployment):
     slug_runner = mgr.get_slug_runner(raise_exception=False)
     metadata: Dict = getattr(slug_runner, "metadata", {})
     if entrypoint := metadata.get("entrypoint"):
-        build_obj.artifact_metadata.update(entrypoint=entrypoint)
+        build_obj.artifact_metadata.entrypoint = entrypoint
         build_obj.save(update_fields=["artifact_metadata", "updated"])
 
     # Update the config property of WlApp object

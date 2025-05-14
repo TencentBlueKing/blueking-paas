@@ -1,27 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Any, Dict, List, Optional, Protocol, Union
 
 import cattr
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.bk_log.backend.apigw import Client as APIGWClient
 from paasng.infras.bk_log.backend.esb import get_client_by_username
 from paasng.infras.bk_log.definitions import CustomCollectorConfig, PlainCustomCollectorConfig
@@ -41,8 +41,7 @@ class _APIGWOperationStub(Protocol):
         proxies: Optional[Dict[str, Any]] = None,
         verify: Optional[bool] = None,
         **kwargs,
-    ) -> Dict:
-        ...
+    ) -> Dict: ...
 
 
 class BKLogQueryAPIProtocol(Protocol):
@@ -202,7 +201,7 @@ class BkLogManagementClient:
             raise BkLogApiError(resp["message"])
 
 
-def make_bk_log_management_client() -> BkLogManagementClient:
+def make_bk_log_management_client(tenant_id: str) -> BkLogManagementClient:
     if settings.ENABLE_BK_LOG_APIGW:
         apigw_client = APIGWClient(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_LOG_APIGW_SERVICE_STAGE)
         apigw_client.update_bkapi_authorization(
@@ -211,6 +210,11 @@ def make_bk_log_management_client() -> BkLogManagementClient:
             bk_app_secret=settings.BK_APP_SECRET,
             bk_username="admin",
         )
+        apigw_client.update_headers(
+            {
+                API_HERDER_TENANT_ID: tenant_id,
+            }
+        )
         return BkLogManagementClient(apigw_client.api)
 
     # ESB 开启了免用户认证，但是又限制了用户名不能为空，所以需要给一个随机字符串
@@ -218,7 +222,7 @@ def make_bk_log_management_client() -> BkLogManagementClient:
     return BkLogManagementClient(esb_client.api)
 
 
-def make_bk_log_esquery_client() -> BKLogQueryAPIProtocol:
+def make_bk_log_esquery_client(tenant_id: str) -> BKLogQueryAPIProtocol:
     if settings.ENABLE_BK_LOG_APIGW:
         apigw_client = APIGWClient(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_LOG_APIGW_SERVICE_STAGE)
         apigw_client.update_bkapi_authorization(
@@ -226,6 +230,11 @@ def make_bk_log_esquery_client() -> BKLogQueryAPIProtocol:
             bk_app_code=settings.BK_APP_CODE,
             bk_app_secret=settings.BK_APP_SECRET,
             bk_username="admin",
+        )
+        apigw_client.update_headers(
+            {
+                API_HERDER_TENANT_ID: tenant_id,
+            }
         )
         return apigw_client.api
 

@@ -123,7 +123,6 @@
                   >
                   </bk-input>
                 </div>
-                <p slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</p>
               </bk-form-item>
 
               <bk-form-item
@@ -454,7 +453,8 @@
               <deploy-process
                 ref="processRef"
                 :cloud-form-data="{url: mirrorData.url, imageCredentialName: imageCredentialsData.name}"
-                :is-create="isCreate"></deploy-process>
+                :is-create="isCreate">
+              </deploy-process>
             </collapseContent>
 
             <collapseContent
@@ -462,7 +462,8 @@
               collapse-item-name="hook"
               :title="$t('部署前置命令')"
               class="mt20">
-              <deploy-hook ref="hookRef" :is-create="isCreate"></deploy-hook>
+              <deploy-hook ref="hookRef" :is-create="isCreate">
+              </deploy-hook>
             </collapseContent>
           </div>
 
@@ -629,15 +630,8 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
+            regex: /^(?:([a-zA-Z0-9]+(?:[._-][a-zA-Z0-9]+)*(?::\d+)?)\/)?(?:([a-zA-Z0-9_-]+)\/)*([a-zA-Z0-9_.-]+)$/,
             message: this.$t('请输入不包含标签(tag)的镜像仓库地址'),
-            trigger: 'blur',
-          },
-          {
-            validator(val) {
-              return !val.includes(':');
-            },
-            message: this.$t('镜像地址中不能包含版本(tag)信息'),
             trigger: 'blur',
           },
         ],
@@ -731,7 +725,7 @@ export default {
     },
     // 示例镜像 placeholder
     mirrorExamplePlaceholder() {
-      return `${this.$t('示例镜像：')}${this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE}`;
+      return `${this.$t('请输入镜像仓库，如')}：${this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE}`;
     },
   },
   watch: {
@@ -827,8 +821,7 @@ export default {
 
     async fetchRegionsServices() {
       try {
-        const res = await this.$store.dispatch('createApp/getRegionsServices', {
-          region: this.region,
+        const res = await this.$store.dispatch('createApp/getServicesByTmpl', {
           language: this.sourceInitTemplate,
         });
         this.regionsServices = JSON.parse(JSON.stringify(res.result));
@@ -1294,6 +1287,11 @@ export default {
 @import "./index.scss";
 .created-module-container{
   background: #F5F7FA;
+  .form-actions {
+    button:first-child {
+      margin-left: 0;
+    }
+  }
 }
 .item-cls {
   /deep/ .bk-form-control .group-text {

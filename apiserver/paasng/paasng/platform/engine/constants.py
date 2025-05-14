@@ -1,24 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import List
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 from paasng.utils.basic import ChoicesEnum
@@ -28,21 +27,21 @@ DOCKER_BUILD_STEPSET_NAME = "docker-build"
 IMAGE_RELEASE_STEPSET_NAME = "image-release"
 
 
-class ClusterType(str, StructuredEnum):
+class ClusterType(StrStructuredEnum):
     """集群类别"""
 
     NORMAL = EnumField("normal", label=_("普通集群"))
     VIRTUAL = EnumField("virtual", label=_("虚拟集群"))
 
 
-class AppEnvName(str, StructuredEnum):
+class AppEnvName(StrStructuredEnum):
     """The default environment names"""
 
     STAG = EnumField("stag", label=_("预发布环境"))
     PROD = EnumField("prod", label=_("生产环境"))
 
 
-class JobStatus(str, StructuredEnum):
+class JobStatus(StrStructuredEnum):
     SUCCESSFUL = EnumField("successful", label="成功")
     FAILED = EnumField("failed", label="失败")
     PENDING = EnumField("pending", label="等待")
@@ -54,7 +53,7 @@ class JobStatus(str, StructuredEnum):
         return [cls.FAILED, cls.SUCCESSFUL, cls.INTERRUPTED]
 
 
-class BuildStatus(str, StructuredEnum):
+class BuildStatus(StrStructuredEnum):
     """While `BuildStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
     SUCCESSFUL = "successful"
@@ -68,7 +67,7 @@ class BuildStatus(str, StructuredEnum):
         return [cls.FAILED, cls.SUCCESSFUL, cls.INTERRUPTED]
 
 
-class ReleaseStatus(str, StructuredEnum):
+class ReleaseStatus(StrStructuredEnum):
     """While `ReleaseStatus` has same members with `JobStatus`, different statuses might be added in the future"""
 
     SUCCESSFUL = "successful"
@@ -110,7 +109,7 @@ class MetricsType(ChoicesEnum):
     _choices_labels = ((MEM, "mem"), (CPU, "cpu"), (__ALL__, "__all__"))
 
 
-class ConfigVarEnvName(str, StructuredEnum):
+class ConfigVarEnvName(StrStructuredEnum):
     """Environment name for managing config var"""
 
     STAG = EnumField("stag", label="仅测试环境")
@@ -142,35 +141,28 @@ class DeployConditions(ChoicesEnum):
     )
 
 
-class RuntimeType(str, StructuredEnum):
+class RuntimeType(StrStructuredEnum):
     BUILDPACK = EnumField("buildpack", label=_("使用 Buildpacks 构建"))
     DOCKERFILE = EnumField("dockerfile", label=_("使用 Dockerfile 构建"))
-    CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image")
+    CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image(云原生和旧镜像应用)")
 
 
-class ImagePullPolicy(str, StructuredEnum):
-    ALWAYS = EnumField("Always")
-    IF_NOT_PRESENT = EnumField("IfNotPresent")
-    NEVER = EnumField("Never")
-
-
-class AppInfoBuiltinEnv(str, StructuredEnum):
+class AppInfoBuiltinEnv(StrStructuredEnum):
     """应用基本信息的内置环境变量built-in"""
 
     APP_ID = EnumField("APP_ID", label=_("蓝鲸应用ID"))
     APP_SECRET = EnumField("APP_SECRET", label=_("蓝鲸应用密钥"))
+    APP_TENANT_ID = EnumField("APP_TENANT_ID", label=_("蓝鲸应用租户 ID"))
 
 
-class AppRunTimeBuiltinEnv(str, StructuredEnum):
+class AppRunTimeBuiltinEnv(StrStructuredEnum):
     """Built-in envs in the app runtime"""
 
     APP_MODULE_NAME = EnumField("APP_MODULE_NAME", label=_("应用当前模块名"))
     ENVIRONMENT = EnumField("ENVIRONMENT", label=_("应用当前环境，预发布环境为 stag、生产环境为 prod"))
     MAJOR_VERSION = EnumField("MAJOR_VERSION", label=_("应用当前运行的开发者中心版本，值为 3"))
     ENGINE_REGION = EnumField("ENGINE_REGION", label=_("应用版本，默认版本为 default"))
-
-
-class NoPrefixAppRunTimeBuiltinEnv(str, StructuredEnum):
-    """Built-in envs without prefix in the app runtime"""
-
-    PORT = EnumField("PORT", label=_("目标端口号，值为 5000"))
+    DEFAULT_PREALLOCATED_URLS = EnumField(
+        "DEFAULT_PREALLOCATED_URLS",
+        label=_('应用模块各环境的访问地址，如 {"stag": "http://stag.com", "prod": "http://prod.com"}'),
+    )

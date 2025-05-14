@@ -1,27 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from collections import defaultdict
 from typing import List
 
 from rest_framework import serializers
 
 from paasng.core.region.models import Region
+from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import UserField, VerificationCodeField
@@ -86,7 +86,7 @@ class AllRegionSpecsSLZ:
         data = {}
         for region in self.regions:
             languages = defaultdict(list)
-            for tmpl in Template.objects.filter_by_region(region.name):
+            for tmpl in Template.objects.filter(type=TemplateType.NORMAL, is_hidden=False):
                 languages[tmpl.language].append(TmplSLZ(tmpl).data)
 
             data.update(
@@ -95,7 +95,6 @@ class AllRegionSpecsSLZ:
                         "display_name": region.display_name,
                         "languages": languages,
                         "description": region.basic_info.description,
-                        "allow_deploy_app_by_lesscode": region.allow_deploy_app_by_lesscode,
                     }
                 }
             )

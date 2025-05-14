@@ -1,11 +1,19 @@
 <template lang="html">
   <ul class="app-nav">
+    <!-- 云原生导航栏 -->
+    <div
+      v-if="isMigrationEntryShown"
+      class="migration-app-btn"
+      @click="handleShowAppMigrationDialog"
+    >
+      {{ $t('迁移为云原生应用') }}
+    </div>
     <template v-for="(category, categoryIndex) in navTree">
       <li
         v-if="category.children && category.children.length"
         :key="categoryIndex"
         :class="{
-          'on': category.isActived && !category.isExpanded
+          on: category.isActived && !category.isExpanded,
         }"
       >
         <a
@@ -14,7 +22,7 @@
           @click.stop.prevent="toggleNavCategory(category)"
         >
           {{ category.label }}
-          <i :class="['paasng-icon paasng-angle-right', { 'down': category.isExpanded }]" />
+          <i :class="['paasng-icon paasng-angle-right', { down: category.isExpanded }]" />
         </a>
         <span :class="getIconClass(category)" />
         <transition
@@ -29,8 +37,9 @@
             <a
               v-for="(navItem, navIndex) in category.children"
               :key="navIndex"
-              :class="{ 'on': navItem.isSelected }"
+              :class="{ on: navItem.isSelected }"
               href="javascript: void(0);"
+              :bk-trace="`{id: '${traceIds[navItem.name]}', action: 'nav', category: '云原生应用'}`"
               @click.stop.prevent="goPage(navItem)"
             >
               {{ $t(navItem.name) }}
@@ -41,12 +50,13 @@
 
       <li
         v-else-if="category.destRoute"
-        :key="categoryIndex"
+        :key="category.label"
         :class="{ 'no-child-actived': category.isActived }"
       >
         <a
           class="overview-text"
           href="javascript:"
+          :bk-trace="`{id: '${traceIds[category.label]}', action: 'nav', category: '云原生应用'}`"
           @click.stop.prevent="goPage(category)"
         >
           {{ category.label }}
@@ -57,10 +67,18 @@
   </ul>
 </template>
 
-<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
-import _ from 'lodash';
+<script>
+import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+import { traceIds } from '@/common/trace-ids';
+import { cloneDeep } from 'lodash';
 
 export default {
+  props: {
+    isMigrationEntryShown: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       navTree: [],
@@ -69,7 +87,6 @@ export default {
         'cloudAppDeployForEnv',
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
-        'cloudAppDeployForResource',
         'imageCredential',
         'observabilityConfig',
         'moduleInfo',
@@ -88,11 +105,16 @@ export default {
         'cloudAppImageList',
         'cloudAppBuildHistory',
         'networkConfig',
+        // 迁移信息
+        'appMigrationInfo',
       ],
       allNavItems: [],
       region: 'ieod',
+      traceIds,
       roleAllowRouters: {
         administrator: [
+          // 迁移信息
+          'appMigrationInfo',
           // 概览
           'cloudAppSummary',
           // 应用编排
@@ -105,8 +127,6 @@ export default {
           'cloudAppDeployForHook',
           // 应用编排 - 环境变量
           'cloudAppDeployForEnv',
-          // 应用编排 - 依赖资源
-          'cloudAppDeployForResource',
           // 应用编排 - YAML
           'cloudAppDeployForYaml',
           // 部署管理
@@ -151,22 +171,24 @@ export default {
           'observabilityConfig',
           // 网络配置
           'networkConfig',
+          // 操作记录
+          'operationRecord',
         ],
         developer: [
+          // 迁移信息
+          'appMigrationInfo',
           // 概览
           'cloudAppSummary',
           // 应用编排
           'cloudAppDeploy',
-          // 应用编排 - 构建配置
+          // 构建配置
           'cloudAppDeployForBuild',
-          // 应用编排 - 进程配置
+          // 进程配置
           'cloudAppDeployForProcess',
-          // 应用编排 - 钩子命令
+          // 钩子命令
           'cloudAppDeployForHook',
-          // 应用编排 - 环境变量
+          // 环境变量
           'cloudAppDeployForEnv',
-          // 应用编排 - 依赖资源
-          'cloudAppDeployForResource',
           // 应用编排 - YAML
           'cloudAppDeployForYaml',
           // 部署管理
@@ -209,6 +231,8 @@ export default {
           'observabilityConfig',
           // 网络配置
           'networkConfig',
+          // 操作记录
+          'operationRecord',
         ],
         operator: [
           // 权限管理
@@ -221,6 +245,8 @@ export default {
           'appConfigs',
           // 文档管理
           'docuManagement',
+          // 操作记录
+          'operationRecord',
         ],
       },
     };
@@ -235,6 +261,13 @@ export default {
     curAppModule() {
       return this.$store.state.curAppModule;
     },
+    // 是否展示迁移信息
+    isMigrationInfoShown() {
+      return this.curAppInfo.migration_status && this.curAppInfo.migration_status.status === 'migration_succeeded';
+    },
+    userFeature() {
+      return this.$store.state.userFeature;
+    },
   },
   watch: {
     curAppInfo() {
@@ -243,14 +276,14 @@ export default {
     'curAppInfo.feature': {
       handler(newValue, oldValue) {
         if (!Object.keys(newValue).length) {
-          this.curAppInfo.feature = _.cloneDeep(oldValue);
+          this.curAppInfo.feature = cloneDeep(oldValue);
         }
         this.init();
       },
       deep: true,
     },
-    '$route'(newVal, oldVal) {
-      const isReload = (newVal.params.id !== oldVal.params.id) || (newVal.params.moduleId !== oldVal.params.moduleId);
+    $route(newVal, oldVal) {
+      const isReload = newVal.params.id !== oldVal.params.id || newVal.params.moduleId !== oldVal.params.moduleId;
       this.init(isReload);
     },
   },
@@ -262,12 +295,13 @@ export default {
      * 侧导航初始化入口
      */
     async init(isReload = true) {
-      if (!this.curAppInfo.application) return;
+      if (!this.curAppInfo.application || this.curAppInfo.application.type !== 'cloud_native') return;
       const appNav = JSON.parse(JSON.stringify(staticData.app_nav));
 
       if (isReload) {
         this.navTree = await this.initNavByRegion(appNav.cloudList);
         await this.initRouterPermission();
+        this.redirectRoute(this.curRouteName);
       }
 
       await this.selectRouterByName(this.curRouteName);
@@ -300,7 +334,7 @@ export default {
         if (!this.curAppInfo.web_config.engine_enabled) {
           navTree = navTree.filter((nav) => {
             if (nav.name === 'appMarketing') {
-              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
+              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appMobileMarket')];
             }
             return ['appMarketing', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
           });
@@ -310,27 +344,34 @@ export default {
         if (this.curAppModule?.region !== 'ieod') {
           navTree.forEach((nav) => {
             if (nav.name === 'appMarketing') {
-              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
+              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appMobileMarket')];
             }
           });
         }
 
+        // 迁移中的应用展示迁移信息
+        if (!this.userFeature.CNATIVE_MGRLEGACY || !this.isMigrationInfoShown) {
+          navTree = navTree.filter((nav) => nav.name !== 'appMigrationInfo');
+        }
+
         // 当角色为开发者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'developer') {
-          navTree = navTree.filter(nav => this.roleAllowRouters.developer.includes(nav.name));
+          navTree = navTree.filter((nav) => this.roleAllowRouters.developer.includes(nav.name));
         }
 
         // 当角色运营者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'operator') {
-          navTree = navTree.filter(nav => this.roleAllowRouters.operator.includes(nav.name));
+          navTree = navTree.filter((nav) => this.roleAllowRouters.operator.includes(nav.name));
         }
 
         // smart应用或lesscode应用，包管理
-        if (this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP
-        && this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP) {
+        if (
+          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP &&
+          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP
+        ) {
           navTree.forEach((nav) => {
             if (nav.name === 'appEngine') {
-              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appPackages')];
+              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appPackages')];
             }
           });
         }
@@ -355,24 +396,11 @@ export default {
           return nav;
         });
 
-        // 接入feature flag来控制应用导航
-        const featureMaps = {
-          docuManagement: 'DOCUMENT_MANAGEMENT', // 文档管理
-          appCloudAPI: 'API_GATEWAY', // 云API权限管理
-        };
         const subFeatureMaps = {
           cloudAppAnalysis: 'ANALYTICS', // 访问统计
-          codeReview: 'CI', // 代码检查
-          monitorAlarm: 'PHALANX', // 告警记录
+          codeReview: 'CODE_CHECK', // 代码检查
+          monitorAlarm: 'MONITORING', // 告警记录
         };
-        // 一级
-        navTree = navTree.filter((nav) => {
-          const key = featureMaps[nav.name];
-          if (key && Object.prototype.hasOwnProperty.call(this.curAppInfo.feature, key)) {
-            return this.curAppInfo.feature[key];
-          }
-          return true;
-        });
         // 二级
         for (let i = 0; i < navTree.length; i++) {
           const nav = navTree[i];
@@ -411,7 +439,6 @@ export default {
         'cloudAppDeployForEnv',
         'cloudAppDeployForYaml',
         'cloudAppDeployForHook',
-        'cloudAppDeployForResource',
         'imageCredential',
         'observabilityConfig',
         'moduleInfo',
@@ -430,6 +457,15 @@ export default {
         'cloudAppImageList',
         'cloudAppBuildHistory',
         'networkConfig',
+        // 迁移信息
+        'appMigrationInfo',
+        'cloudAppDeployForProcess',
+        'cloudAppDeployForVolume',
+        'appMarket',
+        'appBasicInfo',
+        'appMembers',
+        'appPersistentStorage',
+        'docuManagement',
       ];
 
       this.navTree.forEach((nav) => {
@@ -534,8 +570,9 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName))
-          || nav.destRoute?.name === routeName);
+          const router = this.allNavItems.find(
+            (nav) => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName
+          );
           reject(router);
         }
       });
@@ -553,7 +590,7 @@ export default {
     },
 
     simpleAddNavItem(navTree, categoryName, destRouter, name) {
-      const category = navTree.find(item => item.name === categoryName);
+      const category = navTree.find((item) => item.name === categoryName);
       category.children.push({
         categoryName,
         name,
@@ -572,7 +609,7 @@ export default {
      * @param {String} name 名称
      */
     addServiceNavItem(navTree, id, name) {
-      const category = navTree.find(item => item.name === 'appServices');
+      const category = navTree.find((item) => item.name === 'appServices');
       category.children.push({
         categoryName: 'appServices',
         name,
@@ -620,7 +657,7 @@ export default {
         },
       };
 
-      const category = navTree.find(item => item.name === 'appPermissions');
+      const category = navTree.find((item) => item.name === 'appPermissions');
       if (category && type && nav[type]) {
         category.children.push(nav[type]);
       }
@@ -653,7 +690,7 @@ export default {
 
         const routeName = navItem.destRoute.name;
         const params = {
-          ...navItem.destRoute.params || {},
+          ...(navItem.destRoute.params || {}),
           ...this.$router.params,
           moduleId: this.curAppModule?.name,
         };
@@ -694,14 +731,34 @@ export default {
     },
 
     afterEnter(el) {
-      $(el).hide()
-        .slideDown(400);
+      $(el).hide().slideDown(400);
     },
 
     leave(el, done) {
       $(el).slideUp(400, () => {
         done();
       });
+    },
+
+    // 迁移应用弹窗
+    handleShowAppMigrationDialog() {
+      this.$emit('show-migration-dialog', {
+        visible: true,
+        data: this.curAppInfo.application,
+      });
+    },
+
+    // 当前应用切换为无迁移信息应用，跳转至概览
+    redirectRoute(routeName) {
+      const isCloudApp = this.curAppInfo.application?.type === 'cloud_native';
+      if (routeName === 'appMigrationInfo' && isCloudApp && !this.isMigrationInfoShown) {
+        this.$router.push({
+          name: 'cloudAppSummary',
+          params: {
+            id: this.curAppInfo.application.code,
+          },
+        });
+      }
     },
   },
 };
@@ -713,14 +770,29 @@ export default {
   width: 240px;
   margin-top: 1px;
 
+  .migration-app-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 16px;
+    height: 32px;
+    background: #f0f5ff;
+    border-radius: 2px;
+    font-size: 12px;
+    color: #3a84ff;
+    cursor: pointer;
+    &:hover {
+      background: #e1ecff;
+    }
+  }
+
   > li {
-    width: 100%;
+    width: 239px;
     position: relative;
 
     &.on {
       .overview-text {
         color: #313238 !important;
-
       }
       .app-nav-icon {
         color: #313238 !important;

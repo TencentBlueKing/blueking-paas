@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
+from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -27,20 +27,26 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
+from paasng.core.region.models import get_all_regions
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts import serializers
 from paasng.infras.accounts.models import AccountFeatureFlag, Oauth2TokenHolder, UserProfile, make_verifier
 from paasng.infras.accounts.oauth.backends import get_bkapp_oauth_backend_cls
 from paasng.infras.accounts.oauth.exceptions import BKAppOauthError
 from paasng.infras.accounts.oauth.utils import get_available_backends, get_backend
 from paasng.infras.accounts.permissions.application import application_perm_class
+from paasng.infras.accounts.permissions.constants import SiteAction
+from paasng.infras.accounts.permissions.global_site import user_has_site_action_perm
 from paasng.infras.accounts.serializers import AllRegionSpecsSLZ, OAuthRefreshTokenSLZ
 from paasng.infras.accounts.utils import create_app_oauth_backend, get_user_avatar
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.notifier.client import BkNotificationService
+from paasng.infras.notifier.exceptions import BaseNotifierError
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
-from paasng.utils.notifier import get_notification_backend
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +65,12 @@ class UserInfoViewSet(APIView):
         user = request.user
         user_logo = get_user_avatar(user.username)
         data = {
-            "chinese_name": user.chinese_name,
-            "avatar_url": user.avatar_url if user.avatar_url else user_logo,
             "bkpaas_user_id": user.bkpaas_user_id,
             "username": user.username,
+            "tenant_id": getattr(user, "tenant_id", None),
+            "display_name": getattr(user, "display_name", None),
+            "chinese_name": user.chinese_name,
+            "avatar_url": user.avatar_url if user.avatar_url else user_logo,
         }
         return Response(data)
 
@@ -81,19 +89,19 @@ class UserVerificationGenerationView(APIView):
         验证码-生成并发送验证码到用户的手机
         - 注意：接口调用有频率限制 6/min
         """
-        if not PlatformFeatureFlag.get_default_flags()[PlatformFeatureFlag.VERIFICATION_CODE]:
-            raise error_codes.FEATURE_FLAG_DISABLED
+        if not settings.ENABLE_VERIFICATION_CODE:
+            raise error_codes.NOTIFICATION_DISABLED.f(_("暂不支持发送验证码"))
 
         verifier = make_verifier(request.session, request.data.get("func"))
-        noti_backend = get_notification_backend()
-
         message = _("您的蓝鲸验证码是：{verification_code}，请妥善保管。").format(
             verification_code=verifier.set_current_code()
         )
 
-        result = noti_backend.wecom.send([request.user.username], message, _("蓝鲸平台"))
-
-        if not result:
+        user_tenant_id = get_tenant(request.user).id
+        bk_notify = BkNotificationService(user_tenant_id)
+        try:
+            bk_notify.send_wecom([request.user.username], message, _("蓝鲸平台"))
+        except BaseNotifierError:
             raise error_codes.ERROR_SENDING_NOTIFICATION
 
         return JsonResponse({}, status=status.HTTP_201_CREATED)
@@ -107,8 +115,8 @@ class UserVerificationValidationView(APIView):
         验证码-测试验证码
         - 验证成功后，可以带上验证码发起最终操作
         """
-        if not PlatformFeatureFlag.get_default_flags()[PlatformFeatureFlag.VERIFICATION_CODE]:
-            raise error_codes.FEATURE_FLAG_DISABLED
+        if not settings.ENABLE_VERIFICATION_CODE:
+            raise error_codes.NOTIFICATION_DISABLED.f(_("暂不支持发送验证码"))
 
         serializer = serializers.VerificationCodeSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -145,14 +153,24 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             backend = create_app_oauth_backend(application, env_name=env_name)
         except BkOauthClientDoesNotExist:
             raise error_codes.CLIENT_CREDENTIALS_MISSING
+
         try:
-            return Response(
-                data=backend.fetch_token(
-                    username=request.user.username, user_credential=backend.get_user_credential_from_request(request)
-                )
+            data = backend.fetch_token(
+                username=request.user.username, user_credential=backend.get_user_credential_from_request(request)
             )
         except BKAppOauthError as e:
             return Response(status=e.response_code, data={"message": e.error_message})
+        # 新建 token 成功后添加审计记录
+        add_app_audit_record(
+            app_code=app_code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.ACCESS_TOKEN,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+        )
+        return Response(data=data)
 
     @swagger_auto_schema(request_body=OAuthRefreshTokenSLZ)
     def refresh_app_token(self, request, app_code: str, env_name: str):
@@ -168,9 +186,20 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         data = slz.validated_data
 
         try:
-            return Response(data=backend.refresh_token(refresh_token=data["refresh_token"]))
+            data = backend.refresh_token(refresh_token=data["refresh_token"])
         except BKAppOauthError as e:
             return Response(status=e.response_code, data={"message": e.error_message})
+        # 刷新 token 成功后添加审计记录
+        add_app_audit_record(
+            app_code=app_code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.REFRESH,
+            target=OperationTarget.ACCESS_TOKEN,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+        )
+        return Response(data=data)
 
     def validate_app_token(self, request, app_code: str, env_name: str):
         application = self.get_application()
@@ -238,7 +267,7 @@ class Oauth2BackendsViewSet(viewsets.ViewSet):
         scope = token_params.pop("scope", None)
         try:
             Oauth2TokenHolder.objects.update_or_create(
-                provider=backend_name, user=user_profile, region="ieod", scope=scope, defaults=token_params
+                provider=backend_name, user=user_profile, scope=scope, defaults=token_params
             )
         except Exception:
             msg = f"failed to save access token(from {backend}) to {user_profile.username}"
@@ -277,6 +306,11 @@ class AccountFeatureFlagViewSet(viewsets.ViewSet):
     @swagger_auto_schema(tags=["特性标记"])
     def list(self, request):
         flags = AccountFeatureFlag.objects.get_user_features(request.user)
+
+        # 平台管理（导航入口）
+        # TODO 目前只有平台管理员有权限，后续需要支持租户管理员
+        flags["PLATFORM_MANAGEMENT"] = user_has_site_action_perm(request.user, SiteAction.MANAGE_PLATFORM)
+
         return Response(flags)
 
 
@@ -286,11 +320,7 @@ class RegionSpecsViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def retrieve(self, request):
-        # TODO: 当前存在漏洞，如果用户没有创建某 region 应用的权限，但他又是这个 region 下应用的开发者。那么当他进入该应用后，
-        # 点击创建新模块页面，访问 specs 接口时，不会返回对应 region 的相关信息（因为没权限），最终会导致前端页面报错。
-        #
-        # Region 的创建应用权限和管理某个 Region 下应用（创建模块）权限等没有细化。
-        user_profile = UserProfile.objects.get_profile(self.request.user)
-        regions = user_profile.enable_regions
+        """获取当前所有 region（版本）的配置详情。"""
+        regions = list(get_all_regions().values())
         all_spec_slz = AllRegionSpecsSLZ(regions)
         return Response(all_spec_slz.serialize())

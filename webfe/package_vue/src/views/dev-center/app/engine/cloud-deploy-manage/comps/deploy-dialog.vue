@@ -29,14 +29,20 @@
               {{ `${$t('部署至')}${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}` }}
             </bk-button>
           </span>
-          <bk-button :theme="'default'" @click="handleCancel">
+          <bk-button
+            :theme="'default'"
+            @click="handleCancel"
+          >
             {{ $t('取消') }}
           </bk-button>
         </div>
       </template>
 
       <!-- 部署限制 -->
-      <section v-if="isShowErrorAlert.deploy" class="customize-alert-wrapper mb12">
+      <section
+        v-if="isShowErrorAlert.deploy"
+        class="customize-alert-wrapper mb12"
+      >
         <p class="text">
           <i class="paasng-icon paasng-remind exclamation-cls"></i>
           <span>{{ deployErrorData?.message }}</span>
@@ -57,8 +63,14 @@
             @click="getDeployPreparations('deploy')"
           >
             {{ $t('刷新') }}
-            <i class="paasng-icon paasng-refresh-line" v-if="!deployRefreshLoading" />
-            <round-loading class="round-loading-cls" v-else />
+            <i
+              class="paasng-icon paasng-refresh-line"
+              v-if="!deployRefreshLoading"
+            />
+            <round-loading
+              class="round-loading-cls"
+              v-else
+            />
           </bk-button>
         </div>
       </section>
@@ -67,8 +79,11 @@
       <div v-if="deploymentInfoBackUp?.build_method === 'custom_image' && !isSmartApp">
         <!-- allowMultipleImage 为false 代表可以需要自己选择一条tag -->
         <div v-if="!allowMultipleImage">
-          <div class="code-depot mb15">
-            <span class="pr20">{{ $t('镜像仓库') }}：</span>
+          <div
+            class="code-depot mb15"
+            v-bk-overflow-tips="{ content: deploymentInfoBackUp.repo_url }"
+          >
+            <span>{{ $t('镜像仓库') }}：</span>
             {{ deploymentInfoBackUp.repo_url }}
           </div>
           <div>
@@ -145,10 +160,11 @@
       <div v-else>
         <template v-if="!isSmartApp">
           <div
-            class="code-depot mb10"
             v-if="deploymentInfoBackUp.repo_url"
+            class="code-depot mb10"
+            v-bk-overflow-tips="{ content: deploymentInfoBackUp.repo_url }"
           >
-            <span class="pr20">{{ $t('代码仓库') }}：</span>
+            <span>{{ $t('代码仓库') }}：</span>
             {{ deploymentInfoBackUp.repo_url }}
           </div>
           <div class="image-source">
@@ -168,6 +184,13 @@
                 {{ $t(item.label) }}
               </bk-button>
             </div>
+            <p
+              class="tips"
+              v-if="deploymentInfoBackUp?.activeImageSource"
+            >
+              <i class="paasng-icon paasng-info-line"></i>
+              {{ $t('将跳过代码构建阶段，仅发布环境变量等应用配置的变更') }}
+            </p>
           </div>
         </template>
         <div
@@ -179,7 +202,7 @@
             <!-- smartAPP 不展示，代码版本差异 -->
             <bk-button
               v-if="isShowCodeDifferences"
-              style="font-size: 12px;"
+              style="font-size: 12px"
               theme="primary"
               text
               :disabled="isVersionDifferenceDisabled"
@@ -205,7 +228,7 @@
               v-for="(branch, index) in branchList"
               :key="index"
               class="option-group"
-              :name="branch.name"
+              :name="branch.displayName"
             >
               <bk-button
                 ext-cls="paas-branch-btn"
@@ -248,6 +271,9 @@
             :searchable="true"
             @change="handleChangeTags"
             :loading="isTagLoading"
+            enable-scroll-load
+            :scroll-loading="scrollLoadingOptions"
+            @scroll-end="handleScrollToBottom"
           >
             <bk-option
               v-for="option in imageTagList"
@@ -255,14 +281,6 @@
               :key="option.id"
               :name="option.tag"
             />
-            <div
-              slot="extension"
-              @click="handleNext"
-              style="cursor: pointer"
-              v-if="isShowNext"
-            >
-              {{ $t('下一页') }}
-            </div>
           </bk-select>
         </div>
       </div>
@@ -282,14 +300,20 @@
           <bk-radio-group v-model="imagePullStrategy">
             <bk-radio :value="'IfNotPresent'">
               IfNotPresent
-              <span class="last-selected" v-if="lastSelectedImagePullStrategy === 'IfNotPresent'">
+              <span
+                class="last-selected"
+                v-if="lastSelectedImagePullStrategy === 'IfNotPresent'"
+              >
                 ({{ $t('上次选择') }})
               </span>
             </bk-radio>
             <p class="tip mb10">{{ $t('当本地不存在镜像时从远程仓库拉取') }}</p>
             <bk-radio :value="'Always'">
               Always
-              <span class="last-selected" v-if="lastSelectedImagePullStrategy === 'Always'">
+              <span
+                class="last-selected"
+                v-if="lastSelectedImagePullStrategy === 'Always'"
+              >
                 ({{ $t('上次选择') }})
               </span>
             </bk-radio>
@@ -298,7 +322,10 @@
         </div>
       </div>
 
-      <section v-if="isShowCodeAlert" class="customize-alert-wrapper mt10">
+      <section
+        v-if="isShowCodeAlert"
+        class="customize-alert-wrapper mt10"
+      >
         <p class="text">
           <i class="paasng-icon paasng-remind exclamation-cls"></i>
           <span>{{ codeRepositoryErrorData?.message }}</span>
@@ -330,8 +357,14 @@
             @click="handleRefresh"
           >
             {{ $t('刷新') }}
-            <i class="paasng-icon paasng-refresh-line" v-if="!codeRefreshLoading" />
-            <round-loading class="round-loading-cls" v-else />
+            <i
+              class="paasng-icon paasng-refresh-line"
+              v-if="!codeRefreshLoading"
+            />
+            <round-loading
+              class="round-loading-cls"
+              v-else
+            />
           </bk-button>
         </div>
       </section>
@@ -380,7 +413,7 @@
                   {{ $t('已选中分支：') }}
                   <strong>{{ branchValue.split(':')[1] || '--' }}</strong>
                 </span>
-                <span class="revision-diff-sep ml25 mr25"> &lt; &gt; </span>
+                <span class="revision-diff-sep ml25 mr25">&lt; &gt;</span>
                 <span class="">
                   {{ $t('已部署分支：') }}
                   <strong>
@@ -392,16 +425,16 @@
             </form>
             <table class="ps-table ps-table-default ps-table-outline">
               <colgroup>
-                <col style="width:150px">
-                <col style="width:150px">
-                <col style="width:170px">
-                <col style="width:250px">
+                <col style="width: 150px" />
+                <col style="width: 150px" />
+                <col style="width: 170px" />
+                <col style="width: 250px" />
               </colgroup>
               <tr class="ps-table-environment-header">
-                <th> {{ $t('版本号') }} </th>
-                <th> {{ $t('提交人') }} </th>
-                <th> {{ $t('提交时间') }} </th>
-                <th> {{ $t('注释') }} </th>
+                <th>{{ $t('版本号') }}</th>
+                <th>{{ $t('提交人') }}</th>
+                <th>{{ $t('提交时间') }}</th>
+                <th>{{ $t('注释') }}</th>
               </tr>
               <tr
                 v-if="!commitsList.length"
@@ -411,7 +444,7 @@
                   <div class="ps-no-result">
                     <div class="text">
                       <p><i class="paasng-icon paasng-empty no-data" /></p>
-                      <p> {{ $t('暂无版本差异记录') }} </p>
+                      <p>{{ $t('暂无版本差异记录') }}</p>
                     </div>
                   </div>
                 </td>
@@ -420,7 +453,7 @@
                 v-for="(cItem, index) in commitsList"
                 v-else
                 :key="index"
-                :class="['ps-table-template',{ 'open': commitDialog.curCommitsIndex === index }]"
+                :class="['ps-table-template', { open: commitDialog.curCommitsIndex === index }]"
               >
                 <tr
                   class="ps-table-slide-up"
@@ -452,7 +485,8 @@
     </bk-dialog>
   </div>
 </template>
-<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployStatusDetail from './deploy-status-detail';
 import { cloneDeep } from 'lodash';
 
@@ -556,11 +590,15 @@ export default {
       },
       commitsList: [],
       moduleReleaseInfo: null,
+      scrollLoadingOptions: {
+        size: 'mini',
+        isLoading: false,
+      },
     };
   },
   computed: {
     curAppModule() {
-      return this.curAppModuleList.find(e => e.name === (this.deploymentInfoBackUp.module_name || 'default'));
+      return this.curAppModuleList.find((e) => e.name === (this.deploymentInfoBackUp.module_name || 'default'));
     },
     branchEmptyText() {
       const sourceType = this.overview.repo && this.overview.repo.source_type;
@@ -635,7 +673,7 @@ export default {
     deployErrorData() {
       const faileds = this.deployPreparations.failed_conditions;
       if (faileds?.length) {
-        const deployErrorList = faileds.filter(v => deployErrorStatus.includes(v.action_name));
+        const deployErrorList = faileds.filter((v) => deployErrorStatus.includes(v.action_name));
         return deployErrorList[0] || {};
       }
       return {};
@@ -646,7 +684,7 @@ export default {
       const faileds = this.deployPreparations.failed_conditions;
       if (faileds?.length) {
         // 查找第一项进行展示，解决当前项，点击刷新重新获取，再处理下一天错误
-        const codeRepositoryErrorList = faileds.filter(v => codeRepositoryErrorStatus.includes(v.action_name));
+        const codeRepositoryErrorList = faileds.filter((v) => codeRepositoryErrorStatus.includes(v.action_name));
         return codeRepositoryErrorList[0] || {};
       }
       return {};
@@ -681,8 +719,10 @@ export default {
     show: {
       handler(value) {
         if (!value) return;
+        // 镜像来源、镜像拉取策略默认值
+        const { activeImageSource, activeImagePullPolicy } = this.deploymentInfoBackUp;
         this.deployAppDialog.visiable = !!value;
-        this.buttonActive = 'branch';
+        this.buttonActive = activeImageSource || 'branch';
         this.tagData.tagValue = '';
         // 初始化镜像taglist
         this.pagination.limit = 10;
@@ -699,9 +739,11 @@ export default {
         this.getModuleRuntimeOverview();
         // 获取当前模块部署信息
         this.getModuleReleaseInfo();
-        // 上次选择的镜像拉取策略
-        if (this.lastSelectedImagePullStrategy) {
-          this.imagePullStrategy = this.lastSelectedImagePullStrategy;
+        // 外界传递镜像拉取策略，上次选择的镜像拉取策略，否则为默认值
+        this.imagePullStrategy = activeImagePullPolicy || this.lastSelectedImagePullStrategy || 'IfNotPresent';
+        // 已构建镜像，获取下拉列表
+        if (activeImageSource) {
+          this.handleSelected({ value: 'image', label: this.$t('已构建镜像') });
         }
       },
       immediate: true,
@@ -757,6 +799,10 @@ export default {
         this.isLoading = false;
       }
     },
+    // 排序
+    sortingRules(a, b) {
+      return new Date(b.last_update).getTime() - new Date(a.last_update).getTime();
+    },
     async getModuleBranches(favBranchName) {
       this.isBranchesLoading = true;
       this.branchErrorTips = '';
@@ -771,10 +817,14 @@ export default {
           moduleId: this.curModuleId,
         });
 
+        // last_update有值，根据时间排序
+        if (res.results[0]?.last_update) {
+          res.results.sort(this.sortingRules);
+        }
+
         //  Smart 应用(预发布/生产)显示最新分支
         if (this.isSmartApp) {
-          const sortList = res.results.sort(this.sortData);
-          this.branchValue = `${sortList[0].type}:${sortList[0].name}`;
+          this.branchValue = res.results.length ? `${res.results[0]?.type}:${res.results[0]?.name}` : '';
         }
         this.branchesData = res.results;
         const branchesList = [];
@@ -793,14 +843,15 @@ export default {
           };
 
           // 组装数据，实现分组
-          if (!branchesList.map(item => item.id).includes(branch.type)) {
+          if (!branchesList.map((item) => item.id).includes(branch.type)) {
             branchesList.push({
               id: branch.type,
               name: branch.type,
+              displayName: branch.display_type,
               children: [obj],
             });
           } else {
-            const curData = branchesList.find(item => item.id === branch.type);
+            const curData = branchesList.find((item) => item.id === branch.type);
             curData.children.push(obj);
           }
 
@@ -1042,14 +1093,14 @@ export default {
           // 可以自己编辑选择镜像
           if (!this.allowMultipleImage) {
             params = {
-              version_type: 'image',
+              version_type: 'tag',
               version_name: this.tagData.tagValue,
               advanced_options: advancedOptions,
             };
             this.deploymentInfoBackUp.version_info.version_name = this.tagData.tagValue;
           } else {
             params = {
-              version_type: 'manifest',
+              version_type: 'tag',
               version_name: 'manifest',
               advanced_options: advancedOptions,
             };
@@ -1081,6 +1132,7 @@ export default {
     async getImageTagList() {
       try {
         this.isTagLoading = true;
+        this.scrollLoadingOptions.isLoading = true;
         const res = await this.$store.dispatch('deploy/getImageTagData', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -1092,7 +1144,7 @@ export default {
         this.imageTagList.splice(0, this.imageTagList.length, ...(res.results || []));
         this.imageTagListCount = res.count;
         // 默认选中已部署成功的 Tag, 否则选中第一个
-        this.tagData.tagValue = (this.curModulemirrorTag || this.imageTagList[0]?.id) || '';
+        this.tagData.tagValue = this.curModulemirrorTag || this.imageTagList[0]?.id || '';
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1100,6 +1152,7 @@ export default {
         });
       } finally {
         this.isTagLoading = false;
+        this.scrollLoadingOptions.isLoading = false;
       }
     },
 
@@ -1115,7 +1168,7 @@ export default {
         });
         this.customImageTagList.splice(0, this.customImageTagList.length, ...(res || []));
         // 默认选中已部署成功的 Tag, 否则选中第一个
-        this.tagData.tagValue = (this.curModulemirrorTag || this.customImageTagList[0]?.name) || '';
+        this.tagData.tagValue = this.curModulemirrorTag || this.customImageTagList[0]?.name || '';
       } catch (e) {
         this.tagUrl = e?.data?.url;
         this.errorTips = e.message;
@@ -1140,8 +1193,7 @@ export default {
       this.curSelectData = this.imageTagList.find((e) => {
         if (e.id === this.tagData.tagValue) {
           e.revision = e.digest;
-          e.type = 'image',
-          e.name = e.tag;
+          (e.type = 'image'), (e.name = e.tag);
           return e;
         }
       });
@@ -1171,7 +1223,7 @@ export default {
       this.handleCloseProcessWatch();
     },
 
-    handleNext() {
+    handleScrollToBottom() {
       if (this.pagination.limit >= this.imageTagListCount || this.isTagLoading) return;
       this.pagination.limit += 10;
       this.getImageTagList();
@@ -1185,7 +1237,7 @@ export default {
     async getDeployPreparations(type) {
       // 刷新
       if (type) {
-        type === 'deploy' ? this.deployRefreshLoading = true : this.codeRefreshLoading = true;
+        type === 'deploy' ? (this.deployRefreshLoading = true) : (this.codeRefreshLoading = true);
       }
       try {
         const res = await this.$store.dispatch('deploy/getDeployPreparations', {
@@ -1198,10 +1250,12 @@ export default {
         // 将错误数据进行分类
         if (!res.all_conditions_matched && res.failed_conditions.length) {
           // 部署限制相关的，错误信息
-          const deployErrorList = res.failed_conditions.filter(v => deployErrorStatus.includes(v.action_name));
+          const deployErrorList = res.failed_conditions.filter((v) => deployErrorStatus.includes(v.action_name));
           // 代码仓库相关，错误信息
           // eslint-disable-next-line max-len
-          const codeRepositoryErrorList = res.failed_conditions.filter(v => codeRepositoryErrorStatus.includes(v.action_name));
+          const codeRepositoryErrorList = res.failed_conditions.filter((v) =>
+            codeRepositoryErrorStatus.includes(v.action_name)
+          );
           if (deployErrorList.length) {
             this.isShowErrorAlert.deploy = true;
           } else {
@@ -1225,7 +1279,7 @@ export default {
         });
         this.deployAppDialog.disabled = false;
       } finally {
-        type === 'deploy' ? this.deployRefreshLoading = false : this.codeRefreshLoading = false;
+        type === 'deploy' ? (this.deployRefreshLoading = false) : (this.codeRefreshLoading = false);
       }
     },
 
@@ -1335,6 +1389,13 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
+.image-source {
+  .tips {
+    font-size: 12px;
+    color: #979ba5;
+    margin-top: 4px;
+  }
+}
 .version-code {
   cursor: pointer;
   color: #3a84ff;
@@ -1374,7 +1435,7 @@ export default {
 }
 .image-pull-strategy {
   margin-top: 20px;
-  &>.label {
+  & > .label {
     line-height: 32px;
     white-space: nowrap;
   }
@@ -1385,7 +1446,7 @@ export default {
   }
   .last-selected {
     font-size: 12px;
-    color: #C4C6CC;
+    color: #c4c6cc;
   }
 }
 
@@ -1402,8 +1463,8 @@ export default {
   .module-name-tag {
     margin-left: 8px;
     font-size: 12px;
-    color: #63656E;
-    background-color: #F0F1F5;
+    color: #63656e;
+    background-color: #f0f1f5;
     padding: 3px 7px;
     border-radius: 2px;
   }
@@ -1423,10 +1484,10 @@ export default {
   align-items: center;
   padding: 0 10px;
   font-size: 12px;
-  color: #63656E;
+  color: #63656e;
   min-height: 32px;
-  background: #FFEDED;
-  border: 1px solid #FFD2D2;
+  background: #ffeded;
+  border: 1px solid #ffd2d2;
   border-radius: 2px;
 
   .text {
@@ -1435,19 +1496,18 @@ export default {
     margin-right: 10px;
 
     .exclamation-cls {
-      color: #EA3636;
+      color: #ea3636;
       font-size: 14px;
       transform: translateY(2px);
       margin-right: 6px;
     }
   }
 
-
   .line {
     width: 1px;
     margin: 0 10px;
     height: 14px;
-    background: #DCDEE5;
+    background: #dcdee5;
   }
 
   .right-link {
@@ -1467,8 +1527,8 @@ export default {
 }
 .round-loading-cls {
   width: 14px;
-    height: 14px;
-    transform: translateY(-1px);
+  height: 14px;
+  transform: translateY(-1px);
 }
 .deploy-dialog-container :deep(.bk-sideslider-wrapper.right) {
   overflow: unset;
@@ -1477,5 +1537,10 @@ export default {
     margin-bottom: 24px;
     min-height: 620px;
   }
+}
+.code-depot {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

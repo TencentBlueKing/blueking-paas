@@ -1,24 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.engine.models.config_var import ConfigVar
@@ -74,9 +73,15 @@ class RabbitMQServiceMigration(BaseRemoteServiceMigration):
                 key="BK_BROKER_URL",
                 value=bk_broker_url,
                 description="RabbitMQ 服务迁移变量",
+                tenant_id=module.tenant_id,
             )
             ConfigVar.objects.create(
-                module=module, environment=env, key="IS_USE_CELERY", value="true", description="RabbitMQ 服务迁移变量"
+                module=module,
+                environment=env,
+                key="IS_USE_CELERY",
+                value="true",
+                description="RabbitMQ 服务迁移变量",
+                tenant_id=module.tenant_id,
             )
             if self.context.legacy_app_proxy.is_celery_beat_enabled():
                 ConfigVar.objects.create(
@@ -85,6 +90,7 @@ class RabbitMQServiceMigration(BaseRemoteServiceMigration):
                     key="IS_USE_CELERY_BEAT",
                     value="true",
                     description="RabbitMQ 服务迁移变量",
+                    tenant_id=module.tenant_id,
                 )
 
     def rollback_service_instance(self, environment: AppEnvName):

@@ -4,6 +4,8 @@
 
 > 推荐 nodejs 版本: v14.17.6
 
+注：开发者可以使用 [nvm](https://github.com/nvm-sh/nvm) 来管理 nodejs 的版本。
+
 ### 安装依赖包
 
 ```shell
@@ -38,7 +40,7 @@ npm run dev:${版本代号}
 
 ### 如何访问
 
-启动后，本地访问地址示例 `http://bkpaas-dev.example.com:{port}`, 其中 `port` 的值配置在 `webfe/package_vue/config/index.js` 中
+启动后，本地访问地址示例 `http://bkpaas-dev.example.com:{port}`, 其中 `port` 的值配置在 `webfe/package_vue/bk.config.js` 中，默认值为 `6060`。
 
 ## 打包与构建
 

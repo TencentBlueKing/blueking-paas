@@ -19,6 +19,8 @@
 package volumes
 
 import (
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -154,6 +156,29 @@ var _ = Describe("test apply to deployment", func() {
 		}
 	})
 
+	It("subPaths", func() {
+		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
+		subPaths := []string{"nginx.conf", "nginx2.conf"}
+
+		vm := GenericVolumeMount{
+			Volume: Volume{
+				Name: mountName,
+				Source: &paasv1alpha2.VolumeSource{
+					ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+				},
+			},
+			MountPath: mountPath,
+			SubPaths:  subPaths,
+		}
+		_ = vm.ApplyToDeployment(nil, deployment)
+		volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
+		for idx, mount := range volumeMounts {
+			Expect(mount.Name).To(Equal(mountName))
+			Expect(mount.MountPath).To(Equal(filepath.Join(mountPath, subPaths[idx])))
+			Expect(mount.SubPath).To(Equal(subPaths[idx]))
+		}
+	})
+
 	It("configmap source", func() {
 		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
 
@@ -170,6 +195,26 @@ var _ = Describe("test apply to deployment", func() {
 		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
 
 		Expect(deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
+	})
+
+	It("secret source", func() {
+		mountName, mountPath := "nginx-tls-certs", "/etc/nginx/tls"
+
+		vm := GenericVolumeMount{
+			Volume: Volume{
+				Name: mountName,
+				Source: &paasv1alpha2.VolumeSource{
+					Secret: &paasv1alpha2.SecretSource{Name: "nginx-tls-secret"},
+				},
+			},
+			MountPath: mountPath,
+		}
+		_ = vm.ApplyToDeployment(nil, deployment)
+
+		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(mountName))
+		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
+
+		Expect(deployment.Spec.Template.Spec.Volumes[0].Secret.SecretName).To(Equal("nginx-tls-secret"))
 	})
 
 	It("pvc source", func() {
@@ -190,6 +235,110 @@ var _ = Describe("test apply to deployment", func() {
 		Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
 
 		Expect(deployment.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal("nginx-pvc"))
+	})
+})
+
+var _ = Describe("test apply to pod", func() {
+	var pod *corev1.Pod
+
+	BeforeEach(func() {
+		pod = &corev1.Pod{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Pod",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-pod",
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{Name: "nginx", Image: "nginx:latest"},
+				},
+			},
+		}
+	})
+
+	It("subPaths", func() {
+		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
+		subPaths := []string{"nginx.conf", "nginx-tls.crt", "nginx-tls.key"}
+
+		vm := GenericVolumeMount{
+			Volume: Volume{
+				Name: mountName,
+				Source: &paasv1alpha2.VolumeSource{
+					ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+				},
+			},
+			MountPath: mountPath,
+			SubPaths:  subPaths,
+		}
+		_ = vm.ApplyToPod(nil, pod)
+		volumeMounts := pod.Spec.Containers[0].VolumeMounts
+		for idx, mount := range volumeMounts {
+			Expect(mount.Name).To(Equal(mountName))
+			Expect(mount.MountPath).To(Equal(filepath.Join(mountPath, subPaths[idx])))
+			Expect(mount.SubPath).To(Equal(subPaths[idx]))
+		}
+	})
+
+	It("configmap source", func() {
+		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
+
+		vm := GenericVolumeMount{
+			Volume: Volume{
+				Name: mountName,
+				Source: &paasv1alpha2.VolumeSource{
+					ConfigMap: &paasv1alpha2.ConfigMapSource{Name: "nginx-configmap"},
+				},
+			},
+			MountPath: mountPath,
+		}
+		_ = vm.ApplyToPod(nil, pod)
+
+		Expect(pod.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(mountName))
+		Expect(pod.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
+
+		Expect(pod.Spec.Volumes[0].ConfigMap.Name).To(Equal("nginx-configmap"))
+	})
+
+	It("secret source", func() {
+		mountName, mountPath := "nginx-tls-certs", "/etc/nginx/tls"
+
+		vm := GenericVolumeMount{
+			Volume: Volume{
+				Name: mountName,
+				Source: &paasv1alpha2.VolumeSource{
+					Secret: &paasv1alpha2.SecretSource{Name: "nginx-tls-secret"},
+				},
+			},
+			MountPath: mountPath,
+		}
+		_ = vm.ApplyToPod(nil, pod)
+
+		Expect(pod.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(mountName))
+		Expect(pod.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
+
+		Expect(pod.Spec.Volumes[0].Secret.SecretName).To(Equal("nginx-tls-secret"))
+	})
+
+	It("pvc source", func() {
+		mountName, mountPath := "nginx-conf", "/etc/nginx/conf"
+
+		vm := GenericVolumeMount{
+			Volume: Volume{
+				Name: mountName,
+				Source: &paasv1alpha2.VolumeSource{
+					PersistentStorage: &paasv1alpha2.PersistentStorage{Name: "nginx-pvc"},
+				},
+			},
+			MountPath: mountPath,
+		}
+		_ = vm.ApplyToPod(nil, pod)
+
+		Expect(pod.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(mountName))
+		Expect(pod.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal(mountPath))
+
+		Expect(pod.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal("nginx-pvc"))
 	})
 })
 

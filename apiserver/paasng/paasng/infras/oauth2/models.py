@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """为了更好的对蓝鲸平台进行解耦，对于蓝鲸应用来说，其基本功能：包括发布、部署等等，应该和
 牵扯到蓝鲸用户体系的功能模块区分开来。
 
@@ -26,16 +25,18 @@ to the current version of the project delivered to anyone in the future.
 
 采用数据库 trigger 方式，将新数据往旧数据表中同步。
 """
+
 from blue_krill.models.fields import EncryptField
 from django.db import models
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import TimestampedModel
 
 
 class OAuth2Client(TimestampedModel):
-    """OAuth2 体系中的基本单位：Client
+    """[deprecated] OAuth2 体系中的基本单位：Client
 
-    settings.ENABLE_BK_OAUTH 为 True 时，则不再使用该表，Auth 相关的数据直接调用 BKAuth 服务提供的 API。
+    应用的密钥信息已全面接入到 bkAuth，不再需要在开发者中心、桌面存储应用密钥信息，该表已完全废弃
     """
 
     client_id = models.CharField(verbose_name="应用编码", max_length=20, unique=True)
@@ -49,6 +50,7 @@ class BkAppSecretInEnvVar(TimestampedModel):
 
     bk_app_code = models.CharField(max_length=20, unique=True)
     bk_app_secret_id = models.IntegerField(verbose_name="应用密钥的 ID", help_text="不存储密钥的信息，仅存储密钥 ID")
+    tenant_id = tenant_id_field_factory()
 
     def __str__(self) -> str:
         return f"[{self.bk_app_code}]{self.bk_app_secret_id}"

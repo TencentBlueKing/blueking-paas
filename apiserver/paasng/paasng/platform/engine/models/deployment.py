@@ -1,37 +1,40 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
-import cattr
 from attrs import define
 from django.db import models
-from jsonfield import JSONField
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.misc.metrics import DEPLOYMENT_STATUS_COUNTER, DEPLOYMENT_TIME_CONSUME_HISTOGRAM
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import BuildStatus, ImagePullPolicy, JobStatus
+from paasng.platform.bkapp_model.constants import ImagePullPolicy
+from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProbeSet
+from paasng.platform.engine.constants import BuildStatus, JobStatus
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.models.deploy_config import HookList, HookListField
+from paasng.platform.modules.models import Module
+from paasng.platform.modules.models.deploy_config import HookList
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.models import make_json_field, make_legacy_json_field
 
@@ -45,9 +48,12 @@ class DeploymentQuerySet(models.QuerySet):
         """Get all deploys under an env"""
         return self.filter(app_environment=env)
 
-    def owned_by_module(self, module, environment=None):
+    def owned_by_module(self, module: Module, environment: Union[AppEnvironment, None] = None):
         """Return deployments owned by module"""
-        envs = module.get_envs(environment=environment)
+        envs = module.get_envs()
+        if environment:
+            envs = envs.filter(environment=environment)
+
         return self.filter(app_environment__in=envs)
 
     def latest_succeeded(self):
@@ -62,6 +68,8 @@ class AdvancedOptions:
     image_pull_policy: ImagePullPolicy = ImagePullPolicy.IF_NOT_PRESENT
     # 只构建, 不发布
     build_only: bool = False
+    # 是否锁定副本数. 锁定后, 部署时, 不会更改线上副本数
+    lock_replicas: bool = False
     # 构建的镜像 tag, 将覆盖默认规则
     special_tag: Optional[str] = None
     # 直接发布历史 build
@@ -71,23 +79,10 @@ class AdvancedOptions:
 
 
 @dataclass
-class AutoscalingConfig:
-    """This class is a duplication of paas_wl.workloads.autoscaling.entities.AutoscalingConfig, it
-    avoids a circular import problem.
-    """
-
-    # 最小副本数量
-    min_replicas: int
-    # 最大副本数量
-    max_replicas: int
-    # 扩缩容策略
-    policy: str
-
-
-@dataclass
 class ProcessTmpl:
-    """This class is a duplication of paas_wl.bk_app.processes.models.ProcessTmpl, it
-    avoids a circular import problem.
+    """进程配置
+
+    TODO 尝试使用 bkapp_model.entities.Process 替换 ProcessTmpl
     """
 
     name: str
@@ -96,6 +91,7 @@ class ProcessTmpl:
     plan: Optional[str] = None
     autoscaling: bool = False
     scaling_config: Optional[AutoscalingConfig] = None
+    probes: Optional[ProbeSet] = None
 
     def __post_init__(self):
         self.name = self.name.lower()
@@ -124,6 +120,7 @@ class Deployment(OperationVersionBase):
     pre_release_status = models.CharField(
         choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value
     )
+    # 字段 pre_release_int_requested_at 未实际使用
     pre_release_int_requested_at = models.DateTimeField(null=True, help_text="用户请求中断 pre-release 的时间")
     release_id = models.UUIDField(max_length=32, null=True)
     bkapp_release_id = models.BigIntegerField(null=True, help_text="云原生应用发布记录ID")
@@ -133,21 +130,18 @@ class Deployment(OperationVersionBase):
     err_detail = models.TextField("部署异常原因", null=True, blank=True)
     advanced_options: AdvancedOptions = AdvancedOptionsField("高级选项", null=True)
 
-    procfile = JSONField(
-        default=dict,
-        help_text="[deprecated] 启动命令, 在准备阶段 PaaS 会从源码(或配置)读取应用的 procfile, 并更新该字段, 在发布阶段将从该字段读取 procfile",
-    )
     processes = DeclarativeProcessField(
         default=dict,
         help_text="进程定义，在准备阶段 PaaS 会从源码(或配置)读取应用的启动进程, 并更新该字段。在发布阶段会从该字段读取 procfile 和同步 ProcessSpec",
     )
-    hooks: HookList = HookListField(help_text="部署钩子", default=list)
     bkapp_revision_id = models.IntegerField(help_text="本次发布指定的 BkApp Revision id", null=True)
     # The fields that store deployment logs, related to the `OutputStream` model. These fields exist
     # because some logs cannot be written to the "build_process" or "pre_release" objects's output streams,
     # such as logs of the service provision actions and hook command executions from cloud-native applications.
     preparation_stream_id = models.UUIDField(help_text="the logs at the preparation phase", max_length=32, null=True)
     main_stream_id = models.UUIDField(help_text="the logs at the main phase", max_length=32, null=True)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = DeploymentQuerySet().as_manager()
 
@@ -260,9 +254,10 @@ class Deployment(OperationVersionBase):
 
         :raise ValueError: 当无法获取到版本信息时抛此异常
         """
-        module = self.app_environment.module
         # s-mart 镜像应用, 对平台而言还是源码包部署
-        if self.source_version_type != "image" or module.source_origin == SourceOrigin.S_MART:
+        # module.source_origin == SourceOrigin.S_MART 不可删除, 因为存在 source_version_type 值为 image 的旧数据
+        module = self.app_environment.module
+        if self.source_version_type != VersionType.IMAGE.value or module.source_origin == SourceOrigin.S_MART:
             version_type = self.source_version_type
             version_name = self.source_version_name
             # Backward compatibility
@@ -273,7 +268,7 @@ class Deployment(OperationVersionBase):
 
         # 查询第一个引用 build_id 的 Deployment
         ref = Deployment.objects.filter(build_id=self.build_id).exclude(id=self.id).order_by("created").first()
-        if not ref or ref.source_version_type == "image":
+        if not ref or ref.source_version_type == VersionType.IMAGE.value:
             raise ValueError("unknown version info")
         return ref.get_version_info()
 
@@ -287,6 +282,8 @@ class Deployment(OperationVersionBase):
         return VersionInfo(self.source_revision, self.source_version_name, self.source_version_type)
 
     def get_deploy_hooks(self) -> HookList:
+        """获取部署钩子. 目前仅用于普通应用的钩子部署"""
+
         # Warning: 目前的策略是如果同时允许产品上配置, 则优先使用产品上配置
         # 因此 app_desc 中声明的 hooks 会被覆盖产品上已填写的 hooks 覆盖
         try:
@@ -294,19 +291,16 @@ class Deployment(OperationVersionBase):
         except Exception:
             hooks = HookList()
 
-        for hook in self.hooks:
-            if hook.enabled:
-                hooks.upsert(hook.type, command=hook.command, args=hook.args)
+        for hook in self.app_environment.module.deploy_hooks.filter(enabled=True):
+            hooks.upsert(hook.type, command=hook.get_command(), args=hook.get_args())
         return hooks
 
     def get_processes(self) -> List[ProcessTmpl]:
+        """获取本次部署所使用的进程配置列表。"""
         if self.processes:
             return list(self.processes.values())
-        # 兼容旧字段 procfile
-        # 当使用 procfile 时只会创建 process spec, 不会更新 plan/replicas,scaling_config
-        elif self.procfile:
-            return cattr.structure(
-                [{"name": name, "command": command} for name, command in self.procfile.items()],
-                List[ProcessTmpl],
-            )
         return []
+
+    def get_procfile(self) -> Dict[str, str]:
+        """Procfile is a dict containing a process type and its corresponding command"""
+        return {proc.name: proc.command for proc in self.get_processes()}

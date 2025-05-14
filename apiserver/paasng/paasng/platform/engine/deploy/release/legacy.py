@@ -1,26 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""Releasing process of an application deployment"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-
-"""Releasing process of an application deployment
-"""
 import logging
-from dataclasses import asdict
 from typing import Dict, Optional, Tuple
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, CallbackStatus, TaskPoller
@@ -29,8 +26,7 @@ from pydantic import ValidationError as PyDanticValidationError
 from paas_wl.bk_app.applications.models.build import Build
 from paas_wl.bk_app.applications.models.release import Release
 from paas_wl.bk_app.deploy.actions.deploy import DeployAction
-from paas_wl.bk_app.processes.models import ProcessTmpl
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paas_wl.infras.resources.base.exceptions import KubeException
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.config_var import get_env_variables
@@ -58,10 +54,15 @@ class ApplicationReleaseMgr(DeployStep):
 
     @DeployStep.procedures
     def start(self):
+        if self.deployment.has_requested_int:
+            self.state_mgr.finish(JobStatus.INTERRUPTED, "app release interrupted")
+            return
+
         with self.procedure("更新进程配置"):
             # Turn the processes into the corresponding type in paas_wl module
-            procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
-            ProcessManager(self.engine_app.env).sync_processes_specs(procs)
+            procs = self.deployment.get_processes()
+            proc_mgr = ProcessManager(self.engine_app.env)
+            proc_mgr.sync_processes_specs(procs)
 
         with self.procedure("更新应用配置"):
             update_image_runtime_config(deployment=self.deployment)
@@ -166,15 +167,15 @@ def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optiona
 
     deployment_id: Optional[str]
     if deployment:
-        procfile = {p.name: p.command for p in deployment.get_processes()}
+        procfile = deployment.get_procfile()
         deployment_id = str(deployment.id)
     else:
         # NOTE: 更新环境变量时的 Pod 滚动时没有 deployment, 需要从 engine 中查询 procfile
         previous_deployment: Deployment = Deployment.objects.filter(build_id=build_id).latest_succeeded()
-        procfile = {p.name: p.command for p in previous_deployment.get_processes()}
+        procfile = previous_deployment.get_procfile()
         deployment_id = None
 
-    extra_envs = get_env_variables(env, deployment=deployment)
+    extra_envs = get_env_variables(env)
 
     # Create the release and start the background task to wait for the release if needed
     release = release_to_k8s(env, build_id, extra_envs, procfile)

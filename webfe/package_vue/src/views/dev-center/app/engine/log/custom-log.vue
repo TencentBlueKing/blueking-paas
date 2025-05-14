@@ -3,12 +3,13 @@
     <log-filter
       ref="customLogFilter"
       :key="routeChangeIndex"
-      :env-list="envList"
       :stream-list="streamList"
       :process-list="processList"
-      :log-count="pagination.count"
+      :log-count="logsTotal"
       :loading="isChartLoading"
       :type="'customLog'"
+      :max-result="pagination.count"
+      :is-exceed-max-result-window="isExceedMaxResultWindow"
       @change="handleLogSearch"
       @date-change="handlePickSuccess"
       @reload="handleLogReload"
@@ -102,7 +103,7 @@
         <div
           ref="tableBox"
           v-bkloading="{ isLoading: isLogListLoading }"
-          class="table-wrapper"
+          class="table-wrapper log-scroll-cls"
         >
           <table
             id="log-table"
@@ -132,8 +133,9 @@
                             {{ field }}
                           </span>
                           <div
+                            :ref="`filterIcon${field}`"
                             class="paasng-icon paasng-funnel filter-icon"
-                            @click.stop.prevent="handleShowFilter(field)"
+                            @click.stop.prevent="handleShowFilter($event, field, 'icon')"
                           >
                             <div
                               v-if="fieldPopoverShow[field]"
@@ -292,8 +294,9 @@
             </tbody>
           </table>
         </div>
+        <!-- 条数过少不展示分页 -->
         <div
-          v-if="pagination.count"
+          v-if="pagination.count > 9"
           class="ps-page ml0 mr0"
         >
           <bk-pagination
@@ -302,6 +305,7 @@
             :current.sync="pagination.current"
             :count="pagination.count"
             :limit="pagination.limit"
+            :show-total-count="true"
             @change="handlePageChange"
             @limit-change="handlePageSizeChange"
           />
@@ -315,7 +319,7 @@
 import xss from 'xss';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import logFilter from './comps/log-filter.vue';
-import { formatDate } from '@/common/tools';
+import { throttle } from 'lodash';
 
 const xssOptions = {
   whiteList: {
@@ -338,13 +342,10 @@ export default {
       tabActive: 'customLog',
       filterKeyword: '',
       contentHeight: 400,
-      tabChangeIndex: 0,
       renderIndex: 0,
       renderFilter: 0,
       routeChangeIndex: 0,
       isLoading: true,
-      tableMaxWidth: 700,
-      isShowDate: true,
       lastScrollId: '',
       initDateTimeRange: [initStartDate, initEndDate],
       pagination: {
@@ -363,7 +364,6 @@ export default {
       searchFilterKey: [],
       tableFilters: [],
       streamLogFilters: [],
-      envList: [],
       processList: [],
       filterData: [],
       streamList: [],
@@ -401,6 +401,8 @@ export default {
         isAbnormal: false,
         keyword: '',
       },
+      isExceedMaxResultWindow: false,
+      logsTotal: 0,
     };
   },
   computed: {
@@ -530,19 +532,15 @@ export default {
         this.contentHeight = height;
       }
       this.initTableBox();
-      window.onresize = () => {
-        this.initTableBox();
-      };
+      window.addEventListener('resize', throttle(this.initTableBox, 100));
     },
 
     initTableBox() {
-      setTimeout(() => {
-        if (this.$refs.logMain) {
-          const width = this.$refs.logMain.getBoundingClientRect().width - 220;
-          this.$refs.tableBox.style.width = `${width}px`;
-          this.$refs.tableBox.style.maxWidth = `${width}px`;
-        }
-      }, 1000);
+      if (this.$refs.logMain) {
+        const width = this.$refs.logMain.getBoundingClientRect()?.width - 220;
+        this.$refs.tableBox.style.width = `${width}px`;
+        this.$refs.tableBox.style.maxWidth = `${width}px`;
+      }
     },
 
     /**
@@ -647,7 +645,6 @@ export default {
       this.tableFilters = [];
       this.fieldSelectedList = [];
       this.fieldList = [];
-      this.envList = [];
       this.filterData = [];
       this.streamList = [];
       this.processList = [];
@@ -772,9 +769,11 @@ export default {
           item.isToggled = false;
         });
 
+        // 是否超过最大范围
+        this.isExceedMaxResultWindow = res.total > res.max_result_window;
+        this.logsTotal = res.total;
         this.logList.splice(0, this.logList.length, ...data);
-
-        this.pagination.count = res.total;
+        this.pagination.count = this.isExceedMaxResultWindow ? res.max_result_window : res.total;
         this.pagination.current = page;
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
@@ -814,9 +813,7 @@ export default {
               text: option[0],
             });
           });
-          if (condition.name === 'environment') {
-            this.envList = condition.list;
-          } else if (condition.name === 'process_id') {
+          if (condition.name === 'process_id') {
             this.processList = condition.list;
           } else if (condition.name === 'stream') {
             this.streamList = condition.list;
@@ -829,7 +826,6 @@ export default {
         this.fieldList = fieldList;
         this.$refs.customLogFilter && this.$refs.customLogFilter.handleSetParams();
       } catch (res) {
-        this.envList = [];
         this.processList = [];
         this.streamList = [];
       }
@@ -906,7 +902,7 @@ export default {
       this.$refs.logList.toggleRowExpansion(row);
     },
 
-    handleShowFilter(field) {
+    handleShowFilter(e, field) {
       if (!this.fieldPopoverShow[field]) {
         for (const key in this.fieldPopoverShow) {
           this.fieldPopoverShow[key] = false;
@@ -915,6 +911,10 @@ export default {
         this.filterKeyword = '';
         // eslint-disable-next-line no-plusplus
         this.renderIndex++;
+      } else {
+        if (this.$refs[`filterIcon${field}`][0] === e.target) {
+          this.handleCancelFilterChange(field);
+        }
       }
     },
 
@@ -939,7 +939,7 @@ export default {
     },
 
     formatTime(time) {
-      return time ? formatDate(time * 1000) : '--';
+      return time ? moment.unix(time).format('YYYY-MM-DD HH:mm:ss') : '--';
     },
 
     // 获取清洗规则, 添加对应link

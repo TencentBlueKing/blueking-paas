@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""Collector for remote services"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""Collector for remote services
-"""
 import logging
 from collections import namedtuple
 from typing import Dict, Generator, List, Optional
@@ -30,7 +29,7 @@ from rest_framework.exceptions import ValidationError
 from paasng.accessories.servicehub.remote.client import RemoteServiceClient, RemoteSvcConfig
 from paasng.accessories.servicehub.remote.exceptions import FetchRemoteSvcError, RemoteClientError
 from paasng.accessories.servicehub.remote.store import RemoteServiceStore
-from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+from paasng.utils.i18n.serializers import TranslatedCharField
 
 logger = logging.getLogger(__name__)
 
@@ -87,21 +86,14 @@ class MetaInfoSLZ(serializers.Serializer):
     version = serializers.CharField()
 
 
-class RemoteSpecDefinitionSLZ(serializers.Serializer):
-    name = serializers.CharField()
-    display_name = TranslatedCharField()
-    description = serializers.CharField(allow_blank=True)
-    recommended_value = serializers.CharField(allow_blank=True, allow_null=True, default=None)
-
-
 class RemotePlanSLZ(serializers.Serializer):
     uuid = serializers.CharField()
     name = serializers.CharField()
-    properties = serializers.JSONField()
+    properties = serializers.JSONField(default=dict)
     description = serializers.CharField()
-    specifications = serializers.DictField(child=serializers.CharField(allow_null=True), default=dict, allow_null=True)
     is_active = serializers.BooleanField(required=False, default=True)
-    config = serializers.JSONField(required=False, default="不支持")
+    config = serializers.JSONField(required=False, default=dict)
+    tenant_id = serializers.CharField(required=False)
 
 
 class RemoteServiceSLZ(serializers.Serializer):
@@ -118,15 +110,7 @@ class RemoteServiceSLZ(serializers.Serializer):
     config = serializers.DictField(required=False, default=dict)
     is_active = serializers.BooleanField(required=False, default=True)
     is_visible = serializers.BooleanField()
-    specifications = serializers.ListField(
-        child=RemoteSpecDefinitionSLZ(), default=list, allow_null=True, allow_empty=True
-    )
     plans = RemotePlanSLZ(many=True)
-
-
-@i18n
-class RemoteSpecDefinitionUpdateSLZ(RemoteSpecDefinitionSLZ):
-    display_name = I18NExtend(serializers.CharField())  # type: ignore
 
 
 # Serializers end
@@ -153,7 +137,7 @@ def fetch_all_remote_services() -> Generator[FetchResult, None, None]:
     try:
         remote_svc_configs = settings.SERVICE_REMOTE_ENDPOINTS
     except AttributeError:
-        raise ImproperlyConfigured("Can't initialize remote services, " "SERVICE_REMOTE_ENDPOINTS is not configured")
+        raise ImproperlyConfigured("Can't initialize remote services, SERVICE_REMOTE_ENDPOINTS is not configured")
     if not isinstance(remote_svc_configs, list):
         raise ImproperlyConfigured("SERVICE_REMOTE_ENDPOINTS must be list type")
 

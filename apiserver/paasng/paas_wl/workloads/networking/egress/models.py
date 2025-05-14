@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Dict
 
@@ -26,6 +25,7 @@ from jsonfield import JSONField
 from paas_wl.bk_app.applications.models import AuditedModel, WlApp
 from paas_wl.infras.resources.utils.basic import label_toleration_providers
 from paas_wl.workloads.networking.constants import NetworkProtocol
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,6 @@ class RegionClusterState(AuditedModel):
     - What are their IP addresses?
     """
 
-    region = models.CharField(max_length=32)
     cluster_name = models.CharField(max_length=32, null=True)
     name = models.CharField("informative name of state", max_length=64)
     nodes_digest = models.CharField(max_length=64, db_index=True)
@@ -47,14 +46,16 @@ class RegionClusterState(AuditedModel):
     nodes_name = JSONField(default=[], blank=True)
     nodes_data = JSONField(default=[], blank=True)
 
+    tenant_id = tenant_id_field_factory()
+
     def to_labels(self) -> Dict:
-        """To kubernetes lables. The labels will be patched into all kubernetes nodes and also
+        """To kubernetes labels. The labels will be patched into all kubernetes nodes and also
         exists in app's node_selector if the app was bind with current state.
         """
         return {self.name: "1"}
 
     class Meta:
-        unique_together = ("region", "cluster_name", "name")
+        unique_together = ("cluster_name", "name")
         get_latest_by = "created"
         ordering = ["-created"]
 
@@ -67,12 +68,16 @@ class RCStateAppBinding(AuditedModel):
     app = models.OneToOneField(WlApp, on_delete=models.CASCADE)
     state = models.ForeignKey(RegionClusterState, null=True, on_delete=models.CASCADE)
 
+    tenant_id = tenant_id_field_factory()
+
 
 class EgressSpec(AuditedModel):
     wl_app = models.OneToOneField(WlApp, on_delete=models.CASCADE, db_constraint=False)
     replicas = models.IntegerField(default=1)
     cpu_limit = models.CharField(max_length=16)
     memory_limit = models.CharField(max_length=16)
+
+    tenant_id = tenant_id_field_factory()
 
     def build_manifest(self):
         return {
@@ -127,6 +132,8 @@ class EgressRule(AuditedModel):
     # 一般来说，service 与 host 值相同，dport 与 sport 值相同
     src_port = models.IntegerField("源端口")
     service = models.CharField("服务名", max_length=128)
+
+    tenant_id = tenant_id_field_factory()
 
 
 @label_toleration_providers.register_labels

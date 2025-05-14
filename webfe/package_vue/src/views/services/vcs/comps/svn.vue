@@ -36,60 +36,49 @@
               </p>
               <div class="specific-desc">
                 {{ bkpaasUserId }}
-                <a
-                  id="getPassword"
-                  v-bk-tooltips="$t('您将进行密码重置操作！')"
-                  class="blue tooltip loadown-text"
-                  href="javascript:"
-                  @click="openPassword"
-                >
-                  <span v-dashed>{{ $t('忘记密码') }}</span>
-                </a>
-              </div>
-              <div
-                v-if="isopen"
-                class="get-password"
-              >
-                <p style="line-height: 19px;">
-                  {{ $t('验证码已发送至您的企业微信，请注意查收！') }}
-                </p>
-                <p style="margin: 18px 0 20px 0;">
-                  <span class="password">
-                    <input
-                      v-model="verificationcode"
-                      type="text"
-                      class="password-text"
-                      :placeholder="$t('请输入验证码')"
-                    >
-                    <bk-button
-                      v-if="flag"
-                      class="code-text"
-                      theme="default"
-                      :disabled="true"
-                    >{{ timer }}s{{ $t('重新获取') }} </bk-button>
-                    <bk-button
-                      v-else
-                      class="get-code-btn"
-                      theme="default"
-                      @click="getPassword(true)"
-                    > {{ $t('重新获取') }} </bk-button>
-                  </span>
-                </p>
-                <p style="font-size: 0;">
-                  <bk-button
-                    class="mr10"
-                    theme="primary"
-                    @click="resetPassword"
+                <bk-popconfirm
+                  trigger="click"
+                  :ext-cls="'get-verification-code-cls'"
+                  :confirm-text="$t('重置密码')"
+                  @confirm="resetPassword"
+                  @cancel="closePassword"
+                  width="380">
+                  <div slot="content">
+                    <p class="title">
+                      {{ $t('验证码已发送至您的企业微信，请注意查收！') }}
+                    </p>
+                    <p style="margin: 18px 0 20px 0;">
+                      <span class="password">
+                        <input
+                          v-model="verificationcode"
+                          type="text"
+                          class="password-text"
+                          :placeholder="$t('请输入验证码')"
+                        >
+                        <bk-button
+                          v-if="flag"
+                          class="code-text"
+                          theme="default"
+                          :disabled="true"
+                        >{{ timer }}s{{ $t('重新获取') }} </bk-button>
+                        <bk-button
+                          v-else
+                          class="get-code-btn"
+                          theme="default"
+                          @click="getPassword(true)"
+                        > {{ $t('重新获取') }} </bk-button>
+                      </span>
+                    </p>
+                  </div>
+                  <a
+                    id="getPassword"
+                    v-bk-tooltips="$t('您将进行密码重置操作！')"
+                    href="javascript:"
+                    @click="openPassword"
                   >
-                    {{ $t('重置密码') }}
-                  </bk-button>
-                  <bk-button
-                    theme="default"
-                    @click="closePassword"
-                  >
-                    {{ $t('取消') }}
-                  </bk-button>
-                </p>
+                    <span v-dashed>{{ $t('忘记密码') }}</span>
+                  </a>
+                </bk-popconfirm>
               </div>
             </li>
           </ul>
@@ -241,7 +230,9 @@ export default {
     // 关闭密码框
     closePassword() {
       this.isopen = false;
-      this.flag = false;
+      setTimeout(() => {
+        this.flag = false;
+      }, 200);
     },
     // 重置
     resetPassword() {
@@ -340,6 +331,7 @@ export default {
     #getPassword {
         vertical-align: middle;
         line-height: 20px;
+        font-size: 12px;
     }
     .coding {
         padding: 58px 0 956px 0;
@@ -568,6 +560,10 @@ export default {
                 margin-left: 99px;
                 line-height: 41px;
                 color: #63656E;
+                .bk-tooltip {
+                    position: absolute;
+                    right: 12px;
+                }
                 .loadown-text {
                     position: absolute;
                     font-size: 12px;
@@ -577,4 +573,20 @@ export default {
             }
         }
     }
+</style>
+<style lang="scss">
+.get-verification-code-cls {
+  .tippy-content {
+      .title {
+          font-size: 14px;
+          line-height: 20px;
+      }
+      .popconfirm-operate {
+          text-align: left !important;
+          button:first-child {
+            margin-left: 0;
+          }
+      }
+  }
+}
 </style>

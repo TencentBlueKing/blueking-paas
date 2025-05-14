@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 # IAM management API shim
 import functools
 from operator import attrgetter
@@ -212,7 +211,10 @@ def setup_builtin_grade_manager(plugin: PluginInstance):
         manager_definition=definitions.gen_iam_grade_manager(plugin),
     )
     return PluginGradeManager.objects.create(
-        pd_id=plugin.pd.identifier, plugin_id=plugin.id, grade_manager_id=grade_manager_id
+        pd_id=plugin.pd.identifier,
+        plugin_id=plugin.id,
+        grade_manager_id=grade_manager_id,
+        tenant_id=plugin.tenant_id,
     )
 
 
@@ -239,6 +241,7 @@ def setup_builtin_user_groups(plugin: PluginInstance):
             plugin_id=plugin.id,
             role=group.role,
             user_group_id=group.id,
+            tenant_id=plugin.tenant_id,
         )
 
 
@@ -250,6 +253,16 @@ def delete_builtin_user_groups(plugin: PluginInstance):
     user_groups = PluginUserGroup.objects.filter_by_plugin(plugin)
     lazy_iam_client.delete_user_groups(user_groups.values_list("user_group_id", flat=True))
     user_groups.delete()
+
+
+def delete_grade_manager(plugin: PluginInstance):
+    """删除应用的分级管理员"""
+    grade_manager = PluginGradeManager.objects.filter(plugin_id=plugin.id).first()
+    if not grade_manager:
+        return
+
+    lazy_iam_client.delete_grade_manager(grade_manager.grade_manager_id)
+    grade_manager.delete()
 
 
 def user_group_apply_url(plugin_id: str) -> dict:

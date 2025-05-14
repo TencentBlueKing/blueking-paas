@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 from dataclasses import asdict
@@ -32,6 +31,7 @@ from pydantic import BaseModel, PrivateAttr
 from paasng.accessories.publish.entrance.exposer import env_is_deployed
 from paasng.accessories.publish.market.utils import ModuleEnvAvailableAddressHelper
 from paasng.bk_plugins.bk_plugins.constants import PluginTagIdType
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.infras.accounts.utils import id_to_username
 from paasng.platform.applications.models import Application, BaseApplicationFilter, ModuleEnvironment
 from paasng.platform.engine.configurations.provider import env_vars_providers
@@ -57,7 +57,9 @@ class BkPluginProfileManager(models.Manager):
         except ObjectDoesNotExist:
             # Use application's creator as contact by default
             creator = id_to_username(plugin_app.creator)
-            return super().create(application=plugin_app, introduction="", contact=creator), True
+            return super().create(
+                application=plugin_app, introduction="", contact=creator, tenant_id=plugin_app.tenant_id
+            ), True
 
 
 class BkPluginProfile(OwnerTimestampedModel):
@@ -92,6 +94,7 @@ class BkPluginProfile(OwnerTimestampedModel):
     # 预设的插件使用方，创建插件时指定的插件使用方
     # 在插件部署、或者用户手动在基本信息页面修改插件使用方信息时，才会在 APIGW 上创建网关并给插件使用方授权
     pre_distributor_codes = models.JSONField("预设的插件使用方的 code 列表", blank=True, null=True)
+    tenant_id = tenant_id_field_factory()
 
     objects = BkPluginProfileManager()
 
@@ -130,7 +133,9 @@ class BkPluginProfile(OwnerTimestampedModel):
 
 class BkPluginDistributor(TimestampedModel):
     """A "Distributor" is responsible for providing a collection of BkPlugins to a group of users,
-    A plugin's developers can decide that whether the plugin was accessable from a distributor.
+    A plugin's developers can decide that whether the plugin was accessible from a distributor.
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     name = models.CharField("名称", help_text="插件使用方名称", max_length=32, unique=True)
@@ -149,7 +154,10 @@ class BkPluginDistributor(TimestampedModel):
 
 
 class BkPluginTag(AuditedModel):
-    """Plugins and applications use different markets, and plugins should have their own separate tags"""
+    """Plugins and applications use different markets, and plugins should have their own separate tags
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     name = models.CharField("分类名称", help_text="插件使用方名称", max_length=32, unique=True)
     code_name = models.CharField("分类英文名称", help_text="分类英文名称，可替代主键使用", max_length=32, unique=True)
@@ -246,7 +254,7 @@ class DeployedStatus(BaseModel):
 
 
 class DeployedStatusNoAddresses(BaseModel):
-    """Simliar to `DeployedStatus`, but have no `addresses`"""
+    """Similar to `DeployedStatus`, but have no `addresses`"""
 
     deployed: bool
 
@@ -291,6 +299,7 @@ class BkPluginAppQuerySet:
         self,
         search_term: str,
         order_by: List[str],
+        tenant_id: str,
         has_deployed: Optional[bool] = None,
         distributor_code_name: Optional[str] = None,
         tag_id: Optional[int] = None,
@@ -300,7 +309,7 @@ class BkPluginAppQuerySet:
         :param has_deployed: If given, only return applications whose `has_deployed` property matches
         :param distributor_code_name: If given, only return results which have granted permissions to distributor
         """
-        applications = Application.objects.filter(is_plugin_app=True)
+        applications = Application.objects.filter(is_plugin_app=True, tenant_id=tenant_id)
         # Reuse the original application filter
         # Use `prefetch_related` to reduce database queries
         applications = (

@@ -25,21 +25,21 @@ import (
 
 // PlatformConfig contains the config for interacting with other service
 type PlatformConfig struct {
-	// Authentication information for calling BlueKing APIs (components, BkOAuth services, etc.)
-	BkAppCode   string `json:"bkAppCode"`
-	BkAppSecret string `json:"bkAppSecret"`
-	// BlueKing's component API address, the gateway SDK depends on this configuration
-	BkAPIGatewayURL string `json:"bkAPIGatewayURL"`
 	// sentry server dsn, all events waiting for report will be dropped if unset
 	SentryDSN string `json:"sentryDSN"`
 	// if ingressClassName configured, kubernetes.io/ingress.class=$value will be added to ingress's annotations
 	IngressClassName string `json:"ingressClassName"`
+	// CustomDomainIngressClassName works the same as IngressClassName, but only for ingress with custom domains.
+	// Set customDomainIngressClassName if custom domain ingress needs to bound to a specific ingress controller,
+	// otherwise it will be bound to the ingress controller specified by ingressClassName config
+	CustomDomainIngressClassName string `json:"customDomainIngressClassName"`
 }
 
 // IngressPluginConfig contains the config for controlling ingress config
 type IngressPluginConfig struct {
 	AccessControl *AccessControlConfig `json:"accessControl,omitempty"`
 	PaaSAnalysis  *PaaSAnalysisConfig  `json:"paasAnalysis,omitempty"`
+	TenantGuard   *TenantGuardConfig   `json:"tenantGuard,omitempty"`
 }
 
 // AccessControlConfig contains the config for controlling ingress snippet about Access control module
@@ -51,6 +51,13 @@ type AccessControlConfig struct {
 // PaaSAnalysisConfig contains the config for controlling ingress snippet about PA(paas-analysis) module
 type PaaSAnalysisConfig struct {
 	// Is PA enabled on the current cluster?
+	Enabled bool `json:"enabled"`
+}
+
+// TenantGuardConfig contains the config for controlling ingress snippet about TenantGuard.
+// If TenantGuard is enabled, tenantGuardTemplate will be rendered in ingress.
+type TenantGuardConfig struct {
+	// Enabled true if TenantGuard is enabled
 	Enabled bool `json:"enabled"`
 }
 
@@ -164,6 +171,15 @@ func (p *ProjectConfig) GetProcDefaultMemRequest() string {
 // GetIngressClassName returns the ingress class name
 func (p *ProjectConfig) GetIngressClassName() string {
 	return p.Platform.IngressClassName
+}
+
+// GetCustomDomainIngressClassName returns the ingress class name for custom domain ingress.
+// if not set, return the common ingress class name
+func (p *ProjectConfig) GetCustomDomainIngressClassName() string {
+	if p.Platform.CustomDomainIngressClassName != "" {
+		return p.Platform.CustomDomainIngressClassName
+	}
+	return p.GetIngressClassName()
 }
 
 // IsAutoscalingEnabled returns whether autoscaling is enabled

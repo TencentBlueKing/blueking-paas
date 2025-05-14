@@ -1,31 +1,29 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 from enum import Enum
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 from paasng.core.region.states import RegionType
 
 
-class ProductSourceUrlType(int, StructuredEnum):
+class ProductSourceUrlType(IntStructuredEnum):
     """访问地址类型"""
 
     DISABLED = EnumField(1, label="未开启")
@@ -65,14 +63,14 @@ class AppState(Enum):
 TAG_REGION_CHOICES = list(RegionType.get_choices()) + [("all", "所有版本")]
 
 
-class OpenMode(str, StructuredEnum):
+class OpenMode(StrStructuredEnum):
     """应用在桌面的打开方式"""
 
     DESKTOP = EnumField(real_value="desktop", label="桌面")
     NEW_TAB = EnumField(real_value="new_tab", label="新标签页")
 
 
-class TagName(str, StructuredEnum):
+class TagName(StrStructuredEnum):
     """应用分类名称"""
 
     OPSTOOlS = EnumField("OpsTools", label=_("运维工具"))

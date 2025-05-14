@@ -1,53 +1,72 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
+from typing import Dict, List, Optional
 
 from django.conf import settings
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone as django_timezone
 from django.utils.translation import gettext as _
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.bk_app.deploy.app_res.controllers import ProcessesHandler
+from paas_wl.bk_app.mgrlegacy.processes import get_processes_info
+from paas_wl.bk_app.processes.constants import ProcessUpdateType
+from paas_wl.bk_app.processes.processes import ProcessManager
+from paas_wl.bk_app.processes.serializers import UpdateProcessSLZ
+from paas_wl.infras.cluster.utils import get_cluster_by_app
+from paas_wl.infras.resources.generation.mapper import get_mapper_proc_config_latest
+from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
+from paas_wl.workloads.networking.egress.serializers import RCStateAppBindingSLZ, RegionClusterStateSLZ
 from paasng.core.core.storages.sqlalchemy import console_db
-from paasng.infras.accounts.permissions.application import check_application_perm
+from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.mgrlegacy.cnative_migrations.wl_app import WlAppBackupManager
 from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
+from paasng.platform.mgrlegacy.models import WlAppBackupRel
 
 try:
     from paasng.platform.mgrlegacy.legacy_proxy_te import LegacyAppProxy
 except ImportError:
     from paasng.platform.mgrlegacy.legacy_proxy import LegacyAppProxy  # type: ignore
 
+from paas_wl.utils.error_codes import error_codes as wl_error_codes
 from paasng.accessories.publish.entrance.exposer import get_exposed_url
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, AppManger
+from paasng.platform.applications.handlers import turn_on_bk_log_feature
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationProcess
 from paasng.platform.mgrlegacy.serializers import (
     ApplicationMigrationInfoSLZ,
+    ChecklistInfoSLZ,
     CNativeMigrationProcessSLZ,
     LegacyAppSLZ,
     LegacyAppStateSLZ,
+    ListProcessesSLZ,
     MigrationProcessConfirmSLZ,
     MigrationProcessCreateSLZ,
     MigrationProcessDetailSLZ,
@@ -55,13 +74,15 @@ from paasng.platform.mgrlegacy.serializers import (
     QueryMigrationAppSLZ,
 )
 from paasng.platform.mgrlegacy.tasks import (
+    confirm_migration,
     confirm_with_rollback_on_failure,
     migrate_default_to_cnative,
     migrate_with_rollback_on_failure,
     rollback_cnative_to_default,
     rollback_migration_process,
 )
-from paasng.platform.mgrlegacy.utils import LegacyAppManager, check_operation_perms
+from paasng.platform.mgrlegacy.utils import LegacyAppManager, check_operation_perms, get_cnative_target_cluster
+from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -130,11 +151,6 @@ class MigrationDetailViewset(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return MigrationProcess.objects.all().order_by("-id")
-
-    def list(self, request, *args, **kwargs):
-        migration_processes = self.get_queryset()
-        response_serializer = MigrationProcessDetailSLZ(migration_processes, many=True)
-        return Response(data=response_serializer.data)
 
     def state(self, request, id):
         migration_process = MigrationProcess.objects.get(id=id)
@@ -221,6 +237,8 @@ class MigrationConfirmViewset(viewsets.GenericViewSet):
 
 
 class ApplicationMigrationInfoAPIView(viewsets.ViewSet):
+    # TODO: set permission_classes and do perm check
+
     def retrieve(self, request, code):
         migration_process_qs = MigrationProcess.objects.filter(app__code=code)
         has_migration_record = migration_process_qs.exists()
@@ -243,6 +261,8 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     普通应用向云原生应用迁移的相关接口
     """
 
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     def migrate(self, request, code):
         """迁移普通应用到云原生应用
 
@@ -250,11 +270,7 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """
         app = self.get_application()
 
-        if app.type == ApplicationType.CLOUD_NATIVE.value:
-            raise error_codes.APP_MIGRATION_FAILED.f("该应用已是云原生应用，无法迁移")
-
-        if (last_process := CNativeMigrationProcess.objects.filter(app=app).last()) and last_process.is_active():
-            raise error_codes.APP_MIGRATION_FAILED.f("该应用正在变更中, 无法迁移")
+        self._can_migrate_or_raise(app)
 
         migration_process = CNativeMigrationProcess.create_migration_process(app, request.user.pk)
         process_id = migration_process.id
@@ -316,9 +332,209 @@ class CNativeMigrationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """确认迁移"""
         process = get_object_or_404(CNativeMigrationProcess, id=process_id)
 
+        # 校验用户是否有操作当前应用的权限
+        check_application_perm(self.request.user, process.app, AppAction.BASIC_DEVELOP)
+
         if process.status != CNativeMigrationStatus.MIGRATION_SUCCEEDED.value:
             raise error_codes.APP_MIGRATION_CONFIRMED_FAILED.f("该应用记录未表明应用已成功迁移, 无法确认")
 
-        process.confirm()
-        # TODO 增加清理普通应用的集群操作
+        confirm_migration.delay(process.id)
+
+        # 根据集群特性开启应用的日志采集 FeatureFlag
+        turn_on_bk_log_feature(process.app)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @staticmethod
+    def _can_migrate_or_raise(app):
+        if app.type == ApplicationType.CLOUD_NATIVE.value:
+            raise error_codes.APP_MIGRATION_FAILED.f("该应用已是云原生应用，无法迁移")
+
+        if (last_process := CNativeMigrationProcess.objects.filter(app=app).last()) and last_process.is_active():
+            raise error_codes.APP_MIGRATION_FAILED.f("该应用正在变更中, 无法迁移")
+
+        for m in app.modules.all():
+            for env in m.envs.all():
+                cnative_cluster_name = get_cnative_target_cluster().name
+                cluster_name = env.wl_app.config_set.latest().cluster
+                if not cluster_name:
+                    raise error_codes.APP_MIGRATION_FAILED.f(f"应用模块({m.name})未绑定有效集群, 无法迁移")
+                elif cluster_name == cnative_cluster_name:
+                    raise error_codes.APP_MIGRATION_FAILED.f("原集群和目标集群相同, 无法迁移")
+
+
+class DefaultAppProcessViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """普通应用进程管理接口"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def list(self, request, *args, **kwargs):
+        """list all processes/instances.
+
+        用于直接从集群中获取应用进程信息(不依赖应用进程 db 数据)
+        """
+        wl_app = self._get_wl_app()
+
+        if not wl_app:
+            return Response({})
+
+        processes_info = get_processes_info(wl_app)
+        data = {
+            "processes": {
+                "items": processes_info.processes,
+                "metadata": {"resource_version": processes_info.rv_proc},
+            },
+            "instances": {
+                "items": [inst for proc in processes_info.processes for inst in proc.instances],
+                "metadata": {"resource_version": processes_info.rv_inst},
+            },
+            "process_packages": ProcessManager(self.get_env_via_path()).list_processes_specs_for_legacy(),
+        }
+        return Response(ListProcessesSLZ(data).data)
+
+    def update(self, request, *args, **kwargs):
+        """stop/start/scale process
+
+        用于直接向集群中下发管理应用进程的命令(不涉及查询和更新应用进程的 db 数据)
+        """
+        wl_app = self._get_wl_app()
+
+        if not wl_app:
+            raise wl_error_codes.PROCESS_OPERATE_FAILED.f("no process found")
+
+        slz = UpdateProcessSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        validated_data = slz.validated_data
+
+        process_type = validated_data["process_type"]
+        operate_type = validated_data["operate_type"]
+
+        proc_config = get_mapper_proc_config_latest(wl_app, process_type)
+        handler = ProcessesHandler.new_by_app(wl_app)
+
+        try:
+            if operate_type == ProcessUpdateType.START:
+                handler.scale(proc_config, 1)
+            elif operate_type == ProcessUpdateType.STOP:
+                handler.shutdown(proc_config)
+            else:
+                target_replicas = validated_data["target_replicas"]
+                handler.scale(proc_config, target_replicas)
+        except Exception as e:
+            raise wl_error_codes.PROCESS_OPERATE_FAILED.f(str(e))
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _get_wl_app(self) -> WlApp | None:
+        try:
+            return WlAppBackupManager(self.get_env_via_path()).get()
+        except WlAppBackupRel.DoesNotExist:
+            # 用户可能会在未确认迁移时新建模块, 而这些模块是新模块, 没有对应的 WlAppBackupRel
+            return None
+
+
+class DefaultAppEntranceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """普通应用访问地址查询接口"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    def list_all_entrances(self, request, code):
+        """查看应用所有模块的访问入口"""
+        app = self.get_application()
+
+        if last_process := CNativeMigrationProcess.objects.filter(
+            app=app, status=CNativeMigrationStatus.MIGRATION_SUCCEEDED.value
+        ).last():
+            return Response(data=last_process.legacy_data.entrances)
+
+        return Response(data=[])
+
+
+class RetrieveChecklistInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """普通应用迁移前的 Checklist 数据查询接口"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @swagger_auto_schema(tags=["api"], responses={"200": ChecklistInfoSLZ()})
+    def get(self, request, code):
+        """获取普通应用迁移前的 Checklist 数据:
+        - 迁移前后差异化的根域名
+        - 迁移前后差异化的命名空间(值为 null 表示无差异)
+        - 迁移前后差异化的出口 IP 信息(值为 null 表示未绑定出口 IP)
+        """
+        app = self.get_application()
+
+        app_root_domains: List[str] = []
+        app_namespaces: List[Dict] = []
+        app_rcs_bindings: List[Dict] = []
+
+        for m in app.modules.all():
+            for env in m.envs.all():
+                wl_app = env.wl_app
+                app_root_domains.extend(self._get_app_root_domains(wl_app))
+                app_namespaces.append(
+                    {"is_default_module": m.is_default, "environment": env.environment, "namespace": wl_app.namespace}
+                )
+                if binding := self._get_rcs_binding(m, env, wl_app):
+                    app_rcs_bindings.append(binding)
+
+        cnative_cluster = get_cnative_target_cluster()
+        root_domains = {
+            # 当前普通应用的子域名
+            "legacy": list(set(app_root_domains)),
+            # 迁移后的云原生应用的子域名
+            "cnative": [d.name for d in cnative_cluster.ingress_config.app_root_domains],
+        }
+
+        namespaces = None
+        # 当前普通应用的命名空间(不包括默认模块命名空间)
+        legacy_namespaces = [
+            {"environment": n["environment"], "namespace": n["namespace"]}
+            for n in app_namespaces
+            if not n["is_default_module"]
+        ]
+        if legacy_namespaces:
+            namespaces = {
+                # 当前普通应用的命名空间, 它们需要根据环境调整为迁移后的命名空间
+                "legacy": legacy_namespaces,
+                # 迁移后的云原生应用的命名空间(普通应用默认模块的命名空间即云原生命名空间)
+                "cnative": [
+                    {"environment": n["environment"], "namespace": n["namespace"]}
+                    for n in app_namespaces
+                    if n["is_default_module"]
+                ],
+            }
+
+        rcs_bindings = None
+        if app_rcs_bindings:
+            state = RegionClusterState.objects.filter(cluster_name=cnative_cluster.name).latest()
+            node_ip_addresses = RegionClusterStateSLZ(state).data["node_ip_addresses"]
+            rcs_bindings = {
+                # 当前应用绑定的出口 IP 信息
+                "legacy": app_rcs_bindings,
+                # 迁移后的云原生应用, 绑定的出口 IP 信息
+                "cnative": {"ip_addresses": [node["internal_ip_address"] for node in node_ip_addresses]},
+            }
+
+        slz = ChecklistInfoSLZ({"root_domains": root_domains, "namespaces": namespaces, "rcs_bindings": rcs_bindings})
+        return Response(slz.data)
+
+    @staticmethod
+    def _get_rcs_binding(m: Module, env: ModuleEnvironment, wl_app: WlApp) -> Optional[Dict]:
+        """根据模块和环境, 获取绑定的出口 IP 信息"""
+        try:
+            binding = RCStateAppBinding.objects.get(app=wl_app)
+        except RCStateAppBinding.DoesNotExist:
+            return None
+        else:
+            node_ip_addresses = RCStateAppBindingSLZ(binding).data["state"]["node_ip_addresses"]
+            return {
+                "module_name": m.name,
+                "environment": env.environment,
+                "ip_addresses": [node["internal_ip_address"] for node in node_ip_addresses],
+            }
+
+    @staticmethod
+    def _get_app_root_domains(wl_app: WlApp) -> List[str]:
+        """获取应用的访问域名(子域名)"""
+        cluster = get_cluster_by_app(wl_app)
+        return [d.name for d in cluster.ingress_config.app_root_domains]

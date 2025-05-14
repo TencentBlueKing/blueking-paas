@@ -1,39 +1,36 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import time
-from dataclasses import asdict
-from typing import Optional
 
 from django.db import IntegrityError
 
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs import svc_disc
 from paas_wl.bk_app.cnative.specs.constants import DeployStatus
+from paas_wl.bk_app.cnative.specs.credentials import deploy_addons_tls_certs
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelRevision
 from paas_wl.bk_app.cnative.specs.mounts import deploy_volume_source
 from paas_wl.bk_app.cnative.specs.resource import deploy as apply_bkapp_to_k8s
 from paas_wl.bk_app.monitoring.bklog.shim import make_bk_log_controller
-from paas_wl.bk_app.processes.models import ProcessTmpl
-from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.utils.basic import get_client_by_app
+from paasng.misc.monitoring.monitor.service_monitor.controller import make_svc_monitor_controller
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
 from paasng.platform.engine.constants import JobStatus
@@ -54,11 +51,16 @@ class BkAppReleaseMgr(DeployStep):
     phase_type = DeployPhaseTypes.RELEASE
 
     def start(self):
+        """启动部署流程
+
+        NOTE: 云原生应用不再使用 paas_wl.bk_app.processes.models.ProcessSpec 来管理进程, 因此不需要像普通应用那样同步进程信息,
+        如 ApplicationReleaseMgr.start 方法中的 proc_mgr.sync_processes_specs(procs)
+        """
+        if self.deployment.has_requested_int:
+            self.state_mgr.finish(JobStatus.INTERRUPTED, "BkApp release interrupted")
+            return
+
         build = Build.objects.get(pk=self.deployment.build_id)
-        with self.procedure("更新进程配置"):
-            # Turn the processes into the corresponding type in paas_wl module
-            procs = [ProcessTmpl(**asdict(p)) for p in self.deployment.get_processes()]
-            ProcessManager(self.engine_app.env).sync_processes_specs(procs)
 
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
@@ -83,11 +85,7 @@ class BkAppReleaseMgr(DeployStep):
 
 
 def release_by_k8s_operator(
-    env: ModuleEnvironment,
-    revision: AppModelRevision,
-    operator: str,
-    build: Optional[Build] = None,
-    deployment: Optional[Deployment] = None,
+    env: ModuleEnvironment, revision: AppModelRevision, operator: str, build: Build, deployment: Deployment
 ) -> str:
     """Create a new release for given environment(which will be handled by k8s operator).
     this action will start an async waiting procedure which waits for the release to be finished.
@@ -95,10 +93,11 @@ def release_by_k8s_operator(
     :param env: The environment to create the release for.
     :param revision: The revision to be released.
     :param operator: current operator's user_id
+    :param build: build config of the release
     :param deployment: the deployment of the release
 
     :raises: ValueError when image credential_refs is invalid  TODO: 抛更具体的异常
-    :raises: UnprocessibleEntityError when k8s can not process this manifest
+    :raises: kubernetes.dynamic.exceptions.UnprocessibleEntityError when k8s can not process this manifest
     :raises: other unknown exceptions...
     """
     application = env.application
@@ -120,20 +119,21 @@ def release_by_k8s_operator(
             revision=revision,
             status=DeployStatus.PENDING.value,
             operator=operator,
+            tenant_id=application.tenant_id,
         )
     except IntegrityError:
         logger.warning("Name conflicts when creating new AppModelDeploy object, name: %s.", default_name)
         raise
 
     try:
-        advanced_options = deployment.advanced_options if deployment else None
+        advanced_options = deployment.advanced_options
         bkapp_res = get_bkapp_resource_for_deploy(
             env,
             deploy_id=str(app_model_deploy.id),
-            force_image=build.image if build else None,
-            image_pull_policy=advanced_options.image_pull_policy if advanced_options else None,
-            use_cnb=build.is_build_from_cnb() if build else False,
             deployment=deployment,
+            force_image=build.image,
+            image_pull_policy=advanced_options.image_pull_policy if advanced_options else None,
+            use_cnb=build.is_build_from_cnb(),
         )
 
         # 下发 k8s 资源前需要确保命名空间存在
@@ -148,6 +148,8 @@ def release_by_k8s_operator(
         # TODO: There is no way to set svc-disc related spec currently.
         svc_disc.apply_configmap(env, bkapp_res)
 
+        # 下发 TLS 证书（Secrets）
+        deploy_addons_tls_certs(env)
         # 下发待挂载的 volume source
         deploy_volume_source(env)
 
@@ -155,6 +157,8 @@ def release_by_k8s_operator(
 
         # 下发日志采集配置
         ensure_bk_log_if_need(env)
+        # 同步 ServiceMonitor 配置
+        sync_service_monitor(env)
     except Exception:
         app_model_deploy.status = DeployStatus.ERROR
         app_model_deploy.save(update_fields=["status", "updated"])
@@ -171,7 +175,7 @@ def release_by_k8s_operator(
 
     # Poll status in background
     WaitAppModelReady.start(
-        {"env_id": env.id, "deploy_id": app_model_deploy.id, "deployment_id": deployment.id if deployment else None},
+        {"env_id": env.id, "deploy_id": app_model_deploy.id, "deployment_id": deployment.id},
         DeployStatusHandler,
     )
     return str(app_model_deploy.id)
@@ -200,3 +204,11 @@ def ensure_bk_log_if_need(env: ModuleEnvironment):
         make_bk_log_controller(env).create_or_patch()
     except Exception:
         logger.exception("An error occur when creating BkLogConfig")
+
+
+def sync_service_monitor(env: ModuleEnvironment):
+    """如果集群支持且应用声明需要接入蓝鲸监控 metric, 则尝试下发 ServiceMonitor 配置"""
+    try:
+        make_svc_monitor_controller(env).sync()
+    except Exception:
+        logger.exception("An error occur when sync ServiceMonitor")

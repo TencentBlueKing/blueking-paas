@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from string import ascii_uppercase
 from textwrap import dedent
 from typing import List
@@ -35,7 +34,7 @@ from paasng.platform.engine.models.config_var import (
     get_config_vars,
 )
 from paasng.platform.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
-from paasng.platform.engine.serializers import ConfigVarFormatSLZ, ConfigVarFormatWithIdSLZ
+from paasng.platform.engine.serializers import ConfigVarFormatSLZ, ConfigVarFormatWithIdSLZ, ConfigVarSLZ
 from paasng.platform.modules.models import Module
 from tests.utils.helpers import initialize_module
 
@@ -96,7 +95,7 @@ class TestGetConfigVars:
 
 
 class TestFilterByEnvironmentName:
-    """TestCases for ConfigVar.objects.filter_by_environment_name"""
+    """Test cases for ConfigVar.objects.filter_by_environment_name"""
 
     @pytest.mark.parametrize(
         ("environment_name", "length", "keys"),
@@ -120,7 +119,9 @@ class TestFilterByEnvironmentName:
 @pytest.fixture()
 def dest_module(bk_app):
     """Return another module if current application fixture"""
-    module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
+    module = Module.objects.create(
+        application=bk_app, name="test", language="python", source_init_template="test", creator=bk_app.creator
+    )
     initialize_module(module)
     return module
 
@@ -133,9 +134,9 @@ def dest_prod_env(dest_module):
 @pytest.fixture()
 def random_config_var_maker():
     def maker(environment_name, **kwargs):
-        kwargs.setdefault("key", get_random_string(allowed_chars=ascii_uppercase))
-        kwargs.setdefault("value", get_random_string())
-        kwargs.setdefault("description", get_random_string())
+        kwargs.setdefault("key", get_random_string(length=12, allowed_chars=ascii_uppercase))
+        kwargs.setdefault("value", get_random_string(12))
+        kwargs.setdefault("description", get_random_string(12))
         kwargs["environment_name"] = environment_name
         return kwargs
 
@@ -426,3 +427,49 @@ class TestExportedConfigVars:
     )
     def test_to_file_content(self, env_variables, expected):
         assert ExportedConfigVars(env_variables=env_variables).to_file_content() == expected
+
+
+class TestConfigVarTenantId:
+    @pytest.fixture()
+    def bk_module_with_tenant(self, bk_module):
+        """给模块添加随机 tenant_id"""
+        bk_module.tenant_id = get_random_string(length=12, allowed_chars=ascii_uppercase)
+        bk_module.save()
+        return bk_module
+
+    def test_tenant_id_consistency_on_create(self, bk_module_with_tenant):
+        """单个添加环境变量"""
+        test_data = {
+            "key": "TEST_KEY",
+            "value": "test_value",
+            "environment_name": "prod",
+            "description": "test description",
+        }
+
+        slz = ConfigVarSLZ(data=test_data, context={"module": bk_module_with_tenant})
+        slz.is_valid(raise_exception=True)
+        var = slz.save()
+
+        # 验证 tenant_id 是否与所属模块一致
+        db_var = ConfigVar.objects.get(id=var.id)
+        assert db_var.tenant_id == bk_module_with_tenant.tenant_id
+
+    def test_tenant_id_consistency_on_batch(self, bk_module_with_tenant, random_config_var_maker):
+        """批量编辑环境变量"""
+        test_data = [random_config_var_maker(environment_name="prod") for _ in range(3)]
+
+        serializer = ConfigVarFormatWithIdSLZ(
+            data=test_data,
+            context={"module": bk_module_with_tenant},
+            many=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        valid_data = serializer.validated_data
+        # 执行批量保存
+        ConfigVarManager().batch_save(bk_module_with_tenant, valid_data)
+
+        # 验证 tenant_id 是否与所属模块一致
+        assert (
+            ConfigVar.objects.filter(module=bk_module_with_tenant, tenant_id=bk_module_with_tenant.tenant_id).count()
+            == 3
+        )

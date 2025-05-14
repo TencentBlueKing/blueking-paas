@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 import logging
 import os
@@ -25,11 +24,12 @@ from typing import TYPE_CHECKING, Dict, Optional
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 
-from paas_wl.bk_app.applications.managers import AppConfigVarManager
+from paas_wl.bk_app.applications.entities import BuildMetadata
 
 # NOTE: Import kube resource related modules from paas_wl
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.deploy.app_res.utils import get_schedule_config
+from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.kres_entities import ImageCredentials
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
@@ -57,7 +57,7 @@ def generate_slug_path(bp: BuildProcess) -> str:
     return f"{app.region}/home/{slug_name}/push"
 
 
-def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str]:
+def generate_builder_env_vars(bp: BuildProcess, metadata: BuildMetadata) -> Dict[str, str]:
     """Generate all env vars required for building."""
     bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
     store = make_blob_store(bucket)
@@ -66,10 +66,10 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
 
     # TODO: 支持构建镜像到私有仓库
     # Note: 从 ImageCredentials 加载凭证理论上会读取到用户配置的用户/密码, 只需要让 output_image 可以自定义即可支持构建镜像到私有仓库
-    if metadata.get("use_dockerfile"):
+    if metadata.use_dockerfile:
         # build application form Dockerfile
-        image_repository = metadata["image_repository"]
-        output_image = metadata["image"]
+        image_repository = metadata.image_repository
+        output_image = metadata.image
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
@@ -78,10 +78,10 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
             CACHE_REPO=f"{image_repository}/dockerbuild-cache",
             DOCKER_CONFIG_JSON=b64encode(json.dumps(ImageCredentials.load_from_app(app).build_dockerconfig())),
         )
-    elif metadata.get("use_cnb"):
+    elif metadata.use_cnb:
         # build application as image
-        image_repository = metadata["image_repository"]
-        output_image = metadata["image"]
+        image_repository = metadata.image_repository
+        output_image = metadata.image
         env_vars.update(
             SOURCE_GET_URL=store.generate_presigned_url(
                 key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
@@ -118,8 +118,6 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
             PILOT_BUILDER_TIMEOUT=f"{settings.BUILD_PROCESS_TIMEOUT // 60}m",
         )
 
-    env_vars.update(AppConfigVarManager(app=app).get_envs())
-
     # Inject extra env vars in settings for development purpose
     if settings.BUILD_EXTRA_ENV_VARS:
         env_vars.update(settings.BUILD_EXTRA_ENV_VARS)
@@ -127,8 +125,8 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: Dict) -> Dict[str, str
     if settings.PYTHON_BUILDPACK_PIP_INDEX_URL:
         env_vars.update(get_envs_from_pypi_url(settings.PYTHON_BUILDPACK_PIP_INDEX_URL))
 
-    if metadata:
-        update_env_vars_with_metadata(env_vars, metadata)
+    update_env_vars_with_metadata(env_vars, metadata)
+
     return env_vars
 
 
@@ -148,20 +146,19 @@ def generate_launcher_env_vars(slug_path: str) -> Dict[str, str]:
     }
 
 
-def update_env_vars_with_metadata(env_vars: Dict, metadata: Dict):
+def update_env_vars_with_metadata(env_vars: Dict, metadata: BuildMetadata):
     """Update slugbuilder envs from metadata into env_vars
 
     :param env_vars: slugbuilder envs dict
-    :param metadata: metadata dict
-    :return:
+    :param metadata: BuildMetadata obj
     """
-    if "extra_envs" in metadata:
-        env_vars.update(metadata["extra_envs"])
+    # All system built-in vars were injected by this step
+    if metadata.extra_envs:
+        env_vars.update(metadata.extra_envs)
 
-    buildpacks = metadata.get("buildpacks")
-    if buildpacks:
+    if metadata.buildpacks:
         # slugbuilder 自动下载指定的 buildpacks
-        env_vars["REQUIRED_BUILDPACKS"] = buildpacks
+        env_vars["REQUIRED_BUILDPACKS"] = metadata.buildpacks
 
 
 def prepare_slugbuilder_template(
@@ -177,6 +174,8 @@ def prepare_slugbuilder_template(
     # Builder image name
     image = builder_image or settings.DEFAULT_SLUGBUILDER_IMAGE
     logger.info(f"build wl_app<{app.name}> with slugbuilder<{image}>")
+
+    env_vars = render_vars_dict(env_vars, VarsRenderContext(process_type="sys-builder"))
 
     return SlugBuilderTemplate(
         name=generate_builder_name(app),

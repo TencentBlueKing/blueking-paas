@@ -1,9 +1,19 @@
 <template lang="html">
   <div @click="hideAllFilterPopover">
     <log-filter
-      ref="accessLogFilter" :key="routeChangeIndex" :env-list="envList" :stream-list="streamList"
-      :process-list="processList" :log-count="pagination.count" :loading="isChartLoading" :type="'accessLog'"
-      @change="handleLogSearch" @date-change="handlePickSuccess" @reload="handleLogReload" />
+      ref="accessLogFilter"
+      :key="routeChangeIndex"
+      :stream-list="streamList"
+      :process-list="processList"
+      :log-count="logsTotal"
+      :loading="isChartLoading"
+      :type="'accessLog'"
+      :max-result="pagination.count"
+      :is-exceed-max-result-window="isExceedMaxResultWindow"
+      @change="handleLogSearch"
+      @date-change="handlePickSuccess"
+      @reload="handleLogReload"
+    />
 
     <div v-if="tableFormatFilters.length" class="table-filters">
       <ul class="filter-list">
@@ -52,7 +62,7 @@
         </div>
 
         <!-- 查询结果 start -->
-        <div ref="tableBox" v-bkloading="{ isLoading: isLogListLoading }" class="table-wrapper">
+        <div ref="tableBox" v-bkloading="{ isLoading: isLogListLoading }" class="table-wrapper log-scroll-cls">
           <table id="log-table" :key="renderIndex" class="ps-table ps-table-default ps-log-table">
             <thead>
               <tr>
@@ -157,7 +167,9 @@
                     </td>
                     <template v-for="field of fieldSelectedList">
                       <td :key="field" class="field">
-                        <div>{{log.detail[field] || '--' }}</div>
+                        <!-- eslint-disable-next-line vue/no-v-html -->
+                        <div v-if="log.detail[field]" v-html="log.detail[field]"></div>
+                        <span v-else>--</span>
                       </td>
                     </template>
                   </tr>
@@ -188,10 +200,17 @@
             </tbody>
           </table>
         </div>
-        <div v-if="pagination.count" class="ps-page ml0 mr0">
+        <div v-if="pagination.count > 9" class="ps-page ml0 mr0">
           <bk-pagination
-            size="small" align="right" :current.sync="pagination.current" :count="pagination.count"
-            :limit="pagination.limit" @change="handlePageChange" @limit-change="handlePageSizeChange" />
+            size="small"
+            align="right"
+            :current.sync="pagination.current"
+            :count="pagination.count"
+            :limit="pagination.limit"
+            :show-total-count="true"
+            @change="handlePageChange"
+            @limit-change="handlePageSizeChange"
+          />
         </div>
       </div>
     </div>
@@ -202,7 +221,7 @@
 import xss from 'xss';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import logFilter from './comps/log-filter.vue';
-import { formatDate } from '@/common/tools';
+import { throttle } from 'lodash';
 
 const xssOptions = {
   whiteList: {
@@ -224,13 +243,10 @@ export default {
       name: 'log-component',
       filterKeyword: '',
       contentHeight: 400,
-      tabChangeIndex: 0,
       renderIndex: 0,
       renderFilter: 0,
       routeChangeIndex: 0,
       isLoading: true,
-      tableMaxWidth: 700,
-      isShowDate: true,
       lastScrollId: '',
       staticFileds: ['method', 'path', 'status_code', 'response_time'],
       initDateTimeRange: [initStartDate, initEndDate],
@@ -250,7 +266,6 @@ export default {
       streamLogList: [],
       searchFilterKey: [],
       tableFilters: [],
-      envList: [],
       processList: [],
       filterData: [],
       streamList: [],
@@ -271,6 +286,8 @@ export default {
         isAbnormal: false,
         keyword: '',
       },
+      isExceedMaxResultWindow: false,
+      logsTotal: 0,
     };
   },
   computed: {
@@ -400,17 +417,15 @@ export default {
         this.contentHeight = height;
       }
       this.initTableBox();
-      window.onresize = () => {
-        this.initTableBox();
-      };
+      window.addEventListener('resize', throttle(this.initTableBox, 100));
     },
 
     initTableBox() {
-      setTimeout(() => {
+      if (this.$refs.logMain) {
         const width = this.$refs.logMain.getBoundingClientRect().width - 220;
         this.$refs.tableBox.style.width = `${width}px`;
         this.$refs.tableBox.style.maxWidth = `${width}px`;
-      }, 1000);
+      }
     },
 
     /**
@@ -520,7 +535,6 @@ export default {
       this.tableFilters = [];
       this.fieldSelectedList = [];
       this.fieldList = [];
-      this.envList = [];
       this.filterData = [];
       this.streamList = [];
       this.processList = [];
@@ -645,8 +659,11 @@ export default {
           item.isToggled = false;
         });
 
+        // 是否超过最大范围
+        this.isExceedMaxResultWindow = res.total > res.max_result_window;
+        this.logsTotal = res.total;
         this.logList = data;
-        this.pagination.count = res.total;
+        this.pagination.count = this.isExceedMaxResultWindow ? res.max_result_window : res.total;
         this.pagination.current = page;
         if (!this.fieldSelectedList.length) {
           this.fieldSelectedList = [...this.staticFileds];
@@ -690,9 +707,7 @@ export default {
               text: option[0],
             });
           });
-          if (condition.name === 'environment') {
-            this.envList = condition.list;
-          } else if (condition.name === 'process_id') {
+          if (condition.name === 'process_id') {
             this.processList = condition.list;
           } else if (condition.name === 'stream') {
             this.streamList = condition.list;
@@ -705,7 +720,6 @@ export default {
         this.fieldList = fieldList;
         this.$refs.accessLogFilter && this.$refs.accessLogFilter.handleSetParams();
       } catch (res) {
-        this.envList = [];
         this.processList = [];
         this.streamList = [];
       }
@@ -828,7 +842,7 @@ export default {
     },
 
     formatTime(time) {
-      return time ? formatDate(time * 1000) : '--';
+      return time ? moment.unix(time).format('YYYY-MM-DD HH:mm:ss') : '--';
     },
 
     handleTrigger(propObj) {

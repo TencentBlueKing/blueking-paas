@@ -1,24 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import List
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
@@ -42,16 +41,16 @@ FETCH_USER_GROUP_MEMBERS_LIMIT = 10000
 NEVER_EXPIRE_DAYS = -1
 
 
-class PluginPermissionActions(str, StructuredEnum):
+class PluginPermissionActions(StrStructuredEnum):
     """插件相关的操作权限"""
 
     BASIC_DEVELOPMENT = EnumField("basic_development", label=_("基础开发"))
     RELEASE_VERSION = EnumField("release_version", label=_("版本发布"))
     EDIT_PLUGIN = EnumField("edit_plugin", label=_("编辑插件信息"))
-    DELETE_PLUGIN = EnumField("delete_plugin", label=_("删除插件"))
-    MANAGE_MEMBERS = EnumField("manage_members", label=_("成员管理"))
     MANAGE_VISIBILITY = EnumField("manage_visibility", label=_("可见范围管理"))
     MANAGE_CONFIGURATION = EnumField("manage_configuration", label=_("插件配置管理"))
+    MANAGE_MEMBERS = EnumField("manage_members", label=_("成员管理"))
+    DELETE_PLUGIN = EnumField("delete_plugin", label=_("删除插件"))
 
     @classmethod
     def get_choices_by_role(cls, role: PluginRole) -> List["PluginPermissionActions"]:
@@ -70,9 +69,11 @@ class PluginPermissionActions(str, StructuredEnum):
                 PluginPermissionActions.BASIC_DEVELOPMENT,
                 PluginPermissionActions.RELEASE_VERSION,
                 PluginPermissionActions.MANAGE_CONFIGURATION,
+                PluginPermissionActions.EDIT_PLUGIN,
+                PluginPermissionActions.MANAGE_VISIBILITY,
             ]
         raise NotImplementedError
 
 
-class ResourceType(str, StructuredEnum):
+class ResourceType(StrStructuredEnum):
     PLUGIN = EnumField("plugin", label=_("蓝鲸插件"))

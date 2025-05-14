@@ -171,11 +171,6 @@
                     {{ nodeIp.internal_ip_address }}
                   </div>
                 </template>
-                <template v-else-if="!curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP">
-                  <div class="no-ip">
-                    <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
-                  </div>
-                </template>
                 <template v-else>
                   <div class="no-ip">
                     <p> {{ $t('暂未获取出流量 IP 列表') }} </p>
@@ -222,11 +217,6 @@
                     class="ip-item"
                   >
                     {{ nodeIp.internal_ip_address }}
-                  </div>
-                </template>
-                <template v-else-if="!curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP">
-                  <div class="no-ip">
-                    <p> {{ $t('该环境暂不支持获取出流量 IP 信息') }} </p>
                   </div>
                 </template>
                 <template v-else>
@@ -286,6 +276,8 @@ export default {
         prod: false,
       },
       gatewayInfosStagLoading: false,
+      gatewayInfosProdLoading: false,
+      isGatewayInfosBeClearing: false,
       pageLoading: true,
       isNetworkLoading: true,
       envs: [],
@@ -298,19 +290,18 @@ export default {
     },
 
     curStagDisabled() {
-      // 测试环境，没有启用 egress 的，也不再允许用户自己启用
-      return this.gatewayInfosStagLoading
-      || this.isGatewayInfosBeClearing
-      || !this.gatewayInfos.stag.node_ip_addresses.length
-      || !this.curAppModule.clusters.stag.feature_flags.ENABLE_EGRESS_IP;
+      if (this.gatewayInfosStagLoading || this.isGatewayInfosBeClearing) return true;
+      if (this.gatewayInfos.stag.node_ip_addresses.length) return false;
+      // 如果应用未支持开关出口IP管理, 则不允许打开出口IP
+      return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING;
     },
 
     curProdDisabled() {
       // 正式环境，没有启用 egress 的，也不再允许用户自己启用
-      return this.gatewayInfosProdLoading
-      || this.isGatewayInfosBeClearing
-      || !this.gatewayInfos.prod.node_ip_addresses.length
-      || !this.curAppModule.clusters.prod.feature_flags.ENABLE_EGRESS_IP;
+      if (this.gatewayInfosProdLoading || this.isGatewayInfosBeClearing) return true;
+      if (this.gatewayInfos.prod.node_ip_addresses.length) return false;
+      // 通过 FeatureFlag 控制用户是否可自己操作
+      return !this.curAppInfo.feature.TOGGLE_EGRESS_BINDING;
     },
 
     // 基本信息是否为编辑态
@@ -385,7 +376,6 @@ export default {
               this.deployLimit[item.environment] = true;
             });
           } else {
-            console.log('res', res);
             const curEnv = res[0].environment;
             if (curEnv === 'stag') {
               this.deployLimit.stag = true;

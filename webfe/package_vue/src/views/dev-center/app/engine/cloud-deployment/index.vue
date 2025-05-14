@@ -9,102 +9,99 @@
       :module-list="curAppModuleList"
       :first-module-name="firstTabActiveName"
       :active-route-name="active"
+      @tab-change="handleTabChange"
     />
-    <paas-content-loader
-      :placeholder="loaderPlaceholder"
-      :offset-top="30"
-      class="app-container middle overview"
-    >
-      <div
-        v-if="!isTab"
-        class="top-return-bar flex-row align-items-center"
-        @click="handleGoBack"
+    <section :class="[{ 'enhanced-service-main-cls': !isTab }, { 'cloud-native-app': isCloudNativeApp }]">
+      <paas-content-loader
+        :placeholder="loaderPlaceholder"
+        :offset-top="30"
+        class="app-container middle overview"
+        :class="{ 'enhanced-service': !isTab }"
       >
-        <i
-          class="paasng-icon paasng-arrows-left icon-cls-back mr5"
-        />
-        <h4>{{ $t('返回上一页') }}</h4>
-      </div>
-      <section class="deploy-panel deploy-main mt5">
-        <!-- 增强服务实例详情隐藏tab -->
-        <bk-tab
-          v-show="isTab"
-          ext-cls="deploy-tab-cls"
-          :active.sync="active"
-          @tab-change="handleGoPage"
-        >
-          <template slot="setting">
-            <bk-button
-              class="pr20"
-              text
-              @click="handleYamlView"
-            >
-              {{ $t('查看YAML') }}
-            </bk-button>
-          </template>
-          <bk-tab-panel
-            v-for="(panel, index) in curTabPanels"
-            v-bind="panel"
-            :key="index"
-          ></bk-tab-panel>
-        </bk-tab>
-
-        <div class="deploy-content">
-          <router-view
-            :ref="routerRefs"
-            :key="renderIndex"
-            :save-loading="buttonLoading"
-            :is-component-btn="!isFooterActionBtn"
-            @cancel="handleCancel"
-            @hide-tab="isTab = false"
+        <section :class="['deploy-panel', 'deploy-main', { 'instance-details-cls': !isTab }]">
+          <!-- 增强服务实例详情隐藏tab -->
+          <bk-tab
+            v-show="isTab"
+            ext-cls="deploy-tab-cls"
+            :active.sync="active"
             @tab-change="handleGoPage"
-          />
-        </div>
-      </section>
+          >
+            <template slot="setting">
+              <bk-button
+                class="mr10"
+                text
+                @click="toDeploy"
+              >
+                <i class="paasng-icon paasng-bushu"></i>
+                {{ $t('去部署') }}
+              </bk-button>
+              <bk-popover
+                class="mr20"
+                theme="light"
+                ext-cls="more-operations"
+                placement="bottom"
+                ref="moreRef"
+                :tippy-options="{ hideOnClick: false }"
+              >
+                <i class="paasng-icon paasng-icon-more"></i>
+                <div slot="content">
+                  <div
+                    class="option"
+                    @click="handleYamlView"
+                  >
+                    {{ $t('查看 YAML') }}
+                  </div>
+                </div>
+              </bk-popover>
+            </template>
+            <bk-tab-panel
+              v-for="(panel, index) in panels"
+              v-bind="panel"
+              :key="index"
+            ></bk-tab-panel>
+          </bk-tab>
 
-      <!-- <div
-        class="deploy-btn-wrapper"
-        v-if="isPageEdit && isFooterActionBtn"
-      >
-        <bk-button
-          :loading="buttonLoading"
-          class="pl20 pr20"
-          :theme="'primary'"
-          @click="handleSave"
-        >
-          {{ $t('保存') }}
-        </bk-button>
-        <bk-button
-          class="pl20 pr20 ml20"
-          @click="handleCancel"
-        >
-          {{ $t('取消') }}
-        </bk-button>
-      </div> -->
+          <div :class="['deploy-content', { 'details-router-cls': !isTab }]">
+            <router-view
+              :ref="routerRefs"
+              :key="renderIndex"
+              :save-loading="buttonLoading"
+              :is-component-btn="!isFooterActionBtn"
+              @cancel="handleCancel"
+              @hide-tab="isTab = false"
+              @show-tab="handleShowTab"
+              @tab-change="handleGoPage"
+              @route-back="handleGoBack"
+            />
+          </div>
+        </section>
+      </paas-content-loader>
+    </section>
 
-      <bk-dialog
-        v-model="deployDialogConfig.visible"
-        theme="primary"
-        :width="deployDialogConfig.dialogWidth"
-        ext-cls="deploy-dialog"
-        title="YAML"
-        header-position="left"
-        :position="{ top: deployDialogConfig.top }"
-        :show-footer="false"
-      >
-        <deployYaml
-          :height="deployDialogConfig.height"
-          :cloud-app-data="dialogCloudAppData"
-        />
-      </bk-dialog>
-    </paas-content-loader>
+    <bk-dialog
+      v-model="deployDialogConfig.visible"
+      theme="primary"
+      :width="deployDialogConfig.dialogWidth"
+      ext-cls="deploy-dialog"
+      title="YAML"
+      header-position="left"
+      :position="{ top: deployDialogConfig.top }"
+      :show-footer="false"
+    >
+      <deployYaml
+        :height="deployDialogConfig.height"
+        :cloud-app-data="dialogCloudAppData"
+      />
+    </bk-dialog>
   </div>
 </template>
 
-<script>import moduleTopBar from '@/components/paas-module-bar';
+<script>
+import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployYaml from './deploy-yaml';
 import { throttle } from 'lodash';
+import { traceIds } from '@/common/trace-ids';
 
 export default {
   components: {
@@ -159,7 +156,7 @@ export default {
     },
 
     routerRefs() {
-      const curPenel = this.curTabPanels.find(e => e.name === this.active);
+      const curPenel = this.panels.find((e) => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
 
@@ -173,15 +170,7 @@ export default {
     },
 
     firstTabActiveName() {
-      return this.curTabPanels[0].name;
-    },
-
-    curTabPanels() {
-      // 可观测性配置接入featureflag
-      if (!this.userFeature.PHALANX) {
-        this.panels = this.panels.filter(v => v.ref !== 'observability');
-      }
-      return this.panels;
+      return this.panels[0].name;
     },
 
     // 是否需要保存操作按钮
@@ -190,9 +179,16 @@ export default {
       const hideTabItems = ['cloudAppDeployForProcess', 'cloudAppDeployForHook', 'cloudAppDeployForEnv'];
       return !hideTabItems.includes(this.active);
     },
+
+    categoryText() {
+      return this.isCloudNativeApp ? '云原生应用' : '普通应用';
+    },
   },
   watch: {
-    '$route'() {
+    $route(newRoute) {
+      if (this.active !== newRoute.name) {
+        this.handleGoPage(newRoute.name);
+      }
       // eslint-disable-next-line no-plusplus
       this.renderIndex++;
       this.$store.commit('cloudApi/updatePageEdit', false);
@@ -202,7 +198,7 @@ export default {
     },
   },
   created() {
-    this.active = this.panels.find(e => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
+    this.active = this.panels.find((e) => e.ref === this.$route.meta.module)?.name || this.firstTabActiveName;
     // 默认第一项
     if (this.$route.name !== this.firstTabActiveName) {
       this.$router.push({
@@ -217,6 +213,8 @@ export default {
   },
   methods: {
     handleGoPage(routeName) {
+      const label = this.panels.find((item) => item.name === routeName).label;
+      this.sendEventTracking({ id: traceIds[label], action: 'view', category: this.categoryText });
       this.$store.commit('cloudApi/updatePageEdit', false); // 切换tab 页面应为查看页面
       this.active = routeName;
       this.$router.push({
@@ -251,8 +249,8 @@ export default {
       }
     },
 
-    handleGoBack() {
-      this.handleGoPage('appServices');
+    handleGoBack(routeName) {
+      this.handleGoPage(routeName);
       this.isTab = true;
     },
 
@@ -271,6 +269,26 @@ export default {
         this.deployDialogConfig.height = 520;
       }
     },
+
+    handleTabChange() {
+      this.handleGoBack(this.active);
+    },
+
+    handleShowTab(callback) {
+      this.isTab = true;
+      callback(this);
+    },
+
+    // 跳转模块部署
+    toDeploy() {
+      this.$router.push({
+        name: 'cloudAppDeployManageStag',
+        params: {
+          id: this.appCode,
+          filterModule: this.curModuleId,
+        },
+      });
+    },
   },
 };
 </script>
@@ -278,6 +296,17 @@ export default {
 <style lang="scss" scoped>
 @import '../../../../../assets/css/components/conf.scss';
 @import './index.scss';
+.enhanced-service-main-cls.cloud-native-app {
+  height: 100%;
+  display: flex;
+  .enhanced-service {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+  }
+}
+
 .title {
   font-size: 16px;
   color: #313238;
@@ -327,22 +356,31 @@ export default {
 
 .deploy-panel.deploy-main {
   box-shadow: 0 2px 4px 0 #1919290d;
-}
 
-.top-return-bar {
-  background: #F5F7FA;
-  cursor: pointer;
-  h4 {
-    font-size: 14px;
-    color: #313238;
-    font-weight: 400;
-    padding: 0;
+  &.instance-details-cls {
+    // 高度问题·
+    height: 100%;
+    min-height: auto;
+    background: #f5f7fa;
+
+    .details-router-cls {
+      height: 100%;
+    }
   }
-  .icon-cls-back{
-    color: #3A84FF;
-    font-size: 14px;
-    font-weight: bold;
+  i.paasng-icon-more {
+    padding: 3px;
+    font-size: 16px;
+    color: #63656e;
+    cursor: pointer;
+    border-radius: 50%;
+    transform: translateY(0px);
+    &:hover {
+      background: #f0f1f5;
+    }
   }
+}
+.instance-alert-cls {
+  margin-bottom: 16px;
 }
 </style>
 <style lang="scss">
@@ -353,5 +391,21 @@ export default {
   color: #3a84ff;
   font-size: 12px;
   cursor: pointer;
+}
+.more-operations {
+  .tippy-tooltip.light-theme {
+    padding: 6px 0;
+  }
+  .option {
+    height: 32px;
+    line-height: 32px;
+    padding: 0 12px;
+    cursor: pointer;
+    color: #63656e;
+    &:hover {
+      background-color: #eaf3ff;
+      color: #3a84ff;
+    }
+  }
 }
 </style>

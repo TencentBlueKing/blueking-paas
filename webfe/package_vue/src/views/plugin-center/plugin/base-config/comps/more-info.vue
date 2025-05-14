@@ -30,6 +30,7 @@
 </template>
 
 <script>
+import { bus } from '@/common/bus';
 export default {
   name: 'MoreInfo',
   data() {
@@ -57,6 +58,7 @@ export default {
       try {
         const results = await this.$store.dispatch('plugin/getPluginsTypeList');
         const curPluginType = results.find(v => v.plugin_type?.id === this.curPluginInfo.pd_id);
+        bus.$emit('plugin-schemas', curPluginType);
 
         if (!Object.keys(curPluginType.schema.extra_fields)?.length) {
           // 无extra_fields字段不展示

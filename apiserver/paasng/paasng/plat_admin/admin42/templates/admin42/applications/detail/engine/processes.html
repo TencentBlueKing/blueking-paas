@@ -109,9 +109,9 @@
 
     const URLRouter = {
         list: decodeURI("{% url 'wl_api.process_spec_plan' %}"),
-        switch_process_plan: decodeURI("{% url 'wl_api.application.process_plan' application.region '${engine_app_name}' '${process_type}' %}"),
-        scale: decodeURI("{% url 'wl_api.application.process_scale' application.region '${engine_app_name}' '${process_type}' %}"),
-        retrieve: decodeURI("{% url 'wl_api.application.process_instance' application.region '${engine_app_name}' '${process_type}' '${process_instance_name}' %}"),
+        switch_process_plan: decodeURI("{% url 'wl_api.application.process_plan' '${engine_app_name}' '${process_type}' %}"),
+        scale: decodeURI("{% url 'wl_api.application.process_scale' '${engine_app_name}' '${process_type}' %}"),
+        retrieve: decodeURI("{% url 'wl_api.application.process_instance' '${engine_app_name}' '${process_type}' '${process_instance_name}' %}"),
     }
 
 

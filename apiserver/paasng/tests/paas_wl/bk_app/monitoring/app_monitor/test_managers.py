@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from pathlib import Path
 from unittest import mock
@@ -94,9 +93,9 @@ class TestAppMonitorController:
         name = "servicemonitors.monitoring.coreos.com"
 
         if (int(k8s_version.major), int(k8s_version.minor)) <= (1, 16):
-            body = yaml.load((Path(__file__).parent / "crd/v1beta1.yaml").read_text())
+            body = yaml.full_load((Path(__file__).parent / "crd/v1beta1.yaml").read_text())
         else:
-            body = yaml.load((Path(__file__).parent / "crd/v1.yaml").read_text())
+            body = yaml.full_load((Path(__file__).parent / "crd/v1.yaml").read_text())
 
         try:
             KCustomResourceDefinition(k8s_client).create_or_update(name, body=body)
@@ -115,7 +114,7 @@ class TestAppMonitorController:
         return G(AppMetricsMonitor, port=5000, target_port=5001, app=bk_stag_wl_app)
 
     @pytest.mark.usefixtures("_setup_crd")
-    @pytest.mark.auto_create_ns()
+    @pytest.mark.auto_create_ns
     def test_normal(self, monitor, bk_stag_wl_app):
         controller = make_bk_monitor_controller(bk_stag_wl_app)
         assert controller.app_monitor is not None

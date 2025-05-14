@@ -1,33 +1,35 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import random
 from typing import Dict, List
+from unittest.mock import Mock
 
 from paasng.infras.bkmonitorv3.client import BkMonitorClient
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
-from tests.utils.helpers import generate_random_string
+from paasng.platform.applications.models import Application
+from tests.utils.basic import generate_random_string
 
 
 def get_fake_alerts(start_time: int, end_time: int) -> List:
     alerts = [
         {
             "id": generate_random_string(6),
-            "bk_biz_id": random.randint(-5000000, -4000000),
+            "bk_biz_id": -4000000,
             "alert_name": generate_random_string(6),
             "status": random.choice(["ABNORMAL", "CLOSED", "RECOVERED"]),
             "description": generate_random_string(),
@@ -39,6 +41,7 @@ def get_fake_alerts(start_time: int, end_time: int) -> List:
         }
         for _ in range(3)
     ]
+    alerts[1]["labels"].append("gcs_mysql_slow_query")
     return alerts
 
 
@@ -81,12 +84,31 @@ def get_fake_alarm_strategies() -> Dict:
     }
 
 
+def get_fake_space_biz_id(app_codes: List[str]) -> List[Dict]:
+    mock_application = Mock(spec=Application)
+    mock_application.id = 1
+    mock_application.type = "default"
+    mock_application.code = "testapp"
+    mock_application.name = "Test Application"
+    mock_application.get_logo_url.return_value = "http://logo.jpg"
+
+    return [
+        {
+            "application": mock_application,
+            "bk_biz_id": "-4000000",
+        }
+    ]
+
+
 class StubBKMonitorClient(BkMonitorClient):
     """蓝鲸监控提供的API，仅供单元测试使用"""
 
     def query_alerts(self, query_params: QueryAlertsParams) -> List:
         query_data = query_params.to_dict()
         return get_fake_alerts(query_data["start_time"], query_data["end_time"])
+
+    def query_space_biz_id(self, app_codes: List) -> List:
+        return get_fake_space_biz_id(app_codes)
 
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         query_params.to_dict()

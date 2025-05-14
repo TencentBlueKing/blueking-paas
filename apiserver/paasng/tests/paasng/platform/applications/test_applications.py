@@ -1,26 +1,24 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
 import pytest
 from django.conf import settings
-from django.test import TestCase
 from django_dynamic_fixture import G
 
 from paasng.infras.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
@@ -38,19 +36,17 @@ logger = logging.getLogger(__name__)
 pytestmark = pytest.mark.django_db
 
 
-class TestCreateDefaultModule(TestCase):
-    def setUp(self):
-        self.user = create_user()
-        self.application = G(
-            Application, owner=self.user.pk, code="awesome-app", language="Python", region=settings.DEFAULT_REGION_NAME
+class TestCreateDefaultModule:
+    def test_create_default_module(self, bk_user):
+        app = G(
+            Application, owner=bk_user.pk, code="awesome-app", language="Python", region=settings.DEFAULT_REGION_NAME
         )
 
-    def test_create_default_module(self):
-        assert Module.objects.filter(application=self.application).count() == 0
-        create_default_module(self.application)
+        assert Module.objects.filter(application=app).count() == 0
+        create_default_module(app)
 
-        assert Module.objects.filter(application=self.application).count() == 1
-        assert self.application.get_default_module().application == self.application
+        assert Module.objects.filter(application=app).count() == 1
+        assert app.get_default_module().application == app
 
 
 class BaseCaseWithApps:
@@ -122,7 +118,11 @@ class TestApplicationManager(BaseCaseWithApps):
 
         # 给 app_another1 添加 Python 语言的模块后能过滤出来
         Module.objects.create(
-            region=self.app_another1.region, application=self.app_another1, name="python", language="Python"
+            region=self.app_another1.region,
+            application=self.app_another1,
+            name="python",
+            language="Python",
+            creator=self.app_another1.creator,
         )
         apps_new = Application.objects.filter_by_user(self.user).filter_by_languages(["Python"])
         assert set(apps_new) == {self.app1, self.app_another2, self.app_another1}

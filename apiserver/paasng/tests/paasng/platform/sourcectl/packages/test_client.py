@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import tarfile
 from contextlib import ExitStack
+from pathlib import Path
 
 import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
@@ -28,13 +28,14 @@ from paasng.platform.sourcectl.package.client import (
     BinaryTarClient,
     GenericLocalClient,
     GenericRemoteClient,
+    InvalidPackageFileFormatError,
     TarClient,
     ZipClient,
 )
 from paasng.platform.sourcectl.package.uploader import upload_to_blob_store
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar, gen_zip
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 
 class TestBinaryTarClient:
@@ -70,6 +71,18 @@ class TestBinaryTarClient:
                 "./j/",
                 "./j/k/",
             }
+
+    def test_read_invalid_file(self, tmp_path):
+        p = Path(tmp_path / "foo.tgz")
+        p.write_text("Definitely not a tarball")
+        with pytest.raises(InvalidPackageFileFormatError):
+            BinaryTarClient(p).read_file("foo.txt")
+
+    def test_list_invalid_file(self, tmp_path):
+        p = Path(tmp_path / "foo.tgz")
+        p.write_text("Definitely not a tarball")
+        with pytest.raises(InvalidPackageFileFormatError):
+            BinaryTarClient(p).list()
 
 
 @pytest.mark.parametrize(

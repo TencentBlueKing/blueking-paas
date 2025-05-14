@@ -1,12 +1,19 @@
 <template lang="html">
   <ul class="app-nav">
+    <div
+      v-if="isMigrationEntryShown"
+      class="migration-app-btn"
+      @click="handleShowAppMigrationDialog"
+    >
+      {{ $t('迁移为云原生应用') }}
+    </div>
     <template v-for="(category, categoryIndex) in navTree">
       <li
         v-if="category.children && category.children.length"
         :key="categoryIndex"
         :class="{
-          'on': category.isActived && !category.isExpanded,
-          'expanded': category.isExpanded
+          on: category.isActived && !category.isExpanded,
+          expanded: category.isExpanded,
         }"
       >
         <a
@@ -15,7 +22,7 @@
           @click.stop.prevent="toggleNavCategory(category)"
         >
           {{ category.label }}
-          <i :class="['paasng-icon paasng-angle-right', { 'down': category.isExpanded }]" />
+          <i :class="['paasng-icon paasng-angle-right', { down: category.isExpanded }]" />
         </a>
         <span :class="getIconClass(category)" />
         <transition
@@ -30,8 +37,9 @@
             <a
               v-for="(navItem, navIndex) in category.children"
               :key="navIndex"
-              :class="{ 'on': navItem.isSelected }"
+              :class="{ on: navItem.isSelected }"
               href="javascript: void(0);"
+              :bk-trace="`{id: '${traceIds[navItem.name]}', action: 'nav', category: '普通应用'}`"
               @click.stop.prevent="goPage(navItem)"
             >
               {{ $t(navItem.name) }}
@@ -48,6 +56,7 @@
         <a
           class="overview-text"
           href="javascript:"
+          :bk-trace="`{id: '${traceIds[category.label]}', action: 'nav', category: '普通应用'}`"
           @click.stop.prevent="goPage(category)"
         >
           {{ category.label }}
@@ -58,16 +67,25 @@
   </ul>
 </template>
 
-<script>import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
-import _ from 'lodash';
+<script>
+import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
+import { traceIds } from '@/common/trace-ids';
+import { cloneDeep } from 'lodash';
 
 export default {
+  props: {
+    isMigrationEntryShown: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       navTree: [],
       allowedRouterName: [],
       allNavItems: [],
       region: 'ieod',
+      traceIds,
       roleAllowRouters: {
         administrator: [
           'appSummary', // 概览
@@ -79,8 +97,8 @@ export default {
           'moduleManage', // 模块管理
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
-          'docuManagement', // 文档管理
           'appCloudAPI', // 云 API 权限管理
+          'operationRecord', // 操作记录
         ],
 
         developer: [
@@ -92,8 +110,8 @@ export default {
           'moduleManage', // 模块管理
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
-          'docuManagement', // 文档管理
           'appCloudAPI', // 云 API 权限管理
+          'operationRecord', // 操作记录
         ],
 
         operator: [
@@ -103,7 +121,7 @@ export default {
           'appConfigs', // 基本设置
           'appAnalysis', // 数据统计
           'monitorAlarm', // 监控告警
-          'docuManagement', // 文档管理
+          'operationRecord', // 操作记录
         ],
       },
     };
@@ -120,20 +138,16 @@ export default {
     },
   },
   watch: {
-    curAppInfo() {
-      this.init();
-    },
     'curAppInfo.feature': {
       handler(newValue, oldValue) {
         if (!Object.keys(newValue).length) {
-          this.curAppInfo.feature = _.cloneDeep(oldValue);
+          this.curAppInfo.feature = cloneDeep(oldValue);
         }
-        this.init();
       },
       deep: true,
     },
-    '$route'(newVal, oldVal) {
-      const isReload = (newVal.params.id !== oldVal.params.id) || (newVal.params.moduleId !== oldVal.params.moduleId);
+    $route(newVal, oldVal) {
+      const isReload = newVal.params.id !== oldVal.params.id || newVal.params.moduleId !== oldVal.params.moduleId;
       this.init(isReload);
     },
   },
@@ -163,7 +177,6 @@ export default {
       try {
         const { region } = this.curAppInfo.application;
         const res = await this.$store.dispatch('fetchRegionInfo', region);
-        // this.$store.commit('updateCanCreateModule', res.mul_modules_config.creation_allowed)
         this.curAppInfo.userType = res.access_control ? res.access_control.user_type : '';
 
         // 添加增强服务
@@ -181,7 +194,7 @@ export default {
         if (!this.curAppInfo.web_config.engine_enabled) {
           navTree = navTree.filter((nav) => {
             if (nav.name === 'appMarketing') {
-              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
+              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appMobileMarket')];
             }
             return ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
           });
@@ -191,28 +204,30 @@ export default {
         if (this.curAppModule?.region !== 'ieod') {
           navTree.forEach((nav) => {
             if (nav.name === 'appMarketing') {
-              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appMobileMarket')];
+              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appMobileMarket')];
             }
           });
         }
 
         // 当角色为开发者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'developer') {
-          navTree = navTree.filter(nav => this.roleAllowRouters.developer.includes(nav.name));
+          navTree = navTree.filter((nav) => this.roleAllowRouters.developer.includes(nav.name));
         }
 
         // 当角色运营者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'operator') {
-          navTree = navTree.filter(nav => this.roleAllowRouters.operator.includes(nav.name));
+          navTree = navTree.filter((nav) => this.roleAllowRouters.operator.includes(nav.name));
           this.simpleAddNavItem(navTree, 'appEngineOperator', 'appEntryConfig', this.$t('访问管理'));
         }
 
         // smart应用或lesscode应用，包管理
-        if (this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP
-        && this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP) {
+        if (
+          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.LESSCODE_APP &&
+          this.curAppModule?.source_origin !== this.GLOBAL.APP_TYPES.SMART_APP
+        ) {
           navTree.forEach((nav) => {
             if (nav.name === 'appEngine') {
-              nav.children = [...nav.children.filter(sub => sub.destRoute.name !== 'appPackages')];
+              nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appPackages')];
             }
           });
         }
@@ -240,18 +255,18 @@ export default {
         // 接入feature flag来控制应用导航
         const featureMaps = {
           appAnalysis: 'ANALYTICS', // 访问统计
-          docuManagement: 'DOCUMENT_MANAGEMENT', // 文档管理
-          appCloudAPI: 'API_GATEWAY', // 云API权限管理
         };
         const subFeatureMaps = {
-          codeReview: 'CI', // 代码检查
-          monitorAlarm: 'PHALANX', // 告警记录
+          codeReview: 'CODE_CHECK', // 代码检查
+          monitorAlarm: 'MONITORING', // 告警记录
         };
         // 一级
         navTree = navTree.filter((nav) => {
           const key = featureMaps[nav.name];
           if (nav.name === 'appAnalysis') {
-            const result = ['PA_WEBSITE_ANALYTICS', 'PA_INGRESS_ANALYTICS', 'PA_CUSTOM_EVENT_ANALYTICS'].some(key => this.curAppInfo.feature[key]);
+            const result = ['PA_WEBSITE_ANALYTICS', 'PA_INGRESS_ANALYTICS', 'PA_CUSTOM_EVENT_ANALYTICS'].some(
+              (key) => this.curAppInfo.feature[key]
+            );
             // 访问统计三项都为false，不展示一级导航
             if (!result) {
               return false;
@@ -305,6 +320,7 @@ export default {
         'appBasicInfo', // 基本信息
         'appMembers', // 成员管理
         'appPersistentStorage', // 持久存储
+        'docuManagement', // 文档管理
       ];
 
       this.navTree.forEach((nav) => {
@@ -409,8 +425,9 @@ export default {
         if (this.allowedRouterName.includes(routeName)) {
           resolve(true);
         } else {
-          const router = this.allNavItems.find(nav => (nav.matchRouters && nav.matchRouters.includes(routeName))
-          || nav.destRoute?.name === routeName);
+          const router = this.allNavItems.find(
+            (nav) => (nav.matchRouters && nav.matchRouters.includes(routeName)) || nav.destRoute?.name === routeName
+          );
           reject(router);
         }
       });
@@ -428,7 +445,7 @@ export default {
     },
 
     simpleAddNavItem(navTree, categoryName, destRouter, name) {
-      const category = navTree.find(item => item.name === categoryName);
+      const category = navTree.find((item) => item.name === categoryName);
       category.children.push({
         categoryName,
         name,
@@ -447,10 +464,10 @@ export default {
      * @param {String} name 名称
      */
     addServiceNavItem(navTree, id, name) {
-      const category = navTree.find(item => item.name === 'appServices');
+      const category = navTree.find((item) => item.name === 'appServices');
       category.children.push({
         categoryName: 'appServices',
-        name,
+        name: this.$t(name),
         matchRouters: ['appService', 'appServiceInner', 'appServiceConfig', 'appServiceInnerShared'],
         destRoute: {
           name: 'appService',
@@ -490,7 +507,7 @@ export default {
 
         const routeName = navItem.destRoute.name;
         const params = {
-          ...navItem.destRoute.params || {},
+          ...(navItem.destRoute.params || {}),
           ...this.$router.params,
           moduleId: this.curAppModule?.name,
         };
@@ -531,13 +548,20 @@ export default {
     },
 
     afterEnter(el) {
-      $(el).hide()
-        .slideDown(400);
+      $(el).hide().slideDown(400);
     },
 
     leave(el, done) {
       $(el).slideUp(400, () => {
         done();
+      });
+    },
+
+    // 迁移应用弹窗
+    handleShowAppMigrationDialog() {
+      this.$emit('show-migration-dialog', {
+        visible: true,
+        data: this.curAppInfo.application,
       });
     },
   },
@@ -549,6 +573,22 @@ export default {
   padding-top: 9px;
   width: 240px;
   margin-top: 1px;
+
+  .migration-app-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 16px;
+    height: 32px;
+    background: #f0f5ff;
+    border-radius: 2px;
+    font-size: 12px;
+    color: #3a84ff;
+    cursor: pointer;
+    &:hover {
+      background: #e1ecff;
+    }
+  }
 
   > li {
     width: 239px;

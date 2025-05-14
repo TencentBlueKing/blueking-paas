@@ -1,21 +1,21 @@
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """Manage configurations related with source files"""
+
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Optional, Tuple
@@ -49,7 +49,10 @@ class MetaDataReader(Protocol):
         """
 
     def get_app_desc(self, version_info: VersionInfo) -> Dict:
-        """Read app.yaml/app_desc.yaml from repository
+        """Read app_desc.yaml from repository
+
+        NOTE: The platform used to support "app.yaml" using the version 1 spec, support
+        has been dropped because no applications use it anymore.
 
         :raises: exceptions.GetAppYamlError
         """
@@ -92,20 +95,19 @@ class MetaDataFileReader:
             raise exceptions.GetProcfileError(error_msg)
 
         try:
-            procfile = yaml.load(content)
+            procfile = yaml.full_load(content)
         except Exception as e:
-            raise exceptions.GetProcfileError('file "Procfile"\'s format is not YAML') from e
-
+            raise exceptions.GetProcfileFormatError('file "Procfile"\'s format is not YAML') from e
         if not isinstance(procfile, dict):
-            raise exceptions.GetProcfileError('file "Procfile" must be dict type')
+            raise exceptions.GetProcfileFormatError('file "Procfile" must be dict type')
         return procfile
 
     def get_app_desc(self, version_info: VersionInfo) -> Dict:
-        """Read app.yaml/app_desc.yaml from repository
+        """Read app_desc.yaml from repository
 
         :raises: exceptions.GetAppYamlError
         """
-        possible_keys = ["app_desc.yaml", "app_desc.yml", "app.yml", "app.yaml"]
+        possible_keys = ["app_desc.yaml", "app_desc.yml"]
         if self.source_dir != Path("."):
             # Note: 为了保证不影响源码包部署的应用, 优先从根目录读取 app_desc.yaml, 随后再尝试从 source_dir 目录读取
             possible_keys = [
@@ -113,10 +115,6 @@ class MetaDataFileReader:
                 "app_desc.yml",
                 str(self.source_dir / "app_desc.yaml"),
                 str(self.source_dir / "app_desc.yml"),
-                "app.yml",
-                "app.yaml",
-                str(self.source_dir / "app.yml"),
-                str(self.source_dir / "app.yaml"),
             ]
 
         content = None
@@ -124,7 +122,7 @@ class MetaDataFileReader:
             try:
                 content = self.read_file(possible_key, version_info)
                 break
-            except exceptions.DoesNotExistsOnServer:
+            except Exception:
                 continue
         if content is None:
             error_msg = "Can not read app description file from repository"
@@ -133,11 +131,11 @@ class MetaDataFileReader:
             raise exceptions.GetAppYamlError(error_msg)
 
         try:
-            app_description = yaml.load(content)
+            app_description = yaml.full_load(content)
         except Exception as e:
-            raise exceptions.GetAppYamlError('file "app.yaml"\'s format is not YAML') from e
+            raise exceptions.GetAppYamlFormatError('file "app_desc.yaml"\'s format is not YAML') from e
         if not isinstance(app_description, dict):
-            raise exceptions.GetAppYamlError('file "app.yaml" must be dict type')
+            raise exceptions.GetAppYamlFormatError('file "app_desc.yaml" must be dict type')
         return app_description
 
     def get_dockerignore(self, version_info: VersionInfo) -> str:
@@ -207,14 +205,13 @@ class PackageMetaDataReader(MetaDataFileReader):
 
     def get_procfile(self, version_info: VersionInfo) -> Dict[str, str]:
         """Read Procfile config from SourcePackage.meta_data(the field stored app_desc) or repository"""
-        from paasng.platform.declarative.handlers import get_desc_handler
+        from paasng.platform.declarative.handlers import get_deploy_desc_by_module
 
         _, version = self.extract_version_info(version_info)
         package_storage = self.module.packages.get(version=version)
         if package_storage.meta_info:
             try:
-                handler = get_desc_handler(package_storage.meta_info)
-                deploy_desc = handler.get_deploy_desc(self.module.name)
+                deploy_desc = get_deploy_desc_by_module(package_storage.meta_info, self.module.name)
                 return deploy_desc.get_procfile()
             except Exception as e:
                 raise exceptions.GetProcfileError('unable to read file "Procfile"') from e
@@ -222,7 +219,7 @@ class PackageMetaDataReader(MetaDataFileReader):
         return super().get_procfile(version_info)
 
     def get_app_desc(self, version_info: VersionInfo) -> Dict:
-        """Read app.yaml/app_desc.yaml from SourcePackage.meta_data(the field stored app_desc) or repository"""
+        """Read app_desc.yaml from SourcePackage.meta_data(the field stored app_desc) or repository"""
         _, version = self.extract_version_info(version_info)
         package_storage = self.module.packages.get(version=version)
         if package_storage.meta_info:
@@ -241,11 +238,9 @@ def get_metadata_reader(
     source_origin = module.get_source_origin()
     if source_origin == SourceOrigin.AUTHORIZED_VCS:
         return VCSMetaDataReader(get_repo_controller(module, operator), source_dir=source_dir)
-    elif source_origin in [SourceOrigin.BK_LESS_CODE, SourceOrigin.S_MART]:
+    elif source_origin in SourceOrigin.get_package_origins():
         return PackageMetaDataReader(module, source_dir)
     elif source_origin == SourceOrigin.IMAGE_REGISTRY:
         raise NotImplementedError("IMAGE_REGISTRY doesn't support read AppDescription")
-    elif source_origin == SourceOrigin.SCENE:
-        return VCSMetaDataReader(get_repo_controller(module, operator))
     else:
         raise NotImplementedError

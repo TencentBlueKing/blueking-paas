@@ -1,32 +1,34 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import base64
+import datetime
 import logging
-from typing import Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List, Optional, Union
 from urllib.parse import urljoin
 
 import arrow
+import requests
 from django.utils.translation import gettext_lazy as _
 
+from paasng.infras.accounts.models import Oauth2TokenHolder
 from paasng.platform.sourcectl import exceptions
-from paasng.platform.sourcectl.client import DEFAULT_REPO_REF, BaseGitApiClient, GitRepoProvider
-from paasng.platform.sourcectl.models import GitProject
+from paasng.platform.sourcectl.client import DEFAULT_REPO_REF, BaseGitApiClient
+from paasng.platform.sourcectl.models import CommitInfo, GitProject
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +36,15 @@ logger = logging.getLogger(__name__)
 class GiteeApiClient(BaseGitApiClient):
     """Gitee API SDK"""
 
-    repo_provider: str = GitRepoProvider.Gitee
-
     def __init__(self, api_url: str, **kwargs):
-        super().__init__(api_url, **kwargs)
+        self.api_url = api_url
+        self.session = requests.session()
+
+        if "oauth_token" not in kwargs:
+            raise exceptions.AccessTokenMissingError("oauth_token required")
+
+        self.access_token = kwargs["oauth_token"]
+        self.token_holder: Optional[Oauth2TokenHolder] = kwargs.get("__token_holder")
 
     def list_repo(self, **kwargs) -> List[Dict]:
         """从 Gitee API 获取用户的所有仓库
@@ -51,8 +58,9 @@ class GiteeApiClient(BaseGitApiClient):
         """
         url = urljoin(self.api_url, f"repos/{project.path_with_namespace}/contents/{filepath}")
         resp = self._request_with_retry(url, params={"ref": ref})
-        if resp["encoding"] != "base64":
+        if not resp or resp.get("encoding") != "base64":
             raise exceptions.UnsupportedGitRepoEncode(_("当前仅支持 base64 编码格式"))
+
         return base64.b64decode(resp["content"])
 
     def repo_list_branches(self, project: GitProject, **kwargs) -> List[Dict]:
@@ -117,7 +125,13 @@ class GiteeApiClient(BaseGitApiClient):
                 "message": c["commit"]["message"],
             }
 
-    def calculate_user_contribution(self, **kwargs) -> Dict:
+    def calculate_user_contribution(
+        self,
+        username: str,
+        project: GitProject,
+        begin_date: Optional[Union[datetime.datetime, arrow.Arrow]] = None,
+        end_date: Optional[Union[datetime.datetime, arrow.Arrow]] = None,
+    ) -> Dict:
         """Gitee 暂不支持统计贡献"""
         return {
             "project_total_lines": "unsupported",
@@ -125,3 +139,15 @@ class GiteeApiClient(BaseGitApiClient):
             "project_commit_nums": "unsupported",
             "user_commit_nums": "unsupported",
         }
+
+    def commit_files(self, project: GitProject, commit_info: CommitInfo) -> Dict:
+        """批量提交修改文件"""
+        raise NotImplementedError("Gitee don't support batch commit currently")
+
+    def _request_with_retry(self, target_url, **kwargs) -> Any:
+        # Gitee token use query_params
+        params = kwargs.get("params") or {}
+        params["access_token"] = self.access_token
+        kwargs["params"] = params
+
+        return super()._request_with_retry(target_url, **kwargs)

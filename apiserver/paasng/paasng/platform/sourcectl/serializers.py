@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
 
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepositoryInstance, SvnAccount, SvnRepository
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
@@ -81,7 +80,6 @@ class RepositorySLZ(serializers.Serializer):
 class SVNAccountResponseSLZ(serializers.Serializer):
     account = serializers.CharField()
     user = serializers.CharField()
-    region = serializers.CharField()
     id = serializers.IntegerField()
     password = serializers.CharField()
 
@@ -94,35 +92,28 @@ class SvnAccountSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = SvnAccount
-        fields = ("region", "account", "user", "id", "verification_code", "synced_from_paas20")
-        lookup_field = "id"
-
-
-class SvnAccountCreateSLZ(serializers.ModelSerializer):
-    account = serializers.ReadOnlyField()
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-
-    validators = [
-        UniqueTogetherValidator(
-            queryset=SvnAccount.objects.all(), fields=("user", "region"), message="用户在当前Region的SVN账号已经存在"
-        )
-    ]
-
-    class Meta:
-        model = SvnAccount
-        fields = ("region", "account", "user", "id")
+        fields = ("account", "user", "id", "verification_code", "synced_from_paas20")
         lookup_field = "id"
 
 
 class AlternativeVersionSLZ(serializers.Serializer):
     name = serializers.CharField()
     type = serializers.CharField()
+    display_type = serializers.SerializerMethodField()
     revision = serializers.CharField()
     url = serializers.CharField()
     last_update = serializers.DateTimeField()
     message = serializers.CharField(help_text="tag description or commit message")
 
     extra = serializers.JSONField(default=dict)
+
+    def get_display_type(self, obj):
+        # smart 保持前端展示为 image. 相关背景 pr:
+        # https://github.com/TencentBlueKing/blueking-paas/pull/1306/files
+        # https://github.com/TencentBlueKing/blueking-paas/pull/1308/files
+        if self.context.get("is_smart_app") and obj.type == VersionType.TAG.value:
+            return VersionType.IMAGE.value
+        return obj.type
 
 
 class PageNumberPaginationSLZ(serializers.Serializer):
@@ -169,7 +160,7 @@ class RepoBackendModifySLZ(serializers.Serializer):
 class SourcePackageSLZ(serializers.Serializer):
     id = serializers.IntegerField(help_text="主键")
     version = serializers.CharField(help_text="版本信息")
-    package_name = serializers.CharField(help_text="源码包名称")
+    package_name = serializers.CharField(help_text="源码包文件名")
     package_size = serializers.CharField(help_text="源码包大小")
     sha256_signature = serializers.CharField(help_text="sha256数字签名")
     is_deleted = serializers.BooleanField(help_text="源码包是否已被清理")
@@ -181,9 +172,9 @@ class SourcePackageSLZ(serializers.Serializer):
 class SourcePackageUploadViaUrlSLZ(serializers.Serializer):
     package_url = serializers.URLField(help_text="源码包下载路径")
     version = serializers.CharField(help_text="源码包版本号", required=False, default=None)
-    allow_overwrite = serializers.NullBooleanField(help_text="是否允许覆盖原有的源码包", default=False)
+    allow_overwrite = serializers.BooleanField(help_text="是否允许覆盖原有的源码包", default=False, allow_null=True)
 
 
 class SourcePackageUploadViaFileSLZ(serializers.Serializer):
     package = serializers.FileField(help_text="源码包文件")
-    allow_overwrite = serializers.NullBooleanField(help_text="是否允许覆盖原有的源码包", default=False)
+    allow_overwrite = serializers.BooleanField(help_text="是否允许覆盖原有的源码包", default=False, allow_null=True)

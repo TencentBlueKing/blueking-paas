@@ -1,29 +1,29 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import TYPE_CHECKING, Dict
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from rest_framework.serializers import CharField, DateTimeField, Serializer
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
 from paasng.platform.engine.models import Deployment, EngineApp, MarkStatusMixin
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from paasng.platform.engine.models.steps import DeployStep
 
 
-class DeployPhaseTypes(str, StructuredEnum):
+class DeployPhaseTypes(StrStructuredEnum):
     """部署阶段"""
 
     PREPARATION = EnumField("preparation", label=_("准备阶段"))
@@ -59,6 +59,8 @@ class DeployPhase(UuidAuditedModel, MarkStatusMixin):
     status = models.CharField(_("状态"), choices=JobStatus.get_choices(), null=True, max_length=32)
     start_time = models.DateTimeField(_("阶段开始时间"), null=True)
     complete_time = models.DateTimeField(_("阶段完成时间"), null=True)
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         ordering = ["created"]

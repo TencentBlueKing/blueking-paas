@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 from collections import defaultdict
 from pathlib import Path
+from textwrap import dedent
 from unittest.mock import patch
 
 import pytest
@@ -104,9 +104,10 @@ class TestGitClient:
     def test_list_refs(self, client, refs, expected):
         """测试 git show-ref"""
 
-        with patch.object(client, "run") as mock_run, patch(
-            "paasng.platform.sourcectl.git.client.GitClient._get_commit_info"
-        ) as mock_commit_info:
+        with (
+            patch.object(client, "run") as mock_run,
+            patch("paasng.platform.sourcectl.git.client.GitClient._get_commit_info") as mock_commit_info,
+        ):
             mock_run.return_value = "\n".join(refs)
             mock_commit_info.return_value = {"time": "2019-01-01 00:00:00", "message": "fake"}
 
@@ -136,6 +137,18 @@ class TestGitClient:
             mock_run.return_value = cmd_result
             assert client.list_remote("http://example.com/foo.git") == expected
 
+    def test_list_remote_with_warning_and_invalid(self, client):
+        # The command output a warning message sometimes
+        with patch.object(client, "run") as mock_run:
+            mock_run.return_value = dedent(
+                """\
+                warning: redirecting to http://example.com/foo.git/
+                0123456789   HEAD
+                <some random invalid output>
+"""
+            )
+            assert client.list_remote("http://example.com/foo.git") == [("0123456789", "HEAD")]
+
     @pytest.mark.parametrize(
         ("commits", "expected"),
         [
@@ -159,3 +172,17 @@ class TestGitClient:
 
             assert isinstance(command, GitCommand)
             assert command.to_cmd() == ["git", "show", "-s", "--format=%ct/%B", "9n8b7u6y5t"]
+
+    def test_err_stdout_as_exc(self, client):
+        """Test the sensitive information is scrubbed."""
+        # Use a password contains escaped special characters, orig user/pass: foo/pass@%wd
+        command = GitCloneCommand("git", repository=MutableURL("https://foo:pass%40%25wd@example.com/foo.git"))
+        stdout = dedent(
+            """\
+            Cloning into '.'...
+            fatal: Authentication failed for 'https://foo:pass%40%25wd@example.com/foo.git'
+        """
+        )
+        exc = client.err_stdout_as_exc(stdout, command, -1)
+        assert "foo:pass%40%25wd" not in str(exc), "The sensitive information should be scrubbed."
+        assert "failed for 'https://example.com/foo.git'" in str(exc)

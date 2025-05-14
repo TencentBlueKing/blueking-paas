@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from unittest import mock
 
 import pytest
@@ -26,7 +25,7 @@ from paasng.platform.mgrlegacy.migrate import migrate_default_to_cnative, rollba
 from paasng.platform.mgrlegacy.task_data import MIGRATE_TO_CNATIVE_CLASSES_LIST
 from paasng.platform.modules.manager import ModuleInitializer
 from paasng.platform.modules.models import BuildConfig
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 from .conftest import CNATIVE_CLUSTER_NAME
 
@@ -49,6 +48,7 @@ class TestMigrateAndRollback:
         assert bk_app.type == ApplicationType.CLOUD_NATIVE.value
         assert bk_app.get_engine_app("stag").to_wl_obj().latest_config.cluster == CNATIVE_CLUSTER_NAME
         assert [result.migrator_name for result in migration_process.details.migrations] == [
+            "WlAppBackupMigrator",
             "ApplicationTypeMigrator",
             "ApplicationClusterMigrator",
             "BuildConfigMigrator",
@@ -63,6 +63,7 @@ class TestMigrateAndRollback:
             "BuildConfigMigrator",
             "ApplicationClusterMigrator",
             "ApplicationTypeMigrator",
+            "WlAppBackupMigrator",
         ]
 
     def test_migrate_failed(self, bk_app, migration_process):
@@ -77,6 +78,7 @@ class TestMigrateAndRollback:
             assert bk_app.get_engine_app("stag").to_wl_obj().latest_config.cluster == CLUSTER_NAME_FOR_TESTING
 
             assert [result.migrator_name for result in migration_process.details.migrations] == [
+                "WlAppBackupMigrator",
                 "ApplicationTypeMigrator",
                 "ApplicationClusterMigrator",
                 "BuildConfigMigrator",
@@ -84,4 +86,5 @@ class TestMigrateAndRollback:
             assert [result.migrator_name for result in migration_process.details.rollbacks] == [
                 "ApplicationClusterMigrator",
                 "ApplicationTypeMigrator",
+                "WlAppBackupMigrator",
             ]

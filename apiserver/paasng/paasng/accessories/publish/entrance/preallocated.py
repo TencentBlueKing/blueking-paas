@@ -1,3 +1,19 @@
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
 import json
 import logging
 from typing import Dict, List, NamedTuple, Optional
@@ -5,14 +21,14 @@ from typing import Dict, List, NamedTuple, Optional
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
-from paas_wl.infras.cluster.shim import Cluster, RegionClusterService
-from paas_wl.workloads.networking.entrance.addrs import URL, EnvExposedURL
-from paas_wl.workloads.networking.entrance.utils import get_legacy_url
+from paas_wl.infras.cluster.entities import AllocationContext
+from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
+from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.configurations.provider import env_vars_providers
-from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.engine.constants import AppEnvName, AppRunTimeBuiltinEnv
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_clusters
 
@@ -59,9 +75,9 @@ def get_preallocated_urls(module_env: ModuleEnvironment) -> List[EnvExposedURL]:
     elif module.exposed_url_type == ExposedURLType.SUBDOMAIN:
         domains = get_preallocated_domains_by_env(module_env)
         return [EnvExposedURL(url=d.as_url(), provider_type="subdomain") for d in domains]
-    elif module.exposed_url_type is None:
-        if url := get_legacy_url(module_env):
-            return [EnvExposedURL(url=URL.from_address(url), provider_type="legacy")]
+    else:
+        # The "exposed_url_type" is None. This should not happen in normal cases.
+        logger.warning("The exposed_url_type is None when getting preallocated urls, module: %s", module)
     return []
 
 
@@ -78,7 +94,6 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> Dict[str, str]:
     try:
         addrs = get_preallocated_address(
             application.code,
-            env.module.region,
             clusters=clusters,
             module_name=env.module.name,
             preferred_url_type=preferred_url_type,
@@ -86,7 +101,7 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> Dict[str, str]:
         addrs_value = json.dumps(addrs._asdict())
     except ValueError:
         logger.warning("Fail to get preallocated address for application: %s, module: %s", application, env.module)
-    return {settings.CONFIGVAR_SYSTEM_PREFIX + "DEFAULT_PREALLOCATED_URLS": addrs_value}
+    return {settings.CONFIGVAR_SYSTEM_PREFIX + AppRunTimeBuiltinEnv.DEFAULT_PREALLOCATED_URLS.value: addrs_value}
 
 
 class PreAddresses(NamedTuple):
@@ -98,7 +113,6 @@ class PreAddresses(NamedTuple):
 
 def get_preallocated_address(
     app_code: str,
-    region: Optional[str] = None,
     clusters: Optional[Dict[AppEnvName, Cluster]] = None,
     module_name: Optional[str] = None,
     preferred_url_type: Optional[ExposedURLType] = None,
@@ -113,11 +127,7 @@ def get_preallocated_address(
     :raises: ValueError no preallocated address can be found
     """
     preferred_url_type = preferred_url_type or ExposedURLType.SUBPATH
-    region = region or settings.DEFAULT_REGION_NAME
     clusters = clusters or {}
-
-    helper = RegionClusterService(region)
-    stag_address, prod_address = "", ""
 
     def _get_cluster_addr(cluster, addr_key: str) -> str:
         """A small helper function for getting address."""
@@ -135,11 +145,24 @@ def get_preallocated_address(
                 return getattr(addr, addr_key).as_url().as_address()
         return ""
 
+    def _get_default_cluster(app_code: str, environment: AppEnvName) -> Cluster:
+        """Get the cluster for the given application and environment"""
+        try:
+            app = Application.objects.get(code=app_code)
+        except Application.DoesNotExist:
+            # The application has not been deployed yet, but we still need to return an address
+            # because other apps might depend on this non-existent application. Therefore, we will
+            # attempt to get a cluster anyway, even if the result might be incorrect.
+            return ClusterAllocator(AllocationContext.create_for_future_system_apps()).get_default()
+
+        ctx = AllocationContext(tenant_id=app.tenant_id, region=app.region, environment=environment)
+        return ClusterAllocator(ctx).get_default()
+
     # 生产环境
-    prod_cluster = clusters.get(AppEnvName.PROD) or helper.get_default_cluster()
+    prod_cluster = clusters.get(AppEnvName.PROD) or _get_default_cluster(app_code, AppEnvName.PROD)
     prod_address = _get_cluster_addr(prod_cluster, "prod")
-    # 测试环境
-    stag_cluster = clusters.get(AppEnvName.STAG) or helper.get_default_cluster()
+    # 预发布环境
+    stag_cluster = clusters.get(AppEnvName.STAG) or _get_default_cluster(app_code, AppEnvName.STAG)
     stag_address = _get_cluster_addr(stag_cluster, "stag")
 
     if not (stag_address and prod_address):
@@ -161,6 +184,3 @@ def get_bk_doc_url_prefix() -> str:
     # Address for bk_docs_center saas
     # Remove the "/" at the end to ensure that the subdomain and subpath mode are handled in the same way
     return get_preallocated_address(settings.BK_DOC_APP_ID).prod.rstrip("/")
-
-
-# pre-allocated addresses related functions end

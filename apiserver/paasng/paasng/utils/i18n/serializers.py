@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import copy
 from contextlib import ExitStack, contextmanager
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Type, Union, overload
@@ -44,8 +43,7 @@ def i18n(cls_or_languages: Optional[List[str]] = None) -> Callable[[SerializerTy
 
 
 @overload
-def i18n(cls_or_languages: SerializerType) -> SerializerType:
-    ...
+def i18n(cls_or_languages: SerializerType) -> SerializerType: ...
 
 
 def i18n(
@@ -113,7 +111,7 @@ class I18NExtend:
     ...     field = I18NExtend(serializers.CharField())
     ...
     ... slz = DataSLZ(data={"field_en": "alpha", "field_zh_cn": "阿尔法"})
-    ... slz.is_valid(True)
+    ... slz.is_valid(raise_exception=True)
     ... assert slz.validated_data == {"field_en": "alpha", "field_zh_cn": "阿尔法"}
     """
 
@@ -121,7 +119,7 @@ class I18NExtend:
         # languages: What languages does this Field support
         self.languages = list(kwargs.pop("languages", (lang[0] for lang in settings.LANGUAGES)))
         assert base_field.source is None, (
-            "The `source` argument is not meaningful for I18NField." "Remove `source=` from the field declaration."
+            "The `source` argument is not meaningful for I18NField. Remove `source=` from the field declaration."
         )
         self.kwargs = kwargs
         self._base_field = base_field
@@ -239,7 +237,7 @@ class FallbackMixin(_Base):
         self._i18n_field_name = None  # type: ignore
         source = kwargs.pop("source", None)
         assert source is None, (
-            "The `source` argument is not meaningful FallbackCharField." "Remove `source=` from the field declaration."
+            "The `source` argument is not meaningful FallbackCharField. Remove `source=` from the field declaration."
         )
         super().__init__(**kwargs)
 

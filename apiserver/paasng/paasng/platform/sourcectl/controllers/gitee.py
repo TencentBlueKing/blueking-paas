@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote
@@ -27,7 +26,14 @@ from django.utils.functional import cached_property
 from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.git.client import GitClient
 from paasng.platform.sourcectl.gitee.client import GiteeApiClient
-from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, GitProject, Repository, VersionInfo
+from paasng.platform.sourcectl.models import (
+    AlternativeVersion,
+    CommitInfo,
+    CommitLog,
+    GitProject,
+    Repository,
+    VersionInfo,
+)
 from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
 
@@ -98,7 +104,7 @@ class GiteeRepoController(BaseGitRepoController):
         """解析组合 revision 信息（如 branch:master, tag:v1.2），获取更加具体的 commit id（hash）"""
         if ":" not in smart_revision:
             return smart_revision
-        version_type, version_name = smart_revision.split(":")
+        _, version_name = smart_revision.split(":")
         commit = self.api_client.repo_last_commit(self.project, version_name)
         return commit["sha"]
 
@@ -116,6 +122,10 @@ class GiteeRepoController(BaseGitRepoController):
         return repo_url.replace(".git", f"/compare/{from_revision}...{to_revision}")
 
     def get_diff_commit_logs(self, from_revision, to_revision=None, rel_filepath=None) -> List[CommitLog]:
+        """gitee 不支持该功能"""
+        raise NotImplementedError
+
+    def commit_files(self, commit_info: CommitInfo) -> None:
         """gitee 不支持该功能"""
         raise NotImplementedError
 

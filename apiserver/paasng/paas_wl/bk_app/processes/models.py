@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
 from cattr import unstructure
@@ -29,11 +27,13 @@ from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
-from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProbeType, ProcessTargetStatus
+from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
-from paasng.platform.declarative.deployment.resources import ProbeHandler
+from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.platform.bkapp_model.entities import ProbeHandler
+from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.utils.models import make_json_field
 
 if TYPE_CHECKING:
@@ -58,6 +58,10 @@ class ProcessSpecPlanManager(models.Manager):
 
 
 class ProcessSpecPlan(models.Model):
+    """
+    [multi-tenancy] This model is not tenant-aware.
+    """
+
     name = models.CharField("进程规格方案名称", max_length=32, db_index=True)
     max_replicas = models.IntegerField("最大副本数")
     limits = JSONField(default={})
@@ -98,6 +102,8 @@ class ProcessSpec(TimestampedModel):
     autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
     scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
 
+    tenant_id = tenant_id_field_factory()
+
     def save(self, *args, **kwargs):
         if self.target_replicas > self.plan.max_replicas:
             raise ValueError("target_replicas is more than plan max_replicas")
@@ -127,14 +133,14 @@ class ProcessSpecManager:
     def __init__(self, wl_app: "WlApp"):
         self.wl_app = wl_app
 
-    def sync(self, processes: List["ProcessTmpl"]):
+    def sync(self, processes: List[ProcessTmpl]):
         """Sync ProcessSpecs data with given processes.
 
         :param processes: plain process spec structure,
                           such as [{"name": "web", "command": "foo", "replicas": 1, "plan": "bar"}, ...]
                           where 'replicas' and 'plan' is optional
         """
-        processes_map: Dict[str, "ProcessTmpl"] = {process.name: process for process in processes}
+        processes_map: Dict[str, ProcessTmpl] = {process.name: process for process in processes}
         environment = get_metadata(self.wl_app).environment
 
         # Hardcode proc_type to "process" because no other values is supported at this moment.
@@ -155,7 +161,7 @@ class ProcessSpecManager:
             )
         adding_procs = [process for name, process in processes_map.items() if name not in existed_procs_name]
 
-        def process_spec_builder(process: "ProcessTmpl") -> ProcessSpec:
+        def process_spec_builder(process: ProcessTmpl) -> ProcessSpec:
             target_replicas = process.replicas or self.get_default_replicas(process.name, environment)
             plan = default_process_spec_plan
             if plan_name := process.plan:
@@ -163,14 +169,14 @@ class ProcessSpecManager:
 
             return ProcessSpec(
                 type=proc_type,
-                region=self.wl_app.region,
                 name=process.name,
                 engine_app_id=self.wl_app.pk,
                 target_replicas=target_replicas,
                 plan=plan,
                 proc_command=process.command,
                 autoscaling=process.autoscaling,
-                scaling_config=process.scaling_config,
+                scaling_config=process.scaling_config.dict() if process.scaling_config else None,
+                tenant_id=self.wl_app.tenant_id,
             )
 
         self.bulk_create_procs(proc_creator=process_spec_builder, adding_procs=adding_procs)
@@ -179,7 +185,7 @@ class ProcessSpecManager:
         # update spec objects
         updating_proc_specs = [process for name, process in processes_map.items() if name in existed_procs_name]
 
-        def process_spec_updator(process: "ProcessTmpl") -> Tuple[bool, ProcessSpec]:
+        def process_spec_updator(process: ProcessTmpl) -> Tuple[bool, ProcessSpec]:
             process_spec = proc_specs.get(name=process.name)
             recorder = AttrSetter(process_spec)
 
@@ -193,8 +199,8 @@ class ProcessSpecManager:
                 recorder.setattr("plan", plan)
             if process.autoscaling != process_spec.autoscaling:
                 recorder.setattr("autoscaling", process.autoscaling)
-            if (scaling_config := process.scaling_config) and scaling_config != process_spec.scaling_config:
-                recorder.setattr("scaling_config", scaling_config)
+            if (scaling_config := process.scaling_config) and scaling_config.dict() != process_spec.scaling_config:
+                recorder.setattr("scaling_config", scaling_config.dict())
             if (replicas := process.replicas) and replicas != process_spec.target_replicas:
                 recorder.setattr("target_replicas", replicas)
             return recorder.changed, process_spec
@@ -215,8 +221,8 @@ class ProcessSpecManager:
 
     def bulk_create_procs(
         self,
-        proc_creator: Callable[["ProcessTmpl"], ProcessSpec],
-        adding_procs: List["ProcessTmpl"],
+        proc_creator: Callable[[ProcessTmpl], ProcessSpec],
+        adding_procs: List[ProcessTmpl],
     ):
         """bulk create ProcessSpec
 
@@ -231,8 +237,8 @@ class ProcessSpecManager:
 
     def bulk_update_procs(
         self,
-        proc_updator: Callable[["ProcessTmpl"], Tuple[bool, ProcessSpec]],
-        updating_procs: List["ProcessTmpl"],
+        proc_updator: Callable[[ProcessTmpl], Tuple[bool, ProcessSpec]],
+        updating_procs: List[ProcessTmpl],
         updated_fields: List[str],
     ):
         """bulk update ProcessSpec
@@ -270,47 +276,7 @@ def _get_structure(app: "WlApp") -> Dict:
 # Set the "get_structure" function to current implementation
 set_global_get_structure(_get_structure)
 
-
-@dataclass
-class ProcessTmpl:
-    """This class declare a process template which can be used to sync process spec or deploy a process(deployment)
-
-    :param command: 启动指令
-    :param replicas: 副本数
-    :param plan: 资源方案名称
-    :param autoscaling: 是否开启自动扩缩容
-    :param scaling_config: 自动扩缩容配置
-    """
-
-    name: str
-    command: str
-    replicas: Optional[int] = None
-    plan: Optional[str] = None
-    autoscaling: bool = False
-    scaling_config: Optional[AutoscalingConfig] = None
-
-    def __post_init__(self):
-        self.name = self.name.lower()
-
-
 ProbeHandlerField = make_json_field("ProbeHandlerField", ProbeHandler)
-
-
-class ProcessProbe(models.Model):
-    app = models.ForeignKey("api.App", related_name="process_probe", on_delete=models.CASCADE, db_constraint=False)
-    # 探针应该与 process 匹配 （Process 定义里面就是将配置里面的 key 转换为 type ，因此这里与 process 定义同步，取名 process_type）
-    process_type = models.CharField(max_length=255)
-    probe_type = models.CharField(max_length=255, choices=ProbeType.get_django_choices())
-
-    probe_handler = ProbeHandlerField(default=dict, help_text="具体的检测机制配置，例如 httpGet 完整配置")
-    initial_delay_seconds = models.IntegerField(default=0)
-    timeout_seconds = models.PositiveIntegerField(default=1)
-    period_seconds = models.PositiveIntegerField(default=10)
-    success_threshold = models.PositiveIntegerField(default=1)
-    failure_threshold = models.PositiveIntegerField(default=3)
-
-    class Meta:
-        unique_together = ("app", "process_type", "probe_type")
 
 
 def initialize_default_proc_spec_plans():

@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from dataclasses import dataclass
 from typing import Dict
@@ -23,6 +24,7 @@ from typing import Dict
 from django.conf import settings
 from paas_service.base_vendor import BaseProvider, InstanceData  # noqa
 from paas_service.utils import gen_unique_id
+
 from svc_otel.bkmonitorv3.client import make_bk_monitor_client
 from svc_otel.vendor.models import ApmData
 
@@ -31,24 +33,23 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Provider(BaseProvider):
-
     SERVICE_NAME = "otel"
 
-    def _apply_data_token(self, bk_app_code: str, env: str, bk_monitor_space_id: str) -> ApmData:
+    def _apply_data_token(self, bk_app_code: str, env: str, bk_monitor_space_id: str, tenant_id: str) -> ApmData:
         """到蓝鲸监控 OTEL 服务给应用申请 data_token"""
         # 先查询 app_code、env 对应的 data_token 是否已经申请过，已申请则直接返回
         if ApmData.objects.filter(bk_app_code=bk_app_code, env=env).exists():
             apm_data = ApmData.objects.get(bk_app_code=bk_app_code, env=env)
             return apm_data
 
-        app_name = f'bkapp_{bk_app_code}_{env}'
+        app_name = f"bkapp_{bk_app_code}_{env}"
         # APM 应用名称只能包含小写字母和数字(^[a-z0-9_]+$), 需要将 bk_app_code 的连字符转换为 0us0
         app_name = app_name.replace("-", "0us0")
 
         # 保证 app_name 的唯一性
-        unique_app_name = gen_unique_id(app_name, reserve_length=64, divide_char='_')
+        unique_app_name = gen_unique_id(app_name, reserve_length=64, divide_char="_")
 
-        client = make_bk_monitor_client()
+        client = make_bk_monitor_client(tenant_id)
         data_token = client.create_apm(unique_app_name, bk_monitor_space_id)
 
         # 将新申请的 data_token 存储到 DB 中
@@ -61,9 +62,10 @@ class Provider(BaseProvider):
         logger.info("正在创建增强服务实例...")
 
         bk_app_code = params.get("app_code")
-        env = params.get('env')
-        bk_monitor_space_id = params.get('bk_monitor_space_id')
-        apm_data = self._apply_data_token(bk_app_code, env, bk_monitor_space_id)
+        env = params.get("env")
+        bk_monitor_space_id = params.get("bk_monitor_space_id")
+        tenant_id = params.get("tenant_id")
+        apm_data = self._apply_data_token(bk_app_code, env, bk_monitor_space_id, tenant_id)
 
         return InstanceData(
             credentials={

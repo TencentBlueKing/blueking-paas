@@ -16,9 +16,10 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import random
 import string
-from collections import MutableMapping
+from collections.abc import MutableMapping
 
 from pydantic import BaseModel
 
@@ -32,7 +33,7 @@ def generate_password(length=10):
     password_chars = [random.choice(string.ascii_letters + string.digits) for _ in range(length)]
     password_chars.append(random.choice(string.digits))
     random.shuffle(password_chars)
-    return ''.join(password_chars)
+    return "".join(password_chars)
 
 
 class BaseFancyModel(BaseModel, MutableMapping):
@@ -50,3 +51,18 @@ class BaseFancyModel(BaseModel, MutableMapping):
 
     def __len__(self):
         return len(self.__dict__)
+
+
+def gen_addons_cert_mount_path(provider_name: str, cert_name: str) -> str:
+    """生成蓝鲸应用挂载增强服务 ssl 证书的路径
+    重要：不要随意调整该路径，可能会导致证书无法正常挂载（需要与 ApiServer 侧同步调整）
+    :param provider_name: 增强服务提供者名称，如：redis，mysql，rabbitmq（也可能与 Service 同名）
+    :param cert_name: 证书名称，必须是 ca.crt，tls.crt，tls.key 三者之一
+    """
+    if not provider_name:
+        raise ValueError("provider_name is required")
+
+    if cert_name not in ["ca.crt", "tls.crt", "tls.key"]:
+        raise ValueError("cert_name must be one of ca.crt, tls.crt, tls.key")
+
+    return f"/opt/blueking/bkapp-addons-certs/{provider_name}/{cert_name}"

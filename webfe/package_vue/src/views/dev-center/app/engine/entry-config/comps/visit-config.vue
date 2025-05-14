@@ -140,6 +140,7 @@
         <bk-table-column
           :label="$t('访问地址')"
           :min-width="600"
+          class-name="custom-line-column"
         >
           <template slot-scope="{ row, $index }">
             <div
@@ -167,7 +168,7 @@
                     >
                       <bk-input
                         v-model="e.address.url"
-                        :placeholder="domainInputPlaceholderText"
+                        :placeholder="$t('请输入有效域名')"
                         class="url-input-cls"
                       >
                         <template slot="prepend">
@@ -218,9 +219,12 @@
             </div>
           </template>
         </bk-table-column>
+        <!-- 云原生应用暂不支持 -->
         <bk-table-column
+          v-if="!isCloudNativeApp"
           :label="$t('进程')"
           :width="110"
+          class-name="custom-line-column"
         >
           <template slot-scope="{ row }">
             <div
@@ -255,9 +259,11 @@
           </template>
         </bk-table-column>
         <bk-table-column
+          v-if="!isMigrationStatus"
           :label="$t('操作')"
           :width="120"
           fixed="right"
+          class-name="custom-line-column"
         >
           <template slot-scope="{ row, $index }">
             <div
@@ -307,7 +313,7 @@
                   </section>
                 </div>
                 <div v-else>--</div>
-                <div class="line" :style="{top: $index < 4 ? '100%' : 'calc(100% - 0.5px)'}"></div>
+                <div :class="['line', { 'show-last-line': entryList.length === $index + 1 }]"></div>
               </div>
             </div>
           </template>
@@ -344,18 +350,18 @@
         <div class="tl">
           <p>{{ $t('设定后：') }}</p>
           <div class="flex-row mt5">
-            <p>1. </p>
+            <p>1.</p>
             <p class="pl10">
-              {{ $t('应用短地址') }}{{$t('（')}}{{ $route.params.id }}
-              {{ getAppRootDomain(curClickAppModule.clusters.prod) }}{{$t('）')}}
-              {{ $t('指向到应用') }} {{ domainDialog.moduleName }}
+              {{ $t('应用短地址') }}{{ $t('（') }}{{ $route.params.id }}
+              {{ getAppRootDomain(curClickAppModule.clusters.prod) }}{{ $t('）') }} {{ $t('指向到应用') }}
+              {{ domainDialog.moduleName }}
               {{ $t('模块的生产环境') }}
             </p>
           </div>
           <div class="flex-row mt5">
-            <p>2. </p>
+            <p>2.</p>
             <p class="pl10">
-              {{ $t('应用访问限制') }}{{$t('（')}}{{ accessControlText.join('、') }}{{$t('）')}}{{ $t('变更为') }}
+              {{ $t('应用访问限制') }}{{ $t('（') }}{{ accessControlText.join('、') }}{{ $t('）') }}{{ $t('变更为') }}
               {{ $t('对') }}{{ domainDialog.moduleName }} {{ $t('生效') }}
             </p>
           </div>
@@ -382,25 +388,27 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import { ENV_ENUM } from '@/common/constants';
 import { copy } from '@/common/tools';
 export default {
   mixins: [appBaseMixin],
+  props: {
+    // 是否为迁移状态
+    isMigrationStatus: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       type: '',
-      example: '',
       canUpdateSubDomain: false,
       isLoading: false,
       visitDialog: {
         visiable: false,
         title: this.$t('确认切换为子域名访问地址？'),
-      },
-      moduleEntryInfo: {
-        entrances: [],
-        type: 1,
-        entrancesTemplate: {},
       },
       region: '',
       rootDomains: [],
@@ -418,7 +426,6 @@ export default {
       tableIndex: '',
       envIndex: '',
       ipConfigInfo: { frontend_ingress_ip: '' },
-      domainConfig: {},
       placeholderText: '',
       rules: {
         url: [
@@ -429,12 +436,10 @@ export default {
           },
           {
             validator: (value) => {
-              const validDomainsPart = this.domainConfig.valid_domain_suffixes.join('|').replace('.', '\\.');
-              // eslint-disable-next-line no-useless-escape
-              const domainReg = new RegExp(`^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})*?(${validDomainsPart})$`);
+              const domainReg = /^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})*$/;
               return domainReg.test(value);
             },
-            message: () => (this.placeholderText ? `${this.$t('请输入有效域名，并以这些后缀结尾：')}${this.placeholderText}` : `${this.$t('请输入有效域名')}`),
+            message: () => `${this.$t('请输入有效域名')}`,
             trigger: 'blur',
           },
         ],
@@ -470,6 +475,10 @@ export default {
       return this.$store.state.platformFeature;
     },
     configIpTip() {
+      let displayIp = this.defaultIp;
+      if (!this.isIpConsistent) {
+        displayIp = this.ipConfigInfo.frontend_ingress_ip;
+      }
       return {
         theme: 'light',
         allowHtml: true,
@@ -479,14 +488,12 @@ export default {
           <div
             class="mt10 ip-view-wrapper"
             style="height: 32px;background: #F0F1F5;border-radius: 2px;line-height: 32px;">
-            ${this.defaultIp}
+            ${displayIp}
             <i class="paasng-icon paasng-general-copy ip-icon-customize-cls"></i>
           </div>
           <div class="mt10 mb10" style="color: #979BA5;">${this.$t('推荐操作流程: ')}</div>
           <div>1. ${this.$t('首先在页面上添加好自定义访问地址')} </div>
-          <div>2. ${this.$t('修改本机 Hosts 文件，将域名解析到表格中的 IP')} </div>
-          <div>3. ${this.$t('打开浏览器，测试访问是否正常')} </div>
-          <div>4. ${this.$t('修改域名解析记录，将其永久解析到目标 IP')} </div>
+          <div>2. ${this.$t('将您的自定义域名解析到表格中的 IP')} </div>
           </div>`,
         placements: ['bottom'],
         onHidden: () => {
@@ -504,15 +511,6 @@ export default {
     defaultIp() {
       return this.defaultItem.frontend_ingress_ip;
     },
-    // 域名规则placeholder
-    domainInputPlaceholderText() {
-      if (this.domainConfig?.valid_domain_suffixes?.length) {
-        this.placeholderText = this.domainConfig.valid_domain_suffixes.join(',');
-        return this.$t('请输入有效域名，并以这些后缀结尾：') + this.placeholderText;
-      }
-      return this.$t('请输入有效域名');
-    },
-
     // 根据数据提示不同内容
     accessControlText() {
       const textData = { user_access_control: this.$t('用户限制'), ip_access_control: this.$t('IP限制') };
@@ -551,7 +549,6 @@ export default {
       try {
         const { region } = this.curAppInfo.application;
         const res = await this.$store.dispatch('getAppRegion', region);
-        this.domainConfig = res.module_custom_domain;
         this.canUpdateSubDomain = res.entrance_config.manually_upgrade_to_subdomain_allowed;
       } catch (e) {
         this.$paasMessage({
@@ -566,8 +563,10 @@ export default {
     // 访问地址列表数据
     async getEntryList() {
       try {
+        // 迁移应用请求旧数据快照
+        const dispatchName = this.isMigrationStatus ? 'migration/getEntrances' : 'entryConfig/getEntryDataList';
         this.isTableLoading = true;
-        const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
+        const res = await this.$store.dispatch(dispatchName, {
           appCode: this.appCode,
         });
         this.entryList = (res || []).map((e) => {
@@ -699,9 +698,9 @@ export default {
 
     // 环境鼠标移入事件
     handleEnvMouseEnter(index, envIndex, payload, env) {
-      this.ipConfigInfo = (this.curIngressIpConfigs || [])
-        .find(e => e.environment === env && e.module === payload.name)
-      || { frontend_ingress_ip: '暂无ip地址信息' };   // ip地址信息
+      this.ipConfigInfo = (this.curIngressIpConfigs || []).find(
+        (e) => e.environment === env && e.module === payload.name
+      ) || { frontend_ingress_ip: '暂无ip地址信息' }; // ip地址信息
       this.tableIndex = index;
       this.envIndex = envIndex;
       this.mouseEnter = true;
@@ -717,7 +716,7 @@ export default {
 
     // 设置为主模块
     handleSetDefault(payload) {
-      this.curClickAppModule = this.curAppModuleList.find(e => e.name === payload.name) || {}; // 当前点击的模块的所有信息
+      this.curClickAppModule = this.curAppModuleList.find((e) => e.name === payload.name) || {}; // 当前点击的模块的所有信息
       this.domainDialog.visiable = true;
       this.domainDialog.moduleName = payload.name;
       this.domainDialog.title = this.$t(`是否设定${payload.name}模块为主模块`);
@@ -733,14 +732,14 @@ export default {
           this.tipIndex++;
           // 判断ip是否一致
           const firstIp = this.defaultItem?.frontend_ingress_ip || '';
-          this.isIpConsistent = (res || []).every(item => firstIp === item.frontend_ingress_ip);
+          this.isIpConsistent = (res || []).every((item) => firstIp === item.frontend_ingress_ip);
         },
         (res) => {
           this.$paasMessage({
             theme: 'error',
             message: `${this.$t('无法获取域名解析目标IP，错误：')}${res.detail}`,
           });
-        },
+        }
       );
     },
 
@@ -765,10 +764,11 @@ export default {
     async handleSubmit(index, envIndex, payload, envType) {
       this.curInputIndex = envIndex;
       // 需要过滤查看状态的数据才能获取到需要校验输入框的下标
-      const readDataLength =  (payload?.envs[envType] || [])
-        .filter((e, readIndex) => !e.isEdit && readIndex <= envIndex).length;
-      const validateFromIndex = envIndex - readDataLength;    // 当前点击保存的输入框下标
-      await this.$refs.urlInfoForm[validateFromIndex].validate();   // 校验
+      const readDataLength = (payload?.envs[envType] || []).filter(
+        (e, readIndex) => !e.isEdit && readIndex <= envIndex
+      ).length;
+      const validateFromIndex = envIndex - readDataLength; // 当前点击保存的输入框下标
+      await this.$refs.urlInfoForm[validateFromIndex].validate(); // 校验
       const curUrlParams = {
         environment_name: envType,
         domain_name: payload.envs[envType][envIndex].address.url,
@@ -855,7 +855,7 @@ export default {
       this.entryList = this.entryList.map((e, i) => {
         if (index === i) {
           e.envs[envType][envIndex].isEdit = true;
-          const u = e.envs[envType][envIndex].address.url ? new URL(e.envs[envType][envIndex].address.url) : '';   // 格式化地址
+          const u = e.envs[envType][envIndex].address.url ? new URL(e.envs[envType][envIndex].address.url) : ''; // 格式化地址
           e.envs[envType][envIndex].address.url = u.hostname;
           e.envs[envType][envIndex].address.pathPrefix = u.pathname;
           this.hostInfo.hostName = u.hostname;
@@ -1065,6 +1065,20 @@ export default {
     top: 100%;
     left: -15px;
     z-index: 1;
+    &.show-last-line {
+      top: calc(100% - 0.5%);
+    }
+  }
+
+  .custom-line-column .cell .cell-container:last-child {
+    .url-container:last-child {
+      .line {
+        display: none;
+        &.show-last-line {
+          display: block;
+        }
+      }
+    }
   }
 
   .url-container {

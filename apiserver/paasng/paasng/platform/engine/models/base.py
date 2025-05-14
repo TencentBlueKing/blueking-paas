@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import uuid
 from typing import TYPE_CHECKING, Optional
@@ -24,6 +23,7 @@ from django.db import models
 from django.utils import timezone
 
 from paas_wl.bk_app.applications.models import WlApp
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import JobStatus
 from paasng.utils.models import BkUserField, OwnerTimestampedModel, TimestampedModel
 
@@ -59,12 +59,14 @@ class EngineApp(OwnerTimestampedModel):
     region = models.CharField(max_length=32)
     is_active = models.BooleanField(verbose_name="是否活跃", default=True)
 
+    tenant_id = tenant_id_field_factory()
+
     def __str__(self):
         return "{name}-{region}".format(name=self.name, region=self.region)
 
     def to_wl_obj(self) -> "WlApp":
         """Return the corresponding WlApp object in the workloads module"""
-        return WlApp.objects.get(region=self.region, name=self.name)
+        return WlApp.objects.get(name=self.name)
 
 
 class MarkStatusMixin:

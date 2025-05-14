@@ -1,29 +1,28 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from paasng.utils.structure import register
+from paasng.utils.structure import prepare_json_field
 
 
-@register
+@prepare_json_field
 class Pipeline(BaseModel):
     """流水线对象
 
@@ -35,7 +34,7 @@ class Pipeline(BaseModel):
     pipelineId: str
 
 
-@register(by_alias=False)
+@prepare_json_field(by_alias=False)
 class PipelineBuild(BaseModel):
     """流水线构建对象
 
@@ -52,7 +51,7 @@ class PipelineBuild(BaseModel):
         allow_population_by_field_name = True
 
 
-@register
+@prepare_json_field
 class TimeCost(BaseModel):
     """构建阶段耗时详情
 
@@ -70,7 +69,7 @@ class TimeCost(BaseModel):
     totalCost: int
 
 
-@register
+@prepare_json_field
 class BuildStageStatus(BaseModel):
     """构建阶段状态
 
@@ -90,7 +89,7 @@ class BuildStageStatus(BaseModel):
     showMsg: Optional[str]
 
 
-@register
+@prepare_json_field
 class PipelineBuildStatus(BaseModel):
     """流水线构建状态
 
@@ -110,21 +109,33 @@ class PipelineBuildStatus(BaseModel):
     status: str
     currentTimestamp: str
     stageStatus: List[BuildStageStatus] = Field(default_factory=list)
-    totalTime: int
-    executeTime: int
+    totalTime: Optional[int] = 0
+    executeTime: Optional[int] = 0
 
     class Config:
         allow_population_by_field_name = True
 
 
-@register(by_alias=False)
+@prepare_json_field
+class AdditionalOptions(BaseModel):
+    """流水线构建状态额外配置
+
+    :param elementPostInfo: 后置状态信息，如果存在这个字段说明这个步骤是后置步骤，前端不展示出来
+    """
+
+    elementPostInfo: Optional[dict]
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+@prepare_json_field(by_alias=False)
 class PipelineElementModel(BaseModel):
     """流水线元素模型
 
     :param type: Element 类型
     :param name: 任务名称
     :param elementId: 任务ID
-    :param elementEnable: 任务启用状态
     :param status: 任务状态
 
     :param errorType: 错误类型
@@ -136,7 +147,6 @@ class PipelineElementModel(BaseModel):
 
     type: str = Field(alias="@type")
     elementId: str = Field(alias="id")
-    elementEnable: bool
     name: str
 
     status: Optional[str]
@@ -148,11 +158,13 @@ class PipelineElementModel(BaseModel):
     errorMsg: Optional[str]
     timeCost: Optional[TimeCost]
 
+    additionalOptions: Optional[AdditionalOptions]
+
     class Config:
         allow_population_by_field_name = True
 
 
-@register(by_alias=False)
+@prepare_json_field(by_alias=False)
 class PipelineContainerModel(BaseModel):
     """流水线容器模型
 
@@ -174,7 +186,7 @@ class PipelineContainerModel(BaseModel):
         allow_population_by_field_name = True
 
 
-@register(by_alias=False)
+@prepare_json_field(by_alias=False)
 class PipelineStageModel(BaseModel):
     """流水线阶段模型
 
@@ -199,7 +211,7 @@ class PipelineStageModel(BaseModel):
         allow_population_by_field_name = True
 
 
-@register
+@prepare_json_field
 class PipelineModel(BaseModel):
     """流水线模型
 
@@ -215,7 +227,7 @@ class PipelineModel(BaseModel):
     timeCost: Optional[TimeCost]
 
 
-@register(by_alias=False)
+@prepare_json_field(by_alias=False)
 class PipelineBuildDetail(BaseModel):
     """流水线构建详情
 
@@ -243,7 +255,7 @@ class PipelineBuildDetail(BaseModel):
         allow_population_by_field_name = True
 
 
-@register
+@prepare_json_field
 class PipelineLogLine(BaseModel):
     """流水线构建
 
@@ -267,7 +279,7 @@ class PipelineLogLine(BaseModel):
     executeCount: int
 
 
-@register
+@prepare_json_field
 class PipelineLogModel(BaseModel):
     """流水线构建日志
 
@@ -283,3 +295,27 @@ class PipelineLogModel(BaseModel):
     hasMore: Optional[bool]
     logs: List[PipelineLogLine]
     timeUsed: Optional[int]
+
+
+@prepare_json_field
+class CodeccPluginBasicInfo(BaseModel):
+    """Codecc 工具插件基本信息
+
+    :param name: 插件标识
+    :param displayName: 插件名称
+    :param devLanguage: 开发语言
+    :param toolCnTypes: 工具类别
+    :param langList: 适用语言
+    :param needBuildScript: 业务编译脚本, True: 需要业务提供, False: 不需要业务提供
+    :param checkerNum: 规则数
+    :param description: 工具描述
+    """
+
+    name: Optional[str] = None
+    displayName: Optional[str] = None
+    checkerNum: Optional[int] = None
+    devLanguage: Optional[str] = None
+    toolCnTypes: Optional[List[str]] = []
+    langList: Optional[List[str]] = []
+    needBuildScript: Optional[bool] = False
+    description: Optional[str] = ""

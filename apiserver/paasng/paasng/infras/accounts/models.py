@@ -1,26 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import random
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from bkpaas_auth import get_user_by_user_id
+from bkpaas_auth.models import User as RequestUser
 from blue_krill.models.fields import EncryptField
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, UserManager
@@ -30,12 +30,13 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
+from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import FUNCTION_TYPE_MAP, SiteRole
 from paasng.infras.accounts.constants import AccountFeatureFlag as AccountFeatureFlagConst
 from paasng.infras.accounts.oauth.models import Project, Scope
 from paasng.infras.accounts.oauth.utils import get_backend
-from paasng.utils.models import AuditedModel, BkUserField, RegionListField, TimestampedModel
-from paasng.utils.text import generate_token
+from paasng.utils.models import AuditedModel, BkUserField, TimestampedModel
 
 
 class User(AbstractBaseUser):
@@ -66,7 +67,7 @@ class User(AbstractBaseUser):
         _("active"),
         default=True,
         help_text=_(
-            "Designates whether this user should be treated as active. " "Unselect this instead of deleting accounts."
+            "Designates whether this user should be treated as active. Unselect this instead of deleting accounts."
         ),
     )
     date_joined = models.DateTimeField(_("date joined"), default=timezone.now)
@@ -89,69 +90,32 @@ class User(AbstractBaseUser):
         return (self.username,)
 
 
-class UserPrivateTokenManager(models.Manager):
-    """Custom manager for UserPrivateToken"""
-
-    def create_token(self, user: User, expires_in: Optional[int]) -> "UserPrivateToken":
-        """Create a random private token for user
-
-        :param expires_in: after how many seconds, this token will be marked expired, None means
-            never expires.
-        """
-        token = generate_token(length=30)
-        expires_at = None
-        if expires_in:
-            expires_at = timezone.now() + datetime.timedelta(seconds=expires_in)
-        return self.create(user=user, token=token, expires_at=expires_at)
-
-    def get_by_natural_key(self, user: str, token: str, **kwargs):
-        return self.get(user=User.objects.get(username=user))
-
-
-class UserPrivateToken(models.Model):
-    """Private token can be used to authenticate an user, these tokens usually have very long
-    expiration period. So they are perfect for system level communications.
-    """
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    token = models.CharField(max_length=64, unique=True)
-    expires_at = models.DateTimeField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
-
-    objects = UserPrivateTokenManager()
-
-    def has_expired(self):
-        """Check if token has expired"""
-        if not self.is_active:
-            return True
-
-        # empty "expired_at" field means this token will never expire
-        if not self.expires_at:
-            return False
-        return timezone.now() > self.expires_at
-
-    def natural_key(self):
-        return self.user, self.token
-
-
-# 声明要求确保了所有 User 对象在任何 UserPrivateToken 对象之前序列化
-UserPrivateToken.natural_key.dependencies = ["accounts.user"]  # type: ignore
-
-
 class UserProfileManager(models.Manager):
     """Custom profile manager for user"""
 
-    def get_profile(self, user):
+    def get_profile(self, user: RequestUser):
+        """获取或创建用户基本信息，包含用户权限、特性等。
+
+        :param user: 通过 request.user 获取的用户信息
+        """
         if user.pk is None or not user.pk:
             raise ValueError("Must provide a real user, not an anonymous user!")
 
+        current_tenant_id = get_tenant(user).id
+
         try:
-            return self.model.objects.get(user=user.pk)
+            profile = self.model.objects.get(user=user.pk)
+            # 如果 tenant_id 跟当前用户的 tenant-id 不一致的时候更新
+            if profile.tenant_id != current_tenant_id:
+                profile.tenant_id = current_tenant_id
+                profile.save(update_fields=["tenant_id"])
         except self.model.DoesNotExist:
-            # Auto create user
+            # 用户首次访问时，自动创建普通用户。否则必须手动将用户添加到 UserProfile 表后，才能访问站点。
             if settings.AUTO_CREATE_REGULAR_USER:
-                return self.create(user=user.pk, role=SiteRole.USER.value)
+                return self.create(user=user.pk, tenant_id=current_tenant_id, role=SiteRole.USER.value)
             raise
+        else:
+            return profile
 
     def get_by_natural_key(self, user: str):
         return self.get(user=user)
@@ -163,7 +127,8 @@ class UserProfile(TimestampedModel):
     user = BkUserField(unique=True)
     role = models.IntegerField(default=SiteRole.USER.value)
     feature_flags = models.TextField(null=True, blank=True)
-    enable_regions = RegionListField()
+
+    tenant_id = tenant_id_field_factory()
 
     objects = UserProfileManager()
 
@@ -274,7 +239,13 @@ class Oauth2TokenHolder(TimestampedModel):
 
 
 class PrivateTokenHolder(AuditedModel):
-    """Private Token for sourcectl"""
+    """Besides the OAuth2 token, the private token is also supported for authentication
+    with external code services, such as GitLab, etc. When a user (such as a system user)
+    cannot use OAuth2, the private token is a good alternative.
+
+    Despite the name, the "private token" in this model is not related to the "ClientPrivateToken"
+    model.
+    """
 
     provider = models.CharField(max_length=32)
     private_token = EncryptField(default="")
@@ -327,22 +298,3 @@ class AccountFeatureFlag(TimestampedModel):
     effect = models.BooleanField("是否允许(value)", default=True)
     name = models.CharField("特性名称(key)", max_length=64)
     objects = AccountFeatureFlagManager()
-
-
-class AuthenticatedAppAsUserManager(models.Manager):
-    def get_by_natural_key(self, bk_app_code: str):
-        return self.get(bk_app_code=bk_app_code)
-
-
-class AuthenticatedAppAsUser(TimestampedModel):
-    """Store relationships which treat an authenticated(by API Gateway) app as an regular user,
-    useful for calling system APIs without providing any real user credentials"""
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    bk_app_code = models.CharField(max_length=64, unique=True)
-    is_active = models.BooleanField(default=True)
-
-    objects = AuthenticatedAppAsUserManager()
-
-    def natural_key(self):
-        return (self.bk_app_code,)

@@ -41,6 +41,32 @@ type BkApp struct {
 // Hub marks this type as a conversion hub.
 func (*BkApp) Hub() {}
 
+// EnableProcServicesFeature enable proc services feature
+func (bkapp *BkApp) EnableProcServicesFeature() {
+	if bkapp.Annotations == nil {
+		bkapp.Annotations = make(map[string]string)
+	}
+	bkapp.Annotations[ProcServicesFeatureEnabledAnnoKey] = "true"
+}
+
+// IsProcServicesFeatureEnabled check if bkapp use proc services feature
+func (bkapp *BkApp) IsProcServicesFeatureEnabled() bool {
+	if val, ok := bkapp.Annotations[ProcServicesFeatureEnabledAnnoKey]; ok && val == "true" {
+		return true
+	}
+	return false
+}
+
+// HasProcServices check if bkapp has proc services config
+func (bkapp *BkApp) HasProcServices() bool {
+	for _, proc := range bkapp.Spec.Processes {
+		if len(proc.Services) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 //+kubebuilder:object:root=true
 
 // BkAppList contains a list of BkApp
@@ -84,6 +110,11 @@ type AppSpec struct {
 	// count and environment variables.
 	// +optional
 	EnvOverlay *AppEnvOverlay `json:"envOverlay,omitempty"`
+
+	// Observability holds observability configurations, includes metrics config.
+	// However, it is primarily informational here, the real control logic is in paas "apiserver".
+	// +optional
+	Observability *Observability `json:"observability,omitempty"`
 }
 
 // GetWebProcess will find the web process in Spec.Processes
@@ -142,6 +173,10 @@ type Process struct {
 	// Replicas will be used as deployment's spec.replicas
 	Replicas *int32 `json:"replicas"`
 
+	// Services is a list of ProcService which used to expose process network for access within or outside the cluster.
+	// +optional
+	Services []ProcService `json:"services,omitempty"`
+
 	// ResQuotaPlan is the name of plan which defines how much resources current process
 	// can consume.
 	ResQuotaPlan ResQuotaPlan `json:"resQuotaPlan,omitempty"`
@@ -157,6 +192,9 @@ type Process struct {
 
 	// Autoscaling specifies the autoscaling configuration
 	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
+
+	// Probes specifies the probe configuration
+	Probes *ProbeSet `json:"probes,omitempty"`
 }
 
 // Addon is used to specify add-on service
@@ -186,6 +224,9 @@ type Mount struct {
 	Name string `json:"name"`
 	// Source of the mount
 	Source *VolumeSource `json:"source"`
+	// SubPaths is a list of file/directory name.
+	// These file names will be used as SubPath in VolumeMount to mount specific keys.
+	SubPaths []string `json:"subPaths,omitempty"`
 }
 
 // ResQuotaPlan is used to specify process resource quota
@@ -228,6 +269,19 @@ const (
 	// ScalingPolicyDefault is the default autoscaling policy (cpu utilization 85%)
 	ScalingPolicyDefault ScalingPolicy = "default"
 )
+
+// ProbeSet defines the probes configuration
+type ProbeSet struct {
+	// liveness is the configuration for liveness probes.
+	// +optional
+	Liveness *corev1.Probe `json:"liveness,omitempty"`
+	// ReadinessProbe is the configuration for readiness probes.
+	// +optional
+	Readiness *corev1.Probe `json:"readiness,omitempty"`
+	// StartupProbe is the configuration for startup probes.
+	// +optional
+	Startup *corev1.Probe `json:"startup,omitempty"`
+}
 
 // AppHooks defines bkapp deployment hook
 type AppHooks struct {

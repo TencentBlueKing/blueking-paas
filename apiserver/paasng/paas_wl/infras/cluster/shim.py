@@ -1,65 +1,57 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+from typing import TYPE_CHECKING, Dict
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-from typing import TYPE_CHECKING, List, Optional
-
-from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster
-from paasng.platform.applications.models import ModuleEnvironment
-from paasng.utils.configs import get_region_aware
+from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.modules.constants import ExposedURLType
 
 if TYPE_CHECKING:
-    from paasng.platform.applications.models import Application
+    from paasng.platform.applications.models import Application, ModuleEnvironment
 
 
-class RegionClusterService:
-    """RegionClusterService provide interface for querying cluster[s] in given region"""
+def get_exposed_url_type(application: "Application", cluster_name: str | None = None) -> ExposedURLType:
+    """
+    Get the exposed url type
 
-    def __init__(self, region: str):
-        self.region = region
+    :param application: The application
+    :param cluster_name: The name of cluster. If not given, use default cluster of the application
+    """
+    if cluster_name:
+        cluster = Cluster.objects.get(name=cluster_name)
+    else:
+        ctx = AllocationContext(
+            tenant_id=application.tenant_id,
+            region=application.region,
+            environment=AppEnvironment.PRODUCTION,
+        )
+        cluster = ClusterAllocator(ctx).get_default()
 
-    def list_clusters(self) -> List[Cluster]:
-        return Cluster.objects.filter(region=self.region)
-
-    def get_default_cluster(self) -> Cluster:
-        """获取默认集群"""
-        qs = Cluster.objects.filter(region=self.region, is_default=True)
-        if qs.exists():
-            return qs[0]
-        raise Cluster.DoesNotExist(f"Default cluster not found for {self.region}")
-
-    def get_cnative_app_default_cluster(self) -> Cluster:
-        default_cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", self.region)
-        return self.get_cluster_by_name(default_cluster_name)
-
-    def get_cluster_by_name(self, cluster_name: str) -> Cluster:
-        return Cluster.objects.get(region=self.region, name=cluster_name)
-
-    def has_cluster(self, cluster_name: str) -> bool:
-        return Cluster.objects.filter(region=self.region, name=cluster_name).exists()
+    return ExposedURLType(cluster.exposed_url_type)
 
 
 class EnvClusterService:
     """EnvClusterService provide interface for managing the cluster info of given env"""
 
-    def __init__(self, env: ModuleEnvironment):
+    def __init__(self, env: "ModuleEnvironment"):
         self.env = env
 
     def get_cluster(self) -> Cluster:
@@ -71,49 +63,53 @@ class EnvClusterService:
         this function will not check if the cluster actually exists.
         """
         wl_app = self.env.wl_app
-        region = self.env.application.region
 
-        if wl_app.latest_config.cluster:
-            return wl_app.latest_config.cluster
+        if cluster_name := wl_app.latest_config.cluster:
+            return cluster_name
 
-        # 云原生应用需要用自己的默认集群
-        if wl_app.type == WlAppType.CLOUD_NATIVE:
-            return self._get_cnative_app_default_cluster(region).name
+        ctx = AllocationContext.from_module_env(self.env)
+        return ClusterAllocator(ctx).get_default().name
 
-        return RegionClusterService(region).get_default_cluster().name
-
-    def bind_cluster(self, cluster_name: Optional[str]):
+    def bind_cluster(self, cluster_name: str | None, operator: str | None = None):
         """bind `env` to cluster named `cluster_name`, if cluster_name is not given, use default cluster
 
         :raises: Cluster.DoesNotExist if cluster not found
         """
         wl_app = self.env.wl_app
-        region = self.env.application.region
 
         if cluster_name:
             cluster = Cluster.objects.get(name=cluster_name)
-        elif wl_app.type == WlAppType.CLOUD_NATIVE:
-            # 云原生应用需要用自己的默认集群
-            cluster = self._get_cnative_app_default_cluster(region)
         else:
-            cluster = RegionClusterService(region).get_default_cluster()
+            ctx = AllocationContext.from_module_env(self.env)
+            # 支持带操作人的集群分配
+            if operator:
+                ctx.username = operator
 
-        _bind_cluster_to_wl_app(wl_app, cluster)
+            cluster = ClusterAllocator(ctx).get_default()
 
-    def _get_cnative_app_default_cluster(self, region):
-        return RegionClusterService(region).get_cnative_app_default_cluster()
-
-
-def _bind_cluster_to_wl_app(wl_app: WlApp, cluster: Cluster):
-    """bind cluster to wl_app by modifying config.cluster"""
-    latest_config = wl_app.latest_config
-    latest_config.cluster = cluster.name
-    latest_config.mount_log_to_host = cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST)
-    latest_config.save()
+        # bind cluster to wl_app
+        cfg = wl_app.latest_config
+        cfg.cluster = cluster.name
+        cfg.mount_log_to_host = cluster.has_feature_flag(
+            ClusterFeatureFlag.ENABLE_MOUNT_LOG_TO_HOST,
+        )
+        cfg.save()
 
 
-def get_application_cluster(application: "Application") -> Cluster:
-    """Return the cluster name of app's default module"""
-    default_module = application.get_default_module()
-    env = default_module.envs.get(environment="prod")
+def get_app_prod_env_cluster(app: "Application") -> Cluster:
+    """获取默认模块生产环境应用使用的集群名称
+
+    FIXME：理论上这个方法不该存在，应用的每个模块-环境都可能部署到不同的集群中，只检查默认模块的 prod 环境是不够的
+    相关讨论：https://github.com/TencentBlueKing/blueking-paas/pull/1932#discussion_r1974682390
+    """
+    env = app.get_default_module().envs.get(environment=AppEnvironment.PRODUCTION)
     return EnvClusterService(env).get_cluster()
+
+
+def get_app_cluster_names(app: "Application") -> Dict[str, str]:
+    """获取默认模块各环境应用使用的集群名称
+
+    :param app: 应用对象
+    :return: {环境: 集群名称}
+    """
+    return {env.environment: EnvClusterService(env).get_cluster_name() for env in app.get_default_module().envs.all()}

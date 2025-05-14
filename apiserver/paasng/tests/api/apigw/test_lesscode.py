@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import string
 from pathlib import Path
 from unittest import mock
@@ -23,15 +22,11 @@ from unittest import mock
 import pytest
 import yaml
 from django.conf import settings
-from django.test.utils import override_settings
 
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
-from tests.utils.helpers import generate_random_string
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -59,22 +54,7 @@ class TestApiInAPIGW:
     """Test APIs registered on APIGW, the input and output parameters of these APIs cannot be changed at will"""
 
     @pytest.mark.usefixtures("_init_tmpls")
-    @pytest.mark.parametrize(
-        ("is_lesscode_app_cloud_native", "app_type"),
-        [(True, ApplicationType.CLOUD_NATIVE.value), (False, ApplicationType.DEFAULT.value)],
-    )
-    def test_create_lesscode_api(
-        self,
-        bk_user,
-        api_client,
-        mock_wl_services_in_creation,
-        lesscode_public_params,
-        bk_app_code,
-        bk_app_name,
-        is_lesscode_app_cloud_native,
-        app_type,
-    ):
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, True)
+    def test_create_lesscode_api(self, bk_user, api_client, lesscode_public_params, bk_app_code, bk_app_name):
         lesscode_public_params.update(
             {
                 "region": settings.DEFAULT_REGION_NAME,
@@ -82,14 +62,9 @@ class TestApiInAPIGW:
                 "name": bk_app_name,
             }
         )
-        with override_settings(LESSCODE_APP_USE_CLOUD_NATIVE_TYPE=is_lesscode_app_cloud_native):
-            response = api_client.post(
-                "/apigw/api/bkapps/applications/",
-                data=lesscode_public_params,
-            )
+        response = api_client.post("/apigw/api/bkapps/applications/", data=lesscode_public_params)
         assert response.status_code == 201
         assert response.json()["application"]["modules"][0]["source_origin"] == SourceOrigin.BK_LESS_CODE
-        assert response.json()["application"]["type"] == app_type
 
 
 class TestModuleSourcePackageViewSet:
@@ -102,7 +77,7 @@ class TestModuleSourcePackageViewSet:
             "spec_version": 2,
             "module": {"is_default": True, "processes": {"web": {"command": "npm run online"}}, "language": "NodeJS"},
         }
-        return {"app.yaml": yaml.safe_dump(app_desc)}
+        return {"app_desc.yaml": yaml.safe_dump(app_desc)}
 
     @pytest.fixture()
     def tar_path(self, contents):
@@ -121,7 +96,8 @@ class TestModuleSourcePackageViewSet:
             local_path.write_bytes(tar_path.read_bytes())
 
         with mock.patch(
-            "paasng.platform.sourcectl.package.uploader.download_file_via_url", side_effect=download_file_via_url
+            "paasng.platform.sourcectl.package.uploader.download_file_via_url",
+            side_effect=download_file_via_url,
         ):
             response = api_client.post(
                 url,

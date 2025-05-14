@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from pathlib import Path
 from urllib.parse import urlparse
@@ -24,7 +23,8 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.platform.templates.command import EnhancedTemplateCommand
-from paasng.platform.templates.exceptions import TmplNotExists, TmplRegionNotSupported
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.exceptions import TmplNotExists
 from paasng.platform.templates.fixtures import ProcfileFixture
 from paasng.platform.templates.models import Template
 from paasng.platform.templates.utils import StoreType, download_from_blob_store, uncompress_tar_to_local_path
@@ -43,7 +43,7 @@ class Templater:
     def __init__(
         self,
         tmpl_name: str,
-        type: str,
+        type: TemplateType,
         region: str,
         owner_username: str,
         app_code: str,
@@ -53,10 +53,7 @@ class Templater:
         try:
             tmpl: Template = Template.objects.get(name=tmpl_name, type=type)
         except ObjectDoesNotExist:
-            raise TmplNotExists(f"Template<{tmpl_name}>, Type<{type}> does not exists")
-        else:
-            if region not in tmpl.enabled_regions:
-                raise TmplRegionNotSupported(f"Template<{tmpl.name}> does not support this region<{region}>")
+            raise TmplNotExists(f"Template <{tmpl_name}>, Type <{type}> does not exists")
         self.tmpl = tmpl
         self.command = EnhancedTemplateCommand(force_executable_files=DEFAULT_EXECUTABLE_FILES)
         self.region = region
@@ -74,10 +71,7 @@ class Templater:
 
     def download_tmpl(self) -> Path:
         """Download current app template to a local temp directory"""
-        location = self.tmpl.blob_url.get(self.region)
-        if location is None:
-            raise TmplRegionNotSupported(f"Template<{self.tmpl.name}> does not support this region<{self.region}>")
-
+        location = self.tmpl.blob_url
         o = urlparse(location)
         scheme, bucket, path = o.scheme.lower(), o.netloc, Path(o.path)
         logger.debug("checkout template from [%s: %s]", scheme, location)

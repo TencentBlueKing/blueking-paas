@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Dict
 from unittest import mock
@@ -23,20 +22,16 @@ from unittest import mock
 import pytest
 from kubernetes.client.exceptions import ApiException
 
-from paas_wl.bk_app.cnative.specs.constants import (
-    DeployStatus,
-    MResConditionType,
-    MResPhaseType,
-)
+from paas_wl.bk_app.cnative.specs.constants import DeployStatus, MResConditionType, MResPhaseType
 from paas_wl.bk_app.cnative.specs.resource import (
     MresConditionParser,
     create_or_update_bkapp_with_retries,
     deploy,
     get_mres_from_cluster,
+    list_mres_by_env,
 )
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from tests.paas_wl.bk_app.cnative.specs.utils import create_condition, create_res, with_conds
-from tests.utils.mocks.engine import replace_cluster_service
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 logger = logging.getLogger(__name__)
@@ -93,7 +88,13 @@ class TestBkAppClusterOperator:
         manifest: Dict = {
             "apiVersion": "paas.bk.tencent.com/v1alpha2",
             "kind": "BkApp",
-            "metadata": {"name": bk_app.code},
+            "metadata": {
+                "name": bk_app.code,
+                "annotations": {
+                    "bkapp.paas.bk.tencent.com/code": bk_app.code,
+                    "bkapp.paas.bk.tencent.com/module-name": bk_stag_env.module.name,
+                },
+            },
             "spec": {
                 "build": {"image": "nginx:latest"},
                 "processes": [{"name": "web", "replicas": 1, "resQuotaPlan": "default"}],
@@ -102,16 +103,14 @@ class TestBkAppClusterOperator:
             },
         }
 
-        with replace_cluster_service():
-            ret = deploy(bk_stag_env, manifest)
+        ret = deploy(bk_stag_env, manifest)
 
         assert ret["spec"]["processes"][0]["name"] == "web"
         assert get_mres_from_cluster(bk_stag_env) is not None
 
         # 修改进程配置信息，再次部署到集群
         manifest["spec"]["processes"].append({"name": "worker", "replicas": 1})
-        with replace_cluster_service():
-            ret = deploy(bk_stag_env, manifest)
+        ret = deploy(bk_stag_env, manifest)
         assert ret["spec"]["processes"][1]["name"] == "worker"
 
     @pytest.mark.usefixtures("_with_stag_ns")
@@ -140,9 +139,38 @@ class TestBkAppClusterOperator:
         }.get
         with mock.patch(
             "paas_wl.infras.resources.base.crd.BkApp.create_or_update", side_effect=create_or_update_side_effect
-        ) as mocked_create_or_update, replace_cluster_service():
+        ) as mocked_create_or_update:
             client = get_client_by_app(bk_stag_wl_app)
             create_or_update_bkapp_with_retries(client, bk_stag_env, manifest)
 
         assert mocked_create_or_update.call_count == 2
         assert metadata.pop.call_count == 1
+
+
+@pytest.mark.skip_when_no_crds()
+class Test__list_mres_by_env:
+    @pytest.mark.usefixtures("_with_stag_ns")
+    def test_list(self, bk_app, bk_stag_env):
+        manifest = {
+            "apiVersion": "paas.bk.tencent.com/v1alpha2",
+            "kind": "BkApp",
+            "metadata": {
+                "name": bk_app.code,
+                "annotations": {
+                    "bkapp.paas.bk.tencent.com/code": bk_app.code,
+                    "bkapp.paas.bk.tencent.com/module-name": bk_stag_env.module.name,
+                },
+            },
+            "spec": {
+                "build": {"image": "nginx:latest"},
+                "processes": [{"name": "web", "replicas": 1, "resQuotaPlan": "default"}],
+                "hooks": {"preRelease": {"command": ["/bin/echo"], "args": ["Hello"]}},
+            },
+        }
+
+        deploy(bk_stag_env, manifest)
+
+        res = list_mres_by_env(bk_app, bk_stag_env.environment)[0]
+        assert res.metadata.name == bk_app.code
+        assert res.spec.processes[0].name == "web"
+        assert res.spec.processes[0].resQuotaPlan == "default"

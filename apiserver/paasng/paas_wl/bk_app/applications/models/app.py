@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
 from django.db import models
@@ -25,6 +24,7 @@ from jsonfield import JSONField
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import UuidAuditedModel
 from paas_wl.bk_app.applications.models.validators import validate_app_name, validate_app_structure
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 logger = logging.getLogger(__name__)
 
@@ -35,15 +35,13 @@ class App(UuidAuditedModel):
 
     owner = models.CharField(max_length=64)
     region = models.CharField(max_length=32)
-    name = models.SlugField(max_length=64, validators=[validate_app_name])
+    name = models.SlugField(max_length=64, validators=[validate_app_name], unique=True)
     # deprecated field
     structure = JSONField(default={}, blank=True, validators=[validate_app_structure])
     type = models.CharField(verbose_name="应用类型", max_length=16, default=WlAppType.DEFAULT.value, db_index=True)
+    tenant_id = tenant_id_field_factory()
 
-    class Meta:
-        unique_together = ("region", "name")
-
-    @property
+    @cached_property
     def scheduler_safe_name(self):
         """app name in scheduler backend"""
         return self.name.replace("_", "0us0")
@@ -67,11 +65,25 @@ class App(UuidAuditedModel):
 
         return self.scheduler_safe_name
 
+    # TODO 这里使用很多的局部 import，建议抽成具体的方法，放到 metadata 定义附近？
+
+    @cached_property
+    def paas_app_code(self):
+        from paas_wl.bk_app.applications.managers import get_metadata
+
+        return get_metadata(self).paas_app_code
+
     @cached_property
     def module_name(self):
         from paas_wl.bk_app.applications.managers import get_metadata
 
         return get_metadata(self).module_name
+
+    @cached_property
+    def environment(self):
+        from paas_wl.bk_app.applications.managers import get_metadata
+
+        return get_metadata(self).environment
 
     @property
     def latest_config(self):
@@ -79,9 +91,7 @@ class App(UuidAuditedModel):
 
     @property
     def use_dev_sandbox(self) -> bool:
-        if self.name.endswith("-dev"):
-            return True
-        return False
+        return self.name.endswith("-dev")
 
     def __str__(self) -> str:
         return f"<{self.name}, region: {self.region}, type: {self.type}>"

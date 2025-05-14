@@ -1,24 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """Serializer for third-party api"""
+
 from rest_framework import serializers
 
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.serializers import AppIDField, AppNameField
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
@@ -45,6 +46,10 @@ class PluginSyncRequestSLZ(serializers.Serializer):
     extra_fields = serializers.DictField(allow_null=True, help_text="第三方系统声明的额外字段")
     repository = serializers.CharField(help_text="源码仓库")
     operator = serializers.CharField()
+    # 租户相关信息
+    plugin_tenant_mode = serializers.ChoiceField(choices=AppTenantMode.get_choices(), help_text="租户模式")
+    plugin_tenant_id = serializers.CharField(allow_null=True, allow_blank=True, help_text="租户 ID")
+    tenant_id = serializers.CharField(help_text="所属租户")
 
 
 class PluginArchiveRequestSLZ(serializers.Serializer):
@@ -84,6 +89,10 @@ class PluginReleaseVersionSLZ(serializers.Serializer):
     source_version_name = serializers.CharField(help_text="代码分支名/tag名")
     source_hash = serializers.CharField(help_text="代码提交哈希")
 
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginReleaseVersionSLZ__bk_plugins"
+
 
 class DeployPluginRequestSLZ(serializers.Serializer):
     """插件部署操作的请求体格式"""
@@ -101,6 +110,10 @@ class DeployStepSLZ(serializers.Serializer):
     start_time = serializers.DateTimeField(help_text="开始时间", allow_null=True)
     complete_time = serializers.DateTimeField(help_text="结束时间", allow_null=True)
     status = serializers.CharField(help_text="执行状态", allow_null=True)
+
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginDeployStepSLZ__bk_plugins"
 
 
 class PluginDeployResponseSLZ(serializers.Serializer):
@@ -126,10 +139,18 @@ class PluginRoleSLZ(serializers.Serializer):
     # NOTE: 目前插件开发中心的角色ID与开发者中心的角色ID一致
     id = serializers.ChoiceField(help_text="角色ID", choices=ApplicationRole.get_choices())
 
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginRoleSLZ__bk_plugins"
+
 
 class PluginMemberSLZ(serializers.Serializer):
     username = serializers.CharField(help_text="用户名")
     role = PluginRoleSLZ(help_text="角色")
+
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginMemberSLZ__bk_plugins"
 
 
 class PluginConfigSLZ(serializers.Serializer):

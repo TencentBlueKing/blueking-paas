@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""Utils for monitoring engine related stuff"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""Utils for monitoring engine related stuff
-"""
 import datetime
 import logging
 from typing import Optional
@@ -39,8 +38,9 @@ def count_frozen_deployments(edge_seconds: int = 90, now: Optional[datetime.date
     """Count frozen deployments
 
     :param edge_seconds: if a pending deployment's has no updates in `edge_seconds`, it will be counted as "frozen"
-    :param now: current datetime, default to `datetime.datetime.now`
+    :param now: current datetime, default to `arrow.now().datetime`
     """
+    now = now if now else arrow.now().datetime
     edge_date = arrow.get(now).shift(seconds=-edge_seconds)
 
     logger.info("Start counting frozen deployments since {}".format(edge_date.format()))

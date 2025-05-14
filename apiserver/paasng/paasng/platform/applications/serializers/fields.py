@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+import re
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -40,10 +41,39 @@ class AppIDField(serializers.RegexField):
                 DnsSafeNameValidator(_("应用 ID")),
                 AppIDUniqueValidator(),
             ],
-            error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)")},
+            error_messages={
+                "invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度在 3-16 之间。")
+            },
         )
         preset_kwargs.update(kwargs)
         super().__init__(regex, *args, **preset_kwargs)
+
+
+class AppIDSMartField(serializers.RegexField):
+    """Field for validating S-mart applications's ID, the differences to `AppIDField`:
+
+    - max length increased from 16 to 20
+    - allow using underscore("_")
+    """
+
+    # A variation of the DNS pattern with "_" allowed
+    pattern = re.compile(r"^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-_]{,63}(?<!-)$")
+
+    def __init__(self, *args, **kwargs):
+        preset_kwargs = dict(
+            max_length=20,
+            min_length=3,
+            required=True,
+            help_text="应用 ID",
+            validators=[ReservedWordValidator(_("应用 ID")), AppIDUniqueValidator()],
+            error_messages={
+                "invalid": _(
+                    "格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)和下划线(_)，长度在 3-20 之间。"
+                )
+            },
+        )
+        preset_kwargs.update(kwargs)
+        super().__init__(self.pattern, *args, **preset_kwargs)
 
 
 class ApplicationField(serializers.SlugRelatedField):

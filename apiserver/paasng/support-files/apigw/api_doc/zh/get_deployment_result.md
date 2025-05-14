@@ -27,8 +27,8 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' ht
 ```json
 {
 	"status": "failed",
-	"logs": "\nProcfile error: unable to read file \"Procfile\", details: module 'paasng.dev_resources.sourcectl.package.client' has no attribute 'S3TarClient'",
-	"error_detail": "Procfile error: unable to read file \"Procfile\", details: module 'paasng.dev_resources.sourcectl.package.client' has no attribute 'S3TarClient'",
+	"logs": "\nProcfile error: ...",
+	"error_detail": "Procfile error: ...",
 	"error_tips": {
 		"matched_solutions_found": false,
 		"possible_reason": "暂时无法找到解决方案，请前往“标准输出日志”检查是否有异常",

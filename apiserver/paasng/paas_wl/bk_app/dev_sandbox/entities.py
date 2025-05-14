@@ -1,109 +1,91 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+from typing import Dict, List
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
+from attrs import asdict, define, field
+from django.conf import settings
 
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
-
-from blue_krill.data_types.enum import EnumField, StructuredEnum
-
+from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 
-class HealthPhase(str, StructuredEnum):
-    HEALTHY = EnumField("Healthy")
-    PROGRESSING = EnumField("Progressing")
-    UNHEALTHY = EnumField("Unhealthy")
-    UNKNOWN = EnumField("Unknown")
-
-
-@dataclass
+@define
 class Runtime:
-    """容器运行相关配置"""
+    """容器运行时"""
 
     envs: Dict[str, str]
-    image: str
+    image: str = settings.DEV_SANDBOX_IMAGE
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.ALWAYS)
 
 
-@dataclass
+@define
 class ResourceSpec:
     cpu: str
     memory: str
 
-    def to_dict(self):
-        return {
-            "cpu": self.cpu,
-            "memory": self.memory,
-        }
 
-
-@dataclass
+@define
 class Resources:
-    """计算资源定义"""
+    """运行资源"""
 
-    limits: Optional[ResourceSpec] = None
-    requests: Optional[ResourceSpec] = None
+    limits: ResourceSpec | None = None
+    requests: ResourceSpec | None = None
 
     def to_dict(self):
-        d = {}
+        quota = {}
         if self.limits:
-            d["limits"] = self.limits.to_dict()
+            quota["limits"] = asdict(self.limits)
         if self.requests:
-            d["requests"] = self.requests.to_dict()
-        return d
+            quota["requests"] = asdict(self.requests)
+
+        return quota
 
 
-@dataclass
-class Status:
-    replicas: int
-    ready_replicas: int
+@define
+class NetworkConfig:
+    """网络相关配置（Ingress、Service 等使用）"""
 
-    def to_health_phase(self) -> str:
-        if self.replicas == self.ready_replicas:
-            return HealthPhase.HEALTHY
-
-        # TODO 如果需要细化出 Unhealthy, 可以结合 Conditions 处理
-        # 将 Unhealthy 也并入 Progressing, 简化需求
-        return HealthPhase.PROGRESSING
+    # Ingress 访问路径前缀
+    path_prefix: str
+    # Service 端口配置（名称，端口，容器端口）
+    port_name: str
+    port: int
+    target_port: int
 
 
-@dataclass
+@define
 class ServicePortPair:
-    """Service port pair"""
-
     name: str
     port: int
     target_port: int
     protocol: str = "TCP"
 
 
-@dataclass
+@define
 class IngressPathBackend:
-    """Ingress Path Backend object"""
-
     path_prefix: str
     service_name: str
     service_port_name: str
 
 
-@dataclass
+@define
 class IngressDomain:
-    """Ingress Domain object"""
+    """域名配置信息"""
 
     host: str
     path_backends: List[IngressPathBackend]
@@ -111,8 +93,19 @@ class IngressDomain:
     tls_secret_name: str = ""
 
 
-@dataclass
-class DevSandboxDetail:
-    url: str
-    envs: Dict[str, str]
-    status: str
+@define
+class SourceCodeConfig:
+    """源码配置"""
+
+    # 源码获取地址
+    source_fetch_url: str | None = None
+    # 源码获取方式
+    source_fetch_method: SourceCodeFetchMethod = SourceCodeFetchMethod.HTTP
+
+
+@define
+class CodeEditorConfig:
+    """代码编辑器配置"""
+
+    # 登录密码
+    password: str

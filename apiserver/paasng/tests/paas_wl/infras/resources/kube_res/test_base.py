@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from dataclasses import dataclass
 from unittest import mock
 
@@ -74,7 +73,7 @@ dummy_reader = AppEntityReader(DummyObj)
 class TestDummyReader:
     def test_watch_with_error_event(self, wl_app):
         with mock.patch.object(dummy_reader, "kres") as mocked_kres:
-            mocked_kres().__enter__().ops_label.create_watch_stream.return_value = [
+            mocked_kres().__enter__().ops_batch.create_watch_stream.return_value = [
                 {"type": "ERROR", "raw_object": {}}
             ]
             event = next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
@@ -82,7 +81,7 @@ class TestDummyReader:
             assert event.error_message == "Unknown"
 
         with mock.patch.object(dummy_reader, "kres") as mocked_kres:
-            mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(
+            mocked_kres().__enter__().ops_batch.create_watch_stream.side_effect = ApiException(
                 410, 'Expired: too old resource version: 1 (1)"'
             )
             event = next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
@@ -91,7 +90,7 @@ class TestDummyReader:
 
     def test_watch_with_expired_exception(self, wl_app):
         with mock.patch.object(dummy_reader, "kres") as mocked_kres:
-            mocked_kres().__enter__().ops_label.create_watch_stream.side_effect = ApiException(500, "Internal error")
+            mocked_kres().__enter__().ops_batch.create_watch_stream.side_effect = ApiException(500, "Internal error")
             with pytest.raises(ApiException):
                 next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
 

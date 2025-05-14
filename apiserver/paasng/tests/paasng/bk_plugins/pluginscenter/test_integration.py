@@ -1,27 +1,31 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from unittest import mock
 
 import pytest
 from django.utils.translation import gettext_lazy as _
 
-from paasng.bk_plugins.pluginscenter.constants import ActionTypes, PluginReleaseStatus, SubjectTypes
+from paasng.bk_plugins.pluginscenter.constants import (
+    ActionTypes,
+    PluginReleaseStatus,
+    PluginRevisionType,
+    SubjectTypes,
+)
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.models import OperationRecord, PluginRelease
 from tests.paasng.bk_plugins.pluginscenter.conftest import make_api_resource
@@ -67,6 +71,65 @@ class TestReleaseStages:
         pd.refresh_from_db()
 
     @pytest.mark.parametrize(
+        ("new_version", "pre_release_status", "status_code", "resp_code"),
+        [
+            # ("0.0.2", "pending", 400, "CANNOT_RELEASE_ONGOING_EXISTS"),
+            # 上一个版本已经发布完成，则可以新建灰度发布版本
+            ("0.0.2", "successful", 201, ""),
+            # 上一个版本发布失败，则还是用上一个版本号发布
+            ("0.0.1", "failed", 201, ""),
+        ],
+    )
+    @pytest.mark.usefixtures("_setup_release_stages", "_enable_plugin_center")
+    def test_create_canry_release_version(
+        self,
+        test_release,
+        release,
+        pd,
+        plugin,
+        api_client,
+        thirdparty_client,
+        iam_policy_client,
+        new_version,
+        pre_release_status,
+        status_code,
+        resp_code,
+    ):
+        """使用已经测试通过的版本进行灰度发布"""
+        # 设置上一个发布版本的状态
+        release.status = pre_release_status
+        release.save()
+        # 将插件的发布流程设置为发布测试版本的灰度发布
+        pd.release_revision.revisionType = PluginRevisionType.TESTED_VERSION
+        pd.save()
+        with mock.patch("paasng.bk_plugins.pluginscenter.shim.get_plugin_repo_accessor") as get_plugin_repo_accessor:
+            get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
+            resp = api_client.post(
+                f"/api/bkplugins/{pd.identifier}/plugins/{plugin.id}/releases/",
+                data={
+                    "type": "prod",
+                    "source_version_type": "tested_version",
+                    "source_version_name": "test-xxxxx",
+                    "version": new_version,
+                    "comment": "...",
+                    "semver_type": "patch",
+                    "release_id": test_release.id,
+                    "release_strategy": {
+                        "strategy": "gray",
+                        "bkci_project": ["test1", "test2"],
+                        "organization": [{"display_name": "admin", "type": "user", "id": 1, "name": "admin"}],
+                    },
+                },
+            )
+        assert resp.status_code == status_code
+        if status_code != 201:
+            assert resp.json()["code"] == resp_code
+        else:
+            release_strategy = resp.json()["latest_release_strategy"]
+            assert release_strategy["strategy"] == "gray"
+            assert release_strategy["bkci_project"] == ["test1", "test2"]
+
+    @pytest.mark.parametrize(
         ("release_type", "source_version_name", "version", "status_code", "resp_code"),
         [  # 当前插件有未完成的测试版本,仍可创建新分支测试版本
             ("test", "testbranch1", "testbranch1-2501191602", 201, ""),
@@ -76,7 +139,7 @@ class TestReleaseStages:
             ("prod", "foo", "0.0.2", 400, "CANNOT_RELEASE_ONGOING_EXISTS"),
         ],
     )
-    @pytest.mark.usefixtures("_setup_release_stages", "_setup_bk_user")
+    @pytest.mark.usefixtures("_setup_release_stages", "_enable_plugin_center")
     def test_create_release_version(
         self,
         test_release,
@@ -98,7 +161,7 @@ class TestReleaseStages:
             ).count()
             == 1
         )
-        with mock.patch("paasng.bk_plugins.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
+        with mock.patch("paasng.bk_plugins.pluginscenter.shim.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
             # 创建测试版本发布
             resp = api_client.post(
@@ -116,7 +179,7 @@ class TestReleaseStages:
             if status_code != 201:
                 assert resp.json()["code"] == resp_code
 
-    @pytest.mark.usefixtures("_setup_release_stages", "_setup_bk_user")
+    @pytest.mark.usefixtures("_setup_release_stages", "_enable_plugin_center")
     def test_release_version(self, thirdparty_client, pd, plugin, api_client, iam_policy_client):
         # 当前插件没有正在执行的正式版本，可创建新的正式版本
         assert (
@@ -125,7 +188,7 @@ class TestReleaseStages:
             ).count()
             == 0
         )
-        with mock.patch("paasng.bk_plugins.pluginscenter.views.get_plugin_repo_accessor") as get_plugin_repo_accessor:
+        with mock.patch("paasng.bk_plugins.pluginscenter.shim.get_plugin_repo_accessor") as get_plugin_repo_accessor:
             get_plugin_repo_accessor().extract_smart_revision.return_value = "hash"
             # 创建正式版本发布
             resp = api_client.post(
@@ -228,6 +291,7 @@ class TestReleaseStages:
             "status": "pending",
             "fail_message": "",
             "invoke_method": "deployAPI",
+            "status_polling_method": "api",
             "detail": {
                 "steps": [{"id": "step-1", "name": "步骤1", "status": "successful"}],
                 "finished": True,

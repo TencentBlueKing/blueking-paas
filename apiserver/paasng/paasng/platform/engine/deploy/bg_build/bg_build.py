@@ -1,31 +1,33 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
-from typing import Dict, Optional
+from typing import Optional
 from uuid import UUID
 
+import cattr
 from blue_krill.redis_tools.messaging import StreamChannel
 from celery import shared_task
 
+from paas_wl.bk_app.applications.entities import BuildMetadata
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler
 from paasng.core.core.storages.redisdb import get_default_redis
+from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.executors import (
     DefaultBuildProcessExecutor,
     PipelineBuildProcessExecutor,
@@ -47,7 +49,7 @@ _FOLLOWING_LOGS_TIMEOUT = 300
 def start_bg_build_process(
     deploy_id: UUID,
     bp_id: UUID,
-    metadata: Dict,
+    metadata: dict,
     stream_channel_id: Optional[str] = None,
     use_bk_ci_pipeline: bool = False,
 ):
@@ -56,6 +58,9 @@ def start_bg_build_process(
 
     :param deploy_id: The ID of the Deployment object.
     :param bp_id: The ID of the BuildProcess object.
+    :param metadata: 构建元数据, 实际是 BuildMetadata 对象 unstructure 之后的 dict.
+    :param stream_channel_id: stream channel id
+    :param use_bk_ci_pipeline: 是否使用 bkci 流水线服务
     """
     deployment = Deployment.objects.get(pk=deploy_id)
     build_process = BuildProcess.objects.get(pk=bp_id)
@@ -68,13 +73,14 @@ def start_bg_build_process(
     else:
         stream = ConsoleStream()
 
+    build_metadata = cattr.structure(metadata, BuildMetadata)
     if use_bk_ci_pipeline:
         logger.info("deployment %s, build process %s use bk_ci pipeline to build image", deploy_id, bp_id)
         pipeline_bp_executor = PipelineBuildProcessExecutor(deployment, build_process, stream)
-        pipeline_bp_executor.execute(metadata=metadata)
+        pipeline_bp_executor.execute(metadata=build_metadata)
     else:
         bp_executor = DefaultBuildProcessExecutor(deployment, build_process, stream)
-        bp_executor.execute(metadata=metadata)
+        bp_executor.execute(metadata=build_metadata)
 
 
 def interrupt_build_proc(bp_id: UUID) -> bool:
@@ -84,6 +90,9 @@ def interrupt_build_proc(bp_id: UUID) -> bool:
     :raises: DeployInterruptionFailed if the build process is not interruptable.
     """
     bp = BuildProcess.objects.get(pk=bp_id)
+
+    if bp.is_finished():
+        return bp.status == BuildStatus.INTERRUPTED
 
     # 蓝盾流水线即使被取消，也不会中断镜像构建流程，因此中断在这种场景下没有意义
     cfg = BuildConfig.objects.filter(module_id=bp.module_id).first()

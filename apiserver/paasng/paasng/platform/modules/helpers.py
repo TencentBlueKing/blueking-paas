@@ -1,28 +1,28 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, TypedDict, overload
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
-from paas_wl.infras.cluster.models import Cluster, Domain
+from paas_wl.infras.cluster.entities import Domain
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
@@ -54,11 +54,7 @@ class BuildConfigData(TypedDict):
     image_credential_name: Optional[str]
 
 
-def update_build_config_with_method(
-    build_config: BuildConfig,
-    build_method: RuntimeType,
-    data: Dict,
-):
+def update_build_config_with_method(build_config: BuildConfig, build_method: RuntimeType, data: Dict):
     """根据指定的 build_method 更新部分字段
 
     :param build_config: BuildConfig db 模型
@@ -121,12 +117,6 @@ class SlugbuilderBinder:
     @transaction.atomic
     def bind_buildpack(self, buildpack: AppBuildPack):
         """绑定 slugbuilder 和 buildpack"""
-        if self.slugbuilder.region != buildpack.region:
-            raise BindError(
-                f"region must be consistent between "
-                f"slugbuilder({self.slugbuilder.full_image}) and buildpack({buildpack.pk})"
-            )
-
         self.slugbuilder.buildpacks.add(buildpack)
 
     @transaction.atomic
@@ -136,12 +126,6 @@ class SlugbuilderBinder:
 
     def set_buildpacks(self, buildpacks: List[AppBuildPack]):
         """将 slugbuilder 绑定的 buildpack 设置成指定的值"""
-        for buildpack in buildpacks:
-            if self.slugbuilder.region != buildpack.region:
-                raise BindError(
-                    f"region must be consistent between "
-                    f"slugbuilder({self.slugbuilder.full_image}) and buildpack({buildpack.pk})"
-                )
         self.slugbuilder.buildpacks.set(buildpacks, clear=True)
 
 
@@ -173,8 +157,6 @@ class ModuleRuntimeBinder:
     @transaction.atomic
     def bind_image(self, slugrunner: AppSlugRunner, slugbuilder: AppSlugBuilder):
         """绑定构建和运行镜像,如果两个镜像的名称不一致将会报错"""
-        module = self.module
-
         if slugbuilder is None:
             raise RuntimeError("slugbuilder is None")
 
@@ -182,16 +164,6 @@ class ModuleRuntimeBinder:
             raise BindError(
                 f"name must be consistent between "
                 f"slugbuilder({slugbuilder.full_image}) and slugrunner({slugrunner.full_image})"
-            )
-
-        if slugbuilder.region != module.region:
-            raise BindError(
-                f"region must be consistent between " f"slugbuilder({slugbuilder.full_image}) and module({module.pk})"
-            )
-
-        if slugrunner.region != module.region:
-            raise BindError(
-                f"region must be consistent between " f"slugrunner({slugrunner.full_image}) and module({module.pk})"
             )
 
         # 当前模块只能使用一个镜像
@@ -220,7 +192,7 @@ class ModuleRuntimeBinder:
         if slugbuilder is None:
             raise RuntimeError("slugbuilder is None")
 
-        if slugbuilder.region != buildpack.region or not slugbuilder.buildpacks.filter(pk=buildpack.pk).exists():
+        if not slugbuilder.buildpacks.filter(pk=buildpack.pk).exists():
             # 当前 slugbuilder 不能与当前 buildpack 建立关联
             raise BindError(
                 f"binding between slugbuilder {slugbuilder.full_image} and buildpack {buildpack.name} is not allowed"
@@ -296,12 +268,10 @@ class ModuleRuntimeManager:
             return False
 
     @overload
-    def get_slug_builder(self) -> AppSlugBuilder:
-        ...
+    def get_slug_builder(self) -> AppSlugBuilder: ...
 
     @overload
-    def get_slug_builder(self, raise_exception: bool = False) -> Optional[AppSlugBuilder]:
-        ...
+    def get_slug_builder(self, raise_exception: bool = False) -> Optional[AppSlugBuilder]: ...
 
     def get_slug_builder(self, raise_exception: bool = True) -> Optional[AppSlugBuilder]:
         """返回当前模块绑定的 AppSlugBuilder
@@ -313,12 +283,10 @@ class ModuleRuntimeManager:
         return self.build_config.buildpack_builder
 
     @overload
-    def get_slug_runner(self) -> AppSlugRunner:
-        ...
+    def get_slug_runner(self) -> AppSlugRunner: ...
 
     @overload
-    def get_slug_runner(self, raise_exception: bool = False) -> Optional[AppSlugRunner]:
-        ...
+    def get_slug_runner(self, raise_exception: bool = False) -> Optional[AppSlugRunner]: ...
 
     def get_slug_runner(self, raise_exception: bool = True) -> Optional[AppSlugRunner]:
         """返回当前模块绑定的 AppSlugRunner

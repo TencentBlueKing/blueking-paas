@@ -179,6 +179,13 @@ var _ = Describe("test build expect service", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bkapp-sample",
 				Namespace: "default",
+				Annotations: map[string]string{
+					"bkapp.paas.bk.tencent.com/region":      "foo",
+					"bkapp.paas.bk.tencent.com/code":        "bkapp-sample",
+					"bkapp.paas.bk.tencent.com/name":        "bkapp-sample",
+					"bkapp.paas.bk.tencent.com/module-name": "default",
+					"bkapp.paas.bk.tencent.com/environment": "stag",
+				},
 			},
 			Spec: paasv1alpha2.AppSpec{
 				Build: paasv1alpha2.BuildConfig{
@@ -209,7 +216,9 @@ var _ = Describe("test build expect service", func() {
 
 		Expect(len(service.Spec.Ports)).To(Equal(1))
 		Expect(service.Spec.Ports[0].TargetPort.IntVal).To(Equal(int32(80)))
-		Expect(service.Labels).To(Equal(labels.Deployment(bkapp, "web")))
+		Expect(service.Labels["bkapp.paas.bk.tencent.com/code"]).To(Equal("bkapp-sample"))
+		Expect(service.Labels["bkapp.paas.bk.tencent.com/process-name"]).To(Equal("web"))
+		Expect(service.Labels["monitoring.bk.tencent.com/bk_app_code"]).To(Equal("bkapp-sample"))
 		Expect(service.Spec.Selector).To(Equal(labels.PodSelector(bkapp, "web")))
 	})
 
@@ -219,12 +228,92 @@ var _ = Describe("test build expect service", func() {
 		Expect(service).NotTo(BeNil())
 		Expect(len(service.Spec.Ports)).To(Equal(1))
 		Expect(service.Spec.Ports[0].TargetPort.IntVal).To(Equal(int32(5000)))
-		Expect(service.Labels).To(Equal(labels.Deployment(bkapp, "hi")))
+		Expect(service.Labels["bkapp.paas.bk.tencent.com/process-name"]).To(Equal("hi"))
+		Expect(service.Labels["monitoring.bk.tencent.com/bk_app_code"]).To(Equal("bkapp-sample"))
 		Expect(service.Spec.Selector).To(Equal(labels.PodSelector(bkapp, "hi")))
 	})
 
 	It("build for missing process", func() {
 		service := BuildService(bkapp, bkapp.Spec.FindProcess("hello"))
+		Expect(service).To(BeNil())
+	})
+})
+
+var _ = Describe("test build expect service by proc services", func() {
+	var bkapp *paasv1alpha2.BkApp
+
+	BeforeEach(func() {
+		bkapp = &paasv1alpha2.BkApp{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       paasv1alpha2.KindBkApp,
+				APIVersion: paasv1alpha2.GroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "bkapp-sample",
+				Namespace:   "default",
+				Annotations: map[string]string{paasv1alpha2.ProcServicesFeatureEnabledAnnoKey: "true"},
+			},
+		}
+	})
+
+	It("build with proc services", func() {
+		procName := "web"
+		bkapp.Spec = paasv1alpha2.AppSpec{
+			Processes: []paasv1alpha2.Process{
+				{
+					Name:         procName,
+					Replicas:     paasv1alpha2.ReplicasTwo,
+					ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+					Services: []paasv1alpha2.ProcService{
+						{
+							Name:        "web",
+							TargetPort:  5000,
+							Protocol:    corev1.ProtocolTCP,
+							ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+							Port:        80,
+						},
+						{
+							Name:       "metric",
+							TargetPort: 5001,
+							Protocol:   corev1.ProtocolTCP,
+							Port:       5001,
+						},
+					},
+				},
+			},
+		}
+
+		service := BuildService(bkapp, bkapp.Spec.FindProcess(procName))
+		Expect(service.Spec.Ports).To(Equal([]corev1.ServicePort{
+			{
+				Name:       "web",
+				TargetPort: intstr.FromInt(5000),
+				Protocol:   corev1.ProtocolTCP,
+				Port:       80,
+			},
+			{
+				Name:       "metric",
+				TargetPort: intstr.FromInt(5001),
+				Protocol:   corev1.ProtocolTCP,
+				Port:       5001,
+			},
+		}))
+		Expect(service.Labels).To(Equal(labels.Deployment(bkapp, procName)))
+		Expect(service.Spec.Selector).To(Equal(labels.PodSelector(bkapp, procName)))
+	})
+
+	It("build without proc services", func() {
+		bkapp.Spec = paasv1alpha2.AppSpec{
+			Processes: []paasv1alpha2.Process{
+				{
+					Name:         "web",
+					Replicas:     paasv1alpha2.ReplicasTwo,
+					ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+				},
+			},
+		}
+
+		service := BuildService(bkapp, bkapp.Spec.FindProcess("web"))
 		Expect(service).To(BeNil())
 	})
 })

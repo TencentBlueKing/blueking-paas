@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 """Provide functions for the apiserver module.
 
@@ -29,17 +27,15 @@ Other modules which have similar purpose:
 
 These modules will be refactored in the future.
 """
-from typing import Dict, List, NamedTuple, Optional, Union
+
+from typing import Dict, NamedTuple, Optional, Union
 from uuid import UUID
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.managers import WlAppMetadata, get_metadata, update_metadata
 from paas_wl.bk_app.applications.models import Build, WlApp
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.processes.models import ProcessSpec
-from paas_wl.core.resource import generate_bkapp_name
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.modules.models import Module
 
 
 class CreatedAppInfo(NamedTuple):
@@ -48,11 +44,18 @@ class CreatedAppInfo(NamedTuple):
     type: WlAppType
 
 
-def create_app_ignore_duplicated(region: str, name: str, type_: WlAppType) -> CreatedAppInfo:
-    """Create an WlApp object, if the object already exists, return it directly. The object's type
-    will be set to the given type.
+def create_app_ignore_duplicated(region: str, name: str, type_: WlAppType, tenant_id: str) -> CreatedAppInfo:
+    """Create an WlApp object, if the object already exists, return it directly.
+
+    :raise RuntimeError: If the app already exists with different properties.
     """
-    obj, _ = WlApp.objects.update_or_create(region=region, name=name, defaults={"type": type_.value})
+    obj, created = WlApp.objects.get_or_create(
+        name=name, defaults={"type": type_.value, "region": region, "tenant_id": tenant_id}
+    )
+    # If the object already exists, check the properties
+    if not created and ((obj.type, obj.region, obj.tenant_id) != (type_.value, region, tenant_id)):
+        # This should not happen in normal cases
+        raise RuntimeError(f"WlApp {name} already exists with different properties")
     return CreatedAppInfo(obj.uuid, obj.name, WlAppType(obj.type))
 
 
@@ -87,39 +90,6 @@ def delete_wl_resources(env: ModuleEnvironment):
     # TODO: Remove below lines when data was fully migrated
     ProcessSpec.objects.filter(engine_app_id=wl_app.pk).delete()
     wl_app.delete()
-
-
-def create_cnative_app_model_resource(
-    module: Module,
-    image: str,
-    api_version: Optional[str] = ApiVersion.V1ALPHA2,
-    command: Optional[List[str]] = None,
-    args: Optional[List[str]] = None,
-    target_port: Optional[int] = None,
-) -> Dict:
-    """Create a cloud-native AppModelResource object
-
-    :param module: The Module object current app model resource bound with
-    """
-    from paas_wl.bk_app.cnative.specs.models import AppModelResource, create_app_resource
-
-    application = module.application
-    resource = create_app_resource(
-        name=generate_bkapp_name(module),
-        image=image,
-        api_version=api_version,
-        command=command,
-        args=args,
-        target_port=target_port,
-    )
-    model_resource = AppModelResource.objects.create_from_resource(
-        application.region, str(application.id), str(module.id), resource
-    )
-    return {
-        "application_id": model_resource.application_id,
-        "module_id": model_resource.module_id,
-        "manifest": model_resource.revision.json_value,
-    }
 
 
 def get_latest_build_id(env: ModuleEnvironment) -> Optional[UUID]:

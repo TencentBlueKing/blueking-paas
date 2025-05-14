@@ -1,25 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import os
+import re
 import socket
-from typing import Dict, List, Optional, Tuple, Union
+import sys
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+from blue_krill.redis_tools.sentinel import SentinelBackend
 from blue_krill.secure.dj_environ import SecureEnv
 from dynaconf.base import LazySettings
 from dynaconf.utils import object_merge
@@ -168,6 +170,7 @@ def get_service_remote_endpoints(settings: LazySettings) -> List[Dict]:
                     "endpoint_url": otel_ep_url,
                     "provision_params_tmpl": {
                         "app_code": "{application.code}",
+                        "tenant_id": "{application.tenant_id}",
                         "bk_monitor_space_id": "{bk_monitor_space_id}",
                         "env": "{env.environment}",
                     },
@@ -184,7 +187,7 @@ def is_redis_backend(backend: Optional[Union[Tuple, List, str]]) -> bool:
         return False
 
     value = backend[0] if isinstance(backend, (list, tuple)) else backend
-    return value.startswith(("redis://", "sentinel://"))
+    return value.startswith(("redis://", "rediss://", "sentinel://"))
 
 
 def is_redis_sentinel_backend(backend: Optional[Union[Tuple, List, str]]) -> bool:
@@ -194,3 +197,41 @@ def is_redis_sentinel_backend(backend: Optional[Union[Tuple, List, str]]) -> boo
 
     value = backend[0] if isinstance(backend, (list, tuple)) else backend
     return value.startswith("sentinel://")
+
+
+def is_in_celery_worker(argv: Optional[List] = None) -> bool:
+    """Check if current module is running inside the celery worker.
+    An valid celery command: "celery -A paasng worker -l info"
+
+    :param argv: The command args list, default to sys.argv.
+    """
+    argv = argv or sys.argv
+    found_celery, found_worker = False, False
+    for arg in argv:
+        # The celery command might be an absolute path, use search instead of equal
+        if re.search(r"\bcelery$", arg):
+            found_celery = True
+            continue
+        if arg == "worker" and found_celery:
+            found_worker = True
+            break
+    return found_celery and found_worker
+
+
+def cache_redis_sentinel_url(url: str, sentinel_manager: str, sentinel_password: str) -> dict[str, Any]:
+    """Parse a redis sentinel url to django CACHES setting"""
+    backend = SentinelBackend(url, sentinel_manager, {"password": sentinel_password})
+    return {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{sentinel_manager}/{backend.db}",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.SentinelClient",
+            "SENTINELS": [[host["host"], host["port"]] for host in backend.hosts],
+            # redis sentinel 密码
+            "SENTINEL_KWARGS": {"password": sentinel_password},
+            "CONNECTION_POOL_CLASS": "redis.sentinel.SentinelConnectionPool",
+            "CONNECTION_FACTORY": "django_redis.pool.SentinelConnectionFactory",
+            # redis 实例密码
+            "PASSWORD": backend.password,
+        },
+    }

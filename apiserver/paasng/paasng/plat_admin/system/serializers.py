@@ -1,25 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+from typing import Optional
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.accessories.servicehub.services import ServiceSpecificationHelper
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.utils.serializers import UserNameField
@@ -47,6 +49,7 @@ class QueryUniApplicationsByID(serializers.Serializer):
     include_contact_info = serializers.BooleanField(
         help_text="是否在结果中返回应用联系人（即最近操作人），默认返回", default=True
     )
+    include_market_info = serializers.BooleanField(help_text="是否在结果中返回应用市场信息，默认不返回", default=False)
 
 
 class QueryUniApplicationsByUserName(serializers.Serializer):
@@ -69,6 +72,9 @@ class UniversalAppSLZ(serializers.Serializer):
     type = serializers.CharField(help_text="应用类型", default="default")
     logo_url = serializers.CharField(help_text="应用 logo 图片地址", allow_null=True)
     developers = serializers.ListField(child=serializers.CharField(), help_text="开发者人员列表", allow_null=True)
+    tenant_id = serializers.CharField(help_text="所属租户")
+    app_tenant_mode = serializers.CharField(help_text="租户类型")
+    app_tenant_id = serializers.CharField(help_text="租户 ID")
 
 
 class ContactInfoSLZ(serializers.Serializer):
@@ -78,6 +84,24 @@ class ContactInfoSLZ(serializers.Serializer):
     recent_deployment_operators = serializers.ListSerializer(
         child=UserNameField(help_text="用户名", default=None), help_text="近期部署人员列表"
     )
+
+
+class BasicMarketInfoSLZ(serializers.ModelSerializer):
+    """仅返回用户在页面能看到信息，后台 DB 存储的冗余数据不返回"""
+
+    enabled = serializers.BooleanField(read_only=True, help_text="是否上架到市场")
+    market_address = serializers.SerializerMethodField(read_only=True, allow_null=True, help_text="市场访问链接")
+
+    class Meta:
+        model = MarketConfig
+        fields = [
+            "enabled",
+            "market_address",
+        ]
+
+    def get_market_address(self, instance: MarketConfig) -> Optional[str]:
+        entrance = MarketAvailableAddressHelper(instance).access_entrance
+        return entrance.address if entrance is not None else None
 
 
 class QueryApplicationsSLZ(serializers.Serializer):
@@ -142,28 +166,6 @@ class SearchApplicationSLZ(serializers.Serializer):
 class MinimalAppSLZ(serializers.Serializer):
     code = serializers.CharField(help_text="应用ID")
     name = serializers.CharField(help_text="应用名称")
-
-
-class AddonSpecsSLZ(serializers.Serializer):
-    specs = serializers.DictField(default=dict)
-
-    def validate_specs(self, specs):
-        if not specs:
-            return specs
-
-        svc = self.context["svc"]
-        if not svc.public_specifications:
-            raise ValidationError(f"addon service {svc.name} does not support custom specs")
-
-        # filter_plans 无法识别出 invalid spec name, 因此保留下面的逻辑
-        public_spec_names = [spec.name for spec in svc.public_specifications]
-        if invalid_spec_name := set(specs.keys()) - set(public_spec_names):
-            raise ValidationError(f"spec name {invalid_spec_name} is invalid for addon service {svc.name}")
-
-        if not ServiceSpecificationHelper.from_service_public_specifications(svc).filter_plans(specs):
-            raise ValidationError(f"{specs} is invalid for addon service {svc.name}")
-
-        return specs
 
 
 class ClusterNamespaceSLZ(serializers.Serializer):

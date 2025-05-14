@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """PaaS Workload service settings
 
 默认情况下，本项目会读取根目录（manage.py 所在目录）下的 `settings_files` 子目录内的所有
@@ -39,6 +38,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量比 YAML 配置的优先级更高
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
+
 from pathlib import Path
 
 from dynaconf import LazySettings
@@ -85,12 +85,31 @@ BUILD_EXTRA_ENV_VARS = settings.get("BUILD_EXTRA_ENV_VARS", {})
 # 默认容器内监听地址
 CONTAINER_PORT = settings.get("CONTAINER_PORT", 5000)
 
-# dev sandbox 中 devserver 的监听地址
-DEV_SANDBOX_DEVSERVER_PORT = settings.get("DEV_SANDBOX_DEVSERVER_PORT", 8000)
-DEV_SANDBOX_IMAGE = settings.get("DEV_SANDBOX_IMAGE", "bkpaas/dev-heroku-bionic:latest")
-
 # 服务相关插件配置
 SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})
+
+
+# ---------------
+# 沙箱相关配置
+# ---------------
+
+# devserver 监听端口
+DEV_SANDBOX_DEVSERVER_PORT = settings.get("DEV_SANDBOX_DEVSERVER_PORT", 8000)
+# devserver 镜像
+DEV_SANDBOX_IMAGE = settings.get("DEV_SANDBOX_IMAGE", "bkpaas/dev-heroku-bionic:latest")
+
+# 启动沙箱的数量上限
+DEV_SANDBOX_COUNT_LIMIT = settings.get("DEV_SANDBOX_COUNT_LIMIT", 5)
+# 沙箱跨域访问源地址
+DEV_SANDBOX_CORS_ALLOW_ORIGINS = settings.get("DEV_SANDBOX_CORS_ALLOW_ORIGINS", "")
+
+# code editor 监听端口
+DEV_SANDBOX_CODE_EDITOR_PORT = settings.get("DEV_SANDBOX_CODE_EDITOR_PORT", 8080)
+# code editor 镜像
+DEV_SANDBOX_CODE_EDITOR_IMAGE = settings.get("DEV_SANDBOX_CODE_EDITOR_IMAGE", "codercom/code-server:4.9.0")
+
+# 沙箱部署集群，若不配置则使用默认集群
+DEV_SANDBOX_CLUSTER = settings.get("DEV_SANDBOX_CLUSTER", "")
 
 # ---------------
 # 资源命名配置
@@ -154,8 +173,17 @@ DEFAULT_POD_LOGS_LINE = 512
 # Ingress 配置
 # ---------------
 
-# 不指定则使用默认，可以指定为 bk-ingress-nginx
+# 当集群内存在多套 nginx controller 时, 需要设置 kubernetes.io/ingress.class 注解, 将 ingress 规则绑定到具体的 controller.
+# - APP_INGRESS_CLASS 是子域名/子路径/独立域名三种 ingress 默认的 ingress.class 配置
+# - CUSTOM_DOMAIN_INGRESS_CLASS 是独立域名特有的 ingress.class 配置, 优先级高于 APP_INGRESS_CLASS
+#
+# 配置项说明:
+# 如果集群中只有一套 nginx controller, 通过 APP_INGRESS_CLASS 设置注解值即可, 不需要再单独设置 CUSTOM_DOMAIN_INGRESS_CLASS;
+# 如果集群中有多套 nginx controller, 并且独立域名需要绑定具体 controller 时, 可以通过设置 CUSTOM_DOMAIN_INGRESS_CLASS 达到目的.
+# 以蓝鲸私有化版本架构为例, 其采用了两层 nginx controller(第一层向第二层转发请求). 可以通过设置 CUSTOM_DOMAIN_INGRESS_CLASS 将独立域名
+# 绑定到第一层的 controller, 而子路径通过设置 APP_INGRESS_CLASS 绑定到第二层的 controller.
 APP_INGRESS_CLASS = settings.get("APP_INGRESS_CLASS")
+CUSTOM_DOMAIN_INGRESS_CLASS = settings.get("CUSTOM_DOMAIN_INGRESS_CLASS")
 
 # 控制 ingress 资源路径是否严格匹配末尾斜杆, 如某个 ingress 路径设置成 "/foo/", 开启严格匹配将无法通过 "/foo" 访问应用
 # 如果希望通过 "/foo" 也能访问, 则需要设置 APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH、APP_INGRESS_V1_PATH_TRAILING_SLASH 为 False
@@ -177,18 +205,6 @@ ENABLE_MODERN_INGRESS_SUPPORT = settings.get("ENABLE_MODERN_INGRESS_SUPPORT", Tr
 
 # 是否开启终端色彩
 COLORFUL_TERMINAL_OUTPUT = True
-
-# 应用独立域名相关配置
-CUSTOM_DOMAIN_CONFIG = settings.get(
-    "CUSTOM_DOMAIN_CONFIG",
-    {
-        "enabled": True,
-        # 允许用户配置的独立域名后缀列表，如果为空列表，允许任意独立域名
-        "valid_domain_suffixes": settings.get("VALID_CUSTOM_DOMAIN_SUFFIXES", []),
-        # 是否允许用户修改独立域名相关配置，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
-        "allow_user_modifications": True,
-    },
-)
 
 # ---------------
 # egress 配置
@@ -257,7 +273,6 @@ FOR_TESTS_CA_DATA = settings.get("FOR_TESTS_CA_DATA", "")
 FOR_TESTS_CERT_DATA = settings.get("FOR_TESTS_CERT_DATA", "")
 FOR_TESTS_KEY_DATA = settings.get("FOR_TESTS_KEY_DATA", "")
 FOR_TESTS_TOKEN_VALUE = settings.get("FOR_TESTS_TOKEN_VALUE", "")
-FOR_TESTS_FORCE_DOMAIN = settings.get("FOR_TESTS_FORCE_DOMAIN", "")
 
 FOR_TESTS_CLUSTER_CONFIG = {
     "url": FOR_TESTS_APISERVER_URL,
@@ -265,7 +280,6 @@ FOR_TESTS_CLUSTER_CONFIG = {
     "cert_data": FOR_TESTS_CERT_DATA,
     "key_data": FOR_TESTS_KEY_DATA,
     "token_value": FOR_TESTS_TOKEN_VALUE,
-    "force_domain": FOR_TESTS_FORCE_DOMAIN,
 }
 
 FOR_TEST_E2E_INGRESS_CONFIG = settings.get("FOR_TEST_E2E_INGRESS_CONFIG", {})

@@ -1,0 +1,37 @@
+specVersion: 3
+appVersion: '1.0'
+app:
+  bkAppCode: TO_BE_CHANGED
+  bkAppName: TO_BE_CHANGED
+  market:
+    category: demo
+    introduction: A demo application
+    description: Description of a demo application
+    displayOptions:
+      width: 800
+      height: 600
+modules:
+  - name: main
+    isDefault: true
+    sourceDir: main
+    language: Python
+    spec:
+      addons:
+        - name: mysql
+      configuration:
+        env:
+          - name: BKAPP_DEMO
+            value: demo_value
+            description: Demo env variable
+      processes:
+        - name: web
+          procCommand: gunicorn wsgi -b :5000 --access-logfile - --error-logfile -
+          replicas: 1
+          services:
+            - name: web
+              protocol: TCP
+              exposedType:
+                name: bk/http
+              targetPort: 5000
+              port: 80
+

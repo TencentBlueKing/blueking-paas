@@ -1,31 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from textwrap import dedent
 
 import pytest
 import yaml
 
-from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.processes.constants import ProbeType
-from paas_wl.bk_app.processes.models import ProcessProbe
-from paasng.platform.declarative.handlers import AppDescriptionHandler, DescriptionHandler
-from paasng.platform.declarative.handlers import get_desc_handler as _get_desc_handler
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.declarative.handlers import get_deploy_desc_handler
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -96,66 +92,35 @@ def yaml_content_after_change():
     )
 
 
-def get_desc_handler(yaml_content: str) -> DescriptionHandler:
-    handler = _get_desc_handler(yaml.safe_load(yaml_content))
-    assert isinstance(handler, AppDescriptionHandler)
-    return handler
-
-
 class TestSaasProbes:
-    def test_saas_probes(self, bk_deployment, yaml_content):
-        """验证 saas 应用探针对象 ProcessProbe 成功创建"""
+    def test_process_spec_should_have_probes(self, bk_module, bk_deployment, yaml_content):
+        get_handler(yaml_content).handle(bk_deployment)
+
+        spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+
+        assert spec.probes.liveness.exec.command == ["cat", "/tmp/healthy"]
+        assert spec.probes.readiness.tcp_socket.port == "${PORT}"
+
+    def test_probes_changes_after_handling_new_yaml(
+        self, bk_module, bk_deployment, bk_deployment_full, yaml_content, yaml_content_after_change
+    ):
         # bk_deployment.app_environment  外键未实例化，补全
         name = bk_deployment.app_environment.engine_app.name
         region = bk_deployment.app_environment.engine_app.region
-        wlapp = WlApp.objects.create(name=name, region=region)
-
-        assert get_desc_handler(yaml_content).handle_deployment(bk_deployment)
-        liveness_probe: ProcessProbe = ProcessProbe.objects.get(
-            app=wlapp, process_type="web", probe_type=ProbeType.LIVENESS
-        )
-        readiness_probe: ProcessProbe = ProcessProbe.objects.get(
-            app=wlapp, process_type="web", probe_type=ProbeType.READINESS
-        )
-
-        assert liveness_probe.probe_handler
-        assert liveness_probe.probe_handler.exec.command == ["cat", "/tmp/healthy"]
-
-        assert readiness_probe.probe_handler
-        assert readiness_probe.probe_handler.tcp_socket.port == "${PORT}"
-
-    @pytest.mark.parametrize("_mock_delete_process_probe", [True], indirect=True)
-    def test_saas_probes_changes(self, bk_deployment, bk_deployment_full, yaml_content, yaml_content_after_change):
-        """验证 saas 应用探针对象 ProcessProbe 成功修改"""
-        # bk_deployment.app_environment  外键未实例化，补全
-        name = bk_deployment.app_environment.engine_app.name
-        region = bk_deployment.app_environment.engine_app.region
-        wlapp = WlApp.objects.create(name=name, region=region)
 
         # bk_deployment_full.app_environment  外键未实例化，补全
         bk_deployment_full.app_environment.engine_app.name = name
         bk_deployment_full.app_environment.engine_app.region = region
 
-        assert get_desc_handler(yaml_content).handle_deployment(bk_deployment)
+        get_handler(yaml_content).handle(bk_deployment)
         # 模拟重新部署过程
-        assert get_desc_handler(yaml_content_after_change).handle_deployment(bk_deployment)
-        # liveness_probe 无变化
-        liveness_probe: ProcessProbe = ProcessProbe.objects.get(
-            app=wlapp, process_type="web", probe_type=ProbeType.LIVENESS
-        )
-        # readiness_probe 被删除
-        readiness_probe_exists: ProcessProbe = ProcessProbe.objects.filter(
-            app=wlapp, process_type="web", probe_type=ProbeType.READINESS
-        ).exists()
-        # start_probe 新增
-        start_probe: ProcessProbe = ProcessProbe.objects.get(
-            app=wlapp, process_type="web", probe_type=ProbeType.STARTUP
-        )
+        get_handler(yaml_content_after_change).handle(bk_deployment)
 
-        assert liveness_probe.probe_handler
-        assert liveness_probe.probe_handler.exec.command == ["cat", "/tmp/healthy"]
+        spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
+        assert spec.probes.liveness.exec.command == ["cat", "/tmp/healthy"]
+        assert not spec.probes.readiness
+        assert spec.probes.startup.tcp_socket.port == "${PORT}"
 
-        assert not readiness_probe_exists
 
-        assert start_probe.probe_handler
-        assert start_probe.probe_handler.tcp_socket.port == "${PORT}"
+def get_handler(yaml_content: str):
+    return get_deploy_desc_handler(yaml.safe_load(yaml_content))

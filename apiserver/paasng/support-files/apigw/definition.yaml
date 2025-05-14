@@ -8,9 +8,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.2.0
-  title: "Standardize documents according to the BK specification"
-  comment: "Standardize documents according to the BK specification"
+  version: 1.3.4
+  title: "Corrected the path parameters of analysis related API parameters"
+  comment: "Corrected the path parameters of analysis related API parameters"
 
 
 stage:
@@ -33,6 +33,8 @@ grant_permissions:
   - bk_app_code: bk_monitorv3
   - bk_app_code: bk_dataweb
   - bk_app_code: bk_bkdata
+  - bk_app_code: bk_notice
+  - bk_app_code: bk_flow_engine
 
 strategies: []
 

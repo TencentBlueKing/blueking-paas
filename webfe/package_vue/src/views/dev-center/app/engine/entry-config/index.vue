@@ -12,7 +12,7 @@
       v-else
       class="ps-top-bar"
     >
-      <h2 class="box-shadow">
+      <h2>
         {{ $t('访问管理') }}
       </h2>
     </div>
@@ -32,7 +32,7 @@
       </bk-tab>
       <div
         v-if="active === 'moduleAddress'"
-        class="controller"
+        :class="['controller', { default: !isCloudNativeApp }]"
       >
         <paas-content-loader
           :is-loading="isLoading"
@@ -60,13 +60,15 @@
   </div>
 </template>
 
-<script>import visitConfig from './comps/visit-config';
+<script>
+import visitConfig from './comps/visit-config';
 import accessUser from './comps/access-user';
 import accessIp from './comps/access-ip';
 import accessAudit from './comps/access-audit';
 import accessProcess from './comps/access-process';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
+import { traceIds } from '@/common/trace-ids';
 
 export default {
   components: {
@@ -88,7 +90,7 @@ export default {
   computed: {
     accessControl() {
       return this.$store.state.region?.access_control
-        ? this.$store.state.region?.access_control?.module?.map(e => e)
+        ? this.$store.state.region?.access_control?.module?.map((e) => e)
         : [];
     },
     panels() {
@@ -104,13 +106,16 @@ export default {
       if (this.curAppInfo.role.name === 'developer') {
         return panelsData;
       }
-      if (this.accessControl.includes('user_access_control')) {   // 用户限制
+      if (this.accessControl.includes('user_access_control')) {
+        // 用户限制
         panelsData.push({ name: 'user_access_control', label: this.$t('用户限制') });
       }
-      if (this.accessControl.includes('ip_access_control')) {   // IP限制
+      if (this.accessControl.includes('ip_access_control')) {
+        // IP限制
         panelsData.push({ name: 'ip_access_control', label: this.$t('IP限制') });
       }
-      if (this.accessControl.includes('approval')) {   // 单据审批
+      if (this.accessControl.includes('approval')) {
+        // 单据审批
         panelsData.push({ name: 'approval', label: this.$t('单据审批') });
       }
       return panelsData;
@@ -120,6 +125,9 @@ export default {
         return this.active === 'moduleAddress' || this.active === 'process_service_manage';
       }
       return false;
+    },
+    categoryText() {
+      return this.isCloudNativeApp ? '云原生应用' : '普通应用';
     },
   },
   watch: {
@@ -151,6 +159,8 @@ export default {
       });
     },
     handleTabChange(v) {
+      const label = this.panels.find((item) => item.name === v).label;
+      this.sendEventTracking({ id: traceIds[label], action: 'view', category: this.categoryText });
       if (this.initPage) {
         this.active = this.tab || v;
       } else {
@@ -180,6 +190,10 @@ export default {
     background: #fff;
     margin: 20px 24px 0 24px;
     padding-bottom: 20px;
+    &:not(.cloud-cls) {
+      box-shadow: 0 2px 4px 0 #1919290d;
+      border-radius: 2px;
+    }
     &.cloud-cls {
       background: #f5f7fa;
     }
@@ -196,8 +210,10 @@ export default {
   .controller {
     background: #fff;
     min-height: calc(100% - 50px);
-    width: calc(100% - 38px);
     margin: 15px auto 0;
+    &.default {
+      padding: 0 16px;
+    }
     .entry-bar {
       /deep/ .bar-container {
         border: none !important;

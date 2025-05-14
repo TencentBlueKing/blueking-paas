@@ -1,41 +1,41 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""kres is a well capsuled package for playing with kubernetes resources"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""kres is a well capsuled package for playing with kubernetes resources
-"""
 import functools
 import json
 import logging
 import time
 from contextlib import contextmanager
-from enum import Enum
+from datetime import datetime
 from types import ModuleType
 from typing import Any, Callable, Collection, Dict, Iterator, List, Optional, Tuple, Type, Union, overload
 
 import cattr
 from attrs import define
+from blue_krill.data_types.enum import StrStructuredEnum
 from kubernetes import client as client_mod
 from kubernetes.client.api_client import ApiClient
 from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from kubernetes.dynamic.resource import Resource, ResourceInstance
 
-from paas_wl.infras.resources.base.constants import QUERY_LOG_DEFAULT_TIMEOUT
+from paas_wl.infras.resources.base.constants import KUBECTL_RESTART_RESOURCE_KEY, QUERY_LOG_DEFAULT_TIMEOUT
 from paas_wl.infras.resources.base.exceptions import (
     CreateServiceAccountTimeout,
     ReadTargetStatusTimeout,
@@ -66,7 +66,7 @@ def set_default_options(options: ClientOptionsDict):
     _default_options = options
 
 
-class PatchType(str, Enum):
+class PatchType(StrStructuredEnum):
     """Different merge types when patching a kubernetes resource
     See also: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
     """
@@ -116,12 +116,10 @@ class NameBasedMethodProxy:
         self.method_name = name
 
     @overload
-    def __get__(self, instance: None, owner: None) -> "NameBasedMethodProxy":
-        ...
+    def __get__(self, instance: None, owner: None) -> "NameBasedMethodProxy": ...
 
     @overload
-    def __get__(self, instance: object, owner: Type) -> Callable:
-        ...
+    def __get__(self, instance: object, owner: Type) -> Callable: ...
 
     def __get__(self, instance, owner: Optional[Type] = None) -> Union["NameBasedMethodProxy", Callable]:
         if not instance:
@@ -158,7 +156,7 @@ class BaseKresource:
         self.request_timeout = request_timeout or get_default_options().get("request_timeout")
         self.api_version = api_version
         self.ops_name = NameBasedOperations(self, self.request_timeout)
-        self.ops_label = LabelBasedOperations(self, self.request_timeout)
+        self.ops_batch = BatchOperations(self, self.request_timeout)
 
     # Make shortcuts: proxy a collection of methods to self.ops_name(name
     # based operations) for convenience.
@@ -398,9 +396,8 @@ class NameBasedOperations(BaseOperations):
             request_kwargs.update(grace_period_seconds=grace_period_seconds)
             body.grace_period_seconds = grace_period_seconds
 
-        resource = self.kres.dynamic_client.get_preferred_resource(self.kres.kind)
         try:
-            resource.delete(name=name, body=cattr.unstructure(body), namespace=namespace, **request_kwargs)
+            self.resource.delete(name=name, body=cattr.unstructure(body), namespace=namespace, **request_kwargs)
         except ApiException as e:
             if e.status == 404:
                 if raise_if_non_exists:
@@ -454,18 +451,26 @@ class NameBasedOperations(BaseOperations):
         body_dict["metadata"].setdefault("resourceVersion", obj.metadata.resourceVersion)
 
 
-class LabelBasedOperations(BaseOperations):
-    """All operations in this class are based on labels"""
+class BatchOperations(BaseOperations):
+    """All operations in this class are performed in batch"""
 
-    def list(self, labels: Dict, namespace: Namespace = None) -> KubeObjectList:
+    def list(
+        self, labels: Optional[Dict] = None, fields: Optional[Dict] = None, namespace: Namespace = None
+    ) -> KubeObjectList:
         """list resources by labels
 
         :param labels: labels dict
+        :param fields: fields dict
         :param namespace: Resource namespace, only required for is_namespaced resource
         :returns: Various kinds of kubernetes lists
         """
+        labels = labels or {}
+        fields = fields or {}
         list_resp = self.resource.get(
-            label_selector=self.make_labels_string(labels), namespace=namespace, **self.default_kwargs
+            label_selector=self.make_labels_string(labels),
+            field_selector=self.make_fields_string(fields),
+            namespace=namespace,
+            **self.default_kwargs,
         )
         return KubeObjectList(list_resp)
 
@@ -506,6 +511,35 @@ class LabelBasedOperations(BaseOperations):
         :param labels: dict of labels
         """
         return ",".join("{}={}".format(key, value) for key, value in labels.items())
+
+    @staticmethod
+    def make_fields_string(fields: Dict) -> str:
+        """Turn a fields dict into string format
+
+        :param fields: dict of fields
+        Example:
+        Input:
+            input_dict = {
+                "involvedObject": {"name": "xxx", "kind": "Pod"},
+                "reason": "BackOff"
+            }
+        Output:
+            'involvedObject.name=xxx,involvedObject.kind=Pod,reason=BackOff'
+        """
+        field_selectors = []
+
+        # 递归函数用于处理字典嵌套的情况
+        def process_dict(d, prefix=""):
+            for key, value in d.items():
+                # 如果值是字典，递归处理
+                if isinstance(value, dict):
+                    process_dict(value, prefix=f"{prefix}{key}.")
+                else:
+                    field_selectors.append(f"{prefix}{key}={value}")
+
+        process_dict(fields)
+
+        return ",".join(field_selectors)
 
 
 # Individual resource types start
@@ -635,6 +669,23 @@ class KPod(BaseKresource):
 
 class KDeployment(BaseKresource):
     kind = "Deployment"
+
+    def restart(self, name: str, namespace: Namespace):
+        """
+        Rollout restart the deployment by patching annotations
+        This method triggers a rolling restart of a Kubernetes deployment by updating
+
+        For more details on how updating a deployment works, refer to:
+        https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment
+        """
+        body = {
+            "spec": {
+                "template": {
+                    "metadata": {"annotations": {KUBECTL_RESTART_RESOURCE_KEY: f"{datetime.now().isoformat()}"}}
+                }
+            }
+        }
+        return self.patch(name=name, namespace=namespace, body=body)
 
 
 class KStatefulSet(BaseKresource):

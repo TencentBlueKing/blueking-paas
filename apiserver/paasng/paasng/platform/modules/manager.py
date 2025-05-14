@@ -1,26 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """Management functions for application module, may include:
 
 - Module initialization
 - Module deletion / recycle
 """
+
 import logging
 from collections import namedtuple
 from contextlib import contextmanager
@@ -33,16 +33,18 @@ from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.api import create_app_ignore_duplicated, update_metadata_by_env
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppProcess
 from paas_wl.bk_app.deploy.actions.delete import delete_module_related_res
-from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.infras.cluster.shim import EnvClusterService, get_exposed_url_type
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.entities import Monitoring, Process
+from paasng.platform.bkapp_model.entities_syncer import sync_processes
+from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
+from paasng.platform.bkapp_model.models import ObservabilityConfig, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
@@ -60,11 +62,11 @@ from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.connector import get_repo_connector
 from paasng.platform.sourcectl.docker.models import init_image_repo
 from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.exceptions import TmplRegionNotSupported
 from paasng.platform.templates.manager import AppBuildPack, TemplateRuntimeManager
 from paasng.platform.templates.models import Template
 from paasng.utils.addons import ReplaceableFunction
 from paasng.utils.basic import get_username_by_bkpaas_user_id
+from paasng.utils.dictx import get_items
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -89,10 +91,9 @@ class ModuleBuildpackPlaner:
         """获取构建模板代码需要的构建工具"""
         try:
             required_buildpacks = TemplateRuntimeManager(
-                region=self.module.region, tmpl_name=self.module.source_init_template
+                self.module.source_init_template
             ).get_template_required_buildpacks(bp_stack_name=bp_stack_name)
-        # django_legacy 等迁移模板未配 region
-        except (Template.DoesNotExist, TmplRegionNotSupported):
+        except Template.DoesNotExist:
             required_buildpacks = []
 
         language_bp = self.get_language_buildpack(bp_stack_name=bp_stack_name)
@@ -133,25 +134,37 @@ class ModuleInitializer:
         }
 
     @transaction.atomic
-    def create_engine_apps(self, environments: Optional[List[str]] = None, cluster_name: Optional[str] = None):
+    def create_engine_apps(self, env_cluster_names: Dict[str, str] | None = None):
         """Create engine app instances for application"""
-        environments = environments or self.default_environments
+        env_cluster_names = env_cluster_names if env_cluster_names else {}
+
         wl_app_type = (
             WlAppType.CLOUD_NATIVE if self.application.type == ApplicationType.CLOUD_NATIVE else WlAppType.DEFAULT
         )
 
-        for environment in environments:
+        for environment in self.default_environments:
             name = self.make_engine_app_name(environment)
             engine_app = self._get_or_create_engine_app(name, wl_app_type)
             env = ModuleEnvironment.objects.create(
-                application=self.application, module=self.module, engine_app_id=engine_app.id, environment=environment
+                application=self.application,
+                module=self.module,
+                engine_app_id=engine_app.id,
+                environment=environment,
+                tenant_id=self.application.tenant_id,
             )
-            # bind env to cluster
-            EnvClusterService(env).bind_cluster(cluster_name)
+            # 为部署环境绑定集群，支持以模块创建者的身份选择可用集群
+            username = get_username_by_bkpaas_user_id(self.module.creator)
+            EnvClusterService(env).bind_cluster(env_cluster_names.get(environment), operator=username)
 
             # Update metadata
             engine_app_meta_info = self.make_engine_meta_info(env)
             update_metadata_by_env(env, engine_app_meta_info)
+
+        # Also set the module's exposed_url_type by the cluster
+        self.module.exposed_url_type = get_exposed_url_type(
+            application=self.application, cluster_name=env_cluster_names.get(AppEnvironment.PRODUCTION)
+        ).value
+        self.module.save(update_fields=["exposed_url_type"])
 
     def initialize_vcs_with_template(
         self,
@@ -173,7 +186,7 @@ class ModuleInitializer:
             )
             return {"code": "OK", "extra_info": {}, "dest_type": "null"}
 
-        client_secret = get_oauth2_client_secret(self.application.code, self.application.region)
+        client_secret = get_oauth2_client_secret(self.application.code)
         context = {
             "region": self.application.region,
             "owner_username": get_username_by_bkpaas_user_id(self.application.owner),
@@ -210,10 +223,7 @@ class ModuleInitializer:
             return False
 
         # Matches source origin type: IMAGE_REGISTRY or CNATIVE_IMAGE
-        if module_specs.runtime_type == RuntimeType.CUSTOM_IMAGE:
-            return False
-
-        return True
+        return module_specs.runtime_type != RuntimeType.CUSTOM_IMAGE
 
     def bind_default_services(self):
         """Bind default services after module creation"""
@@ -239,7 +249,7 @@ class ModuleInitializer:
     def bind_runtime_by_labels(self, labels: Dict[str, str], contain_hidden: bool = False):
         """Bind slugbuilder/slugrunner/buildpacks by labels"""
         try:
-            slugbuilder = AppSlugBuilder.objects.select_default_runtime(self.module.region, labels, contain_hidden)
+            slugbuilder = AppSlugBuilder.objects.select_default_runtime(labels, contain_hidden)
             # by designed, name must be consistent between builder and runner
             slugrunner = AppSlugRunner.objects.get(name=slugbuilder.name)
         except ObjectDoesNotExist:
@@ -279,22 +289,34 @@ class ModuleInitializer:
             build_params["image_credential_name"] = image_credential["name"]
         update_build_config_with_method(config_obj, build_method=build_config.build_method, data=build_params)
 
-        # 导入进程配置
         processes = [
-            BkAppProcess(
-                name=proc["name"],
-                command=proc["command"],
-                args=proc["args"],
-                targetPort=proc.get("port", None),
+            Process(
+                name=proc_spec["name"],
+                command=proc_spec["command"],
+                args=proc_spec["args"],
+                target_port=proc_spec.get("port", None),
+                probes=proc_spec.get("probes", None),
+                services=proc_spec.get("services", None),
             )
-            for proc in bkapp_spec["processes"]
+            for proc_spec in bkapp_spec["processes"]
         ]
 
-        mgr = ModuleProcessSpecManager(self.module)
-        mgr.sync_from_bkapp(processes)
-        for proc in bkapp_spec["processes"]:
-            if env_overlay := proc.get("env_overlay"):
-                mgr.sync_env_overlay(proc_name=proc["name"], env_overlay=env_overlay)
+        sync_processes(self.module, processes, manager=FieldMgrName.WEB_FORM)
+
+        # 更新环境覆盖&更新可观测功能配置
+        metrics = []
+        for proc_spec in bkapp_spec["processes"]:
+            if env_overlay := proc_spec.get("env_overlay"):
+                for env_name, proc_env_overlay in env_overlay.items():
+                    ProcessSpecEnvOverlay.objects.save_by_module(
+                        self.module, proc_spec["name"], env_name, **proc_env_overlay
+                    )
+
+            if metric := get_items(proc_spec, ["monitoring", "metric"]):
+                metrics.append({"process": proc_spec["name"], **metric})
+
+        monitoring = Monitoring(metrics=metrics) if metrics else None
+        ObservabilityConfig.objects.upsert_by_module(self.module, monitoring)
 
         # 导入 hook 配置
         if hook := bkapp_spec.get("hook"):
@@ -307,9 +329,13 @@ class ModuleInitializer:
 
     def _get_or_create_engine_app(self, name: str, app_type: WlAppType) -> EngineApp:
         """Create or get existed engine app by given name"""
-        info = create_app_ignore_duplicated(self.application.region, name, app_type)
+        info = create_app_ignore_duplicated(self.application.region, name, app_type, self.application.tenant_id)
         engine_app = EngineApp.objects.create(
-            id=info.uuid, name=info.name, owner=self.application.owner, region=self.application.region
+            id=info.uuid,
+            name=info.name,
+            owner=self.application.owner,
+            region=self.application.region,
+            tenant_id=self.application.tenant_id,
         )
         return engine_app
 
@@ -338,14 +364,14 @@ def init_module_in_view(*args, **kwargs) -> ModuleInitResult:
         raise error_codes.CANNOT_CREATE_APP.f(str(e))
 
 
-def initialize_smart_module(module: Module, cluster_name: Optional[str] = None):
+def initialize_smart_module(module: Module, env_cluster_names: Dict[str, str]):
     """Initialize a module for s-mart app"""
     module_initializer = ModuleInitializer(module)
     module_spec = ModuleSpecs(module)
 
     # Create engine apps first
     with _humanize_exception("create_engine_apps", _("服务暂时不可用，请稍候再试")):
-        module_initializer.create_engine_apps(cluster_name=cluster_name)
+        module_initializer.create_engine_apps(env_cluster_names=env_cluster_names)
 
     with _humanize_exception("bind_default_services", _("绑定初始增强服务失败，请稍候再试")):
         module_initializer.bind_default_services()
@@ -364,8 +390,8 @@ def initialize_module(
     repo_type: str,
     repo_url: Optional[str],
     repo_auth_info: Optional[dict],
+    env_cluster_names: Dict[str, str],
     source_dir: str = "",
-    cluster_name: Optional[str] = None,
     bkapp_spec: Optional[Dict] = None,
 ) -> ModuleInitResult:
     """Initialize a module
@@ -383,7 +409,7 @@ def initialize_module(
 
     # Create engine apps first
     with _humanize_exception("create_engine_apps", _("服务暂时不可用，请稍候再试")):
-        module_initializer.create_engine_apps(cluster_name=cluster_name)
+        module_initializer.create_engine_apps(env_cluster_names=env_cluster_names)
 
     source_init_result = {}
     if module_spec.has_vcs:
@@ -396,7 +422,7 @@ def initialize_module(
     build_config = bkapp_spec["build_config"] if bkapp_spec else None
     if not build_config:
         if module_spec.templated_source_enabled:
-            tmpl_mgr = TemplateRuntimeManager(region=module.region, tmpl_name=module.source_init_template)
+            tmpl_mgr = TemplateRuntimeManager(tmpl_name=module.source_init_template)
             build_config = entities.BuildConfig(
                 build_method=tmpl_mgr.template.runtime_type, tag_options=ImageTagOptions()
             )
@@ -459,7 +485,7 @@ class ModuleCleaner:
                 logger.info(f"service<{rel.db_obj.service_id}-{rel.db_obj.service_instance_id}> deleted. ")
 
                 # Put related services into collection
-                service = mixed_service_mgr.get(rel.db_obj.service_id, self.module.region)
+                service = mixed_service_mgr.get(rel.db_obj.service_id)
                 services.append(service)
 
         # Clear all related shared services
@@ -501,22 +527,23 @@ class DefaultServicesBinder:
     def find_services_from_template(self) -> PresetServiceSpecs:
         """find default services defined in module template"""
         try:
-            tmpl_mgr = TemplateRuntimeManager(region=self.module.region, tmpl_name=self.module.source_init_template)
+            tmpl_mgr = TemplateRuntimeManager(self.module.source_init_template)
             return tmpl_mgr.get_preset_services_config()
-        # django_legacy 等迁移模板未配 region
-        except (Template.DoesNotExist, TmplRegionNotSupported):
+        except Template.DoesNotExist:
             return {}
 
     def _bind(self, services: PresetServiceSpecs):
         """Bind current module with given services"""
-        for service_name, config in services.items():
+        # The value of `services` contains specs, the specs used to be a parameter for
+        # `bind_service` but now it's not used anymore, so we just ignore it.
+        for service_name in services:
             try:
-                service_obj = mixed_service_mgr.find_by_name(service_name, self.application.region)
+                service_obj = mixed_service_mgr.find_by_name(service_name)
             except ServiceObjNotFound:
                 logger.exception("应用<%s>获取预设增强服务<%s>失败", self.application.code, service_name)
                 continue
 
-            mixed_service_mgr.bind_service(service_obj, self.module, config.get("specs"))
+            mixed_service_mgr.bind_service_use_first_plan(service_obj, self.module)
 
 
 def make_engine_app_name(module: Module, app_code: str, env: str) -> str:

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 import time
@@ -69,7 +68,7 @@ class AppEntity:
     _kube_data = None  # type: Optional[ResourceInstance]
 
     class Meta:
-        """Metainfo of current AppEntity type"""
+        """Meta info of current AppEntity type"""
 
         # Kubernetes resource type bound with current entity
         kres_class: Type[kres.BaseKresource] = kres.BaseKresource
@@ -147,8 +146,9 @@ class BaseTransformer(Generic[AET]):
         self.gvk_config = gvk_config
         if self.api_version and self.api_version not in self.gvk_config.available_apiversions:
             raise APIServerVersionIncompatible(
-                "APIServer does not support requested api_version, kind: {}, api_version: {}, "
-                "gvk_config: {}".format(self.entity_type.Meta.kres_class.kind, self.api_version, self.gvk_config)
+                "APIServer does not support requested api_version, kind: {}, api_version: {}, gvk_config: {}".format(
+                    self.entity_type.Meta.kres_class.kind, self.api_version, self.gvk_config
+                )
             )
 
     def get_apiversion(self) -> str:
@@ -295,7 +295,7 @@ class NamespaceScopedReader(Generic[AET]):
         labels = labels or {}
         deserializer = self._make_deserializer(cluster_name)
         with self.kres(cluster_name, api_version=deserializer.get_apiversion()) as kres_client:
-            ret = kres_client.ops_label.list(namespace=namespace, labels=labels)
+            ret = kres_client.ops_batch.list(namespace=namespace, labels=labels)
 
         items = []
         for kube_data in ret.items:
@@ -335,7 +335,7 @@ class NamespaceScopedReader(Generic[AET]):
         deserializer = self._make_deserializer(cluster_name)
         with self.kres(cluster_name, api_version=deserializer.get_apiversion()) as kres_client:
             try:
-                for raw_event in kres_client.ops_label.create_watch_stream(
+                for raw_event in kres_client.ops_batch.create_watch_stream(
                     namespace=namespace, labels=labels, **kwargs
                 ):
                     # When client given a staled resource_version, the watch stream will return an ERROR event
@@ -439,15 +439,19 @@ class AppEntityReader(Generic[AET]):
         """List all app's resources"""
         return self.list_by_app_with_meta(app, labels=labels).items
 
-    def list_by_app_with_meta(self, app: WlApp, labels: Optional[Dict] = None) -> ResourceList[AET]:
+    def list_by_app_with_meta(
+        self, app: WlApp, labels: Optional[Dict] = None, fields: Optional[Dict] = None
+    ) -> ResourceList[AET]:
         """List all app's resources,  return results including metadata
 
         :param labels: labels for filtering results
+        :param fields: fields for filtering results
         """
         labels = labels or {}
+        fields = fields or {}
         deserializer = self._make_deserializer(app)
         with self.kres(app, api_version=deserializer.get_apiversion()) as kres_client:
-            ret = kres_client.ops_label.list(namespace=self._get_namespace(app), labels=labels)
+            ret = kres_client.ops_batch.list(namespace=self._get_namespace(app), labels=labels, fields=fields)
 
         items = []
         for kube_data in ret.items:
@@ -477,7 +481,7 @@ class AppEntityReader(Generic[AET]):
         deserializer = self._make_deserializer(app)
         with self.kres(app, api_version=deserializer.get_apiversion()) as kres_client:
             try:
-                for raw_event in kres_client.ops_label.create_watch_stream(
+                for raw_event in kres_client.ops_batch.create_watch_stream(
                     namespace=self._get_namespace(app), labels=labels, **kwargs
                 ):
                     # When client given a staled resource_version, the watch stream will return an ERROR event

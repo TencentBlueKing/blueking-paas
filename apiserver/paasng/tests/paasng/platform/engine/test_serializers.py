@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from textwrap import dedent
 
 import pytest
@@ -28,7 +27,7 @@ from paasng.platform.engine import serializers as slzs
 from paasng.platform.engine.models.config_var import ConfigVar
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "environment_name, bk_env",
     [("stag", "bk_stag_env"), ("prod", "bk_prod_env"), ("_global_", None)],
@@ -47,11 +46,12 @@ class TestConfigVar:
         ],
     )
     def test_input(self, bk_module, environment_name, bk_env, data, expected):
-        v = slzs.ConfigVarSLZ(data=dict(environment_name=environment_name, **data), context={"module": bk_module})
-        v.is_valid(True)
-        assert v.validated_data == dict(
+        slz = slzs.ConfigVarSLZ(data=dict(environment_name=environment_name, **data), context={"module": bk_module})
+        slz.is_valid(raise_exception=True)
+        assert slz.validated_data == dict(
             environment=bk_env,
             module=bk_module,
+            tenant_id=bk_module.tenant_id,
             environment_id=getattr(bk_env, "pk", -1),
             is_global=bk_env is None,
             **data,
@@ -62,11 +62,11 @@ class TestConfigVar:
         [dict(key="FOO", value="bar", description="baz")],
     )
     def test_output(self, bk_module, environment_name, bk_env, data):
-        v = slzs.ConfigVarSLZ(dict(module=bk_module, environment=bk_env, **data))
-        assert v.data == dict(environment_name=environment_name, module=bk_module.pk, **data)
+        slz = slzs.ConfigVarSLZ(dict(module=bk_module, environment=bk_env, **data))
+        assert slz.data == dict(environment_name=environment_name, module=bk_module.pk, **data)
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 class TestConfigVarImportSLZ:
     @pytest.fixture()
     def expected(self, request):
@@ -197,7 +197,7 @@ class TestConfigVarImportSLZ:
             slz.is_valid(raise_exception=True)
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 class TestConfigVarFormatSLZ:
     @pytest.fixture()
     def expected(self, request):

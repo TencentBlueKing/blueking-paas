@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 from unittest import mock
 
@@ -23,7 +22,7 @@ import pytest
 from elasticsearch_dsl.response import Hit, Response
 from elasticsearch_dsl.search import Search
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestLegacyStdoutLogAPIView:
@@ -106,7 +105,6 @@ class TestLegacyStdoutLogAPIView:
                                         "@timestamp": 1,
                                         "json": {"message": "foo"},
                                         "one": {"two": {"three": "four"}},
-                                        "region": bk_app.region,
                                         "app_code": bk_app.code,
                                         "module_name": bk_module.name,
                                         "environment": "stag",
@@ -167,7 +165,6 @@ class TestLegacySysStructuredLogAPIView:
                                 "@timestamp": 1,
                                 "json": {"message": "foo"},
                                 "one": {"two": {"three": "four"}},
-                                "region": bk_app.region,
                                 "app_code": bk_app.code,
                                 "module_name": bk_module.name,
                                 "environment": "stag",
@@ -206,7 +203,6 @@ class TestLegacySysStructuredLogAPIView:
                     # "one.two.three": "four",
                     # 扁平化
                     "json.message": "[bk-mark]???[/bk-mark]",
-                    "region": "default",
                     "app_code": bk_app.code,
                     "module_name": bk_module.name,
                     "environment": "stag",
@@ -214,7 +210,6 @@ class TestLegacySysStructuredLogAPIView:
                     "stream": "foo",
                     "pod_name": "bar",
                 },
-                "region": bk_app.region,
                 "app_code": bk_app.code,
                 # 没有 module_name
                 "environment": "stag",
@@ -275,7 +270,6 @@ class TestSysBkPluginLogsViewset:
                                         "@timestamp": 1,
                                         "json": {"message": "foo"},
                                         "one": {"two": {"three": "four"}},
-                                        "region": bk_plugin_app.region,
                                         "app_code": bk_plugin_app.code,
                                         "environment": "stag",
                                         "process_id": "1234567",
@@ -312,7 +306,6 @@ class TestSysBkPluginLogsViewset:
                     # "@timestamp": 1,
                     # "one.two.three": "four",
                     "json.message": "[bk-mark]???[/bk-mark]",
-                    "region": bk_plugin_app.region,
                     "app_code": bk_plugin_app.code,
                     "environment": "stag",
                     "process_id": "1234567",
@@ -326,7 +319,6 @@ class TestSysBkPluginLogsViewset:
                     # "@timestamp": 1,
                     # "one.two.three": "four",
                     "json.message": "[bk-mark]???[/bk-mark]",
-                    "region": bk_plugin_app.region,
                     "app_code": bk_plugin_app.code,
                     "environment": "stag",
                     "process_id": "1234567",

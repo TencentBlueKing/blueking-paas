@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import base64
 import re
 from typing import Dict
@@ -23,10 +22,12 @@ from typing import Dict
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
-from django.utils.encoding import force_text
-from past.builtins import basestring
+from django.utils.encoding import force_str
 
-from paasng.core.region.models import Region, RegionList, filter_region_by_name
+# k8s 广泛使用的命名规范, 仅允许小写字母、数字和连字符, 最大长度 63
+# 参考 https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
+DNS_SAFE_PATTERN = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+DNS_MAX_LENGTH = 63
 
 RE_APP_CODE = re.compile(r"^[a-z0-9-]{1,16}$")
 RE_APP_SEARCH = re.compile("[\u4300-\u9fa5\\w_\\-\\d]{1,20}")
@@ -44,7 +45,7 @@ class DnsSafeNameValidator:
         self.validator = RegexValidator("^(?![0-9]+.*$)(?!-)[a-zA-Z0-9-]{,63}(?<!-)$", message=self.message)
 
     def __call__(self, value):
-        value = force_text(value)
+        value = force_str(value)
         self.validator(value)
 
 
@@ -59,34 +60,8 @@ class ReservedWordValidator:
         self.validator = RegexValidator("|".join(self.reserved_word), message=self.message, inverse_match=True)
 
     def __call__(self, value):
-        value = force_text(value)
+        value = force_str(value)
         self.validator(value)
-
-
-@deconstructible
-class RegionListValidator:
-    def __call__(self, value):
-        if isinstance(value, basestring):
-            if not self.is_formatted_string(value):
-                raise ValidationError("please supply valid string as 'ieod;tencent;clouds'")
-            return value
-
-        if isinstance(value, RegionList) and all(isinstance(x, Region) for x in value):
-            region_names = ";".join([x.name for x in value])
-            return region_names
-        raise ValidationError("please supply valid RegionList")
-
-    @staticmethod
-    def is_formatted_string(value):
-        try:
-            region_list = filter_region_by_name(value.split(";"))
-        except Exception:
-            return False
-        else:
-            # make sure region not repeat
-            if len(region_list) == len(set(region_list)) == len(value.split(";")):
-                return True
-            return False
 
 
 @deconstructible
@@ -151,12 +126,10 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
     """
     for proc_type in procfile:
         if not PROC_TYPE_PATTERN.match(proc_type):
-            raise ValidationError(
-                f"Invalid proc type: {proc_type}, must match " f"pattern {PROC_TYPE_PATTERN.pattern}"
-            )
+            raise ValidationError(f"Invalid proc type: {proc_type}, must match pattern {PROC_TYPE_PATTERN.pattern}")
         if len(proc_type) > PROC_TYPE_MAX_LENGTH:
             raise ValidationError(
-                f"Invalid proc type: {proc_type}, must not " f"longer than {PROC_TYPE_MAX_LENGTH} characters"
+                f"Invalid proc type: {proc_type}, must not longer than {PROC_TYPE_MAX_LENGTH} characters"
             )
 
     # Formalize procfile data and return

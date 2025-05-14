@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""Tests for Engine APIS"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""TestCases for Engine APIS
-"""
 import logging
 from unittest import mock
 
@@ -30,6 +29,7 @@ from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.models import EnvRoleProtection
+from paasng.platform.sourcectl.constants import VersionType
 
 logger = logging.getLogger(__name__)
 pytestmark = pytest.mark.django_db
@@ -173,15 +173,23 @@ class TestDeploymentViewSet:
 
     def test_deploy_no_revision(self, api_client, bk_app, bk_module):
         url = reverse("api.deploy", kwargs={"code": bk_app.code, "environment": "stag"})
-        resp = api_client.post(url, data={"version_type": "foo", "version_name": "bar"})
+        resp = api_client.post(url, data={"version_type": VersionType.BRANCH.value, "version_name": "bar"})
         assert resp.status_code == 400
         assert resp.json() == {"code": "CANNOT_GET_REVISION", "detail": "无法获取代码版本"}
+
+    def test_deploy_with_image_type(self, api_client, bk_app, bk_module):
+        url = reverse("api.deploy", kwargs={"code": bk_app.code, "environment": "stag"})
+        resp = api_client.post(url, data={"version_type": VersionType.IMAGE.value, "version_name": "bar"})
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == "version_type 为 image 时，revision 必须为 sha256 开头的镜像 digest"
 
     @pytest.mark.usefixtures("_init_tmpls")
     def test_deploy(self, api_client, bk_app_full, bk_module_full):
         url = reverse("api.deploy", kwargs={"code": bk_app_full.code, "environment": "stag"})
         with mock.patch("paasng.platform.engine.views.deploy.DeployTaskRunner"):
-            resp = api_client.post(url, data={"version_type": "foo", "version_name": "bar", "revision": "baz"})
+            resp = api_client.post(
+                url, data={"version_type": VersionType.BRANCH.value, "version_name": "bar", "revision": "baz"}
+            )
 
         coordinator = DeploymentCoordinator(bk_module_full.get_envs("stag"))
         deployment = coordinator.get_current_deployment()
@@ -196,7 +204,9 @@ class TestDeploymentViewSet:
         coordinator = DeploymentCoordinator(bk_stag_env)
 
         assert coordinator.acquire_lock()
-        resp = api_client.post(url, data={"version_type": "foo", "version_name": "bar", "revision": "baz"})
+        resp = api_client.post(
+            url, data={"version_type": VersionType.BRANCH.value, "version_name": "bar", "revision": "baz"}
+        )
         coordinator.release_lock()
 
         assert resp.status_code == 400
@@ -207,6 +217,8 @@ class TestDeploymentViewSet:
 
     def test_deploy_exception(self, api_client, bk_app, bk_module):
         url = reverse("api.deploy", kwargs={"code": bk_app.code, "environment": "stag"})
-        resp = api_client.post(url, data={"version_type": "foo", "version_name": "bar", "revision": "baz"})
+        resp = api_client.post(
+            url, data={"version_type": VersionType.BRANCH.value, "version_name": "bar", "revision": "baz"}
+        )
         assert resp.status_code == 400
         assert resp.json() == {"code": "CANNOT_DEPLOY_APP", "detail": "部署失败: 部署请求异常，请稍候再试"}

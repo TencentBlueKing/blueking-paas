@@ -1,39 +1,54 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 import logging
 from functools import wraps
+from typing import List
 
 from blue_krill.web.std_error import APIError as StdAPIError
+from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
 from paasng.bk_plugins.pluginscenter import constants
+from paasng.bk_plugins.pluginscenter.constants import PluginReleaseStatus, PluginRevisionType
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
+from paasng.bk_plugins.pluginscenter.features import PluginDefinitionFlagsManager, PluginFeatureFlag
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim import (
     add_role_members,
     setup_builtin_grade_manager,
     setup_builtin_user_groups,
 )
-from paasng.bk_plugins.pluginscenter.models import PluginInstance, PluginMarketInfo
-from paasng.bk_plugins.pluginscenter.sourcectl import add_repo_member, get_plugin_repo_initializer
+from paasng.bk_plugins.pluginscenter.models import (
+    PluginDefinition,
+    PluginInstance,
+    PluginMarketInfo,
+    PluginVisibleRange,
+)
+from paasng.bk_plugins.pluginscenter.sourcectl import (
+    add_repo_member,
+    get_plugin_repo_accessor,
+    get_plugin_repo_initializer,
+)
+from paasng.bk_plugins.pluginscenter.sourcectl.base import AlternativeVersion
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import APIError as SourceAPIError
 from paasng.bk_plugins.pluginscenter.sourcectl.exceptions import PluginRepoNameConflict
-from paasng.bk_plugins.pluginscenter.thirdparty.instance import create_instance
+from paasng.bk_plugins.pluginscenter.thirdparty.instance import (
+    callback_on_visible_range_update_approved,
+    create_instance,
+)
 from paasng.platform.sourcectl.git.client import GitCommandExecutionError
 
 logger = logging.getLogger(__name__)
@@ -78,6 +93,10 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
     if plugin.pd.basic_info_definition.release_method == constants.PluginReleaseMethod.CODE:
         init_plugin_repository(plugin, operator)
 
+    # 初始化可见范围
+    if hasattr(plugin.pd, "visible_range_definition"):
+        PluginVisibleRange.get_or_initialize_with_default(plugin=plugin)
+
     # 调用第三方系统API时, 必须保证 plugin.repository 不为空
     if plugin.pd.basic_info_definition.api.create:
         try:
@@ -93,13 +112,30 @@ def init_plugin_in_view(plugin: PluginInstance, operator: str):
             raise error_codes.THIRD_PARTY_API_ERROR
 
     # 创建默认市场信息
-    PluginMarketInfo.objects.create(plugin=plugin, extra_fields={})
+    PluginMarketInfo.objects.create(plugin=plugin, extra_fields={}, tenant_id=plugin.tenant_id)
     # 创建 IAM 分级管理员
     setup_builtin_grade_manager(plugin)
     # 创建 IAM 用户组
     setup_builtin_user_groups(plugin)
     # 添加默认管理员
-    add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=[operator])
+    admins = [operator]
+    if plugin.pd.options and plugin.pd.options.shouldAddAdmins:
+        admins += plugin.pd.administrator
+    add_role_members(plugin, role=constants.PluginRole.ADMINISTRATOR, usernames=list(set(admins)))
+
+
+@atomic
+def update_visible_range_and_callback(plugin: PluginInstance, operator: str):
+    """更新可见范围，需要同步回调第三方 API"""
+    visible_range_obj = plugin.visible_range
+    # 将 ITSM 单据中的可见范围信息更新到 DB 中
+    visible_range_obj.bkci_project = visible_range_obj.itsm_bkci_project
+    visible_range_obj.organization = visible_range_obj.itsm_organization
+    visible_range_obj.save()
+
+    callback_result = callback_on_visible_range_update_approved(plugin.pd, plugin, operator)
+    if not callback_result:
+        logger.exception("The callback to the third API fails when updating the visible range")
 
 
 def init_plugin_repository(plugin: PluginInstance, operator: str):
@@ -122,8 +158,45 @@ def init_plugin_repository(plugin: PluginInstance, operator: str):
     add_repo_member(plugin, operator, role=constants.PluginRole.ADMINISTRATOR)
 
 
-def build_repository_template(repository_group: str) -> str:
+def build_repository_template(pd: PluginDefinition, repository_group: str) -> str:
     """transfer a repository group to repository template"""
     if not repository_group.endswith("/"):
         repository_group += "/"
+
+    if PluginDefinitionFlagsManager(pd).has_feature(PluginFeatureFlag.LOWER_REPO_NAME):
+        return repository_group + "{{ plugin_id|lower }}.git"
     return repository_group + "{{ plugin_id }}.git"
+
+
+def get_source_hash_by_plugin_version(
+    plugin: PluginInstance, source_version_type: str, source_version_name: str, revision_type: str, release_id: str
+) -> str:
+    """插件版本号对应的代码仓库的提交信息
+
+    @param source_version_type: 代码版本类型(branch/tag)
+    @param source_version_name: 代码分支名/tag名
+    @param revision_type: 插件发布类型，主干发布、分支发布、测试版本发布等
+    """
+    # 选择已经通过的测试版本发布，则直接查询版本版本对应的 source hash 即可
+    if revision_type == PluginRevisionType.TESTED_VERSION:
+        return plugin.test_versions.get(id=release_id).source_hash
+    return get_plugin_repo_accessor(plugin).extract_smart_revision(f"{source_version_type}:{source_version_name}")
+
+
+def get_tested_versions(plugin: PluginInstance) -> List[AlternativeVersion]:
+    """插件已经测试通过的版本，部分插件如 Codecc 正式发布时是选择测试通过的版本"""
+    result = []
+    # 获取所有已经测试成功的版本
+    tested_release_list = plugin.test_versions.filter(status=PluginReleaseStatus.SUCCESSFUL).order_by("-updated")
+    for release in tested_release_list:
+        result.append(
+            AlternativeVersion(
+                name=release.version,
+                type=PluginRevisionType.TESTED_VERSION,
+                revision=release.source_hash,
+                last_update=release.updated,
+                url=f"release_id={release.id}",
+                extra={"release_id": release.id},
+            )
+        )
+    return result

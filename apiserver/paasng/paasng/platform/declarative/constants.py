@@ -1,24 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Any, TypeVar
 
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum, StrStructuredEnum
 
 T = TypeVar("T")
 
@@ -44,20 +43,24 @@ class OmittedType:
 OMITTED_VALUE = OmittedType()
 
 
-class AppSpecVersion(StructuredEnum):
-    # VER_1 meaning app.yaml is provided by S-Mart App
+class AppSpecVersion(IntStructuredEnum):
+    # VER_1 meaning app.yaml is provided by legacy S-Mart App,
+    # **this version is not supported anymore**
     VER_1 = 1
+
     VER_2 = 2
-    # VER_3 meaning cnative app
+    # VER_3 means cnative app
     VER_3 = 3
 
+    # UNSPECIFIED means the version is not specified
+    UNSPECIFIED = -1
 
-class AppDescPluginType(str, StructuredEnum):
+
+class AppDescPluginType(StrStructuredEnum):
     APP_VERSION = EnumField("app_version", label="应用版本")
-    APP_LIBRARIES = EnumField("app_libraries", label="应用依赖库")
 
 
-class DiffType(str, StructuredEnum):
+class DiffType(StrStructuredEnum):
     ADDED = EnumField("added", label="新增")
     DELETED = EnumField("deleted", label="删除")
     NOT_MODIFIED = EnumField("not_modified", label="未改动")

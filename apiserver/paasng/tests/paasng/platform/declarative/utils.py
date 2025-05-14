@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Any, Callable, Dict, List, Optional
 
 from paasng.accessories.publish.market.models import Tag
@@ -50,6 +49,7 @@ class AppDescV2Builder:
         module_desc = {
             "is_default": is_default,
             "language": language,
+            "processes": processes or {"web": {"command": "echo 'hello world'"}},
         }
         if source_dir:
             module_desc["source_dir"] = source_dir
@@ -57,8 +57,6 @@ class AppDescV2Builder:
             module_desc["services"] = services
         if env_variables:
             module_desc["env_variables"] = env_variables
-        if processes:
-            module_desc["processes"] = processes
         return module_desc
 
 
@@ -138,7 +136,16 @@ class AppDescV3Builder:
     def make_module(
         module_name: str, is_default: bool = True, language: str = "python", module_spec: Optional[Dict] = None
     ):
-        return {"name": module_name, "isDefault": is_default, "language": language, "spec": module_spec or {}}
+        module_spec = module_spec or {}
+        if not module_spec.get("processes"):
+            module_spec["processes"] = [{"name": "web", "replicas": 1}]
+
+        return {
+            "name": module_name,
+            "isDefault": is_default,
+            "language": language,
+            "spec": module_spec,
+        }
 
 
 class AppDescV3Decorator:
@@ -173,12 +180,12 @@ class AppDescV3Decorator:
         def apply(app_desc: Dict):
             market: Dict[str, Any] = {
                 "introduction": introduction or "introduction",
-                "introduction_en": introduction_en or "introduction_en",
+                "introductionEn": introduction_en or "introduction_en",
             }
             if description:
                 market["description"] = description
             if description_en:
-                market["description_en"] = description_en
+                market["descriptionEn"] = description_en
             if display_options:
                 market["displayOptions"] = display_options
             if tag is not None:

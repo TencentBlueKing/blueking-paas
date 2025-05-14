@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Optional
 
 from django.db.transaction import atomic
@@ -28,9 +27,10 @@ from rest_framework.response import Response
 from paasng.accessories.publish.market import serializers
 from paasng.accessories.publish.market.models import MarketConfig, Product, Tag, get_all_corp_products
 from paasng.accessories.publish.market.protections import AppPublishPreparer
-from paasng.accessories.publish.market.signals import offline_market, release_to_market
 from paasng.infras.accounts.permissions.application import application_perm_class, check_application_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
@@ -160,19 +160,40 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         serializer = self.serializer_class(instance=market_config, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        # TODO: 触发最新动态的变更
+        # 审计记录
+        add_app_audit_record(
+            app_code=application.code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_APP_MARKET,
+            operation=OperationEnum.MODIFY_MARKET_INFO,
+            target=OperationTarget.APP,
+        )
         return Response(serializer.data)
 
     def switch(self, request, code):
         """[API] 应用市场服务开关"""
+        slz = serializers.MarketConfigSwitchInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        enabled = slz.validated_data["enabled"]
         application = self.get_application()
-        if not AppPublishPreparer(application).all_matched:
+
+        # 如果是要关闭发布状态，则不检测是否满足条件
+        if enabled and not AppPublishPreparer(application).all_matched:
             raise error_codes.RELEASED_MARKET_CONDITION_NOT_MET
         # 更新该应用的市场配置的 `enabled` 状态
-        MarketConfig.objects.update_enabled(application, request.data["enabled"])
-        # 触发最新动态的变更
-        signal = release_to_market if request.data["enabled"] else offline_market
-        signal.send(sender=application, application=application, operator=self.request.user.pk)
+        MarketConfig.objects.update_enabled(application, enabled)
+
+        # 审计记录
+        operation = OperationEnum.RELEASE_TO_MARKET if enabled else OperationEnum.OFFLINE_MARKET
+        add_app_audit_record(
+            app_code=application.code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_APP_MARKET,
+            operation=operation,
+            target=OperationTarget.APP,
+        )
         return Response(self.get_serializer(application.market_config).data)
 
     @atomic
@@ -185,6 +206,16 @@ class MarketConfigViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         market_config = slz.save()
         serializer = self.serializer_class(market_config)
+
+        # 审计记录
+        add_app_audit_record(
+            app_code=application.code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_APP_MARKET,
+            operation=OperationEnum.MODIFY_MARKET_URL,
+            target=OperationTarget.APP,
+        )
         return Response(serializer.data)
 
 

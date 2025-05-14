@@ -1,29 +1,30 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import traceback
 from contextlib import suppress
-from typing import List, Type
+from typing import Dict, List, Type
 
 from paasng.accessories.publish.sync_market.managers import AppManger
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import Application
 from paasng.platform.mgrlegacy.cnative_migrations.base import CNativeBaseMigrator
-from paasng.platform.mgrlegacy.constants import MigrationStatus
+from paasng.platform.mgrlegacy.constants import CNativeMigrationStatus, MigrationStatus
 from paasng.platform.mgrlegacy.entities import MigrationResult, RollbackResult
 from paasng.platform.mgrlegacy.exceptions import (
     BackupLegacyDataFailed,
@@ -32,6 +33,7 @@ from paasng.platform.mgrlegacy.exceptions import (
     RollbackFailed,
 )
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess, MigrationContext, MigrationRegister
+from paasng.platform.mgrlegacy.serializers import CNativeMigrationProcessSLZ
 from paasng.platform.mgrlegacy.task_data import MIGRATE_TO_CNATIVE_CLASSES_LIST
 
 try:
@@ -223,15 +225,14 @@ def rollback_cnative_to_default(
 
     try:
         _rollback_cnative(rollback_process, last_migration_process)
-    except MigrationFailed:
+    except (MigrationFailed, RollbackFailed):
         rollback_process.finish_rollback(False)
     else:
         rollback_process.finish_rollback(True)
 
 
 def _rollback_cnative(process: CNativeMigrationProcess, last_migration_process: CNativeMigrationProcess):
-    """
-    actual rollback cloud-native app to default
+    """actual rollback cloud-native app to default
 
     :param process: 用于记录当前的回滚过程详情
     :param last_migration_process: 最近一次迁移过程, 其中的 legacy_data 和 details.migrations 用于回滚
@@ -254,3 +255,25 @@ def _rollback_cnative(process: CNativeMigrationProcess, last_migration_process: 
             raise
         else:
             process.append_rollback(RollbackResult(migrator_name=migrator_cls.get_name(), is_succeeded=True))
+
+
+def get_migration_process_status(app: Application) -> Dict[str, str]:
+    """get cnative migration process status
+
+    :param app: Application
+    :return: CNativeMigrationProcessStatus. 其中, status 字段为 default 时表示应用待迁移, 为 migration_not_required 时表示应用
+        不需要迁移
+    """
+
+    try:
+        process = CNativeMigrationProcess.objects.filter(app=app).latest()
+    except CNativeMigrationProcess.DoesNotExist:
+        if app.type == ApplicationType.DEFAULT.value:
+            # 当普通应用没有迁移记录时, 处于待迁移状态
+            return {"status": CNativeMigrationStatus.DEFAULT.value, "error_msg": ""}
+        # 本身是云原生类型应用(cloud_native)或外链应用(engineless_app), 不需要迁移
+        return {"status": CNativeMigrationStatus.NO_NEED_MIGRATION.value, "error_msg": ""}
+    else:
+        slz = CNativeMigrationProcessSLZ(process)
+        # 返回迁移记录中的迁移状态
+        return {"status": slz.data["status"], "error_msg": slz.data["error_msg"]}

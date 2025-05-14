@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import random
 from argparse import ArgumentParser
@@ -29,6 +28,8 @@ from paasng.accessories.publish.sync_market.managers import AppDeveloperManger, 
 from paasng.accessories.publish.sync_market.models import TagMap, market_models
 from paasng.accessories.publish.sync_market.utils import run_required_db_console_config
 from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.oauth2.utils import get_random_secret_key
 
 logger = logging.getLogger(__name__)
@@ -79,7 +80,7 @@ class Command(BaseCommand):
             default=None,
         )
         parser.add_argument(
-            "--region",
+            "--deploy_ver",
             type=str,
             dest="deploy_ver",
             help="legacy region for app",
@@ -133,13 +134,11 @@ class Command(BaseCommand):
         if not dry_run:
             with console_db.session_scope() as session:
                 AppDeveloperManger(session)._create_developer_by_username(username)
-
-                # 创建对象 LAppSecureInfo -> 表 paas_app_secure_info
                 region = RegionConverter.to_new(deploy_ver) if deploy_ver else settings.DEFAULT_REGION_NAME
                 AppManger(session).sync_oauth(region, code=code, secret=secret_key)
                 # TODO: 检查以下流程
                 #  1. 是否使用 mysql 数据库?
-                #  2. 如果是, 需要创建数据库 service_obj = mixed_service_mgr.find_by_name(service_name, self.application.region)
+                #  2. 如果是, 需要创建数据库 service_obj = mixed_service_mgr.find_by_name(service_name)
                 #  3. 需注释或替换 GCSMysqlServiceMigration、注释 RabbitMQServiceMigration
         if not silence:
             print(f"create legacy {framework_version} app [{name}]<{deploy_ver}-{code}> with secret key: {secret_key}")
@@ -162,7 +161,15 @@ class Command(BaseCommand):
         with console_db.session_scope() as session:
             app = AppManger(session).get(code)
             if not app:
-                app = AppManger(session).create(code, name, deploy_ver, from_paasv3=False)
+                app = AppManger(session).create(
+                    code=code,
+                    name=name,
+                    deploy_ver=deploy_ver,
+                    app_tenant_mode=AppTenantMode.GLOBAL,
+                    app_tenant_id="",
+                    tenant_id=DEFAULT_TENANT_ID,
+                    from_paasv3=False,
+                )
             # legacy db 通过外键绑定了 tag, 因此创建 App 时需要使用真实存在的 tag
             tagmap = Command.get_or_create_tagmap(deploy_ver)
             AppManger(session).update(

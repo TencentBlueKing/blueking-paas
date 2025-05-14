@@ -6,6 +6,7 @@
     <div class="flex-row align-items-center pr40">
       <bk-tab
         :active.sync="active"
+        :scroll-step="100"
         ext-cls="module-tab-cls"
         type="unborder-card"
         @tab-change="handleTabChange"
@@ -115,6 +116,7 @@
       <div slot="footer">
         <bk-button
           theme="primary"
+          :loading="delAppDialog.isLoading"
           :disabled="!formRemoveValidated"
           @click="submitRemoveModule"
         >
@@ -135,6 +137,7 @@ import store from '@/store';
 import router from '@/router';
 import { bkMessage } from 'bk-magic-vue';
 import { bus } from '@/common/bus';
+import i18n from '@/language/i18n';
 
 export default defineComponent({
   name: 'EditorStatus',
@@ -170,7 +173,7 @@ export default defineComponent({
       default: '',
     },
   },
-  setup(props) {
+  setup(props, { emit }) {
     const route = router.currentRoute;
     const vm = getCurrentInstance();
     const active = ref(props.curModule.name || '');
@@ -206,13 +209,13 @@ export default defineComponent({
     const isSmartApp = computed(() => curAppModule.source_origin === vm.proxy.GLOBAL.APP_TYPES.SMART_APP);
 
     // 新建模块禁用提示
-    const disableTips = computed(() => (isSmartApp.value ? 'S-mart 应用不允许在页面上新建模块' : '当前应用不允许创建其他模块'));
+    const disableTips = computed(() => (isSmartApp.value ? i18n.t('S-mart 应用不允许在页面上新建模块') : i18n.t('当前应用不允许创建其他模块')));
 
     // 切换tab
     const handleTabChange = async () => {
       const curModule = (props.moduleList || []).find(e => e.name === active.value);
       await store.commit('updateCurAppModule', curModule);
-
+      emit('tab-change');
       const name = props.activeRouteName || props.firstModuleName;
       let { query } = route;
       if (name === 'appLog') {
@@ -260,6 +263,7 @@ export default defineComponent({
     };
 
     const submitRemoveModule = async () => {
+      delAppDialog.isLoading = true;
       try {
         await store.dispatch('module/deleteModule', {
           appCode: props.appCode,
@@ -267,7 +271,7 @@ export default defineComponent({
         });
         bkMessage({
           theme: 'success',
-          message: '模块删除成功',
+          message: i18n.t('模块删除成功'),
         });
         await store.dispatch('getAppInfo', {
           appCode: props.appCode,
@@ -289,6 +293,7 @@ export default defineComponent({
         });
       } finally {
         delAppDialog.visiable = false;
+        delAppDialog.isLoading = false;
       }
     };
 
@@ -320,6 +325,8 @@ export default defineComponent({
 </script>
 <style lang="scss" scoped>
 .module-bar-container {
+  position: relative;
+  z-index: 999;
   background: #fff;
   box-shadow: 0 3px 4px 0 #0000000a;
   .title {
@@ -329,11 +336,16 @@ export default defineComponent({
   }
 }
 .module-tab-cls {
+  min-width: 0;
   /deep/ .bk-tab-section {
     padding: 0 !important;
   }
   /deep/ .bk-tab-header {
     background-image: none !important;
+    .bk-tab-scroll-controller {
+      height: 50px !important;
+      border-bottom: none;
+    }
   }
 }
 .module-manager {

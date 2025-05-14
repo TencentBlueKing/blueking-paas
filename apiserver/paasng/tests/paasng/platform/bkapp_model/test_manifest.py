@@ -1,65 +1,61 @@
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import functools
+from typing import Dict
 from unittest import mock
 
 import pytest
+from attr import define
 from django.conf import settings
+from django.test import override_settings
 from django_dynamic_fixture import G
 
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
+from paas_wl.bk_app.applications.models.build import Build as WlBuild
 from paas_wl.bk_app.cnative.specs.constants import (
+    BKAPP_TENANT_ID_ANNO_KEY,
+    TENANT_GUARD_ANNO_KEY,
     ApiVersion,
     MountEnvName,
-    ResQuotaPlan,
     VolumeSourceType,
 )
-from paas_wl.bk_app.cnative.specs.crd.bk_app import (
-    BkAppHooks,
-    BkAppResource,
-    BkAppSpec,
-    EnvOverlay,
-    EnvVar,
-    EnvVarOverlay,
-    HostAlias,
-    MountOverlay,
-    ObjectMetadata,
-    SvcDiscEntryBkSaaS,
-    VolumeSource,
-)
-from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMapSourceSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import DomainResolution as DomainResolutionSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import Mount as MountSpec
-from paas_wl.bk_app.cnative.specs.crd.bk_app import SvcDiscConfig as SvcDiscConfigSpec
+from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
+from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paas_wl.core.resource import generate_bkapp_name
+from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.platform.bkapp_model.constants import ResQuotaPlan
+from paasng.platform.bkapp_model.entities import ProcService
 from paasng.platform.bkapp_model.manifest import (
-    DEFAULT_SLUG_RUNNER_ENTRYPOINT,
     AddonsManifestConstructor,
     BuiltinAnnotsManifestConstructor,
     DomainResolutionManifestConstructor,
     EnvVarsManifestConstructor,
     HooksManifestConstructor,
     MountsManifestConstructor,
+    ObservabilityManifestConstructor,
     ProcessesManifestConstructor,
     SvcDiscoveryManifestConstructor,
+    _update_cmd_args_from_wl_build,
     apply_builtin_env_vars,
     apply_env_annots,
     get_manifest,
@@ -67,35 +63,51 @@ from paasng.platform.bkapp_model.manifest import (
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
+    ObservabilityConfig,
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
-from paasng.platform.engine.constants import ConfigVarEnvName, RuntimeType
+from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.constants import DeployHookType
-from paasng.platform.modules.models import BuildConfig
-from tests.utils.helpers import generate_random_string
-from tests.utils.mocks.engine import mock_cluster_service
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()
-def blank_resource() -> BkAppResource:
+def blank_resource() -> crd.BkAppResource:
     """A blank resource object."""
-    return BkAppResource(
-        apiVersion=ApiVersion.V1ALPHA2, metadata=ObjectMetadata(name="a-blank-resource"), spec=BkAppSpec()
+    return crd.BkAppResource(
+        apiVersion=ApiVersion.V1ALPHA2, metadata=ObjectMetadata(name="a-blank-resource"), spec=crd.BkAppSpec()
+    )
+
+
+@pytest.fixture()
+def blank_resource_with_processes() -> crd.BkAppResource:
+    """A resource object have processes spec."""
+    return crd.BkAppResource(
+        apiVersion=ApiVersion.V1ALPHA2,
+        metadata=ObjectMetadata(name="a-blank-resource"),
+        spec=crd.BkAppSpec(
+            processes=[
+                crd.BkAppProcess(name="worker"),
+                crd.BkAppProcess(name="web"),
+            ]
+        ),
     )
 
 
 @pytest.fixture()
 def local_service(bk_app):
     """A local service object."""
-    service = G(Service, name="mysql", category=G(ServiceCategory), region=bk_app.region, logo_b64="dummy")
+    service = G(Service, name="mysql", category=G(ServiceCategory), logo_b64="dummy")
     _ = G(Plan, name=generate_random_string(), service=service)
-    return mixed_service_mgr.get(service.uuid, region=bk_app.region)
+    svc_obj = mixed_service_mgr.get(service.uuid)
+    ServiceBindingPolicyManager(svc_obj, DEFAULT_TENANT_ID).set_static([svc_obj.get_plans()[0]])
+    return svc_obj
 
 
 @pytest.fixture()
@@ -126,17 +138,24 @@ class TestAddonsManifestConstructor:
     def test_empty(self, bk_module, blank_resource):
         AddonsManifestConstructor().apply_to(blank_resource, bk_module)
 
-        annots = blank_resource.metadata.annotations
-        assert annots["bkapp.paas.bk.tencent.com/addons"] == "[]"
         assert len(blank_resource.spec.addons) == 0
 
     def test_with_addons(self, bk_module, blank_resource, local_service):
         mixed_service_mgr.bind_service(local_service, bk_module)
         AddonsManifestConstructor().apply_to(blank_resource, bk_module)
 
-        annots = blank_resource.metadata.annotations
-        assert annots["bkapp.paas.bk.tencent.com/addons"] == '["mysql"]'
         assert len(blank_resource.spec.addons) == 1
+        assert blank_resource.spec.addons[0] == crd.BkAppAddon(name="mysql")
+
+    def test_with_shared_addons(self, bk_module, bk_module_2, blank_resource, local_service):
+        # Let bk_module share a service with bk_module_2
+        mixed_service_mgr.bind_service(local_service, bk_module_2)
+        ServiceSharingManager(bk_module).create(local_service, bk_module_2)
+
+        AddonsManifestConstructor().apply_to(blank_resource, bk_module)
+
+        assert len(blank_resource.spec.addons) == 1
+        assert blank_resource.spec.addons[0] == crd.BkAppAddon(name="mysql", sharedFromModule=bk_module_2.name)
 
 
 class TestEnvVarsManifestConstructor:
@@ -152,10 +171,10 @@ class TestEnvVarsManifestConstructor:
         )
 
         EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.configuration.env == [EnvVar(name="BAR", value="2")]
+        assert blank_resource.spec.configuration.env == [crd.EnvVar(name="BAR", value="2")]
         assert blank_resource.spec.envOverlay.envVariables == [
-            EnvVarOverlay(envName="stag", name="BAR", value="1"),
-            EnvVarOverlay(envName="stag", name="FOO_STAG", value="1"),
+            crd.EnvVarOverlay(envName="stag", name="BAR", value="1"),
+            crd.EnvVarOverlay(envName="stag", name="FOO_STAG", value="1"),
         ]
 
     def test_preset(self, bk_module, bk_stag_env, blank_resource):
@@ -164,10 +183,10 @@ class TestEnvVarsManifestConstructor:
         G(PresetEnvVariable, module=bk_module, environment_name=ConfigVarEnvName.PROD, key="PROD", value="1")
 
         EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="1")]
+        assert blank_resource.spec.configuration.env == [crd.EnvVar(name="GLOBAL", value="1")]
         assert blank_resource.spec.envOverlay.envVariables == [
-            EnvVarOverlay(envName="prod", name="PROD", value="1"),
-            EnvVarOverlay(envName="stag", name="STAG", value="1"),
+            crd.EnvVarOverlay(envName="prod", name="PROD", value="1"),
+            crd.EnvVarOverlay(envName="stag", name="STAG", value="1"),
         ]
 
     def test_override_preset(self, bk_module, bk_stag_env, blank_resource):
@@ -186,11 +205,11 @@ class TestEnvVarsManifestConstructor:
         )
 
         EnvVarsManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.configuration.env == [EnvVar(name="GLOBAL", value="2")]
+        assert blank_resource.spec.configuration.env == [crd.EnvVar(name="GLOBAL", value="2")]
         assert blank_resource.spec.envOverlay.envVariables == [
-            EnvVarOverlay(envName="prod", name="PROD", value="1"),
-            EnvVarOverlay(envName="stag", name="STAG", value="2"),
-            EnvVarOverlay(envName="stag", name="STAG_XX", value="2"),
+            crd.EnvVarOverlay(envName="prod", name="PROD", value="1"),
+            crd.EnvVarOverlay(envName="stag", name="STAG", value="2"),
+            crd.EnvVarOverlay(envName="stag", name="STAG_XX", value="2"),
         ]
 
 
@@ -218,6 +237,21 @@ class TestProcessesManifestConstructor:
         process_web.save()
         return process_web
 
+    @pytest.fixture()
+    def process_web_with_proc_services(self, process_web) -> ModuleProcessSpec:
+        """ProcessSpec for web, with services"""
+        process_web.services = [
+            ProcService(
+                name="web",
+                port=8000,
+                target_port=8000,
+                exposed_type={"name": "bk/http"},
+            ),
+            ProcService(name="metric", port=8001, target_port="${PORT}"),
+        ]
+        process_web.save()
+        return process_web
+
     @pytest.mark.parametrize(
         ("plan_name", "expected"),
         [
@@ -233,30 +267,17 @@ class TestProcessesManifestConstructor:
         initialize_default_proc_spec_plans()
         assert ProcessesManifestConstructor().get_quota_plan(plan_name) == expected
 
-    @pytest.mark.parametrize(
-        ("build_method", "is_cnb_runtime", "expected"),
-        [
-            (RuntimeType.BUILDPACK, False, (DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", "web"])),
-            (RuntimeType.BUILDPACK, True, (DEFAULT_SLUG_RUNNER_ENTRYPOINT, ["start", "web"])),
-            (RuntimeType.DOCKERFILE, False, (["python"], ["-m", "http.server"])),
-        ],
-    )
-    def test_get_command_and_args(self, bk_module, process_web, build_method, is_cnb_runtime, expected):
-        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
-        cfg.build_method = build_method
-        cfg.save()
-        with mock.patch("paasng.platform.bkapp_model.manifest.ModuleRuntimeManager.is_cnb_runtime", is_cnb_runtime):
-            assert ProcessesManifestConstructor().get_command_and_args(bk_module, process_web) == expected
+    def test_get_command_and_args(self, bk_module, process_web):
+        assert ProcessesManifestConstructor().get_command_and_args(process_web) == (
+            ["python"],
+            ["-m", "http.server"],
+        )
 
     def test_get_command_and_args_invalid_var_expr(self, bk_module):
         """Test get_command_and_args() when there is an invalid env var expression."""
-        cfg = BuildConfig.objects.get_or_create_by_module(bk_module)
-        cfg.build_method = RuntimeType.DOCKERFILE
-        cfg.save(update_fields=["build_method"])
-
         proc = G(ModuleProcessSpec, module=bk_module, name="web", proc_command="start -b ${PORT:-5000}")
 
-        assert ProcessesManifestConstructor().get_command_and_args(bk_module, proc) == (
+        assert ProcessesManifestConstructor().get_command_and_args(proc) == (
             ["start"],
             ["-b", "${PORT}"],
         ), "The ${PORT:-5000} should be replaced."
@@ -269,13 +290,13 @@ class TestProcessesManifestConstructor:
                 {
                     "name": "web",
                     "replicas": 1,
-                    "command": ["bash", "/runner/init"],
-                    "args": ["start", "web"],
+                    "command": ["python"],
+                    "args": ["-m", "http.server"],
                     "targetPort": 8000,
                     "resQuotaPlan": "default",
                     "autoscaling": None,
                     "probes": None,
-                    "proc_command": None,
+                    "services": None,
                 }
             ],
             "envOverlay": {
@@ -312,6 +333,14 @@ class TestProcessesManifestConstructor:
             "policy": "default",
         }
 
+    def test_integrated_proc_services(self, bk_module, blank_resource, process_web_with_proc_services):
+        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
+        data = blank_resource.spec.dict(exclude_none=True, include={"processes"})["processes"][0]
+        assert data["services"] == [
+            {"name": "web", "port": 8000, "protocol": "TCP", "targetPort": 8000, "exposedType": {"name": "bk/http"}},
+            {"name": "metric", "port": 8001, "protocol": "TCP", "targetPort": settings.CONTAINER_PORT},
+        ]
+
 
 class TestMountsManifestConstructor:
     def test_normal(self, bk_module, blank_resource):
@@ -321,7 +350,8 @@ class TestMountsManifestConstructor:
             module_id=bk_module.id,
             name="nginx",
             source_type=VolumeSourceType.ConfigMap,
-            source_config=VolumeSource(configMap=ConfigMapSourceSpec(name="nginx-configmap")),
+            sub_paths=["configmap_z"],
+            source_config=crd.VolumeSource(configMap=crd.ConfigMapSource(name="nginx-configmap")),
         )
         # Create 2 mount objects
         create_mount(mount_path="/etc/conf", environment_name=MountEnvName.GLOBAL.value)
@@ -329,27 +359,68 @@ class TestMountsManifestConstructor:
 
         MountsManifestConstructor().apply_to(blank_resource, bk_module)
         assert blank_resource.spec.mounts == [
-            MountSpec(
+            crd.Mount(
                 mountPath="/etc/conf",
                 name="nginx",
-                source=VolumeSource(configMap=ConfigMapSourceSpec(name="nginx-configmap")),
+                source=crd.VolumeSource(configMap=crd.ConfigMapSource(name="nginx-configmap")),
+                subPaths=["configmap_z"],
             )
         ]
         assert blank_resource.spec.envOverlay.mounts == [
-            MountOverlay(
+            crd.MountOverlay(
                 envName="stag",
                 mountPath="/etc/conf_stag",
                 name="nginx",
-                source=VolumeSource(configMap=ConfigMapSourceSpec(name="nginx-configmap")),
+                source=crd.VolumeSource(configMap=crd.ConfigMapSource(name="nginx-configmap")),
+                subPaths=["configmap_z"],
             )
         ]
+
+    def test_tls_credentials(self, bk_module, blank_resource):
+        @define
+        class FakeSvcInstance:
+            config: Dict[str, str]
+
+        @define
+        class FakeSvcRelation:
+            instance: FakeSvcInstance
+
+            def get_instance(self):
+                return self.instance
+
+        with mock.patch(
+            "paasng.platform.bkapp_model.manifest.list_provisioned_tls_enabled_rels",
+            new=lambda env: (
+                [
+                    FakeSvcRelation(instance=FakeSvcInstance(config={"provider_name": "redis"})),
+                    FakeSvcRelation(instance=FakeSvcInstance(config={"provider_name": "mysql"})),
+                ]
+                if env.environment == "stag"
+                else []
+            ),
+        ):
+            MountsManifestConstructor().apply_to(blank_resource, bk_module)
+            assert blank_resource.spec.envOverlay.mounts == [
+                crd.MountOverlay(
+                    envName="stag",
+                    mountPath="/opt/blueking/bkapp-addons-certs/redis",
+                    name="bkapp-addons-certs-redis",
+                    source=crd.VolumeSource(secret=crd.SecretSource(name="bkapp-addons-certs-redis")),
+                ),
+                crd.MountOverlay(
+                    envName="stag",
+                    mountPath="/opt/blueking/bkapp-addons-certs/mysql",
+                    name="bkapp-addons-certs-mysql",
+                    source=crd.VolumeSource(secret=crd.SecretSource(name="bkapp-addons-certs-mysql")),
+                ),
+            ]
 
 
 class TestHooksManifestConstructor:
     def test_normal(self, bk_module, blank_resource):
         bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, command=["python"], args=["hook.py"])
         HooksManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.hooks == BkAppHooks(
+        assert blank_resource.spec.hooks == crd.BkAppHooks(
             preRelease={
                 "command": ["python"],
                 "args": ["hook.py"],
@@ -359,7 +430,7 @@ class TestHooksManifestConstructor:
     def test_proc_command(self, bk_module, blank_resource):
         bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, proc_command="python hook.py")
         HooksManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.hooks == BkAppHooks(
+        assert blank_resource.spec.hooks == crd.BkAppHooks(
             preRelease={
                 "command": ["python"],
                 "args": ["hook.py"],
@@ -368,12 +439,12 @@ class TestHooksManifestConstructor:
 
     def test_not_found(self, bk_module, blank_resource):
         HooksManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.hooks == BkAppHooks()
+        assert blank_resource.spec.hooks == crd.BkAppHooks()
 
     def test_empty_command(self, bk_module, blank_resource):
         bk_module.deploy_hooks.enable_hook(type_=DeployHookType.PRE_RELEASE_HOOK, args=["hook.py"])
         HooksManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.hooks == BkAppHooks(preRelease={"args": ["hook.py"]})
+        assert blank_resource.spec.hooks == crd.BkAppHooks(preRelease={"args": ["hook.py"]})
 
 
 class TestSvcDiscoveryManifestConstructor:
@@ -389,11 +460,11 @@ class TestSvcDiscoveryManifestConstructor:
         )
 
         SvcDiscoveryManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.svcDiscovery == SvcDiscConfigSpec(
+        assert blank_resource.spec.svcDiscovery == crd.SvcDiscConfig(
             bkSaaS=[
-                SvcDiscEntryBkSaaS(bkAppCode="foo"),
-                SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="default"),
-                SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="opps"),
+                crd.SvcDiscEntryBkSaaS(bkAppCode="foo"),
+                crd.SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="default"),
+                crd.SvcDiscEntryBkSaaS(bkAppCode="bar", moduleName="opps"),
             ],
         )
 
@@ -417,10 +488,10 @@ class TestDomainResolutionManifestConstructor:
         )
 
         DomainResolutionManifestConstructor().apply_to(blank_resource, bk_module)
-        assert blank_resource.spec.domainResolution == DomainResolutionSpec(
+        assert blank_resource.spec.domainResolution == crd.DomainResolution(
             nameservers=["192.168.1.3", "192.168.1.4"],
             hostAliases=[
-                HostAlias(
+                crd.HostAlias(
                     ip="1.1.1.1",
                     hostnames=[
                         "bk_app_code_test",
@@ -431,10 +502,39 @@ class TestDomainResolutionManifestConstructor:
         )
 
 
+class TestObservabilityManifestConstructor:
+    def test_normal(self, bk_app, bk_module, blank_resource):
+        G(
+            ObservabilityConfig,
+            module=bk_module,
+            monitoring={
+                "metrics": [{"process": "web", "service_name": "metric", "path": "/metrics", "params": {"foo": "bar"}}]
+            },
+        )
+        ObservabilityManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.observability == crd.Observability(
+            monitoring=crd.Monitoring(
+                metrics=[crd.Metric(process="web", serviceName="metric", path="/metrics", params={"foo": "bar"})]
+            )
+        )
+
+    def test_with_no_observability(self, bk_app, bk_module, blank_resource):
+        ObservabilityManifestConstructor().apply_to(blank_resource, bk_module)
+        assert blank_resource.spec.observability is None
+
+
 def test_get_manifest(bk_module):
     manifest = get_manifest(bk_module)
     assert len(manifest) > 0
     assert manifest[0]["kind"] == "BkApp"
+    assert manifest[0]["metadata"]["annotations"][BKAPP_TENANT_ID_ANNO_KEY] == bk_module.application.app_tenant_id
+
+
+@pytest.mark.parametrize(("enable_multi_tenant_mode", "expected"), [(True, "true"), (False, "false")])
+def test_get_tenant_guard(bk_module, enable_multi_tenant_mode, expected):
+    with override_settings(ENABLE_MULTI_TENANT_MODE=enable_multi_tenant_mode):
+        manifest = get_manifest(bk_module)
+        assert manifest[0]["metadata"]["annotations"][TENANT_GUARD_ANNO_KEY] == expected
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
@@ -453,6 +553,7 @@ def test_apply_env_annots_with_deploy_id(blank_resource, bk_stag_env):
     assert blank_resource.metadata.annotations["bkapp.paas.bk.tencent.com/bkpaas-deploy-id"] == "foo-id"
 
 
+@pytest.mark.usefixtures("_with_wl_apps")
 def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
     G(
         DeploymentDescription,
@@ -470,36 +571,120 @@ def test_apply_builtin_env_vars(blank_resource, bk_stag_env, bk_deployment):
             },
         },
     )
-    with mock_cluster_service():
-        apply_builtin_env_vars(blank_resource, bk_stag_env)
-        var_names = {item.name for item in blank_resource.spec.configuration.env}
-        for name in (
-            "BKPAAS_APP_ID",
-            "BKPAAS_APP_SECRET",
-            "BK_LOGIN_URL",
-            "BK_DOCS_URL_PREFIX",
-            "BKPAAS_DEFAULT_PREALLOCATED_URLS",
-        ):
-            assert name in var_names
-        # 验证描述文件中声明的环境变量不会通过 apply_builtin_env_vars 注入(而是在更上层的组装 manifest 时处理)
-        assert "FOO" not in var_names
-        assert "BAR" not in var_names
-        # 应用描述文件中申明了服务发现的话，不会写入相关的环境变量(云原生应用的服务发现通过 configmap 注入环境变量)
-        assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" not in var_names
+
+    apply_builtin_env_vars(blank_resource, bk_stag_env)
+    var_names = {item.name for item in blank_resource.spec.configuration.env}
+    for name in (
+        "BKPAAS_APP_ID",
+        "BKPAAS_APP_SECRET",
+        "BK_LOGIN_URL",
+        "BK_DOCS_URL_PREFIX",
+        "BKPAAS_DEFAULT_PREALLOCATED_URLS",
+    ):
+        assert name in var_names
+    # 验证描述文件中声明的环境变量不会通过 apply_builtin_env_vars 注入(而是在更上层的组装 manifest 时处理)
+    assert "FOO" not in var_names
+    assert "BAR" not in var_names
+    # 应用描述文件中申明了服务发现的话，不会写入相关的环境变量(云原生应用的服务发现通过 configmap 注入环境变量)
+    assert "BKPAAS_SERVICE_ADDRESSES_BKSAAS" not in var_names
 
 
+@pytest.mark.usefixtures("_with_wl_apps")
 def test_builtin_env_has_high_priority(blank_resource, bk_stag_env):
     custom_login_url = generate_random_string()
 
-    blank_resource.spec.envOverlay = EnvOverlay()
+    blank_resource.spec.envOverlay = crd.EnvOverlay()
     blank_resource.spec.envOverlay.envVariables = [
-        EnvVarOverlay(name="BK_LOGIN_URL", value=custom_login_url, envName="stag")
+        crd.EnvVarOverlay(name="BK_LOGIN_URL", value=custom_login_url, envName="stag")
     ]
 
-    with mock_cluster_service():
-        apply_builtin_env_vars(blank_resource, bk_stag_env)
-        vars = {item.name: item.value for item in blank_resource.spec.configuration.env}
-        vars_overlay = {(v.name, v.envName): v.value for v in blank_resource.spec.envOverlay.envVariables}
+    apply_builtin_env_vars(blank_resource, bk_stag_env)
+    vars = {item.name: item.value for item in blank_resource.spec.configuration.env}
+    vars_overlay = {(v.name, v.envName): v.value for v in blank_resource.spec.envOverlay.envVariables}
 
-        assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
-        assert vars["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]
+    assert vars_overlay[("BK_LOGIN_URL", "stag")] != custom_login_url
+    assert vars["BK_LOGIN_URL"] == vars_overlay[("BK_LOGIN_URL", "stag")]
+
+
+class Test__update_cmd_args_from_wl_build:
+    @pytest.fixture()
+    def bk_app_resource(self):
+        return crd.BkAppResource(
+            apiVersion=ApiVersion.V1ALPHA2,
+            metadata=ObjectMetadata(name="a-test-resource"),
+            spec=crd.BkAppSpec(
+                hooks=crd.BkAppHooks(
+                    preRelease=crd.Hook(
+                        command=["python"],
+                        args=["hook.py"],
+                    )
+                ),
+                processes=[
+                    crd.BkAppProcess(name="worker", command=["celery"], args=["worker", "-l", "info"]),
+                    crd.BkAppProcess(name="web", command=["python"], args=["manage.py", "runserver"]),
+                ],
+            ),
+        )
+
+    @pytest.mark.parametrize(
+        ("artifact_metadata", "expected_hook", "expected_processes"),
+        [
+            # 非 cnb 构建(不设置)
+            (
+                BuildArtifactMetadata(),
+                crd.Hook(
+                    command=["bash", "/runner/init", "python"],
+                    args=["hook.py"],
+                ),
+                [
+                    crd.BkAppProcess(name="worker", command=["bash", "/runner/init"], args=["start", "worker"]),
+                    crd.BkAppProcess(name="web", command=["bash", "/runner/init"], args=["start", "web"]),
+                ],
+            ),
+            # 非 cnb 构建(显式设置)
+            (
+                BuildArtifactMetadata(use_cnb=False),
+                crd.Hook(
+                    command=["bash", "/runner/init", "python"],
+                    args=["hook.py"],
+                ),
+                [
+                    crd.BkAppProcess(name="worker", command=["bash", "/runner/init"], args=["start", "worker"]),
+                    crd.BkAppProcess(name="web", command=["bash", "/runner/init"], args=["start", "web"]),
+                ],
+            ),
+            # cnb 构建
+            (
+                BuildArtifactMetadata(use_cnb=True),
+                crd.Hook(
+                    command=["launcher", "python"],
+                    args=["hook.py"],
+                ),
+                [
+                    crd.BkAppProcess(name="worker", command=["worker"], args=[]),
+                    crd.BkAppProcess(name="web", command=["web"], args=[]),
+                ],
+            ),
+            # 指定了 proc_entrypoints 的 cnb 构建
+            (
+                BuildArtifactMetadata(
+                    use_cnb=True, proc_entrypoints={"web": ["frontend-web"], "worker": ["backend-worker"]}
+                ),
+                crd.Hook(
+                    command=["launcher", "python"],
+                    args=["hook.py"],
+                ),
+                [
+                    crd.BkAppProcess(name="worker", command=["backend-worker"], args=[]),
+                    crd.BkAppProcess(name="web", command=["frontend-web"], args=[]),
+                ],
+            ),
+        ],
+    )
+    def test_update(self, bk_app_resource, artifact_metadata, expected_hook, expected_processes):
+        wl_build = WlBuild.objects.create(artifact_metadata=artifact_metadata)
+
+        _update_cmd_args_from_wl_build(bk_app_resource, wl_build)
+
+        assert bk_app_resource.spec.hooks.preRelease == expected_hook
+        assert bk_app_resource.spec.processes == expected_processes

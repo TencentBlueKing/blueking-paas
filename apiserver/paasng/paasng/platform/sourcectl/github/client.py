@@ -1,33 +1,35 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import base64
+import datetime
 import logging
 import pathlib
-from typing import Dict, Generator, List, Optional
+from typing import Dict, Generator, List, Optional, Union
 from urllib.parse import urljoin
 
 import arrow
+import requests
 from django.utils.translation import gettext_lazy as _
 
+from paasng.infras.accounts.models import Oauth2TokenHolder
 from paasng.platform.sourcectl import exceptions
-from paasng.platform.sourcectl.client import DEFAULT_REPO_REF, DEFAULT_TIMEOUT, BaseGitApiClient, GitRepoProvider
-from paasng.platform.sourcectl.models import GitProject
+from paasng.platform.sourcectl.client import DEFAULT_REPO_REF, DEFAULT_TIMEOUT, BaseGitApiClient
+from paasng.platform.sourcectl.models import CommitInfo, GitProject
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +37,22 @@ logger = logging.getLogger(__name__)
 class GitHubApiClient(BaseGitApiClient):
     """Github API SDK"""
 
-    repo_provider: str = GitRepoProvider.GitHub
-
     def __init__(self, api_url: str, **kwargs):
-        super().__init__(api_url, **kwargs)
-        # Accept header is recommended
-        self.session.headers.update({"Accept": "application/vnd.github.v3+json"})
+        self.api_url = api_url
+        self.session = requests.session()
+
+        if "oauth_token" not in kwargs:
+            raise exceptions.AccessTokenMissingError("oauth_token required")
+
+        self.access_token = kwargs["oauth_token"]
+
+        self.session.headers.update(
+            {
+                "Authorization": f"token {self.access_token}",
+                "Accept": "application/vnd.github.v3+json",
+            }
+        )
+        self.token_holder: Optional[Oauth2TokenHolder] = kwargs.get("__token_holder")
 
     def list_repo(self, **kwargs) -> List[Dict]:
         """从 Github API 获取用户的所有仓库
@@ -54,8 +66,9 @@ class GitHubApiClient(BaseGitApiClient):
         """
         url = urljoin(self.api_url, f"repos/{project.path_with_namespace}/contents/{filepath}")
         resp = self._request_with_retry(url, params={"ref": ref})
-        if resp["encoding"] != "base64":
+        if not resp or resp.get("encoding") != "base64":
             raise exceptions.UnsupportedGitRepoEncode(_("当前仅支持 base64 编码格式"))
+
         return base64.b64decode(resp["content"])
 
     def repo_list_branches(self, project: GitProject, **kwargs) -> List[Dict]:
@@ -117,7 +130,7 @@ class GitHubApiClient(BaseGitApiClient):
         for c in self._fetch_all_items(url):
             yield {
                 "id": c["sha"],
-                # Github commit 信息无 short_id && title，使用 hash，message 替换
+                # GitHub commit 信息无 short_id && title，使用 hash，message 替换
                 "short_id": c["sha"],
                 "title": c["commit"]["message"],
                 "author_name": c["commit"]["author"]["name"],
@@ -127,11 +140,21 @@ class GitHubApiClient(BaseGitApiClient):
                 "message": c["commit"]["message"],
             }
 
-    def calculate_user_contribution(self, **kwargs) -> Dict:
-        """Github 暂不支持统计贡献"""
+    def calculate_user_contribution(
+        self,
+        username: str,
+        project: GitProject,
+        begin_date: Optional[Union[datetime.datetime, arrow.Arrow]] = None,
+        end_date: Optional[Union[datetime.datetime, arrow.Arrow]] = None,
+    ) -> Dict:
+        """GitHub 暂不支持统计贡献"""
         return {
             "project_total_lines": "unsupported",
             "user_total_lines": "unsupported",
             "project_commit_nums": "unsupported",
             "user_commit_nums": "unsupported",
         }
+
+    def commit_files(self, project: GitProject, commit_info: CommitInfo) -> Dict:
+        """批量提交修改文件"""
+        raise NotImplementedError("GitHub don't support batch commit currently")

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import time
 
 import pytest
@@ -25,7 +24,7 @@ from django_dynamic_fixture import G
 
 from paas_wl.bk_app.applications.models import Config, WlApp
 from paas_wl.core.resource import get_process_selector
-from paas_wl.infras.cluster.utils import get_default_cluster_by_region
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.workloads.networking.ingress.entities import PIngressDomain, PServicePortPair
@@ -34,6 +33,7 @@ from paas_wl.workloads.networking.ingress.kres_entities.service import ProcessSe
 from tests.paas_wl.e2e.ingress.utils import E2EFramework, HttpClient, get_ingress_nginx_pod
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.wl_app import create_wl_release
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 
 @pytest.fixture(scope="session")
@@ -44,7 +44,7 @@ def ingress_nginx_ns():
 @pytest.fixture(scope="session")
 def cluster(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        return get_default_cluster_by_region(settings.DEFAULT_REGION_NAME)
+        return Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
 
 
 @pytest.fixture(scope="session")
@@ -62,7 +62,7 @@ def ingress_nginx_reload_checker():
 
 @pytest.fixture(scope="module")
 def framework(
-    setup_ingress_nginx_controller, ingress_nginx_ns, ingress_nginx_reload_checker, k8s_client
+    _setup_ingress_nginx_controller, ingress_nginx_ns, ingress_nginx_reload_checker, k8s_client
 ) -> E2EFramework:
     pod = get_ingress_nginx_pod(namespace=ingress_nginx_ns, client=k8s_client)
     return E2EFramework(

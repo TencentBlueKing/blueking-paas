@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Set
 
@@ -28,6 +27,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from paas_wl.infras.cluster.constants import ClusterFeatureFlag
+from paas_wl.infras.cluster.shim import get_app_prod_env_cluster
 from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.accessories.log.serializers import (
     BkLogCustomCollectMetadataOutputSLZ,
@@ -40,6 +41,7 @@ from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -76,18 +78,25 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         }
 
     @swagger_auto_schema(
-        query_serializer=BkLogCustomCollectMetadataQuerySLZ,
+        query_serializer=BkLogCustomCollectMetadataQuerySLZ(),
         response_serializer=BkLogCustomCollectMetadataOutputSLZ,
         tags=["日志采集"],
     )
     def get_metadata(self, request, code, module_name):
         """查询在日志平台已创建的自定义上报配置以及日志平台的访问地址"""
         application = self.get_application()
+        cluster = get_app_prod_env_cluster(application)
+        if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR):
+            # 集群未开启日志平台特性, 则直接返回，不再调用监控日志平台相关 API
+            raise error_codes.CUSTOM_COLLECTOR_UNSUPPORTED
+
         module = self.get_module_via_path()
         slz = BkLogCustomCollectMetadataQuerySLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
+
         monitor_space, _ = get_or_create_bk_monitor_space(module.application)
-        cfgs = make_bk_log_management_client().list_custom_collector_config(
+        tenant_id = get_tenant_id_for_app(module.application.code)
+        cfgs = make_bk_log_management_client(tenant_id).list_custom_collector_config(
             biz_or_space_id=monitor_space.iam_resource_id
         )
         if not slz.validated_data.get("all", False):
@@ -127,7 +136,8 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
         validated_data = slz.validated_data
 
         monitor_space, _ = get_or_create_bk_monitor_space(module.application)
-        cfg = make_bk_log_management_client().get_custom_collector_config_by_name_en(
+        tenant_id = get_tenant_id_for_app(module.application.code)
+        cfg = make_bk_log_management_client(tenant_id).get_custom_collector_config_by_name_en(
             biz_or_space_id=monitor_space.iam_resource_id, collector_config_name_en=validated_data["name_en"]
         )
         if not cfg or cfg.id != validated_data["collector_config_id"]:
@@ -148,6 +158,7 @@ class CustomCollectorConfigViewSet(ViewSet, ApplicationCodeInPathMixin):
                 "bk_data_id": cfg.bk_data_id,
                 "log_paths": validated_data["log_paths"],
                 "log_type": validated_data["log_type"],
+                "tenant_id": module.tenant_id,
             },
         )
         return Response(

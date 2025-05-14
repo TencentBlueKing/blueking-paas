@@ -1,5 +1,5 @@
 <template>
-  <div class="deploy-hook-container">
+  <div :class="['deploy-hook-container', { special: !isCreate }]">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="deploy-hook-loading"
@@ -16,7 +16,6 @@
               {{ $t('部署前置命令') }}
             </div>
           </div>
-
           <div
             class="edit-container"
             @click="handleEditClick"
@@ -25,6 +24,15 @@
             <i class="paasng-icon paasng-edit-2" />
             {{ $t('编辑') }}
           </div>
+        </div>
+        <div class="deploy-command-tip">
+          {{ $t('部署前置命令在独立容器中执行，适用于数据库表变更等操作。') }}
+          <a
+            :href="GLOBAL.DOC.DEPLOY_ORDER"
+            target="_blank"
+          >
+            {{ $t('使用指南') }}
+          </a>
         </div>
         <!-- 不启用时隐藏 -->
         <bk-form
@@ -56,7 +64,7 @@
             <bk-tag-input
               v-model="preFormData.command"
               style="width: 500px"
-              :placeholder="$t('请输入启动命令，并按 Enter 键结束')"
+              placeholder=" "
               :allow-create="allowCreate"
               :allow-auto-match="true"
               :has-delete-icon="hasDeleteIcon"
@@ -66,7 +74,8 @@
               slot="tip"
               class="whole-item-tips"
             >
-              {{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }}./bin/pre-task.sh
+              {{ $t('数组类型，示例数据：[\'/process_data\']，按回车键分隔每个元素') }}<br/>
+              {{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }} ['/bin/sh', './bin/pre-task.sh']
             </span>
           </bk-form-item>
           <bk-form-item
@@ -79,13 +88,15 @@
               v-model="preFormData.args"
               style="width: 500px"
               ext-cls="tag-extra"
-              :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
+              placeholder=" "
               :allow-create="allowCreate"
               :allow-auto-match="true"
               :has-delete-icon="hasDeleteIcon"
               :paste-fn="copyCommandParameter"
             />
-            <span class="whole-item-tips">{{ $t('示例：--env prod，多个参数可用回车键分隔') }}</span>
+            <span class="whole-item-tips">
+              {{ $t('数组类型，示例数据：[\'--dataset\', \'myset\']，按回车键分隔每个元素') }}
+            </span>
           </bk-form-item>
         </bk-form>
         <bk-form
@@ -98,7 +109,7 @@
             class="pt20"
             style="position: relative;"
           >
-            <span :class="['hook-tag', { 'enabled': preFormData.enabled } ]">
+            <span :class="['hook-tag', { 'enabled': preFormData.enabled }]">
               {{ preFormData.enabled ? $t('已启用') : $t('未启用') }}
             </span>
           </bk-form-item>
@@ -107,7 +118,7 @@
             :label="`${$t('启动命令')}：`"
             style="position: relative;"
           >
-            <div v-if="preFormData.command.length">
+            <div class="hook-tag-cls" v-if="preFormData.command.length">
               <bk-tag
                 v-for="item in preFormData.command"
                 :key="item"
@@ -115,10 +126,7 @@
                 {{ item }}
               </bk-tag>
             </div>
-            <div
-              v-else
-              class="pl10"
-            >
+            <div v-else>
               --
             </div>
           </bk-form-item>
@@ -128,7 +136,7 @@
             class="pt20 hook-form-cls"
             style="position: relative;"
           >
-            <div v-if="preFormData.args.length">
+            <div class="hook-tag-cls" v-if="preFormData.args.length">
               <bk-tag
                 v-for="item in preFormData.args"
                 :key="item"
@@ -136,10 +144,7 @@
                 {{ item }}
               </bk-tag>
             </div>
-            <div
-              v-else
-              class="pl10"
-            >
+            <div v-else>
               --
             </div>
           </bk-form-item>
@@ -410,6 +415,13 @@ export default {
     margin-left: 150px;
     margin-top: 24px;
   }
+
+  .deploy-command-tip {
+    padding-left: 20px;
+    color: #979ba5;
+    font-size: 12px;
+    margin-top: 8px;
+  }
 }
 
 .info-special-form.bk-form.bk-inline-form {
@@ -436,7 +448,6 @@ export default {
   }
 }
 .hook-tag {
-  margin-left: 6px;
   display: inline-block;
   height: 22px;
   padding: 0 8px;
@@ -450,7 +461,10 @@ export default {
     background: #E4FAF0;
   }
 }
-.deploy-hook-container {
+.deploy-hook-container.special {
   min-height: 200px;
+}
+.hook-tag-cls .bk-tag:first-child {
+  margin-left: 0px;
 }
 </style>

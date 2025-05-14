@@ -1,25 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from django.conf import settings
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
@@ -32,6 +30,7 @@ from paas_wl.workloads.networking.ingress.constants import (
     ANNOT_SSL_REDIRECT,
 )
 from paas_wl.workloads.networking.ingress.kres_slzs.utils import NginxRegexRewrittenProvider
+from paas_wl.workloads.networking.ingress.managers import get_ingress_class_by_wl_app
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandboxIngress
@@ -63,10 +62,11 @@ class DevSandboxIngressSerializer(AppEntitySerializer["DevSandboxIngress"]):
         if obj.set_header_x_script_name:
             annotations[ANNOT_CONFIGURATION_SNIPPET] = nginx_adaptor.make_configuration_snippet()
 
-        # 当有多个 ingress controller 存在时，可以指定需要使用的链路
-        if settings.APP_INGRESS_CLASS is not None:
-            annotations["kubernetes.io/ingress.class"] = settings.APP_INGRESS_CLASS
+        # ingressClassName
+        if ingress_cls_name := get_ingress_class_by_wl_app(obj.app):
+            annotations["kubernetes.io/ingress.class"] = ingress_cls_name
 
+        # tls 证书 Secrets
         tls_group_by_secret_name: Dict[str, List] = defaultdict(list)
         for domain in obj.domains:
             if domain.tls_enabled:
@@ -82,30 +82,38 @@ class DevSandboxIngressSerializer(AppEntitySerializer["DevSandboxIngress"]):
             for backend in domain.path_backends:
                 paths.append(
                     {
-                        "path": nginx_adaptor.make_location_path(backend.path_prefix or "/")
-                        if obj.rewrite_to_root
-                        else backend.path_prefix,
+                        "path": (
+                            nginx_adaptor.make_location_path(backend.path_prefix or "/")
+                            if obj.rewrite_to_root
+                            else backend.path_prefix
+                        ),
                         "pathType": "ImplementationSpecific",
                         "backend": {
-                            "service": {"name": backend.service_name, "port": {"name": backend.service_port_name}},
+                            "service": {
+                                "name": backend.service_name,
+                                "port": {
+                                    "name": backend.service_port_name,
+                                },
+                            },
                         },
                     }
                 )
             rules.append({"host": domain.host, "http": {"paths": paths}})
 
         body: Dict[str, Any] = {
+            "apiVersion": self.get_api_version_from_gvk(self.gvk_config),
+            "kind": "Ingress",
             "metadata": {
                 "name": obj.name,
                 "annotations": annotations,
                 "labels": {"env": "dev"},
             },
             "spec": {"rules": rules, "tls": tls},
-            "apiVersion": self.get_api_version_from_gvk(self.gvk_config),
-            "kind": "Ingress",
         }
 
         if original_obj:
             body["metadata"]["resourceVersion"] = original_obj.metadata.resourceVersion
+
         return body
 
 
@@ -133,6 +141,7 @@ class DevSandboxIngressDeserializer(AppEntityDeserializer["DevSandboxIngress"]):
         for rule in rules:
             if not rule.get("http"):
                 continue
+
             domains.append(
                 IngressDomain(
                     host=rule.host,
@@ -141,6 +150,7 @@ class DevSandboxIngressDeserializer(AppEntityDeserializer["DevSandboxIngress"]):
                     path_backends=self._parse_backends(rule.http.paths),
                 )
             )
+
         return domains
 
     def _parse_backends(self, paths: List[ResourceInstance]) -> List[IngressPathBackend]:

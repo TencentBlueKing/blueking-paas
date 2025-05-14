@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""Repo connectors for applications"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""Repo connectors for applications
-"""
 import abc
 import logging
 from dataclasses import dataclass, field
@@ -87,8 +86,8 @@ class ModuleRepoConnector(abc.ABC):
 
 
 class DBBasedMixin:
-    """Databased based repo connector which provides some utils for setting/getting repo object
-    in database
+    """Repo connector, which provides some utilities to set/get repo object, stores
+    data in database.
     """
 
     @property
@@ -103,10 +102,10 @@ class DBBasedMixin:
     def _get_or_create_repo_obj(self, repo_url: str, source_dir: str) -> Any:
         """Get or create a repository object by given url and source_dir."""
         repo_kwargs = {
-            "region": self.application.region,
             "server_name": self.repo_type,
             "repo_url": repo_url,
             "source_dir": source_dir,
+            "tenant_id": self.application.tenant_id,
         }
         # Not using `get_or_create` because it might return more than 1 results
         repo_objs = self.repository_model.objects.filter(**repo_kwargs)[:1]
@@ -155,7 +154,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
         self.auth_manager.initialize(desired_root)
 
         # 创建目录
-        base_info = get_sourcectl_type(self.repo_type).config_as_arguments(self.application.region)
+        base_info = get_sourcectl_type(self.repo_type).config_as_arguments()
         try:
             self.auth_manager.set_paas_user_root_privilege(path=desired_root, write=True, read=True)
             return self._acquire_repo(
@@ -171,7 +170,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
         # 创建目录
         try:
             self.auth_manager.set_paas_user_root_privilege(path=desired_root, write=True, read=True)
-            server_config = get_bksvn_config(self.application.region, name=self.repo_type)
+            server_config = get_bksvn_config(name=self.repo_type)
             return self._acquire_repo(
                 desired_name=unique_id_generator(self.module.name),
                 base_info=server_config.as_module_arguments(root_path=desired_root),
@@ -201,7 +200,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
         repo_url = self.get_repo().get_repo_url()
         with generate_temp_dir() as source_path, promote_repo_privilege_temporary(self.application):
             self.write_templates_to_dir(source_path, self.module.source_init_template, context)
-            svn_credentials = get_bksvn_config(context["region"], name=self.repo_type).get_admin_credentials()
+            svn_credentials = get_bksvn_config(name=self.repo_type).get_admin_credentials()
 
             sync_procedure = SvnSyncProcedure(repo_url, svn_credentials["username"], svn_credentials["password"])
             return sync_procedure.run(source_path=str(source_path))
@@ -255,6 +254,7 @@ class ExternalBasicAuthRepoConnector(ModuleRepoConnector, DBBasedMixin):
             defaults={
                 "username": repo_auth_info.get("username", ""),
                 "password": repo_auth_info.get("password", ""),
+                "tenant_id": self.module.tenant_id,
             },
         )
         if created:
@@ -313,7 +313,7 @@ class BlobStoreSyncProcedure:
             compress_directory(source_path, package_path)
             self.blob_store.upload_file(package_path, self.key, ExtraArgs={"ACL": "private"})
 
-        # Generate a temporary accessable url for source codes
+        # Generate a temporary accessible url for source codes
         url = self.blob_store.generate_presigned_url(key=self.key, expires_in=self.downloadable_address_expires_in)
         return SourceSyncResult(
             dest_type=self.blob_store.STORE_TYPE,
@@ -344,7 +344,7 @@ def generate_downloadable_app_template(module: Module, context: Optional[Dict[st
     application = module.application
     if context is None:
         # generate default context
-        client_secret = get_oauth2_client_secret(application.code, application.region)
+        client_secret = get_oauth2_client_secret(application.code)
         context = {
             "region": application.region,
             "owner_username": get_username_by_bkpaas_user_id(application.owner),

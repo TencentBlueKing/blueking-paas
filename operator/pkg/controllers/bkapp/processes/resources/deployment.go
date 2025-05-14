@@ -62,13 +62,18 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 		deployID = DefaultDeployID
 	}
 
-	// Prepare data
+	// Generate the environment variables and render the "{{bk_var_*}}" var placeholder which
+	// might be used in the values.
 	envVars := common.GetAppEnvs(app)
+	envVars = common.RenderAppVars(envVars, common.VarsRenderContext{ProcessType: procName})
+
 	mounterMap, err := volumes.GetAllVolumeMounterMap(app)
 	if err != nil {
 		return nil, err
 	}
 	replicasGetter := envs.NewReplicasGetter(app)
+
+	// NOTE: UseCNBAnnoKey 保留仅用于兼容存量模型. 新部署的 bkapp 模型已不再包含该注解, 模型中已正确处理 command/args
 	useCNB, _ := strconv.ParseBool(app.Annotations[paasv1alpha2.UseCNBAnnoKey])
 
 	// Find the process spec object
@@ -104,7 +109,7 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 	}
 	annotations := map[string]string{
 		paasv1alpha2.DeployIDAnnoKey:                  deployID,
-		paasv1alpha2.LastSyncedSerializedBkAppAnnoKey: string(bkAppJson),
+		paasv1alpha2.LastSyncedSerializedBkAppAnnoKey: bkAppJson,
 	}
 
 	deployment := &appsv1.Deployment{
@@ -139,6 +144,7 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 					HostAliases:      buildHostAliases(app),
 					Containers:       buildContainers(proc, envVars, image, pullPolicy, resReq, useCNB),
 					ImagePullSecrets: BuildImagePullSecrets(app),
+					NodeSelector:     common.BuildNodeSelector(app),
 					// 不默认向 Pod 中挂载 ServiceAccount Token
 					AutomountServiceAccountToken: lo.ToPtr(false),
 				},
@@ -172,6 +178,8 @@ func buildContainers(
 	useCNB bool,
 ) []corev1.Container {
 	var command, args []string
+
+	// NOTE: useCNB 保留仅用于兼容存量 bkapp 模型. 新部署的 bkapp 模型已不再关注该字段, 模型中已正确处理 command/args
 	if useCNB {
 		// cnb 运行时启动 Process 的 entrypoint 是 `Process.Name`, command 是空列表
 		// See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
@@ -190,8 +198,21 @@ func buildContainers(
 		Command:         kubeutil.ReplaceCommandEnvVariables(command),
 		Args:            kubeutil.ReplaceCommandEnvVariables(args),
 	}
-	if proc.TargetPort != 0 {
+
+	if len(proc.Services) > 0 {
+		container.Ports = make([]corev1.ContainerPort, 0)
+		for _, svc := range proc.Services {
+			container.Ports = append(container.Ports, corev1.ContainerPort{ContainerPort: svc.TargetPort})
+		}
+	} else if proc.TargetPort != 0 {
 		container.Ports = []corev1.ContainerPort{{ContainerPort: proc.TargetPort}}
+	}
+
+	// 容器探针
+	if proc.Probes != nil {
+		container.LivenessProbe = proc.Probes.Liveness
+		container.ReadinessProbe = proc.Probes.Readiness
+		container.StartupProbe = proc.Probes.Startup
 	}
 	return []corev1.Container{container}
 }

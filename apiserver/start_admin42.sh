@@ -33,9 +33,6 @@ fi
 
 python manage.py migrate
 
-mkdir -p ../public/assets
-python manage.py collectstatic --noinput
-
 ## Run!
 command="python manage.py runserver 0.0.0.0:"$PORT
 exec bash -c "$command"

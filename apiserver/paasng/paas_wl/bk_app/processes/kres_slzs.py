@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 #########################
 # Serializers & Readers #
 #########################
@@ -29,14 +28,16 @@ from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import Release, WlApp
 from paas_wl.bk_app.cnative.specs.constants import BKPAAS_DEPLOY_ID_ANNO_KEY
 from paas_wl.bk_app.processes.constants import PROCESS_MAPPER_VERSION_KEY, PROCESS_NAME_KEY
-from paas_wl.bk_app.processes.entities import Resources, Runtime
+from paas_wl.bk_app.processes.entities import Probe, ProbeSet, Resources, Runtime
 from paas_wl.bk_app.processes.exceptions import UnknownProcessTypeError
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
-from paas_wl.infras.resource_templates.managers import AddonManager, ProcessProbeManager
+from paas_wl.infras.resource_templates.managers import AddonManager
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
+from paas_wl.utils.camel_converter import camel_to_snake_case, dict_to_camel
 from paas_wl.utils.kubestatus import HealthStatus, HealthStatusType, check_pod_health_status, parse_pod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paasng.utils.dictx import get_items
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.processes.kres_entities import Instance, Process
@@ -121,6 +122,7 @@ class ProcessDeserializer(AppEntityDeserializer["Process"]):
                 Schedule,
             ),
             resources=cattr.structure(getattr(main_container, "resources", None), Resources),
+            probes=self._deserialize_probes(main_container),
         )
         return process
 
@@ -151,8 +153,20 @@ class ProcessDeserializer(AppEntityDeserializer["Process"]):
                 args=getattr(main_container, "args", []),
                 image_pull_policy=main_container.imagePullPolicy,
             ),
+            probes=self._deserialize_probes(main_container),
         )
         return process
+
+    def _deserialize_probes(self, main_container: ResourceField) -> "ProbeSet":
+        """Deserialize probes from main container"""
+        readiness_probe = getattr(main_container, "readinessProbe", None)
+        liveness_probe = getattr(main_container, "livenessProbe", None)
+        startup_probe = getattr(main_container, "startupProbe", None)
+        return ProbeSet(
+            readiness=cattr.structure(camel_to_snake_case(readiness_probe), Probe) if readiness_probe else None,
+            liveness=cattr.structure(camel_to_snake_case(liveness_probe), Probe) if liveness_probe else None,
+            startup=cattr.structure(camel_to_snake_case(startup_probe), Probe) if startup_probe else None,
+        )
 
     @staticmethod
     def _get_process_type(deployment: ResourceInstance) -> str:
@@ -199,8 +213,10 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
 
         # Use first container's status
         c_status = None
+        c_status_dict = {}
         if pod.status.get("containerStatuses"):
             c_status = pod.status.containerStatuses[0]
+            c_status_dict = get_items(pod.to_dict(), "status.containerStatuses", [{}])[0]
 
         process_type = self.get_process_type(pod)
         target_container = self._get_main_container(app, pod)
@@ -214,11 +230,18 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
                     envs[name] = value
 
         if app.type == WlAppType.DEFAULT:
-            version = int(pod.metadata.labels.get("release_version", 0))
+            labels = pod.metadata.get("labels") or {}
+            version = int(labels.get("release_version", 0))
         else:
-            annotations = pod.metadata.annotations or {}
+            annotations = pod.metadata.get("annotations") or {}
             version = int(annotations.get(BKPAAS_DEPLOY_ID_ANNO_KEY, 0))
 
+        terminated_info = {}
+        if c_status_dict:
+            terminated_info = {
+                "exit_code": get_items(c_status_dict, "lastState.terminated.exitCode"),
+                "reason": get_items(c_status_dict, "lastState.terminated.reason"),
+            }
         return self.entity_type(
             app=app,
             name=pod.metadata.name,
@@ -232,6 +255,7 @@ class InstanceDeserializer(AppEntityDeserializer["Instance"]):
             envs=envs,
             ready=health_status.status == HealthStatusType.HEALTHY,
             restart_count=c_status.restartCount if c_status else 0,
+            terminated_info=terminated_info,
             version=version,
         )
 
@@ -343,12 +367,12 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
 
     def _construct_pod_body_specs(self, process: "Process") -> Dict:
         addon_mgr = AddonManager(process.app)
-        process_probe_mgr = ProcessProbeManager(app=process.app, process_type=process.type)
-        readiness_probe = cattr.unstructure(process_probe_mgr.get_readiness_probe())
+        probes = process.probes
+        readiness_probe = dict_to_camel(probes.readiness.dict()) if probes and probes.readiness else None
         if readiness_probe is None and process.type == "web":
             readiness_probe = cattr.unstructure(addon_mgr.get_readiness_probe())
-        liveness_probe = cattr.unstructure(process_probe_mgr.get_liveness_probe())
-        startup_probe = cattr.unstructure(process_probe_mgr.get_startup_probe())
+        liveness_probe = dict_to_camel(probes.liveness.dict()) if probes and probes.liveness else None
+        startup_probe = dict_to_camel(probes.startup.dict()) if probes and probes.startup else None
         main_container = {
             "env": [{"name": str(key), "value": str(value)} for key, value in process.runtime.envs.items()],
             # add preStop to avoid 502 when redeploy or rolling update app
@@ -358,7 +382,7 @@ class ProcessSerializer(AppEntitySerializer["Process"]):
             "name": process.main_container_name,
             "command": process.runtime.command,
             "args": process.runtime.args,
-            "imagePullPolicy": process.runtime.image_pull_policy,
+            "imagePullPolicy": process.runtime.image_pull_policy.value,
             "resources": {
                 "limits": process.resources.limits if process.resources else {},
                 "requests": process.resources.requests if process.resources else {},

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict, List
 
 import pytest
@@ -63,15 +62,6 @@ def make_stats_indexes_fake_resp():
         # 保留字测试
         ("pod_name", {}, "pod_name"),
         ("pod_name", {"__ext": {"properties": {"io_kubernetes_pod": {"type": "keyword"}}}}, "__ext.io_kubernetes_pod"),
-        (
-            "region",
-            {
-                "__ext": {
-                    "properties": {"labels": {"properties": {"bkapp_paas_bk_tencent_com_region": {"type": "keyword"}}}}
-                }
-            },
-            "__ext.labels.bkapp_paas_bk_tencent_com_region",
-        ),
         (
             "app_code",
             {
@@ -121,7 +111,6 @@ def test_get_es_term(query_term, mappings, expected):
 
 
 _default_log: dict = {
-    "region": NOT_SET,
     "app_code": NOT_SET,
     "module_name": NOT_SET,
     "environment": NOT_SET,
@@ -135,16 +124,11 @@ _default_log: dict = {
     ("log", "expected"),
     [
         (
-            {"__ext.labels.bkapp_paas_bk_tencent_com_region": "default"},
-            {**_default_log, "__ext.labels.bkapp_paas_bk_tencent_com_region": "default", "region": "default"},
-        ),
-        (
             {"__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag"},
             {**_default_log, "__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag", "environment": "stag"},
         ),
         (
             {
-                "__ext.labels.bkapp_paas_bk_tencent_com_region": "default",
                 "__ext.labels.bkapp_paas_bk_tencent_com_code": "code",
                 "__ext.labels.bkapp_paas_bk_tencent_com_module_name": "default",
                 "__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag",
@@ -152,13 +136,11 @@ _default_log: dict = {
                 "__ext.io_kubernetes_pod": "bkapp-code-stag--web-8449579sh9d2",
             },
             {
-                "__ext.labels.bkapp_paas_bk_tencent_com_region": "default",
                 "__ext.labels.bkapp_paas_bk_tencent_com_code": "code",
                 "__ext.labels.bkapp_paas_bk_tencent_com_module_name": "default",
                 "__ext.labels.bkapp_paas_bk_tencent_com_environment": "stag",
                 "__ext.labels.bkapp_paas_bk_tencent_com_process_name": "web",
                 "__ext.io_kubernetes_pod": "bkapp-code-stag--web-8449579sh9d2",
-                "region": "default",
                 "app_code": "code",
                 "module_name": "default",
                 "environment": "stag",

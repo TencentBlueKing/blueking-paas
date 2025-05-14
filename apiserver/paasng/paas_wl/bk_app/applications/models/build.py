@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+import logging
 import os
 import shlex
 from typing import Dict, List, Optional
@@ -27,14 +27,18 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from jsonfield import JSONCharField, JSONField
 from moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
+from moby_distribution.registry.exceptions import PermissionDeny, ResourceNotFound, UnSupportMediaType
 from moby_distribution.registry.resources.manifests import ManifestRef, ManifestSchema2
 from moby_distribution.registry.utils import parse_image
 
 from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
 from paas_wl.bk_app.applications.models.misc import OutputStream
+from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paas_wl.utils.blobstore import make_blob_store
-from paas_wl.utils.constants import BuildStatus, make_enum_choices
-from paas_wl.utils.models import UuidAuditedModel, validate_procfile
+from paas_wl.utils.constants import BuildStatus
+from paas_wl.utils.models import UuidAuditedModel, make_json_field, validate_procfile
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.sourcectl.models import VersionInfo
 
@@ -42,13 +46,13 @@ from paasng.platform.sourcectl.models import VersionInfo
 # TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
 DEFAULT_SLUG_RUNNER_ENTRYPOINT = ["bash", "/runner/init"]
 
+# CNB runner 默认的 entrypoint
+# see: https://buildpacks.io/docs/for-platform-operators/concepts/lifecycle/launch/
+DEFAULT_CNB_RUNNER_ENTRYPOINT = ["launcher"]
 
-def get_app_docker_registry_client() -> DockerRegistryV2Client:
-    return DockerRegistryV2Client.from_api_endpoint(
-        api_endpoint=APIEndpoint(url=settings.APP_DOCKER_REGISTRY_HOST),
-        username=settings.APP_DOCKER_REGISTRY_USERNAME,
-        password=settings.APP_DOCKER_REGISTRY_PASSWORD,
-    )
+logger = logging.getLogger(__name__)
+
+BuildArtifactMetadataField = make_json_field("BuildArtifactMetadataField", py_model=BuildArtifactMetadata)
 
 
 class Build(UuidAuditedModel):
@@ -79,9 +83,13 @@ class Build(UuidAuditedModel):
     artifact_type = models.CharField(help_text="构件类型", default=ArtifactType.SLUG, max_length=16)
     artifact_detail = models.JSONField(default={}, help_text="构件详情(展示信息)")
     artifact_deleted = models.BooleanField(default=False, help_text="slug/镜像是否已被清理")
-    artifact_metadata = models.JSONField(
-        default={}, help_text="构件元信息, 包括 entrypoint/use_cnb/use_dockerfile 等信息"
+
+    artifact_metadata = BuildArtifactMetadataField(
+        default=BuildArtifactMetadata,
+        help_text="构件元信息, 包括 entrypoint/use_cnb/use_dockerfile/proc_entrypoints 等信息",
     )
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         get_latest_by = "created"
@@ -94,14 +102,20 @@ class Build(UuidAuditedModel):
         # 兜底逻辑, 兼容未绑定运行时的迁移应用或历史数据
         return self.app.latest_config.get_image()
 
+    def is_build_from_cnb(self) -> bool:
+        """获取当前 Build 构件是否基于 cnb 构建"""
+        return bool(self.artifact_metadata.use_cnb)
+
     def get_universal_entrypoint(self) -> List[str]:
         """获取使用 Build 运行 hook 等命令的 entrypoint"""
-        if self.artifact_type == ArtifactType.SLUG:
-            return self.artifact_metadata.get("entrypoint") or DEFAULT_SLUG_RUNNER_ENTRYPOINT
-        elif self.artifact_metadata.get("use_cnb"):
+        if self.is_build_from_cnb():
             # cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下文
             # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
-            return ["launcher"]
+            return DEFAULT_CNB_RUNNER_ENTRYPOINT
+
+        if self.artifact_type == ArtifactType.SLUG:
+            return self.artifact_metadata.entrypoint or DEFAULT_SLUG_RUNNER_ENTRYPOINT
+
         # 旧镜像应用分支
         # Note: 关于为什么要使用 env 命令作为 entrypoint, 而不是直接将用户的命令作为 entrypoint.
         # 虽然实际上绝大部分 CRI 实现会在当 Command 非空时 忽略镜像的 CMD(即认为 ENTRYPOINT 和 CMD 是绑定的, 只要 ENTRYPOINT 被修改, 就会忽略 CMD)
@@ -113,27 +127,32 @@ class Build(UuidAuditedModel):
 
     def get_entrypoint_for_proc(self, process_type: str) -> List[str]:
         """获取使用 Build 运行 process_type 的 entrypoint"""
-        if self.artifact_type == ArtifactType.SLUG:
-            return self.get_universal_entrypoint()
-        elif self.artifact_metadata.get("use_cnb"):
-            # cnb 运行时的 entrypoint 是 process_type
-            # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go#L78
-            return [process_type]
-        return self.get_universal_entrypoint()
+        if (proc_entrypoints := self.artifact_metadata.proc_entrypoints) and (
+            entrypoint := proc_entrypoints.get(process_type)
+        ):
+            return entrypoint
+
+        return self._get_default_entrypoint(process_type)
 
     def get_command_for_proc(self, process_type: str, proc_command: str) -> List[str]:
         """获取运行 Build 的 command"""
-        if self.artifact_type == ArtifactType.SLUG:
-            return ["start", process_type]
-        elif self.artifact_metadata.get("use_cnb"):
+        if self.is_build_from_cnb():
             # cnb 运行时的 command 是空列表
             # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go#L78
             return []
+
+        if self.artifact_type == ArtifactType.SLUG:
+            return ["start", process_type]
+
         return shlex.split(proc_command)
 
-    def is_build_from_cnb(self) -> bool:
-        """获取当前 Build 构件是否基于 cnb 构建"""
-        return bool(self.artifact_metadata.get("use_cnb"))
+    def _get_default_entrypoint(self, process_type: str) -> List[str]:
+        if self.is_build_from_cnb():
+            # cnb 运行时的 entrypoint 是 process_type
+            # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go#L78
+            return [process_type]
+
+        return self.get_universal_entrypoint()
 
     @property
     def image_repository(self) -> Optional[str]:
@@ -169,22 +188,34 @@ class Build(UuidAuditedModel):
         if self.artifact_detail:
             return self.artifact_detail
 
+        self.artifact_detail = {"invoke_message": self.build_process.invoke_message}
+
         if self.artifact_type == ArtifactType.IMAGE:
-            image = parse_image(self.image, default_registry=settings.APP_DOCKER_REGISTRY_HOST)
-            registry_client = get_app_docker_registry_client()
+            image_registry = get_image_registry_by_app(self.app)
+            registry_client = DockerRegistryV2Client.from_api_endpoint(
+                api_endpoint=APIEndpoint(url=image_registry.host),
+                username=image_registry.username,
+                password=image_registry.password,
+            )
+            image = parse_image(self.image, default_registry=image_registry.host)
             ref = ManifestRef(repo=image.name, reference=image.tag, client=registry_client)
-            metadata = ref.get_metadata()
-            manifest: ManifestSchema2 = ref.get()
-            self.artifact_detail = {
-                "size": sum(layer.size for layer in manifest.layers),
-                "digest": metadata.digest,
-                "invoke_message": self.build_process.invoke_message,
-            }
-        else:
-            self.artifact_detail = {
-                "invoke_message": self.build_process.invoke_message,
-            }
-        self.save(update_fields=["artifact_detail"])
+
+            metadata = None
+            try:
+                metadata = ref.get_metadata()
+            except (PermissionDeny, ResourceNotFound, UnSupportMediaType) as e:
+                # 由于集群关联的镜像仓库可能被修改，导致历史的构建所关联的镜像不一定能查询到，这里需要忽略
+                logger.warning(f"Failed to get metadata of image {self.image}: {e}")
+
+            size, digest = 0, "unknown"
+            if metadata:
+                manifest: ManifestSchema2 = ref.get()
+                size = sum(layer.size for layer in manifest.layers)
+                digest = metadata.digest
+
+            self.artifact_detail.update({"size": size, "digest": digest})
+
+        self.save(update_fields=["artifact_detail", "updated"])
         return self.artifact_detail
 
     def artifact_invoke_message(self):
@@ -250,6 +281,7 @@ class BuildProcessManager(models.Manager):
             revision=version_info.revision,
             branch=version_info.version_name,
             output_stream=OutputStream.objects.create(),
+            tenant_id=wl_app.tenant_id,
         )
         return build_process
 
@@ -276,11 +308,14 @@ class BuildProcess(UuidAuditedModel):
         verbose_name="完成时间", help_text="failed/successful/interrupted 都是完成", null=True
     )
 
-    status = models.CharField(choices=make_enum_choices(BuildStatus), max_length=12, default=BuildStatus.PENDING.value)
+    status = models.CharField(max_length=12, default=BuildStatus.PENDING.value)
     output_stream = models.OneToOneField("OutputStream", null=True, on_delete=models.CASCADE)
 
     # A BuildProcess will result in a build and release, if succeeded
     build = models.OneToOneField("Build", null=True, related_name="build_process", on_delete=models.CASCADE)
+
+    tenant_id = tenant_id_field_factory()
+
     objects = BuildProcessManager()
 
     class Meta:
@@ -290,6 +325,9 @@ class BuildProcess(UuidAuditedModel):
     def __str__(self):
         return "%s-%s(%s)-%s" % (self.uuid, self.app.name, self.app.region, self.status)
 
+    def is_finished(self):
+        return self.status in BuildStatus.get_finished_states()
+
     def set_int_requested_at(self):
         """Set `int_requested_at` field"""
         self.int_requested_at = timezone.now()
@@ -297,12 +335,10 @@ class BuildProcess(UuidAuditedModel):
 
     def check_interruption_allowed(self) -> bool:
         """Check if current build process allows interruptions"""
-        if self.status in BuildStatus.get_finished_states():
-            return False
-        if not self.logs_was_ready_at:
+        if self.is_finished():
             return False
 
-        return True
+        return self.logs_was_ready_at is not None
 
     def set_logs_was_ready(self):
         """Mark current build was ready for reading logs from"""

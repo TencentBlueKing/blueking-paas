@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import atexit
 import logging
 import urllib.parse
@@ -24,19 +23,21 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, List, Union
 
-import MySQLdb
+import pymysql
 import pytest
 import sqlalchemy as sa
 from blue_krill.monitoring.probe.mysql import transfer_django_db_settings
 from django.conf import settings
 from django.core.management import call_command
+from django.db import transaction
 from django.test.utils import override_settings
-from django.utils.crypto import get_random_string
-from django_dynamic_fixture import G
 from filelock import FileLock
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType
+from paas_wl.infras.cluster.entities import AllocationPolicy
+from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterAllocationPolicy
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
 from paasng.accessories.publish.sync_market.handlers import (
     before_finishing_application_creation,
@@ -46,13 +47,10 @@ from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.bk_plugins.bk_plugins.models import BkPluginProfile
 from paasng.core.core.storages.sqlalchemy import console_db, legacy_db
 from paasng.core.core.storages.utils import SADBManager
-from paasng.infras.accounts.constants import SiteRole
-from paasng.infras.accounts.models import UserProfile
-from paasng.platform.applications.constants import ApplicationRole
-from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature
+from paasng.infras.sysapi_client.constants import ClientRole
+from paasng.infras.sysapi_client.models import ClientPrivateToken, SysAPIClient
+from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.applications.utils import create_default_module
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.manager import make_app_metadata as make_app_metadata_stub
 from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.models import SourceTypeSpecConfig
@@ -63,35 +61,24 @@ from paasng.utils.blobstore import S3Store, make_blob_store
 from tests.paasng.platform.engine.setup_utils import create_fake_deployment
 from tests.utils import mock
 from tests.utils.auth import create_user
+from tests.utils.basic import generate_random_string
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING, build_default_cluster
 from tests.utils.helpers import (
     _mock_wl_services_in_creation,
     configure_regions,
     create_app,
     create_cnative_app,
     create_pending_wl_apps,
-    generate_random_string,
     initialize_module,
 )
 
-logger = logging.getLogger(__file__)
+# Install auto-used fixture
+from tests.utils.mocks.cluster import _cluster_service_allow_nonexisting_wl_apps  # noqa: F401
 
-# The default region for testing
-DEFAULT_REGION = settings.DEFAULT_REGION_NAME
+logger = logging.getLogger(__name__)
+
 svn_lock_fn = Path(__file__).parent / ".svn"
-# A random cluster name for running unittests
-cluster_name_fn = Path(__file__).parent / ".random"
-with FileLock(str(cluster_name_fn.absolute()) + ".lock"):
-    if cluster_name_fn.is_file():
-        CLUSTER_NAME_FOR_TESTING = cluster_name_fn.read_text().strip()
-    else:
-        CLUSTER_NAME_FOR_TESTING = get_random_string(6)
-        cluster_name_fn.write_text(CLUSTER_NAME_FOR_TESTING)
-
-
-@atexit.register
-def clear_filelock():
-    cluster_name_fn.unlink(missing_ok=True)
-    svn_lock_fn.unlink(missing_ok=True)
+atexit.register(lambda: svn_lock_fn.unlink(missing_ok=True))
 
 
 def pytest_addoption(parser):
@@ -116,13 +103,13 @@ def pytest_addoption(parser):
 
 @pytest.fixture(autouse=True, scope="session")
 def _configure_default_region():
-    with configure_regions([DEFAULT_REGION]):
+    with configure_regions([settings.DEFAULT_REGION_NAME]):
         yield
 
 
 @pytest.fixture(autouse=True, scope="session")
 def _drop_legacy_db(request, django_db_keepdb: bool):
-    """在单元测试结束后, 自动摧毁测试数据库, 除非用户显示要求保留"""
+    """在单元测试结束后, 自动摧毁测试数据库, 除非用户显式要求保留"""
     if django_db_keepdb:
         return
 
@@ -130,7 +117,7 @@ def _drop_legacy_db(request, django_db_keepdb: bool):
     def drop_legacy_db_core():
         mysql_config = asdict(transfer_django_db_settings(settings.PAAS_LEGACY_DBCONF))
         db = mysql_config.pop("database")
-        connection = MySQLdb.connect(charset="utf8", **mysql_config)
+        connection = pymysql.connect(charset="utf8", **mysql_config)
         with suppress(Exception), connection.cursor() as cursor:
             cursor.execute(f"drop database {db}")
 
@@ -148,6 +135,26 @@ def _configure_remote_service():
     # unittest should not configure any remote service endpoints
     with override_settings(SERVICE_REMOTE_ENDPOINTS=None):
         yield
+
+
+@pytest.fixture(scope="session")
+def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
+    """Create the default cluster for testing."""
+
+    with django_db_blocker.unblock(), transaction.atomic():
+        Cluster.objects.all().delete()
+        APIServer.objects.all().delete()
+        ClusterAllocationPolicy.objects.all().delete()
+
+        cluster, apiserver = build_default_cluster()
+        cluster.save()
+        apiserver.save()
+
+        ClusterAllocationPolicy.objects.create(
+            type=ClusterAllocationPolicyType.UNIFORM,
+            allocation_policy=AllocationPolicy(env_specific=False, clusters=[cluster.name]),
+            tenant_id=cluster.tenant_id,
+        )
 
 
 def pytest_sessionstart(session):
@@ -191,6 +198,12 @@ def _auto_init_legacy_app(request):
 @pytest.fixture(autouse=True, scope="session")
 def _skip_iam_migrations():
     with override_settings(BK_IAM_SKIP=True):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def _skip_bk_audit_add_event():
+    with override_settings(ENABLE_BK_AUDIT=False):
         yield
 
 
@@ -349,6 +362,18 @@ def bk_user(request):
 
 
 @pytest.fixture(autouse=True)
+def _mock_bk_auth():
+    from tests.utils.mocks.bkauth import StubBkOauthClient
+
+    with (
+        mock.patch("paasng.infras.oauth2.api.BkOauthClient", new=StubBkOauthClient),
+        mock.patch("paasng.infras.oauth2.utils.BkOauthClient", new=StubBkOauthClient),
+        mock.patch("paasng.accessories.app_secret.views.BkOauthClient", new=StubBkOauthClient),
+    ):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _mock_iam():
     def mock_user_has_app_action_perm(user, application, action) -> bool:
         from paasng.infras.iam.constants import APP_DEFAULT_ROLES
@@ -362,27 +387,32 @@ def _mock_iam():
     from tests.utils.mocks.iam import StubBKIAMClient
     from tests.utils.mocks.permissions import StubApplicationPermission
 
-    with mock.patch("paasng.infras.iam.client.BKIAMClient", new=StubBKIAMClient), mock.patch(
-        "paasng.infras.iam.helpers.BKIAMClient",
-        new=StubBKIAMClient,
-    ), mock.patch(
-        "paasng.platform.applications.helpers.BKIAMClient",
-        new=StubBKIAMClient,
-    ), mock.patch(
-        "paasng.infras.iam.helpers.IAM_CLI",
-        new=StubBKIAMClient(),
-    ), mock.patch(
-        "paasng.infras.accounts.permissions.application.user_has_app_action_perm",
-        new=mock_user_has_app_action_perm,
-    ), mock.patch(
-        "paasng.platform.declarative.application.controller.user_has_app_action_perm",
-        new=mock_user_has_app_action_perm,
-    ), mock.patch(
-        "paasng.platform.applications.models.ApplicationPermission",
-        new=StubApplicationPermission,
-    ), mock.patch(
-        "paasng.plat_admin.numbers.app.ApplicationPermission",
-        new=StubApplicationPermission,
+    with (
+        mock.patch("paasng.infras.iam.client.BKIAMClient", new=StubBKIAMClient),
+        mock.patch(
+            "paasng.infras.iam.helpers.BKIAMClient",
+            new=StubBKIAMClient,
+        ),
+        mock.patch(
+            "paasng.platform.applications.helpers.BKIAMClient",
+            new=StubBKIAMClient,
+        ),
+        mock.patch(
+            "paasng.infras.accounts.permissions.application.user_has_app_action_perm",
+            new=mock_user_has_app_action_perm,
+        ),
+        mock.patch(
+            "paasng.platform.declarative.application.controller.user_has_app_action_perm",
+            new=mock_user_has_app_action_perm,
+        ),
+        mock.patch(
+            "paasng.platform.applications.models.ApplicationPermission",
+            new=StubApplicationPermission,
+        ),
+        mock.patch(
+            "paasng.plat_admin.numbers.app.ApplicationPermission",
+            new=StubApplicationPermission,
+        ),
     ):
         yield
 
@@ -392,17 +422,17 @@ def _mock_after_created_action():
     # skip registry app core data to console
     before_finishing_application_creation.disconnect(register_app_core_data)
     # skip turn on bk log feature by default because it required workloads database
-    post_create_application.disconnect(turn_on_bk_log_feature)
+    post_create_application.disconnect(turn_on_bk_log_feature_for_app)
     yield
     before_finishing_application_creation.connect(register_app_core_data)
-    post_create_application.connect(turn_on_bk_log_feature)
+    post_create_application.connect(turn_on_bk_log_feature_for_app)
 
 
 @pytest.fixture()
-def _turn_on_bk_log_feature():
-    post_create_application.connect(turn_on_bk_log_feature)
+def _turn_on_bk_log_feature_for_app():
+    post_create_application.connect(turn_on_bk_log_feature_for_app)
     yield
-    post_create_application.disconnect(turn_on_bk_log_feature)
+    post_create_application.disconnect(turn_on_bk_log_feature_for_app)
 
 
 @pytest.fixture()
@@ -494,6 +524,11 @@ def bk_deployment_full(bk_module_full):
 
 
 @pytest.fixture()
+def tenant_id():
+    return "system"
+
+
+@pytest.fixture()
 def api_client(request, bk_user):
     """Return an authenticated client"""
     client = APIClient()
@@ -502,37 +537,29 @@ def api_client(request, bk_user):
 
 
 @pytest.fixture()
-def sys_api_client(bk_user):
-    """Return an authenticated client which has an authenticated user with system API permissions"""
-    client = APIClient()
-    client.force_authenticate(user=bk_user)
-    # Update user permission
-    UserProfile.objects.update_or_create(
-        user=bk_user.pk, defaults={"role": SiteRole.SYSTEM_API_BASIC_MAINTAINER.value}
-    )
-    return client
+def sys_api_client():
+    """Return an authenticated client which has a system API client with BASIC_MAINTAINER permissions"""
+    return _build_api_client(role=ClientRole.BASIC_MAINTAINER)
 
 
 @pytest.fixture()
-def sys_light_api_client(bk_user):
-    """Return an authenticated client which has an authenticated user with Light App permissions"""
-    client = APIClient()
-    client.force_authenticate(user=bk_user)
-    # Update user permission
-    UserProfile.objects.update_or_create(
-        user=bk_user.pk, defaults={"role": SiteRole.SYSTEM_API_LIGHT_APP_MAINTAINER.value}
-    )
-    return client
+def sys_light_api_client():
+    """Return an authenticated client which has a system API client with LIGHT_APP_MAINTAINER permissions"""
+    return _build_api_client(role=ClientRole.LIGHT_APP_MAINTAINER)
 
 
 @pytest.fixture()
-def sys_lesscode_api_client(bk_user):
-    """Return an authenticated client which has an authenticated user with Lesscode permissions"""
-    client = APIClient()
-    client.force_authenticate(user=bk_user)
-    # Update user permission
-    UserProfile.objects.update_or_create(user=bk_user.pk, defaults={"role": SiteRole.SYSTEM_API_LESSCODE.value})
-    return client
+def sys_lesscode_api_client():
+    """Return an authenticated client which has a system API client with LESSCODE permissions"""
+    return _build_api_client(role=ClientRole.LESSCODE)
+
+
+def _build_api_client(role: ClientRole):
+    """Helper function to build an API client with the given role"""
+    client = SysAPIClient.objects.create(name="test_client", role=role)
+    token = ClientPrivateToken.objects.create_token(client=client, expires_in=None)
+    # Use the private token to authenticate the client
+    return APIClient(headers={"Authorization": f"Bearer {token.token}"})
 
 
 @pytest.fixture()
@@ -571,7 +598,7 @@ def dummy_gitlab_spec():
         "attrs": {
             "name": "dft_gitlab",
             "server_config": {"api_url": "http://127.0.0.1:8080/"},
-            "oauth_credentials": {
+            "oauth_backend_config": {
                 "client_id": "client_id",
                 "client_secret": "client_secret",
                 "authorization_base_url": "http://127.0.0.1:8080/owner/repo.git",
@@ -604,7 +631,7 @@ def _setup_default_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
         ),
         SourceTypeSpecConfig(
             name="bare_git",
-            label_zh_cn="bare_git",
+            label_zh_cn="xbare_git",
             label_en="bare_git",
             enabled=True,
             spec_cls=f"{spec_cls_module_path}.BareGitSourceTypeSpec",
@@ -651,8 +678,7 @@ def _init_tmpls():
             "language": "Python",
             "market_ready": True,
             "preset_services_config": {"mysql": {}},
-            "blob_url": {settings.DEFAULT_REGION_NAME: f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz"},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "blob_url": f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz",
             "required_buildpacks": [],
             "processes": {"web": "python manage.py runserver"},
             "tags": [],
@@ -671,8 +697,7 @@ def _init_tmpls():
             "language": "PHP",
             "market_ready": True,
             "preset_services_config": {},
-            "blob_url": {settings.DEFAULT_REGION_NAME: f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz"},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "blob_url": f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz",
             "required_buildpacks": [],
             "processes": {},
             "tags": [],
@@ -691,8 +716,7 @@ def _init_tmpls():
             "language": "Python",
             "market_ready": True,
             "preset_services_config": {},
-            "blob_url": {settings.DEFAULT_REGION_NAME: f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz"},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "blob_url": f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz",
             "required_buildpacks": [],
             "processes": {},
             "tags": [],
@@ -710,8 +734,7 @@ def _init_tmpls():
             "description_en": "Docker app template",
             "market_ready": True,
             "preset_services_config": {},
-            "blob_url": {settings.DEFAULT_REGION_NAME: f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz"},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "blob_url": f"file:{settings.BASE_DIR}/tests/contents/dummy-tmpl.tar.gz",
             "required_buildpacks": [],
             "processes": {},
             "tags": [],
@@ -729,8 +752,7 @@ def _init_tmpls():
             "language": "Python",
             "market_ready": False,
             "preset_services_config": {"mysql": {}},
-            "blob_url": {},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "blob_url": "",
             "required_buildpacks": [],
             "processes": {},
             "tags": [],
@@ -748,8 +770,7 @@ def _init_tmpls():
             "language": "Go",
             "market_ready": False,
             "preset_services_config": {"mysql": {}},
-            "blob_url": {},
-            "enabled_regions": [settings.DEFAULT_REGION_NAME],
+            "blob_url": "",
             "required_buildpacks": [],
             "processes": {},
             "tags": [],
@@ -759,43 +780,11 @@ def _init_tmpls():
 
 
 @pytest.fixture()
-def create_custom_app():
-    def create(owner, **kwargs):
-        random_name = generate_random_string(length=6)
-        region = kwargs.get("region", "ieod")
-        application = G(
-            Application,
-            owner=owner.pk,
-            code=kwargs.get("code", random_name),
-            name=kwargs.get("name", random_name),
-            language=kwargs.get("language", "Python"),
-            region=region,
-        )
-
-        if "init_default_module" in kwargs:
-            create_default_module(application, source_origin=kwargs.get("source_origin", SourceOrigin.BK_LESS_CODE))
-
-        from tests.utils.helpers import register_iam_after_create_application
-
-        register_iam_after_create_application(application)
-
-        # 添加开发者
-        from paasng.infras.iam.helpers import add_role_members
-
-        if "developers" in kwargs and isinstance(kwargs["developers"], list):
-            add_role_members(application.code, ApplicationRole.DEVELOPER, kwargs["developers"])
-        # 添加运营者
-        if "ops" in kwargs and isinstance(kwargs["ops"], list):
-            add_role_members(application.code, ApplicationRole.OPERATOR, kwargs["ops"])
-
-        return application
-
-    return create
-
-
-@pytest.fixture()
-def create_module(bk_app):
-    module = Module.objects.create(region=bk_app.region, application=bk_app, name=generate_random_string(length=8))
+def bk_module_2(bk_app):
+    """Another module other than the default one, for testing."""
+    module = Module.objects.create(
+        region=bk_app.region, application=bk_app, name=generate_random_string(length=8), creator=bk_app.creator
+    )
     initialize_module(module)
     return module
 
@@ -847,9 +836,10 @@ def mock_env_is_running():
         return status.get(env.environment, False)
 
     status["side_effect"] = side_effect  # type: ignore
-    with mock.patch("paasng.accessories.publish.entrance.exposer.env_is_running") as m1, mock.patch(
-        "paas_wl.workloads.networking.entrance.shim.env_is_running"
-    ) as m2:
+    with (
+        mock.patch("paasng.accessories.publish.entrance.exposer.env_is_running") as m1,
+        mock.patch("paas_wl.workloads.networking.entrance.shim.env_is_running") as m2,
+    ):
         m1.side_effect = side_effect
         m2.side_effect = side_effect
         yield status
@@ -900,25 +890,15 @@ def _with_wl_apps(request):
         bk_app = request.getfixturevalue("bk_cnative_app")
     else:
         bk_app = request.getfixturevalue("bk_app")
+
     create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)
 
 
 @pytest.fixture(autouse=True, scope="session")
 def _mock_sync_developers_to_sentry():
     # 避免单元测试时会往 celery 推送任务
-    with mock.patch("paasng.platform.applications.views.sync_developers_to_sentry"), mock.patch(
-        "paasng.bk_plugins.bk_plugins.pluginscenter_views.sync_developers_to_sentry"
+    with (
+        mock.patch("paasng.platform.applications.views.member.sync_developers_to_sentry"),
+        mock.patch("paasng.bk_plugins.bk_plugins.pluginscenter_views.sync_developers_to_sentry"),
     ):
-        yield
-
-
-@pytest.fixture(autouse=True, scope="session")
-def _mock_delete_process_probe(request):
-    skip_patch = request.param if hasattr(request, "param") else False
-
-    if not skip_patch:
-        # 避免所有单元测试会执行删除 ProcessProbe 操作
-        with mock.patch("paasng.platform.declarative.deployment.controller.delete_process_probes"):
-            yield
-    else:
         yield

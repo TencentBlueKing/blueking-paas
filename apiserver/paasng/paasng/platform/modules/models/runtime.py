@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import operator
 from functools import reduce
@@ -27,7 +26,7 @@ from django.db import models
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.platform.modules.constants import BuildPackType
+from paasng.platform.modules.constants import AppImageType, BuildPackType
 from paasng.utils.models import TimestampedModel
 
 if TYPE_CHECKING:
@@ -40,7 +39,7 @@ class BuildpackManager(models.Manager):
     def filter_module_available(self, module: "Module", contain_hidden: bool = False) -> models.QuerySet:
         """查询模块可用的构建工具
 
-        规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
+        规则: 当前模块下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
         filters = []
 
         # 关联已被绑定至该模块的镜像
@@ -50,29 +49,30 @@ class BuildpackManager(models.Manager):
             logger.debug("module %s 未初始化 BuildConfig", module)
 
         # 给迁移应用绑定镜像时，需要绑定隐藏的构建工具
-        if contain_hidden:
-            filters.append(models.Q(region=module.region))
-        else:
-            filters.append(models.Q(is_hidden=False, region=module.region))
+        if not contain_hidden:
+            filters.append(models.Q(is_hidden=False))
 
         qs = self.get_queryset().filter(reduce(operator.or_, filters))
         # Q: 为什么需要调用 distinct ?
         # A: 因为 models.Q(related_build_configs=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
         return qs.distinct()
 
-    def filter_by_region(self, region: str, contain_hidden: bool = False) -> models.QuerySet:
-        """查询 region 可用的构建工具"""
-        qs = self.get_queryset().filter(region=region)
+    def filter_available(self, contain_hidden: bool = False) -> models.QuerySet:
+        """查询可用的构建工具"""
+        qs = self.get_queryset()
         if not contain_hidden:
             qs = qs.filter(is_hidden=False)
         return qs
 
-    def get_by_natural_key(self, region, name):
-        return self.get(region=region, name=name)
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
 
 
 class AppBuildPack(TimestampedModel):
-    """buildpack 配置"""
+    """buildpack 配置
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     language = models.CharField(verbose_name="编程语言", max_length=32)
     type = models.CharField(verbose_name="引用类型", max_length=32, choices=BuildPackType.get_choices())
@@ -93,7 +93,7 @@ class AppBuildPack(TimestampedModel):
     objects = BuildpackManager()
 
     def natural_key(self):
-        return (self.region, self.name)
+        return (self.name,)
 
     @property
     def info(self):
@@ -106,14 +106,14 @@ class AppBuildPack(TimestampedModel):
         }
 
     def __str__(self) -> str:
-        return f"{self.region}:{self.name}[{self.pk}]"
+        return f"{self.name}[{self.pk}]"
 
 
 class AppImageStackQuerySet(models.QuerySet):
     def filter_module_available(self, module: "Module", contain_hidden: bool = False) -> models.QuerySet:
         """过滤模块可用的镜像
 
-        规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
+        规则: 当前模块下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
         filters = []
 
         # 关联已被绑定至该模块的镜像
@@ -123,19 +123,17 @@ class AppImageStackQuerySet(models.QuerySet):
             logger.debug("module %s 未初始化 BuildConfig", module)
 
         # 给迁移应用绑定镜像时，需要绑定隐藏的镜像
-        if contain_hidden:
-            filters.append(models.Q(region=module.region))
-        else:
-            filters.append(models.Q(is_hidden=False, region=module.region))
+        if not contain_hidden:
+            filters.append(models.Q(is_hidden=False))
 
         qs = self.filter(reduce(operator.or_, filters))
         # Q: 为什么需要调用 distinct ?
         # A: 因为 models.Q(buildconfig__pk=module.build_config.pk) 的查询涉及跨越多个表, 因此需要使用 distinct 进行去重
         return qs.distinct()
 
-    def filter_by_region(self, region: str, contain_hidden: bool = False) -> models.QuerySet:
-        """过滤 region 可用的镜像"""
-        qs = self.filter(region=region)
+    def filter_available(self, contain_hidden: bool = False) -> models.QuerySet:
+        """过滤可用的镜像"""
+        qs = self.all()
         if not contain_hidden:
             qs = qs.filter(is_hidden=False)
         return qs
@@ -180,7 +178,7 @@ class AppImageStackManager(models.Manager):
     def filter_module_available(self, module: "Module", contain_hidden: bool = False) -> models.QuerySet:
         """过滤模块可用的镜像
 
-        规则: 当前模块region下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
+        规则: 当前模块下的未隐藏镜像(公共镜像) 或 已被绑定至该模块的镜像(私有镜像)"""
         return self.get_queryset().filter_module_available(module=module, contain_hidden=contain_hidden)
 
     def filter_by_full_image(self, module: "Module", full_image: str, contain_hidden: bool = False) -> models.QuerySet:
@@ -195,12 +193,12 @@ class AppImageStackManager(models.Manager):
         """根据label查询可用的镜像"""
         return self.filter_module_available(module, contain_hidden).filter_by_labels(labels)
 
-    def select_default_runtime(self, region: str, labels: dict, contain_hidden: bool = False) -> "AppImage":
-        """选择 region 下符合对应 labels 的默认运行时
+    def select_default_runtime(self, labels: dict, contain_hidden: bool = False) -> "AppImage":
+        """选择符合对应 labels 的默认运行时
 
         :raise ObjectDoesNotExist: when no available runtime
         """
-        original_qs = self.get_queryset().filter_by_region(region, contain_hidden=contain_hidden)  # type: AppImageStackQuerySet
+        original_qs = self.get_queryset().filter_available(contain_hidden=contain_hidden)  # type: AppImageStackQuerySet
 
         # firstly, try to select default runtime by labels
         if labels and (available_runtimes := original_qs.filter_by_labels(labels)).exists():
@@ -214,12 +212,7 @@ class AppImageStackManager(models.Manager):
 
         # finally, try to select default runtime by settings
         try:
-            image = settings.DEFAULT_RUNTIME_IMAGES[region]
-        except KeyError:
-            image = list(settings.DEFAULT_RUNTIME_IMAGES.values())[0]
-            logger.warning("Unable to get default image for region: %s, will use %s by default", region, image)
-        try:
-            return original_qs.get(name=image)
+            return original_qs.get(name=settings.DEFAULT_RUNTIME_IMAGES)
         except self.model.DoesNotExist:
             raise ObjectDoesNotExist
 
@@ -228,11 +221,18 @@ class AppImageStackManager(models.Manager):
 
 
 class AppImage(TimestampedModel):
+    """应用基础镜像
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
+
     # 代表其基础镜像,如 ceder14 或 heroku18,相同的名称表示运行环境一致
     name = models.CharField(verbose_name="名称", max_length=64, unique=True)
     display_name = TranslatedFieldWithFallback(
         models.CharField(verbose_name="展示名称", max_length=64, default="", blank=True)
     )
+    type = models.CharField(verbose_name="镜像类型", max_length=32, choices=AppImageType.get_choices())
+
     image = models.CharField(verbose_name="镜像", max_length=256)
     tag = models.CharField(verbose_name="标签", max_length=32)
     # 这个影响用户能否在设置中看见，处理当前版本未就绪/不建议使用/私有定制的情况
@@ -260,7 +260,7 @@ class AppImage(TimestampedModel):
         return ":".join([self.image, tag])
 
     def __str__(self) -> str:
-        return f"{self.region}:{self.name}[{self.pk}]"
+        return f"{self.name}[{self.pk}]"
 
     class Meta:
         abstract = True
@@ -270,7 +270,10 @@ class AppImage(TimestampedModel):
 
 
 class AppSlugRunner(AppImage):
-    """应用运行环境"""
+    """应用运行环境
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     # Deprecated: 使用 build_config 代替该字段
     modules = models.ManyToManyField("modules.Module", related_name="slugrunners")
@@ -279,7 +282,10 @@ class AppSlugRunner(AppImage):
 
 
 class AppSlugBuilder(AppImage):
-    """应用构建环境"""
+    """应用构建环境
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     # 字段指示该环境可用的 buildpacks
     buildpacks = models.ManyToManyField(AppBuildPack, related_name="slugbuilders")
@@ -306,6 +312,6 @@ class AppSlugBuilder(AppImage):
         """
         return list(self.buildpacks.filter_module_available(module).filter(*args, **kwargs))
 
-    def list_region_available_buildpacks(self, region: str, *args, **kwargs) -> List[AppBuildPack]:
-        """查询 region 可用的构建工具"""
-        return list(self.buildpacks.filter_by_region(region).filter(*args, **kwargs))
+    def list_available_buildpacks(self, *args, **kwargs) -> List[AppBuildPack]:
+        """查询可用的构建工具"""
+        return list(self.buildpacks.filter_available().filter(*args, **kwargs))

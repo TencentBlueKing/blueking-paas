@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import abc
 import logging
 from os import PathLike
@@ -27,7 +26,14 @@ from typing_extensions import Protocol
 from paasng.infras.accounts.models import Oauth2TokenHolder, PrivateTokenHolder, UserProfile
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl import exceptions
-from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, GitProject, Repository, VersionInfo
+from paasng.platform.sourcectl.models import (
+    AlternativeVersion,
+    CommitInfo,
+    CommitLog,
+    GitProject,
+    Repository,
+    VersionInfo,
+)
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 
 if TYPE_CHECKING:
@@ -82,8 +88,7 @@ class RepoController(Protocol):
     def extract_version_info(self, version_info: VersionInfo) -> Tuple[str, str]:
         """解析某个 VersionInfo 对象
 
-        :return: 元组（version_name, revision），前者是有名字的版本号，比如 master，后者为具体的
-            Commit ID。
+        :return: 元组（version_name, revision），前者是有名字的版本号，比如 master，后者为具体的 Commit ID。
         """
 
     def extract_smart_revision(self, smart_revision: str) -> str:
@@ -97,6 +102,9 @@ class RepoController(Protocol):
 
     def get_diff_commit_logs(self, from_revision: str, to_revision: str, rel_filepath=None) -> List[CommitLog]:
         """读取 from_revision 至 to_revision 关于 rel_filepath 的所有 commit 日志条目"""
+
+    def commit_files(self, commit_info: CommitInfo) -> None:
+        """批量提交文件"""
 
     @abc.abstractmethod
     def read_file(self, file_path: str, version_info: VersionInfo) -> bytes:
@@ -117,7 +125,7 @@ class BaseGitRepoController:
 
     @classmethod
     def init_by_module(cls, module: "Module", operator: Optional[str] = None):
-        repo_info = get_sourcectl_type(module.source_type).config_as_arguments(module.region)
+        repo_info = get_sourcectl_type(module.source_type).config_as_arguments()
         repo_url = module.get_source_obj().get_repo_url()
         if not repo_url:
             raise ValueError("Require repo_url to init GitRepoController")
@@ -155,7 +163,7 @@ class BaseGitRepoController:
 
 def get_repo_controller_cls(source_origin: Union[int, SourceOrigin], source_control_type) -> Type[RepoController]:
     source_origin = SourceOrigin(source_origin)
-    if source_origin not in [SourceOrigin.AUTHORIZED_VCS, SourceOrigin.SCENE]:
+    if source_origin != SourceOrigin.AUTHORIZED_VCS:
         raise NotImplementedError
     if not source_control_type:
         raise NotImplementedError("empty source control type")
@@ -184,5 +192,5 @@ def list_git_repositories(source_control_type: str, operator: str) -> List[Repos
     }
 
     type_spec = get_sourcectl_type(source_control_type)
-    repo_info = type_spec.config_as_arguments(None)
+    repo_info = type_spec.config_as_arguments()
     return cls.list_all_repositories(**user_credentials, **repo_info)

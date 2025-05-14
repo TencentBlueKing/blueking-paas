@@ -1,29 +1,28 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""Testcases for application entrance management"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""Testcases for application entrance management
-"""
 import cattr
 import pytest
 from django.test.utils import override_settings
 
-from paas_wl.infras.cluster.models import Domain as DomainCfg
-from paas_wl.infras.cluster.models import IngressConfig, PortMap
+from paas_wl.infras.cluster.entities import Domain as DomainCfg
+from paas_wl.infras.cluster.entities import IngressConfig, PortMap
 from paas_wl.workloads.networking.entrance.allocator.subpaths import (
     ModuleEnvSubpaths,
     SubPathAllocator,
@@ -34,9 +33,9 @@ from paasng.accessories.publish.entrance.subpaths import (
     get_preallocated_path,
     get_preallocated_paths_by_env,
 )
-from tests.utils.mocks.engine import mock_cluster_service
+from tests.utils.mocks.cluster import cluster_ingress_config
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestModuleEnvSubpaths:
@@ -49,9 +48,10 @@ class TestModuleEnvSubpaths:
     @pytest.fixture(autouse=True)
     def _setup_cluster(self):
         # Enable USE_LEGACY_SUB_PATH_PATTERN by default
-        with mock_cluster_service(
-            ingress_config={"sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}]}
-        ), override_settings(USE_LEGACY_SUB_PATH_PATTERN=True):
+        with (
+            cluster_ingress_config({"sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}]}),
+            override_settings(USE_LEGACY_SUB_PATH_PATTERN=True),
+        ):
             yield
 
     def test_prod_default(self, bk_module):
@@ -113,7 +113,7 @@ class TestModuleEnvSubpaths:
 class TestModuleEnvSubpathsNotConfigured:
     @pytest.fixture(autouse=True)
     def _setup_cluster(self):
-        with mock_cluster_service(ingress_config={"sub_path_domains": []}):
+        with cluster_ingress_config({"sub_path_domains": []}):
             yield
 
     def test_prod_default(self, bk_module):
@@ -211,8 +211,8 @@ class TestGetPreallocatedPathsByEnv:
     @pytest.fixture(autouse=True)
     def _setup_cluster(self):
         """Replace cluster info in module level"""
-        with mock_cluster_service(
-            ingress_config={
+        with cluster_ingress_config(
+            {
                 "sub_path_domains": [
                     {"name": "sub.example.com"},
                     {"name": "sub.example.org"},

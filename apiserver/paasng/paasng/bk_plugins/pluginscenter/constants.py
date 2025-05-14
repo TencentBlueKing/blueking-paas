@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, IntStructuredEnum, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
 
-class PluginReleaseMethod(str, StructuredEnum):
+class PluginReleaseMethod(StrStructuredEnum):
     """插件发布方式"""
 
     CODE = EnumField("code", label="源码发布")
@@ -28,7 +27,14 @@ class PluginReleaseMethod(str, StructuredEnum):
     IMAGE = EnumField("image", label="镜像发布")
 
 
-class PluginReleaseVersionRule(str, StructuredEnum):
+class PluginBasicInfoAccessMode(StrStructuredEnum):
+    """插件基本信息查看模式"""
+
+    READONLY = EnumField("readonly", label="只读")
+    READWRITE = EnumField("readwrite", label="读写")
+
+
+class PluginReleaseVersionRule(StrStructuredEnum):
     """插件发布版本号规则"""
 
     AUTOMATIC = EnumField("automatic", label="自动生成 semver")
@@ -38,7 +44,7 @@ class PluginReleaseVersionRule(str, StructuredEnum):
     SELF_FILL = EnumField("self-fill", label="用户自助填写")
 
 
-class SemverAutomaticType(str, StructuredEnum):
+class SemverAutomaticType(StrStructuredEnum):
     """语义化版本生成规则"""
 
     MAJOR = EnumField("major", label="重大版本")
@@ -46,18 +52,18 @@ class SemverAutomaticType(str, StructuredEnum):
     PATCH = EnumField("patch", label="修正版本")
 
 
-class ReleaseStageInvokeMethod(str, StructuredEnum):
+class ReleaseStageInvokeMethod(StrStructuredEnum):
     """发布步骤触发方式"""
 
     DEPLOY_API = EnumField("deployAPI", label="部署接口")
     PIPELINE = EnumField("pipeline", label="流水线")
     SUBPAGE = EnumField("subpage", label="子页面")
     ITSM = EnumField("itsm", label="itsm 审批流程")
-    CANARY_WIHT_ITSM = EnumField("canaryWithItsm", label="带审批的灰度发布")
+    CANARY_WITH_ITSM = EnumField("canaryWithItsm", label="带审批的灰度发布")
     BUILTIN = EnumField("builtin", label="内置功能(完善市场信息market, 灰度grayScale, 上线online)")
 
 
-class PluginStatus(str, StructuredEnum):
+class PluginStatus(StrStructuredEnum):
     """插件状态"""
 
     WAITING_APPROVAL = EnumField("waiting-approval", label="创建审批中")
@@ -78,14 +84,14 @@ class PluginStatus(str, StructuredEnum):
         return [cls.APPROVAL_FAILED, cls.WAITING_APPROVAL]
 
 
-class PluginRole(int, StructuredEnum):
+class PluginRole(IntStructuredEnum):
     """插件角色"""
 
     ADMINISTRATOR = EnumField(2, label="管理员")
     DEVELOPER = EnumField(3, label="开发者")
 
 
-class MarketInfoStorageType(str, StructuredEnum):
+class MarketInfoStorageType(StrStructuredEnum):
     """市场信息存储类型"""
 
     THIRD_PARTY = EnumField("third-party", label="仅存储在第三方系统")
@@ -93,7 +99,7 @@ class MarketInfoStorageType(str, StructuredEnum):
     BOTH = EnumField("both", label="同时存储在插件开发中心和第三方系统")
 
 
-class PluginReleaseStatus(str, StructuredEnum):
+class PluginReleaseStatus(StrStructuredEnum):
     """插件发布状态"""
 
     SUCCESSFUL = EnumField("successful", label="成功")
@@ -115,7 +121,7 @@ class PluginReleaseStatus(str, StructuredEnum):
         return [cls.FAILED, cls.INTERRUPTED, cls.SUCCESSFUL]
 
 
-class LogTimeChoices(str, StructuredEnum):
+class LogTimeChoices(StrStructuredEnum):
     """日志搜索-日期范围可选值"""
 
     FIVE_MINUTES = EnumField("5m", label="5分钟")
@@ -129,7 +135,7 @@ class LogTimeChoices(str, StructuredEnum):
     CUSTOMIZED = EnumField("customized", label="自定义")
 
 
-class ActionTypes(str, StructuredEnum):
+class ActionTypes(StrStructuredEnum):
     """操作记录-动作类型"""
 
     CREATE = EnumField("create", label=_("创建"))
@@ -140,9 +146,10 @@ class ActionTypes(str, StructuredEnum):
     DELETE = EnumField("delete", label=_("删除"))
     ARCHIVE = EnumField("archive", label=_("下架"))
     REACTIVATE = EnumField("reactivate", label=_("重新上架"))
+    ROLLBACK = EnumField("rollback", label=_("回滚"))
 
 
-class SubjectTypes(str, StructuredEnum):
+class SubjectTypes(StrStructuredEnum):
     """操作记录-主体"""
 
     PLUGIN = EnumField("plugin", label=_("插件"))
@@ -153,17 +160,48 @@ class SubjectTypes(str, StructuredEnum):
     MARKET_INFO = EnumField("market_info", label=_("市场信息"))
     CONFIG_INFO = EnumField("config_info", label=_("配置信息"))
     VISIBLE_RANGE = EnumField("visible_range", label=_("可见范围"))
+    PUBLISHER = EnumField("publisher", label=_("发布者"))
+    RELEASE_STRATEGY = EnumField("release_strategy", label=_("发布策略"))
 
 
-class PluginReleaseType(str, StructuredEnum):
+class PluginReleaseType(StrStructuredEnum):
     """插件版本发布类型"""
 
     PROD = EnumField("prod", label=_("正式发布"))
     TEST = EnumField("test", label=_("测试发布"))
 
 
-class PluginReleaseStrategy(str, StructuredEnum):
+class ReleaseStrategy(StrStructuredEnum):
     """插件发布策略"""
 
     GRAY = EnumField("gray", label=_("灰度发布"))
     FULL = EnumField("full", label=_("全量发布"))
+
+
+class StatusPollingMethod(StrStructuredEnum):
+    """发布阶段的状态轮询方式"""
+
+    API = EnumField("api", label=_("后台 API 轮询"))
+    FRONTEND = EnumField("frontend", label=_("前端轮询，如通过 Iframe message 通信等"))
+
+
+class PluginRevisionType(StrStructuredEnum):
+    """代码版本类型"""
+
+    ALL = EnumField("all", label=_("不限制"))
+    MASTER = EnumField("master", label=_("仅可选择主分支发布"))
+    TAG = EnumField("tag", label=_("Tag 发布"))
+    TESTED_VERSION = EnumField("tested_version", label=_("已经测试通过的版本"))
+
+
+class GrayReleaseStatus(StrStructuredEnum):
+    """插件灰度发布展示的状态，提供给前端展示的字段不需要国际化标记"""
+
+    GRAY_APPROVAL_IN_PROGRESS = EnumField("gray_approval_in_progress", label="灰度发布审批中")
+    IN_GRAY = EnumField("in_gray", label="灰度中")
+    GRAY_APPROVAL_FAILED = EnumField("gray_approval_failed", label="灰度审批失败")
+    FULL_APPROVAL_IN_PROGRESS = EnumField("full_approval_in_progress", label="全量发布审批中")
+    FULLY_RELEASED = EnumField("fully_released", label="已全量发布")
+    FULL_APPROVAL_FAILED = EnumField("full_approval_failed", label="全量发布审批失败")
+    ROLLED_BACK = EnumField("rolled_back", label="已回滚")
+    INTERRUPTED = EnumField("interrupted", label="已终止")

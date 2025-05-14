@@ -24,57 +24,80 @@ import http from '@/api';
 
 // store
 const state = {
-  appLinks: {
-
-  },
-  appCode: ''
+  appLinks: {},
+  appCode: '',
 };
 
 // getters
-const getters = {
-
-};
+const getters = {};
 
 // mutations
 const mutations = {
-  updateAppExposedLinkUrl: function (state, { appCode, env, value }) {
+  updateAppExposedLinkUrl(state, { appCode, env, value }) {
     state.appLinks[appCode] = state.appLinks[appCode] || {};
     state.appLinks[appCode][env] = value;
-  }
+  },
 };
 
 // actions
 const actions = {
-  fetchAppExposedLinkUrl: async function ({ commit, state }, { appCode, env, force = false }) {
-    return new Promise(resolve => {
-      Vue.http.get(BACKEND_URL + `/api/bkapps/applications/${appCode}/envs/${env}/released_state/`).then(resp => {
-        commit('updateAppExposedLinkUrl', {
-          appCode,
-          env,
-          value: resp.exposed_link.url
-        });
-        resolve(state.appLinks[appCode][env]);
-      }, resp => {
-        resolve(undefined);
-      });
+  async fetchAppExposedLinkUrl({ commit, state }, { appCode, env }) {
+    return new Promise((resolve) => {
+      Vue.http.get(`${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/released_state/`).then(
+        (resp) => {
+          commit('updateAppExposedLinkUrl', {
+            appCode,
+            env,
+            value: resp.exposed_link.url,
+          });
+          resolve(state.appLinks[appCode][env]);
+        },
+        () => {
+          resolve(undefined);
+        }
+      );
     });
   },
 
   /**
-     * 获取应用所有访问入口的ViewSet，访问入口包括: 由平台默认提供的地址(与模块环境 1v1 对应/由用户设置的独立域名地址(与模块环境存在 1vN 关系)
-     *
-     * @param {String} appCode 应用id
-     * @param {Object} config ajax配置
-     */
-  getAppCustomDomainEntrance ({ commit, state }, appCode, config) {
+   * 获取应用所有访问入口的ViewSet，访问入口包括: 由平台默认提供的地址(与模块环境 1v1 对应/由用户设置的独立域名地址(与模块环境存在 1vN 关系)
+   *
+   * @param {String} appCode 应用id
+   * @param {Object} config ajax配置
+   */
+  getAppCustomDomainEntrance({}, appCode, config) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/custom_domain_entrance/`;
     return http.get(url, config);
-  }
+  },
+
+  /**
+   * 获取应用指定模块初始化模块地址
+   */
+  getAppInitTemplateUrl({}, { appCode, moduleId }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/sourcectl/init_template/`;
+    return http.post(url, {});
+  },
+
+  /**
+   * 获取应用默认初始化模块地址
+   */
+  getAppDefaultInitTemplateUrl({}, { appCode }) {
+    const url = `${BACKEND_URL}/api/sourcectl/init_templates/${appCode}/ `;
+    return http.post(url, {});
+  },
+
+  /**
+   * 获取应用仪表盘数据
+   */
+  getBuiltinDashboards({}, { appCode }) {
+    const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/builtin_dashboards/`;
+    return http.get(url);
+  },
 };
 
 export default {
   state,
   getters,
   mutations,
-  actions
+  actions,
 };

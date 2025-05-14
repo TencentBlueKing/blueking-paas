@@ -1,42 +1,49 @@
 <template>
-    <content-loader
-        :width="baseWidth"
-        :height="380"
-        :speed="loadingConf.speed"
-        :primaryColor="loadingConf.primaryColor"
-        :secondaryColor="loadingConf.secondaryColor">
-        <rect x="865" y="9" rx="1" ry="1" width="84" height="16" /> 
-        <rect x="0" y="7" rx="1" ry="1" width="84" height="20" /> 
-        <rect x="0" y="47" rx="2" ry="2" :width="baseWidth" height="62" /> 
-        <rect x="0" y="118" rx="2" ry="2" :width="baseWidth" height="62" /> 
-        <rect x="0" y="191" rx="2" ry="2" :width="baseWidth" height="62" /> 
-        <rect x="0" y="264" rx="2" ry="2" :width="baseWidth" height="62" /> 
-        <rect x="0" y="337" rx="2" ry="2" :width="baseWidth" height="28" /> 
-        <rect x="967" y="9" rx="1" ry="1" width="58" height="16" /> 
-        <rect x="1060" y="0" rx="2" ry="2" width="120" height="36" />
-    </content-loader>
+  <content-loader
+    :width="baseWidth"
+    :height="850"
+    :speed="loadingConf.speed"
+    :primary-color="loadingConf.primaryColor"
+    :secondary-color="loadingConf.secondaryColor">
+    <rect x="0" y="9" rx="1" ry="1" width="180" height="32" />
+    <rect :x="baseWidth - 100" y="9" rx="1" ry="1" width="100" height="32" />
+    <rect :x="baseWidth - 258" y="9" rx="1" ry="1" width="140" height="32" />
+    <rect x="0" y="55" rx="2" ry="2" :width="baseWidth / 2" height="200" />
+    <rect :x="baseWidth / 2 + 20" y="55" rx="2" ry="2" :width="baseWidth / 2" height="200" />
+    <rect x="0" y="280" rx="1" ry="1" width="140" height="32" />
+    <rect x="0" y="330" rx="1" ry="1" :width="baseWidth" height="32" />
+    <rect x="0" y="370" rx="1" ry="1" :width="baseWidth" height="32" />
+    <rect x="0" y="410" rx="1" ry="1" :width="baseWidth" height="32" />
+    <rect x="0" y="450" rx="1" ry="1" :width="baseWidth" height="32" />
+    <rect x="0" y="490" rx="1" ry="1" :width="baseWidth" height="32" />
+    <rect x="0" y="550" rx="1" ry="1" width="140" height="32" />
+    <rect x="0" y="590" rx="1" ry="1" :width="baseWidth" height="32" />
+    <rect x="0" y="630" rx="1" ry="1" :width="baseWidth" height="32" />
+    <rect x="0" y="670" rx="1" ry="1" :width="baseWidth" height="32" />
+    <rect x="0" y="710" rx="1" ry="1" :width="baseWidth" height="32" />
+  </content-loader>
 </template>
 
 <script>
-    import { ContentLoader } from 'vue-content-loader'
-    export default {
-        components: {
-            ContentLoader
-        },
-        props: {
-            baseWidth: {
-                type: Number,
-                default: 1180
-            },
-            contentWidth: {
-                type: Number,
-                default: 1180
-            }
-        },
-        computed: {
-            loadingConf () {
-                return this.$store.state.loadingConf
-            }
-        }
-    }
+import { ContentLoader } from 'vue-content-loader';
+export default {
+  components: {
+    ContentLoader,
+  },
+  props: {
+    baseWidth: {
+      type: Number,
+      default: 1180,
+    },
+    contentWidth: {
+      type: Number,
+      default: 1180,
+    },
+  },
+  computed: {
+    loadingConf() {
+      return this.$store.state.loadingConf;
+    },
+  },
+};
 </script>

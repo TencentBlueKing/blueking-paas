@@ -1,30 +1,29 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
+import cattr
+from django.core.exceptions import ObjectDoesNotExist
 from kubernetes.dynamic import ResourceField
 
 from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.applications.managers import AppConfigVarManager
 from paas_wl.bk_app.applications.models import Release
-from paas_wl.bk_app.processes.entities import Probe, Resources, Runtime, Status
+from paas_wl.bk_app.processes.entities import ProbeSet, Resources, Runtime, Status
 from paas_wl.bk_app.processes.kres_slzs import InstanceDeserializer, ProcessDeserializer, ProcessSerializer
 from paas_wl.core.app_structure import get_structure
 from paas_wl.infras.cluster.utils import get_cluster_by_app
@@ -32,6 +31,7 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.generation.version import AppResVerManager
 from paas_wl.infras.resources.kube_res.base import AppEntity, Schedule
 from paas_wl.infras.resources.utils.basic import get_full_node_selector, get_full_tolerations
+from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.workloads.images.utils import make_image_pull_secret_name
 
 
@@ -51,6 +51,7 @@ class Instance(AppEntity):
     :param envs: 直接在 Pod 中声明的环境变量
     :param ready: 进程实例是否就绪
     :param restart_count: 重启次数
+    :param terminated_info: 终止信息(包含终止原因和退出码)
     :param version: 当前实例的版本号, 每次部署递增
     """
 
@@ -64,6 +65,7 @@ class Instance(AppEntity):
     envs: Dict[str, str] = field(default_factory=dict)
     ready: bool = True
     restart_count: int = 0
+    terminated_info: Dict[str, Optional[Union[str, int]]] = field(default_factory=dict)
 
     version: int = 0
 
@@ -97,7 +99,7 @@ class Process(AppEntity):
     schedule: Schedule
     runtime: Runtime
     resources: Optional[Resources] = None
-    readiness_probe: Optional[Probe] = None
+    probes: Optional[ProbeSet] = None
 
     # 实际资源的动态状态
     metadata: Optional["ResourceField"] = None
@@ -115,9 +117,9 @@ class Process(AppEntity):
         build = release.build
         config = release.config
         procfile = release.get_procfile()
-        envs = AppConfigVarManager(app=release.app).get_process_envs(type_)
-        envs.update(release.get_envs())
+        envs = release.get_envs()
         envs.update(extra_envs or {})
+        envs = render_vars_dict(envs, VarsRenderContext(process_type=type_))
 
         mapper_version = AppResVerManager(release.app).curr_version
         process = Process(
@@ -144,6 +146,20 @@ class Process(AppEntity):
             resources=Resources(**config.resource_requirements.get(type_, {})),
         )
         process.name = mapper_version.proc_resources(process=process).deployment_name
+
+        # 添加探针
+        try:
+            from paasng.platform.bkapp_model.models import ModuleProcessSpec
+            from paasng.platform.modules.models.module import Module
+
+            module = Module.objects.get(application__code=release.app.paas_app_code, name=release.app.module_name)
+            process_spec = ModuleProcessSpec.objects.get(module=module, name=type_)
+            probes = process_spec.probes.render_port() if process_spec.probes else None
+            if probes:
+                process.probes = cattr.structure(cattr.unstructure(probes), ProbeSet)
+        except ObjectDoesNotExist:
+            pass
+
         return process
 
     @property

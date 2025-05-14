@@ -61,13 +61,13 @@ export default defineComponent({
     // 原始数据统一转换为字符串
     const yaml = computed(() => {
       if (typeof value.value === 'object') {
-        return Object.keys(value.value).length ? yamljs.dump(handleIgnoreKeys(value.value)) : '';
+        return Object.keys(value.value).length ? yamljs.dump(handleIgnoreKeys(value.value), { sortKeys: true }) : '';
       }
       return value.value;
     });
     const diffYaml = computed(() => {
       if (typeof original.value === 'object') {
-        return Object.keys(original.value).length ? yamljs.dump(handleIgnoreKeys(original.value)) : '';
+        return Object.keys(original.value).length ? yamljs.dump(handleIgnoreKeys(original.value), { sortKeys: true }) : '';
       }
       return value.value;
     });

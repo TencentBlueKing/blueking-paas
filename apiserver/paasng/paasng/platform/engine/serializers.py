@@ -1,27 +1,28 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+import re
 from datetime import datetime
 
 import yaml
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.fields import SerializerMethodField
 from rest_framework.validators import UniqueTogetherValidator, qs_exists
 
 from paas_wl.bk_app.applications.models import Build, BuildProcess
@@ -30,14 +31,8 @@ from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paasng.accessories.publish.market.serializers import AvailableAddressSLZ
 from paasng.misc.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import (
-    ConfigVarEnvName,
-    DeployConditions,
-    ImagePullPolicy,
-    JobStatus,
-    MetricsType,
-    RuntimeType,
-)
+from paasng.platform.bkapp_model.constants import ImagePullPolicy
+from paasng.platform.engine.constants import ConfigVarEnvName, DeployConditions, JobStatus, MetricsType, RuntimeType
 from paasng.platform.engine.models import DeployPhaseTypes
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.deployment import Deployment
@@ -45,6 +40,7 @@ from paasng.platform.engine.models.offline import OfflineOperation
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.phases_steps.display_blocks import DeployDisplayBlockRenderer
 from paasng.platform.modules.models import Module
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.error_codes import error_codes
@@ -73,7 +69,12 @@ class DeploymentAdvancedOptionsSLZ(serializers.Serializer):
 class CreateDeploymentSLZ(serializers.Serializer):
     """创建部署"""
 
-    version_type = serializers.CharField(required=True, help_text="版本类型, 如 branch/tag/trunk")
+    version_type = serializers.ChoiceField(
+        choices=VersionType.get_choices(),
+        required=True,
+        error_messages={"invalid_choice": f"Invalid choice. Valid choices are {VersionType.get_values()}"},
+        help_text="版本类型, 如 branch/tag/trunk",
+    )
     version_name = serializers.CharField(
         required=True, help_text="版本名称: 如 Tag Name/Branch Name/trunk/package_name"
     )
@@ -83,6 +84,30 @@ class CreateDeploymentSLZ(serializers.Serializer):
     )
 
     advanced_options = DeploymentAdvancedOptionsSLZ(required=False, default={})
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        if attrs["version_type"] == VersionType.IMAGE.value and not self._is_expected_revision(attrs.get("revision")):
+            # 云原生应用选择已构建的镜像部署时, version_type 传入了 image
+            # 这里加上强制校验, 保证 image 类型被正确使用(仅用于云原生应用选择已构建镜像时),
+            # 否则会导致 Deployment.get_version_info 抛出 ValueError("unknown version info")
+            raise ValidationError(_("version_type 为 image 时，revision 必须为 sha256 开头的镜像 digest"))
+        return attrs
+
+    def _is_expected_revision(self, revision):
+        if not revision:
+            return False
+
+        # 由于镜像仓库的原因, 单一的 media_type 可能无法查到镜像的 digest(但镜像是存在的), 因此 revision 可能为 unknown
+        if revision == "unknown":
+            return True
+
+        return self._is_image_digest(revision)
+
+    @staticmethod
+    def _is_image_digest(revision):
+        return bool(re.match(r"^sha256:[0-9a-f]{64}$", revision))
 
 
 class CreateDeploymentResponseSLZ(serializers.Serializer):
@@ -153,7 +178,7 @@ class DeploymentSLZ(serializers.ModelSerializer):
 
 
 class DeploymentErrorTipsSLZ(serializers.Serializer):
-    matched_solutions_found = serializers.NullBooleanField(help_text="是否有匹配的 tips")
+    matched_solutions_found = serializers.BooleanField(help_text="是否有匹配的 tips", allow_null=True)
     possible_reason = serializers.CharField(help_text="可能导致部署错误的原因")
     helpers = serializers.DictField()
 
@@ -163,6 +188,16 @@ class DeploymentResultSLZ(serializers.Serializer):
     logs = serializers.CharField(help_text="部署日志, 纯文本")
     error_detail = serializers.CharField(help_text="错误详情")
     error_tips = DeploymentErrorTipsSLZ()
+
+
+class DeploymentResultQuerySLZ(serializers.Serializer):
+    """部署结果查询参数序列化器"""
+
+    include_ansi_codes = serializers.BooleanField(
+        default=False,
+        required=False,
+        help_text="是否包含 ANSI 转义序列. true 保留终端颜色和格式控制字符, false 过滤这些字符",
+    )
 
 
 class BuildProcessSLZ(serializers.Serializer):
@@ -220,10 +255,7 @@ class ConfigVarApplyResultSLZ(serializers.Serializer):
     deleted_num = serializers.IntegerField()
 
 
-class ConfigVarFormatSLZ(serializers.Serializer):
-    """Serializer for ConfigVar"""
-
-    key = field_env_var_key()
+class ConfigVarWithoutKeyFormatSLZ(serializers.Serializer):
     value = serializers.CharField(help_text="环境变量值")
     environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
     description = serializers.CharField(
@@ -251,7 +283,13 @@ class ConfigVarFormatSLZ(serializers.Serializer):
         else:
             data["is_global"] = False
             data["environment_id"] = module.envs.get(environment=env_name).pk
-        return ConfigVar(**data, module=module)
+        return ConfigVar(**data, module=module, tenant_id=module.tenant_id)
+
+
+class ConfigVarFormatSLZ(ConfigVarWithoutKeyFormatSLZ):
+    """Serializer for ConfigVar"""
+
+    key = field_env_var_key()
 
 
 class ConfigVarFormatWithIdSLZ(ConfigVarFormatSLZ):
@@ -374,6 +412,7 @@ class ConfigVarSLZ(serializers.ModelSerializer):
             data["is_global"] = False
             data["environment_id"] = module.get_envs(env_name).pk
         data["module"] = module.pk
+        data["tenant_id"] = module.tenant_id
         return super().to_internal_value(data)
 
 
@@ -395,6 +434,13 @@ class ListConfigVarsSLZ(serializers.Serializer):
         if f.name not in self.valid_order_by_fields:
             raise ValidationError(_("无效的排序选项：%s") % f)
         return field
+
+
+class PresetEnvVarSLZ(serializers.Serializer):
+    key = serializers.CharField()
+    value = serializers.CharField()
+    environment_name = serializers.CharField()
+    description = serializers.CharField(default="")
 
 
 class CreateOfflineOperationSLZ(serializers.Serializer):
@@ -439,10 +485,23 @@ class OperationSLZ(serializers.ModelSerializer):
     operator = UserField(read_only=True)
     offline_operation = OfflineOperationSLZ(source="get_offline_obj")
     deployment = DeploymentSLZ(source="get_deployment_obj")
+    module_name = SerializerMethodField()
 
     class Meta:
         model = ModuleEnvironmentOperations
-        fields = ["id", "status", "operator", "created", "operation_type", "offline_operation", "deployment"]
+        fields = [
+            "id",
+            "status",
+            "operator",
+            "created",
+            "operation_type",
+            "offline_operation",
+            "deployment",
+            "module_name",
+        ]
+
+    def get_module_name(self, obj: ModuleEnvironmentOperations) -> str:
+        return obj.app_environment.module.name
 
 
 #####################
@@ -533,6 +592,7 @@ class ConditionNotMatchedSLZ(serializers.Serializer):
 class CheckPreparationsSLZ(serializers.Serializer):
     all_conditions_matched = serializers.BooleanField()
     failed_conditions = serializers.ListField(child=ConditionNotMatchedSLZ())
+    replicas_manually_scaled = serializers.BooleanField(help_text="是否通过页面手动扩缩容过")
 
 
 #########################
@@ -559,6 +619,10 @@ class DeployStepSLZ(DeployStepFrameSLZ):
     status = serializers.ChoiceField(choices=JobStatus.get_choices(), required=False)
     start_time = serializers.DateTimeField(required=False)
     complete_time = serializers.DateTimeField(required=False)
+
+    class Meta:
+        # Set a ref_name to avoid conflicts for drf-yasg
+        ref_name = "PluginDeployStepSLZ__engine"
 
 
 class DeployFramePhaseSLZ(serializers.Serializer):

@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import atexit
 from datetime import datetime
 from functools import partial
@@ -26,7 +26,8 @@ from filelock import FileLock
 from paasng.infras.bkmonitorv3.constants import SpaceType
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
-from tests.utils.helpers import create_app, generate_random_string
+from tests.utils.basic import generate_random_string
+from tests.utils.helpers import create_app
 
 pytestmark = pytest.mark.django_db
 
@@ -52,7 +53,10 @@ def clear_filelock():
 
 
 AppQueryAlertsParams = partial(
-    QueryAlertsParams, app_code=FAKE_APP_CODE, start_time=datetime.now(), end_time=datetime.now()
+    QueryAlertsParams.create_by_app_codes,
+    app_codes=[FAKE_APP_CODE],
+    start_time=datetime.now(),
+    end_time=datetime.now(),
 )
 
 AppQueryAlarmStrategiesParams = partial(QueryAlarmStrategiesParams, app_code=FAKE_APP_CODE)
@@ -75,34 +79,35 @@ def bk_monitor_space():
 
 
 class TestQueryAlertsParams:
+    @pytest.mark.django_db
     @pytest.mark.parametrize(
-        ("query_params", "expected_query_string"),
+        ("create_query_params", "expected_query_string"),
         [
             (
-                AppQueryAlertsParams(),
+                lambda: AppQueryAlertsParams(),
                 None,
             ),
             (
-                AppQueryAlertsParams(environment="stag"),
+                lambda: AppQueryAlertsParams(environment="stag"),
                 "labels:(stag)",
             ),
             (
-                AppQueryAlertsParams(environment="stag", alert_code="high_cpu_usage"),
+                lambda: AppQueryAlertsParams(environment="stag", alert_code="high_cpu_usage"),
                 "labels:(stag AND high_cpu_usage)",
             ),
             (
-                AppQueryAlertsParams(alert_code="high_cpu_usage"),
+                lambda: AppQueryAlertsParams(alert_code="high_cpu_usage"),
                 "labels:(high_cpu_usage)",
             ),
             (
-                AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
+                lambda: AppQueryAlertsParams(keyword=SEARCH_KEYWORD),
                 f"alert_name:({SEARCH_KEYWORD} OR *{SEARCH_KEYWORD}*)",
             ),
         ],
     )
-    def test_to_dict(self, query_params, expected_query_string, bk_monitor_space):
-        result = query_params.to_dict()
-        assert result["bk_biz_ids"] == [bk_monitor_space.iam_resource_id]
+    def test_to_dict(self, create_query_params, expected_query_string, bk_monitor_space):
+        result = create_query_params().to_dict()
+        assert result["bk_biz_ids"] == [int(bk_monitor_space.iam_resource_id)]
         if query_string := result.get("query_string"):
             assert query_string == expected_query_string
 

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 from typing import Optional
 from unittest import mock
@@ -62,12 +61,16 @@ class TestAppCommandExecutor:
         hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)
-        with mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_logs_readiness",
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_succeeded", return_value=None
+        with (
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_logs_readiness",
+            ),
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
+            ),
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_succeeded", return_value=None
+            ),
         ):
             executor.perform()
 
@@ -101,18 +104,26 @@ class TestAppCommandExecutor:
         hook = hook_maker("echo 1;echo 2;")
 
         executor = AppCommandExecutor(command=hook, stream=stream)
-        with mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_logs_readiness",
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.command_kmodel.get",
-            side_effect=[mock.MagicMock(phase="Pending"), AppEntityNotFound],
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.parse_pod",
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.check_pod_health_status",
-            return_value=HealthStatus(reason="", message="failed with exit code 1", status=HealthStatusType.UNHEALTHY),
+        with (
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_logs_readiness",
+            ),
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
+            ),
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.command_kmodel.get",
+                side_effect=[mock.MagicMock(phase="Pending"), AppEntityNotFound],
+            ),
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.parse_pod",
+            ),
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.check_pod_health_status",
+                return_value=HealthStatus(
+                    reason="", message="failed with exit code 1", status=HealthStatusType.UNHEALTHY
+                ),
+            ),
         ):
             executor.perform()
 
@@ -136,18 +147,22 @@ class TestAppCommandExecutor:
             hook.save(update_fields=["int_requested_at", "updated"])
             return HealthStatus(reason="", message="failed with exit code 1", status=HealthStatusType.UNHEALTHY)
 
-        with mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_logs_readiness"
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.command_kmodel.get",
-            side_effect=[mock.MagicMock(phase="Pending"), AppEntityNotFound],
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.parse_pod",
-        ), mock.patch(
-            "paas_wl.bk_app.deploy.app_res.controllers.check_pod_health_status",
-            side_effect=interrupt,
+        with (
+            mock.patch("paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.wait_for_logs_readiness"),
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.CommandHandler.get_command_logs", return_value=["1", "2"]
+            ),
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.command_kmodel.get",
+                side_effect=[mock.MagicMock(phase="Pending"), AppEntityNotFound],
+            ),
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.parse_pod",
+            ),
+            mock.patch(
+                "paas_wl.bk_app.deploy.app_res.controllers.check_pod_health_status",
+                side_effect=interrupt,
+            ),
         ):
             executor.perform()
 

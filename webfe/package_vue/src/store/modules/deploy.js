@@ -155,12 +155,30 @@ const actions = {
    * 获取部署管理列表信息
    * @param {Object} params 请求参数：appCode, env
    */
-  getModuleReleaseList({ }, { appCode, env, deployId = '' },  config = {}) {
+  getModuleReleaseList({}, { appCode, env, deployId = '' }, config = {}) {
     let url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/processes/list/`;
     if (deployId) {
       url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/envs/${env}/processes/list/?deployment_id=${deployId}`;
     }
     return http.get(url, config);
+  },
+
+  /**
+   * 获取部署管理模块顺序
+   * @param {Object} params 请求参数：appCode
+   */
+  getModuleOrder({}, { appCode }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/deployment/module_order/`;
+    return http.get(url, config);
+  },
+
+  /**
+   * 设置模块排序
+   * @param {Object} params 请求参数：appCode, data
+   */
+  updateModuleOrder({}, { appCode, data }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/deployment/module_order/`;
+    return http.post(url, data, config);
   },
 
   /**
@@ -258,7 +276,10 @@ const actions = {
      * @param {Object} params 请求参数：appCode, moduleId, env
      */
   getDeployHistory({}, { appCode, moduleId, pageParams }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_operations/lists/?${json2Query(pageParams)}`;
+    let url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/deploy_operations/lists/?${json2Query(pageParams)}`;
+    if (moduleId.length) {
+      url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deploy_operations/lists/?${json2Query(pageParams)}`;
+    }
     return http.get(url, config);
   },
 
@@ -303,7 +324,7 @@ const actions = {
      * @param {Object} params 请求参数：appCode, moduleId, env, deployId
      */
   getDeployLog({}, { appCode, moduleId, deployId }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/result/`;
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/deployments/${deployId}/result/?include_ansi_codes=true`;
     return http.get(url, config);
   },
 
@@ -448,16 +469,6 @@ const actions = {
   },
 
   /**
-     * 获取云原生应用ext
-     *
-     * @param {Object} params 请求参数：appCode, moduleId
-     */
-  getManifestExt({}, { appCode, moduleId, env }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/manifest_ext/`;
-    return http.get(url, config);
-  },
-
-  /**
    * 获取进程是否开启自动扩缩容
    * @param {Object} params 请求参数：appCode, moduleId, env
    */
@@ -557,7 +568,7 @@ const actions = {
    * @param {Object} params 请求参数：appCode, moduleId
    */
   updateVolumeData({}, { appCode, moduleId, id, data }, config = {}) {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/volume_mounts/${id}`;
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/mres/volume_mounts/${id}/`;
     return http.put(url, data, config);
   },
 
@@ -595,6 +606,24 @@ const actions = {
   saveDomainResolutionData({}, { appCode, data }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/domain_resolution/`;
     return http.post(url, data, config);
+  },
+
+  /**
+   * 获取实例事件详情
+   * @param {Object} params 请求参数：appCode
+   */
+  getInstanceEvents({}, { appCode, moduleId, env, name }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/instance_events/${name}/`;
+    return http.get(url, {}, config);
+  },
+
+  /**
+   * 忽略模块
+   * @param {Object} params 请求参数：appCode, moduleId, en
+   */
+  ignoreModule({}, { appCode, moduleId, env }, config = {}) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/idle_notification/mute_rules/`;
+    return http.post(url, {}, config);
   },
 };
 

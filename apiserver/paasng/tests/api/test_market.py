@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 import logging
 import uuid
@@ -28,8 +27,7 @@ from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.accessories.publish.market.constant import OpenMode, ProductSourceUrlType
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product, Tag
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.modules.constants import ExposedURLType
-from tests.utils.helpers import create_app, override_region_configs
+from tests.utils.helpers import create_app
 
 pytestmark = pytest.mark.django_db
 
@@ -45,8 +43,8 @@ def existed_app(bk_app):
 @pytest.fixture()
 def tag(bk_app):
     """A tag fixture for testing"""
-    parent = Tag.objects.create(name="parent test", region=bk_app.region)
-    return Tag.objects.create(name="test", region=bk_app.region, parent=parent)
+    parent = Tag.objects.create(name="parent test")
+    return Tag.objects.create(name="test", parent=parent)
 
 
 @pytest.fixture()
@@ -166,35 +164,25 @@ class TestGetAndUpdateProduct:
                 logger.info("The visiable_labels attribute of the application does not exist, skip verification")
 
 
-def set_subpath_exposed_url_type(region_config):
-    region_config["entrance_config"]["exposed_url_type"] = ExposedURLType.SUBPATH
-
-
-def set_subdomain_exposed_url_type(region_config):
-    region_config["entrance_config"]["exposed_url_type"] = ExposedURLType.SUBDOMAIN
-
-
 @pytest.mark.django_db(databases=["default", "workloads"])
-@pytest.mark.usefixtures("_with_wl_apps", "_setup_cluster")
+@pytest.mark.usefixtures("_with_wl_apps")
 class TestSetEntrance:
     def test_set_builtin_entrance(self, api_client, bk_app, bk_module, bk_prod_env):
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         # 切换默认访问入口
-        with override_region_configs(bk_app.region, set_subdomain_exposed_url_type):
-            url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
-            resp = api_client.post(
-                url,
-                data={
-                    "module": bk_module.name,
-                    "url": f"http://{bk_app.code}.example.com",
-                    "type": 2,
-                },
-            )
-            assert resp.status_code == 200
-            market_config.refresh_from_db()
-            assert market_config.source_url_type == ProductSourceUrlType.ENGINE_PROD_ENV
+        url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
+        resp = api_client.post(
+            url,
+            data={
+                "module": bk_module.name,
+                "url": f"http://{bk_app.code}.example.com",
+                "type": 2,
+            },
+        )
+        assert resp.status_code == 200
+        market_config.refresh_from_db()
+        assert market_config.source_url_type == ProductSourceUrlType.ENGINE_PROD_ENV
 
-    @pytest.mark.usefixtures("_setup_cluster")
     def test_set_builtin_custom(self, api_client, bk_app, bk_module, bk_prod_env):
         # setup data
         # source type: custom
@@ -206,57 +194,52 @@ class TestSetEntrance:
         )
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
         # 切换独立域名
-        with override_region_configs(bk_app.region, set_subdomain_exposed_url_type):
-            url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
-            resp = api_client.post(
-                url,
-                data={
-                    "module": bk_module.name,
-                    "url": "http://foo-custom.example.com/subpath/",
-                    "type": 4,
-                },
-            )
-            assert resp.status_code == 200
-            market_config.refresh_from_db()
-            assert market_config.source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN
-            assert market_config.custom_domain_url == "http://foo-custom.example.com/subpath/"
+        url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
+        resp = api_client.post(
+            url,
+            data={
+                "module": bk_module.name,
+                "url": "http://foo-custom.example.com/subpath/",
+                "type": 4,
+            },
+        )
+        assert resp.status_code == 200
+        market_config.refresh_from_db()
+        assert market_config.source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN
+        assert market_config.custom_domain_url == "http://foo-custom.example.com/subpath/"
 
-    @pytest.mark.usefixtures("_setup_cluster")
     def test_set_failed(self, api_client, bk_app, bk_module, bk_prod_env):
         # 切换不存在的独立域名
-        with override_region_configs(bk_app.region, set_subdomain_exposed_url_type):
-            url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
-            resp = api_client.post(
-                url,
-                data={
-                    "module": bk_module.name,
-                    "url": "http://foo-404.example.com/subpath/",
-                    "type": 4,
-                },
-            )
-            assert resp.status_code == 400
-            assert resp.json() == {
-                "code": "VALIDATION_ERROR",
-                "detail": "url: http://foo-404.example.com/subpath/ 并非 default 模块的访问入口",
-                "fields_detail": {"url": ["http://foo-404.example.com/subpath/ 并非 default 模块的访问入口"]},
-            }
+        url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
+        resp = api_client.post(
+            url,
+            data={
+                "module": bk_module.name,
+                "url": "http://foo-404.example.com/subpath/",
+                "type": 4,
+            },
+        )
+        assert resp.status_code == 400
+        assert resp.json() == {
+            "code": "VALIDATION_ERROR",
+            "detail": "url: http://foo-404.example.com/subpath/ 并非 default 模块的访问入口",
+            "fields_detail": {"url": ["http://foo-404.example.com/subpath/ 并非 default 模块的访问入口"]},
+        }
 
-    @pytest.mark.usefixtures("_setup_cluster")
     def test_set_third_party_url(self, api_client, bk_app, bk_module, bk_prod_env):
         bk_app.type = ApplicationType.ENGINELESS_APP
         bk_app.save()
         market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
-        with override_region_configs(bk_app.region, set_subdomain_exposed_url_type):
-            url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
-            resp = api_client.post(
-                url,
-                data={
-                    "module": bk_module.name,
-                    "url": "http://foo-404.example.com/subpath/",
-                    "type": 3,
-                },
-            )
-            assert resp.status_code == 200
-            market_config.refresh_from_db()
-            assert market_config.source_url_type == ProductSourceUrlType.THIRD_PARTY
-            assert market_config.source_tp_url == "http://foo-404.example.com/subpath/"
+        url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
+        resp = api_client.post(
+            url,
+            data={
+                "module": bk_module.name,
+                "url": "http://foo-404.example.com/subpath/",
+                "type": 3,
+            },
+        )
+        assert resp.status_code == 200
+        market_config.refresh_from_db()
+        assert market_config.source_url_type == ProductSourceUrlType.THIRD_PARTY
+        assert market_config.source_tp_url == "http://foo-404.example.com/subpath/"

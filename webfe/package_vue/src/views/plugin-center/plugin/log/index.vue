@@ -11,7 +11,7 @@
       :offset-top="60"
       :is-customize-width="true"
     >
-      <section class="plugin-log-container card-style">
+      <section class="card-style">
         <bk-tab
           :active.sync="tabActive"
           type="unborder-card"
@@ -104,8 +104,4 @@ export default {
   },
 };
 </script>
-<style lang="scss" scoped>
-.plugin-log-container {
-  padding: 20px;
-}
-</style>
+

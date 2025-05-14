@@ -33,10 +33,6 @@
             </p>
           </div>
           <div class="service-p">
-            <h3> {{ $t('可用环境：') }} </h3>
-            <p>{{ enabledRegions.join('/') || '--' }}</p>
-          </div>
-          <div class="service-p">
             <h3> {{ $t('服务简介：') }} </h3>
             <p>{{ serviceObject.description }}</p>
           </div>
@@ -164,7 +160,6 @@
         tencent: this.$t('外部版'),
         clouds: this.$t('混合云版'),
       },
-      enabledRegions: [],
     };
   },
   computed: {
@@ -211,11 +206,12 @@
 
     toServiceInner(item) {
       this.$router.push({
-        name: 'appServiceInner',
+        name: item.application.type === 'cloud_native' ? 'appServices' : 'appServiceInner',
         params: {
           service: item.service,
           id: item.application.code,
           category_id: this.curCategoryId,
+          moduleId: item.module_name,
         },
       });
     },
@@ -232,10 +228,11 @@
 
     userDetail(item) {
       this.$router.push({
-        name: 'appServiceInner',
+        name: item.application.type === 'cloud_native' ? 'appServices' : 'appServiceInner',
         params: {
           service: item.service,
           id: item.application.code,
+          moduleId: item.module_name,
         },
       });
     },
@@ -271,7 +268,6 @@
         this.pageConf.count = resData.count || 0;
         this.length = this.pageConf.count;
         this.attList = resData.results.instances;
-        this.enabledRegions = resData.results.enabled_regions.map(item => this.lauguageMap[item]);
         this.loading = false;
 
         this.isDataLoading = false;

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from pathlib import Path
 
 import yaml
@@ -31,7 +30,14 @@ from paasng.platform.modules.specs import ModuleSpecs
 
 
 class SourceCodePatcherWithDBDriver:
-    """基于数据库记录驱动的源码 Patcher"""
+    """基于数据库记录驱动的源码 Patcher
+
+    - 目的：基于 CNB 的应用后续启动进程时，必须使用 Procfile 文件，因此自动生成一份
+    - 仅当 Procfile 不存在时才会写入文件
+    - 副作用（存疑？）：当普通应用经由 app_desc.yaml 解析并获取应用进程信息失败时，后续仍
+    会尝试从 Procfile 文件读取进程信息，变成了一种“托底”逻辑。详情见 ApplicationBuilder
+    中调用 get_processes 的部分。
+    """
 
     def __init__(self, module: "Module", source_dir: Path, deployment: Deployment):
         """
@@ -56,11 +62,7 @@ class SourceCodePatcherWithDBDriver:
             # dockerfile 类型的构建方式不需要注入 procfile
             raise SkipPatchCode("Dockerfile-type builds do not require a Procfile")
 
-        try:
-            procfile = self.deploy_description.get_procfile()
-        except DeploymentDescription.DoesNotExist:
-            raise SkipPatchCode("DeploymentDescription does not exist, skip the injection process")
-
+        procfile = self.deployment.get_procfile()
         if not procfile:
             raise SkipPatchCode("Procfile is undefined")
 
@@ -74,11 +76,7 @@ class SourceCodePatcherWithDBDriver:
 
     def _add_procfile_for_default_app(self):
         """「普通应用」尝试往应用源码目录创建 Procfile 文件"""
-        try:
-            procfile = self.deploy_description.get_procfile()
-        except DeploymentDescription.DoesNotExist:
-            raise SkipPatchCode("DeploymentDescription does not exist, skip the injection process")
-
+        procfile = self.deployment.get_procfile()
         if not procfile:
             raise SkipPatchCode("Procfile is undefined")
 

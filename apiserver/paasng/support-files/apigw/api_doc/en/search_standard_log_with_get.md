@@ -14,12 +14,13 @@ Query the standard output logs of the application.
 #### 2. API Parameters:
 
 | Parameter Name | Type | Required | Description |
-|------|------| :------: |-------------|
-| end_time | string | No | End time |
-| log_type | string | No | Log type |
-| scroll_id | string | No | Scroll ID |
-| start_time | string | No | Start time |
-| time_range | string | Yes | Time range |
+|-------------|--------| ------ |-------------|
+| time_range  | string | Yes | Time range，one of "5m" "1h" "3h" "6h" "12h" "1d" "3d" "7d" "customized" |
+| start_time  | string | No | Start time, input if time time_range = "customized" |
+| end_time    | string | No | End time, input if time time_range = "customized" |
+| scroll_id   | string | No | Scroll ID |
+| page        | int    | No | Page，Integer greater than 0  |
+| page_size   | int    | No | Page size，Integer greater than 0  |
 
 ### Request Example
 
@@ -28,44 +29,64 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 ```
 
 ### Response Result Example
-
+#### Success Response
 ```json
 {
-  "result": true,
-  "data": {
-    "scroll_id": "12345",
-    "logs": [
-      {
-        "timestamp": "2021-08-30T10:00:00Z",
-        "log_type": "stdout",
-        "message": "Application started"
-      },
-      {
-        "timestamp": "2021-08-30T10:01:00Z",
-        "log_type": "stdout",
-        "message": "Request received"
-      }
-    ]
-  }
+    "code": 0,
+    "data": {
+        "scroll_id": "scroll id",
+        "logs": [
+            {
+                "environment": "prod",
+                "process_id": "web",
+                "pod_name": "pod name",
+                "message": "message",
+                "timestamp": "2024-08-20 12:21:08"
+            }
+        ],
+        "total": 10299,
+        "dsl": "dsl"
+    }
+}
+```
+
+#### Exception Response
+example 1
+```json
+{
+    "code": "QUERY_LOG_FAILED",
+    "detail": "Query log failed: ..."
+}
+```
+example 2
+```json
+{
+    "code": "VALIDATION_ERROR",
+    "detail": "...",
+    "fields_detail": {
+        "time_range": [
+            "this field can't be empty。"
+        ]
+    }
 }
 ```
 
 ### Response Result Parameter Description
 
-| Field | Type | Description |
-| ------ | ------ | ------ |
-| result | bool | Request result, true for success, false for failure |
-| data | dict | Returned data |
+| Field          | Type         | Description       |
+| -------------- | ------------ | ----------------- |
+| code           | integer      | Status code       |
+| data           | object       | Returned data     |
+| data.scroll_id | string       | ES scroll_id for pagination |
+| data.logs      | []object     | Log list          |
+| data.total     | integer      | Log count         |
+| data.dsl       | string       | DSL query         |
 
-data
-| Field | Type | Description |
-| ------ | ------ | ------ |
-| scroll_id | string | Scroll ID |
-| logs | list | Log list |
-
-logs
-| Field | Type | Description |
-| ------ | ------ | ------ |
-| timestamp | string | Log timestamp |
-| log_type | string | Log type |
-| message | string | Log message |
+data.logs field description
+| Field          | Type         | Description       |
+| -------------- | ------------ | ----------------- |
+| environment    | string       | Running environment, "prod" or "stag" |
+| message        | string       | Log message       |
+| pod_name       | string       | Pod name          |
+| process_id     | string       | Process unique type        |
+| timestamp      | string       | Timestamp         |

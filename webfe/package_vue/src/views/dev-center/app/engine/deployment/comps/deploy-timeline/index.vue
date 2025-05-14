@@ -108,7 +108,6 @@
         },
         watch: {
             list () {
-                console.log('list', this.list);
                 this.$nextTick(() => {
                     this.toggle(this.list[0]);
                 });

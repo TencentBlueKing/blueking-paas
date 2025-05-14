@@ -2,17 +2,14 @@
   <div class="observability-config">
     <div class="top-title mb20">
       <h4>{{ $t('日志采集') }}</h4>
-      <p class="tips" v-if="curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR">
+      <p class="tips" v-if="isLogCollectionSupported">
         {{ $t('默认已采集和清洗：标准输出、开发框架定义日志路径中的日志，也可以添加自定义日志采集规则。') }}
-      </p>
-      <p class="tips" v-else>
-        {{ $t('默认已采集和清洗：标准输出、开发框架定义日志路径中的日志。') }}
       </p>
     </div>
     <!-- 采集规则 -->
-    <section class="collection-rules">
+    <section class="collection-rules" v-bkloading="{ isLoading: isLogCollectionLodaing }">
       <bk-button
-        v-if="curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR"
+        v-if="isLogCollectionSupported"
         theme="primary"
         class="mb16"
         @click="handleAddCollectionRule"
@@ -21,7 +18,7 @@
         {{ $t('新增采集规则') }}
       </bk-button>
       <div
-        v-if="curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR"
+        v-if="isLogCollectionSupported"
         v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
       >
         <bk-table
@@ -81,7 +78,7 @@
               >
                 {{ $t('检索') }}
               </bk-button>
-              <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
+              <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin, allowHTML: true }">
                 <bk-button
                   class="mr10"
                   theme="primary"
@@ -92,7 +89,7 @@
                   {{ $t('编辑') }}
                 </bk-button>
               </span>
-              <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin }">
+              <span v-bk-tooltips="{ content: $t('不能操作平台内置规则'), disabled: !row.is_builtin, allowHTML: true }">
                 <bk-button
                   theme="primary"
                   text
@@ -118,15 +115,15 @@
           </div>
         </div>
       </div>
-      <section
+      <FunctionalDependency
         v-else
-        class="empty"
-      >
-        <div class="empty-content">
-          <div class="title">{{ $t('暂不支持自定义日志采集规则') }}</div>
-          <div class="sub-title">{{ $t('自定义日志采集/清洗规则、日志导出等功能需要部署“蓝鲸日志平台”，由蓝鲸日志平台提供。') }}</div>
-        </div>
-      </section>
+        mode="partial"
+        :title="$t('暂无自定义日志采集等高级功能')"
+        :functional-desc="$t('平台默认采集了标准输出日志、访问日志、开发框架定义的文件日志。部署蓝鲸监控平台后，可以通过自定义日志采集、清洗规则采集任意文件日志，还能提供日志导出、日志关键字告警等功能。')"
+        :guide-title="$t('如需要该功能，需要部署：')"
+        :guide-desc-list="[$t('1. 蓝鲸监控：监控日志套餐')]"
+        @gotoMore="gotoMore"
+      />
     </section>
 
     <!-- 告警策略 -->
@@ -238,10 +235,12 @@
   </div>
 </template>
 
-<script>import i18n from '@/language/i18n.js';
+<script>
+import i18n from '@/language/i18n.js';
 import alarmStrategy from './alarm-strategy.vue';
+import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 export default {
-  components: { alarmStrategy },
+  components: { alarmStrategy, FunctionalDependency },
   data() {
     return {
       isTableLoading: false,
@@ -300,6 +299,8 @@ export default {
       },
       collectionRules: [],
       isRuleLoading: false,
+      isLogCollectionSupported: true,
+      isLogCollectionLodaing: true,
     };
   },
   computed: {
@@ -317,10 +318,7 @@ export default {
     },
   },
   created() {
-    if (this.curAppInfo.feature?.ENABLE_BK_LOG_COLLECTOR) {
-      this.getLogCollectionRuleList();
-    }
-    this.getCustomLogCollectionRule();
+    this.getCustomLogCollectionRule('init');
   },
   methods: {
     // 获取日志采集规则列表
@@ -397,7 +395,7 @@ export default {
     },
 
     // 获取自定义日志采集规则
-    async getCustomLogCollectionRule() {
+    async getCustomLogCollectionRule(type) {
       this.isRuleLoading = true;
       try {
         const res = await this.$store.dispatch('observability/getCustomLogCollectionRule', {
@@ -406,7 +404,13 @@ export default {
         });
         this.customCollectorData = res;
         this.collectionRules = res.options || [];
+        type === 'init' && this.getLogCollectionRuleList();
+        this.isLogCollectionSupported = true;
       } catch (e) {
+        if (e.code === 'CUSTOM_COLLECTOR_UNSUPPORTED') {
+          this.isLogCollectionSupported = false;
+          return;
+        }
         this.$bkMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
@@ -414,6 +418,7 @@ export default {
       } finally {
         setTimeout(() => {
           this.isRuleLoading = false;
+          this.isLogCollectionLodaing = false;
         }, 300);
       }
     },
@@ -515,7 +520,6 @@ export default {
 
     // 页容量变化回调
     handleLimitChange(currentLimit) {
-      console.log('currentLimit', currentLimit);
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
     },
@@ -532,6 +536,11 @@ export default {
           id: this.appCode,
         },
       });
+    },
+
+    // 了解更多
+    gotoMore() {
+      window.open(this.GLOBAL.DOC.LOG_ADVANCED_FEATURE_DOC, '_blank');
     },
   },
 };

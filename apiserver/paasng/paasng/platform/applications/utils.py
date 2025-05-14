@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
@@ -24,11 +23,12 @@ from typing import Optional
 from django.db import transaction
 
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.accessories.publish.market.models import MarketConfig
-from paasng.core.region.models import get_region
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.oauth2.utils import create_oauth2_client
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -54,7 +54,6 @@ def create_default_module(
         skipped.
     :param source_origin: The origin of module's source code
     """
-    region = get_region(application.region)
     language = language or application.language
     module = Module.objects.create(
         application=application,
@@ -67,17 +66,27 @@ def create_default_module(
         source_origin=source_origin.value,
         language=language,
         source_init_template=source_init_template,
-        exposed_url_type=region.entrance_config.exposed_url_type,
+        tenant_id=application.tenant_id,
     )
     return module
 
 
 def create_application(
-    region: str, code: str, name: str, name_en: str, type_: str, operator: str, is_plugin_app: bool
+    region: str,
+    code: str,
+    name: str,
+    name_en: str,
+    app_type: str,
+    operator: str,
+    is_plugin_app: bool,
+    is_ai_agent_app: bool = False,
+    app_tenant_mode: AppTenantMode = AppTenantMode.GLOBAL,
+    app_tenant_id: str = "",
+    tenant_id: str = DEFAULT_TENANT_ID,
 ):
     """创建 Application 模型"""
     application = Application.objects.create(
-        type=type_,
+        type=app_type,
         owner=operator,
         creator=operator,
         region=region,
@@ -85,8 +94,12 @@ def create_application(
         name=name,
         name_en=name_en,
         is_plugin_app=is_plugin_app,
+        is_ai_agent_app=is_ai_agent_app,
+        app_tenant_mode=app_tenant_mode.value,
+        app_tenant_id=app_tenant_id,
+        tenant_id=tenant_id,
     )
-    create_oauth2_client(application.code, application.region)
+    create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
 
     return application
 
@@ -102,7 +115,6 @@ def create_market_config(
     # Create market related data after application created, to avoid market related data be covered
     confirm_required_when_publish = app_specs.confirm_required_when_publish
     return MarketConfig.objects.create(
-        region=application.region,
         application=application,
         # 即使启用应用市场服务, 但新创建App时, 应用推广信息未填写, 因此设置为 False, 后续由开发者在应用推广页面重新打开
         enabled=False,
@@ -117,7 +129,15 @@ def create_market_config(
 
 @transaction.atomic
 def create_third_app(
-    region: str, code: str, name: str, name_en: str, operator: str, market_params: Optional[dict] = None
+    region: str,
+    code: str,
+    name: str,
+    name_en: str,
+    operator: str,
+    app_tenant_mode: AppTenantMode = AppTenantMode.GLOBAL,
+    app_tenant_id: str = "",
+    tenant_id: str = DEFAULT_TENANT_ID,
+    market_params: Optional[dict] = None,
 ) -> Application:
     """创建第三方（外链）应用"""
     if market_params is None:
@@ -128,9 +148,12 @@ def create_third_app(
         code=code,
         name=name,
         name_en=name_en,
-        type_=ApplicationType.ENGINELESS_APP.value,
+        app_type=ApplicationType.ENGINELESS_APP.value,
         operator=operator,
         is_plugin_app=False,
+        app_tenant_mode=app_tenant_mode,
+        app_tenant_id=app_tenant_id,
+        tenant_id=tenant_id,
     )
     create_default_module(application)
 

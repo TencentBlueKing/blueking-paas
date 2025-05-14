@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 
 import pytest
@@ -32,7 +31,7 @@ from paas_wl.workloads.images.utils import make_image_pull_secret_name
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestImageCredentialsHandler:
     @pytest.fixture()
     def kube_res_name(self, wl_app):
@@ -50,11 +49,13 @@ class TestImageCredentialsHandler:
         assert obj._kube_data.data[constants.KUBE_DATA_KEY] == b64encode('{"auths": {}}')
 
     def test_create(self, wl_app, kube_res_name):
-        registry = get_random_string()
-        username = get_random_string()
-        password = get_random_string()
+        registry = get_random_string(12)
+        username = get_random_string(12)
+        password = get_random_string(12)
 
-        AppImageCredential.objects.create(app=wl_app, registry=registry, username=username, password=password)
+        AppImageCredential.objects.create(
+            app=wl_app, registry=registry, username=username, password=password, tenant_id=wl_app.tenant_id
+        )
 
         ensure_image_credentials_secret(wl_app)
         obj = credentials_kmodel.get(wl_app, name=kube_res_name)
@@ -71,7 +72,9 @@ class TestImageCredentialsHandler:
         obj = credentials_kmodel.get(wl_app, name=kube_res_name)
         assert len(obj.credentials) == 0
 
-        AppImageCredential.objects.create(app=wl_app, registry="foo", username="bar", password="baz")
+        AppImageCredential.objects.create(
+            app=wl_app, registry="foo", username="bar", password="baz", tenant_id=wl_app.tenant_id
+        )
         ensure_image_credentials_secret(wl_app)
         obj = credentials_kmodel.get(wl_app, name=kube_res_name)
         assert len(obj.credentials) == 1

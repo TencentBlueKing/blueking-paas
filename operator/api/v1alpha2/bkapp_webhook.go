@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -77,6 +78,12 @@ func (r *BkApp) Default() {
 		r.Spec.Build.ImagePullPolicy = corev1.PullIfNotPresent
 	}
 
+	if r.HasProcServices() {
+		// 配置了 process services, 默认启用该特性
+		r.EnableProcServicesFeature()
+		r.setDefaultProcServices()
+	}
+
 	// 为进程的端口号、资源配额方案等设置默认值
 	for i, proc := range r.Spec.Processes {
 		if proc.TargetPort == 0 {
@@ -86,6 +93,21 @@ func (r *BkApp) Default() {
 			proc.ResQuotaPlan = ResQuotaPlanDefault
 		}
 		r.Spec.Processes[i] = proc
+	}
+}
+
+// setDefaultProcServices 为 ProcServices 配置默认值
+func (r *BkApp) setDefaultProcServices() {
+	for pIdx, proc := range r.Spec.Processes {
+		for sIdx, procSvc := range proc.Services {
+			if procSvc.Protocol == "" {
+				r.Spec.Processes[pIdx].Services[sIdx].Protocol = corev1.ProtocolTCP
+			}
+
+			if procSvc.Port == 0 {
+				r.Spec.Processes[pIdx].Services[sIdx].Port = procSvc.TargetPort
+			}
+		}
 	}
 }
 
@@ -255,6 +277,12 @@ func (r *BkApp) validateAppSpec() *field.Error {
 		}
 	}
 
+	if r.HasProcServices() {
+		if err := r.validateExposedTypes(); err != nil {
+			return err
+		}
+	}
+
 	return r.validateMounts()
 }
 
@@ -368,13 +396,24 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 
 	// 4. 如果启用扩缩容，需要符合规范
 	if proc.Autoscaling != nil {
-		if err := r.validateAutoscaling(
-			pField.Child("autoscaling"),
-			*proc.Autoscaling,
-		); err != nil {
+		if err := r.validateAutoscaling(pField.Child("autoscaling"), *proc.Autoscaling); err != nil {
 			return err
 		}
 	}
+
+	// 5. 如果启用探针，需要符合规范
+	if proc.Probes != nil {
+		if err := r.validateProbes(pField.Child("probe"), *proc.Probes); err != nil {
+			return err
+		}
+	}
+
+	if len(proc.Services) > 0 {
+		if err := r.validateProcServices(pField.Child("services"), proc.Services); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -405,6 +444,186 @@ func (r *BkApp) validateAutoscaling(pPath *field.Path, spec AutoscalingSpec) *fi
 	if !lo.Contains(AllowedScalingPolicies, spec.Policy) {
 		return field.NotSupported(pPath.Child("policy"), spec.Policy, stringx.ToStrArray(AllowedScalingPolicies))
 	}
+	return nil
+}
+
+func (r *BkApp) validateProbes(pPath *field.Path, probeSet ProbeSet) *field.Error {
+	if err := validateProbe(pPath.Child("liveness"), probeSet.Liveness); err != nil {
+		return err
+	}
+	if err := validateProbe(pPath.Child("readiness"), probeSet.Readiness); err != nil {
+		return err
+	}
+	if err := validateProbe(pPath.Child("startup"), probeSet.Startup); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateProbe(pField *field.Path, probe *corev1.Probe) *field.Error {
+	if probe == nil {
+		return nil
+	}
+	// 必须存在且只存在一种类型的探针
+	if probe.Exec == nil && probe.HTTPGet == nil && probe.TCPSocket == nil {
+		return field.Invalid(pField, probe, "at least one probe type must be specified")
+	}
+	// 检查命令探针
+	if probe.Exec != nil {
+		if probe.HTTPGet != nil || probe.TCPSocket != nil {
+			return field.Invalid(pField, probe, "only one probe type can be specified")
+		}
+		if len(probe.Exec.Command) == 0 {
+			return field.Invalid(pField.Child("command"), probe.Exec.Command, "command must not be empty")
+		}
+	}
+	// 检查 HTTP 探针
+	if probe.HTTPGet != nil {
+		if probe.Exec != nil || probe.TCPSocket != nil {
+			return field.Invalid(pField, probe, "only one probe type can be specified")
+		}
+		if probe.HTTPGet.Path == "" {
+			return field.Invalid(pField.Child("path"), probe.HTTPGet.Path, "path must not be empty")
+		}
+		if probe.HTTPGet.Port.Type != intstr.Int {
+			return field.Invalid(pField.Child("port"), probe.HTTPGet.Port, "port must be an integer currently")
+		}
+		port := probe.HTTPGet.Port.IntValue()
+		if port < 1 || port > 65535 {
+			return field.Invalid(pField.Child("port"), probe.HTTPGet.Port, "port must be between 1 and 65535")
+		}
+	}
+	// 检查 TCP 探针
+	if probe.TCPSocket != nil {
+		if probe.Exec != nil || probe.HTTPGet != nil {
+			return field.Invalid(pField, probe, "only one probe type can be specified")
+		}
+		if probe.TCPSocket.Port.Type != intstr.Int {
+			return field.Invalid(pField.Child("port"), probe.TCPSocket.Port, "port must be an integer currently")
+		}
+		port := probe.TCPSocket.Port.IntValue()
+		if port < 1 || port > 65535 {
+			return field.Invalid(pField.Child("port"), probe.TCPSocket.Port, "port must be between 1 and 65535")
+		}
+	}
+
+	// 初始探测延迟范围：0-300 s
+	if probe.InitialDelaySeconds < 0 || probe.InitialDelaySeconds > 300 {
+		return field.Invalid(
+			pField.Child("initialDelaySeconds"),
+			probe.InitialDelaySeconds,
+			"initialDelaySeconds must be between 0 and 300",
+		)
+	}
+	// 探测超时范围：1-60 s
+	if probe.TimeoutSeconds < 1 || probe.TimeoutSeconds > 60 {
+		return field.Invalid(
+			pField.Child("timeoutSeconds"),
+			probe.TimeoutSeconds,
+			"timeoutSeconds must be between 1 and 60",
+		)
+	}
+	// 探测间隔范围：2-300 s
+	if probe.PeriodSeconds < 2 || probe.PeriodSeconds > 300 {
+		return field.Invalid(
+			pField.Child("periodSeconds"),
+			probe.PeriodSeconds,
+			"periodSeconds must be between 2 and 300",
+		)
+	}
+	// 成功阈值范围：1-3
+	if probe.SuccessThreshold < 1 || probe.SuccessThreshold > 3 {
+		return field.Invalid(
+			pField.Child("successThreshold"),
+			probe.SuccessThreshold,
+			"successThreshold must be between 1 and 3",
+		)
+	}
+	// 失败阈值范围：1-50
+	if probe.FailureThreshold < 1 || probe.FailureThreshold > 50 {
+		return field.Invalid(
+			pField.Child("failureThreshold"),
+			probe.FailureThreshold,
+			"failureThreshold must be between 1 and 50",
+		)
+	}
+	return nil
+}
+
+// validateProcServices validates the process services
+func (r *BkApp) validateProcServices(pPath *field.Path, services []ProcService) *field.Error {
+	serviceNames, ports, targetPorts := sets.String{}, sets.Int32{}, sets.Int32{}
+
+	for _, svc := range services {
+		// 校验 service name 是否重复
+		if serviceNames.Has(svc.Name) {
+			return field.Duplicate(pPath.Child("name"), svc.Name)
+		}
+		serviceNames.Insert(svc.Name)
+
+		// port 有效范围：1-65535
+		if svc.Port < 1 || svc.Port > 65535 {
+			return field.Invalid(pPath.Child("port"), svc.Port, "port must be between 1 and 65535")
+		}
+		// 校验 port 是否重复
+		if ports.Has(svc.Port) {
+			return field.Duplicate(pPath.Child("port"), svc.Port)
+		}
+		ports.Insert(svc.Port)
+
+		// targetPort 有效范围：1-65535
+		if svc.TargetPort < 1 || svc.TargetPort > 65535 {
+			return field.Invalid(pPath.Child("targetPort"), svc.TargetPort, "targetPort must be between 1 and 65535")
+		}
+		// 校验 targetPort 是否重复
+		if targetPorts.Has(svc.TargetPort) {
+			return field.Duplicate(pPath.Child("targetPort"), svc.TargetPort)
+		}
+		targetPorts.Insert(svc.TargetPort)
+
+		// 校验协议
+		if err := validateServiceProtocol(svc.Protocol); err != nil {
+			return field.Invalid(pPath.Child("protocol"), svc.Protocol, err.Error())
+		}
+
+	}
+
+	return nil
+}
+
+// validateExposedTypes validates exposed types in BkApp scope.
+// 目前只支持 bk/http 类型，并且一个 BkApp 只能有一个 bk/http 类型的暴露服务作为主入口
+func (r *BkApp) validateExposedTypes() *field.Error {
+	exposedTypes := sets.String{}
+
+	procsField := field.NewPath("spec").Child("processes")
+
+	for pIdx, proc := range r.Spec.Processes {
+		for sIdx, svc := range proc.Services {
+			if svc.ExposedType != nil {
+				if err := validateExposedType(svc.ExposedType); err != nil {
+					return field.Invalid(
+						procsField.Index(pIdx).Child("services").Index(sIdx).Child("exposedType"),
+						svc.ExposedType,
+						err.Error(),
+					)
+				}
+
+				exposedTypeName := string(svc.ExposedType.Name)
+
+				// 检查是否有重复的暴露类型
+				if exposedTypes.Has(exposedTypeName) {
+					return field.Duplicate(
+						procsField.Index(pIdx).Child("services").Index(sIdx).Child("exposedType"),
+						svc.ExposedType.Name,
+					)
+				}
+
+				exposedTypes.Insert(exposedTypeName)
+			}
+		}
+	}
+
 	return nil
 }
 

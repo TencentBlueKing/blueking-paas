@@ -19,6 +19,7 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 import { pluginRouter } from './plugin';
+import { platformRouters } from './platform';
 import store from '@/store';
 
 const frontPage = () => import(/* webpackChunkName: 'front-page' */'@/views/index').then(module => module).catch((error) => {
@@ -26,6 +27,10 @@ const frontPage = () => import(/* webpackChunkName: 'front-page' */'@/views/inde
 });
 
 const devCenterIndex = () => import(/* webpackChunkName: 'dev-center-index' */'@/views/dev-center/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const sandboxIndex = () => import(/* webpackChunkName: 'sandbox-index' */'@/views/dev-center/sandbox/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -174,6 +179,10 @@ const monitorAlarm = () => import(/* webpackChunkName: 'app-engine' */'@/views/d
   window.showDeployTip(error);
 });
 
+const dashboards = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/dashboards').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const codeReview = () => import(/* webpackChunkName: 'app-engine' */'@/views/dev-center/app/engine/code-review').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -273,6 +282,10 @@ const srvVCSMain = () => import(/* webpackChunkName: 'services' */'@/views/servi
   window.showDeployTip(error);
 });
 
+const descriptionFileConversion = () => import(/* webpackChunkName: 'services' */'@/views/services/description-file-conversion').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const srvV3Services = () => import(/* webpackChunkName: 'services' */'@/views/services/v3-services').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -294,6 +307,10 @@ const srvStaticLesscode = () => import(/* webpackChunkName: 'services-info' */'@
   window.showDeployTip(error);
 });
 
+const serviceCopilot = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/copilot').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const srvStaticSDKBlueapps = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/sdk-blueapps').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -306,15 +323,11 @@ const srvStaticBamboo = () => import(/* webpackChunkName: 'services-info' */'@/v
   window.showDeployTip(error);
 });
 
-const srvStaticMarket = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/market').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
-const srvStaticFeaturedApps = () => import(/* webpackChunkName: 'services-info' */'@/views/services/static/featured-apps').then(module => module).catch((error) => {
-  window.showDeployTip(error);
-});
-
 const docuManagement = () => import(/* webpackChunkName: 'docu-management' */'@/views/dev-center/app/docu-management').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const operationRecord = () => import(/* webpackChunkName: 'docu-management' */'@/views/dev-center/app/operation-record').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -345,6 +358,10 @@ const cloudAppBuildHistory = () => import(/* webpackChunkName: 'cloud-image-mana
   window.showDeployTip(error);
 });
 
+const appMigrationInfo = () => import(/* webpackChunkName: 'app-migration-info' */'@/views/dev-center/app/engine/app-migration-info').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 // error pages
 const notFound = () => import(/* webpackChunkName: 'not-found' */'@/views/error-pages/not-found').then(module => module).catch((error) => {
   window.showDeployTip(error);
@@ -363,24 +380,41 @@ const router = new Router({
   },
   routes: [
     ...pluginRouter,
+    ...platformRouters,
     {
       path: '/',
       name: 'home',
       component: frontPage,
+      meta: {
+        isFooterShown: true,
+        isDefaultBackgroundColor: true,
+      },
     },
     {
       path: '/developer-center/',
       name: 'index',
       component: frontPage,
       meta: {
-        // 只有首页需要footer版本信息
-        showPaasFooter: true,
+        isFooterShown: true,
+        isDefaultBackgroundColor: true,
       },
     },
     {
       path: '/developer-center/apps/',
       name: 'myApplications',
       component: devCenterIndex,
+      meta: {
+        isDefaultBackgroundColor: true,
+      },
+    },
+    {
+      path: '/developer-center/sandbox/',
+      name: 'sandbox',
+      component: sandboxIndex,
+      meta: {
+        isDefaultBackgroundColor: true,
+        sandboxPage: true,
+      },
     },
     {
       path: '/developer-center/apps/my-monitor',
@@ -391,11 +425,18 @@ const router = new Router({
       path: '/developer-center/apps/search',
       name: 'search',
       component: searchIndex,
+      meta: {
+        hideGlobalSearch: true,
+      },
     },
     {
       path: '/developer-center/app/create',
       name: 'createApp',
       component: createApp,
+      meta: {
+        isDefaultBackgroundColor: true,
+        appBackgroundColor: '#fafafa',
+      },
     },
     {
       path: '/developer-center/apps/:id/module/create',
@@ -406,6 +447,9 @@ const router = new Router({
       path: '/developer-center/apps/:id/cloud-module/create',
       component: appCreateCloudModule,
       name: 'appCreateCloudModule',
+      meta: {
+        isDefaultBackgroundColor: true,
+      },
     },
     {
       path: '/developer-center/apps/migration/',
@@ -435,6 +479,14 @@ const router = new Router({
           path: ':id/:moduleId/summary',
           component: appSummary,
           name: 'appSummary',
+          meta: {
+            capture403Error: false,
+          },
+        },
+        {
+          path: ':id/app-migration-info',
+          component: appMigrationInfo,
+          name: 'appMigrationInfo',
           meta: {
             capture403Error: false,
           },
@@ -514,6 +566,14 @@ const router = new Router({
               name: 'appMembers',
               meta: {
                 module: 'member',
+              },
+            },
+            {
+              path: 'doc',
+              component: docuManagement,
+              name: 'docuManagement',
+              meta: {
+                module: 'doc',
               },
             },
           ],
@@ -702,6 +762,9 @@ const router = new Router({
               path: 'service/:category_id/service_inner/:service',
               component: appServicesInstance,
               name: 'cloudAppServiceInnerWithModule',
+              meta: {
+                notMinHeight: true,
+              },
             },
             {
               path: ':id/:moduleId/service/:category_id/service_inner_shared/:service',
@@ -814,6 +877,11 @@ const router = new Router({
           component: monitorAlarm,
           name: 'monitorAlarm',
         },
+        {
+          path: ':id/:moduleId/dashboards',
+          component: dashboards,
+          name: 'dashboards',
+        },
         // 普通应用访问统计路由配置
         {
           path: ':id',
@@ -894,6 +962,9 @@ const router = new Router({
           path: ':id/:moduleId/service/:category_id/service_inner/:service',
           component: appServicesInstance,
           name: 'appServiceInner',
+          meta: {
+            notMinHeight: true,
+          },
         },
         {
           path: ':id/service/:category_id/service_inner/:service',
@@ -916,9 +987,9 @@ const router = new Router({
           name: 'appServiceConfig',
         },
         {
-          path: ':id/doc_mgt',
-          component: docuManagement,
-          name: 'docuManagement',
+          path: ':id/operation-record',
+          component: operationRecord,
+          name: 'operationRecord',
         },
       ],
     },
@@ -935,6 +1006,14 @@ const router = new Router({
           path: 'code',
           component: srvVCSMain,
           name: 'serviceCode',
+        },
+        {
+          path: 'file-conversion',
+          component: descriptionFileConversion,
+          name: 'descriptionFileConversion',
+          meta: {
+            notMinHeight: true,
+          },
         },
         {
           path: 'magicbox',
@@ -955,6 +1034,11 @@ const router = new Router({
           path: 'lesscode',
           component: srvStaticLesscode,
           name: 'serviceLesscode',
+        },
+        {
+          path: 'copilot',
+          component: serviceCopilot,
+          name: 'serviceCopilot',
         },
         {
           path: 'framework',
@@ -980,16 +1064,6 @@ const router = new Router({
           path: 'bamboo',
           component: srvStaticBamboo,
           name: 'serviceBamboo',
-        },
-        {
-          path: 'market',
-          component: srvStaticMarket,
-          name: 'serviceMarket',
-        },
-        {
-          path: 'recommend',
-          component: srvStaticFeaturedApps,
-          name: 'serviceRecommend',
         },
       ],
     },
@@ -1062,12 +1136,17 @@ router.beforeEach(async (to, from, next) => {
     const url = window.location.href.replace(window.GLOBAL_CONFIG.V3_OA_DOMAIN, window.GLOBAL_CONFIG.V3_WOA_DOMAIN);
     window.location.replace(url);
   } else {
-    if (to.path.startsWith('/plugin-center')) {
+    const checkUserFeature = async (featureKey) => {
       // 可能为页面刷新重新调用获取功能开关
-      if (!store.state.userFeature.ALLOW_PLUGIN_CENTER) {
+      if (!store.state.userFeature[featureKey]) {
         await store.dispatch('getUserFeature');
       }
-      store.state.userFeature.ALLOW_PLUGIN_CENTER ? next() : next({ name: '404' });
+      store.state.userFeature[featureKey] ? next() : next({ name: '404' });
+    };
+    if (to.path.startsWith('/plugin-center')) {
+      checkUserFeature('ALLOW_PLUGIN_CENTER');
+    } else if (to.path.startsWith('/plat-mgt')) {
+      checkUserFeature('PLATFORM_MANAGEMENT');
     }
     next();
   }

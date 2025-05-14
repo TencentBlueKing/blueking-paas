@@ -1,39 +1,38 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 from typing import Union
 
-import cattr
 from django.conf import settings
 from django.utils.timezone import get_default_timezone
+from django.utils.translation import gettext_lazy as _
 
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
 from paasng.accessories.log.models import CustomCollectorConfig as CustomCollectorConfigModel
 from paasng.accessories.log.models import (
     ElasticSearchConfig,
-    ElasticSearchHost,
     ElasticSearchParams,
     ProcessLogQueryConfig,
 )
 from paasng.accessories.log.shim.bklog_custom_collector_config import get_or_create_custom_collector_config
-from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID, setup_platform_elk_model
+from paasng.accessories.log.shim.setup_elk import ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL, setup_platform_elk_config
 from paasng.infras.bk_log.constatns import ETLType, FieldType
 from paasng.infras.bk_log.definitions import (
     AppLogCollectorConfig,
@@ -44,9 +43,10 @@ from paasng.infras.bk_log.definitions import (
     StorageConfig,
 )
 from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
-from paasng.platform.applications.constants import AppFeatureFlag, AppLanguage
+from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ def build_normal_json_collector_config():
 def update_or_create_es_search_config(
     env: ModuleEnvironment, collector_config: AppLogCollectorConfig, message_field: str = "log"
 ):
-    """初始化日志查询相关的数据库模型
+    """初始化日志平台采集链路日志查询相关的数据库模型
 
     :param str message_field: 日志查询字段, 默认值 log 是日志平台的原始日志字段
     """
@@ -139,32 +139,28 @@ def update_or_create_es_search_config(
         builtinFilters={},
         builtinExcludes={},
         filedMatcher="message|levelname|pathname|funcName|otelSpanID"
-        r"|otelServiceName|otelTraceID|environment|process_id|stream|__ext_json\..*",
+        r"|otelServiceName|otelTraceID|requestID|environment|process_id|stream|__ext_json\..*",
     )
 
-    if application.feature_flag.has_feature(AppFeatureFlag.ENABLE_BK_LOG_CLIENT):
-        defaults = {
-            "backend_type": "bkLog",
-            "bk_log_config": {
-                "scenarioID": "log",
-            },
-            "search_params": search_params,
-        }
-    else:
-        # 使用日志平台采集日志, 但使用 ES 查询日志, 需要保证日志平台的 storage_id 与 ELK 方案的 ES 为同一个 ES
-        host = cattr.structure(settings.ELASTICSEARCH_HOSTS[0], ElasticSearchHost)
-        defaults = {
-            "backend_type": "es",
-            "elastic_search_host": host,
-            "search_params": search_params,
-        }
+    # 日志平台查询 API 参数配置
+    defaults = {
+        "backend_type": "bkLog",
+        "bk_log_config": {
+            "scenarioID": "log",
+        },
+        "search_params": search_params,
+        "tenant_id": env.tenant_id,
+    }
 
     search_config, _ = ElasticSearchConfig.objects.update_or_create(
         collector_config_id=collector_config.collector_config.id,
         defaults=defaults,
     )
 
-    config, _ = ProcessLogQueryConfig.objects.get_or_create(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)
+    config, _ = ProcessLogQueryConfig.objects.get_or_create(
+        env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER, defaults={"tenant_id": env.tenant_id}
+    )
+    config.tenant_id = env.tenant_id
     if collector_config.log_type == "stdout":
         config.stdout = search_config
     elif collector_config.log_type == "json":
@@ -175,7 +171,7 @@ def update_or_create_es_search_config(
 
 
 def setup_bk_log_custom_collector(module: Module):
-    """初始化内置的日志采集项(JSON日志采集和标准输出日志采集)"""
+    """初始化日志平台内置的日志采集项(JSON日志采集和标准输出日志采集)"""
     language: Union[AppLanguage, str]
     try:
         language = AppLanguage(module.language)
@@ -222,8 +218,17 @@ def setup_default_bk_log_model(env: ModuleEnvironment):
     update_or_create_es_search_config(env, stdout_config)
 
     # Ingress 仍然使用 elk 的采集方案
-    setup_platform_elk_model()
-    ingress_config = ElasticSearchConfig.objects.get(collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID)
+    cluster_uuid = EnvClusterService(env).get_cluster().uuid
+    setup_platform_elk_config(cluster_uuid, env.tenant_id)
+    try:
+        ingress_config = ElasticSearchConfig.objects.get(
+            collector_config_id=ELK_INGRESS_COLLECTOR_CONFIG_ID_TMPL.format(cluster_uuid=cluster_uuid)
+        )
+    except ElasticSearchConfig.DoesNotExist:
+        # 未配置时，需要记录异常日志方便排查
+        logger.exception("The elk ingress log is not configured with the corresponding Elasticsearch.")
+        raise error_codes.ES_NOT_CONFIGURED.f(_("日志存储的 Elasticsearch 配置尚未完成，请稍后再试。"))
+
     config = ProcessLogQueryConfig.objects.get(env=env, process_type=DEFAULT_LOG_CONFIG_PLACEHOLDER)
     config.ingress = ingress_config
     config.save()
@@ -255,14 +260,14 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
         )
     elif collector_config.etl_type == ETLType.JSON:
 
-        def make_string_field(index: int, field_name: str) -> ETLField:
+        def make_string_field(index: int, field_name: str, is_analyzed: bool) -> ETLField:
             return ETLField(
                 field_index=index,
                 field_name=field_name,
                 field_type=FieldType.STRING,
                 is_time=False,
                 is_dimension=False,
-                is_analyzed=True,
+                is_analyzed=is_analyzed,
                 option={},
             )
 
@@ -282,13 +287,17 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
 
         fields = [
             *([time_filed] if time_filed is not None else []),
-            make_string_field(2, "message"),
-            make_string_field(3, "levelname"),
-            make_string_field(4, "pathname"),
-            make_string_field(5, "funcName"),
-            make_string_field(6, "otelSpanID"),
-            make_string_field(7, "otelServiceName"),
-            make_string_field(8, "otelTraceID"),
+            # 只对 message 字段做分词处理，其他字段不分词
+            # 对字段分词后无法使用 term 查询做精确查询
+            # https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-term-query.html
+            make_string_field(2, "message", is_analyzed=True),
+            make_string_field(3, "levelname", is_analyzed=False),
+            make_string_field(4, "pathname", is_analyzed=False),
+            make_string_field(5, "funcName", is_analyzed=False),
+            make_string_field(6, "otelSpanID", is_analyzed=False),
+            make_string_field(7, "otelServiceName", is_analyzed=False),
+            make_string_field(8, "otelTraceID", is_analyzed=False),
+            make_string_field(9, "requestID", is_analyzed=False),
         ]
 
         etl_config = ETLConfig(

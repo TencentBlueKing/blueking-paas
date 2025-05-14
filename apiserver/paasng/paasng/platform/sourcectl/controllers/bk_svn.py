@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import os
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from paasng.platform.sourcectl.exceptions import BasicAuthError
-from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, Repository, VersionInfo
+from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
 from paasng.platform.sourcectl.svn.client import SvnRepositoryClient, svn_version_types
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
 
@@ -42,7 +41,7 @@ class SvnRepoController:
     @classmethod
     def init_by_module(cls, module: "Module", operator: Optional[str] = None):
         repo_url = module.get_source_obj().get_repo_url()
-        repo_admin_credentials = get_bksvn_config(module.region, name=module.source_type).get_admin_credentials()
+        repo_admin_credentials = get_bksvn_config(name=module.source_type).get_admin_credentials()
         return cls(repo_url=repo_url, repo_admin_credentials=repo_admin_credentials)
 
     @classmethod
@@ -100,6 +99,10 @@ class SvnRepoController:
             CommitLog(commit["message"], commit["revision"], commit["date"], commit["author"], commit["changelist"])
             for commit in self.svn_client.get_commit_logs(from_revision, to_revision, rel_filepath)
         ]
+
+    def commit_files(self, commit_info: CommitInfo) -> None:
+        """bk_svn 不支持该功能"""
+        raise NotImplementedError
 
     def read_file(self, file_path: str, version_info: VersionInfo) -> bytes:
         """从当前仓库指定版本(version_info)的代码中读取指定文件(file_path) 的内容"""

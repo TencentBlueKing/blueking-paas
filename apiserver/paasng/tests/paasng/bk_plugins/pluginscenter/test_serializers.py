@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict
+from unittest import mock
 
 import cattr
 import pytest
@@ -26,7 +26,9 @@ from django.utils.translation import gettext as _
 from rest_framework.exceptions import ErrorDetail
 
 from paasng.bk_plugins.pluginscenter import serializers
+from paasng.bk_plugins.pluginscenter.constants import PluginRevisionType
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.utils.i18n import to_translated_field
 
 pytestmark = pytest.mark.django_db
@@ -34,6 +36,12 @@ pytestmark = pytest.mark.django_db
 
 def make_translate_fields(field, value) -> Dict:
     return {to_translated_field(field, language_code=language[0]): value for language in settings.LANGUAGES}
+
+
+@pytest.fixture()
+def mocked_plugin_repo_accessor():
+    with mock.patch("paasng.bk_plugins.pluginscenter.shim.get_plugin_repo_accessor") as mocked:
+        yield mocked
 
 
 @pytest.mark.parametrize(
@@ -55,6 +63,7 @@ def make_translate_fields(field, value) -> Dict:
                     PluginCodeTemplate,
                 ),
                 "extra_fields": {},
+                "plugin_tenant_mode": AppTenantMode.GLOBAL,
             },
         ),
         (
@@ -83,6 +92,7 @@ def make_translate_fields(field, value) -> Dict:
                     PluginCodeTemplate,
                 ),
                 "extra_fields": {"email": "foo@example.com", "distributor_codes": ["1", "2"]},
+                "plugin_tenant_mode": AppTenantMode.GLOBAL,
             },
         ),
         (
@@ -106,7 +116,7 @@ def make_translate_fields(field, value) -> Dict:
         ),
     ],
 )
-def test_make_create_plugin_validator(pd, data, is_valid, expected):
+def test_make_create_plugin_validator(pd, data, is_valid, expected, mocked_plugin_repo_accessor):
     slz = serializers.make_plugin_slz_class(pd, creation=True)(data=data, context={"pd": pd})
     if is_valid:
         slz.is_valid(raise_exception=True)
@@ -161,7 +171,7 @@ COMMON_DATA = {"source_version_name": "...", "source_version_type": "...", "comm
         ("0.1.2", {"semver_type": "patch", "version": "0.1.3.4", **COMMON_DATA}, False),
     ],
 )
-def test_validate_automatic_semver(plugin, previous_version, data, is_valid):
+def test_validate_automatic_semver(plugin, previous_version, data, is_valid, mocked_plugin_repo_accessor):
     plugin.pd.release_revision.versionNo = "automatic"
     slz = serializers.make_create_release_version_slz_class(plugin, "prod")(
         data=data, context={"previous_version": previous_version}
@@ -179,7 +189,7 @@ def test_validate_automatic_semver(plugin, previous_version, data, is_valid):
         ({"version": "1.0.0", **COMMON_DATA, "source_version_name": "2.0.0"}, False),
     ],
 )
-def test_validate_revision_eq_source_revision(plugin, data, is_valid):
+def test_validate_revision_eq_source_revision(plugin, data, is_valid, mocked_plugin_repo_accessor):
     plugin.pd.release_revision.versionNo = "revision"
     slz = serializers.make_create_release_version_slz_class(plugin, "prod")(data=data)
     if is_valid:
@@ -203,15 +213,36 @@ def test_validate_revision_eq_source_revision(plugin, data, is_valid):
         ),
     ],
 )
-def test_validate_revision_eq_commit_hash(plugin, source_hash, data, is_valid):
+def test_validate_revision_eq_commit_hash(plugin, source_hash, data, is_valid, mocked_plugin_repo_accessor):
     plugin.pd.release_revision.versionNo = "commit-hash"
-    slz = serializers.make_create_release_version_slz_class(plugin, "prod")(
-        data=data, context={"source_hash": source_hash}
-    )
+    mocked_plugin_repo_accessor().extract_smart_revision.return_value = source_hash
+    slz = serializers.make_create_release_version_slz_class(plugin, "prod")(data=data)
     if is_valid:
         slz.is_valid(raise_exception=True)
     else:
         assert not slz.is_valid()
+
+
+@pytest.mark.parametrize(
+    ("data", "is_valid"),
+    [
+        ({"release_id": "1", "version": "1.0.0", **COMMON_DATA, "source_version_name": "1.0.0"}, True),
+        ({"release_id": "", "version": "1.0.0", **COMMON_DATA, "source_version_name": "1.0.0"}, False),
+        ({"version": "1.0.0", **COMMON_DATA, "source_version_name": "2.0.0"}, False),
+    ],
+)
+def test_validate_tested_version(plugin, data, is_valid):
+    plugin.pd.release_revision.revisionType = PluginRevisionType.TESTED_VERSION
+    plugin.pd.release_revision.versionNo = "revision"
+
+    with mock.patch(
+        "paasng.bk_plugins.pluginscenter.serializers.get_source_hash_by_plugin_version", return_value="hash"
+    ):
+        slz = serializers.make_create_release_version_slz_class(plugin, "prod")(data=data)
+        if is_valid:
+            slz.is_valid(raise_exception=True)
+        else:
+            assert not slz.is_valid()
 
 
 @pytest.mark.parametrize(
@@ -230,7 +261,7 @@ def test_validate_revision_eq_commit_hash(plugin, source_hash, data, is_valid):
         ),
     ],
 )
-def test_validate_release_policy(plugin, release, data, revision_policy, is_valid):
+def test_validate_release_policy(plugin, release, data, revision_policy, is_valid, mocked_plugin_repo_accessor):
     plugin.pd.release_revision.versionNo = "self-fill"
     plugin.pd.release_revision.revisionPolicy = revision_policy
     slz = serializers.make_create_release_version_slz_class(plugin, "prod")(data=data)

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 import logging
 from typing import Dict, List, Optional
@@ -36,12 +35,14 @@ from paas_wl.bk_app.cnative.specs.constants import (
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
 from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.infras.resources.base import base, crd
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.kres_entities import ImageCredentials
-from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paas_wl.workloads.networking.constants import ExposedTypeName
+from paasng.platform.applications.models import Application, ModuleEnvironment
 
 logger = logging.getLogger(__name__)
 
@@ -56,14 +57,13 @@ def get_mres_from_cluster(env: ModuleEnvironment) -> Optional[BkAppResource]:
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
         try:
-            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).get(
-                generate_bkapp_name(env), namespace=wl_app.namespace
-            )
+            bkapp_name = generate_bkapp_name(env)
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).get(bkapp_name, namespace=wl_app.namespace)
         except ResourceNotFoundError:
-            logger.info("Resource BkApp not found in cluster")
+            logger.info("Resource BkApp: %s not found in cluster", bkapp_name)
             return None
         except ResourceMissing:
-            logger.info("BkApp not found in %s, app: %s", wl_app.namespace, env.application)
+            logger.info("BkApp: %s not found in %s, app: %s", bkapp_name, wl_app.namespace, env.application)
             return None
     return BkAppResource(**data)
 
@@ -108,20 +108,26 @@ def deploy(env: ModuleEnvironment, manifest: Dict) -> Dict:
         # 创建或更新 BkApp
         bkapp = create_or_update_bkapp_with_retries(client, env, manifest)
 
-    # Deploy other dependencies
-    deploy_networking(env)
+    sync_networking(env, BkAppResource(**bkapp))
     return bkapp.to_dict()
+
+
+def sync_networking(env: ModuleEnvironment, res: BkAppResource) -> None:
+    """Sync the networking related resources for env, such as Ingress etc."""
+
+    if _need_exposed_services(res):
+        deploy_networking(env)
+    else:
+        delete_networking(env)
 
 
 def deploy_networking(env: ModuleEnvironment) -> None:
     """Deploy the networking related resources for env, such as Ingress etc."""
-    if not _has_web_process(env):
-        return
-
     save_addresses(env)
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = WlApp.objects.get(pk=env.engine_app_id)
     with get_client_by_app(wl_app) as client:
+        # 需要指定 api_version, 因为 DomainGroupMapping 只有 v1alpha1 版本
         crd.DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).create_or_update(
             mapping.metadata.name,
             namespace=wl_app.namespace,
@@ -144,13 +150,13 @@ def delete_bkapp(env: ModuleEnvironment):
 
 def delete_networking(env: ModuleEnvironment):
     """Delete network group mapping in cluster"""
-    if not _has_web_process(env):
-        return
-
     mapping = AddrResourceManager(env).build_mapping()
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
-        crd.DomainGroupMapping(client).delete(mapping.metadata.name, namespace=wl_app.namespace)
+        # 需要指定 api_version, 因为 DomainGroupMapping 只有 v1alpha1 版本
+        crd.DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).delete(
+            mapping.metadata.name, namespace=wl_app.namespace
+        )
 
 
 @define
@@ -203,6 +209,29 @@ class MresConditionParser:
         return None
 
 
-def _has_web_process(env: ModuleEnvironment) -> bool:
-    """Check if the module has web process"""
-    return ModuleProcessSpec.objects.filter(module=env.module, name="web").exists()
+def list_mres_by_env(application: Application, environment: str) -> list[BkAppResource]:
+    """list the application's model resources by running environment"""
+    cluster_namespace_pairs: dict[str, str] = {}
+    for env in application.envs.filter(environment=environment):
+        cluster_namespace_pairs[EnvClusterService(env).get_cluster_name()] = env.wl_app.namespace
+
+    res_list: list[BkAppResource] = []
+    for cluster_name, namespace in cluster_namespace_pairs.items():
+        with get_client_by_cluster_name(cluster_name) as client:
+            data = crd.BkApp(client, api_version=ApiVersion.V1ALPHA2).ops_batch.list(namespace=namespace)
+        res_list.extend([BkAppResource(**res) for res in data.items])
+
+    return res_list
+
+
+def _need_exposed_services(res: BkAppResource) -> bool:
+    """
+    _need_exposed_services checks if the bkapp needs to expose services outside the cluster
+    """
+    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: true 时, 设置了 exposedType 为 bk/http 才需要向集群外暴露服务
+    for proc in res.spec.processes:
+        for svc in proc.services or []:
+            if svc.exposedType and svc.exposedType.name == ExposedTypeName.BK_HTTP:
+                return True
+
+    return False

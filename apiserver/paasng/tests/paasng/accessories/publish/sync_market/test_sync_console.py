@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
 import pytest
+from django.conf import settings
 from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import Product
@@ -43,11 +43,15 @@ from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.infras.iam.helpers import add_role_members, delete_role_members
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
+from paasng.platform.applications.models import Application
+from paasng.platform.applications.utils import create_default_module
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.mgrlegacy.constants import LegacyAppState
+from paasng.platform.modules.constants import SourceOrigin
 from tests.conftest import mark_skip_if_console_not_configured
-from tests.utils.helpers import create_app, generate_random_string
+from tests.utils.basic import generate_random_string
+from tests.utils.helpers import create_app, register_iam_after_create_application
 
 pytestmark = [
     mark_skip_if_console_not_configured(),
@@ -60,13 +64,41 @@ pytestmark = [
 logger = logging.getLogger(__name__)
 
 
+def create_custom_app(owner, **kwargs):
+    random_name = generate_random_string(length=6)
+    application = G(
+        Application,
+        owner=owner.pk,
+        code=kwargs.get("code", random_name),
+        name=kwargs.get("name", random_name),
+        language=kwargs.get("language", "Python"),
+        region=settings.DEFAULT_REGION_NAME,
+    )
+
+    if "init_default_module" in kwargs:
+        create_default_module(application, source_origin=kwargs.get("source_origin", SourceOrigin.BK_LESS_CODE))
+
+    register_iam_after_create_application(application)
+
+    # 添加开发者
+    if "developers" in kwargs and isinstance(kwargs["developers"], list):
+        add_role_members(application.code, ApplicationRole.DEVELOPER, kwargs["developers"])
+    # 添加运营者
+    if "ops" in kwargs and isinstance(kwargs["ops"], list):
+        add_role_members(application.code, ApplicationRole.OPERATOR, kwargs["ops"])
+
+    return application
+
+
 class TestAppMembers:
     @pytest.fixture(autouse=True)
-    def init_data(self, bk_user, create_custom_app):
+    def init_data(self, bk_user):
         init_users = [bk_user.username, "user1", "user2", "user3"]
         app = create_custom_app(bk_user, developers=init_users, ops=init_users)
         # 创建应用后，将应用注册到 console
-        register_application_with_default(app.region, app.code, app.name)
+        register_application_with_default(
+            app.region, app.code, app.name, app.app_tenant_mode, app.app_tenant_id, app.tenant_id
+        )
         return app, init_users
 
     def test_init_members(self, init_data):
@@ -160,9 +192,11 @@ class TestApp:
         with pytest.raises(IntegrityError):
             register_app_core_data(self, bk_app_full)
 
-    def test_app_state(self, bk_user, create_custom_app):
+    def test_app_state(self, bk_user):
         app = create_custom_app(bk_user)
-        app = register_application_with_default(app.region, app.code, app.name)
+        app = register_application_with_default(
+            app.region, app.code, app.name, app.app_tenant_mode, app.app_tenant_id, app.tenant_id
+        )
         # 默认创建的应用未开发状态，不能同步显示到桌面
         assert app.state == LegacyAppState.DEVELOPMENT.value
         assert app.is_already_test == 0

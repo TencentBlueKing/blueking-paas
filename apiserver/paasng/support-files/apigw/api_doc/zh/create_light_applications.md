@@ -1,5 +1,7 @@
 ### 功能描述
-创建轻应用信息，仅供管理侧 APP 使用。
+创建轻应用信息。
+
+说明：轻应用相关 API 默认只允许标准运维（应用ID：bk_sops）调用，如需调用请联系平台管理员添加权限。
 
 ### 请求参数
 
@@ -10,7 +12,7 @@
 
 | 参数名称     | 参数类型 | 是否必填 | 参数说明                                                     |
 | ------------ | -------- | -------- | ------------------------------------------------------------ |
-| app_code     | string   | 是       | 父应用的 APP Code                                            |
+| parent_app_code | string   | 是       | 父应用的 APP Code                                            |
 | app_name     | string   | 是       | 轻应用名称                                                   |
 | app_url      | string   | 是       | 应用链接                                                     |
 | developers   | array    | 是       | 应用开发者用户名列表                                         |
@@ -20,11 +22,12 @@
 | introduction | string   | 否       | 应用的简介                                                   |
 | width        | int      | 否       | 应用在桌面打开窗口宽度，默认为父应用宽度                     |
 | height       | int      | 否       | 应用在桌面打开窗口高度，默认为父应用高度                     |
+| app_tenant_mode | string | 否     |在运营租户下，用户创建轻应用时可选择的值为：global（全租户）或 single（单租户）。如果不传值，默认设置为单租户。 |
 
 ### 请求示例
 
 ```
-curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret": "***"}' -d '{ "parent_app_code": "bksops", "app_url": "http://example.com", "developers": "admin", "creator: "admin" }' --insecure http://bkapi.example.com/api/bkpaas3/prod/system/light-applications
+curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret": "***"}' -d '{ "parent_app_code": "bksops", "app_name":"example_name" "app_url": "http://example.com", "developers": ["admin"], "creator: "admin" }' --insecure http://bkapi.example.com/api/bkpaas3/prod/system/light-applications
 ```
 
 ### 返回结果示例
@@ -34,7 +37,7 @@ curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret"
   "bk_error_msg": "",
   "bk_error_code": 0,
   "data": {
-    "app_code": "demo-0727-001_ps",
+    "light_app_code": "demo-0727-001_ps",
     "app_name": "demo-0727-001_ps",
     "app_url": "http://app.demo.com",
     "introduction": "测试应用",
@@ -52,7 +55,7 @@ curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret"
 
 | 名称         | 类型   | 说明              |
 | ------------ | ------ | ----------------- |
-| app_code     | string | 轻应用的 APP Code |
+| light_app_code | string | 轻应用的 APP Code |
 | app_name     | string | 轻应用的名称      |
 | app_url      | string | 应用链接          |
 | introduction | string | 应用介绍          |

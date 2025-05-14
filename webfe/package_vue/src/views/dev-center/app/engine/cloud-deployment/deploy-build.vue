@@ -21,7 +21,8 @@
         ></image-credential>
         <!-- 上云版添加源码信息 -->
         <code-source
-          v-if="curAppInfo.feature?.ENABLE_IMAGE_APP_BIND_REPO"
+          v-if="curAppInfo.feature?.IMAGE_APP_BIND_REPO"
+          class="custom-image-modle"
           :build-method="buildMethod"
           @close-content-loader="closeContentLoader"
         />
@@ -29,7 +30,7 @@
       <template v-else>
         <!-- lesscode/smart应用 源码信息 -->
         <packages-view
-          v-if="isLesscodeApp || isSmartApp"
+          v-if="isLesscodeApp || isSmartApp || isAidevPlugin"
           @close-content-loader="closeContentLoader"
         />
         <!-- 代码源 -->
@@ -49,7 +50,8 @@
   </div>
 </template>
 
-<script>import codeSource from './comps/deploy-build/code-source.vue';
+<script>
+import codeSource from './comps/deploy-build/code-source.vue';
 import mirror from './comps/deploy-build/mirror.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import packagesView from '@/views/dev-center/app/engine/packages/index.vue';
@@ -77,6 +79,10 @@ export default {
   computed: {
     isCustomImage() {
       return this.curAppModule?.web_config?.runtime_type === 'custom_image';
+    },
+    // AIDEV 插件
+    isAidevPlugin() {
+      return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.AIDEV;
     },
   },
   async created() {
@@ -135,6 +141,9 @@ export default {
 .build-container {
   padding: 0 20px 20px;
   min-height: 200px;
+  ::v-deep .custom-image-modle .source-code-info {
+    border-bottom: none;
+  }
 
   :deep(.code-main),
   :deep(.mirror-main) {

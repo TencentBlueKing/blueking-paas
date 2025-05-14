@@ -7,7 +7,6 @@ Licensed under the MIT License (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at
 
     http://opensource.org/licenses/MIT
-
 Unless required by applicable law or agreed to in writing, software distributed under
 the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 either express or implied. See the License for the specific language governing permissions and
@@ -16,9 +15,12 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from django.urls import path
 
 from . import views
+from .bk_aidev.views import BkAIDevManageView
+from .bk_user.views import BkPluginUserManageView
 from .iam_adaptor.views import PluginSelectionView
 
 urlpatterns = [
@@ -33,8 +35,20 @@ urlpatterns = [
         views.PluginInstanceViewSet.as_view({"get": "retrieve", "post": "update", "delete": "destroy"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/basic_info/",
+        views.PluginInstanceViewSet.as_view({"get": "get_basic_info"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/extra_fields/",
         views.PluginInstanceViewSet.as_view({"post": "update_extra_fields"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/publisher/",
+        views.PluginInstanceViewSet.as_view({"post": "update_publisher"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/visible_range/",
+        views.PluginVisibleRangeViewSet.as_view({"post": "update", "get": "retrieve"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/logo/",
@@ -94,12 +108,25 @@ urlpatterns = [
         views.PluginReleaseViewSet.as_view({"post": "re_release"}),
     ),
     path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/rollback/",
+        views.PluginReleaseViewSet.as_view({"post": "rollback_release"}),
+    ),
+    path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/",
         views.PluginReleaseStageViewSet.as_view({"get": "retrieve"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/rerun/",
         views.PluginReleaseStageViewSet.as_view({"post": "rerun"}),
+    ),
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/stages/<str:stage_id>/status/",
+        views.PluginReleaseStageViewSet.as_view({"post": "update_stage_status"}),
+    ),
+    # 灰度发布策略
+    path(
+        "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/releases/<str:release_id>/strategy/",
+        views.PluginReleaseStrategyViewSet.as_view({"get": "list", "post": "update"}),
     ),
     path(
         "api/bkplugins/<str:pd_id>/plugins/<str:plugin_id>/market/",
@@ -177,5 +204,15 @@ urlpatterns = [
     path(
         "api/bkplugins/shim/iam/selection/plugin_view/",
         PluginSelectionView.as_view(),
+    ),
+    # bk user api
+    path(
+        "api/usermanage/departments/<str:dept_id>/",
+        BkPluginUserManageView.as_view({"get": "get_department"}),
+    ),
+    # bk aidev api
+    path(
+        "api/bkaidev/spaces/",
+        BkAIDevManageView.as_view({"get": "get_spaces"}),
     ),
 ]

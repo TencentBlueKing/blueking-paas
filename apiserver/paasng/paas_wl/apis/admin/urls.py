@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from django.urls import path
 
 from paas_wl.apis.admin.views import certs, clusters, domain, logs, processes
@@ -37,17 +36,17 @@ urlpatterns = [
         name="wl_api.process_spec_plan_by_id",
     ),
     path(
-        "wl_api/regions/<str:region>/apps/<str:name>/processes/<str:process_type>/plan",
+        "wl_api/apps/<str:name>/processes/<str:process_type>/plan",
         processes.ProcessSpecManageViewSet.as_view({"put": "switch_process_plan"}),
         name="wl_api.application.process_plan",
     ),
     path(
-        "wl_api/regions/<str:region>/apps/<str:name>/processes/<str:process_type>/scale",
+        "wl_api/apps/<str:name>/processes/<str:process_type>/scale",
         processes.ProcessSpecManageViewSet.as_view({"put": "scale"}),
         name="wl_api.application.process_scale",
     ),
     path(
-        "wl_api/regions/<str:region>/apps/<str:name>/processes/<str:process_type>/instances/<str:instance_name>/",
+        "wl_api/apps/<str:name>/processes/<str:process_type>/instances/<str:instance_name>/",
         processes.ProcessInstanceViewSet.as_view({"get": "retrieve"}),
         name="wl_api.application.process_instance",
     ),
@@ -82,13 +81,8 @@ urlpatterns = [
     # 平台管理-集群管理API
     path(
         "wl_api/platform/clusters/",
-        clusters.ClusterViewSet.as_view({"post": "update_or_create", "get": "list"}),
+        clusters.ClusterViewSet.as_view({"get": "list"}),
         name="wl_api.clusters",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:cluster_name>/node_state/",
-        clusters.ClusterViewSet.as_view({"post": "gen_node_state"}),
-        name="wl_api.cluster.node_state",
     ),
     path(
         "wl_api/platform/clusters/<str:cluster_name>/operator_info/",
@@ -104,25 +98,5 @@ urlpatterns = [
         "wl_api/platform/clusters/<str:cluster_name>/components/<str:component_name>/",
         clusters.ClusterComponentViewSet.as_view({"get": "get_component_status"}),
         name="wl_api.cluster.component_by_name",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:pk>/",
-        clusters.ClusterViewSet.as_view({"get": "retrieve", "put": "update_or_create", "delete": "destroy"}),
-        name="wl_api.cluster_by_id",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:pk>/api_servers",
-        clusters.ClusterViewSet.as_view({"post": "bind_api_server"}),
-        name="wl_api.cluster.api_servers",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:pk>/set_default/",
-        clusters.ClusterViewSet.as_view({"post": "set_as_default"}),
-        name="wl_api.cluster.set_default",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:pk>/api_servers/<str:api_server_id>",
-        clusters.ClusterViewSet.as_view({"delete": "unbind_api_server"}),
-        name="wl_api.cluster.api_server_by_id",
     ),
 ]

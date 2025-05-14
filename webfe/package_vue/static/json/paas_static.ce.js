@@ -33,7 +33,8 @@ export const PLATFORM_CONFIG = {
         SMART_APP: 3,
         IMAGE: 4,
         SCENE_APP: 5,
-        CNATIVE_IMAGE: 6        //仅镜像的云原生
+        CNATIVE_IMAGE: 6, //仅镜像的云原生
+        AIDEV: 7, // AIDEV插件
     },
 
     // 默认使用的代码库类型
@@ -145,7 +146,7 @@ export const PLATFORM_CONFIG = {
     // 文档
     DOC: {
         // 产品文档，导航右上角展示的文档总入口
-        PRODUCT_DOC: BK_DOCS_URL_PREFIX + '/markdown/PaaS/UserGuide/Overview/README.md',
+        PRODUCT_DOC: PAAS_DOCS_URL_PREFIX + '/UserGuide/Overview/README.md',
     
         // 配置蓝鲸应用访问入口
         APP_ENTRY_INTRO: DOCS_URL_PREFIX + '/topics/paas/app_entry_intro#section-3',
@@ -235,10 +236,7 @@ export const PLATFORM_CONFIG = {
         APIGW_USER_API: BK_APIGW_DOC_URL + '/guide/use-api.html',
 
         // APIGW QUICK_START
-        APIGW_QUICK_START: BK_APIGW_DOC_URL + '/guide/quickstart.html',
-
-        // APIGW API调用指引
-        APIGW_FAQ: BK_APIGW_DOC_URL + '/guide/faq.html',
+        APIGW_QUICK_START: APIGW_DOCS_PREFIX + '/UserGuide/HowTo/call-gateway-api.md',
 
         LESSCODE_START: BK_LESSCODE_URL + '/help/start',
 
@@ -272,17 +270,37 @@ export const PLATFORM_CONFIG = {
         // 服务发现配置
         SERVE_DISCOVERY: DOCS_URL_PREFIX + '/topics/paas/app_desc#%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E9%85%8D%E7%BD%AEsvc_discovery',
 
-        // 帮助：如何构建镜像
-        BUILDING_MIRRIRS_DOC: DOCS_URL_PREFIX + '/quickstart/docker/docker_hello_world',
-
         // 代码库 OAuth 授权配置指引
-        OATUH_CONFIG_GUIDE: BK_DOCS_URL_PREFIX + '/markdown/PaaS平台/产品白皮书/产品功能/系统管理/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
+        OATUH_CONFIG_GUIDE: PAAS_DOCS_URL_PREFIX + '/UserGuide/ProductFeatures/SystemManagement/PaaS3/SysOps.md#代码仓库%20OAuth%20授权配置',
 
         // 构建阶段钩子
         BUILD_PHASE_HOOK: DOCS_URL_PREFIX + '/topics/paas/build_hooks',
 
         // 蓝盾流水线构建
         BK_CI_PIPELINE_BUILD: DOCS_URL_PREFIX + '/topics/paas/bk_ci_pipeline_build',
+
+        // 部署维护
+        DEPLOYMENT_MAINTENANCE: BK_DOCS_URL_PREFIX + '/markdown/ZH/DeploymentGuides/7.1/index.md',
+
+        // 插件-工具框架
+        PLUGIN_TOOL_FRAMEWORK: DOCS_URL_PREFIX + '/p/80458883',
+
+        // 日志高级功能介绍
+        LOG_ADVANCED_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/log_advance.md',
+        // 监控功能介绍
+        MONITORING_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/monitoring/intro.md',
+        // APM 增强服务功能介绍
+        APM_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/services/svc_otel.md',
+        // 令牌使用指引
+        ACCESS_TOKEN_USAGE_GUIDE: DOCS_URL_PREFIX + '/topics/paas/access_token',
+        // 沙箱开发指引
+        SANDBOX_DEVELOPMENT_GUIDE: DOCS_URL_PREFIX + '/topics/paas/paas3_dev_sandbox_intro',
+        // 监控仪表盘指引
+        MONITORING_METRICS_GUIDE: DOCS_URL_PREFIX + '/topics/paas/monitoring/metrics',
+        // 应用描述文件介绍
+        APP_DESC_CNATIVE: DOCS_URL_PREFIX + '/topics/paas/app_desc_cnative',
+        // 访问控制台
+        WEB_CONSOLE: DOCS_URL_PREFIX + '/topics/paas/webconsole'
     },
 
     CONFIG: {
@@ -310,20 +328,29 @@ export const PAAS_STATIC_CONFIG = {
         "list": {
             "nav": [
                 {
-                    "text": staticI18n.$t('首页'),
+                  "text": staticI18n.$t('首页'),
+                  "name": "homePage",
                 },
                 {
-                    "text": staticI18n.$t("应用开发"),
-                    "url": "apps"
+                  "text": staticI18n.$t('应用开发'),
+                  "url": "apps",
+                  "name": "appDevelopment",
                 },
                 {
-                    "text": staticI18n.$t("插件开发")
+                    "text": staticI18n.$t('插件开发'),
+                    "name": "pluginDevelopment",
                 },
                 {
-                    "text": staticI18n.$t("API 网关")
+                    "text": staticI18n.$t("API 网关"),
+                    "name": "apiGateway",
                 },
                 {
-                    "text": staticI18n.$t("服务")
+                    "text": staticI18n.$t("工具"),
+                    "name": "tools",
+                },
+                {
+                    "text": staticI18n.$t("平台管理"),
+                    "name": "platformManagement",
                 }
             ],
             "api_subnav_service": [
@@ -337,77 +364,6 @@ export const PAAS_STATIC_CONFIG = {
                         {
                             "text": staticI18n.$t("API 文档"),
                             "url": BK_APIGW_DOC_URL + "/apigw-api"
-                        }
-                    ]
-                }
-            ],
-            "subnav_service": [
-                {
-                    "title": staticI18n.$t("开发"),
-                    "items": [
-                        {
-                            "text": staticI18n.$t("API 网关"),
-                            "url": "apigateway",
-                            "explain": staticI18n.$t("蓝鲸API网关服务")
-                        },
-                        {
-                            "text": staticI18n.$t("开发框架"),
-                            "url": "framework",
-                            "explain": staticI18n.$t("蓝鲸应用统一开发框架，集成基础功能模块及功能样例")
-                        },
-                        {
-                            "text": staticI18n.$t("前端组件库"),
-                            "url": "magicbox",
-                            "explain": staticI18n.$t("蓝鲸前端组件样例库")
-                        },
-                        {
-                            "text": staticI18n.$t("运维开发工具"),
-                            "url": "lesscode",
-                            "explain": staticI18n.$t("蓝鲸智云运维开发工具平台提供了前端页面在线可视化拖拽组装、配置编辑、源码生成、二次开发等能力。旨在帮助用户通过尽量少的手写代码的方式快速设计和开发 SaaS")
-                        }
-                    ]
-                },
-                {
-                    "items": [
-                        {
-                            "title": staticI18n.$t("计算"),
-                            "items": [
-                                {
-                                    "text": staticI18n.$t("应用引擎"),
-                                    "url": "app-engine",
-                                    "explain": staticI18n.$t("提供弹性、便捷的应用部署服务，支持Python、Go 等多种语言")
-                                }
-                            ]
-                        },
-                        {
-                            "title": staticI18n.$t("增强服务"),
-                            "items": [
-                                {
-                                    "text": staticI18n.$t("数据存储"),
-                                    "url": "vas/1",
-                                    "explain": staticI18n.$t("蓝鲸提供的数据存储类服务集合")
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "title": staticI18n.$t("流程引擎"),
-                    "items": [
-                        {
-                            "text": "Bamboo",
-                            "url": "bamboo",
-                            "explain": staticI18n.$t("标准运维V3使用的分布式的流程定义、管理、调度引擎")
-                        }
-                    ]
-                },
-                {
-                    "title": staticI18n.$t("推广"),
-                    "items": [
-                        {
-                            "text": staticI18n.$t("应用市场"),
-                            "url": "market",
-                            "explain": staticI18n.$t("蓝鲸提供的官方应用市场，用户可以在市场中搜索并使用您开发的应用")
                         }
                     ]
                 }
@@ -541,7 +497,7 @@ export const PAAS_STATIC_CONFIG = {
                 "list": [
                     {
                         "title": staticI18n.$t("如何使用蓝鲸开发框架？"),
-                        "url": DOCS_URL_PREFIX + "/topics/company_tencent/python_framework_usage",
+                        "url": BK_DOCS_URL_PREFIX + "/markdown/ZH/PaaS/DevelopTools/SaaSGuide/DevBasics/README.md",
                         "info": staticI18n.$t("集成登录鉴权、安全防护、权限控制等基础模块，更有后台任务、云API调用等样例供您参考")
                     },
                     {
@@ -562,6 +518,17 @@ export const PAAS_STATIC_CONFIG = {
     "app_nav": {
         "message": staticI18n.$t("应用左侧导航"),
         "cloudList": [
+            {
+                "name": "appMigrationInfo",
+                "label": staticI18n.$t("迁移信息"),
+                "matchRouters": ["appMigrationInfo"],
+                "iconfontName": "qianyi-xianxing",
+                "supportModule": true,
+                "destRoute": {
+                  "name": "appMigrationInfo"
+                },
+                "children": []
+            },
             {
                 "name": "cloudAppSummary",
                 "label": staticI18n.$t("概览"),
@@ -605,6 +572,35 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
+                "name": "cloudAppDeployForBuild",
+                "label": staticI18n.$t("模块配置"),
+                "iconfontName": "configuration-line",
+                "supportModule": false,
+                "destRoute": {
+                    "name": "cloudAppDeployForBuild"
+                },
+                "matchRouters": [
+                    "cloudAppDeploy",
+                    "cloudAppDeployForBuild",
+                    "cloudAppDeployForProcess",
+                    "cloudAppDeployForEnv",
+                    "cloudAppDeployForVolume",
+                    "cloudAppDeployForHook",
+                    "cloudAppDeployForResource",
+                    'imageCredential',
+                    'observabilityConfig',
+                    'moduleInfo',
+                    'appServices',
+                    'appServiceInnerShared',
+                    'appServiceInner',
+                    'cloudAppServiceInnerShared',
+                    'cloudAppServiceInner',
+                    'cloudAppServiceInnerWithModule',
+                    'networkConfig'
+                ],
+                "children": []
+            },
+            {
                 "name": "appObservability",
                 "label": staticI18n.$t("可观测性"),
                 "iconfontName": "keguance",
@@ -632,6 +628,12 @@ export const PAAS_STATIC_CONFIG = {
                         "destRoute": {
                             "name": "cloudAppAnalysis"
                         }
+                    },
+                    {
+                        "name": staticI18n.$t("仪表盘"),
+                        "destRoute": {
+                            "name": "dashboards"
+                        }
                     }
                 ]
             },
@@ -657,63 +659,30 @@ export const PAAS_STATIC_CONFIG = {
             },
             {
                 "name": "appConfigs",
-                "label": staticI18n.$t("应用配置"),
+                "label": staticI18n.$t("应用设置"),
                 "iconfontName": "gear",
-                "children": [
-                    {
-                        "name": staticI18n.$t("模块配置"),
-                        "matchRouters": [
-                            "cloudAppDeploy",
-                            "cloudAppDeployForBuild",
-                            "cloudAppDeployForProcess",
-                            "cloudAppDeployForEnv",
-                            "cloudAppDeployForVolume",
-                            "cloudAppDeployForYaml",
-                            "cloudAppDeployForHook",
-                            "cloudAppDeployForResource",
-                            'imageCredential',
-                            'observabilityConfig',
-                            'moduleInfo',
-                            'appServices',
-                            'appServiceInnerShared',
-                            'appServiceInner',
-                            'cloudAppServiceInnerShared',
-                            'cloudAppServiceInner',
-                            'cloudAppServiceInnerWithModule',
-                            'networkConfig'
-                        ],
-                        "iconfontName": "squares",
-                        "supportModule": false,
-                        "destRoute": {
-                          "name": "cloudAppDeployForBuild"
-                        },
-                        "children": []
-                    },
-                    {
-                        "name": staticI18n.$t("应用配置"),
-                        "matchRouters": [
-                            'appConfigs',
-                            'appMarket',
-                            'appBasicInfo',
-                            'appMembers',
-                            'appPersistentStorage',
-                        ],
-                        "destRoute": {
-                          "name": "appConfigs"
-                        }
-                    }
-                ]
+                "supportModule": false,
+                "matchRouters": [
+                    'appConfigs',
+                    'appMarket',
+                    'appBasicInfo',
+                    'appMembers',
+                    'appPersistentStorage',
+                    'docuManagement',
+                ],
+                "destRoute": {
+                    "name": "appMarket"
+                },
+                "children": []
             },
             {
-                "name": "docuManagement",
-                "label": staticI18n.$t("文档管理"),
-                "matchRouters": [
-                    "docuManagement"
-                ],
-                "iconfontName": "page-fill",
+                "name": "operationRecord",
+                "label": staticI18n.$t("操作记录"),
+                "matchRouters": ["operationRecord"],
+                "iconfontName": "caozuojilu",
                 "supportModule": false,
                 "destRoute": {
-                    "name": "docuManagement"
+                  "name": "operationRecord"
                 },
                 "children": []
             }
@@ -724,7 +693,8 @@ export const PAAS_STATIC_CONFIG = {
                 "label": staticI18n.$t("概览"),
                 "matchRouters": [
                     "appSummaryEmpty",
-                    "pluginSummary"
+                    "pluginSummary",
+                    "pluginFalsePositiveList"
                 ],
                 "iconfontName": "overview",
                 "supportModule": true,
@@ -739,7 +709,8 @@ export const PAAS_STATIC_CONFIG = {
                 "matchRouters": [
                     "pluginVersionManager",
                     "pluginVersionEditor",
-                    "pluginVersionRelease"
+                    "pluginVersionRelease",
+                    "pluginTestReport"
                 ],
                 "iconfontName": "publish-fill",
                 "supportModule": true,
@@ -809,9 +780,21 @@ export const PAAS_STATIC_CONFIG = {
                         ]
                     },
                     {
+                        "name": staticI18n.$t("可见范围"),
+                        "destRoute": {
+                          "name": "pluginVisibleRange"
+                        }
+                    },
+                    {
                         "name": staticI18n.$t("成员管理"),
                         "destRoute": {
                           "name": "pluginRoles"
+                        }
+                    },
+                    {
+                        "name": staticI18n.$t("操作记录"),
+                        "destRoute": {
+                          "name": "pluginOperationRecords"
                         }
                     }
                 ]
@@ -962,113 +945,16 @@ export const PAAS_STATIC_CONFIG = {
                 "children": []
             },
             {
-                "name": "docuManagement",
-                "label": staticI18n.$t("文档管理"),
-                "matchRouters": [
-                    "docuManagement"
-                ],
-                "iconfontName": "page-fill",
+                "name": "operationRecord",
+                "label": staticI18n.$t("操作记录"),
+                "matchRouters": ["operationRecord"],
+                "iconfontName": "caozuojilu",
                 "supportModule": false,
                 "destRoute": {
-                    "name": "docuManagement"
+                  "name": "operationRecord"
                 },
                 "children": []
             }
         ]
     },
-    "bk_service": {
-        "message": staticI18n.$t("蓝鲸服务导航文案"),
-        "list": [
-            {
-                "name": "development",
-                "label": staticI18n.$t("开发"),
-                "iconfontName": "window-source-code",
-                "sublist": [
-                    {
-                        "name": staticI18n.$t("API 网关"),
-                        "destRoute": {
-                            "name": "serviceAPIGateway"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("开发框架"),
-                        "destRoute": {
-                            "name": "serviceFramework"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("前端组件库"),
-                        "destRoute": {
-                            "name": "serviceMagicBox"
-                        }
-                    },
-                    {
-                        "name": staticI18n.$t("运维开发工具"),
-                        "destRoute": {
-                          "name": "serviceLesscode"
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "computing",
-                "label": staticI18n.$t("计算"),
-                "iconfontName": "chip",
-                "sublist": [
-                    {
-                        "name": staticI18n.$t("应用引擎"),
-                        "destRoute": {
-                            "name": "serviceAppEngine"
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "appServices",
-                "label": staticI18n.$t("增强服务"),
-                "iconfontName": "diamond",
-                "sublist": [
-                    {
-                        "name": staticI18n.$t("数据存储"),
-                        "matchRouters": [
-                            "serviceVas",
-                            "serviceInnerPage"
-                        ],
-                        "destRoute": {
-                            "name": "serviceVas",
-                            "params": {
-                                "category_id": "1"
-                            }
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "workflow",
-                "label": staticI18n.$t("流程引擎"),
-                "iconfontName": "dashboard",
-                "sublist": [
-                    {
-                        "name": "Bamboo",
-                        "destRoute": {
-                            "name": "serviceBamboo"
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "marketing",
-                "label": staticI18n.$t("推广"),
-                "iconfontName": "volumn",
-                "sublist": [
-                    {
-                        "name": staticI18n.$t("应用市场"),
-                        "destRoute": {
-                            "name": "serviceMarket"
-                        }
-                    }
-                ]
-            }
-        ]
-    }
 }

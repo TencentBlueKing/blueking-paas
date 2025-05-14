@@ -1,20 +1,19 @@
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from functools import partial
 
 import pytest
@@ -106,15 +105,23 @@ def _deploy_stag_env(bk_stag_env, bk_stag_wl_app, namespace_maker):
     """Deploy a default payload to cluster for stag environment"""
     namespace_maker.make(bk_stag_wl_app.namespace)
     resource = create_app_resource(generate_bkapp_name(bk_stag_env), "nginx:latest")
+    resource.metadata.annotations.update(
+        {
+            "bkapp.paas.bk.tencent.com/code": bk_stag_env.application.code,
+            "bkapp.paas.bk.tencent.com/module-name": bk_stag_env.module.name,
+        }
+    )
     deploy(bk_stag_env, resource.to_deployable())
 
 
 @pytest.mark.skip_when_no_crds()
 class TestCNativeProcController:
-    @pytest.mark.usefixtures("_deploy_stag_env")
-    def test_scale_static_integrated(self, bk_stag_env, web_proc_factory):
-        web_proc_factory(target_replicas=1, target_status=ProcessTargetStatus.START.value)
+    @pytest.fixture(autouse=True)
+    def _create_module_process_spec(self, bk_module):
+        G(ModuleProcessSpec, module=bk_module, name="web")
 
+    @pytest.mark.usefixtures("_deploy_stag_env")
+    def test_scale_static_integrated(self, bk_stag_env):
         assert BkAppProcScaler(bk_stag_env).get_replicas("web") == 1
         # Scale the process
         CNativeProcController(bk_stag_env).scale("web", False, 2)
@@ -129,8 +136,7 @@ class TestCNativeProcController:
         assert BkAppProcScaler(bk_stag_env).get_replicas("web") == 2
 
     @pytest.mark.usefixtures("_deploy_stag_env")
-    def test_autoscaling_integrated(self, bk_stag_env, bk_stag_wl_app, web_proc_factory):
-        web_proc_factory(target_replicas=1, target_status=ProcessTargetStatus.START.value)
+    def test_autoscaling_integrated(self, bk_module, bk_stag_env, bk_stag_wl_app):
         # Turn on the feature flag
         cluster = get_cluster_by_app(bk_stag_wl_app)
         cluster.feature_flags.update({ClusterFeatureFlag.ENABLE_AUTOSCALING: True})
@@ -147,10 +153,8 @@ class TestCNativeProcController:
         assert BkAppProcScaler(bk_stag_env).get_autoscaling("web") is None
 
     @pytest.mark.usefixtures("_deploy_stag_env")
-    def test_scale_down_to_module_target_replicas(self, bk_stag_env, web_proc_factory):
+    def test_scale_down_to_module_target_replicas(self, bk_module, bk_stag_env):
         """测试 scale down 目标副本数与模块目标副本数( ModuleProcessSpec.target_replicas ) 一致时, 会成功 scale down"""
-        web_proc_factory(target_replicas=1, target_status=ProcessTargetStatus.START.value)
-
         proc_spec = ModuleProcessSpec.objects.get(module=bk_stag_env.module, name="web")
         module_target_replicas = proc_spec.target_replicas
         assert proc_spec.get_target_replicas(bk_stag_env.environment) == module_target_replicas

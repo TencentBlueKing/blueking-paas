@@ -28,8 +28,8 @@ Before calling the interface, please get your access_token first. For specific g
 ```json
 {
 	"status": "failed",
-	"logs": "\nProcfile error: unable to read file \"Procfile\", details: module 'paasng.dev_resources.sourcectl.package.client' has no attribute 'S3TarClient'",
-	"error_detail": "Procfile error: unable to read file \"Procfile\", details: module 'paasng.dev_resources.sourcectl.package.client' has no attribute 'S3TarClient'",
+	"logs": "\nProcfile error: ...",
+	"error_detail": "Procfile error: ...",
 	"error_tips": {
 		"matched_solutions_found": false,
 		"possible_reason": "Temporarily unable to find a solution, please go to the \"Standard Output Log\" to check for exceptions",

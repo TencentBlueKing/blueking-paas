@@ -70,11 +70,60 @@ platform:
 		// 检测 leaderElection
 		Expect(projCfg.LeaderElection.LeaderElect).To(Equal(lo.ToPtr(true)))
 		Expect(projCfg.LeaderElection.ResourceName).To(Equal("e56dbef1.bk.tencent.com"))
-		// 检测 platformConfig
-		Expect(projCfg.Platform.BkAppCode).To(Equal("foo"))
-		Expect(projCfg.Platform.BkAppSecret).To(Equal("bar"))
-		Expect(projCfg.Platform.BkAPIGatewayURL).To(Equal("https://example.com"))
 		Expect(projCfg.Platform.SentryDSN).To(Equal("https://sentry.example.com"))
 		Expect(projCfg.Platform.IngressClassName).To(Equal("nginx"))
+		Expect(projCfg.GetIngressClassName()).To(Equal("nginx"))
+		Expect(projCfg.Platform.CustomDomainIngressClassName).To(Equal(""))
+		Expect(projCfg.GetCustomDomainIngressClassName()).To(Equal("nginx"))
+	})
+
+	It("test load from file with customDomainIngressClassName", func() {
+		var projCfg ProjectConfig
+		configContent := `
+apiVersion: paas.bk.tencent.com/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: projectconfig-sample
+platform:
+  bkAppCode: "foo"
+  bkAppSecret: "bar"
+  ingressClassName: bk-nginx
+  customDomainIngressClassName: nginx
+`
+		file, err := os.CreateTemp("", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = file.Write([]byte(configContent))
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = ctrl.ConfigFile().AtPath(file.Name()).OfKind(&projCfg).Complete()
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(projCfg.GetIngressClassName()).To(Equal("bk-nginx"))
+		Expect(projCfg.GetCustomDomainIngressClassName()).To(Equal("nginx"))
+	})
+
+	It("test load from file without any ingressClassName", func() {
+		var projCfg ProjectConfig
+		configContent := `
+apiVersion: paas.bk.tencent.com/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: projectconfig-sample
+platform:
+  bkAppCode: "foo"
+  bkAppSecret: "bar"
+`
+		file, err := os.CreateTemp("", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = file.Write([]byte(configContent))
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = ctrl.ConfigFile().AtPath(file.Name()).OfKind(&projCfg).Complete()
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(projCfg.GetIngressClassName()).To(Equal(""))
+		Expect(projCfg.GetCustomDomainIngressClassName()).To(Equal(""))
 	})
 })

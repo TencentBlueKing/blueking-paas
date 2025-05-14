@@ -1,3 +1,19 @@
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
 """An admin tool that helps migrate applications that using resource mapper v1 to v2.
 
 # 使用说明：
@@ -21,9 +37,11 @@
     python manage.py adm_mapper_v1 --action rollback --env-id {ENV_ID}
 
 """
-import sys
-from enum import Enum
 
+import sys
+
+from blue_krill.data_types.enum import StrStructuredEnum
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
 
 from paas_wl.bk_app.applications.api import get_latest_build_id
@@ -37,7 +55,7 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.deploy.release.legacy import release_by_engine
 
 
-class CommandAction(str, Enum):
+class CommandAction(StrStructuredEnum):
     """A command action."""
 
     # Upgrade to resource mapper v2
@@ -61,17 +79,17 @@ class Command(BaseCommand, CommandBasicMixin):
     def handle(self, *args, **options):
         try:
             env = ModuleEnvironment.objects.get(id=options["env_id"])
-        except ModuleEnvironment.DoesNotExist:
+        except ObjectDoesNotExist:
             self.exit_with_error(f"Environment {options['env_id']} does not exist")
-
-        if options["action"] == CommandAction.UPGRADE.value:
-            self._handle_upgrade(env)
-        elif options["action"] == CommandAction.ROLLBACK.value:
-            self._handle_rollback(env)
-        elif options["action"] == CommandAction.CLEAN_V1.value:
-            self._handle_clean_v1(env)
         else:
-            raise RuntimeError("Invalid action")
+            if options["action"] == CommandAction.UPGRADE:
+                self._handle_upgrade(env)
+            elif options["action"] == CommandAction.ROLLBACK:
+                self._handle_rollback(env)
+            elif options["action"] == CommandAction.CLEAN_V1:
+                self._handle_clean_v1(env)
+            else:
+                raise RuntimeError("Invalid action")
 
     def _handle_upgrade(self, env: ModuleEnvironment):
         """Upgrade the environment to use resource mapper v2, it will re-deploy the environment

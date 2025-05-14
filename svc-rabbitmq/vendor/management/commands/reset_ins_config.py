@@ -16,20 +16,24 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
+import json
 from typing import Optional
 
 from django.core.management.base import BaseCommand
-from vendor.models import Cluster
+from paas_service.models import ServiceInstance
 
 
 class Command(BaseCommand):
-    help = '批量修改已分配 rabbitmq 实例配置信息'
+    help = "批量修改已分配 rabbitmq 实例配置信息"
 
     def add_arguments(self, parser):
         parser.add_argument("--host", dest="host", help="host，不填则不更新", default=None)
         parser.add_argument("--port", dest="port", help="port，不填则不更新", default=None)
         parser.add_argument("--password", dest="password", help="paasword，不填则不更新", default=None)
-        parser.add_argument("--api-port", dest="api-port", help="api-port，与 host 组成 api-url ", default=None, type=int)
+        parser.add_argument(
+            "--api-port", dest="api-port", help="api-port，与 host 组成 api-url ", default=None, type=int
+        )
         parser.add_argument("--api-url", dest="api-url", help="api-url，不填则由 host 与 api-port 组成", default=None)
         parser.add_argument("--admin", dest="admin", help="admin，不填则不更新", default=None)
 
@@ -48,57 +52,32 @@ class Command(BaseCommand):
         dry_run: bool,
         **options,
     ):
-        cluster_objs = Cluster.objects.all()
-        for cluster in cluster_objs:
-            original_values = {
-                "host": cluster.host,
-                "port": cluster.port,
-                "password": cluster.password,
-                "management_api": cluster.management_api,
-                "admin": cluster.admin,
-            }
-            update_fields = []
+        svc_objs = ServiceInstance.objects.all()
+        for svc_obj in svc_objs:
+            credentials = svc_obj.get_credentials()
+            updated_credentials = credentials.copy()
+
             if api_url:
-                cluster.management_api = api_url
-                update_fields.append("management_api")
+                updated_credentials["management_api"] = api_url
             elif host and api_port:
-                cluster.management_api = "http://%s:%s" % (host, api_port)
-                update_fields.append("management_api")
-            elif host:
-                api_port = cluster.management_api.split(":")[2]
-                cluster.management_api = "http://%s:%s" % (host, api_port)
-                update_fields.append("management_api")
-            elif api_port:
-                cluster.management_api = "http://%s:%s" % (cluster.host, api_port)
-                update_fields.append("management_api")
+                updated_credentials["management_api"] = "http://%s:%s" % (host, api_port)
 
             if host:
-                cluster.host = host
-                update_fields.append("host")
+                updated_credentials["host"] = host
 
             if port:
-                cluster.port = port
-                update_fields.append("port")
+                updated_credentials["port"] = port
 
             if password:
-                cluster.password = password
-                update_fields.append("password")
+                updated_credentials["password"] = password
 
             if admin:
-                cluster.admin = admin
-                update_fields.append("admin")
+                updated_credentials["admin"] = admin
 
-            if not dry_run:
-                if update_fields:
-                    cluster.save(update_fields=update_fields)
+            if not dry_run and updated_credentials != credentials:
+                svc_obj.credentials = json.dumps(updated_credentials)
+                svc_obj.save(update_fields=["credentials"])
 
-            updated_values = {
-                "host": cluster.host,
-                "port": cluster.port,
-                "password": cluster.password,
-                "management_api": cluster.management_api,
-                "admin": cluster.admin,
-            }
             self.stdout.write(
-                self.style.NOTICE(f'实例配置变化：\n' f'before:{original_values} \n' f'after:{updated_values} \n')
+                self.style.NOTICE(f"实例配置变化：\n before:{credentials} \n after:{updated_credentials} \n")
             )

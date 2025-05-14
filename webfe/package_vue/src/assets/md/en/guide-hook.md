@@ -7,13 +7,16 @@ The "pre_release" hook executes **after build completion and before deployment p
 To create a pre-release hook, modify the `module.scripts` field in the `app_desc.yaml` file. Here's an example:
 
 ```yaml
-spec_version: 2
+specVersion: 3
 module:
+  name: default
   language: Python
-  scripts:
-    pre_release_hook: "python manage.py migrate --no-input"
-  processes:
-	# ...omitted
+  spec:
+    processes:
+      # ...omitted
+    hooks:
+      preRelease:
+        procCommand: python manage.py migrate --no-input
 ```
 
 #### Notes

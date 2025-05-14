@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 import logging
 from typing import Optional
@@ -24,6 +23,7 @@ from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 from django.utils.translation import get_language
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.platform.bk_lesscode.apigw.client import Client
 from paasng.platform.bk_lesscode.apigw.client import Group as LessCodeGroup
 from paasng.platform.bk_lesscode.exceptions import LessCodeApiError, LessCodeGatewayServiceError
@@ -42,10 +42,11 @@ class DummyLessCodeClient:
 class LessCodeClient:
     """bk_lesscode 通过 APIGW 提供的 API"""
 
-    def __init__(self, login_cookie: str, client: Optional[LessCodeGroup] = None):
+    def __init__(self, login_cookie: str, tenant_id: str, client: Optional[LessCodeGroup] = None):
         self.client = client or self._make_api_client()
         self.login_cookie_name = settings.BK_COOKIE_NAME
         self.login_cookie = login_cookie
+        self.tenant_id = tenant_id
 
     def _make_api_client(self) -> LessCodeGroup:
         """Make a client object for requesting"""
@@ -59,7 +60,8 @@ class LessCodeClient:
                     "bk_app_secret": settings.BK_APP_SECRET,
                     self.login_cookie_name: self.login_cookie,
                 }
-            )
+            ),
+            API_HERDER_TENANT_ID: self.tenant_id,
         }
 
         # 需要 lesscode 的 API 支持国际化
@@ -82,7 +84,7 @@ class LessCodeClient:
             raise LessCodeGatewayServiceError(f"create lesscode app error, detail: {e}")
 
         if resp.get("code") != 0:
-            logger.exception(f'create lesscode app error, message:{resp["message"]} \n data: {data}')
+            logger.exception(f"create lesscode app error, message:{resp['message']} \n data: {data}")
             raise LessCodeApiError(resp["message"])
 
         return True
@@ -99,15 +101,15 @@ class LessCodeClient:
             return ""
 
         if resp.get("code") != 0:
-            logger.exception(f'create lesscode app error, message:{resp["message"]} \n params: {params}')
+            logger.exception(f"create lesscode app error, message:{resp['message']} \n params: {params}")
             return ""
 
         address_path = resp.get("data", {}).get("linkUrl")
         return f"{settings.BK_LESSCODE_URL}{address_path}"
 
 
-def make_bk_lesscode_client(login_cookie: str, client: Optional[LessCodeGroup] = None):
-    if settings.ENABLE_BK_LESSCODE_APIGW:
-        return LessCodeClient(login_cookie, client)
+def make_bk_lesscode_client(login_cookie: str, tenant_id: str, client: Optional[LessCodeGroup] = None):
+    if settings.ENABLE_BK_LESSCODE:
+        return LessCodeClient(login_cookie, tenant_id, client)
     else:
         return DummyLessCodeClient()

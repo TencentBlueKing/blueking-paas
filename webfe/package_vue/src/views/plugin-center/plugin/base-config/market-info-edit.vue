@@ -315,7 +315,6 @@ export default {
 }
 .market-info-wrapper .editor .ql-snow {
   background: #fff;
-  overflow-y: auto;
 }
 .market-info-wrapper .editor .ql-snow .ql-formats {
   line-height: 24px;

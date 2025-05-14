@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from dataclasses import make_dataclass
 from textwrap import dedent
 from unittest.mock import Mock, patch
@@ -24,6 +23,7 @@ import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
 from paas_wl.bk_app.deploy.app_res.controllers import CommandHandler, ProcessesHandler
 from paas_wl.bk_app.processes.managers import AppProcessManager
 from paas_wl.infras.resource_templates.constants import AppAddOnType
@@ -52,7 +52,7 @@ class TestCommand:
     @pytest.fixture()
     def command_model(self, wl_app, wl_build):
         wl_build.image = "busybox:latest"
-        wl_build.artifact_metadata = {"entrypoint": ["sh", "-c"]}
+        wl_build.artifact_metadata = BuildArtifactMetadata(entrypoint=["sh", "-c"])
         wl_build.save()
         config = wl_app.latest_config
         config.runtime.image_pull_policy = ImagePullPolicy.NEVER
@@ -143,9 +143,11 @@ class TestProcessHandler:
     @pytest.mark.mock_get_structured_app()
     def test_deploy_processes(self, wl_app, web_process):
         handler = ProcessesHandler.new_by_app(wl_app)
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch") as kd, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki:
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.replace_or_patch") as kd,
+            patch("paas_wl.workloads.networking.ingress.managers.service.service_kmodel") as ks,
+            patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki,
+        ):
             ks.get.side_effect = AppEntityNotFound()
             ki.get.side_effect = AppEntityNotFound()
 
@@ -172,9 +174,10 @@ class TestProcessHandler:
 
     def test_scale_process(self, wl_app):
         handler = ProcessesHandler.new_by_app(wl_app)
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks:
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp,
+            patch("paas_wl.workloads.networking.ingress.managers.service.service_kmodel") as ks,
+        ):
             proc_config = get_mapper_proc_config_latest(wl_app, "worker")
             handler.scale(proc_config, 3)
 
@@ -193,10 +196,11 @@ class TestProcessHandler:
         d_body = make_dataclass("DBody", [("spec", d_spec)])
         kg = Mock(return_value=d_body(spec=d_spec(replicas=1)))
 
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki, patch(
-            "paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp,
+            patch("paas_wl.workloads.networking.ingress.managers.service.service_kmodel") as ks,
+            patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki,
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg),
         ):
             proc_config = get_mapper_proc_config_latest(wl_app, "worker")
             handler.shutdown(proc_config)
@@ -218,10 +222,11 @@ class TestProcessHandler:
         d_body = make_dataclass("DBody", [("spec", d_spec)])
         kg = Mock(return_value=d_body(spec=d_spec(replicas=1)))
 
-        with patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp, patch(
-            "paas_wl.workloads.networking.ingress.managers.service.service_kmodel"
-        ) as ks, patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki, patch(
-            "paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg
+        with (
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.patch") as kp,
+            patch("paas_wl.workloads.networking.ingress.managers.service.service_kmodel") as ks,
+            patch("paas_wl.workloads.networking.ingress.managers.base.ingress_kmodel") as ki,
+            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kg),
         ):
             # Make ingress point to web service
             faked_ingress = Mock()

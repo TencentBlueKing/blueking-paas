@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 import traceback
 from typing import List, Tuple
@@ -26,6 +25,7 @@ from paasng.infras.iam.client import BKIAMClient
 from paasng.infras.iam.members.models import ApplicationGradeManager, ApplicationUserGroup
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 # 打印应用 ID 信息时，每行展示数量
@@ -53,7 +53,6 @@ class Command(BaseCommand):
         self.dry_run: bool = dry_run
         self.apps: List[str] = apps
         self.exclude_users: List[str] = exclude_users or []
-        self.cli = BKIAMClient()
 
         self._prepare()
         self._sync()
@@ -129,9 +128,7 @@ class Command(BaseCommand):
 
         print(f"---------------- sync {self.total_count} applications administrator finished! ----------------")
         print(
-            f"-- success: {len(self.success_records)} "
-            f"failed: {len(self.failed_records)} "
-            f"unchanged: {unchanged_cnt} --"
+            f"-- success: {len(self.success_records)} failed: {len(self.failed_records)} unchanged: {unchanged_cnt} --"
         )
 
     def _sync_single(self, idx: int, app_code: str) -> Tuple[List, bool]:
@@ -144,20 +141,23 @@ class Command(BaseCommand):
         if not user_group_id:
             raise ValueError(f"app {app_code} user group id not find!")
 
-        administrators = self.cli.fetch_user_group_members(user_group_id)
+        tenant_id = get_tenant_id_for_app(app_code)
+        iam_client = BKIAMClient(tenant_id)
+
+        administrators = iam_client.fetch_user_group_members(user_group_id)
 
         grade_manager_id = self.grade_manager_map.get(app_code)
         if not grade_manager_id:
             raise ValueError(f"app {app_code} grade manager id not find!")
 
-        grade_managers = self.cli.fetch_grade_manager_members(grade_manager_id)
+        grade_managers = iam_client.fetch_grade_manager_members(grade_manager_id)
 
         sync_logs.append(f"app_code: {app_code}, user_group_id: {user_group_id}, grade_manager_id: {grade_manager_id}")
 
         # 待移除的分级管理员（不是应用管理员的，都删掉）
         if usernames := list(set(grade_managers) - set(administrators)):
             sync_logs.append(f"remove {len(usernames)} user from grade manager: {usernames}")
-            self.cli.delete_grade_manager_members(grade_manager_id, usernames)
+            iam_client.delete_grade_manager_members(grade_manager_id, usernames)
             unchanged = False
         else:
             sync_logs.append("no users need to be remove from grade manager")
@@ -170,7 +170,7 @@ class Command(BaseCommand):
                     sync_logs.append(f"user {user} in exclude user list, skip add as grade manager")
                     continue
                 try:
-                    self.cli.add_grade_manager_members(grade_manager_id, [user])
+                    iam_client.add_grade_manager_members(grade_manager_id, [user])
                     unchanged = False
                 except Exception as e:
                     sync_logs.append(f"failed to add grade manager: {user}, maybe was resigned: {str(e)}")

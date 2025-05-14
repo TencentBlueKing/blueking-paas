@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from unittest import mock
 
 import arrow
@@ -50,7 +49,7 @@ class TestClient:
     def test_list_services_normal(self, mocked_get, client):
         mocked_get.return_value = mock_json_response(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON)
 
-        assert len(client.list_services()) == 3
+        assert len(client.list_services()) == 2
         assert mocked_get.called
         assert mocked_get.call_args[0][0] == "http://faked-host/services/"
         auth_inst = mocked_get.call_args[1]["auth"]
@@ -64,6 +63,17 @@ class TestClient:
         assert data is not None
         assert mocked_get.called
         assert mocked_get.call_args[0][0] == "http://faked-host/instances/faked-id/"
+        auth_inst = mocked_get.call_args[1]["auth"]
+        assert isinstance(auth_inst, ClientJWTAuth)
+
+    @mock.patch("requests.get")
+    def test_retrieve_instance_to_be_deleted_normal(self, mocked_get, client):
+        mocked_get.return_value = mock_json_response(data_mocks.REMOTE_INSTANCE_JSON)
+
+        data = client.retrieve_instance_to_be_deleted(instance_id="faked-id")
+        assert data is not None
+        assert mocked_get.called
+        assert mocked_get.call_args[0][0] == "http://faked-host/instances/faked-id/?to_be_deleted=True"
         auth_inst = mocked_get.call_args[1]["auth"]
         assert isinstance(auth_inst, ClientJWTAuth)
 

@@ -96,5 +96,23 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/process_services/`;
       return http.get(url, config);
     },
+
+    /**
+     * 进程重启
+     * @param {Object} params 包括appCode moduleId env processName
+     */
+    restartProcess({}, { appCode, moduleId, env, processName }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/${processName}/restart/`;
+      return http.put(url, {}, config);
+    },
+
+    /**
+     * 实例重启
+     * @param {Object} params 包括appCode moduleId env instanceName
+     */
+    restartInstance({}, { appCode, moduleId, env, instanceName }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/instances/${instanceName}/restart/`;
+      return http.put(url, {}, config);
+    },
   },
 };

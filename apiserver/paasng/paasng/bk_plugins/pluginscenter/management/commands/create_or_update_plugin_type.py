@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import pprint
 from pathlib import Path
 
@@ -50,7 +49,7 @@ class Command(BaseCommand):
     def handle(self, identifier, env, dry_run, *args, **options):
         file_path = Path(settings.BASE_DIR) / "support-files" / "plugin" / f"{identifier}-{env}.yaml"
         with open(file_path, "r", encoding="utf-8") as f:
-            data = yaml.load(f)
+            data = yaml.full_load(f)
 
         if models.PluginDefinition.objects.filter(identifier=identifier).exists():
             self.stdout.write(self.style.WARNING(f"ID 为 {identifier} 的插件类型已经存在，将进行更新"))
@@ -72,6 +71,7 @@ class Command(BaseCommand):
                 "logo": pd_data.logo,
                 "administrator": pd_data.administrator,
                 "approval_config": pd_data.approvalConfig,
+                "options": pd_data.options,
                 "release_revision": pd_data.releaseRevision,
                 "release_stages": pd_data.releaseStages,
                 "test_release_revision": pd_data.testReleaseRevision,
@@ -95,6 +95,9 @@ class Command(BaseCommand):
                 "extra_fields_order": pd_data.spec.basicInfo.extraFieldsOrder,
                 "overview_page": pd_data.spec.basicInfo.overviewPage,
                 "sync_members": pd_data.spec.basicInfo.syncMembers,
+                "access_mode": pd_data.spec.basicInfo.accessMode,
+                "description_zh_cn": pd_data.spec.basicInfo.description,
+                "publisher_description_zh_cn": pd_data.spec.basicInfo.publisher_description,
             },
         )
 
@@ -116,8 +119,8 @@ class Command(BaseCommand):
             models.PluginVisibleRangeDefinition.objects.update_or_create(
                 pd=pd,
                 defaults={
-                    "description_zh_cn": pd_data.spec.visibleRange.description,
-                    "scope": pd_data.spec.visibleRange.scope,
+                    "api": pd_data.spec.visibleRange.api,
+                    "initial": pd_data.spec.visibleRange.initial,
                 },
             )
 

@@ -1,31 +1,34 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import TYPE_CHECKING, Type
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, TaskPoller
 from django.utils.translation import gettext as _
 
-from paasng.platform.applications.signals import module_environment_offline_event, module_environment_offline_success
-from paasng.platform.engine.constants import JobStatus, ReleaseStatus
+from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.service import add_app_audit_record
+from paasng.platform.applications.signals import module_environment_offline_success
+from paasng.platform.engine.constants import JobStatus, OperationTypes, ReleaseStatus
 from paasng.platform.engine.exceptions import OfflineOperationExistError
 from paasng.platform.engine.models import Deployment, OfflineOperation
+from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.utils.query import DeploymentGetter, OfflineOperationGetter
 
 if TYPE_CHECKING:
@@ -72,13 +75,15 @@ class BaseArchiveManager:
             source_version_name=deployment.source_version_name,
             source_revision=deployment.source_revision,
             source_comment=deployment.source_comment,
+            tenant_id=deployment.tenant_id,
         )
-
-        # send offline event to create operation record
-        module_environment_offline_event.send(
-            sender=offline_operation, offline_instance=offline_operation, environment=self.env.environment
+        ModuleEnvironmentOperations.objects.create(
+            operator=operator,
+            app_environment=offline_operation.app_environment,
+            application=offline_operation.app_environment.application,
+            operation_type=OperationTypes.OFFLINE.value,
+            object_uid=offline_operation.pk,
         )
-
         self.perform_implement(offline_operation, result_handler=ArchiveResultHandler)
         return offline_operation
 
@@ -107,9 +112,24 @@ class ArchiveResultHandler(CallbackHandler):
         job_status = status.to_job_status()
         if job_status == JobStatus.SUCCESSFUL:
             offline_op.set_successful()
+            result_code = ResultCode.SUCCESS
         else:
             offline_op.set_failed(error_detail)
+            result_code = ResultCode.FAILURE
 
         module_environment_offline_success.send(
             sender=OfflineOperation, offline_instance=offline_op, environment=offline_op.app_environment.environment
+        )
+
+        # 审计记录
+        add_app_audit_record(
+            app_code=offline_op.app_environment.application.code,
+            tenant_id=offline_op.tenant_id,
+            user=offline_op.operator,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.OFFLINE,
+            target=OperationTarget.APP,
+            module_name=offline_op.app_environment.module.name,
+            environment=offline_op.app_environment.environment,
+            result_code=result_code,
         )

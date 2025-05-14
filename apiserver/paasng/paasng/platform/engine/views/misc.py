@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 
@@ -170,10 +169,24 @@ class OperationsViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer = QueryOperationsSLZ(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         params = serializer.data
+        environment = params.get("environment")
 
-        operations = ModuleEnvironmentOperations.objects.owned_by_module(
-            module, environment=params.get("environment")
-        ).order_by("-created")
+        # 如果没有指定 module，返回所有 module 的部署记录而不是默认 module
+        if module_name is None:
+            operations = (
+                ModuleEnvironmentOperations.objects.select_related("app_environment__module")
+                .filter(application__code=code)
+                .order_by("-created")
+            )
+            # Filter by environment if provided
+            if environment:
+                operations = operations.filter(app_environment__environment=environment)
+        else:
+            operations = (
+                ModuleEnvironmentOperations.objects.select_related("app_environment__module")
+                .owned_by_module(module, environment=params.get("environment"))
+                .order_by("-created")
+            )
 
         # Filter by operator if provided
         operator = params.get("operator")

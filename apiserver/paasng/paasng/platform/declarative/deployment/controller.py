@@ -1,160 +1,119 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from typing import List, Optional
 
-import cattr
-from attrs import define, fields
 from django.db.transaction import atomic
 
-from paas_wl.bk_app.cnative.specs.crd import bk_app
 from paas_wl.bk_app.monitoring.app_monitor.shim import upsert_app_monitor
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.bkapp_model.importer import env_vars, import_manifest
-from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager, sync_hooks
+from paasng.platform.bkapp_model.entities import Process
+from paasng.platform.bkapp_model.entities.v1alpha2 import BkAppSpec
+from paasng.platform.bkapp_model.entities_syncer import sync_processes
+from paasng.platform.bkapp_model.fieldmgr import FieldMgrName
+from paasng.platform.bkapp_model.importer import import_bkapp_spec_entity, import_bkapp_spec_entity_non_cnative
 from paasng.platform.declarative.constants import AppSpecVersion
-from paasng.platform.declarative.deployment.process_probe import delete_process_probes, upsert_process_probe
-from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProbeSet, Process
+from paasng.platform.declarative.deployment.resources import BluekingMonitor, DeploymentDesc, ProcfileProc
+from paasng.platform.declarative.entities import DeployHandleResult
+from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.models.deployment import Deployment, ProcessTmpl
 
 logger = logging.getLogger(__name__)
 
 
-@define
-class PerformResult:
-    """应用描述文件的导入结果
-
-    :param loaded_processes: 导入的进程信息, 进程命令为 Procfile 格式.
-                             如进程信息与 Procfile 中的进程冲突, 将根据应用类型作出不同的策略.
-                             - 普通应用, 以 Procfile 为准
-                             - 云原生应用, 以应用描述文件为准
-    """
-
-    loaded_processes: Optional[Dict[str, ProcessTmpl]] = None
-
-    def set_processes(self, processes: Dict[str, Process]):
-        self.loaded_processes = cattr.structure(
-            {
-                proc_name: {
-                    "name": proc_name,
-                    "command": process.command,
-                    "replicas": process.replicas,
-                    "plan": process.plan,
-                }
-                for proc_name, process in processes.items()
-            },
-            Dict[str, ProcessTmpl],
-        )
-
-
-def convert_bkapp_spec_to_manifest(spec: bk_app.BkAppSpec) -> Dict:
-    """将应用描述文件中的 BkAppSpec 转换成适合直接导入到模型的格式"""
-    # 应用描述文件中的环境变量不展示到产品页面
-    exclude: Mapping[Union[str, int], Any] = {
-        "configuration": ...,
-        "envOverlay": {"envVariables"},
-    }
-    return {
-        "metadata": {},
-        "spec": spec.dict(exclude_none=True, exclude_unset=True, exclude=exclude),
-    }
-
-
-def get_preset_env_vars(spec: bk_app.BkAppSpec) -> Tuple[List[bk_app.EnvVar], List[bk_app.EnvVarOverlay]]:
-    # 应用描述文件中的环境变量不展示到产品页面
-    overlay_env_vars: List[bk_app.EnvVarOverlay] = []
-    if spec.envOverlay:
-        overlay_env_vars = spec.envOverlay.envVariables or []
-    return spec.configuration.env, overlay_env_vars
-
-
 class DeploymentDeclarativeController:
-    """A controller which process deployment descriptions"""
+    """A controller which process deployment description, it was triggered by a
+    new deployment action. The controller handle a given description which was parsed
+    from the source file and do following things:
+
+    - Get and save the processes data
+    - Save other data such as env vars and svc discovery
+
+    :param deployment: The deployment object.
+    """
 
     def __init__(self, deployment: Deployment):
         self.deployment = deployment
+        self.module = self.deployment.app_environment.module
+        self.application = self.module.application
 
     @atomic
-    def perform_action(self, desc: DeploymentDesc) -> PerformResult:
-        """Perform action by given description
+    def perform_action(
+        self, desc: DeploymentDesc, procfile_procs: Optional[List[ProcfileProc]] = None
+    ) -> DeployHandleResult:
+        """Perform action by given description and procfile data.
 
-        :param desc: deployment specification
+        :param desc: The deployment specification
+        :param procfile_procs: The processes list defined by the Procfile
         """
-        result = PerformResult()
-        logger.debug("Update related deployment description object.")
+        if procfile_procs:
+            desc.use_procfile_procs_if_conflict(procfile_procs)
 
-        application = self.deployment.app_environment.application
-        module = self.deployment.app_environment.module
-        processes = desc.get_processes()
+        self.handle_desc(desc)
+
+        return DeployHandleResult(desc.spec_version)
+
+    def handle_desc(self, desc: DeploymentDesc):
+        """Handle the description object, which was read from the app description file.
+
+        :raise: DescriptionValidationError when non-cloud native application use app_desc.yaml of version(specVersion:3)
+        """
+
+        if self.application.type != ApplicationType.CLOUD_NATIVE and desc.spec_version == AppSpecVersion.VER_3:
+            raise DescriptionValidationError(
+                "Non-cloud native application do not support app_desc.yaml of version(specVersion: 3)"
+            )
+
+        if desc.bk_monitor:
+            self._update_bkmonitor(desc.bk_monitor)
+
+        desc_obj = self._save_desc_obj(desc)
+        if self.application.type == ApplicationType.CLOUD_NATIVE:
+            self._handle_desc_cnative_style(desc_obj.spec)
+        else:
+            self._handle_desc_normal_style(desc_obj.spec)
+
+        # 总是将本次解析的进程数据保存到当前 deployment 对象中, 用于普通应用的进程配置同步(ProcessManager.sync_processes_specs)
+        self.deployment.update_fields(processes=desc.get_proc_tmpls())
+
+    def _handle_desc_cnative_style(self, spec_obj: BkAppSpec):
+        """适用于：云原生应用或采用了 version 3 版本的应用描述文件"""
+        import_bkapp_spec_entity(self.module, spec_entity=spec_obj, manager=FieldMgrName.APP_DESC)
+
+    def _handle_desc_normal_style(self, spec_obj: BkAppSpec):
+        """适用于：普通应用"""
+        import_bkapp_spec_entity_non_cnative(self.module, spec_entity=spec_obj, manager=FieldMgrName.APP_DESC)
+
+    def _save_desc_obj(self, desc: DeploymentDesc) -> DeploymentDescription:
+        """Save the raw description data, return the object created."""
         deploy_desc, _ = DeploymentDescription.objects.update_or_create(
             deployment=self.deployment,
             defaults={
-                "runtime": {
-                    "source_dir": desc.source_dir,
-                },
+                "runtime": {"source_dir": desc.source_dir},
                 "spec": desc.spec,
+                "tenant_id": self.deployment.tenant_id,
                 # TODO: store desc.bk_monitor to DeploymentDescription
             },
         )
+        return deploy_desc
 
-        # apply desc to bkapp_model
-        result.set_processes(processes=processes)
-        if desc.spec_version == AppSpecVersion.VER_3 or application.type == ApplicationType.CLOUD_NATIVE:
-            # 云原生应用
-            # TODO: 优化 import 方式, 例如直接接受 desc.spec
-            # Warning: app_desc 中声明的 hooks 会覆盖产品上已填写的 hooks
-            # Warning: import_manifest 时, proc_command 会被置为 None, 仅 command/args 会保留
-            import_manifest(
-                module,
-                input_data=convert_bkapp_spec_to_manifest(deploy_desc.spec),
-            )
-            if hooks := deploy_desc.get_deploy_hooks():
-                self.deployment.update_fields(hooks=hooks)
-        else:
-            # 普通应用
-            # Note: 由于普通应用可能在 Procfile 定义进程, 因此在应用构建时仍然存在其他位点会更新 ModuleProcessSpecManager
-            # TODO: 优化如上所述的情况
-            if result.loaded_processes:
-                ModuleProcessSpecManager(module).sync_from_desc(processes=list(result.loaded_processes.values()))
-            # 仅声明 hooks 时才同步 hooks
-            # 由于普通应用仍然可以在页面上填写部署前置命令, 因此当描述文件未配置 hooks 时, 不代表禁用 hooks.
-            if hooks := deploy_desc.get_deploy_hooks():
-                sync_hooks(module, hooks)
-                self.deployment.update_fields(hooks=hooks)
-        # 导入描述性环境变量
-        env_vars.import_preset_env_vars(module, *get_preset_env_vars(desc.spec))
-
-        if desc.bk_monitor:
-            self.update_bkmonitor(desc.bk_monitor)
-
-        # 为了保证 probe 对象不遗留，对 probe 进行全量删除和全量更新
-        # 对该环境下的 probe 进行全量删除
-        self.delete_probes()
-
-        # 根据配置，对 probe 进行全量更新
-        for process_type, process in processes.items():
-            self.update_probes(process_type=process_type, probes=process.probes)
-
-        return result
-
-    def update_bkmonitor(self, bk_monitor: BluekingMonitor):
+    def _update_bkmonitor(self, bk_monitor: BluekingMonitor):
         """更新 SaaS 监控配置"""
         upsert_app_monitor(
             env=self.deployment.app_environment,
@@ -162,23 +121,21 @@ class DeploymentDeclarativeController:
             target_port=bk_monitor.target_port,  # type: ignore
         )
 
-    def delete_probes(self):
-        """删除 SaaS 探针配置"""
-        delete_process_probes(
-            env=self.deployment.app_environment,
-        )
 
-    def update_probes(self, process_type: str, probes: Optional[ProbeSet] = None):
-        """更新 SaaS 探针配置"""
-        if not probes:
-            return
+def handle_procfile_procs(deployment: Deployment, procfile_procs: List[ProcfileProc]) -> DeployHandleResult:
+    """Handle the processes defined by Procfile, this function only sync the process
+    configs to the database model.
 
-        for probe_field in fields(ProbeSet):
-            probe = getattr(probes, probe_field.name)
-            if probe:
-                upsert_process_probe(
-                    env=self.deployment.app_environment,
-                    process_type=process_type,
-                    probe_type=probe_field.name,
-                    probe=probe,
-                )
+    :param deployment: The deployment object
+    :param procfile_procs: The processes defined by Procfile
+    """
+    module = deployment.app_environment.module
+
+    processes = [Process(name=p.name, proc_command=p.command) for p in procfile_procs]
+    sync_processes(module, processes, FieldMgrName.APP_DESC, use_proc_command=True)
+
+    # 更新 deployment 中的 processes, 用于普通应用的进程配置同步(ProcessManager.sync_processes_specs)
+    proc_tmpls = {p.name: ProcessTmpl(name=p.name, command=p.command) for p in procfile_procs}
+    deployment.update_fields(processes=proc_tmpls)
+
+    return DeployHandleResult()

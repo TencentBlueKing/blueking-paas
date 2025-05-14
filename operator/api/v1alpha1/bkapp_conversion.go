@@ -34,6 +34,7 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 			Command:      proc.Command,
 			Args:         proc.Args,
 			TargetPort:   proc.TargetPort,
+			Services:     proc.Services,
 		}
 		if proc.Image != "" {
 			legacyProcImageConfig[proc.Name] = map[string]string{
@@ -53,6 +54,14 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 				MinReplicas: proc.Autoscaling.MinReplicas,
 				MaxReplicas: proc.Autoscaling.MaxReplicas,
 				Policy:      paasv1alpha2.ScalingPolicy(proc.Autoscaling.Policy),
+			}
+		}
+		// Copy Probes field, extra logics needs because of the pointer type
+		if proc.Probes != nil {
+			dstProc.Probes = &paasv1alpha2.ProbeSet{
+				Liveness:  proc.Probes.Liveness,
+				Readiness: proc.Probes.Readiness,
+				Startup:   proc.Probes.Startup,
 			}
 		}
 
@@ -155,6 +164,7 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 			Command:      proc.Command,
 			Args:         proc.Args,
 			TargetPort:   proc.TargetPort,
+			Services:     proc.Services,
 
 			// Legacy fields
 			Image:           legacyProcImageConfig[proc.Name]["image"],
@@ -169,6 +179,14 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 				MinReplicas: proc.Autoscaling.MinReplicas,
 				MaxReplicas: proc.Autoscaling.MaxReplicas,
 				Policy:      ScalingPolicy(proc.Autoscaling.Policy),
+			}
+		}
+		// Copy Probes field, extra logics needs because of the pointer type
+		if proc.Probes != nil {
+			dstProc.Probes = &ProbeSet{
+				Liveness:  proc.Probes.Liveness,
+				Readiness: proc.Probes.Readiness,
+				Startup:   proc.Probes.Startup,
 			}
 		}
 

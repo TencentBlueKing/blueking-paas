@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 import os
@@ -142,8 +141,8 @@ class ProcessesHandler(ResourceHandlerBase):
         res = self.res_identifiers(config)
         KDeployment(self.client).delete(res.deployment_name, namespace=app.namespace, non_grace_period=True)
         # Delete ReplicaSet and Pods manually
-        KReplicaSet(self.client).ops_label.delete_collection(labels=res.match_labels, namespace=app.namespace)
-        KPod(self.client).ops_label.delete_individual(labels=res.match_labels, namespace=app.namespace)
+        KReplicaSet(self.client).ops_batch.delete_collection(labels=res.match_labels, namespace=app.namespace)
+        KPod(self.client).ops_batch.delete_individual(labels=res.match_labels, namespace=app.namespace)
 
     def delete_gracefully(self, config: MapperProcConfig):
         """Delete a process gracefully by the config object.
@@ -616,7 +615,9 @@ class CommandHandler(PodScheduleHandler):
 
     @staticmethod
     def get_pod_timeout(pod: Command) -> arrow.Arrow:
-        return arrow.get(pod.start_time) + datetime.timedelta(seconds=settings.MAX_SLUG_SECONDS)
+        # 注意：如果 Pod StartTime 为空，则不会超时（保留现场）
+        start_time = arrow.get(pod.start_time) if pod.start_time else arrow.now()
+        return start_time + datetime.timedelta(seconds=settings.MAX_SLUG_SECONDS)
 
 
 class ProcAutoscalingHandler(ResourceHandlerBase):

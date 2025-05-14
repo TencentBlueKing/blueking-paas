@@ -16,7 +16,7 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
-
+/* global global */
 import Vue from 'vue';
 import App from './App';
 import router from '@/router';
@@ -43,10 +43,7 @@ import moment from 'moment';
 import Clipboard from 'clipboard';
 import Directives from '@/directives';
 import '@/common/bkmagic.js';
-// eslint-disable-next-line
-import Blob from '@/common/Blob'
-// eslint-disable-next-line
-import Export2Excel from '@/common/Export2Excel'
+import '@/common/event-tracking.js';
 import PaasContentLoader from '@/components/loader';
 
 // 时间格式过滤器引入
@@ -75,81 +72,22 @@ import { renderHeader } from '@/common/utils';
 
 // markdown样式
 import 'github-markdown-css';
+
 // 代码高亮
 import 'highlight.js/styles/github.css';
+
+// 功能依赖css
+import '@blueking/functional-dependency/vue2/vue2.css';
+
+// 多租户人员选择器样式
+import '@blueking/bk-user-selector/vue2/vue2.css';
+
+// 用户 DisplayName 展示方案
+import BkUserDisplayName from '@blueking/bk-user-display-name';
 
 window.$ = $;
 
 Vue.config.devtools = true;
-
-// components use
-// Vue.use(bkBadge);
-// Vue.use(bkButton);
-// Vue.use(bkLink);
-// Vue.use(bkCheckbox);
-// Vue.use(bkCheckboxGroup);
-// Vue.use(bkCol);
-// Vue.use(bkCollapse);
-// Vue.use(bkCollapseItem);
-// Vue.use(bkContainer);
-// Vue.use(bkDatePicker);
-// Vue.use(bkDialog, {
-//   headerPosition: 'left',
-// });
-// Vue.use(bkDropdownMenu);
-// Vue.use(bkException);
-// Vue.use(bkForm);
-// Vue.use(bkFormItem);
-// Vue.use(bkInput);
-// Vue.use(bkNavigation);
-// Vue.use(bkNavigationMenu);
-// Vue.use(bkNavigationMenuItem);
-// Vue.use(bkOption);
-// Vue.use(bkOptionGroup);
-// Vue.use(bkPagination);
-// Vue.use(bkPopover);
-// Vue.use(bkProcess);
-// Vue.use(bkProgress);
-// Vue.use(bkRadio);
-// Vue.use(bkRadioGroup);
-// Vue.use(bkRoundProgress);
-// Vue.use(bkRow);
-// Vue.use(bkSearchSelect);
-// Vue.use(bkSelect);
-// Vue.use(bkSideslider);
-// Vue.use(bkSlider);
-// Vue.use(bkSteps);
-// Vue.use(bkSwitcher);
-// Vue.use(bkTab);
-// Vue.use(bkOverflowTips);
-// Vue.use(bkTabPanel);
-// Vue.use(bkTable);
-// Vue.use(bkTableColumn, {
-//   showOverflowTooltip: true,
-// });
-// Vue.use(bkTagInput, {
-//   tooltipKey: 'name',
-// });
-// Vue.use(bkTimePicker);
-// Vue.use(bkTimeline);
-// Vue.use(bkTransfer, {
-//   showOverflowTips: true,
-// });
-// Vue.use(bkTree);
-// Vue.use(bkUpload);
-// Vue.use(bkSwiper);
-// Vue.use(bkRate);
-// Vue.use(bkAnimateNumber);
-// Vue.use(bkVirtualScroll);
-// Vue.use(bkPopconfirm);
-// // directives use
-// Vue.use(bkClickoutside);
-// Vue.use(bkTooltips);
-// Vue.use(bkLoading);
-// // Vue.use(bkOverflowTips)
-// Vue.use(bkAlert);
-// Vue.use(bkCard);
-// Vue.use(bkTag);
 
 Vue.use(Directives);
 Vue.component('PaasContentLoader', PaasContentLoader);
@@ -192,6 +130,7 @@ window.GLOBAL_CONFIG = {
   ...PLATFORM_CONFIG,
   ...window.GLOBAL_CONFIG,
   NOTICE_HEIGHT: 40,
+  OP_TYPE_TENANT_ID: 'system',
 };
 Vue.prototype.GLOBAL = window.GLOBAL_CONFIG;
 
@@ -213,16 +152,8 @@ auth.requestCurrentUser().then((user) => {
   if (!user.isAuthenticated) {
     auth.redirectToLogin();
   } else {
-    switch (window.GLOBAL_CONFIG.APP_VERSION) {
-      case 'ee':
-        document.title = i18n.t('开发者中心 | 腾讯蓝鲸智云');
-        break;
-      case 'ce':
-        document.title = i18n.t('开发者中心 | 腾讯蓝鲸智云');
-        break;
-      default:
-        document.title = i18n.t('开发者中心 | 蓝鲸');
-        Vue.prototype.$isInternalVersion = true;
+    if (window.GLOBAL_CONFIG.APP_VERSION === 'te') {
+      Vue.prototype.$isInternalVersion = true;
     }
 
     Vue.config.productionTip = false;
@@ -240,11 +171,14 @@ auth.requestCurrentUser().then((user) => {
         // 获取功能开头详情
         this.$store.dispatch('getUserFeature');
         this.$store.dispatch('getPlatformFeature');
+        BkUserDisplayName.configure({
+          tenantId: user.tenantId,
+          apiBaseUrl: window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod'),
+        });
       },
-      methods: {},
       template: '<App />',
     });
-
+    bus.$emit('on-user-data', user);
     window.GLOBAL_I18N = global.paasVue;
   }
 }, (err) => {

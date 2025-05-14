@@ -47,38 +47,6 @@
                 </p>
               </div>
             </div>
-
-            <div
-              v-if="curUserFeature.ENABLE_TC_DOCKER"
-              class="form-group"
-              style="margin-top: 7px;margin-left: 10px"
-            >
-              <label class="form-label"> {{ $t('构建方式') }} </label>
-              <div
-                class="form-group-flex-radio"
-                style="width: 100%"
-              >
-                <div class="form-group-radio mt10">
-                  <bk-radio-group
-                    v-model="structureType"
-                    class="construction-manner"
-                  >
-                    <bk-radio :value="'soundCode'">
-                      {{ $t('提供源码') }}
-                    </bk-radio>
-                    <bk-radio :value="'mirror'">
-                      {{ $t('提供镜像') }}
-                    </bk-radio>
-                    <bk-radio
-                      :value="'isMirror'"
-                      disabled
-                    >
-                      {{ $t('从源码构建镜像') }}
-                    </bk-radio>
-                  </bk-radio-group>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- 镜像管理 -->
@@ -172,13 +140,6 @@
                     @click="handleCodeTypeChange(1)"
                   >
                     {{ $t('蓝鲸开发框架') }}
-                  </li>
-                  <li
-                    v-if="allRegionsSpecs[region] && allRegionsSpecs[region].allow_deploy_app_by_lesscode"
-                    :class="['tab-item template', { 'active': localSourceOrigin === 2 }]"
-                    @click="handleCodeTypeChange(2)"
-                  >
-                    {{ $t('蓝鲸运维开发平台') }}
                   </li>
                 </div>
               </section>
@@ -638,8 +599,7 @@ export default {
 
     async fetchRegionsServices() {
       try {
-        const res = await this.$store.dispatch('createApp/getRegionsServices', {
-          region: this.region,
+        const res = await this.$store.dispatch('createApp/getServicesByTmpl', {
           language: this.sourceInitTemplate,
         });
         this.regionsServices = JSON.parse(JSON.stringify(res.result));
@@ -815,8 +775,8 @@ export default {
       if (this.$refs.validate2) {
         try {
           await this.$refs.validate2.validate();
-        } catch (error) {
-          console.log('error', error);
+        } catch (e) {
+          console.error(e);
           return;
         }
       }

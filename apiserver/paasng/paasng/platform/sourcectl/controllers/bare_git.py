@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import operator
 from typing import TYPE_CHECKING, Generator, Iterator, List, Optional, Tuple
@@ -25,7 +24,7 @@ from blue_krill.data_types.url import MutableURL
 from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.platform.sourcectl.exceptions import BasicAuthError, DoesNotExistsOnServer
-from paasng.platform.sourcectl.models import AlternativeVersion, CommitLog, Repository, VersionInfo
+from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
 from paasng.platform.sourcectl.utils import generate_temp_dir
 
 if TYPE_CHECKING:
@@ -63,8 +62,7 @@ class BareGitRepoController:
         # 当前 BareGit 只支持 basic auth
         o = urlparse(repo_url)
         repo_url_with_auth = (
-            f"{o.scheme}://{quote(holder.basic_auth.username)}:"
-            f"{quote(holder.basic_auth.password)}@{o.netloc}{o.path}"
+            f"{o.scheme}://{quote(holder.basic_auth.username)}:{quote(holder.basic_auth.password)}@{o.netloc}{o.path}"
         )
         return cls(repo_url=repo_url_with_auth, repo_obj=repo_obj)
 
@@ -77,7 +75,7 @@ class BareGitRepoController:
         """检查仓库权限"""
         try:
             # 使用 ls-remote 来提速
-            self.client.list_remote(self.repo_url)
+            self.client.list_remote_raw(self.repo_url)
         except GitCommandExecutionError as e:
             if "authentication failed" in str(e).lower():
                 raise BasicAuthError("wrong username or password")
@@ -143,6 +141,9 @@ class BareGitRepoController:
         raise NotImplementedError
 
     def get_diff_commit_logs(self, from_revision, to_revision, rel_filepath=None) -> List[CommitLog]:
+        raise NotImplementedError
+
+    def commit_files(self, commit_info: CommitInfo) -> None:
         raise NotImplementedError
 
     def read_file(self, file_path, version_info: VersionInfo) -> bytes:

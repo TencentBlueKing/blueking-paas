@@ -9,6 +9,7 @@
       :app-code="appCode"
       :cur-module="curAppModule"
       :module-list="isEngineEnabled ? curAppModuleList : []"
+      :is-trace="true"
       @change="handleTabChange"
     />
     <div class="router-container">
@@ -38,15 +39,35 @@ export default {
     panels() {
       if (this.isCloudNativeApp) {
         return [
-          { name: 'web', label: this.$t('网站访问统计'), routeName: 'cloudAppWebAnalysis',  feature: 'PA_WEBSITE_ANALYTICS' },
-          { name: 'log', label: this.$t('访问日志统计'), routeName: 'cloudAppLogAnalysis', feature: 'PA_INGRESS_ANALYTICS' },
-          { name: 'event', label: this.$t('自定义事件统计'), routeName: 'cloudAppEventAnalysis', feature: 'PA_CUSTOM_EVENT_ANALYTICS' },
+          {
+            name: 'web',
+            label: this.$t('网站访问统计'),
+            routeName: 'cloudAppWebAnalysis',
+            feature: 'PA_WEBSITE_ANALYTICS',
+          },
+          {
+            name: 'log',
+            label: this.$t('访问日志统计'),
+            routeName: 'cloudAppLogAnalysis',
+            feature: 'PA_INGRESS_ANALYTICS',
+          },
+          {
+            name: 'event',
+            label: this.$t('自定义事件统计'),
+            routeName: 'cloudAppEventAnalysis',
+            feature: 'PA_CUSTOM_EVENT_ANALYTICS',
+          },
         ];
       }
       return [
-        { name: 'web', label: this.$t('网站访问统计'), routeName: 'appWebAnalysis',  feature: 'PA_WEBSITE_ANALYTICS' },
+        { name: 'web', label: this.$t('网站访问统计'), routeName: 'appWebAnalysis', feature: 'PA_WEBSITE_ANALYTICS' },
         { name: 'log', label: this.$t('访问日志统计'), routeName: 'appLogAnalysis', feature: 'PA_INGRESS_ANALYTICS' },
-        { name: 'event', label: this.$t('自定义事件统计'), routeName: 'appEventAnalysis', feature: 'PA_CUSTOM_EVENT_ANALYTICS' },
+        {
+          name: 'event',
+          label: this.$t('自定义事件统计'),
+          routeName: 'appEventAnalysis',
+          feature: 'PA_CUSTOM_EVENT_ANALYTICS',
+        },
       ];
     },
     curPanels() {
@@ -72,7 +93,7 @@ export default {
   methods: {
     handleTabChange(name) {
       this.active = name;
-      const curPanel = this.panels.find(item => item.name === name);
+      const curPanel = this.panels.find((item) => item.name === name);
       this.$router.push({
         name: curPanel.routeName,
         params: {

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict
 
 from kubernetes.client import ApiException
@@ -37,7 +36,7 @@ def detect_operator_status(client: EnhancedApiClient) -> Dict:
     }
 
     # 检查集群中是否存在 Operator 需要的 CRD 定义
-    for crd in KCustomResourceDefinition(client).ops_label.list(labels={}).items:
+    for crd in KCustomResourceDefinition(client).ops_batch.list(labels={}).items:
         crd_kind = crd["spec"]["names"]["kind"]
         if crd_kind in [BkApp.kind, DomainGroupMapping.kind]:
             result["crds"][crd_kind] = True  # type: ignore
@@ -52,7 +51,7 @@ def detect_operator_status(client: EnhancedApiClient) -> Dict:
 
     deployments = (
         KDeployment(client)
-        .ops_label.list(
+        .ops_batch.list(
             labels={"control-plane": "controller-manager"},
             namespace=BKPAAS_APP_OPERATOR_INSTALL_NAMESPACE,
         )
@@ -74,7 +73,7 @@ def fetch_paas_cobj_info(client: EnhancedApiClient, crd_exists: Dict[str, bool])
 
     # 统计 BkApp NotReady & 总数量
     if crd_exists[BkApp.kind]:
-        bkapps = BkApp(client).ops_label.list(labels={}).items
+        bkapps = BkApp(client).ops_batch.list(labels={}).items
         ready_cnt = 0
         not_ready_bkapps = []
         for bkapp in bkapps:
@@ -99,7 +98,7 @@ def fetch_paas_cobj_info(client: EnhancedApiClient, crd_exists: Dict[str, bool])
     # 统计 DomainGroupMapping 数量
     if crd_exists[DomainGroupMapping.kind]:
         domain_group_mappings = (
-            DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).ops_label.list(labels={}).items
+            DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).ops_batch.list(labels={}).items
         )
         result[DomainGroupMapping.kind]["total_cnt"] = len(domain_group_mappings)
 

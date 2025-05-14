@@ -1,20 +1,19 @@
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 from unittest import mock
 
@@ -42,22 +41,13 @@ class TestSiteMetricsClient:
         assert pa_client_class().get_or_create_app_site.called
         assert site_output == site
 
-    @pytest.mark.parametrize(
-        ("region", "expected_dimension_size"),
-        [
-            ("ieod", 2),
-            # TODO: 在实现过滤用户维度后, 修复这个单元测试
-            ("foo", 2),
-        ],
-    )
-    def test_get_site_config(self, pa_client_class, site, page_view_config, region, expected_dimension_size):
-        site.region = region
+    def test_get_site_config(self, pa_client_class, site, page_view_config):
         pa_client_class().get_site_pv_config.return_value = page_view_config
         client = SiteMetricsClient(site, MetricSourceType.USER_TRACKER)
         site_config = client.get_site_pv_config()
         assert pa_client_class().get_site_pv_config.called
         assert site_config["site"]["name"] == site.name
-        assert len(site_config["supported_dimension_type"]) == expected_dimension_size
+        assert len(site_config["supported_dimension_type"]) == 2
 
     def test_get_total_metric_about_site(self, pa_client_class, site, total_data_metrics):
         pa_client_class().get_total_page_view_metric_about_site.return_value = total_data_metrics
@@ -190,11 +180,12 @@ class TestIngressTrackingStatus:
         [(None, True), (100, False)],
     )
     def test_enable(self, bk_stag_env, bkpa_site_id, update_called: bool, site_dict):
-        with mock.patch("paasng.accessories.paas_analysis.clients.PAClient") as pa_client_class, mock.patch(
-            "paasng.accessories.paas_analysis.services.get_metadata_by_env"
-        ) as mocked_get, mock.patch(
-            "paasng.accessories.paas_analysis.services.update_metadata_by_env"
-        ) as mocked_update, mock.patch("paasng.accessories.paas_analysis.services.sync_proc_ingresses"):
+        with (
+            mock.patch("paasng.accessories.paas_analysis.clients.PAClient") as pa_client_class,
+            mock.patch("paasng.accessories.paas_analysis.services.get_metadata_by_env") as mocked_get,
+            mock.patch("paasng.accessories.paas_analysis.services.update_metadata_by_env") as mocked_update,
+            mock.patch("paasng.accessories.paas_analysis.services.sync_proc_ingresses"),
+        ):
             pa_client_class().get_or_create_app_site.return_value = site_dict
             mocked_get.return_value = WlAppMetadata(bkpa_site_id=bkpa_site_id)
 

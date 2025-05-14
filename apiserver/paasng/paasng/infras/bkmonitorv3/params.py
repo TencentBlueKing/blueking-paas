@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from datetime import datetime
 from typing import Dict, List, Optional, Union
 
@@ -36,18 +36,18 @@ class QueryAlertsParams:
     """
     查询告警的参数
 
-    :param app_code: 应用 code
     :param start_time: 发生时间. datetime 类型, 其对应的字符串格式 '%Y-%m-%d %H:%M:%S'
     :param end_time: 结束时间. datetime 类型, 其对应的字符串格式 '%Y-%m-%d %H:%M:%S'
+    :param bk_biz_ids: 监控空间资源 id 列表
     :param environment: 应用部署环境. 可选
     :param alert_code: 支持的告警 code, 如 high_cpu_usage. 可选
     :param status: 告警状态 (ABNORMAL: 表示未恢复, CLOSED: 已关闭, RECOVERED: 已恢复). 可选
     :param keyword: 告警名称包含的关键字. 可选
     """
 
-    app_code: str
     start_time: datetime
     end_time: datetime
+    bk_biz_ids: List[str]
     environment: Optional[str] = None
     alert_code: Optional[str] = None
     status: Optional[str] = None
@@ -58,7 +58,8 @@ class QueryAlertsParams:
         d = {
             "start_time": int(self.start_time.timestamp()),
             "end_time": int(self.end_time.timestamp()),
-            "bk_biz_ids": [get_bk_biz_id(self.app_code)],
+            # 监控那边问题，需要转int
+            "bk_biz_ids": [int(id) for id in self.bk_biz_ids],
             "page": 1,
             "page_size": 500,
             # 按照 ID 降序
@@ -94,6 +95,42 @@ class QueryAlertsParams:
         if not valid_args:
             return None
         return " AND ".join(valid_args)
+
+    @classmethod
+    def create_by_app_codes(
+        cls,
+        start_time: datetime,
+        end_time: datetime,
+        app_codes: List[str],
+        environment: Optional[str] = None,
+        alert_code: Optional[str] = None,
+        status: Optional[str] = None,
+        keyword: Optional[str] = None,
+    ) -> "QueryAlertsParams":
+        """
+        通过 app_codes 创建 QueryAlertsParams 实例
+
+        :param start_time: 开始时间
+        :param end_time: 结束时间
+        :param app_codes: 应用代码列表
+        :param environment: 应用部署环境. 可选
+        :param alert_code: 告警代码. 可选
+        :param status: 告警状态. 可选
+        :param keyword: 关键字. 可选
+        :return: QueryAlertsParams 实例
+        """
+        # 获取 app code 对应的监控 biz id. 如果没有对应的 BKMonitorSpace，会被忽略
+        monitor_spaces = BKMonitorSpace.objects.filter(application__code__in=app_codes)
+        bk_biz_ids = [space.iam_resource_id for space in monitor_spaces]
+        return cls(
+            start_time=start_time,
+            end_time=end_time,
+            bk_biz_ids=bk_biz_ids,
+            environment=environment,
+            alert_code=alert_code,
+            status=status,
+            keyword=keyword,
+        )
 
 
 @define(kw_only=True)

@@ -1,69 +1,115 @@
 <template>
-  <div class="visible-range">
-    <paas-plugin-title />
+  <div class="plugin-overview">
+    <paas-plugin-title
+      :is-plugin-doc="true"
+      :doc-url="curSchemas.plugin_type?.docs"
+    >
+      <div class="top-box">
+        <span class="title">{{ $t('概览') }}</span>
+        <bk-select
+          v-if="isBkSaas"
+          :clearable="false"
+          :disabled="false"
+          :loading="isDashboardLoading"
+          v-model="curDashboard"
+          style="width: 240px"
+          ext-cls="dashboard-select-cls"
+          ext-popover-cls="dashboard-select-popover"
+          @change="handleChange"
+        >
+          <bk-option
+            v-for="option in dashboardList"
+            :key="option.name"
+            :id="option.name"
+            :name="option.display_name"
+          ></bk-option>
+          <div
+            slot="extension"
+            class="select-extension-cls"
+            @click="redirectPage(dashboardLink)"
+          >
+            <i class="paasng-icon paasng-app-store"></i>
+            {{ $t('查看更多仪表盘') }}
+          </div>
+        </bk-select>
+      </div>
+    </paas-plugin-title>
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="summary-plugin-loading"
       :offset-top="20"
       class="app-container overview-middle"
     >
-      <div class="middle">
-        <div class="overview-main">
-          <div class="visual-display card-style">
-            <div :class="['nav-list', { 'is-iframe': curPluginInfo.overview_page?.bottom_url }]">
-              <div
-                class="nav-list-item"
-              >
-                <span class="item-icon">
-                  <i class="paasng-icon paasng-version" />
-                </span>
-                <div class="item-info">
-                  <h3>{{ viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.repoCodeccAvgScore || '--' }}</h3>
-                  <span class="text">{{ $t('代码质量') }}</span>
-                  <i
-                    v-bk-tooltips="$t('质量评价依照腾讯开源治理指标体系 (其中文档质量暂按100分计算)， 评分仅供参考。')"
-                    style="color: #C4C6CC;margin-top:1px;"
-                    class="paasng-icon paasng-info-line ml5"
-                  />
-                </div>
-              </div>
-              <div
-                class="nav-list-item"
-              >
-                <span class="item-icon">
-                  <i class="paasng-icon paasng-alert2" />
-                </span>
-                <div class="item-info">
-                  <h3>{{ viewInfo.codeCheckInfo && viewInfo.codeCheckInfo.resolvedDefectNum || '--' }}</h3>
-                  <span class="text">{{ $t('已解决缺陷数') }}</span>
-                </div>
-              </div>
-              <div
-                class="nav-list-item"
-              >
-                <span class="item-icon">
-                  <i class="paasng-icon paasng-alert" />
-                </span>
-                <div class="item-info">
-                  <h3>{{ viewInfo.codeCheckInfo && viewInfo.qualityInfo.qualityInterceptionRate || '--' }}</h3>
-                  <span class="text">{{ $t('质量红线拦截率') }}</span>
-                  <i
-                    v-bk-tooltips="`${$t('拦截次数:')} ${viewInfo.codeCheckInfo && viewInfo.qualityInfo.interceptionCount || '--'} / ${$t('运行总次数:')} ${viewInfo.codeCheckInfo && viewInfo.qualityInfo.totalExecuteCount || '--'}`"
-                    style="color: #C4C6CC;margin-top:1px;"
-                    class="paasng-icon paasng-info-line ml5"
-                  />
-                </div>
-              </div>
-            </div>
-            <div class="iframe-margin"></div>
-            <section class="iframe-container" v-if="curPluginInfo.overview_page?.bottom_url">
+      <div class="plugin-overview-main">
+        <!-- bk-saas 展示 alert -->
+        <bk-alert
+          v-if="isBkSaas"
+          type="info"
+          class="alert-cls"
+          :show-icon="false"
+        >
+          <div slot="title">
+            {{
+              $t(
+                '平台内置了开发框架仪表盘，应用需开启 Metric 配置并在代码中上报 Metric 数据后，才可在仪表盘中查看相关数据'
+              )
+            }}
+            <bk-button
+              ext-cls="guidelines-cls"
+              text
+              size="small"
+              @click="redirectPage(`${GLOBAL.DOC.MONITORING_METRICS_GUIDE}#13-蓝鲸应用插件标准运维插件`)"
+            >
+              {{ $t('Metric 上报指引') }}
+              <i class="paasng-icon paasng-jump-link"></i>
+            </bk-button>
+          </div>
+        </bk-alert>
+        <div class="content">
+          <div :class="['visual-display', 'card-style', { exception: isDashboardProvided }]">
+            <!-- 暂不支持仪表盘 -->
+            <FunctionalDependency
+              v-if="isDashboardProvided"
+              class="functional-dependency"
+              mode="page"
+              :title="$t('暂无仪表盘功能')"
+              :functional-desc="
+                $t(
+                  '仪表盘可以提供插件运行指标，如执行次数、执行成功率和失败率等，帮助您了解插件的运行状态。GO 语言的蓝鲸应用插件暂未提供内置仪表盘功能，您可以参考相关指引自行实现该功能。'
+                )
+              "
+              @gotoMore="redirectPage(GLOBAL.DOC.MONITORING_METRICS_GUIDE)"
+            />
+            <section
+              v-else-if="iframeUrl"
+              :class="['iframe-container', pdId]"
+            >
               <!-- 嵌入 iframe -->
               <iframe
                 id="iframe-embed"
-                :src="curPluginInfo.overview_page?.bottom_url"
+                :src="iframeUrl"
                 scrolling="no"
                 frameborder="0"
               />
+            </section>
+            <section
+              class="exception-box"
+              v-else-if="isBkSaas"
+            >
+              <bk-exception
+                class="exception-wrap-item dashboards-exception-part"
+                type="empty"
+                scene="part"
+              >
+                <p class="title">{{ $t('暂无仪表盘') }}</p>
+                <p class="tips">{{ $t('插件发布成功后，才会内置仪表盘') }}</p>
+                <bk-button
+                  :theme="'primary'"
+                  @click="toPublish"
+                >
+                  {{ $t('去发布') }}
+                </bk-button>
+              </bk-exception>
             </section>
             <!-- 默认图表 -->
             <template v-else>
@@ -85,16 +131,18 @@
                 <div class="chart-action">
                   <ul class="dimension fl">
                     <li
-                      :class="{ 'active': chartFilterType.pv }"
+                      :class="{ active: chartFilterType.pv }"
                       @click="handleChartFilte('pv')"
                     >
-                      <span class="dot warning" /> {{ $t('提交数') }}
+                      <span class="dot warning" />
+                      {{ $t('提交数') }}
                     </li>
                     <li
-                      :class="{ 'active': chartFilterType.uv }"
+                      :class="{ active: chartFilterType.uv }"
                       @click="handleChartFilte('uv')"
                     >
-                      <span class="dot primary" /> {{ $t('贡献者') }}
+                      <span class="dot primary" />
+                      {{ $t('贡献者') }}
                     </li>
                   </ul>
                 </div>
@@ -103,87 +151,17 @@
                   ref="chart"
                   :options="chartOption"
                   auto-resize
-                  style="width: 100%; height: 440px; background: #1e1e21;"
+                  style="width: 100%; height: 440px; background: #1e1e21"
                 />
               </div>
             </template>
           </div>
 
           <div class="information-container card-style">
-            <div>
-              <h3>{{ $t('基本信息') }}</h3>
-              <div class="base-info">
-                <p
-                  v-bk-overflow-tips
-                  class="text-ellipsis"
-                >
-                  {{ $t('插件类型：') }} <span>{{ curPluginInfo.pd_name }}</span>
-                </p>
-                <p
-                  v-bk-overflow-tips
-                  class="text-ellipsis"
-                >
-                  {{ $t('开发语言：') }} <span>{{ curPluginInfo.language }}</span>
-                </p>
-                <p class="repos">
-                  <span>{{ $t('代码仓库：') }}</span>
-                  <span
-                    v-bk-tooltips.top-end="curPluginInfo.repository"
-                    class="repository-tooltips"
-                  />
-                  <span>{{ curPluginInfo.repository }}</span>
-                  <!-- 复制 -->
-                  <span
-                    v-copy="curPluginInfo.repository"
-                    class="copy-text"
-                  >
-                    <a
-                      :href="curPluginInfo.repository"
-                      target="_blank"
-                      style="color: #979BA5;"
-                    ><i class="paasng-icon paasng-jump-link icon-cls-link mr5 copy-text" /></a>
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            <div class="dynamic-wrapper">
-              <div
-                class="fright-middle fright-last"
-                data-test-id="summary_content_noSource"
-              >
-                <h3> {{ $t('最新动态') }} </h3>
-                <ul class="dynamic-list">
-                  <template v-if="operationsList.length">
-                    <li
-                      v-for="(item, itemIndex) in operationsList"
-                      :key="itemIndex"
-                    >
-                      <p class="dynamic-time">
-                        <span
-                          v-bk-tooltips="item.updated"
-                          class="tooltip-time"
-                        >{{ item.created_format }}</span>
-                      </p>
-                      <p
-                        v-bk-overflow-tips
-                        class="dynamic-content"
-                        style="-webkit-line-clamp: 2;-webkit-box-orient: vertical"
-                      >
-                        {{ $t('由') }} {{ item.display_text }}
-                      <!-- <span class="gruy">{{ item.display_text }}</span> -->
-                      </p>
-                    </li>
-                    <li />
-                  </template>
-                  <template v-else>
-                    <div class="ps-no-result">
-                      <table-empty empty />
-                    </div>
-                  </template>
-                </ul>
-              </div>
-            </div>
+            <!-- 基本信息 -->
+            <base-info :data="curPluginInfo" />
+            <!-- 代码质量 -->
+            <code-quality :view-info="viewInfo" />
           </div>
         </div>
       </div>
@@ -199,16 +177,21 @@ import 'echarts/lib/component/tooltip';
 import chartOption from '@/json/plugin-overview-options';
 import { formatDate } from '@/common/tools';
 import moment from 'moment';
+import CodeQuality from './code-quality.vue';
+import BaseInfo from './base-info.vue';
+import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 export default {
   components: {
     paasPluginTitle,
     chart: ECharts,
+    CodeQuality,
+    BaseInfo,
+    FunctionalDependency,
   },
   mixins: [pluginBaseMixin],
   data() {
     return {
       isLoading: true,
-      operationsList: [],
       chartOption: chartOption.stat,
       renderChartIndex: 0,
       chartDataCache: [],
@@ -217,6 +200,9 @@ export default {
         uv: true,
       },
       initDateTimeRange: [],
+      curSchemas: {
+        plugin_type: {},
+      },
       dateRange: {
         startTime: '',
         endTime: '',
@@ -228,6 +214,11 @@ export default {
         },
       },
       viewInfo: {},
+      isDashboardLoading: false,
+      curDashboard: '',
+      dashboardList: [],
+      displayDashboardData: {},
+      dashboardLink: '',
       shortcuts: [
         {
           text: this.$t('最近7天'),
@@ -263,6 +254,24 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
+    curPluginInfo() {
+      return this.$store.state.plugin.curPluginInfo;
+    },
+    isBkSaas() {
+      return this.pdId === 'bk-saas';
+    },
+    iframeUrl() {
+      if (this.isBkSaas) {
+        return this.displayDashboardData?.dashboard_url;
+      }
+      return this.curPluginInfo.overview_page?.bottom_url;
+    },
+    // 暂未提供仪表盘
+    isDashboardProvided() {
+      const unsupportedLanguage = ['go'];
+      const curLanguage = this.curPluginInfo.language?.toLocaleLowerCase();
+      return this.isBkSaas && unsupportedLanguage.includes(curLanguage);
+    },
   },
   watch: {
     dateRange: {
@@ -271,7 +280,7 @@ export default {
         this.refresh();
       },
     },
-    '$route'() {
+    $route() {
       this.refresh();
     },
   },
@@ -279,41 +288,59 @@ export default {
     this.init();
   },
   mounted() {
-    const end = new Date();
-    const start = new Date();
-    start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-    this.initDateTimeRange = [start, end];
-
-    this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
-    this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+    this.initTime();
     this.getChartData();
   },
   methods: {
     init() {
+      // 蓝鲸应用插件
+      if (this.isBkSaas) {
+        this.getBuiltinDashboards();
+        this.getAppDashboardInfo();
+      }
       moment.locale(this.localLanguage);
-      this.getPluginOperations();
       this.getStoreOverview();
+      this.fetchPluginTypeList();
     },
 
-    // 获取动态
-    async getPluginOperations() {
-      const params = {
-        pdId: this.pdId,
-        pluginId: this.pluginId,
-      };
+    initTime() {
+      const end = new Date();
+      const start = new Date();
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+      this.initDateTimeRange = [start, end];
+
+      this.dateRange.startTime = moment(start).format('YYYY-MM-DD');
+      this.dateRange.endTime = moment(end).format('YYYY-MM-DD');
+    },
+
+    // 获取仪表盘数据
+    async getBuiltinDashboards() {
+      this.isDashboardLoading = true;
       try {
-        const res = await this.$store.dispatch('plugin/getPluginOperations', params);
-        this.operationsList = [];
-        for (const item of res.results) {
-          item.created_format = moment(item.created).startOf('minute')
-            .fromNow();
-          this.operationsList.push(item);
+        const res = await this.$store.dispatch('getBuiltinDashboards', {
+          appCode: this.pluginId,
+        });
+        this.dashboardList = res ?? [];
+        if (this.dashboardList.length) {
+          this.displayDashboardData = this.dashboardList[0];
+          this.curDashboard = this.displayDashboardData.name;
         }
       } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
+        this.catchErrorHandler(e);
+      } finally {
+        this.isDashboardLoading = false;
+      }
+    },
+
+    // 获取仪表盘链接
+    async getAppDashboardInfo() {
+      try {
+        const res = await this.$store.dispatch('baseInfo/getAppDashboardInfo', {
+          appCode: this.pluginId,
         });
+        this.dashboardLink = res.dashboard_url || '';
+      } catch (e) {
+        this.catchErrorHandler(e);
       }
     },
 
@@ -348,6 +375,19 @@ export default {
       }
     },
 
+    // 获取插件类型数据
+    async fetchPluginTypeList() {
+      try {
+        const typeList = await this.$store.dispatch('plugin/getPluginsTypeList');
+        this.curSchemas = typeList.find((t) => t.plugin_type.id === this.curPluginInfo.pd_id);
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
     async getChartData() {
       const start = `${this.dateRange.startTime} 00:00`;
       const end = `${this.dateRange.endTime} 23:59`;
@@ -374,11 +414,13 @@ export default {
         this.chartDataCache = res;
         // 由于API不能同一天的数据，使用默认值
         if (!res.length) {
-          this.chartDataCache = [{
-            commit_count: 0,
-            commit_user_count: 0,
-            day: params.begin_time,
-          }];
+          this.chartDataCache = [
+            {
+              commit_count: 0,
+              commit_user_count: 0,
+              day: params.begin_time,
+            },
+          ];
         }
         this.renderChart();
       } catch (e) {
@@ -396,11 +438,11 @@ export default {
     },
 
     /**
-             * 图表初始化
-             * @param  {Object} chartData 数据
-             * @param  {String} type 类型
-             * @param  {Object} ref 图表对象
-             */
+     * 图表初始化
+     * @param  {Object} chartData 数据
+     * @param  {String} type 类型
+     * @param  {Object} ref 图表对象
+     */
     renderChart() {
       const series = [];
       const xAxisData = [];
@@ -472,31 +514,32 @@ export default {
     },
 
     /**
-             * 清空图表数据
-             */
+     * 清空图表数据
+     */
     clearChart() {
       const chartRef = this.$refs.chart;
 
-      chartRef && chartRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [
-          {
-            name: '',
-            type: 'line',
-            smooth: true,
-            areaStyle: {
-              normal: {
-                opacity: 0,
-              },
+      chartRef &&
+        chartRef.mergeOptions({
+          xAxis: [
+            {
+              data: [],
             },
-            data: [0],
-          },
-        ],
-      });
+          ],
+          series: [
+            {
+              name: '',
+              type: 'line',
+              smooth: true,
+              areaStyle: {
+                normal: {
+                  opacity: 0,
+                },
+              },
+              data: [0],
+            },
+          ],
+        });
     },
 
     refresh() {
@@ -518,471 +561,289 @@ export default {
         endTime: date[1],
       };
     },
+    // 切换仪表盘
+    handleChange(name) {
+      this.displayDashboardData = this.data.find((v) => v.name === name);
+    },
+    toPublish() {
+      this.$router.push({
+        name: 'pluginVersionManager',
+      });
+    },
+    redirectPage(url) {
+      window.open(url, '_blank');
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
-    @import '~@/assets/css/mixins/ellipsis.scss';
+@import '~@/assets/css/mixins/ellipsis.scss';
 
-    .visible-range{
-        .desc{
-            font-size: 12px;
-            color: #979BA5;
-        }
-    }
-    .chart-info {
-        margin: 80px 0 20px;
-        .title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #313238;
-            line-height: 1;
-        }
-    }
-    .chart-box {
-        width: 100%;
-        min-height: 150px;
+.plugin-overview {
+  .desc {
+    font-size: 12px;
+    color: #979ba5;
+  }
+}
+.chart-info {
+  margin: 24px 0 20px;
+  .title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #313238;
+    line-height: 1;
+  }
+}
+.chart-box {
+  width: 100%;
+  min-height: 150px;
 
-        .chart-action {
-            height: 20px;
-            margin-top: 15px;
-            padding: 0 30px;
-        }
+  .chart-action {
+    height: 20px;
+    margin-top: 15px;
+    padding: 0 30px;
+  }
 
-        .dimension {
-            li {
-                display: inline-block;
-                font-size: 12px;
-                color: #63656E;
-                margin-right: 30px;
-                cursor: pointer;
-                opacity: 0.4;
-                line-height: 12px;
+  .dimension {
+    li {
+      display: inline-block;
+      font-size: 12px;
+      color: #63656e;
+      margin-right: 30px;
+      cursor: pointer;
+      opacity: 0.4;
+      line-height: 12px;
 
-                &.active {
-                    opacity: 1;
-                }
-
-                &:last-child {
-                    margin-right: 0;
-                }
-            }
-
-            .dot {
-                width: 10px;
-                height: 10px;
-                display: inline-block;
-                border: 1px solid #3A84FF;
-                background: #A3C5FD;
-                border-radius: 50%;
-                vertical-align: middle;
-                float: left;
-                margin-right: 5px;
-
-                &.warning {
-                    border: 1px solid #FF9C01;
-                    background: #FFD695;
-                }
-            }
-        }
-
-        .time {
-            li {
-                display: inline-block;
-                font-size: 12px;
-                color: #63656E;
-                margin-right: 20px;
-                font-weight: bold;
-                cursor: pointer;
-                padding: 0 2px;
-                border-bottom: 2px solid #fff;
-
-                &:last-child {
-                    margin-right: 0;
-                }
-
-                &.active {
-                    border-bottom: 2px solid #3a84ff;
-                }
-
-                &.disabled {
-                    color: #ccc;
-                    cursor: not-allowed;
-                    border-bottom: 2px solid #fff;
-                }
-            }
-        }
-    }
-    .app-container {
-        .overview-main {
-            display: flex;
-        }
-        .visual-display {
-            padding: 24px;
-            width: 100%;
-            background: #fff;
-        }
-        .nav-list {
-            position: relative;
-            z-index: 99;
-            display: flex;
-            height: 64px;
-            background: #FFFFFF;
-            border: 1px solid #EAEBF0;
-            border-radius: 2px;
-            &.is-iframe {
-                border-radius: 2px 2px 0 0;
-            }
-            .nav-list-item {
-                display: flex;
-                align-items: center;
-                position: relative;
-                flex: 1;
-                &::after {
-                    content: '';
-                    position: absolute;
-                    right: 0;
-                    width: 1px;
-                    height: 48px;
-                    background: #EAEBF0;
-                }
-                &:last-child::after {
-                    background: transparent;
-                }
-                .item-icon {
-                    padding: 0 20px;
-                    font-size: 32px;
-                    color: #C4C6CC;
-                }
-                .item-info {
-                    h3 {
-                        font-size: 16px;
-                        font-weight: 700;
-                        line-height: 24px;
-                        color: #313238;
-                    }
-                    .text {
-                        font-size: 12px;
-                        color: #63656E;
-                        line-height: 20px;
-                    }
-                    i {
-                        transform: translateY(0px);
-                    }
-                }
-            }
-        }
-      .information-container {
-          width: 280px;
-          max-height: calc(100vh - 143px);
-          min-height: 827px;
-          padding-left: 20px;
-          margin-left: 24px;
-          font-size: 12px;
-          border-radius: 2px;
-          color: #63656E;
-          h3 {
-              color: #63656E;
-          }
-          .base-info {
-              margin-right: 15px;
-              p {
-                  line-height: 30px;
-                  white-space: nowrap;
-                  text-overflow: ellipsis;
-                  overflow: hidden;
-                  .copy-text {
-                      position: absolute;
-                      top: 5px;
-                      right: 6px;
-                      color: #3A84FF;
-                      cursor: pointer;
-                  }
-              }
-              .repos {
-                  position: relative;
-                  padding-right: 30px;
-                  .repository-tooltips {
-                      position: absolute;
-                      width: 140px;
-                      height: 100%;
-                  }
-              }
-          }
-          .copy-url {
-              color: #3A84FF;
-              cursor: pointer;
-          }
+      &.active {
+        opacity: 1;
       }
-      .chart-container {
-          display: flex;
-          margin-top: 150px;
-            h2 {
-                font-size: 18px;
-                font-weight: 700;
-            }
+
+      &:last-child {
+        margin-right: 0;
       }
     }
-    .dynamic-wrapper {
-        height: 100%;
-    }
-    .dynamic-list {
-        height: 100%;
-        max-height: calc(100vh - 360px);
-        min-height: 610px;
-        padding-right: 15px;
-        overflow-y: auto;
-        font-size: 12px;
-        color: #63656E;
-    }
-    .dynamic-list::-webkit-scrollbar {
-        width: 4px;
-        background-color: hsla(0,0%,80%,0);
-    }
 
-    .dynamic-list::-webkit-scrollbar-thumb {
-        height: 5px;
-        border-radius: 2px;
-        background-color: #e6e9ea;
-    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+      border: 1px solid #3a84ff;
+      background: #a3c5fd;
+      border-radius: 50%;
+      vertical-align: middle;
+      float: left;
+      margin-right: 5px;
 
-    .dynamic-list li {
-        padding-bottom: 15px;
-        padding-left: 20px;
-        position: relative;
+      &.warning {
+        border: 1px solid #ff9c01;
+        background: #ffd695;
+      }
     }
+  }
 
-    .dynamic-list li:before {
-        position: absolute;
-        content: "";
-        width: 10px;
-        height: 10px;
-        top: 3px;
-        left: 1px;
-        border: solid 1px rgba(87, 163, 241, 1);
-        border-radius: 50%;
+  .time {
+    li {
+      display: inline-block;
+      font-size: 12px;
+      color: #63656e;
+      margin-right: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0 2px;
+      border-bottom: 2px solid #fff;
+
+      &:last-child {
+        margin-right: 0;
+      }
+
+      &.active {
+        border-bottom: 2px solid #3a84ff;
+      }
+
+      &.disabled {
+        color: #ccc;
+        cursor: not-allowed;
+        border-bottom: 2px solid #fff;
+      }
     }
-
-    .dynamic-list li:after {
-        position: absolute;
-        content: "";
-        width: 1px;
-        height: 70px;
-        top: 15px;
-        left: 6px;
-        background: rgba(87, 163, 241, 1);
+  }
+}
+.app-container {
+  .guidelines-cls {
+    height: auto;
+    line-height: unset;
+  }
+  .alert-cls {
+    margin-bottom: 16px;
+  }
+  .plugin-overview-main {
+    height: calc(100vh - 150px);
+    min-height: 800px;
+    .content {
+      display: flex;
+      height: calc(100% - 40px);
     }
-
-    .dynamic-list li:nth-child(1):before {
-        border: solid 1px rgba(87, 163, 241, 1);
-    }
-
-    .dynamic-list li:nth-child(1):after {
-        background: rgba(87, 163, 241, 1);
-    }
-
-    .dynamic-list li:nth-child(2):before {
-        border: solid 1px rgba(87, 163, 241, 0.9);
-    }
-
-    .dynamic-list li:nth-child(2):after {
-        background: rgba(87, 163, 241, 0.9);
-    }
-
-    .dynamic-list li:nth-child(3):before {
-        border: solid 1px rgba(87, 163, 241, 0.8);
-    }
-
-    .dynamic-list li:nth-child(3):after {
-        background: rgba(87, 163, 241, 0.8);
-    }
-
-    .dynamic-list li:nth-child(4):before {
-        border: solid 1px rgba(87, 163, 241, 0.7);
-    }
-
-    .dynamic-list li:nth-child(4):after {
-        background: rgba(87, 163, 241, 0.7);
-    }
-
-    .dynamic-list li:nth-child(5):before {
-        border: solid 1px rgba(87, 163, 241, 0.6);
-    }
-
-    .dynamic-list li:nth-child(5):after {
-        background: rgba(87, 163, 241, 0.6);
-    }
-
-    .dynamic-list li:nth-child(6):before {
-        border: solid 1px rgba(87, 163, 241, 0.5);
-    }
-
-    .dynamic-list li:nth-child(6):after {
-        background: rgba(87, 163, 241, 0.5);
-    }
-
-    .dynamic-list li:nth-child(7):before {
-        border: solid 1px rgba(87, 163, 241, 0.4);
-    }
-
-    .dynamic-list li:nth-child(7):after {
-        background: rgba(87, 163, 241, 0.4);
-    }
-
-    .dynamic-list li:nth-child(8):before {
-        border: solid 1px rgba(87, 163, 241, 0.3);
-    }
-
-    .dynamic-list li:nth-child(8):after {
-        background: rgba(87, 163, 241, 0.3);
-    }
-
-    .dynamic-list li:nth-child(9):before {
-        border: solid 1px rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:nth-child(9):after {
-        background: rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:nth-child(10):before {
-        border: solid 1px rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:nth-child(10):after {
-        background: rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:last-child:before {
-        border: solid 1px rgba(87, 163, 241, 0.2);
-    }
-
-    .dynamic-list li:last-child:after {
-        background: rgba(87, 163, 241, 0);
-    }
-
-    .dynamic-time {
-        line-height: 18px;
-        font-size: 12px;
-        color: #c0c9d3;
-        cursor: default;
-    }
-
-    .dynamic-content {
-        line-height: 24px;
-        height: 48px;
-        overflow: hidden;
-        color: #666;
-        text-overflow: ellipsis;
-        white-space: normal;
-        word-break: break-all;
-        display: -webkit-box;
-    }
-
-    .summary-content {
+  }
+  .visual-display {
+    padding: 24px;
+    width: 100%;
+    background: #fff;
+    overflow: hidden;
+    &.exception {
+      display: flex;
+      align-items: center;
+      .functional-dependency {
         flex: 1;
+      }
     }
+    .exception-box {
+      display: flex;
+      align-items: center;
+      height: 100%;
+    }
+  }
+  .information-container {
+    width: 280px;
+    padding: 12px 16px;
+    margin-left: 24px;
+    font-size: 12px;
+  }
+  .chart-container {
+    display: flex;
+    margin-top: 150px;
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+  }
+}
 
-    .http-list-fleft {
-        display: inline-block;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        width: 400px;
-    }
+.http-list-fleft {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: 400px;
+}
 
-    .http-list-fright {
-        width: 234px;
-        text-align: right;
-    }
+.http-list-fright {
+  width: 234px;
+  text-align: right;
+}
 
-    .middle-http-list li {
-        overflow: hidden;
-        height: 42px;
-        line-height: 42px;
-        background: #fff;
-        color: #666;
-        font-size: 12px;
-        padding: 0 10px;
-    }
+.middle-http-list li {
+  overflow: hidden;
+  height: 42px;
+  line-height: 42px;
+  background: #fff;
+  color: #666;
+  font-size: 12px;
+  padding: 0 10px;
+}
 
-    .middle-http-list li:nth-child(2n-1) {
-        background: #fafafa;
-    }
+.middle-http-list li:nth-child(2n-1) {
+  background: #fafafa;
+}
 
-    .fright-middle {
-        padding: 0 0 24px 0;
-        line-height: 30px;
-        color: #666;
-        border-bottom: solid 1px #e6e9ea;
-    }
+.svn-a {
+  line-height: 20px;
+  padding: 10px 0;
+}
 
-    .fright-middle h3 {
-        padding-bottom: 8px;
-    }
+.overview-sub-fright {
+  width: 260px;
+  min-height: 741px;
+  padding: 0 0 0 20px;
+  border-left: solid 1px #e6e9ea;
+}
 
-    .svn-a {
-        line-height: 20px;
-        padding: 10px 0;
-    }
+.fright-last {
+  border-bottom: none;
+  padding-top: 0;
+  height: 100%;
+}
+.summary_text {
+  display: inline-block;
+  margin-left: 10px;
+}
+.bk-tooltip .bk-tooltip-ref p {
+  width: 193px !important;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
 
-    .overview-sub-fright {
-        width: 260px;
-        min-height: 741px;
-        padding: 0 0 0 20px;
-        border-left: solid 1px #e6e9ea;
-    }
+.iframe-margin {
+  height: 20px;
+  background: #ffff;
+  position: relative;
+  z-index: 99;
+}
 
-    .fright-last {
-        border-bottom: none;
-        padding-top: 0;
-        height: 100%;
-    }
-    .summary_text {
-        display: inline-block;
-        margin-left: 10px;
-    }
-    .bk-tooltip .bk-tooltip-ref p {
-        width: 193px !important;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-    }
-    .address-zh-cn {
-        min-width: 46px;
-    }
-    .address-en {
-        min-width: 66px;
-    }
+.iframe-container {
+  /* resize and min-height are optional, allows user to resize viewable area */
+  -webkit-resize: vertical;
+  -moz-resize: vertical;
+  resize: vertical;
+  height: 100%;
+  &.bk-code-cc-new {
+    transform: translateY(2px);
+    margin-top: -70px;
+  }
+  iframe#iframe-embed {
+    width: 100%;
+    height: 100%;
+    min-height: 795px;
 
-    .iframe-margin {
-        height: 20px;
-        background: #ffff;
-        position: relative;
-        z-index: 99;
+    /* resize seems to inherit in at least Firefox */
+    -webkit-resize: none;
+    -moz-resize: none;
+    resize: none;
+  }
+}
+.dashboards-exception-part {
+  /deep/ .part-img img {
+    height: 200px;
+  }
+  .title {
+    font-size: 24px;
+    color: #4d4f56;
+    line-height: 32px;
+    margin-bottom: 16px;
+  }
+  .tips {
+    font-size: 14px;
+    color: #979ba5;
+    line-height: 22px;
+    margin-bottom: 24px;
+  }
+}
+.top-box {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  .title {
+    margin-right: 24px;
+  }
+  .dashboard-select-cls:not(.is-focus) {
+    background: #f0f1f5;
+    border: none;
+  }
+}
+.dashboard-select-popover {
+  .select-extension-cls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    color: #4d4f56;
+    i {
+      font-size: 12px;
+      margin-right: 5px;
+      transform: translateY(0px);
     }
-
-    .iframe-container {
-        transform: translateY(2px);
-        margin-top: -55px;
-        // margin-top: -52px;
-        /* resize and min-height are optional, allows user to resize viewable area */
-        -webkit-resize: vertical;
-        -moz-resize: vertical;
-        resize: vertical;
-        min-height: 795px;
-
-        iframe#iframe-embed {
-            width: 100%;
-            min-height: 795px;
-            height: calc(100vh - 175px);
-
-            /* resize seems to inherit in at least Firefox */
-            -webkit-resize: none;
-            -moz-resize: none;
-            resize: none;
-        }
-    }
-
+  }
+}
 </style>

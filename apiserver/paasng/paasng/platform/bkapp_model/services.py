@@ -1,118 +1,69 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+from django.conf import settings
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-from typing import Dict, List, Optional
-
-from django.utils.translation import gettext_lazy as _
-
-from paas_wl.bk_app.applications.api import (
-    create_app_ignore_duplicated,
-    create_cnative_app_model_resource,
-    update_metadata_by_env,
-)
-from paas_wl.bk_app.applications.constants import WlAppType
-from paas_wl.bk_app.cnative.specs.constants import ApiVersion
-from paas_wl.infras.cluster.shim import EnvClusterService, RegionClusterService
-from paasng.accessories.log.shim import setup_env_log_model
-from paasng.platform.applications.models import Application, ModuleEnvironment
+from paas_wl.bk_app.cnative.specs.constants import DEFAULT_PROCESS_NAME
+from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.entities.proc_service import ExposedType, ProcService
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
+from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.engine.constants import AppEnvName
-from paasng.platform.engine.models import EngineApp
-from paasng.platform.modules.manager import ModuleInitializer, make_engine_app_name
 from paasng.platform.modules.models import Module
-from paasng.utils.configs import get_region_aware
-from paasng.utils.error_codes import error_codes
-
-# Model-Resource
-default_environments: List[str] = [AppEnvName.STAG.value, AppEnvName.PROD.value]
 
 
-def initialize_simple(
-    module: Module,
-    image: str,
-    cluster_name: Optional[str] = None,
-    api_version: Optional[str] = ApiVersion.V1ALPHA2,
-    command: Optional[List[str]] = None,
-    args: Optional[List[str]] = None,
-    target_port: Optional[int] = None,
-) -> Dict:
-    """Initialize a cloud-native application, return the initialized object
+def check_replicas_manually_scaled(m: Module) -> bool:
+    """check if replicas has been manually scaled by web form"""
+    process_names = ModuleProcessSpec.objects.filter(module=m).values_list("name", flat=True)
 
-    :param module: Module object, a module can only be initialized once
-    :param image: The container image of main process
-    :param cluster_name: The name of cluster to deploy BkApp.
-    :param command: Custom command
-    :param args: Custom args
-    :param target_port: Custom target port
+    if not process_names:
+        return False
+
+    # NOTE: 页面手动扩缩容会修改 spec.env_overlay.replicas 的管理者为 web_form, 因此只需要检查 f_overlay_replicas 字段
+    replicas_fields = []
+    for proc_name in process_names:
+        for env_name in AppEnvName:
+            replicas_fields.append(fieldmgr.f_overlay_replicas(proc_name, env_name))
+
+    managers = fieldmgr.MultiFieldsManager(m).get(replicas_fields)
+    return fieldmgr.FieldMgrName.WEB_FORM in managers.values()
+
+
+def upsert_proc_svc_by_spec_version(m: Module, spec_version: AppSpecVersion | None):
+    """upsert process services base on spec version defined in app_desc.yaml file.
+
+    When spec version lower than 3 (or when only a Procfile exists), default process services must be upserted.
+    Otherwise, this function performs no operation.
     """
-    if not cluster_name:
-        cluster_name = get_default_cluster_name(module.region)
+    # 由于低于 3 版本的 app_desc.yaml/Procfile 不支持显式配置 process services, 因此由平台创建
+    if spec_version in [None, AppSpecVersion.VER_1, AppSpecVersion.VER_2]:
+        proc_specs = ModuleProcessSpec.objects.filter(module=m)
 
-    model_res = create_cnative_app_model_resource(module, image, api_version, command, args, target_port)
-    create_engine_apps(module.application, module, environments=default_environments, cluster_name=cluster_name)
-    return model_res
+        for proc_spec in proc_specs:
+            proc_svc = ProcService(
+                name=proc_spec.name,
+                target_port=settings.CONTAINER_PORT,
+                protocol="TCP",
+                port=80,
+            )
+            if proc_spec.name == DEFAULT_PROCESS_NAME:
+                proc_svc.exposed_type = ExposedType()
 
+            proc_spec.services = [proc_svc]
 
-def create_engine_apps(
-    application: Application,
-    module: Module,
-    cluster_name: str,
-    environments: Optional[List[str]] = None,
-):
-    """Create engine app instances for application"""
-    environments = environments or default_environments
-    for environment in environments:
-        engine_app_name = make_engine_app_name(module, application.code, environment)
-        # 先创建 EngineApp，再更新相关的配置（比如 cluster_name）
-        engine_app = get_or_create_engine_app(application.owner, application.region, engine_app_name)
-        env = ModuleEnvironment.objects.create(
-            application=application, module=module, engine_app_id=engine_app.id, environment=environment
-        )
-        EnvClusterService(env).bind_cluster(cluster_name)
-        setup_env_log_model(env)
-
-        # Update metadata
-        engine_app_meta_info = ModuleInitializer(module).make_engine_meta_info(env)
-        update_metadata_by_env(env, engine_app_meta_info)
-
-
-def get_or_create_engine_app(owner: str, region: str, engine_app_name: str) -> EngineApp:
-    """get or create engine app from workload
-
-    :return: EngineApp object
-    """
-    info = create_app_ignore_duplicated(region, engine_app_name, WlAppType.CLOUD_NATIVE)
-    # Create EngineApp and binding relationships
-    return EngineApp.objects.create(
-        id=info.uuid,
-        name=engine_app_name,
-        owner=owner,
-        region=region,
-    )
-
-
-def get_default_cluster_name(region: str) -> str:
-    """Get default cluster name from settings, and valid if we have this cluster."""
-    try:
-        default_cluster_name = get_region_aware("CLOUD_NATIVE_APP_DEFAULT_CLUSTER", region)
-    except Exception as e:
-        raise error_codes.CANNOT_CREATE_APP.f(_("暂无可用集群, 请联系管理员")) from e
-
-    try:
-        return RegionClusterService(region).get_cluster_by_name(default_cluster_name).name
-    except Exception:
-        raise error_codes.CANNOT_CREATE_APP.f(_(f"集群 {default_cluster_name} 未就绪, 请联系管理员"))
+        if proc_specs:
+            ModuleProcessSpec.objects.bulk_update(proc_specs, ["services"])

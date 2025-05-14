@@ -60,7 +60,7 @@ export default {
          * 获取模块基本信息
          */
     getModuleBasicInfo({  }, { appCode, modelName }, config = {}) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}`;
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${modelName}/`;
       return http.get(url, config);
     },
 

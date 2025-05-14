@@ -21,8 +21,6 @@ package main
 import (
 	"context"
 	"flag"
-	"net/http"
-	"net/url"
 	"os"
 	"time"
 
@@ -32,7 +30,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/iancoleman/strcase"
-	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -51,8 +49,6 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	dgmingress "bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping/ingress"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
-	"bk.tencent.com/paas-app-operator/pkg/platform/external"
-
 	//+kubebuilder:scaffold:imports
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
@@ -81,6 +77,7 @@ func main() {
 		// false: zap.InfoLevel, enable sampling logging. V(0) corresponds to InfoLevel, bigger than 0 will be silent
 		// true: zap.DebugLevel. V(0) corresponds to InfoLevel, V(1) corresponds to DebugLevel, bigger than 1 will be silent
 		Development: false,
+		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
 	// can use zap-devel and zap-log-level args to reset Development and the log level
 	opts.BindFlags(flag.CommandLine)
@@ -97,7 +94,7 @@ func main() {
 	if cfgFile != "" {
 		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(cfgFile).OfKind(projConf))
 		if err != nil {
-			setupLog.Error(err, "unable to load the config file")
+			setupLog.Error(err, "unable to load the config file", "config file", cfgFile)
 			os.Exit(1)
 		}
 	}
@@ -123,11 +120,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = initExtensionClient(); err != nil {
-		setupLog.Error(err, "unable to init extension client")
-		os.Exit(1)
-	}
-
 	initIngressPlugins()
 
 	setupCtx := context.Background()
@@ -139,7 +131,7 @@ func main() {
 	mgrCli := kubeutil.NewTracedClient(mgr.GetClient())
 	mgrScheme := mgr.GetScheme()
 
-	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha1.GroupKindBkApp, projConf.Controller)
+	bkappMgrOpts := genGroupKindMgrOpts(paasv1alpha2.GroupKindBkApp, projConf.Controller)
 	if err = controllers.NewBkAppReconciler(mgrCli, mgrScheme).
 		SetupWithManager(setupCtx, mgr, bkappMgrOpts); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BkApp")
@@ -183,37 +175,31 @@ func main() {
 	}
 }
 
-func initExtensionClient() error {
-	cfgObj := config.Global.(*paasv1alpha1.ProjectConfig)
-
-	if cfgObj.Platform.BkAPIGatewayURL != "" {
-		bkpaasGatewayBaseURL, err := url.Parse(cfgObj.Platform.BkAPIGatewayURL)
-		if err != nil {
-			return errors.Wrap(err, "failed to parse bkpaas gateway url to net.Url")
-		}
-		external.SetDefaultClient(
-			external.NewClient(
-				bkpaasGatewayBaseURL,
-				cfgObj.Platform.BkAppCode,
-				cfgObj.Platform.BkAppSecret,
-				http.DefaultClient,
-			),
-		)
-	} else {
-		setupLog.Info("PlatformConfig.BkAPIGateWayURL is not configured, some of Platform-related functionality will be limited")
-	}
-	return nil
-}
-
 func initIngressPlugins() {
 	cfgObj := config.Global.(*paasv1alpha1.ProjectConfig)
 
 	pluginCfg := cfgObj.IngressPlugin
+
+	if pluginCfg.AccessControl != nil && pluginCfg.TenantGuard != nil && pluginCfg.TenantGuard.Enabled {
+		// 由于 AccessControl 和 TenantGuard 这两个 lua 插件都是通过 access_by_lua_file 指令进行设置,
+		// 而一个作用域只能有一个 access_by_lua_file, 因此, 两个插件不能同时启用.
+		// TODO 后续考虑通过一个 lua 插件模块, 同时支持 AccessControl 和 TenantGuard
+		setupLog.Error(nil, "AccessControl and TenantGuard can not be enabled at the same time.")
+		os.Exit(1)
+	}
+
 	if pluginCfg.AccessControl != nil {
 		setupLog.Info("[IngressPlugin] access control plugin enabled.")
 		dgmingress.RegistryPlugin(&dgmingress.AccessControlPlugin{Config: pluginCfg.AccessControl})
 	} else {
 		setupLog.Info("[IngressPlugin] Missing access control config, disable access control feature.")
+
+		if pluginCfg.TenantGuard != nil && pluginCfg.TenantGuard.Enabled {
+			setupLog.Info("[IngressPlugin] TenantGuard plugin enabled.")
+			dgmingress.RegistryPlugin(&dgmingress.TenantGuardPlugin{})
+		} else {
+			setupLog.Info("[IngressPlugin] Missing tenant guard config, disable tenant guard feature.")
+		}
 	}
 	if pluginCfg.PaaSAnalysis != nil && pluginCfg.PaaSAnalysis.Enabled {
 		// PA 无需额外配置, 可以总是启用该插件

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Dict, Optional
 
@@ -31,8 +30,8 @@ from paasng.platform.engine.signals import pre_appenv_deploy
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
-from paasng.platform.modules.models.deploy_config import Hook, HookList
 from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service
 
@@ -74,16 +73,7 @@ def initialize_deployment(
         model_resource, _ = AppModelResource.objects.get_or_create_by_module(module)
         bkapp_revision_id = model_resource.revision.id
 
-    hooks = HookList(
-        Hook(
-            type=hook.type,
-            command=hook.proc_command,
-            enabled=hook.enabled,
-        )
-        for hook in module.deploy_hooks.all()
-    )
     deployment = Deployment.objects.create(
-        region=module.region,
         operator=operator,
         app_environment=env,
         source_type=module.source_type,
@@ -95,8 +85,8 @@ def initialize_deployment(
             **(advanced_options or {}),
             source_dir=get_source_dir(module, operator=operator, version_info=version_info),
         ),
-        hooks=hooks,
         bkapp_revision_id=bkapp_revision_id,
+        tenant_id=module.tenant_id,
     )
     deployment.refresh_from_db()
     ModuleEnvironmentOperations.objects.create(
@@ -135,7 +125,7 @@ class DeployTaskRunner:
             return False
         elif (
             self.module.get_source_origin() == SourceOrigin.S_MART
-            and self.deployment.version_info.version_type == "image"
+            and self.deployment.version_info.version_type == VersionType.TAG.value
         ):
             return False
         # 如部署时指定了 build_id, 说明是选择了历史版本(镜像)进行发布, 则无需构建

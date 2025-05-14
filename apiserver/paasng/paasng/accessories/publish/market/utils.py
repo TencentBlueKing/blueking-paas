@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from dataclasses import dataclass
 from typing import List, Optional
@@ -111,8 +110,12 @@ class MarketAvailableAddressHelper(AvailableAddressMixin):
             return self.default_access_entrance
         elif source_url_type == ProductSourceUrlType.ENGINE_PROD_ENV_HTTPS:
             return self.default_access_entrance
+        # 自定义地址，不验证是否为主模块的自定义地址，否则会导致切换主模块后应用市场地址为 None
         elif source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN:
-            return self.filter_domain_address(self.market_config.custom_domain_url)
+            return AvailableAddress(
+                address=self.market_config.custom_domain_url,
+                type=ProductSourceUrlType.CUSTOM_DOMAIN.value,
+            )
         elif source_url_type == ProductSourceUrlType.THIRD_PARTY:
             return AvailableAddress(
                 address=self.market_config.source_tp_url, type=ProductSourceUrlType.THIRD_PARTY.value

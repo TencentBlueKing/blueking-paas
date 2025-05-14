@@ -24,7 +24,7 @@
               <span
                 v-if="index === current"
                 class="item-current"
-              >{{ $t('当前版本') }}</span>
+              >{{ $t('当前版本-label') }}</span>
             </li>
           </ul>
         </div>
@@ -49,26 +49,26 @@ import { marked } from 'marked';
 export default {
   name: 'LogVersion',
   props: {
-    dialogShow: Boolean
+    dialogShow: Boolean,
   },
-  data () {
+  data() {
     return {
       show: false,
       current: 0,
       active: 0,
       logList: [],
       loading: false,
-      contactLoading: false
+      contactLoading: false,
     };
   },
   computed: {
-    currentLog () {
+    currentLog() {
       return marked(this.logList[this.active]?.detail || '');
-    }
+    },
   },
   watch: {
     dialogShow: {
-      async handler (v) {
+      async handler(v) {
         this.show = v;
         if (v) {
           this.loading = true;
@@ -79,37 +79,37 @@ export default {
           this.loading = false;
         }
       },
-      immediate: true
-    }
+      immediate: true,
+    },
   },
-  beforeDestroy () {
+  beforeDestroy() {
     this.show = false;
     this.$emit('update:dialogShow', false);
   },
   methods: {
-    handleValueChange (v) {
+    handleValueChange(v) {
       this.$emit('update:dialogShow', v);
     },
     // 查看log详情
-    async handleItemClick (index = 0, curEvent) {
+    async handleItemClick(index = 0, curEvent) {
       this.loading = true;
       this.active = index;
       setTimeout(() => {
         this.loading = false;
       }, 20);
     },
-    async getVersionLogsList () {
+    async getVersionLogsList() {
       try {
         const data = await this.$store.dispatch('getVersionLog');
         return data.map(item => ({ title: item.version, date: item.date, detail: item.content }));
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: e.detail || this.$t('接口异常')
+          message: e.detail || this.$t('接口异常'),
         });
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -202,7 +202,7 @@ export default {
 </style>
 <style lang="scss">
 .detail-container{
-  
+
   font-size: 14px;
         color: #313238;
         h1,

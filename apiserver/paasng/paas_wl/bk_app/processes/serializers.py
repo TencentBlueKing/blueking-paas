@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import copy
 from dataclasses import dataclass, field
 from typing import Any, Dict, Generic, List, Optional, TypeVar
@@ -23,7 +22,7 @@ from uuid import UUID
 
 import arrow
 import cattr
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from kubernetes.utils.quantity import parse_quantity
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
@@ -84,6 +83,7 @@ class InstanceForDisplaySLZ(serializers.Serializer):
     rich_status = serializers.CharField(read_only=True)
     ready = serializers.BooleanField(read_only=True)
     restart_count = serializers.IntegerField()
+    terminated_info = serializers.DictField(read_only=True, help_text="终止信息")
     version = serializers.CharField(read_only=True)
 
     def get_state(self, obj: Instance) -> str:
@@ -125,6 +125,15 @@ class InstanceListSLZ(serializers.Serializer):
 
     items = InstanceForDisplaySLZ(many=True)
     metadata = ListRespMetaDataSLZ()
+
+
+class EventSerializer(serializers.Serializer):
+    reason = serializers.CharField(help_text="事件发生的原因", required=False, allow_null=True)
+    count = serializers.IntegerField(help_text="事件发生的次数")
+    type = serializers.CharField(help_text="事件的类型", required=False, allow_null=True)
+    message = serializers.CharField(help_text="事件内容", required=False, allow_null=True)
+    first_timestamp = serializers.CharField(required=False, allow_null=True)
+    last_timestamp = serializers.CharField(required=False, allow_null=True)
 
 
 class ListWatcherRespSLZ(serializers.Serializer):
@@ -344,10 +353,6 @@ class ProcessSpecSLZ(serializers.Serializer):
     resource_limit_quota = serializers.SerializerMethodField(read_only=True)
     autoscaling = serializers.BooleanField()
     scaling_config = ScalingConfigSLZ()
-
-    # deprecated: 兼容旧的 CNativeProcSpecSLZ, 待前端替换取值字段后移除
-    cpu_limit = serializers.CharField(source="plan.limits.cpu")
-    memory_limit = serializers.CharField(source="plan.limits.memory")
 
     def get_resource_limit_quota(self, obj: ProcessSpec) -> dict:
         limits = obj.plan.limits

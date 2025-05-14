@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from types import SimpleNamespace
 from typing import Dict
 from unittest import mock
@@ -24,7 +23,7 @@ import pytest
 import urllib3
 from django.conf import settings
 
-from paas_wl.bk_app.applications.managers import AppConfigVarManager
+from paas_wl.bk_app.applications.entities import BuildMetadata
 from paasng.platform.engine.deploy.bg_build.utils import (
     generate_builder_env_vars,
     generate_slug_path,
@@ -39,7 +38,7 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 class TestEnvVars:
     def test_generate_env_vars_without_metadata(self, build_proc, wl_app):
-        env_vars = generate_builder_env_vars(build_proc, {})
+        env_vars = generate_builder_env_vars(build_proc, BuildMetadata(image=""))
         bucket = settings.BLOBSTORE_BUCKET_APP_SOURCE
         cache_path = f"{wl_app.region}/home/{wl_app.name}/cache"
         assert env_vars.pop("TAR_PATH") == f"{bucket}/{build_proc.source_tar_path}", "TAR_PATH 与预期不符"
@@ -51,9 +50,6 @@ class TestEnvVars:
         if settings.PYTHON_BUILDPACK_PIP_INDEX_URL:
             for k, v in get_envs_from_pypi_url(settings.PYTHON_BUILDPACK_PIP_INDEX_URL).items():
                 assert env_vars.pop(k) == v, f"{k} 与预期不符"
-        app_config_var = AppConfigVarManager(app=wl_app).get_envs()
-        for key in app_config_var.keys() & env_vars.keys():
-            assert env_vars[key] == app_config_var[key], f"{key} 与预期不符"
 
     def test_update_env_vars_with_metadata(self, build_proc):
         env: Dict[str, str] = {}
@@ -62,10 +58,10 @@ class TestEnvVars:
             {"type": "tar", "url": "https://rgw.com/x.tar", "name": "x", "version": "1.2"},
         ]
 
-        metadata = {"extra_envs": {"a": "b"}, "buildpacks": build_proc.buildpacks_as_build_env()}
+        metadata = BuildMetadata(image="", extra_envs={"a": "b"}, buildpacks=build_proc.buildpacks_as_build_env())
         update_env_vars_with_metadata(env, metadata)
 
-        assert metadata["extra_envs"]["a"] == env["a"]
+        assert metadata.extra_envs["a"] == env["a"]
         assert env["REQUIRED_BUILDPACKS"] == "git x https://github.com/x.git 1.1;tar x https://rgw.com/x.tar 1.2"
 
 
@@ -84,7 +80,7 @@ class TestUtils:
         ),
     )
     def test_prepare_slugbuilder_template_without_metadata(self, mocked_, wl_app, build_proc):
-        env_vars = generate_builder_env_vars(build_proc, {})
+        env_vars = generate_builder_env_vars(build_proc, BuildMetadata(image=""))
         slug_tmpl = prepare_slugbuilder_template(wl_app, env_vars, None)
         assert (
             slug_tmpl.name == f"slug-builder--{wl_app.module_name}"

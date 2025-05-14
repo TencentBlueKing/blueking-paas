@@ -16,6 +16,8 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+import i18n from '@/language/i18n';
+
 /**
  * 函数柯里化
  *
@@ -523,20 +525,20 @@ export function formatTime(time) {
   const minC = diffValue / minute;
   const yearC = diffValue / year;
   if (yearC >= 1) {
-    return `${parseInt(yearC)}${this.$t('年前')}`;
+    return `${parseInt(yearC, 10)}${i18n.t('年前')}`;
   }
   if (monthC >= 1) {
-    result = `${parseInt(monthC)}${this.$t('月前')}`;
+    result = `${parseInt(monthC, 10)}${i18n.t('月前')}`;
   } else if (weekC >= 1) {
-    result = `${parseInt(weekC)}${this.$t('周前')}`;
+    result = `${parseInt(weekC, 10)}${i18n.t('周前')}`;
   } else if (dayC >= 1) {
-    result = `${parseInt(dayC)}${this.$t('天前')}`;
+    result = `${parseInt(dayC, 10)}${i18n.t('天前')}`;
   } else if (hourC >= 1) {
-    result = `${parseInt(hourC)}${this.$t('小时前')}`;
+    result = `${parseInt(hourC, 10)}${i18n.t('小时前')}`;
   } else if (minC >= 1) {
-    result = `${parseInt(minC)}${this.$t('分钟前')}`;
+    result = `${parseInt(minC, 10)}${i18n.t('分钟前')}`;
   } else {
-    result = this.$t('刚刚');
+    result = i18n.t('刚刚');
   }
   return result;
 }
@@ -562,4 +564,58 @@ export function copy(value, ctx) {
     document.getSelection().addRange(selected);
   }
   ctx.$bkMessage({ theme: 'primary', message: ctx.$t('复制成功'), delay: 2000, dismissable: false });
+}
+
+/**
+ * 检查当前元素（el）是否包含指定类名
+ * @param {String} cls 类名
+ * @param {Element} el 元素
+ */
+export function parentClsContains(cls, el) {
+  if (el.classList.contains(cls)) {
+    return true;
+  }
+  let node = el.parentNode;
+  while (node) {
+    if (node.classList && node.classList.contains(cls)) return true;
+    node = node.parentNode;
+  }
+  return false;
+}
+
+/**
+ * 将指定内容以.txt下载
+ * @param {String} cls 类名
+ * @param {Element} el 元素
+ */
+export function downloadTxt(content, fileName) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName; // 指定下载文件的名称
+
+  // 触发点击事件下载文件
+  document.body.appendChild(link);
+  link.click();
+
+  URL.revokeObjectURL(link.href);
+  document.body.removeChild(link);
+}
+
+
+/**
+ * 将数据转为对应的层级路径
+ * @param {data} Arrar 层级数据
+ */
+export function buildPath(data) {
+  const path = [];
+
+  // 按顺序遍历数组，将每个节点的名称添加到路径中
+  data.reverse().forEach((node) => {
+    const name = node.find(([key]) => key === 'name')[1];
+    path.push(name);
+  });
+
+  // 返回由斜杠分隔的路径
+  return path.join('/');
 }

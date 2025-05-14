@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -42,13 +41,11 @@ class EgressGatewayMigration(BaseMigration):
             try:
                 wl_app = engine_app.to_wl_obj()
                 cluster = get_cluster_by_app(wl_app)
-                state = RegionClusterState.objects.filter(region=wl_app.region, cluster_name=cluster.name).latest()
-                RCStateAppBinding.objects.create(app=wl_app, state=state)
+                state = RegionClusterState.objects.filter(cluster_name=cluster.name).latest()
+                RCStateAppBinding.objects.create(app=wl_app, state=state, tenant_id=cluster.tenant_id)
             except ObjectDoesNotExist:
                 self.add_log(
-                    _("{env} 环境绑定出口IP异常, 详情: {detail}").format(
-                        env=env.environment, detail="region {region} 没有集群状态信息".format(region=engine_app.region)
-                    )
+                    _("{env} 环境绑定出口 IP 异常, 详情: 找不到集群或集群状态信息").format(env=env.environment)
                 )
             except IntegrityError:
                 self.add_log(_("{env} 环境绑定出口IP异常, 详情: 不能重复绑定").format(env=env.environment))

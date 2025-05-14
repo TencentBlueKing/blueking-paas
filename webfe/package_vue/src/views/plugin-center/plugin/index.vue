@@ -311,4 +311,20 @@ export default {
 .hide-pd-bottom {
   padding-bottom: 0;
 }
+.plugiun-highly-adaptive {
+  min-width: 0;
+}
+.overview-fright-plugin {
+  /deep/ .bk-form {
+    .bk-label {
+      font-size: 12px !important;
+    }
+    .bk-form-content {
+      font-size: 12px !important;
+      .bk-form-control {
+        font-size: 12px !important;
+      }
+    }
+  }
+}
 </style>

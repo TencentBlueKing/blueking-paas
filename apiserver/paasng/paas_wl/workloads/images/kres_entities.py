@@ -1,28 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from dataclasses import dataclass
 from typing import Dict, List
 
-from django.conf import settings
-
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.cluster.constants import ClusterAnnotationKey
+from paas_wl.infras.cluster.utils import get_cluster_by_app, get_image_registry_by_app
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
@@ -51,15 +50,18 @@ class ImageCredentials(AppEntity):
             ImageCredential(registry=instance.registry, username=instance.username, password=instance.password)
             for instance in qs
         ]
-        # inject builtin credential for APP_DOCKER_REGISTRY_HOST
-        if settings.APP_DOCKER_REGISTRY_HOST:
-            credentials.append(
-                ImageCredential(
-                    registry=settings.APP_DOCKER_REGISTRY_HOST,
-                    username=settings.APP_DOCKER_REGISTRY_USERNAME,
-                    password=settings.APP_DOCKER_REGISTRY_PASSWORD,
-                )
-            )
+
+        def should_inject_builtin_image_credential():
+            # 明确说明当前集群不注入内置镜像凭证的，需要跳过（如：用户托管的集群的情况）
+            annos = get_cluster_by_app(app).annotations
+            return annos.get(ClusterAnnotationKey.SKIP_INJECT_BUILTIN_IMAGE_CREDENTIAL) != "true"
+
+        if should_inject_builtin_image_credential():
+            reg = get_image_registry_by_app(app)
+            # 仅 host 不为空时才注入
+            if reg.host:
+                credentials.append(ImageCredential(registry=reg.host, username=reg.username, password=reg.password))
+
         return ImageCredentials(
             app=app,
             name=make_image_pull_secret_name(app),

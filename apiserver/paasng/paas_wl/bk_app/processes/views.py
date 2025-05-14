@@ -1,28 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import json
 import logging
 from operator import attrgetter
 from typing import Dict, Optional
 
-from django.http import StreamingHttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -35,9 +34,16 @@ from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.controllers import get_proc_ctl, judge_operation_frequent
-from paas_wl.bk_app.processes.exceptions import ProcessNotFound, ProcessOperationTooOften, ScaleProcessError
+from paas_wl.bk_app.processes.exceptions import (
+    PreviousInstanceNotFound,
+    ProcessNotFound,
+    ProcessOperationTooOften,
+    ScaleProcessError,
+)
 from paas_wl.bk_app.processes.models import ProcessSpec
+from paas_wl.bk_app.processes.processes import ProcessManager, list_cnative_module_processes_specs
 from paas_wl.bk_app.processes.serializers import (
+    EventSerializer,
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,
     ModuleScopedData,
@@ -48,22 +54,24 @@ from paas_wl.bk_app.processes.serializers import (
     WatchEventSLZ,
     WatchProcessesQuerySLZ,
 )
-from paas_wl.bk_app.processes.shim import ProcessManager
 from paas_wl.bk_app.processes.watch import ProcInstByEnvListWatcher, ProcInstByModuleEnvListWatcher, WatchEvent
-from paas_wl.core.signals import new_operation_happened
+from paas_wl.infras.resources.base.kres import KDeployment, KPod
+from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.utils.error_codes import error_codes
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
+from paas_wl.workloads.event.reader import event_kmodel
 from paas_wl.workloads.networking.entrance.shim import get_builtin_addr_preferred
 from paas_wl.workloads.networking.ingress.utils import get_service_dns_name
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.operations.constant import OperationType
+from paasng.misc.audit.constants import OperationTarget
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.utils import get_image_info
+from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.deploy.version import get_env_deployed_version_info
 from paasng.platform.engine.models.deployment import Deployment
@@ -101,41 +109,48 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         target_replicas = data.get("target_replicas")
         scaling_config = data.get("scaling_config")
 
-        try:
-            judge_operation_frequent(wl_app, process_type, self._operation_interval)
-        except ProcessOperationTooOften as e:
-            raise error_codes.PROCESS_OPERATION_TOO_OFTEN.f(str(e), replace=True)
+        # TODO 由于云原生应用去除了对 ProcessSpec model 的依赖, 因此暂时不做操作频率限制, 待后续评估后再添加?
+        if wl_app.type == WlAppType.DEFAULT:
+            try:
+                judge_operation_frequent(wl_app, process_type, self._operation_interval)
+            except ProcessOperationTooOften as e:
+                raise error_codes.PROCESS_OPERATION_TOO_OFTEN.f(str(e), replace=True)
 
         self._perform_update(module_env, operate_type, process_type, autoscaling, target_replicas, scaling_config)
 
-        # Create application operation log
-        op_type = self.get_logging_operate_type(operate_type)
-        if op_type:
+        if wl_app.type == WlAppType.DEFAULT:
             try:
-                new_operation_happened.send(
-                    sender=module_env,
-                    env=module_env,
-                    operate_type=op_type,
-                    operator=request.user.pk,
-                    extra_values={"process_type": process_type, "env_name": module_env.environment},
-                )
-            except Exception:
-                logger.exception("Error creating app operation log")
-
-        try:
-            proc_spec = ProcessSpec.objects.get(engine_app_id=module_env.wl_app.uuid, name=process_type)
-        except ProcessSpec.DoesNotExist:
-            raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
+                proc_spec = ProcessSpec.objects.get(engine_app_id=module_env.wl_app.uuid, name=process_type)
+            except ProcessSpec.DoesNotExist:
+                raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
+            else:
+                target_replicas = proc_spec.target_replicas
+                target_status = proc_spec.target_status
         else:
-            return Response(
-                status=status.HTTP_200_OK,
-                data={"target_replicas": proc_spec.target_replicas, "target_status": proc_spec.target_status},
-            )
+            for spec in ProcessManager(module_env).list_processes_specs():
+                if spec["name"] == process_type:
+                    target_replicas = spec["target_replicas"]
+                    target_status = spec["target_status"]
+                    break
+            else:
+                raise error_codes.PROCESS_OPERATE_FAILED.f(f"进程 '{process_type}' 不存在")
 
-    @staticmethod
-    def get_logging_operate_type(type_: str) -> Optional[int]:
-        """Get the type of application operation"""
-        return {"start": OperationType.PROCESS_START.value, "stop": OperationType.PROCESS_STOP.value}.get(type_)
+        # 审计记录
+        add_app_audit_record(
+            app_code=self.get_application().code,
+            tenant_id=wl_app.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            module_name=module_env.module.name,
+            environment=module_env.environment,
+            operation=operate_type,
+            target=OperationTarget.PROCESS,
+            attribute=process_type,
+        )
+        return Response(
+            status=status.HTTP_200_OK,
+            data={"target_replicas": target_replicas, "target_status": target_status},
+        )
 
     def _perform_update(
         self,
@@ -163,6 +178,26 @@ class ProcessesViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except AutoscalingUnsupported as e:
             raise error_codes.PROCESS_OPERATE_FAILED.f(str(e), replace=True)
 
+        # Set the field manager when it's a scale operation
+        if operate_type == ProcessUpdateType.SCALE:
+            # Set both the replicas and autoscaling fields at the same time
+            fieldmgr.MultiFieldsManager(module_env.module).set_many(
+                [
+                    fieldmgr.f_proc_replicas(process_type),
+                    fieldmgr.f_overlay_replicas(process_type, module_env.environment),
+                    fieldmgr.f_overlay_autoscaling(process_type, module_env.environment),
+                ],
+                fieldmgr.FieldMgrName.WEB_FORM,
+            )
+
+    def restart(self, request, code, module_name, environment, process_name):
+        """滚动重启进程"""
+        env = self.get_env_via_path()
+        wl_app = env.wl_app
+        with get_client_by_app(wl_app) as client:
+            KDeployment(client).restart(name=process_name, namespace=wl_app.namespace)
+        return Response(status=status.HTTP_200_OK)
+
 
 class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """适用于云原生应用，按环境查看应用进程实例相关信息。支持一次查看多个模块。"""
@@ -179,10 +214,7 @@ class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin
         module_envs = application.envs.filter(environment=environment)
 
         grouped_data: Dict[str, ModuleScopedData] = {}
-        grouped_proc_specs = {
-            module_env.module.name: ProcessManager(module_env).list_processes_specs() for module_env in module_envs
-        }
-        processes_status = ProcInstByEnvListWatcher(application, environment).list()
+        grouped_proc_specs = list_cnative_module_processes_specs(application, environment)
 
         for module_env in module_envs:
             module = module_env.module
@@ -221,6 +253,8 @@ class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin
         if deployment_id := request.query_params.get("deployment_id"):
             deployment_obj = get_object_or_404(Deployment, id=deployment_id)
             bkapp_release_id = deployment_obj.bkapp_release_id
+
+        processes_status = ProcInstByEnvListWatcher(application, environment).list()
 
         for process in processes_status.processes:
             module_name = process.app.module_name
@@ -297,10 +331,8 @@ class CNativeListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin
             application.type == ApplicationType.CLOUD_NATIVE
             and module.build_config.build_method == RuntimeType.CUSTOM_IMAGE
         ):
-            try:
-                return get_image_info(module)[0]
-            except ValueError:
-                return None
+            return module.build_config.image_repository
+
         repo = module.get_source_obj()
         if repo is None:
             return None
@@ -352,12 +384,8 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 "items": insts,
                 "metadata": {"resource_version": processes_status.rv_inst},
             },
+            "process_packages": ProcessManager(env).list_processes_specs(),
         }
-        processes_specs = ProcessManager(env).list_processes_specs()
-        if wl_app.type == WlAppType.CLOUD_NATIVE:
-            data["cnative_proc_specs"] = processes_specs
-        else:
-            data["process_packages"] = processes_specs
 
         return Response(ListWatcherRespSLZ(data).data)
 
@@ -396,3 +424,62 @@ class ListAndWatchProcsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     def process_event(wl_app: WlApp, event: WatchEvent) -> Dict:
         """Process event payload to Dict of primitive datatypes."""
         return WatchEventSLZ(event, context={"wl_app": wl_app}).data
+
+
+class InstanceEventsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """适用于所有类型应用，应用进程事件相关视图。"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(response_serializer=EventSerializer(many=True))
+    def list(self, request, code, module_name, environment, instance_name):
+        """获取进程实例的相关事件"""
+        wl_app = self.get_wl_app_via_path()
+
+        events = event_kmodel.list_by_app_instance_name(wl_app, instance_name).items
+        return Response(EventSerializer(events, many=True).data)
+
+
+class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """适用于所有类型应用，应用进程操作相关视图"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    # The default number of lines to view when retrieving previous logs
+    view_prev_log_lines_limit = 400
+
+    def retrieve_previous_logs(self, request, code, module_name, environment, process_type, process_instance_name):
+        """获取进程实例上一次运行时的日志（目前限定 400 行）"""
+        env = self.get_env_via_path()
+
+        manager = ProcessManager(env)
+        try:
+            logs = manager.get_previous_logs(
+                process_type, process_instance_name, tail_lines=self.view_prev_log_lines_limit
+            )
+        except PreviousInstanceNotFound:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        return Response(status=status.HTTP_200_OK, data=logs.splitlines())
+
+    def download_previous_logs(self, request, code, module_name, environment, process_type, process_instance_name):
+        """下载进程实例上一次运行时的日志"""
+        env = self.get_env_via_path()
+
+        manager = ProcessManager(env)
+        try:
+            logs = manager.get_previous_logs(process_type, process_instance_name)
+        except PreviousInstanceNotFound:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        response = HttpResponse(logs, content_type="text/plain")
+        response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-previous-logs.txt"'
+        return response
+
+    def restart(self, request, code, module_name, environment, process_instance_name):
+        """重启进程实例"""
+        env = self.get_env_via_path()
+        wl_app = env.wl_app
+        with get_client_by_app(wl_app) as client:
+            KPod(client).delete(name=process_instance_name, namespace=wl_app.namespace)
+        return Response(status=status.HTTP_200_OK)

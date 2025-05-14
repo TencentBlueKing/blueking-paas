@@ -1,24 +1,21 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""Controller for declarative applications
-"""
-
+"""Controller for declarative applications"""
 
 import logging
 from typing import Dict, List, Optional
@@ -27,6 +24,7 @@ from django.conf import settings
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.infras.cluster.shim import get_app_cluster_names
 from paasng.accessories.publish.market.constant import AppType, ProductSourceUrlType
 from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
@@ -34,8 +32,8 @@ from paasng.accessories.publish.market.signals import product_create_or_update_b
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
-from paasng.core.region.models import get_region
-from paasng.infras.accounts.models import User, UserProfile
+from paasng.core.tenant.utils import AppTenantInfo
+from paasng.infras.accounts.models import User
 from paasng.infras.accounts.permissions.application import user_has_app_action_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.utils import create_oauth2_client
@@ -44,8 +42,13 @@ from paasng.platform.applications.handlers import application_logo_updated
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_default_module_switch, post_create_application
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD
-from paasng.platform.declarative.application.fields import AppNameField, AppRegionField
-from paasng.platform.declarative.application.resources import ApplicationDesc, MarketDesc, ModuleDesc, ServiceSpec
+from paasng.platform.declarative.application.fields import AppRegionField
+from paasng.platform.declarative.application.resources import (
+    ApplicationDesc,
+    MarketDesc,
+    ModuleDesc,
+    ServiceSpec,
+)
 from paasng.platform.declarative.application.serializers import AppDescriptionSLZ
 from paasng.platform.declarative.basic import remove_omitted
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
@@ -64,14 +67,14 @@ class AppDeclarativeController:
     :param spec_version: Config schema version
     """
 
-    # 默认是 Smart 应用，场景模板应用需要特殊指定
     source_origin = SourceOrigin.S_MART
-    update_allowed_fields = [AppNameField, AppRegionField]
+    update_allowed_fields = [AppRegionField]
 
-    def __init__(self, user: User, source_origin: Optional[SourceOrigin] = None):
+    def __init__(self, user: User, app_tenant_conf: AppTenantInfo, source_origin: Optional[SourceOrigin] = None):
         if source_origin:
             self.source_origin = source_origin
         self.user = user
+        self.app_tenant_conf = app_tenant_conf
 
     def perform_action(self, desc: ApplicationDesc) -> Application:
         if not desc.instance_existed:
@@ -82,18 +85,7 @@ class AppDeclarativeController:
     @atomic
     def perform_create(self, desc: ApplicationDesc) -> Application:
         """Create application by given input data"""
-        allowed_regions = self.get_allowed_regions()
-        if not desc.region:
-            desc.region = allowed_regions[0]
-        elif desc.region not in allowed_regions:
-            raise DescriptionValidationError({"region": _("用户没有权限在 {} 下创建应用").format(desc.region)})
-
-        is_smart_app = self.source_origin == SourceOrigin.S_MART
-        is_scene_app = self.source_origin == SourceOrigin.SCENE
-
-        app_type = (
-            ApplicationType.CLOUD_NATIVE if settings.SOURCE_PACKAGE_APP_CLOUD_NATIVE else ApplicationType.DEFAULT
-        )
+        desc.region = self._validate_region(desc.region)
 
         application = Application.objects.create(
             owner=self.user.pk,
@@ -102,27 +94,29 @@ class AppDeclarativeController:
             code=desc.code,
             name=desc.name_zh_cn,
             name_en=desc.name_en,
-            is_smart_app=is_smart_app,
-            is_scene_app=is_scene_app,
-            type=app_type,
+            is_smart_app=bool(self.source_origin == SourceOrigin.S_MART),
+            type=ApplicationType.CLOUD_NATIVE,
             # TODO: 是否要设置 language?
             language=desc.default_module.language.value,
+            # 添加租户信息
+            app_tenant_mode=self.app_tenant_conf.app_tenant_mode,
+            app_tenant_id=self.app_tenant_conf.app_tenant_id,
+            tenant_id=self.app_tenant_conf.tenant_id,
         )
-        create_oauth2_client(application.code, application.region)
+        create_oauth2_client(application.code, application.app_tenant_mode, application.app_tenant_id)
         self.sync_modules(application, desc.modules)
         default_module = application.get_default_module()
 
         post_create_application.send(sender=self.__class__, application=application)
-
-        # Create market related data after application created, to avoid market related data be covered
+        # Create market related data after application created, to avoid overwriting market related data
         MarketConfig.objects.create(
-            region=application.region,
             application=application,
             enabled=False,
             auto_enable_when_deploy=True,
             source_module=default_module,
             source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV.value,
             source_tp_url="",
+            tenant_id=application.tenant_id,
         )
 
         self.sync_market_fields(application, desc.market)
@@ -130,36 +124,31 @@ class AppDeclarativeController:
         self.save_description(desc, application, is_creation=True)
         return application
 
-    def get_allowed_regions(self) -> List[str]:
-        """Return all allowed regions for current user"""
-        user_profile = UserProfile.objects.get_profile(self.user)
-        return [r.name for r in user_profile.enable_regions]
-
     @atomic
     def perform_update(self, desc: ApplicationDesc) -> Application:
         """Update application by given input data"""
         # Permission check
         application = Application.objects.get(code=desc.code)
-        # Set region field if omitted
-        if not desc.region:
-            desc.region = application.region
+        desc.region = self._validate_region(desc.region)
 
         if not user_has_app_action_perm(self.user, application, AppAction.BASIC_DEVELOP):
             raise DescriptionValidationError({APP_CODE_FIELD: _("你没有权限操作当前应用")})
 
         # Handle field modifications
+        # NOTE: 更新时, 不修改应用名称
         for field_cls in self.update_allowed_fields:
             field_cls(application).handle_desc(desc)
 
         self.sync_modules(application, desc.modules)
-        self.sync_market_fields(application, desc.market)
         self.sync_services_fields(application, desc.modules)
         self.save_description(desc, application, is_creation=False)
         return application
 
     def sync_modules(self, application: Application, modules_desc: Dict[str, ModuleDesc]):
         """Sync modules to database"""
-        region = get_region(application.region)
+        # Get the cluster name used by the existing default module, if the module exists
+        env_cluster_names = get_app_cluster_names(application) if application.modules.exists() else {}
+
         for module_name, module_desc in modules_desc.items():
             if application.modules.filter(name=module_name).exists():
                 # 重新设置主模块
@@ -180,11 +169,11 @@ class AppDeclarativeController:
                 source_type=None,
                 language=module_desc.language.value,
                 source_init_template="",
-                exposed_url_type=region.entrance_config.exposed_url_type,
+                tenant_id=application.tenant_id,
             )
             # Initialize module
             try:
-                initialize_smart_module(module)
+                initialize_smart_module(module, env_cluster_names=env_cluster_names)
             except ModuleInitializationError as e:
                 raise ControllerError(str(e))
 
@@ -248,13 +237,16 @@ class AppDeclarativeController:
                 introduction_en=market_desc.introduction_en,
                 introduction_zh_cn=market_desc.introduction_zh_cn,
                 logo=market_desc.logo,
+                tenant_id=application.tenant_id,
             )
         )
         logo = product_defaults.pop("logo", None)
         if market_desc.tag_id:
             product_defaults["tag_id"] = market_desc.tag_id
 
+        product_defaults["tenant_id"] = application.tenant_id
         product, created = Product.objects.update_or_create(application=application, defaults=product_defaults)
+
         if logo:
             # Logo was now migrated to Application model
             # TODO: Refactor more to make this look more natural
@@ -267,6 +259,8 @@ class AppDeclarativeController:
             display_options = market_desc.display_options.dict()
         except NotImplementedError:
             display_options = {}
+
+        display_options["tenant_id"] = application.tenant_id
         DisplayOptions.objects.update_or_create(product=product, defaults=display_options)
 
         # Send signal
@@ -292,7 +286,7 @@ class AppDeclarativeController:
         """Sync services related field for single module."""
         for service in services:
             try:
-                obj = mixed_service_mgr.find_by_name(service.name, region=module.region)
+                obj = mixed_service_mgr.find_by_name(service.name)
             except ServiceObjNotFound:
                 logger.warning('Skip binding, service called "%s" not found', service.name)
                 continue
@@ -311,7 +305,7 @@ class AppDeclarativeController:
                     continue
 
                 logger.info('Bind service "%s" to Module "%s".', service.name, module)
-                mixed_service_mgr.bind_service(obj, module, specs=service.specs)
+                mixed_service_mgr.bind_service_use_first_plan(obj, module)
 
     def save_description(self, desc: ApplicationDesc, application: Application, is_creation: bool):
         """Save description to database
@@ -325,7 +319,15 @@ class AppDeclarativeController:
             # TODO: basic info
             basic_info={},
             is_creation=is_creation,
+            tenant_id=application.tenant_id,
         )
+
+    @staticmethod
+    def _validate_region(region: str | None) -> str:
+        """Validate the value of the region field, it can only be None or the default region."""
+        if region and region != settings.DEFAULT_REGION_NAME:
+            raise DescriptionValidationError({"region": _("不允许使用非默认版本")})
+        return settings.DEFAULT_REGION_NAME
 
 
 def flatten_dependency_tree(dependency_tree: Dict[str, List[str]]) -> List[str]:

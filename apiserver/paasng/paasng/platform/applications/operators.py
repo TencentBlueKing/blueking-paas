@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 from collections import defaultdict
 from dataclasses import dataclass
@@ -42,11 +41,13 @@ class AppContactInfo:
 
 def get_contact_info_by_appids(ids: List[str], days_range: int = 31) -> Dict[str, AppContactInfo]:
     """Gets the contact infos for multiple applications."""
-    applications = Application.objects.prefetch_related("latest_op__operation").filter(code__in=ids)
+    applications = Application.objects.prefetch_related("latest_op_record").filter(code__in=ids)
 
     # 获取所有应用的最新操作用户
     latest_operators = {
-        app.code: app.latest_op.operation.user if hasattr(app, "latest_op") and app.latest_op else None
+        app.code: app.latest_op_record.operation.user
+        if hasattr(app, "latest_op_record") and app.latest_op_record
+        else None
         for app in applications
     }
 
@@ -79,7 +80,7 @@ def get_contact_info_by_appids(ids: List[str], days_range: int = 31) -> Dict[str
 def get_contact_info(application: Application) -> AppContactInfo:
     """Retrieve app's contact info; each app performs 4 SQL operations."""
     try:
-        latest_operator = application.latest_op.operation.user
+        latest_operator = application.latest_op_record.operation.user
     except ObjectDoesNotExist:
         latest_operator = None
 

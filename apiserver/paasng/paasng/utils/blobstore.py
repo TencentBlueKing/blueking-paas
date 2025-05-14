@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""BlobStore client"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""BlobStore client
-"""
 import json
 import logging
 import urllib.parse
@@ -28,19 +27,19 @@ from typing import Dict, Optional
 import boto3
 from bkstorages.backends.bkrepo import BKRepoStorage
 from bkstorages.backends.rgw import RGWBoto3Storage
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from blue_krill.storages.blobstore.base import BlobStore
 from blue_krill.storages.blobstore.bkrepo import BKGenericRepo
 from blue_krill.storages.blobstore.s3 import S3Store
 from botocore.exceptions import ClientError
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.utils.encoding import force_bytes, force_text
+from django.utils.encoding import force_bytes, force_str
 
 logger = logging.getLogger(__name__)
 
 
-class StoreType(str, StructuredEnum):
+class StoreType(StrStructuredEnum):
     S3 = EnumField("s3")
     BKREPO = EnumField("bkrepo")
     # 向前兼容, 支持 http/https 协议
@@ -120,8 +119,8 @@ def get_storage_by_bucket(bucket: str, store_type: Optional[str] = None):
             error_code = int(e.response["Error"]["Code"])
             if error_code == 404:
                 s3.create_bucket(Bucket=bucket)
-            else:
-                raise
+        except Exception as e:
+            logger.warning("Error getting bucket %s, error: %s, further actions on it might fail.", bucket, e)
 
         return RGWBoto3Storage(
             bucket=bucket,
@@ -185,7 +184,7 @@ def make_blob_store_env(encrypt: bool = False) -> Dict[str, str]:
 
 def encrypt_slug_config(raw_content: str) -> str:
     f = Fernet(settings.SLUG_ENCRYPT_SECRET_KEY)
-    return force_text(f.encrypt(force_bytes(raw_content)))
+    return force_str(f.encrypt(force_bytes(raw_content)))
 
 
 def download_file_from_blob_store(bucket: str, key: str, local_path: PathLike, store_type: Optional[StoreType] = None):

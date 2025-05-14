@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import base64
 import json
 import logging
@@ -25,9 +24,10 @@ import time
 from typing import TYPE_CHECKING, Dict
 
 from django.conf import settings
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 
 from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.entities import BuildArtifactMetadata, BuildMetadata
 from paas_wl.bk_app.applications.managers import mark_as_latest_artifact
 from paas_wl.bk_app.applications.models.build import Build, BuildProcess
 from paas_wl.bk_app.deploy.app_res.controllers import BuildHandler, NamespacesHandler, ensure_image_credentials_secret
@@ -37,10 +37,12 @@ from paasng.infras.bk_ci import entities
 from paasng.infras.bk_ci.client import BkCIPipelineClient
 from paasng.infras.bk_ci.constants import PipelineBuildStatus
 from paasng.infras.bk_ci.exceptions import BkCIGatewayServiceError
+from paasng.platform.applications.tenant import get_tenant_id_for_app
 from paasng.platform.engine.constants import BuildStatus
 from paasng.platform.engine.deploy.bg_build.exceptions import (
     BkCIPipelineBuildNotSuccess,
     BkCITooManyEnvVarsError,
+    BuildProcessTimeoutError,
 )
 from paasng.platform.engine.deploy.bg_build.utils import (
     SlugBuilderTemplate,
@@ -54,7 +56,6 @@ from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.utils.output import DeployStream, Style
 from paasng.platform.engine.workflow import DeployStep
-from paasng.utils.basic import get_username_by_bkpaas_user_id
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import WlApp
@@ -62,8 +63,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Max timeout seconds for waiting the slugbuilder pod to become ready
-_WAIT_FOR_READINESS_TIMEOUT = 300
-_BUILD_PROCESS_TIMEOUT = 300
+_WAIT_FOR_READINESS_TIMEOUT = 5 * 60
+# Read timeout seconds for retrieving logs (wait for the connection connected)
+_POD_LOG_READ_TIMEOUT = 5 * 60
+# Max timeout seconds for waiting the bkci pipeline to become success
+_BKCI_PIPELINE_BUILD_TIMEOUT = 12 * 60
 
 
 class DefaultBuildProcessExecutor(DeployStep):
@@ -81,7 +85,7 @@ class DefaultBuildProcessExecutor(DeployStep):
         self.wl_app: "WlApp" = bp.app
         self._builder_name = generate_builder_name(self.wl_app)
 
-    def execute(self, metadata: Dict):
+    def execute(self, metadata: BuildMetadata):
         """Execute the build process"""
         try:
             with self.procedure("准备构建环境"):
@@ -152,9 +156,9 @@ class DefaultBuildProcessExecutor(DeployStep):
             # User interruption was allowed when first log message was received — which means the Pod
             # has entered "Running" status.
             for raw_line in self.build_handler.get_build_log(
-                name=self._builder_name, follow=True, timeout=_BUILD_PROCESS_TIMEOUT, namespace=self.wl_app.namespace
+                name=self._builder_name, follow=True, timeout=_POD_LOG_READ_TIMEOUT, namespace=self.wl_app.namespace
             ):
-                line = force_text(raw_line)
+                line = force_str(raw_line)
                 self.stream.write_message(line)
         except Exception:
             logger.warning("failed to watch build logs for App: %s", self.wl_app.name)
@@ -192,21 +196,18 @@ class DefaultBuildProcessExecutor(DeployStep):
         logger.debug("SlugBuilder created: %s", slug_builder_name)
         return slug_builder_name
 
-    def create_and_bind_build_instance(self, metadata: Dict) -> Build:
+    def create_and_bind_build_instance(self, metadata: BuildMetadata) -> Build:
         """Create the Build instance and bind it to self.BuildProcess instance
 
-        :param dict metadata: Metadata to be stored in Build instance, such as `procfile`
+        :param metadata: BuildMetadata to be stored in Build instance
         """
-        if "image" not in metadata:
-            raise KeyError("'image' is required")
-        image = metadata["image"]
         artifact_type = ArtifactType.SLUG
-        artifact_metadata = {}
-        if metadata.get("use_dockerfile") or metadata.get("use_cnb"):
+        artifact_metadata = BuildArtifactMetadata()
+
+        if metadata.use_dockerfile or metadata.use_cnb:
             artifact_type = ArtifactType.IMAGE
-            artifact_metadata["use_dockerfile"] = metadata.get("use_dockerfile", False)
-            artifact_metadata["use_cnb"] = metadata.get("use_cnb", False)
-        bkapp_revision_id = metadata.get("bkapp_revision_id", None)
+            artifact_metadata.use_dockerfile = metadata.use_dockerfile
+            artifact_metadata.use_cnb = metadata.use_cnb
 
         # starting create build
         build_instance = Build.objects.create(
@@ -215,13 +216,14 @@ class DefaultBuildProcessExecutor(DeployStep):
             module_id=self.bp.module_id,
             app=self.wl_app,
             slug_path=generate_slug_path(self.bp),
-            image=image,
+            image=metadata.image,
             branch=self.bp.branch,
             revision=self.bp.revision,
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
-            bkapp_revision_id=bkapp_revision_id,
+            bkapp_revision_id=metadata.bkapp_revision_id,
             artifact_type=artifact_type,
             artifact_metadata=artifact_metadata,
+            tenant_id=self.wl_app.tenant_id,
         )
         mark_as_latest_artifact(build_instance)
 
@@ -255,17 +257,18 @@ class PipelineBuildProcessExecutor(DeployStep):
     max_env_var_block_num = 5
     # 环境变量字符串单块最大长度
     mac_env_var_block_length = 3500
+    # 蓝盾流水线 Job ID
+    bk_ci_pipeline_job_id = "BUILD_CNATIVE_IMAGE"
 
     def __init__(self, deployment: Deployment, bp: BuildProcess, stream: DeployStream):
         super().__init__(deployment, stream)
 
         self.bp = bp
         self.wl_app: "WlApp" = bp.app
-        # 注：蓝盾只提供了正式环境的 API
-        bk_username = get_username_by_bkpaas_user_id(bp.owner)
-        self.ctl = BkCIPipelineClient(bk_username=bk_username)
+        tenant_id = get_tenant_id_for_app(deployment.get_application().code)
+        self.ctl = BkCIPipelineClient(tenant_id, bk_username=settings.BK_CI_CLIENT_USERNAME)
 
-    def execute(self, metadata: Dict):
+    def execute(self, metadata: BuildMetadata):
         """Execute the build process"""
         try:
             with self.procedure("构建环境变量"):
@@ -296,6 +299,9 @@ class PipelineBuildProcessExecutor(DeployStep):
             self.bp.update_status(BuildStatus.FAILED)
         except BkCITooManyEnvVarsError:
             self.stream.write_message(Style.Error("Too many environment variables, please contact the administrator"))
+            self.bp.update_status(BuildStatus.FAILED)
+        except BuildProcessTimeoutError:
+            self.stream.write_message(Style.Error("Build process timeout, please contact the administrator"))
             self.bp.update_status(BuildStatus.FAILED)
         except Exception:
             logger.exception(f"critical error happened during deploy[{self.bp}]")
@@ -330,13 +336,19 @@ class PipelineBuildProcessExecutor(DeployStep):
             start = idx * self.mac_env_var_block_length
             env_vars_params[f"ENV_VARS_BLOCK_{idx}"] = env_vars_str[start : start + self.mac_env_var_block_length]
 
+        # 由于蓝盾流水线构建没有参数可以传递应用信息，因此借用启动参数传递（便于问题定位 & 排查）
+        env = self.deployment.app_environment
+        env_vars_params["APP_MODULE_ENV_INFO"] = (
+            f"App: {env.application.code}, Module: {env.module.name}, Env: {env.environment}"
+        )
+
         return env_vars_params
 
     def _start_following_logs(self, pb: entities.PipelineBuild):
         """通过轮询，检查流水线是否执行完成，并逐批获取执行日志"""
         time_started = time.time()
 
-        while time.time() - time_started < _BUILD_PROCESS_TIMEOUT:
+        while time.time() - time_started < _BKCI_PIPELINE_BUILD_TIMEOUT:
             time.sleep(self.polling_result_interval)
             self.stream.write_message("Pipeline is running, please wait patiently...")
 
@@ -354,13 +366,26 @@ class PipelineBuildProcessExecutor(DeployStep):
             ]:
                 logger.info("break poll loop with pipeline build status: %s", build_status.status)
                 break
+        else:
+            # 没有在 while 循环中跳出 -> 构建超时
+            raise BuildProcessTimeoutError
 
         # Q：为什么不在轮询过程中，按分块获取日志（做流式效果）
         # A：经测试，通过获取 log_num 再分块获取日志，会丢失部分日志，这是难以接受的，
         #    因此采用最后全量拉日志的方式，轮询过程中添加日志提示用户耐心等待流水线执行
+        start_following = False
         for log in self.ctl.retrieve_full_log(pb).logs:
             # 注：丢弃流水线/构建机启动相关日志，只保留构建组件的日志
-            if log.tag.startswith("e-") and log.jobId.startswith("c-"):
+            if not (log.tag.startswith("e-") and log.jobId == self.bk_ci_pipeline_job_id):
+                continue
+
+            # 只保留 [Install plugin] 到 [Output] 之间的日志，不需要其他的
+            if "[Output]" in log.message:
+                break
+            if "[Install plugin]" in log.message:
+                start_following = True
+
+            if start_following:
                 # 移除蓝盾日志中的级别 Tag，如 ##[error], ##[info] 等
                 self.stream.write_message(re.sub(self.bk_ci_log_level_tag_regex, "", log.message))
 
@@ -369,16 +394,12 @@ class PipelineBuildProcessExecutor(DeployStep):
         if self.ctl.retrieve_build_status(pb).status != PipelineBuildStatus.SUCCEED:
             raise BkCIPipelineBuildNotSuccess("build image with bk_ci pipeline not success")
 
-    def _create_and_bind_build_instance(self, metadata: Dict) -> Build:
+    def _create_and_bind_build_instance(self, metadata: BuildMetadata) -> Build:
         """
         创建 Build 对象并绑定到 BuildProcess 实例
 
         注：蓝盾流水线构建只支持镜像制品，不支持 slug 包
         """
-        if not metadata.get("image"):
-            raise KeyError("metadata.image is required")
-
-        procfile = metadata.get("procfile") or {}
 
         build_inst = Build.objects.create(
             owner=self.deployment.operator,
@@ -386,17 +407,15 @@ class PipelineBuildProcessExecutor(DeployStep):
             module_id=self.bp.module_id,
             app=self.wl_app,
             slug_path=generate_slug_path(self.bp),
-            image=metadata["image"],
+            image=metadata.image,
             branch=self.bp.branch,
             revision=self.bp.revision,
-            procfile=procfile,
+            procfile={},
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
-            bkapp_revision_id=metadata.get("bkapp_revision_id", None),
+            bkapp_revision_id=metadata.bkapp_revision_id,
             artifact_type=ArtifactType.IMAGE,
-            artifact_metadata={
-                "use_dockerfile": metadata.get("use_dockerfile", False),
-                "use_cnb": metadata.get("use_cnb", False),
-            },
+            artifact_metadata=BuildArtifactMetadata(use_dockerfile=metadata.use_dockerfile, use_cnb=metadata.use_cnb),
+            tenant_id=self.wl_app.tenant_id,
         )
         mark_as_latest_artifact(build_inst)
 

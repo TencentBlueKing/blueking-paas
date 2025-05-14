@@ -19,10 +19,7 @@
 package controllers
 
 import (
-	"bytes"
 	"context"
-	"io"
-	"net/http"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -32,17 +29,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
-	"bk.tencent.com/paas-app-operator/pkg/platform/external"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
@@ -107,31 +102,6 @@ var _ = Describe("", func() {
 			err := k8sClient.Get(ctx, lookupKey, &corev1.Service{})
 			return err == nil
 		}
-		external.SetDefaultClient(
-			external.NewTestClient("", "", external.RoundTripFunc(func(req *http.Request) *http.Response {
-				switch req.Method {
-				case "GET":
-					// 查询增强服务环境变量
-					return &http.Response{
-						StatusCode: 200,
-						Body:       io.NopCloser(bytes.NewBufferString(`{"credentials": {"FAKE_FOO": "FOO"}}`)),
-						Header:     make(http.Header),
-					}
-				case "POST":
-					// 分配增强服务
-					return &http.Response{
-						StatusCode: 200,
-						Body:       io.NopCloser(bytes.NewBufferString(`{"service_id": "foo-id"}`)),
-						Header:     make(http.Header),
-					}
-				}
-				return &http.Response{
-					StatusCode: 400,
-					Body:       io.NopCloser(bytes.NewBufferString(``)),
-					Header:     make(http.Header),
-				}
-			})),
-		)
 	})
 
 	It("Should Update Status.DeployID when a bkapp was created", func() {

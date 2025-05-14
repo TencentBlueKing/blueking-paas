@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from operator import itemgetter
 from typing import List, Optional, no_type_check
 
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from sqlalchemy.orm.session import Session
 
 from paasng.core.core.storages.sqlalchemy import legacy_db
@@ -69,11 +68,15 @@ def get_v2_application_by_developer(username: str, session: Optional[Session] = 
     :return: List[LApplication]
     """
     permission = Permission()
+    session = session or legacy_db.get_scoped_session()
+
     # 用户有权限的 PaaS2.0 的普通应用列表，从权限中心查询过滤条件，sql_filters 为原生的 sql 查询条件
     sql_filters = permission.app_filters(username)
-
-    session = session or legacy_db.get_scoped_session()
-    normal_app_subquery = session.query(LApplication).filter(sql_filters).all()
+    # 如果 PaaS2.0 没有接入权限中心，则查询到的权限表达式为空，不能进行后续的表达式操作
+    if not sql_filters:
+        return []
+    # SQLAlchemy 1.4 版本开始，原生 SQL 表达式必须通过 text 函数显式声明，以提高代码的明确性与安全性
+    normal_app_subquery = session.query(LApplication).filter(text(sql_filters)).all()
     # 权限中心会返回 1=1 这样的过滤条件，不能用子查询
     normal_app_ids = [app.id for app in normal_app_subquery]
 

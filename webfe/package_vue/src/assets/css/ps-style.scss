@@ -24,6 +24,8 @@
 @import './pages/main.scss';
 @import './pages/overview.scss';
 @import './pages/service.scss';
+@import './mixins/ellipsis.scss';
+@import './global-styles.scss';
 
 @font-face {
     font-family: 'PingFang';
@@ -818,6 +820,7 @@ span.ellipsis {
     font-size: 14px;
     color: #333;
     background: #FFF;
+    box-shadow: 0 3px 4px 0 #0000000a;
     line-height: 52px;
     z-index: 1;
 
@@ -866,7 +869,7 @@ span.ellipsis {
 }
 
 .overview-fright-plugin .app-container {
-    max-width: calc(100% - 50px) !important;
+    max-width: calc(100% - 48px) !important;
 }
 
 .card-style {
@@ -1077,7 +1080,6 @@ span.ellipsis {
             // max-width: 1080px;
         }
     }
-    .ps-container,
     // .app-container {
     //     max-width: 1080px;
     // }
@@ -1085,9 +1087,6 @@ span.ellipsis {
     // .right-main-plugin{
     //     width: 85vw !important;
     // }
-    .right-main-release {
-        width: 85vw !important;
-    }
 }
 
 @media screen and (max-width: 1440px) {
@@ -1153,7 +1152,7 @@ span.ellipsis {
 
 .bk-dialog-footer {
     button:nth-of-type(2) {
-        color: #000;
+        color: #63656e;
         margin-left: 10px;
     }
 }

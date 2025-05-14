@@ -85,6 +85,11 @@ type AppSpec struct {
 	// count and environment variables.
 	// +optional
 	EnvOverlay *AppEnvOverlay `json:"envOverlay,omitempty"`
+
+	// Observability holds observability configurations, includes metrics config.
+	// However, it is primarily informational here, the real control logic is in paas "apiserver".
+	// +optional
+	Observability *paasv1alpha2.Observability `json:"observability,omitempty"`
 }
 
 // GetWebProcess will find the web process in Spec.Processes
@@ -149,6 +154,10 @@ type Process struct {
 	// Replicas will be used as deployment's spec.replicas
 	Replicas *int32 `json:"replicas"`
 
+	// Services is a list of ProcService which used to expose process network for access within or outside the cluster.
+	// +optional
+	Services []paasv1alpha2.ProcService `json:"services,omitempty"`
+
 	// ResQuotaPlan is the name of plan which defines how much resources current process
 	// can consume.
 	ResQuotaPlan paasv1alpha2.ResQuotaPlan `json:"resQuotaPlan,omitempty"`
@@ -170,6 +179,9 @@ type Process struct {
 
 	// Autoscaling specifies the autoscaling configuration
 	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
+
+	// Probes specifies the probe configuration
+	Probes *ProbeSet `json:"probes,omitempty"`
 }
 
 // AutoscalingSpec is bkapp autoscaling config
@@ -195,6 +207,19 @@ const (
 	// ScalingPolicyDefault is the default autoscaling policy (cpu utilization 85%)
 	ScalingPolicyDefault ScalingPolicy = "default"
 )
+
+// ProbeSet defines the probes configuration
+type ProbeSet struct {
+	// liveness is the configuration for liveness probes.
+	// +optional
+	Liveness *corev1.Probe `json:"liveness,omitempty"`
+	// ReadinessProbe is the configuration for readiness probes.
+	// +optional
+	Readiness *corev1.Probe `json:"readiness,omitempty"`
+	// StartupProbe is the configuration for startup probes.
+	// +optional
+	Startup *corev1.Probe `json:"startup,omitempty"`
+}
 
 // AppHooks defines bkapp deployment hook
 type AppHooks struct {

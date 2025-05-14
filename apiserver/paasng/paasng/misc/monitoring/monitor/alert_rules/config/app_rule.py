@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Dict, List, NamedTuple, Optional
 
@@ -67,10 +66,20 @@ _cnative_supported_alert_codes = SupportedAlertCodes(
     module_scoped_codes=[],
 )
 
-# 普通应用支持的告警码
+# rabbitmq 增强服务监控
 if settings.RABBITMQ_MONITOR_CONF.get("enabled", False):
     _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
     _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_RABBITMQ_QUEUE_MESSAGES.value)
+
+# bkrepo 增强服务监控
+if settings.BKREPO_MONITOR_CONF.get("enabled", False):
+    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_BKREPO_QUOTA_USAGE.value)
+    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.HIGH_BKREPO_QUOTA_USAGE.value)
+
+# gcs-mysql 增强服务监控
+if settings.GCS_MYSQL_MONITOR_CONF.get("enabled", False):
+    _default_supported_alert_codes.module_scoped_codes.append(AlertCode.GCS_MYSQL_SLOW_QUERY.value)
+    _cnative_supported_alert_codes.module_scoped_codes.append(AlertCode.GCS_MYSQL_SLOW_QUERY.value)
 
 
 def get_supported_alert_codes(app_type: str) -> SupportedAlertCodes:
@@ -91,14 +100,11 @@ class RuleConfig(Protocol):
     alert_rule_display_name: Optional[str]
 
     @classmethod
-    def from_alert_rule_obj(cls, rule_obj: AppAlertRule, override_fields: Optional[Dict] = None) -> "RuleConfig":
-        ...
+    def from_alert_rule_obj(cls, rule_obj: AppAlertRule, override_fields: Optional[Dict] = None) -> "RuleConfig": ...
 
-    def to_alert_rule_obj(self) -> AppAlertRule:
-        ...
+    def to_alert_rule_obj(self) -> AppAlertRule: ...
 
-    def to_dict(self) -> Dict:
-        ...
+    def to_dict(self) -> Dict: ...
 
     def is_valid(self) -> bool:
         """规则配置是否有效"""
@@ -180,9 +186,7 @@ class AppScopedRuleConfig:
 
     def is_valid(self) -> bool:
         """规则配置是否有效"""
-        if self.metric_labels:
-            return True
-        return False
+        return bool(self.metric_labels)
 
 
 @define

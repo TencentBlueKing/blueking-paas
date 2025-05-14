@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
@@ -26,7 +25,8 @@ from .entities import AlertCode
 RUN_ENVS = AppEnvironment.get_values()
 
 RABBITMQ_SERVICE_NAME = settings.RABBITMQ_MONITOR_CONF.get("service_name", "rabbitmq")
-
+BKREPO_SERVICE_NAME = settings.BKREPO_MONITOR_CONF.get("service_name", "bkrepo")
+GCS_MYSQL_SERVICE_NAME = settings.GCS_MYSQL_MONITOR_CONF.get("service_name", "gcs_mysql")
 
 DEFAULT_RULE_CONFIGS = {
     AlertCode.HIGH_CPU_USAGE.value: {
@@ -53,5 +53,15 @@ DEFAULT_RULE_CONFIGS = {
         "display_name": _("队列消息数过多"),
         "metric_label_names": ["vhost"],
         "threshold_expr": ">= 2000",  # 超过 2000 条
+    },
+    AlertCode.HIGH_BKREPO_QUOTA_USAGE.value: {
+        "display_name": _("BKREPO 存储使用量过高"),
+        "metric_label_names": ["bkrepo_private_bucket", "bkrepo_public_bucket"],
+        "threshold_expr": ">= 90",  # 超过 90%
+    },
+    AlertCode.GCS_MYSQL_SLOW_QUERY.value: {
+        "display_name": _("GCS-MySQL 慢查询新增"),
+        "metric_label_names": ["gcs_mysql_user"],
+        "threshold_expr": "> 5",  # 慢查询增长超过 5
     },
 }

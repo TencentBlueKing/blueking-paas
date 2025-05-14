@@ -22,6 +22,7 @@ package bkapp
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -35,6 +36,7 @@ import (
 	hookres "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/hooks/resources"
 	procres "bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/resources"
 	"bk.tencent.com/paas-app-operator/pkg/metrics"
+	platdeploy "bk.tencent.com/paas-app-operator/pkg/platform/deploy"
 )
 
 // NewDeployActionReconciler returns a DeployActionReconciler.
@@ -53,7 +55,7 @@ type DeployActionReconciler struct {
 func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) base.Result {
 	log := logf.FromContext(ctx)
 	var err error
-	log.V(1).Info("handling deploy action reconciliation.")
+	log.V(1).Info(fmt.Sprintf("handling deploy action reconciliation for bkapp %s/%s", bkapp.Namespace, bkapp.Name))
 
 	currentDeployID := bkapp.Annotations[paasv1alpha2.DeployIDAnnoKey]
 	if currentDeployID == "" {
@@ -65,7 +67,7 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	// loop wil be skipped.
 	if bkapp.Status.DeployId == currentDeployID {
 		log.V(1).Info(
-			"No new deploy action found on the BkApp, skip the rest of the process.",
+			"No new deploy action found on the BkApp, skip the rest of the process",
 			"ObservedGeneration",
 			bkapp.Status.ObservedGeneration,
 			"Generation",
@@ -77,34 +79,46 @@ func (r *DeployActionReconciler) Reconcile(ctx context.Context, bkapp *paasv1alp
 	// If this is not the initial deploy action, check if there is any preceding running hooks,
 	// wait for these hooks by return an error to delay for another reconcile cycle.
 	//
-	// TODO: Should we remove this logic and allow every new deploy action to start even the
-	// hook triggered by older deploy is not finished yet?
-	if bkapp.Status.DeployId != "" {
+	// If hook already turned off, validateNoRunningHooks should not execute (disregarding previous hooks).
+	if bkapp.Spec.Hooks != nil && bkapp.Status.DeployId != "" {
 		if err = r.validateNoRunningHooks(ctx, bkapp); err != nil {
 			return r.Result.WithError(err)
 		}
 	}
 
-	log.Info("New deploy action found.", "name", bkapp.Name, "deployID", currentDeployID)
+	log.Info("New deploy action found", "name", bkapp.Name, "deployID", currentDeployID)
 	bkapp.Status.Phase = paasv1alpha2.AppPending
-	bkapp.Status.HookStatuses = nil
 	bkapp.Status.SetDeployID(currentDeployID)
 	SetDefaultConditions(bkapp)
 
 	// deep copy bkapp to generate merge-patch
 	originalBkapp := bkapp.DeepCopy()
 	// clear original bkapp status to force update
-	originalBkapp.Status = paasv1alpha2.AppStatus{}
+	originalBkapp.Status = paasv1alpha2.AppStatus{
+		// 必须保留 HookStatuses 字段值, 目的是在 MergeFrom 时, 对比 bkapp.Status.HookStatuses 与
+		// originalBkapp.Status.HookStatuses 的值, 生成 patch 指令, 清空集群内 bkapp 模型的 HookStatuses 字段.
+		// 清空后, 进一步避免了在 HookReconciler 中, 读取到旧 HookStatuses 的情况.
+		// 有关 MergeFrom 的说明: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/client#MergeFrom
+		HookStatuses: bkapp.Status.HookStatuses,
+	}
+	bkapp.Status.HookStatuses = nil
+
 	if err = r.Client.Status().Patch(ctx, bkapp, client.MergeFrom(originalBkapp)); err != nil {
 		metrics.IncDeployActionUpdateBkappStatusFailures(bkapp)
-		log.Error(err, "Unable to update bkapp status when a new deploy action is detected")
-		return r.Result.WithError(err)
+		return r.Result.WithError(
+			errors.Wrapf(err, "update bkapp %s status when a new deploy action is detected", bkapp.Name),
+		)
 	}
 	return r.Result
 }
 
 // validate that there are no running hooks currently, return error if found any running hooks.
 func (r *DeployActionReconciler) validateNoRunningHooks(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
+	// 如果上一次的部署是被用户主动中断, 则继续执行后续的部署调和流程, 忽略可能处于 progressing 状态的旧 hook
+	// TODO 考虑支持更实时的中断请求, 包括直接删除执行中的 hook 等?
+	if platdeploy.GetLastDeployStatus(bkapp) == "interrupted" {
+		return nil
+	}
 	// Check pre-release hook
 	if hookres.IsPreReleaseProgressing(bkapp) {
 		_, err := hooks.CheckAndUpdatePreReleaseHookStatus(

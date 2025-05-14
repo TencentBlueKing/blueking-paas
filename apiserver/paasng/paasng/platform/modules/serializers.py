@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import string
 from typing import Dict, Optional
 
@@ -57,16 +56,18 @@ def validate_build_method(build_method: RuntimeType, source_origin: SourceOrigin
 class ModuleNameField(serializers.RegexField):
     """Field for validating Module Name"""
 
-    def __init__(self, regex=RE_APP_CODE, *args, **kwargs):
+    def __init__(self, regex=RE_APP_CODE, **kwargs):
         preset_kwargs = dict(
             max_length=16,
             required=True,
             help_text="模块名称",
             validators=[ReservedWordValidator("模块名称"), DnsSafeNameValidator("模块名称")],
-            error_messages={"invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)")},
+            error_messages={
+                "invalid": _("格式错误，只能包含小写字母(a-z)、数字(0-9)和半角连接符(-)，长度不超过 16 位")
+            },
         )
         preset_kwargs.update(kwargs)
-        super().__init__(regex, *args, **preset_kwargs)
+        super().__init__(regex, **preset_kwargs)
 
 
 class ModuleSLZ(serializers.ModelSerializer):
@@ -78,6 +79,8 @@ class ModuleSLZ(serializers.ModelSerializer):
         help_text="模块源码来源，例如 1 表示 Git 等代码仓库", source="get_source_origin"
     )
     clusters = serializers.SerializerMethodField(help_text="模块下属各环境部署的集群信息")
+    creator = UserNameField()
+    owner = UserNameField()
 
     def get_repo_auth_info(self, instance):
         if not isinstance(instance.get_source_obj(), (SvnRepository, GitRepository)):
@@ -99,9 +102,7 @@ class ModuleSLZ(serializers.ModelSerializer):
             return ""
 
         try:
-            return Template.objects.get(
-                name=obj.source_init_template, type__in=TemplateType.normal_app_types()
-            ).display_name
+            return Template.objects.get(name=obj.source_init_template).display_name
         except ObjectDoesNotExist:
             # 可能存在远古模版，并不在当前模版配置中
             return ""
@@ -176,9 +177,7 @@ class CreateModuleSLZ(serializers.Serializer):
         source_origin = SourceOrigin(data["source_origin"])
 
         if source_origin == SourceOrigin.IMAGE_REGISTRY:
-            data["source_repo_url"] = validate_image_url(
-                data["source_repo_url"], region=self.context["application"].region
-            )
+            data["source_repo_url"] = validate_image_url(data["source_repo_url"])
 
         return data
 
@@ -262,12 +261,18 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
     source_dir = serializers.CharField(required=False, default="", allow_blank=True)
 
-    def validate_source_init_template(self, tmpl_name):
+    def validate_source_init_template(self, tmpl_name: str) -> str:
         if not tmpl_name:
             return tmpl_name
 
-        if not Template.objects.filter(name=tmpl_name).exists():
+        filters = {"name": tmpl_name}
+        # 插件应用还需要额外检查模板是否为插件专用的
+        if self.parent.initial_data.get("is_plugin_app"):
+            filters["type"] = TemplateType.PLUGIN
+
+        if not Template.objects.filter(**filters).exists():
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
+
         return tmpl_name
 
 
@@ -289,8 +294,10 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
         child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
     )
 
-    # custom image 相关字段
-    # NOTE: image_repository 同时用于表示从源码构建的部署方式的镜像仓库
+    # 源码构建（buildpack / dockerfile）产出的镜像的仓库地址
+    env_image_repositories = serializers.JSONField(help_text="环境镜像仓库", required=False, allow_null=True)
+
+    # custom image（纯镜像）专用字段
     image_repository = serializers.CharField(help_text="镜像仓库", required=False, allow_null=True)
     image_credential_name = serializers.CharField(help_text="镜像凭证名称", required=False, allow_null=True)
 

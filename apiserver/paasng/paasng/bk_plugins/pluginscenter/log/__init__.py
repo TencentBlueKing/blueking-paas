@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 import logging
 from typing import Dict, List, Literal, Optional, Tuple, cast
@@ -26,6 +25,7 @@ from paasng.accessories.log.client import LogClientProtocol as BkSaaSLogClientPr
 from paasng.accessories.log.client import instantiate_log_client as instantiate_bksaas_log_client
 from paasng.accessories.log.constants import LogType
 from paasng.accessories.log.models import ProcessLogQueryConfig
+from paasng.accessories.log.shim import setup_env_log_model
 from paasng.bk_plugins.pluginscenter.definitions import ElasticSearchParams
 from paasng.bk_plugins.pluginscenter.log.client import (
     FieldBucketData,
@@ -250,7 +250,11 @@ def _instantiate_log_client(
             search_params = cast(ElasticSearchParams, pd.log_config.ingress)
         return log_client, search_params
     # 由于 bk-saas 接入了日志平台, 每个应用独立的日志查询配置, 因此需要访问 PaaS 的数据库获取配置信息
-    env = Application.objects.get(code=instance.id).get_app_envs("prod")
+    # 插件开发中心只部署主模块的生产环境
+    app = Application.objects.get(code=instance.id)
+    env = app.envs.get(environment="prod", module__is_default=True)
+    # 初始化 env log 模型, 保证数据库对象存在且是 settings 中的最新配置
+    setup_env_log_model(env)
     if log_type == LogType.INGRESS:
         log_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).ingress
         search_params = log_config.search_params
@@ -263,8 +267,10 @@ def _instantiate_log_client(
         search_params = log_config.search_params
 
     # Note: log_config.search_params 返回的是 paasng.accessories.log.models.ElasticSearchParams
-    # 该模型除了没有 filterFields 字段, 其他与插件开发中心的 ElasticSearchParams 一致,
-    return LogClientAdaptor(instantiate_bksaas_log_client(log_config, operator)), search_params
+    # 该模型除了没有 filterFields 字段, 其他与插件开发中心的 ElasticSearchParams 一致
+    return LogClientAdaptor(
+        instantiate_bksaas_log_client(log_config, tenant_id=app.tenant_id, bk_username=operator)
+    ), search_params
 
 
 def get_filter_fields(pd: PluginDefinition, log_type: LogType) -> List[str]:

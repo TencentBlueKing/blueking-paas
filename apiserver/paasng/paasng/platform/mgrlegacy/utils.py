@@ -1,27 +1,29 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import typing
 
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.utils.functional import cached_property
 from rest_framework.exceptions import PermissionDenied
 
+from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.publish.sync_market.managers import AppDeveloperManger
 from paasng.core.region.models import get_region
 from paasng.platform.applications.constants import AppLanguage
@@ -160,14 +162,20 @@ class LegacyAppManager:
             "latest_migration_id": self.get_latest_migration_id(),
             "finished_migration": self.is_finished_migration(),
             "is_active": self.is_active(),
-            "migration_finished_date": self.get_migration_finished_date(),
             "is_prod_deployed": self.legacy_app_proxy.is_prod_deployed(),  # 用于展示是否已上架
             "has_prod_deployed_before_migration": self.has_prod_deployed_before_migration(),  # 用于控制迁移完成回滚
             "stag_exposed_link": self.get_stag_exposed_link(),
             "prod_exposed_link": self.get_prod_exposed_link(),
             "region": self.region(),
+            "migration_finished_date": self.get_migration_finished_date(),
             "legacy_url": self.legacy_app_proxy.legacy_url(),
         }
+
+    def get_stag_exposed_link(self):
+        return getattr(self.legacy_app, "stag_exposed_link", "")
+
+    def get_prod_exposed_link(self):
+        return getattr(self.legacy_app, "prod_exposed_link", "")
 
     def get_language(self):
         """将桌面的开发语言转换成v3上的开发语言, 两者大小写有些出入"""
@@ -187,32 +195,17 @@ class LegacyAppManager:
 
         return None
 
-    def get_stag_exposed_link(self):
-        # NOTE: 只使用 `link_engine_app` 去暴露 App
-        # 因为在未确认迁移时, 市场页面访问的仍然是v2环境的应用
-        try:
-            region_name = self.legacy_app_proxy.to_paasv3_region()
-        except ValueError:
-            return ""
-        region = get_region(region_name)
-        tmpl = region.basic_info.link_engine_app
 
-        # WARNING: not compatible with multiple modules
-        name = "bkapp-%s-%s" % (self.legacy_app.code, "stag")
-        context = dict(region=region_name, name=name)
-        return tmpl.format(**context)
+def get_cnative_target_cluster() -> Cluster:
+    """
+    Get the target cluster when migrating an application to the cloud-native type.
 
-    def get_prod_exposed_link(self):
-        # NOTE: 只使用 `link_engine_app` 去暴露 App
-        # 因为在未确认迁移时, 市场页面访问的仍然是v2环境的应用
-        try:
-            region_name = self.legacy_app_proxy.to_paasv3_region()
-        except ValueError:
-            return ""
-        region = get_region(region_name)
-        tmpl = region.basic_info.link_engine_app
+    :raises: ImproperlyConfigured if MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER is not configured.
+    :return: migrate to cnative application's target cluster.
+    """
+    target_cluster_name = settings.MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER
 
-        # WARNING: not compatible with multiple modules
-        name = "bkapp-%s-%s" % (self.legacy_app.code, "prod")
-        context = dict(region=region_name, name=name)
-        return tmpl.format(**context)
+    if not target_cluster_name:
+        raise ImproperlyConfigured("MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER is not configured.")
+
+    return Cluster.objects.get(name=target_cluster_name)

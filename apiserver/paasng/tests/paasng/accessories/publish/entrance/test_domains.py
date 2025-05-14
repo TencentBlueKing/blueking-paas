@@ -1,37 +1,36 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""Testcases for application entrance management"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""Testcases for application entrance management
-"""
 import cattr
 import pytest
 
-from paas_wl.infras.cluster.models import Domain as DomainCfg
-from paas_wl.infras.cluster.models import IngressConfig, PortMap
+from paas_wl.infras.cluster.entities import Domain as DomainCfg
+from paas_wl.infras.cluster.entities import IngressConfig, PortMap
 from paas_wl.workloads.networking.entrance.allocator.domains import (
     DomainPriorityType,
     ModuleEnvDomains,
     SubDomainAllocator,
 )
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
-from tests.utils.mocks.engine import mock_cluster_service
+from tests.utils.mocks.cluster import cluster_ingress_config
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestGetPreallocatedDomain:
@@ -98,11 +97,7 @@ def bk_app(bk_app):
 @pytest.fixture(autouse=True)
 def _setup_cluster():
     """Replace cluster info in module level"""
-    with mock_cluster_service(
-        ingress_config={
-            "app_root_domains": [{"name": "bar-1.example.com"}],
-        }
-    ):
+    with cluster_ingress_config({"app_root_domains": [{"name": "bar-1.example.com"}]}):
         yield
 
 
@@ -133,9 +128,7 @@ class TestModuleEnvDomains:
 
     @pytest.mark.parametrize(("https_enabled", "expected_scheme"), [(True, "https"), (False, "http")])
     def test_enable_https_by_default(self, https_enabled, expected_scheme, bk_stag_env):
-        with mock_cluster_service(
-            ingress_config={"app_root_domains": [{"name": "example.com", "https_enabled": https_enabled}]}
-        ):
+        with cluster_ingress_config({"app_root_domains": [{"name": "example.com", "https_enabled": https_enabled}]}):
             domains = ModuleEnvDomains(bk_stag_env).all()
             assert domains[0].https_enabled == https_enabled
             assert domains[0].as_url().protocol == expected_scheme
@@ -200,8 +193,8 @@ class TestGetPreallocatedDomainsByEnv:
     @pytest.fixture(autouse=True)
     def _setup_cluster(self):
         """Replace cluster info in module level"""
-        with mock_cluster_service(
-            ingress_config={
+        with cluster_ingress_config(
+            {
                 "app_root_domains": [
                     {"name": "bar-1.example.com"},
                     {"name": "bar-2.example.org"},

@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import os
 import time
 import uuid
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union
 
 from bkstorages.backends.bkrepo import RequestError
 from django.conf import settings
@@ -30,11 +29,16 @@ from django.db.models import Q, QuerySet
 from pilkit.processors import ResizeToFill
 
 from paasng.core.core.storages.object_storage import app_logo_storage
+from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.region.models import get_region
-from paasng.infras.iam.helpers import fetch_role_members
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
+from paasng.platform.applications.entities import SMartAppArtifactMetadata
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models.module import Module
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.models import (
     BkUserField,
@@ -43,6 +47,7 @@ from paasng.utils.models import (
     ProcessedImageField,
     TimestampedModel,
     WithOwnerManager,
+    make_json_field,
 )
 
 logger = logging.getLogger(__name__)
@@ -138,7 +143,7 @@ class BaseApplicationFilter:
     """Base Application Filter"""
 
     @classmethod
-    def filter_queryset(
+    def filter_queryset(  # noqa: C901
         cls,
         queryset: QuerySet,
         include_inactive=False,
@@ -149,6 +154,7 @@ class BaseApplicationFilter:
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
         order_by: Optional[List] = None,
+        app_tenant_mode: Optional[str] = None,
         market_enabled: Optional[bool] = None,
     ):
         """Filter applications by given parameters"""
@@ -176,6 +182,8 @@ class BaseApplicationFilter:
             queryset = queryset.filter(market_config__enabled=market_enabled)
         if type_ is not None:
             queryset = queryset.filter(type=type_)
+        if app_tenant_mode:
+            queryset = queryset.filter(app_tenant_mode=app_tenant_mode)
         return queryset
 
     @staticmethod
@@ -187,13 +195,46 @@ class BaseApplicationFilter:
             # If order_by field is "latest_operated_at", replace it with original field which has
             # related_name prefix.
             if f.name == "latest_operated_at":
-                f.name = "latest_op__latest_operated_at"
-                queryset = queryset.select_related("latest_op")
+                f.name = "latest_op_record__latest_operated_at"
+                queryset = queryset.select_related("latest_op_record")
                 fields.append(str(f))
                 continue
 
             fields.append(field)
         return queryset.order_by(*fields)
+
+
+class JustLeaveAppManager:
+    """
+    刚退出的应用管理器
+
+    Q：为什么需要有这个管理器
+    A：开发者中心接入权限中心后，由于接入的是 RBAC 模型，导致有这么一个链路
+         用户退出权限中心用户组  ----异步任务----> 回收用户权限
+      这样会出现一个问题：用户退出应用后，短时间（30s）内还有这个应用的权限，体验不佳
+      这里的思路是：利用 Redis，缓存用户退出的应用 Code（5min），这段时间内，把这个应用 exclude 掉
+
+    Q：为什么所有方法都加 try-except
+    A：这个 manager 只是优化体验，如果 redis 挂了（虽然概率不大），也不该阻塞主流程
+    """
+
+    def __init__(self, username: str):
+        self.redis_db = get_default_redis()
+        self.username = username
+        self.cache_key = f"bkpaas_just_leave_app_codes:{username}"
+
+    def add(self, app_code: str) -> None:
+        try:
+            self.redis_db.rpush(self.cache_key, app_code)
+            self.redis_db.expire(self.cache_key, settings.IAM_PERM_EFFECTIVE_TIMEDELTA)
+        except Exception:
+            pass
+
+    def list(self) -> Set[str]:
+        try:
+            return {x.decode() for x in self.redis_db.lrange(self.cache_key, 0, -1)}
+        except Exception:
+            return set()
 
 
 class UserApplicationFilter:
@@ -212,11 +253,18 @@ class UserApplicationFilter:
         source_origin: Optional[SourceOrigin] = None,
         type_: Optional[ApplicationType] = None,
         order_by: Optional[List] = None,
+        app_tenant_mode: Optional[str] = None,
     ):
         """Filter applications by given parameters"""
         if order_by is None:
             order_by = []
         applications = Application.objects.filter_by_user(self.user.pk, exclude_collaborated=exclude_collaborated)
+
+        # 从缓存拿刚刚退出的应用 code exclude 掉，避免出现退出用户组，权限中心权限未同步的情况
+        mgr = JustLeaveAppManager(get_username_by_bkpaas_user_id(self.user.pk))
+        if just_leave_app_codes := mgr.list():
+            applications = applications.exclude(code__in=just_leave_app_codes)
+
         return BaseApplicationFilter.filter_queryset(
             applications,
             include_inactive=include_inactive,
@@ -226,6 +274,7 @@ class UserApplicationFilter:
             source_origin=source_origin,
             order_by=order_by,
             type_=type_,
+            app_tenant_mode=app_tenant_mode,
         )
 
 
@@ -242,9 +291,35 @@ class Application(OwnerTimestampedModel):
 
     id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     code = models.CharField(verbose_name="应用代号", max_length=20, unique=True)
-    name = models.CharField(verbose_name="应用名称", max_length=20, unique=True)
+    name = models.CharField(verbose_name="应用名称", max_length=20)
     name_en = models.CharField(verbose_name="应用名称(英文)", max_length=20, help_text="目前仅用于 S-Mart 应用")
 
+    # app_tenant_mode 和 app_tenant_id 字段共同控制了应用的“可用范围”，可能的组合包括：
+    #
+    # - app_tenant_mode: "global", app_tenant_id: ""，表示应用在全租户范围内可用。
+    # - app_tenant_mode: "single", app_tenant_id: "foo"，表示应用仅在 foo 租户范围内可用。
+    #
+    # 应用的“可用范围”将影响对应租户的用户是否可在桌面上看到此应用，以及是否能通过应用链接访问
+    # 应用（不在“可用范围”内的用户请求将被拦截）。
+    #
+    # ## app_tenant_id 和 tenant_id 字段的区别
+    #
+    # 虽然这两个字段都存储“租户”，且值可能相同，但二者有本质区别。tenant_id 是系统级字段，值
+    # 总是等于当前这条数据的所属租户，它确定了数据的所有权。而 app_tenant_id 是业务功能层面的
+    # 字段，它和 app_tenant_mode 共同控制前面提到的业务功能——应用“可用范围”。
+    #
+    app_tenant_mode = models.CharField(
+        verbose_name="应用租户模式",
+        max_length=16,
+        default=AppTenantMode.SINGLE.value,
+        help_text="应用在租户层面的可用范围，可选值：全租户、指定租户",
+    )
+    app_tenant_id = models.CharField(
+        verbose_name="应用租户 ID",
+        max_length=32,
+        default=DEFAULT_TENANT_ID,
+        help_text="应用对哪个租户的用户可用，当应用租户模式为全租户时，本字段值为空",
+    )
     type = models.CharField(
         verbose_name="应用类型",
         max_length=16,
@@ -253,11 +328,14 @@ class Application(OwnerTimestampedModel):
         help_text="与应用部署方式相关的类型信息",
     )
     is_smart_app = models.BooleanField(verbose_name="是否为 S-Mart 应用", default=False)
-    is_scene_app = models.BooleanField(verbose_name="是否为场景 SaaS 应用", default=False)
     is_plugin_app = models.BooleanField(
         verbose_name="是否为插件应用",
         default=False,
         help_text="蓝鲸应用插件：供标准运维、ITSM 等 SaaS 使用，有特殊逻辑",
+    )
+    is_ai_agent_app = models.BooleanField(
+        verbose_name="是否为 AI Agent 插件应用",
+        default=False,
     )
     language = models.CharField(verbose_name="编程语言", max_length=32)
 
@@ -275,9 +353,14 @@ class Application(OwnerTimestampedModel):
         options={"quality": 95},
         null=True,
     )
+    tenant_id = tenant_id_field_factory()
 
     objects: ApplicationQuerySet = ApplicationManager.from_queryset(ApplicationQuerySet)()
     default_objects = models.Manager()
+
+    class Meta:
+        # 应用名称租户内唯一
+        unique_together = ("app_tenant_id", "name")
 
     @property
     def has_deployed(self) -> bool:
@@ -306,7 +389,7 @@ class Application(OwnerTimestampedModel):
         """获取 Application 对应的源码 Repo 对象"""
         return self.get_default_module().get_source_obj()
 
-    def get_engine_app(self, environment, module_name=None):
+    def get_engine_app(self, environment: str, module_name=None):
         """Get the engine app of current application"""
         module = self.get_module(module_name=module_name)
         engine_app = module.get_envs(environment=environment).engine_app
@@ -350,10 +433,14 @@ class Application(OwnerTimestampedModel):
 
     def get_administrators(self):
         """获取具有管理权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         return fetch_role_members(self.code, ApplicationRole.ADMINISTRATOR)
 
     def get_devopses(self) -> List[str]:
         """获取具有运营权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         devopses = fetch_role_members(self.code, ApplicationRole.OPERATOR) + fetch_role_members(
             self.code, ApplicationRole.ADMINISTRATOR
         )
@@ -361,6 +448,8 @@ class Application(OwnerTimestampedModel):
 
     def get_developers(self) -> List[str]:
         """获取具有开发权限的人员名单"""
+        from paasng.infras.iam.helpers import fetch_role_members
+
         developers = fetch_role_members(self.code, ApplicationRole.DEVELOPER) + fetch_role_members(
             self.code, ApplicationRole.ADMINISTRATOR
         )
@@ -423,6 +512,8 @@ class ApplicationEnvironment(TimestampedModel):
     environment = models.CharField(verbose_name="部署环境", max_length=16)
     is_offlined = models.BooleanField(default=False, help_text="是否已经下线，仅成功下线后变为False")
 
+    tenant_id = tenant_id_field_factory()
+
     class Meta:
         unique_together = ("module", "environment")
 
@@ -463,7 +554,7 @@ class ApplicationEnvironment(TimestampedModel):
         self.save(update_fields=["is_offlined"])
 
 
-# Make an alias name to descrease misunderstanding
+# Create an alias name to reduce misunderstandings
 ModuleEnvironment = ApplicationEnvironment
 
 
@@ -507,7 +598,9 @@ class ApplicationFeatureFlagManager(models.Manager):
     def set_feature(self, key: Union[str, AppFeatureFlag], value: bool, application: Optional[Application] = None):
         """设置 feature 状态"""
         instance, qs = self._build_queryset(application)
-        return qs.update_or_create(application=instance, name=AppFeatureFlag(key), defaults={"effect": value})
+        return qs.update_or_create(
+            application=instance, name=AppFeatureFlag(key), defaults={"effect": value, "tenant_id": instance.tenant_id}
+        )
 
     def has_feature(self, key: Union[str, AppFeatureFlag], application: Optional[Application] = None) -> bool:
         """判断app是否具有feature,如果查数据库无记录，则返回默认值"""
@@ -543,12 +636,16 @@ class ApplicationFeatureFlag(TimestampedModel):
     effect = models.BooleanField("是否允许(value)", default=True)
     name = models.CharField("特性名称(key)", max_length=30)
 
+    tenant_id = tenant_id_field_factory()
+
     objects = ApplicationFeatureFlagManager()
 
 
 class UserMarkedApplication(OwnerTimestampedModel):
     application = models.ForeignKey(Application, on_delete=models.CASCADE)
     objects = WithOwnerManager()
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("application", "owner")
@@ -559,3 +656,73 @@ class UserMarkedApplication(OwnerTimestampedModel):
     @property
     def code(self):
         return self.application.code
+
+
+class ApplicationDeploymentModuleOrder(models.Model):
+    user = BkUserField()
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, verbose_name="模块", db_constraint=False)
+    order = models.IntegerField(verbose_name="顺序")
+
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        verbose_name = "模块顺序"
+        unique_together = ("user", "module")
+
+
+SMartAppArtifactMetadataField = make_json_field("SMartAppArtifactMetadataField", SMartAppArtifactMetadata)
+
+
+class SMartAppExtraInfo(models.Model):
+    """SMart 应用额外信息"""
+
+    app = models.OneToOneField(Application, on_delete=models.CASCADE, db_constraint=False)
+    original_code = models.CharField(verbose_name="描述文件中的应用原始 code", max_length=20)
+
+    artifact_metadata = SMartAppArtifactMetadataField(
+        default=SMartAppArtifactMetadata, help_text="smart app 的制品元数据"
+    )
+
+    tenant_id = tenant_id_field_factory()
+
+    @property
+    def use_cnb(self) -> bool:
+        return self.artifact_metadata.use_cnb
+
+    def set_use_cnb_flag(self, use_cnb: bool):
+        self.artifact_metadata.use_cnb = use_cnb
+        self.save(update_fields=["artifact_metadata"])
+
+    def get_proc_entrypoints(self, module_name: str) -> dict[str, list[str]] | None:
+        """根据模块名, 获取模块下所有进程的 entrypoints
+
+        :param module_name: 模块名
+        :return proc_entrypoints, 格式如 {进程名: entrypoint}
+        """
+        return self.artifact_metadata.module_proc_entrypoints.get(module_name)
+
+    def set_proc_entrypoints(self, module_name: str, proc_entrypoints: dict[str, list[str]]):
+        """设置模块下进程的 entrypoints
+
+        :param module_name: 模块名
+        :param proc_entrypoints: 进程 entrypoints
+        """
+        self.artifact_metadata.module_proc_entrypoints[module_name] = proc_entrypoints
+        self.save(update_fields=["artifact_metadata"])
+
+    def get_image_tar(self, module_name: str) -> str | None:
+        """获取模块使用的镜像 tar 包名
+
+        :param module_name: 模块名
+        :return 模块使用的镜像 tar 包名. 如果 artifact_metadata 中没有, 则返回默认值"模块名.tgz"
+        """
+        return self.artifact_metadata.module_image_tars.get(module_name, f"{module_name}.tgz")
+
+    def set_image_tar(self, module_name: str, image_tar: str):
+        """设置模块使用的镜像 tar 包名
+
+        :param module_name: 模块名
+        :param image_tar: 镜像 tar 包名
+        """
+        self.artifact_metadata.module_image_tars[module_name] = image_tar
+        self.save(update_fields=["artifact_metadata"])

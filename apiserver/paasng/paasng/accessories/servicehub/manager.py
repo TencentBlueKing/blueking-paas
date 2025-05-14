@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import operator
+import uuid
 from typing import Callable, Dict, Generator, Iterable, Iterator, List, NamedTuple, Optional, TypeVar, cast
 
-from django.db.models import QuerySet
 from django.http import Http404
 
 from paasng.accessories.servicehub.constants import ServiceBindingType, ServiceType
@@ -28,6 +27,7 @@ from paasng.accessories.servicehub.exceptions import (
     DuplicatedServiceBoundError,
     ServiceObjNotFound,
     SvcAttachmentDoesNotExist,
+    UnboundSvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.local.manager import LocalPlanMgr, LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.models import (
@@ -37,18 +37,23 @@ from paasng.accessories.servicehub.models import (
 )
 from paasng.accessories.servicehub.remote.manager import RemotePlanMgr, RemoteServiceMgr, RemoteServiceObj
 from paasng.accessories.servicehub.remote.store import get_remote_store
-from paasng.accessories.servicehub.services import EngineAppInstanceRel, PlanObj, ServiceObj
+from paasng.accessories.servicehub.services import (
+    EngineAppInstanceRel,
+    PlanObj,
+    ServiceObj,
+    UnboundEngineAppInstanceRel,
+)
 from paasng.accessories.services.models import ServiceCategory
-from paasng.core.region.models import get_all_regions, set_service_categories_loader
+from paasng.core.region.models import set_service_categories_loader
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
 
-def _fetch_service_categories(region: str) -> List[ServiceCategory]:
-    """Fetch service categories by region."""
-    category_ids = {obj.category_id for obj in mixed_service_mgr.list_by_region(region)}
+def _fetch_service_categories() -> List[ServiceCategory]:
+    """Fetch service categories."""
+    category_ids = {obj.category_id for obj in mixed_service_mgr.list_visible()}
     categories = ServiceCategory.objects.filter(pk__in=category_ids).order_by("-sort_priority")
     return list(categories)
 
@@ -119,32 +124,23 @@ class MixedServiceMgr:
         store = get_remote_store()
         self.mgr_instances = [LocalServiceMgr(), RemoteServiceMgr(store)]
 
-    def get(self, uuid: str, region: str) -> ServiceObj:
+    def get(self, uuid: str) -> ServiceObj:
         for mgr in self.mgr_instances:
             try:
-                return mgr.get(uuid, region)
+                return mgr.get(uuid)
             except ServiceObjNotFound:
                 continue
-        raise ServiceObjNotFound(f"service with uuid {uuid} in region {region} was not found")
+        raise ServiceObjNotFound(f"service with uuid {uuid} was not found")
 
-    def find_by_name(self, name: str, region: str, include_invisible: bool = False) -> ServiceObj:
+    def find_by_name(self, name: str, include_invisible: bool = False) -> ServiceObj:
         for mgr in self.mgr_instances:
             try:
-                obj = mgr.find_by_name(name, region)
+                obj = mgr.find_by_name(name)
                 if include_invisible or obj.is_visible:
                     return obj
             except ServiceObjNotFound:
                 continue
-        raise ServiceObjNotFound(f"service with name {name} in region {region} was not found")
-
-    def get_without_region(self, uuid: str) -> ServiceObj:
-        """Get a service without any region info"""
-        for region in get_all_regions():
-            try:
-                return self.get(uuid, region)
-            except ServiceObjNotFound:
-                continue
-        raise ServiceObjNotFound(f"service with uuid {uuid} was not found")
+        raise ServiceObjNotFound(f"service with name {name} was not found")
 
     def get_or_404(self, *args, **kwargs) -> ServiceObj:
         """Get a ServiceObj object or raise 404
@@ -169,10 +165,31 @@ class MixedServiceMgr:
         # 所有 mgr 都无法找到具体条目
         raise SvcAttachmentDoesNotExist(f"module<{module_id}> has no attachment with service<{service_id}>")
 
-    def bind_service(self, service: ServiceObj, module: Module, specs: Optional[Dict[str, str]] = None) -> str:
-        """Create bind relationship for given module and service object"""
+    def bind_service(
+        self,
+        service: ServiceObj,
+        module: Module,
+        plan_id: str | None = None,
+        env_plan_id_map: Dict[str, str] | None = None,
+    ) -> str:
+        """Create bind relationship for given module and service object.
+
+        Use this method when the user can manually select a plan to bind, if this
+        condition is not met, use `bind_service_use_first_plan` instead.
+        """
         DuplicatedBindingValidator(module, ServiceBindingType.NORMAL).validate(service)
-        return _proxied_svc_dispatcher("bind_service")(self, service, module, specs=specs)
+        return _proxied_svc_dispatcher("bind_service")(
+            self, service, module, plan_id=plan_id, env_plan_id_map=env_plan_id_map
+        )
+
+    def bind_service_use_first_plan(self, service: ServiceObj, module: Module) -> str:
+        """Create bind relationship for given module and service object.
+
+        The difference between this method and `bind_service` is that this method will
+        use the first plan when multiple plans are available instead of raising an exception.
+        """
+        DuplicatedBindingValidator(module, ServiceBindingType.NORMAL).validate(service)
+        return _proxied_svc_dispatcher("bind_service_use_first_plan")(self, service, module)
 
     # Dispatch via service type start
 
@@ -185,22 +202,6 @@ class MixedServiceMgr:
     module_is_bound_with = _proxied_svc_dispatcher("module_is_bound_with")
     update = _proxied_svc_dispatcher("update")
     destroy = _proxied_svc_dispatcher("destroy")
-
-    def get_provisioned_queryset_by_services(self, services: List[ServiceObj], application_ids: List[str]) -> QuerySet:
-        joined_qs = None
-        for mgr in self.mgr_instances:
-            mgr_services = [service for service in services if isinstance(service, mgr.service_obj_cls)]
-            if not mgr_services:
-                continue
-
-            qs = mgr.get_provisioned_queryset_by_services(mgr_services, application_ids)
-            if joined_qs is None:
-                joined_qs = qs
-            else:
-                joined_qs = joined_qs.union(qs)
-        if joined_qs is None:
-            raise ValueError(f"{services} is an invalid service list")
-        return joined_qs
 
     # Dispatch via service type end
 
@@ -217,25 +218,28 @@ class MixedServiceMgr:
     list_provisioned_rels = cast(
         Callable[..., Iterable[EngineAppInstanceRel]], _proxied_chained_generator("list_provisioned_rels")
     )
-    list_by_region: Callable[..., Iterable[ServiceObj]] = _proxied_chained_generator("list_by_region")
     list = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list"))
+    list_unbound_instance_rels = cast(
+        Callable[..., Iterable[UnboundEngineAppInstanceRel]], _proxied_chained_generator("list_unbound_instance_rels")
+    )
+    list_visible = cast(Callable[..., Iterable[ServiceObj]], _proxied_chained_generator("list_visible"))
 
     # Proxied generator methods end
 
     def get_env_vars(
-        self, engine_app: EngineApp, service: Optional[ServiceObj] = None, exclude_disabled: bool = False
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None, filter_enabled: bool = False
     ) -> Dict[str, str]:
         """Get all provisioned services env variables
 
         :param engine_app: EngineApp object
         :param service: Optional service object. if given, will only return credentials of the specified service,
             otherwise return the credentials of all services.
-        :param exclude_disabled: Whether to exclude disabled service instances
+        :param filter_enabled: Whether to filter enabled service instances
         :returns: Dict of env variables.
         """
         rels = list(self.list_provisioned_rels(engine_app, service=service))
-        if exclude_disabled:
-            instances = [rel.get_instance() for rel in rels if not rel.db_obj.credentials_disabled]
+        if filter_enabled:
+            instances = [rel.get_instance() for rel in rels if rel.db_obj.credentials_enabled]
         else:
             instances = [rel.get_instance() for rel in rels]
         # 新的覆盖旧的
@@ -246,6 +250,26 @@ class MixedServiceMgr:
             result.update(i.credentials)
         return result
 
+    def get_enabled_env_keys(self, engine_app: EngineApp) -> Dict[str, List[str]]:
+        """
+        Get all provisioned services environment keys
+
+        :param engine_app: EngineApp object
+        :return: Dictionary of service display names to list of their environment keys
+        """
+        provisioned_rels = self.list_provisioned_rels(engine_app)
+        # 凭证的信息写入环境变量的增强服务才展示
+        enabled_rels = [rel for rel in provisioned_rels if rel.db_obj.credentials_enabled]
+
+        results = {}
+        for rel in enabled_rels:
+            # display_name 会被国际化处理为殊字符串类型（__proxy__类型），必须首先将它们转化为标准的字符串
+            service_name = str(rel.get_service().display_name)
+            instance_credentials_keys = list(rel.get_instance().credentials.keys())
+            results[service_name] = instance_credentials_keys
+
+        return results
+
     def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
         for mgr in self.mgr_instances:
             try:
@@ -253,6 +277,16 @@ class MixedServiceMgr:
             except SvcAttachmentDoesNotExist:
                 continue
         raise SvcAttachmentDoesNotExist(f"engine_app<{engine_app}> has no attachment with service<{service.uuid}>")
+
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        for mgr in self.mgr_instances:
+            try:
+                return mgr.get_unbound_instance_rel_by_instance_id(service, service_instance_id)
+            except UnboundSvcAttachmentDoesNotExist:
+                continue
+        raise UnboundSvcAttachmentDoesNotExist(
+            f"service<{service}> has no attachment with service_instance_id<{service_instance_id}>"
+        )
 
 
 class MixedPlanMgr:

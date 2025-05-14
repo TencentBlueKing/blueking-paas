@@ -1,31 +1,31 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
 from django.db import models, transaction
 
-from paas_wl.bk_app.applications.models import BuildProcess, WlApp
+from paas_wl.bk_app.applications.models import BuildProcess, Release, WlApp
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy, AppModelResource, AppModelRevision
+from paas_wl.bk_app.cnative.specs.resource import delete_bkapp, delete_networking
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.bk_app.processes.models import ProcessSpec
-from paas_wl.core.env import env_is_running
 from paas_wl.workloads.networking.ingress.models import Domain
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
 
@@ -34,12 +34,21 @@ logger = logging.getLogger(__name__)
 
 def delete_env_resources(env: "ModuleEnvironment"):
     """Delete app's resources in cluster"""
-    if not env_is_running(env):
+    wl_app = env.wl_app
+
+    # 重要：由于云原生应用 1. 多模块共享命名空间 2. 下架时会删除 bkapp & domaingroupmapping，
+    # 可通过 operator 进行资源回收，因此不需要在这里通过 删除命名空间 清理集群中的资源
+    if env.application.type == ApplicationType.CLOUD_NATIVE:
+        # 清理部署失败时可能残留的, 未通过下架操作删除的 bkapp & domaingroupmapping
+        delete_bkapp(env)
+        delete_networking(env)
         return
 
-    wl_app = env.wl_app
+    # 如果应用有部署过（不论失败/成功）都需要进行资源回收（注：云原生应用不会创建 Release 对象）
+    if not Release.objects.filter(app=wl_app).exists():
+        return
+
     NamespacesHandler.new_by_app(wl_app).delete(namespace=wl_app.namespace)
-    return
 
 
 def delete_module_related_res(module: "Module"):

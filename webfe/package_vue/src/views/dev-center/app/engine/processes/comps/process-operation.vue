@@ -32,16 +32,28 @@
                 <div>
                   <a class="ps-icon-btn-circle no-border expanded-icon">
                     <i
-                      :class="['paasng-icon paasng-bold',{
-                        'paasng-down-shape': process.name === curProcessKey,
-                        'paasng-right-shape': process !== curProcess || !curProcessKey }]" />
+                      :class="[
+                        'paasng-icon paasng-bold',
+                        {
+                          'paasng-down-shape': process.name === curProcessKey,
+                          'paasng-right-shape': process !== curProcess || !curProcessKey,
+                        },
+                      ]"
+                    />
                   </a>
                   <b
                     v-bk-tooltips="process.name"
                     class="process-name"
-                  >{{ process.name }}</b>
+                  >
+                    {{ process.name }}
+                  </b>
                 </div>
-                <div v-if="process.autoscaling" class="auto-scal">{{ $t('自动扩缩容') }}</div>
+                <div
+                  v-if="process.autoscaling"
+                  class="auto-scal"
+                >
+                  {{ $t('自动扩缩容') }}
+                </div>
               </div>
               <div class="instance-count">
                 <div>
@@ -66,7 +78,7 @@
                   <img
                     src="/static/images/btn_loading.gif"
                     class="loading"
-                  >
+                  />
                   <span>
                     {{ process.targetStatus === 'start' ? $t('启动中...') : $t('停止中...') }}
                   </span>
@@ -82,7 +94,6 @@
                   <i class="paasng-icon paasng-process-file" />
                 </a>
                 <a
-                  v-if="platformFeature.ENABLE_WEB_CONSOLE"
                   slot="trigger"
                   v-bk-tooltips="$t('访问控制台')"
                   class="icon-info-d icon-info-base ps-icon-btn-circle no-border"
@@ -112,15 +123,15 @@
                         slot="trigger"
                         class="ps-icon-btn-circle operate-process-icon stop"
                         href="javascript:;"
-                        :class="{ 'disabled': isAppOfflined }"
+                        :class="{ disabled: isAppOfflined }"
                       >
                         <div class="square-icon" />
                         <!-- <i></i> -->
                         <img
                           src="/static/images/btn_loading.gif"
                           class="loading"
-                          style="margin-right: 0;"
-                        >
+                          style="margin-right: 0"
+                        />
                       </a>
                     </tooltip-confirm>
                   </div>
@@ -130,15 +141,15 @@
                     v-bk-tooltips="isAppOfflined ? $t('模块已下架，不可操作') : process.operateIconTitle"
                     class="ps-icon-btn-circle operate-process-icon on start"
                     href="javascript:"
-                    :class="{ 'disabled': isAppOfflined }"
+                    :class="{ disabled: isAppOfflined }"
                     @click="patchProcess(process, index)"
                   >
                     <i />
                     <img
                       src="/static/images/btn_loading.gif"
                       class="loading"
-                      style="margin-right: 0;"
-                    >
+                      style="margin-right: 0"
+                    />
                   </a>
                 </template>
                 <bk-dropdown-menu
@@ -147,24 +158,37 @@
                   ext-cls="dropdown-menu-cls"
                 >
                   <template slot="dropdown-trigger">
-                    <i
-                      class="paasng-icon paasng-icon-more"
-                      v-bk-tooltips="{ content: $t('启动进程后才能进行扩缩容'),
-                                       disabled: process.available_instance_count || process.desired_replicas }" />
+                    <i class="paasng-icon paasng-icon-more" />
                   </template>
-                  <ul class="bk-dropdown-list" slot="dropdown-content">
-                    <!-- <li>
-                        <a
-                          text
-                          href="javascript:void(0);"
-                          class="blue"
-                          @click="showProcessConfigDialog(process, index)"
-                        > {{ $t('扩缩容') }} </a>
-                      </li> -->
-                    <bk-button
-                      text size="small" @click="showProcessConfigDialog(process, index)"
-                      :disabled="!process.available_instance_count
-                        || !process.desired_replicas"> {{ $t('扩缩容') }}</bk-button>
+                  <ul
+                    class="bk-dropdown-list"
+                    slot="dropdown-content"
+                  >
+                    <li
+                      class="option"
+                      v-bk-tooltips="{
+                        content: $t('启动进程后才能进行扩缩容'),
+                        disabled: process.available_instance_count || process.desired_replicas,
+                      }"
+                    >
+                      <bk-button
+                        text
+                        size="small"
+                        @click="showProcessConfigDialog(process, index)"
+                        :disabled="!process.available_instance_count || !process.desired_replicas"
+                      >
+                        {{ $t('扩缩容') }}
+                      </bk-button>
+                    </li>
+                    <li class="option">
+                      <bk-button
+                        text
+                        size="small"
+                        @click="showRestartPopup('process', process)"
+                      >
+                        {{ $t('重启进程') }}
+                      </bk-button>
+                    </li>
                   </ul>
                 </bk-dropdown-menu>
               </div>
@@ -178,10 +202,11 @@
             <div class="process-item-table-wrapper">
               <table class="ps-table ps-table-default ps-instances-table ps-table-special">
                 <thead>
-                  <th> {{ $t('实例名称') }} </th>
-                  <th> {{ $t('状态') }} </th>
-                  <th> {{ $t('创建时间') }} </th>
-                  <th style="min-width: 250px;">
+                  <th>{{ $t('实例名称') }}</th>
+                  <th>{{ $t('状态') }}</th>
+                  <th>{{ $t('重启次数') }}</th>
+                  <th>{{ $t('创建时间') }}</th>
+                  <th style="min-width: 250px">
                     {{ $t('操作') }}
                   </th>
                 </thead>
@@ -202,30 +227,50 @@
                           :class="instance.ready ? 'paasng-check-circle' : 'paasng-empty'"
                         />
                         <span
-                          v-bk-tooltips="{content: getInstanceStateToolTips(instance)}"
+                          v-bk-tooltips="{ content: getInstanceStateToolTips(instance) }"
                           v-dashed="9"
-                        >{{ instance.rich_status }}</span>
+                        >
+                          {{ instance.rich_status }}
+                        </span>
+                      </td>
+                      <td class="restarts">
+                        {{ instance.restart_count }}
                       </td>
                       <td class="time">
                         <template v-if="instance.date_time !== 'Invalid date'">
                           {{ $t('创建于') }} {{ instance.date_time }}
                         </template>
-                        <template v-else>
-                          --
-                        </template>
+                        <template v-else>--</template>
                       </td>
                       <td class="operate-container">
                         <a
                           href="javascript:void(0);"
                           class="blue"
                           @click="showInstanceLog(instance, process)"
-                        > {{ $t('查看日志') }} </a>
+                        >
+                          {{ $t('查看日志') }}
+                        </a>
                         <a
-                          v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
                           href="javascript:void(0);"
-                          class="blue ml5"
+                          class="blue ml8"
                           @click="showInstanceConsole(instance, process)"
-                        > {{ $t('访问控制台') }} </a>
+                        >
+                          {{ $t('访问控制台') }}
+                        </a>
+                        <a
+                          href="javascript:void(0);"
+                          class="blue ml8"
+                          @click="showInstanceEvents(instance, process)"
+                        >
+                          {{ $t('查看事件') }}
+                        </a>
+                        <a
+                          href="javascript:void(0);"
+                          class="blue ml8"
+                          @click="showRestartPopup('instance', instance)"
+                        >
+                          {{ $t('重启实例') }}
+                        </a>
                       </td>
                     </tr>
                   </template>
@@ -247,91 +292,6 @@
           </div>
         </div>
       </div>
-
-      <bk-sideslider
-        :width="800"
-        :is-show.sync="processSlider.isShow"
-        :title="processSlider.title"
-        :quick-close="true"
-      >
-        <div
-          id="log-container"
-          slot="content"
-          class="p0 instance-log-wrapper paas-log-box"
-        >
-          <div class="action-box">
-            <bk-button
-              :key="isLogsLoading"
-              class="fr p0 f12 refresh-btn"
-              style="width: 32px; min-width: 32px;"
-              :disabled="isLogsLoading"
-              @click="loadInstanceLog"
-            >
-              <span class="bk-icon icon-refresh f18" />
-            </bk-button>
-
-            <bk-form
-              form-type="inline"
-              class="fr mr5"
-            >
-              <bk-form-item :label="$t('时间段：')">
-                <bk-select
-                  v-model="curLogTimeRange"
-                  style="width: 250px;"
-                  :clearable="false"
-                  :disabled="isLogsLoading"
-                >
-                  <bk-option
-                    v-for="(option, index) in chartRangeList"
-                    :id="option.id"
-                    :key="index"
-                    :name="option.name"
-                  />
-                </bk-select>
-              </bk-form-item>
-            </bk-form>
-          </div>
-          <div class="instance-textarea">
-            <div
-              class="textarea"
-              style="height: 100%;"
-            >
-              <template v-if="!isLogsLoading && instanceLogs.length">
-                <ul>
-                  <li
-                    v-for="(log, index) of instanceLogs"
-                    :key="index"
-                    class="stream-log"
-                  >
-                    <span
-                      class="mr10"
-                      style="min-width: 140px;"
-                    >{{ log.timestamp }}</span>
-                    <span class="pod-name">{{ log.podShortName }}</span>
-                    <pre
-                      class="message"
-                      v-html="log.message || '--'"
-                    />
-                  </li>
-                </ul>
-              </template>
-              <template v-else-if="isLogsLoading">
-                <div class="log-loading-container">
-                  <div class="log-loading">
-                    {{ $t('日志获取中...') }}
-                  </div>
-                </div>
-              </template>
-              <template v-else>
-                <p>
-                  {{ $t('暂时没有日志记录') }}
-                </p>
-              </template>
-            </div>
-          </div>
-        </div>
-      </bk-sideslider>
-
       <bk-sideslider
         :width="750"
         :is-show.sync="chartSlider.isShow"
@@ -344,17 +304,17 @@
           class="p0 chart-wrapper"
         >
           <div
-            v-if="curAppInfo.feature.RESOURCE_METRICS"
+            v-if="platformFeature.RESOURCE_METRICS"
             v-bk-clickoutside="hideDatePicker"
             class="action-box"
           >
             <bk-form
               form-type="inline"
-              style="float: right;"
+              style="float: right"
             >
               <bk-date-picker
                 v-model="initDateTimeRange"
-                style="margin-top: 4px;"
+                style="margin-top: 4px"
                 :shortcuts="dateShortCut"
                 :shortcuts-type="'relative'"
                 :format="'yyyy-MM-dd HH:mm:ss'"
@@ -369,7 +329,7 @@
               >
                 <div
                   slot="trigger"
-                  style="width: 310px; height: 28px;"
+                  style="width: 310px; height: 28px"
                   @click="toggleDatePicker"
                 >
                   <button class="action-btn timer fr">
@@ -382,60 +342,71 @@
             </bk-form>
           </div>
           <div
-            v-if="curAppInfo.feature.RESOURCE_METRICS"
+            v-if="platformFeature.RESOURCE_METRICS"
             class="chart-box"
           >
-            <strong class="title"> {{ $t('CPU使用') }} <span class="sub-title"> {{ $t('（单位：核）') }} </span></strong>
+            <strong class="title">
+              {{ $t('CPU使用') }}
+              <span class="sub-title">{{ $t('（单位：核）') }}</span>
+            </strong>
             <chart
               ref="cpuLine"
               :options="cpuLine"
               auto-resize
-              style="width: 750px; height: 300px; background: #1e1e21;"
+              style="width: 750px; height: 300px; background: #1e1e21"
             />
           </div>
           <div
-            v-if="curAppInfo.feature.RESOURCE_METRICS"
+            v-if="platformFeature.RESOURCE_METRICS"
             class="chart-box"
           >
-            <strong class="title"> {{ $t('内存使用') }} <span class="sub-title"> {{ $t('（单位：MB）') }} </span></strong>
+            <strong class="title">
+              {{ $t('内存使用') }}
+              <span class="sub-title">{{ $t('（单位：MB）') }}</span>
+            </strong>
             <chart
               ref="memoryLine"
               :options="memoryLine"
               auto-resize
-              style="width: 750px; height: 300px; background: #1e1e21;"
+              style="width: 750px; height: 300px; background: #1e1e21"
             />
           </div>
           <div class="slider-detail-wrapper">
-            <label class="title"> {{ $t('详细信息') }} </label>
+            <label class="title">{{ $t('详细信息') }}</label>
             <section class="detail-item">
-              <label class="label"> {{ $t('类型：') }} </label>
+              <label class="label">{{ $t('类型：') }}</label>
               <div class="content">
                 {{ processPlan.processType }}
               </div>
             </section>
             <section class="detail-item">
-              <label class="label"> {{ $t('实例数上限：') }} </label>
+              <label class="label">{{ $t('实例数上限：') }}</label>
               <div class="content">
                 {{ processPlan.maxReplicas }}
               </div>
             </section>
             <section class="detail-item">
-              <label class="label"> {{ $t('单实例资源配额：') }} </label>
-              <div class="content">
-                {{ $t('内存:') }} {{ processPlan.memLimit }} / CPU: {{ processPlan.cpuLimit }}
-              </div>
+              <label class="label">{{ $t('单实例资源配额：') }}</label>
+              <div class="content">{{ $t('内存:') }} {{ processPlan.memLimit }} / CPU: {{ processPlan.cpuLimit }}</div>
             </section>
             <section class="detail-item">
-              <label class="label"> {{ $t('进程间访问链接：') }} </label>
+              <label class="label">{{ $t('进程间访问链接：') }}</label>
               <div class="content">
                 {{ processPlan.clusterLink }}
               </div>
             </section>
-            <p style="padding-left: 112px; margin-top: 5px; color: #c4c6cc;">
-              {{ $t('注意：进程间访问链接地址只能用于同集群内的不同进程间通信，可在 “模块管理” 页面查看进程的集群信息。更多进程间通信的说明。请参考') }} <a
+            <p style="padding-left: 112px; margin-top: 5px; color: #c4c6cc">
+              {{
+                $t(
+                  '注意：进程间访问链接地址只能用于同集群内的不同进程间通信，可在 “模块管理” 页面查看进程的集群信息。更多进程间通信的说明。请参考'
+                )
+              }}
+              <a
                 target="_blank"
                 :href="GLOBAL.DOC.PROCESS_SERVICE"
-              > {{ $t('进程间通信') }} </a>
+              >
+                {{ $t('进程间通信') }}
+              </a>
             </p>
           </div>
         </div>
@@ -447,7 +418,7 @@
       v-if="isLogShow"
       class="instance-box"
     >
-      <h3>{{ curProcessType.toUpperCase() }} {{ $t('进程实时日志') }} </h3>
+      <h3>{{ curProcessType.toUpperCase() }} {{ $t('进程实时日志') }}</h3>
       <div class="instance-p">
         <div class="instance-input">
           <input
@@ -455,13 +426,13 @@
             class="ps-form-control"
             type="text"
             :placeholder="$t('请输入关键字')"
-          >
+          />
           <input
             class="ps-btn ps-btn-primary"
             type="button"
             :value="$t('过滤')"
             @click.stop.prevent="handleLogsFilter"
-          >
+          />
         </div>
         <label @click="toggleRealTimeLog">
           <input
@@ -469,8 +440,8 @@
             class="ps-checkbox-default"
             value="true"
             checked="checked"
-          >
-          <span> {{ $t('实时滚动') }} </span>
+          />
+          <span>{{ $t('实时滚动') }}</span>
         </label>
       </div>
       <div class="logscroll">
@@ -494,6 +465,16 @@
     </div>
     <!-- 进程实时日志 end -->
 
+    <!-- 查看事件 -->
+    <eventDetail
+      v-model="instanceEventConfig.isShow"
+      :width="computedWidth"
+      :config="instanceEventConfig"
+      :env="environment"
+      :module-id="curModuleId"
+      :instance-name="instanceEventConfig.instanceName"
+    />
+
     <!-- 进程设置 -->
     <bk-dialog
       v-model="processConfigDialog.visiable"
@@ -509,16 +490,28 @@
     >
       <div
         v-if="processConfigDialog.showForm"
-        style="min-height: 65px;"
+        style="min-height: 65px"
       >
-        <bk-radio-group v-model="autoscaling" @change="handleAutoChange" class="mb20">
-          <bk-radio-button class="radio-cls" :value="false">
+        <bk-radio-group
+          v-model="autoscaling"
+          @change="handleAutoChange"
+          class="mb20"
+        >
+          <bk-radio-button
+            class="radio-cls"
+            :value="false"
+          >
             {{ $t('手动调节') }}
           </bk-radio-button>
           <bk-radio-button
-            class="radio-cls" :value="true"
+            class="radio-cls"
+            :value="true"
             :disabled="!autoScalDisableConfig.ENABLE_AUTOSCALING"
-            v-bk-tooltips="{ content: $t('该环境暂不支持自动扩缩容'), disabled: autoScalDisableConfig.ENABLE_AUTOSCALING }">
+            v-bk-tooltips="{
+              content: $t('该环境暂不支持自动扩缩容'),
+              disabled: autoScalDisableConfig.ENABLE_AUTOSCALING,
+            }"
+          >
             {{ $t('自动调节') }}
           </bk-radio-button>
         </bk-radio-group>
@@ -531,23 +524,40 @@
           <bk-form-item :label="$t('当前副本数：')">
             <span>{{ curTargetReplicas }}</span>
           </bk-form-item>
-          <bk-form-item v-if="autoscaling" :label="$t('触发条件：')">
+          <bk-form-item
+            v-if="autoscaling"
+            :label="$t('触发条件：')"
+          >
             <div class="rate-container">
-              <span>{{ $t('CPU 使用率') }} =
-                <bk-input class="w80" v-model="defaultUtilizationRate" disabled></bk-input> </span>
+              <span>
+                {{ $t('CPU 使用率') }} =
+                <bk-input
+                  class="w80"
+                  v-model="defaultUtilizationRate"
+                  disabled
+                ></bk-input>
+              </span>
               <i
                 class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                 v-bk-tooltips="autoScalingTip"
               />
             </div>
           </bk-form-item>
-          <bk-form-item v-if="autoscaling" class="desc-form-item" :label-width="10">
+          <bk-form-item
+            v-if="autoscaling"
+            class="desc-form-item"
+            :label-width="10"
+          >
             <div class="desc-container">
               <p>
-                {{$t('当 CPU 使用率')}} > <span class="cpu-num">85%</span> {{$t('时，会触发扩容')}}
+                {{ $t('当 CPU 使用率') }} >
+                <span class="cpu-num">85%</span>
+                {{ $t('时，会触发扩容') }}
               </p>
-              <p>{{$t('当 CPU 使用率')}} &lt;
-                <span class="cpu-num">{{shrinkLimit}}</span> {{$t('时，会触发缩容')}}
+              <p>
+                {{ $t('当 CPU 使用率') }} &lt;
+                <span class="cpu-num">{{ shrinkLimit }}</span>
+                {{ $t('时，会触发缩容') }}
               </p>
             </div>
           </bk-form-item>
@@ -570,34 +580,50 @@
             />
           </bk-form-item>
         </bk-form>
-        <div class="auto-container" v-if="autoscaling">
+        <div
+          class="auto-container"
+          v-if="autoscaling"
+        >
           <bk-form
-            :rules="scalingRules" :model="scalingConfig"
+            :rules="scalingRules"
+            :model="scalingConfig"
             ref="scalingConfigForm"
-            class="auto-form" :label-width="0"
+            class="auto-form"
+            :label-width="0"
             form-type="inline"
           >
-            <bk-form-item property="minReplicas" error-display-type="normal">
+            <bk-form-item
+              property="minReplicas"
+              error-display-type="normal"
+            >
               <bk-input
                 type="number"
                 :placeholder="minReplicasNum + ' - ' + maxReplicasNum"
                 class="dia-input"
                 v-model="scalingConfig.minReplicas"
+                :max="maxReplicasNum"
+                :min="0"
               >
                 <template slot="prepend">
-                  <div class="group-text">{{$t('最小副本数')}}</div>
+                  <div class="group-text">{{ $t('最小副本数') }}</div>
                 </template>
               </bk-input>
             </bk-form-item>
-            <bk-form-item property="maxReplicas" error-display-type="normal" class="ml20">
+            <bk-form-item
+              property="maxReplicas"
+              error-display-type="normal"
+              class="ml20"
+            >
               <bk-input
                 type="number"
                 :placeholder="'1 - ' + maxReplicasNum"
                 class="dia-input"
                 v-model="scalingConfig.maxReplicas"
+                :max="maxReplicasNum"
+                :min="0"
               >
                 <template slot="prepend">
-                  <div class="group-text">{{$t('最大副本数')}}</div>
+                  <div class="group-text">{{ $t('最大副本数') }}</div>
                 </template>
               </bk-input>
             </bk-form-item>
@@ -622,15 +648,42 @@
           <a
             :href="processRefuseDialog.link"
             target="_blank"
-          > {{ $t('文档：') }} {{ processRefuseDialog.title }}</a>
+          >
+            {{ $t('文档：') }} {{ processRefuseDialog.title }}
+          </a>
         </div>
       </div>
     </bk-dialog>
     <!-- 无法使用控制台 end -->
+
+    <!-- 日志弹窗 -->
+    <process-log
+      v-model="logConfig.visiable"
+      :title="logConfig.title"
+      :logs="logConfig.logs"
+      :loading="logConfig.isLoading"
+      :time-selection="chartRangeList"
+      :params="logConfig.params"
+      @refresh="refreshLogs"
+    ></process-log>
+
+    <!-- 功能依赖项展示 -->
+    <FunctionalDependency
+      :show-dialog.sync="showFunctionalDependencyDialog"
+      mode="dialog"
+      :title="$t('暂无访问控制台功能')"
+      :functional-desc="
+        $t('访问控制台可以让您进入应用进程的容器，查看线上运行的代码、进行在线调试以及执行一次性命令等操作。')
+      "
+      :guide-title="$t('如需使用该功能，需要：')"
+      :guide-desc-list="[$t('1. 安装 BCS 套餐'), $t('2. 将应用集群来源修改为: BCS 集群')]"
+      @gotoMore="gotoMore"
+    />
   </div>
 </template>
 
-<script>import ECharts from 'vue-echarts/components/ECharts.vue';
+<script>
+import ECharts from 'vue-echarts/components/ECharts.vue';
 import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import tooltipConfirm from '@/components/ui/TooltipConfirm';
@@ -640,26 +693,23 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import $ from 'jquery';
 import i18n from '@/language/i18n.js';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
+import eventDetail from '@/views/dev-center/app/engine/cloud-deploy-manage/comps/event-detail.vue';
+import processLog from '@/components/process-log-dialog/log.vue';
+import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 
 let maxReplicasNum = 0;
 
 const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours')
-  .format('YYYY-MM-DD HH:mm:ss');
-// const dateTextMap = {
-//     '5m': '最近5分钟',
-//     '1h': '最近1小时',
-//     '3h': '最近3小时',
-//     '12h': '最近12小时',
-//     '1d': '最近1天',
-//     '7d': '最近7天'
-// }
+const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
   components: {
     tooltipConfirm,
     chart: ECharts,
+    eventDetail,
+    processLog,
+    FunctionalDependency,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -771,14 +821,12 @@ export default {
       curInstance: {
         name: '',
       },
-      instanceLogs: [],
       // 进程操作相关变量
       loading: true,
       isAppOfflined: false,
       deploymentReady: false,
       pendingProcessList: [],
       processInterval: undefined,
-      isLogsLoading: false,
       timer: 0,
       processPlan: {
         processType: 'unkonwn',
@@ -818,10 +866,6 @@ export default {
       logInterval: undefined,
       filterKeys: '',
       logIds: {},
-      processSlider: {
-        isShow: false,
-        title: '',
-      },
       chartSlider: {
         isShow: false,
         title: '',
@@ -895,7 +939,9 @@ export default {
         theme: 'light',
         allowHtml: true,
         content: this.$t('提示信息'),
-        html: `<a target="_blank" href="${this.GLOBAL.LINK.BK_APP_DOC}topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('查看动态扩缩容计算规则')}</a>`,
+        html: `<a target="_blank" href="${
+          this.GLOBAL.LINK.BK_APP_DOC
+        }topics/paas/paas3_autoscaling" style="color: #3a84ff">${this.$t('查看动态扩缩容计算规则')}</a>`,
         placements: ['right'],
       },
       autoScalDisableConfig: {},
@@ -904,6 +950,19 @@ export default {
       defaultUtilizationRate: '85%',
       serverEventErrorTimer: 0,
       serverEventEOFTimer: 0,
+      instanceEventConfig: {
+        isShow: false,
+        name: '',
+        processName: '',
+        instanceName: '',
+      },
+      logConfig: {
+        visiable: false,
+        isLoading: false,
+        title: '',
+        logs: [],
+      },
+      showFunctionalDependencyDialog: false,
     };
   },
   computed: {
@@ -920,19 +979,22 @@ export default {
       return this.$store.state.envEventData;
     },
     shrinkLimit() {
-      return `${((this.curTargetReplicas - 1) / this.curTargetReplicas * 85).toFixed(1)}%`;
+      return `${(((this.curTargetReplicas - 1) / this.curTargetReplicas) * 85).toFixed(1)}%`;
     },
     isCloudNative() {
       return this.curAppInfo.application?.type === 'cloud_native';
     },
+    // 滑框的宽度
+    computedWidth() {
+      const defaultWidth = 980;
+      const maxWidth = window.innerWidth * 0.8;
+      return Math.min(defaultWidth, maxWidth);
+    },
   },
   watch: {
-    curLogTimeRange(val) {
-      this.loadInstanceLog();
-    },
-    '$route'() {
+    $route() {
       this.init();
-      this.getAutoScalFlag();  // 切换路由也需要获取featureflag
+      this.getAutoScalFlag(); // 切换路由也需要获取featureflag
     },
     'processConfigDialog.visiable'(val) {
       if (val) {
@@ -1046,17 +1108,20 @@ export default {
     init() {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/released_state/`;
 
-      this.$http.get(url).then((res) => {
-        if (res.offline) {
-          this.isAppOfflined = true;
-        } else {
-          this.isAppOfflined = false;
+      this.$http.get(url).then(
+        (res) => {
+          if (res.offline) {
+            this.isAppOfflined = true;
+          } else {
+            this.isAppOfflined = false;
+          }
+          this.getProcessList();
+        },
+        (res) => {
+          this.allProcesses = [];
+          this.$emit('data-ready', this.environment);
         }
-        this.getProcessList();
-      }, (res) => {
-        this.allProcesses = [];
-        this.$emit('data-ready', this.environment);
-      });
+      );
     },
 
     handlerChange(dates) {
@@ -1131,16 +1196,22 @@ export default {
     },
 
     /**
-             * 展示实例日志侧栏
-             * @param {Object} instance 实例对象
-             */
+     * 展示实例日志侧栏
+     * @param {Object} instance 实例对象
+     */
     showInstanceLog(instance, process) {
       this.curInstance = instance;
-      this.instanceLogs = [];
-      this.processSlider.isShow = true;
-      this.processSlider.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
+      this.logConfig.visiable = true;
+      this.logConfig.isLoading = true;
+      this.logConfig.params = {
+        appCode: this.appCode,
+        moduleId: this.curModuleId,
+        env: this.environment,
+        processType: process.name,
+        instanceName: instance.name,
+      };
+      this.logConfig.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
       this.loadInstanceLog();
-      this.initSidebarFormData(this.curLogTimeRange);
     },
 
     getParams() {
@@ -1153,8 +1224,8 @@ export default {
     },
 
     /**
-             * 构建过滤参数
-             */
+     * 构建过滤参数
+     */
     getFilterParams() {
       const params = {
         query: {
@@ -1169,14 +1240,9 @@ export default {
     },
 
     /**
-             * 加载实例日志
-             */
+     * 加载实例日志
+     */
     async loadInstanceLog() {
-      if (this.isLogsLoading) {
-        return false;
-      }
-
-      this.isLogsLoading = true;
       try {
         const { appCode } = this;
         const moduleId = this.curModuleId;
@@ -1193,26 +1259,21 @@ export default {
         data.forEach((item) => {
           item.podShortName = item.pod_name.split('-').reverse()[0];
         });
-        this.instanceLogs = data;
-        // 滚动到底部
-        setTimeout(() => {
-          const container = document.getElementById('log-container');
-          container.scrollTop = container.scrollHeight;
-        }, 500);
+        this.logConfig.logs = data;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
-        this.isLogsLoading = false;
+        this.logConfig.isLoading = false;
       }
     },
 
     /**
-             * 显示进程实例列表
-             * @param {Object} data 进程
-             */
+     * 显示进程实例列表
+     * @param {Object} data 进程
+     */
     showProcessDetail(data) {
       // 当前项折叠
       if (data.name === this.curProcessKey) {
@@ -1226,11 +1287,21 @@ export default {
       this.curProcess = data;
     },
 
+    // 查看访问控制台文档
+    gotoMore() {
+      window.open(this.GLOBAL.DOC.WEB_CONSOLE, '_blank');
+    },
+
     /**
-             * 显示进程webConsole
-             * @param {Object} instance, processes
-             */
+     * 显示进程webConsole
+     * @param {Object} instance, processes
+     */
     async showInstanceConsole(instance, processes) {
+      // 暂无访问控制台功能
+      if (!this.platformFeature.WEB_CONSOLE) {
+        this.showFunctionalDependencyDialog = true;
+        return;
+      }
       this.processRefuseDialog.isLoading = true;
       try {
         const params = {
@@ -1261,11 +1332,11 @@ export default {
     },
 
     /**
-             * 图表初始化
-             * @param  {Object} instanceData 数据
-             * @param  {String} type 类型
-             * @param  {Object} ref 图表对象
-             */
+     * 图表初始化
+     * @param  {Object} instanceData 数据
+     * @param  {String} type 类型
+     * @param  {Object} ref 图表对象
+     */
     renderChartNew(instanceData, type, ref) {
       const series = [];
       let xAxisData = [];
@@ -1373,7 +1444,7 @@ export default {
             }
           });
         });
-        limitDatas && (datas.unshift(limitDatas));
+        limitDatas && datas.unshift(limitDatas);
         return datas;
       };
       try {
@@ -1397,9 +1468,9 @@ export default {
     },
 
     /**
-             * 从接口获取Metric 数据
-             * @param {Object} conf 配置参数
-             */
+     * 从接口获取Metric 数据
+     * @param {Object} conf 配置参数
+     */
     async getInstanceMetric(conf) {
       this.isChartLoading = true;
       try {
@@ -1429,11 +1500,11 @@ export default {
     },
 
     /**
-             * 图表初始化
-             * @param  {Object} instanceData 数据
-             * @param  {String} type 类型
-             * @param  {Object} ref 图表对象
-             */
+     * 图表初始化
+     * @param  {Object} instanceData 数据
+     * @param  {String} type 类型
+     * @param  {Object} ref 图表对象
+     */
     renderChart(instanceData, type, ref) {
       const series = [];
       let xAxisData = [];
@@ -1497,68 +1568,73 @@ export default {
     },
 
     /**
-             * 图标侧栏隐藏回调处理
-             */
+     * 图标侧栏隐藏回调处理
+     */
     handlerChartHide() {
-      this.dateParams = Object.assign({}, {
-        start_time: initStartDate,
-        end_time: initEndDate,
-      });
+      this.dateParams = Object.assign(
+        {},
+        {
+          start_time: initStartDate,
+          end_time: initEndDate,
+        }
+      );
       this.initDateTimeRange = [initStartDate, initEndDate];
       this.isDatePickerOpen = false;
       this.clearChart();
     },
 
     /**
-             * 清空图表数据
-             */
+     * 清空图表数据
+     */
     clearChart() {
       const cpuRef = this.$refs.cpuLine;
       const memRef = this.$refs.memoryLine;
 
-      cpuRef && cpuRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [
-          {
-            name: '',
-            type: 'line',
-            smooth: true,
-            symbol: 'none',
-            areaStyle: {
-              normal: {
-                opacity: 0,
-              },
+      cpuRef &&
+        cpuRef.mergeOptions({
+          xAxis: [
+            {
+              data: [],
             },
-            data: [0],
-          },
-        ],
-      });
+          ],
+          series: [
+            {
+              name: '',
+              type: 'line',
+              smooth: true,
+              symbol: 'none',
+              areaStyle: {
+                normal: {
+                  opacity: 0,
+                },
+              },
+              data: [0],
+            },
+          ],
+        });
 
-      memRef && memRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [
-          {
-            name: '',
-            type: 'line',
-            smooth: true,
-            symbol: 'none',
-            areaStyle: {
-              normal: {
-                opacity: 0,
-              },
+      memRef &&
+        memRef.mergeOptions({
+          xAxis: [
+            {
+              data: [],
             },
-            data: [0],
-          },
-        ],
-      });
+          ],
+          series: [
+            {
+              name: '',
+              type: 'line',
+              smooth: true,
+              symbol: 'none',
+              areaStyle: {
+                normal: {
+                  opacity: 0,
+                },
+              },
+              data: [0],
+            },
+          ],
+        });
     },
 
     // 对数据进行处理
@@ -1571,13 +1647,13 @@ export default {
 
       // 遍历进行数据组装
       const extraInfos = processesData.processes.extra_infos;
-      const packages = this.isCloudNative ? processesData.cnative_proc_specs : processesData.process_packages;
+      const packages = processesData.process_packages;
       const instances = processesData.instances.items;
 
       processesData.processes.items.forEach((processItem) => {
-        const { type } = processItem;
-        const extraInfo = extraInfos.find(item => item.type === type);
-        const packageInfo = packages.find(item => item.name === type);
+        const { type, name: processName } = processItem;
+        const extraInfo = extraInfos.find((item) => item.type === type);
+        const packageInfo = packages.find((item) => item.name === type);
 
         const processInfo = {
           ...processItem,
@@ -1623,14 +1699,14 @@ export default {
           clusterLink: processInfo.cluster_link,
           scalingConfig: processInfo.scaling_config,
           autoscaling: processInfo.autoscaling,
+          processName,
         };
 
         this.updateProcessStatus(process);
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = moment(item.start_time).startOf('minute')
-            .fromNow();
+          item.date_time = moment(item.start_time).startOf('minute').fromNow();
         });
 
         // 如果有当前展开项
@@ -1744,7 +1820,7 @@ export default {
           }
         });
       } else if (data.type === 'DELETED') {
-        this.allProcesses = this.allProcesses.filter(process => process.name !== processData.type);
+        this.allProcesses = this.allProcesses.filter((process) => process.name !== processData.type);
       }
     },
 
@@ -1753,8 +1829,7 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = moment(instanceData.start_time).startOf('minute')
-        .fromNow();
+      instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
       this.allProcesses.forEach((process) => {
         if (process.name === instanceData.process_type) {
           // 新增
@@ -1808,6 +1883,7 @@ export default {
         this.watchServerPush();
         this.$emit('data-ready', this.environment);
       } catch (e) {
+        console.error(e);
         // 无法获取进程目前状态
         this.$paasMessage({
           theme: 'error',
@@ -1862,50 +1938,54 @@ export default {
       this.chartSlider.title = `${this.$t('进程')} ${process.name}${this.$t('详情')}`;
       this.chartSlider.isShow = true;
       this.initSidebarFormData(this.initDateTimeRange);
-      if (this.curAppInfo.feature.RESOURCE_METRICS) {
+      if (this.platformFeature.RESOURCE_METRICS) {
         this.getInstanceChart(process);
       }
     },
 
     /**
-             * 显示实例指标数据
-             */
+     * 显示实例指标数据
+     */
     getInstanceChart(processes) {
       this.$nextTick(() => {
         const cpuRef = this.$refs.cpuLine;
         const memRef = this.$refs.memoryLine;
 
-        cpuRef && cpuRef.mergeOptions({
-          xAxis: [
-            {
-              data: [],
-            },
-          ],
-          series: [],
-        });
+        cpuRef &&
+          cpuRef.mergeOptions({
+            xAxis: [
+              {
+                data: [],
+              },
+            ],
+            series: [],
+          });
 
-        memRef && memRef.mergeOptions({
-          xAxis: [
-            {
-              data: [],
-            },
-          ],
-          series: [],
-        });
+        memRef &&
+          memRef.mergeOptions({
+            xAxis: [
+              {
+                data: [],
+              },
+            ],
+            series: [],
+          });
 
-        cpuRef && cpuRef.showLoading({
-          text: this.$t('正在加载'),
-          color: '#30d878',
-          textColor: '#fff',
-          maskColor: 'rgba(255, 255, 255, 0.8)',
-        });
+        cpuRef &&
+          cpuRef.showLoading({
+            text: this.$t('正在加载'),
+            color: '#30d878',
+            textColor: '#fff',
+            maskColor: 'rgba(255, 255, 255, 0.8)',
+          });
 
-        memRef && memRef.showLoading({
-          text: this.$t('正在加载'),
-          color: '#30d878',
-          textColor: '#fff',
-          maskColor: 'rgba(255, 255, 255, 0.8)',
-        });
+        memRef &&
+          memRef.showLoading({
+            text: this.$t('正在加载'),
+            color: '#30d878',
+            textColor: '#fff',
+            maskColor: 'rgba(255, 255, 255, 0.8)',
+          });
 
         // this.getInstanceMetric({
         //     cpuRef: cpuRef,
@@ -1940,7 +2020,8 @@ export default {
             this.processConfigDialog.visiable = false;
             this.$store.commit('updataEnvEventData', []);
             this.updateProcessConfig();
-          } if (this.autoscaling && autoValidate) {
+          }
+          if (this.autoscaling && autoValidate) {
             this.processConfigDialog.isLoading = false;
             this.processConfigDialog.visiable = false;
             this.$store.commit('updataEnvEventData', []);
@@ -1966,9 +2047,12 @@ export default {
     // 进程实例设置
     async updateProcessConfig() {
       // 不允许小于1或者大于最大值，如果没有改变也不允许操作
-      if (!this.autoscaling && (this.processPlan.targetReplicas < 1
-        || this.processPlan.targetReplicas > this.processPlan.maxReplicas
-        || this.processPlan.targetReplicas === this.processPlan.replicas)) {
+      if (
+        !this.autoscaling &&
+        (this.processPlan.targetReplicas < 1 ||
+          this.processPlan.targetReplicas > this.processPlan.maxReplicas ||
+          this.processPlan.targetReplicas === this.processPlan.replicas)
+      ) {
         return;
       }
 
@@ -2009,14 +2093,16 @@ export default {
 
     // 进程启动和停止操作
     patchProcess(process, index) {
-    //   this.$store.commit('updataEnvEventData', []);
       // 停止操作
       if (process.targetStatus === 'start') {
         process.isStopTrigger = true;
-        this.currentClickObj = Object.assign({}, {
-          operateIconTitle: process.operateIconTitle,
-          index,
-        });
+        this.currentClickObj = Object.assign(
+          {},
+          {
+            operateIconTitle: process.operateIconTitle,
+            index,
+          }
+        );
       } else {
         // 启动操作
         this.updateProcess(process, index);
@@ -2034,7 +2120,6 @@ export default {
       }
       process.isActionLoading = true;
 
-
       // 判断是否已经下架
       if (this.isAppOfflined) {
         return false;
@@ -2045,10 +2130,13 @@ export default {
         process.operateIconTitle = process.operateIconTitleCopy;
       }
 
-      this.currentClickObj = Object.assign({}, {
-        operateIconTitle: process.operateIconTitle,
-        index,
-      });
+      this.currentClickObj = Object.assign(
+        {},
+        {
+          operateIconTitle: process.operateIconTitle,
+          index,
+        }
+      );
 
       const processType = process.name;
       const { targetStatus } = process;
@@ -2126,39 +2214,41 @@ export default {
             process_type: this.curProcessType,
           };
         }
-        this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/realtimelogs/`, { params: curParams }).then((res) => {
-          const logInfo = res;
-          // 实时日志数等于上一次请求则无新日志产生 不追加
-          // if(logInfo.count == countNum) return;
-          // countNum = logInfo.count;
-          // 不能用数量, 也不能用lastItemId判定(es查询出来排序可能两次之间会变, 但是lastItemId不变-时间精度只到s)
-          if (logInfo.count > 0) {
-            logInfo.results.forEach((item) => {
-              // 追加ID不重复日志
-              if (!(item.id in this.logIds)) {
-                this.logIds[item.id] = undefined;
-                const htmlItem = this.keyLight(item);
-                this.logDetail.push(htmlItem);
-              }
-            });
-            setTimeout(() => {
-              const currentHeight = $('.textarea .inner').height() + 100;
-              $('.textarea').scrollTop(currentHeight);
-            }, 0);
-          }
-        });
+        this.$http
+          .get(
+            `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/envs/${this.environment}/realtimelogs/`,
+            { params: curParams }
+          )
+          .then((res) => {
+            const logInfo = res;
+            // 实时日志数等于上一次请求则无新日志产生 不追加
+            // if(logInfo.count == countNum) return;
+            // countNum = logInfo.count;
+            // 不能用数量, 也不能用lastItemId判定(es查询出来排序可能两次之间会变, 但是lastItemId不变-时间精度只到s)
+            if (logInfo.count > 0) {
+              logInfo.results.forEach((item) => {
+                // 追加ID不重复日志
+                if (!(item.id in this.logIds)) {
+                  this.logIds[item.id] = undefined;
+                  const htmlItem = this.keyLight(item);
+                  this.logDetail.push(htmlItem);
+                }
+              });
+              setTimeout(() => {
+                const currentHeight = $('.textarea .inner').height() + 100;
+                $('.textarea').scrollTop(currentHeight);
+              }, 0);
+            }
+          });
       }, 1000);
     },
 
     // 实时日志列表 时间 | 进程名 高亮
     keyLight(item) {
-      const text = `<span style="color: #4491e1">[${item.ts}]</span>` + ` <span style="color: #ffa65f">${item.process_name}</span>: ${item.message}`;
+      const text =
+        `<span style="color: #4491e1">[${item.ts}]</span>` +
+        ` <span style="color: #ffa65f">${item.process_name}</span>: ${item.message}`;
       return text;
-    },
-
-    timeFormat(time, instanceTime) {
-      if (time === '几秒前') return time;
-      return `${time} ${instanceTime}`;
     },
 
     // 获取进程状态 tooltips 展示内容
@@ -2191,818 +2281,903 @@ export default {
       this.scalingConfig.maxReplicas = this.curTargetMaxReplicas;
       this.scalingConfig.minReplicas = this.curTargetMinReplicas;
     },
+
+    showInstanceEvents(instance, process) {
+      this.instanceEventConfig.isShow = true;
+      this.instanceEventConfig.name = instance.display_name;
+      this.instanceEventConfig.processName = process.name;
+      this.instanceEventConfig.instanceName = instance.name;
+    },
+
+    preOperation() {
+      this.logConfig.isLoading = true;
+      this.logConfig.logs = [];
+    },
+
+    // 刷新日志
+    refreshLogs(data) {
+      this.preOperation();
+      if (data.type === 'realtime') {
+        this.curLogTimeRange = data.time;
+        this.loadInstanceLog();
+      } else {
+        this.getPreviousLogs();
+      }
+    },
+
+    // 重启日志
+    async getPreviousLogs() {
+      try {
+        const logs = await this.$store.dispatch('log/getPreviousLogs', this.logConfig.params);
+        this.logConfig.logs = logs;
+      } catch (e) {
+        if (e.status === 404) {
+          this.logConfig.logs = [];
+          return;
+        }
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.logConfig.isLoading = false;
+      }
+    },
+
+    // 重启进程、实例弹窗
+    showRestartPopup(type, row) {
+      const restartInstance = type === 'instance';
+      this.$bkInfo({
+        title: restartInstance ? this.$t('确认重启当前实例？') : this.$t('确认滚动重启当前进程下所有实例？'),
+        confirmFn: () => {
+          if (restartInstance) {
+            this.handleRestartInstance(row);
+          } else {
+            this.handleRestartProcess(row);
+          }
+        },
+      });
+    },
+
+    // 重启进程
+    async handleRestartProcess(row) {
+      try {
+        await this.$store.dispatch('processes/restartProcess', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          processName: row.processName,
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 重启实例
+    async handleRestartInstance(instance) {
+      try {
+        await this.$store.dispatch('processes/restartInstance', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          instanceName: instance.name,
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-    @import '~@/assets/css/mixins/ellipsis.scss';
-    .process-table-wrapper {
-        &.reset-style {
-            border: 1px solid #dcdee5;
-        }
-        .process-item {
-            margin-bottom: 10px;
-        }
-        .process-item-header {
-            line-height: 18px;
-            font-size: 12px;
-            color: #63656e;
-            border: solid 1px #dcdee5;
-            background: #fff;
-            display: flex;
-            justify-content: space-between;
-            .process-basic-info {
-                display: flex;
-                padding: 16px 0 0px 24px;
-                width: 230px;
-                vertical-align: middle;
-                cursor: pointer;
-                .expanded-icon {
-                    position: relative;
-                    top: 8px;
-                    margin-right: 10px;
-                    color: #979ba5;
-                    &:hover {
-                        color: #3a84ff;
-                    }
-                }
-                .process-name {
-                    display: inline-block;
-                    max-width: 150px;
-                    color: #313238;
-                    font-weight: bold;
-                    font-size: 14px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    padding-top: 3px;
-                }
-                .auto-scal{
-                  width: 76px;
-                  height: 22px;
-                  line-height: 22px;
-                  background: #E4FAF0;
-                  border-radius: 2px;
-                  color: #14A568;
-                  font-size: 12px;
-                  text-align: center;
-                  margin-left: 8px;
-                }
-            }
-            .instance-count {
-                  padding-left: 56px;
-              }
-            .process-command {
-                width: 490px;
-                cursor: pointer;
-                min-height: 75px;
-                display: flex;
-                align-items: center;
-
-                p {
-                  @include multiline-ellipsis;
-                }
-            }
-
-            .process-status {
-                display: inline-block;
-                padding: 26px 0 0 0;
-
-                img, span {
-                    vertical-align: middle;
-                    margin-right: 3px;
-                }
-            }
-
-            .status-container{
-              width: 260px;
-              .process-operate {
-                  position: relative;
-                  display: inline-block;
-                  padding: 24px 0 0 0;
-                  margin-right: 27px;
-                  width: 55px;
-                  vertical-align: middle;
-                  float: right;
-                  .icon-info-base{
-                      font-size: 24px;
-                  }
-                  .icon-info-l{
-                      position: absolute;
-                      left: -45px;
-                      top: 21px;
-                  }
-                  .icon-info-d{
-                      position: absolute;
-                      left: -90px;
-                      top: 21px;
-                  }
-                  .a-more {
-                      position: relative;
-                      top: 0;
-                      left: 10px;
-                      .paasng-icon-more {
-                          font-size: 24px;
-                      }
-                      &:hover {
-                          .paasng-icon-more:before {
-                              color: #3a84ff !important;
-                          }
-                      }
-                  }
-              }
-            }
-        }
-
-        .ps-table-special {
-            thead {
-                th {
-                    border-top: none !important;
-                    border-right: none !important;
-                }
-            }
-        }
-
-        .process-item-table {
-            background: #fff;
-            border-right: 1px solid #dcdee5;
-            border-bottom: 1px solid #dcdee5;
-            border-left: 1px solid #dcdee5;
-
-            .header-shadow {
-                width: 100%;
-                height: 5px;
-                background: linear-gradient(180deg,rgba(99,101,110,1) 0%,rgba(99,101,110,0) 100%);
-                opacity: .05;
-            }
-
-            .process-item-table-wrapper {
-                padding: 0 30px !important;
-                .ps-table {
-                    td {
-                        font-size: 12px;
-                    }
-                }
-            }
-
-            td {
-                box-sizing: border-box;
-            }
-
-            .instance-textarea {
-                border: none;
-                border-radius: 0;
-            }
-
-            .name {
-                width: 130px;
-
-                >p {
-                    max-width: 300px;
-                    display: inline-block;
-                    color: #63656e;
-                    text-overflow: ellipsis;
-                    overflow: hidden;
-                    white-space: nowrap;
-                    vertical-align: middle;
-                }
-            }
-
-            .run-state {
-                >p {
-                    max-width: 300px;
-                    display: inline-block;
-                    text-overflow: ellipsis;
-                    overflow: hidden;
-                    white-space: nowrap;
-                    vertical-align: middle;
-                }
-
-                .paasng-icon {
-                    position: relative;
-                    top: 1px;
-                    margin-right: 2px;
-                    &.paasng-check-circle {
-                        color: #5bd18b;
-                    }
-                    &.paasng-empty {
-                        color: #ff6669;
-                    }
-                }
-            }
-
-            .operate-container {
-                width: 165px;
-
-                .ps-icon-btn {
-                    float: none;
-
-                    &.on {
-                        background: #3A84FF;
-                        border: solid 1px #3A84FF;
-                        color: #fff;
-                    }
-                }
-            }
-        }
-    }
-
-    .ps-table {
-        thead {
-            th {
-                background-color: #fff;
-                font-weight: bold;
-                font-size: 12px;
-            }
-        }
-
-        tbody {
-            tr {
-                td {
-                    border-bottom: 1px solid #e6e9ea;
-                }
-            }
-            tr {
-                &:last-child {
-                    td {
-                        border-bottom: none;
-                    }
-                }
-            }
-        }
-    }
-    .ps-instances-table {
-        width: 100%;
-
-        &.ps-table th,
-        &.ps-table td {
-            line-height: 24px;
-            // padding: 8px 24px;
-            position: relative;
-        }
-    }
-
-    .realtime-log-icon {
-        cursor: not-allowed;
-
-        &.on {
-            cursor: pointer;
-        }
-    }
-
-    .operate-process-icon {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        border-radius: 50%;
-        .loading {
-            display: none;
-            margin-top: 2px;
-        }
-
-        &.disabled {
-            background-color: #fff !important;
-            border: solid 1px #e9edee !important;
-            cursor: not-allowed;
-
-            i {
-                background-position: 1px -24px !important;
-            }
-        }
-
-        &.is-loading {
-            background-color: #fff !important;
-            border: solid 1px #e9edee !important;
-            cursor: default;
-
-            i {
-                display: none;
-            }
-
-            .loading {
-                display: inline-block;
-            }
-        }
-    }
-
-    .link-input {
-        height: 30px;
-    }
-
-    .operate-process-icon i,
-    .realtime-log-icon i {
-        display: inline-block;
-        overflow: hidden;
-        width: 10px;
-        height: 12px;
-        background: url('/static/images/instance-icon2.png') no-repeat;
-    }
-
-    .operate-process-icon i {
-        background-position: 0 -85px;
-    }
-
-    .operate-process-icon {
+@import '~@/assets/css/mixins/ellipsis.scss';
+.process-table-wrapper {
+  &.reset-style {
+    border: 1px solid #dcdee5;
+  }
+  .process-item {
+    margin-bottom: 10px;
+  }
+  .process-item-header {
+    line-height: 18px;
+    font-size: 12px;
+    color: #63656e;
+    border: solid 1px #dcdee5;
+    background: #fff;
+    display: flex;
+    justify-content: space-between;
+    .process-basic-info {
+      display: flex;
+      padding: 16px 0 0px 24px;
+      width: 230px;
+      vertical-align: middle;
+      cursor: pointer;
+      .expanded-icon {
         position: relative;
+        top: 8px;
+        margin-right: 10px;
+        color: #979ba5;
+        &:hover {
+          color: #3a84ff;
+        }
+      }
+      .process-name {
+        display: inline-block;
+        max-width: 150px;
+        color: #313238;
+        font-weight: bold;
+        font-size: 14px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding-top: 3px;
+      }
+      .auto-scal {
+        width: 76px;
+        height: 22px;
+        line-height: 22px;
+        background: #e4faf0;
+        border-radius: 2px;
+        color: #14a568;
+        font-size: 12px;
+        text-align: center;
+        margin-left: 8px;
+      }
+    }
+    .instance-count {
+      padding-left: 56px;
+    }
+    .process-command {
+      width: 490px;
+      cursor: pointer;
+      min-height: 75px;
+      display: flex;
+      align-items: center;
 
-        .upLoading {
-            position: absolute;
-            left: -1px;
-            top: -1px;
-            line-height: 18px !important;
-            padding: 0;
-            width: 24px;
-            height: 24px;
-            text-align: center;
-            background: rgba(255, 255, 255, .5);
+      p {
+        @include multiline-ellipsis;
+      }
+    }
 
-            img {
-                width: 16px;
-                height: 16px;
-                display: inline-block;
-                margin: 4px;
+    .process-status {
+      display: inline-block;
+      padding: 26px 0 0 0;
+
+      img,
+      span {
+        vertical-align: middle;
+        margin-right: 3px;
+      }
+    }
+
+    .status-container {
+      width: 260px;
+      .process-operate {
+        position: relative;
+        display: inline-block;
+        padding: 24px 0 0 0;
+        margin-right: 27px;
+        width: 55px;
+        vertical-align: middle;
+        float: right;
+        .icon-info-base {
+          font-size: 24px;
+        }
+        .icon-info-l {
+          position: absolute;
+          left: -45px;
+          top: 21px;
+        }
+        .icon-info-d {
+          position: absolute;
+          left: -90px;
+          top: 21px;
+        }
+        .a-more {
+          position: relative;
+          top: 0;
+          left: 10px;
+          .paasng-icon-more {
+            font-size: 24px;
+          }
+          &:hover {
+            .paasng-icon-more:before {
+              color: #3a84ff !important;
             }
+          }
         }
+      }
+    }
+  }
+
+  .ps-table-special {
+    thead {
+      th {
+        border-top: none !important;
+        border-right: none !important;
+      }
+    }
+  }
+
+  .process-item-table {
+    background: #fff;
+    border-right: 1px solid #dcdee5;
+    border-bottom: 1px solid #dcdee5;
+    border-left: 1px solid #dcdee5;
+
+    .header-shadow {
+      width: 100%;
+      height: 5px;
+      background: linear-gradient(180deg, rgba(99, 101, 110, 1) 0%, rgba(99, 101, 110, 0) 100%);
+      opacity: 0.05;
     }
 
-    .operate-process-icon .square-icon {
-        width: 10px;
-        height: 10px;
-        background: #ea3636;
-        border-radius: 1px;
-    }
-
-    .operate-process-icon:hover {
-        background-color: #ea3636;
-        & .square-icon {
-            background-color: #fff;
+    .process-item-table-wrapper {
+      padding: 0 30px !important;
+      .ps-table {
+        td {
+          font-size: 12px;
         }
+      }
     }
 
-    .operate-process-icon:hover i {
-        background-position: 0 0;
-    }
-
-    .operate-process-icon.on i {
-        background-position: 1px -42px;
-    }
-
-    .operate-process-icon.on:hover {
-        background-color: #2dcb56;
-    }
-
-    .operate-process-icon.on:hover i {
-        background-position: 1px -60px;
-    }
-
-    .realtime-log-icon i {
-        background-position: -34px -42px;
-    }
-
-    .realtime-log-icon.on i {
-        background-position: -34px -84px;
-    }
-
-    .realtime-log-icon.show i,
-    .realtime-log-icon.on:hover i {
-        background-position: -34px 0;
-    }
-
-    .realtime-log-icon.show,
-    .realtime-log-icon.on:hover {
-        background: #3A84FF;
-        border: solid 1px #3A84FF;
-    }
-
-    /* 整体样式 */
-    .green {
-        color: #5bd18b
-    }
-
-    .stopped {
-        color: #ccc;
-    }
-
-    .pending {
-        color: #f0a63a;
-    }
-
-    .instance-box {
-        margin-top: 0;
-        margin-bottom: 43px;
-        border-bottom: solid 1px #dfe4e5;
-    }
-
-    .instance-box h3 {
-        color: #333;
-        width: 882px;
-        display: table;
-    }
-
-    .instance-box {
-        display: block;
-        box-sizing: border-box;
-    }
-
-    .instance-p {
-        width: 882px;
-        padding-bottom: 20px;
-        line-height: 36px;
-        /*width: 100%;*/
-        display: table;
-    }
-
-    .instance-input {
-        float: left;
-        margin-right: 20px;
-    }
-
-    .instance-input input[type="text"] {
-        float: left;
-        width: 668px;
-        padding: 0 12px;
-        line-height: 34px;
-        box-sizing: border-box;
-        height: 34px;
-    }
-
-    .instance-input input[type="button"] {
-        float: left;
-        box-sizing: border-box;
-        height: 34px;
-        width: 80px;
-        vertical-align: top;
-        margin: 0 0 0 -1px;
+    td {
+      box-sizing: border-box;
     }
 
     .instance-textarea {
-        border-radius: 2px;
-        line-height: 19px;
-        font-size: 12px;
-        padding: 10px 20px 10px 20px;
-
-        p {
-            padding: 0px 0;
-            padding-bottom: 5px;
-        }
+      border: none;
+      border-radius: 0;
     }
 
-    .textarea {
-        height: 300px;
-        overflow: auto;
-        word-wrap: break-word;
-        word-break: normal;
-    }
+    .name {
+      width: 130px;
 
-    .textarea::-webkit-scrollbar {
-        width: 6px;
-        height: 5px;
-        background-color: #002b36
-    }
-
-    .textarea::-webkit-scrollbar-thumb {
-        border-radius: 20px;
-        background: #a5a5a5;
-        -webkit-box-shadow: inset 0 0 6px hsla(0, 0%, 80%, .3);
-    }
-
-    .textarea::-webkit-scrollbar-track {
-        background-color: #002b36;
-    }
-
-    input[type="button"].checkbox {
-        -webkit-appearance: none;
-        appearance: none;
-        outline: none;
-        border: none;
-    }
-
-    .log-loading-container {
-        height: 25px;
-    }
-
-    .log-loading {
-        text-align: left;
-        width: 100%;
-        vertical-align: middle;
-        color: rgba(147, 161, 161, 0.72);
-    }
-
-    .ps-form-title {
-        width: 100%;
+      > p {
+        max-width: 300px;
         display: inline-block;
-        font-size: 22px;
-        color: #333;
-        text-align: center;
-        line-height: 34px;
-        padding-bottom: 15px;
-    }
-
-    .ps-form-group {
-        margin: 10px 20px
-    }
-
-    .ps-form-group+.ps-form-group {
-        margin: 0 20px;
-    }
-
-    .ps-form-group+.ps-form-button {
-        margin: 20px 20px 0;
-    }
-
-    .ps-form-group+.ps-form-text {
-        margin: 0 20px 10px;
-    }
-
-    .ps-form-group>* {
-        padding-top: 7px;
-        padding-bottom: 8px;
-    }
-
-    .ps-form-group>label {
-        text-align: right;
-    }
-
-    .ps-form-input {
-        width: 100%;
-    }
-
-    .ps-form-text {
-        line-height: 24px;
-        font-size: 14px;
-        color: #666;
-        border: 1px solid #ccc;
-        padding: 5px 5px 5px 5px;
-        border-radius: 2px;
-    }
-
-    .ps-form-button {
-        margin-left: 0px;
-        margin-right: 0px;
-        background: #fafafa;
-        text-align: right;
-        padding: 1em 0 0 0;
-        border-top: solid 1px #e5e5e5;
-    }
-
-    .ps-btn-primary-ghost {
-        span {
-            color: #7b7d8a;
-        }
-
-        &:hover {
-            span {
-                color: #fff;
-            }
-        }
-    }
-
-    .ps-btn-width {
-        width: 80px;
-
-        &.ps-btn-primary {
-            margin-right: 10px;
-        }
-    }
-
-    .blur {
-        display: none;
-    }
-
-    .blur-busy {
-        display: block;
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 10;
-        background-color: rgba(220, 220, 220, 0.20);
-    }
-
-    .paasng-icon {
-        &.loading {
-            width: 13px;
-            vertical-align: middle;
-        }
-    }
-
-    .loading-img {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        padding: 0;
-        width: 16px;
-        height: 16px;
-        margin: -8px 0 0 -8px;
-    }
-
-    .blur-busy+div {
-        filter: blur(1px);
-    }
-
-    .instance-log-wrapper {
-        height: 100%;
-        overflow: auto;
-
-        .instance-textarea {
-            border: none;
-        }
-    }
-
-    .chart-wrapper {
-        height: 100%;
-        overflow: auto;
-        background: #fafbfd;
-
-        .chart-box {
-            margin-bottom: 10px;
-            border-top: 1px solid #dde4eb;
-            border-bottom: 1px solid #dde4eb;
-
-            .title {
-                font-size: 14px;
-                display: block;
-                color: #666;
-                font-weight: normal;
-                padding: 10px 20px;
-            }
-
-            .sub-title {
-                font-size: 12px;
-            }
-            background-color: #fff !important;
-        }
-    }
-
-    .action-box {
-        position: absolute;
-        top: 7px;
-        right: 10px;
-    }
-
-    .ps-no-result {
-        height: auto;
-
-        .text {
-            height: 155px;
-        }
-    }
-
-    .tool-confirm-wrapper {
-        width: 24px;
-        height: 24px;
-        display: inline-block;
-        float: left;
-        margin-right: 5px;
-
-        .ps-icon-btn {
-            clear: both;
-            float: none;
-        }
-    }
-
-    .chart-action-box {
-        background-color: #fafafa;
-        padding: 10px;
-        border-top: 1px solid #ddd;
+        color: #63656e;
+        text-overflow: ellipsis;
         overflow: hidden;
-    }
-
-    .refresh-btn {
-        font-size: 12px;
-        /deep/ .bk-icon {
-            font-size: 16px;
-        }
-    }
-
-    .radio-cls{
-      /deep/ .bk-radio-button-text {
-            padding: 0 102px;
-        }
-    }
-
-    .manual-form-cls{
-      /deep/ .bk-form-content .tooltips-icon {
-        right: 156px !important;
+        white-space: nowrap;
+        vertical-align: middle;
       }
     }
 
-    .stream-log {
-        display: flex;
-        margin-bottom: 8px;
-        font-family: Consolas, "source code pro", "Bitstream Vera Sans Mono", Consolas, Courier, monospace, "微软雅黑", "Arial";
+    .run-state {
+      > p {
+        max-width: 300px;
+        display: inline-block;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        vertical-align: middle;
+      }
 
-        .pod-name {
-            min-width: 75px;
-            text-align: right;
-            margin-right: 15px;
-            color: #979BA5;
-        }
-        .message {
-            flex: 1;
-        }
-    }
-
-    .slider-detail-wrapper {
-        padding: 0 20px 20px 20px;
-        line-height: 32px;
-        .title {
-            display: block;
-            padding-bottom: 2px;
-            color: #313238;
-            border-bottom: 1px solid #dcdee5;
-        }
-        .detail-item {
-            display: flex;
-            justify-content: flex-start;
-            line-height: 32px;
-            .label {
-                color: #313238;
-            }
-        }
-    }
-
-    .action-btn {
+      .paasng-icon {
         position: relative;
-        height: 28px;
-        line-height: 28px;
-        min-width: 28px;
-        display: flex;
-        border-radius: 2px;
-        cursor: pointer;
-
-        .text {
-            min-width: 90px;
-            line-height: 28px;
-            text-align: left;
-            color: #63656E;
-            font-size: 12px;
-            display: inline-block;
+        top: 1px;
+        margin-right: 2px;
+        &.paasng-check-circle {
+          color: #5bd18b;
         }
-
-        .left-icon,
-        .right-icon {
-            width: 28px;
-            height: 28px;
-            line-height: 28px;
-            color: #C4C6CC;
-            display: inline-block;
-            text-align: center;
-        }
-
-        &.refresh {
-            width: 28px;
-        }
-    }
-    .process-empty {
-        height: 280px;
-    }
-    .auto-container{
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid #DCDEE5;
-      .auto-form{
-        display: flex;
-        // width: 280px;
-        /deep/ .bk-form-content .form-error-tip {
-          padding-left: 90px !important;
+        &.paasng-empty {
+          color: #ff6669;
         }
       }
-
     }
-    .desc-container{
-      background: #F0F1F5;
+
+    .operate-container {
+      width: 280px;
+
+      .ps-icon-btn {
+        float: none;
+
+        &.on {
+          background: #3a84ff;
+          border: solid 1px #3a84ff;
+          color: #fff;
+        }
+      }
+    }
+  }
+}
+
+.ps-table {
+  thead {
+    th {
+      background-color: #fff;
+      font-weight: bold;
+      font-size: 12px;
+    }
+  }
+
+  tbody {
+    tr {
+      td {
+        border-bottom: 1px solid #e6e9ea;
+      }
+    }
+    tr {
+      &:last-child {
+        td {
+          border-bottom: none;
+        }
+      }
+    }
+  }
+}
+.ps-instances-table {
+  width: 100%;
+
+  &.ps-table th,
+  &.ps-table td {
+    line-height: 24px;
+    // padding: 8px 24px;
+    position: relative;
+  }
+}
+
+.realtime-log-icon {
+  cursor: not-allowed;
+
+  &.on {
+    cursor: pointer;
+  }
+}
+
+.operate-process-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  .loading {
+    display: none;
+    margin-top: 2px;
+  }
+
+  &.disabled {
+    background-color: #fff !important;
+    border: solid 1px #e9edee !important;
+    cursor: not-allowed;
+
+    i {
+      background-position: 1px -24px !important;
+    }
+  }
+
+  &.is-loading {
+    background-color: #fff !important;
+    border: solid 1px #e9edee !important;
+    cursor: default;
+
+    i {
+      display: none;
+    }
+
+    .loading {
+      display: inline-block;
+    }
+  }
+}
+
+.link-input {
+  height: 30px;
+}
+
+.operate-process-icon i,
+.realtime-log-icon i {
+  display: inline-block;
+  overflow: hidden;
+  width: 10px;
+  height: 12px;
+  background: url('/static/images/instance-icon2.png') no-repeat;
+}
+
+.operate-process-icon i {
+  background-position: 0 -85px;
+}
+
+.operate-process-icon {
+  position: relative;
+
+  .upLoading {
+    position: absolute;
+    left: -1px;
+    top: -1px;
+    line-height: 18px !important;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.5);
+
+    img {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      margin: 4px;
+    }
+  }
+}
+
+.operate-process-icon .square-icon {
+  width: 10px;
+  height: 10px;
+  background: #ea3636;
+  border-radius: 1px;
+}
+
+.operate-process-icon:hover {
+  background-color: #ea3636;
+  & .square-icon {
+    background-color: #fff;
+  }
+}
+
+.operate-process-icon:hover i {
+  background-position: 0 0;
+}
+
+.operate-process-icon.on i {
+  background-position: 1px -42px;
+}
+
+.operate-process-icon.on:hover {
+  background-color: #2dcb56;
+}
+
+.operate-process-icon.on:hover i {
+  background-position: 1px -60px;
+}
+
+.realtime-log-icon i {
+  background-position: -34px -42px;
+}
+
+.realtime-log-icon.on i {
+  background-position: -34px -84px;
+}
+
+.realtime-log-icon.show i,
+.realtime-log-icon.on:hover i {
+  background-position: -34px 0;
+}
+
+.realtime-log-icon.show,
+.realtime-log-icon.on:hover {
+  background: #3a84ff;
+  border: solid 1px #3a84ff;
+}
+
+/* 整体样式 */
+.green {
+  color: #5bd18b;
+}
+
+.stopped {
+  color: #ccc;
+}
+
+.pending {
+  color: #f0a63a;
+}
+
+.instance-box {
+  margin-top: 0;
+  margin-bottom: 43px;
+  border-bottom: solid 1px #dfe4e5;
+}
+
+.instance-box h3 {
+  color: #333;
+  width: 882px;
+  display: table;
+}
+
+.instance-box {
+  display: block;
+  box-sizing: border-box;
+}
+
+.instance-p {
+  width: 882px;
+  padding-bottom: 20px;
+  line-height: 36px;
+  /*width: 100%;*/
+  display: table;
+}
+
+.instance-input {
+  float: left;
+  margin-right: 20px;
+}
+
+.instance-input input[type='text'] {
+  float: left;
+  width: 668px;
+  padding: 0 12px;
+  line-height: 34px;
+  box-sizing: border-box;
+  height: 34px;
+}
+
+.instance-input input[type='button'] {
+  float: left;
+  box-sizing: border-box;
+  height: 34px;
+  width: 80px;
+  vertical-align: top;
+  margin: 0 0 0 -1px;
+}
+
+.instance-textarea {
+  border-radius: 2px;
+  line-height: 19px;
+  font-size: 12px;
+  padding: 10px 20px 10px 20px;
+
+  p {
+    padding: 0px 0;
+    padding-bottom: 5px;
+  }
+}
+
+.textarea {
+  height: 300px;
+  overflow: auto;
+  word-wrap: break-word;
+  word-break: normal;
+}
+
+.textarea::-webkit-scrollbar {
+  width: 6px;
+  height: 5px;
+  background-color: #002b36;
+}
+
+.textarea::-webkit-scrollbar-thumb {
+  border-radius: 20px;
+  background: #a5a5a5;
+  -webkit-box-shadow: inset 0 0 6px hsla(0, 0%, 80%, 0.3);
+}
+
+.textarea::-webkit-scrollbar-track {
+  background-color: #002b36;
+}
+
+input[type='button'].checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  border: none;
+}
+
+.log-loading-container {
+  height: 25px;
+}
+
+.log-loading {
+  text-align: left;
+  width: 100%;
+  vertical-align: middle;
+  color: rgba(147, 161, 161, 0.72);
+}
+
+.ps-form-title {
+  width: 100%;
+  display: inline-block;
+  font-size: 22px;
+  color: #333;
+  text-align: center;
+  line-height: 34px;
+  padding-bottom: 15px;
+}
+
+.ps-form-group {
+  margin: 10px 20px;
+}
+
+.ps-form-group + .ps-form-group {
+  margin: 0 20px;
+}
+
+.ps-form-group + .ps-form-button {
+  margin: 20px 20px 0;
+}
+
+.ps-form-group + .ps-form-text {
+  margin: 0 20px 10px;
+}
+
+.ps-form-group > * {
+  padding-top: 7px;
+  padding-bottom: 8px;
+}
+
+.ps-form-group > label {
+  text-align: right;
+}
+
+.ps-form-input {
+  width: 100%;
+}
+
+.ps-form-text {
+  line-height: 24px;
+  font-size: 14px;
+  color: #666;
+  border: 1px solid #ccc;
+  padding: 5px 5px 5px 5px;
+  border-radius: 2px;
+}
+
+.ps-form-button {
+  margin-left: 0px;
+  margin-right: 0px;
+  background: #fafafa;
+  text-align: right;
+  padding: 1em 0 0 0;
+  border-top: solid 1px #e5e5e5;
+}
+
+.ps-btn-primary-ghost {
+  span {
+    color: #7b7d8a;
+  }
+
+  &:hover {
+    span {
+      color: #fff;
+    }
+  }
+}
+
+.ps-btn-width {
+  width: 80px;
+
+  &.ps-btn-primary {
+    margin-right: 10px;
+  }
+}
+
+.blur {
+  display: none;
+}
+
+.blur-busy {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  background-color: rgba(220, 220, 220, 0.2);
+}
+
+.paasng-icon {
+  &.loading {
+    width: 13px;
+    vertical-align: middle;
+  }
+}
+
+.loading-img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+}
+
+.blur-busy + div {
+  filter: blur(1px);
+}
+
+.chart-wrapper {
+  height: 100%;
+  overflow: auto;
+  background: #fafbfd;
+
+  .chart-box {
+    margin-bottom: 10px;
+    border-top: 1px solid #dde4eb;
+    border-bottom: 1px solid #dde4eb;
+
+    .title {
+      font-size: 14px;
+      display: block;
+      color: #666;
+      font-weight: normal;
       padding: 10px 20px;
-      .cpu-num{
-        color: #FF9C01;
-        font-weight: 700;
-      }
     }
-    .dia-input {
-        width: 250px
-      }
-    .dropdown-menu-cls {
-      left: 10px;
-      i {
-        font-size: 24px;
-        color: #3A84FF;
-        cursor: pointer;
-      }
+
+    .sub-title {
+      font-size: 12px;
     }
-    .bk-form-control .group-box .group-text {
-        line-height: 32px;
+    background-color: #fff !important;
+  }
+}
+
+.action-box {
+  position: absolute;
+  top: 7px;
+  right: 10px;
+}
+
+.ps-no-result {
+  height: auto;
+
+  .text {
+    height: 155px;
+  }
+}
+
+.tool-confirm-wrapper {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  float: left;
+  margin-right: 5px;
+
+  .ps-icon-btn {
+    clear: both;
+    float: none;
+  }
+}
+
+.chart-action-box {
+  background-color: #fafafa;
+  padding: 10px;
+  border-top: 1px solid #ddd;
+  overflow: hidden;
+}
+
+.radio-cls {
+  /deep/ .bk-radio-button-text {
+    padding: 0 102px;
+  }
+}
+
+.manual-form-cls {
+  /deep/ .bk-form-content .tooltips-icon {
+    right: 156px !important;
+  }
+}
+
+.stream-log {
+  display: flex;
+  margin-bottom: 8px;
+  font-family: Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑',
+    'Arial';
+
+  .pod-name {
+    min-width: 75px;
+    text-align: right;
+    margin-right: 15px;
+    color: #979ba5;
+  }
+  .message {
+    flex: 1;
+  }
+}
+
+.slider-detail-wrapper {
+  padding: 0 20px 20px 20px;
+  line-height: 32px;
+  .title {
+    display: block;
+    padding-bottom: 2px;
+    color: #313238;
+    border-bottom: 1px solid #dcdee5;
+  }
+  .detail-item {
+    display: flex;
+    justify-content: flex-start;
+    line-height: 32px;
+    .label {
+      color: #313238;
     }
-    .rate-container{
-      display: flex;
-      align-items: center;
-      .w80{
-        width: 80px;
-      }
+  }
+}
+
+.action-btn {
+  position: relative;
+  height: 28px;
+  line-height: 28px;
+  min-width: 28px;
+  display: flex;
+  border-radius: 2px;
+  cursor: pointer;
+
+  .text {
+    min-width: 90px;
+    line-height: 28px;
+    text-align: left;
+    color: #63656e;
+    font-size: 12px;
+    display: inline-block;
+  }
+
+  .left-icon,
+  .right-icon {
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    color: #c4c6cc;
+    display: inline-block;
+    text-align: center;
+  }
+
+  &.refresh {
+    width: 28px;
+  }
+}
+.process-empty {
+  height: 280px;
+}
+.auto-container {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #dcdee5;
+  .auto-form {
+    display: flex;
+    // width: 280px;
+    /deep/ .bk-form-content .form-error-tip {
+      padding-left: 90px !important;
     }
-    .bk-dropdown-list{
-      width: 70px;
-      text-align: center;
+  }
+}
+.desc-container {
+  background: #f0f1f5;
+  padding: 10px 20px;
+  .cpu-num {
+    color: #ff9c01;
+    font-weight: 700;
+  }
+}
+.dia-input {
+  width: 250px;
+}
+.dropdown-menu-cls {
+  left: 10px;
+  i {
+    font-size: 24px;
+    color: #3a84ff;
+    cursor: pointer;
+  }
+}
+.bk-form-control .group-box .group-text {
+  line-height: 32px;
+}
+.rate-container {
+  display: flex;
+  align-items: center;
+  .w80 {
+    width: 80px;
+  }
+}
+.bk-dropdown-list {
+  text-align: center;
+  .option {
+    height: 32px;
+    line-height: 32px;
+    white-space: nowrap;
+    padding: 0 4px;
+    &:hover {
+      background-color: #eaf3ff;
+      color: #3a84ff;
     }
+  }
+}
 </style>

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import abc
 import itertools
 import logging
@@ -24,12 +23,12 @@ import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from enum import IntEnum
 from functools import lru_cache, reduce
 from typing import Any, Collection, Dict, Generator, Iterable, List, Optional, Set, Tuple, Type, Union, cast
 
 from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import user_id_encoder
+from blue_krill.data_types.enum import IntStructuredEnum
 from django.conf import settings
 from django.utils.translation import gettext as _
 from rest_framework.fields import get_attribute
@@ -73,7 +72,7 @@ PV_UV_COUNT_PERIOD_LENGTH = 90
 logger = logging.getLogger(__name__)
 
 
-class DeployStatus(IntEnum):
+class DeployStatus(IntStructuredEnum):
     PRODUCTION = 1
     STAGING = 2
     DEVELOPING = 3
@@ -685,7 +684,7 @@ def calculate_user_contribution_in_app(username: str, app: SimpleApp):
     if not app.source_repo_type:
         raise RuntimeError("No repo provided")
 
-    repo_admin_credentials = get_bksvn_config(app.region, name=app.source_repo_type).get_admin_credentials()
+    repo_admin_credentials = get_bksvn_config(name=app.source_repo_type).get_admin_credentials()
     user_credentials = {}
 
     if app.source_repo_type in get_sourcectl_names().filter_by_basic_type("git"):
@@ -698,7 +697,7 @@ def calculate_user_contribution_in_app(username: str, app: SimpleApp):
         user_credentials["__token_holder"] = token_holder
 
     type_spec = get_sourcectl_type(app.source_repo_type)
-    repo_info = type_spec.config_as_arguments(app.region)
+    repo_info = type_spec.config_as_arguments()
 
     if app.source_repo_type == get_sourcectl_names().bk_svn:
         svn_cls = cast(Type[SvnRepoController], type_spec.repo_controller_class)

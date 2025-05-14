@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from dataclasses import asdict
 from typing import Dict, Optional
@@ -25,7 +24,7 @@ from bkpaas_auth.models import User
 from blue_krill.storages.blobstore.exceptions import DownloadFailedError
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -40,6 +39,7 @@ from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
@@ -54,11 +54,13 @@ from paasng.platform.engine.serializers import (
     CreateDeploymentResponseSLZ,
     CreateDeploymentSLZ,
     DeployFramePhaseSLZ,
+    DeploymentResultQuerySLZ,
     DeploymentResultSLZ,
     DeploymentSLZ,
     DeployPhaseSLZ,
     QueryDeploymentsSLZ,
 )
+from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.utils.query import DeploymentGetter
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.engine.workflow.protections import ModuleEnvDeployInspector
@@ -66,6 +68,7 @@ from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
 from paasng.platform.modules.models import Module
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.exceptions import GitLabBranchNameBugError
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service
@@ -101,7 +104,11 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(
             data=dict(
                 CheckPreparationsSLZ(
-                    dict(all_conditions_matched=not status.activated, failed_conditions=status.failed_conditions)
+                    dict(
+                        all_conditions_matched=not status.activated,
+                        failed_conditions=status.failed_conditions,
+                        replicas_manually_scaled=check_replicas_manually_scaled(env.module),
+                    )
                 ).data
             )
         )
@@ -132,10 +139,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 raise error_codes.CANNOT_DEPLOY_APP.f(_("历史版本不存在或已被清理"))
             build = Build.objects.get(pk=build_id)
 
-        if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
-            version_info = VersionInfo(version_type="tag", version_name=params["version_name"], revision="")
-        else:
-            version_info = self._get_version_info(request.user, module, params, build=build)
+        version_info = self._get_version_info(request.user, module, params, build=build)
 
         coordinator = DeploymentCoordinator(env)
         if not coordinator.acquire_lock():
@@ -168,20 +172,20 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @staticmethod
     def _get_version_info(user: User, module: Module, params: Dict, build: Optional[Build] = None) -> VersionInfo:
         """Get VersionInfo from user inputted params"""
+        version_name = params["version_name"]
+
+        if module.build_config.build_method == RuntimeType.CUSTOM_IMAGE:
+            return VersionInfo(version_type=VersionType.TAG.value, version_name=version_name, revision="")
+
         if build is not None:
             # 为了让 initialize_deployment 中依赖 VersionInfo 的逻辑能正常运行, 这里根据 build 构造 VersionInfo
             # 但实际上这个 VersionInfo 里的信息并未被使用
             # TODO: 解决这种奇怪的问题, 不管是让 initialize_deployment 不依赖 VersionInfo 或者让这里构造的 VersionInfo 变得有意义
             image_tag = build.image_tag or ""
-            return VersionInfo(
-                version_type="image",
-                version_name=image_tag,
-                revision=image_tag,
-            )
+            return VersionInfo(version_type=VersionType.IMAGE.value, version_name=image_tag, revision=image_tag)
 
-        version_name = params["version_name"]
         version_type = params["version_type"]
-        revision = params.get("revision", None)
+        revision = params.get("revision")
         try:
             # 尝试根据 smart_revision 获取最新的 revision
             version_service = get_version_service(module, operator=user.pk)
@@ -216,18 +220,41 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_DEPLOY_APP.f(_("对象存储服务异常, 请稍后再试"))
         raise error_codes.CANNOT_DEPLOY_APP.f(_("部署请求异常，请稍候再试"))
 
-    @swagger_auto_schema(responses={200: DeploymentResultSLZ}, paginator_inspectors=[])
+    @swagger_auto_schema(
+        responses={200: DeploymentResultSLZ},
+        query_serializer=DeploymentResultQuerySLZ(),
+        paginator_inspectors=[],
+    )
     def get_deployment_result(self, request, code, module_name, uuid):
         """查询部署任务结果"""
+        query_slz = DeploymentResultQuerySLZ(data=request.query_params)
+        query_slz.is_valid(raise_exception=True)
+        include_ansi_codes = query_slz.validated_data.get("include_ansi_codes", False)
+
         deployment = _get_deployment(self.get_module_via_path(), uuid)
+        logs = get_all_logs(deployment)
+        if not include_ansi_codes:
+            logs = strip_ansi(logs)
         hint = get_failure_hint(deployment)
         result = {
             "status": deployment.status,
-            "logs": get_all_logs(deployment),
+            "logs": logs,
             "error_detail": deployment.err_detail,
             "error_tips": asdict(hint),
         }
         return JsonResponse(result)
+
+    def export_deployment_log(self, request, code, module_name, uuid):
+        """导出部署日志"""
+        deployment = _get_deployment(self.get_module_via_path(), uuid)
+        logs = get_all_logs(deployment)
+        filename = f"{code}-{module_name}-{uuid}.log"
+
+        # 过滤ANSI转义序列
+        response = HttpResponse(strip_ansi(logs), content_type="text/plain")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        return response
 
     @swagger_auto_schema(response_serializer=DeploymentSLZ(many=True), query_serializer=QueryDeploymentsSLZ)
     def list(self, request, code, module_name):
@@ -289,6 +316,8 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     @swagger_auto_schema(tags=["部署阶段"], responses={"200": DeployFramePhaseSLZ(many=True)})
     def get_frame(self, request, code, module_name, environment):
         env = self.get_env_via_path()
@@ -301,8 +330,9 @@ class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(tags=["部署阶段"], responses={"200": DeployPhaseSLZ(many=True)})
     def get_result(self, request, code, module_name, environment, uuid):
+        env = self.get_env_via_path()
         try:
-            deployment = Deployment.objects.get(pk=uuid)
+            deployment = env.deployments.get(pk=uuid)
         except ObjectDoesNotExist:
             raise error_codes.CANNOT_GET_DEPLOYMENT
 

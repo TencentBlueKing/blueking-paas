@@ -7,7 +7,9 @@
           <p>
             <i class="paasng-icon paasng-check-1 text-success" />
           </p>
-          <p>{{ $t('恭喜，插件') }} - {{ extraInfo.name }} "{{ extraInfo.pluginName }}"&nbsp;&nbsp;{{ $t('创建成功') }}</p>
+          <p>
+            {{ $t('恭喜，插件') }} - {{ extraInfo.name }} "{{ extraInfo.pluginName }}"&nbsp;&nbsp;{{ $t('创建成功') }}
+          </p>
           <p>
             <bk-button
               :theme="'primary'"
@@ -38,11 +40,7 @@
                 v-copy="gitClone"
               >
                 <i
-                  :class="[
-                    'paasng-icon',
-                    'paasng-general-copy',
-                    localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon',
-                  ]"
+                  :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']"
                 />
                 {{ $t('复制') }}
               </div>
@@ -53,7 +51,7 @@
                 <p>{{ gitClone }}</p>
               </code>
             </div>
-            <div class="title mt10">
+            <div class="title mt24">
               {{ $t('提交代码到代码库') }}
               <div
                 class="icon-wrapper"
@@ -75,7 +73,7 @@
                 <p>{{ pushTips }}</p>
               </code>
             </div>
-            <div class="title mt10">
+            <div class="title mt24">
               {{ $t('创建测试版本进行测试，创建正式版本进行发布') }}
             </div>
           </div>
@@ -112,11 +110,7 @@ export default {
     },
     // 提交到代码仓库
     pushTips() {
-      return [
-        'git add .',
-        'git commit -m "Your modified content"',
-        'git push',
-      ].join('\n');
+      return ['git add .', 'git commit -m "Your modified content"', 'git push'].join('\n');
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -136,15 +130,17 @@ export default {
     this.init();
   },
   mounted() {
-    const objectKey = localStorage.getItem(this.$route.query.key) === 'undefined'
-      ? ''
-      : localStorage.getItem(this.$route.query.key);
+    const objectKey =
+      localStorage.getItem(this.$route.query.key) === 'undefined' ? '' : localStorage.getItem(this.$route.query.key);
     this.extraInfo = JSON.parse(objectKey || '{}');
   },
   methods: {
     async init() {
       try {
-        const res = await this.$store.dispatch('plugin/getPluginInfo', { pluginId: this.pluginId, pluginTypeId: this.pluginTypeId });
+        const res = await this.$store.dispatch('plugin/getPluginInfo', {
+          pluginId: this.pluginId,
+          pluginTypeId: this.pluginTypeId,
+        });
         this.pluginInfo = res;
       } catch (e) {
         console.error(e);
@@ -179,9 +175,14 @@ export default {
   min-height: 100vh;
   background: #f5f7fa;
 
+  .mt24 {
+    margin-top: 24px;
+  }
+
   .biz-create-success {
     background: #f5f7fa;
-    padding: 66px 0 20px 0;
+    padding-bottom: 20px;
+    padding-top: calc(var(--app-notice-height) + 66px);
   }
   .success-wrapper {
     margin-top: 16px;
@@ -258,7 +259,7 @@ export default {
     position: relative;
     font-size: 14px;
     color: #63656e;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     .icon-wrapper {
       position: absolute;
       top: 1px;
@@ -292,7 +293,7 @@ export default {
     box-sizing: content-box;
     content: '';
     width: 1px;
-    height: calc(100% + 11px);
+    height: calc(100% + 25px);
     top: -13px;
     left: -11px;
     background: #d8d8d8;

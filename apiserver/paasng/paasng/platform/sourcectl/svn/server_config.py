@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """Bk Svn server config helper utilities"""
+
 from dataclasses import dataclass
 from typing import Dict, Optional
 from urllib.parse import urlparse
@@ -55,8 +55,8 @@ class BkSvnServerConfig:
         }
 
 
-def get_bksvn_config(region: str, name: Optional[str] = None) -> BkSvnServerConfig:
-    """Get the config object of bk svn source controll type
+def get_bksvn_config(name: Optional[str] = None) -> BkSvnServerConfig:
+    """Get the config object of bk svn source control type
 
     :param name: if given, will get spec type object by name, otherwise try to find the spec type object which was
         registered with type `BkSvnSourceTypeSpec` instead.
@@ -74,8 +74,6 @@ def get_bksvn_config(region: str, name: Optional[str] = None) -> BkSvnServerConf
         try:
             sourcectl_type = sourcectl_types.find_by_type(BkSvnSourceTypeSpec)
         except ValueError:
-            raise RuntimeError(f"No sourcectl type spec can be found, region: {region}, name: {name}")
+            raise RuntimeError(f"No sourcectl type spec can be found, name: {name}")
 
-    # Return a default server config value when requested region was not configured,
-    # which might happens when running mgrlegacy's unit tests
-    return BkSvnServerConfig(**sourcectl_type.get_server_config(region, use_default_value=True))
+    return BkSvnServerConfig(**sourcectl_type.get_server_config())

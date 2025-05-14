@@ -74,11 +74,6 @@
             :data="searchData[curTab].list"
             :filter-key="filterKey"
           />
-          <mk
-            v-if="curTab === 'mk'"
-            :data="searchData[curTab].list"
-            :filter-key="filterKey"
-          />
         </template>
       </div>
       <div
@@ -105,7 +100,6 @@ import { bus } from '@/common/bus';
 import App from './comps/application';
 import Docu from './comps/docu';
 import Iwiki from './comps/iwiki';
-import Mk from './comps/mk';
 
 const getDefaultSearchData = () => ({
   app: {
@@ -117,9 +111,6 @@ const getDefaultSearchData = () => ({
   docu: {
     list: [],
   },
-  mk: {
-    list: [],
-  },
 });
 
 export default {
@@ -128,7 +119,6 @@ export default {
     App,
     Docu,
     Iwiki,
-    Mk,
   },
   data() {
     return {
@@ -150,7 +140,6 @@ export default {
         { name: 'app', label: this.$t('应用'), count: 0 },
         { name: 'iwiki', label: 'iwiki', count: 0 },
         { name: 'docu', label: this.$t('资料库'), count: 0 },
-        { name: 'mk', label: this.$t('码客'), count: 0 },
       ],
       filterKey: '',
     };
@@ -165,12 +154,8 @@ export default {
       return curTabData.count > 0;
     },
     isSetPadding() {
-      return ['docu', 'iwiki', 'mk'].includes(this.curTab);
+      return ['docu', 'iwiki'].includes(this.curTab);
     },
-  },
-  beforeRouteLeave(to, from, next) {
-    bus.$emit('on-leave-search');
-    next();
   },
   created() {
     bus.$emit('on-being-search');
@@ -223,7 +208,7 @@ export default {
     async fetchData() {
       this.isLoading = true;
       try {
-        const res = await Promise.all([this.fetchApp(), this.fetchIwiki(), this.fetchDocu(), this.fetchMk()].map(item => this.promiseWithError(item)));
+        const res = await Promise.all([this.fetchApp(), this.fetchIwiki(), this.fetchDocu()].map(item => this.promiseWithError(item)));
         res.forEach((item, index) => {
           const { count, results } = item;
           this.panels[index].count = count || 0;
@@ -235,9 +220,6 @@ export default {
           }
           if (index === 2) {
             this.searchData.docu.list = [...results];
-          }
-          if (index === 3) {
-            this.searchData.mk.list = [...results];
           }
         });
         this.filterKey = this.value;
@@ -320,14 +302,6 @@ export default {
       });
     },
 
-    fetchMk() {
-      return this.$store.dispatch('search/getSearchMk', {
-        limit: this.pageConf.limit,
-        offset: this.pageConf.limit * (this.pageConf.curPage - 1),
-        keyword: this.value,
-      });
-    },
-
     handleSwitchTab() {
       this.handleInitPageConf();
       this.$nextTick(() => {
@@ -349,12 +323,9 @@ export default {
         } else if (this.curTab === 'docu') {
           const res = await this.fetchDocu();
           this.searchData.docu.list = [...res.results];
-        } else if (this.curTab === 'iwiki') {
+        } else {
           const res = await this.fetchIwiki();
           this.searchData.iwiki.list = [...res.results];
-        } else {
-          const res = await this.fetchMk();
-          this.searchData.mk.list = [...res.results];
         }
       } catch (e) {
         this.$paasMessage({
@@ -376,12 +347,9 @@ export default {
         } else if (this.curTab === 'docu') {
           const res = await this.fetchDocu();
           this.searchData.docu.list = [...res.results];
-        } else if (this.curTab === 'iwiki') {
+        } else {
           const res = await this.fetchIwiki();
           this.searchData.iwiki.list = [...res.results];
-        } else {
-          const res = await this.fetchMk();
-          this.searchData.mk.list = [...res.results];
         }
       } catch (e) {
         this.$paasMessage({

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
 from django.utils.translation import gettext_lazy as _
@@ -88,6 +87,7 @@ class UpsertMountSLZ(serializers.Serializer):
     source_name = serializers.CharField(help_text="共享挂载资源的名称", allow_blank=True, required=False)
     configmap_source = ConfigMapSLZ(required=False, allow_null=True)
     persistent_storage_source = PersistentStorageSLZ(required=False, allow_null=True)
+    sub_paths = serializers.ListField(required=False, child=serializers.CharField(), help_text="子路径配置")
 
     def validate(self, attrs):
         environment_name = attrs["environment_name"]
@@ -124,7 +124,6 @@ class MountSLZ(serializers.ModelSerializer):
         model = Mount
         fields = (
             "id",
-            "region",
             "created",
             "updated",
             "module_id",
@@ -135,6 +134,7 @@ class MountSLZ(serializers.ModelSerializer):
             "source_config",
             "configmap_source",
             "persistent_storage_source",
+            "sub_paths",
         )
 
     def get_configmap_source(self, obj):

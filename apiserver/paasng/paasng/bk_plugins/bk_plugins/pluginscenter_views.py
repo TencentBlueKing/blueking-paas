@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 from collections import defaultdict
 from contextlib import closing
@@ -26,10 +25,10 @@ from bkpaas_auth.core.encoder import user_id_encoder
 from blue_krill.redis_tools.messaging import StreamChannelSubscriber
 from django.conf import settings
 from django.db.transaction import atomic
+from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
@@ -39,17 +38,18 @@ from paasng.bk_plugins.bk_plugins.models import BkPluginTag, make_bk_plugin
 from paasng.bk_plugins.bk_plugins.tasks import archive_prod_env
 from paasng.bk_plugins.bk_plugins.views import logger
 from paasng.core.core.storages.redisdb import get_default_redis
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.iam.helpers import (
     add_role_members,
     delete_role_members,
     fetch_application_members,
     remove_user_all_roles,
 )
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.applications.signals import application_member_updated, post_create_application
 from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.platform.applications.utils import create_application, create_default_module, create_market_config
@@ -67,10 +67,10 @@ from paasng.platform.sourcectl.models import VersionInfo
 from paasng.utils.error_codes import error_codes
 
 # TODO: 确认具体权限
-API_PERMISSION_CLASSES = [IsAuthenticated, site_perm_class(SiteAction.SYSAPI_MANAGE_APPLICATIONS)]
+API_PERMISSION_CLASSES = [sysapi_client_perm_class(ClientAction.MANAGE_APPLICATIONS)]
 
 
-class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class PluginInstanceViewSet(viewsets.ViewSet):
     """插件开发中心-插件实例相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -78,7 +78,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(
         tags=["plugin-center"],
         request_body=api_serializers.PluginSyncRequestSLZ,
-        responses={201: serializers.BkPluginSLZ},
+        responses={201: serializers.BkPluginSLZ()},
     )
     @atomic
     def create_plugin(self, request):
@@ -92,17 +92,17 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
         )
 
-        app_type = (
-            ApplicationType.CLOUD_NATIVE if settings.PLUGIN_APP_USE_CLOUD_NATIVE_TYPE else ApplicationType.DEFAULT
-        )
         application = create_application(
             region=region,
             code=data["id"],
             name=data["name_zh_cn"],
             name_en=data["name_en"],
-            type_=app_type,
+            app_type=ApplicationType.CLOUD_NATIVE,
             operator=encoded_operator,
             is_plugin_app=True,
+            app_tenant_mode=AppTenantMode(data["plugin_tenant_mode"]),
+            app_tenant_id=data["plugin_tenant_id"],
+            tenant_id=data["tenant_id"],
         )
 
         module = create_default_module(
@@ -118,7 +118,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             repo_url=data["repository"],
             repo_auth_info=None,
             source_dir="",
-            cluster_name=None,
+            env_cluster_names={},
         )
 
         application.language = module.language
@@ -137,11 +137,11 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(
         tags=["plugin-center"],
         request_body=api_serializers.PluginSyncRequestSLZ,
-        responses={200: serializers.BkPluginSLZ},
+        responses={200: serializers.BkPluginSLZ()},
     )
     @atomic
     def update_plugin(self, request, code):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
 
         slz = api_serializers.PluginSyncRequestSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
@@ -158,7 +158,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def archive_plugin(self, request, code):
         """下架插件 = 停用网关(切断流量入口) + 回收进程资源(异步)"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
 
         slz = api_serializers.PluginArchiveRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -173,7 +173,7 @@ class PluginInstanceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data={})
 
 
-class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class PluginDeployViewSet(viewsets.ViewSet):
     """插件开发中心-插件部署相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -181,11 +181,11 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(
         tags=["plugin-center"],
         request_body=api_serializers.DeployPluginRequestSLZ,
-        responses={201: api_serializers.PluginDeployResponseSLZ},
+        responses={201: api_serializers.PluginDeployResponseSLZ()},
     )
     def deploy_plugin(self, request, code):
         """部署插件"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         module = application.get_default_module()
 
         slz = api_serializers.DeployPluginRequestSLZ(data=request.data)
@@ -245,7 +245,7 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         responses={200: api_serializers.PluginDeployResponseSLZ},
     )
     def check_deploy_status(self, request, code, deploy_id):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         try:
             deployment = Deployment.objects.get(pk=deploy_id, app_environment__module=application.get_default_module())
         except Deployment.DoesNotExist:
@@ -275,7 +275,7 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(tags=["plugin-center"], responses={200: api_serializers.PluginReleaseLogsResponseSLZ})
     def get_deploy_logs(self, request, code, deploy_id):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         try:
             deployment = Deployment.objects.get(pk=deploy_id, app_environment__module=application.get_default_module())
         except Deployment.DoesNotExist:
@@ -306,14 +306,14 @@ class PluginDeployViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data=api_serializers.PluginReleaseLogsResponseSLZ({"finished": finished, "logs": logs}).data)
 
 
-class PluginMarketViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class PluginMarketViewSet(viewsets.ViewSet):
     """插件开发中心-插件市场信息相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
 
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMarketRequestSLZ)
     def upsert_market_info(self, request, code):
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         profile = make_bk_plugin(application).get_profile()
         slz = api_serializers.PluginMarketRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -336,7 +336,9 @@ class PluginMarketViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.save()
         return Response(data={})
 
-    @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.MarketCategorySLZ(many=True))
+    @swagger_auto_schema(
+        tags=["plugin-center"], responses={status.HTTP_200_OK: api_serializers.MarketCategorySLZ(many=True)}
+    )
     def list_category(self, request):
         """查看系统中所有的“插件分类（Plugin-Tag）”"""
         tags = BkPluginTag.objects.all()
@@ -354,7 +356,7 @@ class PluginMarketViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
 
-class PluginMembersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class PluginMembersViewSet(viewsets.ViewSet):
     """插件开发中心-成员管理相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -362,7 +364,7 @@ class PluginMembersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(tags=["plugin-center"], request_body=api_serializers.PluginMemberSLZ(many=True))
     def sync_members(self, request, code):
         """同步插件成员"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
 
         slz = api_serializers.PluginMemberSLZ(data=request.data, many=True)
         slz.is_valid(raise_exception=True)
@@ -395,7 +397,7 @@ class PluginMembersViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data={})
 
 
-class PluginConfigurationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+class PluginConfigurationViewSet(viewsets.ViewSet):
     """插件开发中心-配置管理相关接口"""
 
     permission_classes = API_PERMISSION_CLASSES
@@ -404,7 +406,7 @@ class PluginConfigurationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @atomic
     def sync_configurations(self, request, code):
         """同步插件配置(环境变量)"""
-        application = self.get_application()
+        application = get_object_or_404(Application, code=code)
         module = application.get_default_module()
         prod_env = module.get_envs(AppEnvName.PROD)
 
@@ -422,6 +424,7 @@ class PluginConfigurationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     "description": item["description"],
                     "is_global": False,
                     "is_builtin": False,
+                    "tenant_id": module.tenant_id,
                 },
             )
         # 删除多余的环境变量

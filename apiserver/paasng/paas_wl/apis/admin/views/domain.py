@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
@@ -28,12 +27,13 @@ from paas_wl.workloads.networking.entrance.serializers import DomainForUpdateSLZ
 from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
-from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.platform.applications.models import Application
 from paasng.utils.api_docs import openapi_empty_response
 
 
-class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+class AppDomainsViewSet(GenericViewSet):
     """管理应用独立域名的 ViewSet"""
 
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -49,7 +49,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         结果默认按（“模块名”、“环境”）排序
         """
-        application = self.get_application()
+        application = get_object_or_404(Application, code=kwargs["code"])
 
         # Get results and sort
         domains = self.get_queryset(application)
@@ -72,17 +72,27 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         - 【客户端】模块与环境建议使用下拉框
         - 【客户端】`https_enabled` 暂不暴露给给用户
         """
-        application = self.get_application()
+        application = get_object_or_404(Application, code=kwargs["code"])
 
         data = validate_domain_payload(request.data, application, serializer_cls=DomainSLZ)
         env = application.get_module(data["module"]["name"]).get_envs(data["environment"]["environment"])
-        instance = get_custom_domain_mgr(application).create(
+        domain = get_custom_domain_mgr(application).create(
             env=env,
             host=data["name"],
             path_prefix=data["path_prefix"],
             https_enabled=data["https_enabled"],
         )
-        return Response(DomainSLZ(instance).data, status=status.HTTP_201_CREATED)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.APP_DOMAIN,
+            app_code=application.code,
+            module_name=env.module.name,
+            environment=env.environment,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data),
+        )
+        return Response(DomainSLZ(domain).data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
         operation_id="update-app-domain",
@@ -92,20 +102,43 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     )
     def update(self, request, **kwargs):
         """更新一个独立域名的域名与路径信息"""
-        application = self.get_application()
-        instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
+        application = get_object_or_404(Application, code=kwargs["code"])
+        domain = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data)
 
-        data = validate_domain_payload(request.data, application, instance=instance, serializer_cls=DomainForUpdateSLZ)
-        new_instance = get_custom_domain_mgr(application).update(
-            instance, host=data["name"], path_prefix=data["path_prefix"], https_enabled=data["https_enabled"]
+        data = validate_domain_payload(request.data, application, instance=domain, serializer_cls=DomainForUpdateSLZ)
+        new_domain = get_custom_domain_mgr(application).update(
+            domain, host=data["name"], path_prefix=data["path_prefix"], https_enabled=data["https_enabled"]
         )
-        return Response(DomainSLZ(new_instance).data)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.APP_DOMAIN,
+            app_code=application.code,
+            module_name=domain.module.name,
+            environment=domain.environment.environment,
+            data_before=data_before,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(new_domain).data),
+        )
+        return Response(DomainSLZ(new_domain).data)
 
     @swagger_auto_schema(operation_id="delete-app-domain", responses={204: openapi_empty_response}, tags=["Domains"])
     def destroy(self, request, *args, **kwargs):
         """通过 ID 删除一个独立域名"""
-        application = self.get_application()
-        instance = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
+        application = get_object_or_404(Application, code=kwargs["code"])
+        domain = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
+        data_before = DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data)
 
-        get_custom_domain_mgr(application).delete(instance)
+        get_custom_domain_mgr(application).delete(domain)
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.APP_DOMAIN,
+            app_code=application.code,
+            module_name=domain.module.name,
+            environment=domain.environment.environment,
+            data_before=data_before,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

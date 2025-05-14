@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 import re
@@ -33,7 +32,6 @@ from paasng.accessories.publish.sync_market.constant import SaaSPackageInfo
 from paasng.accessories.publish.sync_market.models import TagData
 from paasng.infras.legacydb import models as legacy_models
 from paasng.infras.legacydb.entities import EnvItem
-from paasng.infras.oauth2.models import OAuth2Client
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.mgrlegacy.constants import LegacyAppState
@@ -118,6 +116,9 @@ class AppAdaptor:
         code: str,
         name: str,
         deploy_ver: str,
+        app_tenant_mode: str,
+        app_tenant_id: str,
+        tenant_id: str,
         from_paasv3: bool = True,
         logo: str = "",
         is_lapp: bool = False,
@@ -132,7 +133,8 @@ class AppAdaptor:
         is_already_online: int = 0,
     ) -> "legacy_models.LApplication":
         datetime_now = timezone.now()
-        app = self.model(
+        # 应用的基本信息
+        app_data = dict(
             name=name,  # 应用名称
             code=code,  # 应用编码
             logo=logo,  # 应用 logo 的访问地址
@@ -165,6 +167,18 @@ class AppAdaptor:
             migrated_to_paasv3=0,  # 是否已经迁移到Paas3.0
             open_mode="new_tab",  # 应用打开方式, desktop: 桌面打开, new_tab: 新标签页打开
         )
+        # 桌面的应用表里面已经定义了租户相关字段，则写入
+        if hasattr(self.model, "app_tenant_mode"):
+            app_data.update(
+                {
+                    "app_tenant_mode": app_tenant_mode,
+                    "app_tenant_id": app_tenant_id,
+                    "tenant_id": tenant_id,
+                }
+            )
+
+        # 创建应用实例
+        app = self.model(**app_data)
         try:
             self.session.add(app)
             self.session.commit()
@@ -179,31 +193,10 @@ class AppAdaptor:
                     raise
             else:
                 raise
-
-        # 注册应用完成后，同步 oauth 信息
-        try:
-            oauth = OAuth2Client.objects.get(client_id=code)
-        except OAuth2Client.DoesNotExist:
-            logger.info(f"APP(code:{code}) oauth information does not exist, skip oauth synchronization")
-        else:
-            self.sync_oauth("", code, oauth.client_secret)
         return app
 
     def sync_oauth(self, region: str, code: str, secret: str) -> "legacy_models.LApplication":
-        """必须在注册完成应用后再执行"""
-        # 企业版 secret 以明文存储
-        app = self.get(code)
-        if not app:
-            logger.info(f"APP(code:{code}) does not exist, skip oauth synchronization")
-            return None
-
-        self.update(
-            code,
-            {
-                "auth_token": secret,
-            },
-        )
-        return app
+        """接入 bkAuth 后，不需要再往 PaaS2.0 的表中同步应用密钥信息"""
 
     def get_saas_package_info(self, app_id: str) -> Optional["SaaSPackageInfo"]:
         """获取SaaS应用的源码包信息
@@ -255,10 +248,7 @@ class AppTagAdaptor:
 
         tag_list = []
         for tag in console_tags:
-            region = settings.DEFAULT_REGION_NAME
-            tag_list.append(
-                TagData(id=tag.id, name=tag.name, enabled=True, index=tag.index, remark="", parent_id=0, region=region)
-            )
+            tag_list.append(TagData(id=tag.id, name=tag.name, enabled=True, index=tag.index, remark="", parent_id=0))
         return tag_list
 
     def get(self, code: str) -> "legacy_models.LApplicationTag":

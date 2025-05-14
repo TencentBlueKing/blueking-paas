@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Dict
 
@@ -75,6 +74,29 @@ class BkDevopsClient(BaseBkDevopsClient):
             raise BkDevopsApiError(resp["message"])
 
         return resp["data"]["overview"]
+
+    def get_codecc_plugin_basic_info(self, plugin_id: str) -> definitions.CodeccPluginBasicInfo:
+        """查询 Codecc 工具插件的基本信息
+
+        :param plugin_id: 插件 ID
+        """
+        path_params = {"pluginId": plugin_id}
+        try:
+            resp = self.client.app_codecc_bkplugins_get_basic_info(path_params=path_params)
+        except (APIGatewayResponseError, ResponseError) as e:
+            raise BkDevopsGatewayServiceError(
+                "retrieve plugin({plugin_id}) basic info error, detail: {detail}".format(
+                    plugin_id=plugin_id,
+                    detail=e,
+                )
+            )
+        if resp.get("status") != 0:
+            logger.error(
+                "retrieve plugin({plugin_id}) basic info error, resp: %(resp)s", {"build": plugin_id, "resp": resp}
+            )
+            raise BkDevopsApiError(resp["message"])
+        data = resp["data"]
+        return cattrs.structure(data, definitions.CodeccPluginBasicInfo)
 
 
 class PipelineController(BaseBkDevopsClient):

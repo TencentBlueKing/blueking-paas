@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from functools import partial
-from typing import Optional, Type
+from typing import Any, Dict, Optional, Type, TypeVar
 
 import cattr
 from pydantic import BaseModel
@@ -34,3 +33,49 @@ def register(pydantic_model: Optional[Type[BaseModel]] = None, *, by_alias: bool
     if pydantic_model is not None:
         return register_core(pydantic_model)
     return register_core
+
+
+# 使用 paasng.utils.models.make_json_field 创建的 JSON 模型字段，如果用的是 pydantic 的模型，
+# 需要将该模型通过装饰器注册，以便 cattr 模块能正常处理其序列化和反序列化。
+prepare_json_field = register
+
+
+T = TypeVar("T")
+
+
+class NotSetType:
+    """A simple type representing an absent value, can be used with pydantic model."""
+
+    def __repr__(self) -> str:
+        return "NotSetType"
+
+    def __bool__(self) -> bool:
+        return False
+
+    def __copy__(self: T) -> T:
+        return self
+
+    def __deepcopy__(self: T, _: Any) -> T:
+        return self
+
+    def dict(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+NOTSET = NotSetType()
+
+
+def remove_notset(d: Dict) -> Dict:
+    """Return a new dict without notset values"""
+    return {key: value for key, value in d.items() if value != NOTSET}
+
+
+class AllowNotsetModel(BaseModel):
+    """Add support for NOTSET"""
+
+    def dict(self, *args, **kwargs) -> Dict:
+        """Remove fields with notset values"""
+        return remove_notset(super().dict(*args, **kwargs))
+
+    class Config:
+        arbitrary_types_allowed = True

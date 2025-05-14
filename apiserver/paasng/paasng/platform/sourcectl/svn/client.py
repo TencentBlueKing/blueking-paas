@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""A simple SVN client by wrapping svn command line tool"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""A simple SVN client by wrapping svn command line tool
-"""
 import logging
 import os
 import pathlib
@@ -30,7 +29,7 @@ from shutil import copyfile
 from typing import Optional
 
 import arrow
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from svn.common import SvnException
 from svn.local import LocalClient as OrigLocalClient
 from svn.remote import RemoteClient as OrigRemoteClient
@@ -108,7 +107,7 @@ class RepoProvider:
     def __init__(self, base_url, username, password, with_branches_and_tags=True):
         if not base_url.endswith("/"):
             base_url = base_url + "/"
-        self.base_url = force_text(base_url)
+        self.base_url = force_str(base_url)
         self.username = username
         self.password = password
         self.with_branches_and_tags = with_branches_and_tags
@@ -124,7 +123,7 @@ class RepoProvider:
                 already_initialized = True
         return {
             "already_initialized": already_initialized,
-            "repo_url": urllib.parse.urljoin(self.base_url, force_text(desired_name)),
+            "repo_url": urllib.parse.urljoin(self.base_url, force_str(desired_name)),
         }
 
     def initialize_repo(self, working_dir: pathlib.Path, desired_name, message=None):
@@ -192,7 +191,7 @@ class SvnRepositoryClient:
     def __init__(self, repo_url, username, password):
         if not repo_url.endswith("/"):
             repo_url = repo_url + "/"
-        self.repo_url = force_text(repo_url)
+        self.repo_url = force_str(repo_url)
         self.username = username
         self.password = password
         self.svn_credentials = {"username": self.username, "password": self.password}
@@ -200,7 +199,7 @@ class SvnRepositoryClient:
 
     def sync_dir(self, local_path, remote_path, commit_message=""):
         """Sync a local dir to remote, usaully used for templating new repo"""
-        remote_url = urllib.parse.urljoin(self.repo_url, force_text(remote_path))
+        remote_url = urllib.parse.urljoin(self.repo_url, force_str(remote_path))
         rclient = RemoteClient(remote_url, **self.svn_credentials)
 
         if list(rclient.list()):
@@ -255,14 +254,14 @@ class SvnRepositoryClient:
                 continue
             # "trunk"
             if not ver.include_subdirs:
-                url = urllib.parse.urljoin(self.repo_url, force_text(item["name"]))
+                url = urllib.parse.urljoin(self.repo_url, force_str(item["name"]))
                 pri_results.append(
                     AlternativeVersion(item["name"], ver.name, item["commit_revision"], url, item["date"])
                 )
                 continue
 
             for sub_item in self.rclient.list(extended=True, rel_path=ver.dirname):
-                url = urllib.parse.urljoin(self.repo_url, force_text(ver.dirname + "/" + sub_item["name"]))
+                url = urllib.parse.urljoin(self.repo_url, force_str(ver.dirname + "/" + sub_item["name"]))
                 results.append(
                     AlternativeVersion(sub_item["name"], ver.name, sub_item["commit_revision"], url, sub_item["date"])
                 )
@@ -428,13 +427,11 @@ class RemoteClient(OrigRemoteClient):
         user_total_lines = 0
         for commit_log in all_commits_log:
             committed_date = arrow.get(commit_log.date).date()
-            if project_first_commit_date > committed_date:
-                project_first_commit_date = committed_date
+            project_first_commit_date = min(project_first_commit_date, committed_date)
             if commit_log.author == username:
                 user_commit_nums += 1
                 user_commit_calendar[committed_date] += 1
-                if user_first_commit_date > committed_date:
-                    user_first_commit_date = committed_date
+                user_first_commit_date = min(user_first_commit_date, committed_date)
 
         return dict(
             project_total_lines=project_total_lines,

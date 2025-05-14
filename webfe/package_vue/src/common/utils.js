@@ -123,7 +123,6 @@ class NavDataProcessor {
           if (subitem.visible === false) {
             return;
           }
-
           this.navItems.push({
             // eslint-disable-next-line no-underscore-dangle
             ...this._refineItem(subitem),
@@ -144,9 +143,7 @@ class NavDataProcessor {
   }
 }
 
-export {
-  NavDataProcessor,
-};
+export { NavDataProcessor };
 
 export function processNavData(data) {
   const processer = new NavDataProcessor();
@@ -207,7 +204,7 @@ export function clearFilter(refInstance) {
     // eslint-disable-next-line no-restricted-syntax
     for (const key in filterPanels) {
       filterPanels[key].handleReset();
-    };
+    }
   }
 }
 
@@ -224,7 +221,8 @@ export function renderHeader(h, { column }) {
 // 获取唯一随机数
 export function uuid() {
   let id = '';
-  const randomNum = Math.floor((1 + Math.random()) * 0x10000).toString(16)
+  const randomNum = Math.floor((1 + Math.random()) * 0x10000)
+    .toString(16)
     .substring(1);
 
   for (let i = 0; i < 7; i++) {
@@ -310,6 +308,56 @@ export function isJsonString(str) {
       return true;
     }
   } catch (e) {
+    return false;
   }
-  return false;
+}
+
+/**
+ * 分页工具函数
+ * @param {Array} data - 数据源
+ * @param {number} currentPage - 当前页码
+ * @param {number} pageSize - 每页条数
+ * @return {Object} 分页结果，包括分页数据、总条数、总页数等信息
+ */
+export function paginationFun(data = [], currentPage = 1, pageSize = 10) {
+  // 确保页码为整数且大于等于1
+  const currentPageNumber = Math.max(1, parseInt(currentPage, 10));
+  // 计算总条数
+  const totalItems = data.length;
+  // 计算总页数
+  const totalPages = Math.ceil(totalItems / pageSize);
+
+  // 确保页码不超过总页数
+  const safePage = Math.min(currentPageNumber, totalPages);
+  // 计算分页的起始索引和结束索引
+  const startIndex = (safePage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+
+  // 获取当前页的数据
+  const pageData = data.slice(startIndex, endIndex);
+
+  return {
+    currentPage: safePage,
+    pageSize,
+    totalItems,
+    totalPages,
+    pageData,
+  };
+}
+
+/**
+ * 下载文件函数
+ * @param {String} url - 下载地址
+ * @param {String} [filename] - 可选的文件名
+ */
+export function fileDownload(url, filename = '') {
+  const a = document.createElement('a');
+  a.href = url;
+  // 如果提供了文件名，则设置下载属性
+  if (filename) {
+    a.download = filename;
+  }
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }

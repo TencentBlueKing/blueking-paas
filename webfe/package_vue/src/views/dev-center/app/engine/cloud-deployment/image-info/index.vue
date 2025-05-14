@@ -33,7 +33,6 @@
         class="form-edit mt20 pb20 border-b" v-if="isBasePageEdit">
         <bk-form
           :model="buildConfig"
-          :rules="rules"
           ref="baseInfoRef"
         >
           <bk-form-item
@@ -44,14 +43,15 @@
           <bk-form-item
             :label="`${$t('镜像仓库')}：`"
             :required="true"
-            :property="'image'"
+            :property="'image_repository'"
+            :rules="rules.image"
             error-display-type="normal"
           >
             <bk-input
               ref="imageRef"
               v-model="buildConfig.image_repository"
               style="width: 450px;"
-              :placeholder="$t('示例镜像：mirrors.tencent.com/bkpaas/django-helloworld')"
+              :placeholder="$t('请输入镜像仓库，如') + '：mirrors.tencent.com/bkpaas/django-helloworld'"
             >
             </bk-input>
             <p slot="tip" class="input-tips">{{ $t('一个模块只可以配置一个镜像仓库，"进程配置"中的所有进程都会使用该镜像。') }}</p>
@@ -120,7 +120,7 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
+            regex: /^(?:([a-zA-Z0-9]+(?:[._-][a-zA-Z0-9]+)*(?::\d+)?)\/)?(?:([a-zA-Z0-9_-]+)\/)*([a-zA-Z0-9_.-]+)$/,
             message: this.$t('请输入不包含标签(tag)的镜像仓库地址'),
             trigger: 'blur',
           },
@@ -197,8 +197,8 @@ export default {
           });
           this.$refs.baseInfoRef?.clearError();
           this.isBasePageEdit = false;
-        } catch (error) {
-          console.log(error);
+        } catch (e) {
+          console.error(e);
         }
       }
     },

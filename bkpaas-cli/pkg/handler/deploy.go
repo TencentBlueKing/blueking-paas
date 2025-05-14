@@ -23,7 +23,6 @@ import (
 
 	"github.com/TencentBlueKing/gopkg/mapx"
 	"github.com/pkg/errors"
-	"github.com/samber/lo"
 	"github.com/spf13/cast"
 
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/apiresources"
@@ -86,7 +85,7 @@ func (d BaseDeployer) GetResult(opts model.DeployOptions) (model.DeployResult, e
 
 // GetHistory 获取部署历史
 func (d BaseDeployer) GetHistory(opts model.DeployOptions) (model.DeployHistory, error) {
-	respData, err := apiresources.DefaultRequester.ListAppDeployHistory(opts.AppCode, opts.Module)
+	respData, err := apiresources.DefaultRequester.ListAppDeployHistory(opts.AppCode, opts.Module, opts.DeployEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +105,7 @@ func (d BaseDeployer) GetHistory(opts model.DeployOptions) (model.DeployHistory,
 		records = append(records, model.AppDeployRecord{
 			ID:       mapx.GetStr(dp, "id"),
 			Branch:   mapx.GetStr(dp, "repo.name"),
-			Version:  revision[:lo.Min([]int{ShortRevisionLength, len(revision)})],
+			Version:  revision[:min(ShortRevisionLength, len(revision))],
 			Operator: mapx.GetStr(dp, "operator.username"),
 			CostTime: timex.CalcDuration(startTime, endTime),
 			Status:   mapx.GetStr(dp, "status"),
@@ -149,7 +148,7 @@ func (d CNativeAppDeployer) Deploy(opts model.DeployOptions) error {
 	manifest, tag, branch := opts.BkAppManifest, opts.Tag, opts.Branch
 	if manifest != nil {
 		// 导入 manifest
-		_, err := apiresources.DefaultRequester.UpdataBkappModel(appCode, appModule, manifest)
+		_, err := apiresources.DefaultRequester.UpdateBkappModel(appCode, appModule, manifest)
 		if err != nil {
 			return err
 		}

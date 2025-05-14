@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 import logging
 import re
@@ -36,19 +35,20 @@ from rest_framework.viewsets import ViewSet
 
 from paasng.accessories.log import serializers
 from paasng.accessories.log.client import instantiate_log_client
-from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE, LogType
+from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE, MAX_RESULT_WINDOW, LogType
 from paasng.accessories.log.dsl import SearchRequestSchema
-from paasng.accessories.log.exceptions import NoIndexError
+from paasng.accessories.log.exceptions import BkLogApiError, NoIndexError
 from paasng.accessories.log.filters import EnvFilter, ModuleFilter
 from paasng.accessories.log.models import ElasticSearchParams, ProcessLogQueryConfig
 from paasng.accessories.log.responses import IngressLogLine, StandardOutputLogLine, StructureLogLine
 from paasng.accessories.log.shim import setup_env_log_model
 from paasng.accessories.log.utils import clean_logs, parse_request_to_es_dsl
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.bk_log.exceptions import BkLogGatewayServiceError
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.utils.error_codes import error_codes
@@ -95,7 +95,10 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
         #     environment=request.GET.get('environment', 'all'), stream=request.GET.get('stream', 'all')
         # ).inc()
         log_config = self._get_log_query_config()
-        return instantiate_log_client(log_config=log_config, bk_username=self.request.user.username), log_config
+        tenant_id = get_tenant(self.request.user).id
+        return instantiate_log_client(
+            log_config=log_config, tenant_id=tenant_id, bk_username=self.request.user.username
+        ), log_config
 
     def parse_time_range(self) -> SmartTimeRange:
         """parse time range from request.query_params"""
@@ -142,10 +145,13 @@ class LogBaseAPIView(ViewSet, ApplicationCodeInPathMixin):
             highlight_query = dsl.to_dict()
             search = search.query(dsl)
 
-            # 除非指定了 time_field 的排序规则, 否则总是按照 desc 排序
-            sort_params = {time_field: {"order": "desc"}}
+            sort_params = {}
             if query_conditions.sort:
                 sort_params.update({k: {"order": v} for k, v in query_conditions.sort.items()})
+
+            # es 会按 sort 的顺序进行排序，因此将默认排序条件 {time_field:{"order": "desc"}} 放在最后
+            sort_params.setdefault(time_field, {"order": "desc"})
+
             search = search.sort(sort_params)
 
         # 顺序很重要, querystring 在 simple dsl 里, highlight_fields 必须在 search.query(dsl) 后面
@@ -216,7 +222,9 @@ class LogAPIView(LogBaseAPIView):
                 search=search,
                 timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
             )
-        except RequestError:
+        except (RequestError, BkLogApiError) as e:
+            # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("Request error when querying logs: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("failed to get logs")
@@ -227,6 +235,8 @@ class LogAPIView(LogBaseAPIView):
                 "logs": clean_logs(list(response), log_config.search_params),
                 "total": total,
                 "dsl": json.dumps(search.to_dict()),
+                # 前端使用该配置控制页面上展示的日志分页的最大页数
+                "max_result_window": MAX_RESULT_WINDOW,
             },
             Logs[self.line_model],  # type: ignore
         )
@@ -262,7 +272,9 @@ class LogAPIView(LogBaseAPIView):
             # scan 失败大概率是 scroll_id 失效
             logger.exception("scroll_id 失效, 日志查询失败")
             raise error_codes.QUERY_LOG_FAILED.f(_("日志查询快照失效, 请刷新后重试。"))
-        except RequestError:
+        except (RequestError, BkLogApiError) as e:
+            # # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when querying logs: %s", e)  # noqa: TRY400
             raise error_codes.QUERY_REQUEST_ERROR
         except Exception:
             logger.exception("failed to get logs")
@@ -296,10 +308,18 @@ class LogAPIView(LogBaseAPIView):
             ),
             time_field=log_config.search_params.timeField,
         )
+        try:
+            response = log_client.aggregate_date_histogram(
+                index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
+            )
+        except (RequestError, BkLogApiError) as e:
+            # # 用户输入数据不符合 ES 语法等报错，不需要记录到 Sentry，仅打 error 日志即可
+            logger.error("request error when aggregate time-based histogram: %s", e)  # noqa: TRY400
+            raise error_codes.QUERY_REQUEST_ERROR
+        except Exception:
+            logger.exception("failed to aggregate time-based histogram")
+            raise error_codes.QUERY_LOG_FAILED.f(_("聚合时间直方图失败，请稍后再试。"))
 
-        response = log_client.aggregate_date_histogram(
-            index=log_config.search_params.indexPattern, search=search, timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT
-        )
         date_histogram = cattr.structure(
             {
                 **clean_histogram_buckets(response),
@@ -424,21 +444,17 @@ class ModuleLogAPIMixin(_MixinBase):
         return search.limit_offset(limit=limit, offset=offset)
 
 
-class ModuleStdoutLogAPIView(ModuleLogAPIMixin, StdoutLogAPIView):
-    ...
+class ModuleStdoutLogAPIView(ModuleLogAPIMixin, StdoutLogAPIView): ...
 
 
-class ModuleStructuredLogAPIView(ModuleLogAPIMixin, StructuredLogAPIView):
-    ...
+class ModuleStructuredLogAPIView(ModuleLogAPIMixin, StructuredLogAPIView): ...
 
 
-class ModuleIngressLogAPIView(ModuleLogAPIMixin, IngressLogAPIView):
-    ...
+class ModuleIngressLogAPIView(ModuleLogAPIMixin, IngressLogAPIView): ...
 
 
 class SysStructuredLogAPIView(StructuredLogAPIView):
-    permission_classes: List = []
+    permission_classes: List = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def query_logs(self, request, code, module_name, environment):
         return super().query_logs(request, code, module_name, environment)

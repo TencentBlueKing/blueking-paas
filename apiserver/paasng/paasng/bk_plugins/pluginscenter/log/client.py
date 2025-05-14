@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+import logging
 from functools import reduce
 from operator import add
 from typing import Dict, List, Protocol, Tuple
@@ -35,10 +34,13 @@ from paasng.bk_plugins.pluginscenter.definitions import (
 )
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
 from paasng.bk_plugins.pluginscenter.log.constants import DEFAULT_LOG_BATCH_SIZE
+from paasng.bk_plugins.pluginscenter.log.exceptions import BkLogApiError
 from paasng.bk_plugins.pluginscenter.thirdparty.utils import make_client
 from paasng.utils.es_log.misc import count_filters_options
 from paasng.utils.es_log.models import FieldFilter
 from paasng.utils.es_log.search import SmartSearch
+
+logger = logging.getLogger(__name__)
 
 
 class LogClientProtocol(Protocol):
@@ -116,7 +118,11 @@ class BKLogClient:
             data["bkdata_authentication_method"] = self.config.bkdataAuthenticationMethod
         if self.config.bkdataDataToken:
             data["bkdata_data_token"] = self.config.bkdataDataToken
-        return self.client.call(data=data, timeout=timeout)
+        resp = self.client.call(data=data, timeout=timeout)
+        if not resp.get("result"):
+            logger.error(f"query bk log error: {resp['message']}")
+            raise BkLogApiError(resp["message"])
+        return resp
 
 
 class ESLogClient:
@@ -176,7 +182,7 @@ class ESLogClient:
         """获取属性映射"""
         # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
         # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
-        all_mappings = self._client.indices.get_mapping(index, params={"request_timeout": timeout})
+        all_mappings = self._client.indices.get_mapping(index=index, params={"request_timeout": timeout})
         if not all_mappings:
             raise error_codes.QUERY_ES_ERROR.f(
                 _("No mappings available, maybe index does not exist or no logs at all")

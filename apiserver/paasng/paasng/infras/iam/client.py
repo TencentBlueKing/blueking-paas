@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 import logging
 from typing import Dict, List, Optional
@@ -23,6 +22,7 @@ from typing import Dict, List, Optional
 from bkapi_client_core.exceptions import APIGatewayResponseError, HTTPResponseError
 from django.conf import settings
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.iam import utils
 from paasng.infras.iam.apigw.client import Client
 from paasng.infras.iam.apigw.client import Group as BKIAMGroup
@@ -36,6 +36,7 @@ from paasng.infras.iam.constants import (
     IAMErrorCodes,
 )
 from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
+from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import ApplicationRole
 
 logger = logging.getLogger(__name__)
@@ -44,8 +45,9 @@ logger = logging.getLogger(__name__)
 class BKIAMClient:
     """bk-iam 通过 APIGW 提供的 API"""
 
-    def __init__(self):
+    def __init__(self, tenant_id: str):
         self._client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_IAM_APIGW_SERVICE_STAGE)
+        self.tenant_id = tenant_id
         self._client.update_headers(self._prepare_headers())
         self.client: BKIAMGroup = self._client.api
 
@@ -56,7 +58,8 @@ class BKIAMClient:
                     "bk_app_code": settings.BK_APP_CODE,
                     "bk_app_secret": settings.BK_APP_SECRET,
                 }
-            )
+            ),
+            API_HERDER_TENANT_ID: self.tenant_id,
         }
         return headers
 
@@ -76,9 +79,7 @@ class BKIAMClient:
             "members": [init_member] if init_member else [],
             # 创建分级管理员时，仅授权开发者中心的权限
             "authorization_scopes": [
-                utils.get_paas_authorization_scopes(
-                    app_code, app_name, ApplicationRole.ADMINISTRATOR, include_system=True
-                )
+                utils.get_paas_authorization_scopes(app_code, app_name, ApplicationRole.ADMINISTRATOR)
             ],
             # 可授权的人员范围为公司任意人
             "subject_scopes": [
@@ -105,7 +106,7 @@ class BKIAMClient:
 
         return resp["data"]["id"]
 
-    def delete_grade_manager(self, grade_manager_id: str):
+    def delete_grade_manager(self, grade_manager_id: int):
         """
         删除注册到权限中心的分级管理员
 
@@ -420,6 +421,32 @@ class BKIAMClient:
                 )
                 raise BKIAMApiError(resp["message"], resp["code"])
 
+    def revoke_user_group_policies(self, user_group_id: int, actions: List[AppAction]):
+        """
+        回收指定用户组的指定 action 权限
+
+        :param user_group_id: 用户组 ID
+        :param actions: 要回收的 action 列表
+        """
+        path_params = {"system_id": settings.IAM_PAAS_V3_SYSTEM_ID, "group_id": user_group_id}
+        data = {"actions": [{"id": action} for action in actions]}
+
+        try:
+            resp = self.client.v2_management_groups_policies_revoke_by_action(
+                path_params=path_params,
+                data=data,
+            )
+        except APIGatewayResponseError as e:
+            raise BKIAMGatewayServiceError(f"revoke user groups policies error, detail: {e}")
+
+        if resp.get("code") != 0:
+            logger.exception(
+                "revoke user groups policies error, message:{} \n user_group_id: {}, data: {}".format(
+                    resp["message"], user_group_id, data
+                )
+            )
+            raise BKIAMApiError(resp["message"], resp["code"])
+
     def update_grade_managers_with_bksaas_space(
         self, grade_manager_id: str, app_code: str, app_name: str, bk_space_id: str
     ):
@@ -437,9 +464,7 @@ class BKIAMClient:
             "description": utils.gen_grade_manager_desc(app_code),
             # 除创建时初始化的开发者中心权限外，新增监控平台、日志平台最小空间权限
             "authorization_scopes": [
-                utils.get_paas_authorization_scopes(
-                    app_code, app_name, ApplicationRole.ADMINISTRATOR, include_system=True
-                )
+                utils.get_paas_authorization_scopes(app_code, app_name, ApplicationRole.ADMINISTRATOR)
             ]
             + utils.get_bk_monitor_authorization_scope_list(bk_space_id, app_name, include_system=True)
             + utils.get_bk_log_authorization_scope_list(bk_space_id, app_name, include_system=True),

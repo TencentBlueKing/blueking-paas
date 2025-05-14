@@ -1,14 +1,21 @@
 <template>
   <section>
-    <div class="cloud-app-container" v-bkloading="{ isLoading: formLoading, opacity: 1 }">
+    <div
+      class="cloud-app-container"
+      v-bkloading="{ isLoading: formLoading, opacity: 1 }"
+    >
       <bk-alert
-        class="mb20 mt20" type="info"
-        :title="$t('基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力')"></bk-alert>
+        class="mb20 mt20"
+        type="info"
+        :title="
+          $t(
+            '基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力'
+          )
+        "
+      ></bk-alert>
 
       <div class="default-app-type mb20">
-        <default-app-type
-          @on-change-type="handleSwitchAppType"
-        />
+        <default-app-type @on-change-type="handleSwitchAppType" />
       </div>
       <!-- 不是smart应用 -->
       <section v-if="curCodeSource !== 'smart'">
@@ -32,12 +39,17 @@
           >
             <bk-input
               v-model="formData.code"
-              :placeholder="isBkLesscode ? $t('由小写字母组成，长度小于 16 个字符') :
-                $t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')"
+              :placeholder="
+                isBkLesscode
+                  ? $t('由小写字母组成，长度小于 16 个字符')
+                  : $t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')
+              "
               class="form-input-width"
+            ></bk-input>
+            <p
+              slot="tip"
+              class="input-tips"
             >
-            </bk-input>
-            <p slot="tip" class="input-tips">
               {{ $t('应用的唯一标识，创建后不可修改') }}
             </p>
           </bk-form-item>
@@ -51,12 +63,41 @@
           >
             <bk-input
               v-model="formData.name"
-              :placeholder="isBkLesscode ? $t('由汉字、英文字母、数字组成，长度小于 20 个字符') : $t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')"
+              :placeholder="
+                isBkLesscode
+                  ? $t('由汉字、英文字母、数字组成，长度小于 20 个字符')
+                  : $t('由汉字、英文字母、数字、连字符（-）组成，长度小于 20 个字符')
+              "
               class="form-input-width"
-            >
-            </bk-input>
+            ></bk-input>
           </bk-form-item>
-
+          <!-- 多租户 -->
+          <template v-if="isShowTenant">
+            <bk-form-item
+              :required="true"
+              :property="'tenant'"
+              error-display-type="normal"
+              ext-cls="form-item-cls"
+              :label="$t('租户类型')"
+            >
+              <bk-radio-group v-model="formData.tenantMode">
+                <bk-radio-button value="single">{{ $t('单租户') }}</bk-radio-button>
+                <bk-radio-button value="global">{{ $t('全租户') }}</bk-radio-button>
+              </bk-radio-group>
+            </bk-form-item>
+            <bk-form-item
+              v-if="formData.tenantMode === 'single'"
+              :required="true"
+              ext-cls="form-item-cls"
+              :label="$t('所属租户')"
+            >
+              <bk-input
+                class="form-input-width"
+                :value="curUserInfo.tenantId"
+                :disabled="true"
+              ></bk-input>
+            </bk-form-item>
+          </template>
           <!-- 镜像仓库不需要展示构建方式 -->
           <bk-form-item
             :required="true"
@@ -73,14 +114,20 @@
               >
                 <bk-radio :value="'buildpack'">
                   {{ $t('蓝鲸 Buildpack') }}
-                  <span class="tips" @click.stop>
+                  <span
+                    class="tips"
+                    @click.stop
+                  >
                     <bk-icon type="info-circle" />
                     {{ $t('使用构建工具从源码仓库构建镜像，支持多种编程语言，提供开发框架，支持原普通应用所有功能') }}
                   </span>
                 </bk-radio>
                 <bk-radio :value="'dockerfile'">
                   Dockerfile
-                  <span class="tips" @click.stop>
+                  <span
+                    class="tips"
+                    @click.stop
+                  >
                     <bk-icon type="info-circle" />
                     {{ $t('基于仓库的 Dockerfile 直接构建镜像（类似 docker build），暂不提供开发框架') }}
                   </span>
@@ -90,8 +137,12 @@
           </bk-form-item>
         </bk-form>
 
-
-        <bk-steps ext-cls="step-cls" :steps="createSteps" :cur-step.sync="curStep" v-if="isBkDefaultCode"></bk-steps>
+        <bk-steps
+          ext-cls="step-cls"
+          :steps="createSteps"
+          :cur-step.sync="curStep"
+          v-if="isBkDefaultCode"
+        ></bk-steps>
 
         <section v-if="formData.sourceOrigin === 'image' && curStep === 1">
           <!-- 镜像管理 -->
@@ -117,40 +168,42 @@
                 class="form-input-width"
                 clearable
                 :placeholder="mirrorExamplePlaceholder"
-              >
-              </bk-input>
-              <p slot="tip" class="input-tips">{{ $t('镜像应监听“容器端口“处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</p>
+              ></bk-input>
             </bk-form-item>
-            <bk-form-item
-              error-display-type="normal"
-              ext-cls="form-item-cls"
-              :label="$t('镜像凭证')"
-            >
-              <div class="flex-row form-input-width">
+            <section class="cloud-image-credential-box flex-row">
+              <div class="image-label">{{ $t('镜像凭证') }}</div>
+              <bk-form-item
+                error-display-type="normal"
+                :property="'imageCredentialName'"
+                :rules="rules.imageCredential"
+              >
                 <bk-input
                   class="mr10"
                   v-model="formData.imageCredentialName"
                   clearable
                   :placeholder="$t('请输入名称，如 default')"
-                >
-                </bk-input>
+                ></bk-input>
+              </bk-form-item>
+              <bk-form-item>
                 <bk-input
                   class="mr10"
                   v-model="formData.imageCredentialUserName"
                   clearable
                   :placeholder="$t('请输入账号')"
-                >
-                </bk-input>
+                ></bk-input>
+              </bk-form-item>
+              <bk-form-item>
                 <bk-input
                   type="password"
                   v-model="formData.imageCredentialPassWord"
                   clearable
                   :placeholder="$t('请输入密码')"
-                >
-                </bk-input>
-              </div>
-              <p slot="tip" class="input-tips">{{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}</p>
-            </bk-form-item>
+                ></bk-input>
+              </bk-form-item>
+            </section>
+            <p class="cloud-image-credential-tips">
+              {{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}
+            </p>
           </bk-form>
         </section>
 
@@ -177,14 +230,18 @@
                   <div class="flex-row align-items-center tab-container mb20">
                     <div
                       class="tab-item template"
-                      :class="[{ 'active': activeIndex === 1 }]"
-                      @click="handleCodeTypeChange(1)">{{ $t('蓝鲸开发框架') }}
+                      :class="[{ active: activeIndex === 1 }]"
+                      @click="handleCodeTypeChange(1)"
+                    >
+                      {{ $t('蓝鲸开发框架') }}
                     </div>
                     <div
                       v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION"
                       class="tab-item template"
-                      :class="[{ 'active': activeIndex === 3 }]"
-                      @click="handleCodeTypeChange(3)">{{ $t('蓝鲸插件') }}
+                      :class="[{ active: activeIndex === 3 }]"
+                      @click="handleCodeTypeChange(3)"
+                    >
+                      {{ $t('蓝鲸插件') }}
                     </div>
                   </div>
                 </bk-form-item>
@@ -204,15 +261,15 @@
                           {{ $t(defaultlangName[key]) }}
                         </bk-button>
                       </div>
-                      <div class="build-info" @click="showBuildDialog">
-                        <i class="row-icon paasng-icon paasng-page-fill"></i>
-                        {{ $t('构建信息') }}
-                      </div>
                     </div>
                   </bk-form-item>
                   <div class="languages-card">
                     <bk-radio-group v-model="formData.sourceInitTemplate">
-                      <div v-for="(item) in languagesList" :key="item.name" class="pb20">
+                      <div
+                        v-for="item in languagesList"
+                        :key="item.name"
+                        class="pb20"
+                      >
                         <bk-radio :value="item.name">
                           <div class="languages-name pl5">
                             {{ item.display_name }}
@@ -230,23 +287,20 @@
                   class="plugin-container"
                 >
                   <ul class="establish-main-list">
-                    <li>
-                      <label class="pointer">
-                        <bk-radio-group v-model="isOpenSupportPlus">
-                          <bk-radio
-                            :value="'yes'"
-                            disabled
-                          > {{ $t('Python 语言') }} </bk-radio>
-                        </bk-radio-group>
-                      </label>
-                      <p class="f12">
-                        <a
-                          target="_blank"
-                          :href="GLOBAL.LINK.BK_PLUGIN"
-                          style="color: #3a84ff"
-                        >Python + bk-plugin-framework，{{ $t('集成插件开发框架，插件版本管理，插件运行时等模块') }}</a>
-                      </p>
-                    </li>
+                    <bk-radio-group v-model="curPluginTemplate">
+                      <li
+                        class="plugin-item"
+                        v-for="item in pluginTmpls"
+                        :key="item.name"
+                      >
+                        <label class="pointer">
+                          <bk-radio :value="item.name">{{ item.display_name }}</bk-radio>
+                        </label>
+                        <p class="f12 mt5">
+                          {{ item.description }}
+                        </p>
+                      </li>
+                    </bk-radio-group>
                   </ul>
                 </div>
               </bk-form>
@@ -256,7 +310,8 @@
             <section v-if="isBkLesscode">
               <bk-form
                 :label-width="100"
-                class="from-content mt20">
+                class="from-content mt20"
+              >
                 <div class="form-item-title mb10">
                   {{ $t('应用模版') }}
                 </div>
@@ -269,21 +324,22 @@
                 </bk-form-item>
                 <bk-alert
                   type="info"
-                  class="lesscode-info">
+                  class="lesscode-info"
+                >
                   <div slot="title">
                     {{ $t('默认模块需要在') }}
                     <a
                       target="_blank"
                       :href="GLOBAL.LINK.LESSCODE_INDEX"
-                      style="color: #3a84ff">
-                      {{$t('蓝鲸运维开发平台')}}
+                      style="color: #3a84ff"
+                    >
+                      {{ $t('蓝鲸运维开发平台') }}
                     </a>
                     {{ $t('生成源码包部署，您也可以在应用中新增普通模块。') }}
                   </div>
                 </bk-alert>
               </bk-form>
             </section>
-
 
             <bk-form
               v-if="isBkDefaultCode"
@@ -308,10 +364,10 @@
                   <div
                     v-for="(item, index) in sourceControlTypes"
                     :key="index"
-                    :class="['code-depot-item mr10', { 'on': item.value === sourceControlTypeItem }]"
+                    :class="['code-depot-item mr10', { on: item.value === sourceControlTypeItem }]"
                     @click="changeSourceControl(item)"
                   >
-                    <img :src="'/static/images/' + item.imgSrc + '.png'">
+                    <img :src="'/static/images/' + item.imgSrc + '.png'" />
                     <div
                       class="source-control-title"
                       :title="item.name"
@@ -385,36 +441,54 @@
                 <bk-form
                   :model="dockerfileData"
                   form-type="vertical"
-                  ext-cls="build-params-form">
+                  ext-cls="build-params-form"
+                >
                   <div class="form-label">
-                    {{$t('构建参数')}}
+                    {{ $t('构建参数') }}
                   </div>
                   <div class="form-value-wrapper">
                     <bk-button
                       v-if="!dockerfileData.buildParams.length"
                       :text="true"
                       title="primary"
-                      @click="addBuildParams">
+                      @click="addBuildParams"
+                    >
                       <i class="paasng-icon paasng-plus-thick" />
                       {{ $t('新建构建参数') }}
                     </bk-button>
                     <template v-if="dockerfileData.buildParams.length">
                       <div class="build-params-header">
-                        <div class="name">{{$t('参数名')}}</div>
-                        <div class="value">{{$t('参数值')}}</div>
+                        <div class="name">{{ $t('参数名') }}</div>
+                        <div class="value">{{ $t('参数值') }}</div>
                       </div>
                       <div
                         v-for="(item, index) in dockerfileData.buildParams"
                         class="build-params-item"
-                        :key="index">
-                        <bk-form :ref="`name-${index}`" :model="item">
-                          <bk-form-item :rules="rules.buildParams" :property="'name'">
-                            <bk-input v-model="item.name" :placeholder="$t('参数名')"></bk-input>
+                        :key="index"
+                      >
+                        <bk-form
+                          :ref="`name-${index}`"
+                          :model="item"
+                        >
+                          <bk-form-item
+                            :rules="rules.buildParams"
+                            :property="'name'"
+                          >
+                            <bk-input
+                              v-model="item.name"
+                              :placeholder="$t('参数名')"
+                            ></bk-input>
                           </bk-form-item>
                         </bk-form>
                         <span class="equal">=</span>
-                        <bk-form :ref="`value-${index}`" :model="item">
-                          <bk-form-item :rules="rules.buildParams" :property="'value'">
+                        <bk-form
+                          :ref="`value-${index}`"
+                          :model="item"
+                        >
+                          <bk-form-item
+                            :rules="rules.buildParams"
+                            :property="'value'"
+                          >
                             <bk-input v-model="item.value"></bk-input>
                           </bk-form-item>
                         </bk-form>
@@ -431,7 +505,8 @@
                   ext-cls="add-build-params"
                   :text="true"
                   title="primary"
-                  @click="addBuildParams">
+                  @click="addBuildParams"
+                >
                   <i class="paasng-icon paasng-plus-thick" />
                   {{ $t('新建构建参数') }}
                 </bk-button>
@@ -473,25 +548,34 @@
         </section>
 
         <!-- 源码&镜像 部署配置内容 -->
-        <div class="mt20" v-if="formData.sourceOrigin === 'soundCode' && curStep === 2">
-          <collapseContent :title="$t('进程配置')" collapse-item-name="process" active-name="process">
-            <bk-alert
-              type="info">
+        <div
+          class="mt20"
+          v-if="formData.sourceOrigin === 'soundCode' && curStep === 2"
+        >
+          <collapseContent
+            :title="$t('进程配置')"
+            collapse-item-name="process"
+            active-name="process"
+          >
+            <bk-alert type="info">
               <div slot="title">
                 {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
                 <a
                   target="_blank"
                   :href="GLOBAL.DOC.APP_DESC_DOC"
-                  style="color: #3a84ff">
-                  {{$t('应用描述文件')}}
+                  style="color: #3a84ff"
+                >
+                  {{ $t('应用描述文件') }}
                 </a>
               </div>
             </bk-alert>
           </collapseContent>
         </div>
 
-
-        <div class="mt20" v-if="formData.sourceOrigin === 'image' && curStep === 2">
+        <div
+          class="mt20"
+          v-if="formData.sourceOrigin === 'image' && curStep === 2"
+        >
           <!-- 默认展开为编辑态 -->
           <collapseContent
             active-name="process"
@@ -499,7 +583,10 @@
             :title="$t('进程配置')"
           >
             <deploy-process
-              ref="processRef" :cloud-form-data="formData" :is-create="isCreate"></deploy-process>
+              ref="processRef"
+              :cloud-form-data="formData"
+              :is-create="isCreate"
+            ></deploy-process>
           </collapseContent>
 
           <collapseContent
@@ -508,29 +595,41 @@
             :title="$t('部署前置命令')"
             class="mt20"
           >
-            <deploy-hook ref="hookRef" :is-create="isCreate"></deploy-hook>
+            <deploy-hook
+              ref="hookRef"
+              :is-create="isCreate"
+            ></deploy-hook>
           </collapseContent>
         </div>
 
-
-        <div class="mt20 flex-row" v-if="isBkDefaultCode">
-          <!-- :disabled="" -->
-          <div class="mr20" v-if="curStep === 1">
+        <div
+          class="mt20 flex-row align-items-center"
+          v-if="isBkDefaultCode"
+        >
+          <div
+            v-if="curStep === 1"
+            class="mr10"
+            v-bk-tooltips="{ content: '请先授权代码源，然后选代码仓库', disabled: !isNextStepAllowed }"
+          >
+            <!-- 代码仓库-未授权不能创建应用 -->
             <bk-button
               theme="primary"
-              :disabled="!curExtendConfig.isAuth"
+              :disabled="isNextStepAllowed"
               @click="handleNext"
             >
               {{ $t('下一步') }}
             </bk-button>
           </div>
           <div v-if="curStep === 2">
-            <bk-button @click="handlePrev">
+            <bk-button
+              @click="handlePrev"
+              class="mr10"
+            >
               {{ $t('上一步') }}
             </bk-button>
             <bk-button
               theme="primary"
-              class="ml20 mr20"
+              class="mr10"
               :loading="formLoading"
               @click="handleCreateApp"
             >
@@ -542,7 +641,10 @@
           </bk-button>
         </div>
 
-        <div class="mt20 flex-row" v-else>
+        <div
+          class="mt20 flex-row"
+          v-else
+        >
           <bk-button
             theme="primary"
             class="ml20 mr20"
@@ -555,44 +657,6 @@
             {{ $t('取消') }}
           </bk-button>
         </div>
-
-        <!-- 构建信息弹窗 -->
-        <bk-dialog
-          v-model="buildDialog.visiable"
-          width="720"
-          :theme="'primary'"
-          :header-position="'left'"
-          :mask-close="true"
-          :show-footer="false"
-          :title="buildDialog.title"
-        >
-          <bk-form
-            :model="buildDialog.formData"
-            :label-width="localLanguage === 'en' ? 150 : 130">
-            <bk-form-item :label="`${$t('镜像仓库')}：`">
-              <span class="build-text">
-                {{ imageRepositoryTemplate }}
-              </span>
-            </bk-form-item>
-            <bk-form-item :label="`${$t('镜像 tag 规则')}：`">
-              {{ mirrorTag }}
-            </bk-form-item>
-            <bk-form-item :label="`${$t('构建方式')}：`">
-              {{ buildDialog.formData.buildMethod }}
-            </bk-form-item>
-            <bk-form-item :label="`${$t('基础镜像')}：`">
-              {{ buildDialog.formData.imageName }}
-            </bk-form-item>
-            <bk-form-item :label="`${$t('构建工具')}：`">
-              <p
-                class="config-item" v-for="item in buildDialog.formData.buildConfig"
-                :key="item.id"
-                v-bk-tooltips="`${item.display_name}${item.description ? (item.description) : ''}`">
-                {{ item.display_name }} {{ item.description ? (item.description) : '' }}
-              </p>
-            </bk-form-item>
-          </bk-form>
-        </bk-dialog>
       </section>
 
       <!-- S-mart 应用 -->
@@ -603,8 +667,9 @@
     </div>
   </section>
 </template>
-<script>import { DEFAULR_LANG_NAME, DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
-import _ from 'lodash';
+<script>
+import { DEFAULR_LANG_NAME, DEFAULT_APP_SOURCE_CONTROL_TYPES } from '@/common/constants';
+import { cloneDeep } from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
@@ -614,6 +679,7 @@ import { TAG_MAP, TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import defaultAppType from './default-app-type';
 import createSmartApp from './smart';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
+import { mapGetters } from 'vuex';
 export default {
   components: {
     gitExtend,
@@ -628,14 +694,15 @@ export default {
   data() {
     return {
       formData: {
-        name: '',   // 应用名称
-        code: '',   // 应用ID
-        url: '',    // 镜像仓库
+        name: '', // 应用名称
+        code: '', // 应用ID
+        tenantMode: 'single',
+        url: '', // 镜像仓库
         clusterName: '', // 集群名称
-        sourceOrigin: 'soundCode',  // 托管方式
+        sourceOrigin: 'soundCode', // 托管方式
         sourceInitTemplate: '', // 模版来源
-        buildDir: '',   // 构建目录
-        sourceRepoUrl: '',   // 代码仓库
+        buildDir: '', // 构建目录
+        sourceRepoUrl: '', // 代码仓库
         imageCredentialName: '', // 镜像名称
         imageCredentialUserName: '', // 镜像账号
         imageCredentialPassWord: '', // 镜像密码
@@ -646,7 +713,10 @@ export default {
         buildParams: [], // 构建参数
       },
       sourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
-      createSteps: [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }],
+      createSteps: [
+        { title: this.$t('源码信息'), icon: 1 },
+        { title: this.$t('部署配置'), icon: 2 },
+      ],
       curStep: 1,
       buttonActive: '',
       languagesData: {},
@@ -716,7 +786,6 @@ export default {
       formLoading: false,
       advancedOptionsObj: {},
       regionChoose: 'ieod',
-      bkPluginConfig: {},
       rules: {
         code: [
           {
@@ -734,7 +803,10 @@ export default {
               const reg = this.isBkLesscode ? /^[a-z]{1,16}$/ : /^[a-z][a-z0-9-]{2,16}$/;
               return reg.test(val);
             },
-            message: () => (this.isBkLesscode ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符') : this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头')),
+            message: () =>
+              this.isBkLesscode
+                ? this.$t('格式不正确，由小写字母组成，长度小于 16 个字符')
+                : this.$t('请输入 3-16 字符的小写字母、数字、连字符(-)，以小写字母开头'),
             trigger: 'blur',
           },
         ],
@@ -751,10 +823,13 @@ export default {
           },
           {
             validator: (val) => {
-              const reg =  this.isBkLesscode ? /^[\u4e00-\u9fa5a-zA-Z0-9]{1,20}$/ : /^[a-zA-Z\d\u4e00-\u9fa5-]*$/;
+              const reg = this.isBkLesscode ? /^[\u4e00-\u9fa5a-zA-Z0-9]{1,20}$/ : /^[a-zA-Z\d\u4e00-\u9fa5-]*$/;
               return reg.test(val);
             },
-            message: () => (this.isBkLesscode ? this.$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符') : this.$t('格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符')),
+            message: () =>
+              this.isBkLesscode
+                ? this.$t('格式不正确，只能包含：汉字、英文字母、数字，长度小于 20 个字符')
+                : this.$t('格式不正确，只能包含：汉字、英文字母、数字、连字符(-)，长度小于 20 个字符'),
             trigger: 'blur',
           },
         ],
@@ -769,7 +844,9 @@ export default {
               const reg = /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/;
               return reg.test(val);
             },
-            message: this.$t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'),
+            message: this.$t(
+              '支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'
+            ),
             trigger: 'blur',
           },
         ],
@@ -780,7 +857,7 @@ export default {
             trigger: 'blur',
           },
           {
-            regex: /^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
+            regex: /^(?:([a-zA-Z0-9]+(?:[._-][a-zA-Z0-9]+)*(?::\d+)?)\/)?(?:([a-zA-Z0-9_-]+)\/)*([a-zA-Z0-9_.-]+)$/,
             message: this.$t('请输入不包含标签(tag)的镜像仓库地址'),
             trigger: 'blur',
           },
@@ -792,57 +869,41 @@ export default {
             trigger: 'blur',
           },
         ],
-      },
-      buildDialog: {
-        visiable: false,
-        title: this.$t('构建信息'),
-        formData: {},
+        imageCredential: [
+          {
+            validator(val) {
+              if (val === '') return true;
+              const reg = /^[a-zA-Z0-9_]{0,40}$|^$/;
+              return reg.test(val);
+            },
+            message: this.$t('以英文字母、数字或下划线(_)组成，不超过40个字'),
+            trigger: 'blur',
+          },
+        ],
       },
       curCodeSource: 'default',
       activeIndex: 1,
-      isOpenSupportPlus: 'yes',
       isShowAdvancedOptions: false,
+      pluginTmpls: [],
+      curPluginTemplate: '',
+      codeSourceId: 'default',
     };
   },
   computed: {
     curSourceControl() {
-      return this.sourceControlTypes.find(item => item.value === this.sourceControlTypeItem);
+      return this.sourceControlTypes.find((item) => item.value === this.sourceControlTypeItem);
     },
     cloudAppData() {
       return this.$store.state.cloudApi.cloudAppData;
     },
     clusterList() {
-      return this.advancedOptionsObj[this.regionChoose] || [];
-    },
-    imageRepositoryTemplate() {
-      if (!this.buildDialog.formData.imageRepositoryTemplate) return '';
-      let imageRepositoryTemplate = this.buildDialog.formData.imageRepositoryTemplate
-        .replace('{app_code}', this.formData.code);
-      if (imageRepositoryTemplate.includes('//')) {
-        imageRepositoryTemplate = imageRepositoryTemplate.replace('//', '/');
-      }
-      return imageRepositoryTemplate.replace('{module_name}', 'default');
-    },
-    mirrorTag() {
-      const tagOptions = this.buildDialog.formData?.tagOptions || {};
-      const tagStrList = [];
-      // eslint-disable-next-line no-restricted-syntax
-      for (const key in tagOptions) {
-        console.log('tagOptions[key]', tagOptions[key]);
-        if (tagOptions[key] && key !== 'prefix') {
-          tagStrList.push(this.$t(TAG_MAP[key]));
-        }
-      }
-      if (tagOptions.prefix) {
-        tagStrList.unshift(tagOptions.prefix);
-      }
-      return tagStrList.join('-');
-    },
-    userFeature() {
-      return this.$store.state.userFeature;
+      // TODO（mh）目前先取 prod 的集群，后续前端按多租户设计稿开发时，需要分环境处理
+      return this.advancedOptionsObj[this.regionChoose]['prod'] || [];
     },
     mirrorExamplePlaceholder() {
-      return `${this.$t('示例镜像：')}${this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE}`;
+      return `${this.$t('请输入镜像仓库，如')}：${
+        this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE
+      }`;
     },
     // 蓝鲸可视化平台
     isBkLesscode() {
@@ -869,23 +930,40 @@ export default {
     curExtendConfig() {
       return this.gitExtendConfig[this.sourceControlTypeItem];
     },
+    platformFeature() {
+      return this.$store.state.platformFeature;
+    },
+    ...mapGetters(['isShowTenant']),
+    curUserInfo() {
+      return this.$store.state.curUserInfo;
+    },
+    isNextStepAllowed() {
+      return this.codeSourceId === 'default' && !this.curExtendConfig?.isAuth;
+    },
   },
   watch: {
     'formData.sourceOrigin'(value) {
       this.curStep = 1;
       if (value === 'image') {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.CNATIVE_IMAGE; // 6 仅镜像的云原生应用
-        this.createSteps = [{ title: this.$t('镜像信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
+        this.createSteps = [
+          { title: this.$t('镜像信息'), icon: 1 },
+          { title: this.$t('部署配置'), icon: 2 },
+        ];
       } else if (value === 'soundCode') {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP; // 1
-        this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
+        this.createSteps = [
+          { title: this.$t('源码信息'), icon: 1 },
+          { title: this.$t('部署配置'), icon: 2 },
+        ];
       }
       this.$refs.formImageRef?.clearError();
     },
 
     cloudAppData: {
       handler(value) {
-        if (!Object.keys(value).length) {  // 没有应用编排数据
+        if (!Object.keys(value).length) {
+          // 没有应用编排数据
           this.initCloudAppDataFunc();
         }
       },
@@ -898,15 +976,18 @@ export default {
       }
       // 如果有cloudAppData 则将cloudAppData赋值给initCloudAppData
       if (Object.keys(this.cloudAppData).length) {
-        this.initCloudAppData = _.cloneDeep(this.cloudAppData);
+        this.initCloudAppData = cloneDeep(this.cloudAppData);
       }
       this.initCloudAppData.metadata.name = value;
-      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
+      this.localCloudAppData = cloneDeep(this.initCloudAppData);
 
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
     isShowAdvancedOptions(value) {
       this.$store.commit('createApp/updateAdvancedOptions', value);
+    },
+    'platformFeature.REGION_DISPLAY'() {
+      this.getPluginTmpls();
     },
   },
   mounted() {
@@ -914,11 +995,8 @@ export default {
   },
   methods: {
     async init() {
-      await Promise.all([
-        this.fetchLanguageInfo(),
-        this.fetchSourceControlTypesData(),
-        this.fetchAdvancedOptions(),
-      ]);
+      await Promise.all([this.fetchLanguageInfo(), this.fetchSourceControlTypesData(), this.fetchAdvancedOptions()]);
+      this.getPluginTmpls();
       // 收集依赖
       const data = this.collectDependencies();
       this.initSidebarFormData(data);
@@ -941,7 +1019,10 @@ export default {
           source_dir: this.formData.buildDir || '',
         },
       };
-      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)) {
+      if (
+        this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP &&
+        ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)
+      ) {
         data.source_config.source_repo_url = this.repoData.url;
         data.source_config.source_repo_auth_info = {
           username: this.repoData.account,
@@ -993,7 +1074,7 @@ export default {
     },
 
     // 获取代码源仓库信息
-    fetchSourceControlTypesData() {
+    async fetchSourceControlTypesData() {
       this.$store.dispatch('fetchAccountAllowSourceControlType', {}).then((res) => {
         this.sourceControlTypes = res;
         this.sourceControlTypes = this.sourceControlTypes.map((e) => {
@@ -1003,24 +1084,34 @@ export default {
           }
           return e;
         });
-        const sourceControlTypeValues = this.sourceControlTypes.map(item => item.value);
+        this.sourceControlTypeItem =
+          this.sourceControlTypes.find((item) => item.imgSrc === this.sourceControlTypeItem)?.imgSrc ??
+          this.sourceControlTypes[0]?.imgSrc;
+        const sourceControlTypeValues = this.sourceControlTypes.map((item) => item.value);
         sourceControlTypeValues.forEach((item) => {
           if (!Object.keys(this.gitExtendConfig).includes(item)) {
-            this.$set(this.gitExtendConfig, item, _.cloneDeep({
-              isAuth: true,
-              isLoading: false,
-              alertText: '',
-              authAddress: undefined,
-              fetchMethod: this.generateFetchRepoListMethod(item),
-              repoList: [],
-              selectedRepoUrl: '',
-            }));
+            this.$set(
+              this.gitExtendConfig,
+              item,
+              cloneDeep({
+                isAuth: true,
+                isLoading: false,
+                alertText: '',
+                authAddress: undefined,
+                fetchMethod: this.generateFetchRepoListMethod(item),
+                repoList: [],
+                selectedRepoUrl: '',
+              })
+            );
           }
         });
         // 在这几种类型里面需要请求
         Object.keys(this.gitExtendConfig).forEach((key) => {
           const config = this.gitExtendConfig[key];
-          if (key === this.sourceControlTypeItem && ['bk_gitlab', 'tc_git', 'github', 'gitee'].includes(this.sourceControlTypeItem)) {
+          if (
+            key === this.sourceControlTypeItem &&
+            ['bk_gitlab', 'tc_git', 'github', 'gitee'].includes(this.sourceControlTypeItem)
+          ) {
             config.fetchMethod();
           }
         });
@@ -1038,11 +1129,6 @@ export default {
         return;
       }
 
-      // 初始化蓝鲸插件相关配置
-      (res.bk_plugin_configs || []).forEach((c) => {
-        this.bkPluginConfig[c.region] = c;
-      });
-
       // 如果返回当前用户不支持“高级选项”，停止后续处理
       if (!res.allow_adv_options) {
         this.isShowAdvancedOptions = false;
@@ -1055,11 +1141,10 @@ export default {
       advancedRegionClusters.forEach((item) => {
         // eslint-disable-next-line no-prototype-builtins
         if (!this.advancedOptionsObj.hasOwnProperty(item.region)) {
-          this.$set(this.advancedOptionsObj, item.region, item.cluster_names);
+          this.$set(this.advancedOptionsObj, item.region, item.env_cluster_names);
         }
       });
     },
-
 
     generateFetchRepoListMethod(sourceControlTypeItem) {
       // 根据不同的 sourceControlTypeItem 生成对应的 fetchRepoList 方法
@@ -1068,7 +1153,7 @@ export default {
         try {
           config.isLoading = true;
           const resp = await this.$store.dispatch('getRepoList', { sourceControlType: sourceControlTypeItem });
-          config.repoList = resp.results.map(repo => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.repoList = resp.results.map((repo) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
           config.isAuth = true;
         } catch (e) {
           const resp = e.response;
@@ -1088,9 +1173,12 @@ export default {
       this.sourceDirData.error = false;
       this.sourceDirData.value = '';
       this.sourceControlTypeItem = item.value;
-      console.log('this.sourceControlTypeItem', this.sourceControlTypeItem);
       const curGitConfig = this.gitExtendConfig[this.sourceControlTypeItem];
-      if (curGitConfig && curGitConfig.repoList.length < 1 && ['bk_gitlab', 'tc_git', 'github', 'gitee'].includes(this.sourceControlTypeItem)) {
+      if (
+        curGitConfig &&
+        curGitConfig.repoList.length < 1 &&
+        ['bk_gitlab', 'tc_git', 'github', 'gitee'].includes(this.sourceControlTypeItem)
+      ) {
         curGitConfig.fetchMethod();
       }
     },
@@ -1106,8 +1194,9 @@ export default {
         if (!flag) {
           return;
         }
-        if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP) {  // 普通应用
-          await this.$refs?.extend?.valid();    // 代码仓库
+        if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP) {
+          // 普通应用
+          await this.$refs?.extend?.valid(); // 代码仓库
           this.formData.sourceRepoUrl = null;
           switch (this.sourceControlTypeItem) {
             case 'bk_gitlab':
@@ -1125,19 +1214,15 @@ export default {
               break;
           }
         }
-        this.repoData = this.$refs?.repoInfo?.getData();
-        // this.initCloudAppDataFunc();   // 初始化应用编排数据
+        this.repoData = this.$refs?.repoInfo?.getData() ?? {};
         this.curStep = 2;
         this.$nextTick(() => {
           // 默认编辑态
           this.$refs.processRef?.handleEditClick();
           this.$refs.hookRef?.handleEditClick();
         });
-        // if (this.structureType === 'mirror') {
-        //   this.getProcessData();
-        // }
-      } catch (error) {
-        console.log(error);
+      } catch (e) {
+        console.error(e);
       }
     },
 
@@ -1154,7 +1239,7 @@ export default {
         return;
       }
       this.$refs?.processRef?.handleCancel();
-      this.initCloudAppData = _.cloneDeep(this.localCloudAppData);
+      this.initCloudAppData = cloneDeep(this.localCloudAppData);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$router.push({
@@ -1185,12 +1270,14 @@ export default {
       }
       this.formLoading = true;
       const params = {
-        is_plugin_app: !!this.isBkPlugin,
+        is_plugin_app: this.isBkPlugin,
         region: this.regionChoose,
         code: this.formData.code,
         name: this.formData.name,
+        // 租户模式
+        ...(this.isShowTenant && { app_tenant_mode: this.formData.tenantMode }),
         source_config: {
-          source_init_template: this.formData.sourceInitTemplate,
+          source_init_template: this.isBkPlugin ? this.curPluginTemplate : this.formData.sourceInitTemplate,
           source_control_type: this.sourceControlTypeItem,
           source_repo_url: this.formData.sourceRepoUrl,
           source_origin: this.sourceOrigin,
@@ -1241,11 +1328,18 @@ export default {
       // 集群名称
       if (this.formData.clusterName) {
         params.advanced_options = {
-          cluster_name: this.formData.clusterName,
+          // TODO（mh）暂时兼容前端页面组件，在按新的多租户设计稿修改后，需使用具体字段
+          env_cluster_names: {
+            stag: this.formData.clusterName,
+            prod: this.formData.clusterName,
+          },
         };
       }
 
-      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)) {
+      if (
+        this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP &&
+        ['bare_git', 'bare_svn'].includes(this.sourceControlTypeItem)
+      ) {
         params.source_config.source_repo_url = this.repoData.url;
         params.source_config.source_repo_auth_info = {
           username: this.repoData.account,
@@ -1254,13 +1348,17 @@ export default {
         params.source_config.source_dir = this.repoData.sourceDir;
       }
 
-      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE) {  // 仅镜像
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE) {
+        // 仅镜像
         params.source_config = {
           source_origin: this.sourceOrigin,
         };
         // 镜像凭证任意有一个值都需要image_credentials字段，如果都没有这不需要此字段
-        if (this.formData.imageCredentialName || this.formData.imageCredentialUserName
-        || this.formData.imageCredentialPassWord) {
+        if (
+          this.formData.imageCredentialName ||
+          this.formData.imageCredentialUserName ||
+          this.formData.imageCredentialPassWord
+        ) {
           params.bkapp_spec.build_config.image_credential = {};
         }
         // 仅镜像需要镜像凭证信息
@@ -1276,7 +1374,7 @@ export default {
         // params.manifest = {
         //   ...this.cloudAppData,
         // };
-        params.source_config.source_repo_url = this.formData.url;   // 镜像
+        params.source_config.source_repo_url = this.formData.url; // 镜像
       }
 
       // lesscode应用
@@ -1312,6 +1410,7 @@ export default {
           path,
           query: {
             method: params.bkapp_spec.build_config.build_method,
+            template: params.source_config.source_init_template,
             objectKey,
           },
         });
@@ -1333,39 +1432,14 @@ export default {
         metadata: { name: this.formData.code },
         spec: {
           build: {
-            image: this.formData.url.trim(),  // 镜像信息-镜像仓库
+            image: this.formData.url.trim(), // 镜像信息-镜像仓库
             imageCredentialsName: this.formData.imageCredentialName, // 镜像信息-镜像凭证-名称
           },
           processes: [this.cloudAppProcessData],
         },
       };
-      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
+      this.localCloudAppData = cloneDeep(this.initCloudAppData);
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
-    },
-
-    // 获取构建信息
-    async showBuildDialog() {
-      try {
-        const res = await this.$store.dispatch('cloudApi/getBuildDataInfo', {
-          appCode: this.appCode,
-          tplTyp: 'normal',
-          region: this.regionChoose,
-          tplName: this.formData.sourceInitTemplate,
-        });
-        this.buildDialog.visiable = true;
-        this.buildDialog.formData = {
-          imageRepositoryTemplate: res.build_config.image_repository_template,    // 镜像仓库
-          tagOptions: res.build_config.tag_options,   // tag规则
-          buildMethod: res.build_config.build_method,  // 构建方式
-          imageName: `${res.slugbuilder.display_name}（${res.slugbuilder.description}）`,
-          buildConfig: res.build_config.buildpacks,
-        };
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      }
     },
 
     // 构建参数校验
@@ -1377,10 +1451,9 @@ export default {
       // eslint-disable-next-line no-restricted-syntax
       for (const index in this.dockerfileData.buildParams) {
         try {
-          await this.$refs[`name-${index}`][0]?.validate()
-            .finally(async () => {
-              await this.$refs[`value-${index}`][0]?.validate();
-            });
+          await this.$refs[`name-${index}`][0]?.validate().finally(async () => {
+            await this.$refs[`value-${index}`][0]?.validate();
+          });
         } catch (error) {
           flag = false;
         }
@@ -1406,6 +1479,8 @@ export default {
 
     // 切换应用类型
     handleSwitchAppType(codeSource) {
+      this.codeSourceId = codeSource;
+      this.activeIndex = 1;
       this.curStep = 1;
       this.$refs.formBaseRef?.clearError();
       this.curCodeSource = codeSource;
@@ -1443,9 +1518,23 @@ export default {
       const data = this.collectDependencies();
       return this.$isSidebarClosed(JSON.stringify(data));
     },
+
+    // 获取蓝鲸插件模板信息
+    async getPluginTmpls() {
+      try {
+        const res = await this.$store.dispatch('cloudApi/getPluginTmpls');
+        this.curPluginTemplate = res[0]?.name || '';
+        this.pluginTmpls = res;
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
-@import "./cloud.scss";
+@import './cloud.scss';
 </style>

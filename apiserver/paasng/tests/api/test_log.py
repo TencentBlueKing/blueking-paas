@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 from unittest import mock
 
@@ -28,7 +27,7 @@ from paasng.accessories.log.models import CustomCollectorConfig
 from paasng.accessories.log.shim.setup_bklog import build_custom_collector_config_name
 from paasng.infras.bkmonitorv3.models import BKMonitorSpace
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestModuleStructuredLogAPIView:
@@ -102,7 +101,6 @@ class TestModuleStructuredLogAPIView:
                                 "@timestamp": 1,
                                 "json": {"message": "foo"},
                                 "one": {"two": {"three": "four"}},
-                                "region": bk_app.region,
                                 "app_code": bk_app.code,
                                 "module_name": bk_module.name,
                                 "environment": "stag",
@@ -140,7 +138,6 @@ class TestModuleStructuredLogAPIView:
                     # "@timestamp": 1,
                     # "one.two.three": "four",
                     "json.message": "[bk-mark]???[/bk-mark]",
-                    "region": bk_app.region,
                     "app_code": bk_app.code,
                     "module_name": "default",
                     "environment": "stag",
@@ -148,7 +145,6 @@ class TestModuleStructuredLogAPIView:
                     "stream": "foo",
                     "pod_name": "bar",
                 },
-                "region": bk_app.region,
                 "app_code": bk_app.code,
                 # 没有 module_name
                 "environment": "stag",
@@ -237,20 +233,21 @@ class TestCustomCollectorConfigViewSet:
                 },
             ],
         }
+        with mock.patch("paasng.accessories.log.views.config.get_app_prod_env_cluster") as fake_cluster:
+            fake_cluster.has_feature_flag.return_value = True
+            resp = api_client.get(url, data={"all": True})
+            assert "url" in resp.data
+            options = resp.data["options"]
+            assert len(options) == 3
+            assert options[0]["is_builtin"]
+            assert options[1]["is_builtin"]
+            assert not options[2]["is_builtin"]
 
-        resp = api_client.get(url, data={"all": True})
-        assert "url" in resp.data
-        options = resp.data["options"]
-        assert len(options) == 3
-        assert options[0]["is_builtin"]
-        assert options[1]["is_builtin"]
-        assert not options[2]["is_builtin"]
-
-        resp = api_client.get(url, data={"all": False})
-        assert "url" in resp.data
-        filtered_options = resp.data["options"]
-        assert len(filtered_options) == 1
-        assert options[2] == filtered_options[0]
+            resp = api_client.get(url, data={"all": False})
+            assert "url" in resp.data
+            filtered_options = resp.data["options"]
+            assert len(filtered_options) == 1
+            assert options[2] == filtered_options[0]
 
     def test_insert_success(self, api_client, bk_app, bk_module, apigw_client, bkmonitor_space):
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/log/custom-collector/"

@@ -59,9 +59,9 @@ export const APP_ROLE_NAMES = {
 };
 
 export const DEFAULR_LANG_NAME = {
-  Python: 'Python开发框架',
-  Go: 'Golang开发框架',
-  NodeJS: 'NodeJS开发框架',
+  Python: 'Python 开发框架',
+  Go: 'Go 开发框架',
+  NodeJS: 'NodeJS 开发框架',
 };
 
 export const PLUGIN_STATUS = {
@@ -261,3 +261,151 @@ export const PERSISTENT_STORAGE_SIZE_MAP = {
   '2Gi': '2GB',
   '4Gi': '4GB',
 };
+
+/**
+ * 应用类型
+ */
+export const PAAS_APP_TYPE = {
+  default: '普通应用',
+  cloud_native: '云原生应用',
+  engineless_app: '外链应用',
+};
+
+export const CIRCLED_NUMBERS = [
+  '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
+  '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳',
+];
+
+/**
+ * Codecc 版本发布状态
+ */
+export const CODECC_RELEASE_STATUS = {
+  gray_approval_in_progress: '灰度发布审批中',
+  in_gray: '灰度中',
+  gray_approval_failed: '灰度审批失败',
+  full_approval_in_progress: '全量发布审批中',
+  fully_released: '已全量发布',
+  full_approval_failed: '全量发布审批失败',
+  rolled_back: '已回滚',
+  interrupted: '已终止',
+};
+
+/**
+ * 操作记录-操作对象
+ */
+export const APP_OPERATION_TARGET = {
+  app: '应用',
+  module: '模块',
+  process: '进程',
+  env_var: '环境变量',
+  addon: '增强服务',
+  cloud_api: '云 API 权限',
+  secret: '密钥',
+  app_domain: '访问地址',
+  app_member: '应用成员',
+  build_config: '构建配置',
+  volume_mount: '挂载卷',
+  service_discovery: '服务发现',
+  domain_resolution: '域名解析',
+  deploy_restriction: '部署限制',
+  exit_ip: '出口 IP',
+  access_control: '用户限制',
+  access_token: '访问令牌',
+};
+
+/**
+ * 操作记录-操作类型
+ */
+export const APP_OPERATION = {
+  create: '新建',
+  delete: '删除',
+  modify: '修改',
+  refresh: '刷新',
+  create_app: '创建应用',
+  online_to_market: '发布到应用市场',
+  offline_from_market: '从应用市场下架',
+  modify_market_info: '完善应用市场配置',
+  modify_market_url: '修改应用市场访问地址',
+  modify_basic_info: '修改基本信息',
+  start: '启动',
+  stop: '停止',
+  scale: '扩缩容',
+  enable: '启用',
+  disable: '停用',
+  apply: '申请',
+  renew: '续期',
+  deploy: '部署',
+  offline: '下架',
+};
+
+/**
+ * 操作记录-状态
+ */
+export const APP_RESULT_CODE = {
+  0: '成功',
+  1: '执行中',
+  '-1': '失败',
+  '-2': '中断',
+};
+
+/**
+ * 应用详情-应用状态
+ */
+export const APP_DATAILS_STATUS = {
+  none: '健康',
+  ownerless: '无主',
+  idle: '闲置',
+  unvisited: '无用户访问',
+  maintainless: '缺少维护',
+  undeploy: '未部署',
+  misconfigured: '配置不当',
+};
+
+/**
+ * 插件-操作记录-操作对象
+ */
+export const PLUGIN_SUBJECT = {
+  plugin: '插件',
+  test_version: '测试版本',
+  version: '版本',
+  basic_info: '基本信息',
+  logo: 'logo',
+  market_info: '市场信息',
+  config_info: '配置信息',
+  visible_range: '可见范围',
+  publisher: '发布者',
+  release_strategy: '发布策略',
+};
+
+/**
+ * 插件-操作记录-操作类型
+ */
+export const PLUGIN_ACTION = {
+  create: '创建',
+  add: '新建',
+  re_release: '重新发布',
+  terminate: '终止发布',
+  modify: '修改',
+  delete: '删除',
+  archive: '下架',
+  reactivate: '重新上架',
+  rollback: '回滚',
+};
+
+/**
+ * 租户类型
+ */
+export const APP_TENANT_MODE = {
+  single: '单租户',
+  global: '全租户',
+};
+
+/**
+* 平台管理-组件状态
+*/
+export const COMPONENT_STATUS = {
+  not_installed: '未安装',
+  installing: '安装中',
+  installed: '已安装',
+  installation_failed: '安装失败',
+ };

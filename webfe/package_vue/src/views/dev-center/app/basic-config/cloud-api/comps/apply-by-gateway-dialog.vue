@@ -14,7 +14,7 @@
       <bk-form
         :label-width="80"
         :model="formData"
-        style="margin-top: 25px;"
+        style="margin-top: 25px"
       >
         <bk-form-item
           :label="$t('申请理由')"
@@ -32,20 +32,17 @@
           required
           property="expired"
         >
-          <div class="bk-button-group bk-button-group-cls">
-            <bk-button
-              :class="formData.expired === 6 ? 'is-selected' : ''"
-              @click="formData.expired = 6"
-            >
+          <bk-radio-group v-model="formData.expired">
+            <bk-radio-button :value="6">
               {{ $t('6个月') }}
-            </bk-button>
-            <bk-button
-              :class="formData.expired === 12 ? 'is-selected' : ''"
-              @click="formData.expired = 12"
-            >
+            </bk-radio-button>
+            <bk-radio-button :value="12">
               {{ $t('12个月') }}
-            </bk-button>
-          </div>
+            </bk-radio-button>
+            <bk-radio-button :value="0">
+              {{ $t('永久') }}
+            </bk-radio-button>
+          </bk-radio-group>
         </bk-form-item>
       </bk-form>
     </div>
@@ -59,7 +56,7 @@
         {{ $t('确定') }}
       </bk-button>
       <bk-button
-        style="margin-left: 10px;"
+        style="margin-left: 10px"
         @click="handleCancel"
       >
         {{ $t('取消') }}
@@ -68,87 +65,87 @@
   </bk-dialog>
 </template>
 <script>
-    import PaasngAlert from './paasng-alert';
-    export default {
-        name: '',
-        components: {
-            PaasngAlert
-        },
-        props: {
-            show: {
-                type: Boolean,
-                default: false
-            },
-            appCode: {
-                type: String,
-                default: ''
-            },
-            apiId: {
-                type: [String, Number],
-                default: ''
-            },
-            apiName: {
-                type: String,
-                default: ''
-            }
-        },
-        data () {
-            return {
-                visible: false,
-                loading: false,
-                formData: {
-                    reason: '',
-                    expired: 6
-                }
-            };
-        },
-        watch: {
-            show: {
-                handler (value) {
-                    this.visible = !!value;
-                },
-                immediate: true
-            }
-        },
-        methods: {
-            async handleConfirm () {
-                this.loading = true;
-                try {
-                    const params = {
-                        data: {
-                            resource_ids: [],
-                            reason: this.formData.reason,
-                            expire_days: this.formData.expired * 30,
-                            grant_dimension: 'api',
-                            gateway_name: this.apiName
-                        },
-                        appCode: this.appCode,
-                        apiId: this.apiId
-                    };
-                    await this.$store.dispatch('cloudApi/apply', params);
-                    this.$emit('on-api-apply');
-                } catch (e) {
-                    this.catchErrorHandler(e);
-                } finally {
-                    this.loading = false;
-                }
-            },
-
-            handleCancel () {
-                this.visible = false;
-            },
-
-            handleAfterLeave () {
-                this.formData = Object.assign({}, {
-                    reason: '',
-                    expired: 6
-                });
-                this.$emit('update:show', false);
-                this.$emit('after-leave');
-            }
-        }
+import PaasngAlert from './paasng-alert';
+export default {
+  name: '',
+  components: {
+    PaasngAlert,
+  },
+  props: {
+    show: {
+      type: Boolean,
+      default: false,
+    },
+    appCode: {
+      type: String,
+      default: '',
+    },
+    apiId: {
+      type: [String, Number],
+      default: '',
+    },
+    apiName: {
+      type: String,
+      default: '',
+    },
+  },
+  data() {
+    return {
+      visible: false,
+      loading: false,
+      formData: {
+        reason: '',
+        expired: 12,
+      },
     };
+  },
+  watch: {
+    show: {
+      handler(value) {
+        this.visible = !!value;
+      },
+      immediate: true,
+    },
+  },
+  methods: {
+    async handleConfirm() {
+      this.loading = true;
+      try {
+        const params = {
+          data: {
+            resource_ids: [],
+            reason: this.formData.reason,
+            expire_days: this.formData.expired * 30,
+            grant_dimension: 'api',
+            gateway_name: this.apiName,
+          },
+          appCode: this.appCode,
+          apiId: this.apiId,
+        };
+        await this.$store.dispatch('cloudApi/apply', params);
+        this.$emit('on-api-apply');
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    handleCancel() {
+      this.visible = false;
+    },
+
+    handleAfterLeave() {
+      this.formData = Object.assign(
+        {},
+        {
+          reason: '',
+          expired: 6,
+        }
+      );
+      this.$emit('update:show', false);
+      this.$emit('after-leave');
+    },
+  },
+};
 </script>
-<style lang="scss" scoped>
-    .paasng-by-gateway-apply-dialog {}
-</style>

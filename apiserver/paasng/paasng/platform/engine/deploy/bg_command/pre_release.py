@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict
 
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
@@ -44,6 +43,10 @@ class ApplicationPreReleaseExecutor(DeployStep):
 
     @DeployStep.procedures
     def start(self):
+        if self.deployment.has_requested_int:
+            self.state_mgr.finish(JobStatus.INTERRUPTED, "app pre-release interrupted")
+            return None
+
         pre_phase_start.send(self, phase=DeployPhaseTypes.RELEASE)
 
         hook = self.deployment.get_deploy_hooks().get_hook(type_=DeployHookType.PRE_RELEASE_HOOK)
@@ -58,7 +61,7 @@ class ApplicationPreReleaseExecutor(DeployStep):
             update_image_runtime_config(deployment=self.deployment)
 
         with self.procedure("初始化指令执行环境"):
-            extra_envs = get_env_variables(self.engine_app.env, deployment=self.deployment)
+            extra_envs = get_env_variables(self.engine_app.env)
             command_id = exec_command(
                 self.engine_app.env,
                 command_template=CommandTemplate(
@@ -125,7 +128,7 @@ class CommandPoller(DeployPoller):
 
         coordinator = DeploymentCoordinator(deployment.app_environment)
         # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
-        if coordinator.status_polling_timeout:
+        if coordinator.is_status_polling_timeout:
             command_status = CommandStatus.FAILED
         else:
             coordinator.update_polling_time()

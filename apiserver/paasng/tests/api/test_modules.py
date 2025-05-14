@@ -1,38 +1,43 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from unittest import mock
 
 import pytest
 from django.conf import settings
+from django.test.utils import override_settings
 
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.misc.operations.constant import OperationType
-from paasng.misc.operations.models import Operation
+from paas_wl.workloads.networking.ingress.models import Domain
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.bkapp_model.models import ModuleDeployHook, ModuleProcessSpec
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
-from tests.utils.helpers import generate_random_string, initialize_module
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
+from tests.utils.helpers import (
+    create_pending_wl_apps,
+    generate_random_string,
+    initialize_module,
+)
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -82,20 +87,17 @@ class TestModuleCreation:
             assert response.status_code == 201
 
     @pytest.mark.usefixtures("_init_tmpls")
-    @pytest.mark.parametrize(("with_feature_flag", "is_success"), [(True, True), (False, False)])
     def test_create_nondefault_origin(
         self,
         api_client,
         bk_app,
         bk_user,
         mock_wl_services_in_creation,
-        with_feature_flag,
-        is_success,
     ):
-        # Set user feature flag
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CHOOSE_SOURCE_ORIGIN, with_feature_flag)
-
-        with mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync:
+        with (
+            mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync,
+            override_settings(ENABLE_BK_LESSCODE=False),
+        ):
             # Mock return value of syncing template
             mocked_sync.return_value = SourceSyncResult(dest_type="mock")
 
@@ -108,15 +110,13 @@ class TestModuleCreation:
                     "source_origin": SourceOrigin.BK_LESS_CODE.value,
                 },
             )
-            desired_status_code = 201 if is_success else 400
-            assert response.status_code == desired_status_code
+            assert response.status_code == 201
 
 
 class TestCreateCloudNativeModule:
     @pytest.fixture(autouse=True)
     def _setup(self, mock_wl_services_in_creation, mock_initialize_vcs_with_template, _init_tmpls, bk_user, settings):
-        settings.CLOUD_NATIVE_APP_DEFAULT_CLUSTER = CLUSTER_NAME_FOR_TESTING
-        AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_CREATE_CLOUD_NATIVE_APP, True)
+        pass
 
     def test_create_with_image(self, bk_cnative_app, api_client):
         """托管方式：仅镜像"""
@@ -140,6 +140,7 @@ class TestCreateCloudNativeModule:
                                 "stag": {"environment_name": "stag", "target_replicas": 1, "plan_name": "2C1G"},
                                 "prod": {"environment_name": "prod", "target_replicas": 2, "plan_name": "2C1G"},
                             },
+                            "port": 30000,
                         }
                     ],
                     "hook": {
@@ -151,7 +152,7 @@ class TestCreateCloudNativeModule:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         module_data = response.json()["module"]
         assert module_data["web_config"]["build_method"] == "custom_image"
         assert module_data["web_config"]["artifact_type"] == "none"
@@ -162,6 +163,7 @@ class TestCreateCloudNativeModule:
 
         process_spec = ModuleProcessSpec.objects.get(module=module, name="web")
         assert process_spec.command == ["bash", "/app/start_web.sh"]
+        assert process_spec.port == 30000
         assert process_spec.get_target_replicas("stag") == 1
         assert process_spec.get_target_replicas("prod") == 2
 
@@ -191,7 +193,7 @@ class TestCreateCloudNativeModule:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         module_data = response.json()["module"]
         assert module_data["web_config"]["build_method"] == "buildpack"
         assert module_data["web_config"]["artifact_type"] == "image"
@@ -218,7 +220,7 @@ class TestCreateCloudNativeModule:
                 },
             },
         )
-        assert response.status_code == 201, f'error: {response.json()["detail"]}'
+        assert response.status_code == 201, f"error: {response.json()['detail']}"
         module_data = response.json()["module"]
         assert module_data["web_config"]["build_method"] == "dockerfile"
         assert module_data["web_config"]["artifact_type"] == "image"
@@ -316,11 +318,15 @@ class TestModuleDeletion:
             yield
 
     def test_delete_main_module(self, api_client, bk_app, bk_module, bk_user):
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
+        assert not AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.MODULE, operation=OperationEnum.DELETE
+        ).exists()
         response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/")
         assert response.status_code == 400
         assert "主模块不允许被删除" in response.json()["detail"]
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
+        assert not AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.MODULE, operation=OperationEnum.DELETE
+        ).exists()
 
     def test_delete_module(
         self,
@@ -329,21 +335,102 @@ class TestModuleDeletion:
         bk_user,
         mock_wl_services_in_creation,
     ):
-        module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
+        module = Module.objects.create(
+            application=bk_app, name="test", language="python", source_init_template="test", creator=bk_user
+        )
         initialize_module(module)
 
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
         with mock.patch("paasng.platform.modules.manager.delete_module_related_res"):
             response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{module.name}/")
         assert response.status_code == 204
-        assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
+        assert AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.MODULE, operation=OperationEnum.DELETE, attribute=module.name
+        ).exists()
 
     def test_delete_rollback(self, api_client, bk_app, bk_user):
-        module = Module.objects.create(application=bk_app, name="test", language="python", source_init_template="test")
+        module = Module.objects.create(
+            application=bk_app, name="test", language="python", source_init_template="test", creator=bk_user
+        )
         initialize_module(module)
 
-        assert not Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
+        assert not AppOperationRecord.objects.filter(
+            app_code=bk_app.code, target=OperationTarget.MODULE, operation=OperationEnum.DELETE, attribute=module.name
+        ).exists()
         with mock.patch("paasng.platform.modules.views.ModuleCleaner.clean", side_effect=Exception):
             response = api_client.delete(f"/api/bkapps/applications/{bk_app.code}/modules/{module.name}/")
         assert response.status_code == 400
-        assert Operation.objects.filter(application=bk_app, type=OperationType.DELETE_MODULE.value).exists()
+        assert AppOperationRecord.objects.filter(
+            app_code=bk_app.code,
+            target=OperationTarget.MODULE,
+            operation=OperationEnum.DELETE,
+            attribute=module.name,
+            result_code=ResultCode.FAILURE,
+        ).exists()
+
+
+class TestDefaultModuleSwitch:
+    """Test set as default API"""
+
+    @staticmethod
+    def init_another_module(bk_app, bk_user):
+        another_module = Module.objects.create(
+            application=bk_app, name="test", language="python", source_init_template="test", creator=bk_user
+        )
+        initialize_module(another_module)
+        create_pending_wl_apps(bk_app, cluster_name=CLUSTER_NAME_FOR_TESTING)
+        return another_module
+
+    def test_source_module(self, api_client, bk_app, bk_module, bk_user):
+        another_module = self.init_another_module(bk_app, bk_user)
+        MarketConfig.objects.get_or_create_by_app(bk_app)
+
+        # 切换主模块
+        response = api_client.post(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{another_module.name}/set_default/",
+            format="json",
+        )
+
+        assert response.status_code == 200
+        bk_app.refresh_from_db()
+        # 切换主模块后， market config 内的模块信息应当会通过 signal 更新
+        assert bk_app.market_config.source_module == another_module
+        assert bk_app.default_module == another_module
+
+    def test_with_custom_domain(self, api_client, bk_app, bk_module, bk_prod_env, bk_user):
+        another_module = self.init_another_module(bk_app, bk_user)
+
+        # 创建自定义域名
+        Domain.objects.create(
+            name="foo-custom.example.com",
+            path_prefix="/subpath/",
+            module_id=bk_module.id,
+            environment_id=bk_prod_env.id,
+        )
+        # 创建市场配置
+        market_config, _ = MarketConfig.objects.get_or_create_by_app(bk_app)
+
+        # 切换域名为自定义域名
+        url = f"/api/bkapps/applications/{bk_app.code}/entrances/market/"
+        api_client.post(
+            url,
+            data={
+                "module": bk_module.name,
+                "url": "http://foo-custom.example.com/subpath/",
+                "type": 4,
+            },
+        )
+        market_config.refresh_from_db()
+        assert market_config.source_url_type == ProductSourceUrlType.CUSTOM_DOMAIN
+
+        # 切换主模块
+        response = api_client.post(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{another_module.name}/set_default/",
+            format="json",
+        )
+        assert response.status_code == 200
+
+        # 测试切换后地址是否正常显示
+        url = f"/api/market/applications/{bk_app.code}/config/"
+        response = api_client.get(url)
+        assert response.status_code == 200
+        assert response.json()["custom_domain_url"] == "http://foo-custom.example.com/subpath/"

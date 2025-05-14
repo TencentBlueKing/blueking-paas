@@ -131,7 +131,16 @@ export default {
     getAlarmStrategies({}, { appCode }, config = {}) {
       // `${BACKEND_URL}/api/monitor/applications/{bk_app.code}/alarm_strategies/?${json2Query(params)}`
       const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/alarm_strategies/`;
-      return http.post(url, config);
+      return http.get(url, config);
+    },
+
+    /**
+     * 查询用户各应用告警数量
+     * @param {Object} data 请求参数
+     */
+    queryAllAppAlerts({}, { data }, config = {}) {
+      const url = `${BACKEND_URL}/api/monitor/user/alerts/`;
+      return http.post(url, data, config);
     },
   },
 };

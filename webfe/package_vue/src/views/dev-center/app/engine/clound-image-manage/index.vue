@@ -1,8 +1,11 @@
 <template>
   <div class="image-manage">
     <!-- 部署历史 -->
-    <div class="ps-top-bar" v-if="isDeployHistory">
-      <div class="top-title flex-row align-items-center box-shadow">
+    <div
+      class="ps-top-bar"
+      v-if="isDeployHistory"
+    >
+      <div class="top-title flex-row align-items-center">
         <i
           class="paasng-icon paasng-arrows-left icon-cls-back mr5"
           @click="goBack"
@@ -92,8 +95,8 @@ export default {
       font-weight: 400;
       margin-left: 4px;
     }
-    .icon-cls-back{
-      color: #3A84FF;
+    .icon-cls-back {
+      color: #3a84ff;
       font-size: 20px;
       font-weight: bold;
       cursor: pointer;

@@ -1,45 +1,44 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
+import time
 from pathlib import Path
 from typing import Optional
 
+import cattr
 from blue_krill.async_utils.poll_task import CallbackHandler, CallbackResult, PollingResult, PollingStatus, TaskPoller
 from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 
+from paas_wl.bk_app.applications.entities import BuildMetadata
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
+from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
-from paasng.platform.bkapp_model.importer.exceptions import ManifestImportError
-from paasng.platform.bkapp_model.manager import sync_to_bkapp_model
+from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.models import ApplicationEnvironment
+from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.manifest import get_bkapp_resource
-from paasng.platform.declarative.deployment.controller import PerformResult
-from paasng.platform.declarative.exceptions import (
-    AppDescriptionNotFoundError,
-    ControllerError,
-    DescriptionValidationError,
-)
-from paasng.platform.declarative.handlers import AppDescriptionHandler, CNativeAppDescriptionHandler
+from paasng.platform.bkapp_model.services import upsert_proc_svc_by_spec_version
+from paasng.platform.declarative.deployment.controller import DeployHandleResult
+from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.engine.configurations.building import (
     SlugbuilderInfo,
     get_build_args,
@@ -47,12 +46,15 @@ from paasng.platform.engine.configurations.building import (
     get_use_bk_ci_pipeline,
 )
 from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.configurations.image import RuntimeImageInfo, generate_image_repository
+from paasng.platform.engine.configurations.image import (
+    RuntimeImageInfo,
+    generate_image_repository_by_env,
+)
 from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
 from paasng.platform.engine.deploy.bg_build.bg_build import start_bg_build_process
 from paasng.platform.engine.deploy.release import start_release_step
-from paasng.platform.engine.exceptions import HandleAppDescriptionError
+from paasng.platform.engine.exceptions import HandleAppDescriptionError, InitDeployDescHandlerError
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.phases_steps.steps import update_step_by_line
@@ -61,9 +63,8 @@ from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import (
     check_source_package,
     download_source_to_dir,
-    get_app_description_handler,
+    get_deploy_desc_handler_by_version,
     get_dockerignore,
-    get_processes,
     get_source_package_path,
     tag_module_from_source_files,
 )
@@ -148,49 +149,33 @@ class BaseBuilder(DeployStep):
                     package_path, source_destination_path
                 )
 
-    def handle_app_description(self, raise_exception: bool = False) -> Optional[PerformResult]:
-        """Handle application description for deployment
+    def handle_app_description(self) -> DeployHandleResult:
+        """Handle the description files for deployment. It try to parse the app description
+        file and store the related configurations, e.g. processes.
+        Set the implicit_needed flag for process services at the end.
 
-        :param raise_exception: bool, will ignore all exception raise from _handle_app_description
-                                      if raise_exception is False
+        :raises HandleAppDescriptionError: When failed to handle the app description.
         """
         try:
-            return self._handle_app_description()
-        except AppDescriptionNotFoundError:
-            logger.debug("App description file(app_desc.yaml) is not defined, skip.")
+            app_environment = self.deployment.app_environment
+            handler = get_deploy_desc_handler_by_version(
+                app_environment.module,
+                self.deployment.operator,
+                self.deployment.version_info,
+                self.deployment.get_source_dir(),
+            )
+            result = handler.handle(self.deployment)
+
+            upsert_proc_svc_by_spec_version(app_environment.module, result.spec_version)
+        except InitDeployDescHandlerError as e:
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
         except (DescriptionValidationError, ManifestImportError) as e:
-            if raise_exception:
-                raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
-            logger.warning("Error while parsing app description file, skip, error: %s", e)
-        except ControllerError as e:
-            if raise_exception:
-                raise HandleAppDescriptionError(reason=e.message) from e
-            logger.exception("Exception while processing app description file, skip.")
+            raise HandleAppDescriptionError(reason=_("应用描述文件解析异常: {}").format(e.message)) from e
         except Exception as e:
-            if raise_exception:
-                raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
-            logger.exception("Exception while processing app description file, skip.")
-        return None
-
-    def _handle_app_description(self) -> Optional[PerformResult]:
-        """Handle application description for deployment"""
-        module = self.deployment.app_environment.module
-        application = module.application
-        operator = self.deployment.operator
-        version_info = self.deployment.version_info
-        relative_source_dir = self.deployment.get_source_dir()
-        is_cnative_app = application.type == ApplicationType.CLOUD_NATIVE
-
-        # 仅非云原生应用可以禁用应用描述文件
-        if not application.feature_flag.has_feature(AppFeatureFlag.APPLICATION_DESCRIPTION) and not is_cnative_app:
-            logger.debug("App description disabled.")
-            return None
-
-        handler = get_app_description_handler(module, operator, version_info, relative_source_dir)
-        if handler is None or not isinstance(handler, (AppDescriptionHandler, CNativeAppDescriptionHandler)):
-            raise AppDescriptionNotFoundError("No valid app description file found.")
-
-        return handler.handle_deployment(self.deployment)
+            logger.exception("Error while handling app description file, deployment: %s.", self.deployment)
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件时出现异常, 请检查应用描述文件")) from e
+        else:
+            return result
 
     def create_bkapp_revision(self) -> int:
         """generate bkapp model and store it into AppModelResource for querying the deployed bkapp model"""
@@ -266,20 +251,8 @@ class ApplicationBuilder(BaseBuilder):
 
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
-        with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            perform_result = self.handle_app_description(raise_exception=is_cnative_app)
-
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
-            proc_data_from_desc = perform_result.loaded_processes if perform_result else None
-            processes = get_processes(
-                deployment=self.deployment,
-                stream=self.stream,
-                proc_data_from_desc=proc_data_from_desc,
-            )
-            self.deployment.update_fields(processes=processes)
-            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到 bkapp models
-            if proc_data_from_desc != processes:
-                sync_to_bkapp_model(module, processes=list(processes.values()))
+            self.handle_app_description()
 
         bkapp_revision_id = None
         if is_cnative_app:
@@ -309,7 +282,7 @@ class ApplicationBuilder(BaseBuilder):
         blocking current process.
         """
         env = self.deployment.app_environment
-        extra_envs = get_env_variables(env, deployment=self.deployment)
+        extra_envs = get_env_variables(env)
 
         # get slugbuilder and buildpacks from engine_app
         build_info = SlugbuilderInfo.from_engine_app(env.get_engine_app())
@@ -320,7 +293,7 @@ class ApplicationBuilder(BaseBuilder):
         # Use the default image when it's None, which means no images are bound to the app
         builder_image = build_info.build_image or settings.DEFAULT_SLUGBUILDER_IMAGE
 
-        app_image_repository = generate_image_repository(env.module)
+        app_image_repository = generate_image_repository_by_env(env)
         app_image = runtime_info.generate_image(
             version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
         )
@@ -336,18 +309,19 @@ class ApplicationBuilder(BaseBuilder):
         )
 
         # Start the background build process
+        build_metadata = BuildMetadata(
+            image=app_image,
+            use_cnb=build_info.use_cnb,
+            image_repository=app_image_repository,
+            buildpacks=build_process.buildpacks_as_build_env(),
+            extra_envs=extra_envs,
+            bkapp_revision_id=bkapp_revision_id,
+        )
+
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            metadata={
-                "extra_envs": extra_envs,
-                # TODO: 不传递 image_repository
-                "image_repository": app_image_repository,
-                "image": app_image,
-                "buildpacks": build_process.buildpacks_as_build_env(),
-                "use_cnb": build_info.use_cnb,
-                "bkapp_revision_id": bkapp_revision_id,
-            },
+            metadata=cattr.unstructure(build_metadata),
             stream_channel_id=str(self.deployment.id),
             use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )
@@ -369,20 +343,8 @@ class DockerBuilder(BaseBuilder):
 
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
         # DB 中存储的步骤名为中文，所以 procedure_force_phase 必须传中文，不能做国际化处理
-        with self.procedure_force_phase("解析应用描述文件", phase=preparation_phase):
-            perform_result = self.handle_app_description(raise_exception=is_cnative_app)
-
         with self.procedure_force_phase("解析应用进程信息", phase=preparation_phase):
-            proc_data_from_desc = perform_result.loaded_processes if perform_result else None
-            processes = get_processes(
-                deployment=self.deployment,
-                stream=self.stream,
-                proc_data_from_desc=proc_data_from_desc,
-            )
-            self.deployment.update_fields(processes=processes)
-            # 当 Procfile 的进程信息与描述文件中的不一致的时候，同步到 bkapp models
-            if proc_data_from_desc != processes:
-                sync_to_bkapp_model(module, processes=list(processes.values()))
+            self.handle_app_description()
 
         bkapp_revision_id = None
         if is_cnative_app:
@@ -418,17 +380,20 @@ class DockerBuilder(BaseBuilder):
         """Start a new build process[using Dockerfile], this will start a celery task in the background without
         blocking current process.
         """
-        env = self.deployment.app_environment
+        env: ApplicationEnvironment = self.deployment.app_environment
         builder_image = settings.KANIKO_IMAGE
-        app_image_repository = generate_image_repository(env.module)
+        app_image_repository = generate_image_repository_by_env(env)
         app_image = RuntimeImageInfo(env.get_engine_app()).generate_image(
             version_info=self.version_info, special_tag=self.deployment.advanced_options.special_tag
         )
+
+        image_registry = get_image_registry_by_app(env.wl_app)
         # 注入构建环境所需环境变量
         extra_envs = {
             "DOCKERFILE_PATH": get_dockerfile_path(env.module),
             "BUILD_ARG": get_build_args(env.module),
             "REGISTRY_MIRRORS": settings.KANIKO_REGISTRY_MIRRORS,
+            "SKIP_TLS_VERIFY_REGISTRIES": image_registry.host if image_registry.skip_tls_verify else "",
         }
 
         # Create the Build object and start a background build task
@@ -441,18 +406,19 @@ class DockerBuilder(BaseBuilder):
             invoke_message=self.deployment.advanced_options.invoke_message or _("发布时自动构建"),
         )
 
+        build_metadata = BuildMetadata(
+            image=app_image,
+            image_repository=app_image_repository,
+            use_dockerfile=True,
+            extra_envs=extra_envs,
+            bkapp_revision_id=bkapp_revision_id,
+        )
+
         # Start the background build process
         start_bg_build_process.delay(
             self.deployment.id,
             build_process.uuid,
-            metadata={
-                "extra_envs": extra_envs or {},
-                # TODO: 不传递 image_repository
-                "image_repository": app_image_repository,
-                "image": app_image,
-                "use_dockerfile": True,
-                "bkapp_revision_id": bkapp_revision_id,
-            },
+            metadata=cattr.unstructure(build_metadata),
             stream_channel_id=str(self.deployment.id),
             use_bk_ci_pipeline=get_use_bk_ci_pipeline(env.module),
         )
@@ -483,11 +449,11 @@ class BuildProcessPoller(DeployPoller):
         else:
             coordinator = DeploymentCoordinator(deployment.app_environment)
             # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
-            if coordinator.status_polling_timeout:
+            if coordinator.is_status_polling_timeout:
                 logger.warning(
-                    "[deploy_id=%s, build_process_id=%s] polling build status timeout, regarding as failed by PaaS",
-                    self.params["deployment_id"],
+                    "Polling status of build process [%s] timed out, consider it failed, deployment: %s",
                     self.params["build_process_id"],
+                    self.params["deployment_id"],
                 )
                 build_status = BuildStatus.FAILED
                 status = PollingStatus.DONE
@@ -495,7 +461,13 @@ class BuildProcessPoller(DeployPoller):
                 coordinator.update_polling_time()
 
         result = {"build_id": build_id, "build_status": build_status}
-        logger.info("[%s] got build status [%s][%s]", self.params["deployment_id"], build_id, build_status)
+        logger.info(
+            'The status of build process [%s] is "%s", deployment: %s, build_id: %s',
+            self.params["build_process_id"],
+            build_status,
+            self.params["deployment_id"],
+            build_id,
+        )
         return PollingResult(status=status, data=result)
 
     def update_steps(self, deployment: Deployment, build_proc: BuildProcess):
@@ -506,12 +478,19 @@ class BuildProcessPoller(DeployPoller):
             JobStatus.PENDING: phase.get_started_pattern_map(),
             JobStatus.SUCCESSFUL: phase.get_finished_pattern_map(),
         }
-        logger.info("[%s] start updating steps by log lines", self.params["deployment_id"])
+        started_at = time.time()
+        logger.info("Update deployment steps by log lines, deployment: %s", self.params["deployment_id"])
 
         # TODO: Use a flag value to indicate the progress of the scanning of the log,
         # so that we won't need to scan the log from the beginning every time.
         for line in build_proc.output_stream.lines.all().values_list("line", flat=True):
             update_step_by_line(line, pattern_maps, phase)
+
+        logger.info(
+            "Finished updating deployment steps, deployment: %s, cost: %s",
+            self.params["deployment_id"],
+            time.time() - started_at,
+        )
 
 
 class BuildProcessResultHandler(CallbackHandler):

@@ -28,7 +28,7 @@ function JSONP(api, params = {}, options = {}) {
       resolve(response);
     };
     const script = document.createElement('script');
-    script.onerror = (event) => {
+    script.onerror = () => {
       document.body.removeChild(script);
       delete window[callbackName];
       reject('Get data failed.');
@@ -57,7 +57,7 @@ const request = {
       if (response.code !== 0) {
         throw new Error(response);
       }
-      data = response.data;
+      data = Array.isArray(response.data) ? response.data : response.data.results;
     } catch (error) {
       console.error(error.message);
       data = [];

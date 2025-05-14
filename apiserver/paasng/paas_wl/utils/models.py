@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import re
 import sys
 import uuid
@@ -67,7 +66,10 @@ M = TypeVar("M")
 def make_json_field(  # noqa: C901
     cls_name: str, py_model: Type[M], decoder: Callable[[M], Dict] = cattr.unstructure, module: Optional[str] = None
 ) -> Type[JSONField]:
-    """生成会自动进行类型转换为 `py_model` 的 JSONField
+    """
+    Deprecated: 新增的自定义 JsonField 需使用 `paasng.utils.models.make_json_field`
+
+    生成会自动进行类型转换为 `py_model` 的 JSONField
 
     :param cls_name: 自动生成的 JSONField 的类名, 在使用时, cls_name 必须与赋值的变量名一致！否则 migrations 会报错.
     :param py_model: Python 对象, 需要能被 decoder 转换成可序列化成 json serializable 的 dict 对象.

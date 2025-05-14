@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import List, Tuple
 
@@ -29,11 +28,12 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.core.tenant.header import validate_tenant_id_header
 from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_required
 from paasng.infras.accounts.utils import ForceAllowAuthedApp
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 
@@ -66,10 +66,13 @@ class FilterPluginsMixin:
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        tenant_id = validate_tenant_id_header(request)
+
         # Query and paginate applications
         applications = BkPluginAppQuerySet().filter(
             search_term=data["search_term"],
             order_by=[data["order_by"]],
+            tenant_id=tenant_id,
             has_deployed=data["has_deployed"],
             distributor_code_name=data["distributor_code_name"],
             tag_id=data["tag_id"],
@@ -85,13 +88,13 @@ class FilterPluginsMixin:
 class SysBkPluginsViewset(FilterPluginsMixin, viewsets.ViewSet):
     """Viewset for bk_plugin type applications"""
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    permission_classes = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
+
     def list(self, request):
         """查询所有的蓝鲸插件"""
         plugins, paginator = self.filter_plugins(request)
         return paginator.get_paginated_response(serializers.BkPluginSLZ(plugins, many=True).data)
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def retrieve(self, request, code):
         """查询某个蓝鲸插件的详细信息"""
         plugin = get_plugin_or_404(code)
@@ -102,7 +105,8 @@ class SysBkPluginsViewset(FilterPluginsMixin, viewsets.ViewSet):
 class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
     """Viewset for batch operations on bk_plugin type applications"""
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    permission_classes = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
+
     def list_detailed(self, request):
         """批量查询蓝鲸插件的详细信息（包含各环境部署状态等）"""
         plugins, paginator = self.filter_plugins(request)
@@ -121,10 +125,11 @@ class SysBkPluginsBatchViewset(FilterPluginsMixin, viewsets.ViewSet):
 class SysBkPluginLogsViewset(viewsets.ViewSet):
     """Viewset for querying bk_plugin's logs"""
 
+    permission_classes = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
+
     # 该接口已注册到 APIGW
     # 网关名称 list_bk_plugin_logs
     # 请勿随意修改该接口协议
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
     def list(self, request, code):
         """查询某个蓝鲸插件的结构化日志"""
         if request.method == "GET":
@@ -152,7 +157,8 @@ def get_plugin_or_404(code: str) -> BkPlugin:
 class SysBkPluginTagsViewSet(viewsets.ViewSet):
     """Viewset for querying bk_plugin's tags"""
 
-    @site_perm_required(SiteAction.SYSAPI_READ_APPLICATIONS)
+    permission_classes = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
+
     def list(self, request):
         """View all plugin tags in the system"""
         tags = BkPluginTag.objects.all()
@@ -227,6 +233,8 @@ class BkPluginTagsViewSet(viewsets.ViewSet):
 
 class DistributorRelsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """Viewset for managing a single bk_plugin's distributor relations"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     @swagger_auto_schema(tags=["bk_plugin"], responses={200: serializers.DistributorSLZ(many=True)})
     def list(self, request, code):

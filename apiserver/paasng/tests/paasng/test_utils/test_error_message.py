@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import pytest
 from rest_framework.exceptions import ValidationError
 
@@ -23,7 +22,7 @@ from paasng.accessories.servicehub.remote.exceptions import GetClusterEgressInfo
 from paasng.utils.error_message import find_coded_error_message, find_innermost_exception, wrap_validation_error
 
 
-class TestMsgError(Exception):
+class DummyMsgError(Exception):
     pass
 
 
@@ -31,7 +30,7 @@ class TestMsgError(Exception):
     ("exception", "expected"),
     [
         (GetClusterEgressInfoError("Detail Message"), "错误码: 4313021, 获取集群信息失败: Detail Message。"),
-        (TestMsgError("AAAAA"), None),
+        (DummyMsgError("AAAAA"), None),
         pytest.param("unexpected", "", marks=pytest.mark.xfail(raises=TypeError)),
     ],
 )
@@ -40,51 +39,51 @@ def test_find_coded_error_message(exception, expected):
 
 
 def a():
-    raise TestMsgError("A")
+    raise DummyMsgError("A")
 
 
 def b_in_a():
     try:
         a()
-    except TestMsgError as e:
-        raise TestMsgError("B") from e
+    except DummyMsgError as e:
+        raise DummyMsgError("B") from e
 
 
 def b():
     try:
         a()
-    except TestMsgError:
-        raise TestMsgError("B")
+    except DummyMsgError:
+        raise DummyMsgError("B")
 
 
 def c_in_b_in_a():
     try:
         b_in_a()
-    except TestMsgError as e:
-        raise TestMsgError("C") from e
+    except DummyMsgError as e:
+        raise DummyMsgError("C") from e
 
 
 def c_in_b():
     try:
         b()
-    except TestMsgError as e:
-        raise TestMsgError("C") from e
+    except DummyMsgError as e:
+        raise DummyMsgError("C") from e
 
 
 @pytest.mark.parametrize(
     ("trigger", "expected"),
     [
-        (a, TestMsgError("A")),
-        (b_in_a, TestMsgError("A")),
-        (c_in_b_in_a, TestMsgError("A")),
-        (b, TestMsgError("B")),
-        (c_in_b, TestMsgError("B")),
+        (a, DummyMsgError("A")),
+        (b_in_a, DummyMsgError("A")),
+        (c_in_b_in_a, DummyMsgError("A")),
+        (b, DummyMsgError("B")),
+        (c_in_b, DummyMsgError("B")),
     ],
 )
 def test_find_innermost_exception(trigger, expected):
     try:
         trigger()
-    except TestMsgError as e:
+    except DummyMsgError as e:
         assert str(find_innermost_exception(e)) == str(expected)  # noqa: PT017
 
 

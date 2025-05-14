@@ -25,7 +25,7 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' ht
 ```json
 {
     "count": 27,
-    "next": "http://staging.bkpaas.example.com/backend/api/bkapps/applications/vision/modules/default/deployments/lists/?limit=12&offset=12",
+    "next": "http://bkpaas.example.com/backend/api/bkapps/applications/vision/modules/default/deployments/lists/?limit=12&offset=12",
     "previous": null,
     "results": [
         {
@@ -43,7 +43,7 @@ curl -X GET -H 'X-BKAPI-AUTHORIZATION: {"access_token": "your access_token"}' ht
                 "source_type": "bk_gitlab",
                 "type": "branch",
                 "name": "master",
-                "url": "http://git.example.com/v3-awesome-app.git",
+                "url": "repo url",
                 "revision": "141c46a87160afa4f33d280ddc368bf2c12fb5c7",
                 "comment": ""
             }

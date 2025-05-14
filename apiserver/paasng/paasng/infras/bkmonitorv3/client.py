@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import Dict, List, Optional, Union
 
@@ -23,6 +22,7 @@ from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
 from typing_extensions import Protocol
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.bkmonitorv3.backend.apigw import Client
 from paasng.infras.bkmonitorv3.backend.esb import get_client_by_username
 from paasng.infras.bkmonitorv3.definitions import BkMonitorSpace
@@ -31,6 +31,7 @@ from paasng.infras.bkmonitorv3.exceptions import (
     BkMonitorGatewayServiceError,
     BkMonitorSpaceDoesNotExist,
 )
+from paasng.infras.bkmonitorv3.models import BKMonitorSpace as BKMonitorSpaceModel
 from paasng.infras.bkmonitorv3.params import QueryAlarmStrategiesParams, QueryAlertsParams
 
 logger = logging.getLogger(__name__)
@@ -39,26 +40,21 @@ logger = logging.getLogger(__name__)
 class BkMonitorBackend(Protocol):
     """Describes protocols of calling API service"""
 
-    def metadata_get_space_detail(self, *args, **kwargs) -> Dict:
-        ...
+    def metadata_get_space_detail(self, *args, **kwargs) -> Dict: ...
 
-    def metadata_create_space(self, *args, **kwargs) -> Dict:
-        ...
+    def metadata_create_space(self, *args, **kwargs) -> Dict: ...
 
-    def metadata_update_space(self, *args, **kwargs) -> Dict:
-        ...
+    def metadata_update_space(self, *args, **kwargs) -> Dict: ...
 
-    def search_alert(self, *args, **kwargs) -> Dict:
-        ...
+    def search_alert(self, *args, **kwargs) -> Dict: ...
 
-    def search_alarm_strategy_v3(self, *args, **kwargs) -> Dict:
-        ...
+    def search_alarm_strategy_v3(self, *args, **kwargs) -> Dict: ...
 
-    def promql_query(self, *args, **kwargs) -> Dict:
-        ...
+    def promql_query(self, *args, **kwargs) -> Dict: ...
 
-    def as_code_import_config(self, *args, **kwargs) -> Dict:
-        ...
+    def as_code_import_config(self, *args, **kwargs) -> Dict: ...
+
+    def quick_import_dashboard(self, *args, **kwargs) -> Dict: ...
 
 
 class BKMonitorSpaceManager:
@@ -101,7 +97,8 @@ class BKMonitorSpaceManager:
             "space_name": space.space_name,
             "space_id": space.space_id,
             "space_type_id": space.space_type_id,
-            "creator": space.creator,
+            # Application 表中只记录了创建者信息，这个字段不影响实际使用，为了不增加额外的传参复杂度，故 updater 还是传应用的创建者
+            "updater": space.creator,
         }
         try:
             resp = self.client.metadata_update_space(
@@ -175,6 +172,16 @@ class BkMonitorClient:
             raise BkMonitorApiError(resp["message"])
         return resp.get("data", {}).get("alerts", [])
 
+    def query_space_biz_id(self, app_codes: List[str]) -> List[Dict]:
+        """查询应用的蓝鲸监控空间在权限中心的资源 id
+
+        :param app_codes: 查询监控空间的应用 id
+        """
+        monitor_spaces = BKMonitorSpaceModel.objects.filter(application__code__in=app_codes).select_related(
+            "application"
+        )
+        return [{"application": space.application, "bk_biz_id": space.iam_resource_id} for space in monitor_spaces]
+
     def query_alarm_strategies(self, query_params: QueryAlarmStrategiesParams) -> Dict:
         """查询告警策略
 
@@ -190,9 +197,9 @@ class BkMonitorClient:
         if not resp.get("result"):
             raise BkMonitorApiError(resp["message"])
         data = resp.get("data", {})
-        data[
-            "strategy_config_link"
-        ] = f"{settings.BK_MONITORV3_URL}/?bizId={query_params_dict['bk_biz_id']}/#/strategy-config/"
+        data["strategy_config_link"] = (
+            f"{settings.BK_MONITORV3_URL}/?bizId={query_params_dict['bk_biz_id']}/#/strategy-config/"
+        )
         return data
 
     def promql_query(self, bk_biz_id: Optional[str], promql: str, start: str, end: str, step: str) -> List:
@@ -253,8 +260,28 @@ class BkMonitorClient:
         if not resp.get("result"):
             raise BkMonitorApiError(resp["message"])
 
+    def import_dashboard(self, biz_or_space_id: int, dash_name: str):
+        """导入仪表盘到蓝鲸应用的命名空间
 
-def _make_bk_minotor_backend() -> BkMonitorBackend:
+        :param biz_or_space_id: 业务或空间 ID
+        :param dash_name: 仪表盘名称，需要提前将仪表盘的 JSON 文件内置到监控的代码目录中
+        """
+        try:
+            resp = self.client.quick_import_dashboard(
+                data={
+                    "bk_biz_id": biz_or_space_id,
+                    "dash_name": dash_name,
+                }
+            )
+            logger.info(f"quick_import_dashboard, resp:{resp}, bk_biz_id: {biz_or_space_id}, dash_name: {dash_name}")
+        except APIGatewayResponseError:
+            raise BkMonitorGatewayServiceError("an unexpected error when request bkmonitor apigw")
+
+        if not resp.get("result"):
+            raise BkMonitorApiError(resp["message"])
+
+
+def _make_bk_minotor_backend(tenant_id) -> BkMonitorBackend:
     if settings.ENABLE_BK_MONITOR_APIGW:
         apigw_client = Client(
             endpoint=settings.BK_API_URL_TMPL,
@@ -264,6 +291,11 @@ def _make_bk_minotor_backend() -> BkMonitorBackend:
             bk_app_code=settings.BK_APP_CODE,
             bk_app_secret=settings.BK_APP_SECRET,
         )
+        apigw_client.update_headers(
+            {
+                API_HERDER_TENANT_ID: tenant_id,
+            }
+        )
         return apigw_client.api
 
     # ESB 开启了免用户认证，但限制用户名不能为空，因此给默认用户名
@@ -271,9 +303,9 @@ def _make_bk_minotor_backend() -> BkMonitorBackend:
     return esb_client.monitor_v3
 
 
-def make_bk_monitor_client() -> BkMonitorClient:
-    return BkMonitorClient(_make_bk_minotor_backend())
+def make_bk_monitor_client(tenant_id) -> BkMonitorClient:
+    return BkMonitorClient(_make_bk_minotor_backend(tenant_id))
 
 
-def make_bk_monitor_space_manager() -> BKMonitorSpaceManager:
-    return BKMonitorSpaceManager(_make_bk_minotor_backend())
+def make_bk_monitor_space_manager(tenant_id) -> BKMonitorSpaceManager:
+    return BKMonitorSpaceManager(_make_bk_minotor_backend(tenant_id))

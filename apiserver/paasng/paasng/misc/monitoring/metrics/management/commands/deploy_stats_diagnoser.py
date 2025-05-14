@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""Analyze all app's deploy status, highlight problematic stats"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""Analyze all app's deploy status, highlight problematic stats
-"""
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -81,7 +80,7 @@ def build_process_stats(clusters: Iterable[Cluster]) -> BatchProcessStats:
             logger.warning(f"Unable to make client for {cluster.name}")
             continue
 
-        pods = KPod(client).ops_label.list(labels={})
+        pods = KPod(client).ops_batch.list(labels={})
         for pod in pods.items:
             try:
                 proc = AppProcess.from_pod(pod)
@@ -190,7 +189,7 @@ class NodeStateMismatch:
         for cluster in self.clusters:
             c_data = results[cluster.name]
             client = get_client_by_cluster_name(cluster_name=cluster.name)
-            nodes = KNode(client).ops_label.list(labels={})
+            nodes = KNode(client).ops_batch.list(labels={})
             for node in nodes.items:
                 # Find all region state related labels
                 node_name = node.metadata.name
@@ -236,7 +235,7 @@ class AppProcess:
 
         :raises ValueError: when given manifest was not managed by engine app
         """
-        labels = pod.metadata.get("labels", {})
+        labels = pod.metadata.get("labels") or {}
         app_code = labels.get("app_code")
         if not app_code:
             raise ValueError("Pod isn't a valid app resource, no 'app_code' can be found in metadata.labels")

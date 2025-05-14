@@ -1,26 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """A tool to refresh shared TLS certs. Cert files are used to support HTTPS
 protocol for applications. When a cert file was updated during a renewal, this
 command has to be called in order to refresh all Secret resources which contains
 the content of certificate.
 """
+
 import sys
 from functools import partial
 from typing import Iterable, List, Sequence
@@ -41,12 +41,13 @@ class Command(BaseCommand):
     help = "Refresh certificate's related Secret resources"
 
     def add_arguments(self, parser):
+        parser.add_argument("--tenant_id", type=str, required=True, help="The tenant ID")
         parser.add_argument("--name", type=str, required=True, help="Name of certification object")
         parser.add_argument(
             "--full-scan",
             action="store_true",
             help=(
-                "Before refreshing, scan all domains in the cert's region completely first, update the "
+                "Before refreshing, scan all domains in the given tenant completely first, update the "
                 '"shared_cert" field of the domain object if a match is found, helpful when the cert is newly added.'
             ),
         )
@@ -57,11 +58,12 @@ class Command(BaseCommand):
 
     def handle_refresh(self, options):
         """Handle refresh action"""
+        tenant_id = options["tenant_id"]
         name = options["name"]
         try:
-            cert = AppDomainSharedCert.objects.get(name=name)
+            cert = AppDomainSharedCert.objects.get(tenant_id=tenant_id, name=name)
         except AppDomainSharedCert.DoesNotExist:
-            self.exit_with_error(f'Cert "{name}" does not exist')
+            self.exit_with_error(f'Cert "{name}" does not exist in tenant "{tenant_id}"')
 
         # If full scan is enabled, scan all domains and update the cert field if needed
         if options["full_scan"]:
@@ -86,7 +88,7 @@ class Command(BaseCommand):
         self.update_secrets(apps, cert, options["dry_run"])
 
     def scan_and_update(self, cert: AppDomainSharedCert, dry_run: bool):
-        """Scan all domains in the cert's region, update the cert related fields if needed."""
+        """Scan all domains in the cert's tenant, update the cert related fields if needed."""
         # Make a print function which print message with current context
         _print = partial(self.print, title="update_cert_fields")
 
@@ -124,14 +126,14 @@ class Command(BaseCommand):
         cluster_names = []
         for cluster in Cluster.objects.all():
             for domain in cluster.ingress_config.sub_path_domains:
-                if pick_shared_cert(cluster.region, domain.name) == cert:
+                if pick_shared_cert(cluster.tenant_id, domain.name) == cert:
                     cluster_names.append(cluster.name)
                     break
 
         if not cluster_names:
             return []
 
-        app_ids = AppSubpath.objects.filter(region=cert.region).values_list("app_id").distinct()
+        app_ids = AppSubpath.objects.filter(tenant_id=cert.tenant_id).values_list("app_id").distinct()
         apps = []
         # Although AppSubpath has "cluster_name" field, it's value is not set at
         # this moment. So it's impossible to filter affected applications by simply
@@ -192,7 +194,7 @@ class Command(BaseCommand):
 
 def find_uninitialized_domains(cert: AppDomainSharedCert) -> Iterable[AppDomain]:
     """Find all domains which matches the given certificate but not initialized yet"""
-    for domain in AppDomain.objects.filter(region=cert.region).iterator():
+    for domain in AppDomain.objects.filter(tenant_id=cert.tenant_id).iterator():
         if domain.cert or domain.shared_cert:
             continue
         if cert.match_hostname(domain.host):

@@ -3,7 +3,7 @@
 ## 用于加密数据库内容的 Secret
 # BKKRILL_ENCRYPT_SECRET_KEY: ''
 
-## 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'，分别对应 'SM4CTR'和'Fernet' 算法
+## 选择加密数据库内容的算法，可选值：'SHANGMI', 'CLASSIC'，分别对应 'SM4CTR' 和 'FernetCipher' 算法
 # BK_CRYPTO_TYPE : ''
 
 ## （Django）特定 Django 安装的密钥。用于提供 加密签名，默认值为：${BKKRILL_ENCRYPT_SECRET_KEY}
@@ -26,25 +26,22 @@
 ## 日志等级，高于或等于该等级的日志才会被记录
 # LOG_LEVEL: INFO
 
-## Redis 日志存储配置，若不配置，则不会向 redis 写日志
-# LOGGING_REDIS_HANDLER:
-#   class: paas_wl.utils.log.LogstashRedisHandler
-#   level: DEBUG
-#   message_type: python-logstash
-#   queue_name: enginev3_log_list
-#   redis_url: redis://localhost:6379/0
-#   tags:
-#     - example
+# 用于存放日志文件的目录，默认值为空，表示不使用任何文件，所有日志直接输出到控制台。
+# 可配置为有效目录，支持相对或绝对地址，比如："logs" 或 "/var/lib/app_logs/"。
+# 配置本选项后，原有的控制台日志输出将关闭。
+# LOGGING_DIRECTORY: null
+
+# 日志文件所使用的格式，默认为 json，可选值：json、text
+# LOGGING_FILE_FORMAT: "json"
+
+# 是否总是打印日志到控制台，默认为否，仅当配置了日志目录，仍需控制台日志时使用
+# LOGGING_ALWAYS_CONSOLE: false
 
 ## 是否记录代码与数据库互动有关的信息，如请求执行的应用程序级别的 SQL 语句，默认值为 False
 # LOGGING_ENABLE_SQL_QUERIES: false
 
-## 服务通知相关插件
-# NOTIFICATION_PLUGIN_CLASSES:
-#   mail: paasng.utils.notification_plugins.MailNotificationPlugin
-#   sms: paasng.utils.notification_plugins.SMSNotificationPlugin
-#   wechat: paasng.utils.notification_plugins.WeChatNotificationPlugin
-
+# 发送通知的渠道，如果没有配置，则仅记录日志并不调用发送通知的 API
+BK_CMSI_ENABLED_METHODS: ["send_mail", "send_sms", "send_weixin"]
 
 ## ------------------------------------------ Django 基础配置（自定义） ------------------------------------------
 
@@ -143,6 +140,8 @@
 ## 跳过初始化已有应用数据到权限中心
 # BK_IAM_SKIP: false
 
+## 是否启用多租户模式，本配置项仅支持在初次部署时配置，部署后不支持动态调整
+# ENABLE_MULTI_TENANT_MODE: false
 
 ## 网关访问 IAM 地址
 # BK_IAM_APIGATEWAY_URL: ''
@@ -167,16 +166,8 @@
 #   bkmonitor: example-metric-client-token
 ## 是否默认允许创建 Smart 应用
 # IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT: true
-## 是否默认允许创建云原生应用
-# IS_ALLOW_CREATE_CLOUD_NATIVE_APP_BY_DEFAULT: false
-## 云原生应用的默认集群名称
-# CLOUD_NATIVE_APP_DEFAULT_CLUSTER: ""
-## 是否允许创建蓝鲸插件应用
-# IS_ALLOW_CREATE_BK_PLUGIN_APP: false
-## 新建的 lesscode 应用是否为云原生应用
-# LESSCODE_APP_USE_CLOUD_NATIVE_TYPE: true
-## 新建的源码包类型的应用是否为云原生应用，包括 S-mart 应用、场景应用等
-# SOURCE_PACKAGE_APP_CLOUD_NATIVE: true
+## 使用“应用迁移”功能，迁移到云原生应用时所使用的目标集群名称
+# MGRLEGACY_CLOUD_NATIVE_TARGET_CLUSTER: ""
 
 ## 开发者中心使用的 k8s 集群组件（helm chart 名称）
 # BKPAAS_K8S_CLUSTER_COMPONENTS:
@@ -262,7 +253,11 @@
 #   ENDPOINT: http://bkrepo.example.com
 #   USERNAME: bkpaas3
 #   PASSWORD: ''
-
+## bkrepo 项目名称，仅在创建项目时使用。bkrepo 的项目 ID 在 BLOBSTORE_BKREPO_CONFIG["PROJECT"] 中定义
+## NOTE: 按目前 bkrepo 的规则，启用/关闭多租户模式的情况下:
+## 关闭多租户: 项目 ID == 项目名称
+## 启用多租户: 项目 ID == f"{租户 ID}_{项目名称}"
+# BLOBSTORE_BKREPO_PROJECT_NAME = "bkpaas"
 ## 增强服务 LOGO bucket
 # SERVICE_LOGO_BUCKET: bkpaas3-platform-assets
 ## 应用 Logo 存储 bucket 名称
@@ -309,8 +304,16 @@
 # BK_TURBO_URL: ''
 ## 蓝盾流水线服务地址
 # BK_PIPELINE_URL: ''
-## 其他蓝鲸服务地址，格式如：{"BK_SOPS_URL": "http://localhost:8080"}
-# BK_PLATFORM_URLS: {}
+## 蓝鲸节点管理平台地址
+# BK_NODEMAN_URL: ''
+## 蓝鲸容器管理平台地址
+# BK_BCS_URL: ''
+## 蓝鲸服务配置中心地址
+# BK_BSCP_URL: ''
+## 蓝鲸审计中心地址
+# BK_AUDIT_URL: ''
+## 为兼容 PaaS 2.0 而注入的内置环境变量，格式如：{"BK_SOPS_URL": "http://localhost:8080"}
+# BK_PAAS2_PLATFORM_ENVS: {}
 
 ## 应用移动端访问地址，用于渲染模板与内置环境变量的配置项
 # BKPAAS_WEIXIN_URL_MAP:
@@ -334,8 +337,6 @@
 ## Region 配置
 # REGION_CONFIGS: {}
 
-## 启用 BK OAuth 服务
-# ENABLE_BK_OAUTH: false
 ## 蓝鲸 OAuth 服务地址
 # BK_OAUTH_API_URL: http://localhost:8080
 
@@ -344,6 +345,14 @@
 
 ## API Gateway 公钥，用于解析通过 API Gateway 的请求，该值为空时跳过解析
 # APIGW_PUBLIC_KEY: ''
+
+## 是否启用多租户模式, 需要和 ENABLE_MULTI_TENANT_MODE 保持一致
+# BKAUTH_ENABLE_MULTI_TENANT_MODE: ENABLE_MULTI_TENANT_MODE
+
+## 如果当前环境没有 bk-login 网关，则设置 BKAUTH_USER_INFO_APIGW_URL 为空字符串, bkpaas_auth 将使用 BKAUTH_USER_COOKIE_VERIFY_URL
+## 如果设置了有效的 BKAUTH_USER_INFO_APIGW_URL, BKAUTH_USER_COOKIE_VERIFY_URL 配置将被忽略, 使用网关进行用户身份校验
+## 多租户模式下(BKAUTH_ENABLE_MULTI_TENANT_MODE=True)必须设置有效的 BKAUTH_USER_INFO_APIGW_URL, 否则无法使用租户功能
+# BKAUTH_USER_INFO_APIGW_URL = ''
 
 ## 用户身份校验类型，默认值为 bk_token
 # BKAUTH_BACKEND_TYPE: bk_token
@@ -382,11 +391,8 @@
 
 
 ## ------------------------------------ 插件应用相关配置 ------------------------------------
-
-## 插件应用配置
-# BK_PLUGIN_CONFIG:
-  ## 是否允许用户创建插件应用
-  # allow_creation: false
+# 是否允许创建蓝鲸插件应用
+IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 
 ## 管理插件应用的 API 网关环境
 # BK_PLUGIN_APIGW_SERVICE_STAGE: prod
@@ -480,14 +486,6 @@
 ## RabbitMQ 增强服务地址
 # RSVC_BUNDLE_RABBITMQ_ENDPOINT_URL: http://localhost:5672
 
-# 集群名与 app_zone 的映射，app_zone 会在应用申请增强服务实例时用到
-# 其默认值为 universal。如果你需要为集群配置特殊值，也可修改该配置项，
-# 比如 APP_ZONE_CLUSTER_MAPPINGS = {"main-cluster": "another-zone"}
-# APP_ZONE_CLUSTER_MAPPINGS:
-#   ce-dev: dev-default
-#   ce-prod: prod-default
-
-
 ## ------------------------------------ 应用市场相关配置 ------------------------------------
 
 ## 蓝鲸桌面数据库 Host
@@ -505,14 +503,6 @@
 
 ## 是否强制要求填写应用联系人
 # APP_REQUIRE_CONTACTS: false
-
-
-## ------------------------------------ 应用监控服务相关配置 ------------------------------------
-
-## 监控服务 phalanx 地址
-# PHALANX_URL: http://localhost:8080
-## 监控服务 phalanx 访问 token
-# PHALANX_AUTH_TOKEN: ''
 
 
 ## ------------------------------------ 平台日志相关配置 ------------------------------------
@@ -579,10 +569,17 @@
 # IS_PATCH_CODE_IN_MGRLEGACY: true
 
 
-## ------------------------------------ 蓝盾代码检查相关配置 ------------------------------------
+## ------------------------------------ CI 相关配置 ------------------------------------
 
-## 蓝鲸 CI 相关配置项
-# CI_CONFIGS: {}
+## 代码检查配置
+# CODE_CHECK_CONFIGS: {}
+
+# 开发者中心在蓝盾的项目 ID
+BK_CI_PAAS_PROJECT_ID = bk_paas3"
+# 云原生应用构建流水线 ID
+BK_CI_BUILD_PIPELINE_ID = ""
+# 云原生应用构建流水线调用用户（应使用虚拟账号）
+BK_CI_CLIENT_USERNAME = "blueking"
 
 
 ## ------------------------------------ 蓝鲸文档中心配置 ------------------------------------
@@ -591,6 +588,8 @@
 # BK_DOC_APP_ID: ''
 ## 蓝鲸官网文档中心地址
 # BK_DOCS_URL_PREFIX: https://bk.tencent.com/docs
+## PaaS 产品文档版本号，社区版年度大版本更新后需要更新对应的文档版本号
+# BK_PAAS_DOCS_VER: 1.5
 
 ## 平台 FAQ 地址
 # PLATFORM_FAQ_URL: http://localhost:8080
@@ -619,6 +618,9 @@
 ## 是否使用 DockerRegistryToken 来验证，为 false 时使用 HTTPBasicAuthentication
 # SMART_DOCKER_AUTH_BY_TOKEN: true
 
+## 如果用到 python manage.py push_smart_image, SMART_IMAGE_TAG 和 SMART_CNB_IMAGE_TAG 必须设置有效值
+# SMART_IMAGE_TAG: v0.0.1-smart
+# SMART_CNB_IMAGE_TAG: v0.0.1-smart
 
 ## ------------------------------------ 插件开发中心配置 ------------------------------------
 
@@ -646,11 +648,19 @@
 # ENABLE_BK_MONITOR_APIGW: false
 ## 蓝鲸监控网关的环境
 # BK_MONITOR_APIGW_SERVICE_STAGE: prod
-## 监控 RabbitMQ 的配置项, 其中 metric_name_prefix 是采集指标前缀, service_name 是注册到开发者中心的服务名
+## 监控增强服务的配置项, 其中 metric_name_prefix 是采集指标前缀, service_name 是注册到开发者中心的服务名
 # RABBITMQ_MONITOR_CONF:
 #    enabled: true
 #    metric_name_prefix: ''
 #    service_name: 'rabbitmq'
+# BKREPO_MONITOR_CONF:
+#    enabled: true
+#    metric_name_prefix: ''
+#    service_name: 'bkrepo'
+# GCS_MYSQL_MONITOR_CONF:
+#    enabled: true
+#    metric_name_prefix: ''
+#    service_name: 'gcs_mysql'
 
 ## ------------------------------------ 蓝鲸日志配置 ------------------------------------
 # 默认的日志采集器类型, 可选值 "ELK", "BK_LOG"
@@ -662,6 +672,17 @@
 # BK_LOG_APIGW_SERVICE_STAGE: stag
 # 蓝鲸日志平台相关的配置项
 # BKLOG_CONFIG = {}
+
+## ------------------------------------ 蓝鲸通知中心配置 ------------------------------------
+# 通知中心的功能可通过配置开启
+ENABLE_BK_NOTICE = False
+# 对接通知中心的环境，默认为生产环境
+BK_NOTICE_ENV = "prod"
+
+## ------------------------------------ 蓝鲸审计中心配置置 ------------------------------------
+# 审计中心-审计配置-接入-数据上报中获取这两项配置信息的值
+BK_AUDIT_DATA_TOKEN = ""
+BK_AUDIT_ENDPOINT = ""
 
 ## ---------------------------------------- 运行时默认配置 ----------------------------------------
 
@@ -761,6 +782,26 @@
 # SERVICES_PLUGINS: {}
 
 
+## ---------------------------------------- 沙箱相关配置 ----------------------------------------
+
+# devserver 监听端口
+DEV_SANDBOX_DEVSERVER_PORT: 8000
+# devserver 镜像
+DEV_SANDBOX_IMAGE: "bkpaas/dev-heroku-bionic:latest"
+
+# 启动沙箱的数量上限
+DEV_SANDBOX_COUNT_LIMIT: 5
+# 沙箱跨域访问源地址
+DEV_SANDBOX_CORS_ALLOW_ORIGINS: ""
+
+# code editor 监听端口
+DEV_SANDBOX_CODE_EDITOR_PORT: 8080
+# code editor 镜像
+DEV_SANDBOX_CODE_EDITOR_IMAGE: "codercom/code-server:4.9.0"
+
+# 沙箱部署集群，若不配置则使用默认集群
+DEV_SANDBOX_CLUSTER: ""
+
 ## ---------------------------------------- 资源限制配置 ----------------------------------------
 
 ## Web 模块默认副本数量，默认值：{'stag': 1, 'prod': 2}
@@ -808,8 +849,18 @@
 
 ## ---------------------------------------- Ingress 配置 ----------------------------------------
 
-## 不指定则使用默认，可以指定为 bk-ingress-nginx
-# APP_INGRESS_CLASS: ''
+## 当集群内存在多套 nginx controller 时, 需要设置 kubernetes.io/ingress.class 注解, 将 ingress 规则绑定到具体的 controller.
+## - APP_INGRESS_CLASS 是子域名/子路径/独立域名三种 ingress 默认的 ingress.class 配置
+## - CUSTOM_DOMAIN_INGRESS_CLASS 是独立域名特有的 ingress.class 配置, 优先级高于 APP_INGRESS_CLASS
+##
+## 配置项说明:
+## 如果集群中只有一套 nginx controller, 通过 APP_INGRESS_CLASS 设置注解值即可, 不需要再单独设置 CUSTOM_DOMAIN_INGRESS_CLASS;
+## 如果集群中有多套 nginx controller, 并且独立域名需要绑定具体 controller 时, 可以通过设置 CUSTOM_DOMAIN_INGRESS_CLASS 达到目的.
+## 以蓝鲸私有化版本架构为例, 其采用了两层 nginx controller(第一层向第二层转发请求). 可以通过设置 CUSTOM_DOMAIN_INGRESS_CLASS 将独立域名
+## 绑定到第一层的 controller, 而子路径通过设置 APP_INGRESS_CLASS 绑定到第二层的 controller.
+# APP_INGRESS_CLASS = ''
+# CUSTOM_DOMAIN_INGRESS_CLASS = ''
+
 
 ## ingress extensions/v1beta1 资源路径是否保留末尾斜杠，默认值为 true
 # APP_INGRESS_EXT_V1BETA1_PATH_TRAILING_SLASH: true
@@ -824,19 +875,6 @@
 ##    apiVersion 的支持，服务会报错
 ##  - 只能使用 <1.0 版本的 ingress-nginx
 # ENABLE_MODERN_INGRESS_SUPPORT: true
-
-## 应用独立域名相关配置
-# CUSTOM_DOMAIN_CONFIG:
-  ## 是否允许使用独立域名
-  # enabled: true
-  ## 允许用户配置的独立域名后缀列表，如果为空列表，允许任意独立域名
-  # valid_domain_suffixes: []
-  ## 是否允许用户修改独立域名相关配置，如果为 False，只能由管理员通过后台管理界面调整应用独立域名配置
-  # allow_user_modifications: true
-
-## 独立域名简化版配置，表示允许用户配置的独立域名后缀列表，为空表示允许任意域名
-## CUSTOM_DOMAIN_CONFIG 拥有更高的优先级
-# VALID_CUSTOM_DOMAIN_SUFFIXES: []
 
 ## ---------------------------------------- Egress 配置 ----------------------------------------
 

@@ -2,6 +2,14 @@
   <div class="nav-wrapper">
     <div :class="['title', 'pt15', { pb15: !navList.length }, { 'fixed-height': !navList.length }]">
       {{ title }}
+      <div
+        v-if="isMigrationProgress"
+        class="migration-progress"
+        @click.stop="handleShowAppMigrationDialog"
+      >
+        <i class="paasng-icon paasng-qianyi-mianxing" />
+        <span>{{ $t('迁移进度') }}</span>
+      </div>
       <!-- 模块列表 -->
       <div class="module-select-wrapper">
         <bk-select
@@ -67,9 +75,11 @@
     </div>
   </div>
 </template>
-<script>import { defineComponent, ref, watch } from 'vue';
+<script>
+import { defineComponent, ref, watch, computed, getCurrentInstance } from 'vue';
 import store from '@/store';
 import router from '@/router';
+import { traceIds } from '@/common/trace-ids';
 
 export default defineComponent({
   name: 'EditorStatus',
@@ -110,13 +120,29 @@ export default defineComponent({
         return [];
       },
     },
+    // 迁移进度
+    isMigrationProgress: {
+      type: Boolean,
+      default: false,
+    },
+    // 是否添加元素埋点
+    isTrace: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup(props, { emit }) {
     const curActive = ref(props.active || props.navList[0]?.name);
     const curModelName = ref(props.curModule.name || 'default');
+    const instance = getCurrentInstance();
     const route = router.currentRoute;
-
+    const curAppInfo = computed(() => store.state.curAppInfo);
     const handleTabChange = () => {
+      if (props.isTrace) {
+        const category = curAppInfo.value.application?.type === 'cloud_native' ? '云原生应用' : '普通应用';
+        const label = props.navList.find((item) => item.name === curActive.value).label;
+        instance.proxy.sendEventTracking({ id: traceIds[label], action: 'view', category });
+      }
       emit('change', curActive.value);
     };
 
@@ -125,7 +151,7 @@ export default defineComponent({
     };
 
     const handleChangeModule = (moduleName) => {
-      const module = props.moduleList.find(item => item.name === moduleName) || {};
+      const module = props.moduleList.find((item) => item.name === moduleName) || {};
       emit('change-module', module);
       store.commit('updateCurAppModule', module);
       // 根据模块刷新当前路由
@@ -139,10 +165,13 @@ export default defineComponent({
       });
     };
 
-    watch(() => props.navList, (list) => {
-      // 通过路径高亮tab
-      curActive.value = props.active || list[0]?.name;
+    watch([() => props.navList, () => props.active], ([newList, newActive]) => {
+      curActive.value = newActive || newList[0]?.name;
     });
+
+    const handleShowAppMigrationDialog = () => {
+      emit('migration-dialog', true);
+    };
 
     return {
       curActive,
@@ -150,6 +179,7 @@ export default defineComponent({
       handleTabChange,
       handleRightConfigClick,
       handleChangeModule,
+      handleShowAppMigrationDialog,
     };
   },
 });
@@ -189,6 +219,17 @@ export default defineComponent({
 
     &:hover {
       background: #eaebf0;
+    }
+  }
+  .migration-progress {
+    color: #3a84ff;
+    font-size: 12px;
+    cursor: pointer;
+    i {
+      margin-right: 5px;
+      margin-left: 14px;
+      font-size: 14px;
+      transform: translateY(0);
     }
   }
 }

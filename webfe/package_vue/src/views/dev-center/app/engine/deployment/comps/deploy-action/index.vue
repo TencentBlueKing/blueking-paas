@@ -273,7 +273,7 @@
             </p>
             <p class="deploy-text-wrapper">
               <span>
-                由 {{ lastDeploymentInfo.operator.username }} {{ $t('于') }} {{ lastDeploymentInfo.created }} {{ $t(' 手动停止部署') }}
+                {{ $t('由') }} {{ lastDeploymentInfo.operator.username }} {{ $t('于') }} {{ lastDeploymentInfo.created }} {{ $t(' 手动停止部署') }}
               </span>
               <span>
                 <bk-button
@@ -345,7 +345,7 @@
       >
         <div class="wrapper default-box">
           <div class="fl mr25">
-            {{ $t('当前版本：') }} {{ deploymentInfo.repo.version }}
+            {{ $t('当前版本') }}： {{ deploymentInfo.repo.version }}
           </div>
           <div
             v-if="!isLesscodeApp"
@@ -355,7 +355,7 @@
           </div>
           <div class="span fl" />
           <div class="fl">
-            {{ $t('由') }} {{ deploymentInfo.operator && deploymentInfo.operator.username }} {{ $t(' 于 ') }} {{ deploymentInfo.created }} {{ isAppOffline ? $t('下架') : $t('部署') }}
+            {{ $t('由') }} {{ deploymentInfo.operator && deploymentInfo.operator.username }} {{ $t('于') }} {{ deploymentInfo.created }} {{ isAppOffline ? $t('下架') : $t('部署') }}
           </div>
 
           <bk-dropdown-menu
@@ -421,7 +421,7 @@
                 v-for="(branch, index) in branchList"
                 :key="index"
                 class="option-group"
-                :name="branch.name"
+                :name="branch.displayName"
               >
                 <bk-button
                   ext-cls="paas-branch-btn"
@@ -1078,7 +1078,7 @@ import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployTimeline from '../deploy-timeline';
 import deployLog from '../deploy-log';
 import { bus } from '@/common/bus';
-// import { getActualLeft, getActualTop } from '@/common/utils'
+import { fileDownload } from '@/common/utils';
 
 export default {
   isBranchesLoading: true,
@@ -1577,6 +1577,7 @@ export default {
             branchesList.push({
               id: branch.type,
               name: branch.type,
+              displayName: branch.display_type,
               children: [obj],
             });
           } else {
@@ -3143,24 +3144,22 @@ export default {
     },
 
     /**
-             * 下载模板说明
-             */
-    handleDownloadTemplate() {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/sourcectl/init_template/`;
-      this.$http.post(url).then((resp) => {
-        const s3Address = resp.downloadable_address;
-        const a = document.createElement('a');
-        a.href = s3Address;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }, (resp) => {
+     * 下载模板说明
+     */
+    async handleDownloadTemplate() {
+      try {
+        const res = await this.$store.dispatch('getAppInitTemplateUrl', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+        fileDownload(res.downloadable_address);
+      } catch (e) {
         this.$paasMessage({
           limit: 1,
           theme: 'error',
           message: resp.detail || this.$t('服务暂不可用，请稍后再试'),
         });
-      });
+      }
     },
 
     dropdownShow() {
@@ -3214,7 +3213,7 @@ export default {
 
     getBranchInfoType() {
       const branchInfo = this.branchesMap[this.branchSelection];
-      this.branchInfoType = branchInfo.type;
+      this.branchInfoType = branchInfo.display_type;
     },
 
     async getLessCode() {

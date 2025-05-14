@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+import logging
 from operator import attrgetter
 from typing import Dict, List, Optional, Protocol, Tuple, Union
 
@@ -28,7 +27,7 @@ from elasticsearch_dsl.response import AggResponse, Response
 from elasticsearch_dsl.response.aggs import FieldBucketData
 
 from paasng.accessories.log.constants import DEFAULT_LOG_BATCH_SIZE
-from paasng.accessories.log.exceptions import LogQueryError, NoIndexError
+from paasng.accessories.log.exceptions import BkLogApiError, LogQueryError, NoIndexError
 from paasng.accessories.log.filters import (
     FieldFilter,
     agg_builtin_filters,
@@ -40,6 +39,8 @@ from paasng.accessories.log.models import BKLogConfig, ElasticSearchConfig, Elas
 from paasng.infras.bk_log.client import _APIGWOperationStub, make_bk_log_esquery_client
 from paasng.utils.es_log.misc import filter_indexes_by_time_range
 from paasng.utils.es_log.search import SmartSearch, SmartTimeRange
+
+logger = logging.getLogger(__name__)
 
 
 class LogClientProtocol(Protocol):
@@ -71,9 +72,9 @@ class LogClientProtocol(Protocol):
 class BKLogClient:
     """BKLogClient is an implement of LogClientProtocol, the log search backend is bk log search"""
 
-    def __init__(self, config: BKLogConfig, bk_username: str):
+    def __init__(self, config: BKLogConfig, tenant_id: str, bk_username: str):
         self.config = config
-        self._esclient = make_bk_log_esquery_client()
+        self._esclient = make_bk_log_esquery_client(tenant_id)
 
     def execute_search(self, index: str, search: SmartSearch, timeout: int) -> Tuple[Response, int]:
         """search log from index with body and params, implement with bk-log"""
@@ -105,7 +106,8 @@ class BKLogClient:
             resp = self._call_api(self._esclient.esquery_dsl, data=data, timeout=timeout)
 
         if not resp["result"]:
-            # 有可能是 scroll id 失效了, 反正抛异常就对了
+            # API 返回异常可能原因：scroll 失效，这里统一返回 ScanError，如果为空则设置为 none 防止类型异常
+            scroll_id = scroll_id or "none"
             raise ScanError(scroll_id, "Scroll request has failed on `{}`".format(resp["message"]))
 
         response = Response(search.search, resp["data"])
@@ -179,7 +181,11 @@ class BKLogClient:
             data["bkdata_authentication_method"] = self.config.bkdataAuthenticationMethod
         if self.config.bkdataDataToken:
             data["bkdata_data_token"] = self.config.bkdataDataToken
-        return method(data=data, timeout=timeout)
+        resp = method(data=data, timeout=timeout)
+        if not resp.get("result"):
+            logger.error(f"query bk log error: {resp['message']}")
+            raise BkLogApiError(resp["message"])
+        return resp
 
 
 class ESLogClient:
@@ -216,6 +222,8 @@ class ESLogClient:
                 ),
             )
         if not response.success():
+            # API 返回异常可能原因：scroll 失效，这里统一返回 ScanError，如果为空则设置为 none 防止类型异常
+            scroll_id = scroll_id or "none"
             failed = response._shards.failed
             total = response._shards.total
             raise ScanError(
@@ -267,7 +275,7 @@ class ESLogClient:
         # 当前假设同一批次的 index(类似 aa-2021.04.20,aa-2021.04.19) 拥有相同的 mapping, 因此直接获取最新的 mapping
         # 如果同一批次 index mapping 发生变化，可能会导致日志查询为空
         es_index = self._get_indexes(index, time_range, timeout)
-        all_mappings = self._client.indices.get_mapping(es_index, params={"request_timeout": timeout})
+        all_mappings = self._client.indices.get_mapping(index=es_index, params={"request_timeout": timeout})
         # 由于手动创建会没有 properties, 需要将无 properties 的 mappings 过滤掉
         all_not_empty_mappings = {
             key: mapping for key, mapping in all_mappings.items() if mapping["mappings"].get("properties")
@@ -285,7 +293,7 @@ class ESLogClient:
         # Note: 使用 stats 接口优化查询性能
         all_indexes = list(
             self._client.indices.stats(
-                index, metric="fielddata", params={"request_timeout": timeout, "level": "indices"}
+                index=index, metric="fielddata", params={"request_timeout": timeout, "level": "indices"}
             )["indices"].keys()
         )
         if filtered_indexes := filter_indexes_by_time_range(all_indexes, time_range=time_range):
@@ -306,11 +314,11 @@ class ESLogClient:
         ]
 
 
-def instantiate_log_client(log_config: ElasticSearchConfig, bk_username: str) -> LogClientProtocol:
+def instantiate_log_client(log_config: ElasticSearchConfig, tenant_id: str, bk_username: str) -> LogClientProtocol:
     """实例化 log client 实例"""
     if log_config.backend_type == "bkLog":
         assert log_config.bk_log_config
-        return BKLogClient(log_config.bk_log_config, bk_username=bk_username)
+        return BKLogClient(log_config.bk_log_config, tenant_id=tenant_id, bk_username=bk_username)
     elif log_config.backend_type == "es":
         assert log_config.elastic_search_host
         return ESLogClient(log_config.elastic_search_host)

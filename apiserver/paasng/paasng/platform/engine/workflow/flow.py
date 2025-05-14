@@ -1,21 +1,21 @@
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """Core components for deploy workflow"""
+
 import logging
 import time
 from contextlib import contextmanager
@@ -23,7 +23,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Optional
 
 import redis
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
@@ -48,6 +48,7 @@ from paasng.utils.error_message import find_coded_error_message
 if TYPE_CHECKING:
     from paasng.platform.engine.models.phases import DeployPhase
     from paasng.platform.engine.models.steps import DeployStep as DeployStepModel
+    from paasng.platform.sourcectl.models import VersionInfo
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +236,7 @@ class DeploymentCoordinator:
 
     def acquire_lock(self) -> bool:
         """Acquire lock to start a new deployment"""
-        if self.redis.set(self.key_name_lock, self.DEFAULT_TOKEN, nx=True, px=self.timeout_ms):
+        if self.redis.set(self.key_name_lock, self.DEFAULT_TOKEN, nx=True, px=self.timeout_ms):  # noqa: SIM103
             return True
         return False
 
@@ -250,7 +251,7 @@ class DeploymentCoordinator:
         def execute_release(pipe):
             if expected_deployment:
                 deployment_id = pipe.get(self.key_name_deployment)
-                if deployment_id and (force_text(deployment_id) != str(expected_deployment.pk)):
+                if deployment_id and (force_str(deployment_id) != str(expected_deployment.pk)):
                     raise ValueError(
                         f"deployment lock holder mismatch, found: {deployment_id}, expected: {expected_deployment.pk}"
                     )
@@ -263,6 +264,19 @@ class DeploymentCoordinator:
 
         self.redis.transaction(execute_release, self.key_name_deployment)
 
+    def release_if_polling_timed_out(self, expected_deployment: Deployment):
+        """release the deploy lock if status polling time out of the deployment"""
+        if (
+            (current_deployment := self.get_current_deployment())
+            and self.is_status_polling_timeout
+            and current_deployment.pk == expected_deployment.pk
+        ):
+            # Release deploy lock
+            try:
+                self.release_lock(expected_deployment=expected_deployment)
+            except ValueError as e:
+                logger.warning("Failed to release the deployment lock: %s", e)
+
     def set_deployment(self, deployment: Deployment):
         """Set current deployment"""
         self.redis.set(self.key_name_deployment, str(deployment.pk), px=self.timeout_ms)
@@ -272,12 +286,7 @@ class DeploymentCoordinator:
         """Get current deployment"""
         deployment_id = self.redis.get(self.key_name_deployment)
         if deployment_id:
-            # 若存在部署进程，但数据上报已经超时，则认为部署失败，主动解锁并失效
-            if self.status_polling_timeout:
-                self.release_lock()
-                return None
-
-            return Deployment.objects.get(pk=force_text(deployment_id))
+            return Deployment.objects.get(pk=force_str(deployment_id))
         return None
 
     def update_polling_time(self):
@@ -285,15 +294,15 @@ class DeploymentCoordinator:
         self.redis.set(self.key_name_latest_polling_time, time.time(), px=self.timeout_ms)
 
     @property
-    def status_polling_timeout(self) -> bool:
-        """检查报告时间是否超时"""
+    def is_status_polling_timeout(self) -> bool:
+        """检查报告时间是否超时. 目前用于 build 和 hook 流程的控制"""
         latest_polling_time = self.redis.get(self.key_name_latest_polling_time)
         # 如果没有上次报告状态时间，则认为未超时，并设置查询时间为上次报告时间
         if not latest_polling_time:
             self.update_polling_time()
             return False
 
-        return (time.time() - float(force_text(latest_polling_time))) > self.POLLING_TIMEOUT
+        return (time.time() - float(force_str(latest_polling_time))) > self.POLLING_TIMEOUT
 
     @contextmanager
     def release_on_error(self):
@@ -318,7 +327,7 @@ class DeployStep:
         self.engine_app = deployment.get_engine_app()
         self.module_environment = deployment.app_environment
         self.engine_client = EngineDeployClient(self.engine_app)
-        self.version_info = deployment.version_info
+        self.version_info: "VersionInfo" = deployment.version_info
 
         self.stream = stream or get_default_stream(deployment)
         self.state_mgr = DeploymentStateMgr(deployment=self.deployment, stream=self.stream, phase_type=self.phase_type)

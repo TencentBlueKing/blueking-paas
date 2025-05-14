@@ -1,22 +1,20 @@
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
-import json
 import logging
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -40,6 +38,9 @@ logger = logging.getLogger(__name__)
 def wrap_request_exc():
     try:
         yield
+    except requests.JSONDecodeError as e:
+        logger.exception("The response from pa is not valid JSON.")
+        raise PAClientException("response not JSON") from e
     except requests.RequestException as e:
         # Handle the potential NoneType of e.request
         request_info = e.request.url if e.request else "unknown"
@@ -47,9 +48,6 @@ def wrap_request_exc():
 
         error_msg = f"Something wrong happened when fetching {request_info}"
         raise PAClientException(error_msg) from e
-    except json.decoder.JSONDecodeError as e:
-        logger.exception(f"invalid json response: {e.doc}")
-        raise PAClientException(f"invalid json response: {e.doc}") from e
     except PAResponseError as e:
         logger.exception(f"invalid response({e.status_code}) from {e.request_url}.Detail: {e.response_text}")
         raise
@@ -316,8 +314,8 @@ class SiteMetricsClient:
         resp = self.pa_client.get_site_pv_config(
             site_name=self.site.name, metric_source_type=self.metric_source_type.value
         )
-        slz = slzs.PageViewConfigSLZ(data=resp, context={"region": self.site.region})
-        slz.is_valid(True)
+        slz = slzs.PageViewConfigSLZ(data=resp)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_total_page_view_metric_about_site(self, start_time: datetime.date, end_time: datetime.date):
@@ -328,7 +326,7 @@ class SiteMetricsClient:
             end_time=end_time,
         )
         slz = slzs.PageViewTotalMetricSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_metrics_dimension(
@@ -353,7 +351,7 @@ class SiteMetricsClient:
             interval=interval.value,
         )
         slz = slzs.MetricsDimensionSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_metrics_aggregate_by_interval_about_site(
@@ -372,7 +370,7 @@ class SiteMetricsClient:
             fill_missing_data=fill_missing_data,
         )
         slz = slzs.PageViewMetricTrendSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     ################
@@ -382,7 +380,7 @@ class SiteMetricsClient:
     def get_site_ce_config(self):
         resp = self.pa_client.get_site_ce_config(site_name=self.site.name)
         slz = slzs.CustomEventConfigSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_total_custom_event_metric_about_site(
@@ -396,7 +394,7 @@ class SiteMetricsClient:
             end_time=end_time,
         )
         slz = slzs.CustomEventTotalMetricSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_custom_event_overview(
@@ -418,7 +416,7 @@ class SiteMetricsClient:
             interval=interval.value,
         )
         slz = slzs.CustomEventOverviewTableSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_custom_event_detail(
@@ -444,7 +442,7 @@ class SiteMetricsClient:
             interval=interval.value,
         )
         slz = slzs.CustomEventDetailTableSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data
 
     def get_custom_event_trend_about_site(
@@ -462,5 +460,5 @@ class SiteMetricsClient:
             fill_missing_data=fill_missing_data,
         )
         slz = slzs.CustomEventMetricTrendSLZ(data=resp)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         return slz.validated_data

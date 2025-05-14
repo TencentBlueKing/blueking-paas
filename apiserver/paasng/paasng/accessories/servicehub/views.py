@@ -1,24 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
+from collections import defaultdict
 from typing import Any, Dict, List
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.http import Http404
@@ -27,32 +28,41 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.servicehub import serializers as slzs
+from paasng.accessories.servicehub.binding_policy.selector import PlanSelector
 from paasng.accessories.servicehub.exceptions import (
+    BindServicePlanError,
     ReferencedAttachmentNotFound,
     ServiceObjNotFound,
     SharedAttachmentAlreadyExists,
+    UnboundSvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.models import ServiceSetGroupByName
 from paasng.accessories.servicehub.remote.manager import (
     RemoteServiceInstanceMgr,
     RemoteServiceMgr,
     get_app_by_instance_name,
 )
 from paasng.accessories.servicehub.remote.store import get_remote_store
-from paasng.accessories.servicehub.services import ServiceObj, ServicePlansHelper, ServiceSpecificationHelper
+from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import ServiceCategory
-from paasng.core.region.models import get_all_regions
-from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.infras.accounts.constants import FunctionType
+from paasng.infras.accounts.models import make_verifier
+from paasng.infras.accounts.permissions.application import (
+    app_view_actions_perm,
+    application_perm_class,
+)
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.infras.sysapi_client.constants import ClientAction
+from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter
@@ -67,7 +77,6 @@ from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
-from paasng.utils.views import permission_classes as perm_classes
 
 logger = logging.getLogger(__name__)
 
@@ -103,9 +112,17 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
 class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与蓝鲸应用模块相关的增强服务接口"""
 
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {"unbind": AppAction.MANAGE_ADDONS_SERVICES},
+            default_action=AppAction.BASIC_DEVELOP,
+        ),
+    ]
+
     @staticmethod
     def get_service(service_id, application):
-        return mixed_service_mgr.get_or_404(service_id, region=application.region)
+        return mixed_service_mgr.get_or_404(service_id)
 
     def _get_application_by_code(self, application_code):
         application = get_object_or_404(Application, code=application_code)
@@ -115,23 +132,29 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @transaction.atomic
     @swagger_auto_schema(request_body=slzs.CreateAttachmentSLZ, response_serializer=slzs.ServiceAttachmentSLZ)
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def bind(self, request):
         """创建蓝鲸应用与增强服务的绑定关系"""
         serializer = slzs.CreateAttachmentSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         data = serializer.data
-        specs = data["specs"]
         application = self._get_application_by_code(data["code"])
         service_obj = self.get_service(data["service_id"], application)
         module = application.get_module(data.get("module_name", None))
 
         try:
-            rel_pk = mixed_service_mgr.bind_service(service_obj, module, specs)
-        except Exception as e:
+            rel_pk = mixed_service_mgr.bind_service(
+                service_obj,
+                module,
+                plan_id=data["plan_id"],
+                env_plan_id_map=data["env_plan_id_map"],
+            )
+        except BindServicePlanError as e:
+            logger.warning("No plans can be found for service %s, environment: %s.", service_obj.uuid, str(e))
+            raise error_codes.CANNOT_BIND_SERVICE.f(_("获取可用服务方案失败"))
+        except Exception:
             logger.exception("bind service %s to module %s error.", service_obj.uuid, module.name)
-            raise error_codes.CANNOT_BIND_SERVICE.f(f"{e}")
+            raise error_codes.CANNOT_BIND_SERVICE.f("Unknown error")
 
         for env in module.envs.all():
             for rel in mixed_service_mgr.list_unprovisioned_rels(env.engine_app, service_obj):
@@ -139,7 +162,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 if plan.is_eager:
                     rel.provision()
 
-        SERVICE_BIND_COUNTER.labels(service=service_obj.name, region=application.region).inc()
+        SERVICE_BIND_COUNTER.labels(service=service_obj.name).inc()
         serializer = slzs.ServiceAttachmentSLZ(
             {
                 "id": rel_pk,
@@ -148,11 +171,25 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "module_name": module.name,
             }
         )
+
+        add_app_audit_record(
+            app_code=application.code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.ENABLE,
+            target=OperationTarget.ADD_ON,
+            attribute=service_obj.name,
+            module_name=module.name,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=service_obj.config),
+        )
         return Response(serializer.data)
 
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def retrieve(self, request, code, module_name, service_id):
-        """查看应用模块与增强服务的绑定关系详情"""
+        """查看应用模块与增强服务的绑定关系详情。
+
+        - `plans` 字段包含每个环境的方案详情
+        """
         application = self.get_application()
         module = self.get_module_via_path()
         service = self.get_service(service_id, application)
@@ -162,55 +199,66 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise Http404
 
         results = []
+        plans = {}
         for env in module.envs.all():
             for rel in mixed_service_mgr.list_provisioned_rels(env.engine_app, service=service):
                 instance = rel.get_instance()
-                plan = rel.get_plan()
                 results.append(
                     {
                         "service_instance": instance,
                         "environment": env.environment,
                         "environment_name": AppEnvName.get_choice_label(env.environment),
-                        "service_specs": plan.specifications,
                         "usage": "{}",
                     }
                 )
-        serializer = slzs.ServiceInstanceInfoSLZ(results, many=True)
-        return Response({"count": len(results), "results": serializer.data})
 
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
-    def retrieve_specs(self, request, code, module_name, service_id):
-        """获取应用已绑定的服务规格"""
+            for rel in mixed_service_mgr.list_all_rels(env.engine_app, service_id=service.uuid):
+                plans[env.environment] = slzs.PlanForDisplaySLZ(rel.get_plan()).data
+                # Only read the first one
+                break
+
+        serializer = slzs.ServiceInstanceInfoSLZ(results, many=True)
+        return Response({"count": len(results), "results": serializer.data, "plans": plans})
+
+    @swagger_auto_schema(response_serializer=slzs.PossiblePlansOutputSLZ)
+    def list_possible_plans(self, request, code, module_name, service_id):
+        """获取应用模块绑定服务时，可能的方案详情，主要由客户端在绑定前调用。关键逻辑：
+
+        - 当 `has_multiple_plans` 为 False 时，无需其他操作，可直接继续完成绑定
+        - 当 `has_multiple_plans` 为 True 时，表示存在多个可选方案，此时需要引导用户完成选择
+            - `static_plans` 非空时：表示所有环境的方案一致，使用该列表作为可选项
+            - `env_specific_plans` 非空时：表示不同环境的方案不一致，使用该字典作为可选项，此时
+              可能需要区分环境来展示多个可选项
+        """
         application = self.get_application()
         module = self.get_module_via_path()
         service = self.get_service(service_id, application)
 
-        # 如果模块与增强服务之间没有绑定关系，直接返回 404 状态码
-        if not mixed_service_mgr.module_is_bound_with(service, module):
-            raise Http404
+        possible_plans = PlanSelector().list_possible_plans(service, module)
+        has_multi = possible_plans.has_multiple_plans()
+        if not has_multi:
+            # 当不存在多个可选方案时，无需返回更多信息，因为可以直接完成绑定
+            slz = slzs.PossiblePlansOutputSLZ({"has_multiple_plans": False})
+            return Response(slz.data)
 
-        specs = {}
-        for env in module.envs.all():
-            for rel in mixed_service_mgr.list_all_rels(env.engine_app, service_id=service_id):
-                plan = rel.get_plan()
-                specs = plan.specifications
-                break  # 现阶段所有环境的服务规格一致，因此只需要拿一个
+        def _plans_to_data(plans):
+            return [{"uuid": p.uuid, "name": p.name, "description": p.description} for p in plans]
 
-        results = []
-        # 拼接描述,免得前端请求多个接口
-        for definition in service.specifications:
-            result = definition.as_dict()
-            result["value"] = specs.get(definition.name)
-            results.append(result)
+        # Set the plans data
+        data: Dict[str, Any] = {"has_multiple_plans": has_multi}
+        if static_plans := possible_plans.get_static_plans():
+            data["static_plans"] = _plans_to_data(static_plans)
+        elif env_plans := possible_plans.get_env_specific_plans():
+            data["env_specific_plans"] = {env: _plans_to_data(plans) for env, plans in env_plans.items()}
 
-        slz = slzs.ServicePlanSpecificationSLZ(results, many=True)
-        return Response({"results": slz.data})
+        slz = slzs.PossiblePlansOutputSLZ(data)
+        return Response(slz.data)
 
-    @perm_classes([application_perm_class(AppAction.MANAGE_ADDONS_SERVICES)], policy="merge")
     def unbind(self, request, code, module_name, service_id):
         """删除一个服务绑定关系"""
         application = self._get_application_by_code(code)
         module = application.get_module(module_name)
+        service = self.get_service(service_id, application)
 
         # Check if application was protected
         raise_if_protected(application, ProtectedRes.SERVICES_MODIFICATIONS)
@@ -229,7 +277,33 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_DESTROY_SERVICE.f(f"{e}")
 
         module_attachment.delete()
+
+        add_app_audit_record(
+            app_code=code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_ADDONS_SERVICES,
+            operation=OperationEnum.DISABLE,
+            target=OperationTarget.ADD_ON,
+            attribute=service.name,
+            module_name=module_name,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=service.config if service else None),
+        )
         return Response(status=status.HTTP_200_OK)
+
+    def list_provisioned_env_keys(self, request, code, module_name):
+        """获取已经生效的增强服务环境变量 KEY"""
+        module = self.get_module_via_path()
+
+        # env_key_dict 内容示例： {"svc_name": ["key1", "key2"]}
+        env_key_dict: Dict[str, List[str]] = {}
+        for env in module.get_envs():
+            env_key_dict = {
+                **env_key_dict,
+                **ServiceSharingManager(env.module).get_enabled_env_keys(env),
+                **mixed_service_mgr.get_enabled_env_keys(env.engine_app),
+            }
+        return Response(data=env_key_dict)
 
 
 class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -247,53 +321,37 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def retrieve(self, request, service_id):
         """获取服务详细信息"""
-        service = mixed_service_mgr.get_without_region(uuid=service_id)
+        service = mixed_service_mgr.get(uuid=service_id)
         serializer = self.serializer_class(service)
         return Response({"result": serializer.data})
 
-    def list_by_template(self, request, region, template):
+    def list_by_template(self, request, template):
         """根据初始模板获取相关增强服务"""
         tmpl = Template.objects.get(name=template, type=TemplateType.NORMAL)
         services = {}
-        for name, info in tmpl.preset_services_config.items():
+        for name in tmpl.preset_services_config:
+            # INFO: 之前的版本会读取 preset_services_config 中的 value 作为服务信息，用来
+            # 当成 Specs 来筛选服务的 Plan，目前已废弃。
             try:
-                service = mixed_service_mgr.find_by_name(name, region)
+                service = mixed_service_mgr.find_by_name(name)
             except ServiceObjNotFound:
                 logger.exception("Failed to get enhanced service <%s> preset in template <%s>", name, template)
                 continue
 
-            helper = ServiceSpecificationHelper.from_service_public_specifications(service)
-            slz = slzs.ServiceWithSpecsSLZ(
+            slz = slzs.ServiceSimpleFieldsSLZ(
                 {
                     "uuid": service.uuid,
                     "name": service.name,
                     "display_name": service.display_name,
                     "description": service.description,
                     "category": service.category,
-                    "specs": helper.format_given_specs(info.get("specs", {})),
                 }
             )
             services[service.name] = slz.data
 
         return Response({"result": services})
 
-    def list_by_region(self, request, region):
-        """根据region获取所有增强服务"""
-        results = []
-        for category in ServiceCategory.objects.order_by("sort_priority").all():
-            services = []
-            for service in mixed_service_mgr.list_by_category(region=region, category_id=category.id):
-                if not service.is_visible:
-                    continue
-
-                services.append(service)
-
-            if services:
-                results.append({"category": category, "services": services})
-        serializer = slzs.ServiceCategoryByRegionSLZ(results, many=True)
-        return Response({"count": len(results), "results": serializer.data})
-
-    @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ)
+    @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ())
     def list_related_apps(self, request, service_id):
         """获取服务绑定的所有应用"""
         serializer = slzs.ServiceAttachmentQuerySLZ(data=request.query_params)
@@ -302,15 +360,14 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         param = serializer.data
         application_ids = list(Application.objects.filter_by_user(request.user).values_list("id", flat=True))
 
-        service = mixed_service_mgr.get_without_region(uuid=service_id)
+        service = mixed_service_mgr.get(uuid=service_id)
         qs = mixed_service_mgr.get_provisioned_queryset(service, application_ids=application_ids).order_by(
             param["order_by"]
         )
 
         page = self.paginator.paginate_queryset(qs, self.request, view=self)
         page_data = []
-        # TODO: 查询结果里面同一个应用如果有多个 Module，就会在结果集中出现多次。应该升级为同时返回应用
-        # 与模块信息，前端也需要同时升级。
+        # 增强服务按模块级别启用，故需要同时返回应用信息与模块信息
         for obj in page:
             _data = {
                 "id": obj.pk,
@@ -328,7 +385,6 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         获取应用的服务(已启用&未启用)
         [Deprecated] use list_by_module instead
         """
-        application = self.get_application()
         module = self.get_module_via_path()
         category = get_object_or_404(ServiceCategory, pk=category_id)
 
@@ -337,9 +393,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         shared_services = [info.service for info in shared_infos]
         bound_services = list(mixed_service_mgr.list_binded(module, category_id=category.id))
 
-        services_in_category = list(
-            mixed_service_mgr.list_by_category(region=application.region, category_id=category.id)
-        )
+        services_in_category = list(mixed_service_mgr.list_by_category(category_id=category.id))
         unbound_services = []
         for svc in services_in_category:
             if svc in bound_services or svc in shared_services:
@@ -361,7 +415,6 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def list_by_module(self, request, code, module_name):
         """获取指定模块所有分类的应用增强服务(已启用&未启用)"""
-        application = self.get_application()
         module = self.get_module_via_path()
 
         # Query shared / bound services
@@ -369,9 +422,9 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         shared_services = [info.service for info in shared_infos]
         bound_services = list(mixed_service_mgr.list_binded(module))
 
-        services_in_region = list(mixed_service_mgr.list_by_region(region=application.region))
+        services = list(mixed_service_mgr.list_visible())
         unbound_services = []
-        for svc in services_in_region:
+        for svc in services:
             if svc in bound_services or svc in shared_services:
                 continue
             unbound_services.append(svc)
@@ -395,7 +448,6 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     "module": shared_info.module,
                     "ref_module": shared_info.ref_module,
                     "provision_infos": ref_svc_allocation["provision_infos"],
-                    "specifications": ref_svc_allocation["specifications"],
                 }
             )
 
@@ -411,7 +463,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def _gen_service_obj_allocations(module: Module, services: List[ServiceObj]) -> Dict[str, Any]:
         """生成服务对象分配信息"""
         svc_allocation_map: Dict[str, Dict[str, Any]] = {
-            svc.uuid: {"service": svc, "provision_infos": {}, "specifications": []} for svc in services
+            svc.uuid: {"service": svc, "provision_infos": {}, "plans": {}} for svc in services
         }
         for env in module.get_envs():
             rels = mixed_service_mgr.list_all_rels(env.engine_app)
@@ -423,18 +475,7 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 alloc = svc_allocation_map[svc.uuid]
                 # 补充实例分配信息
                 alloc["provision_infos"][env.environment] = rel.is_provisioned()
-
-                # 现阶段所有环境的服务规格一致，若某环境已经获取到配置参数信息，则跳过以免重复
-                if alloc["specifications"]:
-                    continue
-
-                # 补充配置参数信息
-                specs = rel.get_plan().specifications
-                for definition in alloc["service"].specifications:
-                    result = definition.as_dict()
-                    result["value"] = specs.get(definition.name)
-                    alloc["specifications"].append(result)
-
+                alloc["plans"][env.environment] = rel.get_plan()
         return svc_allocation_map
 
 
@@ -450,72 +491,43 @@ class ServiceSetViewSet(viewsets.ViewSet):
         return paginator
 
     def list_by_category(self, request, category_id):
-        """
-        根据增强服务分类，查询该分类下的所有增强服务(不区分 region)
-        """
+        """根据增强服务分类，查询该分类下的所有增强服务。"""
         # 保证 category 存在
         category = get_object_or_404(ServiceCategory, pk=category_id)
-        all_regions = list(get_all_regions().keys())
-
-        service_sets: Dict[str, ServiceSetGroupByName] = {}
-        for region in all_regions:
-            services: List[ServiceObj] = list(
-                mixed_service_mgr.list_by_category(region=region, category_id=category.id)
-            )
-            for service in services:
-                service_set = service_sets.setdefault(service.name, ServiceSetGroupByName.from_service(service))
-                # 初始化 ServiceSet
-                service_set.services.append(service)
-                service_set.add_enabled_region(region)
-
+        services: List[ServiceObj] = list(mixed_service_mgr.list_by_category(category_id=category.id))
         return Response(
             {
-                "count": len(service_sets),
-                "results": slzs.ServiceSetGroupByNameSLZ(service_sets.values(), many=True).data,
-                "regions": all_regions,
+                "count": len(services),
+                "results": slzs.ServiceWithInstsSLZ(services, many=True).data,
             }
         )
 
-    @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ)
+    @swagger_auto_schema(query_serializer=slzs.ServiceAttachmentQuerySLZ())
     def list_by_name(self, request, service_name):
-        """
-        根据增强服务的英文名字，查询所有命名为该名字的增强服务(不区分 region), 并带上绑定服务的实例信息
-        """
+        """根据增强服务的英文名字，查询所有命名为该名字的增强服务, 并带上绑定服务的实例信息"""
         # 查询用户具有权限的应用id列表
         application_ids = list(UserApplicationFilter(request.user).filter().values_list("id", flat=True))
-        all_regions = get_all_regions().keys()
 
         serializer = slzs.ServiceAttachmentQuerySLZ(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         param = serializer.data
 
-        service_set = None
-
-        for region in all_regions:
-            try:
-                service = mixed_service_mgr.find_by_name(region=region, name=service_name)
-                if not service_set:
-                    service_set = ServiceSetGroupByName.from_service(service)
-
-                # 初始化 service_set
-                service_set.services.append(service)
-                service_set.add_enabled_region(region)
-            except ServiceObjNotFound:
-                continue
-
-        if not service_set:
+        try:
+            service = mixed_service_mgr.find_by_name(name=service_name)
+        except ServiceObjNotFound:
             raise Http404(f"{service_name} not found")
 
         # 查询与 Services 绑定的 Module
-        qs = mixed_service_mgr.get_provisioned_queryset_by_services(
-            service_set.services, application_ids=application_ids
-        ).order_by(param["order_by"])
+        qs = mixed_service_mgr.get_provisioned_queryset(service, application_ids=application_ids).order_by(
+            param["order_by"]
+        )
 
+        instances = []
         page = self.paginator.paginate_queryset(qs, self.request, view=self)
         # TODO: 查询结果里面同一个应用如果有多个 Module，就会在结果集中出现多次。应该升级为同时返回应用
         # 与模块信息，前端也需要同时升级。
         for obj in page:
-            service_set.instances.append(
+            instances.append(
                 {
                     "id": obj.pk,
                     "application": obj.module.application,
@@ -526,42 +538,26 @@ class ServiceSetViewSet(viewsets.ViewSet):
                     "region": obj.module.region,
                 }
             )
-        return self.paginator.get_paginated_response(slzs.ServiceSetGroupByNameSLZ(service_set).data)
-
-
-class ServicePlanViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
-
-    @swagger_auto_schema(Response={200: slzs.ServiceSpecificationSLZ}, tags=["增强服务"])
-    def retrieve_specifications(self, request, service_id, region):
-        """获取一个增强服务的规格组合"""
-
-        service = mixed_service_mgr.get_or_404(service_id, region=region)
-        plan_helper = ServicePlansHelper.from_service(service)
-        definitions = service.public_specifications
-        helper = ServiceSpecificationHelper(definitions, list(plan_helper.get_by_region(region)))
-        slz = slzs.ServiceSpecificationSLZ(
-            dict(
-                definitions=definitions,
-                recommended_values=helper.get_recommended_spec().values(),
-                values=helper.list_plans_spec_value(),
-            )
-        )
-
-        return Response(slz.data)
+        service.instances = instances  # type: ignore
+        return self.paginator.get_paginated_response(slzs.ServiceWithInstsSLZ(service).data)
 
 
 class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     """与共享增强服务有关的接口"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {"destroy": AppAction.MANAGE_ADDONS_SERVICES},
+            default_action=AppAction.BASIC_DEVELOP,
+        ),
+    ]
 
     @staticmethod
     def get_service(service_id, application):
-        return mixed_service_mgr.get_or_404(service_id, region=application.region)
+        return mixed_service_mgr.get_or_404(service_id)
 
     @swagger_auto_schema(tags=["增强服务"], response_serializer=MinimalModuleSLZ(many=True))
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def list_shareable(self, request, code, module_name, service_id):
         """查看所有可被共享的模块
 
@@ -575,7 +571,6 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(
         tags=["增强服务"], request_body=slzs.CreateSharedAttachmentsSLZ, responses={201: openapi_empty_response}
     )
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def create_shared(self, request, code, module_name, service_id):
         """创建增强服务共享关系
 
@@ -611,7 +606,6 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response({}, status.HTTP_201_CREATED)
 
     @swagger_auto_schema(tags=["增强服务"], response_serializer=slzs.SharedServiceInfoSLZ)
-    @perm_classes([application_perm_class(AppAction.BASIC_DEVELOP)], policy="merge")
     def retrieve(self, request, code, module_name, service_id):
         """查看已创建的共享关系
 
@@ -625,7 +619,6 @@ class ServiceSharingViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(slzs.SharedServiceInfoSLZ(info).data)
 
     @swagger_auto_schema(tags=["增强服务"], responses={204: openapi_empty_response})
-    @perm_classes([application_perm_class(AppAction.MANAGE_ADDONS_SERVICES)], policy="merge")
     def destroy(self, request, code, module_name, service_id):
         """解除共享关系
 
@@ -644,7 +637,7 @@ class SharingReferencesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @staticmethod
     def get_service(service_id, application):
-        return mixed_service_mgr.get_or_404(service_id, region=application.region)
+        return mixed_service_mgr.get_or_404(service_id)
 
     @swagger_auto_schema(tags=["增强服务"], response_serializer=MinimalModuleSLZ(many=True))
     def list_related_modules(self, request, code, module_name, service_id):
@@ -660,7 +653,7 @@ class SharingReferencesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
 
 class RelatedApplicationsInfoViewSet(viewsets.ViewSet):
-    permission_classes = [site_perm_class(SiteAction.SYSAPI_READ_APPLICATIONS)]
+    permission_classes = [sysapi_client_perm_class(ClientAction.READ_APPLICATIONS)]
 
     def retrieve_related_applications_info(self, request, db_name):
         """查看 mysql 增强服务的数据库关联的应用信息
@@ -686,7 +679,7 @@ class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathM
         """查看增强服务是否导入环境变量"""
         module = self.get_module_via_path()
         envs = module.envs.all()
-        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
+        service_obj = mixed_service_mgr.get_or_404(service_id)
         engine_app_attachments = [
             mixed_service_mgr.get_attachment_by_engine_app(service_obj, env.engine_app) for env in envs
         ]
@@ -698,16 +691,112 @@ class ServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathM
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        credentials_disabled = data["credentials_disabled"]
+        credentials_enabled = data["credentials_enabled"]
 
         module = self.get_module_via_path()
         envs = module.envs.all()
-        service_obj = mixed_service_mgr.get_or_404(service_id, self.get_application().region)
+        service_obj = mixed_service_mgr.get_or_404(service_id)
         results = []
         for env in envs:
             attachment = mixed_service_mgr.get_attachment_by_engine_app(service_obj, env.engine_app)
-            attachment.credentials_disabled = credentials_disabled
-            attachment.save(update_fields=["credentials_disabled"])
+            attachment.credentials_enabled = credentials_enabled
+            attachment.save(update_fields=["credentials_enabled"])
             results.append(attachment)
 
         return Response(slzs.ServiceEngineAppAttachmentSLZ(results, many=True).data)
+
+
+class UnboundServiceEngineAppAttachmentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """已解绑待回收增强服务实例相关API"""
+
+    permission_classes = [
+        IsAuthenticated,
+        app_view_actions_perm(
+            {"list_by_module": AppAction.BASIC_DEVELOP},
+            default_action=AppAction.MANAGE_ADDONS_SERVICES,
+        ),
+    ]
+
+    @swagger_auto_schema(tags=["增强服务"], response_serializer=slzs.UnboundServiceEngineAppAttachmentSLZ(many=True))
+    def list_by_module(self, request, code, module_name):
+        """查看模块所有已解绑增强服务实例，按增强服务归类"""
+        module = self.get_module_via_path()
+
+        categorized_rels = defaultdict(list)
+        for env in module.envs.all():
+            for rel in mixed_service_mgr.list_unbound_instance_rels(env.engine_app):
+                instance = rel.get_instance()
+                if not instance:
+                    # 如果已经回收了，获取不到 instance，跳过
+                    continue
+
+                categorized_rels[str(rel.db_obj.service_id)].append(
+                    {
+                        "instance_id": rel.db_obj.service_instance_id,
+                        "service_instance": instance,
+                        "environment": env.environment,
+                        "environment_name": AppEnvName.get_choice_label(env.environment),
+                    }
+                )
+
+        results = []
+        for service_id, rels in categorized_rels.items():
+            results.append({"service": mixed_service_mgr.get_or_404(service_id), "unbound_instances": rels})
+
+        serializer = slzs.UnboundServiceEngineAppAttachmentSLZ(results, many=True)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(tags=["增强服务"], query_serializer=slzs.DeleteUnboundServiceEngineAppAttachmentSLZ)
+    def delete(self, request, code, module_name, service_id):
+        """回收已解绑增强服务"""
+        slz = slzs.DeleteUnboundServiceEngineAppAttachmentSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        service_obj = mixed_service_mgr.get_or_404(service_id)
+        try:
+            unbound_instance = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(
+                service_obj, data["instance_id"]
+            )
+        except UnboundSvcAttachmentDoesNotExist:
+            raise Http404
+
+        unbound_instance.recycle_resource()
+
+        return Response()
+
+    @swagger_auto_schema(tags=["增强服务"], request_body=slzs.RetrieveUnboundServiceSensitiveFieldSLZ)
+    def retrieve_sensitive_field(self, request, code, module_name, service_id):
+        """验证验证码查看解绑实例的敏感信息字段"""
+        serializer = slzs.RetrieveUnboundServiceSensitiveFieldSLZ(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        # 验证验证码
+        if settings.ENABLE_VERIFICATION_CODE:
+            verifier = make_verifier(request.session, FunctionType.RETRIEVE_UNBOUND_SERVICE_SENSITIVE_FIELD.value)
+            is_valid = verifier.validate(data["verification_code"])
+            if not is_valid:
+                raise ValidationError({"verification_code": [_("验证码错误")]})
+        # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
+        else:
+            logger.warning(
+                "Verification code functionality is not currently supported. Returning the sensitive field directly."
+            )
+
+        service_obj = mixed_service_mgr.get_or_404(service_id)
+
+        try:
+            unbound_instance_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(
+                service_obj, data["instance_id"]
+            )
+        except UnboundSvcAttachmentDoesNotExist:
+            raise Http404
+
+        instance = unbound_instance_rel.get_instance()
+        if not instance:
+            raise NotFound(detail="Resource has been recycled.", code=404)
+
+        credentials = instance.credentials
+        if data["field_name"] in instance.should_remove_fields and data["field_name"] in credentials:
+            return Response(credentials[data["field_name"]])
+        return Response()

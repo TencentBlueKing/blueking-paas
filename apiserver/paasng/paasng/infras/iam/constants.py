@@ -1,22 +1,21 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-from blue_krill.data_types.enum import StructuredEnum
+from blue_krill.data_types.enum import IntStructuredEnum, StrStructuredEnum
 
 from paasng.platform.applications.constants import ApplicationRole
 
@@ -42,7 +41,7 @@ FETCH_USER_GROUP_MEMBERS_LIMIT = 10000
 LIST_GRADE_MANAGERS_LIMIT = 15000
 
 
-class ResourceType(str, StructuredEnum):
+class ResourceType(StrStructuredEnum):
     """
     iam 上注册的资源类型
     """
@@ -62,7 +61,7 @@ class ResourceType(str, StructuredEnum):
     BkLogEsSource = "es_source"
 
 
-class IAMErrorCodes(int, StructuredEnum):
+class IAMErrorCodes(IntStructuredEnum):
     """
     iam api 返回错误码
     https://bk.tencent.com/docs/document/7.0/236/39801
@@ -137,8 +136,3 @@ APP_MINI_ACTIONS_IN_BK_LOG = {
         ],
     },
 }
-
-
-# 由于权限中心的用户组授权为异步行为，即创建用户组，添加用户，对组授权后需要等待一段时间（10-20秒左右）才能鉴权
-# 因此需要在应用创建后的一定的时间内，对创建者（拥有应用最高权限）的操作进行权限豁免以保证功能可正常使用
-PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP = 5 * 60

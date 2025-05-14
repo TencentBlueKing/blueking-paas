@@ -1,46 +1,45 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Type
 
 from attrs import define, field, validators
 from bkpaas_auth.core.encoder import user_id_encoder
-from blue_krill.data_types.enum import EnumField, StructuredEnum
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.conf import settings
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from iam.exceptions import AuthAPIError
 
-from paasng.infras.iam.constants import PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP, ResourceType
+from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.permissions.perm import PermCtx, Permission, ResCreatorAction, validate_empty
 from paasng.infras.iam.permissions.request import ResourceRequest
 
 logger = logging.getLogger(__name__)
 
 
-class AppAction(str, StructuredEnum):
+class AppAction(StrStructuredEnum):
     """蓝鲸 PaaS 应用相关权限"""
 
     # 应用基础信息查看
     VIEW_BASIC_INFO = EnumField("view_basic_info", label=_("基础信息查看"))
-    # 应用基础信息编辑（含文档管理）s
+    # 应用基础信息编辑（含文档管理）
     EDIT_BASIC_INFO = EnumField("edit_basic_info", label=_("基础信息编辑"))
     # 应用删除/下架
     DELETE_APPLICATION = EnumField("delete_application", label=_("应用删除"))
@@ -225,7 +224,7 @@ class ApplicationPermission(Permission):
         # 因此在应用创建后的短时间内，需特殊豁免以免在列表页无法查询到最新的应用
         perm_exempt_filter = Q(
             owner=user_id_encoder.encode(settings.USER_TYPE, request.subject.id),
-            created__gt=datetime.now() - timedelta(seconds=PERM_EXEMPT_TIME_FOR_OWNER_AFTER_CREATE_APP),
+            created__gt=datetime.now() - timedelta(seconds=settings.IAM_PERM_EFFECTIVE_TIMEDELTA),
         )
         if not filters:
             return perm_exempt_filter

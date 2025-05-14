@@ -158,4 +158,7 @@ export default {
     color: #f5222d;
   }
 }
+.bk-form-warp /deep/ .bk-form-item .bk-form-content .bk-select {
+  background-color: #fff;
+}
 </style>

@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-import json
 import logging
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -49,6 +47,9 @@ class BkAppSecret:
 def wrap_request_exc():
     try:
         yield
+    except requests.JSONDecodeError as e:
+        logger.exception("The response from bk-oauth is not valid JSON.")
+        raise BkOauthApiException("response not JSON") from e
     except requests.RequestException as e:
         # Handle the potential NoneType of e.request
         request_info = e.request.url if e.request else "unknown"
@@ -57,9 +58,6 @@ def wrap_request_exc():
 
         error_msg = f"Something wrong happened when fetching {request_info}"
         raise BkOauthApiException(error_msg) from e
-    except json.decoder.JSONDecodeError as e:
-        logger.exception(f"invalid json response: {e.doc}")
-        raise BkOauthApiException(f"invalid json response: {e.doc}") from e
     except BkOauthApiResponseError as e:
         logger.exception(
             "invalid response(%s) from %s ,request_id: %s ,Detail: %s",
@@ -90,13 +88,14 @@ class BkOauthClient:
                 request_id=resp.headers.get("x-request-id") or "",
             )
 
-    def create_client(self, bk_app_code: str):
+    def create_client(self, bk_app_code: str, app_tenant_mode: str, app_tenant_id: str):
         """创建 OAuth 应用默认会生成对应的 bk_app_secret"""
         url = f"{self.bk_oauth_url}/api/v1/apps"
         data = {
             "bk_app_code": bk_app_code,
             # BKAuth 未提供修改 name 的 API，name 也必须唯一，故 name 的值也是用 bk_app_code
             "name": bk_app_code,
+            "bk_tenant": {"mode": app_tenant_mode, "id": app_tenant_id},
         }
         with wrap_request_exc():
             resp = requests.post(url, json=data, headers=self.headers)

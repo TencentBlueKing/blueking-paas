@@ -1,49 +1,76 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from dataclasses import dataclass
-from typing import Optional
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.entities import Resources, Runtime, Status
+from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_WORKSPACE
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvKey, DevSandboxStatus
+from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Runtime, SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.kres_slzs import DevSandboxDeserializer, DevSandboxSerializer
+from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_name
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 
 
 @dataclass
 class DevSandbox(AppEntity):
-    """DevSandbox entity"""
+    """开发沙箱"""
 
+    # 唯一标识
+    code: str
+    # 镜像，环境变量等信息
     runtime: Runtime
-    resources: Optional[Resources] = None
+    # 源码相关配置
+    source_code_cfg: SourceCodeConfig
+    # 代码编辑器配置
+    code_editor_cfg: CodeEditorConfig | None = None
     # 部署后, 从集群中获取状态
-    status: Optional[Status] = None
+    status: str = DevSandboxStatus.PENDING
 
     class Meta:
-        kres_class = kres.KDeployment
+        kres_class = kres.KPod
         serializer = DevSandboxSerializer
         deserializer = DevSandboxDeserializer
 
     @classmethod
-    def create(cls, dev_wl_app: WlApp, runtime: Runtime, resources: Optional[Resources] = None) -> "DevSandbox":
-        return cls(app=dev_wl_app, name=get_dev_sandbox_name(dev_wl_app), runtime=runtime, resources=resources)
+    def create(
+        cls,
+        wl_app: WlApp,
+        code: str,
+        token: str,
+        runtime: Runtime,
+        source_code_cfg: SourceCodeConfig,
+        code_editor_cfg: CodeEditorConfig | None = None,
+    ) -> "DevSandbox":
+        # 注入特殊环境变量
 
+        # 沙箱服务
+        runtime.envs[DevSandboxEnvKey.WORKSPACE] = DEV_SANDBOX_WORKSPACE
+        runtime.envs[DevSandboxEnvKey.TOKEN] = token
+        # 源代码信息
+        runtime.envs[DevSandboxEnvKey.SOURCE_FETCH_METHOD] = str(source_code_cfg.source_fetch_method)
+        runtime.envs[DevSandboxEnvKey.SOURCE_FETCH_URL] = source_code_cfg.source_fetch_url or ""
 
-def get_dev_sandbox_name(dev_wl_app: WlApp) -> str:
-    return dev_wl_app.scheduler_safe_name
+        return cls(
+            app=wl_app,
+            name=get_dev_sandbox_name(wl_app),
+            code=code,
+            runtime=runtime,
+            source_code_cfg=source_code_cfg,
+            code_editor_cfg=code_editor_cfg,
+        )

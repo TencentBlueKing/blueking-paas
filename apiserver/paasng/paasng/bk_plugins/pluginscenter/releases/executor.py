@@ -1,26 +1,29 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from blue_krill.async_utils.django_utils import apply_async_on_commit
 from django.utils.translation import gettext as _
 
 from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
+from paasng.bk_plugins.pluginscenter.handlers import post_save, update_release_status_when_stage_status_change
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.client import ItsmClient
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ItsmTicketStatus
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.utils import get_ticket_status, submit_canary_release_ticket
 from paasng.bk_plugins.pluginscenter.models import PluginRelease
 from paasng.bk_plugins.pluginscenter.releases.stages import init_stage_controller
 from paasng.bk_plugins.pluginscenter.tasks import poll_stage_status
@@ -43,7 +46,10 @@ class PluginReleaseExecutor:
         if not is_success:
             raise error_codes.EXECUTE_STAGE_ERROR.f(_("同步版本信息失败, 不能新建版本"))
 
-        self.execute_current_stage(operator=operator)
+        if self.release.current_stage.invoke_method == constants.ReleaseStageInvokeMethod.CANARY_WITH_ITSM:
+            self.execute_gray_release(operator=operator)
+        else:
+            self.execute_current_stage(operator=operator)
 
     def enter_next_stage(self, operator: str):
         """进入下一个发布阶段: 切换 release.current_stage 至 next_stage 并执行
@@ -172,4 +178,32 @@ class PluginReleaseExecutor:
             and current_stage.status in constants.PluginReleaseStatus.running_status()
         ):
             raise error_codes.CANNOT_CANCEL_RELEASE.f(_("请到 ITSM 撤回审批单据"))
+
+        if current_stage.invoke_method == constants.ReleaseStageInvokeMethod.CANARY_WITH_ITSM:
+            latest_release_strategy = self.release.latest_release_strategy
+            if latest_release_strategy and latest_release_strategy.itsm_detail:
+                ticket_info = get_ticket_status(latest_release_strategy.itsm_detail.sn)
+                # 灰度发布审批时，如果审批单据还未完结，需要后台调用 API 主动撤销单据
+                if ticket_info["current_status"] not in ItsmTicketStatus.completed_status():
+                    client = ItsmClient()
+                    client.withdraw_ticket(
+                        latest_release_strategy.itsm_detail.sn, latest_release_strategy.itsm_submitter
+                    )
+                # 更新版本的灰度状态
+                self.release.gray_status = constants.GrayReleaseStatus.INTERRUPTED
+                self.release.save()
         current_stage.update_status(constants.PluginReleaseStatus.INTERRUPTED, fail_message=_("用户主动终止发布"))
+
+    def execute_gray_release(self, operator: str):
+        """灰度发布，只需要创建审批单据"""
+        self.release.refresh_from_db()
+        # 不需要回调第三方 API，仅在审批成功后才回调
+        post_save.disconnect(update_release_status_when_stage_status_change)
+
+        current_stage = self.release.current_stage
+        current_stage.status = constants.PluginReleaseStatus.PENDING
+        current_stage.operator = operator
+        current_stage.save(update_fields=["operator", "status"])
+
+        # 创建灰度审批单据
+        submit_canary_release_ticket(self.release.plugin.pd, self.release.plugin, self.release, operator)

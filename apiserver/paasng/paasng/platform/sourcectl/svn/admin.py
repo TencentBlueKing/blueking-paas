@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""A simple SVN client by wrapping svn command line tool"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""A simple SVN client by wrapping svn command line tool
-"""
 import contextlib
 import inspect
 import json
@@ -63,7 +62,6 @@ class BaseSvnAuthClient:
 
 
 class BaseRealSvnAuthClient(BaseSvnAuthClient):
-    REGION: str
     SVN_SECRET = "32fc6114554e3c53d5952594510021e2"
     SVN_OPERATE_ERROR_NOTIFIER = "admin"
     DUMMY = True
@@ -78,7 +76,7 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
     BASE_SVN_DEL_AUTHZ = "{admin_url}svn_del/authz/"
 
     def __init__(self):
-        admin_url = self.get_admin_url(self.REGION)
+        admin_url = self.get_admin_url()
         if not admin_url:
             return
         if not admin_url.endswith("/"):
@@ -92,9 +90,9 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
         self.SVN_DEL_AUTHZ = self.BASE_SVN_DEL_AUTHZ.format(admin_url=admin_url)  # svn 权限删除
 
     @staticmethod
-    def get_admin_url(region: str) -> Optional[str]:
+    def get_admin_url() -> Optional[str]:
         try:
-            return get_bksvn_config(region).admin_url
+            return get_bksvn_config().admin_url
         except RuntimeError:
             logger.warning("No bk svn sourcectl was configured")
             return None
@@ -247,7 +245,6 @@ class BaseRealSvnAuthClient(BaseSvnAuthClient):
 class IeodSvnAuthClient(BaseRealSvnAuthClient):
     """SVN用户账号注册及授权（互娱内部版）"""
 
-    REGION = "ieod"
     BASE_SVN_ADD_DIR = "{admin_url}svn_add/app_dir_trunk/"
 
 
@@ -280,7 +277,7 @@ class SvnApplicationAuthorization:
         self.update_developers()
         # 修改目录权限
         # `v3apps/` + `somecode-123`
-        repo_path = get_bksvn_config(self.application.region).get_base_path() + path
+        repo_path = get_bksvn_config().get_base_path() + path
         self.svn_client.mod_authz(repo_path=repo_path, group_name=self.code, is_code_private=True)
 
     def update_developers(self):
@@ -293,11 +290,11 @@ class SvnApplicationAuthorization:
         :param path 不包含通用根目录的 应用path
         """
         privilege = "%s%s" % ("r" if read else "", "w" if write else "")
-        admin_credentials = get_bksvn_config(self.application.region).get_admin_credentials()
+        admin_credentials = get_bksvn_config().get_admin_credentials()
 
         # 修改目录权限
         # `v3apps/` + `somecode-123`
-        repo_path = get_bksvn_config(self.application.region).get_base_path() + path
+        repo_path = get_bksvn_config().get_base_path() + path
         self.svn_client.mod_authz_common(
             repo_path=repo_path, group_or_user_name=admin_credentials["username"], authz=privilege
         )
@@ -305,7 +302,7 @@ class SvnApplicationAuthorization:
     def set_paas_user_privilege(self, read=True, write=False):
         """设置paas账户的权限"""
         privilege = "%s%s" % ("r" if read else "", "w" if write else "")
-        admin_credentials = get_bksvn_config(self.application.region).get_admin_credentials()
+        admin_credentials = get_bksvn_config().get_admin_credentials()
 
         # 需要保证 repo obj 已经生成
         # 由于不容易切分 app_code/module，所以这里将平台账号在每一个使用了 svn module 路径下授权
@@ -382,16 +379,15 @@ class DummyAppAuthorization(SvnApplicationAuthorization):
     svn_client_cls = SvnAuthClient4Developer
 
 
-def get_svn_authorization_manager_cls(region: str) -> Type[SvnApplicationAuthorization]:
-    config = get_bksvn_config(region)
+def get_svn_authorization_manager_cls() -> Type[SvnApplicationAuthorization]:
+    config = get_bksvn_config()
     if not config.auth_mgr_cls:
         return DummyAppAuthorization
     return import_string(config.auth_mgr_cls)
 
 
 def get_svn_authorization_manager(application):
-    region = application.region
-    cls = get_svn_authorization_manager_cls(region)
+    cls = get_svn_authorization_manager_cls()
     return cls(application)
 
 

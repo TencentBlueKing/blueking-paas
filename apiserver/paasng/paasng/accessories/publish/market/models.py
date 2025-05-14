@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import os
 import time
@@ -24,7 +23,6 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
-from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
@@ -33,6 +31,7 @@ from translated_fields import TranslatedFieldWithFallback
 
 from paasng.accessories.publish.market import constant
 from paasng.core.core.storages.object_storage import app_logo_storage
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.models import Module
@@ -42,9 +41,6 @@ logger = logging.getLogger(__name__)
 
 
 class TagManager(models.Manager):
-    def get_query_set(self):
-        return super(TagManager, self).get_query_set().filter(region__in=[settings.RUN_VER, "all"])
-
     def get_default_tag(self):
         """自动给应用创建市场信息时,使用默认分类"""
         # 将最后添加的分类设置为默认分类
@@ -52,8 +48,9 @@ class TagManager(models.Manager):
 
 
 class Tag(models.Model):
-    """
-    按用途分类
+    """按用途分类
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     parent = models.ForeignKey(
@@ -68,7 +65,6 @@ class Tag(models.Model):
     remark = models.CharField("备注", blank=True, null=True, max_length=255, help_text="备注")
     index = models.IntegerField("排序", default=0, help_text="显示排序字段")
     enabled = models.BooleanField("是否可选", default=True, help_text="创建应用时是否可选择该分类")
-    region = models.CharField("部署环境", max_length=32, help_text="部署区域")
 
     objects = TagManager()
 
@@ -82,7 +78,7 @@ class Tag(models.Model):
             return _(self.name)
 
     def __str__(self):
-        return "{}:{} region={} parent={}".format(self.id, self.name, self.region, self.parent)
+        return "{}:{} parent={}".format(self.id, self.name, self.parent)
 
 
 class ProductManager(WithOwnerManager):
@@ -102,10 +98,11 @@ class ProductManager(WithOwnerManager):
                 "name_zh_cn": application.name,
                 "introduction_en": application.name,
                 "introduction_zh_cn": application.name,
+                "tenant_id": application.tenant_id,
             },
         )
         if created:
-            DisplayOptions.objects.create(product=product)
+            DisplayOptions.objects.create(product=product, tenant_id=application.tenant_id)
         return product
 
 
@@ -161,6 +158,8 @@ class Product(OwnerTimestampedModel):
     related_corp_products = JSONField(default=[], help_text="所属业务")
     # 可见范围
     visiable_labels = JSONField("可见范围标签", blank=True, null=True)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = ProductManager()
 
@@ -228,6 +227,8 @@ class DisplayOptions(models.Model):
         default=constant.OpenMode.NEW_TAB.value,
     )
 
+    tenant_id = tenant_id_field_factory()
+
 
 class MarketConfigManager(models.Manager):
     def get_or_create_by_app(self, application: Application) -> Tuple["MarketConfig", bool]:
@@ -250,6 +251,7 @@ class MarketConfigManager(models.Manager):
                 auto_enable_when_deploy=not confirm_required_when_publish,
                 source_module=application.get_default_module(),
                 source_url_type=url_type,
+                tenant_id=application.tenant_id,
             )
             return obj, True
 
@@ -281,6 +283,7 @@ class MarketConfig(TimestampedModel):
     prefer_https = models.BooleanField(
         null=True, verbose_name="[deprecated] 仅为 False 时强制使用 http, 否则保持与集群 https_enabled 状态一致"
     )
+    tenant_id = tenant_id_field_factory()
 
     objects = MarketConfigManager()
 

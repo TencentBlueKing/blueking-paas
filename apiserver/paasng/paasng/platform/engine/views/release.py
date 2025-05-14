@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict, Optional
 
 from django.utils.translation import gettext as _
@@ -25,12 +24,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paas_wl.bk_app.applications.api import get_latest_build_id
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.accessories.publish.entrance.preallocated import get_preallocated_url
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.deploy.release.legacy import release_by_engine
 from paasng.platform.engine.models.config_var import ENVIRONMENT_NAME_FOR_GLOBAL
@@ -73,7 +71,6 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         - path param: environment, 部署环境(stag或者prod), 必须
         - get param: with_processes, 是否返回进程信息，传递 true 时返回，默认不返回
         """
-        app = self.get_application()
         module_env = self.get_env_via_path()
         serializer = self.serializer_class(request.query_params)
 
@@ -101,12 +98,6 @@ class ReleasedInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             "offline": offline_data,
             "exposed_link": {"url": exposed_link.address if exposed_link else None},
             "default_access_entrance": {"url": default_access_entrance.address if default_access_entrance else None},
-            "feature_flag": {  # 应用 feature flag 接口已独立提供，后续 feature flag 不再往这里同步
-                "release_to_bk_market": app.feature_flag.has_feature(AppFeatureFlag.RELEASE_TO_BLUEKING_MARKET),
-                "release_to_wx_miniprogram": app.feature_flag.has_feature(
-                    AppFeatureFlag.RELEASE_TO_WEIXIN_MINIPROGRAM
-                ),
-            },
         }
         if serializer.data["with_processes"]:
             _specs = ProcessManager(module_env).list_processes_specs()

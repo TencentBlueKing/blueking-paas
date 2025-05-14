@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import json
 from textwrap import dedent
 
@@ -43,8 +42,8 @@ class TestPreCreatedInstanceImport:
     @pytest.mark.parametrize(
         "input_",
         [
-            {"plan": "plan-b", "config": "{}", "credentials": DUMMY_CREDENTIALS},
-            {"plan": "plan-b", "config": '{"a": "b"}', "credentials": DUMMY_CREDENTIALS},
+            {"plan": "plan-b", "config": {}, "credentials": DUMMY_CREDENTIALS},
+            {"plan": "plan-b", "config": {"a": "b"}, "credentials": DUMMY_CREDENTIALS},
         ],
     )
     def test_import_single(self, bk_service, bk_plan, input_):
@@ -55,18 +54,18 @@ class TestPreCreatedInstanceImport:
 
         assert PreCreatedInstance.objects.filter(plan=bk_plan).count() == 1
         instance = PreCreatedInstance.objects.get(plan=bk_plan)
-        assert instance.config == json.loads(input_["config"])
+        assert instance.config == input_["config"]
         assert json.loads(instance.credentials) == json.loads(DUMMY_CREDENTIALS)
 
     @pytest.mark.parametrize(
         ("input_", "expected"),
         [
             ([], 0),
-            ([{"plan": "plan-b", "config": "{}", "credentials": DUMMY_CREDENTIALS}], 1),
+            ([{"plan": "plan-b", "config": {}, "credentials": DUMMY_CREDENTIALS}], 1),
             (
                 [
-                    {"plan": "plan-b", "config": "{}", "credentials": DUMMY_CREDENTIALS},
-                    {"plan": "plan-b", "config": "{}", "credentials": DUMMY_CREDENTIALS},
+                    {"plan": "plan-b", "config": {}, "credentials": DUMMY_CREDENTIALS},
+                    {"plan": "plan-b", "config": {}, "credentials": DUMMY_CREDENTIALS},
                 ],
                 2,
             ),

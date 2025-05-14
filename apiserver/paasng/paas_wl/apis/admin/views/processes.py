@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -32,6 +31,8 @@ from paas_wl.bk_app.processes.controllers import get_proc_ctl
 from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.bk_app.processes.readers import instance_kmodel
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.platform.applications.models import ModuleEnvironment
 
 
@@ -46,7 +47,7 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
     serializer_class = ProcessSpecPlanSLZ
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     filter_backends = [SearchFilter]
-    search_fields = ["region", "environment"]
+    search_fields = ["environment"]
     queryset = ProcessSpecPlan.objects.all()
 
     def _list_data(self):
@@ -66,24 +67,40 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
 
     def create(self, request, **kwargs):
         """创建 ProcessSpecPlan"""
-        slz = self.get_serializer(data=request.data)
-        slz.is_valid(True)
+        slz = ProcessSpecPlanSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
         slz.save()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.PROCESS_SPEC_PLAN,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.validated_data),
+        )
         return Response(slz.validated_data, status=status.HTTP_201_CREATED)
 
     def edit(self, request, **kwargs):
         """更新已有 ProcessSpecPlan"""
-        instance = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
-        slz = self.get_serializer(data=request.data, instance=instance)
-        slz.is_valid(True)
+        plan = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
+        data_before = DataDetail(type=DataType.RAW_DATA, data=ProcessSpecPlanSLZ(plan).data)
+
+        slz = ProcessSpecPlanSLZ(data=request.data, instance=plan)
+        slz.is_valid(raise_exception=True)
         slz.save()
 
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.PROCESS_SPEC_PLAN,
+            data_before=data_before,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=ProcessSpecPlanSLZ(plan).data),
+        )
         return Response(slz.validated_data, status=status.HTTP_200_OK)
 
     def list_binding_app(self, request, **kwargs):
         """获取已有的 AppList"""
-        instance = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
-        qs = self.paginate_queryset(instance.processspec_set.all())
+        plan = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
+        qs = self.paginate_queryset(plan.processspec_set.all())
         return Response(ProcessSpecBoundInfoSLZ(qs, many=True).data)
 
 
@@ -94,11 +111,11 @@ class ProcessSpecManageViewSet(GenericViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_app(self):
-        app = get_object_or_404(WlApp, region=self.kwargs["region"], name=self.kwargs["name"])
+        app = get_object_or_404(WlApp, name=self.kwargs["name"])
         self.check_object_permissions(self.request, app)
         return app
 
-    def switch_process_plan(self, request, region, name, process_type):
+    def switch_process_plan(self, request, name, process_type):
         wl_app = self.get_app()
         data = request.data
 
@@ -111,29 +128,52 @@ class ProcessSpecManageViewSet(GenericViewSet):
             except ProcessSpecPlan.DoesNotExist:
                 raise Http404("No ProcessSpecPlan matches the given name.")
 
+        defaults = {
+            "type": "process",
+            "target_replicas": 1,
+            "target_status": ProcessTargetStatus.START,
+            "plan": plan,
+            "tenant_id": wl_app.tenant_id,
+        }
+
         process_spec, _ = ProcessSpec.objects.get_or_create(
             engine_app_id=wl_app.pk,
             name=process_type,
-            defaults={
-                "type": "process",
-                "region": region,
-                "target_replicas": 1,
-                "target_status": ProcessTargetStatus.START,
-                "plan": plan,
-            },
+            defaults=defaults,
         )
+        # 记录目前使用的 plan 名称（操作审计用）
+        cur_plan_name = process_spec.plan.name
 
         process_spec.plan = plan
         process_spec.save(update_fields=["plan", "updated"])
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY_PLAN,
+            target=OperationTarget.PROCESS,
+            attribute=f"{wl_app.name}:{process_type}",
+            data_before=DataDetail(type=DataType.RAW_DATA, data={"plan": cur_plan_name}),
+            data_after=DataDetail(type=DataType.RAW_DATA, data={"plan": plan.name}),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def scale(self, request, region, name, process_type):
+    def scale(self, request, name, process_type):
         wl_app = self.get_app()
         data = request.data
         process_spec = get_object_or_404(ProcessSpec, engine_app_id=wl_app.pk, name=process_type)
         ctl = get_proc_ctl(get_env_by_wl_app(wl_app))
+
         if process_spec.target_replicas != int(data["target_replicas"]):
+            data_before = DataDetail(type=DataType.RAW_DATA, data={"replicas": process_spec.target_replicas})
             ctl.scale(process_spec.name, target_replicas=int(data["target_replicas"]))
+            add_admin_audit_record(
+                user=request.user.pk,
+                operation=OperationEnum.SCALE,
+                target=OperationTarget.PROCESS,
+                attribute=wl_app.name,
+                data_before=data_before,
+                data_after=DataDetail(type=DataType.RAW_DATA, data={"replicas": data["target_replicas"]}),
+            )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -143,11 +183,11 @@ class ProcessInstanceViewSet(GenericViewSet):
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_app(self):
-        app = get_object_or_404(WlApp, region=self.kwargs["region"], name=self.kwargs["name"])
+        app = get_object_or_404(WlApp, name=self.kwargs["name"])
         self.check_object_permissions(self.request, app)
         return app
 
-    def retrieve(self, request, region, name, process_type, instance_name):
+    def retrieve(self, request, name, process_type, instance_name):
         app = self.get_app()
         inst = instance_kmodel.get(app, instance_name)
         return Response(InstanceSerializer(inst).data)

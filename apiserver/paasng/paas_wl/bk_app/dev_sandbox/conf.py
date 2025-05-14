@@ -1,53 +1,73 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from django.conf import settings
 
-from .entities import IngressPathBackend, ServicePortPair
+from paas_wl.bk_app.dev_sandbox.entities import NetworkConfig, Resources, ResourceSpec
 
-_ingress_service_conf = [
-    # dev sandbox 中 devserver 的路径与端口映射
-    {
-        "path_prefix": "/devserver/",
-        "service_port_name": "devserver",
-        "port": 8000,
-        "target_port": settings.DEV_SANDBOX_DEVSERVER_PORT,
-    },
-    # dev sandbox 中 saas 应用的路径与端口映射
-    {"path_prefix": "/", "service_port_name": "app", "port": 80, "target_port": settings.CONTAINER_PORT},
-]
+if TYPE_CHECKING:
+    from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
 
 
-DEV_SANDBOX_SVC_PORT_PAIRS: List[ServicePortPair] = [
-    ServicePortPair(name=conf["service_port_name"], port=conf["port"], target_port=conf["target_port"])
-    for conf in _ingress_service_conf
-]
+DEV_SERVER_NETWORK_CONFIG = NetworkConfig(
+    path_prefix="/devserver/",
+    port_name="devserver",
+    port=8000,
+    target_port=settings.DEV_SANDBOX_DEVSERVER_PORT,
+)
+
+APP_SERVER_NETWORK_CONFIG = NetworkConfig(
+    path_prefix="/app/",
+    port_name="app",
+    port=80,
+    target_port=settings.CONTAINER_PORT,
+)
+
+CODE_EDITOR_NETWORK_CONFIG = NetworkConfig(
+    path_prefix="/code_editor/",
+    port_name="code-editor",
+    port=10251,
+    target_port=settings.DEV_SANDBOX_CODE_EDITOR_PORT,
+)
 
 
-def get_ingress_path_backends(service_name: str) -> List[IngressPathBackend]:
-    """get ingress path backends from _ingress_service_conf with service_name"""
-    return [
-        IngressPathBackend(
-            path_prefix=conf["path_prefix"],
-            service_name=service_name,
-            service_port_name=conf["service_port_name"],
-        )
-        for conf in _ingress_service_conf
-    ]
+def get_network_configs(dev_sandbox: "DevSandbox") -> List[NetworkConfig]:
+    cfgs = [DEV_SERVER_NETWORK_CONFIG, APP_SERVER_NETWORK_CONFIG]
+
+    # 只有配置启用代码编辑器，才会提供相应的网络配置
+    if dev_sandbox.code_editor_cfg:
+        cfgs.append(CODE_EDITOR_NETWORK_CONFIG)
+
+    return cfgs
+
+
+# 开发沙箱默认资源配额
+DEV_SERVER_RESOURCE_QUOTA = Resources(
+    limits=ResourceSpec(cpu="4", memory="2Gi"),
+    requests=ResourceSpec(cpu="200m", memory="512Mi"),
+)
+
+# 代码编辑器默认资源配额
+CODE_EDITOR_RESOURCE_QUOTA = Resources(
+    limits=ResourceSpec(cpu="4", memory="2Gi"),
+    requests=ResourceSpec(cpu="500m", memory="1Gi"),
+)
+
+# 默认工作空间
+DEV_SANDBOX_WORKSPACE = "/data/workspace"

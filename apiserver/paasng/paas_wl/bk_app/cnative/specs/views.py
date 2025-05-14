@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from contextlib import suppress
 from urllib.parse import quote
@@ -39,6 +38,7 @@ from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount
 from paas_wl.bk_app.cnative.specs.mounts import (
     MountManager,
     check_persistent_storage_enabled,
+    check_storage_class_exists,
     init_volume_source_controller,
 )
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
@@ -58,6 +58,8 @@ from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
@@ -103,6 +105,8 @@ class MresVersionViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
 
 class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
     def _validate_registry_permission(self, registry_service: DockerRegistryController):
         """Validates the registry permission by attempting to touch it.
 
@@ -212,8 +216,8 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 environment_name=validated_data["environment_name"],
                 mount_path=validated_data["mount_path"],
                 source_type=validated_data["source_type"],
-                region=application.region,
                 source_name=validated_data.get("source_name"),
+                sub_paths=validated_data.get("sub_paths"),
             )
         except IntegrityError:
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
@@ -222,17 +226,34 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             # 创建或更新 Mount source
             configmap_source = validated_data.get("configmap_source") or {}
             controller = init_volume_source_controller(mount_instance.source_type)
+            data = configmap_source.get("source_config_data", {})
             controller.create_by_env(
                 app_id=mount_instance.module.application.id,
                 module_id=mount_instance.module.id,
                 env_name=mount_instance.environment_name,
                 source_name=mount_instance.get_source_name,
-                data=configmap_source.get("source_config_data"),
+                data=data,
             )
+
         try:
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
             raise error_codes.CREATE_VOLUME_MOUNT_FAILED.f(_(e))
+
+        # source_config 字段无法被序列化
+        data_after = MountSLZ(mount_instance).data
+        del data_after["source_config"]
+        add_app_audit_record(
+            app_code=code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.VOLUME_MOUNT,
+            attribute=mount_instance.name,
+            module_name=module_name,
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
+        )
         return Response(data=slz.data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
@@ -240,6 +261,8 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     def update(self, request, code, module_name, mount_id):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
+        data_before = MountSLZ(mount_instance).data
+        del data_before["source_config"]
 
         slz = UpsertMountSLZ(data=request.data, context={"module_id": module.id, "mount_id": mount_instance.id})
         slz.is_valid(raise_exception=True)
@@ -250,10 +273,11 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         mount_instance.name = validated_data["name"]
         mount_instance.environment_name = validated_data["environment_name"]
         mount_instance.mount_path = validated_data["mount_path"]
+        mount_instance.sub_paths = validated_data["sub_paths"]
         if source_name := validated_data.get("source_name"):
             mount_instance.source_config = controller.build_volume_source(source_name)
         try:
-            mount_instance.save(update_fields=["name", "environment_name", "mount_path", "source_config"])
+            mount_instance.save(update_fields=["name", "environment_name", "mount_path", "source_config", "sub_paths"])
         except IntegrityError:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_("同环境和路径挂载卷已存在"))
 
@@ -271,12 +295,29 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             slz = MountSLZ(mount_instance)
         except GetSourceConfigDataError as e:
             raise error_codes.UPDATE_VOLUME_MOUNT_FAILED.f(_(e))
+
+        data_after = MountSLZ(mount_instance).data
+        del data_after["source_config"]
+        add_app_audit_record(
+            app_code=code,
+            tenant_id=module.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.VOLUME_MOUNT,
+            attribute=mount_instance.name,
+            module_name=module_name,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
+            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
+        )
         return Response(data=slz.data, status=status.HTTP_200_OK)
 
     @transaction.atomic
     def destroy(self, request, code, module_name, mount_id):
         module = self.get_module_via_path()
         mount_instance = get_object_or_404(Mount, id=mount_id, module_id=module.id)
+        data_before = MountSLZ(mount_instance).data
+        del data_before["source_config"]
 
         controller = init_volume_source_controller(mount_instance.source_type)
         controller.delete_by_env(
@@ -287,6 +328,17 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         )
         mount_instance.delete()
 
+        add_app_audit_record(
+            app_code=code,
+            tenant_id=module.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.VOLUME_MOUNT,
+            attribute=mount_instance.name,
+            module_name=module_name,
+            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -372,11 +424,13 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PersistentStorageFeatureViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+class StorageClassViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
 
     def check(self, request, code):
-        """检查应用是否支持持久化存储"""
+        """检查应用是否开启相应的 StorageClass"""
         app = self.get_application()
-        enabled = check_persistent_storage_enabled(application=app)
-        return Response(enabled)
+        exists = check_storage_class_exists(
+            application=app, storage_class_name=settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME
+        )
+        return Response(exists)

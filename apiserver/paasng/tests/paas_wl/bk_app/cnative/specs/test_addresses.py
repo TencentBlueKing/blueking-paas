@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 import pytest
 
@@ -24,26 +22,25 @@ from paas_wl.bk_app.cnative.specs.addresses import Domain as MappingDomain
 from paas_wl.workloads.networking.ingress.constants import AppDomainSource, AppSubpathSource
 from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainSharedCert, AppSubpath, Domain
 from paasng.platform.modules.constants import ExposedURLType
-from tests.utils.helpers import override_region_configs
-from tests.utils.mocks.engine import replace_cluster_service
+from tests.utils.mocks.cluster import cluster_ingress_config
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_save_addresses(bk_prod_env, bk_prod_wl_app, settings):
+def test_save_addresses(bk_module, bk_prod_env, bk_prod_wl_app, settings):
     settings.USE_LEGACY_SUB_PATH_PATTERN = False
+    bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
+    bk_module.save(update_fields=["exposed_url_type"])
+
     assert AppDomain.objects.filter(app=bk_prod_wl_app).count() == 0
     assert AppSubpath.objects.filter(app=bk_prod_wl_app).count() == 0
 
-    def set_exposed_url_type(region_config):
-        region_config["entrance_config"]["exposed_url_type"] = ExposedURLType.SUBDOMAIN
-
-    with replace_cluster_service(
-        replaced_ingress_config={
+    with cluster_ingress_config(
+        replaced_config={
             "sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}],
             "app_root_domains": [{"name": "bkapps.example.com"}, {"name": "bkapps.example2.com"}],
         }
-    ), override_region_configs(bk_prod_wl_app.region, set_exposed_url_type):
+    ):
         save_addresses(bk_prod_env)
     # 不同长度的子域名
     assert AppDomain.objects.filter(app=bk_prod_wl_app).count() == 3 * 2
@@ -51,7 +48,7 @@ def test_save_addresses(bk_prod_env, bk_prod_wl_app, settings):
     assert AppSubpath.objects.filter(app=bk_prod_wl_app).count() == 3
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestToDomain:
     @pytest.mark.parametrize(
         ("host", "https_enabled", "secret_name_has_value"),
@@ -64,7 +61,11 @@ class TestToDomain:
     def test_with_https(self, host, https_enabled, secret_name_has_value, bk_stag_wl_app):
         # Create a shared cert object
         AppDomainSharedCert.objects.create(
-            region=bk_stag_wl_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
+            tenant_id=bk_stag_wl_app.tenant_id,
+            name="foo",
+            cert_data="",
+            key_data="",
+            auto_match_cns="*-foo.example.com",
         )
         d = AppDomain.objects.create(
             app=bk_stag_wl_app,
@@ -81,7 +82,7 @@ class TestToDomain:
             assert domain.tlsSecretName is None
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestToSharedTLSDomain:
     def test_normal(self, bk_stag_wl_app):
         d = MappingDomain(host="x-foo.example.com", pathPrefixList=["/"])
@@ -90,7 +91,11 @@ class TestToSharedTLSDomain:
 
         # Create a shared cert object
         AppDomainSharedCert.objects.create(
-            region=bk_stag_wl_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*-foo.example.com"
+            tenant_id=bk_stag_wl_app.tenant_id,
+            name="foo",
+            cert_data="",
+            key_data="",
+            auto_match_cns="*-foo.example.com",
         )
         d = to_shared_tls_domain(d, bk_stag_wl_app)
         assert d.tlsSecretName is not None

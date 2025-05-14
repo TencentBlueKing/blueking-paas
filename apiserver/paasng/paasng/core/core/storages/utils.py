@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """sqlalchemy db manager"""
+
 import logging
 import urllib.parse
 from contextlib import contextmanager
@@ -32,7 +32,7 @@ from typing_extensions import Protocol
 logger = logging.getLogger()
 
 
-def make_sa_conn_string(config_dict, driver_type="mysqldb"):
+def make_sa_conn_string(config_dict, driver_type="pymysql"):
     """Convert a django db dict to sqlalchemy string"""
     return "mysql+%(driver_type)s://%(user)s:%(password)s@%(host)s:%(port)s/%(db)s?charset=utf8" % {
         "driver_type": driver_type,
@@ -54,17 +54,13 @@ class DummyObject(LazyObject):
 
 class DBManagerProtocol(Protocol):
     @property
-    def engine(self) -> Engine:
-        ...
+    def engine(self) -> Engine: ...
 
-    def get_model(self, table_name: str):
-        ...
+    def get_model(self, table_name: str): ...
 
-    def get_scoped_session(self):
-        ...
+    def get_scoped_session(self): ...
 
-    def session_scope(self):
-        ...
+    def session_scope(self): ...
 
 
 class DummyDB:
@@ -145,9 +141,9 @@ class SADBManager:
     def _create_engine(db_config) -> Engine:
         echo = logger.level == logging.DEBUG
         try:
-            dbstr = make_sa_conn_string(db_config, driver_type="mysqldb")
+            dbstr = make_sa_conn_string(db_config, driver_type="pymysql")
             pool_options = db_config.get("POOL_OPTIONS") or DEFAULT_POOL_OPTIONS
-            return create_engine(dbstr, echo=echo, **pool_options)
+            return create_engine(dbstr, connect_args=db_config.get("OPTIONS", {}), echo=echo, **pool_options)
         except Exception as e:
             raise RuntimeError(
                 "engine<{db_name}> is not successfully initialized".format(db_name=db_config["NAME"])

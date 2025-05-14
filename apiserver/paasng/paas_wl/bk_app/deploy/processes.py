@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 # TODO: Add Tests for both controller classes
 import logging
 from typing import Optional
@@ -39,6 +38,7 @@ from paas_wl.workloads.autoscaling.kres_entities import ProcAutoscaling
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.manager import ModuleProcessSpecManager
+from paasng.platform.bkapp_model.models import ModuleProcessSpec
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +121,13 @@ class AppProcessesController:
 
         spec_updater = ProcSpecUpdater(self.env, proc_type)
         spec_updater.change_replicas(target_replicas)
+
+        # 旧镜像应用需要同步副本数到 ModuleProcessSpec 中
+        try:
+            ModuleProcessSpecManager(self.env.module).set_replicas(proc_type, self.env.environment, target_replicas)
+        except Exception:
+            logger.exception(f"Failed to sync replicas to ModuleProcessSpec for app({self.env.application.code})")
+
         proc_spec = spec_updater.spec_object
         try:
             proc_config = get_mapper_proc_config_latest(self.app, proc_spec.name)
@@ -139,7 +146,7 @@ class AppProcessesController:
 
         proc_spec.autoscaling = True
         proc_spec.scaling_config = AutoscalingConfig(
-            min_replicas=scaling.spec.max_replicas, max_replicas=scaling.spec.max_replicas, policy="default"
+            min_replicas=scaling.spec.min_replicas, max_replicas=scaling.spec.max_replicas, policy="default"
         )
         proc_spec.save(update_fields=["autoscaling", "scaling_config", "updated"])
 
@@ -185,18 +192,18 @@ class CNativeProcController:
         self.app = env.wl_app
 
     def start(self, proc_type: str):
-        """Start a process."""
-        spec_updater = ProcSpecUpdater(self.env, proc_type)
-        spec_updater.set_start()
+        """Start a process"""
+        module_process_spec = self._get_module_process_spec(proc_type)
+
         try:
-            BkAppProcScaler(self.env).set_replicas(proc_type, spec_updater.spec_object.target_replicas)
+            BkAppProcScaler(self.env).set_replicas(
+                proc_type, module_process_spec.get_target_replicas(self.env.environment)
+            )
         except ProcNotFoundInRes as e:
             raise ProcessNotFound(str(e))
 
     def stop(self, proc_type: str):
         """Stop a process."""
-        spec_updater = ProcSpecUpdater(self.env, proc_type)
-        spec_updater.set_stop()
         try:
             BkAppProcScaler(self.env).set_replicas(proc_type, 0)
         except ProcNotFoundInRes as e:
@@ -229,7 +236,6 @@ class CNativeProcController:
         if target_replicas > DEFAULT_CNATIVE_MAX_REPLICAS:
             raise ValueError(f"target_replicas can't be greater than {DEFAULT_CNATIVE_MAX_REPLICAS}")
 
-        ProcSpecUpdater(self.env, proc_type).change_replicas(target_replicas)
         # Update the module specs also to keep the bkapp model in sync.
         ModuleProcessSpecManager(self.env.module).set_replicas(proc_type, self.env.environment, target_replicas)
 
@@ -240,14 +246,13 @@ class CNativeProcController:
 
     def disable_autoscaling_if_enabled(self, proc_type: str):
         """Disable autoscaling if it's enabled."""
-        if ProcSpecUpdater(self.env, proc_type).spec_object.autoscaling:
+        module_process_spec = self._get_module_process_spec(proc_type)
+        if module_process_spec.get_autoscaling(self.env.environment):
             self.scale_auto(proc_type, False)
 
     def scale_auto(self, proc_type: str, enabled: bool, scaling_config: Optional[AutoscalingConfig] = None):
         """Update autoscaling config for the given process."""
-        spec_updater = ProcSpecUpdater(self.env, proc_type)
         if not enabled:
-            spec_updater.set_autoscaling(False)
             ModuleProcessSpecManager(self.env.module).set_autoscaling(proc_type, self.env.environment, False)
             BkAppProcScaler(self.env).set_autoscaling(proc_type, False, None)
             return
@@ -258,11 +263,12 @@ class CNativeProcController:
             raise AutoscalingUnsupported("autoscaling feature is not available in the current cluster.")
 
         # Use the old config value when the scaling config is not provided.
-        scaling_config = scaling_config or spec_updater.spec_object.scaling_config
         if not scaling_config:
-            raise AutoscalingUnsupported("autoscaling config is not set from the given proc_type.")
+            module_process_spec = self._get_module_process_spec(proc_type)
+            scaling_config = module_process_spec.get_scaling_config(self.env.environment)
+            if not scaling_config:
+                raise AutoscalingUnsupported("autoscaling config is not set from the given proc_type.")
 
-        spec_updater.set_autoscaling(True, scaling_config)
         ModuleProcessSpecManager(self.env.module).set_autoscaling(
             proc_type, self.env.environment, True, scaling_config
         )
@@ -271,6 +277,12 @@ class CNativeProcController:
         except ProcNotFoundInRes as e:
             raise ProcessNotFound(str(e))
         return
+
+    def _get_module_process_spec(self, proc_type: str):
+        try:
+            return ModuleProcessSpec.objects.get(module=self.env.module, name=proc_type)
+        except ModuleProcessSpec.DoesNotExist:
+            raise ProcessNotFound("module process spec not found")
 
 
 class ProcSpecUpdater:
@@ -297,7 +309,9 @@ class ProcSpecUpdater:
         """Set the process to "stop" state."""
         proc_spec = self.spec_object
         proc_spec.target_status = ProcessTargetStatus.STOP.value
-        proc_spec.save(update_fields=["target_status", "updated"])
+        # 确保停止进程 / 下架时候的副本数不会超过套餐允许的最大副本数
+        proc_spec.target_replicas = min(proc_spec.target_replicas, proc_spec.plan.max_replicas)
+        proc_spec.save(update_fields=["target_status", "target_replicas", "updated"])
 
     def change_replicas(self, target_replicas: int):
         """Change the target_replicas value."""

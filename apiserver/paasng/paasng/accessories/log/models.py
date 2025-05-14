@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict, List, Literal, Optional, Union
 
 from django.db import models
@@ -23,6 +22,7 @@ from django.utils.translation import gettext_lazy as _
 from pydantic import BaseModel, Field
 
 from paasng.accessories.log.constants import DEFAULT_LOG_CONFIG_PLACEHOLDER
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.models import Module
 from paasng.utils.models import AuditedModel, UuidAuditedModel, make_json_field
@@ -81,7 +81,10 @@ ContainerLogCollectorConfigField = make_json_field("ContainerLogCollectorConfigF
 
 
 class ProcessStructureLogCollectorConfig(AuditedModel):
-    """进程结构化日志采集配置"""
+    """[deprecated] 进程结构化日志采集配置
+
+    该表并未实际使用，线上表中没有任何数据。
+    """
 
     collector_config_id = models.BigAutoField(_("采集配置ID"), primary_key=True)
 
@@ -96,6 +99,9 @@ class ProcessStructureLogCollectorConfig(AuditedModel):
 class ElasticSearchConfig(UuidAuditedModel):
     """ES查询配置"""
 
+    # collector_config_id 为：elk-ingress、elk-stdout、elk-structured 为 开发者中心自有日志采集链路的 ES 配置
+    # release-1.7 版本开始修改为按集群级别设置，将 ES 配置信息存储在 ClusterElasticSearchConfig 表
+    # 并将 collector_config_id 的格式变更为：elk-ingress-{cluster_id}
     collector_config_id = models.CharField(_("采集配置ID"), unique=True, help_text="采集配置ID", max_length=64)
     backend_type = models.CharField(help_text="日志后端类型, 可选 'es', 'bkLog' ", max_length=16)
     elastic_search_host: Optional[ElasticSearchHost] = ElasticSearchHostField(
@@ -105,6 +111,7 @@ class ElasticSearchConfig(UuidAuditedModel):
         null=True, help_text="required when backend_type is 'bkLog'"
     )
     search_params: ElasticSearchParams = ElasticSearchParamsField(help_text="ES 搜索相关配置")
+    tenant_id = tenant_id_field_factory()
 
 
 class ProcessLogQueryConfigManager(models.Manager):
@@ -149,6 +156,7 @@ class ProcessLogQueryConfig(UuidAuditedModel):
         null=True,
         related_name="related_ingress",
     )
+    tenant_id = tenant_id_field_factory()
 
     objects = ProcessLogQueryConfigManager()
 
@@ -176,6 +184,7 @@ class CustomCollectorConfig(UuidAuditedModel):
 
     is_builtin = models.BooleanField(_("是否为内置采集项"), default=False)
     is_enabled = models.BooleanField(_("是否启用"), default=True)
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("module", "name_en")

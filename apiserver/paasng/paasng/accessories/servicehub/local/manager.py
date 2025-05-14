@@ -1,28 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+"""Local services manager"""
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-"""Local services manager
-"""
 import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, Generator, Iterator, List, Optional, cast
+from typing import Any, Dict, Generator, Iterable, Iterator, List, Optional, cast
 from uuid import UUID
 
 from django.core.exceptions import ValidationError
@@ -32,13 +31,20 @@ from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.servicehub import constants
+from paasng.accessories.servicehub.binding_policy.selector import PlanSelector, get_plan_by_env
 from paasng.accessories.servicehub.exceptions import (
+    BindServicePlanError,
     CanNotModifyPlan,
     ProvisionInstanceError,
     ServiceObjNotFound,
     SvcAttachmentDoesNotExist,
+    UnboundSvcAttachmentDoesNotExist,
 )
-from paasng.accessories.servicehub.models import ServiceEngineAppAttachment, ServiceModuleAttachment
+from paasng.accessories.servicehub.models import (
+    ServiceEngineAppAttachment,
+    ServiceModuleAttachment,
+    UnboundServiceEngineAppAttachment,
+)
 from paasng.accessories.servicehub.services import (
     NOTSET,
     BasePlanMgr,
@@ -48,8 +54,7 @@ from paasng.accessories.servicehub.services import (
     PlanObj,
     ServiceInstanceObj,
     ServiceObj,
-    ServiceSpecificationDefinition,
-    ServiceSpecificationHelper,
+    UnboundEngineAppInstanceRel,
 )
 from paasng.accessories.services.models import Plan, Service
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
@@ -67,23 +72,15 @@ class LocalPlanObj(PlanObj):
 
     @classmethod
     def from_db(cls, plan: Plan) -> "LocalPlanObj":
-        # 向前兼容 no-ha: ["stag"], ha: ["prod"] 的逻辑
-        properties = {
-            "restricted_envs": {"no-ha": [AppEnvName.STAG.value], "ha": [AppEnvName.PROD.value]}.get(
-                plan.name, [AppEnvName.STAG.value, AppEnvName.PROD.value]
-            )
-        }
         config = json.loads(plan.config or "{}")
-        specifications = config.get("specifications") or {}
         instance = cls(
             uuid=str(plan.uuid),
+            tenant_id=plan.tenant_id,
             name=plan.name,
             description=plan.description,
             is_active=plan.is_active,
             is_eager=plan.is_eager,
-            region=plan.service.region,
-            specifications=specifications,
-            properties=properties,
+            properties={},
             config=config,
         )
         instance.db_object = plan
@@ -111,9 +108,6 @@ class LocalServiceObj(ServiceObj):
         # format uuid instance to str
         if isinstance(fields["uuid"], UUID):
             fields["uuid"] = str(fields["uuid"])
-        fields["specifications"] = [
-            ServiceSpecificationDefinition(**i) for i in service.config.get("specifications") or ()
-        ]
         fields["provider_name"] = service.config.get("provider_name", None)
 
         result = cls(**fields)
@@ -127,6 +121,11 @@ class LocalServiceObj(ServiceObj):
         if is_active is not NOTSET:
             qs = qs.filter(is_active=is_active)
         return [LocalPlanObj.from_db(p).with_service(self) for p in qs]
+
+    def get_plans_by_tenant_id(self, tenant_id: str, is_active=True) -> List["PlanObj"]:
+        """Return all plans under the specified tenant"""
+        all_plans = self.get_plans(is_active=is_active)
+        return [plan for plan in all_plans if (plan.tenant_id == tenant_id)]
 
 
 class LocalEngineAppInstanceRel(EngineAppInstanceRel):
@@ -165,7 +164,16 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
         ).inc()
 
     def recycle_resource(self):
+        service_instance = self.db_obj.service_instance
         self.db_obj.clean_service_instance()
+        if self.db_obj.service.prefer_async_delete:
+            UnboundServiceEngineAppAttachment.objects.create(
+                owner=self.db_obj.owner,
+                engine_app=self.db_obj.engine_app,
+                service=self.db_obj.service,
+                service_instance=service_instance,
+                tenant_id=self.db_obj.tenant_id,
+            )
 
     def get_instance(self) -> ServiceInstanceObj:
         """Get service instance object"""
@@ -181,6 +189,7 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
             uuid=str(self.db_obj.service_instance_id),
             credentials=json.loads(self.db_obj.service_instance.credentials),
             config=self.db_obj.service_instance.config,
+            tenant_id=self.db_obj.plan.tenant_id,
             should_hidden_fields=should_hidden_fields,
             should_remove_fields=should_remove_fields,
             create_time=self.db_obj.created,
@@ -190,60 +199,79 @@ class LocalEngineAppInstanceRel(EngineAppInstanceRel):
         return LocalPlanObj.from_db(self.db_obj.plan)
 
 
+class UnboundLocalEngineAppInstanceRel(UnboundEngineAppInstanceRel):
+    """Unbound relationship between EngineApp and local provisioned instance"""
+
+    def __init__(self, db_obj: UnboundServiceEngineAppAttachment):
+        self.db_obj = db_obj
+
+    def recycle_resource(self) -> None:
+        self.db_obj.clean_service_instance()
+
+    def get_instance(self) -> Optional[ServiceInstanceObj]:
+        """Get service instance object"""
+        # All local service instance's credentials was prefixed with service name
+        service_name = self.db_obj.service.name
+        should_hidden_fields = constants.SERVICE_HIDDEN_FIELDS.get(service_name, [])
+        should_remove_fields = constants.SERVICE_SENSITIVE_FIELDS.get(service_name, [])
+
+        return ServiceInstanceObj(
+            uuid=str(self.db_obj.service_instance),
+            credentials=json.loads(self.db_obj.service_instance.credentials),
+            config=self.db_obj.service_instance.config,
+            tenant_id=self.db_obj.service_instance.plan.tenant_id,
+            should_hidden_fields=should_hidden_fields,
+            should_remove_fields=should_remove_fields,
+            create_time=self.db_obj.created,
+        )
+
+
 class LocalServiceMgr(BaseServiceMgr):
     """Local in-database services manager"""
 
     service_obj_cls = LocalServiceObj
 
-    def get(self, uuid: str, region: str) -> LocalServiceObj:
+    def get(self, uuid: str) -> LocalServiceObj:
         """Get a single service by given uuid
 
         :raises: ServiceObjNotFound
         """
         try:
-            obj = Service.objects.get(uuid=uuid, region=region)
+            obj = Service.objects.get(uuid=uuid, is_active=True)
         except (Service.DoesNotExist, ValidationError) as e:
             raise ServiceObjNotFound(f"Service with id={uuid} not found in database") from e
         return LocalServiceObj.from_db_object(obj)
 
-    def find_by_name(self, name: str, region: str) -> LocalServiceObj:
+    def find_by_name(self, name: str) -> LocalServiceObj:
         """Find a single service by service name
 
         :raises: ServiceObjNotFound
         """
         try:
-            obj = Service.objects.get(name=name, region=region)
+            obj = Service.objects.get(name=name, is_active=True)
         except Service.DoesNotExist as e:
             raise ServiceObjNotFound(f"Service with name={name} not found in database") from e
         return LocalServiceObj.from_db_object(obj)
 
-    def list_by_category(
-        self, region: str, category_id: int, include_hidden=False
-    ) -> Generator[ServiceObj, None, None]:
+    def list_by_category(self, category_id: int, include_hidden=False) -> Generator[ServiceObj, None, None]:
         """query a list of services by category"""
-        services = Service.objects.filter(
-            region=region,
-            category=category_id,
-            is_active=True,
-        )
+        services = Service.objects.filter(category=category_id, is_active=True)
         if not include_hidden:
             services = services.filter(is_visible=True)
         for svc in services:
             yield LocalServiceObj.from_db_object(svc)
 
-    def list_by_region(self, region: str, include_hidden=False) -> Generator[ServiceObj, None, None]:
-        """query a list of services by region"""
-        services = Service.objects.filter(region=region, is_active=True, is_visible=True)
+    def list_visible(self) -> Iterable[ServiceObj]:
+        """list all Services that is not hidden"""
+        services = Service.objects.filter(is_active=True)
         for svc in services:
-            # Ignore services which is_visible field is False
-            if not include_hidden and not svc.is_visible:
+            if not svc.is_visible:
                 continue
-
             yield LocalServiceObj.from_db_object(svc)
 
-    def list(self) -> Generator[ServiceObj, None, None]:
-        """query all list of services"""
-        services = Service.objects.all()
+    def list(self) -> Iterable[ServiceObj]:
+        """List all services"""
+        services = Service.objects.filter(is_active=True)
         for svc in services:
             yield LocalServiceObj.from_db_object(svc)
 
@@ -251,9 +279,9 @@ class LocalServiceMgr(BaseServiceMgr):
         """该方法负责将 ServiceObj 的数据格式转换成 in-database 的 Service 对象的存储格式"""
         # 丢弃 uuid 属性, 防止主键意外变更
         data.pop("uuid", None)
-        # 由于本地增强服务并无 specifications/provider_name 等字段, 因此将这些额外属性存储在 config 字段中
+        # 由于本地增强服务并无 provider_name 等字段, 因此将这些额外属性存储在 config 字段中
         data.setdefault("config", {})
-        for key, default in [("specifications", []), ("provider_name", None)]:  # type: ignore
+        for key, default in [("provider_name", None)]:  # type: ignore
             data["config"][key] = data.pop(key, default)
         # logo_64 直接存储 base64 格式的链接(也支持存储外链), 这里将 logo 重命名为 logo_b64, 以直接存储 base64 格式的图片
         data["logo_b64"] = data.pop("logo")
@@ -278,10 +306,21 @@ class LocalServiceMgr(BaseServiceMgr):
         db_obj = Service.objects.get(pk=service.uuid)
         db_obj.delete()
 
-    def bind_service(self, service: ServiceObj, module: Module, specs: Optional["Dict[str, str]"] = None) -> str:
+    def bind_service(
+        self,
+        service: ServiceObj,
+        module: Module,
+        plan_id: str | None = None,
+        env_plan_id_map: Dict[str, str] | None = None,
+    ) -> str:
         """Bind a service to module"""
         db_service = Service.objects.get(pk=service.uuid)
-        return LocalServiceBinder(LocalServiceObj.from_db_object(db_service)).bind(module).pk
+        return LocalServiceBinder(LocalServiceObj.from_db_object(db_service)).bind(module, plan_id, env_plan_id_map).pk
+
+    def bind_service_use_first_plan(self, service: ServiceObj, module: Module) -> str:
+        """Bind a service to module, use the first plan when multiple plans are available"""
+        db_service = Service.objects.get(pk=service.uuid)
+        return LocalServiceBinder(LocalServiceObj.from_db_object(db_service)).bind_use_first_plan(module).pk
 
     def bind_service_partial(self, service: ServiceObj, module: Module) -> str:
         """Bind a service to module, without binding to engine app"""
@@ -338,6 +377,16 @@ class LocalServiceMgr(BaseServiceMgr):
         for attachment in qs:
             yield self.transform_rel_db_obj(attachment)
 
+    def list_unbound_instance_rels(
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None
+    ) -> Generator[UnboundEngineAppInstanceRel, None, None]:
+        """Return all unbound local service instances, filter by specific service (None for all)"""
+        qs = engine_app.unbound_service_attachment.all()
+        if service:
+            qs = qs.filter(service_id=service.uuid)
+        for attachment in qs:
+            yield UnboundLocalEngineAppInstanceRel(attachment)
+
     def get_attachment_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
         try:
             return ServiceEngineAppAttachment.objects.get(
@@ -353,13 +402,6 @@ class LocalServiceMgr(BaseServiceMgr):
         """Return the queryset of provisioned db queryset by query condition"""
         modules = Module.objects.filter(application_id__in=application_ids)
         return ServiceModuleAttachment.objects.filter(service_id=service.uuid, module__in=modules)
-
-    def get_provisioned_queryset_by_services(self, services: List[ServiceObj], application_ids: List[str]) -> QuerySet:
-        """Return the queryset of provisioned db queryset by query condition"""
-        modules = Module.objects.filter(application_id__in=application_ids)
-        return ServiceModuleAttachment.objects.filter(
-            service_id__in=[service.uuid for service in services], module__in=modules
-        )
 
     def transform_rel_db_obj(self, obj: ServiceEngineAppAttachment) -> LocalEngineAppInstanceRel:
         """Transform a db attachment to rel instance"""
@@ -386,6 +428,17 @@ class LocalServiceMgr(BaseServiceMgr):
         except ServiceEngineAppAttachment.DoesNotExist as e:
             raise SvcAttachmentDoesNotExist from e
 
+    def get_unbound_instance_rel_by_instance_id(self, service: ServiceObj, service_instance_id: uuid.UUID):
+        """Return a unbound local service instance, filter by specific service and service instance id"""
+        try:
+            instance = UnboundServiceEngineAppAttachment.objects.get(
+                service_id=service.uuid,
+                service_instance__uuid=service_instance_id,
+            )
+        except UnboundServiceEngineAppAttachment.DoesNotExist as e:
+            raise UnboundSvcAttachmentDoesNotExist from e
+        return UnboundLocalEngineAppInstanceRel(instance)
+
 
 class LocalPlanMgr(BasePlanMgr):
     """Local in-database plans manager"""
@@ -395,12 +448,16 @@ class LocalPlanMgr(BasePlanMgr):
     def __init__(self):
         self.service_mgr = LocalServiceMgr()
 
-    def list_plans(self, service: Optional[ServiceObj] = None) -> Generator[PlanObj, None, None]:
+    def list_plans(
+        self, service: Optional[ServiceObj] = None, tenant_id: Optional[str] = None
+    ) -> Generator[PlanObj, None, None]:
         for svc in self.service_mgr.list():
             if service and svc.uuid != service.uuid:
                 continue
-
-            yield from svc.get_plans(is_active=NOTSET)
+            plans = svc.get_plans(is_active=NOTSET)
+            if tenant_id:
+                plans = [plan for plan in plans if plan.tenant_id == tenant_id]
+            yield from plans
 
     def create_plan(self, service: ServiceObj, plan_data: Dict):
         svc = self._get_service_in_db(service)
@@ -412,6 +469,7 @@ class LocalPlanMgr(BasePlanMgr):
             description=plan_data["description"],
             is_active=plan_data["is_active"],
             config=plan_data["config"],
+            tenant_id=plan_data["tenant_id"],
         )
 
     def update_plan(self, service: ServiceObj, plan_id: str, plan_data: Dict):
@@ -440,11 +498,7 @@ class LocalPlanMgr(BasePlanMgr):
         """该方法负责将 PlanObj 的数据格式转换成 in-database 的 Plan 对象的存储格式"""
         # 丢弃 uuid 属性, 防止主键意外变更
         data.pop("uuid", None)
-        # 由于本地增强服务方案并无 specifications 等字段, 因此将这些额外属性存储在 config 字段中
         data.setdefault("config", {})
-        for key, default in [("specifications", {})]:  # type: ignore
-            data["config"][key] = data.pop(key, default)
-
         # Plan 的 config 属性不是 JsonField, 因此需要 json.dumps
         data["config"] = json.dumps(data["config"])
         return data
@@ -481,48 +535,61 @@ class LocalServiceBinder:
         self.service = service
 
     @atomic()
-    def bind(self, module: Module, specs: Optional[Dict[str, str]] = None):
-        """Create the binding relationship in local database"""
-        specs_helper = ServiceSpecificationHelper(
-            definitions=self.service.specifications, plans=self.service.get_plans(is_active=True)
-        )
-        # if provided empty specifications, will return all plans.
-        plans = specs_helper.filter_plans(specifications=specs)
+    def bind(self, module: Module, plan_id: str | None, env_plan_id_map: dict[str, str] | None):
+        """Create the binding relationship in local database.
 
+        :raises BindServicePlanError: When no appropriate plans can be found.
+        """
         svc_module_attachment, _ = ServiceModuleAttachment.objects.get_or_create(
-            service=self.service.db_object, module=module
+            service=self.service.db_object, module=module, defaults={"tenant_id": module.tenant_id}
         )
 
-        # bind plans to each engineApp without provision
-        for env in module.envs.all():  # type: ModuleEnvironment
-            plan = cast(LocalPlanObj, self._get_plan_by_env(env, plans))
-            self._bind_for_env(env, plan)
+        # bind plans to each environment
+        for env in module.envs.all():
+            try:
+                plan = get_plan_by_env(self.service, env, plan_id, env_plan_id_map)
+            except ValueError as e:
+                raise BindServicePlanError(str(e))
 
+            plan = cast(LocalPlanObj, plan)
+            self._bind_for_env(env, plan)
+        return svc_module_attachment
+
+    @atomic()
+    def bind_use_first_plan(self, module: Module):
+        """Create the binding relationship in local database. Use the first plan
+        if multiple plans are available.
+
+        :raises BindServicePlanError: When no appropriate plans can be found.
+        """
+        svc_module_attachment, _ = ServiceModuleAttachment.objects.get_or_create(
+            service=self.service.db_object, module=module, defaults={"tenant_id": module.tenant_id}
+        )
+
+        # bind plans to each environment
+        for env in module.envs.all():
+            plans = PlanSelector().list(self.service, env)
+            if not plans:
+                raise BindServicePlanError("no plans found")
+
+            # Use the first plan
+            plan = cast(LocalPlanObj, plans[0])
+            self._bind_for_env(env, plan)
         return svc_module_attachment
 
     @atomic()
     def bind_without_plan(self, module: Module):
         """bind the Service to Module, without binding any ServiceEngineAppAttachment"""
         svc_module_attachment, _ = ServiceModuleAttachment.objects.get_or_create(
-            service=self.service.db_object, module=module
+            service=self.service.db_object, module=module, defaults={"tenant_id": module.tenant_id}
         )
         return svc_module_attachment
-
-    @staticmethod
-    def _get_plan_by_env(env: ModuleEnvironment, plans: List[PlanObj]) -> PlanObj:
-        """Return the first plan which matching the given env."""
-        plans = sorted(plans, key=lambda i: ("restricted_envs" in i.properties), reverse=True)
-
-        for plan in plans:
-            if "restricted_envs" not in plan.properties or env.environment in plan.properties["restricted_envs"]:
-                return plan
-        raise RuntimeError("can not bind a plan")
 
     def _bind_for_env(self, env: ModuleEnvironment, plan: LocalPlanObj):
         svc_engine_app_attachment, created = ServiceEngineAppAttachment.objects.get_or_create(
             engine_app=env.engine_app,
             service=self.service.db_object,
-            defaults=dict(plan=plan.db_object),
+            defaults={"plan": plan.db_object, "tenant_id": env.tenant_id},
         )
 
         if created or svc_engine_app_attachment.plan_id == constants.LEGACY_PLAN_ID:

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import time
 from pathlib import PurePath
@@ -34,7 +33,12 @@ from translated_fields import TranslatedFieldWithFallback
 
 from paasng.bk_plugins.pluginscenter import constants
 from paasng.bk_plugins.pluginscenter.definitions import PluginCodeTemplate, PluginoverviewPage, find_stage_by_id
+from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
 from paasng.core.core.storages.object_storage import plugin_logo_storage
+from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.models import AuditedModel, BkUserField, ProcessedImageField, UuidAuditedModel, make_json_field
 
 logger = logging.getLogger(__name__)
@@ -83,6 +87,7 @@ class PluginInstance(UuidAuditedModel):
         choices=constants.PluginStatus.get_choices(),
         default=constants.PluginStatus.WAITING_APPROVAL,
     )
+    publisher = models.CharField(verbose_name="插件发布者", max_length=64, default="")
     itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
     creator = BkUserField()
     is_deleted = models.BooleanField(default=False, help_text="是否已删除")
@@ -95,6 +100,20 @@ class PluginInstance(UuidAuditedModel):
         options={"quality": 95},
         default=None,
     )
+
+    plugin_tenant_mode = models.CharField(
+        verbose_name="插件租户模式",
+        max_length=16,
+        default=AppTenantMode.SINGLE.value,
+        help_text="插件在租户层面的可用范围，可选值：全租户、指定租户",
+    )
+    plugin_tenant_id = models.CharField(
+        verbose_name="插件租户 ID",
+        max_length=32,
+        default=DEFAULT_TENANT_ID,
+        help_text="插件对哪个租户的用户可用，当租户模式为全租户时，本字段值为空",
+    )
+    tenant_id = tenant_id_field_factory()
 
     def get_logo_url(self) -> str:
         # 插件应用的默认 Logo 用平台统一的 Logo
@@ -116,6 +135,8 @@ class PluginInstance(UuidAuditedModel):
             overview_page.topUrl = overview_page.topUrl.format(plugin_id=self.id)
         if overview_page.bottomUrl:
             overview_page.bottomUrl = overview_page.bottomUrl.format(plugin_id=self.id)
+        if overview_page.ignoredUrl:
+            overview_page.ignoredUrl = overview_page.ignoredUrl.format(plugin_id=self.id)
         return overview_page
 
     @property
@@ -154,12 +175,18 @@ class PluginMarketInfo(AuditedModel):
     description = TranslatedFieldWithFallback(models.TextField(verbose_name="详细描述", null=True))
     contact = models.TextField(verbose_name="联系人", help_text="以分号(;)分割")
     extra_fields = models.JSONField(verbose_name="额外字段")
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
 
 class PluginReleaseVersionManager(models.Manager):
-    def get_latest_succeeded(self, plugin: Optional["PluginInstance"] = None) -> Optional["PluginRelease"]:
-        """获取最后一个成功发布的正式版本，用于:
-        1.发布正式版本时自动生成版本号
+    def get_latest_succeeded(
+        self, plugin: Optional["PluginInstance"] = None, type: Optional[str] = constants.PluginReleaseType.PROD
+    ) -> Optional["PluginRelease"]:
+        """获取最后一个成功发布的版本，默认为正式版本用于:
+        1. 新建测试/版本页面：
+        - 代码差异对比
+        - 自动生成版本号
         """
         # 兼容关联查询(RelatedManager)的接口
         if plugin is None:
@@ -169,9 +196,9 @@ class PluginReleaseVersionManager(models.Manager):
                 raise TypeError("get_latest_succeeded() 1 required positional argument: 'plugin'")
 
         try:
-            return self.filter(
-                plugin=plugin, status=constants.PluginReleaseStatus.SUCCESSFUL, type=constants.PluginReleaseType.PROD
-            ).latest("created")
+            return self.filter(plugin=plugin, status=constants.PluginReleaseStatus.SUCCESSFUL, type=type).latest(
+                "created"
+            )
         except self.model.DoesNotExist:
             return None
 
@@ -246,8 +273,16 @@ class PluginRelease(AuditedModel):
     status = models.CharField(default=constants.PluginReleaseStatus.INITIAL, max_length=16)
     tag = models.CharField(verbose_name="标签", max_length=16, db_index=True, null=True)
     retryable = models.BooleanField(default=True, help_text="失败后是否可重试")
+    is_rolled_back = models.BooleanField(default=False, help_text="是否已回滚")
+    # 灰度状态需要根据 itsm 审批单据的状态来确定，为避免每次查询灰度状态的时候都调用 itsm API，记录到 DB 中，在 itsm 回调时更新灰度状态
+    # 同时，也方便前端根据”灰度状态“过滤发布版本
+    gray_status = models.CharField(
+        verbose_name="灰度发布状态", max_length=32, default=constants.GrayReleaseStatus.IN_GRAY
+    )
 
     creator = BkUserField()
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
     objects = PluginReleaseVersionManager()
 
@@ -277,15 +312,35 @@ class PluginRelease(AuditedModel):
                 stage_id=stage.id,
                 stage_name=stage.name,
                 invoke_method=stage.invokeMethod,
+                status_polling_method=stage.statusPollingMethod,
                 defaults={
                     "next_stage": next_stage,
                     "status": constants.PluginReleaseStatus.INITIAL,
+                    "tenant_id": self.plugin.tenant_id,
                 },
             )
         self.current_stage = next_stage
         self.stages_shortcut = stages_shortcut[::-1]
         self.status = constants.PluginReleaseStatus.PENDING
         self.save(update_fields=["current_stage", "stages_shortcut", "status", "updated"])
+
+    @property
+    def latest_release_strategy(self) -> Optional["PluginReleaseStrategy"]:
+        if self.release_strategies.exists():
+            return self.release_strategies.latest("created")
+        return None
+
+    @property
+    def is_latest(self) -> bool:
+        """判断版本是否为当前最新发布成功的版本"""
+        latest_release = (
+            PluginRelease.objects.filter(
+                plugin=self.plugin, type=self.type, status=constants.PluginReleaseStatus.SUCCESSFUL
+            )
+            .order_by("-created")
+            .first()
+        )
+        return self == latest_release
 
 
 class PluginReleaseStage(AuditedModel):
@@ -298,6 +353,12 @@ class PluginReleaseStage(AuditedModel):
     stage_id = models.CharField(verbose_name="阶段标识", max_length=32)
     stage_name = models.CharField(verbose_name="阶段名称", max_length=16, help_text="冗余字段, 用于减少查询次数")
     invoke_method = models.CharField(verbose_name="触发方式", max_length=16, help_text="冗余字段, 用于减少查询次数")
+    status_polling_method = models.CharField(
+        verbose_name="阶段的状态轮询方式",
+        max_length=16,
+        default=constants.StatusPollingMethod.API,
+        help_text="冗余字段, 用于减少查询次数",
+    )
 
     status = models.CharField(verbose_name="发布状态", default=constants.PluginReleaseStatus.INITIAL, max_length=16)
     fail_message = models.TextField(verbose_name="错误原因")
@@ -309,6 +370,8 @@ class PluginReleaseStage(AuditedModel):
     operator = models.CharField(verbose_name="操作人", max_length=32, null=True)
 
     next_stage = models.OneToOneField("PluginReleaseStage", on_delete=models.SET_NULL, db_constraint=False, null=True)
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("release", "stage_id")
@@ -330,19 +393,17 @@ class PluginReleaseStage(AuditedModel):
     @cached_property
     def has_post_command(self):
         stage_definition = find_stage_by_id(self.release.plugin.pd, self.release, self.stage_id)
-        if stage_definition and stage_definition.api and stage_definition.api.postCommand:
-            return True
-        return False
+        return bool(stage_definition and stage_definition.api and stage_definition.api.postCommand)
 
 
 class PluginReleaseStrategy(AuditedModel):
     """插件版本的发布策略"""
 
     release = models.ForeignKey(
-        PluginRelease, on_delete=models.CASCADE, db_constraint=False, related_name="release_strategy"
+        PluginRelease, on_delete=models.CASCADE, db_constraint=False, related_name="release_strategies"
     )
     strategy = models.CharField(
-        verbose_name="发布策略", max_length=32, choices=constants.PluginReleaseStrategy.get_choices()
+        verbose_name="发布策略", max_length=32, choices=constants.ReleaseStrategy.get_choices()
     )
     bkci_project = models.JSONField(
         verbose_name="蓝盾项目ID", blank=True, null=True, help_text="格式：['1111', '222222']"
@@ -363,10 +424,39 @@ class PluginReleaseStrategy(AuditedModel):
     #     }
     # ]
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
+
+    def get_itsm_service_name(self, is_organization_changed: bool) -> str:
+        """根据发布策略的设置获取对应的 ITSM 审批流程"""
+        if self.strategy == constants.ReleaseStrategy.FULL:
+            return ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL
+
+        # 灰度范围包括了组织且组织信息变更了，则需要上级审批
+        if self.organization and is_organization_changed:
+            return ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL
+        return ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL
+
+    @cached_property
+    def itsm_detail_fields(self) -> Optional[dict]:
+        if not self.itsm_detail:
+            return None
+        return {item["key"]: item["value"] for item in self.itsm_detail.fields}
+
+    @property
+    def itsm_submitter(self):
+        # 部分老的单据中没有 submitter，则使用版本的创建者
+        release_creator = self.release.creator.username
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("submitter", release_creator)
+        return release_creator
 
 
 class ApprovalService(UuidAuditedModel):
-    """审批服务信息"""
+    """审批服务信息。全局配置，不添加租户 ID
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     service_name = models.CharField(verbose_name="审批服务名称", max_length=64, unique=True)
     service_id = models.IntegerField(verbose_name="审批服务ID", help_text="用于在 ITSM 上提申请单据")
@@ -378,6 +468,8 @@ class PluginConfig(AuditedModel):
     plugin = models.ForeignKey(PluginInstance, on_delete=models.CASCADE, db_constraint=False, related_name="configs")
     unique_key = models.CharField(verbose_name="唯一标识", max_length=64)
     row = models.JSONField(verbose_name="配置内容(1行), 格式 {'column_key': 'value'}", default=dict)
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         unique_together = ("plugin", "unique_key")
@@ -386,9 +478,53 @@ class PluginConfig(AuditedModel):
 class PluginVisibleRange(AuditedModel):
     """插件可见范围"""
 
-    plugin = models.OneToOneField(PluginInstance, on_delete=models.CASCADE, db_constraint=False)
+    plugin = models.OneToOneField(
+        PluginInstance, on_delete=models.CASCADE, db_constraint=False, related_name="visible_range"
+    )
     bkci_project = models.JSONField(verbose_name="蓝盾项目ID", default=list)
     organization = models.JSONField(verbose_name="组织架构", blank=True, null=True)
+    is_in_approval = models.BooleanField(verbose_name="是否在审批中", default=False)
+    itsm_detail: Optional[ItsmDetail] = ItsmDetailField(default=None, null=True)
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
+
+    @cached_property
+    def itsm_detail_fields(self) -> Optional[dict]:
+        if not self.itsm_detail:
+            return None
+        return {item["key"]: item["value"] for item in self.itsm_detail.fields}
+
+    @property
+    def itsm_bkci_project(self):
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("origin_bkci_project")
+        return None
+
+    @property
+    def itsm_organization(self):
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("origin_organization")
+        return None
+
+    @property
+    def itsm_submitter(self):
+        # 部分老的单据中没有 submitter，则使用插件的创建者
+        plugin_creator = self.plugin.creator.username
+        if self.itsm_detail_fields:
+            return self.itsm_detail_fields.get("submitter", plugin_creator)
+        return plugin_creator
+
+    @classmethod
+    def get_or_initialize_with_default(cls, plugin: "PluginInstance") -> "PluginVisibleRange":
+        try:
+            return cls.objects.get(plugin=plugin)
+        except PluginVisibleRange.DoesNotExist:
+            defaults = {"tenant_id": plugin.tenant_id}
+            if hasattr(plugin.pd, "visible_range_definition"):
+                defaults.update({"organization": cattr.unstructure(plugin.pd.visible_range_definition.initial)})
+
+        visible_range_obj, _created = cls.objects.get_or_create(plugin=plugin, defaults=defaults)
+        return visible_range_obj
 
 
 class OperationRecord(AuditedModel):
@@ -406,6 +542,8 @@ class OperationRecord(AuditedModel):
     action = models.CharField(max_length=32, choices=constants.ActionTypes.get_choices())
     specific = models.CharField(max_length=255, null=True)
     subject = models.CharField(max_length=32, choices=constants.SubjectTypes.get_choices())
+    # 租户信息
+    tenant_id = tenant_id_field_factory()
 
     def get_display_text(self):
         action_text = constants.ActionTypes.get_choice_label(self.action)
@@ -415,3 +553,32 @@ class OperationRecord(AuditedModel):
         if self.specific:
             return f"{username} {action_text} {self.specific} {subject_text}"
         return f"{username} {action_text}{subject_text}"
+
+    @property
+    def operator_username(self) -> str:
+        if self.operator:
+            return get_username_by_bkpaas_user_id(self.operator)
+        return ""
+
+
+def is_release_strategy_organization_changed(release: PluginRelease) -> bool:
+    """检查发布策略的组织是否变更"""
+
+    # 如果没有最新的发布策略，返回 True
+    latest_release_strategy = release.latest_release_strategy
+    if not latest_release_strategy:
+        return True
+
+    # 找到倒数第二的发布策略
+    try:
+        second_release_strategy = release.release_strategies.exclude(id=latest_release_strategy.id).latest("created")
+    except release.release_strategies.model.DoesNotExist:
+        # 如果找不到倒数第二个策略，返回 True
+        return True
+
+    # 获取两个发布策略的组织 ID 集合
+    latest_org_ids = {s["id"] for s in latest_release_strategy.organization or set()}
+    second_org_ids = {s["id"] for s in second_release_strategy.organization or set()}
+
+    # 前后两个组织的 ID 不完全相等
+    return latest_org_ids != second_org_ids

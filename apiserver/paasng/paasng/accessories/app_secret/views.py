@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -42,7 +42,8 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.oauth2.api import BkOauthClient
 from paasng.infras.oauth2.models import BkAppSecretInEnvVar
 from paasng.infras.oauth2.utils import get_app_secret_in_env_var
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
@@ -82,6 +83,15 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise ValidationError(_(f"密钥已达到上限，应用仅允许有 {MAX_SECRET_COUNT} 个密钥"))
 
         client.create_app_secret(code)
+
+        add_app_audit_record(
+            app_code=code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.SECRET,
+        )
         return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(tags=["鉴权信息"], request_body=AppSecretStatusSLZ, responses={"204": "没有返回数据"})
@@ -99,6 +109,15 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise ValidationError(_("当前密钥为内置密钥，不允许被禁用"))
 
         BkOauthClient().toggle_app_secret(code, bk_app_secret_id, enabled)
+
+        add_app_audit_record(
+            app_code=code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.ENABLE if enabled else OperationEnum.DISABLE,
+            target=OperationTarget.SECRET,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["鉴权信息"], responses={"204": "没有返回数据"})
@@ -126,6 +145,15 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise ValidationError(_("当前密钥为内置密钥，不允许删除"))
 
         client.del_app_secret(code, bk_app_secret_id)
+
+        add_app_audit_record(
+            app_code=code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.SECRET,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(tags=["鉴权信息"], request_body=VerificationCodeSLZ)
@@ -133,8 +161,8 @@ class BkAuthSecretViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """验证验证码查看密钥详情"""
         application = self.get_application()
 
-        # 部分版本没有发送通知的渠道可通过平台FeatureFlag设置：跳过验证码校验步骤
-        if PlatformFeatureFlag.get_default_flags()[PlatformFeatureFlag.VERIFICATION_CODE]:
+        # 部分版本没有发送通知的渠道可置：跳过验证码校验步骤
+        if settings.ENABLE_VERIFICATION_CODE:
             serializer = VerificationCodeSLZ(data=request.data)
             serializer.is_valid(raise_exception=True)
 
@@ -191,6 +219,7 @@ class BkAppSecretInEnvVaViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise ValidationError(_("密钥已被禁用，不能设置为内置密钥"))
 
         BkAppSecretInEnvVar.objects.update_or_create(
-            bk_app_code=application.code, defaults={"bk_app_secret_id": bk_app_secret_id}
+            bk_app_code=application.code,
+            defaults={"bk_app_secret_id": bk_app_secret_id, "tenant_id": application.tenant_id},
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

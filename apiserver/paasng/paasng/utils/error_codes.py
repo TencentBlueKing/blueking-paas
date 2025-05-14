@@ -1,28 +1,43 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from blue_krill.web.std_error import ErrorCode
 from django.utils.translation import gettext_lazy as _
 
 
 class ErrorCodes:
+    # 平台管理员相关
+    USER_PROFILE_NOT_FOUND = ErrorCode(_("用户不存在"))
+
+    # 用户特性相关
+    USER_FEATURE_FLAG_NOT_FOUND = ErrorCode(_("用户特性不存在"))
+    USER_FEATURE_FLAG_ALREADY_EXISTS = ErrorCode(_("用户特性已存在"))
+
+    # 已授权应用相关
+    APP_NOT_FOUND = ErrorCode(_("应用不存在"))
+    SYSAPI_CLIENT_ROLE_NOT_FOUND = ErrorCode(_("指定的 sysapi client 权限不存在"))
+    SYSAPI_CLIENT_NOT_FOUND = ErrorCode(_("请求未携带有效的 sysapi client 信息"))
+    APP_AUTHENTICATED_ALREADY_EXISTS = ErrorCode(_("应用已经添加了授权关系"))
+    SYSAPI_CLIENT_ALREADY_EXISTS = ErrorCode(_("指定的 sysapi client 已存在"))
+    SYSAPI_CLIENT_PERM_DENIED = ErrorCode(_("当前的 sysapi client 无权访问"), status_code=403)
+
     # 用户与通知相关
     ERROR_SENDING_NOTIFICATION = ErrorCode(_("发送通知消息失败，请稍候重试"))
+    NOTIFICATION_DISABLED = ErrorCode(_("暂不支持发送通知"))
     # 人员管理
     MEMBERSHIP_DELETE_FAILED = ErrorCode(_("应用应该至少拥有一个管理员"))
     MEMBERSHIP_OWNER_FAILED = ErrorCode(_("应用所有者不能执行该操作"))
@@ -35,6 +50,7 @@ class ErrorCodes:
     CANNOT_DELETE_APP = ErrorCode(_("应用删除失败"))
     APP_RES_PROTECTED = ErrorCode(_("访问受保护资源失败"))
     # 模块
+    CANNOT_CREATE_MODULE = ErrorCode(_("模块创建失败"))
     CANNOT_SET_DEFAULT = ErrorCode(_("设置默认访问模块失败"))
     CANNOT_DELETE_MODULE = ErrorCode(_("删除模块失败"))
     CREATE_MODULE_QUOTA_EXCEEDED = ErrorCode(_("模块创建数量已达到配额上限"))
@@ -51,6 +67,7 @@ class ErrorCodes:
     CREATE_SHARED_ATTACHMENT_ERROR = ErrorCode(_("共享增强服务失败"), code_num=4313050)
     CANNOT_DESTROY_CI_RESOURCES = ErrorCode(_("CI相关资源删除失败"), code_num=4313081)
     CANNOT_READ_INSTANCE_INFO = ErrorCode(_("读取增强服务实例信息失败"), code_num=4313082)
+    UNSUPPORTED_OPERATION = ErrorCode(_("增强服务暂时不支持该操作"))
     # 部署
     CANNOT_GET_DEPLOYMENT = ErrorCode(_("查询部署信息失败"), code_num=4311001)
     CANNOT_GET_DEPLOYMENT_PHASES = ErrorCode(_("查询部署阶段信息失败"), code_num=4311002)
@@ -75,6 +92,7 @@ class ErrorCodes:
     PACKAGE_ALREADY_EXISTS = ErrorCode(_("源码包已存在"), code_num=4312009)
     MISSING_VERSION_INFO = ErrorCode(_("缺失版本信息"), code_num=4312010)
     OBJECT_STORE_EXCEPTION = ErrorCode(_("对象存储服务异常"), code_num=4312011)
+    CANNOT_COMMIT_TO_REPOSITORY = ErrorCode(_("代码提交失败"), code_num=4312012)
     # 部署配置
     BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志
@@ -82,6 +100,8 @@ class ErrorCodes:
     QUERY_REQUEST_ERROR = ErrorCode(_("查询日志失败，请检查查询条件"))
     CUSTOM_COLLECTOR_NOT_EXISTED = ErrorCode(_("日志平台-「自定义上报」配置不存在"))
     CANNOT_DELETE_CUSTOM_COLLECTOR = ErrorCode(_("删除日志采集规则失败"))
+    CUSTOM_COLLECTOR_UNSUPPORTED = ErrorCode(_("暂不支持自定义日志采集"))
+    ES_NOT_CONFIGURED = ErrorCode(_("ElasticSearch 未配置"))
     # 权限管理
     CANNOT_MODIFY_ITEM = ErrorCode(_("当前项不允许变更"))
     # 迁移
@@ -119,10 +139,12 @@ class ErrorCodes:
     # 文档填写
     DOC_TEMPLATE_ID_NOT_FOUND = ErrorCode(_("文档模板不存在"))
     # S-Mart 应用
-    PREPARED_PACKAGE_NOT_FOUND = ErrorCode(_("没找到任何待创建的 S-mart 应用包"), code_num=4314001)
+    PREPARED_PACKAGE_NOT_FOUND = ErrorCode(_("没找到任何待创建的 S-Mart 应用包"), code_num=4314001)
+    PREPARED_PACKAGE_ERROR = ErrorCode(_("预处理 S-Mart 应用包异常"))
     MISSING_DESCRIPTION_INFO = ErrorCode(_("缺失应用描述文件"), code_num=4314002)
     FAILED_TO_HANDLE_APP_DESC = ErrorCode(_("分析应用描述文件异常"), code_num=4314003)
     FAILED_TO_PUSH_IMAGE = ErrorCode(_("访问容器镜像仓库异常"), code_num=4314004)
+    FILE_CORRUPTED_ERROR = ErrorCode(_("S-Mart 应用源码文件损坏"))
     # 对外接口异常
     CANNOT_GET_BK_USER_CREDENTIAL = ErrorCode(_("无法获取用户凭证"))
     # Oauth 相关错误
@@ -141,9 +163,6 @@ class ErrorCodes:
     # 应用模板相关
     NORMAL_TMPL_NOT_FOUND = ErrorCode(_("指定的应用模板不存在或不可用"))
     UNKNOWN_TEMPLATE = ErrorCode(_("无效的应用模板"))
-    # 场景模板（Scene SaaS）相关
-    SCENE_TMPL_NOT_FOUND = ErrorCode(_("指定的场景模板不存在"))
-    SCENE_TMPL_DESC_ERROR = ErrorCode(_("场景模板应用描述文件异常"))
 
     # lesscode app 相关
     CREATE_LESSCODE_APP_ERROR = ErrorCode(_("创建蓝鲸运维开发平台应用错误"))
@@ -179,9 +198,19 @@ class ErrorCodes:
     # Manifest
     IMPORT_MANIFEST_FAILED = ErrorCode(_("导入应用模型失败"))
 
+    # 应用集群
+    CANNOT_CREATE_CLUSTER = ErrorCode(_("无法创建应用集群"))
+    CANNOT_UPDATE_CLUSTER = ErrorCode(_("无法更新应用集群"))
+    CANNOT_DELETE_CLUSTER = ErrorCode(_("无法删除应用集群"))
+    # 集群组件
+    CANNOT_UPSERT_CLUSTER_COMPONENT = ErrorCode(_("无法更新集群组件"))
+
     # dev sandbox
-    DEV_SANDBOX_ALREADY_EXISTS = ErrorCode("dev sandbox already exists", status_code=409)
-    DEV_SANDBOX_NOT_FOUND = ErrorCode("dev sandbox not found")
+    DEV_SANDBOX_CREATE_FAILED = ErrorCode(_("创建开发沙箱失败"))
+    DEV_SANDBOX_ALREADY_EXISTS = ErrorCode(_("开发沙箱已存在"), status_code=409)
+    DEV_SANDBOX_NOT_FOUND = ErrorCode(_("指定的开发沙箱不存在"), status_code=404)
+    DEV_SANDBOX_COUNT_OVER_LIMIT = ErrorCode(_("开发沙箱总数量超过上限"))
+    DEV_SANDBOX_API_ERROR = ErrorCode(_("开发沙箱 API 请求异常"))
 
     def dump(self, fh=None):
         """A function to dump ErrorCodes as markdown table."""

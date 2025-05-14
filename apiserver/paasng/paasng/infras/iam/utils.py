@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import time
 from typing import List
 
@@ -122,19 +121,17 @@ def get_app_actions_by_role(role: ApplicationRole) -> List[AppAction]:
     return []
 
 
-def get_paas_authorization_scopes(
-    app_code: str, app_name: str, role: ApplicationRole, include_system: bool = False
-) -> dict:
+def get_paas_authorization_scopes(app_code: str, app_name: str, role: ApplicationRole) -> dict:
     """
     应用在开发者中心的授权信息
 
+    :param app_code: 应用编码
+    :param app_name: 应用名称
     :param role: 用户的角色，开发者中心的权限要根据角色做区分
-    :param include_system: 创建、更新分级管理员时的授权范围中需要包含系统ID(system);
-                           给用户组授权时系统信息在路径参数中，授权范围中不需要包含系统信息
     """
     scopes = {
         "system": settings.IAM_PAAS_V3_SYSTEM_ID,
-        "actions": [{"id": action} for action in get_app_actions_by_role(ApplicationRole.ADMINISTRATOR)],
+        "actions": [{"id": action} for action in get_app_actions_by_role(role)],
         "resources": [
             {
                 "system": settings.IAM_PAAS_V3_SYSTEM_ID,
@@ -152,8 +149,6 @@ def get_paas_authorization_scopes(
             }
         ],
     }
-    if include_system:
-        scopes["system"] = settings.IAM_PAAS_V3_SYSTEM_ID
     return scopes
 
 

@@ -1,54 +1,53 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import uuid
 from unittest import mock
 
 import pytest
-from django.conf import settings
-from django_dynamic_fixture import G
 
+from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
 from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
 from paasng.accessories.servicehub.remote.manager import RemotePlanObj, RemoteServiceObj
-from paasng.accessories.services.models import Service, ServiceCategory
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.mgrlegacy.app_migrations.service import BaseRemoteServiceMigration, BaseServiceMigration
 from tests.conftest import skip_if_legacy_not_configured
-from tests.utils.mocks.engine import mock_cluster_service
 
-pytestmark = [skip_if_legacy_not_configured(), pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
+pytestmark = [
+    skip_if_legacy_not_configured(),
+    pytest.mark.django_db(databases=["default", "workloads"]),
+    pytest.mark.xdist_group(name="remote-services"),
+]
 
 
 dummy_service = RemoteServiceObj(
-    region=settings.DEFAULT_REGION_NAME,
     uuid="00000000-0000-0000-0000-000000000000",
     name="dummy-service",
     logo="",
     is_visible=True,
     plans=[
         RemotePlanObj(
-            region=settings.DEFAULT_REGION_NAME,
             uuid="11111111-1111-1111-1111-111111111111",
+            tenant_id=DEFAULT_TENANT_ID,
             name="dummy-plan",
             description="dummy plan",
             is_eager=True,
             is_active=True,
-            specifications={},
             properties={},
         )
     ],
@@ -59,12 +58,7 @@ dummy_service = RemoteServiceObj(
 def _mock_get_service():
     with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
-        yield
-
-
-@pytest.fixture(autouse=True)
-def _setup_cluster():
-    with mock_cluster_service():
+        ServiceBindingPolicyManager(dummy_service, DEFAULT_TENANT_ID).set_static([dummy_service.get_plans()[0]])
         yield
 
 
@@ -74,18 +68,6 @@ class TestBaseServiceMigration:
 
 
 class TestBaseRemoteServiceMigration:
-    @pytest.fixture()
-    def bk_service(self):
-        category = G(ServiceCategory)
-        svc = G(
-            Service,
-            name=dummy_service.name,
-            category=category,
-            region=settings.DEFAULT_REGION_NAME,
-            uuid=dummy_service.uuid,
-        )
-        return svc
-
     def test_bind_service_to_default_module(self, bk_module, migration_instance_maker):
         migration = migration_instance_maker(BaseRemoteServiceMigration)
         assert RemoteServiceModuleAttachment.objects.filter(module=bk_module).exists() is False

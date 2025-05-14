@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict, List
 
 from django.db import models
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.bk_plugins.pluginscenter.constants import PluginReleaseType
+from paasng.bk_plugins.pluginscenter.constants import PluginBasicInfoAccessMode, PluginReleaseType
 from paasng.bk_plugins.pluginscenter.definitions import (
     FieldSchema,
     PluginBackendAPI,
@@ -31,7 +30,9 @@ from paasng.bk_plugins.pluginscenter.definitions import (
     PluginCreateApproval,
     PluginFeature,
     PluginLogConfig,
+    PluginOptions,
     PluginoverviewPage,
+    PluginVisibleRangeLevel,
     ReleaseRevisionDefinition,
     ReleaseStageDefinition,
 )
@@ -51,9 +52,16 @@ PluginConfigColumnDefinitionField = make_json_field(
 )
 PluginFeaturesField = make_json_field("PluginFeaturesField", List[PluginFeature])
 PluginoverviewPageField = make_json_field("PluginoverviewPageField", PluginoverviewPage)
+PluginVisibleRangeLevelField = make_json_field("PluginVisibleRangeLevelField", List[PluginVisibleRangeLevel])
+PluginOptionsField = make_json_field("PluginOptionsField", PluginOptions)
 
 
 class PluginDefinition(UuidAuditedModel):
+    """[multi-tenancy] This model is not tenant-aware.
+
+    说明：插件类型的定义，如标准运维插件类型对所有租户可见，创建的标准运维插件实例才是租户级别的。
+    """
+
     identifier = models.CharField(unique=True, max_length=64)
     name = TranslatedFieldWithFallback(models.CharField(max_length=64))
     description = TranslatedFieldWithFallback(models.TextField())
@@ -68,6 +76,8 @@ class PluginDefinition(UuidAuditedModel):
     release_stages: List[ReleaseStageDefinition] = ReleaseStageDefinitionField()
     log_config: PluginLogConfig = PluginLogConfigField(null=True)
     features: List[PluginFeature] = PluginFeaturesField(default=list)
+
+    options = PluginOptionsField(help_text="插件额外配置项", default=None, null=True)
 
     # 测试版本
     test_release_revision: ReleaseRevisionDefinition = ReleaseRevisionDefinitionField(null=True)
@@ -85,12 +95,17 @@ class PluginDefinition(UuidAuditedModel):
 
 
 class PluginBasicInfoDefinition(AuditedModel):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     pd = models.OneToOneField(
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="basic_info_definition"
     )
     id_schema = FieldSchemaField()
     name_schema = FieldSchemaField()
     init_templates = PluginCodeTemplateListField(help_text="初始化模板")
+    access_mode = models.CharField(
+        verbose_name="基本信息查看模式", max_length=16, default=PluginBasicInfoAccessMode.READWRITE
+    )
     release_method = models.CharField(verbose_name="发布方式", max_length=16)
     repository_group = models.CharField(verbose_name="插件代码初始化仓库组", max_length=255)
     api: PluginBackendAPI = PluginBackendAPIField()
@@ -99,6 +114,8 @@ class PluginBasicInfoDefinition(AuditedModel):
     extra_fields_en = PluginExtraFieldField(default=dict)
     extra_fields_order = models.JSONField(default=list)
     overview_page = PluginoverviewPageField(null=True)
+    description = TranslatedFieldWithFallback(models.TextField(default=""))
+    publisher_description = TranslatedFieldWithFallback(models.TextField(default=""))
 
     @classmethod
     def get_languages(cls) -> List[str]:
@@ -114,11 +131,13 @@ class PluginBasicInfoDefinition(AuditedModel):
 
 
 class PluginMarketInfoDefinition(AuditedModel):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     pd = models.OneToOneField(
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="market_info_definition"
     )
     storage = models.CharField(verbose_name="存储方式", max_length=16)
-    category: PluginBackendAPIResource = PluginBackendAPIResourceField()
+    category: PluginBackendAPIResource = PluginBackendAPIResourceField(null=True)
     api: PluginBackendAPI = PluginBackendAPIField(null=True)
     extra_fields = PluginExtraFieldField(default=dict)
     extra_fields_en = PluginExtraFieldField(default=dict)
@@ -126,6 +145,8 @@ class PluginMarketInfoDefinition(AuditedModel):
 
 
 class PluginConfigInfoDefinition(AuditedModel):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     pd = models.OneToOneField(
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="config_definition"
     )
@@ -138,8 +159,10 @@ class PluginConfigInfoDefinition(AuditedModel):
 
 
 class PluginVisibleRangeDefinition(AuditedModel):
+    """[multi-tenancy] This model is not tenant-aware."""
+
     pd = models.OneToOneField(
         PluginDefinition, on_delete=models.CASCADE, db_constraint=False, related_name="visible_range_definition"
     )
-    description = TranslatedFieldWithFallback(models.TextField(default=""))
-    scope = models.JSONField(default=list)
+    api: PluginBackendAPI = PluginBackendAPIField(null=True)
+    initial: PluginVisibleRangeLevel = PluginVisibleRangeLevelField(null=True)

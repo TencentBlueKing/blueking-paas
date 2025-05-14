@@ -16,15 +16,17 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 from typing import Dict
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
+from typing_extensions import Protocol
+
 from svc_otel.bkmonitorv3.backend.apigw import Client
 from svc_otel.bkmonitorv3.backend.esb import get_client_by_username
 from svc_otel.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
-from typing_extensions import Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +34,7 @@ logger = logging.getLogger(__name__)
 class BkMonitorBackend(Protocol):
     """Describes protocols of calling API service"""
 
-    def create_apm_application(self, *args, **kwargs) -> Dict:
-        ...
+    def create_apm_application(self, *args, **kwargs) -> Dict: ...
 
 
 class BkMonitorClient:
@@ -75,21 +76,21 @@ class BkMonitorClient:
         except APIGatewayResponseError as e:
             raise BkMonitorGatewayServiceError("Failed to create APM on BK Monitor") from e
 
-        if not resp['result']:
+        if not resp["result"]:
             logger.error(
-                f'Failed to create APM BK Monitor, resp:{resp} \apm_name: {apm_name}, space_uid:{bk_monitor_space_id}'
+                f"Failed to create APM BK Monitor, resp:{resp} \apm_name: {apm_name}, space_uid:{bk_monitor_space_id}"
             )
-            raise BkMonitorApiError(resp['message'])
-        return resp['data']
+            raise BkMonitorApiError(resp["message"])
+        return resp["data"]
 
 
-def make_bk_monitor_client() -> BkMonitorClient:
+def make_bk_monitor_client(tenant_id) -> BkMonitorClient:
     if settings.ENABLE_BK_MONITOR_APIGW:
         apigw_client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.APIGW_ENVIRONMENT)
-        apigw_client.update_bkapi_authorization(
-            **{
-                'bk_app_code': settings.BK_APP_CODE,
-                'bk_app_secret': settings.BK_APP_SECRET,
+        apigw_client.update_bkapi_authorization(bk_app_code=settings.BK_APP_CODE, bk_app_secret=settings.BK_APP_SECRET)
+        apigw_client.update_headers(
+            {
+                "X-Bk-Tenant-Id": tenant_id,
             }
         )
         return BkMonitorClient(apigw_client.api)

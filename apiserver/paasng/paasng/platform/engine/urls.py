@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from paasng.utils.basic import make_app_pattern, make_app_pattern_with_global_envs, re_path
 
 from . import views
@@ -96,11 +95,31 @@ urlpatterns = [
         ),
         name="api.config_vars.template",
     ),
+    re_path(
+        make_app_pattern(r"/config_vars/preset/$", include_envs=False),
+        views.PresetConfigVarViewSet.as_view({"get": "list"}),
+        name="api.preset_config_vars",
+    ),
+    re_path(
+        make_app_pattern(r"/config_vars/(?P<config_vars_key>[A-Z][A-Z0-9_]*)/$", include_envs=False),
+        views.ConfigVarViewSet.as_view(
+            {
+                "get": "retrieve_by_key",
+                "post": "upsert_by_key",
+            }
+        ),
+        name="api.config_vars_by_key",
+    ),
     # deploy
     re_path(
         make_app_pattern(r"/deployments/%s/result/$" % PVAR_UUID, include_envs=False),
         views.DeploymentViewSet.as_view({"get": "get_deployment_result"}),
         name="api.deploy.result",
+    ),
+    re_path(
+        make_app_pattern(r"/deployments/%s/logs/export/$" % PVAR_UUID, include_envs=False),
+        views.DeploymentViewSet.as_view({"get": "export_deployment_log"}),
+        name="api.deploy.export_log",
     ),
     re_path(
         make_app_pattern(r"/deployments/{}/interruptions/$".format(PVAR_UUID), include_envs=False),

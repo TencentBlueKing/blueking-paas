@@ -1,42 +1,46 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
+from django.dispatch import Signal
 
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
+# providing_args: [value: str]
+prepare_use_application_code = Signal()
 
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-import django.dispatch
+# providing_args: [value: str, instance: Optional["Application"] = None]
+prepare_use_application_name = Signal()
 
-prepare_use_application_code = django.dispatch.Signal(providing_args=["value"])
-prepare_use_application_name = django.dispatch.Signal(providing_args=["value", "instance"])
-post_create_application = django.dispatch.Signal(providing_args=["application"])
-before_finishing_application_creation = django.dispatch.Signal(providing_args=["application"])
+# providing_args: [application: Application]
+post_create_application = Signal()
 
-prepare_change_application_name = django.dispatch.Signal(providing_args=["region", "code", "name", "name_en"])
+# providing_args: [application: Application]
+before_finishing_application_creation = Signal()
 
+# providing_args: [code: str, name: Optional[str] = None, name_en: Optional[str] = None]
+prepare_change_application_name = Signal()
 
-online_market_success = django.dispatch.Signal(providing_args=["deployment_instance"])
+# providing_args: [offline_instance: OfflineOperation, environment: str]
+module_environment_offline_success = Signal()
 
-pre_delete_application = django.dispatch.Signal(providing_args=["application", "operator"])
-pre_delete_module = django.dispatch.Signal(providing_args=["module", "operator"])
+# providing_args: [application: Application]
+application_member_updated = Signal()
 
-module_environment_offline_success = django.dispatch.Signal(providing_args=["offline_instance", "environment"])
-module_environment_offline_event = django.dispatch.Signal(providing_args=["offline_instance", "environment"])
-application_member_updated = django.dispatch.Signal(providing_args=["application"])
+# providing_args: [application: Application, new_module: Module, old_module: Module]
+application_default_module_switch = Signal()
 
-application_default_module_switch = django.dispatch.Signal(providing_args=["application", "new_module", "old_module"])
-
-# Signal that represents an update of application's logo, make sure to send this signal when logo
-# was updated.
-application_logo_updated = django.dispatch.Signal(providing_args=["application"])
+# Signal that represents an update of application's logo, make sure to send this signal when logo was updated.
+# providing_args: [application: Application]
+application_logo_updated = Signal()

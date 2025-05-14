@@ -16,6 +16,7 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from typing import Dict
 
 from django.conf import settings
@@ -24,13 +25,9 @@ from paas_service.models import Service
 
 
 def context_processors(request) -> Dict:
-    try:
-        SVC_LOGO_URL = Service.objects.first().logo
-    except Service.DoesNotExist:
-        SVC_LOGO_URL = ""
-
+    svc = Service.objects.first()
     return {
-        "SVC_LOGO_URL": SVC_LOGO_URL,
+        "SVC_LOGO_URL": svc.logo if svc else "",
         "csrf_token": get_token(request),
         "settings": settings,
     }

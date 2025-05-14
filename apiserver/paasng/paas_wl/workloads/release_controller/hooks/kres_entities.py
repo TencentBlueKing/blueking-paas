@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 from dataclasses import dataclass
@@ -27,7 +26,6 @@ from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 from typing_extensions import Literal
 
-from paas_wl.bk_app.applications.managers import AppConfigVarManager
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resource_templates.logging import get_app_logging_volume, get_app_logging_volume_mounts
@@ -42,6 +40,7 @@ from paas_wl.infras.resources.kube_res.base import (
 )
 from paas_wl.infras.resources.kube_res.envs import decode_envs, encode_envs
 from paas_wl.infras.resources.utils.basic import get_full_node_selector, get_full_tolerations
+from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.utils.kubestatus import (
     check_pod_health_status,
     get_container_fail_message,
@@ -104,7 +103,7 @@ class CommandDeserializer(AppEntityDeserializer["Command"]):
             type_=annotations["type"],
             version=int(annotations["version"]),
             # 运行时信息
-            start_time=start_time,
+            start_time=start_time.datetime if start_time else None,
             phase=pod_status.phase,
             phase_message=health_status.message,
             main_container_exit_code=main_container_exit_code,
@@ -227,8 +226,8 @@ class Command(AppEntity):
     @classmethod
     def from_db_obj(cls, command: "CommandModel", extra_envs: Optional[Dict] = None) -> "Command":
         envs = command.get_envs()
-        envs.update(AppConfigVarManager(command.app).get_envs())
         envs.update(extra_envs or {})
+        envs = render_vars_dict(envs, context=VarsRenderContext(process_type="sys-cmd"))
 
         return cls(
             app=command.app,

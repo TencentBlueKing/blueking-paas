@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from functools import partial
 
 import pytest
@@ -34,6 +33,7 @@ from paasng.bk_plugins.bk_plugins.models import (
     make_bk_plugin,
     plugin_to_detailed,
 )
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.applications.constants import ApplicationType
 
 pytestmark = pytest.mark.django_db
@@ -95,7 +95,9 @@ def test_get_plugin_env_variables(bk_plugin):
 
 class TestBkPluginAppQuerySet:
     def test_distributor_code_name(self, bk_plugin_app, mock_apigw_api_client):
-        query = partial(BkPluginAppQuerySet().filter, search_term="", order_by=["-created"])
+        query = partial(
+            BkPluginAppQuerySet().filter, search_term="", order_by=["-created"], tenant_id=DEFAULT_TENANT_ID
+        )
         assert query().count() == 1
         assert query(distributor_code_name="sample-dis-1").count() == 0
 
@@ -105,7 +107,9 @@ class TestBkPluginAppQuerySet:
         assert query(distributor_code_name="sample-dis-1").count() == 1
 
     def test_tag_id(self, bk_plugin, mock_apigw_api_client):
-        query = partial(BkPluginAppQuerySet().filter, search_term="", order_by=["-created"])
+        query = partial(
+            BkPluginAppQuerySet().filter, search_term="", order_by=["-created"], tenant_id=DEFAULT_TENANT_ID
+        )
 
         tag_1 = G(BkPluginTag, code_name="sample-tag-1", name="sample-tag-1")
         assert query(tag_id=tag_1.id).count() == 0
@@ -119,3 +123,17 @@ class TestBkPluginAppQuerySet:
         profile.tag = tag_1
         profile.save(update_fields=["tag"])
         assert query(tag_id=tag_1.id).count() == 1
+
+    def test_tenant_id(self, bk_plugin_app, mock_apigw_api_client):
+        default_query = partial(
+            BkPluginAppQuerySet().filter, search_term="", order_by=["-created"], tenant_id=DEFAULT_TENANT_ID
+        )
+        assert default_query().count() == 1
+        tenant1_query = partial(
+            BkPluginAppQuerySet().filter, search_term="", order_by=["-created"], tenant_id="tenant1"
+        )
+        assert tenant1_query().count() == 0
+
+        bk_plugin_app.tenant_id = "tenant1"
+        bk_plugin_app.save()
+        assert BkPluginAppQuerySet().filter(search_term="", order_by=["-created"], tenant_id="tenant1").count() == 1

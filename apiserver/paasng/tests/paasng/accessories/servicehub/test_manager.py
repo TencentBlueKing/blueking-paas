@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 from json import dumps
 from typing import Dict
@@ -25,88 +24,104 @@ from uuid import UUID
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.accessories.servicehub.constants import Category
-from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
+from paasng.accessories.servicehub.binding_policy.manager import PolicyCombinationManager, ServiceBindingPolicyManager
+from paasng.accessories.servicehub.binding_policy.policy import (
+    PolicyCombinationConfig,
+    RuleBasedAllocationPolicy,
+    UnifiedAllocationPolicy,
+)
+from paasng.accessories.servicehub.constants import Category, PrecedencePolicyCondType
+from paasng.accessories.servicehub.exceptions import (
+    BindServicePlanError,
+    ServiceObjNotFound,
+    UnboundSvcAttachmentDoesNotExist,
+)
 from paasng.accessories.servicehub.local import LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.models import ServiceEngineAppAttachment
+from paasng.accessories.servicehub.models import (
+    ServiceBindingPolicy,
+    ServiceBindingPrecedencePolicy,
+    ServiceEngineAppAttachment,
+)
 from paasng.accessories.servicehub.remote import RemoteServiceObj
 from paasng.accessories.servicehub.services import ServiceInstanceObj
 from paasng.accessories.services.models import Plan, Service, ServiceCategory, ServiceInstance
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.platform.modules.manager import ModuleCleaner
 from tests.paasng.accessories.servicehub import data_mocks
-from tests.utils.helpers import BaseTestCaseWithApp
 
 pytestmark = [pytest.mark.django_db, pytest.mark.xdist_group(name="remote-services")]
 
 
 @pytest.mark.usefixtures("_faked_remote_services")
-class TestMixedMgr:
+class TestMixedMgrGetAndList:
     def test_list_by_category(self):
-        services = list(mixed_service_mgr.list_by_category("r1", category_id=Category.DATA_STORAGE))
+        services = list(mixed_service_mgr.list_by_category(category_id=Category.DATA_STORAGE))
         assert len(services) == 1
 
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        G(Service, category=category, region="r1", logo_b64="dummy")
-        G(Service, category=category, region="r2", logo_b64="dummy")
+        G(Service, category=category, logo_b64="dummy")
 
-        services = list(mixed_service_mgr.list_by_category("r1", category_id=Category.DATA_STORAGE))
+        services = list(mixed_service_mgr.list_by_category(category_id=Category.DATA_STORAGE))
         assert len(services) == 2
 
-    def test_list_by_region(self):
-        services = list(mixed_service_mgr.list_by_region("r1"))
-        assert len(services) == 2
+    def test_list(self):
+        # 2 remote services
+        assert len(list(mixed_service_mgr.list_visible())) == 2
 
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        G(Service, category=category, region="r1", logo_b64="dummy")
-        G(Service, category=category, region="r2", logo_b64="dummy")
+        G(Service, category=category, logo_b64="dummy")
 
-        services = list(mixed_service_mgr.list_by_region("r1"))
-        assert len(services) == 3
+        assert len(list(mixed_service_mgr.list_visible())) == 3
 
     def test_get_remote_found(self):
-        obj = mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"], region="r1")
+        obj = mixed_service_mgr.get(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["uuid"])
         assert obj is not None
 
     def test_get_local_found(self):
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        svc = G(Service, category=category, region="r1", logo_b64="dummy")
+        svc = G(Service, category=category, logo_b64="dummy")
 
-        obj = mixed_service_mgr.get(str(svc.uuid), region="r1")
+        obj = mixed_service_mgr.get(str(svc.uuid))
         assert obj is not None
 
     def test_get_not_found(self):
         with pytest.raises(ServiceObjNotFound):
-            mixed_service_mgr.get(uuid="f" * 64, region="r1")
+            mixed_service_mgr.get(uuid="f" * 64)
 
     def test_find_by_name_local_found(self):
         # Add a service in database
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        svc = G(Service, category=category, region="r1", logo_b64="dummy")
+        svc = G(Service, category=category, logo_b64="dummy")
 
-        obj = mixed_service_mgr.find_by_name(str(svc.name), region="r1")
+        obj = mixed_service_mgr.find_by_name(str(svc.name))
         assert obj is not None
         assert isinstance(obj, LocalServiceObj)
         assert not isinstance(obj, RemoteServiceObj)
 
     def test_find_by_name_remote_found(self):
-        obj = mixed_service_mgr.find_by_name(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["name"], region="r1")
+        obj = mixed_service_mgr.find_by_name(data_mocks.OBJ_STORE_REMOTE_SERVICES_JSON[0]["name"])
         assert obj is not None
         assert not isinstance(obj, LocalServiceObj)
         assert isinstance(obj, RemoteServiceObj)
 
     def test_find_by_name_not_found(self):
         with pytest.raises(ServiceObjNotFound):
-            mixed_service_mgr.find_by_name("non-exists-name", region="r1")
+            mixed_service_mgr.find_by_name("non-exists-name")
 
     @mock.patch("paasng.accessories.servicehub.manager.MixedServiceMgr.list_provisioned_rels")
     def test_get_env_vars_ordering(self, mock_list_provisioned_rels):
         def create_mock_rel(create_time: "datetime.datetime", **credentials):
             rel = mock.MagicMock()
             rel.get_instance.return_value = ServiceInstanceObj(
-                uuid="", credentials=credentials, config={}, create_time=create_time
+                uuid="",
+                credentials=credentials,
+                config={},
+                create_time=create_time,
+                tenant_id=DEFAULT_TENANT_ID,
             )
             return rel
 
@@ -120,70 +135,196 @@ class TestMixedMgr:
         assert envs == {"a": 1, "b": 2, "c": 3}
 
 
-class TestLocalMgr(BaseTestCaseWithApp):
-    app_region = "r1"
+class TestMixedMgrBindService:
+    """All test cases in this class test both local and remote services by using
+    the parametrized fixture `service_obj`."""
 
-    def setUp(self):
-        super().setUp()
-        self._create_service()
+    def test_no_plans(self, bk_module, service_obj, plan1):
+        with pytest.raises(BindServicePlanError):
+            mixed_service_mgr.bind_service(service_obj, bk_module)
 
-    def _create_service(self):
-        # Add a service in database
-        category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        self.svc = G(Service, name="mysql", category=category, region="r1", logo_b64="dummy")
-        # Create default plans
-        self.plan_default = G(Plan, name="no-ha", service=self.svc, config="{}")
-        self.plan_ha = G(Plan, name="ha", service=self.svc, config="{}")
-
-    def test_bind_service(self):
-        mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        rel_pk = mgr.bind_service(service, self.module)
+    def test_static_single(self, bk_module, service_obj, plan1):
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])
+        rel_pk = mixed_service_mgr.bind_service(service_obj, bk_module)
         assert rel_pk is not None
 
-    def test_list_binded(self):
-        mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        assert list(mgr.list_binded(self.module)) == []
-        for env in self.application.envs.all():
-            assert list(mgr.list_unprovisioned_rels(env.engine_app)) == []
+    def test_static_multi(self, bk_module, service_obj, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1, plan2])
+        with pytest.raises(BindServicePlanError):
+            mixed_service_mgr.bind_service(service_obj, bk_module)
 
-        rel_pk = mgr.bind_service(service, self.module)
+    def test_valid_plan_id(self, service_obj, bk_module, plan1):
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])
+        rel_pk = mixed_service_mgr.bind_service(service_obj, bk_module, plan_id=plan1.uuid)
         assert rel_pk is not None
-        assert list(mgr.list_binded(self.module)) == [service]
-        for env in self.application.envs.all():
-            assert len(list(mgr.list_unprovisioned_rels(env.engine_app))) == 1
 
-    def _create_instance(self):
-        return G(
-            ServiceInstance,
-            service=self.svc,
-            plan=self.plan_default,
-            config="{}",
-            credentials=dumps({"MYSQL_USERNAME": "foo", "MYSQL_PASSWORD": "bar"}),
+    def test_invalid_plan_id(self, service_obj, bk_module, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])
+        with pytest.raises(BindServicePlanError):
+            mixed_service_mgr.bind_service(service_obj, bk_module, plan_id=plan2.uuid)
+
+    def test_valid_env_plan_id_map(self, service_obj, bk_module, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_env_specific(
+            env_plans=[("stag", [plan1]), ("prod", [plan2])]
+        )
+        rel_pk = mixed_service_mgr.bind_service(
+            service_obj, bk_module, env_plan_id_map={"stag": plan1.uuid, "prod": plan2.uuid}
+        )
+        assert rel_pk is not None
+
+    def test_invalid_env_plan_id_map(self, service_obj, bk_module, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_env_specific(
+            env_plans=[("stag", [plan1]), ("prod", [plan1])]
+        )
+        with pytest.raises(BindServicePlanError):
+            mixed_service_mgr.bind_service(
+                service_obj, bk_module, env_plan_id_map={"stag": plan1.uuid, "prod": plan2.uuid}
+            )
+
+    # Tests for bind_use_first_plan start
+    def test_use_first_plan_no_plans(self, bk_module, service_obj, plan1):
+        with pytest.raises(BindServicePlanError):
+            mixed_service_mgr.bind_service_use_first_plan(service_obj, bk_module)
+
+    def test_use_first_plan_ok(self, bk_module, service_obj, bk_stag_env, plan1, plan2):
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan2, plan1])
+        rel_pk = mixed_service_mgr.bind_service_use_first_plan(service_obj, bk_module)
+        assert rel_pk is not None
+
+        # Check the bound plan
+        rels = mixed_service_mgr.list_all_rels(bk_stag_env.engine_app, service_obj.uuid)
+        assert all(rel.get_plan().name == plan2.name for rel in rels)
+
+    # Tests for list_binded start
+
+    def test_list_binded(self, service_obj, bk_app, bk_module, plan1):
+        assert list(mixed_service_mgr.list_binded(bk_module)) == []
+        for env in bk_app.envs.all():
+            assert list(mixed_service_mgr.list_unprovisioned_rels(env.engine_app)) == []
+
+        ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan1])
+        rel_pk = mixed_service_mgr.bind_service(service_obj, bk_module)
+
+        assert rel_pk is not None
+        assert list(mixed_service_mgr.list_binded(bk_module)) == [service_obj]
+        for env in bk_app.envs.all():
+            assert len(list(mixed_service_mgr.list_unprovisioned_rels(env.engine_app))) == 1
+
+
+class TestPolicyCombinationManager:
+    @pytest.fixture()
+    def policy_config(self, bk_app, service_obj, plan1, plan2):
+        allocation_policy = UnifiedAllocationPolicy(plans=[plan1.uuid, plan2.uuid])
+        allocation_precedence_policies = [
+            RuleBasedAllocationPolicy(
+                cond_type=PrecedencePolicyCondType.REGION_IN,
+                cond_data={"regions": [bk_app.region]},
+                priority=2,
+                plans=[plan1.uuid],
+            ),
+            RuleBasedAllocationPolicy(
+                cond_type=PrecedencePolicyCondType.CLUSTER_IN,
+                cond_data={"cluster_name": ["cluster1", "cluster2"]},
+                priority=1,
+                env_plans={"stag": [plan2.uuid]},
+            ),
+        ]
+
+        return PolicyCombinationConfig(
+            tenant_id=DEFAULT_TENANT_ID,
+            service_id=service_obj.uuid,
+            allocation_precedence_policies=allocation_precedence_policies,
+            allocation_policy=allocation_policy,
         )
 
+    def test_upsert(self, service_obj, bk_app, bk_module, plan1, plan2, policy_config):
+        mgr = PolicyCombinationManager(service=service_obj, tenant_id=DEFAULT_TENANT_ID)
+        mgr.upsert(policy_config)
+
+        precedence_policy1 = ServiceBindingPrecedencePolicy.objects.get(
+            service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID, priority=2
+        )
+        precedence_policy2 = ServiceBindingPrecedencePolicy.objects.get(
+            service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID, priority=1
+        )
+        policy = ServiceBindingPolicy.objects.get(service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID)
+        assert precedence_policy1.cond_data == {"regions": [bk_app.region]}
+        assert precedence_policy1.data == {"plan_ids": [plan1.uuid]}
+        assert precedence_policy2.cond_data == {"cluster_name": ["cluster1", "cluster2"]}
+        assert precedence_policy2.data == {"env_plan_ids": {"stag": [plan2.uuid]}}
+        assert policy.data == {"plan_ids": [plan1.uuid, plan2.uuid]}
+
+    def test_get_policy_combination_configs(self, service_obj, policy_config):
+        mgr = PolicyCombinationManager(service=service_obj, tenant_id=DEFAULT_TENANT_ID)
+        mgr.upsert(policy_config)
+
+        policy_combination_config = mgr.get()
+        assert policy_combination_config == policy_config
+
+
+class TestLocalMgrProvisionAndInstance:
+    @pytest.fixture()
+    def svc(self, bk_app):
+        """Create a local service object."""
+        category = G(ServiceCategory, id=Category.DATA_STORAGE)
+        svc = G(Service, name="mysql", category=category, logo_b64="dummy")
+        # Create 2 plans
+        G(Plan, name="plan-stag", service=svc, config="{}")
+        G(Plan, name="plan-prod", service=svc, config="{}")
+        return svc
+
+    @pytest.fixture()
+    def service(self, svc, bk_module) -> LocalServiceObj:
+        return LocalServiceMgr().get(svc.uuid)
+
+    @pytest.fixture()
+    def plan_stag(self, service):
+        plans = service.get_plans()
+        return next((p for p in plans if p.name == "plan-stag"), None)
+
+    @pytest.fixture(autouse=True)
+    def _with_static_binding_policy(self, service, plan_stag):
+        """Set the binding policy for the service to a static plan, so the binding can
+        proceed by default.
+        """
+        ServiceBindingPolicyManager(service, DEFAULT_TENANT_ID).set_static([plan_stag])
+
+    @pytest.fixture()
+    def instance_factory(self, svc, plan_stag):
+        """A factory method that creates an instance object."""
+
+        def _create():
+            return G(
+                ServiceInstance,
+                service=svc,
+                plan=plan_stag.db_object,
+                config="{}",
+                credentials=dumps({"MYSQL_USERNAME": "foo", "MYSQL_PASSWORD": "bar"}),
+            )
+
+        return _create
+
     @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
-    def test_provision(self, mocked_method):
+    def test_provision(self, mocked_method, instance_factory, svc, bk_app, bk_module):
         """Test service instance provision"""
-        mocked_method.side_effect = [self._create_instance(), self._create_instance()]
+        mocked_method.side_effect = [instance_factory(), instance_factory()]
 
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        mgr.bind_service(service, self.module)
-        for env in self.application.envs.all():
+        service = mgr.get(svc.uuid)
+        mgr.bind_service(service, bk_module)
+        for env in bk_app.envs.all():
             for rel in mgr.list_unprovisioned_rels(env.engine_app):
                 assert rel.is_provisioned() is False
                 rel.provision()
                 assert rel.is_provisioned() is True
 
     @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
-    def test_instance_has_create_time_attr(self, mocked_method):
-        mocked_method.side_effect = [self._create_instance()]
+    def test_instance_has_create_time_attr(self, mocked_method, instance_factory, svc, bk_app, bk_module):
+        mocked_method.side_effect = [instance_factory()]
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        mgr.bind_service(service, self.module)
-        env = self.application.envs.first()
+        service = mgr.get(svc.uuid)
+        mgr.bind_service(service, bk_module)
+        env = bk_app.envs.first()
         for rel in mgr.list_unprovisioned_rels(env.engine_app):
             rel.provision()
             instance = rel.get_instance()
@@ -191,12 +332,12 @@ class TestLocalMgr(BaseTestCaseWithApp):
 
     @mock.patch("paasng.accessories.servicehub.constants.SERVICE_SENSITIVE_FIELDS", {"mysql": ["MYSQL_PASSWORD"]})
     @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
-    def test_get_instance(self, mocked_method):
-        mocked_method.side_effect = [self._create_instance(), self._create_instance()]
+    def test_get_instance(self, mocked_method, instance_factory, svc, bk_app, bk_module):
+        mocked_method.side_effect = [instance_factory(), instance_factory()]
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        mgr.bind_service(service, self.module)
-        for env in self.application.envs.all():
+        service = mgr.get(svc.uuid)
+        mgr.bind_service(service, bk_module)
+        for env in bk_app.envs.all():
             for rel in mgr.list_unprovisioned_rels(env.engine_app):
                 rel.provision()
                 instance = rel.get_instance()
@@ -211,66 +352,106 @@ class TestLocalMgr(BaseTestCaseWithApp):
                 assert instance.should_remove_fields == ["MYSQL_PASSWORD"]
             break
 
-    def test_find_by_name_not_found(self):
+    def test_module_is_bound_with(self, svc, bk_module):
         mgr = LocalServiceMgr()
-        with pytest.raises(ServiceObjNotFound):
-            mgr.find_by_name(name="foo_name", region=self.module.region)
+        service = mgr.get(svc.uuid)
+        assert mgr.module_is_bound_with(service, bk_module) is False
 
-    def test_find_by_name_normal(self):
-        mgr = LocalServiceMgr()
-        service = mgr.find_by_name(name="mysql", region=self.module.region)
-        assert service is not None
+        mgr.bind_service(service, bk_module)
+        assert mgr.module_is_bound_with(service, bk_module) is True
 
-    def test_module_is_bound_with(self):
-        mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
-        assert mgr.module_is_bound_with(service, self.module) is False
-
-        mgr.bind_service(service, self.module)
-        assert mgr.module_is_bound_with(service, self.module) is True
-
-    def test_get_attachment_by_instance_id(self):
+    def test_get_attachment_by_instance_id(self, bk_module):
         expect_obj: Dict[UUID, ServiceEngineAppAttachment] = {}
 
         mgr = LocalServiceMgr()
-        svc = mgr.find_by_name(name="mysql", region=self.module.region)
+        svc = mgr.find_by_name(name="mysql")
 
         # 绑定服务并创建服务实例
-        mgr.bind_service(svc, self.module)
-        for env in self.module.envs.all():
+        mgr.bind_service(svc, bk_module)
+        for env in bk_module.envs.all():
             for rel in mixed_service_mgr.list_unprovisioned_rels(env.engine_app, svc):
                 plan = rel.get_plan()
                 if plan.is_eager:
                     rel.provision()
                     expect_obj[rel.db_obj.service_instance_id] = rel.db_obj
 
-        for service_instance_id in expect_obj:
-            assert mgr.get_attachment_by_instance_id(svc, service_instance_id) == expect_obj[service_instance_id]
+        for _id, expected_val in expect_obj.values():
+            assert mgr.get_attachment_by_instance_id(svc, _id) == expected_val
 
+    @mock.patch("paasng.accessories.services.models.Service.delete_service_instance")
+    @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
+    def test_list_unbound_instance_rels(
+        self, create_service_instance_by_plan, delete_service_instance, instance_factory, svc, bk_app, bk_module
+    ):
+        create_service_instance_by_plan.side_effect = [instance_factory(), instance_factory()]
+        delete_service_instance.side_effect = (
+            lambda service_instance: service_instance.delete() if service_instance else None
+        )
 
-class TestLocalRabbitMQMgr(BaseTestCaseWithApp):
-    app_region = "r1"
-
-    def setUp(self):
-        super().setUp()
-        self.category = G(ServiceCategory, id=Category.DATA_STORAGE)
-        self.svc = G(Service, name="rabbitmq", category=self.category, region=self.app_region, logo_b64="dummy")
-        # Create default plans
-        self.plan_default = G(Plan, name="no-ha", service=self.svc, config="{}", is_active=False)
-        self.plan_ha = G(Plan, name="ha", service=self.svc, config="{}", is_active=False)
-
-    def test_bind_service(self):
         mgr = LocalServiceMgr()
-        service = mgr.get(self.svc.uuid, region=self.module.region)
+        service = mgr.get(svc.uuid)
+        mgr.bind_service(service, bk_module)
 
-        with self.assertRaisesMessage(RuntimeError, "can not bind a plan"):
-            mgr.bind_service(service, self.module)
+        attachments: Dict[UUID, ServiceEngineAppAttachment] = {}
+        for env in bk_app.envs.all():
+            for rel in mgr.list_unprovisioned_rels(env.engine_app):
+                rel.provision()
+                attachments[rel.db_obj.service_instance_id] = rel.db_obj
 
-    def test_list_by_category(self):
+        assert len(attachments) == 2
+
+        cleaner = ModuleCleaner(bk_module)
+        cleaner.delete_services(svc.uuid)
+
+        unbound_rels = []
+        for env in bk_app.envs.all():
+            for u_rel in mgr.list_unbound_instance_rels(env.engine_app):
+                assert u_rel.db_obj.service_instance_id in attachments
+                assert u_rel.db_obj.service_id == attachments[u_rel.db_obj.service_instance_id].service_id
+                assert u_rel.db_obj.engine_app == attachments[u_rel.db_obj.service_instance_id].engine_app
+                unbound_rels.append(u_rel)
+
+        assert len(unbound_rels) == len(attachments)
+
+        for u_rel in unbound_rels:
+            u_rel.recycle_resource()
+
+        for env in bk_app.envs.all():
+            for _rel in mgr.list_unbound_instance_rels(env.engine_app):
+                pytest.fail("Expect no return unbound instance rels after recycle resource")
+
+    @mock.patch("paasng.accessories.services.models.Service.delete_service_instance")
+    @mock.patch("paasng.accessories.services.models.Service.create_service_instance_by_plan")
+    def test_get_unbound_instance_rel_by_instance_id(
+        self, create_service_instance_by_plan, delete_service_instance, instance_factory, svc, bk_app, bk_module
+    ):
+        create_service_instance_by_plan.side_effect = [instance_factory(), instance_factory()]
+        delete_service_instance.side_effect = (
+            lambda service_instance: service_instance.delete() if service_instance else None
+        )
+
         mgr = LocalServiceMgr()
-        found = False
-        for service in mgr.list_by_category(category_id=self.category.id, region=self.app_region, include_hidden=True):
-            if service.uuid == str(self.svc.uuid):
-                found = True
+        service = mgr.get(svc.uuid)
+        mgr.bind_service(service, bk_module)
 
-        assert found
+        attachments: Dict[UUID, ServiceEngineAppAttachment] = {}
+        for env in bk_app.envs.all():
+            for rel in mgr.list_unprovisioned_rels(env.engine_app):
+                rel.provision()
+                attachments[rel.db_obj.service_instance_id] = rel.db_obj
+
+        assert len(attachments) == 2
+
+        cleaner = ModuleCleaner(bk_module)
+        cleaner.delete_services(svc.uuid)
+
+        for instance_id in attachments:
+            rel = mgr.get_unbound_instance_rel_by_instance_id(svc, instance_id)
+            assert rel.db_obj.service_instance_id in attachments
+            assert rel.db_obj.service_id == attachments[rel.db_obj.service_instance_id].service_id
+            assert rel.db_obj.engine_app == attachments[rel.db_obj.service_instance_id].engine_app
+            rel.recycle_resource()
+
+        for instance_id in attachments:
+            with pytest.raises(UnboundSvcAttachmentDoesNotExist):
+                mgr.get_unbound_instance_rel_by_instance_id(svc, instance_id)

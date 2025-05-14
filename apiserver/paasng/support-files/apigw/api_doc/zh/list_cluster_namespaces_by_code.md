@@ -7,7 +7,7 @@
 
 | 参数名称 | 参数类型 | 必须 | 参数说明 |
 | -------- | -------- | ---- | -------- |
-| app_code | string   | 是   | 应用 ID，如 "apigw-api-test" |
+| code | string   | 是   | 应用 ID，如 "apigw-api-test" |
 
 #### 2、接口参数：
 暂无。

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from unittest import mock
 
 import pytest
@@ -28,8 +27,7 @@ from paasng.bk_plugins.pluginscenter.sourcectl import PluginRepoInitializer
 pytestmark = pytest.mark.django_db
 
 
-class SentinelException(Exception):
-    ...
+class SentinelException(Exception): ...
 
 
 def set_plugin_repository(repository: str):
@@ -88,9 +86,13 @@ class TestInitPlugin:
     def test_iam_exception(self, plugin, plugin_repo_initializer, mocked_create_instance):
         """测试调用 IAM 接口异常的情景"""
         plugin_repo_initializer.create_project.side_effect = set_plugin_repository("foo")
-        with mock.patch("paasng.bk_plugins.pluginscenter.shim.add_repo_member"), mock.patch(
-            "paasng.bk_plugins.pluginscenter.shim.setup_builtin_grade_manager", side_effect=SentinelException
-        ), pytest.raises(SentinelException):
+        with (
+            mock.patch("paasng.bk_plugins.pluginscenter.shim.add_repo_member"),
+            mock.patch(
+                "paasng.bk_plugins.pluginscenter.shim.setup_builtin_grade_manager", side_effect=SentinelException
+            ),
+            pytest.raises(SentinelException),
+        ):
             init_plugin_in_view(plugin, "")
         assert plugin.repository == "foo"
         assert plugin_repo_initializer.delete_project.called

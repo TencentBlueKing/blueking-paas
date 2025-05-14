@@ -1,25 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 import pytest
 
-from paas_wl.infras.cluster.models import Domain
+from paas_wl.infras.cluster.entities import Domain
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.exceptions import BindError
 from paasng.platform.modules.helpers import (
@@ -28,18 +26,16 @@ from paasng.platform.modules.helpers import (
     get_module_clusters,
     get_module_prod_env_root_domains,
 )
-from tests.utils.helpers import generate_random_string
-from tests.utils.mocks.engine import mock_cluster_service
+from tests.utils.basic import generate_random_string
+from tests.utils.mocks.cluster import cluster_ingress_config
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.parametrize(
     ("slugbuilder_attrs", "slugrunner_attrs", "ok"),
     [
         (dict(name=generate_random_string(12)), dict(name=generate_random_string(16)), False),
-        (dict(region=generate_random_string()), dict(), False),
-        (dict(), dict(region=generate_random_string()), False),
         (dict(), dict(), True),
     ],
 )
@@ -75,11 +71,7 @@ def test_bind_image(bk_module, slugbuilder, slugrunner, slugbuilder_attrs, slugr
     ("slugbuilder_attrs", "buildpack_attrs", "linked", "ok"),
     [
         (dict(name=generate_random_string(12)), dict(name=generate_random_string(16)), False, False),
-        (dict(region=generate_random_string()), dict(), False, False),
-        (dict(), dict(region=generate_random_string()), False, False),
         (dict(name=generate_random_string(12)), dict(name=generate_random_string(16)), True, True),
-        (dict(region=generate_random_string()), dict(), True, False),
-        (dict(), dict(region=generate_random_string()), True, False),
         (dict(), dict(), True, True),
     ],
 )
@@ -124,8 +116,7 @@ def test_bind_buildpack(bk_module, slugbuilder, slugrunner, buildpack, slugbuild
 
 
 def test_get_module_clusters(bk_module):
-    with mock_cluster_service():
-        assert len(get_module_clusters(bk_module)) != 0
+    assert len(get_module_clusters(bk_module)) != 0
 
 
 def test_get_module_clusters_engineless(bk_module):
@@ -165,6 +156,6 @@ def test_get_module_clusters_engineless(bk_module):
 def test_get_module_prod_env_root_domains(
     bk_module, exposed_url_type, ingress_config, include_reserved, expected_domains
 ):
-    with mock_cluster_service(replaced_ingress_config=ingress_config):
+    with cluster_ingress_config(replaced_config=ingress_config):
         bk_module.exposed_url_type = exposed_url_type
         assert get_module_prod_env_root_domains(bk_module, include_reserved) == expected_domains

@@ -27,7 +27,7 @@ export default {
     color: ['#EA3636', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA'],
     // color: ['#317fff', '#8ec68d', '#f2d0a8'],
     title: {
-      show: false
+      show: false,
     },
     tooltip: {
       trigger: 'axis',
@@ -35,14 +35,14 @@ export default {
         type: 'line',
         animation: true,
         label: {
-          backgroundColor: '#6a7985'
-        }
+          backgroundColor: '#6a7985',
+        },
       },
-      formatter (params, ticket, callback) {
+      formatter(params) {
         let ret = `<div>${params[0].axisValueLabel}</div>`;
-        params.forEach(item => {
-          let val = parseFloat(item.value).toFixed(2);
-          if (val === '0.00') {
+        params.forEach((item) => {
+          let val = parseFloat(item.value).toFixed(3);
+          if (val === '0.000') {
             val = 0;
           }
           if (item.seriesName.includes('使用量')) {
@@ -55,25 +55,25 @@ export default {
           ret += `<div>${item.seriesName}：${val}${i18n.t('核')}</div>`;
         });
         return ret;
-      }
+      },
     },
     legend: {
       data: [
         'Current',
         'Request',
-        'Limit'
-      ]
+        'Limit',
+      ],
     },
     locale: 'EN',
     toolbox: {
-      show: false
+      show: false,
     },
     grid: {
       top: '5%',
       left: '0',
       right: '18px',
       bottom: '0',
-      containLabel: true
+      containLabel: true,
     },
     xAxis: [{
       type: 'category',
@@ -82,33 +82,33 @@ export default {
       axisLine: {
         show: true,
         lineStyle: {
-          color: '#dde3ea'
-        }
+          color: '#dde3ea',
+        },
       },
       // 设置横轴坐标刻度
       axisTick: {
-        show: false
+        show: false,
       },
       // 设置横轴文字
       axisLabel: {
         color: '#8a8f99',
-        formatter (value, index) {
+        formatter(value) {
           let ret = value;
           if (value) {
             ret = value.replace(' ', '\n');
           }
           return ret;
-        }
+        },
       },
       // 设置风格 - 竖线
       splitLine: {
         show: true,
         lineStyle: {
           color: ['#ecf0f4'],
-          type: 'dashed'
-        }
+          type: 'dashed',
+        },
       },
-      data: []
+      data: [],
     }],
     yAxis: [{
       boundaryGap: [0, '2%'],
@@ -117,37 +117,37 @@ export default {
       axisLine: {
         show: true,
         lineStyle: {
-          color: '#dde3ea'
-        }
+          color: '#dde3ea',
+        },
       },
       // 设置纵轴刻度
       axisTick: {
-        show: false
+        show: false,
       },
       // 设置纵轴文字
       axisLabel: {
         color: '#8a8f99',
-        formatter (value, index) {
+        formatter(value) {
           return `${value}`;
-        }
+        },
       },
       // 设置网格 - 横线
       splitLine: {
         show: true,
         lineStyle: {
           color: ['#ecf0f4'],
-          type: 'solid'
-        }
-      }
+          type: 'solid',
+        },
+      },
     }],
     series: [
-    ]
+    ],
   },
   memory: {
     color: ['#EA3636', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA', '#7BA1FA'],
     // color: ['#317fff', '#8ec68d', '#f2d0a8'],
     title: {
-      show: false
+      show: false,
     },
     tooltip: {
       trigger: 'axis',
@@ -155,12 +155,12 @@ export default {
         type: 'line',
         animation: true,
         label: {
-          backgroundColor: '#6a7985'
-        }
+          backgroundColor: '#6a7985',
+        },
       },
-      formatter (params, ticket, callback) {
+      formatter(params) {
         let ret = `<div>${params[0].axisValueLabel}</div>`;
-        params.forEach(item => {
+        params.forEach((item) => {
           if (item.seriesName.includes('使用量')) {
             const seriesNameArr = item.seriesName.split('-');
             seriesNameArr[1] = i18n.t(seriesNameArr[1]);
@@ -171,24 +171,24 @@ export default {
           ret += `<div>${item.seriesName}：${item.value}MB</div>`;
         });
         return ret;
-      }
+      },
     },
     legend: {
       data: [
         'Current',
         'Request',
-        'Limit'
-      ]
+        'Limit',
+      ],
     },
     toolbox: {
-      show: false
+      show: false,
     },
     grid: {
       top: '5%',
       left: '0',
       right: '18px',
       bottom: '0',
-      containLabel: true
+      containLabel: true,
     },
     xAxis: [{
       type: 'category',
@@ -197,33 +197,33 @@ export default {
       axisLine: {
         show: true,
         lineStyle: {
-          color: '#dde3ea'
-        }
+          color: '#dde3ea',
+        },
       },
       // 设置横轴坐标刻度
       axisTick: {
-        show: false
+        show: false,
       },
       // 设置横轴文字
       axisLabel: {
         color: '#8a8f99',
-        formatter (value, index) {
+        formatter(value) {
           let ret = value;
           if (value) {
             ret = value.replace(' ', '\n');
           }
           return ret;
-        }
+        },
       },
       // 设置风格 - 竖线
       splitLine: {
         show: true,
         lineStyle: {
           color: ['#ecf0f4'],
-          type: 'dashed'
-        }
+          type: 'dashed',
+        },
       },
-      data: []
+      data: [],
     }],
     yAxis: [{
       boundaryGap: [0, '2%'],
@@ -232,30 +232,30 @@ export default {
       axisLine: {
         show: true,
         lineStyle: {
-          color: '#dde3ea'
-        }
+          color: '#dde3ea',
+        },
       },
       // 设置纵轴刻度
       axisTick: {
-        show: false
+        show: false,
       },
       // 设置纵轴文字
       axisLabel: {
         color: '#8a8f99',
-        formatter (value, index) {
+        formatter(value) {
           return `${value}`;
-        }
+        },
       },
       // 设置网格 - 横线
       splitLine: {
         show: true,
         lineStyle: {
           color: ['#ecf0f4'],
-          type: 'dashed'
-        }
-      }
+          type: 'dashed',
+        },
+      },
     }],
     series: [
-    ]
-  }
+    ],
+  },
 };

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import re
 from typing import Optional
@@ -38,7 +37,6 @@ from paasng.accessories.publish.sync_market.managers import (
 from paasng.accessories.publish.sync_market.utils import run_required_db_console_config
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.region.models import get_region
-from paasng.infras.oauth2.models import OAuth2Client
 from paasng.platform.applications.exceptions import AppFieldValidationError, IntegrityError
 from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.applications.signals import (
@@ -210,7 +208,14 @@ def register_app_core_data(sender, application: Application, **kwargs):
     :raises: IntegrityError when application with the same code already exists in legacy database
     """
     try:
-        register_application_with_default(application.region, application.code, application.name)
+        register_application_with_default(
+            application.region,
+            application.code,
+            application.name,
+            application.app_tenant_mode,
+            application.app_tenant_id,
+            application.tenant_id,
+        )
     except SqlIntegrityError as e:
         if len(e.args) > 0:
             error_msg = e.args[0]
@@ -245,11 +250,13 @@ def on_change_application_name(sender, code: str, name: Optional[str] = None, na
             raise IntegrityError(field="name")
 
 
-def register_application_with_default(region, code, name):
+def register_application_with_default(region, code, name, app_tenant_mode, app_tenant_id, tenant_id):
     """使用默认数据注册到蓝鲸桌面DB（占用code和name字段）"""
     deploy_ver = get_region(region).basic_info.legacy_deploy_version
     with console_db.session_scope() as session:
-        app = AppManger(session).create(code, name, deploy_ver, from_paasv3=True)
+        app = AppManger(session).create(
+            code, name, deploy_ver, app_tenant_mode, app_tenant_id, tenant_id, from_paasv3=True
+        )
         # 应用注册完毕, 开始同步开发者信息
         try:
             application = Application.objects.get(code=code)
@@ -258,17 +265,6 @@ def register_application_with_default(region, code, name):
         except Exception:
             logger.exception("同步应用开发者信息至桌面失败!")
     return app
-
-
-@receiver(post_save, sender=OAuth2Client)
-@run_required_db_console_config
-def application_oauth_handler(sender, instance, created, raw, using, update_fields, *args, **kwargs):
-    """监听App权限信息初始化, 同步写secrete key到console db"""
-    with console_db.session_scope() as session:
-        if instance.client_secret:
-            AppManger(session).sync_oauth(
-                region=instance.region, code=instance.client_id, secret=instance.client_secret
-            )
 
 
 @receiver(module_environment_offline_success)

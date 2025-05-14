@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import re
 from typing import Dict, Optional
 
@@ -50,7 +49,7 @@ class AppLogoField(serializers.ImageField):
 
 
 class VisiableLabelsSlz(serializers.Serializer):
-    id = serializers.IntegerField(label="ID")
+    id = serializers.CharField(label="ID")
     type = serializers.CharField(label="类型", min_length=1)
     name = serializers.CharField(label="名称", min_length=1)
     display_name = serializers.CharField(
@@ -170,6 +169,7 @@ class ProductCreateSLZ(serializers.ModelSerializer, ProductBaseSLZ):
         """Validate creation params"""
         data["code"] = data["application"].code
         data["owner"] = data["application"].owner
+        data["tenant_id"] = data["application"].tenant_id
         return data
 
     def create(self, validated_data: Dict):
@@ -179,7 +179,7 @@ class ProductCreateSLZ(serializers.ModelSerializer, ProductBaseSLZ):
         instance = super().create(validated_data)
         # Create DisplayOptions object
         if display_options:
-            DisplayOptions.objects.create(product=instance, **display_options)
+            DisplayOptions.objects.create(product=instance, tenant_id=instance.tenant_id, **display_options)
             product_contact_updated.send(sender=instance, product=instance)
 
         product_create_or_update_by_operator.send(
@@ -235,7 +235,7 @@ class TagSLZ(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Tag
-        fields = ("url", "id", "name", "parent", "remark", "index", "region")
+        fields = ("url", "id", "name", "parent", "remark", "index")
 
 
 class ProductStateSLZ(serializers.ModelSerializer):
@@ -282,7 +282,7 @@ class MarketConfigSLZ(serializers.ModelSerializer):
         required=False,
         help_text="访问地址类型\n" + " ".join(map(str, ProductSourceUrlType.get_choices())),
     )
-    prefer_https = serializers.NullBooleanField(required=False, help_text="是否偏好 HTTPS")
+    prefer_https = serializers.BooleanField(required=False, help_text="是否偏好 HTTPS", allow_null=True)
 
     source_module_id = serializers.UUIDField(allow_null=True, required=False, help_text="绑定模块id", read_only=True)
     source_module_name = serializers.CharField(
@@ -356,6 +356,10 @@ class MarketConfigSLZ(serializers.ModelSerializer):
 
         # 不使用前端透传的 source_url_type
         validated_data["source_url_type"] = ProductSourceUrlType.THIRD_PARTY.value
+
+
+class MarketConfigSwitchInputSLZ(serializers.Serializer):
+    enabled = serializers.BooleanField(required=True, help_text="是否上架到市场")
 
 
 class AvailableAddressSLZ(serializers.Serializer):

@@ -88,7 +88,7 @@
                   <bk-form-item :label="`${$t('镜像 tag')}：`">
                     <span class="form-text">{{ row.detail.image_info.tag || '--' }}</span>
                   </bk-form-item>
-                  <bk-form-item :label="`${$t('大小（B）')}：`">
+                  <bk-form-item :label="`${$t('大小')}：`">
                     <span class="form-text">{{ row.detail.image_info.size || '--' }}</span>
                   </bk-form-item>
                   <bk-form-item :label="`${$t('更新时间')}：`">
@@ -133,7 +133,7 @@
         />
         <bk-table-column
           width="120"
-          :label="$t('大小（B）')"
+          :label="$t('大小')"
           prop="size"
           sortable
         />
@@ -154,6 +154,7 @@
 </template>
 
 <script>import appBaseMixin from '@/mixins/app-base-mixin';
+import humanize from 'humanize';
 export default {
   name: 'ClundImageList',
   mixins: [appBaseMixin],
@@ -229,6 +230,7 @@ export default {
             image_info: {},
           },
           ...image,
+          size: humanize.filesize(image.size),
         }));
         this.pagination.count = res.count;
         this.updateTableEmptyConfig();
@@ -255,6 +257,7 @@ export default {
           moduleName: this.moduleName,
           buildId: id,
         });
+        res.image_info.size = humanize.filesize(res.image_info.size);
         this.imageList.forEach((image) => {
           if (image.id === id) {
             image.detail = res;
@@ -371,6 +374,7 @@ export default {
       }
       .form-text {
         color: #313238;
+        line-height: 32px;
       }
       /deep/ .bk-form-item + .bk-form-item {
         margin-top: 0;

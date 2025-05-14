@@ -97,6 +97,19 @@ var _ = Describe("Test DeployActionReconciler", func() {
 			ret := NewDeployActionReconciler(builder.WithObjects(bkapp).Build()).Reconcile(context.Background(), bkapp)
 
 			expectDeployActionInitialized(ret, bkapp, "1")
+			Expect(bkapp.Status.HookStatuses).To(BeNil())
+		})
+
+		It("HookStatuses is set to nil when initial deploy action", func() {
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.DeployIDAnnoKey: "1"})
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthHealthy,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+
+			NewDeployActionReconciler(builder.WithObjects(bkapp).Build()).Reconcile(context.Background(), bkapp)
+			Expect(bkapp.Status.HookStatuses).To(BeNil())
 		})
 
 		It("deploy ID changed", func() {
@@ -141,9 +154,10 @@ var _ = Describe("Test DeployActionReconciler", func() {
 				Phase:     paasv1alpha2.HealthUnhealthy,
 				StartTime: lo.ToPtr(metav1.Now()),
 			})
-			hook := hookres.BuildPreReleaseHook(
+			hook, err := hookres.BuildPreReleaseHook(
 				bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease),
 			)
+			Expect(err).To(BeNil())
 
 			client := builder.WithObjects(bkapp, hook.Pod).Build()
 			ret := NewDeployActionReconciler(client).Reconcile(context.Background(), bkapp)
@@ -160,7 +174,8 @@ var _ = Describe("Test DeployActionReconciler", func() {
 				StartTime: lo.ToPtr(metav1.Now()),
 			})
 
-			hook := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			hook, err := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			Expect(err).To(BeNil())
 			Expect(hook.Pod).NotTo(BeNil())
 
 			client := builder.WithObjects(bkapp, hook.Pod).Build()
@@ -171,6 +186,30 @@ var _ = Describe("Test DeployActionReconciler", func() {
 			// The phase is failed because the hook's pod is failed.
 			Expect(bkapp.Status.Phase).To(Equal(paasv1alpha2.AppFailed))
 			Expect(bkapp.Status.DeployId).To(Equal("1"))
+		})
+
+		It("deploy ID changed with running hook when last deploy is interrupted", func() {
+			bkapp.SetAnnotations(
+				map[string]string{
+					paasv1alpha2.DeployIDAnnoKey:         "2",
+					paasv1alpha2.LastDeployStatusAnnoKey: "interrupted",
+				},
+			)
+			bkapp.Status.DeployId = "1"
+			bkapp.Status.SetHookStatus(paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Phase:     paasv1alpha2.HealthProgressing,
+				StartTime: lo.ToPtr(metav1.Now()),
+			})
+
+			hook, err := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+			Expect(err).To(BeNil())
+			Expect(hook.Pod).NotTo(BeNil())
+
+			client := builder.WithObjects(bkapp, hook.Pod).Build()
+			ret := NewDeployActionReconciler(client).Reconcile(context.Background(), bkapp)
+
+			expectDeployActionInitialized(ret, bkapp, "2")
 		})
 	})
 })

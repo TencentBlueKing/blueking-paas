@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 
 from six import ensure_text
@@ -30,6 +29,11 @@ from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.workflow import DeployStep
 
 logger = logging.getLogger(__name__)
+
+# Max timeout seconds for waiting the pre-release-hook pod to become ready
+# This timeout should be consistent with the default application
+# defined at `paas_wl.bk_app.deploy.actions.exec._WAIT_FOR_READINESS_TIMEOUT`
+_WAIT_FOR_READINESS_TIMEOUT = 300
 
 
 def generate_pre_release_hook_name(bkapp_name: str, deploy_id: int) -> str:
@@ -66,7 +70,7 @@ class PreReleaseDummyExecutor(DeployStep):
         handler = BkAppHookHandler(wl_app, hook_name)
 
         try:
-            handler.wait_for_logs_readiness()
+            handler.wait_for_logs_readiness(timeout=_WAIT_FOR_READINESS_TIMEOUT)
         except ReadTargetStatusTimeout as e:
             pod = e.extra_value
             if pod is None:

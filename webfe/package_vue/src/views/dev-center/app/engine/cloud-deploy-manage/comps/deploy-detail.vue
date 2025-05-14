@@ -2,22 +2,21 @@
   <div class="deploy-detail">
     <section class="instance-details">
       <div class="instance-item">
-        <span class="label">{{$t('运行实例数')}}：</span>
+        <span class="label">{{ $t('运行实例数') }}：</span>
         <span class="value">{{ runningInstanceLength }}</span>
       </div>
       <div class="instance-item">
-        <span class="label">{{$t('期望实例数')}}：</span>
-        <span class="value">{{deploymentInfo?.total_desired_replicas}}</span>
+        <span class="label">{{ $t('期望实例数') }}：</span>
+        <span class="value">{{ deploymentInfo?.total_desired_replicas }}</span>
       </div>
       <div class="instance-item">
-        <span class="label">{{$t('异常实例数')}}：</span>
-        <span class="value">{{deployData.total_failed}}</span>
+        <span class="label">{{ $t('异常实例数') }}：</span>
+        <span class="value">{{ deployData.total_failed }}</span>
       </div>
     </section>
 
     <section class="process-table-wrapper">
       <bk-table
-        v-bkloading="{ isLoading: isTableLoading }"
         :data="allProcesses"
         class="process-detail-table"
         border
@@ -30,30 +29,140 @@
           <template slot-scope="{ row }">
             <div>
               <span>{{ row.name || '--' }}</span>
-              <span class="ml5" v-if="!row.autoscaling">
-                {{ row.instances.length }} / {{ row.available_instance_count }}
+              <span
+                class="ml5"
+                v-if="!row.autoscaling"
+              >
+                {{ (row.instances || []).filter((item) => item.ready).length }} / {{ row.available_instance_count }}
               </span>
               <!-- <div class="rejected-count" v-if="row.failed">{{ row.failed }}</div> -->
-              <div class="icon-expand" v-if="row.instances.length > 1">
+              <div
+                class="icon-expand"
+                v-if="row.instances.length > 1"
+              >
                 <img
                   v-if="row.isExpand"
                   class="image-icon"
                   @click="handleExpand(row)"
                   src="/static/images/tableminus.svg"
-                >
+                />
                 <img
                   v-else
                   class="image-icon"
                   @click="handleExpand(row)"
                   src="/static/images/tableplus.svg"
-                >
+                />
               </div>
             </div>
-            <div class="scaling-dot mt5" v-if="row.autoscaling">{{ $t('自动扩缩容') }}</div>
+            <div
+              class="scaling-dot mt5"
+              v-if="row.autoscaling"
+            >
+              {{ $t('自动扩缩容') }}
+            </div>
           </template>
         </bk-table-column>
         <bk-table-column
           :label="$t('实例名称')"
+          class-name="table-colum-instance-cls colum-instance-name"
+        >
+          <template slot-scope="{ row }">
+            <div v-if="row.instances.length">
+              <div
+                class="instance-item-cls cell-container instance-name"
+                :class="row.isExpand ? 'expand' : 'close'"
+                v-for="instance in row.instances"
+                :key="instance.process_name"
+              >
+                <div
+                  class="text-ellipsis"
+                  v-bk-overflow-tips
+                >
+                  {{ instance.display_name }}
+                </div>
+              </div>
+            </div>
+            <div
+              v-else
+              class="instance-item-cls-empty cell-container pl30"
+            >
+              --
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('状态')"
+          class-name="table-colum-instance-cls"
+        >
+          <template slot-scope="{ row }">
+            <div v-if="row.instances.length">
+              <div
+                class="instance-item-cls cell-container status"
+                :class="row.isExpand ? 'expand' : 'close'"
+                v-for="instance in row.instances"
+                :key="instance.process_name"
+              >
+                <div class="text-ellipsis">
+                  <span
+                    class="dot"
+                    :class="instance.rich_status"
+                  ></span>
+                  <span v-bk-tooltips="instance.state_message || ''">
+                    <em
+                      v-dashed="{ disabled: instance.rich_status === 'Running' }"
+                      class="instance-item-status"
+                    >
+                      {{ instance.rich_status || '--' }}
+                    </em>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div
+              v-else
+              class="instance-item-cls-empty cell-container"
+            >
+              --
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('重启次数')"
+          class-name="table-colum-instance-cls"
+          width="80"
+          :render-header="$renderHeader"
+        >
+          <template slot-scope="{ row }">
+            <div v-if="row.instances.length">
+              <div
+                class="instance-item-cls cell-container"
+                :class="row.isExpand ? 'expand' : 'close'"
+                v-for="instance in row.instances"
+                :key="instance.process_name"
+              >
+                <span
+                  v-bk-tooltips="{
+                    content: instance.terminated_info?.reason,
+                    placement: 'bottom',
+                    offset: '0, -10',
+                    disabled: !instance.terminated_info?.reason,
+                  }"
+                  :class="{ tip: instance.terminated_info?.reason }"
+                >
+                  {{ instance.restart_count }}
+                </span>
+              </div>
+            </div>
+            <div
+              v-else
+              class="instance-item-cls-empty cell-container"
+            >
+              --
+            </div>
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          :label="$t('创建时间')"
           class-name="table-colum-instance-cls"
         >
           <template slot-scope="{ row }">
@@ -63,105 +172,75 @@
                 :class="row.isExpand ? 'expand' : 'close'"
                 v-for="instance in row.instances"
                 :key="instance.process_name"
-                @mouseenter="handleMouseEnter(instance.display_name)"
-                @mouseleave="rowDisplayName = ''"
-              >
-                <div
-                  class="content"
-                  :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                >
-                  {{ instance.display_name }}
-                </div>
-              </div>
-            </div>
-            <div v-else class="instance-item-cls-empty cell-container">--</div>
-          </template>
-        </bk-table-column>
-        <bk-table-column :label="$t('状态')" class-name="table-colum-instance-cls">
-          <template slot-scope="{ row }">
-            <div v-if="row.instances.length">
-              <div
-                class="instance-item-cls cell-container status"
-                :class="row.isExpand ? 'expand' : 'close'"
-                v-for="instance in row.instances"
-                :key="instance.process_name"
-                @mouseenter="handleMouseEnter(instance.display_name)"
-                @mouseleave="rowDisplayName = ''"
-              >
-                <div
-                  class="content"
-                  :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                >
-                  <div
-                    class="dot"
-                    :class="instance.rich_status"
-                  >
-                  </div>
-                  <span v-bk-tooltips="instance.state_message || ''">
-                    <em
-                      v-dashed="{disabled: instance.rich_status === 'Running'}"
-                      class="instance-item-status"
-                    >
-                      {{ instance.rich_status || '--' }}
-                    </em>
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div v-else class="instance-item-cls-empty cell-container">--</div>
-          </template>
-        </bk-table-column>
-        <bk-table-column :label="$t('创建时间')" class-name="table-colum-instance-cls">
-          <template slot-scope="{ row }">
-            <div v-if="row.instances.length">
-              <div
-                class="instance-item-cls cell-container"
-                :class="row.isExpand ? 'expand' : 'close'"
-                v-for="instance in row.instances"
-                :key="instance.process_name"
-                @mouseenter="handleMouseEnter(instance.display_name)"
-                @mouseleave="rowDisplayName = ''"
               >
                 <template v-if="instance.date_time !== 'Invalid date'">
-                  <div
-                    class="content"
-                    :class="{ hoverBackground: rowDisplayName === instance.display_name }"
-                  >
-                    {{ $t('创建于') }} {{ instance.date_time }}
-                  </div>
+                  <div class="text-ellipsis">{{ instance.date_time }}</div>
                 </template>
-                <template v-else>
-                  --
-                </template>
+                <template v-else>--</template>
               </div>
             </div>
-            <div v-else class="instance-item-cls-empty cell-container">--</div>
+            <div
+              v-else
+              class="instance-item-cls-empty cell-container"
+            >
+              --
+            </div>
           </template>
         </bk-table-column>
-        <bk-table-column label="" class-name="table-colum-instance-cls">
+        <bk-table-column
+          label=""
+          class-name="table-colum-instance-cls"
+          :width="220"
+        >
           <template slot-scope="{ row }">
             <div
               class="instance-item-cls cell-container operation-column"
               :class="row.isExpand ? 'expand' : 'close'"
               v-for="instance in row.instances"
               :key="instance.process_name"
-              @mouseenter="handleMouseEnter(instance.display_name)"
-              @mouseleave="rowDisplayName = ''"
             >
               <bk-button
                 class="mr10"
                 :text="true"
                 title="primary"
-                @click="showInstanceLog(instance)">
-                {{$t('查看日志')}}
+                @click="showInstanceConsole(instance, row)"
+              >
+                WebConsole
               </bk-button>
               <bk-button
+                class="mr10"
                 :text="true"
                 title="primary"
-                v-if="curAppInfo.feature.ENABLE_WEB_CONSOLE"
-                @click="showInstanceConsole(instance, row)">
-                {{$t('访问控制台')}}
+                @click="showInstanceLog(instance, row)"
+              >
+                {{ $t('日志') }}
               </bk-button>
+              <bk-popover
+                class="table-more-popover-cls"
+                theme="light"
+                ext-cls="more-operations"
+                placement="bottom"
+              >
+                <i class="paasng-icon paasng-ellipsis more"></i>
+                <div
+                  slot="content"
+                  class="more-content"
+                  style="white-space: normal"
+                >
+                  <div
+                    class="option"
+                    @click="showInstanceEvents(instance, row.name, $index)"
+                  >
+                    {{ $t('查看事件') }}
+                  </div>
+                  <div
+                    class="option"
+                    @click="showRestartPopup('instance', instance, $index)"
+                  >
+                    {{ $t('重启实例') }}
+                  </div>
+                </div>
+              </bk-popover>
             </div>
           </template>
         </bk-table-column>
@@ -170,20 +249,21 @@
           :width="195"
           class-name="table-colum-operation-cls default-background"
         >
-          <template slot-scope="{ row }">
+          <template slot-scope="{ row, $index }">
             <div class="operation">
               <div
-                v-if="!row.autoscaling
-                  && row.instances.length !== row.available_instance_count"
+                v-if="!row.autoscaling && row.instances.length !== row.available_instance_count"
                 class="flex-row align-items-center mr10"
               >
                 <img
                   src="/static/images/btn_loading.gif"
                   class="loading"
+                />
+                <span
+                  class="pl10"
+                  style="white-space: nowrap"
                 >
-                <span class="pl10" style="white-space: nowrap;">
-                  <span
-                    v-if="row.instances.length < row.available_instance_count">
+                  <span v-if="row.instances.length < row.available_instance_count">
                     {{ $t('启动中...') }}
                   </span>
                   <span v-else>{{ $t('停止中...') }}</span>
@@ -196,10 +276,13 @@
                   :content="$t('确认停止该进程？')"
                   width="288"
                   trigger="click"
-                  @confirm="handleUpdateProcess">
-                  <div class="round-wrapper" @click="handleProcessOperation(row)">
-                    <div class="square-icon">
-                    </div>
+                  @confirm="handleUpdateProcess"
+                >
+                  <div
+                    class="round-wrapper"
+                    @click="handleProcessOperation(row)"
+                  >
+                    <div class="square-icon"></div>
                   </div>
                 </bk-popconfirm>
                 <div v-else>
@@ -208,25 +291,44 @@
                     :content="$t('确认启动该进程？')"
                     width="288"
                     trigger="click"
-                    @confirm="handleUpdateProcess">
+                    @confirm="handleUpdateProcess"
+                  >
                     <i
                       class="paasng-icon paasng-play-circle-shape start"
-                      @click="handleProcessOperation(row)"></i>
+                      @click="handleProcessOperation(row)"
+                    ></i>
                   </bk-popconfirm>
                 </div>
               </div>
               <i
                 v-bk-tooltips="$t('进程详情')"
                 class="paasng-icon paasng-log-2 detail mr10"
-                @click="showProcessDetailDialog(row)"></i>
+                @click="showProcessDetailDialog(row)"
+              ></i>
               <bk-popover
                 theme="light"
                 ext-cls="more-operations"
                 placement="bottom"
-                :tippy-options="{ 'hideOnClick': false }">
+              >
                 <i class="paasng-icon paasng-ellipsis more"></i>
-                <div slot="content" style="white-space: normal;">
-                  <div class="option" @click="handleExpansionAndContraction(row)">{{$t('扩缩容')}}</div>
+                <div
+                  slot="content"
+                  class="more-content"
+                  style="white-space: normal"
+                >
+                  <div
+                    class="option"
+                    @click="handleExpansionAndContraction(row, $index)"
+                  >
+                    {{ $t('扩缩容') }}
+                  </div>
+                  <!-- 重启进程 -->
+                  <div
+                    class="option"
+                    @click="showRestartPopup('process', row, $index)"
+                  >
+                    {{ $t('滚动重启') }}
+                  </div>
                 </div>
               </bk-popover>
             </div>
@@ -247,17 +349,17 @@
         class="p0 chart-wrapper"
       >
         <div
-          v-if="curAppInfo.feature.RESOURCE_METRICS"
+          v-if="platformFeature.RESOURCE_METRICS"
           v-bk-clickoutside="hideDatePicker"
           class="action-box"
         >
           <bk-form
             form-type="inline"
-            style="float: right;"
+            style="float: right"
           >
             <bk-date-picker
               v-model="initDateTimeRange"
-              style="margin-top: 4px;"
+              style="margin-top: 4px"
               :shortcuts="dateShortCut"
               :shortcuts-type="'relative'"
               :format="'yyyy-MM-dd HH:mm:ss'"
@@ -272,7 +374,7 @@
             >
               <div
                 slot="trigger"
-                style="width: 310px; height: 28px;"
+                style="width: 310px; height: 28px"
                 @click="toggleDatePicker"
               >
                 <button class="action-btn timer fr">
@@ -285,148 +387,84 @@
           </bk-form>
         </div>
         <div
-          v-if="curAppInfo.feature.RESOURCE_METRICS"
+          v-if="platformFeature.RESOURCE_METRICS"
           class="chart-box"
         >
-          <strong class="title"> {{ $t('CPU使用') }} <span class="sub-title"> {{ $t('（单位：核）') }} </span></strong>
+          <strong class="title">
+            {{ $t('CPU使用') }}
+            <span class="sub-title">{{ $t('（单位：核）') }}</span>
+          </strong>
           <chart
             ref="cpuLine"
             :options="cpuLine"
             auto-resize
-            style="width: 750px; height: 300px; background: #1e1e21;"
+            style="width: 750px; height: 300px; background: #1e1e21"
           />
         </div>
         <div
-          v-if="curAppInfo.feature.RESOURCE_METRICS"
+          v-if="platformFeature.RESOURCE_METRICS"
           class="chart-box"
         >
-          <strong class="title"> {{ $t('内存使用') }} <span class="sub-title"> {{ $t('（单位：MB）') }} </span></strong>
+          <strong class="title">
+            {{ $t('内存使用') }}
+            <span class="sub-title">{{ $t('（单位：MB）') }}</span>
+          </strong>
           <chart
             ref="memoryLine"
             :options="memoryLine"
             auto-resize
-            style="width: 750px; height: 300px; background: #1e1e21;"
+            style="width: 750px; height: 300px; background: #1e1e21"
           />
         </div>
         <div class="slider-detail-wrapper">
-          <label class="title"> {{ $t('详细信息') }} </label>
+          <label class="title">{{ $t('详细信息') }}</label>
           <section class="detail-item">
-            <label class="label"> {{ $t('类型：') }} </label>
+            <label class="label">{{ $t('类型：') }}</label>
             <div class="content">
               {{ processPlan.processType }}
             </div>
           </section>
           <section class="detail-item">
-            <label class="label"> {{ $t('实例数上限：') }} </label>
+            <label class="label">{{ $t('实例数上限：') }}</label>
             <div class="content">
               {{ processPlan.maxReplicas }}
             </div>
           </section>
           <section class="detail-item">
-            <label class="label"> {{ $t('单实例资源配额：') }} </label>
-            <div class="content">
-              {{ $t('内存:') }} {{ processPlan.memLimit }} / CPU: {{ processPlan.cpuLimit }}
-            </div>
+            <label class="label">{{ $t('单实例资源配额：') }}</label>
+            <div class="content">{{ $t('内存:') }} {{ processPlan.memLimit }} / CPU: {{ processPlan.cpuLimit }}</div>
           </section>
           <section class="detail-item">
-            <label class="label"> {{ $t('进程间访问链接：') }} </label>
+            <label class="label">{{ $t('进程间访问链接：') }}</label>
             <div class="content">
               {{ processPlan.clusterLink }}
             </div>
           </section>
-          <p style="padding-left: 112px; margin-top: 5px; color: #c4c6cc;">
-            {{ $t('注意：进程间访问链接地址只能用于同集群内的不同进程间通信，可在 “模块管理” 页面查看进程的集群信息。更多进程间通信的说明。请参考') }} <a
+          <p style="padding-left: 112px; margin-top: 5px; color: #c4c6cc">
+            {{
+              $t(
+                '注意：进程间访问链接地址只能用于同集群内的不同进程间通信，可在 “模块管理” 页面查看进程的集群信息。更多进程间通信的说明。请参考'
+              )
+            }}
+            <a
               target="_blank"
               :href="GLOBAL.DOC.PROCESS_SERVICE"
-            > {{ $t('进程间通信') }} </a>
+            >
+              {{ $t('进程间通信') }}
+            </a>
           </p>
         </div>
       </div>
     </bk-sideslider>
-    <!-- 日志侧栏 -->
-    <bk-sideslider
-      :width="800"
-      :is-show.sync="processSlider.isShow"
-      :title="processSlider.title"
-      :quick-close="true"
-    >
-      <div
-        id="log-container"
-        slot="content"
-        class="p0 instance-log-wrapper paas-log-box"
-      >
-        <div class="action-box">
-          <bk-button
-            :key="isLogsLoading"
-            class="fr p0 f12 refresh-btn"
-            style="width: 32px; min-width: 32px;"
-            :disabled="isLogsLoading"
-            @click="loadInstanceLog"
-          >
-            <span class="bk-icon icon-refresh f18" />
-          </bk-button>
 
-          <bk-form
-            form-type="inline"
-            class="fr mr5"
-          >
-            <bk-form-item :label="$t('时间段：')">
-              <bk-select
-                v-model="curLogTimeRange"
-                style="width: 250px;"
-                :clearable="false"
-                :disabled="isLogsLoading"
-              >
-                <bk-option
-                  v-for="(option, i) in chartRangeList"
-                  :id="option.id"
-                  :key="i"
-                  :name="option.name"
-                />
-              </bk-select>
-            </bk-form-item>
-          </bk-form>
-        </div>
-        <div class="instance-textarea">
-          <div
-            class="textarea"
-            style="height: 100%;"
-          >
-            <template v-if="!isLogsLoading && instanceLogs.length">
-              <ul>
-                <li
-                  v-for="(log, idx) of instanceLogs"
-                  :key="idx"
-                  class="stream-log"
-                >
-                  <span
-                    class="mr10"
-                    style="min-width: 140px;"
-                  >{{ log.timestamp }}</span>
-                  <span class="pod-name">{{ log.podShortName }}</span>
-                  <!-- eslint-disable-next-line vue/no-v-html -->
-                  <pre class="message" v-html="log.message || '--'"
-                  />
-                </li>
-              </ul>
-            </template>
-            <template v-else-if="isLogsLoading">
-              <div class="log-loading-container">
-                <div class="log-loading">
-                  {{ $t('日志获取中...') }}
-                </div>
-              </div>
-            </template>
-            <template v-else>
-              <p>
-                {{ $t('暂时没有日志记录') }}
-              </p>
-            </template>
-          </div>
-        </div>
-      </div>
-    </bk-sideslider>
-
+    <!-- 查看事件 -->
+    <eventDetail
+      v-model="instanceEventConfig.isShow"
+      :width="computedWidth"
+      :config="instanceEventConfig"
+      :env="environment"
+      :module-id="curModuleId"
+    />
 
     <!-- 无法使用控制台 -->
     <bk-dialog
@@ -443,7 +481,9 @@
           <a
             :href="processRefuseDialog.link"
             target="_blank"
-          > {{ $t('文档：') }} {{ processRefuseDialog.title }}</a>
+          >
+            {{ $t('文档：') }} {{ processRefuseDialog.title }}
+          </a>
         </div>
       </div>
     </bk-dialog>
@@ -454,12 +494,36 @@
       :key="moduleName"
       :ref="`${moduleName}ScaleDialog`"
       @updateStatus="handleProcessStatus"
-    >
-    </scale-dialog>
+    ></scale-dialog>
+
+    <!-- 日志弹窗 -->
+    <process-log
+      v-model="logConfig.visiable"
+      :title="logConfig.title"
+      :logs="logConfig.logs"
+      :loading="logConfig.isLoading"
+      :time-selection="chartRangeList"
+      :params="logConfig.params"
+      @refresh="refreshLogs"
+    ></process-log>
+
+    <!-- 功能依赖项展示 -->
+    <FunctionalDependency
+      :show-dialog.sync="showFunctionalDependencyDialog"
+      mode="dialog"
+      :title="$t('暂无访问控制台功能')"
+      :functional-desc="
+        $t('访问控制台可以让您进入应用进程的容器，查看线上运行的代码、进行在线调试以及执行一次性命令等操作。')
+      "
+      :guide-title="$t('如需使用该功能，需要：')"
+      :guide-desc-list="[$t('1. 安装 BCS 套餐'), $t('2. 将应用集群来源修改为: BCS 集群')]"
+      @gotoMore="gotoMore"
+    />
   </div>
 </template>
 
-<script>import moment from 'moment';
+<script>
+import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import chartOption from '@/json/instance-chart-option';
@@ -467,19 +531,26 @@ import ECharts from 'vue-echarts/components/ECharts.vue';
 import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
+import eventDetail from './event-detail.vue';
+import dayjs from 'dayjs';
+import processLog from '@/components/process-log-dialog/log.vue';
+import { cloneDeep, isEqual } from 'lodash';
+import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 
 moment.locale('zh-cn');
 // let maxReplicasNum = 0;
 
 const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours')
-  .format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 let timeRangeCache = '';
 let timeShortCutText = '';
 export default {
   components: {
     chart: ECharts,
     scaleDialog,
+    eventDetail,
+    processLog,
+    FunctionalDependency,
   },
   mixins: [appBaseMixin, sidebarDiffMixin],
   props: {
@@ -577,15 +648,12 @@ export default {
       },
     ];
     return {
-      isTableLoading: false,
-      isColumnExpand: true,
       deployData: {},
       allProcesses: [],
       chartSlider: {
         isShow: false,
         title: '',
       },
-      curChartTimeRange: '1h',
       curLogTimeRange: '1h',
       chartRangeList: [
         {
@@ -612,8 +680,6 @@ export default {
       prevProcessVersion: 0,
       prevInstanceVersion: 0,
       serverTimeout: 30,
-      cloudServerEvent: null,
-
       timerDisplay: this.$t('最近1小时'),
       datePickerOption: {
         // 小于今天的都不能选
@@ -637,12 +703,6 @@ export default {
       },
       watchServerTimer: null,
       curUpdateProcess: {},
-      processSlider: {
-        isShow: false,
-        title: '',
-      },
-      isLogsLoading: false,
-      instanceLogs: [],
       processRefuseDialog: {
         isLoading: false,
         visiable: false,
@@ -650,10 +710,22 @@ export default {
         title: '',
         link: '',
       },
-      rowDisplayName: '',
       // EventSource handler
       serverProcessEvent: undefined,
       scaleTargetReplicas: 0,
+      instanceEventConfig: {
+        isShow: false,
+        name: '',
+        instanceName: '',
+      },
+      logConfig: {
+        visiable: false,
+        isLoading: false,
+        title: '',
+        logs: [],
+        parmas: {},
+      },
+      showFunctionalDependencyDialog: false,
     };
   },
   computed: {
@@ -661,17 +733,23 @@ export default {
       // 当前模块的名称
       return this.deploymentInfo.module_name;
     },
-    isWatchProcess() {
-      return this.$route.params.id;
-    },
     localLanguage() {
       return this.$store.state.localLanguage;
     },
     runningInstanceLength() {
       return this.allProcesses.reduce((p, v) => {
-        p += (v.instances.length || 0);
-        return p;
+        const readyInstancesCount = v.instances.filter((instance) => instance.ready).length;
+        return p + readyInstancesCount;
       }, 0);
+    },
+    // 滑框的宽度
+    computedWidth() {
+      const defaultWidth = 980;
+      const maxWidth = window.innerWidth * 0.8;
+      return Math.min(defaultWidth, maxWidth);
+    },
+    platformFeature() {
+      return this.$store.state.platformFeature;
     },
   },
 
@@ -685,21 +763,14 @@ export default {
       immediate: true,
       // deep: true,
     },
-    // isDialogShowSideslider: {
-    //   handler(value) {
-    //     // 在没有侧栏的情况下
-    //     if (!value
-    //     && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
-    //       this.watchServerPush();
-    //     }
-    //   },
-    // },
     rvData: {
       handler(newVal, oldVal) {
         if (this.isDialogShowSideslider || !oldVal) return;
         // 进入页面启动事件流
-        if (JSON.stringify(newVal) !== JSON.stringify(oldVal)
-        && (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)) {
+        if (
+          !isEqual(newVal, oldVal) &&
+          (this.serverProcessEvent === undefined || this.serverProcessEvent.readyState === EventSource.CLOSED)
+        ) {
           this.watchServerPush();
         }
       },
@@ -724,50 +795,28 @@ export default {
       row.isExpand = !row.isExpand;
     },
     handleProcessOperation(row) {
-      this.curUpdateProcess = row;    // 当前点击的进程
+      this.curUpdateProcess = row; // 当前点击的进程
     },
 
     handleUpdateProcess() {
       this.updateProcess();
     },
-    handleExpansionAndContraction(row) {
-      this.curUpdateProcess = row;    // 当前点击的进程
+    handleExpansionAndContraction(row, i) {
+      this.curUpdateProcess = row; // 当前点击的进程
       const refName = `${this.moduleName}ScaleDialog`;
       this.$refs[refName].handleShowDialog(row, this.environment, this.moduleName);
     },
-    // 处理进程与实例的关系
-    // handleDeployInstanceData() {
-    //   this.processData = this.deployData.processes.reduce((p, v) => {
-    //     const instances = this.deployData.instances.filter((e) => {
-    //       if (e.process_type === v.type) {
-    //         e.date_time = moment(e.start_time).startOf('minute')
-    //           .fromNow();
-    //         return true;
-    //       }
-    //       return false;
-    //     });
-    //     v.instances = instances;
-    //     v.totalCount = v.failed + v.success;
-    //     p.push(v);
-    //     console.log(p);
-    //     return p;
-    //   }, []);
-    //   console.log(11113, this.processData);
-    // },
 
     // 对数据进行处理
     formatProcesses(processesData) {
       const allProcesses = [];
-
-      // 遍历进行数据组装
-      const packages = processesData.proc_specs;
-      const { instances } = processesData;
-      // 如果是下架的进程则processesData.proc_specs会有数据
-      if (processesData.proc_specs.length) {
-        const processName = processesData.processes.map(e => e.type);
-        processesData.proc_specs.forEach((e) => {
-          if (!processName.includes(e.name)) {
-            processesData.processes.push({
+      const { proc_specs: packages, instances, processes } = processesData;
+      // 如果是下架的进程则 processesData.proc_specs 会有数据
+      if (packages.length > 0) {
+        const processNames = processes.map((e) => e.type);
+        packages.forEach((e) => {
+          if (!processNames.includes(e.name)) {
+            processes.push({
               module_name: e.plan_name,
               name: '',
               type: e.name,
@@ -782,23 +831,17 @@ export default {
           }
         });
       }
-      processesData.processes.forEach((processItem) => {
-        const { type } = processItem;
-        const packageInfo = packages.find(item => item.name === type);
+      processes.forEach((processItem) => {
+        const { type, name } = processItem;
+        const packageInfo = packages.find((item) => item.name === type) || {};
+        const relatedInstances = instances.filter((instance) => instance.process_type === type);
 
         const processInfo = {
           ...processItem,
           ...packageInfo,
-          instances: [],
+          instances: relatedInstances,
         };
 
-        instances.forEach((instance) => {
-          if (instance.process_type === type) {
-            processInfo.instances.push(instance);
-          }
-        });
-
-        // 作数据转换，以兼容原逻辑
         const process = {
           name: processInfo.name,
           instance: processInfo.instances.length,
@@ -814,30 +857,25 @@ export default {
           available_instance_count: processInfo.target_status === 'stop' ? 0 : processInfo.target_replicas,
           failed: processInfo.failed,
           resourceLimit: processInfo.resource_limit,
-          cpuLimit: processInfo.cpu_limit,
-          memLimit: processInfo.memory_limit,
+          cpuLimit: processInfo.resource_limit?.cpu,
+          memLimit: processInfo.resource_limit?.memory,
           clusterLink: processInfo.cluster_link,
           isExpand: true,
           autoscaling: processInfo.autoscaling,
           type,
           scalingConfig: processInfo.scaling_config,
+          processName: name,
         };
         this.updateProcessStatus(process);
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = moment(item.start_time).startOf('minute')
-            .fromNow();
+          item.date_time = moment(item.start_time).startOf('minute').fromNow();
+          item.isOperate = false;
         });
         allProcesses.push(process);
       });
-      allProcesses.forEach((processe) => {
-        processe.instances.forEach((instance) => {
-          instance.isOperate = false;
-        });
-      });
-      this.allProcesses = JSON.parse(JSON.stringify(allProcesses));
-      console.log('this.allProcesses', this.allProcesses);
+      this.allProcesses = cloneDeep(allProcesses);
     },
 
     // 进程详情
@@ -848,7 +886,7 @@ export default {
         targetReplicas: process.targetReplicas,
         maxReplicas: process.maxReplicas,
         status: process.status,
-        cpuLimit: this.transfer_cpu_unit(process.cpuLimit),
+        cpuLimit: this.transferCpuUnit(process.cpuLimit),
         memLimit: process.memLimit,
         clusterLink: process.clusterLink,
       };
@@ -856,12 +894,12 @@ export default {
       this.curProcessKey = process.name;
       this.chartSlider.title = `${this.$t('进程')} ${process.name}${this.$t('详情')}`;
       this.chartSlider.isShow = true;
-      if (this.curAppInfo.feature.RESOURCE_METRICS) {
+      if (this.platformFeature.RESOURCE_METRICS) {
         this.getInstanceChart(process);
       }
     },
 
-    transfer_cpu_unit(cpuLimit) {
+    transferCpuUnit(cpuLimit) {
       if (cpuLimit.endsWith('m')) {
         cpuLimit = parseInt(/^\d+/.exec(cpuLimit)) / 1000;
       }
@@ -876,37 +914,41 @@ export default {
         const cpuRef = this.$refs.cpuLine;
         const memRef = this.$refs.memoryLine;
 
-        cpuRef && cpuRef.mergeOptions({
-          xAxis: [
-            {
-              data: [],
-            },
-          ],
-          series: [],
-        });
+        cpuRef &&
+          cpuRef.mergeOptions({
+            xAxis: [
+              {
+                data: [],
+              },
+            ],
+            series: [],
+          });
 
-        memRef && memRef.mergeOptions({
-          xAxis: [
-            {
-              data: [],
-            },
-          ],
-          series: [],
-        });
+        memRef &&
+          memRef.mergeOptions({
+            xAxis: [
+              {
+                data: [],
+              },
+            ],
+            series: [],
+          });
 
-        cpuRef && cpuRef.showLoading({
-          text: this.$t('正在加载'),
-          color: '#30d878',
-          textColor: '#fff',
-          maskColor: 'rgba(255, 255, 255, 0.8)',
-        });
+        cpuRef &&
+          cpuRef.showLoading({
+            text: this.$t('正在加载'),
+            color: '#30d878',
+            textColor: '#fff',
+            maskColor: 'rgba(255, 255, 255, 0.8)',
+          });
 
-        memRef && memRef.showLoading({
-          text: this.$t('正在加载'),
-          color: '#30d878',
-          textColor: '#fff',
-          maskColor: 'rgba(255, 255, 255, 0.8)',
-        });
+        memRef &&
+          memRef.showLoading({
+            text: this.$t('正在加载'),
+            color: '#30d878',
+            textColor: '#fff',
+            maskColor: 'rgba(255, 255, 255, 0.8)',
+          });
 
         this.fetchMetric({
           cpuRef,
@@ -920,10 +962,13 @@ export default {
      * 图标侧栏隐藏回调处理
      */
     handlerChartHide() {
-      this.dateParams = Object.assign({}, {
-        start_time: initStartDate,
-        end_time: initEndDate,
-      });
+      this.dateParams = Object.assign(
+        {},
+        {
+          start_time: initStartDate,
+          end_time: initEndDate,
+        }
+      );
       this.initDateTimeRange = [initStartDate, initEndDate];
       this.isDatePickerOpen = false;
       this.clearChart();
@@ -958,7 +1003,6 @@ export default {
     toggleDatePicker() {
       this.isDatePickerOpen = !this.isDatePickerOpen;
     },
-
 
     async fetchMetric(conf) {
       // 请求数据
@@ -1004,7 +1048,7 @@ export default {
             }
           });
         });
-        limitDatas && (datas.unshift(limitDatas));
+        limitDatas && datas.unshift(limitDatas);
         return datas;
       };
       try {
@@ -1028,55 +1072,57 @@ export default {
     },
 
     /**
-      * 清空图表数据
-    */
+     * 清空图表数据
+     */
     clearChart() {
       const cpuRef = this.$refs.cpuLine;
       const memRef = this.$refs.memoryLine;
 
-      cpuRef && cpuRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [
-          {
-            name: '',
-            type: 'line',
-            smooth: true,
-            symbol: 'none',
-            areaStyle: {
-              normal: {
-                opacity: 0,
-              },
+      cpuRef &&
+        cpuRef.mergeOptions({
+          xAxis: [
+            {
+              data: [],
             },
-            data: [0],
-          },
-        ],
-      });
+          ],
+          series: [
+            {
+              name: '',
+              type: 'line',
+              smooth: true,
+              symbol: 'none',
+              areaStyle: {
+                normal: {
+                  opacity: 0,
+                },
+              },
+              data: [0],
+            },
+          ],
+        });
 
-      memRef && memRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [
-          {
-            name: '',
-            type: 'line',
-            smooth: true,
-            symbol: 'none',
-            areaStyle: {
-              normal: {
-                opacity: 0,
-              },
+      memRef &&
+        memRef.mergeOptions({
+          xAxis: [
+            {
+              data: [],
             },
-            data: [0],
-          },
-        ],
-      });
+          ],
+          series: [
+            {
+              name: '',
+              type: 'line',
+              smooth: true,
+              symbol: 'none',
+              areaStyle: {
+                normal: {
+                  opacity: 0,
+                },
+              },
+              data: [0],
+            },
+          ],
+        });
     },
 
     /**
@@ -1159,7 +1205,6 @@ export default {
       // }
       // process.isActionLoading = true;
 
-
       // // 判断是否已经下架
       // if (this.isAppOfflined) {
       //   return false;
@@ -1175,8 +1220,7 @@ export default {
       //   index,
       // });
 
-      const processType = process.name;
-      const { targetStatus } = process;
+      const { name: processType, targetStatus } = process;
       const patchForm = {
         process_type: processType,
         operate_type: targetStatus === 'start' ? 'stop' : 'start',
@@ -1190,20 +1234,10 @@ export default {
           data: patchForm,
         });
 
-        console.log('process', process, res);
-
-        if (res.target_status === 'start') {
-          process.available_instance_count = res.target_replicas;
-        } else {
-          process.available_instance_count = 0;
-        }
+        process.available_instance_count = res.target_status === 'start' ? res.target_replicas : 0;
 
         // 更新当前操作状态
-        if (targetStatus === 'start') {
-          process.targetStatus = 'stop';
-        } else {
-          process.targetStatus = 'start';
-        }
+        process.targetStatus = targetStatus === 'start' ? 'stop' : 'start';
         if (!this.watchServerTimer) {
           this.watchServerPush();
         }
@@ -1219,59 +1253,44 @@ export default {
       }
     },
 
-
     // 监听进程事件流
     watchServerPush() {
-      console.log('监听');
-      // 停止轮询的标志
       if (this.watchServerTimer) {
         clearTimeout(this.watchServerTimer);
-      };
+      }
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/envs/${this.environment}/processes/watch/?rv_proc=${this.rvData.rvProc}&rv_inst=${this.rvData.rvInst}&timeout_seconds=${this.serverTimeout}`;
 
-      const serverProcessEvent = new EventSource(url, {
-        withCredentials: true,
-      });
-      if (this.serverProcessEvent !== undefined) {
+      if (this.serverProcessEvent) {
         this.serverProcessEvent.close();
       }
-      this.serverProcessEvent = serverProcessEvent;
+      this.serverProcessEvent = new EventSource(url, { withCredentials: true });
 
-      // 收藏服务推送消息
-      serverProcessEvent.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log(this.$t('接受到推送'), data);
-        if (data.object_type === 'process') {
-          if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
-          this.updateProcessData(data);
-        } else if (data.object_type === 'instance') {
-          if (data.object.module_name !== this.curModuleId) return;   // 更新当前模块的进程
-          this.updateInstanceData(data);
-        } else if (data.type === 'ERROR') {
-          // 判断 event.type 是否为 ERROR 即可，如果是 ERROR，就等待 2 秒钟后，重新发起 list/watch 流程
-          clearTimeout(this.timer);
-          this.timer = setTimeout(() => {
-            // this.getProcessList(this.releaseId, false);
-          }, 2000);
+      // 服务推送消息处理
+      this.serverProcessEvent.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          // 如果模块名称不匹配，直接返回
+          if (data.object.module_name !== this.curModuleId) return;
+
+          // 根据对象类型更新数据
+          if (['process', 'instance'].includes(data.object_type)) {
+            this.updateProcessData(data);
+          }
+        } catch (e) {
+          console.error(e);
         }
       };
 
       // 服务异常
-      serverProcessEvent.onerror = (event) => {
-        // 异常后主动关闭，否则会继续重连
-        console.error(this.$t('推送异常'), event);
-        serverProcessEvent.close();
-
-        // 推迟调用，防止过于频繁导致服务性能问题
-        // this.watchServerTimer = setTimeout(() => {
-        //   this.watchServerPush();
-        // }, 3000);
+      this.serverProcessEvent.onerror = () => {
+        this.serverProcessEvent.close();
       };
 
       // 服务结束
-      serverProcessEvent.addEventListener('EOF', () => {
-        serverProcessEvent.close();
-        if (this.serverProcessEvent === serverProcessEvent) {
+      this.serverProcessEvent.addEventListener('EOF', () => {
+        this.serverProcessEvent.close();
+        if (this.serverProcessEvent === this.serverProcessEvent) {
           // 服务结束请求列表接口
           bus.$emit('get-release-info');
         }
@@ -1297,7 +1316,7 @@ export default {
           }
         });
       } else if (data.type === 'DELETED') {
-        this.allProcesses = this.allProcesses.filter(process => process.name !== processData.type);
+        this.allProcesses = this.allProcesses.filter((process) => process.name !== processData.type);
       }
     },
 
@@ -1306,8 +1325,7 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = moment(instanceData.start_time).startOf('minute')
-        .fromNow();
+      instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
       this.allProcesses.forEach((process) => {
         if (process.type === instanceData.process_type) {
           // 新增
@@ -1339,15 +1357,15 @@ export default {
 
     updateProcessStatus(process) {
       /*
-        * 设置进程状态
-        * targetStatus: 进行的操作，start\stop\scale
-        * status: 操作状态，Running\stoped
-        *
-        * 如何判断进程当前是否为操作中（繁忙状态）？
-        * 主要根据 process_packages 里面的 target_status 判断：
-        * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
-        * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
-        */
+       * 设置进程状态
+       * targetStatus: 进行的操作，start\stop\scale
+       * status: 操作状态，Running\stoped
+       *
+       * 如何判断进程当前是否为操作中（繁忙状态）？
+       * 主要根据 process_packages 里面的 target_status 判断：
+       * 如果 target_status 为 stop，仅当 processes 里面的 success 为 0 且实例为 0 时正常，否则为操作中
+       * 如果 target_status 为 start，仅当 success 与 target_replicas 一致，而且 failed 为 0 时正常，否则为操作中
+       */
       if (process.targetStatus === 'stop') {
         process.operateIconTitle = this.$t('启动进程');
         process.operateIconTitleCopy = this.$t('启动进程');
@@ -1367,30 +1385,30 @@ export default {
       }
     },
 
-
     /**
-     * 展示实例日志侧栏
-     * @param {Object} instance 实例对象
-    */
-    showInstanceLog(instance) {
+     * 展示实例/重启日志弹窗
+     * @param {Object} instance  实例对象
+     * @param {Object} row
+     */
+    showInstanceLog(instance, row) {
       this.curInstance = instance;
-      this.instanceLogs = [];
-      this.processSlider.isShow = true;
-      this.processSlider.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
+      this.logConfig.visiable = true;
+      this.logConfig.isLoading = true;
+      this.logConfig.params = {
+        appCode: this.appCode,
+        moduleId: this.curModuleId,
+        env: this.environment,
+        processType: row.name,
+        instanceName: instance.name,
+      };
+      this.logConfig.title = `${this.$t('实例')} ${this.curInstance.display_name} ${this.$t('控制台输出日志')}`;
       this.loadInstanceLog();
-      // 收集初始状态
-      this.initSidebarFormData(this.curLogTimeRange);
     },
 
     /**
      * 加载实例日志
      */
     async loadInstanceLog() {
-      if (this.isLogsLoading) {
-        return false;
-      }
-
-      this.isLogsLoading = true;
       try {
         const { appCode } = this;
         const moduleId = this.curModuleId;
@@ -1405,29 +1423,30 @@ export default {
         });
         const data = res.logs.reverse();
         data.forEach((item) => {
+          item.timestamp = dayjs.unix(item.timestamp).format('YYYY-MM-DD HH:mm:ss');
           item.podShortName = item.pod_name.split('-').reverse()[0];
         });
-        this.instanceLogs = data;
-        // 滚动到底部
-        setTimeout(() => {
-          const container = document.getElementById('log-container');
-          container.scrollTop = container.scrollHeight;
-        }, 500);
+        this.logConfig.logs = data;
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
-        this.isLogsLoading = false;
+        this.logConfig.isLoading = false;
       }
     },
 
     /**
      * 显示进程webConsole
      * @param {Object} instance, processes
-    */
+     */
     async showInstanceConsole(instance, processes) {
+      // 暂无访问控制台功能
+      if (!this.platformFeature.WEB_CONSOLE) {
+        this.showFunctionalDependencyDialog = true;
+        return;
+      }
       this.processRefuseDialog.isLoading = true;
       try {
         const params = {
@@ -1488,7 +1507,7 @@ export default {
         this.serverProcessEvent.close();
         if (this.watchServerTimer) {
           clearTimeout(this.watchServerTimer);
-        };
+        }
       }
     },
 
@@ -1507,8 +1526,103 @@ export default {
       }
     },
 
-    handleMouseEnter(name) {
-      this.rowDisplayName = name;
+    // 显示查看事件
+    showInstanceEvents(data, processName) {
+      this.instanceEventConfig.isShow = true;
+      this.instanceEventConfig.name = data.display_name;
+      this.instanceEventConfig.processName = processName;
+      this.instanceEventConfig.instanceName = data.name;
+    },
+
+    preOperation() {
+      this.logConfig.isLoading = true;
+      this.logConfig.logs = [];
+    },
+
+    // 刷新日志
+    refreshLogs(data) {
+      this.preOperation();
+      if (data.type === 'realtime') {
+        this.curLogTimeRange = data.time;
+        this.loadInstanceLog();
+      } else {
+        this.getPreviousLogs();
+      }
+    },
+
+    // 重启日志
+    async getPreviousLogs() {
+      try {
+        const logs = await this.$store.dispatch('log/getPreviousLogs', this.logConfig.params);
+        this.logConfig.logs = logs;
+      } catch (e) {
+        if (e.status === 404) {
+          this.logConfig.logs = [];
+          return;
+        }
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      } finally {
+        this.logConfig.isLoading = false;
+      }
+    },
+
+    // 重启进程、实例弹窗
+    showRestartPopup(type, row, i) {
+      const restartInstance = type === 'instance';
+      this.$bkInfo({
+        title: restartInstance ? this.$t('确认重启当前实例？') : this.$t('确认滚动重启当前进程下所有实例？'),
+        confirmFn: () => {
+          if (restartInstance) {
+            this.handleRestartInstance(row);
+          } else {
+            this.handleRestartProcess(row);
+          }
+        },
+      });
+    },
+
+    // 滚动重启
+    async handleRestartProcess(row) {
+      try {
+        await this.$store.dispatch('processes/restartProcess', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          processName: row.processName,
+        });
+        bus.$emit('get-release-info');
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 重启实例
+    async handleRestartInstance(instance) {
+      try {
+        await this.$store.dispatch('processes/restartInstance', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          env: this.environment,
+          instanceName: instance.name,
+        });
+        bus.$emit('get-release-info');
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
+    },
+
+    // 查看更多-访问控制台
+    gotoMore() {
+      window.open(this.GLOBAL.DOC.WEB_CONSOLE, '_blank');
     },
   },
 };
@@ -1516,7 +1630,6 @@ export default {
 
 <style lang="scss" scoped>
 .deploy-detail {
-
   .instance-details {
     display: flex;
   }
@@ -1525,10 +1638,10 @@ export default {
     flex: 1;
     display: flex;
     justify-content: center;
-    border-right: 1px solid #EAEBF0;
+    border-right: 1px solid #eaebf0;
     margin: 12px 0;
     .label {
-      color: #63656E;
+      color: #63656e;
     }
     .value {
       color: #313238;
@@ -1539,7 +1652,7 @@ export default {
     &:last-child {
       border-right: none;
       .value {
-        color: #EA3636;
+        color: #ea3636;
       }
     }
   }
@@ -1561,24 +1674,26 @@ export default {
       cursor: pointer;
     }
     .start {
-      color: #2DCB56;
+      color: #2dcb56;
       font-size: 20px;
     }
     .detail {
-      color: #979BA5;
+      color: #979ba5;
 
       &:hover {
-        color: #63656E;
+        color: #63656e;
       }
     }
-    .more {
-      transform: rotate(90deg);
-      border-radius: 50%;
-      padding: 3px;
-      color: #63656E;
-      &:hover {
-        background: #F0F1F5;
-      }
+  }
+
+  i.more {
+    transform: rotate(90deg);
+    border-radius: 50%;
+    padding: 3px;
+    color: #63656e;
+    cursor: pointer;
+    &:hover {
+      background: #f0f1f5;
     }
   }
 
@@ -1590,11 +1705,11 @@ export default {
     margin-right: 8px;
 
     &.faild {
-      background: #EA3636;
+      background: #ea3636;
       border: 3px solid #fce0e0;
     }
     &.running {
-      background: #3FC06D;
+      background: #3fc06d;
       border: 3px solid #daefe4;
     }
   }
@@ -1617,45 +1732,60 @@ export default {
         height: 100%;
         padding: 0;
 
-        .instance-item-cls-empty{
-          position: absolute;
-          width: 50%;
-          left: 65%;
-          top: 50%;
-          text-align: left;
-          padding-left: 5px;
-          transform: translate(-50%, -50%);
+        .instance-item-cls-empty {
+          padding: 0 10px;
         }
 
         .operation-column {
+          align-items: center;
           justify-content: end;
           padding-right: 12px;
+          .more {
+            font-size: 16px;
+          }
+          .bk-primary.bk-button-text {
+            height: auto;
+          }
+          .table-more-popover-cls {
+            height: 22px;
+            .bk-tooltip-ref {
+              height: 22px;
+              display: flex;
+              align-items: center;
+            }
+          }
         }
 
-        .instance-item-cls  {
+        .instance-item-cls {
           border-bottom: 1px solid #dfe0e5;
-          transition: .25s ease;
+          transition: 0.25s ease;
+          padding: 0 10px;
 
-          .content {
-            position: absolute;
-            width: calc(50% + 5px);
-            left: 65%;
-            top: 50%;
-            transform: translate(calc(-50% + 7px), -50%);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: flex;
-            align-items: center;
+          &.instance-name {
+            padding-left: 30px;
           }
 
           .instance-item-status {
             padding-bottom: 2px;
           }
 
-          // .hoverBackground {
-          //   background-color: #FAFBFD;
-          // }
+          .text-ellipsis {
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+          }
+
+          span.tip {
+            position: relative;
+            &::before {
+              content: '';
+              position: absolute;
+              width: 100%;
+              height: 1px;
+              bottom: 15px;
+              border-bottom: 1px dashed;
+            }
+          }
 
           &:last-child {
             border-bottom: none;
@@ -1678,15 +1808,13 @@ export default {
           }
         }
       }
+
+      &.colum-instance-name .bk-table-header-label {
+        padding-left: 30px;
+      }
+
       .bk-table-header-label {
-        // display: flex;
-        // justify-content: center;
-        position: absolute;
-        width: 50%;
-        left: 65%;
-        top: 50%;
-        padding-left: 5px;
-        transform: translate(-50%, -50%);
+        padding: 0 10px;
       }
     }
     .table-colum-operation-cls {
@@ -1701,10 +1829,10 @@ export default {
         padding: 0 10px;
       }
       &.default-background {
-        background: #FAFBFD;
+        background: #fafbfd;
       }
     }
-    .bk-table-body .table-colum-process-cls  {
+    .bk-table-body .table-colum-process-cls {
       .cell {
         align-items: flex-start;
         flex-direction: column;
@@ -1714,20 +1842,20 @@ export default {
           line-height: 16px;
           padding: 0 4px;
           font-size: 10px;
-          color: #14A568;
-          background: #E4FAF0;
+          color: #14a568;
+          background: #e4faf0;
           border-radius: 2px;
         }
       }
     }
-    .table-colum-process-cls  {
+    .table-colum-process-cls {
       .cell {
         display: block;
         height: 100%;
         display: flex;
       }
       &.default-background {
-        background: #FAFBFD;
+        background: #fafbfd;
       }
     }
   }
@@ -1739,8 +1867,8 @@ export default {
     height: 18px;
     text-align: center;
     line-height: 18px;
-    color: #EA3636;
-    background: #FEEBEA;
+    color: #ea3636;
+    background: #feebea;
     border-radius: 9px;
   }
   .icon-expand {
@@ -1750,7 +1878,8 @@ export default {
     transform: translateY(-50%) translateX(50%);
     z-index: 99;
     cursor: pointer;
-    .image-icon{
+    .image-icon {
+      display: block;
       width: 14px;
       height: 14px;
     }
@@ -1762,17 +1891,17 @@ export default {
       margin-top: -2px;
       width: 20px;
       height: 20px;
-      background: #EA3636;
+      background: #ea3636;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .square-icon {
-        width: 8px;
-        height: 8px;
-        background: #fff;
-        border-radius: 1px;
+      width: 8px;
+      height: 8px;
+      background: #fff;
+      border-radius: 1px;
     }
   }
   .dot {
@@ -1780,119 +1909,103 @@ export default {
     width: 13px;
     height: 13px;
     border-radius: 50%;
-    margin-right: 8px;
+    margin-right: 5px;
     flex-shrink: 0;
+    transform: translateY(2px);
 
-    &.Failed {
-      background: #EA3636;
+    &.Failed,
+    &.Error {
+      background: #ea3636;
       border: 3px solid #fce0e0;
     }
     &.interrupted,
-    &.Pending {
-      background: #FF9C01;
+    &.Pending,
+    &.CrashLoopBackOff {
+      background: #ff9c01;
       border: 3px solid #ffefd6;
     }
     &.Running {
-      background: #3FC06D;
+      background: #3fc06d;
       border: 3px solid #daefe4;
     }
   }
 
   .chart-wrapper {
-      height: 100%;
-      overflow: auto;
-      background: #fafbfd;
+    height: 100%;
+    overflow: auto;
+    background: #fafbfd;
 
-      .chart-box {
-          margin-bottom: 10px;
-          border-top: 1px solid #dde4eb;
-          border-bottom: 1px solid #dde4eb;
+    .chart-box {
+      margin-bottom: 10px;
+      border-top: 1px solid #dde4eb;
+      border-bottom: 1px solid #dde4eb;
 
-          .title {
-              font-size: 14px;
-              display: block;
-              color: #666;
-              font-weight: normal;
-              padding: 10px 20px;
-          }
-
-          .sub-title {
-              font-size: 12px;
-          }
-          background-color: #fff !important;
+      .title {
+        font-size: 14px;
+        display: block;
+        color: #666;
+        font-weight: normal;
+        padding: 10px 20px;
       }
+
+      .sub-title {
+        font-size: 12px;
+      }
+      background-color: #fff !important;
+    }
   }
 
   .slider-detail-wrapper {
-      padding: 0 20px 20px 20px;
+    padding: 0 20px 20px 20px;
+    line-height: 32px;
+    .title {
+      display: block;
+      padding-bottom: 2px;
+      color: #313238;
+      border-bottom: 1px solid #dcdee5;
+    }
+    .detail-item {
+      display: flex;
+      justify-content: flex-start;
       line-height: 32px;
-      .title {
-          display: block;
-          padding-bottom: 2px;
-          color: #313238;
-          border-bottom: 1px solid #dcdee5;
+      .label {
+        color: #313238;
       }
-      .detail-item {
-          display: flex;
-          justify-content: flex-start;
-          line-height: 32px;
-          .label {
-              color: #313238;
-          }
-      }
+    }
   }
 
   .action-btn {
-      position: relative;
+    position: relative;
+    height: 28px;
+    line-height: 28px;
+    min-width: 28px;
+    display: flex;
+    border-radius: 2px;
+    cursor: pointer;
+
+    .text {
+      min-width: 90px;
+      line-height: 28px;
+      text-align: left;
+      color: #63656e;
+      font-size: 12px;
+      display: inline-block;
+    }
+
+    .left-icon,
+    .right-icon {
+      width: 28px;
       height: 28px;
       line-height: 28px;
-      min-width: 28px;
-      display: flex;
-      border-radius: 2px;
-      cursor: pointer;
-
-      .text {
-          min-width: 90px;
-          line-height: 28px;
-          text-align: left;
-          color: #63656E;
-          font-size: 12px;
-          display: inline-block;
-      }
-
-      .left-icon,
-      .right-icon {
-          width: 28px;
-          height: 28px;
-          line-height: 28px;
-          color: #C4C6CC;
-          display: inline-block;
-          text-align: center;
-      }
-
-      &.refresh {
-          width: 28px;
-      }
-  }
-  .instance-log-wrapper {
-      height: 100%;
-      overflow: auto;
-
-      .instance-textarea {
-          border: none;
-      }
-  }
-  .instance-textarea {
-      border-radius: 2px;
-      line-height: 19px;
-      font-size: 12px;
-      padding: 50px 20px 10px 20px;
-
-      p {
-          padding: 0px 0;
-          padding-bottom: 5px;
-      }
+      color: #c4c6cc;
+      display: inline-block;
+      text-align: center;
     }
+
+    &.refresh {
+      width: 28px;
+    }
+  }
   .action-box {
     position: absolute;
     top: 12px;
@@ -1901,20 +2014,34 @@ export default {
 }
 
 .process-detail-table {
-  /deep/ .bk-table-body-wrapper .hover-row>td {
-    background: #FFFFFF !important;
+  /deep/ .bk-table-body-wrapper .hover-row > td {
+    background: #ffffff !important;
   }
-  /deep/ .bk-table-body-wrapper .hover-row>.default-background {
-    background: #FAFBFD !important;
+  /deep/ .bk-table-body-wrapper .hover-row > .default-background {
+    background: #fafbfd !important;
   }
 }
 </style>
 
 <style lang="scss">
-.more-operations .tippy-tooltip .tippy-content {
-  cursor: pointer;
-  &:hover {
-    color: #3a84ff;
+.more-operations {
+  .tippy-tooltip {
+    padding: 0;
+    .tippy-content {
+      cursor: pointer;
+      .more-content {
+        padding: 6px 0;
+        .option {
+          padding: 0 16px;
+          height: 32px;
+          line-height: 32px;
+          &:hover {
+            background-color: #eaf3ff;
+            color: #3a84ff;
+          }
+        }
+      }
+    }
   }
 }
 </style>

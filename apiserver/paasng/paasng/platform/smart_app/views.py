@@ -1,22 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+import copy
 import logging
+import tarfile
+from os import PathLike
+from pathlib import Path
 from typing import List, cast
 
 from blue_krill.storages.blobstore.exceptions import DownloadFailedError, UploadFailedError
@@ -35,24 +38,28 @@ from rest_framework.response import Response
 
 from paasng.accessories.servicehub.manager import ServiceObj, mixed_service_mgr
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
+from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.declarative.application.resources import ApplicationDesc, ApplicationDescDiffDog
+from paasng.platform.applications.models import Application, SMartAppExtraInfo
+from paasng.platform.applications.tenant import validate_app_tenant_params
+from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.exceptions import ControllerError, DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
-from paasng.platform.smart_app.detector import SourcePackageStatReader
-from paasng.platform.smart_app.exceptions import PreparedPackageNotFound
-from paasng.platform.smart_app.prepared import PreparedSourcePackage
+from paasng.platform.smart_app.exceptions import GenAppCodeError, PreparedPackageNotFound
 from paasng.platform.smart_app.serializers import (
     AppDescriptionSLZ,
+    PackageStashConfirmRequestSLZ,
     PackageStashRequestSLZ,
     PackageStashResponseSLZ,
-    PackageStashResponseWithDiffSLZ,
 )
-from paasng.platform.smart_app.utils import dispatch_package_to_modules, get_app_description
+from paasng.platform.smart_app.services.app_desc import gen_app_code_when_conflict, get_app_description
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader, update_meta_info
+from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
+from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.package.downloader import download_package
 from paasng.platform.sourcectl.serializers import SourcePackageSLZ
@@ -84,23 +91,23 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_SMART_APP):
             raise ValidationError(_("你无法创建 SMart 应用"))
 
-        def get_region(app_desc):
-            user_profile = UserProfile.objects.get_profile(self.request.user)
-            enable_regions = [r.name for r in user_profile.enable_regions]
-            if not app_desc.region or app_desc.region not in enable_regions:
-                return enable_regions[0]
-            return app_desc.region
-
         slz = PackageStashRequestSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
+
         package_fp = slz.validated_data["package"]
+
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
+            request.user, slz.validated_data["app_tenant_mode"]
+        )
 
         with generate_temp_dir() as download_dir:
             filepath = get_filepath(package_fp, str(download_dir))
 
             stat = SourcePackageStatReader(filepath).read()
-            app_desc = get_app_description(stat)
-            self.validate_app_desc(app_desc)
+
+            original_app_desc = get_app_description(stat)
+            app_desc = self.validate_and_prepare_app_desc(original_app_desc, app_tenant_id)
+
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
 
@@ -108,7 +115,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
             PreparedSourcePackage(request).store(filepath)
 
         logger.debug("[S-Mart] fetching remote services by region.")
-        supported_services = list(mixed_service_mgr.list_by_region(get_region(app_desc=app_desc)))
+        supported_services = list(mixed_service_mgr.list_visible())
         supported_services = cast(List[ServiceObj], supported_services)
 
         return Response(
@@ -117,15 +124,23 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                     "app_description": app_desc,
                     "signature": stat.sha256_signature,
                     "supported_services": [service.name for service in supported_services],
+                    "original_app_description": original_app_desc,
                 }
             ).data
         )
 
-    @swagger_auto_schema(tags=["S-Mart", "创建应用"])
-    def create_prepared(self, request):
+    @swagger_auto_schema(request_body=PackageStashConfirmRequestSLZ, tags=["S-Mart", "创建应用"])
+    def confirm(self, request):
         """根据已暂存的 S-Mart 源码包创建应用"""
         if not AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_CREATE_SMART_APP):
             raise ValidationError(_("你无法创建 S-Mart 应用"))
+
+        slz = PackageStashConfirmRequestSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
+            request.user, slz.validated_data["app_tenant_mode"]
+        )
 
         with generate_temp_dir() as download_dir:
             # Step 1. retrieve package(tarball)
@@ -135,10 +150,28 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 logger.exception("S-Mart package does not exist!")
                 raise error_codes.PREPARED_PACKAGE_NOT_FOUND
 
+            if not self.is_valid_tar_file(filepath):
+                raise error_codes.FILE_CORRUPTED_ERROR.f(_("源码文件加载不完整，请重试或联系管理员"))
+
             # Step 2. create application, module
             stat = SourcePackageStatReader(filepath).read()
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
+
+            original_app_desc = get_app_description(stat)
+
+            # 替换成实际待创建的应用信息
+            stat.meta_info = update_meta_info(
+                stat.meta_info,
+                app_code=slz.validated_data["code"],
+                app_name=slz.validated_data["name_zh_cn"],
+            )
+            # 租户信息放到单独的字段中，不会干扰应用描述文件字段
+            stat.meta_info["tenant"] = {
+                "app_tenant_mode": app_tenant_mode,
+                "app_tenant_id": app_tenant_id,
+                "tenant_id": tenant.id,
+            }
 
             handler = get_desc_handler(stat.meta_info)
             with atomic():
@@ -148,6 +181,11 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 except (ControllerError, DescriptionValidationError) as e:
                     logger.exception("Create app error !")
                     raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)
+                else:
+                    # 创建 SMartAppExtraInfo, 记录应用原始 code
+                    SMartAppExtraInfo.objects.create(
+                        app=application, original_code=original_app_desc.code, tenant_id=application.tenant_id
+                    )
 
             # Step 3. dispatch package as Image to registry
             try:
@@ -168,14 +206,43 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
         return Response({}, status=status.HTTP_201_CREATED)
 
     @staticmethod
-    def validate_app_desc(app_desc: ApplicationDesc):
-        """校验 ApplicationDesc."""
-        if app_desc.instance_existed:
-            raise ValidationError(_("应用ID: {appid} 的应用已存在!").format(appid=app_desc.code))
-        if app_desc.market is None:
+    def validate_and_prepare_app_desc(original_app_desc: ApplicationDesc, app_tenant_id: str) -> ApplicationDesc:
+        """validate original app_desc and prepare app_desc which will be used to create app"""
+        if original_app_desc.market is None:
             raise ValidationError(_("缺失应用市场配置（market)!"))
-        if app_desc.spec_version == AppSpecVersion.VER_1:
-            raise error_codes.MISSING_DESCRIPTION_INFO.f(_("请检查源码包是否存在 app_desc.yaml 文件"))
+
+        if not original_app_desc.instance_existed:
+            return original_app_desc
+
+        try:
+            smart_app = SMartAppExtraInfo.objects.get(
+                original_code=original_app_desc.code, app__app_tenant_id=app_tenant_id
+            )
+        except SMartAppExtraInfo.DoesNotExist:
+            # 生成可创建应用的 app_desc. 其中, code 随机生成, 保证唯一性, 用于前端推荐值
+            app_desc = copy.deepcopy(original_app_desc)
+            app_desc.instance_existed = False
+            try:
+                app_desc.code = gen_app_code_when_conflict(original_app_desc.code)
+            except GenAppCodeError:
+                raise error_codes.PREPARED_PACKAGE_ERROR.f(_("自动生成应用 ID 失败，请重试或联系管理员"))
+            else:
+                return app_desc
+        else:
+            raise ValidationError(
+                _("S-mart 包已用于创建应用（ID：{smart_app_code}），不允许重复创建!").format(
+                    smart_app_code=smart_app.app.code
+                )
+            )
+
+    @staticmethod
+    def is_valid_tar_file(filepath: PathLike) -> bool:
+        """检查指定路径的文件是否为 tar 包"""
+        try:
+            with tarfile.open(Path(filepath), "r"):
+                return True
+        except tarfile.TarError:
+            return False
 
 
 @method_decorator(name="list", decorator=swagger_auto_schema(tags=["源码包管理", "S-Mart"]))
@@ -213,19 +280,32 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
         return Response(data=AppDescriptionSLZ(app_desc).data)
 
     @staticmethod
-    def validate_app_desc(app_desc: ApplicationDesc):
-        """校验 ApplicationDesc."""
-        if not app_desc.instance_existed:
-            raise ValidationError(_("应用ID: {appid} 的应用不存在!").format(appid=app_desc.code))
-        if app_desc.market is None:
+    def validate_and_prepare_app_desc(original_app_desc: ApplicationDesc, app: Application) -> ApplicationDesc:
+        """validate original app_desc and prepare app_desc which will be used to update app"""
+        if original_app_desc.spec_version == AppSpecVersion.VER_3 and app.type != ApplicationType.CLOUD_NATIVE:
+            raise ValidationError(_("非云原生应用, 请使用 (spec_version: 2) 版本的应用描述文件"))
+
+        if original_app_desc.market is None:
             raise ValidationError(_("缺失应用市场配置（market)!"))
-        if app_desc.spec_version == AppSpecVersion.VER_1:
-            raise error_codes.MISSING_DESCRIPTION_INFO.f(_("请检查源码包是否存在 app_desc.yaml 文件"))
+
+        if not SMartAppExtraInfo.objects.filter(original_code=original_app_desc.code, app=app).exists():
+            raise ValidationError(
+                _("应用描述文件中声明的应用 ID({app_desc_code}) 未创建过 S-mart 应用").format(
+                    app_desc_code=original_app_desc.code
+                )
+            )
+
+        # 准备可更新应用的 app_desc. 其中, code 设置为实际待更新的 app code
+        app_desc = copy.deepcopy(original_app_desc)
+        app_desc.code = app.code
+        app_desc.name_zh_cn = app.name
+        app_desc.instance_existed = True
+        return app_desc
 
     @swagger_auto_schema(
         tags=["源码包管理", "S-Mart"],
         request_body=PackageStashRequestSLZ,
-        response_serializer=PackageStashResponseWithDiffSLZ,
+        response_serializer=PackageStashResponseSLZ,
         parser_classes=[MultiPartParser],
     )
     def stash(self, request, code):
@@ -241,22 +321,24 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
             filepath = get_filepath(package_fp, download_dir)
 
             stat = SourcePackageStatReader(filepath).read()
-            app_desc = get_app_description(stat)
-            self.validate_app_desc(app_desc)
+
+            original_app_description = get_app_description(stat)
+            app_desc = self.validate_and_prepare_app_desc(original_app_description, application)
+
             if not stat.version:
                 raise error_codes.MISSING_VERSION_INFO
 
             # Store as prepared package for later usage(commit)
             PreparedSourcePackage(request, namespace=namespace).store(filepath)
 
-        supported_services = mixed_service_mgr.list_by_region(application.region)
+        supported_services = mixed_service_mgr.list_visible()
         return Response(
-            data=PackageStashResponseWithDiffSLZ(
+            data=PackageStashResponseSLZ(
                 {
                     "app_description": app_desc,
                     "signature": stat.sha256_signature,
-                    "diffs": ApplicationDescDiffDog(application=application, desc=app_desc).diff(),
                     "supported_services": [service.name for service in supported_services],
+                    "original_app_description": original_app_description,
                 }
             ).data
         )
@@ -265,6 +347,8 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
     @swagger_auto_schema(tags=["源码包管理", "S-Mart"])
     def commit(self, request, code, signature):
         """保存暂存的源码包, 并应用源码包内的应用描述信息."""
+        application = self.get_application()
+
         with generate_temp_dir() as download_dir:
             # Step 1. retrieve package(tarball)
             try:
@@ -274,17 +358,28 @@ class SMartPackageManagerViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin, v
                 raise error_codes.PREPARED_PACKAGE_NOT_FOUND
 
             stat = SourcePackageStatReader(filepath).read()
-            if not stat.version:
-                raise error_codes.MISSING_VERSION_INFO
-
             if stat.sha256_signature != signature:
-                # NOTE: 防御性日志, 先不处理这种情景, 仅记录下来
                 logger.error(
                     "the provided digital signature is inconsistent with "
                     "the digital signature of the actually saved source code package."
                 )
+                raise error_codes.FILE_CORRUPTED_ERROR.f(_("文件签名不一致"))
+            if not stat.version:
+                raise error_codes.MISSING_VERSION_INFO
 
             # Step 2. handle app(create module if necessary)
+            # 替换成实际待更新的应用信息
+            stat.meta_info = update_meta_info(
+                stat.meta_info,
+                app_code=application.code,
+                app_name=application.name,
+            )
+            # 租户信息放到单独的字段中，不会干扰应用描述文件字段
+            stat.meta_info["tenant"] = {
+                "app_tenant_mode": application.app_tenant_mode,
+                "app_tenant_id": application.app_tenant_id,
+                "tenant_id": application.tenant_id,
+            }
             handler = get_desc_handler(stat.meta_info)
             try:
                 application = handler.handle_app(request.user)

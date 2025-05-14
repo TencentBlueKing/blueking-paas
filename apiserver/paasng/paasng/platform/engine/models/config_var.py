@@ -1,28 +1,28 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
-from typing import TYPE_CHECKING, Dict
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import ConfigVarEnvName
-from paasng.utils.models import TimestampedModel
+from paasng.utils.models import AuditedModel, BkUserField, TimestampedModel
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models.module import Module
@@ -48,6 +48,12 @@ def get_config_vars(module: "Module", env_name: str) -> Dict[str, str]:
         module=module, environment_id__in=(ENVIRONMENT_ID_FOR_GLOBAL, env_id)
     ).order_by("environment_id")
     return {obj.key: obj.value for obj in config_vars}
+
+
+def get_custom_builtin_config_vars(config_vars_prefix: str) -> Dict[str, str]:
+    """Get default config vars as dict, with prefix"""
+    builtin_config_vars = dict(BuiltinConfigVar.objects.values_list("key", "value"))
+    return add_prefix_to_key(builtin_config_vars, config_vars_prefix)
 
 
 class ConfigVarQuerySet(models.QuerySet):
@@ -76,6 +82,8 @@ class ConfigVar(TimestampedModel):
     value = models.TextField(null=False)
     description = models.CharField(max_length=200, null=True)
     is_builtin = models.BooleanField(default=False)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = ConfigVarQuerySet.as_manager()
 
@@ -124,8 +132,36 @@ class ConfigVar(TimestampedModel):
             # 差异点
             environment_id=environment_id,
             module=module,
+            tenant_id=self.tenant_id,
         )
 
 
-def add_prefix_to_key(items: dict, prefix: str) -> Dict[str, str]:
+def add_prefix_to_key(items: dict, prefix: str) -> Dict[str, Any]:
     return {f"{prefix}{key}": value for key, value in items.items()}
+
+
+@dataclass
+class BuiltInEnvVarDetail:
+    key: str
+    value: str
+    description: Optional[str]
+    prefix: str = field(default="")
+
+    def __post_init__(self):
+        if self.prefix:
+            self.key = f"{self.prefix}{self.key}"
+
+    def to_dict(self):
+        return {self.key: {"value": self.value, "description": self.description}}
+
+
+class BuiltinConfigVar(AuditedModel):
+    """Default config vars for global, can be added or edited in admin42.
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
+
+    key = models.CharField(verbose_name="环境变量名", max_length=128, null=False, unique=True)
+    value = models.TextField(verbose_name="环境变量值", max_length=512, null=False)
+    description = models.CharField(verbose_name="描述", max_length=512, null=False)
+    operator = BkUserField(verbose_name="更新者")

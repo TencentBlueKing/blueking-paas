@@ -1,7 +1,7 @@
 <template>
   <div class="image-container">
     <paas-content-loader
-      :class="['image-content', { 'bottom-line': curAppInfo?.feature?.ENABLE_IMAGE_APP_BIND_REPO }]"
+      :class="['image-content', { 'bottom-line': curAppInfo?.feature?.IMAGE_APP_BIND_REPO }]"
       :is-loading="isLoading"
       :is-transition="false"
       :offset-top="0"

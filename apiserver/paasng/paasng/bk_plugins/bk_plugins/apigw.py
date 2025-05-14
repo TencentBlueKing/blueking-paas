@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 """API Gateway related functionalities"""
+
 import logging
 from typing import Collection, Dict, List, Optional, Tuple
 
@@ -25,6 +25,7 @@ from bkapi_client_core.exceptions import BKAPIError, RequestException
 from django.conf import settings
 from typing_extensions import Protocol
 
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.models import Application
 
@@ -111,17 +112,13 @@ def set_distributors(plugin_app: Application, distributors: Collection[BkPluginD
 class PluginApiGWClient(Protocol):
     """Describes protocols of calling API Gateway management service"""
 
-    def sync_api(self, *args, **kwargs) -> Dict:
-        ...
+    def sync_api(self, *args, **kwargs) -> Dict: ...
 
-    def grant_permissions(self, *args, **kwargs) -> Dict:
-        ...
+    def grant_permissions(self, *args, **kwargs) -> Dict: ...
 
-    def revoke_permissions(self, *args, **kwargs) -> Dict:
-        ...
+    def revoke_permissions(self, *args, **kwargs) -> Dict: ...
 
-    def update_gateway_status(self, *args, **kwargs) -> Dict:
-        ...
+    def update_gateway_status(self, *args, **kwargs) -> Dict: ...
 
 
 class PluginDefaultAPIGateway:
@@ -147,7 +144,8 @@ class PluginDefaultAPIGateway:
         profile = self.plugin_app.bk_plugin_profile
         # When name is absent in plugin profile, generate a new name
         # WARN: The default value for gateway name should not exceeds 20 characters long.
-        self.gw_name = profile.api_gw_name or f"bk-{self.plugin_app.code}"
+        # WARN: BlueKing official product gateways use the prefix bk- and need to be distinguished from them.
+        self.gw_name = profile.api_gw_name or f"bp-{self.plugin_app.code}"
 
     def sync(self) -> int:
         """Sync API gateway resource, if the gateway resource doesn't exist yet, create it.
@@ -226,9 +224,15 @@ class PluginDefaultAPIGateway:
         client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_PLUGIN_APIGW_SERVICE_STAGE)
         bk_app_code, bk_app_secret = self._get_credentials()
         client.update_bkapi_authorization(bk_app_code=bk_app_code, bk_app_secret=bk_app_secret)
+        # API 网关的请求头中都需要添加 租户 ID
+        client.update_headers(
+            {
+                API_HERDER_TENANT_ID: self.plugin_app.tenant_id,
+            }
+        )
         return client.api
 
     def _get_credentials(self) -> Tuple[str, str]:
         """Get the application's (code, secret) pair"""
-        secret = get_oauth2_client_secret(self.plugin_app.code, self.plugin_app.region)
+        secret = get_oauth2_client_secret(self.plugin_app.code)
         return self.plugin_app.code, secret

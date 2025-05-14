@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 from typing import TYPE_CHECKING
 
@@ -26,7 +25,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_403_FORBIDDEN
 
-from paas_wl.bk_app.processes.shim import ProcessManager
+from paas_wl.bk_app.processes.processes import ProcessManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.accessories.serializers import DocumentaryLinkSLZ
 from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
@@ -35,11 +34,9 @@ from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.user import user_has_feature
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag as PFF
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.processes import serializers as slzs
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.utils.error_codes import error_codes
@@ -53,16 +50,10 @@ logger = logging.getLogger(__name__)
 
 
 class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [
-        IsAuthenticated,
-        application_perm_class(AppAction.BASIC_DEVELOP),
-    ]
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def _is_whitelisted_user(self, request):
         return user_has_feature(AFF.ENABLE_WEB_CONSOLE)().has_permission(request, self)
-
-    def _is_smart_app(self, module):
-        return module.get_source_origin() == SourceOrigin.S_MART
 
     def _get_webconsole_docs_from_advisor(self):
         """从智能顾问中获取 web-console 相关的文档"""
@@ -77,14 +68,12 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
     def _get_webconsole_command(self, module: "Module", runtime_type: str, is_cnb_runtime: bool):
         """获取进入 webconsole 的默认命令"""
         if runtime_type == RuntimeType.BUILDPACK:
-            # Smart 应用（包含普通应用类型、云原生应用类型）runtime_type 为 buildpack
-            # 但是在流水线中单独构建的镜像，还是使用的原来的 heruku buildpack，而不是 CNB buildpack，没有 launcher 命令
-            if self._is_smart_app(module) or not is_cnb_runtime:
-                return "bash"
-
             # cnb 运行时执行其他命令需要用 `launcher` 进入 buildpack 上下文
             # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
-            return "launcher bash"
+            if is_cnb_runtime:
+                return "launcher bash"
+
+            return "bash"
 
         # 如果不是 buildpack 构建类型，直接使用 sh 命令
         return "sh"
@@ -94,17 +83,13 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
     )
     def open(self, request, code, module_name, environment, process_type, process_instance_name):
         slz = slzs.WebConsoleOpenSLZ(data=request.query_params)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
 
         # 必须调用 get_application() 方法才能触发权限校验
         _ = self.get_application()
         module = self.get_module_via_path()
         env = self.get_env_via_path()
         manager = ProcessManager(env)
-
-        if not PFF.get_default_flags()[PFF.ENABLE_WEB_CONSOLE]:
-            # 平台不支持 WebConsole 功能
-            raise error_codes.FEATURE_FLAG_DISABLED
 
         runtime_type = ModuleSpecs(module).runtime_type
         is_cnb_runtime = False

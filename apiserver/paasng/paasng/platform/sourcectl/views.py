@@ -1,28 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import datetime
 import logging
 from pathlib import Path
-from typing import Dict
 from urllib.parse import urlparse
 
 from blue_krill.storages.blobstore.exceptions import UploadFailedError
+from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -35,13 +34,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from svn.common import SvnException
 
-from paasng.core.region.states import RegionType
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import Oauth2TokenHolder, make_verifier
 from paasng.infras.accounts.oauth.utils import get_backend
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.feature_flags.constants import PlatformFeatureFlag
+from paasng.infras.notifier.client import BkNotificationService
+from paasng.infras.notifier.exceptions import BaseNotifierError
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
@@ -66,7 +68,6 @@ from paasng.platform.sourcectl.svn.client import RepoProvider
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
 from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.utils.error_codes import error_codes
-from paasng.utils.notifier import get_notification_backend
 
 #############
 # API Views #
@@ -107,62 +108,32 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
         list_serializer = slzs.SvnAccountSLZ(accounts, many=True, context=self.get_serializer_context())
         return Response(list_serializer.data)
 
-    def process_password(self, region, account, password):
+    def process_password(self, account, password):
         """对返回的密码信息进行加工处理"""
         user = self.request.user
-        message = _("您的蓝鲸{region}开发账户, SVN账号是{account}, 密码是：{password}, 请妥善保管。").format(
-            region=RegionType.get_choice_label(region), account=account, password=password
+        message = _("您的蓝鲸开发账户, SVN账号是{account}, 密码是：{password}, 请妥善保管。").format(
+            account=account, password=password
         )
-        noti_backend = get_notification_backend()
 
-        result = noti_backend.wecom.send([user.username], message, _("蓝鲸平台"))
-
-        if not result:
+        user_tenant_id = get_tenant(user).id
+        bk_notify = BkNotificationService(user_tenant_id)
+        try:
+            bk_notify.send_wecom([user.username], message, _("蓝鲸平台"))
+        except BaseNotifierError:
             raise error_codes.ERROR_SENDING_NOTIFICATION
 
         return {
             "user": user.username,
             "account": account,
-            "region": region,
             "password": password,
         }
 
-    def notify_svn_account_changed(self, username, account, password, created, region):
-        svn_account_updated.send(
-            sender=self, username=username, account=account, password=password, created=created, region=region
-        )
-
-    def get_create_serializer(self, *args, **kwargs):
-        serializer_class = slzs.SvnAccountCreateSLZ
-        kwargs["context"] = self.get_serializer_context()
-        return serializer_class(*args, **kwargs)
-
-    @swagger_auto_schema(response_serializer=slzs.SVNAccountResponseSLZ)
-    def create(self, request):
-        serializer = self.get_create_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
-
-        account_info = SvnAccount.objects.create_account(user=request.user, region=validated_data["region"])
-
-        self.notify_svn_account_changed(
-            username=request.user.username,
-            account=account_info["account"],
-            password=account_info["password"],
-            created=True,
-            region=validated_data["region"],
-        )
-
-        result = self.process_password(
-            region=account_info["region"], account=account_info["account"], password=account_info["password"]
-        )
-        result["id"] = account_info["id"]
-        response_serializer = slzs.SVNAccountResponseSLZ(result)
-        headers = self.get_success_headers(response_serializer.data)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    def notify_svn_account_changed(self, username, account, password, created):
+        svn_account_updated.send(sender=self, username=username, account=account, password=password, created=created)
 
     @swagger_auto_schema(response_serializer=slzs.SVNAccountResponseSLZ)
     def update(self, request, *args, **kwargs):
+        """输入验证码后重置 SVN 密码。"""
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
         serializer = slzs.SvnAccountSLZ(
@@ -171,25 +142,22 @@ class SvnAccountViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        if PlatformFeatureFlag.get_default_flags()[PlatformFeatureFlag.VERIFICATION_CODE]:
+        if settings.ENABLE_VERIFICATION_CODE:
             verifier = make_verifier(request.session, FunctionType.SVN.value)
             code = data["verification_code"]
             if not verifier.validate_and_clean(code):
                 raise ValidationError({"verification_code": [_("验证码错误")]})
 
-        account_info = SvnAccount.objects.reset_account(instance=instance, user=request.user, region=data["region"])
+        account_info = SvnAccount.objects.reset_account(instance=instance, user=request.user)
 
         self.notify_svn_account_changed(
             username=request.user.username,
             account=account_info["account"],
             password=account_info["password"],
             created=False,
-            region=data["region"],
         )
 
-        result = self.process_password(
-            region=account_info["region"], account=account_info["account"], password=account_info["password"]
-        )
+        result = self.process_password(account=account_info["account"], password=account_info["password"])
         result["id"] = account_info["id"]
         response_serializer = slzs.SVNAccountResponseSLZ(result)
         return Response(response_serializer.data)
@@ -232,6 +200,11 @@ class GitRepoViewSet(viewsets.ViewSet):
         except AccessTokenForbidden as e:
             raise error_codes.CANNOT_GET_REPO.f(_("当前 AccessToken 无法获取到仓库列表，请检查后重试")) from e
         except Exception as e:
+            logger.exception(
+                "Unknown error occurred when getting repo list, user_id: %s, sourcectl_type: %s",
+                request.user.pk,
+                source_control_type,
+            )
             raise error_codes.CANNOT_GET_REPO.f(_("访问源码仓库失败，请联系项目管理员")) from e
 
         return Response({"results": slzs.RepoSLZ(repos, many=True).data})
@@ -288,15 +261,15 @@ class ModuleSourcePackageViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMix
 
     @swagger_auto_schema(
         request_body=slzs.SourcePackageUploadViaUrlSLZ,
-        responses={200: slzs.SourcePackageSLZ},
+        responses={200: slzs.SourcePackageSLZ()},
         tags=["源码包管理"],
         operation_description="目前仅提供给 lesscode 项目使用",
     )
     def upload_via_url(self, request, code, module_name):
-        """根据 URL 方式上传源码包, 目前不校验 app.yaml"""
+        """根据 URL 方式上传源码包, 目前不校验 app_desc.yaml"""
         module = self.get_module()
         slz = slzs.SourcePackageUploadViaUrlSLZ(data=request.data)
-        slz.is_valid(True)
+        slz.is_valid(raise_exception=True)
         data = slz.validated_data
         allow_overwrite = data["allow_overwrite"]
         version = data["version"]
@@ -326,7 +299,7 @@ class ModuleInitTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         module = self.get_application().get_default_module()
         return self._create_downloadable_address(module)
 
-    def _create_downloadable_address(self, module: Module) -> Dict:
+    def _create_downloadable_address(self, module: Module) -> Response:
         """生成新的可下载初始化模版源码包地址"""
         try:
             result = generate_downloadable_app_template(module)
@@ -353,11 +326,22 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if module.get_source_origin() == SourceOrigin.IMAGE_REGISTRY:
             return self._modify_image(request, code, module_name)
 
-        serializer = slzs.RepoBackendModifySLZ(data=self.request.data)
-        serializer.is_valid(True)
-        data = serializer.data
+        slz = slzs.RepoBackendModifySLZ(data=self.request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.data
         repo_type = data["source_control_type"]
         repo_url = data["source_repo_url"]
+
+        data_before = None
+        if source_obj := module.get_source_obj():
+            data_before = DataDetail(
+                type=DataType.RAW_DATA,
+                data={
+                    "repo_type": source_obj.get_source_type(),
+                    "repo_url": source_obj.get_repo_url(),
+                    "source_dir": source_obj.get_source_dir(),
+                },
+            )
 
         if isinstance(get_sourcectl_type(repo_type), BkSvnSourceTypeSpec):
             # 支持用户进行 Svn -> Git 仓库修改, 或Git -> Git 仓库修改, 不支持 Git -> Svn 修改
@@ -372,18 +356,35 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             raise error_codes.CANNOT_BIND_REPO.f(_("请稍候再试"))
 
         repo_updated.send(sender=self, module_id=module.id, operator=request.user.username)
-        return Response(data={"message": f"仓库成功更改为 {repo_url}", "repo_type": repo_type, "repo_url": repo_url})
+
+        add_app_audit_record(
+            app_code=application.code,
+            tenant_id=application.tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.BASIC_DEVELOP,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.APP_DOMAIN,
+            module_name=module_name,
+            data_before=data_before,
+            data_after=DataDetail(
+                type=DataType.RAW_DATA,
+                data={"repo_type": repo_type, "repo_url": repo_url, "source_dir": data["source_dir"]},
+            ),
+        )
+        return Response(
+            data={"message": _("仓库成功更改为 {}").format(repo_url), "repo_type": repo_type, "repo_url": repo_url}
+        )
 
     def _modify_image(self, request, code, module_name):
         module = self.get_module_via_path()
-        serializer = slzs.RepoBackendModifySLZ(data=request.data)
-        serializer.is_valid(True)
-        data = serializer.data
+        slz = slzs.RepoBackendModifySLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.data
         repo_url = data["source_repo_url"]
 
         init_image_repo(
             module,
-            repo_url=data["source_repo_url"],
+            repo_url=repo_url,
             source_dir=data["source_dir"],
             repo_auth_info=data["source_repo_auth_info"],
         )
@@ -400,7 +401,9 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         try:
             version_service = get_version_service(module, operator=request.user.pk)
             alternative_versions = slzs.AlternativeVersionSLZ(
-                version_service.list_alternative_versions(), many=True
+                version_service.list_alternative_versions(),
+                many=True,
+                context={"is_smart_app": application.is_smart_app},
             ).data
         except UserNotBindedToSourceProviderError:
             raise error_codes.NEED_TO_BIND_OAUTH_INFO
@@ -479,6 +482,7 @@ class RepoDataViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except AccessTokenForbidden:
             raise error_codes.CANNOT_GET_REPO.f(_("AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"))
         except Exception as e:
+            logger.exception("Unknown error occurred when getting compare url, user_id: %s", request.user.pk)
             raise error_codes.CANNOT_GET_REPO.f(_(f"仓库信息查询异常: {e}"))
         return Response({"result": compare_url})
 
@@ -501,7 +505,7 @@ class SVNRepoTagsView(APIView, ApplicationCodeInPathMixin):
         with promote_repo_privilege_temporary(application):
             time_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
             data = {"tag_name": time_str, "comment": time_str}
-            provider = RepoProvider(**svn_type_spec.config_as_arguments(application.region))
+            provider = RepoProvider(**svn_type_spec.config_as_arguments())
 
             try:
                 result = provider.make_tag_from_trunk(
@@ -543,7 +547,11 @@ class RevisionInspectViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except AccessTokenForbidden:
             raise error_codes.CANNOT_GET_REPO.f(_("AccessToken无权限访问该仓库, 请检查授权与其对应 Scope"))
         except Exception:
-            logger.exception("unable to fetch repo info")
+            logger.exception(
+                "Unknown error occurred when inspecting version, user_id: %s, version: %s",
+                request.user.pk,
+                smart_revision,
+            )
             raise error_codes.CANNOT_GET_REPO.f(_("{module} 的仓库信息查询异常").format(module=module))
         else:
             return Response(data)

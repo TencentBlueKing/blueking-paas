@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import uuid
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from django.conf import settings
 from django.db.models import QuerySet
@@ -33,7 +32,7 @@ from paas_wl.bk_app.cnative.specs.crd.bk_app import ConfigMapSource as ConfigMap
 from paas_wl.bk_app.cnative.specs.crd.bk_app import PersistentStorage as PersistentStorageSpec
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentStorageSource
-from paas_wl.infras.cluster.shim import get_application_cluster
+from paas_wl.infras.cluster.shim import get_app_prod_env_cluster
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KStorageClass
@@ -198,7 +197,7 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
     def delete_by_app(self, application_id: str, source_name: str) -> None:
         # 删除持久存储资源前，需要确保对应挂载卷资源已被删除
         if Mount.objects.filter(source_config=self.build_volume_source(source_name)).exists():
-            raise ValidationError(_("删除持久存储资源失败,请先删除相应挂载卷资源"))
+            raise ValidationError(_("删除持久存储资源失败，请先删除相应挂载卷资源"))
 
         app = Application.objects.get(id=application_id)
         app_envs = app.get_app_envs()
@@ -254,7 +253,7 @@ def init_volume_source_controller(volume_source_type: str) -> BaseVolumeSourceCo
 
 def generate_source_config_name(app_code: str) -> str:
     """Generate name of the Mount source_config"""
-    return f"{app_code}-{uuid.uuid4().hex}"
+    return f"{app_code.replace('_', '0us0')}-{uuid.uuid4().hex}"
 
 
 def deploy_volume_source(env: ModuleEnvironment):
@@ -281,8 +280,8 @@ class MountManager:
         environment_name: str,
         mount_path: str,
         source_type: str,
-        region: str,
         source_name: Optional[str] = None,
+        sub_paths: Optional[List[str]] = None,
     ) -> Mount:
         source_config_name = source_name or generate_source_config_name(app_code=app_code)
         controller = init_volume_source_controller(source_type)
@@ -294,8 +293,8 @@ class MountManager:
             environment_name=environment_name,
             mount_path=mount_path,
             source_type=source_type,
-            region=region,
             source_config=source_config,
+            sub_paths=sub_paths or [],
         )
 
 
@@ -306,7 +305,7 @@ def check_storage_class_exists(application: Application, storage_class_name: str
     :param storage_class_name: 要检查的 StorageClass 的名称。
     :return bool: 如果 StorageClass 存在,返回 True。否则返回 False。
     """
-    cluster = get_application_cluster(application)
+    cluster = get_app_prod_env_cluster(application)
     with get_client_by_cluster_name(cluster_name=cluster.name) as client:
         storage_class_client = KStorageClass(client)
         try:

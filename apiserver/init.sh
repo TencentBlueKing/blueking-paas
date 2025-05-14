@@ -87,7 +87,6 @@ ensure-apigw() {
 ensure-apt-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
-    region="$3"
     buildpack_url="$4"
     vendor_url="$5"
     buildpack_name="$6"
@@ -95,7 +94,6 @@ ensure-apt-buildpack() {
     # apt
     apt_buildpack_version=v2
     python manage.py manage_buildpack \
-    --region "${region}" \
     --name "${buildpack_name}" \
     --display_name_zh_cn "安装系统包" \
     --display_name_en "Install Apt package" \
@@ -104,14 +102,12 @@ ensure-apt-buildpack() {
     --tag "${apt_buildpack_version}" \
     --language Apt \
     --type tar \
-    --address "${buildpack_url}/${buildpack_name}-${apt_buildpack_version}.tar" \
-    --hidden
+    --address "${buildpack_url}/${buildpack_name}-${apt_buildpack_version}.tar"
 }
 
 ensure-python-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
-    region="$3"
     buildpack_url="$4"
     vendor_url="$5"
     buildpack_name="$6"
@@ -122,7 +118,6 @@ ensure-python-buildpack() {
     python_buildpack_version=v213
     
     python manage.py manage_buildpack \
-    --region "${region}" \
     --name "${buildpack_name}" \
     --display_name_zh_cn "Python" \
     --display_name_en "Python" \
@@ -143,7 +138,6 @@ ensure-python-buildpack() {
 ensure-nodejs-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
-    region="$3"
     buildpack_url="$4"
     vendor_url="$5"
     buildpack_name="$6"
@@ -153,7 +147,6 @@ ensure-nodejs-buildpack() {
     nodejs_buildpack_version=v163
     
     python manage.py manage_buildpack \
-    --region "${region}" \
     --name "${buildpack_name}" \
     --display_name_zh_cn "NodeJS" \
     --display_name_en "NodeJS" \
@@ -172,20 +165,18 @@ ensure-nodejs-buildpack() {
 ensure-golang-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
-    region="$3"
     buildpack_url="$4"
     vendor_url="$5"
     buildpack_name="$6"
     
     # golang
-    go_buildpack_version=v168
+    go_buildpack_version=v191
     python manage.py manage_buildpack \
-    --region "${region}" \
     --name "${buildpack_name}" \
     --display_name_zh_cn "Golang" \
     --display_name_en "Golang" \
-    --description_zh_cn "默认 Go 版本为1.12.17，最大支持版本1.19.1" \
-    --description_en "Default Go Version: 1.12.17, Highest supported version: 1.19.1" \
+    --description_zh_cn "默认 Go 版本为1.20.14，最大支持版本1.22.3" \
+    --description_en "Default Go Version: 1.20.14, Highest supported version: 1.22.3" \
     --tag "${go_buildpack_version}" \
     --language Go \
     --type tar \
@@ -195,8 +186,7 @@ ensure-golang-buildpack() {
     "GOPROXY=${PAAS_BUILDPACK_GOLANG_GOPROXY}"
 }
 
-ensure-buleking-image() {
-    region="$1"
+ensure-blueking-image() {
     apt_buildpack_name="$2"
     python_buildpack_name="$3"
     nodejs_buildpack_name="$4"
@@ -204,7 +194,7 @@ ensure-buleking-image() {
     
     image_name="blueking"
     python manage.py manage_image \
-    --region "${region}" \
+    --type "legacy" \
     --image "${PAAS_APP_IMAGE}" \
     --name "${image_name}" \
     --display_name_zh_cn "蓝鲸基础镜像" \
@@ -219,14 +209,15 @@ ensure-buleking-image() {
 
     cnb_image_name="blueking-cloudnative"
     python manage.py manage_image \
-    --region "${region}" \
-    --image "${PAAS_HEROKU_BUILDER_IMAGE}" \
+    --type "cnb" \
+    --slugbuilder "${PAAS_HEROKU_BUILDER_IMAGE}" \
+    --slugrunner "${PAAS_HEROKU_RUNNER_IMAGE}" \
     --name "${cnb_image_name}" \
     --display_name_zh_cn "蓝鲸基础镜像" \
     --display_name_en "Blueking Basic Image" \
     --description_zh_cn "基于 Ubuntu，支持多构建工具组合构建" \
     --description_en "Ubuntu-based, multi-buildpack combination build support" \
-    --environment "CNB_PLATFORM_API=0.11" "CNB_RUN_IMAGE=${PAAS_HEROKU_RUNNER_IMAGE}" \
+    --environment "CNB_PLATFORM_API=0.11" "CNB_RUN_IMAGE=${PAAS_HEROKU_RUNNER_IMAGE}" "CNB_SKIP_TLS_VERIFY=${PAAS_APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY:-false}" \
     --label secureEncrypted=1 supportHttp=1 isCloudNativeBuilder=1 cnative_app=1
     python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${apt_buildpack_name}"
     python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${python_buildpack_name}"
@@ -235,7 +226,6 @@ ensure-buleking-image() {
 }
 
 ensure-legacy-image() {
-    region="$1"
     apt_buildpack_name="$2"
     python_buildpack_name="$3"
     nodejs_buildpack_name="$4"
@@ -243,7 +233,7 @@ ensure-legacy-image() {
     
     legacy_image_name="legacy-blueking"
     python manage.py manage_image \
-    --region "${region}" \
+    --type "legacy" \
     --image "${PAAS_APP_IMAGE}" \
     --name "${legacy_image_name}" \
     --display_name_zh_cn "蓝鲸基础镜像（旧）" \
@@ -258,11 +248,11 @@ ensure-legacy-image() {
 }
 
 ensure-smart-image() {
-    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
+    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --type legacy --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
+    python manage.py push_smart_image --image "${PAAS_HEROKU_RUNNER_IMAGE}" --type cnb --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
 }
 
 ensure-runtimes() {
-    region=default
     stack="${PAAS_STACK:-heroku-18}"
     bkrepo_endpoint="${PAAS_BLOBSTORE_BKREPO_ENDPOINT%/}"
     bkrepo_project="${PAAS_BLOBSTORE_BKREPO_PROJECT:-bkpaas}"
@@ -273,36 +263,45 @@ ensure-runtimes() {
     
     # apt
     apt_buildpack_name=bk-buildpack-apt
-    ensure-apt-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${region}" "${buildpack_url}" "${vendor_url}" "${apt_buildpack_name}"
+    ensure-apt-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${buildpack_url}" "${vendor_url}" "${apt_buildpack_name}"
     
     # python
     python_buildpack_name=bk-buildpack-python
-    ensure-python-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${region}" "${buildpack_url}" "${vendor_url}" "${python_buildpack_name}"
+    ensure-python-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${buildpack_url}" "${vendor_url}" "${python_buildpack_name}"
     
     # nodejs
     nodejs_buildpack_name=bk-buildpack-nodejs
-    ensure-nodejs-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${region}" "${buildpack_url}" "${vendor_url}" "${nodejs_buildpack_name}"
+    ensure-nodejs-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${buildpack_url}" "${vendor_url}" "${nodejs_buildpack_name}"
     
     # golang
     golang_buildpack_name=bk-buildpack-go
-    ensure-golang-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${region}" "${buildpack_url}" "${vendor_url}" "${golang_buildpack_name}"
+    ensure-golang-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${buildpack_url}" "${vendor_url}" "${golang_buildpack_name}"
     
     # blueking image
-    ensure-buleking-image "${region}" "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
+    ensure-blueking-image "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
     
     # legacy blueking image
-    ensure-legacy-image "${region}" "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
+    ensure-legacy-image "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
 }
 
 ensure-init-data() {
-    python manage.py better_loaddata fixtures/* -e templates.template
+    python manage.py loaddata fixtures/smart_advisor.yaml
     # 之前是在 paasng/fixtures/accounts.yaml 通过 fixture 添加可调用系统 API 的应用，后续添加直接通过命令更方便
     python manage.py create_authed_app_user --bk_app_code=bk_dataweb  --role=50
     python manage.py create_authed_app_user --bk_app_code=bk_bkdata  --role=50
+    python manage.py create_authed_app_user --bk_app_code=bk_apigateway --role=50
+    python manage.py create_authed_app_user --bk_app_code=bk_log_search --role=50
+    python manage.py create_authed_app_user --bk_app_code=bk_monitorv3 --role=50
     python manage.py create_authed_app_user --bk_app_code=bk_paas3 --role=60
+    python manage.py create_authed_app_user --bk_app_code=bk_sops --role=70
+    python manage.py create_authed_app_user --bk_app_code=bk_lesscode --role=80
     python manage.py create_3rd_party_apps --source extra_fixtures/3rd_apps.yaml --app_codes "${PAAS_THIRD_APP_INIT_CODES}" --override=true
     # 将开发者中心注册到通知中心
     python manage.py register_to_bk_notice
+    # 初始化本地 redis 增强服务
+    python manage.py loaddata fixtures/services.yaml
+    # 初始化本地 redis 增强服务的 Plan
+    python manage.py init_redis_service_plans
 }
 
 ensure-runtime-steps() {

@@ -9,10 +9,9 @@
       v-bkloading="{ isLoading }"
       class="app-container"
     >
-      <config-edit
-        :list="definitions"
+      <ConfigEdit
+        :data="serviceConfig"
         :guide="serviceMarkdown"
-        :value="values"
         :enable-loading="loading"
         @on-change="handleConfigChange"
       />
@@ -36,11 +35,9 @@ export default {
       isLoading: false,
       service: this.$route.params.service,
       servicePaths: [],
-      categoryId: 0,
-      definitions: [],
-      values: [],
       loading: false,
       serviceMarkdown: `## ${this.$t('暂无使用说明')}`,
+      serviceConfig: this.$route.params.data,
     };
   },
   computed: {
@@ -49,12 +46,15 @@ export default {
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
   },
   created() {
     this.init();
+    if (!this.serviceConfig) {
+      this.getServicePossiblePlans();
+    }
   },
   methods: {
     init() {
@@ -73,21 +73,19 @@ export default {
           title: `${this.$t('启用')}${resData.display_name}`,
         });
 
-        console.log('this.servicePaths', this.servicePaths);
         if (resData.instance_tutorial && resData.instance_tutorial.length > 0) {
           this.serviceMarkdown = resData.instance_tutorial;
         }
-        this.categoryId = resData.category.id;
+        this.isLoading = false;
       });
-      this.fetchServicesSpecsDetail();
     },
     async handleConfigChange(action, payload) {
       this.loading = true;
       const params = {
-        specs: payload,
         service_id: this.service,
         module_name: this.curModuleId,
         code: this.curAppCode,
+        [payload.key]: payload.value,
       };
       try {
         await this.$store.dispatch('service/enableServices', params);
@@ -114,48 +112,25 @@ export default {
         this.loading = false;
       }
     },
-    async fetchServicesSpecsDetail() {
+    // 获取应用模块绑定服务时，可能的详情方案
+    async getServicePossiblePlans() {
       try {
-        const res = await this.$store.dispatch('service/getServicesSpecsDetail', {
-          id: this.service,
-          region: this.region,
-        })
-                    ;(res.definitions || []).forEach((item, index) => {
-          let values = [];
-          res.values.forEach((val) => {
-            values.push(val[index]);
-          });
-          values = [...new Set(values)].filter(Boolean);
-          this.$set(item, 'children', values);
-          this.$set(item, 'active', res.recommended_values[index]);
-          this.$set(item, 'showError', false);
+        const res = await this.$store.dispatch('service/getServicePossiblePlans', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          service: this.service,
         });
-        this.definitions = [...res.definitions];
-        this.values = [...res.values];
+        this.serviceConfig = res;
       } catch (e) {
-        this.$paasMessage({
-          limit: 1,
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-        this.$router.push({
-          name: 'appService',
-          params: {
-            id: this.curAppCode,
-            moduleId: this.curModuleId,
-          },
-        });
-      } finally {
-        this.isLoading = false;
+        this.catchErrorHandler(e);
       }
     },
   },
 };
-
 </script>
 
 <style lang="scss" scoped>
-    .app-container {
-        padding: 15px 0;
-    }
+.app-container {
+  padding: 15px 0;
+}
 </style>

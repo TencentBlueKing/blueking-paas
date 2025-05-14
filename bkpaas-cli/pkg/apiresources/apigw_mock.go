@@ -160,7 +160,7 @@ func (r MockedRequester) GetAppDeployResult(appCode, appModule, deployID string)
 }
 
 // ListAppDeployHistory ...
-func (r MockedRequester) ListAppDeployHistory(appCode, appModule string) (map[string]any, error) {
+func (r MockedRequester) ListAppDeployHistory(appCode, appModule, appEnv string) (map[string]any, error) {
 	return map[string]any{
 		"count": 2,
 		"results": []any{
@@ -207,7 +207,7 @@ func (r MockedRequester) ListAppDeployHistory(appCode, appModule string) (map[st
 }
 
 // DeployCNativeApp ...
-func (r MockedRequester) UpdataBkappModel(
+func (r MockedRequester) UpdateBkappModel(
 	appCode, appModule string, manifest map[string]any,
 ) ([]map[string]any, error) {
 	return []map[string]any{manifest}, nil

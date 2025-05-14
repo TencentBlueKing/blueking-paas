@@ -21,6 +21,10 @@ const pluginSummary = () => import(/* webpackChunkName: 'plugin-sumary' */'@/vie
   window.showDeployTip(error);
 });
 
+const pluginFalsePositiveList = () => import(/* webpackChunkName: 'plugin-sumary' */'@/views/plugin-center/plugin/summary/false-positive-list.vue').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const pluginVersionManager = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/index').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -29,7 +33,11 @@ const pluginVersionRelease = () => import(/* webpackChunkName: 'plugin-version' 
   window.showDeployTip(error);
 });
 
-const pluginVersionEditor = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/editor-version').then(module => module).catch((error) => {
+const pluginVersionEditor = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/create-version').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const pluginReleaseDetails = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/version-details').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -49,7 +57,15 @@ const pluginRoles = () => import(/* webpackChunkName: 'plugin-config' */'@/views
   window.showDeployTip(error);
 });
 
+const pluginOperationRecords = () => import(/* webpackChunkName: 'plugin-config' */'@/views/plugin-center/plugin/base-config/operation-records.vue').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const pluginDeployEnv = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/deploy-env/index').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
+const pluginTestReport = () => import(/* webpackChunkName: 'plugin-version' */'@/views/plugin-center/plugin/version-manager/test-report').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
 
@@ -128,12 +144,32 @@ export const pluginRouter = [
         },
       },
       {
+        path: ':pluginTypeId/:id/false-positive-list',
+        component: pluginFalsePositiveList,
+        name: 'pluginFalsePositiveList',
+        meta: {
+          pathName: i18n.t('误报列表'),
+          capture403Error: false,
+          supportBack: true,
+        },
+      },
+      {
         path: ':pluginTypeId/:id/version-manage',
         component: pluginVersionManager,
         name: 'pluginVersionManager',
         meta: {
           pathName: i18n.t('版本管理'),
           capture403Error: false,
+        },
+      },
+      {
+        path: ':pluginTypeId/:id/test-report',
+        component: pluginTestReport,
+        name: 'pluginTestReport',
+        meta: {
+          pathName: i18n.t('测试报告'),
+          capture403Error: false,
+          supportBack: true,
         },
       },
       {
@@ -160,6 +196,16 @@ export const pluginRouter = [
         name: 'pluginVersionEditor',
         meta: {
           pathName: i18n.t('新建版本'),
+          capture403Error: false,
+          supportBack: true,
+        },
+      },
+      {
+        path: ':pluginTypeId/:id/version-details',
+        component: pluginReleaseDetails,
+        name: 'pluginReleaseDetails',
+        meta: {
+          pathName: i18n.t('版本发布'),
           capture403Error: false,
           supportBack: true,
         },
@@ -237,6 +283,16 @@ export const pluginRouter = [
         name: 'pluginRoles',
         meta: {
           pathName: i18n.t('成员管理'),
+          capture403Error: false,
+          isPlugin: true,
+        },
+      },
+      {
+        path: ':pluginTypeId/:id/operation-records',
+        component: pluginOperationRecords,
+        name: 'pluginOperationRecords',
+        meta: {
+          pathName: i18n.t('操作记录'),
           capture403Error: false,
           isPlugin: true,
         },

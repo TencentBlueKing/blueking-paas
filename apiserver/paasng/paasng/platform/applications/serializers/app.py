@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from typing import Dict, Optional
 
 from django.conf import settings
@@ -31,61 +30,26 @@ from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
 from paasng.platform.applications.operators import get_last_operator
 from paasng.platform.applications.signals import application_logo_updated, prepare_change_application_name
+from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.evaluation.constants import OperationIssueType
 from paasng.platform.modules.constants import SourceOrigin
-from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ, ModuleSourceConfigSLZ
+from paasng.platform.modules.models.module import Module
+from paasng.platform.modules.serializers import MinimalModuleSLZ, ModuleSLZ
 from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
+from paasng.utils.serializers import UserNameField
 from paasng.utils.validators import RE_APP_SEARCH
 
-from .fields import ApplicationField, AppNameField
-from .mixins import AdvancedCreationParamsMixin, AppBasicInfoMixin, MarketParamsMixin
+from .fields import AppIDField, ApplicationField, AppNameField
+from .mixins import AppTenantMixin
 
 
-class CreateApplicationV2SLZ(AppBasicInfoMixin):
-    """普通应用创建应用表单，目前产品上已经没有入口，但是暂时先保留 API"""
-
-    type = serializers.ChoiceField(choices=ApplicationType.get_django_choices(), default=ApplicationType.DEFAULT.value)
-    engine_enabled = serializers.BooleanField(default=True, required=False)
-    engine_params = ModuleSourceConfigSLZ(required=False)
-    advanced_options = AdvancedCreationParamsMixin(required=False)
-    is_plugin_app = serializers.BooleanField(default=False)
-
-    def validate(self, attrs):
-        super().validate(attrs)
-
-        if attrs["engine_enabled"] and not attrs.get("engine_params"):
-            raise ValidationError(_("应用引擎参数未提供"))
-
-        # Be compatible with current application creation page, should be removed when new design was published
-        if not attrs["engine_enabled"]:
-            attrs["type"] = ApplicationType.ENGINELESS_APP.value
-        elif attrs["type"] == ApplicationType.ENGINELESS_APP.value:
-            raise ValidationError(_('已开启引擎，类型不能为 "engineless_app"'))
-
-        return attrs
-
-
-class CreateCloudNativeApplicationSLZ(CreateApplicationV2SLZ):
-    def to_internal_value(self, data: Dict):
-        data = super().to_internal_value(data)
-        data["type"] = ApplicationType.CLOUD_NATIVE.value
-        return data
-
-
-class CreateThirdPartyApplicationSLZ(AppBasicInfoMixin):
-    """创建外链应用的表单"""
-
-    engine_enabled = serializers.BooleanField(default=False)
-    market_params = MarketParamsMixin()
-
-    def validate(self, attrs):
-        if attrs["engine_enabled"]:
-            raise ValidationError(_("该接口只支持创建外链应用"))
-        return attrs
-
-
-class SysThirdPartyApplicationSLZ(AppBasicInfoMixin):
+@i18n
+class SysThirdPartyApplicationSLZ(AppTenantMixin):
     """创建系统外链应用"""
 
+    region = serializers.ChoiceField(choices=get_region().get_choices())
+    code = AppIDField()
+    name = I18NExtend(AppNameField())
     operator = serializers.CharField(required=True)
 
     def validate_code(self, code):
@@ -144,6 +108,78 @@ class SearchApplicationSLZ(serializers.Serializer):
     prefer_marked = serializers.BooleanField(default=True)
 
 
+class IdleModuleEnvSLZ(serializers.Serializer):
+    module_name = serializers.CharField(help_text="模块名称")
+    env_name = serializers.ChoiceField(help_text="环境", choices=AppEnvName.get_choices())
+    cpu_quota = serializers.IntegerField(help_text="CPU 配额")
+    memory_quota = serializers.IntegerField(help_text="内存配额")
+    cpu_usage_avg = serializers.FloatField(help_text="CPU 平均使用率")
+    # 注：环境的最近部署时间存储在 JSONField 中，在入库时已经转成字符串，不需要使用 DateTimeField
+    latest_deployed_at = serializers.CharField(help_text="最近部署时间")
+
+
+class IdleApplicationSLZ(serializers.Serializer):
+    code = serializers.CharField(help_text="应用 Code")
+    name = serializers.CharField(help_text="应用名称")
+    type = serializers.CharField(help_text="应用类型")
+    is_plugin_app = serializers.BooleanField(help_text="是否为插件应用")
+    logo_url = serializers.CharField(help_text="应用 Logo 访问地址")
+
+    administrators = serializers.JSONField(help_text="应用管理员列表")
+    developers = serializers.JSONField(help_text="应用开发者列表")
+    module_envs = serializers.ListField(help_text="闲置模块 & 环境列表", child=IdleModuleEnvSLZ())
+
+
+class IdleApplicationListOutputSLZ(serializers.Serializer):
+    collected_at = serializers.DateTimeField(help_text="采集时间")
+    applications = serializers.ListField(help_text="应用列表", child=IdleApplicationSLZ())
+
+
+class ApplicationEvaluationSLZ(serializers.Serializer):
+    code = serializers.CharField(source="app.code", help_text="应用 Code")
+    name = serializers.CharField(source="app.name", help_text="应用名称")
+    type = serializers.CharField(source="app.type", help_text="应用类型")
+    is_plugin_app = serializers.BooleanField(source="app.is_plugin_app", help_text="是否为插件应用")
+    logo_url = serializers.CharField(source="app.get_logo_url", help_text="应用 Logo 访问地址")
+    cpu_limits = serializers.IntegerField(help_text="CPU 配额")
+    mem_limits = serializers.IntegerField(help_text="内存配额")
+    cpu_usage_avg = serializers.FloatField(help_text="CPU 使用率(7d)")
+    mem_usage_avg = serializers.FloatField(help_text="内存使用率(7d)")
+    pv = serializers.IntegerField(help_text="PV(30d)")
+    uv = serializers.IntegerField(help_text="UV(30d)")
+    latest_operated_at = serializers.DateTimeField(help_text="最近操作时间")
+    issue_type = serializers.ChoiceField(choices=OperationIssueType.get_choices(), help_text="应用状态")
+
+
+class ApplicationEvaluationListQuerySLZ(serializers.Serializer):
+    issue_type = serializers.ChoiceField(
+        choices=OperationIssueType.get_choices(), help_text="应用状态", required=False, allow_null=True
+    )
+    order = serializers.CharField(help_text="排序", default="id")
+
+    def validate_order(self, value):
+        if value not in ["cpu_usage_avg", "-cpu_usage_avg", "pv", "-pv", "uv", "-uv", "id", "-id"]:
+            raise ValidationError(_("排序字段不合法"))
+
+        return value
+
+
+class ApplicationEvaluationListResultSLZ(serializers.Serializer):
+    collected_at = serializers.DateTimeField(help_text="采集时间")
+    applications = serializers.ListField(help_text="应用列表", child=ApplicationEvaluationSLZ())
+
+
+class ApplicationEvaluationIssueCountSLZ(serializers.Serializer):
+    issue_type = serializers.ChoiceField(choices=OperationIssueType.get_choices(), help_text="评估结果类型")
+    count = serializers.IntegerField(help_text="应用数量")
+
+
+class ApplicationEvaluationIssueCountListResultSLZ(serializers.Serializer):
+    collected_at = serializers.DateTimeField(help_text="采集时间")
+    issue_type_counts = ApplicationEvaluationIssueCountSLZ(many=True, help_text="应用评估结果及数量")
+    total = serializers.IntegerField(help_text="应用评估报告总数量")
+
+
 class EnvironmentDeployInfoSLZ(serializers.Serializer):
     deployed = serializers.BooleanField(help_text="是否部署")
     url = serializers.URLField(help_text="访问地址")
@@ -155,6 +191,8 @@ class ApplicationSLZ(serializers.ModelSerializer):
     logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的 Logo 地址")
     config_info = serializers.DictField(read_only=True, help_text="应用的额外状态信息")
     modules = serializers.SerializerMethodField(help_text="应用各模块信息列表")
+    creator = UserNameField()
+    owner = UserNameField()
 
     def get_modules(self, application: Application):
         # 将 default_module 排在第一位
@@ -163,7 +201,7 @@ class ApplicationSLZ(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        exclude = ["logo"]
+        exclude = ["logo", "tenant_id"]
 
 
 class ApplicationWithDeployInfoSLZ(ApplicationSLZ):
@@ -193,6 +231,7 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
     type = serializers.ChoiceField(choices=ApplicationType.get_django_choices(), required=False)
     order_by = serializers.CharField(default="name")
     prefer_marked = serializers.BooleanField(default=True)
+    app_tenant_mode = serializers.CharField(required=False)
 
     def validate_order_by(self, value):
         if value.startswith("-"):
@@ -261,6 +300,7 @@ class ApplicationWithMarketSLZ(serializers.Serializer):
     product = ProductSLZ(read_only=True)
     marked = serializers.BooleanField(read_only=True)
     market_config = MarketConfigSLZ(read_only=True)
+    migration_status = serializers.JSONField(read_only=True)
 
 
 class ApplicationMinimalSLZ(serializers.ModelSerializer):
@@ -269,6 +309,13 @@ class ApplicationMinimalSLZ(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = ["id", "code", "name"]
+
+
+class ApplicationWithMarkMinimalSLZ(serializers.Serializer):
+    """用于显示带收藏标记的应用列表"""
+
+    application = ApplicationMinimalSLZ(read_only=True)
+    marked = serializers.BooleanField(read_only=True)
 
 
 class ApplicationSLZ4Record(serializers.ModelSerializer):
@@ -281,6 +328,17 @@ class ApplicationSLZ4Record(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = ["id", "type", "code", "name", "logo_url", "config_info"]
+
+
+class ApplicationWithLogoMinimalSLZ(serializers.ModelSerializer):
+    """用于带Logo URL的简化应用列表"""
+
+    name = TranslatedCharField()
+    logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的Logo地址")
+
+    class Meta:
+        model = Application
+        fields = ["id", "type", "code", "name", "logo_url"]
 
 
 class MarketAppMinimalSLZ(serializers.Serializer):
@@ -313,7 +371,7 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
                 owner=self.context["request"].user.pk, application__code=attrs["application"].code
             ).exists()
         ):
-            raise serializers.ValidationError("您已经标记该应用")
+            raise ValidationError(_("已经标记该应用"))
         return attrs
 
     class Meta:
@@ -322,6 +380,7 @@ class ApplicationMarkedSLZ(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["owner"] = self.context["request"].user.pk
+        validated_data["tenant_id"] = validated_data["application"].tenant_id
         return super(ApplicationMarkedSLZ, self).create(validated_data)
 
     def __repr__(self):
@@ -386,3 +445,47 @@ class ApplicationMembersInfoSLZ(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = ["id", "code", "name", "administrators", "devopses", "developers", "last_operator"]
+
+
+class ApplicationDeploymentModuleOrderSLZ(serializers.Serializer):
+    module_name = serializers.CharField(max_length=20, required=True, help_text="模块名称")
+    order = serializers.IntegerField(required=True, help_text="模块顺序")
+
+
+class ApplicationDeploymentModuleOrderReqSLZ(serializers.Serializer):
+    module_orders = ApplicationDeploymentModuleOrderSLZ(many=True, required=True)
+
+    def validate(self, data):
+        code = self.context.get("code")
+        if not code:
+            raise ValidationError("Cannot get app code")
+
+        all_module_names = set(Module.objects.filter(application__code=code).values_list("name", flat=True))
+
+        module_names = set()
+        orders = set()
+
+        for module in data["module_orders"]:
+            module_name = module["module_name"]
+            order = module["order"]
+
+            # Check for duplicate module_name
+            if module_name in module_names:
+                raise ValidationError(f"Duplicate module_name: {module_name}.")
+            # Check for duplicate order
+            if order in orders:
+                raise ValidationError(f"Duplicate order: {order}.")
+
+            # check if the module_name is a module of the app
+            if module_name not in all_module_names:
+                raise ValidationError(f"No module named as {module_name}.")
+
+            module_names.add(module_name)
+            orders.add(order)
+
+        # Check if all modules for the app code have set an order
+        missing_orders = all_module_names - module_names
+        if missing_orders:
+            raise ValidationError(f"Modules missing an order: {', '.join(missing_orders)}.")
+
+        return data

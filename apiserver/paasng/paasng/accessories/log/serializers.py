@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from pathlib import PurePosixPath
 from typing import List
 
@@ -25,7 +24,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import get_attribute
 
-from paasng.accessories.log.constants import LogTimeChoices
+from paasng.accessories.log.constants import MAX_RESULT_WINDOW, LogTimeChoices
 from paasng.infras.bk_log.constatns import BkLogType
 from paasng.utils.es_log.time_range import SmartTimeRange
 
@@ -57,7 +56,6 @@ class StructureLogLineSLZ(serializers.Serializer):
     message = serializers.CharField(help_text="日志内容")
     detail = serializers.DictField(help_text="日志详情", source="raw")
 
-    region = serializers.CharField()
     app_code = serializers.CharField()
     environment = serializers.CharField()
     process_id = serializers.CharField(allow_null=True, allow_blank=True)
@@ -70,6 +68,7 @@ class StructureLogsSLZ(serializers.Serializer):
     logs = StructureLogLineSLZ(many=True)
     total = serializers.IntegerField(help_text="总日志量, 用于计算页数")
     dsl = serializers.CharField(help_text="日志查询语句")
+    max_result_window = serializers.IntegerField(help_text="日志查询的最大窗口, 用于限制最大页数")
 
 
 class IngressLogLineSLZ(serializers.Serializer):
@@ -94,6 +93,7 @@ class IngressLogSLZ(serializers.Serializer):
     logs = IngressLogLineSLZ(many=True)
     total = serializers.IntegerField(help_text="总日志量, 用于计算页数")
     dsl = serializers.CharField(help_text="日志查询语句")
+    max_result_window = serializers.IntegerField(help_text="日志查询的最大窗口, 用于限制最大页数")
 
 
 class DateHistogramSLZ(serializers.Serializer):
@@ -116,7 +116,13 @@ class LogFieldFilterSLZ(serializers.Serializer):
 
 
 class LogQueryParamsSLZ(serializers.Serializer):
-    """查询日志的 query 参数"""
+    """查询日志的 query 参数，包含：
+    - 结构化日志
+    - 访问日志
+    - 标准输出日志
+    - 日志事件直方图
+    - 日志字段统计
+    """
 
     time_range = serializers.ChoiceField(choices=LogTimeChoices.get_choices(), required=True)
     start_time = serializers.DateTimeField(help_text="format %Y-%m-%d %H:%M:%S", allow_null=True, required=False)
@@ -144,6 +150,10 @@ class LogQueryParamsSLZ(serializers.Serializer):
             attrs["limit"] = attrs["page_size"]
         if "page" in attrs:
             attrs["offset"] = (attrs["page"] - 1) * attrs["limit"]
+
+        # 限制最大分页条数
+        if attrs["offset"] + attrs["limit"] > MAX_RESULT_WINDOW:
+            raise ValidationError(_(f"最多仅能查看前 {MAX_RESULT_WINDOW} 条日志"))
         return attrs
 
 

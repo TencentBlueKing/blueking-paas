@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from jsonfield import JSONField
 from translated_fields import TranslatedFieldWithFallback
 
-from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 from .constants import DeployFailurePatternType
 from .tags import get_default_tagset, get_dynamic_tag
@@ -39,7 +38,9 @@ class AppModuleTagManager(models.Manager):
         """Tag tags on given module"""
         get_default_tagset().validate_tags(tags)
         for tag in tags:
-            self.get_queryset().update_or_create(module=app_module, tag_str=str(tag), defaults={"source": source})
+            self.get_queryset().update_or_create(
+                module=app_module, tag_str=str(tag), defaults={"source": source, "tenant_id": app_module.tenant_id}
+            )
 
     def cleanup_module(self, app_module):
         """Clean up all tags on given module"""
@@ -55,6 +56,8 @@ class AppModuleTagRel(models.Model):
     tag_str = models.CharField(max_length=128, blank=False)
     source = models.CharField(max_length=32, blank=False)
     created = models.DateTimeField(auto_now_add=True)
+    tenant_id = tenant_id_field_factory()
+
     objects = AppModuleTagManager()
 
     class Meta:
@@ -68,7 +71,10 @@ cleanup_module = AppModuleTagRel.objects.cleanup_module
 
 
 class DocumentaryLink(models.Model):
-    """Links from document systems including blueking doc and other opensource documentations"""
+    """Links from document systems including blueking doc and other open-source documentations
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     title = TranslatedFieldWithFallback(models.CharField(max_length=256, blank=False))
     short_description = TranslatedFieldWithFallback(models.CharField(max_length=512, blank=True))
@@ -89,11 +95,14 @@ class DocumentaryLink(models.Model):
 
     @property
     def format_location(self) -> str:
-        return self.location.format(doc_url_prefix=get_bk_doc_url_prefix())
+        return self.location.format(paas_doc_url_prefix=settings.PAAS_DOCS_URL_PREFIX)
 
 
 class DeployFailurePattern(models.Model):
-    """Stores common failure patterns for failed deployments"""
+    """Stores common failure patterns for failed deployments.
+
+    [multi-tenancy] This model is not tenant-aware.
+    """
 
     type = models.IntegerField(default=DeployFailurePatternType.REGULAR_EXPRESSION)
     value = models.CharField(max_length=2048, blank=False)

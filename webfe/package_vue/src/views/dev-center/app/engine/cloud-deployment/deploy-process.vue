@@ -2,7 +2,7 @@
   <div class="deploy-process-config">
     <section
       v-if="isShowPage"
-      style="margin-top: 38px;"
+      style="margin-top: 38px"
     >
       <bk-exception
         class="exception-wrap-item exception-part"
@@ -11,11 +11,16 @@
       >
         <p
           class="mt10"
-          style="color: #979BA5;font-size: 12px;"
+          style="color: #979ba5; font-size: 12px"
         >
           {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
         </p>
-        <p class="guide-link mt15" @click="handleViewGuide">{{ $t('查看使用指南') }}</p>
+        <p
+          class="guide-link mt15"
+          @click="handleViewGuide"
+        >
+          {{ $t('查看使用指南') }}
+        </p>
       </bk-exception>
     </section>
     <template v-else>
@@ -28,7 +33,10 @@
         :offset-left="20"
         class="deploy-action-box"
       >
-        <div class="title-wrapper" v-if="!isCreate">
+        <div
+          class="title-wrapper"
+          v-if="!isCreate"
+        >
           <span class="title">{{ $t('进程配置') }}</span>
           <div
             v-if="!isPageEdit"
@@ -39,69 +47,19 @@
             {{ $t('编辑') }}
           </div>
         </div>
-        <div
-          class="process-container"
-        >
-          <div
-            class="btn-container flex-row align-items-baseline"
-            :class="[isPageEdit ? '' : 'justify-content-between']"
-          >
-            <div class="bk-button-group bk-button-group-cls">
-              <bk-button
-                v-for="(panel, index) in panels"
-                :key="index"
-                :class="[processNameActive === panel.name ? 'is-selected' : '', 'mb10']"
-                @click="handleBtnGroupClick(panel.name, index)"
-              >
-                {{ panel.name }}
-                <i
-                  v-if="processNameActive === panel.name && panel.name !== 'web' && isPageEdit"
-                  class="paasng-icon paasng-edit-2 pl5 pr10"
-                  ref="tooltipsHtml"
-                  @click="handleProcessNameEdit(panel.name, index)"
-                  v-bk-tooltips="$t('编辑')"
-                />
-
-                <bk-popconfirm
-                  :content="$t('确认删除该进程')"
-                  width="288"
-                  style="display: inline-block"
-                  class="item-close-icon"
-                  trigger="click"
-                  @confirm="handleDelete(panel.name, index)"
-                >
-                  <i
-                    v-if="processNameActive === panel.name && index !== 0 && isPageEdit"
-                    class="paasng-icon paasng-icon-close"
-                    v-bk-tooltips="$t('删除')"
-                  />
-                </bk-popconfirm>
-              </bk-button>
-            </div>
-            <span
-              v-if="isPageEdit"
-              class="pl10"
-            >
-              <bk-button
-                text
-                theme="primary"
-                @click="handleProcessNameEdit('')"
-              >
-                <i class="paasng-icon paasng-plus-thick add-icon" />
-                {{ $t('新增进程') }}
-              </bk-button>
-            </span>
-            <!-- <bk-button
-          v-if="!isPageEdit"
-          class="fr"
-          theme="primary"
-          title="编辑"
-          :outline="true"
-          @click="handleEditClick"
-        >
-          {{ $t('编辑') }}
-        </bk-button> -->
-          </div>
+        <div class="process-container">
+          <section>
+            <process-service
+              :data="panels"
+              :active="processNameActive"
+              :active-data="formData"
+              :mode="isPageEdit ? 'edit' : 'view'"
+              @add="handleProcessNameEdit"
+              @edit="handleProcessNameEdit"
+              @delete="handleDelete"
+              @change="handleBtnGroupClick"
+            />
+          </section>
           <div
             class="form-deploy"
             v-if="isPageEdit"
@@ -129,6 +87,7 @@
                   :label-width="labelWidth"
                   :property="'image'"
                   :rules="rules.image"
+                  :error-display-type="'normal'"
                   v-else-if="isCustomImage && allowMultipleImage"
                 >
                   <bk-input
@@ -138,19 +97,13 @@
                     :placeholder="$t('请输入带标签的镜像仓库')"
                   />
                   <p class="whole-item-tips">
-                    {{ $t('示例镜像：') }}
+                    {{ $t('请输入镜像仓库，如') }}：
                     <span>
                       {{ GLOBAL.CONFIG.MIRROR_EXAMPLE }}
                     </span>
                   </p>
                   <p :class="['whole-item-tips', localLanguage === 'en' ? '' : 'no-wrap']">
-                    <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>&nbsp;
-                    <a
-                      target="_blank"
-                      :href="GLOBAL.DOC.BUILDING_MIRRIRS_DOC"
-                    >
-                      {{ $t('帮助：如何构建镜像') }}
-                    </a>
+                    <span>{{ $t('镜像应监听“容器端口”处所指定的端口号，或环境变量值 $PORT 来提供 HTTP 服务') }}</span>
                   </p>
                 </bk-form-item>
 
@@ -206,7 +159,7 @@
                     :key="tagInputIndex"
                   />
                   <p class="whole-item-tips">
-                    {{ $t('示例：start_server，多个命令可用回车键分隔') }}
+                    {{ $t('数组类型，示例数据：[\'/serverctl\', \'start\']，按回车键分隔每个元素') }}
                   </p>
                 </bk-form-item>
 
@@ -219,37 +172,66 @@
                     v-model="formData.args"
                     style="width: 500px"
                     ext-cls="tag-extra"
-                    :placeholder="$t('请输入命令参数，并按 Enter 键结束')"
+                    :placeholder="$t('留空将使用镜像的默认值')"
                     :allow-create="allowCreate"
                     :allow-auto-match="true"
                     :has-delete-icon="hasDeleteIcon"
                     :paste-fn="copyCommandParameter"
                   />
                   <p class="whole-item-tips">
-                    {{ $t('示例： -listen $PORT，多个参数可用回车键分隔') }}
+                    {{ $t('数组类型，示例数据：[\'--port\', \'8081\']，按回车键分隔每个元素') }}
                   </p>
                 </bk-form-item>
-
+                <!-- 进程服务编辑态 -->
                 <bk-form-item
-                  :label="$t('容器端口')"
+                  :label="$t('进程服务')"
                   :label-width="labelWidth"
-                  :property="'port'"
                 >
-                  <bk-input
-                    v-model="formData.port"
-                    style="width: 500px"
-                    :placeholder="$t('请输入 1 - 65535 的整数，非必填')"
-                  />
-                  <i
-                    v-show="isTargetPortErrTips"
-                    v-bk-tooltips.top-end="targetPortErrTips"
-                    class="bk-icon icon-exclamation-circle-shape tooltips-icon"
-                    tabindex="0"
-                    style="right: 8px"
-                  />
-                  <p class="whole-item-tips">
-                    {{ $t('接收 HTTP 请求的端口号．建议镜像直接监听 $PORT 环境变量不修改本值') }}
-                  </p>
+                  <div class="prcess-servie-item">
+                    <!-- 主入口，不能关闭进程服务 -->
+                    <bk-switcher
+                      v-bk-tooltips="{
+                        content: $t('取消访问入口后，才可以关闭进程服务'),
+                        disabled: !isCurProcessMainEntry,
+                      }"
+                      v-model="serviceProcess[formData.name]"
+                      theme="primary"
+                      :disabled="isCurProcessMainEntry"
+                      @change="toggleServiceProcess"
+                    ></bk-switcher>
+                    <span class="item-tips">
+                      <i class="paasng-icon paasng-info-line" />
+                      {{
+                        $t(
+                          '开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。',
+                        )
+                      }}
+                      <a
+                        target="_blank"
+                        :href="GLOBAL.DOC.PROCESS_SERVICE"
+                      >
+                        {{ $t('进程服务说明') }}
+                      </a>
+                    </span>
+                  </div>
+                </bk-form-item>
+                <!-- 开启进程服务，展示端口映射 -->
+                <bk-form-item
+                  v-if="serviceProcess[formData.name]"
+                  :label="$t('端口映射')"
+                  :label-width="labelWidth"
+                >
+                  <div class="port-mapping-wrapper">
+                    <port-map-table
+                      :name="formData.name"
+                      :services="formData.services"
+                      :main-entry-data="curProcessMainEntryData"
+                      :address="moduleAccessAddress"
+                      @change-service="handleChangeService"
+                      @delete-service="handleDeleteService"
+                      @change-access-entry="changeMainEntry"
+                    />
+                  </div>
                 </bk-form-item>
                 <bk-form-item :label-width="70">
                   <bk-button
@@ -265,26 +247,25 @@
                     />
                   </bk-button>
                 </bk-form-item>
+                <!-- Metric 采集 - 编辑态 -->
+                <metric
+                  v-if="ifopen"
+                  :key="btnIndex"
+                  ref="metric"
+                  :is-edit="isPageEdit"
+                  :data="formData"
+                  :dashboard-url="dashboardUrl"
+                  @updated-data="handleUpdateMetric"
+                  @toggle-metric="toggleMetric"
+                  @enable-service="toggleServiceProcess(true)"
+                />
                 <bk-form-item
                   v-if="ifopen"
-                  :label="$t('配置环境')"
+                  :label="$t('资源配置')"
+                  ext-cls="env-form-item-cls"
                   :label-width="labelWidth"
                 >
-                  <!-- <bk-radio-group v-model="envName">
-                <bk-radio-button
-                  class="radio-cls"
-                  v-for="(item, index) in envsData"
-                  :key="index"
-                  :value="item.value">
-                  {{ item.label }}
-                </bk-radio-button>
-              </bk-radio-group> -->
-                </bk-form-item>
-                <bk-form-item
-                  v-show="ifopen"
-                  :label-width="70"
-                >
-                  <div class="env-name w885">{{ $t('预发布环境') }}</div>
+                  <div class="env-name">{{ $t('预发布环境') }}</div>
                   <div class="env-container">
                     <bk-form
                       ref="formStagEnv"
@@ -316,7 +297,10 @@
                             v-if="quotaPlansFlag"
                             class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                           />
-                          <quota-popver v-else :data="stagQuotaData" />
+                          <quota-popver
+                            v-else
+                            :data="stagQuotaData"
+                          />
                         </div>
                       </bk-form-item>
                       <bk-form-item
@@ -340,8 +324,12 @@
                               :value="true"
                               :disabled="!autoScalDisableConfig.stag.ENABLE_AUTOSCALING"
                               v-bk-tooltips="{
-                                content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
-                                disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING
+                                content: $t(
+                                  isCreate
+                                    ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。'
+                                    : '该环境暂不支持自动扩缩容',
+                                ),
+                                disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING,
                               }"
                             >
                               {{ $t('自动调节') }}
@@ -406,6 +394,7 @@
                           :required="true"
                           :property="'scaling_config.min_replicas'"
                           :rules="rules.stagMinReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.stag.scaling_config.min_replicas"
@@ -421,6 +410,7 @@
                           :required="true"
                           :property="'scaling_config.max_replicas'"
                           :rules="rules.stagMaxReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.stag.scaling_config.max_replicas"
@@ -441,6 +431,7 @@
                           :required="true"
                           :property="'target_replicas'"
                           :rules="rules.formReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.stag.target_replicas"
@@ -453,12 +444,7 @@
                       </section>
                     </bk-form>
                   </div>
-                </bk-form-item>
-                <bk-form-item
-                  v-show="ifopen"
-                  :label-width="70"
-                >
-                  <div class="env-name w885">{{ $t('生产环境') }}</div>
+                  <div class="env-name">{{ $t('生产环境') }}</div>
                   <div class="env-container">
                     <bk-form
                       ref="formProdEnv"
@@ -490,7 +476,10 @@
                             v-if="quotaPlansFlag"
                             class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                           />
-                          <quota-popver v-else :data="prodQuotaData" />
+                          <quota-popver
+                            v-else
+                            :data="prodQuotaData"
+                          />
                         </div>
                       </bk-form-item>
                       <bk-form-item
@@ -514,8 +503,12 @@
                               :value="true"
                               :disabled="!autoScalDisableConfig.prod.ENABLE_AUTOSCALING"
                               v-bk-tooltips="{
-                                content: $t(isCreate ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。' : '该环境暂不支持自动扩缩容'),
-                                disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING
+                                content: $t(
+                                  isCreate
+                                    ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。'
+                                    : '该环境暂不支持自动扩缩容',
+                                ),
+                                disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING,
                               }"
                             >
                               {{ $t('自动调节') }}
@@ -580,6 +573,7 @@
                           :required="true"
                           :property="'scaling_config.min_replicas'"
                           :rules="rules.prodMinReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.prod.scaling_config.min_replicas"
@@ -595,6 +589,7 @@
                           :required="true"
                           :property="'scaling_config.max_replicas'"
                           :rules="rules.prodMaxReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.prod.scaling_config.max_replicas"
@@ -615,6 +610,7 @@
                           :required="true"
                           :property="'target_replicas'"
                           :rules="rules.formReplicas"
+                          :error-display-type="'normal'"
                         >
                           <bk-input
                             v-model="formData.env_overlay.prod.target_replicas"
@@ -637,7 +633,10 @@
             class="form-detail mt20"
             v-else
           >
-            <bk-form :model="formData" :label-width="viewLabelWidth">
+            <bk-form
+              :model="formData"
+              :label-width="labelWidth"
+            >
               <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
               <bk-form-item
                 v-if="!allowMultipleImage"
@@ -652,7 +651,10 @@
                 <span class="form-text">{{ formData.image || '--' }}</span>
               </bk-form-item>
               <bk-form-item :label="`${$t('启动命令')}：`">
-                <span v-if="formData.command && formData.command.length">
+                <span
+                  class="process-tag-cls"
+                  v-if="formData.command && formData.command.length"
+                >
                   <bk-tag
                     v-for="item in formData.command"
                     :key="item"
@@ -668,7 +670,10 @@
                 </span>
               </bk-form-item>
               <bk-form-item :label="`${$t('命令参数')}：`">
-                <span v-if="formData.args && formData.args.length">
+                <span
+                  class="process-tag-cls"
+                  v-if="formData.args && formData.args.length"
+                >
                   <bk-tag
                     v-for="item in formData.args"
                     :key="item"
@@ -683,8 +688,39 @@
                   --
                 </span>
               </bk-form-item>
-              <bk-form-item :label="`${$t('容器端口')}：`">
-                <span class="form-text">{{ formData.port || '--' }}</span>
+              <!-- 进程服务查看态 -->
+              <bk-form-item :label="`${$t('进程服务')}：`">
+                <div class="view-process-service">
+                  <span :class="['tag', { enable: formData.services?.length }]">
+                    {{ formData.services?.length ? $t('已启用') : $t('未启用') }}
+                  </span>
+                  <span class="item-tips">
+                    <i class="paasng-icon paasng-info-line" />
+                    {{
+                      $t(
+                        '开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。',
+                      )
+                    }}
+                    <a
+                      target="_blank"
+                      :href="GLOBAL.DOC.PROCESS_SERVICE"
+                    >
+                      {{ $t('进程服务说明') }}
+                    </a>
+                  </span>
+                </div>
+              </bk-form-item>
+              <bk-form-item
+                :label="`${$t('端口映射')}：`"
+                v-if="formData.services?.length"
+              >
+                <div class="port-mapping-wrapper">
+                  <port-map-table
+                    :services="formData.services"
+                    :address="moduleAccessAddress"
+                    :mode="'view'"
+                  />
+                </div>
               </bk-form-item>
               <bk-form-item :label-width="55">
                 <bk-button
@@ -700,16 +736,34 @@
                   />
                 </bk-button>
               </bk-form-item>
-              <section
-                class="mt20 extra-config-cls"
+              <!-- Metric 采集 - 查看 -->
+              <bk-form-item
+                :label="`Metric ${$t('采集')}：`"
                 v-if="ifopen"
               >
-                <bk-form-item :label="`${$t('配置环境')}：`">
+                <span :class="['tag', { enable: formData.monitoring }]">
+                  {{ formData.monitoring ? $t('已启用') : $t('未启用') }}
+                </span>
+                <span class="item-tips">
+                  <i class="paasng-icon paasng-info-line" />
+                  <span v-html="metricTipsHtml"></span>
+                </span>
+                <metric-view-mode
+                  v-if="formData.monitoring"
+                  :data="formData.monitoring ?? {}"
+                />
+              </bk-form-item>
+              <section
+                :class="['mt20', 'extra-config-cls', { 'view-status': !isPageEdit }]"
+                v-if="ifopen"
+              >
+                <bk-form-item :label="`${$t('资源配置')}：`">
                   <div class="flex-row env-detail">
                     <div
                       v-for="item in envsData"
                       :key="item.value"
-                      :class="item.value === 'prod' ? 'ml20' : ''"
+                      class="env-panel"
+                      :class="item.value === 'prod' ? 'ml24' : ''"
                     >
                       <div class="env-name">{{ item.label }}</div>
                       <div class="env-item">
@@ -723,13 +777,16 @@
                               v-if="quotaPlansFlag"
                               class="paasng-icon paasng-exclamation-circle uv-tips ml10"
                             />
-                            <quota-popver v-else :data="item.value === 'stag' ? stagQuotaData : prodQuotaData" />
+                            <quota-popver
+                              v-else
+                              :data="item.value === 'stag' ? stagQuotaData : prodQuotaData"
+                            />
                           </span>
                         </bk-form-item>
 
                         <bk-form-item :label="`${$t('扩缩容方式')}：`">
                           <span class="form-text">
-                            {{formData.env_overlay[item.value].autoscaling ? $t('自动调节') : $t('手动调节') }}
+                            {{ formData.env_overlay[item.value].autoscaling ? $t('自动调节') : $t('手动调节') }}
                           </span>
                         </bk-form-item>
 
@@ -746,7 +803,7 @@
                           </bk-form-item>
                         </section>
                         <section v-else>
-                          <bk-form-item :label="$t('副本数量：')">
+                          <bk-form-item :label="`${$t('副本数量')}：`">
                             <span class="form-text">
                               {{ formData.env_overlay[item.value].target_replicas || '--' }}
                             </span>
@@ -759,6 +816,16 @@
               </section>
             </bk-form>
           </div>
+
+          <!-- 探针 -->
+          <section v-if="ifopen">
+            <probe
+              ref="formProbe"
+              :process-data="formData"
+              :is-edit="isPageEdit"
+              @change-form-data="changeProbeFormData"
+            />
+          </section>
 
           <!-- 创建应用于与模块需隐藏 -->
           <div
@@ -780,59 +847,99 @@
             </bk-button>
           </div>
         </div>
-
-        <bk-dialog
-          v-model="processDialog.visiable"
-          width="320"
-          :theme="'primary'"
-          :header-position="'left'"
-          :mask-close="false"
-          :title="processDialog.title"
-          :loading="processDialog.loading"
-          @confirm="handleConfirm"
-          @cancel="handleDialogCancel"
-        >
-          <bk-form
-            ref="formDialog"
-            :model="processDialog"
-            :label-width="0"
-          >
-            <bk-form-item
-              :required="true"
-              :property="'name'"
-              :rules="rules.processName"
-            >
-              <bk-input
-                class="path-input-cls"
-                v-model="processDialog.name"
-                :placeholder="$t('请输入进程名称')"
-                @enter="handleConfirm"
-              ></bk-input>
-            </bk-form-item>
-          </bk-form>
-        </bk-dialog>
       </paas-content-loader>
+
+      <!-- 分割线 -->
+      <div class="dividing-line"></div>
 
       <!-- 钩子命令-创建应用、模块不展示 -->
       <deploy-hook v-if="!isCreate" />
     </template>
+
+    <!-- 新增/编辑进程 -->
+    <bk-dialog
+      v-model="processDialog.visiable"
+      width="480"
+      :theme="'primary'"
+      :header-position="'left'"
+      :mask-close="false"
+      :title="isEditPopup ? $t('编辑进程') : $t('新增进程')"
+      :loading="processDialog.loading"
+      ext-cls="prcess-dialog-cls"
+      @confirm="handleConfirm"
+      @cancel="handleDialogCancel"
+    >
+      <bk-form
+        ref="formDialog"
+        :model="processDialog"
+        form-type="vertical"
+      >
+        <bk-form-item
+          :label="$t('新增类型')"
+          v-if="!isEditPopup"
+        >
+          <div class="process-type-item">
+            <bk-radio :checked="true">
+              {{ $t('进程') }}
+            </bk-radio>
+            <p class="tips">{{ $t('适合长时间运行的进程，可暴露外部或内部流量') }}</p>
+          </div>
+        </bk-form-item>
+        <bk-form-item
+          :required="true"
+          :property="'name'"
+          :label="$t('进程名称')"
+          :rules="rules.processName"
+          :error-display-type="'normal'"
+        >
+          <bk-input
+            class="path-input-cls"
+            v-model="processDialog.name"
+            @enter="handleConfirm"
+          ></bk-input>
+        </bk-form-item>
+      </bk-form>
+    </bk-dialog>
+
+    <!-- 访问地址变更弹窗 -->
+    <entry-change-dialog
+      v-model="entryDialog.visible"
+      ref="entryChangeDialog"
+      :config="entryDialog"
+      :address="moduleAccessAddress"
+      @confirm="saveAppProcessInfo"
+    />
+
     <!-- 指南 -->
     <user-guide ref="userGuideRef" />
   </div>
 </template>
 
-<script>import _ from 'lodash';
+<script>
+import { cloneDeep } from 'lodash';
 import { RESQUOTADATA, ENV_OVERLAY } from '@/common/constants';
 import userGuide from './comps/user-guide/index.vue';
 import quotaPopver from './comps/quota-popver';
 import deployHook from './deploy-hook';
 import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
+import probe from './comps/probe/index.vue';
+import metric from './comps/metric/index.vue';
+import metricViewMode from './comps/metric/view-mode.vue';
+import processService from './comps/process-config/process-service.vue';
+import portMapTable from './comps/process-config/port-map-table.vue';
+import entryChangeDialog from './comps/process-config/entry-change-dialog.vue';
 
 export default {
   components: {
     userGuide,
     quotaPopver,
     deployHook,
+    probe,
+    metric,
+    metricViewMode,
+    processService,
+    portMapTable,
+    entryChangeDialog,
   },
   props: {
     moduleId: {
@@ -867,6 +974,7 @@ export default {
         args: [],
         port: 5000,
         env_overlay: ENV_OVERLAY,
+        services: [],
       },
       formDataBackUp: {
         name: 'web',
@@ -876,6 +984,7 @@ export default {
         args: [],
         port: 5000,
         env_overlay: ENV_OVERLAY,
+        services: [],
       },
       bkappAnnotations: {},
       allowCreate: true,
@@ -883,6 +992,7 @@ export default {
       processData: [],
       processDataBackUp: [],
       isLoading: false,
+      dashboardUrl: '',
       rules: {
         image: [
           {
@@ -1008,16 +1118,8 @@ export default {
             trigger: 'blur',
           },
           {
-            validator: v => /^[a-z0-9]([-a-z0-9]){1,11}$/.test(v),
+            validator: (v) => /^[a-z0-9]([-a-z0-9]){1,11}$/.test(v),
             message: `${this.$t('请输入 2-12 个字符的小写字母、数字、连字符，以小写字母开头')}`,
-            trigger: 'blur',
-          },
-          {
-            validator: (v) => {
-              const panelName = this.panels.map(e => e.name);
-              return !panelName.includes(v);
-            },
-            message: `${this.$t('不允许添加同名进程')}`,
             trigger: 'blur',
           },
         ],
@@ -1035,9 +1137,8 @@ export default {
       processDialog: {
         loading: false,
         visiable: false,
-        title: this.$t('进程名称'),
         name: '',
-        index: '',
+        index: null,
       },
       quotaPlansFlag: false,
       triggerMethodData: ['CPU 使用率'],
@@ -1052,6 +1153,17 @@ export default {
       allQuotaList: [],
       stagQuotaData: {},
       prodQuotaData: {},
+      isEditPopup: false,
+      serviceProcess: {},
+      moduleAccessAddress: '',
+      // 访问地址变更
+      entryDialog: {
+        visible: false,
+        entryData: null,
+        type: '',
+      },
+      // 初始访问入口
+      initEntryData: null,
     };
   },
   computed: {
@@ -1077,11 +1189,19 @@ export default {
     labelWidth() {
       return this.localLanguage === 'en' ? 190 : 150;
     },
-    viewLabelWidth() {
-      return this.localLanguage === 'en' ? 190 : 150;
-    },
     isShowPage() {
       return !this.isCustomImage && !this.isCreate;
+    },
+    isCurProcessMainEntry() {
+      return this.isMainEntry(this.formData.services);
+    },
+    curProcessMainEntryData() {
+      return this.panels.find((v) => this.isMainEntry(v.services));
+    },
+    // metric tips
+    metricTipsHtml() {
+      const monitoringDashboard = `<a href="${this.dashboardUrl}" target="_blank">${this.$t('蓝鲸监控仪表盘')}</a>`;
+      return this.$t('配置 Metric 采集后，您可以在 {s} 功能中进行配置并查看您的仪表盘。', { s: monitoringDashboard });
     },
   },
   watch: {
@@ -1089,6 +1209,9 @@ export default {
       handler() {
         if (!this.formData.port) this.formData.port = null;
         if (!this.formData.image_credential_name) this.formData.image_credential_name = null;
+        if (!this.serviceProcess[this.formData.name]) {
+          this.$set(this.serviceProcess, this.formData.name, !!this.formData.services?.length);
+        }
       },
       deep: true,
     },
@@ -1121,9 +1244,19 @@ export default {
   async created() {
     if (this.isCreate) {
       if (!this.processData.length) {
+        // 默认为访问入口
+        this.formData.services = [
+          {
+            exposed_type: { name: 'bk/http' },
+            name: 'http',
+            protocol: 'TCP',
+            port: 80,
+            target_port: 5000,
+          },
+        ];
         this.processData.push(this.formData);
-        this.processDataBackUp = _.cloneDeep(this.processData);
-        this.panels = _.cloneDeep(this.processData);
+        this.processDataBackUp = cloneDeep(this.processData);
+        this.panels = cloneDeep(this.processData);
       }
     } else {
       // 非创建应用初始化为查看态
@@ -1132,6 +1265,8 @@ export default {
       // 扩缩容FeatureFlag
       this.getAutoScalFlag('stag');
       this.getAutoScalFlag('prod');
+      this.getAppDashboardInfo();
+      this.getEntryList();
     }
     // 镜像需要调用进程配置、且不能是创建应用的时候
     if (this.isCustomImage && !this.isCreate) {
@@ -1139,8 +1274,6 @@ export default {
     }
     // 获取资源配额数据
     await this.getQuotaPlans();
-  },
-  mounted() {
   },
   methods: {
     async init() {
@@ -1150,14 +1283,15 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
-        this.processData = this.setProcessData(res.proc_specs);
+        this.processData = this.formatData(res.proc_specs);
         this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
         if (this.allowMultipleImage) {
           this.getImageCredentialList();
         }
-        this.processDataBackUp = _.cloneDeep(this.processData);
+        this.processDataBackUp = cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
+          this.processNameActive = this.processData[this.btnIndex].name;
           // 传入的镜像仓库示例
           if (this.imageUrl) {
             this.formData.image = this.imageUrl;
@@ -1165,8 +1299,11 @@ export default {
           if (!Object.keys(this.formData.env_overlay).length) {
             this.formData.env_overlay = ENV_OVERLAY;
           }
-          this.panels = _.cloneDeep(this.processData);
+          this.panels = cloneDeep(this.processData);
         }
+        this.$nextTick(() => {
+          this.initEntryData = this.getEntryNames();
+        });
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1176,30 +1313,22 @@ export default {
         this.isLoading = false;
       }
     },
-    // 将web放在第一个位置
-    setProcessData(processList = []) {
+    // 数据初始化
+    formatData(processList = []) {
       // 无进程，默认添加 web 进程
       if (!processList.length) {
         processList.push(this.formData);
-      };
-
-      // 是否存在web进程
-      const webProcess = processList.find(v => v.name === 'web');
-      if (webProcess) {
-        let processItem = {};
-        for (let i = 0; i < processList.length; i++) {
-          if (processList[i].name === 'web') {
-            processItem = processList[i];
-            processList.splice(i, 1);
-            break;
-          }
-        }
-        // 将web进程设置为第一项
-        processList.unshift(processItem);
-      } else {
-        // 没有 web 进程 默认为当前进程列表第一项
-        this.processNameActive = processList[0].name;
+        this.processNameActive = this.formData.name;
       }
+
+      const firstProcess = processList[0];
+      this.$set(this.serviceProcess, firstProcess.name, !!firstProcess.services?.length);
+
+      // 数据格式统一
+      processList = processList.map((item) => ({
+        ...item,
+        services: Array.isArray(item.services) ? item.services : [],
+      }));
 
       return processList;
     },
@@ -1257,7 +1386,6 @@ export default {
         const { appCode } = this;
         const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
         this.imageCredentialList = res;
-        console.log('res', res);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1272,12 +1400,11 @@ export default {
     },
 
     // 按扭组点击
-    handleBtnGroupClick(v, i) {
+    handleBtnGroupClick(name, i) {
       // 选中的进程信息
       this.formData = this.processData[i];
-      this.processNameActive = v;
+      this.processNameActive = name;
       this.btnIndex = i;
-      // tag-input 输入切换问题
       // eslint-disable-next-line no-plusplus
       this.tagInputIndex++;
     },
@@ -1299,7 +1426,7 @@ export default {
         await this.$refs?.formDeploy?.validate();
         return true;
       } catch (error) {
-        console.log('error', error);
+        console.error('error', error);
         return false;
       }
     },
@@ -1318,35 +1445,30 @@ export default {
       this.processDialog.loading = true;
       try {
         await this.$refs.formDialog.validate(); // 校验进程名
-        this.processNameActive = this.processDialog.name; // 选中当前点击tab
-        if (this.processDialog.index) { // 编辑进程名
-          this.panels.forEach((e, i) => {
-            if (i === this.processDialog.index) {
-              e.name = this.processDialog.name;
-            }
-          });
-          this.processData[this.btnIndex].name = this.processDialog.name;
+        if (this.processDialog.index !== -1) {
+          // 编辑进程名
+          this.processData[this.processDialog.index].name = this.processDialog.name;
         } else {
           // 新增进程
-          this.panels.push({ name: this.processDialog.name });
-          this.btnIndex = this.panels.length - 1;
           // this.allowMultipleImage 共享image、image_credential_name
           if (!this.allowMultipleImage) {
             this.formDataBackUp.image = this.formData.image;
             this.formDataBackUp.image_credential_name = this.formData.image_credential_name;
           }
-          this.formData = _.cloneDeep(this.formDataBackUp);
+          this.formData = cloneDeep(this.formDataBackUp);
           this.formData.name = this.processDialog.name;
           this.processData.push(this.formData);
+          this.btnIndex = this.panels.length - 1;
+          this.processNameActive = this.processDialog.name;
         }
         this.processDialog.visiable = false;
+        this.panels = cloneDeep(this.processData);
       } catch (error) {
-        console.log('error', error);
+        console.error('error', error);
       } finally {
         this.processDialog.loading = false;
       }
     },
-
     // 弹窗取消
     handleDialogCancel() {
       this.processDialog.visiable = false;
@@ -1355,20 +1477,40 @@ export default {
 
     // 页面取消
     handleCancel() {
-      this.processData = _.cloneDeep(this.processDataBackUp);
-      this.formData = this.processData[0];
-      this.panels = _.cloneDeep(this.processData);
-      this.processNameActive = 'web';
-      this.btnIndex = 0;
+      this.processData = cloneDeep(this.processDataBackUp);
+      this.panels = cloneDeep(this.processData);
+      this.formData = this.processData[this.btnIndex];
       this.$store.commit('cloudApi/updateProcessPageEdit', false);
       this.$store.commit('cloudApi/updatePageEdit', false);
     },
 
     // 编辑进程名称
-    handleProcessNameEdit(processName, i = '') {
+    handleProcessNameEdit(processName, i = -1) {
+      this.isEditPopup = !!processName;
+      this.updatedProcessNameValidator(this.isEditPopup);
+      this.processDialog.name = this.isEditPopup ? processName : '';
+      this.processDialog.index = i; // 如果为-1， 这代表是新增
       this.processDialog.visiable = true;
-      this.processDialog.name = processName;
-      this.processDialog.index = i; // 如果为空 这代表是新增
+    },
+
+    updatedProcessNameValidator(flag) {
+      this.$refs.formDialog.clearError();
+      if (flag) {
+        if (this.rules.processName?.length === 3) {
+          this.rules.processName.pop();
+        }
+      } else {
+        if (this.rules.processName?.length === 2) {
+          this.rules.processName.push({
+            validator: (v) => {
+              const panelName = this.panels.map((e) => e.name);
+              return !panelName.includes(v);
+            },
+            message: `${this.$t('不允许添加同名进程')}`,
+            trigger: 'blur',
+          });
+        }
+      }
     },
 
     // 删除某个进程
@@ -1376,9 +1518,10 @@ export default {
       this.processData.splice(i, 1);
       // eslint-disable-next-line prefer-destructuring
       this.formData = this.processData[0];
-      this.panels = _.cloneDeep(this.processData);
-
-      this.processNameActive = 'web';
+      this.panels = cloneDeep(this.processData);
+      this.processNameActive = this.processData[0].name;
+      // 删除
+      delete this.serviceProcess[processName];
       this.btnIndex = 0;
     },
 
@@ -1388,7 +1531,7 @@ export default {
         this.quotaPlansFlag = true;
         const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
         // 默认值
-        this.resQuotaData = res.map(item => item.name);
+        this.resQuotaData = res.map((item) => item.name);
 
         // 资源配额数据
         this.allQuotaList = res;
@@ -1425,21 +1568,81 @@ export default {
       }
     },
 
+    // 滚动至报错位置
+    scrollToErrorPosition() {
+      const element = this.$refs.metric.$el;
+      if (element) {
+        element?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      }
+    },
+
+    // 处理校验
+    async handleValidate() {
+      try {
+        await this.$refs?.formStagEnv?.validate();
+        await this.$refs?.formProdEnv?.validate();
+        await this.$refs?.formDeploy?.validate();
+        await this.$refs?.formProbe?.probeValidate();
+        await this.$refs?.metric?.metricValidate();
+        return true;
+      } catch (e) {
+        console.error(e);
+        if (['service_name', 'path'].includes(e.field)) {
+          // 当前metric未校验通过，将页面滚动到错误信息位置
+          this.scrollToErrorPosition();
+        }
+        return false;
+      }
+    },
+
+    // Metric 参数转换
+    transformMonitoring(data) {
+      data.forEach((item) => {
+        if (item.monitoring && Array.isArray(item.monitoring.metric?.params)) {
+          const paramsArray = item.monitoring.metric.params;
+          const paramsObject = {};
+          paramsArray.forEach((param) => {
+            paramsObject[param.key] = param.value;
+          });
+          item.monitoring.metric.params = paramsObject;
+        }
+      });
+      return data;
+    },
+
     // 保存
     async handleSave() {
-      await this.$refs?.formStagEnv?.validate();
-      await this.$refs?.formProdEnv?.validate();
-      await this.$refs?.formDeploy?.validate();
+      const isValidationSuccessful = await this.handleValidate();
+      if (!isValidationSuccessful) return;
       // 创建应用或创建模块返回值
       if (this.isCreate) {
         return [...this.processData];
       }
+      const saveEntryData = this.getEntryNames();
+      // Metric参数处理
+      this.processData = this.transformMonitoring(this.processData);
+      // 判断是否变更访问地址
+      if (!this.isAccessEntryPointChanged(this.initEntryData, saveEntryData)) {
+        // 变更访问入口
+        this.entryDialog.visible = true;
+        this.entryDialog.entryData = saveEntryData;
+        this.entryDialog.type = saveEntryData === null ? 'cancel' : 'change';
+      } else {
+        this.saveAppProcessInfo();
+      }
+    },
+
+    // 保存进程配置信息
+    async saveAppProcessInfo() {
       try {
         await this.$store.dispatch('deploy/saveAppProcessInfo', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
-          params: [...this.processData],
+          params: {
+            proc_specs: [...this.processData],
+          },
         });
+        this.$refs.entryChangeDialog?.handleAfterLeave();
         this.$paasMessage({
           theme: 'success',
           message: this.$t('保存成功！'),
@@ -1463,9 +1666,138 @@ export default {
     // 资源配额方案change回调
     handleChange(name, env) {
       if (env === 'stag') {
-        this.stagQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
+        this.stagQuotaData = this.allQuotaList.find((v) => v.name === name) || { limit: {}, request: {} };
       } else {
-        this.prodQuotaData = this.allQuotaList.find(v => v.name === name) || { limit: {}, request: {} };
+        this.prodQuotaData = this.allQuotaList.find((v) => v.name === name) || { limit: {}, request: {} };
+      }
+    },
+    // 设置对应探测数据
+    changeProbeFormData(config) {
+      this.formData.probes[config.key] = config.data;
+    },
+    // 判断是否为主入口
+    isMainEntry(services) {
+      if (!services?.length) return false;
+      return services.some((service) => service.exposed_type?.name === 'bk/http');
+    },
+    // 启停进程
+    toggleServiceProcess(falg) {
+      if (falg) {
+        if (!this.formData.services?.length) {
+          this.formData.services.push({
+            name: 'http',
+            protocol: 'TCP',
+            port: 80,
+            target_port: 5000,
+          });
+        }
+      } else {
+        this.$set(this.formData, 'services', []);
+      }
+      this.panels = cloneDeep(this.processData);
+    },
+    // 更新进程服务
+    handleChangeService(data) {
+      delete data.service.id;
+      delete data.service.isEdit;
+      if (data.type === 'edit') {
+        // 更新
+        this.formData.services.splice(data.editIndex, 1, data.service);
+      } else {
+        this.formData.services.push(data.service);
+      }
+    },
+    handleDeleteService(name) {
+      const index = this.formData.services.findIndex((v) => v.name === name);
+      this.formData.services.splice(index, 1);
+    },
+    // 切换主入口
+    changeMainEntry(data) {
+      const oldMainEntryName = this.curProcessMainEntryData?.name;
+      const servieName = data.type === 'set' ? data.row.name : '';
+      this.setProcessMainEntry(oldMainEntryName, data.name, servieName);
+      this.panels = cloneDeep(this.processData);
+    },
+    // 设置主入口数据
+    setProcessMainEntry(oldMainEntryName, newMainEntryName, servieName) {
+      const newExposedType = { name: 'bk/http' }; // 主入口默认值
+
+      // 找到当前旧的主入口进程并将其 services 中的 exposed_type 设置为 null
+      if (oldMainEntryName) {
+        this.processData.forEach((process) => {
+          if (process.name === oldMainEntryName) {
+            process.services?.forEach((service) => {
+              if (service.exposed_type?.name) {
+                service.exposed_type = null;
+              }
+            });
+          }
+        });
+      }
+
+      // 取消访问入口无需，设置新的入口
+      if (!servieName) return;
+
+      // 找到新的主入口进程并将其 services 中的 exposed_type 设置为 newExposedType
+      this.processData.forEach((process) => {
+        if (process.name === newMainEntryName) {
+          process.services?.forEach((service) => {
+            if (service.name === servieName) {
+              this.$set(service, 'exposed_type', newExposedType);
+            }
+          });
+        }
+      });
+    },
+    getEntryNames() {
+      if (!this.curProcessMainEntryData) return null;
+      const entry = this.curProcessMainEntryData?.services?.find((v) => v.exposed_type?.name === 'bk/http');
+      return {
+        processName: this.curProcessMainEntryData.name,
+        servieName: entry.name,
+      };
+    },
+    // 是否变更访问入口
+    isAccessEntryPointChanged(entry1, entry2) {
+      if (entry1 === null && entry2 === null) return true;
+      if (entry1 === null || entry2 === null) return false;
+      return entry1.servieName === entry2.servieName && entry1.processName === entry2.processName;
+    },
+    // 访问地址列表数据
+    async getEntryList() {
+      try {
+        const res = await this.$store.dispatch('entryConfig/getEntryDataList', {
+          appCode: this.appCode,
+        });
+        const module = res.find((module) => module.name === this.curModuleId);
+        this.moduleAccessAddress = module?.envs?.prod?.find((env) => env.address.type !== 'custom')?.address?.url || '';
+      } catch (e) {
+        this.moduleAccessAddress = '';
+      }
+    },
+    // 启停metric
+    toggleMetric(data) {
+      if (data === null) {
+        this.$set(this.formData, 'monitoring', null);
+        return;
+      }
+      this.formData.monitoring = {};
+      this.$set(this.formData.monitoring, 'metric', data);
+    },
+    // 同步metric数据
+    handleUpdateMetric(config) {
+      const index = this.processData.findIndex((v) => v.name === config.name);
+      this.$set(this.processData[index].monitoring.metric, config.key, config.value);
+    },
+    // 获取仪表盘链接
+    async getAppDashboardInfo() {
+      try {
+        const res = await this.$store.dispatch('baseInfo/getAppDashboardInfo', {
+          appCode: this.appCode,
+        });
+        this.dashboardUrl = res.dashboard_url || '';
+      } catch (e) {
+        this.catchErrorHandler(e);
       }
     },
   },
@@ -1473,10 +1805,29 @@ export default {
 </script>
 <style lang="scss" scoped>
 .process-container {
-  // margin-top: 20px;
-  // border: 1px solid #e6e9ea;
   border-top: none;
-  padding-bottom: 20px;
+  .port-mapping-wrapper {
+    margin-right: 56px;
+  }
+  .service-explain {
+    padding: 0;
+  }
+  .item-tips {
+    color: #63656e;
+    font-size: 12px;
+    margin-left: 16px;
+    i {
+      font-size: 14px;
+      color: #979ba5;
+      transform: translateY(0px);
+    }
+    span {
+      margin-left: 3px;
+    }
+  }
+}
+.ml24 {
+  margin-left: 24px;
 }
 .tab-container {
   position: relative;
@@ -1567,17 +1918,20 @@ export default {
       display: flex;
     }
   }
-
   .form-pre {
     border-top: 1px solid #dcdee5;
   }
-
   .form-pre-command.bk-form.bk-inline-form .bk-form-input {
     height: 32px !important;
   }
-
-  .form-process {
-    width: 625px;
+  .prcess-servie-item {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: #63656e;
+    .bk-switcher {
+      flex-shrink: 0;
+    }
   }
 }
 .btn-container {
@@ -1602,24 +1956,36 @@ export default {
 .form-detail {
   .form-text {
     color: #313238;
-    padding-left: 10px;
+  }
+  .process-tag-cls .bk-tag:first-child {
+    margin-left: 0px;
+  }
+  .tag {
+    display: inline-block;
+    height: 22px;
+    line-height: 22px;
+    padding: 0 8px;
+    font-size: 12px;
+    color: #63656e;
+    background: #f0f1f5;
+    border-radius: 2px;
+    &.enable {
+      color: #14a568;
+      background: #e4faf0;
+    }
   }
 }
-.w885 {
-  width: 885px !important;
-}
 .env-name {
-  width: 420px;
   color: #313238;
   font-size: 14px;
   height: 32px;
   line-height: 32px;
-  background: #F0F1F5;
+  background: #f0f1f5;
   padding-left: 20px;
 }
 
 .env-item {
-  background: #FAFBFD;
+  background: #fafbfd;
   height: 180px;
   /deep/ .bk-form-item {
     margin-top: 10px;
@@ -1630,10 +1996,22 @@ export default {
   padding-top: 10px;
 }
 .env-container {
-  width: 885px;
-  background: #FAFBFD;
+  background: #fafbfd;
   border-radius: 2px;
   padding: 20px 24px;
+}
+.view-status {
+  .env-panel {
+    width: 420px;
+    /deep/ .env-item {
+      .bk-form-item .bk-label {
+        padding-right: 0;
+      }
+    }
+  }
+}
+.env-form-item-cls {
+  margin-right: 56px;
 }
 .process-name {
   width: 280px;
@@ -1665,19 +2043,41 @@ export default {
     font-size: 14px;
     color: #313238;
   }
-  .edit-container{
-    color: #3A84FF;
+  .edit-container {
+    color: #3a84ff;
     font-size: 12px;
     cursor: pointer;
     padding-left: 10px;
   }
 }
-
 .more-config-item .bk-form-content {
   margin-left: 55px !important;
 }
-
 .form-style-cls {
   background-color: #fff;
+}
+.process-type-item {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  background: #e1ecff;
+  border: 1px solid #3a84ff;
+  border-radius: 2px;
+  padding: 0 12px;
+  .tips {
+    flex: 1;
+    padding-left: 16px;
+    font-size: 12px;
+    color: #979ba5;
+    line-height: 20px;
+  }
+}
+/deep/ .prcess-dialog-cls .bk-dialog .bk-dialog-header {
+  padding-bottom: 5px;
+}
+.dividing-line {
+  height: 1px;
+  margin: 24px;
+  background: #eaebf0;
 }
 </style>

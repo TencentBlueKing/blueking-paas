@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import re
 from contextlib import suppress
@@ -94,9 +93,14 @@ def update_step_by_line(line: str, pattern_maps: Dict, phase: "DeployPhase"):
     """
     for job_status, pattern_map in pattern_maps.items():
         for pattern, step_name in pattern_map.items():
-            match = re.compile(pattern).findall(line)
-            # 未能匹配上任何预设匹配集
-            if not match:
+            # When the line is too long(>10k), the pattern matching will take too long
+            # complete. To improve the performance, we only try to find the pattern in
+            # the first 1k characters.
+            #
+            # This won't affect the matching result because most patterns only occur
+            # at the beginning of the line.
+            p = re.compile(pattern, flags=re.IGNORECASE)
+            if not p.search(line[:1024]):
                 continue
 
             try:

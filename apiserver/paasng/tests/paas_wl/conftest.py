@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import atexit
 import copy
 import logging
@@ -33,16 +32,14 @@ from kubernetes.client.exceptions import ApiException
 from paas_wl.bk_app.applications.models import Build, BuildProcess, WlApp
 from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan, initialize_default_proc_spec_plans
 from paas_wl.infras.cluster.models import Cluster
-from paas_wl.infras.cluster.utils import get_default_cluster_by_region
-from paas_wl.infras.resources.base.base import get_client_by_cluster_name, get_global_configuration_pool
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.infras.resources.base.kres import KCustomResourceDefinition, KNamespace
 from paas_wl.utils.blobstore import S3Store, make_blob_store
 from paasng.platform.applications.models import ModuleEnvironment
-from tests.conftest import CLUSTER_NAME_FOR_TESTING
 from tests.paas_wl.utils.basic import random_resource_name
 from tests.paas_wl.utils.build import create_build_proc
 from tests.paas_wl.utils.wl_app import create_wl_release
-from tests.utils.mocks.engine import build_default_cluster
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +50,12 @@ DEFAULT_PROD_ENV_ID = 2
 
 @pytest.fixture(scope="session")
 def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
-    """Create default cluster for testing"""
+    """Some initialization jobs before running tests."""
     with django_db_blocker.unblock():
         with transaction.atomic():
-            # Clear cached configuration pool before creating default cluster in case
-            # there are some stale configurations in the pool.
-            get_global_configuration_pool.cache_clear()
-
-            cluster = create_default_cluster()
-            setup_default_client(cluster)
+            # Clear cached configuration pool in case there are some stale configurations
+            # in the pool.
+            invalidate_global_configuration_pool()
 
         # The initialization in `processes.models` will not create default package plans in the TEST database,
         # it only creates the default plans in the non-test database(without the "test_" prefix).
@@ -90,7 +84,8 @@ def crds_is_configured(django_db_setup, django_db_blocker):
     :return: Whether the CRDs are successfully configured
     """
     with django_db_blocker.unblock():
-        client = get_client_by_cluster_name(get_default_cluster_by_region(settings.DEFAULT_REGION_NAME).name)
+        cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
+        client = get_client_by_cluster_name(cluster.name)
         version = VersionApi(client).get_code()
 
     # Minimal required version is 1.17
@@ -133,8 +128,9 @@ def _skip_when_no_crds(request, crds_is_configured):
 
 
 @pytest.fixture()
-def k8s_client(settings):
-    client = get_client_by_cluster_name(get_default_cluster_by_region(settings.DEFAULT_REGION_NAME).name)
+def k8s_client():
+    cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
+    client = get_client_by_cluster_name(cluster.name)
     return client
 
 
@@ -146,7 +142,8 @@ def k8s_version(k8s_client):
 @pytest.fixture(scope="module")
 def namespace_maker(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        k8s_client = get_client_by_cluster_name(get_default_cluster_by_region(settings.DEFAULT_REGION_NAME).name)
+        cluster = Cluster.objects.get(name=CLUSTER_NAME_FOR_TESTING)
+        k8s_client = get_client_by_cluster_name(cluster.name)
         k8s_version = VersionApi(k8s_client).get_code()
 
     class Maker:
@@ -212,15 +209,6 @@ def resource_name() -> str:
     return random_resource_name()
 
 
-def create_default_cluster():
-    """Destroy all existing clusters and create a default one"""
-    Cluster.objects.all().delete()
-    cluster, apiserver = build_default_cluster()
-    cluster.save()
-    apiserver.save()
-    return cluster
-
-
 @pytest.fixture()
 def patch_ingress_config():
     """Patch ingress_config of the default cluster, usage:
@@ -246,12 +234,6 @@ def patch_ingress_config():
     # Restore to original
     cluster.ingress_config = orig_cfg
     cluster.save(update_fields=["ingress_config"])
-
-
-def setup_default_client(cluster: Cluster):
-    """setup the default config for those client created by `kubernetes.client.ApiClient`"""
-    # TODO: 待重构, 让 BaseKresource 不再接受 ModuleType 类型的 client
-    get_client_by_cluster_name(cluster.name)
 
 
 def get_cluster_with_hook(hook_func: Callable) -> Callable:
@@ -286,7 +268,9 @@ def set_structure(default_process_spec_plan):
     def handler(app, procfile: Dict, plan: ProcessSpecPlan = default_process_spec_plan):
         ProcessSpec.objects.filter(engine_app_id=app.uuid).delete()
         for proc, replicas in procfile.items():
-            ProcessSpec.objects.create(name=proc, target_replicas=replicas, engine_app_id=app.uuid, plan=plan)
+            ProcessSpec.objects.create(
+                name=proc, target_replicas=replicas, engine_app_id=app.uuid, plan=plan, tenant_id=app.tenant_id
+            )
 
     return handler
 
@@ -342,4 +326,4 @@ def wl_build(bk_stag_wl_app, bk_user) -> Build:
         "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
         "artifact_type": "slug",
     }
-    return Build.objects.create(**build_params)
+    return Build.objects.create(tenant_id=bk_stag_wl_app.tenant_id, **build_params)

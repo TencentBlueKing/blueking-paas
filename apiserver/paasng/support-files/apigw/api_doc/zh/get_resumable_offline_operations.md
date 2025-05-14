@@ -1,5 +1,5 @@
 ### 功能描述
-查询可恢复的下架操作
+查询可恢复的下架操作。可恢复的下架操作指当前被卡住的下线操作。
 
 ### 请求参数
 
@@ -25,6 +25,8 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{your AccessToken}}"}
 ```
 
 ### 返回结果示例
+#### 正常返回
+当有可恢复的下线操作
 ```json
 {
   "result": {
@@ -52,26 +54,31 @@ curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{your AccessToken}}"}
 }
 ```
 
+当没有可恢复的下线操作
+```json
+{}
+```
+
 ### 返回结果参数说明
 
-| 字段 |   类型 |  是否必填 | 描述 |
-| ------ | ------ | ------ | ------ |
-| id | string | 是 | UUID |
-| status | string | 是 | 下线状态，可选值：successful, failed, pending |
-| operator | string | 是 | Operator |
-| created | string | 是 | Created |
-| log | string | 是 | 下线日志 |
-| err_detail | string | 是 | 下线异常原因 |
-| offline_operation_id | string | 是 | 下线操作ID |
-| environment | string | 是 | 环境名称 |
-| repo | object | 是 | 仓库信息 |
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| id | string | UUID |
+| status | string | 下线状态，可选值：successful, failed, pending |
+| operator | object | 操作人 |
+| created | string | 创建时间 |
+| log | string | 下线日志 |
+| err_detail | string | 下线异常原因 |
+| offline_operation_id | string | 下线操作ID |
+| environment | string | 环境名称 |
+| repo | object | 仓库信息 |
 
 repo
-| 字段 |   类型 |  是否必填 | 描述 |
-| ------ | ------ | ------ | ------ |
-| source_type | string | 是 | 源类型 |
-| type | string | 是 | 类型 |
-| name | string | 是 | 名称 |
-| url | string | 是 | URL |
-| revision | string | 是 | 版本 |
-| comment | string | 是 | 备注 |
+| 字段 |   类型 | 描述 |
+| ------ | ------ | ------ |
+| source_type | string | 源类型 |
+| type | string | 类型 |
+| name | string | 名称 |
+| url | string | URL |
+| revision | string | 版本 |
+| comment | string | 备注 |

@@ -18,18 +18,27 @@
           <paas-plugin-title
             :name="isOfficialVersion ? $t('发布') : $t('测试')"
             :no-shadow="true"
-            :version="curVersion"
+            :version-data="curRelease"
+            :status-map="PLUGIN_TEST_VERSION_STATUS"
           />
           <!-- 结束发布流程禁用终止发布 -->
-          <bk-button
-            v-if="pluginFeatureFlags.CANCEL_RELEASE"
-            class="discontinued"
-            :disabled="isPostedSuccessfully"
-            @click="showInfoCancelRelease"
+          <span
+            v-bk-tooltips="{
+              content: $t('当前版本{s}，无需终止操作', { s: releaseDisablePrompt }),
+              disabled: !disableTerminationRelease,
+              placements: ['bottom']
+            }"
           >
-            <i class="paasng-icon paasng-stop-2" />
-            {{ $t('终止发布') }}
-          </bk-button>
+            <bk-button
+              v-if="pluginFeatureFlags.CANCEL_RELEASE"
+              class="discontinued"
+              :disabled="disableTerminationRelease"
+              @click="showInfoCancelRelease"
+            >
+              <i class="paasng-icon paasng-minus-circle" />
+              {{ isOfficialVersion ? $t('终止发布') : $t('终止测试') }}
+            </bk-button>
+          </span>
         </div>
       </div>
       <section class="content-container">
@@ -65,21 +74,6 @@
 
       <!-- 手动预览与发布完成不展示底部操作按钮组 -->
       <div class="footer-btn-warp" v-if="isShowButtonGroup && !isPostedSuccessfully">
-        <bk-popover placement="top" :disabled="isAllowPrev && !isItsmStage">
-          <bk-button
-            v-if="!isFirstStage"
-            theme="default"
-            class="ml5"
-            style="width: 120px"
-            :disabled="!isAllowPrev"
-            @click="handlerPrev"
-          >
-            {{ $t('上一步') }}
-          </bk-button>
-          <div slot="content" style="white-space: normal;">
-            {{ $t('单据正在审批中，无法回到上一步，如有修改需求，请先撤销提单') }}
-          </div>
-        </bk-popover>
         <!-- 构建完成可以进入下一步 -->
         <bk-popover placement="top" :disabled="nextTips.disabled">
           <bk-button
@@ -99,14 +93,15 @@
             </template>
           </bk-button>
           <div slot="content" style="white-space: normal;">
-            {{ nextTips.content }}
+            {{ $t(nextTips.content) }}
           </div>
         </bk-popover>
       </div>
     </paas-content-loader>
   </div>
 </template>
-<script>import paasPluginTitle from '@/components/pass-plugin-title';
+<script>
+import paasPluginTitle from '@/components/pass-plugin-title';
 import { bus } from '@/common/bus';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import deployStage from './release-stages/deploy';
@@ -118,7 +113,7 @@ import itsmStage from './release-stages/itsm';
 import approvalStage from './release-stages/itsm';
 import buildStage from './release-stages/build';
 import testStage from './release-stages/test';
-import { PLUGIN_VERSION_MAP } from '@/common/constants';
+import { PLUGIN_VERSION_MAP, PLUGIN_VERSION_STATUS, PLUGIN_TEST_VERSION_STATUS } from '@/common/constants';
 import versionSteps from './version-steps/index.vue';
 
 export default {
@@ -161,24 +156,28 @@ export default {
         height: '100%',
       },
       excludeCardStyleList: ['deploy', 'itsm', 'test'],
+      isWebPolling: true,
+      PLUGIN_TEST_VERSION_STATUS,
     };
   },
   computed: {
+    curRelease() {
+      return this.$store.state.plugin.curRelease;
+    },
     releaseId() {
       return this.$route.query.release_id;
     },
     stageId() {
-      return this.$store.state.plugin.curRelease?.current_stage?.stage_id;
+      return this.curRelease?.current_stage?.stage_id;
     },
     curVersion() {
       return this.$route.query.version || this.titleVersion;
     },
     titleVersion() {
-      const releaseData = this.$store.state.plugin.curRelease;
-      return `${releaseData.version} (${releaseData.source_version_name})`;
+      return `${this.curRelease.version} (${this.curRelease.source_version_name})`;
     },
     status() {
-      return this.$store.state.plugin.curRelease.status;
+      return this.curRelease.status;
     },
     releaseTopHeight() {
       const topHeight = this.stageId === 'deploy' ? 117 : 117 - 56;
@@ -201,21 +200,6 @@ export default {
     },
     isSingleStage() {
       return this.curAllStages.length === 1;
-    },
-    // 是否禁用上一步
-    isAllowPrev() {
-      switch (this.curStageComponmentType) {
-        case 'itsm':
-          const itemStatus = this.stageData.status || this.pluginDetailedData.current_stage?.status;
-          // 已撤销、审批不通过，才显示上一步，其余情况禁用
-          const isDisabledList = ['interrupted', 'failed'];
-          return !!isDisabledList.includes(itemStatus);
-          break;
-        default:
-          const isRunningDeploy = this.stageData.stage_id === 'deploy' && this.stageData.status === 'pending';
-          return !isRunningDeploy && this.status !== 'successful';
-          break;
-      }
     },
     isAllowNext() {
       // 测试阶段下一步按钮禁用由接口返回值决定
@@ -263,6 +247,15 @@ export default {
     isOfficialVersion() {
       return this.versionType === 'prod';
     },
+    disableTerminationRelease() {
+      return !['initial', 'pending'].includes(this.pluginDetailedData.status);
+    },
+    releaseDisablePrompt() {
+      if (this.pluginDetailedData.status === 'interrupted') {
+        return this.$t(PLUGIN_VERSION_STATUS[this.pluginDetailedData.status]);
+      }
+      return this.$t(`已${PLUGIN_VERSION_STATUS[this.pluginDetailedData.status]}`);
+    },
   },
   watch: {
     stageData: {
@@ -299,8 +292,22 @@ export default {
       // 关闭基本信息编辑态
       bus.$emit('release-stage-changes', 'leave');
     });
+    // 在接收消息的页面中设置监听器
+    window.addEventListener('message', this.messageEvent);
+  },
+  beforeDestroy() {
+    clearTimeout(this.timeId);
   },
   methods: {
+    messageEvent(event) {
+      if (!event.data || event.data?.type !== 'design-test') return;
+      const status = event.data.data;
+      if (status === 'success') {
+        this.isShowButtonGroup && this.updateStepStatus('successful');
+      } else if (status === 'fail') {
+        this.isShowButtonGroup && this.updateStepStatus('failed');
+      }
+    },
     async pollingReleaseStageDetail() {
       if (this.clickStageId) {
         clearTimeout(this.timeId);
@@ -354,8 +361,9 @@ export default {
         }
         const res = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
         this.stageData = res;
-        // 所有阶段都需要进行轮询 && 手动切换不用轮询
-        if (this.stageData.status === 'pending' && !curStepStageId) {
+        // status_polling_method === 'frontend' 前端IFrame通信，其他状态都需要进行轮询 && 手动切换不用轮询
+        this.isWebPolling = res.status_polling_method !== 'frontend';
+        if (this.isWebPolling && this.stageData.status === 'pending' && !curStepStageId) {
           this.pollingReleaseStageDetail();
         }
         switch (this.stageData.stage_id) {
@@ -446,8 +454,8 @@ export default {
       if (!this.isAllowNext) {
         return;
       }
-      this.isLoading = true;
       await this.$refs.curStageComponment.nextStage(async () => {
+        this.isLoading = true;
         try {
           const params = {
             pdId: this.pdId,
@@ -470,8 +478,8 @@ export default {
 
     showInfoCancelRelease() {
       this.$bkInfo({
-        title: `${this.$t('确认终止发布版本')}${this.curVersion} ？`,
-        width: 480,
+        title: `${this.$t(`确认终止${this.isOfficialVersion ? '发布' : '测试'}版本`)}${this.curVersion} ？`,
+        width: 540,
         maskClose: true,
         confirmFn: () => {
           this.handlerCancelRelease();
@@ -505,37 +513,12 @@ export default {
       }
     },
 
-    // 上一步
-    async handlerPrev() {
-      this.isLoading = true;
-      this.isPrevious = true;
-      try {
-        const params = {
-          pdId: this.pdId,
-          pluginId: this.pluginId,
-          releaseId: this.$route.query.release_id,
-        };
-        const releaseData = await this.$store.dispatch('plugin/backRelease', params);
-        this.$store.commit('plugin/updateCurRelease', releaseData);
-        await this.getReleaseDetail();
-        await this.getReleaseStageDetail();
-      } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        setTimeout(() => {
-          this.isLoading = false;
-          this.stepsStatus = '';
-          this.isPrevious = false;
-        }, 200);
-      }
-    },
-
     goVersionManager() {
       this.$router.push({
         name: 'pluginVersionManager',
+        query: {
+          type: this.isOfficialVersion ? 'prod' : 'test',
+        },
       });
     },
 
@@ -570,6 +553,29 @@ export default {
       await this.getReleaseDetail();
       // 获取当前步骤信息
       this.getReleaseStageDetail(!isPolling ? data.id : '');
+    },
+
+    // 请求接口更新步骤状态
+    async updateStepStatus(status) {
+      try {
+        await this.$store.dispatch('plugin/updateStepStatus', {
+          pdId: this.pdId,
+          pluginId: this.pluginId,
+          releaseId: this.releaseId,
+          stageId: this.stageId,
+          data: {
+            // successful、failed、pending、initial、interrupted
+            status,
+          },
+        });
+        this.getReleaseDetail();
+        this.getReleaseStageDetail();
+      } catch (e) {
+        this.$bkMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('接口异常'),
+        });
+      }
     },
   },
 };
@@ -709,10 +715,9 @@ export default {
     color: #C4C6CC;
 }
 .discontinued {
-    color: #979BA5;
     font-size: 14px;
     i {
-        font-size: 16px;
+      margin-right: 3px;
     }
 }
 .success-check-wrapper,

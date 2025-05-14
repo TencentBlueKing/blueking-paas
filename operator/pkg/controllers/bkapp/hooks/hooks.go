@@ -21,11 +21,12 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
-	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -65,29 +66,22 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 
 	log.V(1).Info("handling pre-release-hook reconciliation")
 	if current.Pod != nil {
-		if err := r.UpdateStatus(ctx, bkapp, current, hookres.HookExecuteTimeoutThreshold); err != nil {
+		if err := r.UpdateStatus(bkapp, current, hookres.HookExecuteTimeoutThreshold); err != nil {
 			return r.Result.WithError(err)
 		}
 
 		switch {
 		case current.TimeoutExceededProgressing(hookres.HookExecuteTimeoutThreshold):
-			// 删除超时的 pod
-			if err := r.Client.Delete(ctx, current.Pod); err != nil {
-				return r.Result.WithError(errors.WithStack(hookres.ErrExecuteTimeout))
-			}
-			return r.Result.WithError(errors.WithStack(hookres.ErrExecuteTimeout))
+			// Pod 执行超时之后，终止调和循环
+			return r.Result.End()
 		case current.TimeoutExceededFailed(hookres.HookExecuteFailedTimeoutThreshold):
-			if err := r.Client.Delete(ctx, current.Pod); err != nil {
-				return r.Result.WithError(errors.WithStack(hookres.ErrPodEndsUnsuccessfully))
-			}
 			// Pod 在超时时间内一直失败, 终止调和循环
 			log.Error(errors.WithStack(hookres.ErrPodEndsUnsuccessfully), "execute timeout")
-			// 不能调用 WithError 否则不会停止调和循环(Result 协议保持与 controller-runtime 的协议一致)
+			// 不能调用 WithError 否则不会停止调和循环（Result 协议保持与 controller-runtime 的协议一致）
 			// ref: https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile#Reconciler
 			return r.Result.End()
 		case current.Progressing():
 			// 当 Hook 执行成功或失败时会由 owned pod 触发新的调和循环, 因此只需要通过 Requeue 处理超时事件即可
-
 			return r.Result.Requeue(hookres.HookExecuteTimeoutThreshold)
 		case current.Succeeded():
 			return r.Result
@@ -103,14 +97,17 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 		return r.Result.WithError(err)
 	}
 
-	hook := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+	hook, err := hookres.BuildPreReleaseHook(bkapp, bkapp.Status.FindHookStatus(paasv1alpha2.HookPreRelease))
+	if err != nil {
+		return r.Result.WithError(err)
+	}
 	if hook != nil {
 		// Apply service discovery related changes
 		if ok := svcdisc.NewWorkloadsMutator(r.Client, bkapp).ApplyToPod(ctx, hook.Pod); ok {
 			log.V(1).Info("Applied svc-discovery related changes to the pre-release pod.")
 		}
 
-		if err := r.ExecuteHook(ctx, bkapp, hook); err != nil {
+		if err = r.ExecuteHook(ctx, bkapp, hook); err != nil {
 			return r.Result.WithError(err)
 		}
 		// 启动 Pod 后退出调和循环, 等待 Pod 状态更新事件触发下次循环
@@ -139,11 +136,18 @@ func (r *HookReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkAp
 // 获取应用当前在集群中的状态
 func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha2.BkApp) hookres.HookInstance {
 	pod := corev1.Pod{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: names.PreReleaseHook(bkapp), Namespace: bkapp.Namespace}, &pod)
-	if err != nil {
+	key := types.NamespacedName{Namespace: bkapp.Namespace, Name: names.PreReleaseHook(bkapp)}
+	if err := r.Client.Get(ctx, key, &pod); err != nil {
 		return hookres.HookInstance{
-			Pod:    nil,
-			Status: nil,
+			Pod: nil,
+			Status: &paasv1alpha2.HookStatus{
+				Type:      paasv1alpha2.HookPreRelease,
+				Started:   lo.ToPtr(false),
+				StartTime: nil,
+				Phase:     paasv1alpha2.HealthUnknown,
+				Reason:    "Failed",
+				Message:   lo.Ternary(apierrors.IsNotFound(err), "PreReleaseHook not found", err.Error()),
+			},
 		}
 	}
 
@@ -164,6 +168,9 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha
 			ObservedGeneration: bkapp.Generation,
 		})
 	}
+
+	// StartTime 总是重新读取, 避免调和时, currentStatus.StartTime 仍是上一个 Instance 的 StartTime
+	currentStatus.StartTime = lo.ToPtr(pod.GetCreationTimestamp())
 
 	healthStatus := health.CheckPodHealthStatus(&pod)
 	return hookres.HookInstance{
@@ -213,7 +220,6 @@ func (r *HookReconciler) ExecuteHook(
 
 // UpdateStatus will update bkapp hook status from the given instance status
 func (r *HookReconciler) UpdateStatus(
-	ctx context.Context,
 	bkapp *paasv1alpha2.BkApp,
 	instance hookres.HookInstance,
 	timeoutThreshold time.Duration,
@@ -226,6 +232,19 @@ func (r *HookReconciler) UpdateStatus(
 		observedGeneration = hookCond.ObservedGeneration
 	} else {
 		observedGeneration = bkapp.Generation
+	}
+
+	// 若 Hook Pod 不存在，则应该判定 Hook 执行失败，但不认为 bkapp 失败，因为可以通过后续调和循环重新创建 Hook Pod
+	if instance.Pod == nil {
+		apimeta.SetStatusCondition(&bkapp.Status.Conditions, metav1.Condition{
+			Type:               paasv1alpha2.HooksFinished,
+			Status:             metav1.ConditionFalse,
+			Reason:             instance.Status.Reason,
+			Message:            instance.Status.Message,
+			ObservedGeneration: observedGeneration,
+		})
+		r.updateAppProgressingStatus(bkapp, metav1.ConditionFalse)
+		return nil
 	}
 
 	switch {
@@ -302,11 +321,11 @@ func (r *HookReconciler) cleanupFinishedHooks(
 	}
 
 	// 按照创建时间排序，清理掉最早的几个
-	slices.SortFunc(pods, func(x, y corev1.Pod) bool {
+	slices.SortFunc(pods, func(x, y corev1.Pod) int {
 		if x.CreationTimestamp.Equal(&y.CreationTimestamp) {
-			return x.Name < y.Name
+			return strings.Compare(x.Name, y.Name)
 		}
-		return x.CreationTimestamp.Before(&y.CreationTimestamp)
+		return lo.Ternary(x.CreationTimestamp.Before(&y.CreationTimestamp), -1, 1)
 	})
 
 	for i := 0; i < numToDelete; i++ {
@@ -325,21 +344,18 @@ func CheckAndUpdatePreReleaseHookStatus(
 	r := NewHookReconciler(cli)
 	instance := r.getCurrentState(ctx, bkapp)
 
-	if instance.Pod == nil {
-		return false, errors.New("pre-release-hook not found")
-	}
-
-	if err = r.UpdateStatus(ctx, bkapp, instance, timeout); err != nil {
+	if err = r.UpdateStatus(bkapp, instance, timeout); err != nil {
 		return false, err
 	}
 
 	switch {
-	// 删除超时的 pod
+	// 删除超时的 Pod
 	case instance.TimeoutExceededProgressing(timeout):
 		if err = cli.Delete(ctx, instance.Pod); err != nil {
 			return false, err
 		}
 		return false, errors.WithStack(hookres.ErrExecuteTimeout)
+	// 若 instance.Pod 为 nil，会判定为失败
 	case instance.Failed():
 		return false, errors.Wrapf(
 			hookres.ErrPodEndsUnsuccessfully,

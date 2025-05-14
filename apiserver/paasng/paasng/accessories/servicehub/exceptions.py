@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
-
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
 
 class BaseServicesException(Exception):
@@ -46,6 +44,10 @@ class SvcAttachmentDoesNotExist(BaseServicesException):
     """remote or local service attachment does not exist"""
 
 
+class UnboundSvcAttachmentDoesNotExist(BaseServicesException):
+    """unbound remote or local service attachment does not exist"""
+
+
 class CanNotModifyPlan(BaseServicesException):
     """remote or local service attachment already provided"""
 
@@ -62,3 +64,22 @@ class DuplicatedServiceBoundError(BaseServicesException):
     """
     when user try to create a sharing relation for an already bound service or verse-vise. Raise this error
     """
+
+
+class BindServicePlanError(Exception):
+    """Unable to get the right plan object when binding a service."""
+
+
+# Plan Selector Errors start
+
+
+class PlanSelectorError(Exception):
+    """The base error for selecting plans"""
+
+
+class NoPlanFoundError(PlanSelectorError):
+    """No plans found when trying to select a plan"""
+
+
+class MultiplePlanFoundError(PlanSelectorError):
+    """Multiple plans found when trying to select a plan"""

@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import logging
 import shutil
 from os import PathLike
@@ -23,6 +22,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from paasng.platform.modules.models.module import Module
+from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, VersionInfo
 from paasng.platform.sourcectl.package.client import BasePackageClient, get_client
 
@@ -66,7 +66,7 @@ class PackageController:
         if not package_storage.relative_path:
             return
 
-        # The source file may have a relative path (e.g. app_code/app.yaml and so on.),
+        # The source file may have a relative path (e.g. app_code/app_desc.yaml and so on.),
         # So we need to move the files in that directory into local_path
         local_path_obj = Path(local_path)
         source_path = local_path_obj / package_storage.relative_path
@@ -85,8 +85,8 @@ class PackageController:
         qs = SourcePackage.default_objects.filter(module_id=self.module.pk).order_by("created")
         items = [
             AlternativeVersion(
-                name=info.package_name,
-                type="package" if info.storage_engine != "docker" else "image",
+                name=info.version,
+                type=VersionType.PACKAGE.value if info.storage_engine != "docker" else VersionType.TAG.value,
                 revision=info.version,
                 url=info.storage_url,
                 last_update=info.updated,
@@ -104,8 +104,8 @@ class PackageController:
         _, version = self.extract_version_info(version_info)
         info = self.module.packages.get(version=version)
         return AlternativeVersion(
-            name=info.package_name,
-            type="package" if info.storage_engine != "docker" else "image",
+            name=info.version,
+            type=VersionType.PACKAGE.value if info.storage_engine != "docker" else VersionType.TAG.value,
             revision=info.version,
             url=info.storage_url,
             last_update=info.updated,
@@ -118,14 +118,15 @@ class PackageController:
     def extract_smart_revision(self, smart_revision: str) -> str:
         if ":" not in smart_revision:
             return smart_revision
-        version_type, package_name = smart_revision.split(":", 1)
-        # NOTE: 为了兼容 svn/git 的交互协议, 允许通过传递 package_name 来部署最后一个以 package_name 命名的版本。
-        if self.module.packages.filter(package_name=package_name).exists():
-            return self.module.packages.filter(package_name=package_name).last().version
 
+        _, package_name = smart_revision.split(":", 1)
+        # NOTE: 为了兼容 svn/git 的交互协议, 允许通过传递 package_name 来部署最后一个以 package_name 命名的版本。
+        if obj_by_pkg_name := self.module.packages.filter(package_name=package_name).last():
+            return obj_by_pkg_name.version
         # NOTE: 与 LessCode 那边约定, 通过 url 上传包时会用 version 来取代 package_name, 因此这里做一个兼容。
-        if self.module.packages.filter(version=package_name).exists():
-            return package_name
+        elif obj_by_version := self.module.packages.filter(version=package_name).last():
+            return obj_by_version.version
+
         raise SourcePackage.DoesNotExist
 
     def build_url(self, version_info: VersionInfo) -> str:

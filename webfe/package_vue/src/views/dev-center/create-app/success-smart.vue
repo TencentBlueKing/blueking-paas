@@ -13,14 +13,14 @@
             <bk-button
               :theme="'primary'"
               class="mr10"
-              @click="handlePageJump('appDeploy')"
+              @click="handlePageJump(application?.type === 'default' ? 'appDeployForStag' : 'cloudAppDeployManageStag')"
             >
               {{ $t('部署应用') }}
             </bk-button>
             <bk-button
               :theme="'default'"
               type="submit"
-              @click="handlePageJump('appSummary')"
+              @click="handlePageJump(application?.type === 'default' ? 'appSummary' : 'cloudAppSummary')"
             >
               {{ $t('应用概览') }}
             </bk-button>
@@ -40,7 +40,7 @@ export default {
   data() {
     const appCode = this.$route.params.id;
     return {
-      appCode: appCode,
+      appCode,
       application: {},
     };
   },
@@ -73,7 +73,8 @@ export default {
 
   .biz-create-success {
     background: #f5f7fa;
-    padding: 76px 0 20px 0;
+    padding-bottom: 20px;
+    padding-top: calc(var(--app-notice-height) + 74px);
   }
   .success-wrapper {
     .info {

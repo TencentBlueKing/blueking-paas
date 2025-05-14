@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 from unittest.mock import patch
 
 import pytest
+from django.test.utils import override_settings
 from django_dynamic_fixture import G
 
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
@@ -42,12 +42,12 @@ from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainCert
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestAssignDomains:
     @pytest.fixture()
     def _foo_shared_cert(self, bk_stag_wl_app):
         AppDomainSharedCert.objects.create(
-            region=bk_stag_wl_app.region, name="foo", cert_data="", key_data="", auto_match_cns="*.foo.com"
+            tenant_id=bk_stag_wl_app.tenant_id, name="foo", cert_data="", key_data="", auto_match_cns="*.foo.com"
         )
 
     @pytest.mark.usefixtures("_foo_shared_cert")
@@ -123,14 +123,14 @@ class TestAssignDomains:
         assert [d.host for d in ingress.domains] == ["foo.com"]
 
 
-@pytest.mark.auto_create_ns()
+@pytest.mark.auto_create_ns
 class TestSubdomainAppIngressMgrCommon:
     """Test common interfaces for `SubdomainAppIngressMgr`"""
 
     @pytest.fixture(autouse=True)
     def _setup_data(self, bk_stag_wl_app):
         AppDomain.objects.create(
-            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host="bar-2.com", source=AppDomainSource.AUTO_GEN
+            app=bk_stag_wl_app, tenant_id=bk_stag_wl_app.tenant_id, host="bar-2.com", source=AppDomainSource.AUTO_GEN
         )
 
     def test_sync_no_domains(self, bk_stag_wl_app):
@@ -219,7 +219,7 @@ class TestSubdomainAppIngressMgr:
         assert len(ingress_mgr.list_desired_domains()) == 1
 
         AppDomain.objects.create(
-            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host="bar-2.com", source=AppDomainSource.AUTO_GEN
+            app=bk_stag_wl_app, tenant_id=bk_stag_wl_app.tenant_id, host="bar-2.com", source=AppDomainSource.AUTO_GEN
         )
         assert len(ingress_mgr.list_desired_domains()) == 2
 
@@ -228,13 +228,13 @@ class TestSubdomainAppIngressMgr:
         assert len(ingress_mgr.list_desired_domains()) == 0
         # SubDomain ingress should only include domains when their source is "CUSTOM"
         AppDomain.objects.create(
-            app=bk_stag_wl_app, region=bk_stag_wl_app.region, host="foo.com", source=AppDomainSource.INDEPENDENT
+            app=bk_stag_wl_app, tenant_id=bk_stag_wl_app.tenant_id, host="foo.com", source=AppDomainSource.INDEPENDENT
         )
         assert len(ingress_mgr.list_desired_domains()) == 0
 
 
-@pytest.mark.mock_get_structured_app()
-@pytest.mark.auto_create_ns()
+@pytest.mark.mock_get_structured_app
+@pytest.mark.auto_create_ns
 class TestCustomDomainIngressMgr:
     @pytest.mark.parametrize(
         ("path_prefix", "expected_path_prefixes", "customized_ingress_name"),
@@ -278,15 +278,33 @@ class TestCustomDomainIngressMgr:
         with pytest.raises(AppEntityNotFound):
             ingress_kmodel.get(bk_stag_wl_app, mgr.make_ingress_name())
 
+    def test_get_ingress_class(self, bk_stag_env, bk_stag_wl_app):
+        domain = G(
+            Domain,
+            name="foo.example.com",
+            module_id=bk_stag_env.module.id,
+            environment_id=bk_stag_env.id,
+        )
+        mgr = CustomDomainIngressMgr(domain)
+        assert mgr.get_annotations().get("kubernetes.io/ingress.class") is None
 
-@pytest.mark.auto_create_ns()
+        with override_settings(APP_INGRESS_CLASS="test-ingress"):
+            mgr = CustomDomainIngressMgr(domain)
+            assert mgr.get_annotations()["kubernetes.io/ingress.class"] == "test-ingress"
+
+        with override_settings(CUSTOM_DOMAIN_INGRESS_CLASS="test-custom-ingress"):
+            mgr = CustomDomainIngressMgr(domain)
+            assert mgr.get_annotations()["kubernetes.io/ingress.class"] == "test-custom-ingress"
+
+
+@pytest.mark.auto_create_ns
 class TestIntegratedDomains:
     """Test cases for some combined situations"""
 
     def test_assign_custom_hosts_affects_no_independent_domains(self, bk_stag_wl_app):
         AppDomain.objects.create(
             app=bk_stag_wl_app,
-            region=bk_stag_wl_app.region,
+            tenant_id=bk_stag_wl_app.tenant_id,
             host="foo-independent.com",
             source=AppDomainSource.INDEPENDENT,
         )
@@ -318,7 +336,7 @@ class TestIngressDomainFactory:
         domain = factory.create(domain_with_cert, raise_on_no_cert=False)
         assert domain.tls_enabled is False
 
-    @pytest.mark.auto_create_ns()
+    @pytest.mark.auto_create_ns
     @pytest.mark.parametrize(
         ("cert_type", "expected_cert_name"),
         [(AppDomainCert, "eng-normal-test"), (AppDomainSharedCert, "eng-shared-test")],

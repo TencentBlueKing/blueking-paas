@@ -57,6 +57,14 @@ const (
 	EnvironmentKey = "bkapp.paas.bk.tencent.com/environment"
 	// WlAppNameKey 注解中存储当前 EngineApp 名称的键名
 	WlAppNameKey = "bkapp.paas.bk.tencent.com/wl-app-name"
+	// BkAppTenantIDKey 注解中存储应用租户 ID 的键名
+	BkAppTenantIDKey = "bkapp.paas.bk.tencent.com/app-tenant-id"
+
+	// ProcServicesFeatureEnabledAnnoKey 注解表示是否启用 process services 特性, 可选值为 "true" 或 "false".
+	// true 表示启用; false 或未设置该注解值, 表示不启用, 仍按旧的隐式调和逻辑处理 service, 即为每个 process 默认
+	// 创建并关联一个 service.
+	// 说明: 未设置该注解值的 BkApp 均是线上存量资源, 为了兼容, 继续按照旧逻辑调和.
+	ProcServicesFeatureEnabledAnnoKey = "bkapp.paas.bk.tencent.com/proc-services-feature-enabled"
 
 	// LegacyProcImageAnnoKey, In API version "v1alpha1", every process can use a different image.
 	// This behaviour was changed in "v1alpha2", but we still need to save the legacy images configs
@@ -67,6 +75,11 @@ const (
 	// memory resources. This behaviour was changed in "v1alpha2", but we still need to save the
 	// legacy resource configs in annotations to maintain backward compatibility.
 	LegacyProcResAnnoKey = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
+
+	// EgressClusterStateNameAnnoKey 注解中存储 Egress 相关配置的键名
+	// 在集群中，作为出口 ip 的节点被打上了 {EgressClusterStateNameAnnoKey:"1"} 的标签
+	// 并且通过 nodeSelector 将开启了出口 ip 功能的应用调度到相应（拥有该标签）的节点
+	EgressClusterStateNameAnnoKey = "bkapp.paas.bk.tencent.com/egress-cluster-state-name"
 )
 
 // 日志采集相关信息
@@ -88,6 +101,8 @@ const (
 	ProcessNameKey = "bkapp.paas.bk.tencent.com/process-name"
 	// AccessControlAnnoKey 注解中存储当前应用是否启用白名单功能的键名
 	AccessControlAnnoKey = "bkapp.paas.bk.tencent.com/access-control"
+	// TenantGuardAnnoKey 注解中存储当前应用是否启用租户门卫的键名
+	TenantGuardAnnoKey = "bkapp.paas.bk.tencent.com/tenant-guard"
 	// ImageCredentialsRefAnnoKey 注解中存储镜像凭证引用的键名
 	ImageCredentialsRefAnnoKey = "bkapp.paas.bk.tencent.com/image-credentials"
 	// DeployIDAnnoKey 注解中存储 bkpaas 部署ID的键名
@@ -100,6 +115,7 @@ const (
 	// ResourceTypeKey 注解中存储资源类型的键名
 	ResourceTypeKey = "bkapp.paas.bk.tencent.com/resource-type"
 	// UseCNBAnnoKey 注解中声明镜像类型是否 cnb 的键名
+	// Deprecated: 新部署的 bkapp 模型已不再包含该字段, 保留仅用于兼容存量模型
 	UseCNBAnnoKey = "bkapp.paas.bk.tencent.com/use-cnb"
 	// IngressClassAnnoKey 通过该注解绑定 ingress 的控制器
 	IngressClassAnnoKey = "kubernetes.io/ingress.class"
@@ -107,6 +123,8 @@ const (
 	DeploySkipUpdateAnnoKey = "bkapp.paas.bk.tencent.com/deployment-skip-update"
 	// LastSyncedSerializedBkAppAnnoKey 注解保存上一次用于同步 workloads 资源的序列化过的 BkApp 内容
 	LastSyncedSerializedBkAppAnnoKey = "bkapp.paas.bk.tencent.com/last-synced-serialized-bkapp"
+	// LastDeployStatusAnnoKey 注解保存上一次的部署状态
+	LastDeployStatusAnnoKey = "bkapp.paas.bk.tencent.com/last-deploy-status"
 )
 
 const (

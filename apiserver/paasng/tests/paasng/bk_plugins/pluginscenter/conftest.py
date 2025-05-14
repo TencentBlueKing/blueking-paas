@@ -1,31 +1,36 @@
 # -*- coding: utf-8 -*-
-"""
-TencentBlueKing is pleased to support the open source community by making
-蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
-Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
-Licensed under the MIT License (the "License"); you may not use this file except
-in compliance with the License. You may obtain a copy of the License at
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
 
-    http://opensource.org/licenses/MIT
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the License for the specific language governing permissions and
-limitations under the License.
-
-We undertake not to change the open source license (MIT license) applicable
-to the current version of the project delivered to anyone in the future.
-"""
 import string
 from unittest import mock
 
 import pytest
 from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
 from django.conf import settings
+from django.test.utils import override_settings
 from django_dynamic_fixture import G
 from translated_fields import to_attribute
 
-from paasng.bk_plugins.pluginscenter.constants import MarketInfoStorageType, PluginReleaseMethod, PluginRole
+from paasng.bk_plugins.pluginscenter.constants import (
+    MarketInfoStorageType,
+    PluginReleaseMethod,
+    PluginRevisionType,
+    PluginRole,
+)
 from paasng.bk_plugins.pluginscenter.iam_adaptor.models import PluginGradeManager, PluginUserGroup
 from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.bk_plugins.pluginscenter.itsm_adaptor.constants import ApprovalServiceName
@@ -38,10 +43,9 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginMarketInfoDefinition,
     PluginRelease,
     PluginReleaseStage,
+    PluginReleaseStrategy,
     PluginVisibleRangeDefinition,
 )
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
-from paasng.infras.accounts.models import AccountFeatureFlag
 from tests.utils.helpers import generate_random_string
 
 
@@ -64,9 +68,11 @@ def pd():
                 "create": make_api_resource("create-release"),
                 "update": make_api_resource("update-release-{ version_id }"),
             },
-            "gradualReleaseStrategy": ["bkciProject", "organization"],
         },
-        release_stages=[{"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"}],
+        release_stages=[
+            {"id": "online_approval", "name": "上线审批", "invokeMethod": "itsm"},
+            {"id": "test", "name": "在线测试", "invokeMethod": "subpage"},
+        ],
         test_release_revision={
             "revisionType": "all",
             "versionNo": "branch-timestamp",
@@ -142,8 +148,7 @@ def pd():
     pd.visible_range_definition = G(
         PluginVisibleRangeDefinition,
         pd=pd,
-        description_zh_cn="仅可见范围内的组织、用户可在研发商店查看并使用该插件",
-        scope=["organization", "bkciProject"],
+        initial=[{"name": "总公司", "id": "1", "type": "department"}],
     )
 
     pd.config_definition = G(
@@ -211,6 +216,12 @@ def release(plugin):
 
 
 @pytest.fixture()
+def subpage_stage(release):
+    stage = PluginReleaseStage.objects.filter(release=release, invoke_method="subpage").first()
+    return stage
+
+
+@pytest.fixture()
 def itsm_online_stage(release):
     stage = PluginReleaseStage.objects.filter(
         release=release, invoke_method="itsm", stage_id="online_approval", release__type="prod"
@@ -221,6 +232,22 @@ def itsm_online_stage(release):
 @pytest.fixture()
 def online_approval_service():
     svc: ApprovalService = G(ApprovalService, service_name=ApprovalServiceName.ONLINE_APPROVAL.value, service_id=1)
+    return svc
+
+
+@pytest.fixture()
+def visible_range_approval_service():
+    svc: ApprovalService = G(
+        ApprovalService, service_name=ApprovalServiceName.VISIBLE_RANGE_APPROVAL.value, service_id=3
+    )
+    return svc
+
+
+@pytest.fixture()
+def gray_release_approval_service():
+    svc: ApprovalService = G(
+        ApprovalService, service_name=ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL.value, service_id=4
+    )
     return svc
 
 
@@ -243,8 +270,9 @@ def iam_policy_client():
 
 
 @pytest.fixture()
-def _setup_bk_user(bk_user):
-    AccountFeatureFlag.objects.set_feature(bk_user, AFF.ALLOW_PLUGIN_CENTER, True)
+def _enable_plugin_center():
+    with override_settings(IS_ALLOW_PLUGIN_CENTER=True):
+        yield
 
 
 @pytest.fixture()
@@ -269,3 +297,28 @@ def itsm_test_stage(release):
         release=release, invoke_method="itsm", stage_id="test_approval", release__type="test"
     ).first()
     return stage
+
+
+@pytest.fixture()
+def release_strategy(plugin, bk_user):
+    plugin.pd.release_revision.revisionType = PluginRevisionType.TESTED_VERSION
+    plugin.pd.save()
+    release: PluginRelease = G(
+        PluginRelease,
+        plugin=plugin,
+        source_location=plugin.repository,
+        type="prod",
+        source_version_type="tested_version",
+        source_version_name="test-master",
+        version="0.0.1",
+        comment="",
+        creator=bk_user,
+    )
+    release.initial_stage_set()
+    release_strategy = PluginReleaseStrategy.objects.create(
+        release=release,
+        strategy="gray",
+        bkci_project=["test1", "test2"],
+        organization=[{"display_name": "admin", "type": "user", "id": 1, "name": "admin"}],
+    )
+    return release_strategy

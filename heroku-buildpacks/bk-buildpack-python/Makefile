@@ -56,18 +56,12 @@ update: unpatch ## 更新 buildpack
 .PHONY: patch
 patch: 
 	patch buildpack/bin/compile patches/buildpack/bin/compile.patch
-	patch buildpack/bin/steps/python patches/buildpack/bin/steps/python.patch
-	patch buildpack/bin/steps/collectstatic patches/buildpack/bin/steps/collectstatic.patch
-	patch buildpack/bin/steps/pip-install patches/buildpack/bin/steps/pip-install.patch
 	rsync -a --delete ./hooks buildpack/
 
 
 .PHONY: unpatch
 unpatch:
 	patch -R buildpack/bin/compile patches/buildpack/bin/compile.patch
-	patch -R buildpack/bin/steps/python patches/buildpack/bin/steps/python.patch
-	patch -R buildpack/bin/steps/collectstatic patches/buildpack/bin/steps/collectstatic.patch
-	patch -R buildpack/bin/steps/pip-install patches/buildpack/bin/steps/pip-install.patch
 	rm -r buildpack/hooks
 
 

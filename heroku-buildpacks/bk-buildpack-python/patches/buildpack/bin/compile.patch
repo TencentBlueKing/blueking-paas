@@ -10,12 +10,12 @@
 > fi
 > 
 > # -- Added by blueking builder-stack --
-> source ${ROOT_DIR}/hooks/setup-user-compile-hook
+> source ${BUILDPACK_DIR}/hooks/setup-user-compile-hook
 166a179,181
 > # -- Added by blueking builder-stack --
-> source ${ROOT_DIR}/hooks/pre-install
+> source ${BUILDPACK_DIR}/hooks/pre-install
 > 
 298a314,316
 > # -- Added by blueking builder-stack --
-> source ${ROOT_DIR}/hooks/post-install
+> source ${BUILDPACK_DIR}/hooks/post-install
 > 

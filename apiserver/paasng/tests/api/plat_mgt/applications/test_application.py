@@ -209,7 +209,22 @@ class TestApplicationDetailView:
         register_app_core_data(sender=None, application=bk_app)
         return bk_app
 
-    def test_get_app_detail(self, app_with_market_product, plat_mgt_api_client):
+    @pytest.fixture()
+    def setup_wl_apps(self, app_with_market_product):
+        """为应用的所有环境创建 WlApp 对象"""
+        created_apps = []
+        for module in app_with_market_product.modules.all():
+            for env in module.envs.all():
+                app, created = WlApp.objects.get_or_create(name=env.engine_app.name)
+                if created:
+                    created_apps.append(app)
+
+        yield
+
+        for app in created_apps:
+            app.delete()
+
+    def test_get_app_detail(self, app_with_market_product, setup_wl_apps, plat_mgt_api_client):
         """测试获取应用详情"""
 
         url = reverse("plat_mgt.applications.retrieve_app_name", kwargs={"app_code": app_with_market_product.code})

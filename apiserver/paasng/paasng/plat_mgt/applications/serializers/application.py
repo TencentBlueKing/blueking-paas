@@ -15,15 +15,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+
 from typing import Optional
 
+from bkpaas_auth.models import user_id_encoder
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from paas_wl.infras.cluster.shim import EnvClusterService
+from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import UpdateApplicationSLZ
+from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
@@ -146,10 +151,18 @@ class ApplicationEnvironmentSLZ(serializers.Serializer):
     """应用环境序列化器"""
 
     name = serializers.CharField(source="environment", read_only=True, help_text="环境名称")
-    is_offlined = serializers.BooleanField(read_only=True, help_text="环境状态")
-
+    is_deployed = serializers.SerializerMethodField(help_text="是否已部署", read_only=True)
+    exposed_url = serializers.SerializerMethodField(help_text="访问链接, 未部署时为 None", read_only=True)
     deploy_cluster = serializers.SerializerMethodField(help_text="部署集群")
     recent_operation = serializers.SerializerMethodField(help_text="最近操作")
+
+    def get_is_deployed(self, env) -> bool:
+        """获取环境是否已部署"""
+        return env_is_deployed(env)
+
+    def get_exposed_url(self, env) -> Optional[str]:
+        exposed_link = get_exposed_url(env)
+        return exposed_link.address if exposed_link else None
 
     def get_deploy_cluster(self, env) -> str:
         """获取集群名称"""
@@ -160,17 +173,20 @@ class ApplicationEnvironmentSLZ(serializers.Serializer):
         else:
             return cluster.name
 
-    def get_recent_operation(self, env) -> Optional[dict]:
+    def get_recent_operation(self, env) -> Optional[str]:
         """获取最近操作"""
         last_op = ModuleEnvironmentOperations.objects.filter(app_environment=env).order_by("-created").first()
         if not last_op:
             return None
-        return {
-            "operator": last_op.operator,
-            "updated": last_op.created,
-            "operation_type": last_op.operation_type,
-            "status": last_op.status,
-        }
+        decoded_user = user_id_encoder.decode(last_op.operator)
+        operator = decoded_user[1] if isinstance(decoded_user, tuple) else str(decoded_user)
+        updated = last_op.created.strftime("%Y-%m-%d %H:%M:%S")
+        operation_type = OperationTypes.get_choice_label(last_op.operation_type)
+        status = JobStatus.get_choice_label(last_op.status)
+
+        return _("{operator}于{time}{operation}{status}").format(
+            operator=operator, time=updated, operation=operation_type, status=status
+        )
 
 
 class ApplicationModuleSLZ(serializers.Serializer):

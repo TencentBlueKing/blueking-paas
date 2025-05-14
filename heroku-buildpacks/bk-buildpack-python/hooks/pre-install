@@ -14,14 +14,14 @@ if [ -f runtime.txt ]; then
 fi
 
 # 移除不需要的步骤
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/mercurial"
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/pylibmc"
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/cryptography"
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/geo-libs"
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/gdal"
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/mercurial"
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/pylibmc"
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/cryptography"
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/geo-libs"
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/gdal"
 
 # 对目录 /var/cache/apt/archives/partial/ 无权限会安装失败
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/sqlite3"
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/sqlite3"
 buildpack_sqlite3_install(){
     mkdir -p "${CACHE_DIR}/.heroku"
     echo "" > "${CACHE_DIR}/.heroku/python-sqlite3-version"

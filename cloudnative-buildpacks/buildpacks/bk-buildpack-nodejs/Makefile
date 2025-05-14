@@ -13,7 +13,7 @@ package: package-heroku-buildpack  ## package the buildpack
 
 .PHONY: package-heroku-buildpack
 package-heroku-buildpack: init-submodule  ## package heroku buildpack
-	cd target && make pack version=v163
+	cd target && make pack version=$(VERSION)
 
 
 .PHONY: init-submodule

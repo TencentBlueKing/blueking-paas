@@ -24,7 +24,7 @@ version = "5.6.1"
 [[buildpacks]]
 uri = "../../buildpacks/bk-buildpack-python/cnb-buildpack"
 id = "bk-buildpack-python"
-version = "v213"
+version = "v285"
 
 [[buildpacks]]
 uri = "../../buildpacks/bk-buildpack-nodejs/cnb-buildpack"
@@ -34,52 +34,47 @@ version = "v163"
 [[buildpacks]]
 uri = "../../buildpacks/bk-buildpack-go/cnb-buildpack"
 id = "bk-buildpack-go"
-version = "v205"
-
+version = "v206"
 
 [[buildpacks]]
 uri = "../../buildpacks/bk-buildpack-apt/cnb-buildpack"
 id = "bk-buildpack-apt"
 version = "v2"
 
+
 [lifecycle]
 uri = "https://bkpaas-runtimes-1252002024.cos.ap-shanghai.myqcloud.com/buildpacks/lifecycle-v0.17.6%2Bblueking.linux.x86-64.tgz"
+
 
 [[order]]
 [[order.group]]
 id = "bk-buildpack-apt"
 version = "v2"
 
-
 [[order]]
 [[order.group]]
 id = "paketo-buildpacks/go"
 version = "4.3.3"
 
-
 [[order]]
 [[order.group]]
 id = "bk-buildpack-python"
-version = "v213"
-
+version = "v285"
 
 [[order]]
 [[order.group]]
 id = "bk-buildpack-nodejs"
 version = "v163"
 
-
 [[order]]
 [[order.group]]
 id = "bk-buildpack-go"
-version = "v205"
-
+version = "v206"
 
 [[order]]
 [[order.group]]
 id = "paketo-buildpacks/java-native-image"
 version = "8.3.0"
-
 
 [[order]]
 [[order.group]]
@@ -90,7 +85,6 @@ version = "9.4.0"
 [[order.group]]
 id = "paketo-buildpacks/nodejs"
 version = "1.6.0"
-
 
 [[order]]
 [[order.group]]

@@ -2,7 +2,7 @@ api = "0.4"
 
 [buildpack]
   id = "bk-buildpack-python"
-  version = "v213"
+  version = "v285"
   name = "bk-buildpack-python"
 
 [[stacks]]

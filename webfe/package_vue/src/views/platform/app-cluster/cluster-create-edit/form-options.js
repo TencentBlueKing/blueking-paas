@@ -335,3 +335,45 @@ export const componentConfigOptions = [
     tips: '应用域名需要配置解析到集群的出口 IP',
   },
 ];
+
+// 镜像仓库配置信息
+export const mirrorRepositoryOptions = [
+  {
+    label: '镜像仓库域名',
+    type: 'input',
+    property: 'host',
+    required: true,
+    placeholder: '请输入镜像仓库的域名，如：mirrors.tencent.com',
+    rules: [...requiredRule],
+  },
+  {
+    label: '命名空间',
+    type: 'input',
+    property: 'namespace',
+    required: true,
+    placeholder: '请输入命名空间，如：bkpaas/docker',
+    rules: [...requiredRule],
+  },
+  {
+    label: '用户名',
+    type: 'input',
+    property: 'username',
+    required: true,
+    rules: [...requiredRule],
+  },
+  {
+    label: '密码',
+    type: 'password',
+    property: 'password',
+    required: true,
+    rules: [...requiredRule],
+  },
+  {
+    label: '跳过证书验证',
+    type: 'switcher',
+    property: 'skip_tls_verify',
+    required: true,
+    rules: [...requiredRule],
+    tips: '如果镜像仓库的域名未配 HTTPS 证书时，需要开启该选项',
+  },
+];

@@ -270,4 +270,12 @@ export default {
   '请输入应用 ID，按 Enter 搜索': 'Please enter the application ID and press Enter to search',
   删除后: 'After deletion',
   '将无法再使用平台管理相关功能。': 'will no longer be able to use platform management-related features.',
+  镜像仓库域名: 'Image Repository Domain',
+  跳过证书验证: 'Skip Certificate Verification',
+  使用独立镜像仓库: 'Use Independent Image Repository',
+  应用构建时生成的镜像会推送到这里: 'Images generated during application build will be pushed here',
+  '不启用时，使用平台公共的镜像仓库': 'When not enabled, the platforms public image repository is used',
+  '如果镜像仓库的域名未配 HTTPS 证书时，需要开启该选项': 'Enable this option if the image repository domain is not configured with an HTTPS certificate',
+  '请输入镜像仓库的域名，如：mirrors.tencent.com': 'Please enter the domain of the image repository, e.g., mirrors.tencent.com',
+  '请输入命名空间，如：bkpaas/docker': 'Please enter the namespace, e.g., bkpaas/docker',
 };

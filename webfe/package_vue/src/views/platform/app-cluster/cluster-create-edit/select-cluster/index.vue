@@ -175,39 +175,120 @@
         </bk-form-item>
       </bk-form>
     </section>
+    <!-- 非必填折叠 -->
+    <section class="card-style setting">
+      <bk-collapse
+        v-model="activeNames"
+        ext-cls="setting-collapse-cls"
+      >
+        <bk-collapse-item name="elastic">
+          <div class="card-title">
+            <i
+              class="paasng-icon paasng-right-shape"
+              :class="{ expand: isExpanded }"
+            ></i>
+            <span>{{ $t('ElasticSearch 集群信息') }}</span>
+            <span class="sub-tip ml8">
+              {{ $t('用于采集应用日志，该配置将在后续安装 bkapp-log-collection 时会生效') }}
+            </span>
+          </div>
+          <div
+            style="margin-top: 18px"
+            slot="content"
+          >
+            <bk-form
+              :label-width="155"
+              :model="elasticSearchFormData"
+              ref="clusterInfoForm"
+              ext-cls="cluster-form-cls"
+            >
+              <bk-form-item
+                v-for="item in displayElasticSearchOptions"
+                :label="$t(item.label)"
+                :required="item.required"
+                :property="item.property"
+                :rules="item.rules"
+                :key="item.label"
+                :error-display-type="'normal'"
+              >
+                <ConfigInput
+                  v-if="['password', 'input'].includes(item.type)"
+                  v-model="elasticSearchFormData[item.property]"
+                  :type="item.type"
+                />
+                <ConfigSelect
+                  v-else-if="item.type === 'select'"
+                  v-model="elasticSearchFormData[item.property]"
+                  v-bind="item"
+                />
+              </bk-form-item>
+            </bk-form>
+          </div>
+        </bk-collapse-item>
+      </bk-collapse>
+    </section>
     <section class="card-style">
       <div class="card-title">
-        <span>{{ $t('ElasticSearch 集群信息') }}</span>
+        <span>{{ $t('镜像仓库') }}</span>
         <span class="sub-tip ml8">
-          {{ $t('用于采集应用日志，该配置将在后续安装 bkapp-log-collection 时会生效') }}
+          {{ $t('应用构建时生成的镜像会推送到这里') }}
         </span>
       </div>
       <bk-form
         :label-width="155"
-        :model="elasticSearchFormData"
-        ref="clusterInfoForm"
+        :model="mirrorRepositoryFormData"
+        ref="imageRepositoryRef"
         ext-cls="cluster-form-cls"
       >
+        <!-- image_repository 有值的时候才会展示  -->
         <bk-form-item
-          v-for="item in displayElasticSearchOptions"
-          :label="$t(item.label)"
-          :required="item.required"
-          :property="item.property"
-          :rules="item.rules"
-          :key="item.label"
+          v-if="defaultImageRepository"
+          :label="$t('使用独立镜像仓库')"
           :error-display-type="'normal'"
         >
-          <ConfigInput
-            v-if="['password', 'input'].includes(item.type)"
-            v-model="elasticSearchFormData[item.property]"
-            :type="item.type"
-          />
-          <ConfigSelect
-            v-else-if="item.type === 'select'"
-            v-model="elasticSearchFormData[item.property]"
-            v-bind="item"
-          />
+          <bk-switcher
+            v-model="isImageRepository"
+            theme="primary"
+          ></bk-switcher>
+          <p
+            slot="tip"
+            class="item-tips"
+            v-bk-overflow-tips
+          >
+            {{ `${$t('不启用时，使用平台公共的镜像仓库')}：${defaultImageRepository}` }}
+          </p>
         </bk-form-item>
+        <template v-if="isImageRepository">
+          <bk-form-item
+            v-for="item in displayMirrorRepositoryOptions"
+            :label="$t(item.label)"
+            :required="item.required"
+            :property="item.property"
+            :rules="item.rules"
+            :key="item.label"
+            :error-display-type="'normal'"
+          >
+            <ConfigInput
+              v-if="['password', 'input'].includes(item.type)"
+              v-model="mirrorRepositoryFormData[item.property]"
+              :type="item.type"
+              :placeholder="$t(item.placeholder)"
+            />
+            <bk-switcher
+              v-else
+              v-model="mirrorRepositoryFormData[item.property]"
+              theme="primary"
+            ></bk-switcher>
+            <p
+              v-if="item.tips"
+              slot="tip"
+              class="item-tips"
+              v-bk-overflow-tips
+            >
+              {{ $t(item.tips) }}
+            </p>
+          </bk-form-item>
+        </template>
       </bk-form>
     </section>
     <section class="card-style">
@@ -250,6 +331,7 @@ import {
   certOptions,
   elasticSearchOptions,
   availableTenantsOptions,
+  mirrorRepositoryOptions,
 } from '../form-options';
 import ConfigInput from '../comps/config-input.vue';
 import ConfigSelect from '../comps/config-select.vue';
@@ -329,14 +411,43 @@ export default {
       // 编辑态特殊处理
       specialPropertys: ['bcs_cluster_id', 'bcs_project_id'],
       editDisabledPropertys: ['name'],
+      activeNames: [],
+      // 镜像仓库数据
+      mirrorRepositoryFormData: {
+        host: '',
+        namespace: '',
+        username: '',
+        password: '',
+        skip_tls_verify: false,
+      },
+      // 使用独立镜像仓库
+      isImageRepository: true,
+      clusterDefaultConfigs: {},
     };
   },
   computed: {
+    ...mapState({
+      curUserInfo: (state) => state.curUserInfo,
+      platformFeature: (state) => state.platformFeature,
+    }),
     displayBcsOptions() {
       return this.queryClusterId ? this.updateRequiredFields(bcsOptions, ['token']) : bcsOptions;
     },
     displayElasticSearchOptions() {
-      return this.queryClusterId ? this.updateRequiredFields(elasticSearchOptions, ['password']) : elasticSearchOptions;
+      const options = this.queryClusterId
+        ? this.updateRequiredFields(elasticSearchOptions, ['password'])
+        : elasticSearchOptions;
+      if (this.platformFeature.BK_LOG) {
+        // BK_LOG 为 ture，form 为非必填
+        return options.map((item) => {
+          return {
+            ...item,
+            required: false,
+            rules: [],
+          };
+        });
+      }
+      return options;
     },
     displayK8sOptions() {
       return this.queryClusterId
@@ -360,15 +471,23 @@ export default {
     isEdit() {
       return this.$route.path.endsWith('/edit');
     },
-    ...mapState({
-      curUserInfo: (state) => state.curUserInfo,
-    }),
     // 存在id说明集群已经创建
     queryClusterId() {
       return this.$route.query?.id || '';
     },
     customAPIAddress() {
       return this.infoFormData.api_address_type === 'custom';
+    },
+    // 默认平台镜像仓库
+    defaultImageRepository() {
+      return this.clusterDefaultConfigs?.image_repository;
+    },
+    // 镜像仓库form配置
+    displayMirrorRepositoryOptions() {
+      return mirrorRepositoryOptions;
+    },
+    isExpanded() {
+      return this.activeNames.length > 0;
     },
   },
   watch: {
@@ -401,6 +520,7 @@ export default {
       this.infoFormData.container_log_dir = '/var/lib/docker/containers';
     }
     this.getClusterServerUrlTmpl();
+    this.getClusterDefaultConfigs();
   },
   methods: {
     // 去掉指定属性的必填属性
@@ -444,6 +564,10 @@ export default {
           this.$refs.clusterServices[0]?.setData(apiServers);
         }
       });
+      // 镜像仓库数据回填
+      if (data.app_image_registry !== null && Object.keys(data.app_image_registry)?.length) {
+        this.mirrorRepositoryFormData = { ...data.app_image_registry };
+      }
     },
     infoSelectChange(data) {
       // 设置业务值
@@ -459,6 +583,20 @@ export default {
         this.urlTmpl = ret.url_tmpl;
       } catch (e) {
         this.catchErrorHandler(e);
+      }
+    },
+    // 获取集群默认配置项
+    async getClusterDefaultConfigs() {
+      try {
+        const ret = await this.$store.dispatch('tenant/getClusterDefaultConfigs');
+        this.clusterDefaultConfigs = ret;
+        // mage_repository 不为空，默认关闭 “使用独立镜像仓库”
+        this.isImageRepository = !ret.image_repository;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        // 必填展开 ElasticSearch 集群信息
+        this.activeNames = this.platformFeature.BK_LOG ? [] : ['elastic'];
       }
     },
     formatBcsData() {
@@ -489,10 +627,10 @@ export default {
         data.api_servers = [this.infoFormData.api_servers];
       }
       // ElasticSearch 集群信息
-      const { password } = this.elasticSearchFormData;
       data.elastic_search_config = {
         ...this.elasticSearchFormData,
       };
+      data.app_image_registry = this.isImageRepository ? { ...this.mirrorRepositoryFormData } : null;
       return data;
     },
     // 格式化k8s集群数据
@@ -528,16 +666,19 @@ export default {
       // APIServers
       data.api_servers = this.$refs.apiServices[0]?.getData();
       // ElasticSearch 集群信息
-      const { password } = this.elasticSearchFormData;
       data.elastic_search_config = {
         ...this.elasticSearchFormData,
       };
+      data.app_image_registry = this.isImageRepository ? { ...this.mirrorRepositoryFormData } : null;
       return data;
     },
     // 表单校验
     formValidate() {
       // APIServers 组件校验
       let validateArr = [this.$refs.clusterInfoForm.validate(), this.$refs.tenantForm.validate()];
+      if (this.isImageRepository) {
+        validateArr.push(this.$refs.imageRepositoryRef.validate());
+      }
       if (this.isBcsCluster) {
         // bcs校验
         validateArr.unshift(this.$refs.bcsForm.validate());
@@ -573,6 +714,36 @@ export default {
     }
     /deep/ .bk-form-radio.border-tip .bk-radio-text span {
       border-bottom: 1px dashed;
+    }
+    &.setting {
+      margin-top: 16px;
+      .card-title {
+        margin-bottom: 0;
+        i {
+          font-size: 12px;
+          color: #4d4f56;
+          transition: all 0.2s;
+          margin-right: 6px;
+          transform: translateY(-1px);
+          &.expand {
+            transform: rotate(90deg) translateX(-1px);
+          }
+        }
+      }
+    }
+  }
+  .setting-collapse-cls {
+    /deep/ .bk-collapse-item {
+      .bk-collapse-item-header {
+        padding: 0;
+        height: auto !important;
+        .fr {
+          display: none;
+        }
+      }
+      .bk-collapse-item-content {
+        padding: 0 !important;
+      }
     }
   }
   .item-tips {

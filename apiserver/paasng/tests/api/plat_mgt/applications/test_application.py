@@ -260,7 +260,7 @@ class TestApplicationDetailView:
         """测试更新应用集群"""
 
         env = bk_app.get_default_module().envs.get(environment="prod")
-        WlApp.objects.create(name=env.engine_app.name)
+        wl_app = WlApp.objects.create(name=env.engine_app.name)
 
         url = reverse(
             "plat_mgt.applications.update_cluster",
@@ -271,9 +271,9 @@ class TestApplicationDetailView:
         assert rsp.status_code == 204
 
         # 验证集群是否更新成功
-        env.refresh_from_db()
-        assert env.wl_app.latest_config is not None, "latest_config is None"
-        assert env.wl_app.latest_config.cluster == "new-cluster"
+        wl_app.refresh_from_db()
+        assert wl_app.latest_config is not None, "latest_config is None"
+        assert wl_app.latest_config.cluster == "new-cluster"
 
     def test_list_clusters(self, plat_mgt_api_client, clusters):
         """测试获取应用集群列表"""

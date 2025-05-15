@@ -24,6 +24,7 @@ from attrs import define
 
 from paas_wl.infras.cluster.entities import PortMap
 from paas_wl.workloads.networking.entrance.constants import AddressType
+from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol
 
 default_port_map = PortMap()
 
@@ -37,6 +38,9 @@ class URL:
     query: str = ""
 
     def as_address(self):
+        if self.protocol.startswith(AppDomainProtocol.GRPC):
+            return f"{self.protocol}://{self.hostname}:{self.port}{self.path}"
+
         query = f"?{self.query}" if self.query else ""
         if default_port_map.get_port_num(self.protocol) == self.port:
             return f"{self.protocol}://{self.hostname}{self.path}{query}"

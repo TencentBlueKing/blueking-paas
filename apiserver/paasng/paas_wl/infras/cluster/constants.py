@@ -58,6 +58,8 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
     ENABLE_AUTOSCALING = FeatureFlagField(label=_("支持自动扩容"), default=False)
     # 支持通过 BCS Egress Operator 提供固定的出口 IP，推荐仅在虚拟集群中使用
     ENABLE_BCS_EGRESS = FeatureFlagField(label=_("支持 BCS Egress"), default=False)
+    # 集群配置了子域名, 并且子域名有证书，才能启用 gRPC Ingress
+    ENABLE_GRPC_INGRESS = FeatureFlagField(label=_("支持 gRPC Ingress"), default=False)
 
 
 class ClusterAnnotationKey(StrStructuredEnum):

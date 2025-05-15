@@ -41,5 +41,6 @@ class TestClusterDefaultConfigViewSet:
                 ClusterFeatureFlag.ENABLE_BK_LOG_COLLECTOR: False,
                 ClusterFeatureFlag.ENABLE_AUTOSCALING: False,
                 ClusterFeatureFlag.ENABLE_BCS_EGRESS: False,
+                ClusterFeatureFlag.ENABLE_GRPC_INGRESS: False,
             },
         }

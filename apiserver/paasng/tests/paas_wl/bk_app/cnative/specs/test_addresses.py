@@ -19,7 +19,7 @@ import pytest
 
 from paas_wl.bk_app.cnative.specs.addresses import AddrResourceManager, save_addresses, to_domain, to_shared_tls_domain
 from paas_wl.bk_app.cnative.specs.addresses import Domain as MappingDomain
-from paas_wl.workloads.networking.ingress.constants import AppDomainSource, AppSubpathSource
+from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol, AppDomainSource, AppSubpathSource
 from paas_wl.workloads.networking.ingress.models import AppDomain, AppDomainSharedCert, AppSubpath, Domain
 from paasng.platform.modules.constants import ExposedURLType
 from tests.utils.mocks.cluster import cluster_ingress_config
@@ -27,28 +27,41 @@ from tests.utils.mocks.cluster import cluster_ingress_config
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_save_addresses(bk_module, bk_prod_env, bk_prod_wl_app, settings):
-    settings.USE_LEGACY_SUB_PATH_PATTERN = False
-    bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
-    bk_module.save(update_fields=["exposed_url_type"])
-
-    assert AppDomain.objects.filter(app=bk_prod_wl_app).count() == 0
-    assert AppSubpath.objects.filter(app=bk_prod_wl_app).count() == 0
-
-    with cluster_ingress_config(
-        replaced_config={
-            "sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}],
-            "app_root_domains": [{"name": "bkapps.example.com"}, {"name": "bkapps.example2.com"}],
-        }
+class Test__save_addresses:
+    @pytest.mark.parametrize(
+        ("protocol", "expected_app_domain_count", "expected_sub_path_count"),
+        [(AppDomainProtocol.HTTP, 3 * 2, 3), (AppDomainProtocol.GRPC, 3 * 2, 0)],
+    )
+    def test(
+        self,
+        bk_module,
+        bk_prod_env,
+        bk_prod_wl_app,
+        settings,
+        protocol,
+        expected_app_domain_count,
+        expected_sub_path_count,
     ):
-        save_addresses(bk_prod_env)
-    # 不同长度的子域名
-    assert AppDomain.objects.filter(app=bk_prod_wl_app).count() == 3 * 2
-    # 不同长度的子路径, 即使配置了多个 sub_path_domains 都只会是 3 条记录
-    assert AppSubpath.objects.filter(app=bk_prod_wl_app).count() == 3
+        settings.USE_LEGACY_SUB_PATH_PATTERN = False
+        bk_module.exposed_url_type = ExposedURLType.SUBDOMAIN.value
+        bk_module.save(update_fields=["exposed_url_type"])
+
+        assert AppDomain.objects.filter(app=bk_prod_wl_app).count() == 0
+        assert AppSubpath.objects.filter(app=bk_prod_wl_app).count() == 0
+
+        with cluster_ingress_config(
+            replaced_config={
+                "sub_path_domains": [{"name": "sub.example.com"}, {"name": "sub.example.cn"}],
+                "app_root_domains": [{"name": "bkapps.example.com"}, {"name": "bkapps.example2.com"}],
+            }
+        ):
+            save_addresses(bk_prod_env, protocol)
+
+        assert AppDomain.objects.filter(app=bk_prod_wl_app).count() == expected_app_domain_count
+        assert AppSubpath.objects.filter(app=bk_prod_wl_app).count() == expected_sub_path_count
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestToDomain:
     @pytest.mark.parametrize(
         ("host", "https_enabled", "secret_name_has_value"),
@@ -82,7 +95,7 @@ class TestToDomain:
             assert domain.tlsSecretName is None
 
 
-@pytest.mark.auto_create_ns
+@pytest.mark.auto_create_ns()
 class TestToSharedTLSDomain:
     def test_normal(self, bk_stag_wl_app):
         d = MappingDomain(host="x-foo.example.com", pathPrefixList=["/"])

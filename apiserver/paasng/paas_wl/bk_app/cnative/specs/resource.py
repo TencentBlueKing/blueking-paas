@@ -24,7 +24,11 @@ from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.cnative.specs.addresses import AddrResourceManager, save_addresses
+from paas_wl.bk_app.cnative.specs.addresses import (
+    AddrResourceManager,
+    gen_domain_group_mapping_name,
+    save_addresses,
+)
 from paas_wl.bk_app.cnative.specs.constants import (
     ApiVersion,
     ConditionStatus,
@@ -32,7 +36,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     MResConditionType,
     MResPhaseType,
 )
-from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, MetaV1Condition
+from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource, ExposedType, MetaV1Condition
 from paas_wl.bk_app.cnative.specs.credentials import ImageCredentialsManager
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.cluster.shim import EnvClusterService
@@ -42,6 +46,7 @@ from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.images.kres_entities import ImageCredentials
 from paas_wl.workloads.networking.constants import ExposedTypeName
+from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol
 from paasng.platform.applications.models import Application, ModuleEnvironment
 
 logger = logging.getLogger(__name__)
@@ -116,15 +121,20 @@ def sync_networking(env: ModuleEnvironment, res: BkAppResource) -> None:
     """Sync the networking related resources for env, such as Ingress etc."""
 
     if _need_exposed_services(res):
-        deploy_networking(env)
+        exposed_type = _find_exposed_type(res)
+        assert exposed_type is not None, "exposed type should not be None when need exposed services"
+        protocol = AppDomainProtocol.HTTP if exposed_type.name == ExposedTypeName.BK_HTTP else ExposedTypeName.BK_GRPC
+        deploy_networking(env, protocol=protocol)
     else:
         delete_networking(env)
 
 
-def deploy_networking(env: ModuleEnvironment) -> None:
+def deploy_networking(env: ModuleEnvironment, protocol: str = AppDomainProtocol.HTTP) -> None:
     """Deploy the networking related resources for env, such as Ingress etc."""
-    save_addresses(env)
+
+    save_addresses(env, protocol)
     mapping = AddrResourceManager(env).build_mapping()
+
     wl_app = WlApp.objects.get(pk=env.engine_app_id)
     with get_client_by_app(wl_app) as client:
         # 需要指定 api_version, 因为 DomainGroupMapping 只有 v1alpha1 版本
@@ -150,12 +160,11 @@ def delete_bkapp(env: ModuleEnvironment):
 
 def delete_networking(env: ModuleEnvironment):
     """Delete network group mapping in cluster"""
-    mapping = AddrResourceManager(env).build_mapping()
     wl_app = env.wl_app
     with get_client_by_app(wl_app) as client:
         # 需要指定 api_version, 因为 DomainGroupMapping 只有 v1alpha1 版本
         crd.DomainGroupMapping(client, api_version=ApiVersion.V1ALPHA1).delete(
-            mapping.metadata.name, namespace=wl_app.namespace
+            gen_domain_group_mapping_name(wl_app), namespace=wl_app.namespace
         )
 
 
@@ -224,14 +233,25 @@ def list_mres_by_env(application: Application, environment: str) -> list[BkAppRe
     return res_list
 
 
+def is_exposed_grpc_svc(res: BkAppResource) -> bool:
+    exposed_type = _find_exposed_type(res)
+    return bool(exposed_type and exposed_type.name == ExposedTypeName.BK_GRPC)
+
+
 def _need_exposed_services(res: BkAppResource) -> bool:
     """
     _need_exposed_services checks if the bkapp needs to expose services outside the cluster
     """
-    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: true 时, 设置了 exposedType 为 bk/http 才需要向集群外暴露服务
+    # bkapp.paas.bk.tencent.com/proc-services-feature-enabled: true 时, 设置了 exposedType 为 bk/http 或 bk/grpc 才需要向集群外暴露服务
+    exposed_type = _find_exposed_type(res)
+    return bool(exposed_type and exposed_type.name in [ExposedTypeName.BK_HTTP, ExposedTypeName.BK_GRPC])
+
+
+def _find_exposed_type(res: BkAppResource) -> ExposedType | None:
+    """find exposed type from bkapp resource"""
     for proc in res.spec.processes:
         for svc in proc.services or []:
-            if svc.exposedType and svc.exposedType.name == ExposedTypeName.BK_HTTP:
-                return True
+            if svc.exposedType:
+                return svc.exposedType
 
-    return False
+    return None

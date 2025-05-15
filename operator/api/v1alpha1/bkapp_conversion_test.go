@@ -53,7 +53,7 @@ var _ = Describe("test conversion back and forth", func() {
 							{
 								Name:        "web",
 								Protocol:    corev1.ProtocolTCP,
-								ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+								ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHTTP},
 								TargetPort:  5000,
 								Port:        80,
 							},
@@ -213,7 +213,7 @@ var _ = Describe("test conversion back and forth", func() {
 							{
 								Name:        "web",
 								Protocol:    corev1.ProtocolTCP,
-								ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+								ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHTTP},
 								TargetPort:  5000,
 								Port:        80,
 							},

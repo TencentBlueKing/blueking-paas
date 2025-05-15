@@ -16,7 +16,7 @@ variable "APT_SOURCES" {
 
 variable "BASE_PACKAGES" {
   default = <<EOF
-  libssl-dev libc6-dev default-libmysqlclient-dev
+  libssl-dev libc6-dev default-libmysqlclient-dev git
   EOF
 }
 

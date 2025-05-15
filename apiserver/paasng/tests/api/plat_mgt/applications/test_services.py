@@ -47,12 +47,13 @@ def services_obj(db):
     """创建两个本地增强服务"""
     # 创建服务分类
     category = ServiceCategory.objects.create(name_en="test_category")
-    temp_logo = SimpleUploadedFile("test_logo.png", b"\x00\x01\x02\x03", content_type="image/png")
+    temp_logo1 = SimpleUploadedFile("test_logo.png", b"\x00\x01\x02\x03", content_type="image/png")
+    temp_logo2 = SimpleUploadedFile("test_logo.png", b"\x00\x01\x02\x03", content_type="image/png")
 
     # 创建两个服务
     service1 = Service.objects.create(
         name="test_service1",
-        logo=temp_logo,
+        logo=temp_logo1,
         category=category,
         config={"provider_name": "mysql"},
         is_active=True,
@@ -61,7 +62,7 @@ def services_obj(db):
 
     service2 = Service.objects.create(
         name="test_service2",
-        logo=temp_logo,
+        logo=temp_logo2,
         category=category,
         config={"provider_name": "redis"},
         is_active=True,

@@ -78,4 +78,25 @@ urlpatterns = [
         views.ApplicationMemberViewSet.as_view({"get": "get_roles"}),
         name="plat_mgt.applications.members.get_roles",
     ),
+    # 平台管理 - 增强服务
+    re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/services/$",
+        views.ApplicationAddonServicesViewSet.as_view({"get": "list"}),
+        name="plat_mgt.applications.services",
+    ),
+    re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/services/(?P<service_id>[^/]+)/envs/(?P<env_name>[^/]+)/$",
+        views.ApplicationAddonServicesViewSet.as_view({"post": "assign_instance"}),
+        name="plat_mgt.applications.services.assign_instance",
+    ),
+    re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/services/(?P<service_id>[^/]+)/envs/(?P<env_name>[^/]+)/instances/(?P<instance_id>[^/]+)/$",
+        views.ApplicationAddonServicesViewSet.as_view({"delete": "delete_instance"}),
+        name="plat_mgt.applications.services.delete_instance",
+    ),
+    re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/services/(?P<service_id>[^/]+)/envs/(?P<env_name>[^/]+)/instances/(?P<instance_id>[^/]+)/credential/$",
+        views.ApplicationAddonServicesViewSet.as_view({"get": "view_credentials"}),
+        name="plat_mgt.applications.services.view_credentials",
+    ),
 ]

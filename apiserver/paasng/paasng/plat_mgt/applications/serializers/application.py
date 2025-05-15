@@ -18,7 +18,6 @@
 
 from typing import Optional
 
-from bkpaas_auth.models import user_id_encoder
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -173,20 +172,18 @@ class ApplicationEnvironmentSLZ(serializers.Serializer):
         else:
             return cluster.name
 
-    def get_recent_operation(self, env) -> Optional[str]:
+    def get_recent_operation(self, env) -> Optional[dict]:
         """获取最近操作"""
         last_op = ModuleEnvironmentOperations.objects.filter(app_environment=env).order_by("-created").first()
         if not last_op:
             return None
-        decoded_user = user_id_encoder.decode(last_op.operator)
-        operator = decoded_user[1] if isinstance(decoded_user, tuple) else str(decoded_user)
+        operator = last_op.operator.username
         updated = last_op.created.strftime("%Y-%m-%d %H:%M:%S")
         operation_type = OperationTypes.get_choice_label(last_op.operation_type)
         status = JobStatus.get_choice_label(last_op.status)
+        message = _("于{time}{operation}{status}").format(time=updated, operation=operation_type, status=status)
 
-        return _("{operator}于{time}{operation}{status}").format(
-            operator=operator, time=updated, operation=operation_type, status=status
-        )
+        return {"operator": operator, "message": message}
 
 
 class ApplicationModuleSLZ(serializers.Serializer):

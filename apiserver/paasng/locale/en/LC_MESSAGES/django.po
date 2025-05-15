@@ -2322,8 +2322,8 @@ msgstr "No valid configuration information is available."
 
 #: paasng/plat_mgt/applications/serializers/application.py:184
 #, python-brace-format
-msgid "{operator}于{time}{operation}{status}"
-msgstr "{operator} {operation} {status} at {time}"
+msgid "于{time}{operation}{status}"
+msgstr " {operation} {status} at {time}"
 
 #: paasng/plat_mgt/infras/clusters/serializers/clusters.py:341
 msgid "BCS 集群必须提供项目，集群，业务信息"

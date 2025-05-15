@@ -518,9 +518,9 @@ export default {
       const { tenantId } = this.curUserInfo;
       tenantId && this.infoFormData.available_tenant_ids.push(tenantId);
       this.infoFormData.container_log_dir = '/var/lib/docker/containers';
+      this.getClusterDefaultConfigs();
     }
     this.getClusterServerUrlTmpl();
-    this.getClusterDefaultConfigs();
   },
   methods: {
     // 去掉指定属性的必填属性
@@ -549,7 +549,7 @@ export default {
       // ElasticSearch 集群信息
       this.elasticSearchFormData = {
         ...this.elasticSearchFormData,
-        ...data.elastic_search_config,
+        ...(data.elastic_search_config || {}),
       };
       // k8s APIServers 数据（数组）
       this.$set(this.infoFormData, 'api_servers_list', data.api_servers);
@@ -568,6 +568,7 @@ export default {
       if (data.app_image_registry !== null && Object.keys(data.app_image_registry)?.length) {
         this.mirrorRepositoryFormData = { ...data.app_image_registry };
       }
+      this.getClusterDefaultConfigs();
     },
     infoSelectChange(data) {
       // 设置业务值
@@ -590,14 +591,22 @@ export default {
       try {
         const ret = await this.$store.dispatch('tenant/getClusterDefaultConfigs');
         this.clusterDefaultConfigs = ret;
-        // mage_repository 不为空，默认关闭 “使用独立镜像仓库”
-        this.isImageRepository = !ret.image_repository;
+        if (this.isEdit) {
+          // 编辑状态，app_image_registry 有值直接显示镜像仓库表单
+          this.isImageRepository = this.clusterData.app_image_registry !== null || !this.defaultImageRepository;
+        } else {
+          this.isImageRepository = !ret.image_repository;
+        }
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
         // 必填展开 ElasticSearch 集群信息
         this.activeNames = this.platformFeature.BK_LOG ? [] : ['elastic'];
       }
+    },
+    // 检查每个字段是否为 ''
+    areAllFieldsEmptyString(obj) {
+      return Object.values(obj).every((value) => value === '');
     },
     formatBcsData() {
       let data = pick(this.infoFormData, [
@@ -626,10 +635,9 @@ export default {
       } else {
         data.api_servers = [this.infoFormData.api_servers];
       }
-      // ElasticSearch 集群信息
-      data.elastic_search_config = {
-        ...this.elasticSearchFormData,
-      };
+      // ElasticSearch 集群信息（非必填、并且无填写时传递null）
+      const isEmpty = this.areAllFieldsEmptyString(this.elasticSearchFormData);
+      data.elastic_search_config = this.platformFeature.BK_LOG && isEmpty ? null : { ...this.elasticSearchFormData };
       data.app_image_registry = this.isImageRepository ? { ...this.mirrorRepositoryFormData } : null;
       return data;
     },
@@ -666,9 +674,8 @@ export default {
       // APIServers
       data.api_servers = this.$refs.apiServices[0]?.getData();
       // ElasticSearch 集群信息
-      data.elastic_search_config = {
-        ...this.elasticSearchFormData,
-      };
+      const isEmpty = this.areAllFieldsEmptyString(this.elasticSearchFormData);
+      data.elastic_search_config = this.platformFeature.BK_LOG && isEmpty ? null : { ...this.elasticSearchFormData };
       data.app_image_registry = this.isImageRepository ? { ...this.mirrorRepositoryFormData } : null;
       return data;
     },

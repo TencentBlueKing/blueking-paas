@@ -278,4 +278,5 @@ export default {
   '如果镜像仓库的域名未配 HTTPS 证书时，需要开启该选项': '如果镜像仓库的域名未配 HTTPS 证书时，需要开启该选项',
   '请输入镜像仓库的域名，如：mirrors.tencent.com': '请输入镜像仓库的域名，如：mirrors.tencent.com',
   '请输入命名空间，如：bkpaas/docker': '请输入命名空间，如：bkpaas/docker',
+  使用平台公共的镜像仓库: '使用平台公共的镜像仓库',
 };

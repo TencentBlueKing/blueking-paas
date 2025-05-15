@@ -278,4 +278,5 @@ export default {
   '如果镜像仓库的域名未配 HTTPS 证书时，需要开启该选项': 'Enable this option if the image repository domain is not configured with an HTTPS certificate',
   '请输入镜像仓库的域名，如：mirrors.tencent.com': 'Please enter the domain of the image repository, e.g., mirrors.tencent.com',
   '请输入命名空间，如：bkpaas/docker': 'Please enter the namespace, e.g., bkpaas/docker',
+  使用平台公共的镜像仓库: 'Use Platform Public Image Repository',
 };

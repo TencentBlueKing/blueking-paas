@@ -87,6 +87,7 @@
               <component
                 :is="tabActive"
                 :data="curDetailData"
+                :default-config="clusterDefaultConfigs"
               />
             </keep-alive>
           </div>
@@ -132,6 +133,7 @@ export default {
       contentLoading: false,
       tenantList: [],
       curDetailData: {},
+      clusterDefaultConfigs: {},
     };
   },
   computed: {
@@ -159,6 +161,7 @@ export default {
   methods: {
     init() {
       this.getClusterList();
+      this.getClusterDefaultConfigs();
     },
     switchDetails(name) {
       this.activeName = name || '';
@@ -202,6 +205,15 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.contentLoading = false;
+      }
+    },
+    // 获取集群默认配置项
+    async getClusterDefaultConfigs() {
+      try {
+        const ret = await this.$store.dispatch('tenant/getClusterDefaultConfigs');
+        this.clusterDefaultConfigs = ret;
+      } catch (e) {
+        this.catchErrorHandler(e);
       }
     },
   },

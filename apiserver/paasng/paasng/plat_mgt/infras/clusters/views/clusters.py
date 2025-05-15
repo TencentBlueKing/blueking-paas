@@ -258,7 +258,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
                 )
             else:
                 # es_cfg 为空意味走日志平台采集方案，不再需要保留 ClusterElasticSearchConfig
-                ClusterElasticSearchConfig.objects.filter(cluster=cluster).delete()
+                ClusterElasticSearchConfig.objects.filter(cluster=cluster, tenant_id=cluster.tenant_id).delete()
 
             # 集群 App 镜像仓库配置
             if image_registry := data.get("app_image_registry"):
@@ -267,7 +267,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
                 )
             else:
                 # image_registry 为空意味着使用默认镜像仓库，不再需要保留 ClusterAppImageRegistry
-                ClusterAppImageRegistry.objects.filter(cluster=cluster).delete()
+                ClusterAppImageRegistry.objects.filter(cluster=cluster, tenant_id=cluster.tenant_id).delete()
 
         # 更新集群后，需要根据变更的信息，决定是否刷新配置池
         if auth_cfg_modified or api_servers_modified:

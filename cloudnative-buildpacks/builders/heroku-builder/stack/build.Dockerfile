@@ -33,7 +33,9 @@ RUN echo "debconf debconf/frontend select noninteractive" | debconf-set-selectio
     apt-get -y $package_args install locales && \
     locale-gen en_US.UTF-8 && \
     update-locale LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8 LC_ALL=en_US.UTF-8 && \
-    echo $packages | xargs apt-get -y $package_args install
+    echo $packages | xargs apt-get -y $package_args install && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 USER cnb
 WORKDIR /app

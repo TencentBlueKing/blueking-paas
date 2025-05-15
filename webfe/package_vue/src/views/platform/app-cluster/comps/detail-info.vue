@@ -71,6 +71,20 @@
         <template v-else>{{ data.elastic_search_config?.[key] || '--' }}</template>
       </template>
     </DetailsRow>
+    <div class="view-title">{{ $t('镜像仓库') }}</div>
+    <DetailsRow
+      v-for="(val, key) in imageRegistryKeys"
+      :key="key"
+      :label-width="labelWidth"
+    >
+      <template slot="label">{{ `${val}：` }}</template>
+      <template slot="value">
+        <div v-if="key === 'password'">
+          <SensitiveText :text="data.app_image_registry?.[key]" />
+        </div>
+        <template v-else>{{ data.app_image_registry?.[key] || '--' }}</template>
+      </template>
+    </DetailsRow>
     <div class="view-title">{{ $t('租户信息') }}</div>
     <DetailsRow
       v-for="(val, key) in tenantKeys"
@@ -115,6 +129,12 @@ export default {
         scheme: this.$t('协议'),
         host: this.$t('主机'),
         port: this.$t('端口'),
+        username: this.$t('用户名'),
+        password: this.$t('密码'),
+      },
+      imageRegistryKeys: {
+        host: this.$t('镜像仓库域名'),
+        namespace: this.$t('命名空间'),
         username: this.$t('用户名'),
         password: this.$t('密码'),
       },

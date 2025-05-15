@@ -107,9 +107,6 @@ def bk_app_with_modules_services(bk_app, services_obj, test_credentials):
         ref_attachment_pk=attachment2.pk,
     )
 
-    # 确保每个模块的环境都有 ServiceEngineAppAttachment
-    from paasng.accessories.services.models import Plan
-
     # 创建服务计划和引擎应用关联
     plan1 = Plan.objects.create(service=service1, name="default-plan-1", is_active=True)
     plan2 = Plan.objects.create(service=service2, name="default-plan-2", is_active=True)

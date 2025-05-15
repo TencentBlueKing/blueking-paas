@@ -283,3 +283,6 @@ FOR_TESTS_CLUSTER_CONFIG = {
 }
 
 FOR_TEST_E2E_INGRESS_CONFIG = settings.get("FOR_TEST_E2E_INGRESS_CONFIG", {})
+
+# grpc 端口, 默认为 443 (nginx-ingress-controller 的 tls 端口). 如果通过 4 层代理转发至 nginx 的 443, 则设置为代理端口.
+GRPC_PORT = settings.get("GRPC_PORT", 443)

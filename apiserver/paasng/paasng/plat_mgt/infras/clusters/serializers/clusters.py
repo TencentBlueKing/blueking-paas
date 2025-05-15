@@ -301,8 +301,8 @@ class ClusterCreateInputSLZ(serializers.Serializer):
         help_text="集群访问入口（一般为 clb）IP", required=False, allow_blank=True
     )
 
-    elastic_search_config = ElasticSearchConfigSLZ(help_text="ES 集群配置", required=False)
-    app_image_registry = ImageRegistrySLZ(help_text="应用镜像仓库，若未指定则使用默认", required=False)
+    elastic_search_config = ElasticSearchConfigSLZ(help_text="ES 集群配置", required=False, allow_null=True)
+    app_image_registry = ImageRegistrySLZ(help_text="应用镜像仓库，若未指定则使用默认", required=False, allow_null=True)
     available_tenant_ids = serializers.ListField(
         help_text="可用租户 ID 列表", child=serializers.CharField(), min_length=1
     )

@@ -38,6 +38,8 @@ class PortMap:
 
     http: int = 80
     https: int = 443
+    grpc: int = settings.GRPC_PORT
+    grpcs: int = settings.GRPC_PORT
 
     def get_port_num(self, protocol: str) -> int:
         """Return port number by protocol"""

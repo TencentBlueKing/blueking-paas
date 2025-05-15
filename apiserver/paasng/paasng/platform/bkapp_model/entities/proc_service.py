@@ -30,7 +30,7 @@ class ExposedType(BaseModel):
     :param name: name of the exposed type. Default is bk/http
     """
 
-    name: Literal[ExposedTypeName.BK_HTTP] = ExposedTypeName.BK_HTTP
+    name: Literal[ExposedTypeName.BK_HTTP, ExposedTypeName.BK_GRPC] = ExposedTypeName.BK_HTTP
 
 
 @prepare_json_field

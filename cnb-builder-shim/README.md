@@ -13,13 +13,13 @@
 执行以下命令构建新镜像：
 
 ```shell
-make heroku-builder-bionic
+make heroku-builder-noble
 ```
 
-其将使用默认的“云原生 builder 镜像”，名称为 `mirrors.tencent.com/bkpaas/builder-heroku-bionic:latest`，你也可以传递环境变量修改该默认名：
+其将使用默认的“云原生 builder 镜像”，名称为 `mirrors.tencent.com/bkpaas/builder-heroku-noble:latest`，你也可以传递环境变量修改该默认名：
 
 ```shell
-BUILDER_IMAGE_NAME="my-builder-heroku-bionic" BUILDER_IMAGE_TAG="my-tag" IMAGE_NAME="bk-builder-heroku-bionic" IMAGE_TAG="latest" make heroku-builder-bionic
+BUILDER_IMAGE_NAME="my-builder-heroku-noble" BUILDER_IMAGE_TAG="my-tag" IMAGE_NAME="bk-builder-heroku-noble" IMAGE_TAG="latest" make heroku-builder-noble
 ```
 
 - `BUILDER_IMAGE_*`：将要使用的“构建 builder 镜像”名称
@@ -63,11 +63,11 @@ tar -czvf /tmp/source.tgz -C examples/python-flask .
 
 ```bash
 # BUILDER_SHIM_IMAGE：构建工具镜像地址
-export BUILDER_SHIM_IMAGE='mirrors.tencent.com/bkpaas/bk-builder-heroku-bionic:latest'
+export BUILDER_SHIM_IMAGE='mirrors.tencent.com/bkpaas/bk-builder-heroku-noble:latest'
 # OUTPUT_IMAGE：镜像推送的目标地址
 export OUTPUT_IMAGE='mirrors.tencent.com/your_namespace/example-flask:latest'
 # CNB_RUN_IMAGE：用于运行应用的基础镜像，需要可读权限
-export CNB_RUN_IMAGE='mirrors.tencent.com/bkpaas/run-heroku-bionic:latest'
+export CNB_RUN_IMAGE='mirrors.tencent.com/bkpaas/run-heroku-noble:latest'
 ```
 
 然后执行命令，将源码包构建为镜像：
@@ -101,10 +101,10 @@ docker run --rm \
 make heroku-dev
 ```
 
-其将使用默认的 “云原生 builder 镜像”，名称为 `mirrors.tencent.com/bkpaas/builder-heroku-bionic:latest`，你也可以传递环境变量修改该默认名：
+其将使用默认的 “云原生 builder 镜像”，名称为 `mirrors.tencent.com/bkpaas/builder-heroku-noble:latest`，你也可以传递环境变量修改该默认名：
 
 ```shell
-BUILDER_IMAGE_NAME="my-builder-heroku-bionic" BUILDER_IMAGE_TAG="my-tag" DEV_IMAGE_NAME="bk-dev-heroku-bionic" DEV_IMAGE_TAG="latest" make heroku-dev
+BUILDER_IMAGE_NAME="my-builder-heroku-noble" BUILDER_IMAGE_TAG="my-tag" DEV_IMAGE_NAME="bk-dev-heroku-noble" DEV_IMAGE_TAG="latest" make heroku-dev
 ```
 
 - `DEV_IMAGE_NAME`: 目标开发镜像名
@@ -130,7 +130,7 @@ docker run -d --net=host \
     -e PIP_INDEX_URL=$PIP_INDEX_URL \
     -e PIP_EXTRA_INDEX_URL=$PIP_EXTRA_INDEX_URL \
     -e BUILDPACK_S3_BASE_URL=$BUILDPACK_S3_BASE_URL \
-    bk-dev-heroku-bionic:latest
+    bk-dev-heroku-noble:latest
 ```
 
 ### 3. 通过 http 请求完成源码的 hot-reload

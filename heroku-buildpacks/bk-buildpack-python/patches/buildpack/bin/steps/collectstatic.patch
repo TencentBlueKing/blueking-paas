@@ -1,6 +1,0 @@
-83c83
-< echo "          $ heroku config:set DISABLE_COLLECTSTATIC=1"
----
-> echo "****** set environment variable DISABLE_COLLECTSTATIC=1"
-85d84
-< echo "       https://devcenter.heroku.com/articles/django-assets"

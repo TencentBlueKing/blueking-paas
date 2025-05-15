@@ -1,19 +1,19 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"context"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 	bcfg "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/buildconfig"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 )
 
 // archiveSourceTarball 生成 Procfile 文件后写入 sourceDir, 并将其打包成 destTGZ 文件
@@ -114,10 +114,11 @@ func makeRunArgs(group *plan.ModuleBuildGroup, moduleSrcTGZ string, runImage str
 
 // writeArtifactJsonFile 根据 buildPlan, 在目录 artifactDir 写入 artifact.json.
 // artifact.json 描述应用模块与镜像 tar 的对应关系以及进程 entrypoints, 格式如下:
-//  {
-//   "module1": {"image_tar": "module1.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}},
-//   "module2": {"image_tar": "module2.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}}
-// }
+//
+//	{
+//	  "module1": {"image_tar": "module1.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}},
+//	  "module2": {"image_tar": "module2.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}}
+//	}
 func writeArtifactJsonFile(buildPlan *plan.BuildPlan, artifactDir string) error {
 	moduleArtifact := make(map[string]map[string]any)
 	for _, group := range buildPlan.BuildGroups {

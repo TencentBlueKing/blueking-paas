@@ -4,9 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/tidwall/gjson"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
 )

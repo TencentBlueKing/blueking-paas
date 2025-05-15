@@ -7,7 +7,7 @@ variable "BUILDER_IMAGE_TAG" {
 }
 
 variable "IMAGE_NAME" {
-  default = "mirrors.tencent.com/bkpaas/bk-builder-heroku-bionic"
+  default = "mirrors.tencent.com/bkpaas/bk-builder-heroku-noble"
 }
 
 variable "IMAGE_TAG" {
@@ -15,7 +15,7 @@ variable "IMAGE_TAG" {
 }
 
 variable "DEV_IMAGE_NAME" {
-  default = "mirrors.tencent.com/bkpaas/bk-dev-heroku-bionic"
+  default = "mirrors.tencent.com/bkpaas/bk-dev-heroku-noble"
 }
 
 variable "DEV_IMAGE_TAG" {
@@ -25,23 +25,13 @@ variable "DEV_IMAGE_TAG" {
 
 function "builder_image_name" {
   params = [stack_id, override]
-  result = equal(override, "") ? (equal(stack_id, "heroku-18") ? "mirrors.tencent.com/bkpaas/builder-heroku-bionic": "mirrors.tencent.com/bkpaas/builder-heroku-jammy") : override
+  result = equal(override, "") ? "mirrors.tencent.com/bkpaas/builder-heroku-noble" : override
 }
 
-target "heroku-builder-bionic" {
+target "heroku-builder-noble" {
   dockerfile = "docker-build/heroku-builder/Dockerfile"
   args = {
     BUILDER_IMAGE_NAME = "${builder_image_name("heroku-18", BUILDER_IMAGE_NAME)}"
-    BUILDER_IMAGE_TAG = "${BUILDER_IMAGE_TAG}"
-  }
-  tags = ["${IMAGE_NAME}:${IMAGE_TAG}"]
-  platforms = ["linux/amd64"]
-}
-
-target "heroku-builder-jammy" {
-  dockerfile = "docker-build/heroku-builder/Dockerfile"
-  args = {
-    BUILDER_IMAGE_NAME = "${builder_image_name("heroku-22", BUILDER_IMAGE_NAME)}"
     BUILDER_IMAGE_TAG = "${BUILDER_IMAGE_TAG}"
   }
   tags = ["${IMAGE_NAME}:${IMAGE_TAG}"]

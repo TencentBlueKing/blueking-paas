@@ -21,14 +21,12 @@
 为尽量降低维护成本，推荐不修改原 buildpack 文件, 而是使用 hook 和 patch 的方式来调整 buildpack 行为：
 
 - hook（钩子）：存放在 hooks 目录中，是独立的 Bash 脚本，在 buildpack 的不同阶段被显式调用
-   - TODO: **hooks/setup-utils 当前未被实际安装，待确认后启用**
 - patch（补丁）：存放在 patches 目录中， 基于打补丁的方式修改原脚本
 
 > **增加新文件后, 请维护以下文件说明**
 
 ### 已有 hook
 - setup-user-compile-hook: 兼容 pre-compile/post-compile
-- setup-utils: 从蓝鲸源中下载 stdlib.sh
 - pre-install: 安装 python 前的 hook
 - post-install: 安装 python 后的 hook
 

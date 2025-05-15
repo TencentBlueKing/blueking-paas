@@ -1,9 +1,9 @@
 ARG IMAGE=heroku/heroku
-ARG TAG=18.v27
+ARG TAG=24.v149
 
 FROM ${IMAGE}:${TAG}
 
-ARG STACK_ID="heroku-18"
+ARG STACK_ID="heroku-24"
 ARG sources
 ARG packages
 ARG package_args='--allow-downgrades --allow-remove-essential --allow-change-held-packages --no-install-recommends'
@@ -13,7 +13,9 @@ ARG package_args='--allow-downgrades --allow-remove-essential --allow-change-hel
 LABEL io.buildpacks.stack.id=${STACK_ID}
 ENV CNB_USER_ID=2000 CNB_GROUP_ID=2000 CNB_STACK_ID=${STACK_ID} STACK=${STACK_ID}
 
-# Create the user
+# Use root to create cnb user
+USER root
+
 RUN groupadd --gid ${CNB_GROUP_ID} cnb && \
   useradd --uid ${CNB_USER_ID} --gid ${CNB_GROUP_ID} -m -s /bin/bash --home-dir /app cnb && \
   chown cnb:cnb /app /tmp -R
@@ -27,29 +29,13 @@ RUN echo "$sources" > /etc/apt/sources.list
 
 RUN echo "debconf debconf/frontend select noninteractive" | debconf-set-selections && \
     export DEBIAN_FRONTEND=noninteractive && \
-    apt-get clean && apt-get update && apt-get -y $package_args update && \
+    apt-get -y $package_args update && \
     apt-get -y $package_args install locales && \
     locale-gen en_US.UTF-8 && \
     update-locale LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8 LC_ALL=en_US.UTF-8 && \
     echo $packages | xargs apt-get -y $package_args install && \
-    apt-get autoremove -y && \
-    apt-get clean -y && \
-    rm -rf \
-    /usr/share/doc \
-    /usr/share/man \
-    /usr/share/info \
-    /usr/share/locale \
-    /var/lib/apt/lists/* \
-    /tmp/* \
-    /etc/apt/preferences \
-    /var/log/* \
-    /var/cache/debconf/* \
-    /etc/systemd \
-    /lib/lsb \
-    /lib/udev \
-    /usr/lib/x86_64-linux-gnu/gconv/IBM* \
-    /usr/lib/x86_64-linux-gnu/gconv/EBC* && \
-    bash -c "mkdir -p /usr/share/man/man{1..8}"
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 ENV HOME /app
 WORKDIR /app

@@ -3,7 +3,7 @@
 # 在安装 Python 环境之前执行
 
 # 设置 vendor 到 PATH
-export PATH=$PATH:$ROOT_DIR/vendor/
+export PATH=$PATH:$BUILDPACK_DIR/vendor/
 
 # 为 heroku pip-install 提供可编辑目录
 mkdir -p /app/.heroku/src
@@ -13,15 +13,15 @@ if [ -f runtime.txt ]; then
     sed -i '/^$/d' runtime.txt
 fi
 
-# 移除不需要的步骤
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/mercurial"
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/pylibmc"
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/cryptography"
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/geo-libs"
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/gdal"
+# remove unneeded steps
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/mercurial"
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/pylibmc"
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/cryptography"
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/geo-libs"
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/gdal"
 
-# 对目录 /var/cache/apt/archives/partial/ 无权限会安装失败
-echo "#!/usr/bin/env bash" > "${BIN_DIR}/steps/sqlite3"
+# Installation will fail if you do not have permission to the directory /var/cache/apt/archives/partial/
+echo "#!/usr/bin/env bash" > "${BUILDPACK_DIR}/bin/steps/sqlite3"
 buildpack_sqlite3_install(){
     mkdir -p "${CACHE_DIR}/.heroku"
     echo "" > "${CACHE_DIR}/.heroku/python-sqlite3-version"
@@ -30,24 +30,17 @@ buildpack_sqlite3_install(){
 mkdir -p ~/.pip/
 echo "[global]" > ~/.pip/pip.conf
 
-# 设置 pip 首选源
+# set pip index-url
 if [ -n "${PIP_INDEX_URL}" ]; then
     echo "index-url = ${PIP_INDEX_URL}" >> ~/.pip/pip.conf
 fi
 
-# 设置 pip 次选源
+# set pip extra-index-url
 if [ -n "${PIP_EXTRA_INDEX_URL}" ]; then
     echo "extra-index-url = ${PIP_EXTRA_INDEX_URL}" >> ~/.pip/pip.conf
 fi
 
-# 设置 pip 信任域名
+# set pip trusted-host
 if [ -n "${PIP_INDEX_HOST}" ]; then
     echo "trusted-host = ${PIP_INDEX_HOST}" >> ~/.pip/pip.conf
-fi
-
-# 指定 pip 版本
-if [ -n "${PIP_VERSION}" ]; then
-    export PIP_UPDATE=${PIP_VERSION}
-    # 设置这个的话 get-pip 会报错
-    unset PIP_VERSION
 fi

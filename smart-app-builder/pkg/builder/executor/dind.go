@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 )
 
 // dindCmdProvider docker-in-docker command provider

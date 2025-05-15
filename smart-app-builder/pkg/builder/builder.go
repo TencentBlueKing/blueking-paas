@@ -5,14 +5,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
 	bexec "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/executor"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 )
 
 // AppBuilder build the source code to artifact

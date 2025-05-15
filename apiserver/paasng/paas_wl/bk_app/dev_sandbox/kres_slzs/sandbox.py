@@ -147,7 +147,7 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
 class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandbox":
         dev_server_container = self._get_dev_server_container(kube_data)
-        envs = {env.name: env.value for env in dev_server_container.env if getattr(env, "value")}
+        envs = {env.name: env.value for env in dev_server_container.env if getattr(env, "value", "")}
 
         code = ""
         if annos := kube_data.metadata.annotations:

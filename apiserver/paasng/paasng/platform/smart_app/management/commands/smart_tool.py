@@ -81,13 +81,10 @@ class Command(BaseCommand):
             dest="raw_tenant_mode",
             required=False,
             type=str,
-            default=AppTenantMode.GLOBAL,
             choices=AppTenantMode.get_values(),
             help="租户类型，可选值：global, single",
         )
-        parser.add_argument(
-            "--app_tenant_id", dest="raw_tenant_id", required=False, type=str, default="", help="租户ID"
-        )
+        parser.add_argument("--app_tenant_id", dest="raw_tenant_id", required=False, type=str, help="租户ID")
 
     @handle_error
     def handle(self, file_path: str, operator, raw_tenant_mode, raw_tenant_id, *args, **options):

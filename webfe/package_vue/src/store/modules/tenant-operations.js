@@ -40,5 +40,47 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/applications/tenant_app_statistics/`;
       return http.get(url);
     },
+    /**
+     * 应用列表-获取租户类型
+     */
+    getTenantModeList() {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/tenant_mode_list/`;
+      return http.get(url);
+    },
+    /**
+     * 应用列表-获取应用类型
+     */
+    getAppTypes() {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/types/`;
+      return http.get(url);
+    },
+    /**
+     * 应用详情-获取应用详情数据
+     */
+    getAppDetails({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/`;
+      return http.get(url);
+    },
+    /**
+     * 应用详情-更新应用信息
+     */
+    updateAppInfo({}, { appCode, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/`;
+      return http.post(url, data);
+    },
+    /**
+     * 应用详情-获取部署集群列表
+     */
+    getClusters() {
+      const url = `${BACKEND_URL}/api/plat_mgt/clusters/`;
+      return http.get(url);
+    },
+    /**
+     * 应用详情-更新部署集群
+     */
+    updateDeployCluster({}, { appCode, moduleId, env, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/envs/${env}/cluster/`;
+      return http.post(url, data);
+    },
   },
 };

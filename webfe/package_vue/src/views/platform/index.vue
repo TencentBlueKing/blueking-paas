@@ -57,9 +57,12 @@ export default {
   },
   computed: {
     title() {
-      const { name, path, query } = this.$route;
+      const { name, path, params } = this.$route;
       if (name === 'clusterCreateEdit') {
         return path.endsWith('/add') ? this.$t('添加集群') : this.$t('编辑集群');
+      }
+      if (name === 'platformAppDetails') {
+        return `${this.$t('应用详情')}: ${params.code}`;
       }
       return this.$route.meta.title;
     },

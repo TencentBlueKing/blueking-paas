@@ -100,7 +100,6 @@
 <script>
 import TenantSelect from '../../services/service-plan/tenant-select';
 import { mapState } from 'vuex';
-import { PAAS_APP_TYPE } from '@/common/constants';
 
 export default {
   name: 'PlatformAppList',
@@ -128,13 +127,37 @@ export default {
       },
       // 应用数量信息
       appCountInfo: {},
+      // 应用类型
+      appTypes: [],
+      // 租户类型
+      tenantTypes: [],
       // 表头过滤
       tableFilterMap: {},
       tableEmptyConf: {
         keyword: '',
         isAbnormal: false,
       },
-      columns: [
+    };
+  },
+  computed: {
+    ...mapState(['platformFeature']),
+    tabData() {
+      const tenantList = this.tenants.map((item) => {
+        return {
+          name: item.id,
+          label: item.name,
+        };
+      });
+      return [
+        {
+          name: 'all',
+          label: this.$t('全部租户'),
+        },
+        ...tenantList,
+      ];
+    },
+    columns() {
+      return [
         {
           label: this.$t('应用'),
           prop: 'code',
@@ -142,10 +165,7 @@ export default {
         {
           label: this.$t('租户类型'),
           prop: 'app_tenant_mode',
-          filters: [
-            { text: this.$t('全租户'), value: 'global' },
-            { text: this.$t('单租户'), value: 'single' },
-          ],
+          filters: this.tenantTypes,
           'filter-multiple': false,
           'column-key': 'app_tenant_mode',
         },
@@ -156,10 +176,7 @@ export default {
         {
           label: this.$t('应用类型'),
           prop: 'type',
-          filters: Object.entries(PAAS_APP_TYPE).map(([key, value]) => ({
-            text: this.$t(value),
-            value: key,
-          })),
+          filters: this.appTypes,
           'filter-multiple': false,
           'column-key': 'type',
         },
@@ -188,30 +205,12 @@ export default {
           sortable: true,
           'column-key': 'order_by',
         },
-      ],
-    };
-  },
-  computed: {
-    ...mapState(['platformFeature']),
-    tabData() {
-      const tenantList = this.tenants.map((item) => {
-        return {
-          name: item.id,
-          label: item.name,
-        };
-      });
-      return [
-        {
-          name: 'all',
-          label: this.$t('全部租户'),
-        },
-        ...tenantList,
       ];
     },
   },
   async created() {
     await this.getPlatformApps();
-    this.getTenantAppStatistics();
+    Promise.all([this.getTenantAppStatistics(), this.getTenantModeList(), this.getAppTypes()]);
   },
   methods: {
     // 页码重置
@@ -313,7 +312,7 @@ export default {
         this.catchErrorHandler(e);
       }
     },
-    // 获取租户类型
+    // 获取租户应用数量
     async getTenantAppStatistics() {
       try {
         const res = await this.$store.dispatch('tenantOperations/getTenantAppStatistics');
@@ -326,12 +325,39 @@ export default {
         this.catchErrorHandler(e);
       }
     },
+    // 获取租户类型
+    async getTenantModeList() {
+      try {
+        const res = await this.$store.dispatch('tenantOperations/getTenantModeList');
+        this.tenantTypes = res.map((item) => ({
+          value: item.type,
+          text: item.label,
+        }));
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    // 获取应用类型
+    async getAppTypes() {
+      try {
+        const res = await this.$store.dispatch('tenantOperations/getAppTypes');
+        this.appTypes = res.map((item) => ({
+          value: item.type,
+          text: item.label,
+        }));
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
     // 跳转应用详情
     toAppDetail(data) {
       this.$router.push({
         name: 'platformAppDetails',
         params: {
           code: data.code,
+        },
+        query: {
+          active: 'overview',
         },
       });
     },

@@ -140,10 +140,14 @@ export const platformRouters = [
         name: 'platformAppDetails',
         meta: {
           title: i18n.t('应用详情'),
+          supportBack: true,
           panels: [
             { name: 'overview', label: i18n.t('概览') },
             { name: 'feature', label: i18n.t('特性管理') },
           ],
+          backRoute: {
+            name: 'platformAppList',
+          }
         },
       },
     ],

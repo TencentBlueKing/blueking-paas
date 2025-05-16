@@ -2274,11 +2274,13 @@ msgstr ""
 "The cluster deployed in the current environment does not support BCS Egress"
 
 #: paasng/plat_admin/admin42/views/services.py:120
+#: paasng/plat_mgt/applications/views/services.py:180
 msgid "当前环境不存在未分配的增强服务实例"
 msgstr ""
 "There are no unallocated instances of Add-ons in the current environment"
 
 #: paasng/plat_admin/admin42/views/services.py:147
+#: paasng/plat_mgt/applications/views/services.py:212
 msgid "迁移应用不支持回收增强服务实例"
 msgstr ""
 "Migrating applications does not support reclaiming enhanced service "

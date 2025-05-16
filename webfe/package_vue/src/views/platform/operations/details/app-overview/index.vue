@@ -37,6 +37,7 @@
                 <bk-button
                   style="padding: 0 6px"
                   text
+                  :loading="editApp.loading"
                   @click="handleEditAppName(baseInfo[key])"
                 >
                   <i class="paasng-icon paasng-edit-2" />
@@ -49,7 +50,7 @@
                 ref="appNameInput"
                 v-model="editApp.name"
                 @blur="updataAppName"
-                @enter="updataAppName"
+                @enter="editApp.isEdit = false"
               ></bk-input>
             </div>
             <span v-else-if="key === 'app_tenant_mode'">
@@ -241,6 +242,7 @@ export default {
       editApp: {
         isEdit: false,
         name: '',
+        loading: false,
       },
       editDeployCluster: {
         visible: false,
@@ -294,6 +296,7 @@ export default {
       const { name } = this.editApp;
       this.editApp.isEdit = false;
       if (name === this.baseInfo.name) return;
+      this.$set(this.editApp, 'loading', true);
       try {
         await this.$store.dispatch('tenantOperations/updateAppInfo', {
           appCode: this.appCode,
@@ -307,6 +310,8 @@ export default {
         });
       } catch (e) {
         this.catchErrorHandler(e);
+      } finally {
+        this.$set(this.editApp, 'loading', false);
       }
     },
     // 获取部署集群列表

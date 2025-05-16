@@ -2,16 +2,18 @@
   <div class="right-main app-details-container">
     <!-- 基本信息 -->
     <AppOverview v-if="tabActive === 'overview'" />
-    <span v-else>开发中...</span>
+    <Feature v-else></Feature>
   </div>
 </template>
 
 <script>
 import AppOverview from './app-overview';
+import Feature from './feature';
 export default {
   name: 'platformAppDetail',
   components: {
     AppOverview,
+    Feature,
   },
   data() {
     return {};

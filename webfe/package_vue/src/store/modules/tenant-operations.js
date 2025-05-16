@@ -82,5 +82,19 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/envs/${env}/cluster/`;
       return http.post(url, data);
     },
+    /**
+     * 特性管理-获取特性列表
+     */
+    getFeatureList({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/feature_flags/`;
+      return http.get(url);
+    },
+    /**
+     * 特性管理-更新应用特性
+     */
+    updateFeatureFlags({}, { appCode, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/feature_flags/`;
+      return http.put(url, data);
+    },
   },
 };

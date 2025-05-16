@@ -54,6 +54,7 @@ class BkAppReleaseMgr(DeployStep):
 
     phase_type = DeployPhaseTypes.RELEASE
 
+    @DeployStep.procedures
     def start(self):
         """启动部署流程
 

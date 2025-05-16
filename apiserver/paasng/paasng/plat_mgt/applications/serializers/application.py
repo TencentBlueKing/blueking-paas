@@ -21,6 +21,7 @@ from typing import Optional
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.core.tenant.constants import AppTenantMode
@@ -167,7 +168,7 @@ class ApplicationEnvironmentSLZ(serializers.Serializer):
         """获取集群名称"""
         try:
             cluster = EnvClusterService(env).get_cluster()
-        except Exception:
+        except Cluster.DoesNotExist:
             return ""
         else:
             return cluster.name

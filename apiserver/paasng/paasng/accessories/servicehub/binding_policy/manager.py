@@ -182,41 +182,45 @@ class PolicyCombinationManager:
         allocation_precedence_policies = policy_combination_config.allocation_precedence_policies
         allocation_policy = policy_combination_config.allocation_policy
 
-        # Set the base policy
-        if allocation_policy.plans:
-            self.service_binding_policy_mgr.set_static(plans=self._plan_ids_to_objs(allocation_policy.plans))
-        elif allocation_policy.env_plans:
-            self.service_binding_policy_mgr.set_env_specific(
-                env_plans=self._plan_ids_to_env_plan_objs(allocation_policy.env_plans)
-            )
+        # 按规则分配
+        if allocation_precedence_policies:
+            for config in allocation_precedence_policies:
+                if config.plans:
+                    self.service_binding_policy_mgr.add_precedence_static(
+                        cond_type=PrecedencePolicyCondType(config.cond_type),
+                        cond_data=config.cond_data,
+                        plans=self._plan_ids_to_objs(config.plans),
+                        priority=config.priority,
+                    )
+                elif config.env_plans:
+                    self.service_binding_policy_mgr.add_precedence_env_specific(
+                        cond_type=PrecedencePolicyCondType(config.cond_type),
+                        cond_data=config.cond_data,
+                        env_plans=self._plan_ids_to_env_plan_objs(config.env_plans),
+                        priority=config.priority,
+                    )
 
-        # Add precedence policies with decreasing priority
-        for config in allocation_precedence_policies:
-            if config.plans:
-                self.service_binding_policy_mgr.add_precedence_static(
-                    cond_type=PrecedencePolicyCondType(config.cond_type),
-                    cond_data=config.cond_data,
-                    plans=self._plan_ids_to_objs(config.plans),
-                    priority=config.priority,
-                )
-            elif config.env_plans:
-                self.service_binding_policy_mgr.add_precedence_env_specific(
-                    cond_type=PrecedencePolicyCondType(config.cond_type),
-                    cond_data=config.cond_data,
-                    env_plans=self._plan_ids_to_env_plan_objs(config.env_plans),
-                    priority=config.priority,
+        # 统一分配
+        if allocation_policy:
+            if allocation_policy.plans:
+                self.service_binding_policy_mgr.set_static(plans=self._plan_ids_to_objs(allocation_policy.plans))
+            elif allocation_policy.env_plans:
+                self.service_binding_policy_mgr.set_env_specific(
+                    env_plans=self._plan_ids_to_env_plan_objs(allocation_policy.env_plans)
                 )
 
     def get(self) -> Optional[PolicyCombinationConfig]:
         service_binding_policy = self.service_binding_policy_mgr.get_service_binding_policy()
-        # service_binding_policy 是必有的，如果没有表示没有正确配置或者没有配置过绑定策略
-        if service_binding_policy is None:
-            return None
-        precedence_policies = self.service_binding_policy_mgr.get_precedence_policies()
-        allocation_precedence_policies = [
-            RuleBasedAllocationPolicy.create_from_policy(policy) for policy in precedence_policies
-        ]
         allocation_policy = UnifiedAllocationPolicy.create_from_policy(service_binding_policy)
+
+        precedence_policies = self.service_binding_policy_mgr.get_precedence_policies()
+        if precedence_policies:
+            allocation_precedence_policies = [
+                RuleBasedAllocationPolicy.create_from_policy(policy) for policy in precedence_policies
+            ]
+        else:
+            allocation_precedence_policies = None
+
         return PolicyCombinationConfig(
             tenant_id=self.tenant_id,
             service_id=self.service.uuid,

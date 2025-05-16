@@ -16,13 +16,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .build_cfg import BuildConfig
-from .deploy_config import DeployConfig
 from .module import Module
 from .runtime import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildPackType
 
 __all__ = [
     "BuildConfig",
-    "DeployConfig",
     "Module",
     "AppBuildPack",
     "AppSlugBuilder",

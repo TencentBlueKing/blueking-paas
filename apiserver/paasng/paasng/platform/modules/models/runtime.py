@@ -87,8 +87,6 @@ class AppBuildPack(TimestampedModel):
     # 这个影响用户能否在设置中看见，处理当前版本未就绪/不建议使用/私有定制的情况
     is_hidden = models.BooleanField(verbose_name="是否隐藏", default=False)
     description = TranslatedFieldWithFallback(models.CharField(verbose_name="描述", max_length=1024, blank=True))
-    # Deprecated: 使用 build_config 代替该字段
-    modules = models.ManyToManyField("modules.Module", related_name="buildpacks")
 
     objects = BuildpackManager()
 
@@ -275,9 +273,6 @@ class AppSlugRunner(AppImage):
     [multi-tenancy] This model is not tenant-aware.
     """
 
-    # Deprecated: 使用 build_config 代替该字段
-    modules = models.ManyToManyField("modules.Module", related_name="slugrunners")
-
     objects = AppImageStackManager()
 
 
@@ -289,8 +284,6 @@ class AppSlugBuilder(AppImage):
 
     # 字段指示该环境可用的 buildpacks
     buildpacks = models.ManyToManyField(AppBuildPack, related_name="slugbuilders")
-    # Deprecated: 使用 build_config 代替该字段
-    modules = models.ManyToManyField("modules.Module", related_name="slugbuilders")
 
     step_meta_set = models.ForeignKey(
         "engine.StepMetaSet",

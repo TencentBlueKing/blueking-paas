@@ -62,13 +62,6 @@ class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False, allow_null=True)
 
 
-class ModuleProcessSpecMetadataSLZ(serializers.Serializer):
-    """特性开关"""
-
-    # TODO allow_multiple_image has been deprecated, remove it in the future
-    allow_multiple_image = serializers.BooleanField(default=False, help_text="是否允许使用多个不同镜像")
-
-
 class ExposedTypeSLZ(serializers.Serializer):
     name = serializers.ChoiceField(help_text="暴露服务的类型名", choices=ExposedTypeName.get_django_choices())
 
@@ -246,7 +239,6 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
 
 class ModuleProcessSpecsOutputSLZ(serializers.Serializer):
     proc_specs = ModuleProcessSpecSLZ(many=True, read_only=True)
-    metadata = ModuleProcessSpecMetadataSLZ(read_only=True)
 
 
 class ModuleProcessSpecsInputSLZ(serializers.Serializer):

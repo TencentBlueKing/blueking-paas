@@ -55,9 +55,7 @@ class TestModuleProcessSpecViewSet:
         url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
         resp = api_client.get(url)
         data = resp.json()
-        metadata = data["metadata"]
         proc_specs = data["proc_specs"]
-        assert metadata["allow_multiple_image"] is False
         assert len(proc_specs) == 2
         assert proc_specs[0]["name"] == "web"
         assert proc_specs[0]["image"] == "example.com/foo"

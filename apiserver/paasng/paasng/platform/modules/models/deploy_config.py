@@ -20,11 +20,9 @@ from typing import List, Optional, Union
 
 import cattr
 from attrs import define
-from django.db import models
-from jsonfield import JSONField
 
 from paasng.platform.modules.constants import DeployHookType
-from paasng.utils.models import UuidAuditedModel, make_legacy_json_field
+from paasng.utils.models import make_legacy_json_field
 
 # Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
 # TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
@@ -106,14 +104,3 @@ cattr.register_structure_hook(HookList, HookList.__cattrs_structure__)
 cattr.register_unstructure_hook(HookList, HookList.__cattrs_unstructure__)
 cattr.register_structure_hook(Union[str, List[str]], lambda items, cl: items)  # type: ignore
 cattr.register_unstructure_hook(Union[str, List[str]], lambda value: value)  # type: ignore
-
-
-# TODO: Replace this models with ModuleProcessSpec && ModuleDeployHook
-class DeployConfig(UuidAuditedModel):
-    """Deprecated: This model is not used anymore."""
-
-    module = models.OneToOneField(
-        "modules.Module", on_delete=models.CASCADE, db_constraint=False, related_name="deploy_config"
-    )
-    procfile = JSONField(default=dict, help_text="部署命令")
-    hooks: HookList = HookListField(help_text="部署钩子", default=HookList)

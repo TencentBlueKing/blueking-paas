@@ -162,7 +162,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
             proc_specs.append(data)
 
-        resp_data = {"metadata": {"allow_multiple_image": False}, "proc_specs": proc_specs}
+        resp_data = {"proc_specs": proc_specs}
         return Response(ModuleProcessSpecsOutputSLZ(resp_data).data)
 
     @swagger_auto_schema(request_body=ModuleProcessSpecsInputSLZ)

@@ -24,10 +24,8 @@ from django.urls import reverse
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.accessories.servicehub.exceptions import SvcAttachmentDoesNotExist
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.models import (
-    ServiceEngineAppAttachment,
-)
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory, ServiceInstance
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
@@ -38,20 +36,26 @@ pytestmark = pytest.mark.django_db
 
 @pytest.mark.django_db(databases=["default", "workloads"])
 class TestApplicationAddonServices:
-    """测试应用的附加服务"""
+    """测试应用的增强服务"""
 
     def _setup_services(self):
         """创建三个服务"""
         services = []
         for name in ["mysql", "redis", "mongodb"]:
-            service = G(Service, name=name, category=G(ServiceCategory), logo_b64="dummy")
+            service = G(
+                Service,
+                name=name,
+                category=G(ServiceCategory),
+                logo_b64="dummy",
+                config={"provider_name": "pool"},
+            )
             G(Plan, name=generate_random_string(), service=service)
             svc_obj = mixed_service_mgr.get(service.uuid)
             services.append(svc_obj)
         return services
 
-    def _setup_bk_app(self, app):
-        """创建一个拥有复数的模块和服务的应用"""
+    def _bind_services_to_modules(self, app):
+        """绑定服务到模块"""
         svc1, svc2, svc3 = self.services[0], self.services[1], self.services[2]
 
         module1, module2 = self.module_1, self.module_2
@@ -63,21 +67,6 @@ class TestApplicationAddonServices:
 
         # 共享服务
         ServiceSharingManager(module2).create(svc1, module1)
-
-        # # 为模块1中的所有环境分配svc1的服务实例
-        # for env in module1.envs.all():
-        #     for rel in mixed_service_mgr.list_unprovisioned_rels(env.engine_app, svc1):
-        #         if not rel.is_provisioned():
-        #             # 手动创建服务实例
-        #             instance = ServiceInstance.objects.create(
-        #                 service=svc1.db_object,
-        #                 plan=rel.get_plan().db_object,
-        #                 credentials=json.dumps(self.credentials),
-        #                 config={},
-        #             )
-        #             # 手动分配实例到关系
-        #             rel.db_obj.service_instance = instance
-        #             rel.db_obj.save()
 
         return app
 
@@ -96,11 +85,10 @@ class TestApplicationAddonServices:
 
         self.services = self._setup_services()
 
-        self._setup_bk_app(bk_app)
+        self._bind_services_to_modules(bk_app)
 
-        svc = self.services[0]
-        self.service = svc.db_object
-        self.plan = svc.get_plans()[0].db_object
+        self.svc = self.services[0]
+        self.plan = self.svc.get_plans()[0]
 
     def _get_service_url(self, action, **kwargs):
         """获取服务的URL"""
@@ -109,7 +97,7 @@ class TestApplicationAddonServices:
             kwargs={
                 "app_code": self.app.code,
                 "module_name": self.module_1.name,
-                "service_id": str(self.service.uuid),
+                "service_id": str(self.svc.uuid),
                 "env_name": self.stag_env.environment,
                 **kwargs,
             },
@@ -121,23 +109,34 @@ class TestApplicationAddonServices:
             credentials = self.credentials
 
         return ServiceInstance.objects.create(
-            service=self.service,
-            plan=self.plan,
+            service=self.svc.db_object,
+            plan=self.plan.db_object,
             credentials=json.dumps(credentials),
             config={},
         )
 
     def create_attachment(self, service_instance=None):
-        """创建或更新服务附件"""
+        """创建或更新服务关系"""
 
-        return ServiceEngineAppAttachment.objects.update_or_create(
-            engine_app=self.stag_env.engine_app,
-            service=self.service,
-            defaults={
-                "plan": self.plan,
-                "service_instance": service_instance,
-            },
-        )
+        # 先检查是否已存在关系，如果存在则返回
+        try:
+            rel = mixed_service_mgr.get_attachment_by_engine_app(self.svc, self.stag_env.engine_app)
+            is_new = False
+        except SvcAttachmentDoesNotExist:
+            # 创建新的关系
+            mixed_service_mgr.bind_service(
+                service=self.svc,
+                module=self.module_1,
+                plan_id=str(self.plan.uuid),
+            )
+            rel = mixed_service_mgr.get_attachment_by_engine_app(self.svc, self.stag_env.engine_app)
+            is_new = True
+
+        # 如果需要更新服务实例
+        if service_instance is not None:
+            rel.service_instance = service_instance
+            rel.save(update_fields=["service_instance"])
+        return rel, is_new
 
     def test_list(self, plat_mgt_api_client):
         """测试获取应用的附加服务列表"""
@@ -151,11 +150,11 @@ class TestApplicationAddonServices:
     def test_assign_instance(self, plat_mgt_api_client):
         """测试分配附加服务实例"""
 
-        ServiceEngineAppAttachment.objects.filter(engine_app=self.stag_env.engine_app, service=self.service).delete()
         attachment, _ = self.create_attachment(None)
 
         # 构造API请求URL
         url = self._get_service_url("assign_instance")
+        print("url: ", url)
 
         instance = self.create_service_instance()
 

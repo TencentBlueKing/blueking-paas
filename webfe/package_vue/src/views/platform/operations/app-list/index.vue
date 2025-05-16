@@ -202,7 +202,7 @@ export default {
         {
           label: this.$t('创建时间'),
           prop: 'created_humanized',
-          sortable: true,
+          sortable: 'custom',
           'column-key': 'order_by',
         },
       ];

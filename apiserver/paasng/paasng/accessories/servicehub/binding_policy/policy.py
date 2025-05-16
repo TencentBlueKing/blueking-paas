@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import abc
-from typing import Any
+from typing import Any, Optional
 
 from attrs import define
 
@@ -145,7 +145,7 @@ class UnifiedAllocationPolicy:
     env_plans: dict[str, list[str]] | None = None
 
     @classmethod
-    def create_from_policy(cls, policy: ServiceBindingPolicy) -> "UnifiedAllocationPolicy":
+    def create_from_policy(cls, policy: ServiceBindingPolicy | None) -> Optional["UnifiedAllocationPolicy"]:
         if policy is None:
             return None
         return cls(
@@ -161,9 +161,9 @@ class RuleBasedAllocationPolicy:
     This class holds the necessary configuration data extracted from a ServiceBindingPrecedencePolicy.
     """
 
-    cond_type: str
-    cond_data: dict[str, list[str]]
     priority: int
+    cond_type: str
+    cond_data: dict[str, list[str]] = {}
     plans: list[str] | None = None
     env_plans: dict[str, list[str]] | None = None
 
@@ -182,10 +182,16 @@ class RuleBasedAllocationPolicy:
 class PolicyCombinationConfig:
     """The configuration for building policy combination.
 
+    This class provides two mutually exclusive approaches for service binding allocation:
 
-    This class integrates multiple rule-based policies to allocate service bindings
-    based on specific conditions like region or cluster, ensuring the selection of
-    appropriate plans and providing a fallback option if none of the conditions are met.
+    1. Rule-based Precedence Policies:
+       - Evaluates multiple conditions in priority order (e.g., region, cluster)
+       - First matching condition determines the allocation
+       - Provides fallback to default plans if no conditions match
+
+    2. Unified Allocation Policy:
+       - Applies a single allocation rule to all cases
+       - Simpler configuration for uniform allocation needs
 
     Example Usage:
     - If the region is "region_default", assign plans ["plan_region"].
@@ -210,16 +216,40 @@ class PolicyCombinationConfig:
                 cond_data={"cluster_names": ["cluster_default"]},
                 priority=1,
                 plans=["plan_cluster"]
+            ),
+            RuleBasedAllocationPolicy(
+                cond_type="".
+                cond_data={},
+                priority=0,
+                plans=["plan_cluster"]
             )
         ],
-        allocation_policy=UnifiedAllocationPolicy(plans=["plan_default"])
+        allocation_policy= None,
     )
     ```
+
+    Example Usage:
+    - Allocate the same plans ["plan_unified"] to all service bindings
+
+    Configuration Example:
+    ```
+    PolicyCombinationConfig(
+        tenant_id="tenant_x",
+        service_id="service_x",
+        allocation_precedence_policies=None,
+        allocation_policy=UnifiedAllocationPolicy(
+            plans=["plan_unified"],
+        )
+    )
     """
 
     tenant_id: str
     service_id: str
     # 按规则分配
-    allocation_precedence_policies: list[RuleBasedAllocationPolicy]
-    # 统一分配，也是按规则分配最终的保底选项
-    allocation_policy: UnifiedAllocationPolicy
+    allocation_precedence_policies: list[RuleBasedAllocationPolicy] | None = None
+    # 统一分配
+    allocation_policy: UnifiedAllocationPolicy | None = None
+
+    def __attrs_post_init__(self):
+        if (self.allocation_precedence_policies is not None) == (self.allocation_policy is not None):
+            raise ValueError("Must set either 'allocation_precedence_policies' or 'allocation_policy' (but not both)")

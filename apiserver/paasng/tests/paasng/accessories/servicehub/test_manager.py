@@ -28,7 +28,6 @@ from paasng.accessories.servicehub.binding_policy.manager import PolicyCombinati
 from paasng.accessories.servicehub.binding_policy.policy import (
     PolicyCombinationConfig,
     RuleBasedAllocationPolicy,
-    UnifiedAllocationPolicy,
 )
 from paasng.accessories.servicehub.constants import Category, PrecedencePolicyCondType
 from paasng.accessories.servicehub.exceptions import (
@@ -214,7 +213,6 @@ class TestMixedMgrBindService:
 class TestPolicyCombinationManager:
     @pytest.fixture()
     def policy_config(self, bk_app, service_obj, plan1, plan2):
-        allocation_policy = UnifiedAllocationPolicy(plans=[plan1.uuid, plan2.uuid])
         allocation_precedence_policies = [
             RuleBasedAllocationPolicy(
                 cond_type=PrecedencePolicyCondType.REGION_IN,
@@ -228,13 +226,18 @@ class TestPolicyCombinationManager:
                 priority=1,
                 env_plans={"stag": [plan2.uuid]},
             ),
+            RuleBasedAllocationPolicy(
+                cond_type="none",
+                cond_data={},
+                priority=0,
+                env_plans={"stag": [plan1.uuid]},
+            ),
         ]
 
         return PolicyCombinationConfig(
             tenant_id=DEFAULT_TENANT_ID,
             service_id=service_obj.uuid,
             allocation_precedence_policies=allocation_precedence_policies,
-            allocation_policy=allocation_policy,
         )
 
     def test_upsert(self, service_obj, bk_app, bk_module, plan1, plan2, policy_config):
@@ -247,12 +250,18 @@ class TestPolicyCombinationManager:
         precedence_policy2 = ServiceBindingPrecedencePolicy.objects.get(
             service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID, priority=1
         )
-        policy = ServiceBindingPolicy.objects.get(service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID)
+        precedence_policy3 = ServiceBindingPrecedencePolicy.objects.get(
+            service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID, priority=0
+        )
+        assert not ServiceBindingPolicy.objects.filter(
+            service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID
+        ).exists()
         assert precedence_policy1.cond_data == {"regions": [bk_app.region]}
         assert precedence_policy1.data == {"plan_ids": [plan1.uuid]}
         assert precedence_policy2.cond_data == {"cluster_name": ["cluster1", "cluster2"]}
         assert precedence_policy2.data == {"env_plan_ids": {"stag": [plan2.uuid]}}
-        assert policy.data == {"plan_ids": [plan1.uuid, plan2.uuid]}
+        assert precedence_policy3.cond_data == {}
+        assert precedence_policy3.data == {"env_plan_ids": {"stag": [plan1.uuid]}}
 
     def test_get_policy_combination_configs(self, service_obj, policy_config):
         mgr = PolicyCombinationManager(service=service_obj, tenant_id=DEFAULT_TENANT_ID)

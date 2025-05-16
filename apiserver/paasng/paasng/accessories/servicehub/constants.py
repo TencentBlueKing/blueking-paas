@@ -76,3 +76,6 @@ class PrecedencePolicyCondType(StrStructuredEnum):
 
     # Test if the cluster is in the given list
     CLUSTER_IN = EnumField("cluster_in", label="Cluster.in")
+
+    # No condition
+    NONE = EnumField("none", label="None")

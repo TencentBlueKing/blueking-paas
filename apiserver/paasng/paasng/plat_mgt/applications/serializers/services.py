@@ -48,7 +48,7 @@ class ApplicationAddonServicesEnvSLZ(serializers.Serializer):
 class ApplicationAddonServicesSLZ(serializers.Serializer):
     """应用增强服务对象序列化器"""
 
-    service_id = serializers.CharField(help_text="增强服务 ID")
+    service_uuid = serializers.CharField(help_text="增强服务 ID")
     service_name = serializers.CharField(help_text="增强服务名称")
     config = serializers.JSONField(help_text="增强服务配置")
     is_shared = serializers.BooleanField(default=False, help_text="是否共享服务")

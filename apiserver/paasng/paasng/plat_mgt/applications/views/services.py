@@ -26,13 +26,13 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.accessories.servicehub.constants import LEGACY_PLAN_ID, ServiceType
+from paasng.accessories.servicehub.constants import LEGACY_PLAN_ID
 from paasng.accessories.servicehub.exceptions import (
     SvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.models import ServiceModuleAttachment, SharedServiceAttachment
 from paasng.accessories.servicehub.services import EngineAppInstanceRel
+from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
@@ -64,11 +64,9 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
         services_map = {}
 
         ## 获取直接服务
-        attachments = ServiceModuleAttachment.objects.filter(module=module).select_related("service")
-        for attachment in attachments:
-            service = attachment.service
-            services_map[service.pk] = {
-                "service_id": str(service.pk),
+        for service in mixed_service_mgr.list_binded(module):
+            services_map[service.uuid] = {
+                "service_uuid": str(service.uuid),
                 "service_name": service.name,
                 "config": service.config,
                 "environment": [],
@@ -76,40 +74,18 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
                 "shared_from": None,
             }
         ## 获取共享服务
-        shared_attachments = SharedServiceAttachment.objects.filter(
-            module=module, service_type=ServiceType.LOCAL
-        ).exclude(ref_attachment_pk=None)
-
-        if not shared_attachments:
-            return services_map
-
-        ## 获取引用附件信息
-        ref_attachment_ids = [sa.ref_attachment_pk for sa in shared_attachments]
-        ref_attachments = ServiceModuleAttachment.objects.filter(id__in=ref_attachment_ids).select_related(
-            "service", "module"
-        )
-
-        # 创建ID到附件的映射，减少循环查找
-        ref_map = {ref.pk: ref for ref in ref_attachments}
-
-        # 4. 处理共享服务
-        for shared in shared_attachments:
-            ref = ref_map.get(shared.ref_attachment_pk)
-            if not ref:
+        for shared_info in ServiceSharingManager(module).list_all_shared_info():
+            service = shared_info.service
+            if service.uuid in services_map:
                 continue
 
-            service = ref.service
-            # 避免和直接服务重复
-            if service.pk in services_map:
-                continue
-
-            services_map[service.pk] = {
-                "service_id": str(service.pk),
+            services_map[service.uuid] = {
+                "service_uuid": str(service.uuid),
                 "service_name": service.name,
                 "config": service.config,
                 "environment": [],
                 "is_shared": True,
-                "shared_from": ref.module.name,
+                "shared_from": shared_info.ref_module.name,
             }
 
         return services_map
@@ -117,17 +93,17 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
     def _fill_environment_info(self, module, services_map) -> None:
         """填充环境信息"""
 
-        name_to_pk = {data["service_name"]: pk for pk, data in services_map.items()}
+        name_to_uuid = {data["service_name"]: uuid for uuid, data in services_map.items()}
 
         ## 获取环境部署状态
         for env in module.envs.all():
-            engine_app = env.engine_app
-            services_rels = mixed_service_mgr.list_all_rels(engine_app=engine_app)
+            services_rels = mixed_service_mgr.list_all_rels(engine_app=env.engine_app)
             for rel in services_rels:
                 service = rel.get_service()
-                if service.name in name_to_pk:
-                    pk = name_to_pk[service.name]
-                    services_map[pk]["environment"].append(
+                service_uuid = name_to_uuid.get(service.name)
+                if service_uuid:
+                    # 直接服务
+                    services_map[service_uuid]["environment"].append(
                         {"env_name": env.environment, "is_deploy_instance": rel.is_provisioned()}
                     )
 
@@ -142,12 +118,6 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
         modules_data = []
 
         for module in application.modules.all():
-            # 准备模块数据结构
-            module_data = {
-                "module_name": module.name,
-                "addons_service": [],
-            }
-
             # 获取模块下的增强服务
             services_map = self._get_module_services(module)
 
@@ -156,8 +126,7 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
 
             ## 将服务列表添加到模块数据中
             service_list = sorted(services_map.values(), key=lambda x: x["service_name"])
-            module_data["addons_service"] = service_list
-            modules_data.append(module_data)
+            modules_data.append({"module_name": module.name, "addons_service": service_list})
 
         # 返回模块数据
         slz = slzs.ApplicationAddonServicesListOutputSLZ(modules_data, many=True)

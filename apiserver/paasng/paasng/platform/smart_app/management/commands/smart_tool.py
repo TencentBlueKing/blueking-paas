@@ -116,9 +116,9 @@ class Command(BaseCommand):
         with atomic():
             # 由于创建应用需要操作 v2 的数据库, 因此将事务的粒度控制在 handle_app 的维度, 避免其他地方失败导致创建应用的操作回滚, 但是 v2 中 app code 已被占用的问题.
             application = handler.handle_app(operator)
-            # 创建 SMartAppExtraInfo, 记录应用原始 code
-            SMartAppExtraInfo.objects.create(
-                app=application, original_code=original_app_desc.code, tenant_id=application.tenant_id
+            # 创建/更新 SMartAppExtraInfo, 记录应用原始 code
+            SMartAppExtraInfo.objects.update_or_create(
+                app=application, defaults={"original_code": original_app_desc.code, "tenant_id": application.tenant_id}
             )
 
         # Step 2. dispatch package as Image to registry

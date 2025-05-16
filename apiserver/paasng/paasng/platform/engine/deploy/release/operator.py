@@ -54,6 +54,7 @@ class BkAppReleaseMgr(DeployStep):
 
     phase_type = DeployPhaseTypes.RELEASE
 
+    @DeployStep.procedures
     def start(self):
         """启动部署流程
 
@@ -196,7 +197,7 @@ def preflight_deploy(env: ModuleEnvironment, res: BkAppResource):
         return
 
     cluster = get_cluster_by_app(env.wl_app)
-    if cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_GRPC_INGRESS):
+    if not cluster.has_feature_flag(ClusterFeatureFlag.ENABLE_GRPC_INGRESS):
         raise DeployShouldAbortError("grpc ingress feature is not available in the current cluster")
 
 

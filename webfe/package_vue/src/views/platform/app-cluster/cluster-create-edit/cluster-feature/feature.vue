@@ -38,17 +38,24 @@ export default {
   },
   data() {
     return {
-      isLoading: false,
+      isLoading: true,
       details: {},
       featureFlags: {},
       featureMaps: [],
+      // 默认配置
+      clusterDefaultConfigs: {},
     };
   },
   watch: {
     data: {
       handler(newValue) {
         if (Object.keys(newValue)?.length) {
-          this.featureFlags = cloneDeep(newValue.feature_flags);
+          const depFeatureFlags = cloneDeep(newValue.feature_flags);
+          if (Object.keys(depFeatureFlags)?.length) {
+            this.featureFlags = depFeatureFlags;
+          } else { // 接口默认值
+            this.featureFlags = this.clusterDefaultConfigs.feature_flags || {};
+          }
         } else {
           this.setDefault();
         }
@@ -58,7 +65,9 @@ export default {
     },
   },
   created() {
-    this.getClusterFeatureFlags();
+    Promise.all([this.getClusterDefaultConfigs(), this.getClusterFeatureFlags()]).finally(() => {
+      this.isLoading = false;
+    });
   },
   methods: {
     async getClusterFeatureFlags() {
@@ -69,8 +78,17 @@ export default {
         this.catchErrorHandler(e);
       }
     },
+    // 获取集群默认配置项
+    async getClusterDefaultConfigs() {
+      try {
+        const ret = await this.$store.dispatch('tenant/getClusterDefaultConfigs');
+        this.clusterDefaultConfigs = ret;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
     setDefault() {
-      this.featureFlags = {
+      this.featureFlags = this.clusterDefaultConfigs?.feature_flags || {
         ENABLE_BCS_EGRESS: false,
         ENABLE_MOUNT_LOG_TO_HOST: false,
         INGRESS_USE_REGEX: false,

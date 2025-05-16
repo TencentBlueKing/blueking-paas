@@ -71,6 +71,28 @@
         <template v-else>{{ data.elastic_search_config?.[key] || '--' }}</template>
       </template>
     </DetailsRow>
+    <div class="view-title">{{ $t('镜像仓库') }}</div>
+    <template v-if="data.app_image_registry !== null">
+      <DetailsRow
+        v-for="(val, key) in imageRegistryKeys"
+        :key="val + key"
+        :label-width="labelWidth"
+      >
+        <template slot="label">{{ `${val}：` }}</template>
+        <template slot="value">
+          <div v-if="key === 'password'">
+            <SensitiveText :text="data.app_image_registry?.[key]" />
+          </div>
+          <template v-else>{{ data.app_image_registry?.[key] || '--' }}</template>
+        </template>
+      </DetailsRow>
+    </template>
+    <p
+      class="tips"
+      v-else
+    >
+      {{ `${$t('使用平台公共的镜像仓库')}：` }}{{ defaultConfig?.image_repository || '--' }}
+    </p>
     <div class="view-title">{{ $t('租户信息') }}</div>
     <DetailsRow
       v-for="(val, key) in tenantKeys"
@@ -108,6 +130,10 @@ export default {
       type: Object,
       default: () => {},
     },
+    defaultConfig: {
+      type: Object,
+      default: () => {},
+    },
   },
   data() {
     return {
@@ -115,6 +141,12 @@ export default {
         scheme: this.$t('协议'),
         host: this.$t('主机'),
         port: this.$t('端口'),
+        username: this.$t('用户名'),
+        password: this.$t('密码'),
+      },
+      imageRegistryKeys: {
+        host: this.$t('镜像仓库域名'),
+        namespace: this.$t('命名空间'),
         username: this.$t('用户名'),
         password: this.$t('密码'),
       },
@@ -201,6 +233,11 @@ export default {
 <style lang="scss" scoped>
 .cluster-detail-info {
   position: relative;
+  .tips {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #979ba5;
+  }
   .certificate {
     max-width: 480px;
     display: flex;

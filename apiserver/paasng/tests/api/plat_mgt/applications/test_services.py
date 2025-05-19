@@ -27,7 +27,7 @@ from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingP
 from paasng.accessories.servicehub.exceptions import SvcAttachmentDoesNotExist
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
-from paasng.accessories.services.models import Plan, Service, ServiceCategory, ServiceInstance
+from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory, ServiceInstance
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from tests.utils.helpers import generate_random_string
 
@@ -186,13 +186,15 @@ class TestApplicationAddonServices:
     def test_view_credentials(self, plat_mgt_api_client):
         """测试查看附加服务实例的凭据"""
 
-        # 创建服务实例和关联
-        instance = self.create_service_instance()
-        self.create_attachment(instance)
+        # 创建预创建实例
+        pre_credentials = {"user": "pre_user", "password": "pre_password", "host": "127.0.0.1", "port": "3307"}
+        pre_instance = PreCreatedInstance.objects.create(
+            plan=self.plan.db_object, credentials=json.dumps(pre_credentials), is_allocated=False
+        )
 
         # 构造API请求URL
-        url = self._get_service_url("view_credentials", instance_id=str(instance.uuid))
+        url = self._get_service_url("view_credentials", pre_instance_id=str(pre_instance.uuid))
 
         rsp = plat_mgt_api_client.get(url)
         assert rsp.status_code == 200
-        assert rsp.data["result"] == self.credentials
+        assert json.loads(rsp.data["result"]) == pre_credentials

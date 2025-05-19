@@ -47,7 +47,8 @@ urlpatterns = [
         name="plat_mgt.applications.retrieve_app_name",
     ),
     re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/envs/(?P<env_name>[^/]+)/cluster/$",
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/"
+        r"envs/(?P<env_name>[^/]+)/cluster/$",
         views.ApplicationDetailViewSet.as_view({"post": "update_cluster"}),
         name="plat_mgt.applications.update_cluster",
     ),
@@ -85,17 +86,20 @@ urlpatterns = [
         name="plat_mgt.applications.services",
     ),
     re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/services/(?P<service_id>[^/]+)/envs/(?P<env_name>[^/]+)/$",
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/"
+        r"services/(?P<service_id>[^/]+)/envs/(?P<env_name>[^/]+)/$",
         views.ApplicationAddonServicesViewSet.as_view({"post": "assign_instance"}),
         name="plat_mgt.applications.services.assign_instance",
     ),
     re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/services/(?P<service_id>[^/]+)/envs/(?P<env_name>[^/]+)/instances/(?P<instance_id>[^/]+)/$",
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/"
+        r"services/(?P<service_id>[^/]+)/envs/(?P<env_name>[^/]+)/instances/(?P<instance_id>[^/]+)/$",
         views.ApplicationAddonServicesViewSet.as_view({"delete": "delete_instance"}),
         name="plat_mgt.applications.services.delete_instance",
     ),
     re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/services/(?P<service_id>[^/]+)/envs/(?P<env_name>[^/]+)/instances/(?P<instance_id>[^/]+)/credential/$",
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/"
+        r"services/(?P<service_id>[^/]+)/envs/(?P<env_name>[^/]+)/instances/(?P<pre_instance_id>[^/]+)/credential/$",
         views.ApplicationAddonServicesViewSet.as_view({"get": "view_credentials"}),
         name="plat_mgt.applications.services.view_credentials",
     ),

@@ -272,7 +272,7 @@
                             v-for="(item, index) in searchLogTips"
                             :key="index"
                           >
-                            <span :class="[{ first: index === 0 }, { second: index === 1 }]">
+                            <span>
                               {{ index + 1 }}.
                               <span>{{ item.text }}</span>
                               <template v-if="item.link">
@@ -315,7 +315,8 @@
   </div>
 </template>
 
-<script>import moment from 'moment';
+<script>
+import moment from 'moment';
 import xss from 'xss';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import logFilter from './comps/log-filter.vue';
@@ -328,8 +329,7 @@ const xssOptions = {
 };
 const logXss = new xss.FilterXSS(xssOptions);
 const initEndDate = moment().format('YYYY-MM-DD HH:mm:ss');
-const initStartDate = moment().subtract(1, 'hours')
-  .format('YYYY-MM-DD HH:mm:ss');
+const initStartDate = moment().subtract(1, 'hours').format('YYYY-MM-DD HH:mm:ss');
 
 export default {
   components: {
@@ -1092,16 +1092,6 @@ export default {
   }
 }
 
-span.first {
-  position: relative;
-  left: -38px;
-}
-
-span.second {
-  position: relative;
-  left: -12px;
-}
-
 .detail-box {
   padding: 5px 0;
   background-color: #fafbfd;
@@ -1339,6 +1329,14 @@ span.second {
 }
 .table-wrapper {
   width: auto;
+  .search-tips {
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    line-height: 24px;
+    width: fit-content;
+    text-align: left;
+  }
 }
 .tooltip-icon {
   cursor: pointer;

@@ -18,49 +18,62 @@
 
 from rest_framework import serializers
 
-from paasng.plat_admin.admin42.serializers.services import PlanObjSLZ, ServiceInstanceSLZ, ServiceObjSLZ
-from paasng.platform.engine.constants import AppEnvName
+# from paasng.accessories.servicehub.serializers import (
+#     ServiceMinimalSLZ,
+# )
+from paasng.platform.modules.serializers import MinimalModuleSLZ
 
 
-class ApplicationAddonServicesObjSLZ(ServiceObjSLZ):
-    """应用增强服务对象序列化器"""
+class AddonServiceSLZ(serializers.Serializer):
+    """应用增强服务序列化器"""
 
-    # 继承自 admin42 的序列化器
+    uuid = serializers.CharField(help_text="增强服务唯一标识")
+    name = serializers.CharField(help_text="增强服务名称")
+    display_name = serializers.CharField(help_text="增强服务展示名称")
 
 
-class ApplicationAddonServicesInstanceSLZ(ServiceInstanceSLZ):
+class AddonServiceInstanceSLZ(serializers.Serializer):
     """应用增强服务实例序列化器"""
 
-
-class ApplicationAddonServicesPlanSLZ(PlanObjSLZ):
-    """应用增强服务计划序列化器"""
-
-    # 继承自 admin42 的序列化器
+    uuid = serializers.UUIDField()
+    config = serializers.JSONField()
+    credentials = serializers.JSONField()
 
 
-class ApplicationAddonServicesConfigSLZ(serializers.Serializer):
-    """应用增强服务环境序列化器"""
+class AddonServicePlanSLZ(serializers.Serializer):
+    """应用增强服务绑定计划序列化器"""
 
-    env_name = serializers.ChoiceField(choices=AppEnvName.get_choices(), help_text="环境名称")
-    is_deploy_instance = serializers.BooleanField(help_text="是否分配实例")
+    env_name = serializers.CharField(help_text="环境名称")
     plan_name = serializers.CharField(help_text="增强服务计划名称")
     plan_description = serializers.CharField(help_text="增强服务计划描述")
 
 
-class ApplicationAddonServicesSLZ(serializers.Serializer):
-    """应用增强服务对象序列化器"""
-
-    service_uuid = serializers.CharField(help_text="增强服务 ID")
-    service_name = serializers.CharField(help_text="增强服务名称")
-    is_shared = serializers.BooleanField(default=False, help_text="是否共享服务")
-    shared_from = serializers.CharField(allow_null=True, required=False, help_text="共享自哪个模块")
-    config = serializers.ListField(child=ApplicationAddonServicesConfigSLZ(), help_text="增强服务环境")
+class AddonServiceProvisionInfoSLZ(serializers.Serializer):
+    stag = serializers.BooleanField(help_text="是否已配置实例(预发布环境)", default=False)
+    prod = serializers.BooleanField(help_text="是否已配置实例(生产环境)", default=False)
 
 
-class ApplicationAddonServicesListOutputSLZ(serializers.Serializer):
+class AddonBoundServiceInfoSLZ(serializers.Serializer):
+    """Serializer for representing bound service info"""
+
+    service = AddonServiceSLZ(help_text="增强服务信息")
+    provision_infos = AddonServiceProvisionInfoSLZ(help_text="增强服务实例分配信息")
+    plans = AddonServicePlanSLZ(help_text="增强服务方案信息", many=True)
+    ref_modules = serializers.ListField(help_text="共享当前增强服务的模块", allow_null=True, child=MinimalModuleSLZ())
+
+
+class AddonSharedServiceInfo(serializers.Serializer):
+    """应用增强服务共享信息序列化器"""
+
+    module = MinimalModuleSLZ(help_text="发起共享的模块")
+    ref_module = MinimalModuleSLZ(help_text="被共享的模块")
+    service = AddonServiceSLZ(help_text="共享服务信息")
+    provision_infos = AddonServiceProvisionInfoSLZ(help_text="共享服务实例分配信息")
+
+
+class AddonServiceListOutputSLZ(serializers.Serializer):
     """应用模块增强服务列表"""
 
     module_name = serializers.CharField(help_text="模块名称")
-    addons_service = serializers.ListField(
-        child=ApplicationAddonServicesSLZ(), help_text="增强服务列表", required=False, default=list
-    )
+    bound_services = AddonBoundServiceInfoSLZ(many=True, help_text="绑定的增强服务列表")
+    shared_services = AddonSharedServiceInfo(many=True, help_text="共享的增强服务列表")

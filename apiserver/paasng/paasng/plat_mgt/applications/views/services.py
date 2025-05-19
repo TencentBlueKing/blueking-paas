@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from django.db.transaction import atomic
 from django.http.response import Http404
@@ -31,14 +31,15 @@ from paasng.accessories.servicehub.exceptions import (
     SvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.services import EngineAppInstanceRel
-from paasng.accessories.servicehub.sharing import ServiceSharingManager
+from paasng.accessories.servicehub.services import EngineAppInstanceRel, ServiceObj
+from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.applications.serializers import services as slzs
 from paasng.platform.applications.models import Application
+from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
 
@@ -52,59 +53,42 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
         return DataDetail(
             type=DataType.RAW_DATA,
             data={
-                "service": slzs.ApplicationAddonServicesObjSLZ(rel.get_service()).data,
-                "instance": slzs.ApplicationAddonServicesInstanceSLZ(rel.get_instance()).data,
-                "plan": slzs.ApplicationAddonServicesPlanSLZ(rel.get_plan()).data,
+                "service": slzs.AddonServiceSLZ(rel.get_service()).data,
+                "instance": slzs.AddonServiceInstanceSLZ(rel.get_instance()).data,
+                "plan": slzs.AddonServicePlanSLZ(rel.get_plan()).data,
             },
         )
 
-    def _get_module_services_with_env_info(self, module) -> Dict[str, Dict[str, Any]]:
-        """获取模块下的增强服务及其环境信息"""
-        services_map: Dict[str, Any] = {}
+    @staticmethod
+    def _gen_service_obj_allocations(module: Module, services: List[ServiceObj]) -> Dict[str, Any]:
+        """生成服务对象分配信息"""
+        svc_allocation_map: Dict[str, Dict[str, Any]] = {
+            svc.uuid: {"service": svc, "provision_infos": {}, "plans": []} for svc in services
+        }
+        for env in module.get_envs():
+            rels = mixed_service_mgr.list_all_rels(env.engine_app)
+            for rel in rels:
+                svc = rel.get_service()
+                if svc.uuid not in svc_allocation_map:
+                    continue
 
-        ## 获取直接服务
-        for service in mixed_service_mgr.list_binded(module):
-            services_map[service.uuid] = {
-                "service_uuid": str(service.uuid),
-                "service_name": service.name,
-                "config": [],
-                "is_shared": False,
-                "shared_from": None,
-            }
-        ## 获取共享服务
-        for shared_info in ServiceSharingManager(module).list_all_shared_info():
-            service = shared_info.service
-            if service.uuid not in services_map:
-                services_map[service.uuid] = {
-                    "service_uuid": str(service.uuid),
-                    "service_name": service.name,
-                    "config": [],
-                    "is_shared": True,
-                    "shared_from": shared_info.ref_module.name,
-                }
+                alloc = svc_allocation_map[svc.uuid]
+                # 补充实例分配信息
+                alloc["provision_infos"][env.environment] = rel.is_provisioned()
+                plan = rel.get_plan()
+                alloc["plans"].append(
+                    {
+                        "env_name": env.environment,
+                        "plan_name": plan.name,
+                        "plan_description": plan.description,
+                    }
+                )
 
-        name_to_uuid = {data["service_name"]: uuid for uuid, data in services_map.items()}
-
-        # 填充环境信息
-        for env in module.envs.all():
-            for rel in mixed_service_mgr.list_all_rels(engine_app=env.engine_app):
-                service = rel.get_service()
-                service_uuid = name_to_uuid.get(service.name)
-                if service_uuid:
-                    services_map[service_uuid]["config"].append(
-                        {
-                            "env_name": env.environment,
-                            "is_deploy_instance": rel.is_provisioned(),
-                            "plan_name": rel.get_plan().name,
-                            "plan_description": rel.get_plan().description,
-                        }
-                    )
-
-        return services_map
+        return svc_allocation_map
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications.services"],
-        responses={status.HTTP_200_OK: slzs.ApplicationAddonServicesListOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: slzs.AddonServiceListOutputSLZ(many=True)},
     )
     def list(self, request, app_code):
         """获取增强服务列表"""
@@ -113,15 +97,45 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
         modules_data = []
 
         for module in application.modules.all():
-            # 获取模块的服务及环境信息
-            services_map = self._get_module_services_with_env_info(module)
+            # 查询共享 / 绑定服务
+            shared_infos = list(ServiceSharingManager(module).list_all_shared_info())
+            bound_services = list(mixed_service_mgr.list_binded(module))
 
-            ## 将服务列表添加到模块数据中
-            service_list = sorted(services_map.values(), key=lambda x: x["service_name"])
-            modules_data.append({"module_name": module.name, "addons_service": service_list})
+            # 已经启用的增强服务
+            bound_service_obj_allocations = self._gen_service_obj_allocations(module, bound_services)
+            bound_service_infos = list(bound_service_obj_allocations.values())
+            # 补充引用当前模块实例的模块信息
+            sharing_ref_mgr = SharingReferencesManager(module)
+            for svc_info in bound_service_infos:
+                svc_info["ref_modules"] = sharing_ref_mgr.list_related_modules(svc_info["service"])
+
+            # 共享其他模块的增强服务
+            shared_service_infos = []
+            for shared_info in shared_infos:
+                svc = shared_info.service
+                ref_svc_allocation = self._gen_service_obj_allocations(shared_info.ref_module, services=[svc])[
+                    svc.uuid
+                ]
+                shared_service_infos.append(
+                    {
+                        "service": svc,
+                        "module": shared_info.module,
+                        "ref_module": shared_info.ref_module,
+                        "provision_infos": ref_svc_allocation["provision_infos"],
+                    }
+                )
+
+            # 组合数据
+            modules_data.append(
+                {
+                    "module_name": module.name,
+                    "bound_services": bound_service_infos,
+                    "shared_services": shared_service_infos,
+                }
+            )
 
         # 返回模块数据
-        slz = slzs.ApplicationAddonServicesListOutputSLZ(modules_data, many=True)
+        slz = slzs.AddonServiceListOutputSLZ(modules_data, many=True)
         return Response(slz.data)
 
     @atomic

@@ -47,9 +47,9 @@ export default {
   },
   computed: {
     title() {
-      const { name, path } = this.$route;
+      const { name, path, query } = this.$route;
       if (name === 'clusterCreateEdit') {
-        return path.endsWith('/add') ? this.$t('添加集群') : this.$t('编辑集群');
+        return path.endsWith('/add') ? this.$t('添加集群') : `${this.$t('编辑集群')}: ${query.id}`;
       }
       return this.$route.meta.title;
     },

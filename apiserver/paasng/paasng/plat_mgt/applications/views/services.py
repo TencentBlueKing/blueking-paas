@@ -58,54 +58,49 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
             },
         )
 
-    def _get_module_services(self, module) -> Dict[str, Dict[str, Any]]:
-        """获取模块下的增强服务"""
-        # 获取该模块下所有服务记录，包括直接服务和共享服务
-        services_map = {}
+    def _get_module_services_with_env_info(self, module) -> Dict[str, Dict[str, Any]]:
+        """获取模块下的增强服务及其环境信息"""
+        services_map: Dict[str, Any] = {}
 
         ## 获取直接服务
         for service in mixed_service_mgr.list_binded(module):
             services_map[service.uuid] = {
                 "service_uuid": str(service.uuid),
                 "service_name": service.name,
-                "config": service.config,
-                "environment": [],
+                "config": [],
                 "is_shared": False,
                 "shared_from": None,
             }
         ## 获取共享服务
         for shared_info in ServiceSharingManager(module).list_all_shared_info():
             service = shared_info.service
-            if service.uuid in services_map:
-                continue
-
-            services_map[service.uuid] = {
-                "service_uuid": str(service.uuid),
-                "service_name": service.name,
-                "config": service.config,
-                "environment": [],
-                "is_shared": True,
-                "shared_from": shared_info.ref_module.name,
-            }
-
-        return services_map
-
-    def _fill_environment_info(self, module, services_map) -> None:
-        """填充环境信息"""
+            if service.uuid not in services_map:
+                services_map[service.uuid] = {
+                    "service_uuid": str(service.uuid),
+                    "service_name": service.name,
+                    "config": [],
+                    "is_shared": True,
+                    "shared_from": shared_info.ref_module.name,
+                }
 
         name_to_uuid = {data["service_name"]: uuid for uuid, data in services_map.items()}
 
-        ## 获取环境部署状态
+        # 填充环境信息
         for env in module.envs.all():
-            services_rels = mixed_service_mgr.list_all_rels(engine_app=env.engine_app)
-            for rel in services_rels:
+            for rel in mixed_service_mgr.list_all_rels(engine_app=env.engine_app):
                 service = rel.get_service()
                 service_uuid = name_to_uuid.get(service.name)
                 if service_uuid:
-                    # 直接服务
-                    services_map[service_uuid]["environment"].append(
-                        {"env_name": env.environment, "is_deploy_instance": rel.is_provisioned()}
+                    services_map[service_uuid]["config"].append(
+                        {
+                            "env_name": env.environment,
+                            "is_deploy_instance": rel.is_provisioned(),
+                            "plan_name": rel.get_plan().name,
+                            "plan_description": rel.get_plan().description,
+                        }
                     )
+
+        return services_map
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications.services"],
@@ -118,11 +113,8 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
         modules_data = []
 
         for module in application.modules.all():
-            # 获取模块下的增强服务
-            services_map = self._get_module_services(module)
-
-            # 填充环境信息
-            self._fill_environment_info(module, services_map)
+            # 获取模块的服务及环境信息
+            services_map = self._get_module_services_with_env_info(module)
 
             ## 将服务列表添加到模块数据中
             service_list = sorted(services_map.values(), key=lambda x: x["service_name"])

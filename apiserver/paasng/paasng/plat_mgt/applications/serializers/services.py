@@ -38,11 +38,13 @@ class ApplicationAddonServicesPlanSLZ(PlanObjSLZ):
     # 继承自 admin42 的序列化器
 
 
-class ApplicationAddonServicesEnvSLZ(serializers.Serializer):
+class ApplicationAddonServicesConfigSLZ(serializers.Serializer):
     """应用增强服务环境序列化器"""
 
     env_name = serializers.ChoiceField(choices=AppEnvName.get_choices(), help_text="环境名称")
     is_deploy_instance = serializers.BooleanField(help_text="是否分配实例")
+    plan_name = serializers.CharField(help_text="增强服务计划名称")
+    plan_description = serializers.CharField(help_text="增强服务计划描述")
 
 
 class ApplicationAddonServicesSLZ(serializers.Serializer):
@@ -50,10 +52,9 @@ class ApplicationAddonServicesSLZ(serializers.Serializer):
 
     service_uuid = serializers.CharField(help_text="增强服务 ID")
     service_name = serializers.CharField(help_text="增强服务名称")
-    config = serializers.JSONField(help_text="增强服务配置")
     is_shared = serializers.BooleanField(default=False, help_text="是否共享服务")
     shared_from = serializers.CharField(allow_null=True, required=False, help_text="共享自哪个模块")
-    environment = serializers.ListField(child=ApplicationAddonServicesEnvSLZ(), help_text="增强服务环境")
+    config = serializers.ListField(child=ApplicationAddonServicesConfigSLZ(), help_text="增强服务环境")
 
 
 class ApplicationAddonServicesListOutputSLZ(serializers.Serializer):

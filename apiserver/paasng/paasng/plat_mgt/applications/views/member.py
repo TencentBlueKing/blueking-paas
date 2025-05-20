@@ -16,6 +16,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 
+from collections import defaultdict
+
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -69,11 +71,14 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         slz = slzs.ApplicationMembershipCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        users = slz.validated_data["users"]
-        role = slz.validated_data["role"]
+        role_members_map = defaultdict(list)
+        for info in slz.data:
+            for role in info["roles"]:
+                role_members_map[role["id"]].append(info["user"]["username"])
 
         try:
-            add_role_members(application.code, role, users)
+            for role, members in role_members_map.items():
+                add_role_members(application.code, role, members)
         except BKIAMGatewayServiceError as e:
             raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
 

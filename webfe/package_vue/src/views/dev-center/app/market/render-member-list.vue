@@ -39,7 +39,7 @@ export default {
       default: 'user',
     },
     customStyles: {
-      type: String,
+      type: Boolean,
       default: false,
     },
   },

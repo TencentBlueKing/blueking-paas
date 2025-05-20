@@ -1,5 +1,8 @@
 <template>
-  <div class="process-card-container" @click="handleClick">
+  <div
+    class="process-card-container"
+    @click="handleClick"
+  >
     <div :class="wrapperClasses">
       <div class="logo mr10">
         <img
@@ -8,7 +11,7 @@
         />
       </div>
       <div class="title">
-        <span>{{ $t(label) }}</span>：
+        <span>{{ $t(label) }}：</span>
         <span>{{ name }}</span>
       </div>
       <!-- 编辑 -->
@@ -22,7 +25,7 @@
         v-if="!main && isEdit"
         v-bk-tooltips="{ content: $t('一个模块下，必须有一个进程'), disabled: !delIconDisabled }"
         class="paasng-icon paasng-plus-circle-shape delete-cls"
-        :class="{ 'disabled': delIconDisabled }"
+        :class="{ disabled: delIconDisabled }"
         @click.stop="$emit('delete', name)"
       />
       <!-- 主入口标识 -->
@@ -115,7 +118,7 @@ export default {
     display: flex;
     align-items: center;
     height: 52px;
-    padding: 0 12px 0 14px;
+    padding: 0 14px;
     font-size: 14px;
     color: #313238;
     background: #f5f7fa;
@@ -152,7 +155,7 @@ export default {
       position: absolute;
       top: -3px;
       right: -3px;
-      color: #EA3636;
+      color: #ea3636;
       transform: rotate(45deg);
       &.disabled {
         color: #c4c6cc;
@@ -166,7 +169,7 @@ export default {
       height: 16px;
       font-size: 10px;
       padding-left: 6px;
-      color: #FFFFFF;
+      color: #ffffff;
       background: #3a84ff;
       border-radius: 0 2px 0 100px;
     }

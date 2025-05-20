@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
+from django.conf import settings
 from django_dynamic_fixture import G
 
 from paasng.platform.bkapp_model.entities import AutoscalingConfig, Metric, ProcService
@@ -405,12 +406,12 @@ class TestModuleProcessSpecWithProcServicesViewSet:
         assert proc_specs[0]["services"] == [
             {
                 "name": "web",
-                "target_port": "${PORT}",
+                "target_port": settings.CONTAINER_PORT,
                 "port": 80,
                 "exposed_type": {"name": exposed_type},
                 "protocol": "TCP",
             },
-            {"name": "backend", "target_port": 5001, "port": None, "exposed_type": None, "protocol": "TCP"},
+            {"name": "backend", "target_port": 5001, "port": 5001, "exposed_type": None, "protocol": "TCP"},
         ]
         assert proc_specs[1]["services"] is None
 
@@ -430,7 +431,7 @@ class TestModuleProcessSpecWithProcServicesViewSet:
 
         assert len(proc_specs) == 1
         assert proc_specs[0]["services"] == [
-            {"name": "web", "target_port": 8000, "port": None, "exposed_type": {"name": "bk/http"}, "protocol": "TCP"},
+            {"name": "web", "target_port": 8000, "port": 8000, "exposed_type": {"name": "bk/http"}, "protocol": "TCP"},
             {"name": "backend", "target_port": 8001, "port": 80, "exposed_type": None, "protocol": "TCP"},
         ]
 

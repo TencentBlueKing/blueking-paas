@@ -22,10 +22,19 @@ from paasng.platform.bkapp_model.entities import ProbeSet, ProcService
 class TestRenderPort:
     def test_proc_service(self):
         proc_service = ProcService(target_port="${PORT}", name="web")
-        assert proc_service.render_port().target_port == settings.CONTAINER_PORT
+        rendered_proc_svc = proc_service.render_port()
+        assert rendered_proc_svc.target_port == settings.CONTAINER_PORT
+        assert rendered_proc_svc.port == settings.CONTAINER_PORT
 
         proc_service = ProcService(target_port=8080, name="web")
-        assert proc_service.render_port().target_port == 8080
+        rendered_proc_svc = proc_service.render_port()
+        assert rendered_proc_svc.target_port == 8080
+        assert rendered_proc_svc.port == 8080
+
+        proc_service = ProcService(target_port=8080, name="web", port=80)
+        rendered_proc_svc = proc_service.render_port()
+        assert rendered_proc_svc.target_port == 8080
+        assert rendered_proc_svc.port == 80
 
     def test_probes(self):
         probes = ProbeSet(

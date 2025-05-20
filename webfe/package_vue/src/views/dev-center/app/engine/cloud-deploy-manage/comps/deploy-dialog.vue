@@ -786,10 +786,7 @@ export default {
           moduleId: this.curModuleId,
         });
         this.processesData = res.proc_specs;
-        this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
-        if (!this.allowMultipleImage) {
-          this.getCustomImageTagList(); // 获取仅镜像下镜像tag
-        }
+        this.getCustomImageTagList(); // 获取仅镜像下镜像tag
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

@@ -436,6 +436,7 @@ export default {
         this.isPageLoading = false;
         this.isLoading = false;
         this.$nextTick(() => {
+          if (!this.logId) return;
           // query参数获取默认打开项
           const curLog = this.historyList.find((v) => v.deployment?.id === this.logId);
           curLog && this.handleShowLogSideslider(curLog);

@@ -10,10 +10,10 @@
             theme="primary"
             size="small"
             :outline="true"
+            icon="plus"
             ext-cls="new-process"
             @click="$emit('add', null)"
           >
-            <bk-icon type="plus" />
             {{ $t('新增') }}
           </bk-button>
         </div>
@@ -92,7 +92,7 @@ export default {
   },
   methods: {
     setMainEntryName(list = []) {
-      this.mainName = list.find(v => this.isMainEntry(v.services))?.name;
+      this.mainName = list.find((v) => this.isMainEntry(v.services))?.name;
     },
     handleChange(name, index) {
       this.$emit('change', name, index);
@@ -119,7 +119,7 @@ export default {
     // 判断是否为主入口
     isMainEntry(services) {
       if (!services?.length) return false;
-      return services.some(service => service.exposed_type?.name === 'bk/http');
+      return services.some((service) => service.exposed_type?.name === 'bk/http');
     },
   },
 };
@@ -157,8 +157,8 @@ export default {
   }
   .process-list {
     display: flex;
-      flex-wrap: wrap; /* 允许换行 */
-      gap: 8px; /* 设置间隔 */
+    flex-wrap: wrap; /* 允许换行 */
+    gap: 8px; /* 设置间隔 */
   }
 }
 </style>

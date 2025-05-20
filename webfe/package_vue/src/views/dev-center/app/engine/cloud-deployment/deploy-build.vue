@@ -11,7 +11,6 @@
       <!-- 仅镜像 -->
       <template v-if="isCustomImage">
         <image-info
-          v-if="!allowMultipleImage"
           :credential-list="credentialList"
           @close-content-loader="closeContentLoader"
         ></image-info>
@@ -73,7 +72,6 @@ export default {
       isLoading: true,
       buildMethod: '',
       credentialList: [],
-      allowMultipleImage: false,
     };
   },
   computed: {
@@ -85,10 +83,9 @@ export default {
       return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.AIDEV;
     },
   },
-  async created() {
+  created() {
     if (this.isCustomImage) {
-      await this.getCredentialList();
-      this.getProcessInfo();
+      this.getCredentialList();
     }
   },
   methods: {
@@ -114,23 +111,6 @@ export default {
           theme: 'error',
           message: e.detail || this.$t('接口异常'),
         });
-      }
-    },
-
-    async getProcessInfo() {
-      try {
-        const res = await this.$store.dispatch('deploy/getAppProcessInfo', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-        });
-        this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message,
-        });
-      } finally {
-        this.isLoading = false;
       }
     },
   },

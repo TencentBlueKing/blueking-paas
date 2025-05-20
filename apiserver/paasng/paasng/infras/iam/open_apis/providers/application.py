@@ -33,7 +33,7 @@ class ApplicationProvider(ResourceProvider):
 
     def list_instance(self, filter_obj: FancyDict, page_obj: Page, **options) -> ListResult:
         name_field = self._get_name_field(options.get("language"))
-        applications = Application.objects.all().values("code", name_field)
+        applications = Application.objects.filter(tenant_id=options.get("tenant_id")).values("code", name_field)
         results = [
             {"id": app["code"], "display_name": f"{app[name_field]} ({app['code']})"}
             for app in applications[page_obj.slice_from : page_obj.slice_to]
@@ -45,7 +45,7 @@ class ApplicationProvider(ResourceProvider):
         name_field = self._get_name_field(options.get("language"))
 
         results = []
-        applications = Application.objects.filter(code__in=ids)
+        applications = Application.objects.filter(code__in=ids, tenant_id=options.get("tenant_id"))
         approvers = self._fetch_application_approvers([app.code for app in applications])
         for app in applications:
             results.append(
@@ -71,9 +71,11 @@ class ApplicationProvider(ResourceProvider):
         """支持模糊搜索应用名"""
         keyword = filter_obj.keyword or ""
         name_field = self._get_name_field(options.get("language"))
-        applications = Application.objects.filter(
-            Q(name__icontains=keyword) | Q(name_en__icontains=keyword) | Q(code__icontains=keyword)
-        ).values("code", name_field)
+        applications = (
+            Application.objects.filter(tenant_id=options.get("tenant_id"))
+            .filter(Q(name__icontains=keyword) | Q(name_en__icontains=keyword) | Q(code__icontains=keyword))
+            .values("code", name_field)
+        )
         results = [
             {"id": app["code"], "display_name": f"{app[name_field]} ({app['code']})"}
             for app in applications[page_obj.slice_from : page_obj.slice_to]

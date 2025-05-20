@@ -52,6 +52,7 @@ from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import ServiceCategory
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import (
@@ -358,7 +359,9 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
 
         param = serializer.data
-        application_ids = list(Application.objects.filter_by_user(request.user).values_list("id", flat=True))
+        application_ids = list(
+            Application.objects.filter_by_user(request.user, get_tenant(request.user).id).values_list("id", flat=True)
+        )
 
         service = mixed_service_mgr.get(uuid=service_id)
         qs = mixed_service_mgr.get_provisioned_queryset(service, application_ids=application_ids).order_by(

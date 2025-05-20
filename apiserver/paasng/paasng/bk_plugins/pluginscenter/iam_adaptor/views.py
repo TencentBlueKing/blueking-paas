@@ -23,6 +23,7 @@ from rest_framework.views import APIView
 
 from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import ResourceType
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.providers import PluginProvider
+from paasng.core.tenant.user import OP_TYPE_TENANT_ID
 
 
 def get_api_dispatcher():
@@ -33,11 +34,7 @@ def get_api_dispatcher():
 
 def get_iam():
     return IAM(
-        settings.IAM_APP_CODE,
-        settings.IAM_APP_SECRET,
-        settings.BK_IAM_V3_INNER_URL,
-        settings.BKPAAS_URL,
-        settings.BK_IAM_APIGATEWAY_URL,
+        settings.IAM_APP_CODE, settings.IAM_APP_SECRET, settings.BK_IAM_APIGATEWAY_URL, bk_tenant_id=OP_TYPE_TENANT_ID
     )
 
 

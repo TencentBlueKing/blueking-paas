@@ -41,14 +41,9 @@ class BKPaaSIAMMigrator:
         app_code = settings.IAM_APP_CODE
         app_secret = settings.IAM_APP_SECRET
 
-        use_apigateway = getattr(settings, "BK_IAM_USE_APIGATEWAY", False)
-        if use_apigateway:
-            do_migrate.enable_use_apigateway()
-            iam_host = getattr(settings, "BK_IAM_APIGATEWAY_URL", "")
-            if iam_host == "":
-                raise exceptions.MigrationFailError("settings.BK_IAM_APIGATEWAY_URL should be set")
-        else:
-            iam_host = settings.BK_IAM_V3_INNER_URL
+        iam_host = getattr(settings, "BK_IAM_APIGATEWAY_URL", "")
+        if iam_host == "":
+            raise exceptions.MigrationFailError("settings.BK_IAM_APIGATEWAY_URL should be set")
 
         # only trigger migrator at db migrate
         if "migrate" not in sys.argv:

@@ -34,8 +34,6 @@ class BKIAMClient:
         self.iam = IAM(
             settings.IAM_APP_CODE,
             settings.IAM_APP_SECRET,
-            settings.BK_IAM_V3_INNER_URL,
-            settings.BKPAAS_URL,
             settings.BK_IAM_APIGATEWAY_URL,
         )
 

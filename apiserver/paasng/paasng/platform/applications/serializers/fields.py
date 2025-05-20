@@ -20,6 +20,7 @@ import re
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.models import Application
 from paasng.utils.serializers import NickNameField
 from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedWordValidator
@@ -78,7 +79,8 @@ class AppIDSMartField(serializers.RegexField):
 
 class ApplicationField(serializers.SlugRelatedField):
     def get_queryset(self):
-        return Application.objects.filter_by_user(user=self.context["request"].user)
+        user = self.context["request"].user
+        return Application.objects.filter_by_user(user=user, tenant_id=get_tenant(user).id)
 
 
 class AppNameField(NickNameField):

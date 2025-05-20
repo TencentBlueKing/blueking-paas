@@ -38,6 +38,7 @@ from sqlalchemy.orm import Query, Session
 from paasng.accessories.publish.market.models import MarketConfig, Tag
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.core.region.models import get_region
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.plat_admin.system.constants import SimpleAppSource
@@ -219,7 +220,8 @@ class DefaultAppDataBuilder(AppDataBuilder):
         """Set filter by developers"""
         app_filters, app_ids = [], []
         for username in filter_developers:
-            if f := ApplicationPermission().gen_develop_app_filters(username):
+            # FIXME: 多租户的情况下无法正常工作, 因为 username 的租户并非 DEFAULT_TENANT_ID
+            if f := ApplicationPermission().gen_develop_app_filters(username, DEFAULT_TENANT_ID):
                 app_filters.append(f)
 
         if app_filters:

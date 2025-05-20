@@ -111,10 +111,7 @@ class _BkRepoProbe(HttpProbe):
 
 class BKIAMProbe(HttpProbe):
     name = "bkiam"
-
-    iam_host = settings.BK_IAM_V3_INNER_URL
-    if getattr(settings, "BK_IAM_USE_APIGATEWAY", False):
-        iam_host = getattr(settings, "BK_IAM_APIGATEWAY_URL", "")
+    iam_host = getattr(settings, "BK_IAM_APIGATEWAY_URL", "")
     url = f"{iam_host}/ping"
     is_core = True
 

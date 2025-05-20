@@ -52,9 +52,7 @@ class FakeApplicationIAM:
             return True
         if request.subject.id == roles.APP_DEVELOP_USER and request.action.id in app_develop_allowed_actions:
             return True
-        if request.subject.id == roles.APP_OPERATE_USER and request.action.id in app_operate_allowed_actions:
-            return True
-        return False
+        return request.subject.id == roles.APP_OPERATE_USER and request.action.id in app_operate_allowed_actions
 
     def is_allowed_with_cache(self, request: Request) -> bool:
         return self.is_allowed(request)
@@ -64,7 +62,7 @@ class FakeApplicationPermission(Permission):
     iam = FakeApplicationIAM()
 
     def resource_inst_multi_actions_allowed(
-        self, username: str, action_ids: List[str], resources: List[Resource]
+        self, username: str, tenant_id: str, action_ids: List[str], resources: List[Resource]
     ) -> Dict[str, bool]:
         if username in [roles.ADMIN_USER, roles.APP_ADMIN_USER]:
             return {action_id: True for action_id in action_ids}
@@ -81,7 +79,7 @@ class FakeApplicationPermission(Permission):
         return multi
 
     def batch_resource_multi_actions_allowed(
-        self, username: str, action_ids: List[str], resources: List[Resource]
+        self, username: str, tenant_id: str, action_ids: List[str], resources: List[Resource]
     ) -> Dict[str, Dict[str, bool]]:
         perms = {}
         for _, r_id in enumerate([res.id for res in resources]):

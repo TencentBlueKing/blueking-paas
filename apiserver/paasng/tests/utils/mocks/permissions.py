@@ -65,7 +65,7 @@ class StubApplicationPermission:
     def can_manage_module(self, *args, **kwargs) -> bool:
         return True
 
-    def gen_user_app_filters(self, username):
+    def gen_user_app_filters(self, username, tenant_id):
         """生成用户有权限的应用 Django 过滤条件"""
         from paasng.platform.applications.models import ApplicationMembership
 
@@ -74,7 +74,7 @@ class StubApplicationPermission:
         )
         return Q(id__in=app_ids)
 
-    def gen_develop_app_filters(self, username):
+    def gen_develop_app_filters(self, username, tenant_id):
         """生成用户有开发者权限的应用 Django 过滤条件"""
         from paasng.platform.applications.constants import ApplicationRole
         from paasng.platform.applications.models import ApplicationMembership

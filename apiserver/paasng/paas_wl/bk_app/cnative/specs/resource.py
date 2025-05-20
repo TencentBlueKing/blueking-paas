@@ -123,7 +123,7 @@ def sync_networking(env: ModuleEnvironment, res: BkAppResource) -> None:
     if _need_exposed_services(res):
         exposed_type = _find_exposed_type(res)
         assert exposed_type is not None, "exposed type should not be None when need exposed services"
-        protocol = AppDomainProtocol.HTTP if exposed_type.name == ExposedTypeName.BK_HTTP else ExposedTypeName.BK_GRPC
+        protocol = AppDomainProtocol.HTTP if exposed_type.name == ExposedTypeName.BK_HTTP else AppDomainProtocol.GRPC
         deploy_networking(env, protocol=protocol)
     else:
         delete_networking(env)

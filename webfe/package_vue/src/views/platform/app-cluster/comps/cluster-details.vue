@@ -87,6 +87,7 @@
               <component
                 :is="tabActive"
                 :data="curDetailData"
+                :default-config="clusterDefaultConfigs"
               />
             </keep-alive>
           </div>
@@ -132,6 +133,7 @@ export default {
       contentLoading: false,
       tenantList: [],
       curDetailData: {},
+      clusterDefaultConfigs: {},
     };
   },
   computed: {
@@ -159,6 +161,7 @@ export default {
   methods: {
     init() {
       this.getClusterList();
+      this.getClusterDefaultConfigs();
     },
     switchDetails(name) {
       this.activeName = name || '';
@@ -204,12 +207,22 @@ export default {
         this.contentLoading = false;
       }
     },
+    // 获取集群默认配置项
+    async getClusterDefaultConfigs() {
+      try {
+        const ret = await this.$store.dispatch('tenant/getClusterDefaultConfigs');
+        this.clusterDefaultConfigs = ret;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .cluster-details-container {
+  min-height: 0;
   height: 100%;
   display: flex;
   margin-top: 16px;
@@ -236,6 +249,19 @@ export default {
     }
     .bk-resize-layout-aside {
       min-width: 280px;
+      .bk-resize-layout-aside-content {
+        overflow: auto;
+      }
+    }
+  }
+  .cluster-details-tab {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    /deep/ .bk-tab-section {
+      height: 100%;
+      min-height: 0;
+      overflow: auto;
     }
   }
   .list {
@@ -324,7 +350,7 @@ export default {
   }
   .details-wrapper {
     position: relative;
-    // height: 100%;
+    height: 100%;
     // overflow: auto;
     .close {
       position: absolute;

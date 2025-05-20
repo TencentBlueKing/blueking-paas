@@ -154,7 +154,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     for environment_name in AppEnvName
                 },
                 "probes": spec.probes or {},
-                "services": spec.services,
+                "services": ([svc.render_port() for svc in spec.services] if spec.services else None),
             }
 
             if metric := proc_metric_map.get(spec.name):

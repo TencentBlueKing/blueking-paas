@@ -57,4 +57,9 @@ class ProcService(BaseModel):
         """render target_port to settings.CONTAINER_PORT if original value is ${PORT}"""
         if self.target_port == PORT_PLACEHOLDER:
             self.target_port = settings.CONTAINER_PORT
+
+        # 未显式设置 port 时, 使用 target_port 的值
+        if not self.port:
+            self.port = int(self.target_port)
+
         return self

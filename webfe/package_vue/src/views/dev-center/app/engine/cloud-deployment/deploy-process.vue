@@ -146,41 +146,6 @@
                   </p>
                 </bk-form-item>
 
-                <!-- 镜像凭证 -->
-                <bk-form-item
-                  v-if="panels[panelActive] && allowMultipleImage"
-                  :label="$t('镜像凭证')"
-                  :label-width="labelWidth"
-                  :property="'command'"
-                >
-                  <bk-select
-                    v-model="formData.image_credential_name"
-                    :disabled="false"
-                    style="width: 500px"
-                    ext-cls="select-custom"
-                    ext-popover-cls="select-popover-custom"
-                    searchable
-                  >
-                    <bk-option
-                      v-for="option in imageCredentialList"
-                      :id="option.name"
-                      :key="option.name"
-                      :name="option.name"
-                    />
-                    <div
-                      slot="extension"
-                      style="cursor: pointer"
-                      @click="handlerCreateImageCredential"
-                    >
-                      <i class="bk-icon icon-plus-circle mr5" />
-                      {{ $t('新建凭证') }}
-                    </div>
-                  </bk-select>
-                  <p class="whole-item-tips">
-                    {{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}
-                  </p>
-                </bk-form-item>
-
                 <bk-form-item
                   :label="$t('启动命令')"
                   :label-width="labelWidth"
@@ -1175,7 +1140,6 @@ export default {
         ],
       },
       imageCredential: '',
-      imageCredentialList: [],
       targetPortErrTips: '',
       isTargetPortErrTips: false,
       ifopen: false,
@@ -1348,10 +1312,6 @@ export default {
         });
         this.hasProcess = !!res.proc_specs?.length;
         this.processData = this.formatData(res.proc_specs);
-        this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
-        if (this.allowMultipleImage) {
-          this.getImageCredentialList();
-        }
         this.processDataBackUp = cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
@@ -1442,25 +1402,6 @@ export default {
       this.formData.command = ['bash', '/app/start_web.sh'];
       this.formData.args = [];
       this.formData.port = 5000;
-    },
-
-    // 获取凭证列表
-    async getImageCredentialList() {
-      try {
-        const { appCode } = this;
-        const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
-        this.imageCredentialList = res;
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      }
-    },
-
-    // 前往创建镜像凭证页面
-    handlerCreateImageCredential() {
-      this.$router.push({ name: 'imageCredential' });
     },
 
     // 按扭组点击

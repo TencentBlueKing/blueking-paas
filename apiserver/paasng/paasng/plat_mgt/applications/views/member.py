@@ -68,7 +68,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         """添加成员"""
 
         application = get_object_or_404(Application, code=app_code)
-        slz = slzs.ApplicationMembershipCreateInputSLZ(data=request.data)
+        slz = slzs.ApplicationMembershipCreateInputSLZ(data=request.data, many=True)
         slz.is_valid(raise_exception=True)
 
         role_members_map = defaultdict(list)

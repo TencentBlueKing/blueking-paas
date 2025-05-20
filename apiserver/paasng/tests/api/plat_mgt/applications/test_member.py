@@ -68,14 +68,13 @@ class TestApplicationMemberViewSet:
 
     def test_create(self, plat_mgt_api_client, bk_app):
         url = reverse("plat_mgt.applications.members", kwargs={"app_code": bk_app.code})
-        data = {"users": [{"username": "test_user"}], "role": {"id": 2}}
+        data = [{"user": {"username": "test_user"}, "roles": [{"id": 2}]}]
         rsp = plat_mgt_api_client.post(url, data=data)
         assert rsp.status_code == 201
 
         # 检查数据库是否有对应的用户组和成员
-        user_id = user_id_encoder.encode(username="test_user", provider_type=settings.USER_TYPE)
         assert ApplicationUserGroup.objects.filter(app_code=bk_app.code, role=2).exists()
-        assert self._assert_user_in_role(bk_app, 2, user_id)
+        assert self._assert_user_in_role(bk_app, 2, "test_user")
 
     def test_update(self, plat_mgt_api_client, bk_app):
         # 准备测试数据

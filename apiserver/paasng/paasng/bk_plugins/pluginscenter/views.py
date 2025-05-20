@@ -265,8 +265,8 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         is_ai_plugin = validated_data["template"].id.startswith("bk-ai")
         if is_ai_plugin:
             # 对于 AI 插件，直接从原始数据中获取 extra_fields
-            # 因为蓝鲸应用的插件中并未定义 extraFields 的数据结构，前端针对 AI 插件的模板单独传的 extra_fields 字段
-            extra_fields = slz.initial_data.get("extra_fields", {})
+            # 因为蓝鲸应用的插件中并未定义 extraFields 的数据结构，前端针对 AI 插件的模板单独传的 ai_extra_fields 字段
+            extra_fields = slz.initial_data.get("ai_extra_fields", {})
 
         plugin = PluginInstance(
             pd=pd,

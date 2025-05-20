@@ -27,9 +27,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.servicehub.constants import LEGACY_PLAN_ID
-from paasng.accessories.servicehub.exceptions import (
-    SvcAttachmentDoesNotExist,
-)
+from paasng.accessories.servicehub.exceptions import SvcAttachmentDoesNotExist
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.services import EngineAppInstanceRel, ServiceObj
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
@@ -38,6 +36,11 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.applications.serializers import services as slzs
+from paasng.plat_mgt.infras.services.serializers import (
+    PlanObjOutputSLZ,
+    ServiceInstanceOutputSLZ,
+    ServiceObjOutputSLZ,
+)
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
@@ -48,52 +51,14 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
-    @staticmethod
-    def _gen_service_data_detail(rel: EngineAppInstanceRel) -> DataDetail:
-        return DataDetail(
-            type=DataType.RAW_DATA,
-            data={
-                "service": slzs.AddonServiceSLZ(rel.get_service()).data,
-                "instance": slzs.AddonServiceInstanceSLZ(rel.get_instance()).data,
-                "plan": slzs.AddonServicePlanSLZ(rel.get_plan()).data,
-            },
-        )
-
-    @staticmethod
-    def _gen_service_obj_allocations(module: Module, services: List[ServiceObj]) -> Dict[str, Any]:
-        """生成服务对象分配信息"""
-        svc_allocation_map: Dict[str, Dict[str, Any]] = {
-            svc.uuid: {"service": svc, "provision_infos": {}, "plans": []} for svc in services
-        }
-        for env in module.get_envs():
-            rels = mixed_service_mgr.list_all_rels(env.engine_app)
-            for rel in rels:
-                svc = rel.get_service()
-                if svc.uuid not in svc_allocation_map:
-                    continue
-
-                alloc = svc_allocation_map[svc.uuid]
-                # 补充实例分配信息
-                alloc["provision_infos"][env.environment] = rel.is_provisioned()
-                plan = rel.get_plan()
-                alloc["plans"].append(
-                    {
-                        "env_name": env.environment,
-                        "plan_name": plan.name,
-                        "plan_description": plan.description,
-                    }
-                )
-
-        return svc_allocation_map
-
     @swagger_auto_schema(
         tags=["plat_mgt.applications.services"],
-        responses={status.HTTP_200_OK: slzs.AddonServiceListOutputSLZ(many=True)},
+        responses={status.HTTP_200_OK: slzs.ServiceListOutputSLZ(many=True)},
     )
-    def list(self, request, app_code):
+    def list(self, request, code):
         """获取增强服务列表"""
 
-        application = get_object_or_404(Application, code=app_code)
+        application = get_object_or_404(Application, code=code)
         modules_data = []
 
         for module in application.modules.all():
@@ -135,7 +100,7 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
             )
 
         # 返回模块数据
-        slz = slzs.AddonServiceListOutputSLZ(modules_data, many=True)
+        slz = slzs.ServiceListOutputSLZ(modules_data, many=True)
         return Response(slz.data)
 
     @atomic
@@ -143,11 +108,11 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
         tags=["plat_mgt.applications.services"],
         responses={status.HTTP_201_CREATED: None},
     )
-    def assign_instance(self, request, app_code, module_name, env_name, service_id):
+    def provision_instance(self, request, code, module_name, environment, service_id):
         """分配增强服务实例"""
-        application = get_object_or_404(Application, code=app_code)
+        application = get_object_or_404(Application, code=code)
         module = get_object_or_404(application.modules.all(), name=module_name)
-        env = module.envs.get(environment=env_name)
+        env = module.envs.get(environment=environment)
         service = mixed_service_mgr.get_or_404(service_id)
 
         rel = next(mixed_service_mgr.list_unprovisioned_rels(engine_app=env.engine_app, service=service), None)
@@ -159,7 +124,7 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
             user=request.user.pk,
             operation=OperationEnum.PROVISION_INSTANCE,
             target=OperationTarget.APP,
-            app_code=app_code,
+            app_code=code,
             module_name=module,
             environment=env,
             data_after=self._gen_service_data_detail(rel),
@@ -171,7 +136,7 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
         tags=["plat_mgt.applications.services"],
         responses={status.HTTP_204_NO_CONTENT: None},
     )
-    def delete_instance(self, request, app_code, module_name, env_name, service_id, instance_id):
+    def recycle_resource(self, request, code, module_name, environment, service_id, instance_id):
         """删除增强服务实例"""
         service = mixed_service_mgr.get_or_404(service_id)
 
@@ -193,21 +158,60 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
                 user=request.user.pk,
                 operation=OperationEnum.RECYCLE_RESOURCE,
                 target=OperationTarget.APP,
-                app_code=app_code,
+                app_code=code,
                 module_name=module_name,
                 data_before=data_before,
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def view_credentials(self, request, app_code, module_name, env_name, service_id, instance_id):
-        """查看增强服务实例凭据"""
+    def view_credentials(self, request, code, module_name, environment, service_id, instance_id):
+        """查看增强服务实例凭据, 使用 PreCreateINstance 的 UUID"""
+
         service = mixed_service_mgr.get_or_404(service_id)
 
-        try:
-            instance_rel = mixed_service_mgr.get_instance_rel_by_instance_id(service, instance_id)
-        except SvcAttachmentDoesNotExist:
+        rel = mixed_service_mgr.get_instance_rel_by_instance_id(service, instance_id)
+        if not rel:
             raise Http404
 
-        instance = instance_rel.get_instance()
-        return Response({"result": instance.credentials})
+        return Response(rel.get_instance().get_credentials())
+
+    @staticmethod
+    def _gen_service_data_detail(rel: EngineAppInstanceRel) -> DataDetail:
+        return DataDetail(
+            type=DataType.RAW_DATA,
+            data={
+                "service": ServiceObjOutputSLZ(rel.get_service()).data,
+                "instance": ServiceInstanceOutputSLZ(rel.get_instance()).data,
+                "plan": PlanObjOutputSLZ(rel.get_plan()).data,
+            },
+        )
+
+    @staticmethod
+    def _gen_service_obj_allocations(module: Module, services: List[ServiceObj]) -> Dict[str, Any]:
+        """生成服务对象分配信息"""
+        svc_allocation_map: Dict[str, Dict[str, Any]] = {
+            svc.uuid: {"service": svc, "provision_infos": [], "plans": {}} for svc in services
+        }
+        for env in module.get_envs():
+            rels = mixed_service_mgr.list_all_rels(env.engine_app)
+            for rel in rels:
+                svc = rel.get_service()
+                if svc.uuid not in svc_allocation_map:
+                    continue
+
+                alloc = svc_allocation_map[svc.uuid]
+                alloc["provision_infos"].append(
+                    {
+                        "env_name": env.environment,
+                        "is_provisioned": rel.is_provisioned(),
+                        "instance_uuid": rel.get_instance().uuid if rel.is_provisioned() else None,
+                    }
+                )
+                plan = rel.get_plan()
+                alloc["plans"][env.environment] = {
+                    "name": plan.name,
+                    "description": plan.description,
+                }
+
+        return svc_allocation_map

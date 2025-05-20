@@ -63,6 +63,35 @@ class ServiceObjOutputListSLZ(ServiceObjOutputSLZ):
     pass
 
 
+class PlanForDisplayOutputSLZ(serializers.Serializer):
+    """用于简单展示的 Plan 信息"""
+
+    name = serializers.CharField(help_text="方案名称")
+    description = serializers.CharField(help_text="方案描述")
+
+
+class PlanObjOutputSLZ(serializers.Serializer):
+    """增强服务计划详情"""
+
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    service_id = serializers.CharField(source="service.uuid", read_only=True)
+
+    uuid = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    name = serializers.CharField()
+    description = serializers.CharField()
+    config = serializers.JSONField(required=False, default=dict)
+    is_active = serializers.BooleanField()
+    properties = serializers.JSONField(required=False, default=dict)
+
+
+class ServiceInstanceOutputSLZ(serializers.Serializer):
+    """增强服务实例"""
+
+    uuid = serializers.UUIDField()
+    config = serializers.JSONField()
+    credentials = serializers.JSONField()
+
+
 class ServiceCreateSLZ(serializers.Serializer):
     """创建增强服务"""
 

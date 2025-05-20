@@ -103,8 +103,8 @@ urlpatterns = [
             include_envs=True,
             prefix="api/plat_mgt/applications/",
         ),
-        views.ApplicationAddonServicesViewSet.as_view({"delete": "recycle_instance"}),
-        name="plat_mgt.applications.services.instance.delete",
+        views.ApplicationAddonServicesViewSet.as_view({"delete": "recycle_resource"}),
+        name="plat_mgt.applications.services.instance.recycle",
     ),
     re_path(
         make_app_pattern(

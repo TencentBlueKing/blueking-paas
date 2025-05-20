@@ -136,7 +136,7 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
         tags=["plat_mgt.applications.services"],
         responses={status.HTTP_204_NO_CONTENT: None},
     )
-    def recycle_instance(self, request, code, module_name, environment, service_id, instance_id):
+    def recycle_resource(self, request, code, module_name, environment, service_id, instance_id):
         """删除增强服务实例"""
         service = mixed_service_mgr.get_or_404(service_id)
 

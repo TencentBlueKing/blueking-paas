@@ -7,6 +7,7 @@
         @click="goBack"
       />
       {{ title }}
+      <slot name="extra"></slot>
     </div>
     <div
       v-if="tabPanels.length"
@@ -101,6 +102,8 @@ export default {
     }
   }
   .title {
+    display: flex;
+    align-items: center;
     padding-left: 24px;
     font-size: 16px;
     color: #313238;

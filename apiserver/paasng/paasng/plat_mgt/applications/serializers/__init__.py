@@ -35,11 +35,7 @@ from .member import (
     ApplicationMembershipUpdateInputSLZ,
 )
 from .services import (
-    AddonServiceInstanceSLZ,
-    AddonServiceListOutputSLZ,
-    AddonServicePlanObjSLZ,
-    AddonServicePlanSLZ,
-    AddonServiceSLZ,
+    ServiceListOutputSLZ,
 )
 
 __all__ = [
@@ -60,9 +56,5 @@ __all__ = [
     "ApplicationMembershipListOutputSLZ",
     "ApplicationMembershipUpdateInputSLZ",
     # services
-    "AddonServiceInstanceSLZ",
-    "AddonServiceListOutputSLZ",
-    "AddonServicePlanSLZ",
-    "AddonServicePlanObjSLZ",
-    "AddonServiceSLZ",
+    "ServiceListOutputSLZ",
 ]

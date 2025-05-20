@@ -18,72 +18,52 @@
 
 from rest_framework import serializers
 
-# from paasng.accessories.servicehub.serializers import (
-#     ServiceMinimalSLZ,
-# )
+from paasng.plat_mgt.infras.services.serializers import (
+    PlanForDisplayOutputSLZ,
+)
 from paasng.platform.modules.serializers import MinimalModuleSLZ
 
 
-class AddonServiceSLZ(serializers.Serializer):
-    """应用增强服务序列化器"""
-
-    uuid = serializers.CharField(help_text="增强服务唯一标识")
-    name = serializers.CharField(help_text="增强服务名称")
-    display_name = serializers.CharField(help_text="增强服务展示名称")
+class ServiceMinimalObjSLZ(serializers.Serializer):
+    uuid = serializers.CharField()
+    name = serializers.CharField()
+    display_name = serializers.CharField()
 
 
-class AddonServiceInstanceSLZ(serializers.Serializer):
-    """应用增强服务实例序列化器"""
-
-    uuid = serializers.UUIDField()
-    config = serializers.JSONField()
-    credentials = serializers.JSONField()
-
-
-class AddonServicePlanObjSLZ(serializers.Serializer):
-    """应用增强服务计划对象序列化器"""
-
-    uuid = serializers.UUIDField(help_text="增强服务计划唯一标识")
-    name = serializers.CharField(help_text="增强服务计划名称")
-    description = serializers.CharField(help_text="增强服务计划描述")
-
-
-class AddonServicePlanSLZ(serializers.Serializer):
+class ServicePlanOutputSLZ(serializers.Serializer):
     """应用增强服务绑定计划序列化器"""
 
+    stag = PlanForDisplayOutputSLZ(help_text="预发布环境方案信息", default=None)
+    prod = PlanForDisplayOutputSLZ(help_text="生产环境方案信息", default=None)
+
+
+class ServiceProvisionInfoSLZ(serializers.Serializer):
     env_name = serializers.CharField(help_text="环境名称")
-    plan_name = serializers.CharField(help_text="增强服务计划名称")
-    plan_description = serializers.CharField(help_text="增强服务计划描述")
+    is_provisioned = serializers.BooleanField(help_text="是否已分配实例")
+    instance_uuid = serializers.UUIDField(help_text="增强服务实例唯一标识", allow_null=True, default=None)
 
 
-class AddonServiceProvisionInfoSLZ(serializers.Serializer):
-    env_name = serializers.CharField(help_text="环境名称")
-    is_provisioned = serializers.BooleanField(help_text="是否已配置实例", default=False)
-    instance_id = serializers.UUIDField(help_text="环境实例UUID", allow_null=True)
-    pre_instance_id = serializers.UUIDField(help_text="预创建实例UUID")
+class BoundServiceInfoOutPutSLZ(serializers.Serializer):
+    """应用增强服务绑定信息序列化器"""
 
-
-class AddonBoundServiceInfoSLZ(serializers.Serializer):
-    """Serializer for representing bound service info"""
-
-    service = AddonServiceSLZ(help_text="增强服务信息")
-    provision_infos = AddonServiceProvisionInfoSLZ(help_text="增强服务实例分配信息", many=True)
-    plans = AddonServicePlanSLZ(help_text="增强服务方案信息", many=True)
+    service = ServiceMinimalObjSLZ(help_text="增强服务信息")
+    provision_infos = ServiceProvisionInfoSLZ(help_text="增强服务实例分配信息", many=True)
+    plans = ServicePlanOutputSLZ(help_text="增强服务方案信息")
     ref_modules = serializers.ListField(help_text="共享当前增强服务的模块", allow_null=True, child=MinimalModuleSLZ())
 
 
-class AddonSharedServiceInfo(serializers.Serializer):
+class SharedServiceInfoOutputSLZ(serializers.Serializer):
     """应用增强服务共享信息序列化器"""
 
     module = MinimalModuleSLZ(help_text="发起共享的模块")
     ref_module = MinimalModuleSLZ(help_text="被共享的模块")
-    service = AddonServiceSLZ(help_text="共享服务信息")
-    provision_infos = AddonServiceProvisionInfoSLZ(help_text="共享服务实例分配信息", many=True)
+    service = ServiceMinimalObjSLZ(help_text="共享服务信息")
+    provision_infos = ServiceProvisionInfoSLZ(help_text="共享服务实例分配信息", many=True)
 
 
-class AddonServiceListOutputSLZ(serializers.Serializer):
+class ServiceListOutputSLZ(serializers.Serializer):
     """应用模块增强服务列表"""
 
     module_name = serializers.CharField(help_text="模块名称")
-    bound_services = AddonBoundServiceInfoSLZ(many=True, help_text="绑定的增强服务列表")
-    shared_services = AddonSharedServiceInfo(many=True, help_text="共享的增强服务列表")
+    bound_services = BoundServiceInfoOutPutSLZ(many=True, help_text="绑定的增强服务列表")
+    shared_services = SharedServiceInfoOutputSLZ(many=True, help_text="共享的增强服务列表")

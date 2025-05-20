@@ -144,7 +144,6 @@ class TestApplicationAddonServices:
         resp = plat_mgt_api_client.get(url)
         assert resp.status_code == 200
         assert isinstance(resp.data, list)
-        print("数据: ", resp.data)
         assert len(resp.data) > 0
 
     def test_assign_instance(self, plat_mgt_api_client):
@@ -154,7 +153,6 @@ class TestApplicationAddonServices:
 
         # 构造API请求URL
         url = self._get_service_url("assign_instance")
-        print("url: ", url)
 
         instance = self.create_service_instance()
 

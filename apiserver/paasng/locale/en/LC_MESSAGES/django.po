@@ -2280,7 +2280,7 @@ msgstr ""
 "There are no unallocated instances of Add-ons in the current environment"
 
 #: paasng/plat_admin/admin42/views/services.py:147
-#: paasng/plat_mgt/applications/views/services.py:195
+#: paasng/plat_mgt/applications/views/services.py:149
 msgid "迁移应用不支持回收增强服务实例"
 msgstr ""
 "Migrating applications does not support reclaiming enhanced service "

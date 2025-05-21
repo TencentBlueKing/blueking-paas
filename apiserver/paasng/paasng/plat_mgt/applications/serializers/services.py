@@ -18,9 +18,7 @@
 
 from rest_framework import serializers
 
-from paasng.plat_mgt.infras.services.serializers import (
-    PlanForDisplayOutputSLZ,
-)
+from paasng.plat_mgt.infras.services.serializers import PlanForDisplayOutputSLZ, ServiceInstanceOutputSLZ
 from paasng.platform.modules.serializers import MinimalModuleSLZ
 
 
@@ -67,3 +65,15 @@ class ServiceListOutputSLZ(serializers.Serializer):
     module_name = serializers.CharField(help_text="模块名称")
     bound_services = BoundServiceInfoOutPutSLZ(many=True, help_text="绑定的增强服务列表")
     shared_services = SharedServiceInfoOutputSLZ(many=True, help_text="共享的增强服务列表")
+
+
+# 回收增强服务相关 SLZ
+
+
+class RecyclableServiceListOutputSLZ(serializers.Serializer):
+    """可回收的增强服务列表序列化器"""
+
+    environment = serializers.CharField(help_text="环境名称")
+    module = serializers.CharField(help_text="模块名称")
+    service = ServiceMinimalObjSLZ(help_text="增强服务信息")
+    instance = ServiceInstanceOutputSLZ(help_text="增强服务实例信息")

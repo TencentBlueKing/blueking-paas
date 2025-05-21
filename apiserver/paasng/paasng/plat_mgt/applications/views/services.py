@@ -46,7 +46,7 @@ from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
 
-class ApplicationAddonServicesViewSet(viewsets.ViewSet):
+class ApplicationServicesViewSet(viewsets.ViewSet):
     """平台管理 - 应用增强服务"""
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
@@ -215,3 +215,70 @@ class ApplicationAddonServicesViewSet(viewsets.ViewSet):
                 }
 
         return svc_allocation_map
+
+
+class ApplicationServicesRecyclableViewSet(viewsets.ViewSet):
+    """平台管理 - 增强服务回收"""
+
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+
+    @staticmethod
+    def _gen_service_data_detail(rel: EngineAppInstanceRel) -> DataDetail:
+        service_data = ServiceObjOutputSLZ(mixed_service_mgr.get_or_404(rel.db_obj.service_id)).data
+
+        return DataDetail(
+            type=DataType.RAW_DATA,
+            data={
+                "instance": ServiceInstanceOutputSLZ(rel.get_instance()).data,
+                "service": service_data,
+            },
+        )
+
+    def list_unbound(self, request, app_code):
+        """获取可回收的增强服务实例列表"""
+        result = []
+        application = get_object_or_404(Application, code=app_code)
+        for module in application.modules.all():
+            for env in module.envs.all():
+                # 获取可回收的增强服务实例
+                for rel in mixed_service_mgr.list_unbound_instance_rels(engine_app=env.engine_app):
+                    instance = rel.get_instance()
+                    if not instance:
+                        # 如果已经回收了，获取不到 instance，跳过
+                        continue
+
+                    result.append(
+                        dict(
+                            environment=env.environment,
+                            module=module.name,
+                            service=mixed_service_mgr.get_or_404(rel.db_obj.service_id),
+                            instance=instance,
+                        )
+                    )
+        return Response(slzs.RecyclableServiceListOutputSLZ(result, many=True).data)
+
+    def recycle(self, request, code, module_name, service_id, instance_id):
+        """回收增强服务实例"""
+        service = mixed_service_mgr.get_or_404(service_id)
+
+        try:
+            rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(
+                service=service,
+                service_instance_id=instance_id,
+            )
+        except SvcAttachmentDoesNotExist:
+            raise Http404
+
+        data_before = self._gen_service_data_detail(rel)
+        rel.recycle_resource()
+
+        add_admin_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.RECYCLE_RESOURCE,
+            target=OperationTarget.APP,
+            app_code=code,
+            module_name=module_name,
+            data_before=data_before,
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

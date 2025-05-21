@@ -85,7 +85,7 @@ urlpatterns = [
     # 平台管理 - 增强服务
     re_path(
         r"^api/plat_mgt/applications/(?P<code>[^/]+)/modules/services/$",
-        views.ApplicationAddonServicesViewSet.as_view({"get": "list"}),
+        views.ApplicationServicesViewSet.as_view({"get": "list"}),
         name="plat_mgt.applications.services",
     ),
     re_path(
@@ -94,7 +94,7 @@ urlpatterns = [
             include_envs=True,
             prefix="api/plat_mgt/applications/",
         ),
-        views.ApplicationAddonServicesViewSet.as_view({"get": "view_credentials"}),
+        views.ApplicationServicesViewSet.as_view({"get": "view_credentials"}),
         name="plat_mgt.applications.services.credentials",
     ),
     re_path(
@@ -103,7 +103,7 @@ urlpatterns = [
             include_envs=True,
             prefix="api/plat_mgt/applications/",
         ),
-        views.ApplicationAddonServicesViewSet.as_view({"delete": "recycle_resource"}),
+        views.ApplicationServicesViewSet.as_view({"delete": "recycle_resource"}),
         name="plat_mgt.applications.services.instance.recycle",
     ),
     re_path(
@@ -112,7 +112,7 @@ urlpatterns = [
             include_envs=True,
             prefix="api/plat_mgt/applications/",
         ),
-        views.ApplicationAddonServicesViewSet.as_view({"post": "provision_instance"}),
+        views.ApplicationServicesViewSet.as_view({"post": "provision_instance"}),
         name="plat_mgt.applications.services.instance.provision",
     ),
 ]

@@ -34,7 +34,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])
-class TestApplicationAddonServices:
+class TestApplicationServicesViewSet:
     """测试应用的增强服务"""
 
     @pytest.fixture(autouse=True)

@@ -46,7 +46,7 @@ from paasng.platform.modules.models import Module
 from paasng.utils.error_codes import error_codes
 
 
-class ApplicationAddonServicesViewSet(viewsets.ViewSet):
+class ApplicationServicesViewSet(viewsets.ViewSet):
     """平台管理 - 应用增强服务"""
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]

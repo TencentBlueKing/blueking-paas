@@ -59,7 +59,9 @@ class FakeApplicationIAM:
 
 
 class FakeApplicationPermission(Permission):
-    iam = FakeApplicationIAM()
+    @staticmethod
+    def _make_iam(tenant_id: str):
+        return FakeApplicationIAM()
 
     def resource_inst_multi_actions_allowed(
         self, username: str, tenant_id: str, action_ids: List[str], resources: List[Resource]

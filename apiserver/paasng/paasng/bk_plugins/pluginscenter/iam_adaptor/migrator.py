@@ -26,6 +26,8 @@ from django.db.migrations import RunPython
 from iam.contrib.iam_migration import exceptions
 from iam.contrib.iam_migration.utils import do_migrate
 
+from paasng.core.tenant.user import OP_TYPE_TENANT_ID
+
 
 class IAMPermissionTemplateRender:
     """TemplateRender used to render jinja2 template located at 'permission-templates'"""
@@ -75,7 +77,7 @@ class IAMMigrator:
         if not ok:
             raise exceptions.NetworkUnreachableError("bk iam ping error")
 
-        ok = do_migrate.do_migrate(self.migration_data, iam_host, app_code, app_secret)
+        ok = do_migrate.do_migrate(self.migration_data, iam_host, app_code, app_secret, bk_tenant_id=OP_TYPE_TENANT_ID)
         if not ok:
             raise exceptions.MigrationFailError("iam migrate fail")
 

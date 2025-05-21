@@ -220,7 +220,7 @@ class DefaultAppDataBuilder(AppDataBuilder):
         """Set filter by developers"""
         app_filters, app_ids = [], []
         for username in filter_developers:
-            # FIXME: 多租户的情况下无法正常工作, 因为 username 的租户并非 DEFAULT_TENANT_ID
+            # FIXME: 多租户的情况下无法正常工作, 因为 username 的租户并非 DEFAULT_TENANT_ID. 考虑持久化租户信息?
             if f := ApplicationPermission().gen_develop_app_filters(username, DEFAULT_TENANT_ID):
                 app_filters.append(f)
 

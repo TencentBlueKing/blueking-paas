@@ -15,13 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
 import logging
 import time
 from typing import List
 
 from bkapi_client_core.exceptions import APIGatewayResponseError
 from django.conf import settings
-from django.utils.functional import SimpleLazyObject
 
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.iam_adaptor import definitions
@@ -34,6 +34,7 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import (
     ResourceType,
 )
 from paasng.bk_plugins.pluginscenter.thirdparty.utils import registry_i18n_hook
+from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 from paasng.infras.iam.apigw.client import Client
 from paasng.infras.iam.apigw.client import Group as BKIAMGroup
 from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
@@ -52,12 +53,9 @@ def calc_expired_at(expire_after_days: int) -> int:
 class BKIAMClient:
     """bk-iam 通过 APIGW 提供的管理端 API client"""
 
-    def __init__(self):
+    def __init__(self, tenant_id: str):
         client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_IAM_APIGW_SERVICE_STAGE)
-        client.update_bkapi_authorization(
-            bk_app_code=settings.BK_APP_CODE,
-            bk_app_secret=settings.BK_APP_SECRET,
-        )
+        client.update_headers(self._prepare_headers(tenant_id))
         registry_i18n_hook(client.session)
         self.client: BKIAMGroup = client.api
 
@@ -381,5 +379,15 @@ class BKIAMClient:
                 )
                 raise BKIAMApiError(resp["message"])
 
-
-lazy_iam_client: BKIAMClient = SimpleLazyObject(BKIAMClient)
+    @staticmethod
+    def _prepare_headers(tenant_id: str) -> dict:
+        headers = {
+            "x-bkapi-authorization": json.dumps(
+                {
+                    "bk_app_code": settings.BK_APP_CODE,
+                    "bk_app_secret": settings.BK_APP_SECRET,
+                }
+            ),
+            API_HERDER_TENANT_ID: tenant_id,
+        }
+        return headers

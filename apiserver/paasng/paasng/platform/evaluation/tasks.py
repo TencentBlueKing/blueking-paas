@@ -199,7 +199,7 @@ def send_idle_email_to_app_developers(
         total_count=total_cnt, notification_type=EmailNotificationType.IDLE_APP_MODULE_ENVS
     )
     for idx, username in enumerate(waiting_notify_usernames):
-        # FIXME: 多租户的情况下无法正常工作, 因为 username 的租户并非 DEFAULT_TENANT_ID
+        # FIXME: 多租户的情况下无法正常工作, 因为 username 的租户并非 DEFAULT_TENANT_ID. 考虑持久化租户信息?
         filters = ApplicationPermission().gen_develop_app_filters(username, DEFAULT_TENANT_ID)
         app_codes = Application.objects.filter(is_active=True).filter(filters).values_list("code", flat=True)
 

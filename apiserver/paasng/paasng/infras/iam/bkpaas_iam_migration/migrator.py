@@ -25,6 +25,8 @@ from iam.contrib.iam_migration import exceptions
 from iam.contrib.iam_migration.migrator import renders
 from iam.contrib.iam_migration.utils import do_migrate
 
+from paasng.core.tenant.user import OP_TYPE_TENANT_ID
+
 
 class BKPaaSIAMMigrator:
     """
@@ -67,6 +69,6 @@ class BKPaaSIAMMigrator:
         if not ok:
             raise exceptions.NetworkUnreachableError("bk iam ping error")
 
-        ok = do_migrate.do_migrate(data, iam_host, app_code, app_secret)
+        ok = do_migrate.do_migrate(data, iam_host, app_code, app_secret, bk_tenant_id=OP_TYPE_TENANT_ID)
         if not ok:
             raise exceptions.MigrationFailError("iam migrate fail")

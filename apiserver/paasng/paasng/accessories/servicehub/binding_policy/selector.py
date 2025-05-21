@@ -16,6 +16,8 @@
 from enum import StrEnum
 from typing import Dict, List
 
+from django.core.exceptions import ObjectDoesNotExist
+
 from paasng.accessories.servicehub.constants import ServiceAllocationPolicyType
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError, PlanSelectorError
 from paasng.accessories.servicehub.models import ServiceAllocationPolicy
@@ -116,8 +118,9 @@ class PlanSelector:
                 return self.plan_ids_to_objs(service, precedence_policy_obj.get_plan_ids(env))
         elif allocation_policy.type == ServiceAllocationPolicyType.UNIFORM.value:
             # Get plans based on the binding policy
-            policy = allocation_policy.uniform_policy
-            if not policy:
+            try:
+                policy = allocation_policy.uniform_policy
+            except ObjectDoesNotExist:
                 return []
 
             policy_obj = binding_policy_factory(policy.type, policy.data)

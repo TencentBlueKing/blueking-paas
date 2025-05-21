@@ -2,6 +2,11 @@ fail_fast: true
 repos:
   - repo: local
     hooks:
+      - id: smart-app-builder-fmt
+        language: system
+        name: run make fmt for "smart-app-builder"
+        entry: bash -c "cd smart-app-builder && make fmt"
+        files: '^smart-app-builder/'
       - id: smart-app-builder-lint
         language: system
         name: run make lint for "smart-app-builder"

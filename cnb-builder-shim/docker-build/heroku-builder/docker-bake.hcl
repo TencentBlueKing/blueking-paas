@@ -1,5 +1,5 @@
 variable "BUILDER_IMAGE_NAME" {
-  default = ""
+  default = "mirrors.tencent.com/bkpaas/builder-heroku-noble"
 }
 
 variable "BUILDER_IMAGE_TAG" {
@@ -22,16 +22,10 @@ variable "DEV_IMAGE_TAG" {
   default = "latest"
 }
 
-
-function "builder_image_name" {
-  params = [stack_id, override]
-  result = equal(override, "") ? "mirrors.tencent.com/bkpaas/builder-heroku-noble" : override
-}
-
 target "heroku-builder-noble" {
   dockerfile = "docker-build/heroku-builder/Dockerfile"
   args = {
-    BUILDER_IMAGE_NAME = "${builder_image_name("heroku-18", BUILDER_IMAGE_NAME)}"
+    BUILDER_IMAGE_NAME = "${BUILDER_IMAGE_NAME}"
     BUILDER_IMAGE_TAG = "${BUILDER_IMAGE_TAG}"
   }
   tags = ["${IMAGE_NAME}:${IMAGE_TAG}"]

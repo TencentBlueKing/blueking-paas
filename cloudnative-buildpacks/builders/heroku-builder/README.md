@@ -6,6 +6,8 @@
 
 ### 1. 构建基础镜像 (stack)
 
+基础镜像（Stack）基于 Ubuntu 镜像构建而来，将用于进一步构建成 cnb builder 镜像，亦可作为 runner 镜像使用
+
 ```bash
 ❯ make stack-noble
 # 可以通过环境变量指定镜像名称和 tag
@@ -13,6 +15,8 @@
 ```
 
 ### 2. 构建 cnb builder
+
+cnb builder 由基础镜像（Stack）+ buildpacks 构建而来，可用于将源码包构建为可运行的 SaaS 镜像
 
 前置依赖: 构建 cnb builder 需要安装 [pack](https://buildpacks.io/docs/tools/pack/)
 

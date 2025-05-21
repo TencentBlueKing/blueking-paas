@@ -1,5 +1,13 @@
+variable "STACK_BUILDER_IMAGE_NAME" {
+  default = "mirrors.tencent.com/bkpaas/build-heroku-noble"
+}
+
 variable "STACK_BUILDER_TAG" {
   default = "latest"
+}
+
+variable "STACK_RUNNER_IMAGE_NAME" {
+  default = "mirrors.tencent.com/bkpaas/run-heroku-noble"
 }
 
 variable "STACK_RUNNER_TAG" {
@@ -29,7 +37,7 @@ target "heroku-build-noble" {
     sources = "${APT_SOURCES}"
     packages = "${BASE_PACKAGES}"
   }
-  tags = ["mirrors.tencent.com/bkpaas/build-heroku-noble:${STACK_BUILDER_TAG}"]
+  tags = ["${STACK_BUILDER_IMAGE_NAME}:${STACK_BUILDER_TAG}"]
   platforms = ["linux/amd64"]
 }
 
@@ -41,6 +49,6 @@ target "heroku-run-noble" {
     sources = "${APT_SOURCES}"
     packages = "${BASE_PACKAGES}"
   }
-  tags = ["mirrors.tencent.com/bkpaas/run-heroku-noble:${STACK_RUNNER_TAG}"]
+  tags = ["${STACK_RUNNER_IMAGE_NAME}:${STACK_RUNNER_TAG}"]
   platforms = ["linux/amd64"]
 }

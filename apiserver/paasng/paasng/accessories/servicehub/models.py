@@ -27,7 +27,7 @@ from paasng.accessories.services.models import Plan, Service, ServiceInstance
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.modules.models import Module
-from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel
+from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel, UuidAuditedModel
 
 logger = logging.getLogger(__name__)
 
@@ -267,10 +267,21 @@ class SharedServiceAttachment(TimestampedModel):
         unique_together = ("module", "service_type", "service_id")
 
 
+class ServiceAllocationPolicy(UuidAuditedModel):
+    """服务分配策略"""
+
+    service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)
+    # 枚举值 -> ServiceAllocationPolicyType
+    type = models.CharField(max_length=32, help_text="分配策略类型")
+
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        unique_together = ("tenant_id", "service_id")
+
+
 class ServiceBindingPolicy(AuditedModel):
-    """ServiceBindingPolicy 是增强服务所使用的绑定策略，负责在应用启用增强服务时确定应该
-    使用哪一个增强服务方案（Plan）。一个增强服务，必须有一个绑定策略才算完成“初始化”，否则
-    无法被应用正常使用。
+    """统一分配策略。
 
     - 当前支持两类策略：静态和分环境，详见 ServiceBindingPolicyType。
     """
@@ -278,6 +289,12 @@ class ServiceBindingPolicy(AuditedModel):
     service_id = models.UUIDField(verbose_name="增强服务 ID")
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
+    allocation_policy = models.OneToOneField(
+        "ServiceAllocationPolicy",
+        on_delete=models.CASCADE,
+        related_name="uniform_policy",
+        null=True,
+    )
 
     # See `ServiceBindingPolicyType`
     type = models.CharField(verbose_name="策略类型", max_length=16)
@@ -289,16 +306,21 @@ class ServiceBindingPolicy(AuditedModel):
 
 
 class ServiceBindingPrecedencePolicy(AuditedModel):
-    """ServiceBindingPrecedencePolicy 是优先于普通 ServiceBindingPolicy 之上的特殊策略，
-    它并非必选，并且不像普通策略一样针对所有的情况生效。ServiceBindingPrecedencePolicy 总是
-    只对特定条件生效，例如：某些特殊的应用或某些特殊应用集群，等等。
+    """按规则匹配，一般由多个 ServiceBindingPrecedencePolicy 实例组合形成一个完整的规则匹配。
 
-    如果 ServiceBindingPrecedencePolicy 生效，将忽略其他已配置的 ServiceBindingPolicy。
+    - 当前支持三种规则匹配：Region.in Cluster.in 和 AlwaysMatch，详见 PrecedencePolicyCondType。
+    - 当前支持两类策略：静态和分环境，详见 ServiceBindingPolicyType。
     """
 
     service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
+    allocation_policy = models.ForeignKey(
+        ServiceAllocationPolicy,
+        on_delete=models.CASCADE,
+        related_name="rule_based_policies",
+        null=True,
+    )
 
     # See `PrecedencePolicyCondType`
     cond_type = models.CharField(verbose_name="条件类型", max_length=16)

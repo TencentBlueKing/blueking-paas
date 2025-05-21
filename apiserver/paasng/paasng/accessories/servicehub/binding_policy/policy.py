@@ -85,6 +85,8 @@ def precedence_policy_factory(
             return RegionInPrecedencePolicy(cond_data=cond_data, binding_policy=binding_policy)
         case PrecedencePolicyCondType.CLUSTER_IN.value:
             return ClusterInPrecedencePolicy(cond_data=cond_data, binding_policy=binding_policy)
+        case PrecedencePolicyCondType.ALWAYS_MATCH.value:
+            return AlwaysMatchPrecedencePolicy(binding_policy=binding_policy)
         case _:
             raise ValueError(f"Invalid condition type: {cond_type}")
 
@@ -127,6 +129,16 @@ class ClusterInPrecedencePolicy(BindingPrecedencePolicy):
         return cluster_name in self.cond_data["cluster_names"]
 
 
+@define
+class AlwaysMatchPrecedencePolicy(BindingPrecedencePolicy):
+    """A guaranteed fallback precedence policy that matches all cases unconditionally."""
+
+    binding_policy: BindingPolicy
+
+    def match(self, env: ModuleEnvironment) -> bool:
+        return True
+
+
 def get_service_type(service: ServiceObj) -> str:
     # TODO: Fix the circular import issue
     from paasng.accessories.servicehub.manager import get_db_properties
@@ -161,9 +173,9 @@ class RuleBasedAllocationPolicy:
     This class holds the necessary configuration data extracted from a ServiceBindingPrecedencePolicy.
     """
 
-    priority: int
     cond_type: str
-    cond_data: dict[str, list[str]] = {}
+    cond_data: dict[str, list[str]]
+    priority: int
     plans: list[str] | None = None
     env_plans: dict[str, list[str]] | None = None
 
@@ -185,9 +197,9 @@ class PolicyCombinationConfig:
     This class provides two mutually exclusive approaches for service binding allocation:
 
     1. Rule-based Precedence Policies:
-       - Evaluates multiple conditions in priority order (e.g., region, cluster)
+       - Evaluates multiple conditions in priority order
        - First matching condition determines the allocation
-       - Provides fallback to default plans if no conditions match
+       - Always uses cond_type=PrecedencePolicyCondType.ALWAYS_MATCH as the guaranteed fallback
 
     2. Unified Allocation Policy:
        - Applies a single allocation rule to all cases
@@ -203,7 +215,8 @@ class PolicyCombinationConfig:
     ```
     PolicyCombinationConfig(
         tenant_id="tenant_x",
-        service_id="service_x"
+        service_id="service_x",
+        allocation_policy_type="rule_based",
         allocation_precedence_policies=[
             RuleBasedAllocationPolicy(
                 cond_type=PrecedencePolicyCondType.REGION_IN.value,
@@ -218,13 +231,13 @@ class PolicyCombinationConfig:
                 plans=["plan_cluster"]
             ),
             RuleBasedAllocationPolicy(
-                cond_type="".
+                cond_type=PrecedencePolicyCondType.Always_Match.value.
                 cond_data={},
                 priority=0,
-                plans=["plan_cluster"]
+                plans=["plan"]
             )
         ],
-        allocation_policy= None,
+        allocation_policy=None,
     )
     ```
 
@@ -236,6 +249,7 @@ class PolicyCombinationConfig:
     PolicyCombinationConfig(
         tenant_id="tenant_x",
         service_id="service_x",
+        allocation_policy_type="uniform",
         allocation_precedence_policies=None,
         allocation_policy=UnifiedAllocationPolicy(
             plans=["plan_unified"],
@@ -245,6 +259,8 @@ class PolicyCombinationConfig:
 
     tenant_id: str
     service_id: str
+    # 枚举值 -> ServiceAllocationPolicyType
+    policy_type: str
     # 按规则分配
     allocation_precedence_policies: list[RuleBasedAllocationPolicy] | None = None
     # 统一分配

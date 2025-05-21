@@ -47,7 +47,7 @@ class AllocationPrecedencePolicySLZ(BaseAllocationPolicySLZ):
         ref_name = "plat_mgt.infras.services.AllocationPrecedencePolicySLZ"
 
     cond_type = serializers.ChoiceField(choices=PrecedencePolicyCondType.get_choices())
-    cond_data = serializers.DictField(child=serializers.ListField(child=serializers.CharField()), default=dict)
+    cond_data = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
     priority = serializers.IntegerField()
 
 

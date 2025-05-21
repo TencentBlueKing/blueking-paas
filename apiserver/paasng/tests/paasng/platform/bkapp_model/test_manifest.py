@@ -39,7 +39,9 @@ from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paas_wl.core.resource import generate_bkapp_name
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.accessories.servicehub.constants import ServiceAllocationPolicyType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.models import ServiceAllocationPolicy
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
@@ -100,13 +102,24 @@ def blank_resource_with_processes() -> crd.BkAppResource:
     )
 
 
+@pytest.fixture
+def uniform_allocation_policy(service_obj):
+    return ServiceAllocationPolicy.objects.create(
+        service_id=service_obj.uuid,
+        type=ServiceAllocationPolicyType.UNIFORM.value,
+        tenant_id=DEFAULT_TENANT_ID,
+    )
+
+
 @pytest.fixture()
-def local_service(bk_app):
+def local_service(bk_app, uniform_allocation_policy):
     """A local service object."""
     service = G(Service, name="mysql", category=G(ServiceCategory), logo_b64="dummy")
     _ = G(Plan, name=generate_random_string(), service=service)
     svc_obj = mixed_service_mgr.get(service.uuid)
-    ServiceBindingPolicyManager(svc_obj, DEFAULT_TENANT_ID).set_static([svc_obj.get_plans()[0]])
+    ServiceBindingPolicyManager(svc_obj, DEFAULT_TENANT_ID).set_static(
+        [svc_obj.get_plans()[0]], uniform_allocation_policy
+    )
     return svc_obj
 
 

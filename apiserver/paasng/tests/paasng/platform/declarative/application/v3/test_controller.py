@@ -25,12 +25,14 @@ from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import Product, Tag
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
-from paasng.accessories.servicehub.constants import Category
+from paasng.accessories.servicehub.constants import Category, ServiceAllocationPolicyType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.models import ServiceAllocationPolicy
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.core.tenant.utils import AppTenantInfo
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import CNATIVE_APP_CODE_FIELD
@@ -73,6 +75,15 @@ def declarative_controller(bk_user, app_tenant):
     return AppDeclarativeController(
         user=bk_user,
         app_tenant_conf=app_tenant,
+    )
+
+
+@pytest.fixture
+def uniform_allocation_policy(service_obj):
+    return ServiceAllocationPolicy.objects.create(
+        service_id=service_obj.uuid,
+        type=ServiceAllocationPolicyType.UNIFORM.value,
+        tenant_id=DEFAULT_TENANT_ID,
     )
 
 
@@ -271,7 +282,7 @@ class TestMarketDisplayOptionsField:
 
 class TestServicesField:
     @pytest.fixture(autouse=True)
-    def _default_services(self, request, app_tenant):
+    def _default_services(self, request, app_tenant, uniform_allocation_policy):
         """Create local services in order by run unit tests"""
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
         service_names = ["mysql", "rabbitmq"]
@@ -284,7 +295,9 @@ class TestServicesField:
 
             # Create a default binding polity so that the binding works by default
             service = mixed_service_mgr.get(svc.uuid)
-            ServiceBindingPolicyManager(service, app_tenant.tenant_id).set_static([service.get_plans()[0]])
+            ServiceBindingPolicyManager(service, app_tenant.tenant_id).set_static(
+                [service.get_plans()[0]], uniform_allocation_policy
+            )
 
     @pytest.fixture()
     def app_desc(self, random_name, tag):

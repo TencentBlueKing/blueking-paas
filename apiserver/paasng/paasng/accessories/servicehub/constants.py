@@ -77,5 +77,12 @@ class PrecedencePolicyCondType(StrStructuredEnum):
     # Test if the cluster is in the given list
     CLUSTER_IN = EnumField("cluster_in", label="Cluster.in")
 
-    # No condition
-    NONE = EnumField("none", label="None")
+    # Always match
+    ALWAYS_MATCH = EnumField("always_match", label="AlwaysMatch")
+
+
+class ServiceAllocationPolicyType(StrStructuredEnum):
+    """服务分配策略类型"""
+
+    UNIFORM = EnumField("uniform", label="统一分配")
+    RULE_BASED = EnumField("rule_based", label="按规则分配")

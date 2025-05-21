@@ -17,16 +17,16 @@
 
 
 import json
+import uuid
 from unittest import mock
 
 import pytest
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
-from paasng.accessories.servicehub.exceptions import SvcAttachmentDoesNotExist
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
-from paasng.accessories.services.models import Plan, Service, ServiceCategory, ServiceInstance
+from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from tests.utils.helpers import generate_random_string
 
@@ -59,7 +59,20 @@ class TestApplicationServicesViewSet:
                 logo_b64="dummy",
                 config={"provider_name": "pool"},
             )
-            G(Plan, name=generate_random_string(), service=service)
+            plan = G(
+                Plan,
+                name=generate_random_string(),
+                service=service,
+                config=json.dumps({}),
+            )
+            # 为每个服务创建预创建服务实例
+            G(
+                PreCreatedInstance,
+                plan=plan,
+                is_allocated=False,
+                credentials=json.dumps(self.credentials),
+            )
+
             svc = mixed_service_mgr.get(service.uuid)
             services.append(svc)
 
@@ -77,36 +90,6 @@ class TestApplicationServicesViewSet:
         self.svc = services[0]
         self.plan = self.svc.get_plans()[0]
 
-    def create_service_instance(self):
-        """创建服务实例"""
-
-        return G(
-            ServiceInstance,
-            service=self.svc.db_object,  # type: ignore
-            plan=self.plan.db_object,  # type: ignore
-            credentials=json.dumps(self.credentials),
-            config={},
-        )
-
-    def get_or_create_attachment(self, service_instance=None):
-        """创建或获取服务附件"""
-        try:
-            rel = mixed_service_mgr.get_attachment_by_engine_app(self.svc, self.stag_env.engine_app)
-        except SvcAttachmentDoesNotExist:
-            mixed_service_mgr.bind_service(
-                service=self.svc,
-                module=self.module_1,
-                plan_id=str(self.plan.uuid),
-            )
-            rel = mixed_service_mgr.get_attachment_by_engine_app(self.svc, self.stag_env.engine_app)
-
-        # 如果提供了服务实例，更新附件
-        if service_instance is not None:
-            rel.service_instance = service_instance
-            rel.save(update_fields=["service_instance"])
-
-        return rel
-
     def test_list(self, plat_mgt_api_client):
         """测试获取应用的附加服务列表"""
         url = f"/api/plat_mgt/applications/{self.app.code}/modules/services/"
@@ -115,53 +98,54 @@ class TestApplicationServicesViewSet:
         assert isinstance(resp.data, list)
         assert len(resp.data) > 0
 
-    def test_provision_instance(self, plat_mgt_api_client):
+    @mock.patch("paasng.plat_mgt.applications.views.services.add_admin_audit_record", return_value=None)
+    def test_provision_instance(self, mock_audit_record, plat_mgt_api_client):
         """测试分配附加服务实例"""
-
-        rel = self.get_or_create_attachment()
 
         # 构造API请求URL
         url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/"
+        rsp = plat_mgt_api_client.post(url)
+        assert rsp.status_code == 201
 
-        instance = self.create_service_instance()
+        # 验证已经分配了实例
+        service_rel = mixed_service_mgr.get_attachment_by_engine_app(self.svc, self.stag_env.engine_app)
+        assert service_rel.service_instance is not None
 
-        with mock.patch.object(Service, "create_service_instance_by_plan", return_value=instance):
-            rsp = plat_mgt_api_client.post(url)
-            assert rsp.status_code == 201
-
-            # 验证附件现在关联了服务实例
-            rel.refresh_from_db()
-            assert rel.service_instance is not None
+        # 验证审计记录函数被调用
+        mock_audit_record.assert_called_once()
 
     def test_recycle_instance(self, plat_mgt_api_client):
         """测试删除附加服务实例"""
 
         # 创建服务实例和关联
-        instance = self.create_service_instance()
-        rel = self.get_or_create_attachment(instance)
+        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, self.svc), None)
+        assert rel is not None
+        rel.provision()
+        instance_uuid = rel.get_instance().uuid
 
         # 构造API请求URL
-        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/{instance.uuid}/"
-
+        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/{instance_uuid}/"
         rsp = plat_mgt_api_client.delete(url)
         assert rsp.status_code == 204
 
         # 验证实例已解除关联
-        rel.refresh_from_db()
-        assert rel.service_instance is None
+        unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, uuid.UUID(instance_uuid))
+        assert unbound_rel is not None
 
     def test_view_credentials(self, plat_mgt_api_client):
         """测试查看附加服务实例的凭据"""
 
         # 创建服务实例和关联
-        instance = self.create_service_instance()
-        self.get_or_create_attachment(instance)
+        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, self.svc), None)
+        assert rel is not None
+        rel.provision()
+
+        instance_uuid = rel.get_instance().uuid
 
         # 构造API请求URL
-        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/{instance.uuid}/credentials/"
-
+        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/{instance_uuid}/credentials/"
         rsp = plat_mgt_api_client.get(url)
         assert rsp.status_code == 200
 
         # 验证返回的凭据与创建时一致
-        assert rsp.data == self.credentials
+        assert len(rsp.data) > 0

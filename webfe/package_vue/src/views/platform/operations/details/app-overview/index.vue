@@ -67,13 +67,16 @@
               <span v-else>{{ baseInfo[key] }}</span>
             </template>
             <span v-else-if="key === 'is_active'">{{ baseInfo[key] ? $t('正常') : $t('下架') }}</span>
-            <template v-else>{{ baseInfo[key] || '--' }}</template>
+            <template v-else>
+              {{ key === 'type' ? PAAS_APP_TYPE[baseInfo[key]] : baseInfo[key] || '--' }}
+            </template>
           </div>
         </DetailsRow>
       </div>
     </section>
-    <!-- 模块信息 -->
+    <!-- 模块信息-外链应用不展示 -->
     <section
+      v-if="!isEnginelessApp && !isLoading"
       class="module-info-wrapper card-style"
       v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
     >
@@ -83,11 +86,11 @@
         ext-cls="module-collapse-cls"
       >
         <bk-collapse-item
-          v-for="item in moduleData"
+          v-for="(item, index) in moduleData"
           :name="item.name"
           :key="item.name"
           :hide-arrow="true"
-          :class="['mb16', { default: item.is_default }]"
+          :class="[{ mb16: index !== moduleData.length - 1 }, { default: item.is_default }]"
         >
           <div class="module-tit">
             <div class="name-info">
@@ -119,8 +122,8 @@
                 :label="`${$t(val)}：`"
               >
                 <div slot="value">
-                  <div v-if="key === 'is_offlined'">
-                    {{ env[key] ? $t('已下线') : $t('运行中') }}
+                  <div v-if="key === 'is_deployed'">
+                    {{ env[key] ? $t('已部署') : $t('未部署') }}
                     <bk-button
                       v-if="env.exposed_url"
                       style="padding: 0 6px"
@@ -214,6 +217,7 @@
 <script>
 import DetailsRow from '@/components/details-row';
 import { mapState } from 'vuex';
+import { PAAS_APP_TYPE } from '@/common/constants';
 
 export default {
   name: 'appOverview',
@@ -234,7 +238,7 @@ export default {
         created_humanized: '创建时间',
       },
       moduleKeys: {
-        is_offlined: '状态',
+        is_deployed: '状态',
         deploy_cluster: '部署集群',
         recent_operation: '最近操作',
       },
@@ -255,12 +259,16 @@ export default {
       },
       // 部署集群
       deployClusterList: [],
+      PAAS_APP_TYPE,
     };
   },
   computed: {
     ...mapState(['platformFeature']),
     appCode() {
       return this.$route.params.code;
+    },
+    isEnginelessApp() {
+      return this.baseInfo.type === 'engineless_app';
     },
   },
   created() {

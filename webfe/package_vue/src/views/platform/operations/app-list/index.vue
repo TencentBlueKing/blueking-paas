@@ -397,16 +397,29 @@ export default {
       cursor: pointer;
     }
     i.dot {
+      position: relative;
       display: inline-block;
       margin-right: 8px;
       width: 13px;
       height: 13px;
       border-radius: 50%;
-      background: #979ba5;
-      border: 3px solid #979ba5;
+      background: #979ba529;
+      &::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 7px;
+        height: 7px;
+        background: #979ba5;
+        border-radius: 50%;
+      }
       &.successful {
-        background: #3fc06d;
-        border: 3px solid #daf6e5;
+        &::before {
+          background: #3fc06d;
+        }
+        background: #daf6e5;
       }
     }
   }

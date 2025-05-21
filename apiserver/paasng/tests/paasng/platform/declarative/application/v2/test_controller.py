@@ -280,7 +280,7 @@ class TestMarketDisplayOptionsField:
 
 class TestServicesField:
     @pytest.fixture(autouse=True)
-    def _default_services(self, request, app_tenant, uniform_allocation_policy):
+    def _default_services(self, request, app_tenant):
         """Create local services in order by run unit tests"""
         category = G(ServiceCategory, id=Category.DATA_STORAGE)
         service_names = ["mysql", "rabbitmq"]
@@ -293,9 +293,7 @@ class TestServicesField:
 
             # Create a default binding polity so that the binding works by default
             service = mixed_service_mgr.get(svc.uuid)
-            ServiceBindingPolicyManager(service, app_tenant.tenant_id).set_static(
-                [service.get_plans()[0]], uniform_allocation_policy
-            )
+            ServiceBindingPolicyManager(service, app_tenant.tenant_id).set_static([service.get_plans()[0]])
 
     @pytest.fixture()
     def app_desc(self, random_name, tag):

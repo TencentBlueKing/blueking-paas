@@ -49,12 +49,14 @@ class ServiceBindingPolicyManager:
     def __init__(self, service: ServiceObj, tenant_id: str):
         self.service = service
         self.tenant_id = tenant_id
+        self.allocation_policy = ServiceAllocationPolicy.objects.get(
+            service_id=self.service.uuid, tenant_id=self.tenant_id
+        )
 
-    def set_static(self, plans: list[PlanObj], allocation_policy: ServiceAllocationPolicy):
+    def set_static(self, plans: list[PlanObj]):
         """Set the fixed binding policy for the service.
 
         :param plans: The list of plans to be set as the binding policy.
-        :param allocation_policy: The allocation policy to be set.
         """
         if not plans:
             raise ValueError("plans cannot be empty")
@@ -63,17 +65,16 @@ class ServiceBindingPolicyManager:
         ServiceBindingPolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
-            allocation_policy=allocation_policy,
+            allocation_policy=self.allocation_policy,
             tenant_id=self.tenant_id,
             defaults={"type": ServiceBindingPolicyType.STATIC.value, "data": data},
         )
 
-    def set_env_specific(self, env_plans: list[tuple[str, list[PlanObj]]], allocation_policy: ServiceAllocationPolicy):
+    def set_env_specific(self, env_plans: list[tuple[str, list[PlanObj]]]):
         """Set the environment specific binding policy for the service.
 
         :param env_plans: A list of tuples, where each tuple contains the environment
             name and the list of plans.
-        :param allocation_policy: The allocation policy to be set.
         """
         if not all(plans for _, plans in env_plans):
             raise ValueError("plans cannot be empty")
@@ -82,7 +83,7 @@ class ServiceBindingPolicyManager:
         ServiceBindingPolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
-            allocation_policy=allocation_policy,
+            allocation_policy=self.allocation_policy,
             tenant_id=self.tenant_id,
             defaults={"type": ServiceBindingPolicyType.ENV_SPECIFIC.value, "data": data},
         )
@@ -93,7 +94,6 @@ class ServiceBindingPolicyManager:
 
     def add_precedence_static(
         self,
-        allocation_policy: ServiceAllocationPolicy,
         cond_type: PrecedencePolicyCondType,
         cond_data: dict[str, Any],
         plans: list[PlanObj],
@@ -101,7 +101,6 @@ class ServiceBindingPolicyManager:
     ):
         """Add a precedence policy with static binding policy
 
-        :param allocation_policy: The ServiceAllocationPolicy to be set.
         :param cond_type: The type of the condition.
         :param cond_data: The data for the condition.
         :param plans: The list of plans to be set as the binding policy.
@@ -114,7 +113,7 @@ class ServiceBindingPolicyManager:
         ServiceBindingPrecedencePolicy.objects.create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
-            allocation_policy=allocation_policy,
+            allocation_policy=self.allocation_policy,
             tenant_id=self.tenant_id,
             priority=priority,
             cond_type=cond_type.value,
@@ -125,7 +124,6 @@ class ServiceBindingPolicyManager:
 
     def add_precedence_env_specific(
         self,
-        allocation_policy: ServiceAllocationPolicy,
         cond_type: PrecedencePolicyCondType,
         cond_data: dict[str, Any],
         env_plans: list[tuple[str, list[PlanObj]]],
@@ -133,7 +131,6 @@ class ServiceBindingPolicyManager:
     ):
         """Add a precedence policy with env specific binding policy
 
-        :param allocation_policy: The allocation policy to be set.
         :param cond_type: The type of the condition.
         :param cond_data: The data for the condition.
         :param env_plans: A list of tuples, where each tuple contains the environment
@@ -147,7 +144,7 @@ class ServiceBindingPolicyManager:
         ServiceBindingPrecedencePolicy.objects.create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
-            allocation_policy=allocation_policy,
+            allocation_policy=self.allocation_policy,
             tenant_id=self.tenant_id,
             priority=priority,
             cond_type=cond_type.value,
@@ -198,7 +195,7 @@ class PolicyCombinationManager:
         """Update or insert a combination of service binding policies."""
         self.clean()
 
-        svc_allocation_policy = ServiceAllocationPolicy.objects.create(
+        ServiceAllocationPolicy.objects.create(
             service_id=self.service.uuid, tenant_id=self.tenant_id, type=cfg.policy_type
         )
 
@@ -210,7 +207,6 @@ class PolicyCombinationManager:
             for config in allocation_precedence_policies:
                 if config.plans:
                     self.service_binding_policy_mgr.add_precedence_static(
-                        allocation_policy=svc_allocation_policy,
                         cond_type=PrecedencePolicyCondType(config.cond_type),
                         cond_data=config.cond_data,
                         plans=self._plan_ids_to_objs(config.plans),
@@ -218,7 +214,6 @@ class PolicyCombinationManager:
                     )
                 elif config.env_plans:
                     self.service_binding_policy_mgr.add_precedence_env_specific(
-                        allocation_policy=svc_allocation_policy,
                         cond_type=PrecedencePolicyCondType(config.cond_type),
                         cond_data=config.cond_data,
                         env_plans=self._plan_ids_to_env_plan_objs(config.env_plans),
@@ -231,14 +226,10 @@ class PolicyCombinationManager:
             if not allocation_policy:
                 return
             if allocation_policy.plans:
-                self.service_binding_policy_mgr.set_static(
-                    plans=self._plan_ids_to_objs(allocation_policy.plans),
-                    allocation_policy=svc_allocation_policy,
-                )
+                self.service_binding_policy_mgr.set_static(plans=self._plan_ids_to_objs(allocation_policy.plans))
             elif allocation_policy.env_plans:
                 self.service_binding_policy_mgr.set_env_specific(
-                    env_plans=self._plan_ids_to_env_plan_objs(allocation_policy.env_plans),
-                    allocation_policy=svc_allocation_policy,
+                    env_plans=self._plan_ids_to_env_plan_objs(allocation_policy.env_plans)
                 )
 
     def get(self) -> Optional[PolicyCombinationConfig]:

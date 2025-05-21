@@ -599,7 +599,13 @@ export default {
           name: this.form.name,
           template: this.form.templateName,
           pd_id: this.form.pd_id,
-          extra_fields: this.isAiPlugin ? { space_id: this.bkAiSpaces.spaceId } : this.schemaFormData,
+          extra_fields: this.schemaFormData,
+          // 仅当是 AI 插件时才包含 ai_extra_fields 参数
+          ...(this.isAiPlugin && {
+            ai_extra_fields: { 
+              space_id: this.bkAiSpaces.spaceId 
+            }
+          }),
         };
         const res = await this.$store.dispatch('plugin/savePlugins', params);
         this.$paasMessage({

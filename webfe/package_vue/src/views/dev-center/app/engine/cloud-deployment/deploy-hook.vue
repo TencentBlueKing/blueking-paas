@@ -10,7 +10,10 @@
       class="deploy-action-box"
     >
       <div class="form-pre">
-        <div class="flex-row align-items-center pl20 pr20" v-if="!isCreate">
+        <div
+          class="flex-row align-items-center pl20 pr20"
+          v-if="!isCreate"
+        >
           <div class="item-title-container">
             <div class="item-title">
               {{ $t('部署前置命令') }}
@@ -19,7 +22,7 @@
           <div
             class="edit-container"
             @click="handleEditClick"
-            v-if="!isPageEdit && !isCreate"
+            v-if="!isPageEdit && !isReadOnlyMode"
           >
             <i class="paasng-icon paasng-edit-2" />
             {{ $t('编辑') }}
@@ -44,7 +47,6 @@
           <bk-form-item
             :label="$t('是否启用')"
             class="pt20"
-            style="position: relative;"
           >
             <bk-switcher
               v-if="isPageEdit"
@@ -59,7 +61,6 @@
             :required="true"
             :rules="rules.command"
             :error-display-type="'normal'"
-            style="position: relative;"
           >
             <bk-tag-input
               v-model="preFormData.command"
@@ -74,15 +75,16 @@
               slot="tip"
               class="whole-item-tips"
             >
-              {{ $t('数组类型，示例数据：[\'/process_data\']，按回车键分隔每个元素') }}<br/>
-              {{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }} ['/bin/sh', './bin/pre-task.sh']
+              {{ $t("数组类型，示例数据：['/process_data']，按回车键分隔每个元素") }}
+              <br />
+              {{ $t('在每次部署前执行。如需执行多条命令请将其封装在一个脚本中，如：') }}
+              ['/bin/sh', './bin/pre-task.sh']
             </span>
           </bk-form-item>
           <bk-form-item
             v-if="preFormData.enabled"
             :label="$t('命令参数')"
             class="pt20 hook-form-cls"
-            style="position: relative;"
           >
             <bk-tag-input
               v-model="preFormData.args"
@@ -95,7 +97,7 @@
               :paste-fn="copyCommandParameter"
             />
             <span class="whole-item-tips">
-              {{ $t('数组类型，示例数据：[\'--dataset\', \'myset\']，按回车键分隔每个元素') }}
+              {{ $t("数组类型，示例数据：['--dataset', 'myset']，按回车键分隔每个元素") }}
             </span>
           </bk-form-item>
         </bk-form>
@@ -107,47 +109,55 @@
           <bk-form-item
             :label="`${$t('是否启用')}：`"
             class="pt20"
-            style="position: relative;"
           >
-            <span :class="['hook-tag', { 'enabled': preFormData.enabled }]">
+            <span :class="['hook-tag', { enabled: preFormData.enabled }]">
               {{ preFormData.enabled ? $t('已启用') : $t('未启用') }}
             </span>
           </bk-form-item>
+          <!-- 非镜像模块查看态-展示 proc_command -->
           <bk-form-item
-            v-if="preFormData.enabled"
             :label="`${$t('启动命令')}：`"
-            style="position: relative;"
+            v-if="preFormData.enabled && isReadOnlyMode && readonlyStartupCommand"
           >
-            <div class="hook-tag-cls" v-if="preFormData.command.length">
-              <bk-tag
-                v-for="item in preFormData.command"
-                :key="item"
-              >
-                {{ item }}
-              </bk-tag>
-            </div>
-            <div v-else>
-              --
-            </div>
+            {{ readonlyStartupCommand }}
           </bk-form-item>
-          <bk-form-item
-            v-if="preFormData.enabled"
-            :label="`${$t('命令参数')}：`"
-            class="pt20 hook-form-cls"
-            style="position: relative;"
-          >
-            <div class="hook-tag-cls" v-if="preFormData.args.length">
-              <bk-tag
-                v-for="item in preFormData.args"
-                :key="item"
+          <template v-else>
+            <bk-form-item
+              v-if="preFormData.enabled"
+              :label="`${$t('启动命令')}：`"
+            >
+              <div
+                class="hook-tag-cls"
+                v-if="preFormData.command.length"
               >
-                {{ item }}
-              </bk-tag>
-            </div>
-            <div v-else>
-              --
-            </div>
-          </bk-form-item>
+                <bk-tag
+                  v-for="item in preFormData.command"
+                  :key="item"
+                >
+                  {{ item }}
+                </bk-tag>
+              </div>
+              <div v-else>--</div>
+            </bk-form-item>
+            <bk-form-item
+              v-if="preFormData.enabled"
+              :label="`${$t('命令参数')}：`"
+              class="pt20 hook-form-cls"
+            >
+              <div
+                class="hook-tag-cls"
+                v-if="preFormData.args.length"
+              >
+                <bk-tag
+                  v-for="item in preFormData.args"
+                  :key="item"
+                >
+                  {{ item }}
+                </bk-tag>
+              </div>
+              <div v-else>--</div>
+            </bk-form-item>
+          </template>
         </bk-form>
         <!-- 创建应用/模块不展示 -->
         <div
@@ -169,12 +179,12 @@
           </bk-button>
         </div>
       </div>
-
     </paas-content-loader>
   </div>
 </template>
 
-<script>import { cloneDeep } from 'lodash';
+<script>
+import { cloneDeep } from 'lodash';
 import i18n from '@/language/i18n.js';
 
 export default {
@@ -243,6 +253,14 @@ export default {
     curModuleId() {
       return this.curAppModule?.name;
     },
+    // 非镜像模块、创建模块、应用为查看模式
+    isReadOnlyMode() {
+      return !this.isCustomImage && !this.isCreate;
+    },
+    // 只读模式展示的启动命令
+    readonlyStartupCommand() {
+      return this.preFormData?.proc_command;
+    },
   },
 
   created() {
@@ -250,8 +268,8 @@ export default {
     if (!this.isCreate) {
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
-      this.init();
     }
+    this.init();
   },
 
   methods: {
@@ -387,6 +405,9 @@ export default {
 <style lang="scss" scoped>
 .form-pre {
   padding-bottom: 20px;
+  /deep/ .bk-form-item {
+    position: relative;
+  }
 
   .item-title-container {
     display: flex;
@@ -439,7 +460,7 @@ export default {
   color: #313238;
 }
 .edit-container {
-  color: #3A84FF;
+  color: #3a84ff;
   font-size: 12px;
   cursor: pointer;
   padding-left: 12px;
@@ -453,12 +474,12 @@ export default {
   padding: 0 8px;
   font-size: 12px;
   line-height: 22px;
-  color: #63656E;
-  background: #F0F1F5;
+  color: #63656e;
+  background: #f0f1f5;
   border-radius: 2px;
   &.enabled {
-    color: #14A568;
-    background: #E4FAF0;
+    color: #14a568;
+    background: #e4faf0;
   }
 }
 .deploy-hook-container.special {

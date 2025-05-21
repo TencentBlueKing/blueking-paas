@@ -1,7 +1,10 @@
 <template>
   <div class="app-overview-container">
     <!-- 基本信息 -->
-    <section class="base-info-wrapper card-style">
+    <section
+      class="base-info-wrapper card-style"
+      v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
+    >
       <div class="view-title">{{ $t('基本信息') }}</div>
       <div class="info-wrapper">
         <DetailsRow
@@ -56,7 +59,7 @@
             <span v-else-if="key === 'app_tenant_mode'">
               {{ baseInfo[key] ? (baseInfo[key] === 'single' ? $t('单租户') : $t('全租户')) : '--' }}
             </span>
-            <template v-else-if="key === 'creator'">
+            <template v-else-if="['creator', 'owner'].includes(key)">
               <bk-user-display-name
                 :user-id="baseInfo[key]"
                 v-if="platformFeature.MULTI_TENANT_MODE"

@@ -96,5 +96,33 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/feature_flags/`;
       return http.put(url, data);
     },
+    /**
+     * 成员管理-获取成员列表
+     */
+    getMembers({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/`;
+      return http.get(url);
+    },
+    /**
+     * 成员管理-添加成员
+     */
+    addMember({}, { appCode, postParams }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/`;
+      return http.post(url, postParams);
+    },
+    /**
+     * 成员管理-角色更新
+     */
+    updateRole({}, { appCode, id, params }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/${id}/`;
+      return http.put(url, params);
+    },
+    /**
+     * 成员管理-删除成员
+     */
+    deleteMember({}, { appCode, id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/${id}/`;
+      return http.delete(url);
+    },
   },
 };

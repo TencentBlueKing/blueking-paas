@@ -61,6 +61,14 @@ export default {
       return this.$route.meta?.supportBack;
     },
   },
+  watch: {
+    $route(newRoute) {
+      const newActive = newRoute.query?.active;
+      if (newActive && newActive !== this.active) {
+        this.active = newActive;
+      }
+    },
+  },
   methods: {
     handleTabChange(activeName) {
       this.$emit('tab-change', activeName);

@@ -129,13 +129,10 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     name = serializers.CharField(read_only=True, help_text="应用名称")
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
     owner = serializers.CharField(source="owner.username", read_only=True, help_text="应用所有者")
-    type = serializers.SerializerMethodField(read_only=True, help_text="应用类型")
+    type = serializers.CharField(read_only=True, help_text="应用类型")
     is_active = serializers.BooleanField(read_only=True, help_text="应用状态")
     creator = UserNameField(read_only=True, help_text="创建人")
     created_humanized = HumanizeDateTimeField(source="created", help_text="创建时间")
-
-    def get_type(self, instance: Application) -> str:
-        return ApplicationType.get_choice_label(instance.type)
 
 
 class ApplicationEnvironmentOperationSLZ(serializers.Serializer):

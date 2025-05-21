@@ -165,6 +165,10 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications.services"],
+        responses={status.HTTP_200_OK: "credentials in JSON format"},
+    )
     def view_credentials(self, request, code, module_name, environment, service_id, instance_id):
         """查看增强服务实例凭据, 使用 PreCreateINstance 的 UUID"""
 

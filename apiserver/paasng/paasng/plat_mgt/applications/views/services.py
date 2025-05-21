@@ -238,6 +238,10 @@ class ApplicationServicesRecyclableViewSet(viewsets.ViewSet):
             },
         )
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications.services"],
+        responses={status.HTTP_200_OK: slzs.RecyclableServiceListOutputSLZ(many=True)},
+    )
     def list_unbound(self, request, app_code):
         """获取可回收的增强服务实例列表"""
         result = []
@@ -261,6 +265,10 @@ class ApplicationServicesRecyclableViewSet(viewsets.ViewSet):
                     )
         return Response(slzs.RecyclableServiceListOutputSLZ(result, many=True).data)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications.services"],
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
     def recycle(self, request, code, module_name, service_id, instance_id):
         """回收增强服务实例"""
         service = mixed_service_mgr.get_or_404(service_id)

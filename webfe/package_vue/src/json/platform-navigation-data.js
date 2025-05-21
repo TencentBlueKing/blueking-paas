@@ -58,7 +58,7 @@ export default [
     groupId: 'operations',
     name: 'platformAppList',
     label: i18n.t('应用列表'),
-    iconfontName: 'diamond',
+    iconfontName: 'Application-list',
     matchRouters: ['platformAppList', 'platformAppDetails'],
     destRoute: {
       name: 'platformAppList',

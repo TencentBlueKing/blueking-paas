@@ -35,6 +35,7 @@ from .member import (
     ApplicationMembershipUpdateInputSLZ,
 )
 from .services import (
+    RecyclableServiceListOutputSLZ,
     ServiceListOutputSLZ,
 )
 
@@ -56,5 +57,6 @@ __all__ = [
     "ApplicationMembershipListOutputSLZ",
     "ApplicationMembershipUpdateInputSLZ",
     # services
+    "RecyclableServiceListOutputSLZ",
     "ServiceListOutputSLZ",
 ]

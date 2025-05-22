@@ -24,6 +24,7 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.accessories.servicehub.exceptions import UnboundSvcAttachmentDoesNotExist
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
@@ -149,3 +150,97 @@ class TestApplicationServicesViewSet:
 
         # 验证返回的凭据与创建时一致
         assert len(rsp.data) > 0
+
+
+@pytest.mark.django_db(databases=["default", "workloads"])
+class TestApplicationServicesRecyclableViewSet:
+    """测试应用的增强服务-回收管理API"""
+
+    @pytest.fixture(autouse=True)
+    def setup_services(self, bk_app, bk_module, bk_module_2, bk_stag_env, bk_prod_env):
+        """创建服务和绑定关系"""
+        self.app = bk_app
+        self.module_1 = bk_module
+        self.module_2 = bk_module_2
+        self.stag_env = bk_stag_env
+        self.prod_env = bk_prod_env
+
+        # 创建测试凭证
+        self.credentials = {"user": "test_user", "password": "test_password", "host": "127.0.0.1", "port": "3306"}
+
+        # 创建三个服务
+        services = []
+        for name in ["mysql", "redis", "mongodb"]:
+            service = G(
+                Service,
+                name=name,
+                category=G(ServiceCategory),
+                logo_b64="dummy",
+                config={"provider_name": "pool"},
+            )
+            plan = G(Plan, name=generate_random_string(), service=service, config="{}")
+            svc = mixed_service_mgr.get(service.uuid)
+
+            # 为每个服务创建预创建服务实例
+            G(
+                PreCreatedInstance,
+                plan=plan,
+                is_allocated=False,
+                credentials=json.dumps(self.credentials),
+                config={},
+            )
+
+            services.append(svc)
+
+        # 绑定服务到模块
+        svc1, svc2, svc3 = services
+        for svc, module in [(svc1, bk_module), (svc2, bk_module), (svc3, bk_module_2)]:
+            ServiceBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_static([svc.get_plans()[0]])
+            mixed_service_mgr.bind_service(svc, module)
+
+        # 共享服务
+        ServiceSharingManager(bk_module_2).create(svc1, bk_module)
+
+        # 保存服务供测试使用
+        self.services = services
+        self.svc = services[0]
+        self.plan = self.svc.get_plans()[0]
+
+    def test_list_unbound(self, plat_mgt_api_client):
+        """测试获取可回收的实例列表"""
+
+        # 创建一个服务实例并解绑
+        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, service=self.svc), None)
+        assert rel is not None
+        rel.provision()
+        rel.recycle_resource()
+
+        url = f"/api/plat_mgt/applications/{self.app.code}/services/unbound/"
+        resp = plat_mgt_api_client.get(url)
+
+        assert resp.status_code == 200
+        assert len(resp.data) > 0
+
+    def test_recycle(self, plat_mgt_api_client):
+        """测试回收资源"""
+
+        # 创建一个服务实例
+        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, service=self.svc), None)
+        assert rel is not None
+        rel.provision()
+
+        # 获取实例ID并解绑
+        instance_uuid = uuid.UUID(rel.get_instance().uuid)
+        rel.recycle_resource()
+
+        # 确认实例已解绑成功
+        unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, instance_uuid)
+        assert unbound_rel is not None
+
+        url = f"/api/plat_mgt/applications/{self.app.code}/services/{self.svc.uuid}/unbound/instance/{instance_uuid}/"
+        resp = plat_mgt_api_client.delete(url)
+
+        # 验证 API 调用成功且实例已经回收
+        assert resp.status_code == 204
+        with pytest.raises(UnboundSvcAttachmentDoesNotExist):
+            mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, instance_uuid)

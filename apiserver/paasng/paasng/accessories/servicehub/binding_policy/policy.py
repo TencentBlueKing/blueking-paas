@@ -265,7 +265,3 @@ class PolicyCombinationConfig:
     allocation_precedence_policies: list[RuleBasedAllocationPolicy] | None = None
     # 统一分配
     allocation_policy: UnifiedAllocationPolicy | None = None
-
-    def __attrs_post_init__(self):
-        if (self.allocation_precedence_policies is not None) == (self.allocation_policy is not None):
-            raise ValueError("Must set either 'allocation_precedence_policies' or 'allocation_policy' (but not both)")

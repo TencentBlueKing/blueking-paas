@@ -77,15 +77,6 @@ def declarative_controller(bk_user, app_tenant):
     )
 
 
-@pytest.fixture
-def uniform_allocation_policy(service_obj):
-    return ServiceAllocationPolicy.objects.create(
-        service_id=service_obj.uuid,
-        type=ServiceAllocationPolicyType.UNIFORM.value,
-        tenant_id=DEFAULT_TENANT_ID,
-    )
-
-
 class TestAppDeclarativeControllerCreation:
     @pytest.mark.parametrize("field_name", ["bk_app_code", "bk_app_name", "region"])
     def test_run_invalid_input(self, random_name, field_name, declarative_controller):
@@ -293,7 +284,12 @@ class TestServicesField:
 
             # Create a default binding polity so that the binding works by default
             service = mixed_service_mgr.get(svc.uuid)
-            ServiceBindingPolicyManager(service, app_tenant.tenant_id).set_static([service.get_plans()[0]])
+            allocation_policy = ServiceAllocationPolicy.objects.create(
+                service_id=service.uuid,
+                type=ServiceAllocationPolicyType.UNIFORM.value,
+                tenant_id=DEFAULT_TENANT_ID,
+            )
+            ServiceBindingPolicyManager(allocation_policy).set_static([service.get_plans()[0]])
 
     @pytest.fixture()
     def app_desc(self, random_name, tag):

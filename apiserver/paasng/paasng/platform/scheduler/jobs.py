@@ -122,12 +122,12 @@ def _handel_single_service_default_policy(service, default_tenant_id):
                 logger.warning("No plans available for service(%s) under tenant(%s)", service.name, default_tenant_id)
                 return
 
-            ServiceAllocationPolicy.objects.create(
+            allocation_policy = ServiceAllocationPolicy.objects.create(
                 service_id=service.uuid,
                 type=ServiceAllocationPolicyType.UNIFORM.value,
                 tenant_id=default_tenant_id,
             )
-            ServiceBindingPolicyManager(service, default_tenant_id).set_static(plans)
+            ServiceBindingPolicyManager(allocation_policy).set_static(plans)
             # 添加初始化记录，避免重复初始化
             DefaultPolicyCreationRecord.objects.get_or_create(
                 service_id=service.uuid,

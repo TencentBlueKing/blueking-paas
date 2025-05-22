@@ -24,12 +24,14 @@ from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import Product, Tag
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
-from paasng.accessories.servicehub.constants import Category
+from paasng.accessories.servicehub.constants import Category, ServiceAllocationPolicyType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.models import ServiceAllocationPolicy
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.core.tenant.utils import AppTenantInfo
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD
@@ -282,7 +284,12 @@ class TestServicesField:
 
             # Create a default binding polity so that the binding works by default
             service = mixed_service_mgr.get(svc.uuid)
-            ServiceBindingPolicyManager(service, app_tenant.tenant_id).set_static([service.get_plans()[0]])
+            allocation_policy = ServiceAllocationPolicy.objects.create(
+                service_id=service.uuid,
+                type=ServiceAllocationPolicyType.UNIFORM.value,
+                tenant_id=DEFAULT_TENANT_ID,
+            )
+            ServiceBindingPolicyManager(allocation_policy).set_static([service.get_plans()[0]])
 
     @pytest.fixture()
     def app_desc(self, random_name, tag):

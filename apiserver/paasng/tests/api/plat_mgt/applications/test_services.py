@@ -24,7 +24,9 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.accessories.servicehub.constants import ServiceAllocationPolicyType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.models import ServiceAllocationPolicy
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
@@ -79,7 +81,12 @@ class TestApplicationServicesViewSet:
         # 绑定服务到模块
         svc1, svc2, svc3 = services
         for svc, module in [(svc1, bk_module), (svc2, bk_module), (svc3, bk_module_2)]:
-            ServiceBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_static([svc.get_plans()[0]])
+            allocation_policy = ServiceAllocationPolicy.objects.create(
+                service_id=svc.uuid,
+                type=ServiceAllocationPolicyType.UNIFORM.value,
+                tenant_id=DEFAULT_TENANT_ID,
+            )
+            ServiceBindingPolicyManager(allocation_policy).set_static([svc.get_plans()[0]])
             mixed_service_mgr.bind_service(svc, module)
 
         # 共享服务

@@ -92,7 +92,7 @@ class TestApplicationServicesViewSet:
         self.svc = services[0]
         self.plan = self.svc.get_plans()[0]
 
-    def test_list_bound(self, plat_mgt_api_client):
+    def test_list_bound_attachments(self, plat_mgt_api_client):
         """测试获取应用的绑定服务列表"""
         url = f"/api/plat_mgt/applications/{self.app.code}/services/bound_attachments/"
         resp = plat_mgt_api_client.get(url)
@@ -100,7 +100,7 @@ class TestApplicationServicesViewSet:
         assert isinstance(resp.data, list)
         assert len(resp.data) > 0
 
-    def test_list_unbound(self, plat_mgt_api_client):
+    def test_list_unbound_attachments(self, plat_mgt_api_client):
         """测试获取可回收的实例列表"""
 
         # 创建一个服务实例并解绑
@@ -149,7 +149,7 @@ class TestApplicationServicesViewSet:
         unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, uuid.UUID(instance_uuid))
         assert unbound_rel is not None
 
-    def test_recycle_unbound(self, plat_mgt_api_client):
+    def test_recycle_unbound_attachments(self, plat_mgt_api_client):
         """测试回收已解绑的服务资源"""
 
         # 创建一个服务实例

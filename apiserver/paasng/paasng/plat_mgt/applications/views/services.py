@@ -55,7 +55,7 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
         tags=["plat_mgt.applications.services"],
         responses={status.HTTP_200_OK: slzs.ServiceListOutputSLZ(many=True)},
     )
-    def list_bound(self, request, code):
+    def list_bound_attachments(self, request, code):
         """列出已绑定的增强服务"""
 
         application = get_object_or_404(Application, code=code)
@@ -107,7 +107,7 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
         tags=["plat_mgt.applications.services"],
         responses={status.HTTP_200_OK: slzs.UnboundServiceInstanceSLZ(many=True)},
     )
-    def list_unbound(self, request, code):
+    def list_unbound_attachments(self, request, code):
         """列出未绑定的增强服务实例"""
         result = []
         application = get_object_or_404(Application, code=code)
@@ -197,7 +197,7 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
         tags=["plat_mgt.applications.services"],
         responses={status.HTTP_204_NO_CONTENT: None},
     )
-    def recycle_unbound(self, request, code, module_name, service_id, instance_id):
+    def recycle_unbound_attachments(self, request, code, module_name, service_id, instance_id):
         """回收未绑定的增强服务实例"""
         service = mixed_service_mgr.get_or_404(service_id)
 

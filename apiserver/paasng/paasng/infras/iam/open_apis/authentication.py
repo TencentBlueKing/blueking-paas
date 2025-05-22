@@ -20,7 +20,7 @@ from iam import IAM
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.exceptions import AuthenticationFailed as RESTAuthenticationFailed
 
-from paasng.core.tenant.user import OP_TYPE_TENANT_ID
+from paasng.core.tenant.user import get_init_tenant_id
 
 from .exceptions import AuthenticationFailed
 
@@ -45,7 +45,7 @@ class IAMBasicAuthentication(BasicAuthentication):
             settings.IAM_APP_CODE,
             settings.IAM_APP_SECRET,
             settings.BK_IAM_APIGATEWAY_URL,
-            bk_tenant_id=OP_TYPE_TENANT_ID,
+            bk_tenant_id=get_init_tenant_id(),
         )
         ok, msg, token = _iam.get_token(settings.IAM_PAAS_V3_SYSTEM_ID)
         if not ok:

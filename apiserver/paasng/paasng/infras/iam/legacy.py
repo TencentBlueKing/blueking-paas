@@ -24,7 +24,7 @@ from iam import IAM, Action, Request, Subject
 from iam.contrib.converter.sql import SQLConverter
 from iam.exceptions import AuthAPIError
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.user import get_init_tenant_id
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +40,7 @@ class Permission:
             settings.IAM_APP_CODE,
             settings.IAM_APP_SECRET,
             settings.BK_IAM_APIGATEWAY_URL,
-            # 存量 v2 应用未启用租户, 统一设置成默认租户
-            bk_tenant_id=DEFAULT_TENANT_ID,
+            bk_tenant_id=get_init_tenant_id(),
         )
 
     def _make_request_without_resources(self, username: str, action_id: str) -> "Request":

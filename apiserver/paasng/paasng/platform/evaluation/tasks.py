@@ -23,7 +23,6 @@ from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.iam.helpers import fetch_role_members
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.misc.audit.models import AppOperationRecord
@@ -168,7 +167,7 @@ def collect_and_update_app_operation_reports(app_codes: List[str]):
 
 @shared_task
 def send_idle_email_to_app_developers(
-    app_codes: List[str], only_specified_users: List[str], exclude_specified_users: List[str]
+    tenant_id: str, app_codes: List[str], only_specified_users: List[str], exclude_specified_users: List[str]
 ):
     """发送应用闲置模块邮件给应用管理员/开发者"""
     reports = AppOperationReport.objects.filter(issue_type=OperationIssueType.IDLE)
@@ -199,8 +198,7 @@ def send_idle_email_to_app_developers(
         total_count=total_cnt, notification_type=EmailNotificationType.IDLE_APP_MODULE_ENVS
     )
     for idx, username in enumerate(waiting_notify_usernames):
-        # FIXME: 多租户的情况下无法正常工作, 因为 username 的租户并非 DEFAULT_TENANT_ID. 考虑持久化租户信息?
-        filters = ApplicationPermission().gen_develop_app_filters(username, DEFAULT_TENANT_ID)
+        filters = ApplicationPermission().gen_develop_app_filters(username, tenant_id)
         app_codes = Application.objects.filter(is_active=True).filter(filters).values_list("code", flat=True)
 
         # 从缓存拿刚刚退出的应用 code exclude 掉，避免出现退出用户组，权限中心权限未同步的情况

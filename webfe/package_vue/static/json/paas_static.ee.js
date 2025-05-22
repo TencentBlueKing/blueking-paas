@@ -671,7 +671,7 @@ export const PAAS_STATIC_CONFIG = {
                     'docuManagement',
                 ],
                 "destRoute": {
-                    "name": "appMarket"
+                    "name": "appBasicInfo"
                 },
                 "children": []
             },
@@ -931,7 +931,7 @@ export const PAAS_STATIC_CONFIG = {
             {
                 "name": "appConfigs",
                 "iconfontName": "gear",
-                "label": staticI18n.$t("应用配置"),
+                "label": staticI18n.$t("应用设置"),
                 "matchRouters": [
                     'appConfigs',
                     'appMarket',
@@ -940,7 +940,7 @@ export const PAAS_STATIC_CONFIG = {
                     'appMobileMarket',
                 ],
                 "destRoute": {
-                  "name": "appConfigs"
+                  "name": "appBasicInfo"
                 },
                 "children": []
             },

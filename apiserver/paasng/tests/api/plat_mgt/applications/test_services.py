@@ -35,8 +35,8 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])
-class TestApplicationServicesViewSet:
-    """测试应用的增强服务"""
+class ApplicationServicesBaseTestCase:
+    """应用服务测试的基类"""
 
     @pytest.fixture(autouse=True)
     def setup_services(self, bk_app, bk_module, bk_module_2, bk_stag_env, bk_prod_env):
@@ -72,6 +72,7 @@ class TestApplicationServicesViewSet:
                 plan=plan,
                 is_allocated=False,
                 credentials=json.dumps(self.credentials),
+                config={},
             )
 
             svc = mixed_service_mgr.get(service.uuid)
@@ -90,6 +91,11 @@ class TestApplicationServicesViewSet:
         self.services = services
         self.svc = services[0]
         self.plan = self.svc.get_plans()[0]
+
+
+@pytest.mark.django_db(databases=["default", "workloads"])
+class TestApplicationServicesViewSet(ApplicationServicesBaseTestCase):
+    """测试应用的增强服务"""
 
     def test_list(self, plat_mgt_api_client):
         """测试获取应用的附加服务列表"""
@@ -153,58 +159,8 @@ class TestApplicationServicesViewSet:
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])
-class TestApplicationServicesRecyclableViewSet:
+class TestApplicationServicesRecyclableViewSet(ApplicationServicesBaseTestCase):
     """测试应用的增强服务-回收管理API"""
-
-    @pytest.fixture(autouse=True)
-    def setup_services(self, bk_app, bk_module, bk_module_2, bk_stag_env, bk_prod_env):
-        """创建服务和绑定关系"""
-        self.app = bk_app
-        self.module_1 = bk_module
-        self.module_2 = bk_module_2
-        self.stag_env = bk_stag_env
-        self.prod_env = bk_prod_env
-
-        # 创建测试凭证
-        self.credentials = {"user": "test_user", "password": "test_password", "host": "127.0.0.1", "port": "3306"}
-
-        # 创建三个服务
-        services = []
-        for name in ["mysql", "redis", "mongodb"]:
-            service = G(
-                Service,
-                name=name,
-                category=G(ServiceCategory),
-                logo_b64="dummy",
-                config={"provider_name": "pool"},
-            )
-            plan = G(Plan, name=generate_random_string(), service=service, config="{}")
-            svc = mixed_service_mgr.get(service.uuid)
-
-            # 为每个服务创建预创建服务实例
-            G(
-                PreCreatedInstance,
-                plan=plan,
-                is_allocated=False,
-                credentials=json.dumps(self.credentials),
-                config={},
-            )
-
-            services.append(svc)
-
-        # 绑定服务到模块
-        svc1, svc2, svc3 = services
-        for svc, module in [(svc1, bk_module), (svc2, bk_module), (svc3, bk_module_2)]:
-            ServiceBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_static([svc.get_plans()[0]])
-            mixed_service_mgr.bind_service(svc, module)
-
-        # 共享服务
-        ServiceSharingManager(bk_module_2).create(svc1, bk_module)
-
-        # 保存服务供测试使用
-        self.services = services
-        self.svc = services[0]
-        self.plan = self.svc.get_plans()[0]
 
     def test_list_unbound(self, plat_mgt_api_client):
         """测试获取可回收的实例列表"""

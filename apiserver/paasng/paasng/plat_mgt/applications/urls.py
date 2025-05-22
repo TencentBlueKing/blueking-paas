@@ -117,7 +117,7 @@ urlpatterns = [
     ),
     # 平台管理 - 增强服务回收
     re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/services/unbound/$",
+        r"^api/plat_mgt/applications/(?P<code>[^/]+)/services/unbound/$",
         views.ApplicationServicesRecyclableViewSet.as_view({"get": "list_unbound"}),
         name="plat_mgt.applications.services.list_unbound",
     ),

@@ -242,10 +242,10 @@ class ApplicationServicesRecyclableViewSet(viewsets.ViewSet):
         tags=["plat_mgt.applications.services"],
         responses={status.HTTP_200_OK: slzs.RecyclableServiceListOutputSLZ(many=True)},
     )
-    def list_unbound(self, request, app_code):
+    def list_unbound(self, request, code):
         """获取可回收的增强服务实例列表"""
         result = []
-        application = get_object_or_404(Application, code=app_code)
+        application = get_object_or_404(Application, code=code)
         for module in application.modules.all():
             for env in module.envs.all():
                 # 获取可回收的增强服务实例

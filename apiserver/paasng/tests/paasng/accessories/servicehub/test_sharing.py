@@ -169,6 +169,14 @@ class TestServiceSharingManager:
 
 
 class TestSharingReferencesManager:
+    @pytest.fixture
+    def uniform_allocation_policy(self, service_obj):
+        return ServiceAllocationPolicy.objects.create(
+            service_id=service_obj.uuid,
+            type=ServiceAllocationPolicyType.UNIFORM.value,
+            tenant_id=DEFAULT_TENANT_ID,
+        )
+
     @pytest.fixture(autouse=True)
     def _setup_data(self, bk_module, ref_module, service_obj, uniform_allocation_policy):
         # Initialize the binding policy

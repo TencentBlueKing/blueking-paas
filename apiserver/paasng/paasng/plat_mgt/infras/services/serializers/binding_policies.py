@@ -62,9 +62,9 @@ class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
     tenant_id = serializers.CharField(help_text="所属租户")
     policy_type = serializers.ChoiceField(choices=ServiceAllocationPolicyType.get_choices())
     allocation_precedence_policies = AllocationPrecedencePolicySLZ(
-        many=True, help_text="规则分配配置", allow_null=True
+        many=True, help_text="规则分配配置", allow_null=True, required=False
     )
-    allocation_policy = AllocationPolicySLZ(help_text="统一分配配置", allow_null=True)
+    allocation_policy = AllocationPolicySLZ(help_text="统一分配配置", allow_null=True, required=False)
 
     def to_internal_value(self, data) -> PolicyCombinationConfig:
         attrs = super().to_internal_value(data)

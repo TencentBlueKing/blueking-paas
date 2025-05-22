@@ -269,18 +269,16 @@ class TestPlanSelectorListPossiblePlans:
             "prod": [plan1, plan2],
         }
 
-    def test_tenant_isolation(
-        self, service_obj, bk_module, bk_prod_env, plan1, plan2, tenant_id, uniform_allocation_policy
-    ):
+    def test_tenant_isolation(self, service_obj, bk_module, bk_prod_env, plan1, plan2, tenant_id):
         # 验证租户隔离性
         # 配置租户为 'system' 的 ServiceBindingPolicy
-        ServiceAllocationPolicy.objects.create(
+        allocation_policy = ServiceAllocationPolicy.objects.create(
             service_id=service_obj.uuid,
             type=ServiceAllocationPolicyType.UNIFORM.value,
             tenant_id=tenant_id,
         )
-        ServiceBindingPolicyManager(uniform_allocation_policy).set_static([plan1, plan2])
-        ServiceBindingPolicyManager(uniform_allocation_policy).set_env_specific(
+        ServiceBindingPolicyManager(allocation_policy).set_static([plan1, plan2])
+        ServiceBindingPolicyManager(allocation_policy).set_env_specific(
             env_plans=[
                 (AppEnvName.STAG, [plan1]),
                 (AppEnvName.PROD, [plan1, plan2]),

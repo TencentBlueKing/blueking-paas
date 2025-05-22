@@ -102,22 +102,18 @@ def blank_resource_with_processes() -> crd.BkAppResource:
     )
 
 
-@pytest.fixture
-def uniform_allocation_policy(service_obj):
-    return ServiceAllocationPolicy.objects.create(
-        service_id=service_obj.uuid,
-        type=ServiceAllocationPolicyType.UNIFORM.value,
-        tenant_id=DEFAULT_TENANT_ID,
-    )
-
-
 @pytest.fixture()
-def local_service(bk_app, uniform_allocation_policy):
+def local_service(bk_app):
     """A local service object."""
     service = G(Service, name="mysql", category=G(ServiceCategory), logo_b64="dummy")
     _ = G(Plan, name=generate_random_string(), service=service)
     svc_obj = mixed_service_mgr.get(service.uuid)
-    ServiceBindingPolicyManager(uniform_allocation_policy).set_static([svc_obj.get_plans()[0]])
+    allocation_policy = ServiceAllocationPolicy.objects.create(
+        service_id=svc_obj.uuid,
+        type=ServiceAllocationPolicyType.UNIFORM.value,
+        tenant_id=DEFAULT_TENANT_ID,
+    )
+    ServiceBindingPolicyManager(allocation_policy).set_static([svc_obj.get_plans()[0]])
     return svc_obj
 
 

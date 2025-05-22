@@ -23,6 +23,7 @@ from paasng.platform.modules.serializers import (
     ImageTagOptionsSLZ,
     RuntimeType,
 )
+from paasng.platform.templates.models import Template
 from paasng.utils.i18n.serializers import TranslatedCharField
 
 
@@ -70,3 +71,15 @@ class TemplateDetailSLZ(serializers.Serializer):
 
     slugbuilder = AppSlugBuilderMinimalSLZ(help_text="基础镜像详细信息")
     build_config = BuildConfigPreviewSLZ()
+
+
+class TemplateRenderSLZ(serializers.ModelSerializer):
+    """模板渲染信息"""
+
+    display_name = TranslatedCharField()
+    description = TranslatedCharField()
+    relative_source_dir = serializers.CharField(help_text="模板代码所在相对目录", source="get_source_dir")
+
+    class Meta:
+        model = Template
+        fields = ["name", "display_name", "description", "repo_url", "render_method", "relative_source_dir"]

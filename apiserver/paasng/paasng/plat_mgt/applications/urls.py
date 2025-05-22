@@ -16,7 +16,10 @@
 # to the current version of the project delivered to anyone in the future.
 
 from paasng.plat_mgt.applications import views
-from paasng.utils.basic import re_path
+from paasng.utils.basic import make_app_pattern, re_path
+
+SERVICE_UUID = "(?P<service_id>[0-9a-f-]{32,36})"
+INSTANCE_UUID = "(?P<instance_id>[0-9a-f-]{32,36})"
 
 urlpatterns = [
     # 平台管理 - 应用列表
@@ -47,7 +50,8 @@ urlpatterns = [
         name="plat_mgt.applications.retrieve_app_name",
     ),
     re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/envs/(?P<env_name>[^/]+)/cluster/$",
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/"
+        r"envs/(?P<env_name>[^/]+)/cluster/$",
         views.ApplicationDetailViewSet.as_view({"post": "update_cluster"}),
         name="plat_mgt.applications.update_cluster",
     ),
@@ -77,5 +81,38 @@ urlpatterns = [
         r"^api/plat_mgt/applications/members/roles/$",
         views.ApplicationMemberViewSet.as_view({"get": "get_roles"}),
         name="plat_mgt.applications.members.get_roles",
+    ),
+    # 平台管理 - 增强服务
+    re_path(
+        r"^api/plat_mgt/applications/(?P<code>[^/]+)/modules/services/$",
+        views.ApplicationServicesViewSet.as_view({"get": "list"}),
+        name="plat_mgt.applications.services",
+    ),
+    re_path(
+        make_app_pattern(
+            f"/services/{SERVICE_UUID}/instance/{INSTANCE_UUID}/credentials/$",
+            include_envs=True,
+            prefix="api/plat_mgt/applications/",
+        ),
+        views.ApplicationServicesViewSet.as_view({"get": "view_credentials"}),
+        name="plat_mgt.applications.services.credentials",
+    ),
+    re_path(
+        make_app_pattern(
+            f"/services/{SERVICE_UUID}/instance/{INSTANCE_UUID}/$",
+            include_envs=True,
+            prefix="api/plat_mgt/applications/",
+        ),
+        views.ApplicationServicesViewSet.as_view({"delete": "recycle_resource"}),
+        name="plat_mgt.applications.services.instance.recycle",
+    ),
+    re_path(
+        make_app_pattern(
+            f"/services/{SERVICE_UUID}/instance/$",
+            include_envs=True,
+            prefix="api/plat_mgt/applications/",
+        ),
+        views.ApplicationServicesViewSet.as_view({"post": "provision_instance"}),
+        name="plat_mgt.applications.services.instance.provision",
     ),
 ]

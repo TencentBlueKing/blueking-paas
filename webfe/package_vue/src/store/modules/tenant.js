@@ -27,6 +27,7 @@ export default {
     availableClusters: {},
     curTenantData: {},
     clustersStatus: {},
+    detailActiveName: '',
   },
   mutations: {
     updateAvailableClusters(state, data) {
@@ -40,6 +41,9 @@ export default {
         ...state.clustersStatus,
         [clusterName]: status,
       };
+    },
+    updateDetailActiveName(state, data) {
+      state.detailActiveName = data;
     },
   },
   actions: {

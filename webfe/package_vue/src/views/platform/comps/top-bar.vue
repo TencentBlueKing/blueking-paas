@@ -7,6 +7,7 @@
         @click="goBack"
       />
       {{ title }}
+      <slot name="extra"></slot>
     </div>
     <div
       v-if="tabPanels.length"
@@ -70,6 +71,7 @@ export default {
       // 详情页单独编辑
       if (this.$route.query?.alone) {
         backRoute.query.type = 'detail';
+        this.$store.commit('tenant/updateDetailActiveName', this.$route.query?.id);
       }
       if (backRoute) {
         this.$router.push(backRoute);
@@ -100,6 +102,8 @@ export default {
     }
   }
   .title {
+    display: flex;
+    align-items: center;
     padding-left: 24px;
     font-size: 16px;
     color: #313238;

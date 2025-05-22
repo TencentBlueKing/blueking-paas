@@ -109,12 +109,6 @@ export default {
     DetailComponents,
     DetailFeature,
   },
-  props: {
-    active: {
-      type: String,
-      default: '',
-    },
-  },
   data() {
     return {
       tabActive: 'DetailInfo',
@@ -139,6 +133,7 @@ export default {
   computed: {
     ...mapState('tenant', {
       clustersStatus: (state) => state.clustersStatus,
+      detailActiveName: (state) => state.detailActiveName,
     }),
     curClustersStatus() {
       return this.clustersStatus[this.activeName] ?? {};
@@ -178,7 +173,7 @@ export default {
         if (clusterId) {
           this.switchDetails(clusterId);
         } else {
-          this.switchDetails(this.active || res[0]?.name);
+          this.switchDetails(this.detailActiveName || res[0]?.name);
         }
         setTimeout(() => {
           // 获取集群状态

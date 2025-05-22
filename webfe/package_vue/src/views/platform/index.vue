@@ -12,7 +12,17 @@
         :title="title"
         :tab-panels="panels"
         @tab-change="handleTabChange"
-      ></TopBar>
+      >
+        <template
+          v-if="isSubTitle"
+          slot="extra"
+        >
+          <span class="sub-title">
+            <span class="line"></span>
+            <span>{{ $route.meta.subTitle }}：{{ $route.query?.id }}</span>
+          </span>
+        </template>
+      </TopBar>
       <div class="content-area">
         <router-view
           :tab-active="active"
@@ -47,11 +57,15 @@ export default {
   },
   computed: {
     title() {
-      const { name, path } = this.$route;
+      const { name, path, query } = this.$route;
       if (name === 'clusterCreateEdit') {
         return path.endsWith('/add') ? this.$t('添加集群') : this.$t('编辑集群');
       }
       return this.$route.meta.title;
+    },
+    isSubTitle() {
+      const { name, path, meta } = this.$route;
+      return meta?.subTitle && name === 'clusterCreateEdit' && path.endsWith('/edit');
     },
     panels() {
       return this.$route.meta?.panels || [];
@@ -145,6 +159,19 @@ export default {
     .content-area {
       flex: 1;
       min-height: 0;
+    }
+    .sub-title {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      color: #979ba5;
+      .line {
+        display: inline-block;
+        width: 1px;
+        height: 14px;
+        background-color: #dcdee5;
+        margin: 0 8px;
+      }
     }
   }
 }

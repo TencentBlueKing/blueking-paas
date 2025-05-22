@@ -8,9 +8,9 @@
 - 移除：部分 bk-buildpack-python 中的 [patch](https://github.com/TencentBlueKing/blueking-paas/pull/2143#discussion_r2092281296)
 
 备注：
-- noble 版本基础镜像支持 Python 3.11 -> 3.13，Go 1.1 -> 1.24
+- noble 版本基础镜像支持 Python 3.11 - 3.13，Go 1.1 - 1.24
 - 存量 bionic 版本构建工具维护在分支：[builder-stack-1.x](https://github.com/TencentBlueKing/blueking-paas/tree/builder-stack-1.x)
-- 存量 bionic 版本构建工具（v1.x.x）可用于支持低版本的 Python 应用
+- 存量 bionic 版本构建工具（v1.x.x）可用于支持低版本的 Python 应用（3.6 - 3.11）
 
 ## v1.1.0
 

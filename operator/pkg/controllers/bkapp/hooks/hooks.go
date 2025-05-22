@@ -166,6 +166,9 @@ func (r *HookReconciler) getCurrentState(ctx context.Context, bkapp *paasv1alpha
 		})
 	}
 
+	// StartTime 总是重新读取, 避免调和时, currentStatus.StartTime 仍是上一个 Instance 的 StartTime
+	currentStatus.StartTime = lo.ToPtr(pod.GetCreationTimestamp())
+
 	healthStatus := health.CheckPodHealthStatus(&pod)
 	return hookres.HookInstance{
 		Pod: &pod,

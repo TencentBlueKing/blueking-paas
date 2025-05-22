@@ -3,11 +3,11 @@ package appdesc
 import (
 	"os"
 
-	"gopkg.in/yaml.v3"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 
-	descv3 "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/appdesc/v3"
 	descv2 "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/appdesc/v2"
+	descv3 "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/appdesc/v3"
 	bcfg "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/buildconfig"
 )
 

@@ -1,5 +1,10 @@
 .DEFAULT_GOAL := help
 
+.PHONY: fmt
+fmt: golines gofumpt ## 执行 golines，gofumpt ...
+	$(GOLINES) ./ -m 119 -w --base-formatter gofmt --no-reformat-tags
+	$(GOFUMPT) -l -w .
+
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint
 	$(GOCILINT) run

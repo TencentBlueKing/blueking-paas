@@ -1,41 +1,28 @@
-# heroku-builder
+# cloudnative-buildpacks/builders/heroku-builder
 
-蓝鲸 SaaS Builder，用于将云原生应用从源代码构建成可运行镜像，基于 [heroku/base-images](https://github.com/heroku/base-images/tree/main) 项目。
+蓝鲸 SaaS Builder, 基于 [heroku-24](https://github.com/heroku/base-images/tree/v149/heroku-24) 镜像, 底层镜像是 ubuntu:noble.
 
-## 开发指南
+## 使用说明
 
-### 名词解释
+### 1. 构建基础镜像 (stack)
 
-- CNB Stack：基础镜像，用于构建 cnb builder / runner 等
-- CNB builder：构建器镜像，可使用若干 buildpack 将源代码构建成可运行镜像
-
-### 前置依赖
-
-构建 cnb builder 需要安装 [pack](https://buildpacks.io/docs/tools/pack/)
-
-### heroku-18（bionic）
-
-基础镜像：[heroku-18 / ubuntu-bionic](https://github.com/heroku/stack-images/tree/v23/heroku-18) 
-
-### 构建 cnb stack（基础镜像）
+基础镜像（Stack）基于 Ubuntu 镜像构建而来，将用于进一步构建成 cnb builder 镜像，亦可作为 runner 镜像使用
 
 ```bash
-❯ make stack-bionic
+❯ make stack-noble
 # 可以通过环境变量指定镜像名称和 tag
-❯ BUILD_IMAGE_NAME="build-heroku-bionic" STACK_BUILDER_TAG="latest" RUN_IMAGE_NAME="run-heroku-bionic" STACK_RUNNER_TAG="latest" make stack-bionic
+❯ BUILD_IMAGE_NAME="build-heroku-noble" STACK_BUILDER_TAG="latest" RUN_IMAGE_NAME="run-heroku-noble" STACK_RUNNER_TAG="latest" make stack-noble
 ```
 
-### 构建 cnb builder（构建阶段镜像）
+### 2. 构建 cnb builder
+
+cnb builder 由基础镜像（Stack）+ buildpacks 构建而来，可用于将源码包构建为可运行的 SaaS 镜像
+
+前置依赖: 构建 cnb builder 需要安装 [pack](https://buildpacks.io/docs/tools/pack/)
 
 ```bash
-❯ make builder-bionic
+❯ make builder-noble
 # 可以通过环境变量指定镜像名称和 tag
-# 如需修改基础镜像, 需要修改 heroku-18.toml 中的 run-image 和 build-image 字段
-❯ BUILDER_IMAGE_NAME="builder-heroku-bionic" BUILDER_TAG="latest" make builder-bionic
+# 如需修改基础镜像, 需要修改 heroku-24.toml 中的 run-image 和 build-image 字段
+❯ BUILDER_IMAGE_NAME="builder-heroku-noble" BUILDER_TAG="latest" make builder-noble
 ```
-
-### 参考资料
-
-- [buildpack 文档](https://buildpacks.io/docs/)
-- [builder.toml 配置说明](https://buildpacks.io/docs/reference/config/builder-config/)
-- [buildpack.toml 配置说明](https://buildpacks.io/docs/reference/config/buildpack-config/)

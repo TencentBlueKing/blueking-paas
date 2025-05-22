@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/pflag"
 	"github.com/pkg/errors"
+	"github.com/spf13/pflag"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 )
 
 const (

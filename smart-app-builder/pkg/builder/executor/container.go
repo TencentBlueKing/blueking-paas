@@ -11,9 +11,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/config"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 )
 
 // containerExecutor is a build executor in container

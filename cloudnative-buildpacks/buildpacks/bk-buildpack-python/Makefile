@@ -1,19 +1,18 @@
 .DEFAULT_GOAL:=help
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 NAME := bk-buildpack-python
-VERSION := v213
-
+VERSION := v285
 
 ##@ Build
 .PHONY: package
-package: package-heroku-buildpack ## 将 cnb buildpack 打包
+package: package-heroku-buildpack  ## package the buildpack
 	cp shim/* cnb-buildpack/bin/
 	tar -xvf target/output/bk-buildpack-python-${VERSION}.tar -C cnb-buildpack/target
-	tar -zcvf $(NAME)-$(VERSION).tgz -C cnb-buildpack .
+	pack buildpack package $(NAME)-$(VERSION).cnb -p cnb-buildpack/ -f file
 
 
 .PHONY: package-heroku-buildpack
-package-heroku-buildpack: init-submodule ## 打包 heroku-buildpack
+package-heroku-buildpack: init-submodule  ## package heroku buildpack
 	cd target && make pack version=$(VERSION)
 
 

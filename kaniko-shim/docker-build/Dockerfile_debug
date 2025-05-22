@@ -1,5 +1,5 @@
 # ------------------------------- builder container -------------------------------
-FROM golang:1.22.8-bullseye as binary-builder
+FROM golang:1.23.8-bookworm as binary-builder
 
 WORKDIR /src
 

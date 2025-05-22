@@ -25,16 +25,15 @@ from paasng.utils.serializers import UserField
 class ApplicationMembershipListOutputSLZ(serializers.Serializer):
     """平台管理 - 应用成员序列化器"""
 
-    roles = serializers.ListField(child=serializers.CharField(), help_text="用户角色列表")
-    username = serializers.CharField(help_text="用户名")
-    user = serializers.CharField(help_text="用户ID")
+    user = UserField()
+    roles = serializers.ListField(child=RoleField(), help_text="用户角色列表")
 
 
 class ApplicationMembershipCreateInputSLZ(serializers.Serializer):
     """平台管理 - 创建应用成员序列化器"""
 
-    users = serializers.ListField(child=UserField(), help_text="用户列表")
-    role = RoleField(help_text="用户角色")
+    user = UserField()
+    roles = serializers.ListField(child=RoleField(), help_text="用户角色列表")
 
 
 class ApplicationMembershipUpdateInputSLZ(serializers.Serializer):

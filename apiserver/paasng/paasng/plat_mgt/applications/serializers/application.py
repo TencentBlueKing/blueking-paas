@@ -15,15 +15,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+
 from typing import Optional
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
+from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import UpdateApplicationSLZ
+from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
@@ -123,14 +128,11 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     code = serializers.CharField(read_only=True, help_text="应用 ID")
     name = serializers.CharField(read_only=True, help_text="应用名称")
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
-    owner = serializers.CharField(read_only=True, help_text="应用所有者")
-    type = serializers.SerializerMethodField(read_only=True, help_text="应用类型")
+    owner = serializers.CharField(source="owner.username", read_only=True, help_text="应用所有者")
+    type = serializers.CharField(read_only=True, help_text="应用类型")
     is_active = serializers.BooleanField(read_only=True, help_text="应用状态")
     creator = UserNameField(read_only=True, help_text="创建人")
     created_humanized = HumanizeDateTimeField(source="created", help_text="创建时间")
-
-    def get_type(self, instance: Application) -> str:
-        return ApplicationType.get_choice_label(instance.type)
 
 
 class ApplicationEnvironmentOperationSLZ(serializers.Serializer):
@@ -146,16 +148,24 @@ class ApplicationEnvironmentSLZ(serializers.Serializer):
     """应用环境序列化器"""
 
     name = serializers.CharField(source="environment", read_only=True, help_text="环境名称")
-    is_offlined = serializers.BooleanField(read_only=True, help_text="环境状态")
-
+    is_deployed = serializers.SerializerMethodField(help_text="是否已部署", read_only=True)
+    exposed_url = serializers.SerializerMethodField(help_text="访问链接, 未部署时为 None", read_only=True)
     deploy_cluster = serializers.SerializerMethodField(help_text="部署集群")
     recent_operation = serializers.SerializerMethodField(help_text="最近操作")
+
+    def get_is_deployed(self, env) -> bool:
+        """获取环境是否已部署"""
+        return env_is_deployed(env)
+
+    def get_exposed_url(self, env) -> Optional[str]:
+        exposed_link = get_exposed_url(env)
+        return exposed_link.address if exposed_link else None
 
     def get_deploy_cluster(self, env) -> str:
         """获取集群名称"""
         try:
             cluster = EnvClusterService(env).get_cluster()
-        except Exception:
+        except Cluster.DoesNotExist:
             return ""
         else:
             return cluster.name
@@ -165,12 +175,13 @@ class ApplicationEnvironmentSLZ(serializers.Serializer):
         last_op = ModuleEnvironmentOperations.objects.filter(app_environment=env).order_by("-created").first()
         if not last_op:
             return None
-        return {
-            "operator": last_op.operator,
-            "updated": last_op.created,
-            "operation_type": last_op.operation_type,
-            "status": last_op.status,
-        }
+        operator = last_op.operator.username
+        updated = last_op.created.strftime("%Y-%m-%d %H:%M:%S")
+        operation_type = OperationTypes.get_choice_label(last_op.operation_type)
+        status = JobStatus.get_choice_label(last_op.status)
+        message = _("于{time}{operation}{status}").format(time=updated, operation=operation_type, status=status)
+
+        return {"operator": operator, "message": message}
 
 
 class ApplicationModuleSLZ(serializers.Serializer):

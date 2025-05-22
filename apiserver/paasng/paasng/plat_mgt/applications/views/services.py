@@ -234,7 +234,7 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
         responses={status.HTTP_200_OK: "credentials in JSON format"},
     )
     def view_credentials(self, request, code, module_name, environment, service_id, instance_id):
-        """查看增强服务实例凭据, 使用 PreCreateINstance 的 UUID"""
+        """查看增强服务实例凭据"""
 
         service = mixed_service_mgr.get_or_404(service_id)
 

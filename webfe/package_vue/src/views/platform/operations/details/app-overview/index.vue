@@ -13,13 +13,8 @@
           :is-full="true"
           :align="'flex-start'"
           :key="val"
+          :label="`${$t(val)}：`"
         >
-          <template
-            slot="label"
-            class="mr10"
-          >
-            {{ `${$t(val)}：` }}
-          </template>
           <div slot="value">
             <!-- 应用ID -->
             <div v-if="key === 'code'">
@@ -80,7 +75,7 @@
       class="module-info-wrapper card-style"
       v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
     >
-      <div class="view-title mb16">{{ $t('模块信息') }}</div>
+      <div class="view-title mb10">{{ $t('模块信息') }}</div>
       <bk-collapse
         v-model="activeNames"
         ext-cls="module-collapse-cls"
@@ -404,9 +399,15 @@ export default {
     margin-bottom: 16px !important;
   }
   /deep/ .details-row {
+    margin-top: 0;
     .label,
     .value {
       font-size: 14px;
+      height: 40px;
+      line-height: 40px;
+    }
+    .value {
+      padding-left: 10px;
     }
   }
   .base-info-wrapper {
@@ -428,15 +429,19 @@ export default {
     margin-top: 16px;
     padding: 16px;
     .module-tit {
+      height: 100%;
       display: flex;
       align-items: center;
       font-weight: 500;
       font-size: 14px;
       color: #313238;
       .name-info {
+        height: 100%;
         width: 175px;
+        font-weight: 700;
       }
       .env-info {
+        height: 100%;
         flex: 1;
         display: flex;
         font-weight: 400;
@@ -483,7 +488,7 @@ export default {
         width: 150px;
         padding-right: 14px;
         text-align: right;
-        font-weight: 500;
+        font-weight: 700;
         font-size: 14px;
         line-height: 20px;
         color: #4d4f56;

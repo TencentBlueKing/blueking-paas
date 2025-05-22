@@ -27,6 +27,7 @@ export default {
     availableClusters: {},
     curTenantData: {},
     clustersStatus: {},
+    detailActiveName: '',
   },
   mutations: {
     updateAvailableClusters(state, data) {
@@ -40,6 +41,9 @@ export default {
         ...state.clustersStatus,
         [clusterName]: status,
       };
+    },
+    updateDetailActiveName(state, data) {
+      state.detailActiveName = data;
     },
   },
   actions: {
@@ -215,6 +219,13 @@ export default {
      */
     getClusterFeatureFlags({}) {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_feature_flags/`;
+      return http.get(url);
+    },
+    /**
+     * 获取集群默认配置
+     */
+    getClusterDefaultConfigs({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_default_configs/`;
       return http.get(url);
     },
     /**

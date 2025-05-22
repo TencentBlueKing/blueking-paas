@@ -185,7 +185,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         except (BkMonitorGatewayServiceError, BkMonitorApiError) as e:
             logger.info(f"Failed to update app space on BK Monitor, {e}")
         except Exception:
-            logger.exception("Failed to update app space on BK Monitor")
+            logger.exception("Failed to update app space on BK Monitor (unknown error)")
 
         add_app_audit_record(
             app_code=application.code,

@@ -87,8 +87,8 @@ class OperationTypes(ChoicesEnum):
     ONLINE = "online"
 
     _choices_labels = (
-        (OFFLINE, "OFFLINE"),
-        (ONLINE, "ONLINE"),
+        (OFFLINE, "下架"),
+        (ONLINE, "部署"),
     )
 
 

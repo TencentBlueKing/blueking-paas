@@ -123,7 +123,7 @@ class ExposedType(BaseModel):
     :param name: the name of the exposed type
     """
 
-    name: Literal[ExposedTypeName.BK_HTTP] = ExposedTypeName.BK_HTTP
+    name: Literal[ExposedTypeName.BK_HTTP, ExposedTypeName.BK_GRPC] = ExposedTypeName.BK_HTTP
 
 
 class ProcService(BaseModel):

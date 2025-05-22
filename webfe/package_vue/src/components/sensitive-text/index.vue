@@ -3,7 +3,12 @@
     <span v-if="!text">--</span>
     <template v-else>
       <span v-if="!showText">**********</span>
-      <span v-else>{{ text }}</span>
+      <span
+        v-else
+        class="plain-text text-ellipsis"
+      >
+        {{ text }}
+      </span>
       <span class="icon-wrapper">
         <i
           :class="['paasng-icon', showText ? 'paasng-eye' : 'paasng-eye-slash']"
@@ -59,9 +64,14 @@ export default {
 .sensitive-text-wrapper {
   display: inline-flex;
   align-items: center;
+  width: 100%;
+  .plain-text {
+    flex: 1;
+  }
 }
 
 .icon-wrapper {
+  flex-shrink: 0;
   margin-left: 8px;
   display: inline-flex;
   gap: 6px;

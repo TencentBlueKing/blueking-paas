@@ -1111,7 +1111,7 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 	It("Normal", func() {
 		bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
 			{Name: "web", TargetPort: 5000, Port: 80, ExposedType: &paasv1alpha2.ExposedType{
-				Name: paasv1alpha2.ExposedTypeNameBkHttp,
+				Name: paasv1alpha2.ExposedTypeNameBkHTTP,
 			}, Protocol: corev1.ProtocolTCP},
 			{Name: "metric", TargetPort: 5001, Port: 5000, Protocol: corev1.ProtocolTCP},
 		}
@@ -1128,7 +1128,7 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 				Port:       80,
 				Protocol:   "FakeProtocol",
 				ExposedType: &paasv1alpha2.ExposedType{
-					Name: paasv1alpha2.ExposedTypeNameBkHttp,
+					Name: paasv1alpha2.ExposedTypeNameBkHTTP,
 				},
 			},
 		}
@@ -1144,7 +1144,7 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 				Port:       -1,
 				Protocol:   corev1.ProtocolTCP,
 				ExposedType: &paasv1alpha2.ExposedType{
-					Name: paasv1alpha2.ExposedTypeNameBkHttp,
+					Name: paasv1alpha2.ExposedTypeNameBkHTTP,
 				},
 			},
 		}
@@ -1171,7 +1171,7 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 	It("Duplicate name", func() {
 		bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
 			{Name: "web", TargetPort: 5000, Port: 80, ExposedType: &paasv1alpha2.ExposedType{
-				Name: paasv1alpha2.ExposedTypeNameBkHttp,
+				Name: paasv1alpha2.ExposedTypeNameBkHTTP,
 			}, Protocol: corev1.ProtocolTCP},
 			{Name: "web", TargetPort: 5001, Port: 5000, Protocol: corev1.ProtocolTCP},
 		}
@@ -1182,7 +1182,7 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 	It("Duplicate targetPort", func() {
 		bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
 			{Name: "web", TargetPort: 5000, Port: 80, ExposedType: &paasv1alpha2.ExposedType{
-				Name: paasv1alpha2.ExposedTypeNameBkHttp,
+				Name: paasv1alpha2.ExposedTypeNameBkHTTP,
 			}, Protocol: corev1.ProtocolTCP},
 			{Name: "metric", TargetPort: 5000, Port: 5000, Protocol: corev1.ProtocolTCP},
 		}
@@ -1194,7 +1194,7 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 		It("Duplicate in one process", func() {
 			bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
 				{Name: "web", TargetPort: 5000, Port: 80, ExposedType: &paasv1alpha2.ExposedType{
-					Name: paasv1alpha2.ExposedTypeNameBkHttp,
+					Name: paasv1alpha2.ExposedTypeNameBkHTTP,
 				}, Protocol: corev1.ProtocolTCP},
 				{
 					Name:       "metric",
@@ -1202,7 +1202,7 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 					Port:       5001,
 					Protocol:   corev1.ProtocolTCP,
 					ExposedType: &paasv1alpha2.ExposedType{
-						Name: paasv1alpha2.ExposedTypeNameBkHttp,
+						Name: paasv1alpha2.ExposedTypeNameBkHTTP,
 					},
 				},
 			}
@@ -1221,7 +1221,7 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 							TargetPort:  5000,
 							Port:        80,
 							Protocol:    corev1.ProtocolTCP,
-							ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+							ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHTTP},
 						},
 					},
 				},
@@ -1235,7 +1235,7 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 							TargetPort:  5000,
 							Port:        80,
 							Protocol:    corev1.ProtocolTCP,
-							ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
+							ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHTTP},
 						},
 					},
 				},
@@ -1244,6 +1244,42 @@ var _ = Describe("test webhook.Validator validate process services", func() {
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring(`Duplicate value: "bk/http"`))
 		})
+	})
+
+	It("Multiple exposed types", func() {
+		bkapp.Spec.Processes = []paasv1alpha2.Process{
+			{
+				Name:         "web",
+				Replicas:     paasv1alpha2.ReplicasTwo,
+				ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+				Services: []paasv1alpha2.ProcService{
+					{
+						Name:        "web",
+						TargetPort:  5000,
+						Port:        80,
+						Protocol:    corev1.ProtocolTCP,
+						ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkGRPC},
+					},
+				},
+			},
+			{
+				Name:         "metric",
+				Replicas:     paasv1alpha2.ReplicasTwo,
+				ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+				Services: []paasv1alpha2.ProcService{
+					{
+						Name:        "web",
+						TargetPort:  5000,
+						Port:        80,
+						Protocol:    corev1.ProtocolTCP,
+						ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHTTP},
+					},
+				},
+			},
+		}
+
+		err := bkapp.ValidateCreate()
+		Expect(err.Error()).To(ContainSubstring(`setting multiple exposedTypes in a BkApp is not supported`))
 	})
 })
 

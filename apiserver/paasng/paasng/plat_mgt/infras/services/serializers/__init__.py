@@ -28,7 +28,15 @@ from .plans import (
     PlanWithSvcSLZ,
 )
 from .pre_created_instances import PreCreatedInstanceOutputSLZ, PreCreatedInstanceUpsertSLZ
-from .services import ServiceCreateSLZ, ServiceObjOutputListSLZ, ServiceObjOutputSLZ, ServiceUpdateSLZ
+from .services import (
+    PlanForDisplayOutputSLZ,
+    PlanObjOutputSLZ,
+    ServiceCreateSLZ,
+    ServiceInstanceOutputSLZ,
+    ServiceObjOutputListSLZ,
+    ServiceObjOutputSLZ,
+    ServiceUpdateSLZ,
+)
 
 __all__ = [
     # plans
@@ -42,7 +50,10 @@ __all__ = [
     "PolicyCombinationConfigOutputSLZ",
     "PrecedencePolicyCondTypeOutputSLZ",
     # services
+    "PlanForDisplayOutputSLZ",
+    "PlanObjOutputSLZ",
     "ServiceObjOutputSLZ",
+    "ServiceInstanceOutputSLZ",
     "ServiceObjOutputListSLZ",
     "ServiceCreateSLZ",
     "ServiceUpdateSLZ",

@@ -67,7 +67,7 @@ class ServiceListOutputSLZ(serializers.Serializer):
     shared_services = SharedServiceInfoOutputSLZ(many=True, help_text="共享的增强服务列表")
 
 
-class RecyclableServiceListOutputSLZ(serializers.Serializer):
+class UnboundServiceInstanceSLZ(serializers.Serializer):
     """可回收的增强服务列表序列化器"""
 
     environment = serializers.CharField(help_text="环境名称")

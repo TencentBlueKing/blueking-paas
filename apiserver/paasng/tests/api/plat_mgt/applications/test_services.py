@@ -35,8 +35,8 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])
-class ApplicationServicesBaseTestCase:
-    """应用服务测试的基类"""
+class TestApplicationServicesViewSet:
+    """测试应用的增强服务"""
 
     @pytest.fixture(autouse=True)
     def setup_services(self, bk_app, bk_module, bk_module_2, bk_stag_env, bk_prod_env):
@@ -92,75 +92,13 @@ class ApplicationServicesBaseTestCase:
         self.svc = services[0]
         self.plan = self.svc.get_plans()[0]
 
-
-@pytest.mark.django_db(databases=["default", "workloads"])
-class TestApplicationServicesViewSet(ApplicationServicesBaseTestCase):
-    """测试应用的增强服务"""
-
-    def test_list(self, plat_mgt_api_client):
-        """测试获取应用的附加服务列表"""
-        url = f"/api/plat_mgt/applications/{self.app.code}/modules/services/"
+    def test_list_bound(self, plat_mgt_api_client):
+        """测试获取应用的绑定服务列表"""
+        url = f"/api/plat_mgt/applications/{self.app.code}/services/bound_attachments/"
         resp = plat_mgt_api_client.get(url)
         assert resp.status_code == 200
         assert isinstance(resp.data, list)
         assert len(resp.data) > 0
-
-    @mock.patch("paasng.plat_mgt.applications.views.services.add_admin_audit_record", return_value=None)
-    def test_provision_instance(self, mock_audit_record, plat_mgt_api_client):
-        """测试分配附加服务实例"""
-
-        # 构造API请求URL
-        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/"
-        rsp = plat_mgt_api_client.post(url)
-        assert rsp.status_code == 201
-
-        # 验证已经分配了实例
-        service_rel = mixed_service_mgr.get_attachment_by_engine_app(self.svc, self.stag_env.engine_app)
-        assert service_rel.service_instance is not None
-
-        # 验证审计记录函数被调用
-        mock_audit_record.assert_called_once()
-
-    def test_recycle_instance(self, plat_mgt_api_client):
-        """测试删除附加服务实例"""
-
-        # 创建服务实例和关联
-        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, self.svc), None)
-        assert rel is not None
-        rel.provision()
-        instance_uuid = rel.get_instance().uuid
-
-        # 构造API请求URL
-        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/{instance_uuid}/"
-        rsp = plat_mgt_api_client.delete(url)
-        assert rsp.status_code == 204
-
-        # 验证实例已解除关联
-        unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, uuid.UUID(instance_uuid))
-        assert unbound_rel is not None
-
-    def test_view_credentials(self, plat_mgt_api_client):
-        """测试查看附加服务实例的凭据"""
-
-        # 创建服务实例和关联
-        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, self.svc), None)
-        assert rel is not None
-        rel.provision()
-
-        instance_uuid = rel.get_instance().uuid
-
-        # 构造API请求URL
-        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/{instance_uuid}/credentials/"
-        rsp = plat_mgt_api_client.get(url)
-        assert rsp.status_code == 200
-
-        # 验证返回的凭据与创建时一致
-        assert len(rsp.data) > 0
-
-
-@pytest.mark.django_db(databases=["default", "workloads"])
-class TestApplicationServicesRecyclableViewSet(ApplicationServicesBaseTestCase):
-    """测试应用的增强服务-回收管理API"""
 
     def test_list_unbound(self, plat_mgt_api_client):
         """测试获取可回收的实例列表"""
@@ -171,14 +109,48 @@ class TestApplicationServicesRecyclableViewSet(ApplicationServicesBaseTestCase):
         rel.provision()
         rel.recycle_resource()
 
-        url = f"/api/plat_mgt/applications/{self.app.code}/services/unbound/"
+        url = f"/api/plat_mgt/applications/{self.app.code}/services/unbound_attachments/"
         resp = plat_mgt_api_client.get(url)
 
         assert resp.status_code == 200
         assert len(resp.data) > 0
 
-    def test_recycle(self, plat_mgt_api_client):
-        """测试回收资源"""
+    @mock.patch("paasng.plat_mgt.applications.views.services.add_admin_audit_record", return_value=None)
+    def test_provision_instance(self, mock_audit_record, plat_mgt_api_client):
+        """测试分配服务实例"""
+
+        # 构造API请求URL
+        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/bound_attachments/"
+        rsp = plat_mgt_api_client.post(url)
+        assert rsp.status_code == 201
+
+        # 验证已经分配了实例
+        service_rel = mixed_service_mgr.get_attachment_by_engine_app(self.svc, self.stag_env.engine_app)
+        assert service_rel.service_instance is not None
+
+        # 验证审计记录函数被调用
+        mock_audit_record.assert_called_once()
+
+    def test_unbound_instance(self, plat_mgt_api_client):
+        """测试解绑增强服务实例"""
+
+        # 创建服务实例和关联
+        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, self.svc), None)
+        assert rel is not None
+        rel.provision()
+        instance_uuid = rel.get_instance().uuid
+
+        # 构造API请求URL
+        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/bound_attachments/{instance_uuid}/"
+        rsp = plat_mgt_api_client.delete(url)
+        assert rsp.status_code == 204
+
+        # 验证实例已解除关联
+        unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, uuid.UUID(instance_uuid))
+        assert unbound_rel is not None
+
+    def test_recycle_unbound(self, plat_mgt_api_client):
+        """测试回收已解绑的服务资源"""
 
         # 创建一个服务实例
         rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, service=self.svc), None)
@@ -193,10 +165,30 @@ class TestApplicationServicesRecyclableViewSet(ApplicationServicesBaseTestCase):
         unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, instance_uuid)
         assert unbound_rel is not None
 
-        url = f"/api/plat_mgt/applications/{self.app.code}/services/{self.svc.uuid}/unbound/instance/{instance_uuid}/"
+        url = (
+            f"/api/plat_mgt/applications/{self.app.code}/services/{self.svc.uuid}/unbound_attachments/{instance_uuid}/"
+        )
         resp = plat_mgt_api_client.delete(url)
 
         # 验证 API 调用成功且实例已经回收
         assert resp.status_code == 204
         with pytest.raises(UnboundSvcAttachmentDoesNotExist):
             mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, instance_uuid)
+
+    def test_view_credentials(self, plat_mgt_api_client):
+        """测试查看附加服务实例的凭据"""
+
+        # 创建服务实例和关联
+        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, self.svc), None)
+        assert rel is not None
+        rel.provision()
+
+        instance_uuid = rel.get_instance().uuid
+
+        # 构造API请求URL
+        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/bound_attachments/{instance_uuid}/credentials/"
+        rsp = plat_mgt_api_client.get(url)
+        assert rsp.status_code == 200
+
+        # 验证返回的凭据与创建时一致
+        assert len(rsp.data) > 0

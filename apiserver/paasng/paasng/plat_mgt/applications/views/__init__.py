@@ -19,7 +19,7 @@
 from .application import ApplicationDetailViewSet, ApplicationListViewSet
 from .feature import ApplicationFeatureViewSet
 from .member import ApplicationMemberViewSet
-from .services import ApplicationServicesRecyclableViewSet, ApplicationServicesViewSet
+from .services import ApplicationServicesViewSet
 
 __all__ = [
     # application
@@ -30,7 +30,6 @@ __all__ = [
     "ApplicationMemberViewSet",
     # application detail
     "ApplicationDetailViewSet",
-    # application addon services
+    # application services
     "ApplicationServicesViewSet",
-    "ApplicationServicesRecyclableViewSet",
 ]

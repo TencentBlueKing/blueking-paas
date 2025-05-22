@@ -35,8 +35,8 @@ from .member import (
     ApplicationMembershipUpdateInputSLZ,
 )
 from .services import (
-    RecyclableServiceListOutputSLZ,
     ServiceListOutputSLZ,
+    UnboundServiceInstanceSLZ,
 )
 
 __all__ = [
@@ -57,6 +57,6 @@ __all__ = [
     "ApplicationMembershipListOutputSLZ",
     "ApplicationMembershipUpdateInputSLZ",
     # services
-    "RecyclableServiceListOutputSLZ",
+    "UnboundServiceInstanceSLZ",
     "ServiceListOutputSLZ",
 ]

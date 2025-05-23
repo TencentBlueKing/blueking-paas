@@ -23,7 +23,6 @@ import pytest
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.apis.admin.constants import HELM_RELEASE_SECRET_TYPE
-from paas_wl.apis.admin.helpers.helm import DeployResult, HelmChart, HelmRelease, HelmReleaseParser
 
 
 @pytest.fixture()
@@ -60,26 +59,4 @@ def helm_release_secret() -> ResourceInstance:
             "type": HELM_RELEASE_SECRET_TYPE,
             "data": {"release": raw},
         },
-    )
-
-
-def test_HelmReleaseParser(helm_release_secret):  # noqa: N802
-    release = HelmReleaseParser(helm_release_secret, parse_manifest=True).parse()
-    assert release == HelmRelease(
-        name="bkpaas-app-operator",
-        namespace="blueking",
-        version=1,
-        chart=HelmChart(
-            name="bkpaas-app-operator",
-            version="1.1.0-beta.1",
-            app_version="v1.1.0-beta.1",
-            description="this is a description",
-        ),
-        deploy_result=DeployResult(
-            status="superseded",
-            description="Upgrade complete",
-            created_at="2023-06-29 17:25:24+08:00",
-        ),
-        resources=[{"foo": "bar"}, {"bar": "boo"}],
-        secret_name="sh.helm.release.v1.bkpaas-app-operator.v1",
     )

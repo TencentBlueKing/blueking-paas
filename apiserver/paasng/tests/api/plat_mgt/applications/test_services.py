@@ -120,7 +120,7 @@ class TestApplicationServicesViewSet:
         """测试分配服务实例"""
 
         # 构造API请求URL
-        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/bound_attachments/"
+        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/"
         rsp = plat_mgt_api_client.post(url)
         assert rsp.status_code == 201
 
@@ -141,7 +141,7 @@ class TestApplicationServicesViewSet:
         instance_uuid = rel.get_instance().uuid
 
         # 构造API请求URL
-        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/bound_attachments/{instance_uuid}/"
+        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/{instance_uuid}/"
         rsp = plat_mgt_api_client.delete(url)
         assert rsp.status_code == 204
 
@@ -149,7 +149,7 @@ class TestApplicationServicesViewSet:
         unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, uuid.UUID(instance_uuid))
         assert unbound_rel is not None
 
-    def test_recycle_unbound_attachments(self, plat_mgt_api_client):
+    def test_recycle_unbound_instance(self, plat_mgt_api_client):
         """测试回收已解绑的服务资源"""
 
         # 创建一个服务实例
@@ -165,9 +165,7 @@ class TestApplicationServicesViewSet:
         unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, instance_uuid)
         assert unbound_rel is not None
 
-        url = (
-            f"/api/plat_mgt/applications/{self.app.code}/services/{self.svc.uuid}/unbound_attachments/{instance_uuid}/"
-        )
+        url = f"/api/plat_mgt/applications/{self.app.code}/services/{self.svc.uuid}/instance/{instance_uuid}/"
         resp = plat_mgt_api_client.delete(url)
 
         # 验证 API 调用成功且实例已经回收
@@ -186,7 +184,7 @@ class TestApplicationServicesViewSet:
         instance_uuid = rel.get_instance().uuid
 
         # 构造API请求URL
-        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/bound_attachments/{instance_uuid}/credentials/"
+        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/{instance_uuid}/credentials/"
         rsp = plat_mgt_api_client.get(url)
         assert rsp.status_code == 200
 

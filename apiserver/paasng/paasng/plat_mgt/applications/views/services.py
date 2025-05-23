@@ -197,7 +197,7 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
         tags=["plat_mgt.applications.services"],
         responses={status.HTTP_204_NO_CONTENT: None},
     )
-    def recycle_unbound_attachments(self, request, code, module_name, service_id, instance_id):
+    def recycle_unbound_instance(self, request, code, module_name, service_id, instance_id):
         """回收未绑定的增强服务实例"""
         service = mixed_service_mgr.get_or_404(service_id)
 

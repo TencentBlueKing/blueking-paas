@@ -95,7 +95,7 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(
-            f"/services/{SERVICE_UUID}/bound_attachments/{INSTANCE_UUID}/credentials/$",
+            f"/services/{SERVICE_UUID}/instance/{INSTANCE_UUID}/credentials/$",
             include_envs=True,
             prefix="api/plat_mgt/applications/",
         ),
@@ -104,7 +104,7 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(
-            f"/services/{SERVICE_UUID}/bound_attachments/{INSTANCE_UUID}/$",
+            f"/services/{SERVICE_UUID}/instance/{INSTANCE_UUID}/$",
             include_envs=True,
             prefix="api/plat_mgt/applications/",
         ),
@@ -113,7 +113,7 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(
-            f"/services/{SERVICE_UUID}/bound_attachments/$",
+            f"/services/{SERVICE_UUID}/instance/$",
             include_envs=True,
             prefix="api/plat_mgt/applications/",
         ),
@@ -122,11 +122,11 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(
-            f"/services/{SERVICE_UUID}/unbound_attachments/{INSTANCE_UUID}/$",
+            f"/services/{SERVICE_UUID}/instance/{INSTANCE_UUID}/$",
             include_envs=False,
             prefix="api/plat_mgt/applications/",
         ),
-        views.ApplicationServicesViewSet.as_view({"delete": "recycle_unbound_attachments"}),
-        name="plat_mgt.applications.services.recycle_unbound_attachments",
+        views.ApplicationServicesViewSet.as_view({"delete": "recycle_unbound_instance"}),
+        name="plat_mgt.applications.services.recycle_unbound_instance",
     ),
 ]

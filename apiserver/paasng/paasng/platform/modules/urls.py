@@ -88,6 +88,12 @@ urlpatterns = [
         views.ModuleDeployConfigViewSet.as_view({"post": "update_procfile"}),
         name="api.modules.deploy_config.procfile.update",
     ),
+    # 获取应用模块的初始化模板信息
+    re_path(
+        r"^api/bkapps/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/template/$",
+        views.ModuleTemplateViewSet.as_view({"get": "retrieve"}),
+        name="api.modules.template",
+    ),
 ]
 
 # Multi-editions specific start

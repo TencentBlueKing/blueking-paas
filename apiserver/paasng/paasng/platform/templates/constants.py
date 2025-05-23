@@ -24,3 +24,10 @@ class TemplateType(StrStructuredEnum):
 
     NORMAL = EnumField("normal", _("普通应用"))
     PLUGIN = EnumField("plugin", _("插件模板"))
+
+
+class RenderMethod(StrStructuredEnum):
+    """渲染方式"""
+
+    DJANGO_TEMPLATE = EnumField("django_template", "django template")
+    COOKIECUTTER = EnumField("cookiecutter", "cookiecutter")

@@ -100,7 +100,9 @@
     required_buildpacks: []
     processes: {}
     tags: []
-    repo_url: ''
+    repo_url: 'https://github.com/TencentBlueKing/bk-plugin-framework-python/'
+    source_dir: './template'
+    render_method: 'cookiecutter'
     runtime_type: buildpack
     is_hidden: false
 - model: templates.template

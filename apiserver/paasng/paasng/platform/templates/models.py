@@ -62,7 +62,12 @@ class Template(AuditedModel):
         ordering = ["created"]
 
     def get_source_dir(self) -> Path:
-        """get relative source_dir"""
+        """获取模板代码的相对目录路径
+
+        示例：
+        当 source_dir 存储为 "/app/src" 时 -> 返回 "app/src"
+        当 source_dir 存储为 "./backend" 时 -> 返回 "backend"
+        """
         source_dir = Path(self.source_dir)
         if source_dir.is_absolute():
             return source_dir.relative_to("/")

@@ -27,7 +27,7 @@ from paasng.infras.iam.permissions.resources.application import ApplicationPermi
 from .fake.application import FakeApplicationPermission
 
 
-def generate_apply_url(username: str, action_request_list: List[ActionResourcesRequest]) -> str:
+def generate_apply_url(tenant_id: str, action_request_list: List[ActionResourcesRequest]) -> str:
     expect = []
     for req in action_request_list:
         resources = ""

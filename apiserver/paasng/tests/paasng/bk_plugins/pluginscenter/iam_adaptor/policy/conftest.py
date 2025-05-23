@@ -19,14 +19,8 @@ from unittest import mock
 
 import pytest
 
-from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.client import BKIAMClient
-
 
 @pytest.fixture()
 def iam_policy_client():
-    with mock.patch(
-        "paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions.lazy_iam_client",
-        new=mock.MagicMock(),
-        spec=BKIAMClient,
-    ) as mocked_client:
-        yield mocked_client
+    with mock.patch("paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions.BKIAMClient") as mocked_client:
+        yield mocked_client.return_value

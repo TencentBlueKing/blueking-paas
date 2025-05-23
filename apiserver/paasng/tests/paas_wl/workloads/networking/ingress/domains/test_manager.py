@@ -24,10 +24,12 @@ from rest_framework.exceptions import ValidationError
 from paas_wl.workloads.networking.ingress.domains.manager import (
     CNativeCustomDomainManager,
     check_domain_used_by_market,
+    is_subdomain_of_any,
 )
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.accessories.publish.market.models import MarketConfig
 from tests.paas_wl.bk_app.cnative.specs.utils import create_cnative_deploy
+from tests.utils.mocks.cluster import cluster_ingress_config
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -55,7 +57,19 @@ def test_check_domain_used_by_market(bk_app, bk_module, domain_cfg, domain_url, 
     assert check_domain_used_by_market(bk_app, domain) == expected
 
 
-class TestCNativeDftCustomDomainManager:
+class TestCNativeCustomDomainManager:
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        # Replace the cluster ingress config to test the logic that denies the creation of domains
+        # that are sub-domains of the system domain in the ingress config.
+        with cluster_ingress_config(
+            replaced_config={
+                "sub_path_domains": [{"name": "sub-path.example.org"}],
+                "app_root_domains": [{"name": "sub-domain.example.org"}],
+            }
+        ):
+            yield
+
     def test_create_no_deploys(self, bk_cnative_app, bk_stag_env, bk_stag_wl_app):
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         with pytest.raises(ValidationError):
@@ -71,8 +85,25 @@ class TestCNativeDftCustomDomainManager:
         assert mocker.called
         assert domain is not None
 
+    @pytest.mark.parametrize(
+        "domain",
+        [
+            # Domain equal to the system "sub-path" domain
+            "sub-path.example.org",
+            # Domain is sub-domain of the system "sub-domain" domain
+            "foobar.sub-domain.example.org",
+        ],
+    )
+    @mock.patch("paas_wl.bk_app.cnative.specs.handlers.deploy_networking")
+    def test_create_failed_if_domain_is_system(self, mocker, domain, bk_cnative_app, bk_stag_env):
+        mgr = CNativeCustomDomainManager(bk_cnative_app)
+        with pytest.raises(ValidationError, match="平台保留域名"):
+            mgr.create(env=bk_stag_env, host=domain, path_prefix="/", https_enabled=False)
+
+        assert not mocker.called
+
     @mock.patch("paas_wl.bk_app.cnative.specs.handlers.deploy_networking", side_effect=ValueError("foo"))
-    def test_create_failed(self, mocked_, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_user):
+    def test_create_failed_when_deploy_error(self, mocked_, bk_cnative_app, bk_stag_env, bk_stag_wl_app, bk_user):
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         # Create a successful deploy
         create_cnative_deploy(bk_stag_env, bk_user)
@@ -99,8 +130,29 @@ class TestCNativeDftCustomDomainManager:
         assert Domain.objects.get(environment_id=bk_stag_env.id).name == "bar.example.com"
 
     @mock.patch("paas_wl.bk_app.cnative.specs.handlers.deploy_networking")
+    def test_update_failed_if_domain_is_system(self, mocker, bk_cnative_app, bk_stag_env, domain_foo_com):
+        with pytest.raises(ValidationError, match="平台保留域名"):
+            CNativeCustomDomainManager(bk_cnative_app).update(
+                domain_foo_com, host="foobar.sub-domain.example.org", path_prefix="/", https_enabled=False
+            )
+
+    @mock.patch("paas_wl.bk_app.cnative.specs.handlers.deploy_networking")
     def test_delete(self, mocker, bk_cnative_app, domain_foo_com):
         assert Domain.objects.count() == 1
         CNativeCustomDomainManager(bk_cnative_app).delete(domain_foo_com)
         assert mocker.called
         assert Domain.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    ("domain", "domain_list", "expected"),
+    [
+        ("sub.example.com", ["example.org", "example.com"], True),
+        # The domain equal to an item in the list should return True
+        ("example.com", ["example.org", "example.com"], True),
+        ("other-example.com", ["example.com"], False),
+        ("foobar.com", ["example.org", "example.com"], False),
+    ],
+)
+def test_is_subdomain_of_any(domain, domain_list, expected):
+    assert is_subdomain_of_any(domain, domain_list) == expected

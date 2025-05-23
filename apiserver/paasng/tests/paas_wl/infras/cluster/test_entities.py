@@ -20,27 +20,15 @@ import cattr
 from paas_wl.infras.cluster.entities import IngressConfig
 
 
-def test_find_subdomain_domain():
+def test_get_domain_names():
     ing_cfg = cattr.structure(
         {
             "app_root_domains": [{"name": "foo-1.example.com", "https_enabled": True}],
+            "sub_path_domains": [{"name": "foo-2.example.com"}],
         },
         IngressConfig,
     )
-    d = ing_cfg.find_subdomain_domain("foo-1.example.com")
-    assert d is not None
-    assert d.https_enabled is True
-    assert ing_cfg.find_subdomain_domain("foo-2.example.com") is None
 
+    domains = ing_cfg.get_domain_names()
 
-def test_find_subpath_domain():
-    ing_cfg = cattr.structure(
-        {
-            "sub_path_domains": [{"name": "foo-1.example.com", "https_enabled": True}],
-        },
-        IngressConfig,
-    )
-    d = ing_cfg.find_subpath_domain("foo-1.example.com")
-    assert d is not None
-    assert d.https_enabled is True
-    assert ing_cfg.find_subpath_domain("bar.example.com") is None
+    assert domains == ["foo-1.example.com", "foo-2.example.com"]

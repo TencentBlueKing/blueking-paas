@@ -55,6 +55,8 @@ apiserver 为 blueking-paas 项目的主控模块。
 - `poetry shell`：进入当前的 virtualenv
 - `poetry run {COMMAND}`：使用 virtualenv 执行命令
 
+注：poetry 较新的版本中默认不带 `poetry shell`，需要手动安装
+
 ### (可选) 准备 Nodejs 开发环境
 
 apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开发管理端功能, 需要准备 Nodejs 开发环境
@@ -86,6 +88,8 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 
 4. 收集静态资源
 
+收集静态资源之前，需要在 `/apiserver/paasng` 目录下新建 `/public/static` 文件夹，用于存放静态资源。 
+
 ```shell
 ❯ make collectstatic
 ```
@@ -94,6 +98,10 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 
 本项目使用 dynaconf 加载用户配置, 可参考 [配置模板](./paasng/conf.yaml.tpl) 创建你的本地配置,
 详细的配置说明请阅读 [配置文件](./paasng/paasng/settings/__init__.py)。
+
+具体步骤参考：
+1. 在 `/apiserver/paasng` 目录下新建 `settings_local.yaml` 文件，用于配置本地服务（如 mysql、redis 等）
+2. 在 `/apiserver/paasng` 目录下新建 `settings_files` 目录，用于存放配置通用资源的文件，具体可以参考配置模板
 
 ## 测试
 
@@ -173,7 +181,7 @@ $ pytest --run-e2e-test --reuse-db -s ./tests/paas_wl/e2e
 
 在 `apigw-manager` 和 `bkpaas-auth` 这两个 SDK 的升级后，需要验证 JWT 认证的有效性，以确保 API 网关能够正确地处理认证请求。
 
-** 步骤 1: 使用 access_token 访问 API 网关获取合法的 JWT **
+**步骤 1: 使用 access_token 访问 API 网关获取合法的 JWT**
 
 参考如下命令访问 API 网关上的 API，并添加调试参数：`-H 'X-BKAPI-Debug: True' -H 'X-BKAPI-Dynamic-Debug: True'`，在响应头中查找`x-bkapi-jwt`，记录该值用于下一步测试。
 
@@ -187,7 +195,7 @@ curl -X GET \
 -vv
 ```
 
-** 步骤 2: 使用 JWT 访问本地或测试环境的用户态 API **
+**步骤 2: 使用 JWT 访问本地或测试环境的用户态 API**
 
 使用上一步获取到 JWT 访问本地或者测试环境任意用户态 API。
 
@@ -216,6 +224,10 @@ curl -X GET \
 ```shell
 ❯ make server
 ```
+
+web 服务启动后需要配置本地 hosts 文件，将 web 的 ip 映射到特定的域名，
+比如 `app.example.com`，之后浏览器访问 `app.example.com:8000/admin42` 
+即可访问到本地蓝鲸 PaaS Admin 控制台
 
 - 启动 celery 后台服务
 
@@ -315,3 +327,11 @@ UPDATE `bk_paas_ng`.`accounts_userprofile` SET `role` = 4 WHERE `id` = 1;
 ```
 
 该命令修改指定 id 的用户为超级用户
+
+### 数据库迁移问题
+
+如果在进行数据库迁移的过程中出现 IAM 相关的迁移无法完成的情况，可以在配置文件中添加配置：`BK_IAM_SKIP: true`
+
+### apiserver 运行起来但无法访问 PaaS Admin 问题
+
+查看控制台，如果提示缺失 APIGW，需要在配置文件中增加 `BKAUTH_USER_INFO_APIGW_URL: ""`

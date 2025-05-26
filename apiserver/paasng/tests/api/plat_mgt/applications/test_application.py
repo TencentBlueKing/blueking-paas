@@ -267,7 +267,7 @@ class TestApplicationDetailView:
             kwargs={"app_code": bk_app.code, "module_name": bk_app.get_default_module().name, "env_name": "prod"},
         )
         data = {"name": "new-cluster"}
-        rsp = plat_mgt_api_client.post(url, data=data)
+        rsp = plat_mgt_api_client.put(url, data=data)
         assert rsp.status_code == 204
 
         # 验证集群是否更新成功

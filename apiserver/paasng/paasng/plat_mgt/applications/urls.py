@@ -52,7 +52,7 @@ urlpatterns = [
     re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/"
         r"envs/(?P<env_name>[^/]+)/cluster/$",
-        views.ApplicationDetailViewSet.as_view({"post": "update_cluster"}),
+        views.ApplicationDetailViewSet.as_view({"put": "update_cluster"}),
         name="plat_mgt.applications.update_cluster",
     ),
     re_path(

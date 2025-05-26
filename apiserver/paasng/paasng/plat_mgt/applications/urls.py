@@ -84,9 +84,14 @@ urlpatterns = [
     ),
     # 平台管理 - 增强服务
     re_path(
-        r"^api/plat_mgt/applications/(?P<code>[^/]+)/modules/services/$",
-        views.ApplicationServicesViewSet.as_view({"get": "list"}),
-        name="plat_mgt.applications.services",
+        r"^api/plat_mgt/applications/(?P<code>[^/]+)/services/bound_attachments/$",
+        views.ApplicationServicesViewSet.as_view({"get": "list_bound_attachments"}),
+        name="plat_mgt.applications.services.list_bound_attachments",
+    ),
+    re_path(
+        r"^api/plat_mgt/applications/(?P<code>[^/]+)/services/unbound_attachments/$",
+        views.ApplicationServicesViewSet.as_view({"get": "list_unbound_attachments"}),
+        name="plat_mgt.applications.services.list_unbound_attachments",
     ),
     re_path(
         make_app_pattern(
@@ -103,8 +108,8 @@ urlpatterns = [
             include_envs=True,
             prefix="api/plat_mgt/applications/",
         ),
-        views.ApplicationServicesViewSet.as_view({"delete": "recycle_resource"}),
-        name="plat_mgt.applications.services.instance.recycle",
+        views.ApplicationServicesViewSet.as_view({"delete": "unbound_instance"}),
+        name="plat_mgt.applications.services.unbound_instance",
     ),
     re_path(
         make_app_pattern(
@@ -113,6 +118,15 @@ urlpatterns = [
             prefix="api/plat_mgt/applications/",
         ),
         views.ApplicationServicesViewSet.as_view({"post": "provision_instance"}),
-        name="plat_mgt.applications.services.instance.provision",
+        name="plat_mgt.applications.services.provision_instance",
+    ),
+    re_path(
+        make_app_pattern(
+            f"/services/{SERVICE_UUID}/instance/{INSTANCE_UUID}/$",
+            include_envs=False,
+            prefix="api/plat_mgt/applications/",
+        ),
+        views.ApplicationServicesViewSet.as_view({"delete": "recycle_unbound_instance"}),
+        name="plat_mgt.applications.services.recycle_unbound_instance",
     ),
 ]

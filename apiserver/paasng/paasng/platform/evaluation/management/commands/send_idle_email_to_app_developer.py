@@ -44,6 +44,7 @@ class Command(BaseCommand):
     help = "Send application's idle module env infos to application's developers by emails"
 
     def add_arguments(self, parser):
+        parser.add_argument("--tenant_id", dest="tenant_id", required=True, help="The tenant ID")
         parser.add_argument("--codes", dest="app_codes", default=[], nargs="*", help="应用 Code 列表")
         parser.add_argument(
             "--only_specified_users", dest="only_specified_users", default=[], nargs="*", help="只发送给指定的用户"
@@ -55,12 +56,22 @@ class Command(BaseCommand):
         parser.add_argument("--async", dest="async_run", default=False, action="store_true", help="异步执行")
 
     def handle(
-        self, app_codes, only_specified_users, exclude_specified_users, notify_all, async_run, *args, **options
+        self,
+        tenant_id,
+        app_codes,
+        only_specified_users,
+        exclude_specified_users,
+        notify_all,
+        async_run,
+        *args,
+        **options,
     ):
         if not (notify_all or app_codes):
             raise ValueError("please specify --codes or --all")
 
         if async_run:
-            send_idle_email_to_app_developers.delay(app_codes, only_specified_users, exclude_specified_users)
+            send_idle_email_to_app_developers.delay(
+                app_codes, only_specified_users, exclude_specified_users, tenant_id
+            )
         else:
-            send_idle_email_to_app_developers(app_codes, only_specified_users, exclude_specified_users)
+            send_idle_email_to_app_developers(app_codes, only_specified_users, exclude_specified_users, tenant_id)

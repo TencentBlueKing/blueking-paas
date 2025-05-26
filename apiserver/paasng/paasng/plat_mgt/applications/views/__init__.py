@@ -30,6 +30,6 @@ __all__ = [
     "ApplicationMemberViewSet",
     # application detail
     "ApplicationDetailViewSet",
-    # application addon services
+    # application services
     "ApplicationServicesViewSet",
 ]

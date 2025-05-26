@@ -70,3 +70,14 @@ class TemplateDetailSLZ(serializers.Serializer):
 
     slugbuilder = AppSlugBuilderMinimalSLZ(help_text="基础镜像详细信息")
     build_config = BuildConfigPreviewSLZ()
+
+
+class TemplateRenderOutputSLZ(serializers.Serializer):
+    """模板渲染信息"""
+
+    name = serializers.CharField(help_text="模板名称")
+    display_name = TranslatedCharField()
+    description = TranslatedCharField()
+    repo_url = serializers.CharField(help_text="代码仓库地址")
+    render_method = serializers.CharField(help_text="模版代码渲染方式")
+    source_dir = serializers.CharField(help_text="模板代码所在相对目录", source="get_source_dir")

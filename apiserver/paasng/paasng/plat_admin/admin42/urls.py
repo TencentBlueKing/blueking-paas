@@ -35,13 +35,11 @@ from .views import (
 )
 from .views.engine import (
     certs,
-    clusters,
     config_vars,
     custom_domain,
     deployments,
     egress,
     log_config,
-    operator,
     package,
     proc_spec,
     runtime,
@@ -155,16 +153,6 @@ urlpatterns = [
         runtimes.SlugRunnerAPIViewSet.as_view(dict(put="update", delete="destroy")),
         name="admin.runtimes.slugrunner.detail",
     ),
-    # 平台管理-集群管理页
-    re_path(r"^platform/clusters/manage/$", clusters.ClusterManageView.as_view(), name="admin.clusters.manage"),
-    # 平台管理-集群组件页
-    re_path(
-        r"^platform/clusters/components/manage/$",
-        clusters.ClusterComponentManageView.as_view(),
-        name="admin.cluster_components.manage",
-    ),
-    # 平台管理-集群 Operator 管理页
-    re_path(r"^platform/operators/manage/$", operator.OperatorManageView.as_view(), name="admin.operators.manage"),
     # 平台管理-共享证书管理
     re_path(
         r"^platform/certs/shared/manage/$", certs.SharedCertsManageView.as_view(), name="admin.shared.certs.manage"

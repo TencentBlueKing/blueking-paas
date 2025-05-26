@@ -88,7 +88,7 @@ class TestPermission:
             ),
         ],
     )
-    def test_multi_actions(self, plugin_with_role, drf_request, iam_policy_client, actions_permission, status_code):
+    def test_multi_actions(self, plugin_with_role, drf_request, actions_permission, iam_policy_client, status_code):
         iam_policy_client.is_actions_allowed.return_value = actions_permission
         response = make_view(plugin_with_role, list(actions_permission.keys()))(drf_request)
         assert response.status_code == status_code

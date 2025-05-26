@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .application import (
-    ApplicationClusterSLZ,
+    ApplicationClusterInputSLZ,
     ApplicationDetailOutputSLZ,
     ApplicationListFilterInputSLZ,
     ApplicationListOutputSLZ,
@@ -41,7 +41,7 @@ from .services import (
 
 __all__ = [
     # application
-    "ApplicationClusterSLZ",
+    "ApplicationClusterInputSLZ",
     "ApplicationDetailOutputSLZ",
     "ApplicationListFilterInputSLZ",
     "ApplicationListOutputSLZ",

@@ -274,11 +274,3 @@ class TestApplicationDetailView:
         wl_app.refresh_from_db()
         assert wl_app.latest_config is not None, "latest_config is None"
         assert wl_app.latest_config.cluster == "new-cluster"
-
-    def test_list_clusters(self, plat_mgt_api_client, clusters):
-        """测试获取应用集群列表"""
-
-        url = reverse("plat_mgt.applications.list_clusters")
-        rsp = plat_mgt_api_client.get(url)
-        assert rsp.status_code == 200
-        assert len(rsp.data) > 0

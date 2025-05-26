@@ -20,11 +20,14 @@ from typing import Optional
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
+from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster
-from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import UpdateApplicationSLZ
@@ -203,7 +206,23 @@ class ApplicationNameUpdateInputSLZ(UpdateApplicationSLZ):
     """更新应用名称序列化器"""
 
 
-class ApplicationClusterSLZ(serializers.Serializer):
+class ApplicationClusterInputSLZ(serializers.Serializer):
     """更新应用集群序列化器"""
 
     name = serializers.CharField(required=True, help_text="集群名称")
+
+    def validate_name(self, name: str) -> str:
+        """验证集群名称"""
+        cur_user = self.context["user"]
+        environment = self.context["environment"]
+
+        ctx = AllocationContext(
+            tenant_id=get_tenant(cur_user).id,
+            region=self.parent.parent.initial_data["region"],
+            environment=environment,
+            username=cur_user.username,
+        )
+        if not ClusterAllocator(ctx).check_available(name):
+            raise ValidationError(_("集群名称错误，无法找到名为 {name} 的集群").format(name=name))
+
+        return name

@@ -14,8 +14,8 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
 import logging
+from pathlib import Path
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -49,7 +49,10 @@ class Template(AuditedModel):
     required_buildpacks = models.JSONField(verbose_name=_("必须的构建工具"), blank=True, default=list)
     processes = models.JSONField(verbose_name=_("进程配置"), blank=True, default=dict)
     tags = models.JSONField(verbose_name=_("标签"), blank=True, default=list)
-    repo_url = models.CharField(verbose_name=_("代码仓库信息"), max_length=256, blank=True, default="")
+    repo_url = models.CharField(verbose_name=_("代码仓库地址"), max_length=256, blank=True, default="")
+    source_dir = models.CharField(verbose_name=_("模板代码所在目录"), max_length=256, blank=True, default="./")
+    # 模板代码渲染方式，可选值：django_template / cookiecutter
+    render_method = models.CharField(verbose_name=_("模板渲染方式"), max_length=32, default="django_template")
     runtime_type = models.CharField(verbose_name=_("运行时类型"), max_length=32, default=RuntimeType.BUILDPACK)
     is_hidden = models.BooleanField(
         verbose_name=_("是否隐藏"), help_text=_("被隐藏的模板不会出现在创建应用时的列表中"), default=False
@@ -57,3 +60,15 @@ class Template(AuditedModel):
 
     class Meta:
         ordering = ["created"]
+
+    def get_source_dir(self) -> Path:
+        """获取模板代码的相对目录路径
+
+        示例：
+        当 source_dir 存储为 "/app/src" 时 -> 返回 "app/src"
+        当 source_dir 存储为 "./backend" 时 -> 返回 "backend"
+        """
+        source_dir = Path(self.source_dir)
+        if source_dir.is_absolute():
+            return source_dir.relative_to("/")
+        return source_dir

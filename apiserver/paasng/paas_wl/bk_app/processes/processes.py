@@ -35,7 +35,7 @@ from paas_wl.bk_app.cnative.specs.resource import get_mres_from_cluster, list_mr
 from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
 from paas_wl.bk_app.processes.controllers import list_processes
 from paas_wl.bk_app.processes.entities import Status
-from paas_wl.bk_app.processes.exceptions import PreviousInstanceNotFound
+from paas_wl.bk_app.processes.exceptions import CurrentInstanceNotFound, PreviousInstanceNotFound
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.models import ProcessSpecManager
 from paas_wl.bk_app.processes.readers import process_kmodel
@@ -292,6 +292,63 @@ class ProcessManager:
             },
         )
 
+    def get_instance_logs(
+        self,
+        process_type: str,
+        instance_name: str,
+        previous: bool = False,
+        container_name: str | None = None,
+        tail_lines: Optional[int] = None,
+    ):
+        """获取进程实例日志
+
+        :param process_type: 进程类型
+        :param instance_name: 进程实例名称
+        :param previous: 是否获取上一次运行的日志
+        :param container_name: 容器名称
+        :param tail_lines: 获取日志末尾的行数
+        :return: str
+        """
+        if not container_name:
+            container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
+
+        k8s_client = get_client_by_app(self.wl_app)
+
+        response = KPod(k8s_client).get_log(
+            name=instance_name,
+            namespace=self.wl_app.namespace,
+            previous=previous,
+            container=container_name,
+            tail_lines=tail_lines,
+        )
+
+        return ensure_text(response.data)
+
+    def get_current_logs(
+        self,
+        process_type: str,
+        instance_name: str,
+        container_name: str | None = None,
+        tail_lines: Optional[int] = None,
+    ):
+        """获取进程实例当前运行时日志"""
+        try:
+            logs = self.get_instance_logs(
+                process_type=process_type,
+                instance_name=instance_name,
+                previous=False,
+                container_name=container_name,
+                tail_lines=tail_lines,
+            )
+        except ApiException as e:
+            # k8s apiserver 返回错误, 未找到当前运行的容器
+            if e.status == 404:
+                raise CurrentInstanceNotFound("Current running container not found")
+            else:
+                raise
+
+        return logs
+
     def get_previous_logs(
         self,
         process_type: str,
@@ -299,26 +356,14 @@ class ProcessManager:
         container_name: str | None = None,
         tail_lines: Optional[int] = None,
     ):
-        """获取进程实例上一次运行时日志
-
-        :param process_type: 进程类型
-        :param instance_name: 进程实例名称
-        :param container_name: 容器名称
-        :param tail_lines: 获取日志末尾的行数
-        :return: str
-        :raise: PreviousInstanceNotFound when previous instance not found
-        """
-        if not container_name:
-            container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
-
-        k8s_client = get_client_by_app(self.wl_app)
+        """获取进程实例上一次运行时日志"""
 
         try:
-            response = KPod(k8s_client).get_log(
-                name=instance_name,
-                namespace=self.wl_app.namespace,
-                container=container_name,
+            logs = self.get_instance_logs(
+                process_type=process_type,
+                instance_name=instance_name,
                 previous=True,
+                container_name=container_name,
                 tail_lines=tail_lines,
             )
         except ApiException as e:
@@ -330,7 +375,7 @@ class ProcessManager:
             else:
                 raise
 
-        return ensure_text(response.data)
+        return logs
 
     def _list_default_specs(self, target_status: Optional[str] = None) -> list[dict]:
         """查询普通应用的进程 specs"""

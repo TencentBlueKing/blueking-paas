@@ -476,6 +476,39 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-previous-logs.txt"'
         return response
 
+    def retrieve_current_logs(self, request, code, module_name, environment, process_type, process_instance_name):
+        """获取进程实例当前运行时的日志（目前限定 400 行）"""
+        env = self.get_env_via_path()
+
+        tail_lines = None
+        try:
+            if "tail_lines" in request.query_params:
+                tail_lines = int(request.query_params.get("tail_lines"))
+        except (ValueError, TypeError):
+            pass
+
+        manager = ProcessManager(env)
+        try:
+            logs = manager.get_current_logs(process_type, process_instance_name, tail_lines=tail_lines)
+        except PreviousInstanceNotFound:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        return Response(status=status.HTTP_200_OK, data=logs.splitlines())
+
+    def download_current_logs(self, request, code, module_name, environment, process_type, process_instance_name):
+        """下载进程实例当前运行时的日志"""
+        env = self.get_env_via_path()
+
+        manager = ProcessManager(env)
+        try:
+            logs = manager.get_current_logs(process_type, process_instance_name)
+        except PreviousInstanceNotFound:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        response = HttpResponse(logs, content_type="text/plain")
+        response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-current-logs.txt"'
+        return response
+
     def restart(self, request, code, module_name, environment, process_instance_name):
         """重启进程实例"""
         env = self.get_env_via_path()

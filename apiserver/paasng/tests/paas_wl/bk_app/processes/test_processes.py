@@ -34,7 +34,7 @@ from paas_wl.bk_app.processes.entities import (
     ProbeSet as WLProbeSet,
 )
 from paas_wl.bk_app.processes.entities import TCPSocketAction as WLTCPSocketAction
-from paas_wl.bk_app.processes.exceptions import PreviousInstanceNotFound
+from paas_wl.bk_app.processes.exceptions import CurrentInstanceNotFound, PreviousInstanceNotFound
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.kres_slzs import ProcessDeserializer, ProcessSerializer
 from paas_wl.bk_app.processes.processes import (
@@ -188,6 +188,16 @@ class TestProcessManager:
         bad_inst_name = wl_app.scheduler_safe_name + "-bad"
         with pytest.raises(PreviousInstanceNotFound):
             _ = ProcessManager(bk_stag_env).get_previous_logs("", bad_inst_name, "main")
+
+    def test_get_current_logs_normal(self, setup_log_pod, bk_stag_env, wl_app):
+        logs = ProcessManager(bk_stag_env).get_current_logs("", wl_app.scheduler_safe_name, "main")
+        assert logs is not None
+        assert isinstance(logs, str)
+
+    def test_get_current_logs_inst_not_found(self, setup_log_pod, bk_stag_env, wl_app):
+        bad_inst_name = wl_app.scheduler_safe_name + "-bad"
+        with pytest.raises(CurrentInstanceNotFound):
+            _ = ProcessManager(bk_stag_env).get_current_logs("", bad_inst_name, "main")
 
     @pytest.mark.usefixtures("bk_stag_wl_app")
     def test_list_cnative_processes_specs(self, bk_cnative_app, bk_stag_env):

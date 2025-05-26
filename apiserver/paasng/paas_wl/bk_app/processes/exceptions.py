@@ -75,3 +75,7 @@ class UnknownProcessTypeError(AppEntityDeserializeError):
 
 class PreviousInstanceNotFound(Exception):
     """Unable to find the previous instance"""
+
+
+class CurrentInstanceNotFound(Exception):
+    """Unable to find the current instance"""

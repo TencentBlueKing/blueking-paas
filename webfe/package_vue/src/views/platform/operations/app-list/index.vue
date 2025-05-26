@@ -13,7 +13,7 @@
       </div>
       <bk-input
         v-model="searchValue"
-        :placeholder="$t('请输入应用名称、ID')"
+        :placeholder="$t('请输入应用 ID、应用名称')"
         :right-icon="'bk-icon icon-search'"
         style="width: 480px"
         clearable
@@ -130,7 +130,10 @@ export default {
       // 应用类型
       appTypes: [],
       // 租户类型
-      tenantTypes: [],
+      tenantTypes: [
+        { value: 'global', text: this.$t('全租户') },
+        { value: 'single', text: this.$t('单租户') },
+      ],
       // 表头过滤
       tableFilterMap: {},
       tableEmptyConf: {
@@ -159,8 +162,12 @@ export default {
     columns() {
       return [
         {
-          label: this.$t('应用'),
+          label: `${this.$t('应用')} ID`,
           prop: 'code',
+        },
+        {
+          label: this.$t('应用名称'),
+          prop: 'name',
         },
         {
           label: this.$t('租户类型'),
@@ -208,9 +215,16 @@ export default {
       ];
     },
   },
+  watch: {
+    searchValue(newVal) {
+      if (!newVal) {
+        this.handleSearch();
+      }
+    },
+  },
   async created() {
     await this.getPlatformApps();
-    Promise.all([this.getTenantAppStatistics(), this.getTenantModeList(), this.getAppTypes()]);
+    Promise.all([this.getTenantAppStatistics(), this.getAppTypes()]);
   },
   methods: {
     // 页码重置
@@ -321,18 +335,6 @@ export default {
         res.forEach((item) => {
           this.$set(this.appCountInfo, item.tenant_id, item.app_count);
         });
-      } catch (e) {
-        this.catchErrorHandler(e);
-      }
-    },
-    // 获取租户类型
-    async getTenantModeList() {
-      try {
-        const res = await this.$store.dispatch('tenantOperations/getTenantModeList');
-        this.tenantTypes = res.map((item) => ({
-          value: item.type,
-          text: item.label,
-        }));
       } catch (e) {
         this.catchErrorHandler(e);
       }

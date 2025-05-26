@@ -41,13 +41,6 @@ export default {
       return http.get(url);
     },
     /**
-     * 应用列表-获取租户类型
-     */
-    getTenantModeList() {
-      const url = `${BACKEND_URL}/api/plat_mgt/applications/tenant_mode_list/`;
-      return http.get(url);
-    },
-    /**
      * 应用列表-获取应用类型
      */
     getAppTypes() {

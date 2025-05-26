@@ -42,14 +42,29 @@
                   {{ $t('编辑') }}
                 </bk-button>
               </template>
-              <bk-input
+              <div
+                class="name-edit-warpper"
                 v-else
-                style="width: 160px"
-                ref="appNameInput"
-                v-model="editApp.name"
-                @blur="updataAppName"
-                @enter="editApp.isEdit = false"
-              ></bk-input>
+              >
+                <bk-input
+                  style="width: 160px"
+                  ref="appNameInput"
+                  v-model="editApp.name"
+                  @enter="updataAppName"
+                ></bk-input>
+                <!-- 保存 -->
+                <bk-button
+                  class="save"
+                  :icon="editApp.loading ? 'loading' : 'check-1'"
+                  :disabled="editApp.loading"
+                  @click="updataAppName"
+                ></bk-button>
+                <bk-button
+                  icon="close"
+                  class="cancel"
+                  @click="handleCancel"
+                ></bk-button>
+              </div>
             </div>
             <span v-else-if="key === 'app_tenant_mode'">
               {{ baseInfo[key] ? (baseInfo[key] === 'single' ? $t('单租户') : $t('全租户')) : '--' }}
@@ -126,7 +141,7 @@
                       @click="toLink(env.exposed_url)"
                     >
                       <i class="paasng-icon paasng-jump-link"></i>
-                      {{ $t('访问应用') }}
+                      {{ $t('访问') }}
                     </bk-button>
                   </div>
                   <div v-else-if="key === 'deploy_cluster'">
@@ -245,6 +260,7 @@ export default {
         isEdit: false,
         name: '',
         loading: false,
+        oldName: '',
       },
       editDeployCluster: {
         visible: false,
@@ -282,26 +298,34 @@ export default {
         if (this.moduleData.length) {
           this.activeNames.push(this.moduleData[0].name);
         }
+        this.editApp.oldName = ret.basic_info?.name || '';
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
         this.isLoading = false;
       }
     },
+    // 编辑
     handleEditAppName(appName) {
-      this.editApp = {
-        isEdit: true,
-        name: this.editApp.name || appName,
-      };
+      this.editApp.isEdit = true;
+      this.editApp.name = this.editApp.name || appName;
       this.$nextTick(() => {
         this.$refs.appNameInput[0]?.focus();
       });
     },
+    // 取消
+    handleCancel() {
+      this.editApp.isEdit = false;
+      this.editApp.name = this.editApp.oldName;
+    },
     // 更新应用名称
     async updataAppName() {
-      const { name } = this.editApp;
-      this.editApp.isEdit = false;
-      if (name === this.baseInfo.name) return;
+      const { name, oldName } = this.editApp;
+      // 未变化
+      if (name === oldName) {
+        this.handleCancel();
+        return;
+      }
       this.$set(this.editApp, 'loading', true);
       try {
         await this.$store.dispatch('tenantOperations/updateAppInfo', {
@@ -314,9 +338,11 @@ export default {
           theme: 'success',
           message: this.$t('应用名称修改成功'),
         });
+        this.$set(this.editApp, 'oldName', name);
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
+        this.editApp.isEdit = false;
         this.$set(this.editApp, 'loading', false);
       }
     },
@@ -377,7 +403,7 @@ export default {
     },
     // 基本信息访问应用
     toAccessApp() {
-      const routeName = this.baseInfo.type === '云原生应用' ? 'cloudAppSummary' : 'appSummary';
+      const routeName = this.baseInfo.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary';
       this.$router.push({
         name: routeName,
         params: { id: this.baseInfo.code },
@@ -424,6 +450,20 @@ export default {
     display: grid;
     grid-template-columns: repeat(2, 1fr); /* 创建两列等宽的网格 */
     gap: 0; /* 消除列与列之间的间距 */
+    .name-edit-warpper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      .save,
+      .cancel {
+        display: flex;
+        justify-content: center;
+        width: 32px;
+      }
+      .save {
+        color: #3a84ff;
+      }
+    }
   }
   .module-info-wrapper {
     margin-top: 16px;
@@ -499,7 +539,7 @@ export default {
 }
 .deploy-cluster-header-cls {
   color: #313238;
-  .sub-tit {
+  .sub-tit span {
     font-size: 14px;
     color: #979ba5;
   }

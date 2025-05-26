@@ -290,6 +290,6 @@ export default {
   恢复默认值: 'Restore Default Value',
   修改部署集群: 'Modify Deployment Cluster',
   请输入特性名称: 'Please enter feature name',
-  '请输入应用名称、ID': 'Please enter application name or ID',
+  '请输入应用 ID、应用名称': 'Please enter app ID or app name',
   '修改后需要重新部署才能生效，并且需要手动清理原有集群中的进程。': 'Changes require redeployment to take effect and manual cleanup of processes in the original cluster.',
 };

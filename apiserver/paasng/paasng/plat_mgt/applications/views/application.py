@@ -212,7 +212,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
 
         slz = slzs.ApplicationClusterInputSLZ(
             data=request.data,
-            context={"user": request.user, "environment": env.environment},
+            context={"user": request.user, "environment": env.environment, "region": application.region},
         )
         slz.is_valid(raise_exception=True)
 

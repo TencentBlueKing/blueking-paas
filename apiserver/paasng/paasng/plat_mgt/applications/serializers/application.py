@@ -26,6 +26,7 @@ from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
+from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.constants import ApplicationType
@@ -215,10 +216,11 @@ class ApplicationClusterInputSLZ(serializers.Serializer):
         """验证集群名称"""
         cur_user = self.context["user"]
         environment = self.context["environment"]
+        region = self.context["region"]
 
         ctx = AllocationContext(
             tenant_id=get_tenant(cur_user).id,
-            region=self.parent.parent.initial_data["region"],
+            region=get_region(region),
             environment=environment,
             username=cur_user.username,
         )

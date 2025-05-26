@@ -17,7 +17,7 @@
 
 from django.urls import path
 
-from paas_wl.apis.admin.views import certs, clusters, domain, logs, processes
+from paas_wl.apis.admin.views import certs, domain, logs, processes
 
 urlpatterns = [
     # 平台管理-应用资源方案-API

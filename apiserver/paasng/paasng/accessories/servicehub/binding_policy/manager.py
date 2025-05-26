@@ -15,7 +15,6 @@
 # to the current version of the project delivered to anyone in the future.
 from typing import Any, Optional
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import QuerySet
 
@@ -30,7 +29,6 @@ from paasng.accessories.servicehub.constants import (
     ServiceAllocationPolicyType,
     ServiceBindingPolicyType,
 )
-from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import (
     ServiceAllocationPolicy,
     ServiceBindingPolicy,
@@ -44,13 +42,13 @@ from .policy import get_service_type
 class ServiceBindingPolicyManager:
     """The manager class for service binding policy
 
-    :param allocation_policy: The allocation policy object.
+    :param service: The service object for which the policies are managed.
+    :param tenant_id : The unique identifier for the tenant.
     """
 
-    def __init__(self, allocation_policy: ServiceAllocationPolicy):
-        self.allocation_policy = allocation_policy
-        self.service = mixed_service_mgr.get(uuid=allocation_policy.service_id)
-        self.tenant_id = allocation_policy.tenant_id
+    def __init__(self, service: ServiceObj, tenant_id: str):
+        self.service = service
+        self.tenant_id = tenant_id
 
     def set_static(self, plans: list[PlanObj]):
         """Set the fixed binding policy for the service.
@@ -64,7 +62,6 @@ class ServiceBindingPolicyManager:
         ServiceBindingPolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
-            allocation_policy=self.allocation_policy,
             tenant_id=self.tenant_id,
             defaults={"type": ServiceBindingPolicyType.STATIC.value, "data": data},
         )
@@ -82,19 +79,13 @@ class ServiceBindingPolicyManager:
         ServiceBindingPolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
-            allocation_policy=self.allocation_policy,
             tenant_id=self.tenant_id,
             defaults={"type": ServiceBindingPolicyType.ENV_SPECIFIC.value, "data": data},
         )
 
     def clean_static_policies(self):
         """clean static policies"""
-        try:
-            policy = self.allocation_policy.uniform_policy
-        except ObjectDoesNotExist:
-            return
-
-        policy.delete()
+        ServiceBindingPolicy.objects.filter(service_id=self.service.uuid, tenant_id=self.tenant_id).delete()
 
     def add_precedence_static(
         self,
@@ -117,7 +108,6 @@ class ServiceBindingPolicyManager:
         ServiceBindingPrecedencePolicy.objects.create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
-            allocation_policy=self.allocation_policy,
             tenant_id=self.tenant_id,
             priority=priority,
             cond_type=cond_type.value,
@@ -148,7 +138,6 @@ class ServiceBindingPolicyManager:
         ServiceBindingPrecedencePolicy.objects.create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
-            allocation_policy=self.allocation_policy,
             tenant_id=self.tenant_id,
             priority=priority,
             cond_type=cond_type.value,
@@ -159,7 +148,7 @@ class ServiceBindingPolicyManager:
 
     def clean_precedence_policies(self):
         """clean the precedence policies"""
-        self.allocation_policy.rule_based_policies.all().delete()
+        ServiceBindingPrecedencePolicy.objects.filter(service_id=self.service.uuid).delete()
 
     def get_service_binding_policy(self) -> Optional[ServiceBindingPolicy]:
         try:
@@ -183,20 +172,16 @@ class PolicyCombinationManager:
     def __init__(self, service: ServiceObj, tenant_id: str):
         self.service = service
         self.tenant_id = tenant_id
+        self.service_binding_policy_mgr = ServiceBindingPolicyManager(service, tenant_id)
 
     def clean(self):
         """Remove policy combination"""
-        try:
-            allocation_policy = ServiceAllocationPolicy.objects.get(
-                service_id=self.service.uuid,
-                tenant_id=self.tenant_id,
-            )
-        except ServiceAllocationPolicy.DoesNotExist:
-            return
-
-        service_binding_policy_mgr = ServiceBindingPolicyManager(allocation_policy)
-        service_binding_policy_mgr.clean_static_policies()
-        service_binding_policy_mgr.clean_precedence_policies()
+        ServiceAllocationPolicy.objects.filter(
+            service_id=self.service.uuid,
+            tenant_id=self.tenant_id,
+        ).delete()
+        self.service_binding_policy_mgr.clean_static_policies()
+        self.service_binding_policy_mgr.clean_precedence_policies()
 
     @transaction.atomic()
     def upsert(self, cfg: PolicyCombinationConfig):
@@ -206,7 +191,6 @@ class PolicyCombinationManager:
         allocation_policy, _ = ServiceAllocationPolicy.objects.update_or_create(
             service_id=self.service.uuid, tenant_id=self.tenant_id, defaults={"type": cfg.policy_type}
         )
-        service_binding_policy_mgr = ServiceBindingPolicyManager(allocation_policy)
 
         if cfg.policy_type == ServiceAllocationPolicyType.RULE_BASED.value:
             # 按规则分配
@@ -215,14 +199,14 @@ class PolicyCombinationManager:
                 return
             for config in allocation_precedence_policies:
                 if config.plans:
-                    service_binding_policy_mgr.add_precedence_static(
+                    self.service_binding_policy_mgr.add_precedence_static(
                         cond_type=PrecedencePolicyCondType(config.cond_type),
                         cond_data=config.cond_data,
                         plans=self._plan_ids_to_objs(config.plans),
                         priority=config.priority,
                     )
                 elif config.env_plans:
-                    service_binding_policy_mgr.add_precedence_env_specific(
+                    self.service_binding_policy_mgr.add_precedence_env_specific(
                         cond_type=PrecedencePolicyCondType(config.cond_type),
                         cond_data=config.cond_data,
                         env_plans=self._plan_ids_to_env_plan_objs(config.env_plans),
@@ -235,9 +219,9 @@ class PolicyCombinationManager:
             if not allocation_policy:
                 return
             if allocation_policy.plans:
-                service_binding_policy_mgr.set_static(plans=self._plan_ids_to_objs(allocation_policy.plans))
+                self.service_binding_policy_mgr.set_static(plans=self._plan_ids_to_objs(allocation_policy.plans))
             elif allocation_policy.env_plans:
-                service_binding_policy_mgr.set_env_specific(
+                self.service_binding_policy_mgr.set_env_specific(
                     env_plans=self._plan_ids_to_env_plan_objs(allocation_policy.env_plans)
                 )
 
@@ -247,7 +231,7 @@ class PolicyCombinationManager:
             tenant_id=self.tenant_id,
         )
         if svc_allocation_policy.type == ServiceAllocationPolicyType.RULE_BASED.value:
-            precedence_policies = svc_allocation_policy.rule_based_policies.order_by("-priority")
+            precedence_policies = self.service_binding_policy_mgr.get_precedence_policies()
             allocation_precedence_policies = [
                 RuleBasedAllocationPolicy.create_from_policy(policy) for policy in precedence_policies
             ]
@@ -259,7 +243,8 @@ class PolicyCombinationManager:
                 allocation_policy=None,
             )
         elif svc_allocation_policy.type == ServiceAllocationPolicyType.UNIFORM.value:
-            uniform_policy = UnifiedAllocationPolicy.create_from_policy(svc_allocation_policy.uniform_policy)
+            service_binding_policy = self.service_binding_policy_mgr.get_service_binding_policy()
+            uniform_policy = UnifiedAllocationPolicy.create_from_policy(service_binding_policy)
             return PolicyCombinationConfig(
                 tenant_id=self.tenant_id,
                 service_id=self.service.uuid,

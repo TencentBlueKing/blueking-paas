@@ -64,14 +64,14 @@ dummy_service = RemoteServiceObj(
 def _mock_get_service():
     with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
-        allocation_policy = ServiceAllocationPolicy.objects.create(
+        ServiceAllocationPolicy.objects.create(
             service_id=dummy_service.uuid,
             type=ServiceAllocationPolicyType.UNIFORM.value,
             tenant_id=DEFAULT_TENANT_ID,
         )
         with mock.patch.object(mixed_service_mgr, "get") as get:
             get.return_value = dummy_service
-            ServiceBindingPolicyManager(allocation_policy).set_static([dummy_service.get_plans()[0]])
+            ServiceBindingPolicyManager(dummy_service, DEFAULT_TENANT_ID).set_static([dummy_service.get_plans()[0]])
         yield
 
 

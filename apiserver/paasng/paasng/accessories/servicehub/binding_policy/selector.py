@@ -16,11 +16,13 @@
 from enum import StrEnum
 from typing import Dict, List
 
-from django.core.exceptions import ObjectDoesNotExist
-
 from paasng.accessories.servicehub.constants import ServiceAllocationPolicyType
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError, PlanSelectorError
-from paasng.accessories.servicehub.models import ServiceAllocationPolicy
+from paasng.accessories.servicehub.models import (
+    ServiceAllocationPolicy,
+    ServiceBindingPolicy,
+    ServiceBindingPrecedencePolicy,
+)
 from paasng.accessories.servicehub.services import PlanObj, ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models.module import Module
@@ -105,28 +107,46 @@ class PlanSelector:
             return []
 
         if allocation_policy.type == ServiceAllocationPolicyType.RULE_BASED.value:
-            precedence_policies = allocation_policy.rule_based_policies.order_by("-priority")
-            for pre_policy in precedence_policies:
-                precedence_policy_obj = precedence_policy_factory(
-                    pre_policy.cond_type,
-                    pre_policy.cond_data,
-                    binding_policy=binding_policy_factory(pre_policy.type, pre_policy.data),
-                )
-                # If the policy does not match the env object, try the next one
-                if not precedence_policy_obj.match(env):
-                    continue
-                return self.plan_ids_to_objs(service, precedence_policy_obj.get_plan_ids(env))
+            return self._list_rule_based_policies(service, env)
         elif allocation_policy.type == ServiceAllocationPolicyType.UNIFORM.value:
-            # Get plans based on the binding policy
-            try:
-                policy = allocation_policy.uniform_policy
-            except ObjectDoesNotExist:
-                return []
-
-            policy_obj = binding_policy_factory(policy.type, policy.data)
-            return self.plan_ids_to_objs(service, policy_obj.get_plan_ids(env))
+            return self._get_uniform_policy(service, env)
 
         return []
+
+    def _get_uniform_policy(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
+        """get the plans based on the ServiceBindingPolicy.
+        :return: A list plans based on the ServiceBindingPolicy.
+        """
+        # Get plans based on the binding policy
+        try:
+            policy = ServiceBindingPolicy.objects.get(service_id=service.uuid, tenant_id=env.tenant_id)
+        except ServiceBindingPolicy.DoesNotExist:
+            return []
+
+        policy_obj = binding_policy_factory(policy.type, policy.data)
+        return self.plan_ids_to_objs(service, policy_obj.get_plan_ids(env))
+
+    def _list_rule_based_policies(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
+        """List the plans based on the ServiceBindingPrecedencePolicy.
+        :return: A list plans based on the ServiceBindingPrecedencePolicy.
+        :raise ValueError: If no precedence policy matches the env object.
+        """
+        precedence_policies = ServiceBindingPrecedencePolicy.objects.filter(
+            service_id=service.uuid, tenant_id=env.tenant_id
+        ).order_by("-priority")
+        for pre_policy in precedence_policies:
+            policy_obj = precedence_policy_factory(
+                pre_policy.cond_type,
+                pre_policy.cond_data,
+                binding_policy=binding_policy_factory(pre_policy.type, pre_policy.data),
+            )
+            # If the policy does not match the env object, try the next one
+            if not policy_obj.match(env):
+                continue
+            return self.plan_ids_to_objs(service, policy_obj.get_plan_ids(env))
+        raise ValueError(
+            "Must have at least one ServiceBindingPrecedencePolicy with cond_type=always_match as fallback"
+        )
 
     @staticmethod
     def plan_ids_to_objs(service: ServiceObj, plan_ids: List[str]) -> List[PlanObj]:

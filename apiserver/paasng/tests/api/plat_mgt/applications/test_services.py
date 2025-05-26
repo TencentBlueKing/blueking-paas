@@ -81,12 +81,12 @@ class TestApplicationServicesViewSet:
         # 绑定服务到模块
         svc1, svc2, svc3 = services
         for svc, module in [(svc1, bk_module), (svc2, bk_module), (svc3, bk_module_2)]:
-            allocation_policy = ServiceAllocationPolicy.objects.create(
+            ServiceAllocationPolicy.objects.create(
                 service_id=svc.uuid,
                 type=ServiceAllocationPolicyType.UNIFORM.value,
                 tenant_id=DEFAULT_TENANT_ID,
             )
-            ServiceBindingPolicyManager(allocation_policy).set_static([svc.get_plans()[0]])
+            ServiceBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_static([svc.get_plans()[0]])
             mixed_service_mgr.bind_service(svc, module)
 
         # 共享服务

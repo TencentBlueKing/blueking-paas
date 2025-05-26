@@ -32,7 +32,6 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.constants import AppTenantMode
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.core.tenant.utils import AppTenantInfo
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.application.constants import CNATIVE_APP_CODE_FIELD
@@ -286,12 +285,12 @@ class TestServicesField:
 
             # Create a default binding polity so that the binding works by default
             service = mixed_service_mgr.get(svc.uuid)
-            allocation_policy = ServiceAllocationPolicy.objects.create(
+            ServiceAllocationPolicy.objects.create(
                 service_id=service.uuid,
                 type=ServiceAllocationPolicyType.UNIFORM.value,
-                tenant_id=DEFAULT_TENANT_ID,
+                tenant_id=app_tenant.tenant_id,
             )
-            ServiceBindingPolicyManager(allocation_policy).set_static([service.get_plans()[0]])
+            ServiceBindingPolicyManager(service, app_tenant.tenant_id).set_static([service.get_plans()[0]])
 
     @pytest.fixture()
     def app_desc(self, random_name, tag):

@@ -289,12 +289,6 @@ class ServiceBindingPolicy(AuditedModel):
     service_id = models.UUIDField(verbose_name="增强服务 ID")
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
-    allocation_policy = models.OneToOneField(
-        "ServiceAllocationPolicy",
-        on_delete=models.CASCADE,
-        related_name="uniform_policy",
-        null=True,
-    )
 
     # See `ServiceBindingPolicyType`
     type = models.CharField(verbose_name="策略类型", max_length=16)
@@ -315,12 +309,6 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
     service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
-    allocation_policy = models.ForeignKey(
-        ServiceAllocationPolicy,
-        on_delete=models.CASCADE,
-        related_name="rule_based_policies",
-        null=True,
-    )
 
     # See `PrecedencePolicyCondType`
     cond_type = models.CharField(verbose_name="条件类型", max_length=16)

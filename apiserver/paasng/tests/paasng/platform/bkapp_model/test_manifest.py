@@ -108,12 +108,12 @@ def local_service(bk_app):
     service = G(Service, name="mysql", category=G(ServiceCategory), logo_b64="dummy")
     _ = G(Plan, name=generate_random_string(), service=service)
     svc_obj = mixed_service_mgr.get(service.uuid)
-    allocation_policy = ServiceAllocationPolicy.objects.create(
+    ServiceAllocationPolicy.objects.create(
         service_id=svc_obj.uuid,
         type=ServiceAllocationPolicyType.UNIFORM.value,
         tenant_id=DEFAULT_TENANT_ID,
     )
-    ServiceBindingPolicyManager(allocation_policy).set_static([svc_obj.get_plans()[0]])
+    ServiceBindingPolicyManager(svc_obj, DEFAULT_TENANT_ID).set_static([svc_obj.get_plans()[0]])
     return svc_obj
 
 

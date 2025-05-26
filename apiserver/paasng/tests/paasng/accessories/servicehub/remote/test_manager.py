@@ -125,10 +125,8 @@ class TestRemoteEngineAppInstanceRel:
 
     @mock.patch("paas_wl.workloads.networking.egress.shim.get_cluster_egress_info")
     @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
-    @mock.patch("paasng.accessories.servicehub.binding_policy.manager.mixed_service_mgr.get")
     def test_provision(
         self,
-        mock_get_service,
         mocked_provision,
         get_cluster_egress_info,
         store,
@@ -139,13 +137,12 @@ class TestRemoteEngineAppInstanceRel:
     ):
         """Test service instance provision"""
         get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
-        mock_get_service.return_value = bk_service
         plans = [bk_plan_1]
         mgr = RemoteServiceMgr(store=store)
         bk_service.plans = plans
 
         # Set the binding policy and bind
-        ServiceBindingPolicyManager(uniform_allocation_policy).set_static([plans[0]])
+        ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([plans[0]])
         mgr.bind_service(bk_service, bk_module)
 
         with mock.patch.object(mgr, "get") as get_service:
@@ -166,10 +163,8 @@ class TestRemoteEngineAppInstanceRel:
                     assert mocked_provision.call_args[1]["params"]["username"] == rel.db_engine_app.name
 
     @mock.patch("paasng.accessories.servicehub.remote.manager.EnvClusterInfo.get_egress_info")
-    @mock.patch("paasng.accessories.servicehub.binding_policy.manager.mixed_service_mgr.get")
     def test_render_params(
         self,
-        get_service,
         mock_get_egress_info,
         store,
         bk_app,
@@ -178,13 +173,12 @@ class TestRemoteEngineAppInstanceRel:
         bk_plan_1,
         uniform_allocation_policy,
     ):
-        get_service.return_value = bk_service
         mock_get_egress_info.return_value = {}
         mgr = RemoteServiceMgr(store=store)
         bk_service.plans = [bk_plan_1]
 
         # Set the binding policy and bind
-        ServiceBindingPolicyManager(uniform_allocation_policy).set_static([bk_service.plans[0]])
+        ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([bk_service.plans[0]])
         mgr.bind_service(bk_service, bk_module)
 
         env = bk_module.get_envs("stag")
@@ -226,15 +220,13 @@ class TestRemoteMgrWithRealStore:
             store.empty()
 
     @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
-    @mock.patch("paasng.accessories.servicehub.binding_policy.manager.mixed_service_mgr.get")
     def test_module_rebind_failed_after_provision(
-        self, get_service, mock_provision_instance, store, bk_module, bk_service, uniform_allocation_policy
+        self, mock_provision_instance, store, bk_module, bk_service, uniform_allocation_policy
     ):
-        get_service.return_value = bk_service
         mgr = RemoteServiceMgr(store=store)
 
         plans = bk_service.plans
-        ServiceBindingPolicyManager(uniform_allocation_policy).set_static([plans[0]])
+        ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([plans[0]])
         mgr.bind_service(bk_service, bk_module)
         env = bk_module.get_envs("stag")
 
@@ -243,7 +235,7 @@ class TestRemoteMgrWithRealStore:
             assert rel.is_provisioned() is True
 
         # Change the binding policy
-        ServiceBindingPolicyManager(uniform_allocation_policy).set_static([plans[1]])
+        ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([plans[1]])
         with pytest.raises(CanNotModifyPlan):
             mgr.bind_service(bk_service, bk_module)
 
@@ -261,12 +253,12 @@ class TestRemoteMgr:
         # Initialize with a static binding policy
         mgr = RemoteServiceMgr(store=store)
         svc = mgr.get(id_of_first_service)
-        allocation_policy = ServiceAllocationPolicy.objects.create(
+        ServiceAllocationPolicy.objects.create(
             service_id=svc.uuid,
             type=ServiceAllocationPolicyType.UNIFORM.value,
             tenant_id=DEFAULT_TENANT_ID,
         )
-        ServiceBindingPolicyManager(allocation_policy).set_static([svc.get_plans()[0]])
+        ServiceBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_static([svc.get_plans()[0]])
 
     @pytest.fixture()
     def store(self):

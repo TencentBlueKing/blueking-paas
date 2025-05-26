@@ -288,8 +288,8 @@ class TestPlanSelectorListPossiblePlans:
         )
         # 获取租户为 'default' 的 ServiceBindingPolicy
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
-        assert possible_plans.get_static_plans() is None
-        assert possible_plans.get_env_specific_plans() == []
+        assert possible_plans.get_static_plans() == []
+        assert possible_plans.get_env_specific_plans() is None
 
 
 class Test__get_plan_by_env:

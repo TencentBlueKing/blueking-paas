@@ -27,13 +27,6 @@ DOCKER_BUILD_STEPSET_NAME = "docker-build"
 IMAGE_RELEASE_STEPSET_NAME = "image-release"
 
 
-class ClusterType(StrStructuredEnum):
-    """集群类别"""
-
-    NORMAL = EnumField("normal", label=_("普通集群"))
-    VIRTUAL = EnumField("virtual", label=_("虚拟集群"))
-
-
 class AppEnvName(StrStructuredEnum):
     """The default environment names"""
 

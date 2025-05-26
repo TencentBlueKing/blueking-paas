@@ -1288,21 +1288,23 @@ export default {
       this.getAutoScalFlag('prod');
       this.getAppDashboardInfo();
       this.getEntryList();
+      this.init();
     }
-    // 查看模式获取最近一条操作记录
     if (this.isReadOnlyMode) {
-      dayjs.extend(relativeTime);
-      if (this.localLanguage !== 'en') {
-        dayjs.locale('zh-cn');
-      }
+      this.configureDayjsLocale();
+      // 查看模式获取最近一条操作记录
       this.getDeploymentOperations();
     }
-    // 镜像需要调用进程配置、且不能是创建应用的时候
-    this.init();
     // 获取资源配额数据
     await this.getQuotaPlans();
   },
   methods: {
+    configureDayjsLocale() {
+      dayjs.extend(relativeTime);
+      if (this.localLanguage !== 'en') {
+        dayjs.locale('zh-cn');
+      }
+    },
     async init() {
       try {
         this.isLoading = true;

@@ -32,6 +32,7 @@ from translated_fields import TranslatedFieldWithFallback
 from paasng.accessories.publish.market import constant
 from paasng.core.core.storages.object_storage import app_logo_storage
 from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.modules.models import Module
@@ -83,7 +84,7 @@ class Tag(models.Model):
 
 class ProductManager(WithOwnerManager):
     def owned_and_collaborated_by(self, user):
-        application_ids = Application.objects.filter_by_user(user).values_list("id", flat=True)
+        application_ids = Application.objects.filter_by_user(user, get_tenant(user).id).values_list("id", flat=True)
         return self.filter(application__id__in=application_ids)
 
     def create_default_product(self, application: Application) -> "Product":

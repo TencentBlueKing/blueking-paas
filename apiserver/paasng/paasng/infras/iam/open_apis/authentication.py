@@ -20,6 +20,8 @@ from iam import IAM
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.exceptions import AuthenticationFailed as RESTAuthenticationFailed
 
+from paasng.core.tenant.user import get_init_tenant_id
+
 from .exceptions import AuthenticationFailed
 
 
@@ -39,14 +41,13 @@ class IAMBasicAuthentication(BasicAuthentication):
         if userid != "bk_iam":
             raise AuthenticationFailed("username is not bk_iam")
 
-        iam = IAM(
+        _iam = IAM(
             settings.IAM_APP_CODE,
             settings.IAM_APP_SECRET,
-            settings.BK_IAM_V3_INNER_URL,
-            settings.BKPAAS_URL,
             settings.BK_IAM_APIGATEWAY_URL,
+            bk_tenant_id=get_init_tenant_id(),
         )
-        ok, msg, token = iam.get_token(settings.IAM_PAAS_V3_SYSTEM_ID)
+        ok, msg, token = _iam.get_token(settings.IAM_PAAS_V3_SYSTEM_ID)
         if not ok:
             raise AuthenticationFailed(f"get system token fail: {msg}")
         if password != token:

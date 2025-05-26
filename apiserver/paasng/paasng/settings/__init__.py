@@ -835,15 +835,16 @@ PLUGIN_APP_DEFAULT_LOGO = settings.get("PLUGIN_APP_DEFAULT_LOGO", APPLICATION_DE
 # 蓝鲸 SSM 平台访问地址, 用于 access_token 验证
 BK_SSM_URL = settings.get("BK_SSM_URL", "")
 
-# 权限中心内网访问地址，用于对接权限中心
+# deprecated：权限中心内网访问地址，用于对接权限中心.
+# bk-iam sdk version >= 2.0.2 时, BK_IAM_V3_INNER_URL 已废弃
 BK_IAM_V3_INNER_URL = settings.get("BK_IAM_V3_INNER_URL", "http://localhost:8080")
 
 # 访问的权限中心 APIGW 版本
 BK_IAM_APIGW_SERVICE_STAGE = settings.get("BK_IAM_APIGW_SERVICE_STAGE", "stage")
 
 # 参数说明 https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#22-config
-# 如果通过网关访问, BK_IAM_APIGATEWAY_URL 将替代 BK_IAM_V3_INNER_URL
-BK_IAM_USE_APIGATEWAY = settings.get("BK_IAM_USE_APIGATEWAY", True)
+# bk-iam sdk version >= 2.0.2 时, 只能通过 apigateway 访问 iam
+BK_IAM_USE_APIGATEWAY = True
 
 BK_IAM_APIGATEWAY_URL = settings.get(
     "BK_IAM_APIGATEWAY_URL", f"{BK_API_URL_TMPL.format(api_name='bk-iam')}/{BK_IAM_APIGW_SERVICE_STAGE}"

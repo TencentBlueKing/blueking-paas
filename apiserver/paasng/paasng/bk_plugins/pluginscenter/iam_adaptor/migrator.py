@@ -26,6 +26,8 @@ from django.db.migrations import RunPython
 from iam.contrib.iam_migration import exceptions
 from iam.contrib.iam_migration.utils import do_migrate
 
+from paasng.core.tenant.user import get_init_tenant_id
+
 
 class IAMPermissionTemplateRender:
     """TemplateRender used to render jinja2 template located at 'permission-templates'"""
@@ -64,14 +66,9 @@ class IAMMigrator:
         app_code = settings.IAM_APP_CODE
         app_secret = settings.IAM_APP_SECRET
 
-        use_apigateway = getattr(settings, "BK_IAM_USE_APIGATEWAY", False)
-        if use_apigateway:
-            do_migrate.enable_use_apigateway()
-            iam_host = getattr(settings, "BK_IAM_APIGATEWAY_URL", "")
-            if iam_host == "":
-                raise exceptions.MigrationFailError("settings.BK_IAM_APIGATEWAY_URL should be set")
-        else:
-            iam_host = settings.BK_IAM_V3_INNER_URL
+        iam_host = getattr(settings, "BK_IAM_APIGATEWAY_URL", "")
+        if iam_host == "":
+            raise exceptions.MigrationFailError("settings.BK_IAM_APIGATEWAY_URL should be set")
 
         if getattr(settings, "BK_IAM_SKIP", False):
             return
@@ -80,7 +77,9 @@ class IAMMigrator:
         if not ok:
             raise exceptions.NetworkUnreachableError("bk iam ping error")
 
-        ok = do_migrate.do_migrate(self.migration_data, iam_host, app_code, app_secret)
+        ok = do_migrate.do_migrate(
+            self.migration_data, iam_host, app_code, app_secret, bk_tenant_id=get_init_tenant_id()
+        )
         if not ok:
             raise exceptions.MigrationFailError("iam migrate fail")
 

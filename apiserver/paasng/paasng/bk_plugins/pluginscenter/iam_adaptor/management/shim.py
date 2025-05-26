@@ -28,7 +28,7 @@ from django.conf import settings
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.iam_adaptor import definitions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import NEVER_EXPIRE_DAYS, PLUGIN_BUILTIN_ROLES
-from paasng.bk_plugins.pluginscenter.iam_adaptor.management.client import lazy_iam_client
+from paasng.bk_plugins.pluginscenter.iam_adaptor.management.client import BKIAMClient
 from paasng.bk_plugins.pluginscenter.iam_adaptor.models import PluginGradeManager, PluginUserGroup
 from paasng.bk_plugins.pluginscenter.models import PluginInstance
 from paasng.infras.iam.exceptions import BKIAMApiError, BKIAMGatewayServiceError
@@ -68,7 +68,7 @@ def fetch_grade_manager_members(plugin: PluginInstance) -> List[str]:
     :param plugin: 蓝鲸插件
     """
     iam_grade_manager = PluginGradeManager.objects.filter_by_plugin(plugin).get()
-    return lazy_iam_client.fetch_grade_manager_members(iam_grade_manager.grade_manager_id)
+    return BKIAMClient(plugin.tenant_id).fetch_grade_manager_members(iam_grade_manager.grade_manager_id)
 
 
 @transform_api_error
@@ -79,7 +79,7 @@ def fetch_role_members(plugin: PluginInstance, role: PluginRole) -> List[str]:
     :param role: 插件角色
     """
     iam_group = PluginUserGroup.objects.filter_by_plugin(plugin).get(role=role)
-    return lazy_iam_client.fetch_user_group_members(iam_group.user_group_id)
+    return BKIAMClient(plugin.tenant_id).fetch_user_group_members(iam_group.user_group_id)
 
 
 @transform_api_error
@@ -93,16 +93,17 @@ def add_role_members(
     :param usernames: 待添加成员名称列表
     :param expired_after_days: X 天后权限过期（-1 表示永不过期）
     """
+    iam_client = BKIAMClient(plugin.tenant_id)
     # 如果是管理者，还要添加成分级管理员
     if role == PluginRole.ADMINISTRATOR:
         iam_grade_manager = PluginGradeManager.objects.filter_by_plugin(plugin).get()
-        lazy_iam_client.add_grade_manager_members(
+        iam_client.add_grade_manager_members(
             grade_manager_id=iam_grade_manager.grade_manager_id,
             usernames=usernames,
         )
 
     iam_group = PluginUserGroup.objects.filter_by_plugin(plugin).get(role=role)
-    lazy_iam_client.add_user_group_members(
+    iam_client.add_user_group_members(
         user_group_id=iam_group.user_group_id,
         usernames=usernames,
         expired_after_days=expired_after_days,
@@ -117,16 +118,17 @@ def delete_role_members(plugin: PluginInstance, role: PluginRole, usernames: Lis
     :param role: 插件角色
     :param usernames: 待删除的成员名称列表
     """
+    iam_client = BKIAMClient(plugin.tenant_id)
     # 如果是管理者，还要从分级管理员中移除
     if role == PluginRole.ADMINISTRATOR:
         iam_grade_manager = PluginGradeManager.objects.filter_by_plugin(plugin).get()
-        lazy_iam_client.delete_grade_manager_members(
+        iam_client.delete_grade_manager_members(
             grade_manager_id=iam_grade_manager.grade_manager_id,
             usernames=usernames,
         )
 
     iam_group = PluginUserGroup.objects.filter_by_plugin(plugin).get(role=role)
-    return lazy_iam_client.delete_user_group_members(
+    return iam_client.delete_user_group_members(
         user_group_id=iam_group.user_group_id,
         usernames=usernames,
     )
@@ -135,9 +137,10 @@ def delete_role_members(plugin: PluginInstance, role: PluginRole, usernames: Lis
 @transform_api_error
 def fetch_user_roles(plugin: PluginInstance, username: str) -> List[PluginRole]:
     """获取用户在插件中的对应的角色"""
+    iam_client = BKIAMClient(plugin.tenant_id)
     user_roles = []
     for group in PluginUserGroup.objects.filter_by_plugin(plugin):
-        if username in lazy_iam_client.fetch_user_group_members(group.user_group_id):
+        if username in iam_client.fetch_user_group_members(group.user_group_id):
             user_roles.append(PluginRole(group.role))
 
     return sorted(user_roles)
@@ -155,7 +158,7 @@ def fetch_user_main_role(plugin: PluginInstance, username: str) -> Optional[Role
 @transform_api_error
 def remove_user_all_roles(plugin: PluginInstance, usernames: List[str]):
     """
-    删除用户在某个 APP 下的所有权限角色
+    删除用户在某个插件下的所有权限角色
 
     :param plugin: 蓝鲸插件
     :param usernames: 待删除的成员名称列表
@@ -163,9 +166,11 @@ def remove_user_all_roles(plugin: PluginInstance, usernames: List[str]):
     if not usernames:
         return
 
+    iam_client = BKIAMClient(plugin.tenant_id)
+
     # 先清理掉分级管理员权限
     iam_grade_manager = PluginGradeManager.objects.filter_by_plugin(plugin).get()
-    lazy_iam_client.delete_grade_manager_members(
+    iam_client.delete_grade_manager_members(
         grade_manager_id=iam_grade_manager.grade_manager_id,
         usernames=usernames,
     )
@@ -173,7 +178,7 @@ def remove_user_all_roles(plugin: PluginInstance, usernames: List[str]):
     # 再将所有的内建角色权限清理掉
     role_group_id_map = {group.role: group.user_group_id for group in PluginUserGroup.objects.filter_by_plugin(plugin)}
     for group_id in role_group_id_map.values():
-        lazy_iam_client.delete_user_group_members(group_id, usernames)
+        iam_client.delete_user_group_members(group_id, usernames)
 
 
 @transform_api_error
@@ -184,6 +189,8 @@ def fetch_plugin_members(plugin: PluginInstance) -> List[PluginMember]:
 
     :param plugin: 蓝鲸插件
     """
+    iam_client = BKIAMClient(plugin.tenant_id)
+
     members = []
     for group in PluginUserGroup.objects.filter_by_plugin(plugin):
         members.extend(
@@ -192,7 +199,7 @@ def fetch_plugin_members(plugin: PluginInstance) -> List[PluginMember]:
                     "role": {"id": PluginRole(group.role), "name": PluginRole.get_choice_label(group.role)},
                     "username": username,
                 }
-                for username in lazy_iam_client.fetch_user_group_members(group.user_group_id)
+                for username in iam_client.fetch_user_group_members(group.user_group_id)
             ]
         )
     return sorted(cattr.structure(members, List[PluginMember]), key=attrgetter("role.id"))
@@ -206,7 +213,7 @@ def setup_builtin_grade_manager(plugin: PluginInstance):
     """
     if PluginGradeManager.objects.filter_by_plugin(plugin).exists():
         return PluginGradeManager.objects.filter_by_plugin(plugin).get()
-    grade_manager_id = lazy_iam_client.create_grade_manager(
+    grade_manager_id = BKIAMClient(plugin.tenant_id).create_grade_manager(
         plugin_resource=definitions.gen_iam_resource(plugin),
         manager_definition=definitions.gen_iam_grade_manager(plugin),
     )
@@ -231,10 +238,10 @@ def setup_builtin_user_groups(plugin: PluginInstance):
             continue
         missing_groups.append(definitions.gen_plugin_user_group(plugin=plugin, role=role))
 
-    created_groups = lazy_iam_client.create_user_groups(grade_manager_id=grade_manager_id, groups=missing_groups)
-    lazy_iam_client.initial_user_group_policies(
-        plugin_resource=definitions.gen_iam_resource(plugin), groups=created_groups
-    )
+    iam_client = BKIAMClient(plugin.tenant_id)
+
+    created_groups = iam_client.create_user_groups(grade_manager_id=grade_manager_id, groups=missing_groups)
+    iam_client.initial_user_group_policies(plugin_resource=definitions.gen_iam_resource(plugin), groups=created_groups)
     for group in created_groups:
         PluginUserGroup.objects.create(
             pd_id=plugin.pd.identifier,
@@ -251,7 +258,7 @@ def delete_builtin_user_groups(plugin: PluginInstance):
     :param plugin: 蓝鲸插件
     """
     user_groups = PluginUserGroup.objects.filter_by_plugin(plugin)
-    lazy_iam_client.delete_user_groups(user_groups.values_list("user_group_id", flat=True))
+    BKIAMClient(plugin.tenant_id).delete_user_groups(user_groups.values_list("user_group_id", flat=True))
     user_groups.delete()
 
 
@@ -261,7 +268,7 @@ def delete_grade_manager(plugin: PluginInstance):
     if not grade_manager:
         return
 
-    lazy_iam_client.delete_grade_manager(grade_manager.grade_manager_id)
+    BKIAMClient(plugin.tenant_id).delete_grade_manager(grade_manager.grade_manager_id)
     grade_manager.delete()
 
 

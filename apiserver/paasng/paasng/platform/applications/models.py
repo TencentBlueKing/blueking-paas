@@ -33,7 +33,7 @@ from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.fields import tenant_id_field_factory
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.applications.entities import SMartAppArtifactMetadata
@@ -81,13 +81,14 @@ class ApplicationQuerySet(models.QuerySet):
 
         return get_username_by_bkpaas_user_id(user)
 
-    def _filter_by_user(self, user):
+    def _filter_by_user(self, user, tenant_id: str):
         """Filter applications, take application only if user play a role in it.
 
         :param user: User object or user_id
+        :param tenant_id: the user's tenant ID
         """
         username = self.get_username(user)
-        filters = ApplicationPermission().gen_user_app_filters(username)
+        filters = ApplicationPermission().gen_user_app_filters(username, tenant_id)
         if not filters:
             return self.none()
 
@@ -115,8 +116,8 @@ class ApplicationQuerySet(models.QuerySet):
         # Generate a new QuerySet object
         return self.model.objects.filter(id__in=ids)
 
-    def filter_by_user(self, user, exclude_collaborated=False):
-        qs = self._filter_by_user(user)
+    def filter_by_user(self, user, tenant_id: str, exclude_collaborated=False):
+        qs = self._filter_by_user(user, tenant_id)
         if exclude_collaborated:
             qs = qs.filter(owner=self.get_user_id(user))
         return qs
@@ -258,7 +259,9 @@ class UserApplicationFilter:
         """Filter applications by given parameters"""
         if order_by is None:
             order_by = []
-        applications = Application.objects.filter_by_user(self.user.pk, exclude_collaborated=exclude_collaborated)
+        applications = Application.objects.filter_by_user(
+            self.user.pk, tenant_id=get_tenant(self.user).id, exclude_collaborated=exclude_collaborated
+        )
 
         # 从缓存拿刚刚退出的应用 code exclude 掉，避免出现退出用户组，权限中心权限未同步的情况
         mgr = JustLeaveAppManager(get_username_by_bkpaas_user_id(self.user.pk))

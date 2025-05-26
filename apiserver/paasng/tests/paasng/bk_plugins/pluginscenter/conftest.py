@@ -260,7 +260,7 @@ def thirdparty_client():
 @pytest.fixture()
 def iam_policy_client():
     with mock.patch(
-        "paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions.lazy_iam_client",
+        "paasng.bk_plugins.pluginscenter.iam_adaptor.policy.permissions.BKIAMClient",
         new=mock.MagicMock(),
         spec=BKIAMClient,
     ) as iam_policy_client:

@@ -60,7 +60,7 @@ class TestApplicationPermission:
             app_permission_obj.can_delete_application(perm_ctx)
         assert exc.value.code == PermissionDeniedError.code
         assert exc.value.data["perms"]["apply_url"] == generate_apply_url(
-            roles.APP_OPERATE_USER,
+            perm_ctx.tenant_id,
             action_request_list=[
                 ActionResourcesRequest(
                     AppAction.DELETE_APPLICATION,

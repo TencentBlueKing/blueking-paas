@@ -72,7 +72,7 @@ class TemplateDetailSLZ(serializers.Serializer):
     build_config = BuildConfigPreviewSLZ()
 
 
-class TemplateRenderRetrieveOutputSLZ(serializers.Serializer):
+class TemplateRenderOutputSLZ(serializers.Serializer):
     """模板渲染信息"""
 
     name = serializers.CharField(help_text="模板名称")
@@ -80,4 +80,4 @@ class TemplateRenderRetrieveOutputSLZ(serializers.Serializer):
     description = TranslatedCharField()
     repo_url = serializers.CharField(help_text="代码仓库地址")
     render_method = serializers.CharField(help_text="模版代码渲染方式")
-    relative_source_dir = serializers.CharField(help_text="模板代码所在相对目录", source="get_source_dir")
+    source_dir = serializers.CharField(help_text="模板代码所在相对目录", source="get_source_dir")

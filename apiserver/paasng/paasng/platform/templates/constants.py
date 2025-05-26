@@ -27,7 +27,11 @@ class TemplateType(StrStructuredEnum):
 
 
 class RenderMethod(StrStructuredEnum):
-    """渲染方式"""
+    """模板渲染方式
+
+    - django_template: 使用 Django 模板引擎进行渲染，支持变量替换和简单逻辑，目前开发框架都使用该方式
+    - cookiecutter: 使用 Cookiecutter 模板系统进行渲染，支持目录结构生成和复杂交互，目前插件都使用该方式
+    """
 
     DJANGO_TEMPLATE = EnumField("django_template", "django template")
     COOKIECUTTER = EnumField("cookiecutter", "cookiecutter")

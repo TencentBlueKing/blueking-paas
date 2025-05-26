@@ -186,11 +186,11 @@ export default {
   },
   watch: {
     $route(newRoute) {
-      if (this.active !== newRoute.name) {
+      if (this.active !== newRoute.name || newRoute.name === 'appServices') {
         this.handleGoPage(newRoute.name);
+        this.isTab = newRoute.name === 'appServices'; // 显示tab
       }
-      // eslint-disable-next-line no-plusplus
-      this.renderIndex++;
+      this.renderIndex += 1;
       this.$store.commit('cloudApi/updatePageEdit', false);
     },
     appCode() {

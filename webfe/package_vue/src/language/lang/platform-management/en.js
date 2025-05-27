@@ -294,4 +294,7 @@ export default {
   '修改后需要重新部署才能生效，并且需要手动清理原有集群中的进程。': 'Changes require redeployment to take effect and manual cleanup of processes in the original cluster.',
   '应用对哪个租户的用户可用，当应用租户模式为全租户时，租户 ID 值为空': 'Which tenants users the application is available to; when the application tenant mode is set to all tenants, the tenant ID value is empty',
   '所有进程的内存/CPU limit 的总和': 'The total memory/CPU limit of all processes',
+  '共享 {m} 模块': 'Share {m} module',
+  '确认给 {m} 模块的预发布环境分配 {n} 增强服务实例': 'Confirm assigning {n} enhanced service instances to the pre-release environment of {m} module',
+  '确认删除 {m} 模块的{e} {n} 增强服务实例': 'Confirm deletion of {e} {n} enhanced service instances from {m} module',
 };

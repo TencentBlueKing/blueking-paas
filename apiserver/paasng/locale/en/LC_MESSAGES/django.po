@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-05-27 10:33+0800\n"
+"POT-Creation-Date: 2025-05-27 14:49+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -286,12 +286,10 @@ msgstr ""
 "The environment is not ready or has been archived, please try to redeploy it."
 
 #: paas_wl/infras/cluster/constants.py:30
-#: paasng/platform/engine/constants.py:33
 msgid "普通集群"
 msgstr "Standard cluster"
 
 #: paas_wl/infras/cluster/constants.py:31
-#: paasng/platform/engine/constants.py:34
 msgid "虚拟集群"
 msgstr "Virtual cluster"
 
@@ -476,7 +474,7 @@ msgstr "Memory usage amount"
 
 #: paas_wl/workloads/images/views.py:59
 #: paasng/platform/applications/views/creation.py:158
-#: paasng/platform/modules/views.py:344
+#: paasng/platform/modules/views.py:345
 msgid "同名凭证已存在"
 msgstr "Credential with the same name already exists"
 
@@ -502,14 +500,17 @@ msgstr ""
 #: paas_wl/workloads/networking/ingress/domains/manager.py:84
 #: paas_wl/workloads/networking/ingress/domains/manager.py:163
 msgid "未部署的环境无法添加独立域名，请先部署对应环境"
-msgstr "Unable to add a domain for an undeployed environment, please deploy first"
+msgstr ""
+"Unable to add a domain for an undeployed environment, please deploy first"
 
 #: paas_wl/workloads/networking/ingress/domains/manager.py:86
 #: paas_wl/workloads/networking/ingress/domains/manager.py:117
 #: paas_wl/workloads/networking/ingress/domains/manager.py:165
 #: paas_wl/workloads/networking/ingress/domains/manager.py:191
 msgid "该域名为平台保留域名，无法使用，请使用其他域名"
-msgstr "The domain conflicts with system-reserved domains and cannot be used, please use another domain"
+msgstr ""
+"The domain conflicts with system-reserved domains and cannot be used, please "
+"use another domain"
 
 #: paas_wl/workloads/networking/ingress/domains/manager.py:101
 msgid "找不到有效的 TLS 证书"
@@ -522,19 +523,23 @@ msgstr "The domain {host} has been occupied"
 
 #: paas_wl/workloads/networking/ingress/domains/manager.py:106
 #: paas_wl/workloads/networking/ingress/domains/manager.py:180
-#: paasng/accessories/servicehub/views.py:599
+#: paasng/accessories/servicehub/views.py:602
 msgid "未知错误"
 msgstr "Unknown error"
 
 #: paas_wl/workloads/networking/ingress/domains/manager.py:113
 #: paas_wl/workloads/networking/ingress/domains/manager.py:187
 msgid "该域名已被绑定为主访问入口, 请解绑后再进行更新操作"
-msgstr "The domain has been bound as the application's main entrance domain. please update after unbinding"
+msgstr ""
+"The domain has been bound as the application's main entrance domain. please "
+"update after unbinding"
 
 #: paas_wl/workloads/networking/ingress/domains/manager.py:130
 #: paas_wl/workloads/networking/ingress/domains/manager.py:210
 msgid "该域名已被绑定为主访问入口, 请解绑后再进行删除操作"
-msgstr "The domain has been bound as the application's main entrance domain. please delete after unbinding"
+msgstr ""
+"The domain has been bound as the application's main entrance domain. please "
+"delete after unbinding"
 
 #: paas_wl/workloads/networking/ingress/domains/manager.py:135
 #: paas_wl/workloads/networking/ingress/domains/manager.py:219
@@ -758,7 +763,7 @@ msgid "其它"
 msgstr "Other"
 
 #: paasng/accessories/publish/market/protections.py:48
-#: paasng/platform/engine/constants.py:133
+#: paasng/platform/engine/constants.py:126
 #: paasng/platform/engine/workflow/protections.py:68
 msgid "未完善应用基本信息"
 msgstr "Incomplete app basic information"
@@ -832,10 +837,6 @@ msgstr "get available service plan failed"
 #, python-brace-format
 msgid "模块 {ref_module_name} 不存在"
 msgstr "Module {ref_module_name} does not exist"
-
-#: paasng/accessories/servicehub/views.py:602
-msgid "未知错误"
-msgstr "Unknown error"
 
 #: paasng/accessories/servicehub/views.py:605
 #, python-brace-format
@@ -2370,12 +2371,12 @@ msgstr "Testing in progress"
 msgid "无法获取到有效的配置信息."
 msgstr "No valid configuration information is available."
 
-#: paasng/plat_mgt/applications/serializers/application.py:185
+#: paasng/plat_mgt/applications/serializers/application.py:186
 #, python-brace-format
 msgid "于{time}{operation}{status}"
 msgstr " {operation} {status} at {time}"
 
-#: paasng/plat_mgt/applications/serializers/application.py:226
+#: paasng/plat_mgt/applications/serializers/application.py:228
 #: paasng/platform/applications/serializers/mixins.py:74
 #, python-brace-format
 msgid "集群名称错误，无法找到名为 {name} 的集群"
@@ -2909,86 +2910,86 @@ msgstr ""
 "[Deprecated] Rule-based application access sub-path, suitable for backward "
 "compatibility only"
 
-#: paasng/platform/engine/constants.py:40
+#: paasng/platform/engine/constants.py:33
 msgid "预发布环境"
 msgstr "Stag Env"
 
-#: paasng/platform/engine/constants.py:41
+#: paasng/platform/engine/constants.py:34
 msgid "生产环境"
 msgstr "Prod Env"
 
-#: paasng/platform/engine/constants.py:134
+#: paasng/platform/engine/constants.py:127
 msgid "当前用户无部署该环境的权限"
 msgstr "The current user does not have permission to deploy this environment"
 
-#: paasng/platform/engine/constants.py:135
+#: paasng/platform/engine/constants.py:128
 msgid "当前用户尚未绑定 OAUTH 授权信息"
 msgstr "The current user has not yet bound the OAUTH authorization information"
 
-#: paasng/platform/engine/constants.py:136
+#: paasng/platform/engine/constants.py:129
 msgid "当前用户没有访问源码仓库的权限"
 msgstr "The current user does not have permission to access the repository"
 
-#: paasng/platform/engine/constants.py:137
+#: paasng/platform/engine/constants.py:130
 msgid "当前源码仓库信息异常"
 msgstr "The current source code repository information is abnormal"
 
-#: paasng/platform/engine/constants.py:138
+#: paasng/platform/engine/constants.py:131
 #: paasng/platform/engine/workflow/protections.py:127
 msgid "未完善进程启动命令"
 msgstr "Incomplete process start command"
 
-#: paasng/platform/engine/constants.py:139
+#: paasng/platform/engine/constants.py:132
 msgid "当前用户未授权 CI 组件访问仓库的权限"
 msgstr ""
 "The current user does not authorize the CI component to access the repository"
 
-#: paasng/platform/engine/constants.py:140
+#: paasng/platform/engine/constants.py:133
 #: paasng/platform/engine/workflow/protections.py:151
 msgid "未设置插件分类"
 msgstr "Plugin category not set"
 
-#: paasng/platform/engine/constants.py:145
+#: paasng/platform/engine/constants.py:138
 msgid "使用 Buildpacks 构建"
 msgstr "Build using Buildpacks"
 
-#: paasng/platform/engine/constants.py:146
+#: paasng/platform/engine/constants.py:139
 msgid "使用 Dockerfile 构建"
 msgstr "Build using Dockerfile"
 
-#: paasng/platform/engine/constants.py:153
+#: paasng/platform/engine/constants.py:146
 msgid "蓝鲸应用ID"
 msgstr "BK APP ID"
 
-#: paasng/platform/engine/constants.py:154
+#: paasng/platform/engine/constants.py:147
 msgid "蓝鲸应用密钥"
 msgstr "BK APP Secret"
 
-#: paasng/platform/engine/constants.py:155
+#: paasng/platform/engine/constants.py:148
 #, fuzzy
 #| msgid "蓝鲸应用ID"
 msgid "蓝鲸应用租户 ID"
 msgstr "BK APP ID"
 
-#: paasng/platform/engine/constants.py:161
+#: paasng/platform/engine/constants.py:154
 msgid "应用当前模块名"
 msgstr "Current Module Name"
 
-#: paasng/platform/engine/constants.py:162
+#: paasng/platform/engine/constants.py:155
 msgid "应用当前环境，预发布环境为 stag、生产环境为 prod"
 msgstr ""
 "Current environment, the pre-release environment is stag, and the production "
 "environment is prod"
 
-#: paasng/platform/engine/constants.py:163
+#: paasng/platform/engine/constants.py:156
 msgid "应用当前运行的开发者中心版本，值为 3"
 msgstr "The currently running Dev Center version, the value is 3"
 
-#: paasng/platform/engine/constants.py:164
+#: paasng/platform/engine/constants.py:157
 msgid "应用版本，默认版本为 default"
 msgstr "APP version, the default version is default"
 
-#: paasng/platform/engine/constants.py:167
+#: paasng/platform/engine/constants.py:160
 msgid ""
 "应用模块各环境的访问地址，如 {\"stag\": \"http://stag.com\", \"prod\": "
 "\"http://prod.com\"}"
@@ -3512,21 +3513,21 @@ msgstr "Source code configuration"
 msgid "指令不能以 'start ' 开头."
 msgstr "The command cannot begin with 'start '."
 
-#: paasng/platform/modules/views.py:195
+#: paasng/platform/modules/views.py:196
 msgid "主模块不允许被删除"
 msgstr "The default module is not allowed to be deleted"
 
-#: paasng/platform/modules/views.py:246
+#: paasng/platform/modules/views.py:247
 #, python-brace-format
 msgid "{module_name} 模块已经被删除"
 msgstr "The {module_name} module has been removed."
 
-#: paasng/platform/modules/views.py:249
+#: paasng/platform/modules/views.py:250
 #, python-brace-format
 msgid "{module_name} 模块已经是主模块"
 msgstr "The {module_name} module is already the default module"
 
-#: paasng/platform/modules/views.py:259
+#: paasng/platform/modules/views.py:260
 #, python-brace-format
 msgid ""
 "目标 {module_name} 模块未满足应用市场服务开启条件，切换主模块会导致应用在市场"
@@ -3536,33 +3537,33 @@ msgstr ""
 "Market service, switching the default module will cause the APP to be "
 "exceptionally accessible in the marketplace"
 
-#: paasng/platform/modules/views.py:327
+#: paasng/platform/modules/views.py:328
 msgid "当前应用所属的版本不允许创建新模块"
 msgstr ""
 "Creating new modules is not allowed for the current app due to its region"
 
-#: paasng/platform/modules/views.py:330
+#: paasng/platform/modules/views.py:331
 msgid "当前应用下不允许创建新模块"
 msgstr "New modules are not allowed to be created under the current APP"
 
-#: paasng/platform/modules/views.py:335
+#: paasng/platform/modules/views.py:336
 #, python-brace-format
 msgid "单个应用下最多能创建 {num} 个模块"
 msgstr "Up to {num} modules can be created under a single APP"
 
-#: paasng/platform/modules/views.py:418 paasng/platform/modules/views.py:519
+#: paasng/platform/modules/views.py:419 paasng/platform/modules/views.py:520
 msgid "构建工具不存在"
 msgstr "The build tool does not exist"
 
-#: paasng/platform/modules/views.py:507
+#: paasng/platform/modules/views.py:508
 msgid "不支持的构建方式"
 msgstr "Unsupported build method"
 
-#: paasng/platform/modules/views.py:514
+#: paasng/platform/modules/views.py:515
 msgid "当前模块不支持修改构建方式为 {}"
 msgstr "The current module does not support modifying the build mode as {}"
 
-#: paasng/platform/modules/views.py:623
+#: paasng/platform/modules/views.py:624
 msgid "当前应用不支持配置「启动命令」"
 msgstr ""
 "The current APP does not support the configuration of 「start commands」"
@@ -3869,18 +3870,28 @@ msgid "标签"
 msgstr "Tags"
 
 #: paasng/platform/templates/models.py:52
-msgid "代码仓库信息"
+#, fuzzy
+#| msgid "代码仓库信息"
+msgid "代码仓库地址"
 msgstr "Code Repository Information"
 
 #: paasng/platform/templates/models.py:53
+msgid "模板代码所在目录"
+msgstr ""
+
+#: paasng/platform/templates/models.py:55
+msgid "模板渲染方式"
+msgstr ""
+
+#: paasng/platform/templates/models.py:56
 msgid "运行时类型"
 msgstr "Runtime Type"
 
-#: paasng/platform/templates/models.py:55
+#: paasng/platform/templates/models.py:58
 msgid "是否隐藏"
 msgstr "Is Hidden"
 
-#: paasng/platform/templates/models.py:55
+#: paasng/platform/templates/models.py:58
 msgid "被隐藏的模板不会出现在创建应用时的列表中"
 msgstr ""
 "hidden templates will not appear in the list when creating new applications"

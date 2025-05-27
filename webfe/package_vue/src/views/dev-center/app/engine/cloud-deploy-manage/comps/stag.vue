@@ -59,6 +59,7 @@
       :environment="environment"
       v-bind="$attrs"
       @module-deployment-info="updateModuleDeploymentData"
+      @expand="($event) => (isExpand = !$event)"
     />
 
     <sandbox-sideslider

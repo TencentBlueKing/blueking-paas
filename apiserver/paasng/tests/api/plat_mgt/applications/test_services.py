@@ -24,6 +24,7 @@ import pytest
 from django_dynamic_fixture import G
 
 from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.accessories.servicehub.exceptions import UnboundSvcAttachmentDoesNotExist
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
@@ -71,6 +72,7 @@ class TestApplicationServicesViewSet:
                 plan=plan,
                 is_allocated=False,
                 credentials=json.dumps(self.credentials),
+                config={},
             )
 
             svc = mixed_service_mgr.get(service.uuid)
@@ -90,17 +92,32 @@ class TestApplicationServicesViewSet:
         self.svc = services[0]
         self.plan = self.svc.get_plans()[0]
 
-    def test_list(self, plat_mgt_api_client):
-        """测试获取应用的附加服务列表"""
-        url = f"/api/plat_mgt/applications/{self.app.code}/modules/services/"
+    def test_list_bound_attachments(self, plat_mgt_api_client):
+        """测试获取应用的绑定服务列表"""
+        url = f"/api/plat_mgt/applications/{self.app.code}/services/bound_attachments/"
         resp = plat_mgt_api_client.get(url)
         assert resp.status_code == 200
         assert isinstance(resp.data, list)
         assert len(resp.data) > 0
 
+    def test_list_unbound_attachments(self, plat_mgt_api_client):
+        """测试获取可回收的实例列表"""
+
+        # 创建一个服务实例并解绑
+        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, service=self.svc), None)
+        assert rel is not None
+        rel.provision()
+        rel.recycle_resource()
+
+        url = f"/api/plat_mgt/applications/{self.app.code}/services/unbound_attachments/"
+        resp = plat_mgt_api_client.get(url)
+
+        assert resp.status_code == 200
+        assert len(resp.data) > 0
+
     @mock.patch("paasng.plat_mgt.applications.views.services.add_admin_audit_record", return_value=None)
     def test_provision_instance(self, mock_audit_record, plat_mgt_api_client):
-        """测试分配附加服务实例"""
+        """测试分配服务实例"""
 
         # 构造API请求URL
         url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_1.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/"
@@ -114,8 +131,8 @@ class TestApplicationServicesViewSet:
         # 验证审计记录函数被调用
         mock_audit_record.assert_called_once()
 
-    def test_recycle_instance(self, plat_mgt_api_client):
-        """测试删除附加服务实例"""
+    def test_unbound_instance(self, plat_mgt_api_client):
+        """测试解绑增强服务实例"""
 
         # 创建服务实例和关联
         rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, self.svc), None)
@@ -131,6 +148,30 @@ class TestApplicationServicesViewSet:
         # 验证实例已解除关联
         unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, uuid.UUID(instance_uuid))
         assert unbound_rel is not None
+
+    def test_recycle_unbound_instance(self, plat_mgt_api_client):
+        """测试回收已解绑的服务资源"""
+
+        # 创建一个服务实例
+        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, service=self.svc), None)
+        assert rel is not None
+        rel.provision()
+
+        # 获取实例ID并解绑
+        instance_uuid = uuid.UUID(rel.get_instance().uuid)
+        rel.recycle_resource()
+
+        # 确认实例已解绑成功
+        unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, instance_uuid)
+        assert unbound_rel is not None
+
+        url = f"/api/plat_mgt/applications/{self.app.code}/services/{self.svc.uuid}/instance/{instance_uuid}/"
+        resp = plat_mgt_api_client.delete(url)
+
+        # 验证 API 调用成功且实例已经回收
+        assert resp.status_code == 204
+        with pytest.raises(UnboundSvcAttachmentDoesNotExist):
+            mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, instance_uuid)
 
     def test_view_credentials(self, plat_mgt_api_client):
         """测试查看附加服务实例的凭据"""

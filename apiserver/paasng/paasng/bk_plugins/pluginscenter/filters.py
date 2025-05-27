@@ -18,8 +18,9 @@
 from rest_framework.filters import BaseFilterBackend
 
 from paasng.bk_plugins.pluginscenter.constants import PluginStatus
-from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.client import lazy_iam_client
+from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.bk_plugins.pluginscenter.models import PluginInstance
+from paasng.core.tenant.user import get_tenant
 
 
 class PluginInstancePermissionFilter(BaseFilterBackend):
@@ -33,7 +34,8 @@ class PluginInstancePermissionFilter(BaseFilterBackend):
         # 创建未审批中插件的未接入权限中心，仅创建者可在列表页面查看
         approval_qs = queryset.model.objects.filter(creator=request.user.pk, status__in=PluginStatus.approval_status())
 
-        filters = lazy_iam_client.build_plugin_filters(username=request.user.username)
+        iam_client = BKIAMClient(get_tenant(request.user).id)
+        filters = iam_client.build_plugin_filters(username=request.user.username)
         if filters:
             return queryset.filter(filters) | approval_qs
         else:

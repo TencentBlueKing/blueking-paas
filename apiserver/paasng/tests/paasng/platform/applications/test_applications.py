@@ -21,6 +21,7 @@ import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.iam.helpers import add_role_members, fetch_application_members, remove_user_all_roles
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application, UserApplicationFilter
@@ -102,18 +103,18 @@ class BaseCaseWithApps:
 
 class TestApplicationManager(BaseCaseWithApps):
     def test_filter_by_user_normal(self):
-        apps = Application.objects.filter_by_user(self.user)
+        apps = Application.objects.filter_by_user(self.user, get_tenant(self.user).id)
         assert set(apps) == {self.app1, self.app_another1, self.app_another2}
 
     def test_filter_by_userremove(self):
         usernames = [m["username"] for m in fetch_application_members(self.app_another2.code)]
         remove_user_all_roles(self.app_another2.code, usernames)
 
-        apps = Application.objects.filter_by_user(self.user)
+        apps = Application.objects.filter_by_user(self.user, get_tenant(self.user).id)
         assert set(apps) == {self.app1, self.app_another1}
 
     def test_filter_language(self):
-        apps = Application.objects.filter_by_user(self.user).filter_by_languages(["Python"])
+        apps = Application.objects.filter_by_user(self.user, get_tenant(self.user).id).filter_by_languages(["Python"])
         assert set(apps) == {self.app1, self.app_another2}
 
         # 给 app_another1 添加 Python 语言的模块后能过滤出来
@@ -124,31 +125,45 @@ class TestApplicationManager(BaseCaseWithApps):
             language="Python",
             creator=self.app_another1.creator,
         )
-        apps_new = Application.objects.filter_by_user(self.user).filter_by_languages(["Python"])
+        apps_new = Application.objects.filter_by_user(self.user, get_tenant(self.user).id).filter_by_languages(
+            ["Python"]
+        )
         assert set(apps_new) == {self.app1, self.app_another2, self.app_another1}
 
     def test_active_only(self):
-        apps = Application.objects.filter_by_user(self.user).filter_by_languages(["Python"]).only_active()
+        apps = (
+            Application.objects.filter_by_user(self.user, get_tenant(self.user).id)
+            .filter_by_languages(["Python"])
+            .only_active()
+        )
         assert set(apps) == {self.app1, self.app_another2}
 
         self.app1.is_active = False
         self.app1.save()
-        apps = Application.objects.filter_by_user(self.user).filter_by_languages(["Python"]).only_active()
+        apps = (
+            Application.objects.filter_by_user(self.user, get_tenant(self.user).id)
+            .filter_by_languages(["Python"])
+            .only_active()
+        )
         assert set(apps) == {self.app_another2}
 
     def test_search_by_code_or_name(self):
-        apps = Application.objects.filter_by_user(self.user).search_by_code_or_name("awesome")
+        apps = Application.objects.filter_by_user(self.user, get_tenant(self.user).id).search_by_code_or_name(
+            "awesome"
+        )
         assert set(apps) == {self.app1, self.app_another1}
 
     def test_filter_by_user(self):
-        apps = Application.objects.filter_by_user(self.user)
+        apps = Application.objects.filter_by_user(self.user, get_tenant(self.user).id)
         assert set(apps) == {self.app1, self.app_another1, self.app_another2}
 
-        apps = Application.objects.filter_by_user(self.user, exclude_collaborated=True)
+        apps = Application.objects.filter_by_user(self.user, get_tenant(self.user).id, exclude_collaborated=True)
         assert set(apps) == {self.app1}
 
     def test_filter_by_source_origin(self):
-        apps = Application.objects.filter_by_user(self.user).filter_by_source_origin(SourceOrigin.BK_LESS_CODE)
+        apps = Application.objects.filter_by_user(self.user, get_tenant(self.user).id).filter_by_source_origin(
+            SourceOrigin.BK_LESS_CODE
+        )
         assert set(apps) == {self.app_another2}
 
 

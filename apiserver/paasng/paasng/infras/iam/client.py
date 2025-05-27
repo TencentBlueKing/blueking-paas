@@ -47,21 +47,9 @@ class BKIAMClient:
 
     def __init__(self, tenant_id: str):
         self._client = Client(endpoint=settings.BK_API_URL_TMPL, stage=settings.BK_IAM_APIGW_SERVICE_STAGE)
+        self._client.update_headers(self._prepare_headers(tenant_id))
         self.tenant_id = tenant_id
-        self._client.update_headers(self._prepare_headers())
         self.client: BKIAMGroup = self._client.api
-
-    def _prepare_headers(self) -> dict:
-        headers = {
-            "x-bkapi-authorization": json.dumps(
-                {
-                    "bk_app_code": settings.BK_APP_CODE,
-                    "bk_app_secret": settings.BK_APP_SECRET,
-                }
-            ),
-            API_HERDER_TENANT_ID: self.tenant_id,
-        }
-        return headers
 
     def create_grade_managers(self, app_code: str, app_name: str, init_member: Optional[str] = None) -> int:
         """
@@ -480,7 +468,7 @@ class BKIAMClient:
         path_params = {"id": grade_manager_id}
         try:
             resp = self.client.management_grade_managers_update(
-                headers=self._prepare_headers(),
+                headers=self._prepare_headers(self.tenant_id),
                 data=data,
                 path_params=path_params,
             )
@@ -510,7 +498,7 @@ class BKIAMClient:
             for scope in scope_list:
                 try:
                     resp = self.client.v2_management_groups_policies_grant(
-                        headers=self._prepare_headers(),
+                        headers=self._prepare_headers(self.tenant_id),
                         path_params=path_params,
                         data=scope,
                     )
@@ -540,7 +528,7 @@ class BKIAMClient:
             for scope in scope_list:
                 try:
                     resp = self.client.v2_management_groups_policies_grant(
-                        headers=self._prepare_headers(),
+                        headers=self._prepare_headers(self.tenant_id),
                         path_params=path_params,
                         data=scope,
                     )
@@ -554,3 +542,16 @@ class BKIAMClient:
                         )
                     )
                     raise BKIAMApiError(resp["message"], resp["code"])
+
+    @staticmethod
+    def _prepare_headers(tenant_id: str) -> dict:
+        headers = {
+            "x-bkapi-authorization": json.dumps(
+                {
+                    "bk_app_code": settings.BK_APP_CODE,
+                    "bk_app_secret": settings.BK_APP_SECRET,
+                }
+            ),
+            API_HERDER_TENANT_ID: tenant_id,
+        }
+        return headers

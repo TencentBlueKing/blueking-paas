@@ -21,6 +21,8 @@ from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from paasng.core.tenant.header import validate_tenant_id_header
+
 from .authentication import IAMBasicAuthentication
 from .providers.resource import BKPaaSResourceProvider
 from .serializers import QueryResourceSLZ
@@ -34,7 +36,7 @@ class ResourceAPIView(APIView):
 
     def _get_options(self, request):
         request.LANGUAGE_CODE = request.META.get("HTTP_BLUEKING_LANGUAGE", settings.LANGUAGE_CODE)
-        return {"language": request.LANGUAGE_CODE}
+        return {"language": request.LANGUAGE_CODE, "tenant_id": validate_tenant_id_header(request)}
 
     def post(self, request, *args, **kwargs):
         serializer = QueryResourceSLZ(data=request.data)

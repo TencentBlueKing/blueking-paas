@@ -82,6 +82,11 @@ class AppCreatorAction(ResCreatorAction):
 class AppPermCtx(PermCtx):
     code = field(validator=[validators.instance_of(str), validate_empty])
 
+    def __attrs_post_init__(self):
+        from paasng.platform.applications.tenant import get_tenant_id_for_app
+
+        self.tenant_id = get_tenant_id_for_app(self.code)
+
     @property
     def resource_id(self) -> str:
         return self.code
@@ -192,30 +197,30 @@ class ApplicationPermission(Permission):
         perm_ctx.validate_resource_id()
         return self.can_multi_actions(perm_ctx, [AppAction.MANAGE_MODULE, AppAction.VIEW_BASIC_INFO], raise_exception)
 
-    def gen_user_app_filters(self, username):
+    def gen_user_app_filters(self, username: str, tenant_id: str):
         """
         生成用户有权限的应用 Django 过滤条件
 
         所有应用的角色都会有基础信息查看权限
         """
         request = self._make_request(username, AppAction.VIEW_BASIC_INFO)
-        return self._gen_app_filters_by_request(request)
+        return self._gen_app_filters_by_request(request, tenant_id)
 
-    def gen_develop_app_filters(self, username):
+    def gen_develop_app_filters(self, username: str, tenant_id: str):
         """
         生成用户有开发者权限的应用 Django 过滤条件
 
         管理者，开发者才会有基础开发权限
         """
         request = self._make_request(username, AppAction.BASIC_DEVELOP)
-        return self._gen_app_filters_by_request(request)
+        return self._gen_app_filters_by_request(request, tenant_id)
 
-    def _gen_app_filters_by_request(self, request):
+    def _gen_app_filters_by_request(self, request, tenant_id: str):
         """根据 IAM Auth Request 生成 Django 的过滤器"""
         key_mapping = {"application.id": "code"}
 
         try:
-            filters = self.iam.make_filter(request, key_mapping=key_mapping)
+            filters = self._make_iam(tenant_id).make_filter(request, key_mapping=key_mapping)
         except AuthAPIError as e:
             logger.warning("generate user app filters failed: %s", str(e))
             return None

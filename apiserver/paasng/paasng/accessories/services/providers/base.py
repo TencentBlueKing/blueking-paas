@@ -99,7 +99,7 @@ class ResourcePoolProvider(BaseProvider):
             return InstanceData(
                 credentials=creds,
                 config={
-                    "__pk__": instance.pk,
+                    "__pk__": str(instance.pk),
                     "is_pre_created": True,
                     "provider_name": provider_name,
                     "enable_tls": bool(ca or cert or cert_key),

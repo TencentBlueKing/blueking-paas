@@ -27,6 +27,7 @@ from contextlib import contextmanager
 from operator import attrgetter
 from typing import Any, Dict, List, Optional
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext as _
@@ -38,7 +39,6 @@ from paas_wl.infras.cluster.shim import EnvClusterService, get_exposed_url_type
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
-from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.entities import Monitoring, Process
@@ -59,8 +59,10 @@ from paasng.platform.modules.helpers import (
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.modules.utils import get_module_init_repo_context
 from paasng.platform.sourcectl.connector import get_repo_connector
 from paasng.platform.sourcectl.docker.models import init_image_repo
+from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.manager import AppBuildPack, TemplateRuntimeManager
 from paasng.platform.templates.models import Template
@@ -172,6 +174,7 @@ class ModuleInitializer:
         repo_url: Optional[str] = None,
         repo_auth_info: Optional[dict] = None,
         source_dir: str = "",
+        init_template_to_repo: bool = False,
     ):
         """Initialize module vcs with source template
 
@@ -179,6 +182,7 @@ class ModuleInitializer:
         :param repo_url: the address of repository, used when source_origin is `AUTHORIZED_VCS`
         :param repo_auth_info: the auth of repository
         :param source_dir: The work dir, which containing Procfile.
+        :param init_template_to_repo: whether to initialize template to repo
         """
         if not self._should_initialize_vcs():
             logger.info(
@@ -186,30 +190,34 @@ class ModuleInitializer:
             )
             return {"code": "OK", "extra_info": {}, "dest_type": "null"}
 
-        client_secret = get_oauth2_client_secret(self.application.code)
-        context = {
-            "region": self.application.region,
-            "owner_username": get_username_by_bkpaas_user_id(self.application.owner),
-            "app_code": self.application.code,
-            "app_secret": client_secret,
-            "app_name": self.application.name,
-        }
-
         if not repo_type:
             raise ValueError("repo type must not be None")
 
+        # 将代码仓库地址等信息存储到 model 字段中
         connector = get_repo_connector(repo_type, self.module)
         connector.bind(repo_url, source_dir=source_dir, repo_auth_info=repo_auth_info)
 
-        # Only run syncing procedure when `source_init_template` is valid
-        if not Template.objects.filter(name=self.module.source_init_template, type=TemplateType.NORMAL).exists():
-            return {"code": "OK", "extra_info": {}, "dest_type": "null"}
+        try:
+            template = Template.objects.get(name=self.module.source_init_template)
+        except Template.DoesNotExist:
+            raise ValueError(f"Template ({self.module.source_init_template}) does not exist")
 
-        result = connector.sync_templated_sources(context)
+        # 将模板（存储在对象存储中心）同步到对象存储，仅普通模板支持该功能
+        result = {"code": "OK", "extra_info": {}, "dest_type": "null"}
+        if template.type == TemplateType.NORMAL:
+            context = get_module_init_repo_context(self.module, template.type)
+            syc_res = connector.sync_templated_sources(context=context)
+            if syc_res.is_success():
+                result = {"code": "OK", "extra_info": syc_res.extra_info, "dest_type": syc_res.dest_type}
+            else:
+                result = {"code": syc_res.error}
 
-        if result.is_success():
-            return {"code": "OK", "extra_info": result.extra_info, "dest_type": result.dest_type}
-        return {"code": result.error}
+        # 将模板代码初始化到应用的代码仓库中
+        if init_template_to_repo and repo_url:
+            connector.init_repo(template, repo_url, context=context)
+
+        # 返回应用初始化代码同步到对象存储的地址信息，用于前端创建成功页面的展示
+        return result
 
     def _should_initialize_vcs(self) -> bool:
         """Check if current module should run source template initializing procedure"""
@@ -353,6 +361,41 @@ def _humanize_exception(step_name: str, message: str):
         raise ModuleInitializationError(message) from e
 
 
+def create_new_repo(module: Module, repo_type: str, username: str) -> str:
+    """Create a new repo for module"""
+    # 使用平台代码仓库公共账号的 private_token 鉴权
+    conf = settings.APP_REPO_CONF
+    user_credentials = {"private_token": conf["private_token"]}
+    # 创建代码仓库，仓库名为应用 ID_模块名，仓库可见级别为 public
+    repo_name = f"{module.application.code}_{module.name}"
+    description = f"{module.application.name}({module.name} 模块)"
+    creator_cls = get_sourcectl_type(repo_type).repo_creator_class
+    if not creator_cls:
+        raise error_codes.CANNOT_CREATE_APP.f(_(f"源码仓库类型({repo_type})不支持新建代码仓库"))
+
+    try:
+        repo_url = creator_cls(
+            repository_group=settings.APP_REPOSITORY_GROUP, api_url=conf["api_url"], user_credentials=user_credentials
+        ).create_repo_and_add_member(repo_name=repo_name, description=description, username=username)
+    except Exception:
+        raise error_codes.CANNOT_CREATE_APP.f(_("新建代码仓库，请稍候再试"))
+    return repo_url
+
+
+def delete_repo(repo_type: str, repo_url: str):
+    """Delete the code repository created by the platform"""
+    # 使用平台代码仓库公共账号的 private_token 鉴权
+    conf = settings.APP_REPO_CONF
+    user_credentials = {"private_token": conf["private_token"]}
+    creator_cls = get_sourcectl_type(repo_type).repo_creator_class
+    if not creator_cls:
+        raise error_codes.CANNOT_CREATE_APP.f(_(f"源码仓库类型({repo_type})不支持删除代码仓库"))
+
+    creator_cls(
+        repository_group=settings.APP_REPOSITORY_GROUP, api_url=conf["api_url"], user_credentials=user_credentials
+    ).delete_project(repo_url)
+
+
 def init_module_in_view(*args, **kwargs) -> ModuleInitResult:
     """Initialize a module in view function, see `initialize_module(...)` for more information
 
@@ -393,6 +436,7 @@ def initialize_module(
     env_cluster_names: Dict[str, str],
     source_dir: str = "",
     bkapp_spec: Optional[Dict] = None,
+    init_template_to_repo: bool = False,
 ) -> ModuleInitResult:
     """Initialize a module
 
@@ -402,6 +446,7 @@ def initialize_module(
     :param source_dir: The work dir, which containing Procfile.
     :param cluster_name: optional engine cluster name
     :param bkapp_spec: optional cnative module bkapp_spec
+    :param init_template_to_repo: whether to initialize template to repo
     :raises: ModuleInitializationError when any steps failed
     """
     module_initializer = ModuleInitializer(module)
@@ -416,7 +461,11 @@ def initialize_module(
         # initialize module vcs with template if required
         with _humanize_exception("initialize_app_source", _("代码初始化过程失败，请稍候再试")):
             source_init_result = module_initializer.initialize_vcs_with_template(
-                repo_type, repo_url, repo_auth_info=repo_auth_info, source_dir=source_dir
+                repo_type,
+                repo_url,
+                repo_auth_info=repo_auth_info,
+                source_dir=source_dir,
+                init_template_to_repo=init_template_to_repo,
             )
 
     build_config = bkapp_spec["build_config"] if bkapp_spec else None

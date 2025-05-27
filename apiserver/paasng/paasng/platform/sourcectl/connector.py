@@ -19,18 +19,28 @@
 
 import abc
 import logging
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
+from textwrap import dedent
 from typing import Any, Dict, Optional, Type
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
+from cookiecutter.main import cookiecutter
 from django.conf import settings
 from django.db.models import Model
 
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
-from paasng.platform.sourcectl.models import GitRepository, RepoBasicAuthHolder, RepositoryInstance, SvnRepository
+from paasng.platform.sourcectl.git.client import GitClient, MutableURL
+from paasng.platform.sourcectl.models import (
+    GitProject,
+    GitRepository,
+    RepoBasicAuthHolder,
+    RepositoryInstance,
+    SvnRepository,
+)
 from paasng.platform.sourcectl.source_types import get_sourcectl_type, get_sourcectl_types
 from paasng.platform.sourcectl.svn.admin import get_svn_authorization_manager, promote_repo_privilege_temporary
 from paasng.platform.sourcectl.svn.client import SvnRepositoryClient, acquire_repo
@@ -38,6 +48,7 @@ from paasng.platform.sourcectl.svn.exceptions import CannotInitNonEmptyTrunk
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
 from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
 from paasng.platform.templates.templater import Templater
 from paasng.utils.basic import get_username_by_bkpaas_user_id, unique_id_generator
 from paasng.utils.blobstore import BlobStore, make_blob_store
@@ -73,16 +84,19 @@ class ModuleRepoConnector(abc.ABC):
 
     @abc.abstractmethod
     def sync_templated_sources(self, context: dict) -> SourceSyncResult:
-        """Sync the templated source to remote"""
+        """Sync the templated source to remote object storage
+        NOTE: Only supports normal templates, that is, the template code is stored in blob_url
+        """
 
-    def write_templates_to_dir(self, target_path: Path, templater_name: str, context: dict):
-        """Create the templated module source files and write them into target_path"""
-        try:
-            templater = Templater(tmpl_name=templater_name, type=TemplateType.NORMAL, **context)
-            templater.write_to_dir(target_path)
-        except Exception:
-            logger.exception("unable to render app source template %s", templater_name)
-            raise
+    @abc.abstractmethod
+    def init_repo(self, template: Template, repo_url: str, context: dict):
+        """
+        Initialize the template code into the source code repository of the application.
+
+        For normal templates, download the template code from object storage.
+        For plugin templates, download the template code from the code repository.
+        and render the app  context into the template code based on the template's `render_method`.
+        """
 
 
 class DBBasedMixin:
@@ -196,12 +210,23 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
         return self.save_repo_info(repo_url, source_dir=source_dir)
 
     def sync_templated_sources(self, context) -> SourceSyncResult:
-        """Sync the source to svn server with an initial commit"""
-        repo_url = self.get_repo().get_repo_url()
-        with generate_temp_dir() as source_path, promote_repo_privilege_temporary(self.application):
-            self.write_templates_to_dir(source_path, self.module.source_init_template, context)
-            svn_credentials = get_bksvn_config(name=self.repo_type).get_admin_credentials()
+        """Sync the templated source to remote object storage
+        NOTE: Only supports normal templates, that is, the template code is stored in blob_url
+        """
+        return generate_downloadable_app_template(self.module, context)
 
+    def init_repo(self, template: Template, repo_url: str, context: dict):
+        """Sync the source to svn server with an initial commit"""
+        with generate_temp_dir() as source_path, promote_repo_privilege_temporary(self.application):
+            # SVN 仅支持普通模板，并只能从 blob_url（模板上传到对象存储的路径）下载模板
+            try:
+                templater = Templater(tmpl_name=self.module.source_init_template, type=TemplateType.NORMAL, **context)
+                templater.write_to_dir(source_path)
+            except Exception:
+                logger.exception("unable to render app source template %s", self.module.source_init_template)
+                raise
+
+            svn_credentials = get_bksvn_config(name=self.repo_type).get_admin_credentials()
             sync_procedure = SvnSyncProcedure(repo_url, svn_credentials["username"], svn_credentials["password"])
             return sync_procedure.run(source_path=str(source_path))
 
@@ -215,6 +240,7 @@ class ExternalGitAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
 
     auth_method = "oauth"
     repository_model = GitRepository
+    client = GitClient()
 
     def bind(self, repo_url: Optional[str] = "", source_dir: str = "", **kwargs):
         if not repo_url:
@@ -222,8 +248,100 @@ class ExternalGitAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
         return self.save_repo_info(repo_url, source_dir=source_dir)
 
     def sync_templated_sources(self, context) -> SourceSyncResult:
-        """Publish templated source to external storage"""
+        """Sync the templated source to remote object storage
+        NOTE: Only supports normal templates, that is, the template code is stored in blob_url
+        """
         return generate_downloadable_app_template(self.module, context)
+
+    def init_repo(self, template: Template, repo_url: str, context: dict):
+        """
+        Initialize the template code into the source code repository of the application.
+
+        :param template: Template object
+        :param repo_url: Repo URL
+        """
+        git_project = GitProject.parse_from_repo_url(repo_url, self.module.source_type)
+        commit_message = "init repo"
+
+        with generate_temp_dir() as dest_dir:
+            # 克隆仓库到工作目录 dest_dir
+            self.client.clone(self._build_repo_url_with_auth(git_project), dest_dir)
+            # 将模板代码渲染到 dest_dir
+            self._render_template_to_dest_dir(template, dest_dir, context)
+
+            # 配置 Git 用户信息
+            self._fix_git_user_config(dest_dir / ".git" / "config")
+
+            # 提交并推送代码
+            self.client.add(dest_dir, Path("."))
+            self.client.commit(dest_dir, message=commit_message)
+            self.client.push(dest_dir)
+
+    def _render_template_to_dest_dir(self, template: Template, dest_dir: Path, context: dict):
+        """渲染模板到目标目录
+        NOTE: 普通模板从对象存储中下载模板代码，插件应用从代码仓库中下载模板代码。并根据模板的的 render_method 将应用相关的 context 渲染到模板代码中
+        """
+
+        if template.type == TemplateType.NORMAL:
+            # 普通代码仓库，用 djagno 模板引擎渲染
+            templater = Templater(tmpl_name=template.name, type=TemplateType.NORMAL, **context)
+            templater.write_to_dir(dest_dir)
+        elif template.type == TemplateType.PLUGIN:
+            with generate_temp_dir() as temp_dir, generate_temp_dir() as render_dir:
+                # 从代码仓库下载代码到本地目录
+                self._download_to(template.repo_url, template.get_source_dir(), temp_dir)
+                # 插件模板用 cookiecutter 渲染
+                cookiecutter(str(temp_dir), no_input=True, extra_context=context, output_dir=str(render_dir))
+                items = list(render_dir.iterdir())
+                if len(items) == 1:
+                    # 对于自带根目录的模板, 需要丢弃最外层
+                    items = list(items[0].iterdir())
+                for item in items:
+                    shutil.move(str(item), str(dest_dir / item.name))
+        else:
+            raise NotImplementedError
+
+    def _download_to(self, repo_url: str, source_dir: Path, dest_dir: Path):
+        """将代码仓库指定目录的内容下载到本地 `dest_dir` 目录"""
+        # FIXME: 模板代码仓库的托管类型，后续扩展到工蜂以外的代码仓库再在 Template model 中添加 repo_type 字段
+        repo_type = "tc_git"
+        git_project = GitProject.parse_from_repo_url(repo_url, repo_type)
+        repository = self._build_repo_url_with_auth(git_project)
+
+        with generate_temp_dir() as temp_dir:
+            real_source_dir = temp_dir / source_dir
+            self.client.clone(repository, path=temp_dir, depth=1)
+            self.client.clean_meta_info(temp_dir)
+            for path in real_source_dir.iterdir():
+                shutil.move(str(path), str(dest_dir / path.relative_to(real_source_dir)))
+        return dest_dir
+
+    def _build_repo_url_with_auth(self, project: GitProject) -> MutableURL:
+        """构建包含 username:token 的代码仓库地址
+
+        NOTE: 用于拉取模板代码和将代码写入到平台创建的代码仓库中。这里不能使用用户的 Oauth Token，只能用平台的 Private Token
+        """
+
+        username = "private"
+        password = settings.APP_REPO_CONF["private_token"]
+        api_url = settings.APP_REPO_CONF["api_url"]
+
+        return MutableURL(urljoin(api_url, project.path_with_namespace)).replace(
+            username=quote(username), password=quote(password)
+        )
+
+    def _fix_git_user_config(self, dest_dir: Path):
+        """修复 git 的用户信息缺失问题"""
+        with dest_dir.open(mode="a") as fh:
+            fh.write(
+                dedent(
+                    f"""
+            [user]
+                email = {settings.APP_REPO_CONF["email"]}
+                name = {settings.APP_REPO_CONF["username"]}
+            """
+                )
+            )
 
 
 class ExternalBasicAuthRepoConnector(ModuleRepoConnector, DBBasedMixin):
@@ -273,7 +391,9 @@ class ExternalBasicAuthRepoConnector(ModuleRepoConnector, DBBasedMixin):
         return repo_obj
 
     def sync_templated_sources(self, context) -> SourceSyncResult:
-        """Generate downloadable app template to s3, not updating to repo"""
+        """Sync the templated source to remote object storage
+        NOTE: Only supports normal templates, that is, the template code is stored in blob_url
+        """
         return generate_downloadable_app_template(self.module, context)
 
 

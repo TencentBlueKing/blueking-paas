@@ -37,6 +37,7 @@ from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.platform.modules.specs import ModuleSpecs, SourceOriginSpecs
 from paasng.platform.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.platform.sourcectl.serializers import RepositorySLZ
+from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.validators import validate_image_url
 from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.platform.templates.constants import TemplateType
@@ -260,6 +261,10 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
     source_dir = serializers.CharField(required=False, default="", allow_blank=True)
+    auto_create_repo = serializers.BooleanField(required=False, default=False, help_text="是否由平台新建代码仓库")
+    init_template_to_repo = serializers.BooleanField(
+        required=False, default=False, help_text="是否将模板代码初始化到代码仓库中"
+    )
 
     def validate_source_init_template(self, tmpl_name: str) -> str:
         if not tmpl_name:
@@ -274,6 +279,19 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
 
         return tmpl_name
+
+    def validate(self, attrs):
+        # 由平台新建代码仓库，则源码仓库类型必填，且需要检查是否支持创建仓库
+        if attrs["auto_create_repo"]:
+            if not attrs.get("source_control_type"):
+                raise ValidationError(_("新建代码仓库时，源码仓库类型不能为空"))
+            # 检查源码仓库类型是否支持初始化代码
+            if get_sourcectl_type(attrs["source_control_type"]).repo_creator_class is None:
+                raise ValidationError(_(f"源码仓库类型({attrs['source_control_type']})不支持新建代码仓库"))
+
+        if attrs["init_template_to_repo"] and (not attrs.get("source_init_template")):
+            raise ValidationError(_("将模板代码初始化到代码仓库中时，必须选择应用模板"))
+        return attrs
 
 
 class ModuleBuildConfigSLZ(serializers.Serializer):

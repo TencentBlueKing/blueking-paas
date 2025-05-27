@@ -112,6 +112,18 @@ class GetDockerIgnoreError(ExceptionWithMessage):
     """When .dockerignore can not be found in application directory"""
 
 
+class TcGitAPIError(ExceptionWithMessage):
+    """When tc_git api return error"""
+
+
+class RepoNameConflict(ExceptionWithMessage):
+    """仓库名称冲突, 同名仓库已存在"""
+
+
+class AuthTokenMissingError(ExceptionWithMessage):
+    """缺少鉴权凭证错误"""
+
+
 class GitLabBranchNameBugError(Exception):
     """existing bug in gitlab
     https://gitlab.com/gitlab-org/gitlab-ce/issues/42231

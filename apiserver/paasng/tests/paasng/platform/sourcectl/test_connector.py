@@ -42,7 +42,7 @@ class TestIntegratedSvnAppRepoConnector:
                 "app_code": bk_app.code,
                 "app_secret": "nosec",
                 "app_name": bk_app.name,
-            }
+            },
         )
         mocked_client.assert_called()
         mocked_client().sync_dir.assert_called()
@@ -66,7 +66,7 @@ class TestExternalGitAppRepoConnector:
                 "app_code": bk_app.code,
                 "app_secret": "nosec",
                 "app_name": bk_app.name,
-            }
+            },
         )
 
         assert ret.is_success() is True

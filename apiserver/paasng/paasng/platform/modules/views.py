@@ -64,7 +64,7 @@ from paasng.platform.modules.helpers import (
     get_image_labels_by_module,
     update_build_config_with_method,
 )
-from paasng.platform.modules.manager import ModuleCleaner, init_module_in_view
+from paasng.platform.modules.manager import ModuleCleaner, create_new_repo, delete_repo, init_module_in_view
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
@@ -306,16 +306,32 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             tenant_id=application.tenant_id,
         )
 
-        ret = init_module_in_view(
-            module,
-            repo_type=source_config.get("source_control_type"),
-            repo_url=source_config.get("source_repo_url"),
-            repo_auth_info=source_config.get("source_repo_auth_info"),
-            source_dir=source_config.get("source_dir", ""),
-            # 新模块集群配置复用默认模块的
-            env_cluster_names=get_app_cluster_names(application),
-            bkapp_spec=data["bkapp_spec"],
-        )
+        repo_type = source_config.get("source_control_type")
+        repo_url = source_config.get("source_repo_url")
+        # 由平台创建代码仓库
+        if source_config.get("auto_create_repo"):
+            repo_url = create_new_repo(module, repo_type, username=request.user.username)
+
+        try:
+            ret = init_module_in_view(
+                module,
+                repo_type=repo_type,
+                repo_url=repo_url,
+                repo_auth_info=source_config.get("source_repo_auth_info"),
+                source_dir=source_config.get("source_dir", ""),
+                # 新模块集群配置复用默认模块的
+                env_cluster_names=get_app_cluster_names(application),
+                bkapp_spec=data["bkapp_spec"],
+                init_template_to_repo=source_config.get("init_template_to_repo"),
+            )
+        except Exception:
+            # 创建应用失败，则需要删除由平台创建的代码仓库
+            if source_config.get("auto_create_repo"):
+                try:
+                    delete_repo(repo_type, repo_url)
+                except Exception:
+                    logger.exception(f"Failed to delete repository({repo_url}) during rollback")
+            raise
 
         return Response(
             data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},

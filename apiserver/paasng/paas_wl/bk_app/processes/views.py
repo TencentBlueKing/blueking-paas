@@ -35,6 +35,7 @@ from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.controllers import get_proc_ctl, judge_operation_frequent
 from paas_wl.bk_app.processes.exceptions import (
+    CurrentInstanceNotFound,
     PreviousInstanceNotFound,
     ProcessNotFound,
     ProcessOperationTooOften,
@@ -44,6 +45,8 @@ from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.bk_app.processes.processes import ProcessManager, list_cnative_module_processes_specs
 from paas_wl.bk_app.processes.serializers import (
     EventSerializer,
+    InstanceLogDownloadInputSLZ,
+    InstanceLogQueryInputSLZ,
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,
     ModuleScopedData,
@@ -445,76 +448,43 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    # The default number of lines to view when retrieving previous logs
-    view_prev_log_lines_limit = 400
-
-    def retrieve_previous_logs(self, request, code, module_name, environment, process_type, process_instance_name):
-        """获取进程实例上一次运行时的日志（目前限定 400 行）"""
+    def retrieve_logs(self, request, code, module_name, environment, process_type, process_instance_name):
+        """获取进程实例的日志"""
         env = self.get_env_via_path()
-
         manager = ProcessManager(env)
+
+        slz = InstanceLogQueryInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
         try:
             logs = manager.get_instance_logs(
                 process_type=process_type,
                 instance_name=process_instance_name,
-                previous=True,
-                tail_lines=self.view_prev_log_lines_limit,
+                previous=data["previous"],
+                tail_lines=data["tail_lines"],
             )
-        except PreviousInstanceNotFound:
+        except (PreviousInstanceNotFound, CurrentInstanceNotFound):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(status=status.HTTP_200_OK, data=logs.splitlines())
 
-    def download_previous_logs(self, request, code, module_name, environment, process_type, process_instance_name):
+    def download_logs(self, request, code, module_name, environment, process_type, process_instance_name):
         """下载进程实例上一次运行时的日志"""
         env = self.get_env_via_path()
-
         manager = ProcessManager(env)
+
+        slz = InstanceLogDownloadInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
         try:
-            logs = manager.get_instance_logs(process_type, process_instance_name, previous=True)
-        except PreviousInstanceNotFound:
+            logs = manager.get_instance_logs(process_type, process_instance_name, previous=data["previous"])
+        except (PreviousInstanceNotFound, CurrentInstanceNotFound):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         response = HttpResponse(logs, content_type="text/plain")
         response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-previous-logs.txt"'
-        return response
-
-    def retrieve_current_logs(self, request, code, module_name, environment, process_type, process_instance_name):
-        """获取进程实例当前运行时的日志"""
-        env = self.get_env_via_path()
-
-        tail_lines = None
-        try:
-            if "tail_lines" in request.query_params:
-                tail_lines = int(request.query_params.get("tail_lines"))
-        except (ValueError, TypeError):
-            pass
-
-        manager = ProcessManager(env)
-        try:
-            logs = manager.get_instance_logs(
-                process_type=process_type,
-                instance_name=process_instance_name,
-                previous=False,
-                tail_lines=tail_lines,
-            )
-        except PreviousInstanceNotFound:
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-        return Response(status=status.HTTP_200_OK, data=logs.splitlines())
-
-    def download_current_logs(self, request, code, module_name, environment, process_type, process_instance_name):
-        """下载进程实例当前运行时的日志"""
-        env = self.get_env_via_path()
-
-        manager = ProcessManager(env)
-        try:
-            logs = manager.get_instance_logs(process_type, process_instance_name, previous=False)
-        except PreviousInstanceNotFound:
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-        response = HttpResponse(logs, content_type="text/plain")
-        response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-current-logs.txt"'
         return response
 
     def restart(self, request, code, module_name, environment, process_instance_name):

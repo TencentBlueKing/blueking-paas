@@ -84,6 +84,7 @@ from paasng.platform.modules.serializers import (
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
+from paasng.platform.templates.serializers import TemplateRenderOutputSLZ
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
 
@@ -640,3 +641,17 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 }
             ).data
         )
+
+
+class ModuleTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @swagger_auto_schema(response_serializer=TemplateRenderOutputSLZ)
+    def retrieve(self, request, code, module_name):
+        """获取当前模块的初始化模板信息"""
+        module = self.get_module_via_path()
+
+        # 可能存在远古模版，并不在当前模版配置中
+        template = get_object_or_404(Template, name=module.source_init_template)
+
+        return Response(TemplateRenderOutputSLZ(template).data)

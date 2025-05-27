@@ -62,18 +62,11 @@ export default {
       return http.post(url, data);
     },
     /**
-     * 应用详情-获取部署集群列表
-     */
-    getClusters() {
-      const url = `${BACKEND_URL}/api/plat_mgt/clusters/`;
-      return http.get(url);
-    },
-    /**
      * 应用详情-更新部署集群
      */
     updateDeployCluster({}, { appCode, moduleId, env, data }) {
       const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/envs/${env}/cluster/`;
-      return http.post(url, data);
+      return http.put(url, data);
     },
     /**
      * 特性管理-获取特性列表

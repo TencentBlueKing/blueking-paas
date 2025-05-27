@@ -346,10 +346,10 @@ export default {
         this.$set(this.editApp, 'loading', false);
       }
     },
-    // 获取部署集群列表
+    // 取部署集群列表
     async getClusters() {
       try {
-        const res = await this.$store.dispatch('tenantOperations/getClusters');
+        const res = await this.$store.dispatch('tenant/getClusterList');
         this.deployClusterList = res;
       } catch (e) {
         this.catchErrorHandler(e);

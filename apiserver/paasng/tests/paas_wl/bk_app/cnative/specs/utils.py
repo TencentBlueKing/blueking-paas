@@ -59,16 +59,19 @@ def create_cnative_deploy(
         model_res = AppModelResource.objects.get(module_id=str(module.id))
         model_res.use_resource(resource)
 
-    return AppModelDeploy.objects.create(
+    obj, _ = AppModelDeploy.objects.update_or_create(
         application_id=app.id,
         module_id=module.id,
         environment_name=env.environment,
-        name=name,
-        revision=model_res.revision,
-        status=status.value,
-        operator=user,
-        tenant_id=app.tenant_id,
+        defaults={
+            "name": name,
+            "revision": model_res.revision,
+            "status": status.value,
+            "operator": user.id,
+            "tenant_id": app.tenant_id,
+        },
     )
+    return obj
 
 
 def create_condition(

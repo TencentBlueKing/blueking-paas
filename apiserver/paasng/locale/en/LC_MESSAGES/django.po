@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-05-26 15:45+0800\n"
+"POT-Creation-Date: 2025-05-27 10:33+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -498,6 +498,48 @@ msgstr "Parameter format error"
 msgid "该域名与路径组合已被其他应用或模块使用"
 msgstr ""
 "This domain and path combination is already in use by another APP or module."
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:84
+#: paas_wl/workloads/networking/ingress/domains/manager.py:163
+msgid "未部署的环境无法添加独立域名，请先部署对应环境"
+msgstr "Unable to add a domain for an undeployed environment, please deploy first"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:86
+#: paas_wl/workloads/networking/ingress/domains/manager.py:117
+#: paas_wl/workloads/networking/ingress/domains/manager.py:165
+#: paas_wl/workloads/networking/ingress/domains/manager.py:191
+msgid "该域名为平台保留域名，无法使用，请使用其他域名"
+msgstr "The domain conflicts with system-reserved domains and cannot be used, please use another domain"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:101
+msgid "找不到有效的 TLS 证书"
+msgstr "Unable to find a valid TLS certificate"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:103
+#, python-brace-format
+msgid "域名 {host} 已被占用"
+msgstr "The domain {host} has been occupied"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:106
+#: paas_wl/workloads/networking/ingress/domains/manager.py:180
+#: paasng/accessories/servicehub/views.py:599
+msgid "未知错误"
+msgstr "Unknown error"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:113
+#: paas_wl/workloads/networking/ingress/domains/manager.py:187
+msgid "该域名已被绑定为主访问入口, 请解绑后再进行更新操作"
+msgstr "The domain has been bound as the application's main entrance domain. please update after unbinding"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:130
+#: paas_wl/workloads/networking/ingress/domains/manager.py:210
+msgid "该域名已被绑定为主访问入口, 请解绑后再进行删除操作"
+msgstr "The domain has been bound as the application's main entrance domain. please delete after unbinding"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:135
+#: paas_wl/workloads/networking/ingress/domains/manager.py:219
+msgid "无法删除集群中域名访问记录"
+msgstr "Unable to delete the domain record in the cluster's configuration"
 
 #: paas_wl/workloads/networking/ingress/serializers.py:51
 msgid "内部服务端口列表 ports 不能为空"
@@ -4485,6 +4527,5 @@ msgstr "zh-cn"
 #~ msgid "用户没有权限在 {} 下创建应用"
 #~ msgstr "User does not have permission to create APP under {}"
 
-#, python-brace-format
 #~ msgid "模板名称: {tmpl_name}"
 #~ msgstr "Template Name: {tmpl_name}"

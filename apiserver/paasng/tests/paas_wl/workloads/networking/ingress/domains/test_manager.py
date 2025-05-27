@@ -95,7 +95,8 @@ class TestCNativeCustomDomainManager:
         ],
     )
     @mock.patch("paas_wl.bk_app.cnative.specs.handlers.deploy_networking")
-    def test_create_failed_if_domain_is_system(self, mocker, domain, bk_cnative_app, bk_stag_env):
+    def test_create_failed_if_domain_is_system(self, mocker, domain, bk_cnative_app, bk_stag_env, bk_user):
+        create_cnative_deploy(bk_stag_env, bk_user)
         mgr = CNativeCustomDomainManager(bk_cnative_app)
         with pytest.raises(ValidationError, match="平台保留域名"):
             mgr.create(env=bk_stag_env, host=domain, path_prefix="/", https_enabled=False)
@@ -130,7 +131,8 @@ class TestCNativeCustomDomainManager:
         assert Domain.objects.get(environment_id=bk_stag_env.id).name == "bar.example.com"
 
     @mock.patch("paas_wl.bk_app.cnative.specs.handlers.deploy_networking")
-    def test_update_failed_if_domain_is_system(self, mocker, bk_cnative_app, bk_stag_env, domain_foo_com):
+    def test_update_failed_if_domain_is_system(self, mocker, bk_cnative_app, bk_stag_env, domain_foo_com, bk_user):
+        create_cnative_deploy(bk_stag_env, bk_user)
         with pytest.raises(ValidationError, match="平台保留域名"):
             CNativeCustomDomainManager(bk_cnative_app).update(
                 domain_foo_com, host="foobar.sub-domain.example.org", path_prefix="/", https_enabled=False

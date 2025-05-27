@@ -477,7 +477,7 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         return response
 
     def retrieve_current_logs(self, request, code, module_name, environment, process_type, process_instance_name):
-        """获取进程实例当前运行时的日志（目前限定 400 行）"""
+        """获取进程实例当前运行时的日志"""
         env = self.get_env_via_path()
 
         tail_lines = None

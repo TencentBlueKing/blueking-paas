@@ -16,15 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 import datetime
-from unittest import mock
+import json
 
 import pytest
 from django.urls import reverse
 
 from paas_wl.bk_app.applications.models.app import WlApp
 from paas_wl.infras.cluster.constants import ClusterType
-from paas_wl.infras.cluster.models import Cluster
-from paas_wl.infras.cluster.shim import ClusterAllocator
+from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
 from paasng.accessories.publish.market.constant import AppType
 from paasng.accessories.publish.market.models import Product
 from paasng.accessories.publish.sync_market.handlers import register_app_core_data
@@ -208,6 +207,16 @@ class TestApplicationDetailView:
             available_tenant_ids=[tenant_id],
         )
 
+        # 创建集群分配策略
+        policy_data = {
+            "type": "uniform",
+            "allocation_policy": {
+                "env_specific": False,
+                "clusters": ["tenant", "cluster", "new-cluster"],
+            },
+        }
+        ClusterAllocationPolicy.objects.update_or_create(tenant_id=tenant_id, defaults=policy_data)
+
         yield cluster1, cluster2
         # 清理测试集群
         cluster1.delete()
@@ -273,19 +282,19 @@ class TestApplicationDetailView:
 
     def test_update_cluster(self, bk_app, plat_mgt_api_client, clusters):
         """测试更新应用集群"""
-        with mock.patch.object(ClusterAllocator, "check_available", return_value=True):
-            env = bk_app.get_default_module().envs.get(environment="prod")
-            wl_app = WlApp.objects.create(name=env.engine_app.name, region=bk_app.region)
 
-            url = reverse(
-                "plat_mgt.applications.update_cluster",
-                kwargs={"app_code": bk_app.code, "module_name": bk_app.get_default_module().name, "env_name": "prod"},
-            )
-            data = {"name": "new-cluster"}
-            rsp = plat_mgt_api_client.put(url, data=data)
-            assert rsp.status_code == 204
+        env = bk_app.get_default_module().envs.get(environment="prod")
+        wl_app = WlApp.objects.create(name=env.engine_app.name, region=bk_app.region)
 
-            # 验证集群是否更新成功
-            wl_app.refresh_from_db()
-            assert wl_app.latest_config is not None, "latest_config is None"
-            assert wl_app.latest_config.cluster == "new-cluster"
+        url = reverse(
+            "plat_mgt.applications.update_cluster",
+            kwargs={"app_code": bk_app.code, "module_name": bk_app.get_default_module().name, "env_name": "prod"},
+        )
+        data = {"name": "new-cluster"}
+        rsp = plat_mgt_api_client.put(url, data=json.dumps(data), content_type="application/json")
+        assert rsp.status_code == 204
+
+        # 验证集群是否更新成功
+        wl_app.refresh_from_db()
+        assert wl_app.latest_config is not None, "latest_config is None"
+        assert wl_app.latest_config.cluster == "new-cluster"

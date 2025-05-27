@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-05-14 16:26+0800\n"
+"POT-Creation-Date: 2025-05-27 10:33+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -320,31 +320,37 @@ msgstr "Supports auto-scaling"
 msgid "支持 BCS Egress"
 msgstr "Supports BCS Egress"
 
-#: paas_wl/infras/cluster/constants.py:66
+#: paas_wl/infras/cluster/constants.py:62
+#, fuzzy
+#| msgid "支持 BCS Egress"
+msgid "支持 gRPC Ingress"
+msgstr "Supports BCS Egress"
+
+#: paas_wl/infras/cluster/constants.py:68
 msgid "BCS 项目 ID"
 msgstr "BCS Project ID"
 
-#: paas_wl/infras/cluster/constants.py:67
+#: paas_wl/infras/cluster/constants.py:69
 msgid "BCS 集群 ID"
 msgstr "BCS Cluster ID"
 
-#: paas_wl/infras/cluster/constants.py:68
+#: paas_wl/infras/cluster/constants.py:70
 msgid "蓝鲸业务 ID"
 msgstr "Blueking Business ID"
 
-#: paas_wl/infras/cluster/constants.py:70
+#: paas_wl/infras/cluster/constants.py:72
 msgid "跳过内置镜像凭证注入"
 msgstr "Skip inject builtin image credentials"
 
-#: paas_wl/infras/cluster/constants.py:73
+#: paas_wl/infras/cluster/constants.py:75
 msgid "Ingress 类名"
 msgstr "Ingress Class Name"
 
-#: paas_wl/infras/cluster/constants.py:79
+#: paas_wl/infras/cluster/constants.py:81
 msgid "统一分配"
 msgstr "Uniform allocation"
 
-#: paas_wl/infras/cluster/constants.py:80
+#: paas_wl/infras/cluster/constants.py:82
 msgid "按规则分配"
 msgstr "Allocate according to rules"
 
@@ -492,6 +498,48 @@ msgstr "Parameter format error"
 msgid "该域名与路径组合已被其他应用或模块使用"
 msgstr ""
 "This domain and path combination is already in use by another APP or module."
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:84
+#: paas_wl/workloads/networking/ingress/domains/manager.py:163
+msgid "未部署的环境无法添加独立域名，请先部署对应环境"
+msgstr "Unable to add a domain for an undeployed environment, please deploy first"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:86
+#: paas_wl/workloads/networking/ingress/domains/manager.py:117
+#: paas_wl/workloads/networking/ingress/domains/manager.py:165
+#: paas_wl/workloads/networking/ingress/domains/manager.py:191
+msgid "该域名为平台保留域名，无法使用，请使用其他域名"
+msgstr "The domain conflicts with system-reserved domains and cannot be used, please use another domain"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:101
+msgid "找不到有效的 TLS 证书"
+msgstr "Unable to find a valid TLS certificate"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:103
+#, python-brace-format
+msgid "域名 {host} 已被占用"
+msgstr "The domain {host} has been occupied"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:106
+#: paas_wl/workloads/networking/ingress/domains/manager.py:180
+#: paasng/accessories/servicehub/views.py:599
+msgid "未知错误"
+msgstr "Unknown error"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:113
+#: paas_wl/workloads/networking/ingress/domains/manager.py:187
+msgid "该域名已被绑定为主访问入口, 请解绑后再进行更新操作"
+msgstr "The domain has been bound as the application's main entrance domain. please update after unbinding"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:130
+#: paas_wl/workloads/networking/ingress/domains/manager.py:210
+msgid "该域名已被绑定为主访问入口, 请解绑后再进行删除操作"
+msgstr "The domain has been bound as the application's main entrance domain. please delete after unbinding"
+
+#: paas_wl/workloads/networking/ingress/domains/manager.py:135
+#: paas_wl/workloads/networking/ingress/domains/manager.py:219
+msgid "无法删除集群中域名访问记录"
+msgstr "Unable to delete the domain record in the cluster's configuration"
 
 #: paas_wl/workloads/networking/ingress/serializers.py:51
 msgid "内部服务端口列表 ports 不能为空"
@@ -651,7 +699,7 @@ msgid "日志查询快照失效, 请刷新后重试。"
 msgstr "The  Logging  snapshot has failed, please refresh and try again."
 
 #: paasng/accessories/log/views/logs.py:321
-#: paasng/bk_plugins/pluginscenter/views.py:1207
+#: paasng/bk_plugins/pluginscenter/views.py:1215
 msgid "聚合时间直方图失败，请稍后再试。"
 msgstr "Failed to aggregate time histogram, please try again later."
 
@@ -784,10 +832,6 @@ msgstr "get available service plan failed"
 #, python-brace-format
 msgid "模块 {ref_module_name} 不存在"
 msgstr "Module {ref_module_name} does not exist"
-
-#: paasng/accessories/servicehub/views.py:599
-msgid "未知错误"
-msgstr "Unknown error"
 
 #: paasng/accessories/servicehub/views.py:602
 #, python-brace-format
@@ -999,7 +1043,7 @@ msgid "无法停止发布"
 msgstr "Can't stop publish"
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:34
-#: paasng/bk_plugins/pluginscenter/views.py:717
+#: paasng/bk_plugins/pluginscenter/views.py:725
 msgid "插件不支持终止发布操作"
 msgstr "Plugin does not support abort publish operation"
 
@@ -1371,57 +1415,57 @@ msgstr "Tc_git interface request timeout"
 msgid "工蜂接口请求异常"
 msgstr "Tc_git interface request exception"
 
-#: paasng/bk_plugins/pluginscenter/views.py:431
+#: paasng/bk_plugins/pluginscenter/views.py:439
 msgid "插件已下架，不能再执行下架操作"
 msgstr "The plugin has already been archived and cannot be archived again."
 
-#: paasng/bk_plugins/pluginscenter/views.py:455
+#: paasng/bk_plugins/pluginscenter/views.py:463
 msgid "插件未下架，不能重新上架"
 msgstr "Plugin not unlisted, cannot be relisted."
 
-#: paasng/bk_plugins/pluginscenter/views.py:741
+#: paasng/bk_plugins/pluginscenter/views.py:749
 msgid "当前版本已回滚，不可再次回滚"
 msgstr ""
 "The current version has already been rolled back and cannot be rolled back "
 "again."
 
-#: paasng/bk_plugins/pluginscenter/views.py:743
+#: paasng/bk_plugins/pluginscenter/views.py:751
 msgid "只允许最新版本回滚"
 msgstr "Only the latest version can be rolled back."
 
-#: paasng/bk_plugins/pluginscenter/views.py:854
+#: paasng/bk_plugins/pluginscenter/views.py:862
 msgid "仅支持重试当前阶段"
 msgstr "Only supports retrying the current phase"
 
-#: paasng/bk_plugins/pluginscenter/views.py:872
+#: paasng/bk_plugins/pluginscenter/views.py:880
 msgid "仅支持更新当前阶段状态"
 msgstr "Only updating the current status is supported."
 
-#: paasng/bk_plugins/pluginscenter/views.py:988
+#: paasng/bk_plugins/pluginscenter/views.py:996
 msgid "用户 {} 已存在"
 msgstr "User {} already exists."
 
-#: paasng/bk_plugins/pluginscenter/views.py:1016
+#: paasng/bk_plugins/pluginscenter/views.py:1024
 msgid "插件成员 {} 不存在"
 msgstr "Plugin member {} does not exist."
 
-#: paasng/bk_plugins/pluginscenter/views.py:1096
+#: paasng/bk_plugins/pluginscenter/views.py:1104
 msgid "查询标准输出日志失败，请稍后再试。"
 msgstr "Failed to query standard output logs. Please try again later."
 
-#: paasng/bk_plugins/pluginscenter/views.py:1134
+#: paasng/bk_plugins/pluginscenter/views.py:1142
 msgid "查询结构化日志失败，请稍后再试。"
 msgstr "Failed to query structured logs. Please try again later."
 
-#: paasng/bk_plugins/pluginscenter/views.py:1170
+#: paasng/bk_plugins/pluginscenter/views.py:1178
 msgid "查询访问日志失败，请稍后再试。"
 msgstr "Failed to query access logs. Please try again later."
 
-#: paasng/bk_plugins/pluginscenter/views.py:1246
+#: paasng/bk_plugins/pluginscenter/views.py:1254
 msgid "统计日志的字段失败，请稍后再试。"
 msgstr "Failed to count log fields. Please try again later."
 
-#: paasng/bk_plugins/pluginscenter/views.py:1332
+#: paasng/bk_plugins/pluginscenter/views.py:1340
 msgid "可见范围修改失败：正在审批中"
 msgstr "Failed to modify visibility range: under review."
 
@@ -2176,7 +2220,7 @@ msgid "规则"
 msgstr "Rules"
 
 #: paasng/plat_admin/admin42/serializers/services.py:78
-#: paasng/plat_mgt/infras/services/serializers/services.py:103
+#: paasng/plat_mgt/infras/services/serializers/services.py:132
 msgid ""
 "{} 不符合规范: 由 3-32 位字母、数字、连接符(-)、下划线(_) 字符组成，以字母开"
 "头，字母或数字结尾"
@@ -2289,14 +2333,14 @@ msgid "当前环境所部署的集群不支持 BCS Egress"
 msgstr ""
 "The cluster deployed in the current environment does not support BCS Egress"
 
-#: paasng/plat_admin/admin42/views/services.py:120
-#: paasng/plat_mgt/applications/views/services.py:163
+#: paasng/plat_admin/admin42/views/services.py:108
+#: paasng/plat_mgt/applications/views/services.py:120
 msgid "当前环境不存在未分配的增强服务实例"
 msgstr ""
 "There are no unallocated instances of Add-ons in the current environment"
 
-#: paasng/plat_admin/admin42/views/services.py:147
-#: paasng/plat_mgt/applications/views/services.py:149
+#: paasng/plat_admin/admin42/views/services.py:135
+#: paasng/plat_mgt/applications/views/services.py:152
 msgid "迁移应用不支持回收增强服务实例"
 msgstr ""
 "Migrating applications does not support reclaiming enhanced service "
@@ -2322,7 +2366,7 @@ msgstr "Testing in progress"
 msgid "无法获取到有效的配置信息."
 msgstr "No valid configuration information is available."
 
-#: paasng/plat_mgt/applications/serializers/application.py:184
+#: paasng/plat_mgt/applications/serializers/application.py:182
 #, python-brace-format
 msgid "于{time}{operation}{status}"
 msgstr " {operation} {status} at {time}"
@@ -2604,31 +2648,31 @@ msgstr ""
 "The cluster is not configured with a default root domain. Please check if "
 "the cluster configuration is correct."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:83
+#: paasng/platform/bkapp_model/serializers/serializers.py:76
 #: paasng/platform/bkapp_model/serializers/v1alpha2.py:205
 msgid ""
 "服务名应仅包含小写字母，数字字符和连字符\"-\"，且必须以字母数字字符开头和结"
 "尾，最大长度不超过 63"
 msgstr ""
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:153
+#: paasng/platform/bkapp_model/serializers/serializers.py:146
 msgid "至多设置一个探活配置"
 msgstr "At most one liveness probe configuration can be set."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:155
+#: paasng/platform/bkapp_model/serializers/serializers.py:148
 msgid "至少设置一个探活配置"
 msgstr "At least one liveness probe configuration must be set."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:339
+#: paasng/platform/bkapp_model/serializers/serializers.py:334
 msgid "服务发现列表中存在重复项：{}"
 msgstr "Duplicate entries found in svc-discovery list: {}"
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:359
+#: paasng/platform/bkapp_model/serializers/serializers.py:354
 msgid "至少需要提供一个有效值：nameservers 或 host_aliases"
 msgstr ""
 "At least one valid value must be provided: nameservers or host_aliases."
 
-#: paasng/platform/bkapp_model/serializers/serializers.py:365
+#: paasng/platform/bkapp_model/serializers/serializers.py:360
 msgid "BkApp 配置信息"
 msgstr "BkApp config info"
 
@@ -3518,13 +3562,13 @@ msgid "当前应用不支持配置「启动命令」"
 msgstr ""
 "The current APP does not support the configuration of 「start commands」"
 
-#: paasng/platform/smart_app/management/commands/smart_tool.py:59
+#: paasng/platform/smart_app/management/commands/smart_tool.py:60
 #: paasng/platform/smart_app/views.py:212
 #: paasng/platform/smart_app/views.py:289
 msgid "缺失应用市场配置（market)!"
 msgstr "Missing  Market  configuration (market)!"
 
-#: paasng/platform/smart_app/management/commands/smart_tool.py:61
+#: paasng/platform/smart_app/management/commands/smart_tool.py:62
 msgid "请检查源码包是否存在 app_desc.yaml 文件"
 msgstr "Please check if the source package has an app_desc.yaml file"
 
@@ -4478,6 +4522,5 @@ msgstr "zh-cn"
 #~ msgid "用户没有权限在 {} 下创建应用"
 #~ msgstr "User does not have permission to create APP under {}"
 
-#, python-brace-format
 #~ msgid "模板名称: {tmpl_name}"
 #~ msgstr "Template Name: {tmpl_name}"

@@ -54,8 +54,8 @@ apiserver 为 blueking-paas 项目的主控模块。
 
 - `poetry env info --path`：获取虚拟环境路径
 - `source $(poetry env info --path)/bin/activate`：手动激活虚拟环境
-- `poetry run {COMMAND}`：使用 virtualenv 执行命令
 - `python manage.py runserver 0.0.0.0:8000`：在虚拟环境下启动项目，并支持外部访问
+- `poetry run {COMMAND}`：使用 virtualenv 执行命令
 
 注：poetry 较新的版本中默认不带 `poetry shell`，需要手动安装
 
@@ -106,15 +106,19 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 1. 在 `apiserver/paasng/` 目录下新建 `settings_local.yaml` 文件，用于配置本地服务（如 MySQL、Redis 等）
 2. 在 `apiserver/paasng/` 目录下新建 `settings_files` 目录，用于存放配置通用资源的文件，具体可以参考 [配置模板](./paasng/conf.yaml.tpl) 和 [配置文件](./paasng/paasng/settings/__init__.py)
 3. `settings_local.yaml` 中配置 MySQL：
-   1. `DATABASE_HOST: ''`
-   2. `DATABASE_NAME: bk_paas_ng`
-   3. `DATABASE_PASSWORD: ''`
-   4. `DATABASE_PORT: 3306`
-   5. `DATABASE_USER: root`
+```
+DATABASE_HOST: ''
+DATABASE_NAME: bk_paas_ng
+DATABASE_PASSWORD: ''
+DATABASE_PORT: 3306
+DATABASE_USER: root
+```
 4. `apiserver/paasng/settings_files` 中配置通用资源：
-   1. `BKKRILL_ENCRYPT_SECRET_KEY: ''`
-   2. `LOGIN_FULL: ''`
-   3. `BKAUTH_USER_INFO_APIGW_URL: ''`
+```
+BKKRILL_ENCRYPT_SECRET_KEY: ''
+LOGIN_FULL: ''
+BKAUTH_USER_INFO_APIGW_URL: ''
+```
 
 ## 测试
 

@@ -296,7 +296,7 @@ class ProcessManager:
         self,
         process_type: str,
         instance_name: str,
-        previous: bool = False,
+        previous: bool,
         container_name: str | None = None,
         tail_lines: Optional[int] = None,
     ):
@@ -308,74 +308,36 @@ class ProcessManager:
         :param container_name: 容器名称
         :param tail_lines: 获取日志末尾的行数
         :return: str
+        :raise:
+            PreviousInstanceNotFound when previous instance not found
+            CurrentInstanceNotFound when current instance not found.
+            ApiException for other API-related errors.
         """
         if not container_name:
             container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
 
         k8s_client = get_client_by_app(self.wl_app)
 
-        response = KPod(k8s_client).get_log(
-            name=instance_name,
-            namespace=self.wl_app.namespace,
-            previous=previous,
-            container=container_name,
-            tail_lines=tail_lines,
-        )
-
-        return ensure_text(response.data)
-
-    def get_current_logs(
-        self,
-        process_type: str,
-        instance_name: str,
-        container_name: str | None = None,
-        tail_lines: Optional[int] = None,
-    ):
-        """获取进程实例当前运行时日志"""
         try:
-            logs = self.get_instance_logs(
-                process_type=process_type,
-                instance_name=instance_name,
-                previous=False,
-                container_name=container_name,
+            rsp = KPod(k8s_client).get_log(
+                name=instance_name,
+                namespace=self.wl_app.namespace,
+                previous=previous,
+                container=container_name,
                 tail_lines=tail_lines,
             )
         except ApiException as e:
-            # k8s apiserver 返回错误, 未找到当前运行的容器
-            if e.status == 404:
-                raise CurrentInstanceNotFound("Current running container not found")
-            else:
-                raise
-
-        return logs
-
-    def get_previous_logs(
-        self,
-        process_type: str,
-        instance_name: str,
-        container_name: str | None = None,
-        tail_lines: Optional[int] = None,
-    ):
-        """获取进程实例上一次运行时日志"""
-
-        try:
-            logs = self.get_instance_logs(
-                process_type=process_type,
-                instance_name=instance_name,
-                previous=True,
-                container_name=container_name,
-                tail_lines=tail_lines,
-            )
-        except ApiException as e:
-            # k8s apiserver 返回错误 未找到上一个中断退出的容器
             if e.status == 400 and "previous terminated container" in json.loads(e.body)["message"]:
                 raise PreviousInstanceNotFound("Terminated container not found")
             elif e.status == 404:
-                raise PreviousInstanceNotFound("Instance not found")
+                if previous:
+                    raise PreviousInstanceNotFound("Previous instance not found")
+                else:
+                    raise CurrentInstanceNotFound("Current running container not found")
             else:
                 raise
 
-        return logs
+        return ensure_text(rsp.data)
 
     def _list_default_specs(self, target_status: Optional[str] = None) -> list[dict]:
         """查询普通应用的进程 specs"""

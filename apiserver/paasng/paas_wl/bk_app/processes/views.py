@@ -454,8 +454,11 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         manager = ProcessManager(env)
         try:
-            logs = manager.get_previous_logs(
-                process_type, process_instance_name, tail_lines=self.view_prev_log_lines_limit
+            logs = manager.get_instance_logs(
+                process_type=process_type,
+                instance_name=process_instance_name,
+                previous=True,
+                tail_lines=self.view_prev_log_lines_limit,
             )
         except PreviousInstanceNotFound:
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -468,7 +471,7 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         manager = ProcessManager(env)
         try:
-            logs = manager.get_previous_logs(process_type, process_instance_name)
+            logs = manager.get_instance_logs(process_type, process_instance_name, previous=True)
         except PreviousInstanceNotFound:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -489,7 +492,12 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         manager = ProcessManager(env)
         try:
-            logs = manager.get_current_logs(process_type, process_instance_name, tail_lines=tail_lines)
+            logs = manager.get_instance_logs(
+                process_type=process_type,
+                instance_name=process_instance_name,
+                previous=False,
+                tail_lines=tail_lines,
+            )
         except PreviousInstanceNotFound:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -501,7 +509,7 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         manager = ProcessManager(env)
         try:
-            logs = manager.get_current_logs(process_type, process_instance_name)
+            logs = manager.get_instance_logs(process_type, process_instance_name, previous=False)
         except PreviousInstanceNotFound:
             return Response(status=status.HTTP_204_NO_CONTENT)
 

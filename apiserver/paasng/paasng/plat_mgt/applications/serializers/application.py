@@ -132,7 +132,7 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     code = serializers.CharField(read_only=True, help_text="应用 ID")
     name = serializers.CharField(read_only=True, help_text="应用名称")
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
-    owner = serializers.CharField(source="owner.username", read_only=True, help_text="应用所有者")
+    app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
     type = serializers.CharField(read_only=True, help_text="应用类型")
     is_active = serializers.BooleanField(read_only=True, help_text="应用状态")
     creator = UserNameField(read_only=True, help_text="创建人")

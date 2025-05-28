@@ -358,32 +358,6 @@ urlpatterns = [
         log_config.LogConfigView.as_view(),
         name="admin.applications.engine.log_config.manage",
     ),
-    # 部署列表页
-    re_path(r"^deployments/$", deployments.DeploymentListView.as_view(), name="admin.deployments.list"),
-    re_path(
-        r"^operation/statistics/deploy/apps/$",
-        deploy.AppDeployStatisticsView.as_view({"get": "get", "post": "export"}),
-        name="admin.operation.statistics.deploy.apps",
-    ),
-    re_path(
-        r"^operation/statistics/deploy/apps/export/$",
-        deploy.AppDeployStatisticsView.as_view({"get": "export"}),
-        name="admin.operation.statistics.deploy.apps.export",
-    ),
-    re_path(
-        r"^operation/statistics/deploy/developers/$",
-        deploy.DevelopersDeployStatisticsView.as_view({"get": "get"}),
-        name="admin.operation.statistics.deploy.developers",
-    ),
-    re_path(
-        r"^operation/statistics/deploy/developers/export/$",
-        deploy.DevelopersDeployStatisticsView.as_view({"get": "export"}),
-        name="admin.operation.statistics.deploy.developers.export",
-    ),
-]
-
-# 平台管理-用户管理
-urlpatterns += [
     # 用户管理-首页
     re_path(r"^accountmgr/$", accountmgr.UserProfilesManageView.as_view(), name="admin.accountmgr.index"),
     # 用户管理-用户列表
@@ -409,6 +383,28 @@ urlpatterns += [
         r"^api/accountmgr/account_feature_flags/$",
         accountmgr.AccountFeatureFlagManageViewSet.as_view({"get": "list", "post": "update_or_create"}),
         name="admin.accountmgr.account_feature_flags.api",
+    ),
+    # 部署列表页
+    re_path(r"^deployments/$", deployments.DeploymentListView.as_view(), name="admin.deployments.list"),
+    re_path(
+        r"^operation/statistics/deploy/apps/$",
+        deploy.AppDeployStatisticsView.as_view({"get": "get", "post": "export"}),
+        name="admin.operation.statistics.deploy.apps",
+    ),
+    re_path(
+        r"^operation/statistics/deploy/apps/export/$",
+        deploy.AppDeployStatisticsView.as_view({"get": "export"}),
+        name="admin.operation.statistics.deploy.apps.export",
+    ),
+    re_path(
+        r"^operation/statistics/deploy/developers/$",
+        deploy.DevelopersDeployStatisticsView.as_view({"get": "get"}),
+        name="admin.operation.statistics.deploy.developers",
+    ),
+    re_path(
+        r"^operation/statistics/deploy/developers/export/$",
+        deploy.DevelopersDeployStatisticsView.as_view({"get": "export"}),
+        name="admin.operation.statistics.deploy.developers.export",
     ),
 ]
 

@@ -393,7 +393,7 @@ export const PLUGIN_ACTION = {
 };
 
 /**
- * 租户类型
+ * 租户模式
  */
 export const APP_TENANT_MODE = {
   single: '单租户',

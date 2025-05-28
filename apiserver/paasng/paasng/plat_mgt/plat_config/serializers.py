@@ -15,12 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from rest_framework import serializers
 
-urlpatterns = [
-    path("", include("paasng.plat_mgt.applications.urls")),
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-    path("", include("paasng.plat_mgt.users.urls")),
-    path("", include("paasng.plat_mgt.plat_config.urls")),
-]
+
+class UserListFeaturesSlz(serializers.Serializer):
+    """用户列表特性配置序列化器"""
+
+    show_user_list = serializers.BooleanField(help_text="是否显示用户列表导航")

@@ -15,12 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from django.urls import path
+
+from . import views
 
 urlpatterns = [
-    path("", include("paasng.plat_mgt.applications.urls")),
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-    path("", include("paasng.plat_mgt.users.urls")),
-    path("", include("paasng.plat_mgt.plat_config.urls")),
+    # 平台管理前端特性配置
+    path(
+        "api/plat_mgt/frontend_features/",
+        views.PlatMgtFrontendFeatureViewSet.as_view(
+            {"get": "list_frontend_features", "post": "update_frontend_features"}
+        ),
+        name="plat_mgt.frontend_features",
+    ),
 ]

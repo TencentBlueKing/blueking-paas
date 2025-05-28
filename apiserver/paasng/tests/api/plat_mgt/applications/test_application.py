@@ -48,6 +48,7 @@ class TestApplicationListView:
             name="全局应用1",
             type="default",
             app_tenant_id="global-tenant-1",
+            tenant_id="tenant1",
             app_tenant_mode=AppTenantMode.GLOBAL.value,
             is_active=True,
             created=datetime.datetime.now() - datetime.timedelta(days=1),
@@ -57,6 +58,7 @@ class TestApplicationListView:
             name="全局应用2",
             type="default",
             app_tenant_id="global-tenant-2",
+            tenant_id="tenant2",
             app_tenant_mode=AppTenantMode.GLOBAL.value,
             is_active=True,
             created=datetime.datetime.now() - datetime.timedelta(days=2),
@@ -68,6 +70,7 @@ class TestApplicationListView:
             name="单租户应用1",
             type="engineless_app",
             app_tenant_id="tenant1",
+            tenant_id="tenant1",
             app_tenant_mode=AppTenantMode.SINGLE.value,
             is_active=True,
             created=datetime.datetime.now() - datetime.timedelta(days=3),
@@ -77,6 +80,7 @@ class TestApplicationListView:
             name="单租户应用2",
             type="cloud_native",
             app_tenant_id="tenant1",
+            tenant_id="tenant1",
             app_tenant_mode=AppTenantMode.SINGLE.value,
             is_active=False,
             created=datetime.datetime.now() - datetime.timedelta(days=4),
@@ -86,6 +90,7 @@ class TestApplicationListView:
             name="单租户应用3",
             type="cloud_native",
             app_tenant_id="tenant2",
+            tenant_id="tenant2",
             app_tenant_mode=AppTenantMode.SINGLE.value,
             is_active=False,
             created=datetime.datetime.now() - datetime.timedelta(days=5),
@@ -101,7 +106,7 @@ class TestApplicationListView:
             ({"search": "single"}, 3, {"single-app1", "single-app2", "single-app3"}),
             # 测试过滤条件
             ({"name": "全局"}, 2, ["global-app1", "global-app2"]),
-            ({"app_tenant_id": "global-tenant-1"}, 1, ["global-app1"]),
+            ({"tenant_id": "tenant1"}, 3, ["global-app1", "single-app1", "single-app2"]),
             ({"type": "default"}, 2, ["global-app2", "global-app1"]),
             ({"app_tenant_mode": "global"}, 2, {"global-app1", "global-app2"}),
             ({"is_active": "true"}, 3, {"global-app1", "global-app2", "single-app1"}),
@@ -163,19 +168,17 @@ class TestApplicationListView:
         # 测试不带查询参数的情况
         rsp = plat_mgt_api_client.get(url)
         assert rsp.status_code == 200
-        assert len(rsp.data) == 3
+        assert len(rsp.data) == 2
         assert rsp.data == [
-            {"tenant_id": AppTenantMode.GLOBAL.value, "app_count": 2},
-            {"tenant_id": "tenant1", "app_count": 2},
-            {"tenant_id": "tenant2", "app_count": 1},
+            {"tenant_id": "tenant1", "app_count": 3},
+            {"tenant_id": "tenant2", "app_count": 2},
         ]
 
         # 测试携带查询参数的情况
         rsp = plat_mgt_api_client.get(url, {"app_tenant_mode": AppTenantMode.SINGLE.value})
         assert rsp.status_code == 200
-        assert len(rsp.data) == 3
+        assert len(rsp.data) == 2
         assert rsp.data == [
-            {"tenant_id": AppTenantMode.GLOBAL.value, "app_count": 0},
             {"tenant_id": "tenant1", "app_count": 2},
             {"tenant_id": "tenant2", "app_count": 1},
         ]

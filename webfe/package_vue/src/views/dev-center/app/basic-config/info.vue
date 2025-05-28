@@ -47,13 +47,13 @@
                 </div>
                 <template v-if="isShowTenant">
                   <div class="item">
-                    <div class="label">{{ $t('租户类型') }}：</div>
+                    <div class="label">{{ $t('租户模式') }}：</div>
                     <div class="value">
                       {{ $t(appTenantMode[curAppInfo.application.app_tenant_mode]) }}
                     </div>
                   </div>
                   <div class="item">
-                    <div class="label">{{ $t('所属租户') }}：</div>
+                    <div class="label">{{ $t('租户 ID') }}：</div>
                     <div class="value">{{ curAppInfo.application.app_tenant_id || '--' }}</div>
                   </div>
                 </template>

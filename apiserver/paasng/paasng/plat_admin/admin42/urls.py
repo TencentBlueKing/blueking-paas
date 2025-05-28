@@ -17,6 +17,8 @@
 
 from __future__ import absolute_import
 
+from django.conf import settings
+
 from paasng.utils.basic import re_path
 
 from . import views
@@ -358,32 +360,6 @@ urlpatterns = [
         log_config.LogConfigView.as_view(),
         name="admin.applications.engine.log_config.manage",
     ),
-    # 用户管理-首页
-    re_path(r"^accountmgr/$", accountmgr.UserProfilesManageView.as_view(), name="admin.accountmgr.index"),
-    # 用户管理-用户列表
-    re_path(
-        r"^accountmgr/userprofiles/$",
-        accountmgr.UserProfilesManageView.as_view(),
-        name="admin.accountmgr.userprofiles.index",
-    ),
-    # 用户管理-用户列表 API
-    re_path(
-        r"^api/accountmgr/userprofiles/$",
-        accountmgr.UserProfilesManageViewSet.as_view({"post": "bulk_create", "put": "update", "delete": "destroy"}),
-        name="admin.accountmgr.userprofile.api",
-    ),
-    # 用户管理-用户特性管理
-    re_path(
-        r"^accountmgr/account_feature_flags/$",
-        accountmgr.AccountFeatureFlagManageView.as_view(),
-        name="admin.accountmgr.account_feature_flags.index",
-    ),
-    # 用户管理-用户特性管理 API
-    re_path(
-        r"^api/accountmgr/account_feature_flags/$",
-        accountmgr.AccountFeatureFlagManageViewSet.as_view({"get": "list", "post": "update_or_create"}),
-        name="admin.accountmgr.account_feature_flags.api",
-    ),
     # 部署列表页
     re_path(r"^deployments/$", deployments.DeploymentListView.as_view(), name="admin.deployments.list"),
     re_path(
@@ -407,6 +383,39 @@ urlpatterns = [
         name="admin.operation.statistics.deploy.developers.export",
     ),
 ]
+
+# 平台管理-用户管理
+if not settings.AUTO_CREATE_REGULAR_USER:
+    urlpatterns += [
+        # 用户管理-首页
+        re_path(r"^accountmgr/$", accountmgr.UserProfilesManageView.as_view(), name="admin.accountmgr.index"),
+        # 用户管理-用户列表
+        re_path(
+            r"^accountmgr/userprofiles/$",
+            accountmgr.UserProfilesManageView.as_view(),
+            name="admin.accountmgr.userprofiles.index",
+        ),
+        # 用户管理-用户列表 API
+        re_path(
+            r"^api/accountmgr/userprofiles/$",
+            accountmgr.UserProfilesManageViewSet.as_view(
+                {"post": "bulk_create", "put": "update", "delete": "destroy"}
+            ),
+            name="admin.accountmgr.userprofile.api",
+        ),
+        # 用户管理-用户特性管理
+        re_path(
+            r"^accountmgr/account_feature_flags/$",
+            accountmgr.AccountFeatureFlagManageView.as_view(),
+            name="admin.accountmgr.account_feature_flags.index",
+        ),
+        # 用户管理-用户特性管理 API
+        re_path(
+            r"^api/accountmgr/account_feature_flags/$",
+            accountmgr.AccountFeatureFlagManageViewSet.as_view({"get": "list", "post": "update_or_create"}),
+            name="admin.accountmgr.account_feature_flags.api",
+        ),
+    ]
 
 # 应用配置管理，可以提供给管理应用、插件模板的同学使用
 urlpatterns += [

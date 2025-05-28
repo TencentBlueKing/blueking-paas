@@ -118,20 +118,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         {% endif %}
                     {% endif %}
                     {% if perm.manage_platform %}
-                    {
-                        name: "用户管理",
-                        url: "{% url 'admin.accountmgr.index' %}",
-                        children: [
+                        {% if not AUTO_CREATE_REGULAR_USER %}
                             {
-                                name: "用户列表",
-                                url: "{% url 'admin.accountmgr.userprofiles.index' %}"
-                            },
-                            {
-                                name: "用户特性管理",
-                                url: "{% url 'admin.accountmgr.account_feature_flags.index' %}",
-                            },
-                        ]
-                    },
+                                name: "用户管理",
+                                url: "{% url 'admin.accountmgr.index' %}",
+                                children: [
+                                    {
+                                        name: "用户列表",
+                                        url: "{% url 'admin.accountmgr.userprofiles.index' %}"
+                                    },
+                                    {
+                                        name: "用户特性管理",
+                                        url: "{% url 'admin.accountmgr.account_feature_flags.index' %}",
+                                    },
+                                ]
+                        },
+                        {% endif %}
                     {
                         name: "操作审计",
                         url: "{% url 'admin.audit.index' %}",

@@ -190,7 +190,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="更新应用集群",
-        request_body=slzs.ApplicationClusterInputSLZ(),
+        request_body=slzs.UpdateClusterSLZ(),
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     def update_cluster(self, request, app_code, module_name, env_name):
@@ -200,7 +200,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         module = application.get_module(module_name)
         env = get_object_or_404(module.envs, environment=env_name)
 
-        slz = slzs.ApplicationClusterInputSLZ(
+        slz = slzs.UpdateClusterSLZ(
             data=request.data,
             context={"user": request.user, "environment": env.environment, "region": application.region},
         )

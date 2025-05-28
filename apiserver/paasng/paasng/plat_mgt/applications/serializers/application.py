@@ -207,7 +207,7 @@ class ApplicationNameUpdateInputSLZ(UpdateApplicationSLZ):
     """更新应用名称序列化器"""
 
 
-class ApplicationClusterInputSLZ(serializers.Serializer):
+class UpdateClusterSLZ(serializers.Serializer):
     """更新应用集群序列化器"""
 
     name = serializers.CharField(required=True, help_text="集群名称")
@@ -225,6 +225,6 @@ class ApplicationClusterInputSLZ(serializers.Serializer):
             username=cur_user.username,
         )
         if not ClusterAllocator(ctx).check_available(name):
-            raise ValidationError(_("集群名称错误，无法找到名为 {name} 的集群").format(name=name))
+            raise ValidationError(_("现有的分配策略下未找到匹配的集群(集群名: {name})").format(name=name))
 
         return name

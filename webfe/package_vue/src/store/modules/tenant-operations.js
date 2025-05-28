@@ -145,5 +145,12 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/services/unbound_attachments/`;
       return http.get(url);
     },
+    /**
+     * 增强服务-回收未绑定的增强服务实例
+     */
+    recycleServiceInstance({}, { appCode, moduleId, serviceId, instanceId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/services/${serviceId}/instance/${instanceId}/`;
+      return http.delete(url);
+    },
   },
 };

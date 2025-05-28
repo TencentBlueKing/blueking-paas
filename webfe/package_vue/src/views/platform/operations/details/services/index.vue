@@ -17,6 +17,7 @@
           <bk-button
             text
             size="small"
+            @click="showImmediateRecycleSidebar"
           >
             {{ $t('立即回收') }}
           </bk-button>
@@ -204,19 +205,28 @@
         {{ $t('进行确认') }}
       </div>
     </DeleteDialog>
+
+    <RecycleSideslider
+      ref="recycleSideslider"
+      :show.sync="unrecycledSidebar.visible"
+      :list="unboundServices"
+      @refresh="getUnboundAttachments"
+    />
   </div>
 </template>
 
 <script>
-import assignInstanceDialog from './assign-instance-dialog.vue';
+import AssignInstanceDialog from './assign-instance-dialog.vue';
 import EditorSideslider from '@/components/editor-sideslider';
 import DeleteDialog from '@/components/delete-dialog';
+import RecycleSideslider from './recycle-sideslider.vue';
 
 export default {
   components: {
-    assignInstanceDialog,
+    AssignInstanceDialog,
     EditorSideslider,
     DeleteDialog,
+    RecycleSideslider,
   },
   data() {
     return {
@@ -247,6 +257,11 @@ export default {
       envMap: {
         stag: this.$t('预发布环境'),
         prod: this.$t('生产环境'),
+      },
+      // 未回收侧栏
+      unrecycledSidebar: {
+        visible: false,
+        row: {},
       },
     };
   },
@@ -440,6 +455,10 @@ export default {
       } catch (e) {
         this.catchErrorHandler(e);
       }
+    },
+    // 立即回收
+    showImmediateRecycleSidebar() {
+      this.unrecycledSidebar.visible = true;
     },
   },
 };

@@ -323,7 +323,8 @@ class ProcessManager:
                 tail_lines=tail_lines,
             )
         except ApiException as e:
-            if e.status == 404:
+            if e.status in (404, 400):
+                # 400: 获取上一次重启时的日志, 如果没有重启过的实例, 则会返回 400 错误
                 raise InstanceNotFound("Instance not found")
             else:
                 raise

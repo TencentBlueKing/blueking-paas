@@ -103,7 +103,7 @@ class ResourcePoolProvider(BaseProvider):
                     "is_pre_created": True,
                     "provider_name": provider_name,
                     "enable_tls": bool(ca or cert or cert_key),
-                    "recyclable": instance.config.get("recycle", False),
+                    "recyclable": instance.config.get("recyclable", False),
                 },
             )
 

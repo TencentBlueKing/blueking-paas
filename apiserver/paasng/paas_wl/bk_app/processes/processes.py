@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import json
 from typing import Dict, List, Optional
 
 from attrs import asdict, define, field
@@ -35,7 +34,7 @@ from paas_wl.bk_app.cnative.specs.resource import get_mres_from_cluster, list_mr
 from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
 from paas_wl.bk_app.processes.controllers import list_processes
 from paas_wl.bk_app.processes.entities import Status
-from paas_wl.bk_app.processes.exceptions import CurrentInstanceNotFound, PreviousInstanceNotFound
+from paas_wl.bk_app.processes.exceptions import InstanceNotFound
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.models import ProcessSpecManager
 from paas_wl.bk_app.processes.readers import process_kmodel
@@ -308,10 +307,7 @@ class ProcessManager:
         :param container_name: 容器名称
         :param tail_lines: 获取日志末尾的行数
         :return: str
-        :raise:
-            PreviousInstanceNotFound when previous instance not found
-            CurrentInstanceNotFound when current instance not found.
-            ApiException for other API-related errors.
+        :raise: InstanceNotFound when instance not found
         """
         if not container_name:
             container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
@@ -327,13 +323,8 @@ class ProcessManager:
                 tail_lines=tail_lines,
             )
         except ApiException as e:
-            if e.status == 400 and "previous terminated container" in json.loads(e.body)["message"]:
-                raise PreviousInstanceNotFound("Terminated container not found")
-            elif e.status == 404:
-                if previous:
-                    raise PreviousInstanceNotFound("Previous instance not found")
-                else:
-                    raise CurrentInstanceNotFound("Current running container not found")
+            if e.status == 404:
+                raise InstanceNotFound("Instance not found")
             else:
                 raise
 

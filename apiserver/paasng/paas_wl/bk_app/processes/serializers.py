@@ -422,9 +422,10 @@ class InstanceLogDownloadInputSLZ(serializers.Serializer):
     previous = serializers.BooleanField(help_text="是否获取上一个实例的日志")
 
 
-class InstanceLogQueryInputSLZ(InstanceLogDownloadInputSLZ):
+class InstanceLogQueryInputSLZ(serializers.Serializer):
     """Serializer for query params of instance log API"""
 
+    previous = serializers.BooleanField(help_text="是否获取上一个实例的日志")
     tail_lines = serializers.IntegerField(
         required=False, default=400, min_value=1, max_value=10000, help_text="获取日志的行数"
     )

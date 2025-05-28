@@ -34,7 +34,7 @@ from paas_wl.bk_app.processes.entities import (
     ProbeSet as WLProbeSet,
 )
 from paas_wl.bk_app.processes.entities import TCPSocketAction as WLTCPSocketAction
-from paas_wl.bk_app.processes.exceptions import CurrentInstanceNotFound, PreviousInstanceNotFound
+from paas_wl.bk_app.processes.exceptions import InstanceNotFound
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.kres_slzs import ProcessDeserializer, ProcessSerializer
 from paas_wl.bk_app.processes.processes import (
@@ -184,8 +184,8 @@ class TestProcessManager:
         [
             ("", False, None),  # 当前实例日志，正常情况
             ("", True, None),  # 上一次实例日志，正常情况
-            ("-bad", False, CurrentInstanceNotFound),  # 不存在的当前实例
-            ("-bad", True, PreviousInstanceNotFound),  # 不存在的上一次实例
+            ("-bad", False, InstanceNotFound),  # 不存在的当前实例
+            ("-bad", True, InstanceNotFound),  # 不存在的上一次实例
         ],
     )
     def test_get_instance_logs(

@@ -78,7 +78,7 @@
               :property="'tenant'"
               error-display-type="normal"
               ext-cls="form-item-cls"
-              :label="$t('租户类型')"
+              :label="$t('租户模式')"
             >
               <bk-radio-group v-model="formData.tenantMode">
                 <bk-radio-button value="single">{{ $t('单租户') }}</bk-radio-button>
@@ -89,7 +89,7 @@
               v-if="formData.tenantMode === 'single'"
               :required="true"
               ext-cls="form-item-cls"
-              :label="$t('所属租户')"
+              :label="$t('租户 ID')"
             >
               <bk-input
                 class="form-input-width"

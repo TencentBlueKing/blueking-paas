@@ -99,9 +99,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
 
         tenant_id_list = []
         # 查询各个租户的应用数量
-        tenant_ids = filtered_queryset.filter(app_tenant_mode=AppTenantMode.SINGLE.value).values_list(
-            "tenant_id", flat=True
-        )
+        tenant_ids = filtered_queryset.values_list("tenant_id", flat=True)
         tenant_id_counts = Counter(tenant_ids)
         for tenant_id in sorted(tenant_id_counts.keys()):
             tenant_id_list.append({"tenant_id": tenant_id, "app_count": tenant_id_counts[tenant_id]})

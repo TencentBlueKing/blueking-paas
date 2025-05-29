@@ -20,11 +20,15 @@ from typing import Optional
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
+from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster
-from paas_wl.infras.cluster.shim import EnvClusterService
+from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
+from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import UpdateApplicationSLZ
@@ -71,7 +75,7 @@ class ApplicationListFilterInputSLZ(serializers.Serializer):
 
     search = serializers.CharField(required=False, help_text="应用名称/ID 关键字搜索")
     name = serializers.CharField(required=False, help_text="应用名称")
-    app_tenant_id = serializers.CharField(required=False, help_text="应用租户 ID")
+    tenant_id = serializers.CharField(required=False, help_text="应用所属租户")
     app_tenant_mode = serializers.ChoiceField(
         required=False,
         choices=AppTenantMode.get_choices(),
@@ -128,7 +132,7 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     code = serializers.CharField(read_only=True, help_text="应用 ID")
     name = serializers.CharField(read_only=True, help_text="应用名称")
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
-    owner = serializers.CharField(source="owner.username", read_only=True, help_text="应用所有者")
+    app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
     type = serializers.CharField(read_only=True, help_text="应用类型")
     is_active = serializers.BooleanField(read_only=True, help_text="应用状态")
     creator = UserNameField(read_only=True, help_text="创建人")
@@ -203,7 +207,24 @@ class ApplicationNameUpdateInputSLZ(UpdateApplicationSLZ):
     """更新应用名称序列化器"""
 
 
-class ApplicationClusterSLZ(serializers.Serializer):
+class UpdateClusterSLZ(serializers.Serializer):
     """更新应用集群序列化器"""
 
     name = serializers.CharField(required=True, help_text="集群名称")
+
+    def validate_name(self, name: str) -> str:
+        """验证集群名称"""
+        cur_user = self.context["user"]
+        environment = self.context["environment"]
+        region = self.context["region"]
+
+        ctx = AllocationContext(
+            tenant_id=get_tenant(cur_user).id,
+            region=get_region(region),
+            environment=environment,
+            username=cur_user.username,
+        )
+        if not ClusterAllocator(ctx).check_available(name):
+            raise ValidationError(_("现有的分配策略下未找到匹配的集群(集群名: {name})").format(name=name))
+
+        return name

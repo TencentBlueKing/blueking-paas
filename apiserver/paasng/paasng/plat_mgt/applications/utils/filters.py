@@ -44,9 +44,9 @@ class ApplicationFilterBackend(BaseFilterBackend):
             queryset = queryset.filter(name__icontains=name)
 
         # 应用租户ID过滤
-        app_tenant_id = validate_params.get("app_tenant_id")
-        if app_tenant_id:
-            queryset = queryset.filter(app_tenant_id=app_tenant_id)
+        tenant_id = validate_params.get("tenant_id")
+        if tenant_id:
+            queryset = queryset.filter(tenant_id=tenant_id)
 
         # 应用租户模式过滤
         app_tenant_mode = validate_params.get("app_tenant_mode")

@@ -2343,13 +2343,13 @@ msgstr ""
 "The cluster deployed in the current environment does not support BCS Egress"
 
 #: paasng/plat_admin/admin42/views/services.py:108
-#: paasng/plat_mgt/applications/views/services.py:147
+#: paasng/plat_mgt/applications/views/services.py:120
 msgid "当前环境不存在未分配的增强服务实例"
 msgstr ""
 "There are no unallocated instances of Add-ons in the current environment"
 
 #: paasng/plat_admin/admin42/views/services.py:135
-#: paasng/plat_mgt/applications/views/services.py:180
+#: paasng/plat_mgt/applications/views/services.py:152
 msgid "迁移应用不支持回收增强服务实例"
 msgstr ""
 "Migrating applications does not support reclaiming enhanced service "
@@ -2375,10 +2375,15 @@ msgstr "Testing in progress"
 msgid "无法获取到有效的配置信息."
 msgstr "No valid configuration information is available."
 
-#: paasng/plat_mgt/applications/serializers/application.py:182
+#: paasng/plat_mgt/applications/serializers/application.py:186
 #, python-brace-format
 msgid "于{time}{operation}{status}"
 msgstr " {operation} {status} at {time}"
+
+#: paasng/plat_mgt/applications/serializers/application.py:228
+#, python-brace-format
+msgid "现有的分配策略下未找到匹配的集群(集群名: {name})"
+msgstr "No matching cluster was found under the existing allocation strategy (cluster name: {name})"
 
 #: paasng/plat_mgt/infras/clusters/serializers/clusters.py:341
 msgid "BCS 集群必须提供项目，集群，业务信息"

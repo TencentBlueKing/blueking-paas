@@ -50,8 +50,8 @@
       >
         <template slot-scope="{ row }">
           <!-- 字段待确认 -->
-          <span :class="['tag', { yes: row.config?.recycle }]">
-            {{ row.config?.recycle ? $t('是') : $t('否') }}
+          <span :class="['tag', { yes: row.config?.recyclable }]">
+            {{ row.config?.recyclable ? $t('是') : $t('否') }}
           </span>
         </template>
       </bk-table-column>

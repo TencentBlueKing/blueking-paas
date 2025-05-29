@@ -55,6 +55,17 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'operations',
+    name: 'platformAppList',
+    label: i18n.t('应用列表'),
+    iconfontName: 'Application-list',
+    matchRouters: ['platformAppList', 'platformAppDetails'],
+    destRoute: {
+      name: 'platformAppList',
+    },
+    sublist: [],
+  },
+  {
     groupId: 'user',
     name: 'platformUserManagement',
     label: i18n.t('用户管理'),

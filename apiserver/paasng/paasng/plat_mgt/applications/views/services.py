@@ -120,12 +120,18 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
                         # 如果已经回收了，获取不到 instance，跳过
                         continue
 
+                    instance_data = dict(
+                        uuid=rel.db_obj.service_instance_id,
+                        config=instance.config,
+                        credentials=instance.get_credentials(),
+                    )
+
                     result.append(
                         dict(
                             environment=env.environment,
                             module=module.name,
                             service=mixed_service_mgr.get_or_404(rel.db_obj.service_id),
-                            instance=instance,
+                            instance=instance_data,
                         )
                     )
         return Response(slzs.UnboundServiceInstanceSLZ(result, many=True).data)

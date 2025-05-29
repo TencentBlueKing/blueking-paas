@@ -398,17 +398,27 @@ urlpatterns += [
         accountmgr.UserProfilesManageViewSet.as_view({"post": "bulk_create", "put": "update", "delete": "destroy"}),
         name="admin.accountmgr.userprofile.api",
     ),
-    # 用户管理-用户特性管理
+    # 部署列表页
+    re_path(r"^deployments/$", deployments.DeploymentListView.as_view(), name="admin.deployments.list"),
     re_path(
-        r"^accountmgr/account_feature_flags/$",
-        accountmgr.AccountFeatureFlagManageView.as_view(),
-        name="admin.accountmgr.account_feature_flags.index",
+        r"^operation/statistics/deploy/apps/$",
+        deploy.AppDeployStatisticsView.as_view({"get": "get", "post": "export"}),
+        name="admin.operation.statistics.deploy.apps",
     ),
-    # 用户管理-用户特性管理 API
     re_path(
-        r"^api/accountmgr/account_feature_flags/$",
-        accountmgr.AccountFeatureFlagManageViewSet.as_view({"get": "list", "post": "update_or_create"}),
-        name="admin.accountmgr.account_feature_flags.api",
+        r"^operation/statistics/deploy/apps/export/$",
+        deploy.AppDeployStatisticsView.as_view({"get": "export"}),
+        name="admin.operation.statistics.deploy.apps.export",
+    ),
+    re_path(
+        r"^operation/statistics/deploy/developers/$",
+        deploy.DevelopersDeployStatisticsView.as_view({"get": "get"}),
+        name="admin.operation.statistics.deploy.developers",
+    ),
+    re_path(
+        r"^operation/statistics/deploy/developers/export/$",
+        deploy.DevelopersDeployStatisticsView.as_view({"get": "export"}),
+        name="admin.operation.statistics.deploy.developers.export",
     ),
 ]
 

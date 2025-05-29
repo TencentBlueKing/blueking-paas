@@ -1127,3 +1127,6 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-waiting-2:before {
 	content: "\e294";
 }
+.paasng-Application-list:before {
+	content: "\e29a";
+}

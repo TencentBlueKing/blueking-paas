@@ -2,6 +2,7 @@
   <div class="palt-app-service-container">
     <div class="top-box">
       <bk-alert
+        v-if="unboundServices?.length"
         type="info"
         class="recycle-alert-cls"
         closable
@@ -41,6 +42,15 @@
       v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
       :cell-class-name="cellClassName"
     >
+      <div slot="empty">
+        <table-empty
+          :keyword="tableEmptyConf.keyword"
+          :abnormal="tableEmptyConf.isAbnormal"
+          :empty-title="$t('暂无增强服务')"
+          @reacquire="getServices"
+          @clear-filter="searchValue = ''"
+        />
+      </div>
       <bk-table-column
         :label="$t('模块')"
         prop="moduleName"
@@ -278,6 +288,10 @@ export default {
         visible: false,
         row: {},
       },
+      tableEmptyConf: {
+        keyword: '',
+        isAbnormal: false,
+      },
     };
   },
   computed: {
@@ -345,6 +359,7 @@ export default {
       this.filteredData = searchTerm
         ? this.serviceList.filter((item) => item.moduleName.toLowerCase()?.includes(searchTerm))
         : [...this.serviceList];
+      this.updateTableEmptyConfig();
     }, 300),
     // 获取增强服务数据
     async getServices() {
@@ -384,8 +399,10 @@ export default {
           ]);
         });
         this.filteredData = [...this.serviceList];
+        this.setTableAbnormalState(false);
       } catch (e) {
         this.catchErrorHandler(e);
+        this.setTableAbnormalState(true);
       } finally {
         this.isTableLoading = false;
       }
@@ -480,6 +497,7 @@ export default {
         this.credentialConfig.data = ret;
       } catch (e) {
         this.catchErrorHandler(e);
+        this.credentialConfig.data = {};
       }
     },
     // 获取未绑定增强服务实例（未回收）
@@ -496,6 +514,12 @@ export default {
     // 立即回收
     showImmediateRecycleSidebar() {
       this.unrecycledSidebar.visible = true;
+    },
+    setTableAbnormalState(isAbnormal) {
+      this.tableEmptyConf.isAbnormal = isAbnormal;
+    },
+    updateTableEmptyConfig() {
+      this.tableEmptyConf.keyword = this.searchValue ? 'placeholder' : '';
     },
   },
 };

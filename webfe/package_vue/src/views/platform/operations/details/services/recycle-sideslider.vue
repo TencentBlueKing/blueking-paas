@@ -257,8 +257,8 @@ export default {
         await this.$store.dispatch('tenantOperations/recycleServiceInstance', {
           appCode: this.appCode,
           moduleId: module,
-          serviceId: instance?.uuid,
-          instanceId: service?.uuid,
+          serviceId: service?.uuid,
+          instanceId: instance?.uuid,
         });
         // 刷新服务列表
         this.$emit('refresh');

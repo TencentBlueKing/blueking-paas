@@ -22,5 +22,4 @@ urlpatterns = [
     path("", include("paasng.plat_mgt.infras.urls")),
     path("", include("paasng.plat_mgt.overview.urls")),
     path("", include("paasng.plat_mgt.users.urls")),
-    path("", include("paasng.plat_mgt.plat_config.urls")),
 ]

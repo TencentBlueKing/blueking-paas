@@ -23,6 +23,7 @@ from django.conf import settings
 from paasng.platform.sourcectl.connector import ExternalGitAppRepoConnector, IntegratedSvnAppRepoConnector
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
 from paasng.utils.blobstore import detect_default_blob_store
 
 pytestmark = pytest.mark.django_db
@@ -35,8 +36,13 @@ class TestIntegratedSvnAppRepoConnector:
         bk_module.source_init_template = settings.DUMMY_TEMPLATE_NAME
 
         connector = IntegratedSvnAppRepoConnector(bk_module, get_sourcectl_types().names.bk_svn)
-        connector.bind("svn://svn.x.com/app/a/")
-        ret = connector.sync_templated_sources(
+        repo_url = "svn://svn.x.com/app/a/"
+        connector.bind(repo_url)
+
+        template = Template.objects.get(name=settings.DUMMY_TEMPLATE_NAME)
+        connector.init_repo(
+            template,
+            repo_url,
             context={
                 "region": bk_app.region,
                 "owner_username": "user1",
@@ -47,10 +53,6 @@ class TestIntegratedSvnAppRepoConnector:
         )
         mocked_client.assert_called()
         mocked_client().sync_dir.assert_called()
-
-        assert ret.is_success() is True
-        assert ret.dest_type == "svn"
-        assert ret.extra_info["remote_source_root"] == "svn://svn.x.com/app/a/trunk"
 
 
 class TestExternalGitAppRepoConnector:

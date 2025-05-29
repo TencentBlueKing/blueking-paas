@@ -228,7 +228,7 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
 
             svn_credentials = get_bksvn_config(name=self.repo_type).get_admin_credentials()
             sync_procedure = SvnSyncProcedure(repo_url, svn_credentials["username"], svn_credentials["password"])
-            return sync_procedure.run(source_path=str(source_path))
+            sync_procedure.run(source_path=str(source_path))
 
 
 class ExternalGitAppRepoConnector(ModuleRepoConnector, DBBasedMixin):

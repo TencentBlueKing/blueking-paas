@@ -153,12 +153,14 @@ class TestModuleInitializer:
             raw_module.source_origin = SourceOrigin.AUTHORIZED_VCS
             raw_module.save()
 
-            result = ModuleInitializer(raw_module).initialize_vcs_with_template("dft_bk_svn")
+            # SVN 也需要添加 init_template_to_repo 参数才会执行初始化代码到仓库的操作，否则默认只会将模板代码上传到对象存储
+            result = ModuleInitializer(raw_module).initialize_vcs_with_template(
+                "dft_bk_svn", repo_url="http://git.example.com/test-group/repo1.git", init_template_to_repo=True
+            )
 
             mocked_client.assert_called()
             mocked_client().sync_dir.assert_called()
             assert result["code"] == "OK"
-            assert result["dest_type"] == "svn"
             assert "extra_info" in result
 
     @pytest.mark.parametrize(

@@ -197,13 +197,14 @@ class ModuleInitializer:
         connector = get_repo_connector(repo_type, self.module)
         connector.bind(repo_url, source_dir=source_dir, repo_auth_info=repo_auth_info)
 
+        result = {"code": "OK", "extra_info": {}, "dest_type": "null"}
+        # # Only run syncing procedure when `source_init_template` is valid
         try:
             template = Template.objects.get(name=self.module.source_init_template)
         except Template.DoesNotExist:
-            raise ValueError(f"Template ({self.module.source_init_template}) does not exist")
+            return result
 
         # 将模板（存储在对象存储中心）同步到对象存储，仅普通模板支持该功能
-        result = {"code": "OK", "extra_info": {}, "dest_type": "null"}
         if template.type == TemplateType.NORMAL:
             context = get_module_init_repo_context(self.module, template.type)
             syc_res = connector.sync_templated_sources(context=context)

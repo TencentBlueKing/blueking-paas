@@ -19,6 +19,7 @@ from unittest import mock
 
 import pytest
 from django.conf import settings
+from django.test.utils import override_settings
 
 from paasng.platform.sourcectl.connector import ExternalGitAppRepoConnector, IntegratedSvnAppRepoConnector
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
@@ -93,17 +94,18 @@ class TestExternalGitAppRepoConnector:
         mocked_client.return_value.push.return_value = None
 
         connector = ExternalGitAppRepoConnector(bk_module, "tc_git")
-        connector.init_repo(
-            template=mock_template,
-            repo_url="http://git.example.com/test-group/repo1.git",
-            context={
-                "region": bk_app.region,
-                "owner_username": "user1",
-                "app_code": bk_app.code,
-                "app_secret": "nosec",
-                "app_name": bk_app.name,
-            },
-        )
+        with override_settings(APP_REPO_CONF={"api_url": "http://api.example.com", "private_token": "xxxx"}):
+            connector.init_repo(
+                template=mock_template,
+                repo_url="http://git.example.com/test-group/repo1.git",
+                context={
+                    "region": bk_app.region,
+                    "owner_username": "user1",
+                    "app_code": bk_app.code,
+                    "app_secret": "nosec",
+                    "app_name": bk_app.name,
+                },
+            )
 
         # 验证 Git 操作被调用
         mock_fix_config.assert_called_once()

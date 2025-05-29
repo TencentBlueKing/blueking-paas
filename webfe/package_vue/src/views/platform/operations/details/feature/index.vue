@@ -100,12 +100,19 @@ export default {
         const res = await this.$store.dispatch('tenantOperations/getFeatureList', {
           appCode: this.appCode,
         });
-        this.featureList = res.sort((a, b) => b.effect - a.effect);
+        // default_feature_flag 和 effect 不相等的排在前面
+        this.featureList = res.sort((a, b) => {
+          const diffA = a.default_feature_flag !== a.effect;
+          const diffB = b.default_feature_flag !== b.effect;
+          return diffB - diffA;
+        });
         this.filteredData = [...this.featureList];
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
-        this.isTableLoading = false;
+        setTimeout(() => {
+          this.isTableLoading = false;
+        }, 200);
       }
     },
     // 更新特性

@@ -69,7 +69,7 @@
             <span v-else-if="key === 'app_tenant_mode'">
               {{ baseInfo[key] ? (baseInfo[key] === 'single' ? $t('单租户') : $t('全租户')) : '--' }}
             </span>
-            <template v-else-if="['creator', 'owner'].includes(key)">
+            <template v-else-if="['creator'].includes(key)">
               <bk-user-display-name
                 :user-id="baseInfo[key]"
                 v-if="platformFeature.MULTI_TENANT_MODE"
@@ -240,8 +240,8 @@ export default {
       baseInfoKeys: {
         code: '应用 ID',
         name: '应用名称',
-        app_tenant_mode: '租户类型',
-        owner: '所属用户',
+        app_tenant_mode: '租户模式',
+        app_tenant_id: '租户 ID',
         type: '应用类型',
         is_active: '状态',
         creator: '创建人',

@@ -292,4 +292,6 @@ export default {
   请输入特性名称: 'Please enter feature name',
   '请输入应用 ID、应用名称': 'Please enter app ID or app name',
   '修改后需要重新部署才能生效，并且需要手动清理原有集群中的进程。': 'Changes require redeployment to take effect and manual cleanup of processes in the original cluster.',
+  '应用对哪个租户的用户可用，当应用租户模式为全租户时，租户 ID 值为空': 'Which tenants users the application is available to; when the application tenant mode is set to all tenants, the tenant ID value is empty',
+  '所有进程的内存/CPU limit 的总和': 'The total memory/CPU limit of all processes',
 };

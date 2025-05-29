@@ -26,7 +26,7 @@
             <TenantSelect
               v-model="curTenantId"
               :panels="tabData"
-              :label="$t('租户')"
+              :label="$t('所属租户')"
               :count-map="tenantPlanCountMap"
             />
           </div>
@@ -229,7 +229,7 @@ export default {
     displayPlans() {
       return this.planList.filter((item) => item.tenant_id === this.curTenantId);
     },
-    // 字段搜索、服务名、租户类型过滤
+    // 字段搜索、服务名、租户模式过滤
     searchPlans() {
       const { searchValue, activeServiceId, activeType, displayPlans = [] } = this;
       const lowerCaseSearchTerm = searchValue?.toLocaleLowerCase() || '';

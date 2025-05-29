@@ -6,7 +6,7 @@
           class="tenant-select-cls"
           v-model="curTenantId"
           :panels="tabData"
-          :label="$t('租户')"
+          :label="$t('所属租户')"
           :count-map="appCountInfo"
           @change="getPlatformApps"
         />
@@ -27,8 +27,9 @@
         :data="appList"
         :pagination="pagination"
         ref="tableRef"
-        size="small"
+        size="medium"
         v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
+        :default-sort="{ prop: 'created_humanized', order: 'ascending' }"
         @page-change="pgHandlePageChange"
         @page-limit-change="pgHandlePageLimitChange"
         @filter-change="handleFilterChange"
@@ -61,15 +62,22 @@
                 :src="row.logo ? row.logo : '/static/images/default_logo.png'"
                 class="app-logo"
               />
-              <span
-                class="text-ellipsis app-name"
-                v-bk-overflow-tips
-                @click="toAppDetail(row)"
-              >
-                {{ row[column.prop] }}
-              </span>
+              <div class="flex-column app-infos text-ellipsis">
+                <span
+                  class="text-ellipsis app-name"
+                  v-bk-overflow-tips
+                  @click="toAppDetail(row)"
+                >
+                  {{ row['name'] }}
+                </span>
+                <span
+                  v-bk-overflow-tips
+                  class="code text-ellipsis"
+                >
+                  {{ row[column.prop] }}
+                </span>
+              </div>
             </div>
-            <!-- 租户类型 -->
             <div v-else-if="column.prop === 'app_tenant_mode'">
               {{ row[column.prop] === 'single' ? $t('单租户') : $t('全租户') }}
             </div>
@@ -123,19 +131,20 @@ export default {
         current: 1,
         count: 0,
         limit: 10,
-        limitList: [5, 10, 15, 20],
+        limitList: [10, 20, 50, 100],
       },
       // 应用数量信息
       appCountInfo: {},
       // 应用类型
       appTypes: [],
-      // 租户类型
       tenantTypes: [
         { value: 'global', text: this.$t('全租户') },
         { value: 'single', text: this.$t('单租户') },
       ],
       // 表头过滤
-      tableFilterMap: {},
+      tableFilterMap: {
+        order_by: '-created',
+      },
       tableEmptyConf: {
         keyword: '',
         isAbnormal: false,
@@ -162,23 +171,21 @@ export default {
     columns() {
       return [
         {
-          label: `${this.$t('应用')} ID`,
+          label: this.$t('应用'),
           prop: 'code',
+          'min-width': 160,
         },
         {
-          label: this.$t('应用名称'),
-          prop: 'name',
-        },
-        {
-          label: this.$t('租户类型'),
+          label: this.$t('租户模式'),
           prop: 'app_tenant_mode',
           filters: this.tenantTypes,
           'filter-multiple': false,
           'column-key': 'app_tenant_mode',
         },
         {
-          label: this.$t('所属租户'),
+          label: `${this.$t('租户')} ID`,
           prop: 'app_tenant_id',
+          'render-header': this.renderHeader,
         },
         {
           label: this.$t('应用类型'),
@@ -190,6 +197,7 @@ export default {
         {
           label: this.$t('资源配额'),
           prop: 'resource_quotas',
+          'render-header': this.renderHeader,
         },
         {
           label: this.$t('状态'),
@@ -223,8 +231,9 @@ export default {
     },
   },
   async created() {
-    await this.getPlatformApps();
-    Promise.all([this.getTenantAppStatistics(), this.getAppTypes()]);
+    this.getPlatformApps();
+    this.getTenantAppStatistics();
+    this.getAppTypes();
   },
   methods: {
     // 页码重置
@@ -272,6 +281,27 @@ export default {
       this.$set(this.tableFilterMap, 'order_by', orderBy);
       this.getPlatformApps();
     },
+    // 租户id/资源配额自定义表头
+    renderHeader(h, data) {
+      const isTenantIdColumn = data.column?.property === 'app_tenant_id';
+      const msg = isTenantIdColumn
+        ? this.$t('应用对哪个租户的用户可用，当应用租户模式为全租户时，租户 ID 值为空')
+        : this.$t('所有进程的内存/CPU limit 的总和');
+      const directive = {
+        name: 'bkTooltips',
+        content: msg,
+        placement: 'top',
+        ...(isTenantIdColumn && { width: 230 }),
+      };
+      return (
+        <span
+          class="custom-header-cell"
+          v-bk-tooltips={directive}
+        >
+          {data.column.label}
+        </span>
+      );
+    },
     // 搜索
     handleSearch() {
       this.resetPage();
@@ -292,7 +322,7 @@ export default {
       }
       // 所属租户
       if (this.curTenantId !== 'all') {
-        queryParams.app_tenant_id = this.curTenantId;
+        queryParams.tenant_id = this.curTenantId;
       }
       return queryParams;
     },
@@ -317,24 +347,12 @@ export default {
     async getTenantAppStatistics() {
       try {
         const res = await this.$store.dispatch('tenantOperations/getTenantAppStatistics');
-        // 全部租户
-        this.$set(this.appCountInfo, 'all', this.pagination.count);
         res.forEach((item) => {
           this.$set(this.appCountInfo, item.tenant_id, item.app_count);
         });
-      } catch (e) {
-        this.catchErrorHandler(e);
-      }
-    },
-    // 获取租户应用数量
-    async getTenantAppStatistics() {
-      try {
-        const res = await this.$store.dispatch('tenantOperations/getTenantAppStatistics');
         // 全部租户
-        this.$set(this.appCountInfo, 'all', this.pagination.count);
-        res.forEach((item) => {
-          this.$set(this.appCountInfo, item.tenant_id, item.app_count);
-        });
+        const totalAppCount = res.reduce((total, item) => total + item.app_count, 0);
+        this.$set(this.appCountInfo, 'all', totalAppCount);
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -365,8 +383,11 @@ export default {
     },
     // 清空搜索筛选条件
     clearFilterKey() {
-      this.tableFilterMap = {};
+      this.tableFilterMap = {
+        order_by: '-created',
+      };
       this.searchValue = '';
+      this.curTenantId = 'all';
       this.$refs.tableRef?.clearFilter();
     },
     updateTableEmptyConfig() {
@@ -388,15 +409,27 @@ export default {
   }
   .table-wrapper {
     margin-top: 16px;
-    .app-logo {
-      width: 24px;
-      height: 24px;
-      border-radius: 2px;
-      margin-right: 16px;
+    /deep/ .bk-table-header {
+      .custom-header-cell {
+        text-decoration: underline;
+        text-decoration-style: dashed;
+        text-underline-position: under;
+      }
     }
-    .app-name {
-      color: #3a84ff;
-      cursor: pointer;
+    .app-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 2px;
+      margin-right: 20px;
+    }
+    .app-infos {
+      font-size: 12px;
+      justify-content: center;
+      .app-name {
+        color: #3a84ff;
+        font-weight: 700;
+        cursor: pointer;
+      }
     }
     i.dot {
       position: relative;

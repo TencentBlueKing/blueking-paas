@@ -125,7 +125,7 @@ export default {
       } else {
         newQuery = {
           ...(active === 'list' && query),
-          active,
+          ...(active && { active }),
         };
       }
       this.$router.push({

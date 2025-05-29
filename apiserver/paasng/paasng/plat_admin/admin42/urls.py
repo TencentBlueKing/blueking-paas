@@ -358,6 +358,20 @@ urlpatterns = [
         log_config.LogConfigView.as_view(),
         name="admin.applications.engine.log_config.manage",
     ),
+    # 用户管理-首页
+    re_path(r"^accountmgr/$", accountmgr.UserProfilesManageView.as_view(), name="admin.accountmgr.index"),
+    # 用户管理-用户列表
+    re_path(
+        r"^accountmgr/userprofiles/$",
+        accountmgr.UserProfilesManageView.as_view(),
+        name="admin.accountmgr.userprofiles.index",
+    ),
+    # 用户管理-用户列表 API
+    re_path(
+        r"^api/accountmgr/userprofiles/$",
+        accountmgr.UserProfilesManageViewSet.as_view({"post": "bulk_create", "put": "update", "delete": "destroy"}),
+        name="admin.accountmgr.userprofile.api",
+    ),
     # 部署列表页
     re_path(r"^deployments/$", deployments.DeploymentListView.as_view(), name="admin.deployments.list"),
     re_path(
@@ -379,24 +393,6 @@ urlpatterns = [
         r"^operation/statistics/deploy/developers/export/$",
         deploy.DevelopersDeployStatisticsView.as_view({"get": "export"}),
         name="admin.operation.statistics.deploy.developers.export",
-    ),
-]
-
-# 平台管理-用户管理
-urlpatterns += [
-    # 用户管理-首页
-    re_path(r"^accountmgr/$", accountmgr.UserProfilesManageView.as_view(), name="admin.accountmgr.index"),
-    # 用户管理-用户列表
-    re_path(
-        r"^accountmgr/userprofiles/$",
-        accountmgr.UserProfilesManageView.as_view(),
-        name="admin.accountmgr.userprofiles.index",
-    ),
-    # 用户管理-用户列表 API
-    re_path(
-        r"^api/accountmgr/userprofiles/$",
-        accountmgr.UserProfilesManageViewSet.as_view({"post": "bulk_create", "put": "update", "delete": "destroy"}),
-        name="admin.accountmgr.userprofile.api",
     ),
     # 部署列表页
     re_path(r"^deployments/$", deployments.DeploymentListView.as_view(), name="admin.deployments.list"),

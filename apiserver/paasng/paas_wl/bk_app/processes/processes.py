@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
 from typing import Dict, List, Optional
 
 from attrs import asdict, define, field
@@ -323,8 +324,9 @@ class ProcessManager:
                 tail_lines=tail_lines,
             )
         except ApiException as e:
-            if e.status in (404, 400):
-                # 400: 获取上一次重启时的日志, 如果没有重启过的实例, 则会返回 400 错误
+            if e.status == 400 and "previous terminated container" in json.loads(e.body)["message"]:
+                raise InstanceNotFound("Terminated container not found")
+            elif e.status == 404:
                 raise InstanceNotFound("Instance not found")
             else:
                 raise

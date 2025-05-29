@@ -578,34 +578,96 @@ class TestCreateCloudNativeApp:
         assert process_spec.get_target_replicas("prod") == 2
 
     @pytest.mark.usefixtures("_init_tmpls")
+    @mock.patch("paasng.platform.applications.views.creation.delete_repo")
     @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
     @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")
-    def test_create_with_buildpack(self, mocked_binder, mocked_manager, api_client):
+    @mock.patch("paasng.platform.applications.views.creation.create_new_repo")
+    @pytest.mark.parametrize(
+        ("source_control_type", "auto_create_repo", "init_error"),
+        [
+            # 初始化模块信息正常
+            ("tc_git", True, False),
+            ("tc_git", False, False),
+            # 初始化异常且自动创建的仓库
+            ("tc_git", True, True),
+            # 初始化异常但未自动创建仓库
+            ("tc_git", False, True),
+        ],
+    )
+    def test_create_with_buildpack(
+        self,
+        mock_create_new_repo,
+        mocked_manager,
+        mocked_binder,
+        mock_delete_repo,
+        api_client,
+        source_control_type,
+        auto_create_repo,
+        init_error,
+    ):
         """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
         mocked_binder().bind_bp_stack.return_value = None
         mocked_manager().get_slug_builder.return_value = mock.MagicMock(is_cnb_runtime=True, environments={})
 
         random_suffix = generate_random_string(length=6)
-        response = api_client.post(
-            "/api/bkapps/cloud-native/",
-            data={
-                "region": settings.DEFAULT_REGION_NAME,
-                "code": f"uta-{random_suffix}",
-                "name": f"uta-{random_suffix}",
-                "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
-                "source_config": {
-                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
-                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
-                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
-                    "source_repo_auth_info": {},
+
+        if init_error:
+            with pytest.raises(RuntimeError, match="forced error"), mock.patch(
+                "paasng.platform.applications.views.creation.init_module_in_view",
+                side_effect=RuntimeError("forced error"),
+            ):
+                api_client.post(
+                    "/api/bkapps/cloud-native/",
+                    data={
+                        "region": settings.DEFAULT_REGION_NAME,
+                        "code": f"uta-{random_suffix}",
+                        "name": f"uta-{random_suffix}",
+                        "": True,
+                        "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
+                        "source_config": {
+                            "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                            "source_control_type": source_control_type,
+                            "auto_create_repo": auto_create_repo,
+                            "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                            "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                            "source_repo_auth_info": {},
+                        },
+                    },
+                )
+        else:
+            response = api_client.post(
+                "/api/bkapps/cloud-native/",
+                data={
+                    "region": settings.DEFAULT_REGION_NAME,
+                    "code": f"uta-{random_suffix}",
+                    "name": f"uta-{random_suffix}",
+                    "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
+                    "source_config": {
+                        "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                        "source_control_type": source_control_type,
+                        "auto_create_repo": auto_create_repo,
+                        "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                        "source_repo_url": "https://github.com/octocat/helloWorld.git",
+                        "source_repo_auth_info": {},
+                    },
                 },
-            },
-        )
-        assert response.status_code == 201, f"error: {response.json()['detail']}"
-        app_data = response.json()["application"]
-        assert app_data["type"] == "cloud_native"
-        assert app_data["modules"][0]["web_config"]["build_method"] == "buildpack"
-        assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
+            )
+            assert response.status_code == 201, f"error: {response.json()['detail']}"
+            app_data = response.json()["application"]
+            assert app_data["type"] == "cloud_native"
+            assert app_data["modules"][0]["web_config"]["build_method"] == "buildpack"
+            assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
+
+        if auto_create_repo:
+            mock_create_new_repo.assert_called_once()
+        else:
+            mock_create_new_repo.assert_not_called()
+
+        # 验证异常时的仓库清理
+        if init_error and auto_create_repo:
+            mock_delete_repo.assert_called_once_with(source_control_type, mock.ANY)
+        else:
+            mock_delete_repo.assert_not_called()
 
     @pytest.mark.usefixtures("_init_tmpls")
     def test_create_with_dockerfile(self, api_client):

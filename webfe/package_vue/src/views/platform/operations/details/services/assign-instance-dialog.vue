@@ -7,6 +7,7 @@
     :mask-close="false"
     :auto-close="false"
     :title="$t('确认分配实例')"
+    :loading="loading"
     ext-cls="assign-instance-dialog-cls"
     @confirm="$emit('confirm')"
     @cancel="close"

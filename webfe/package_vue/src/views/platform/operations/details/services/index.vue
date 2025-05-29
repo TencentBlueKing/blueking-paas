@@ -32,7 +32,7 @@
       ></bk-input>
     </div>
     <bk-table
-      :data="serviceList"
+      :data="filteredData"
       ref="tableRef"
       size="small"
       class="service-table-cls"
@@ -172,7 +172,20 @@
       :sub-title="subTitle"
       :value="valuesJson"
       :read-only="true"
-    />
+    >
+      <!-- 共享模块 alert 提示 -->
+      <div
+        class="aleat-wrapper"
+        slot="header-alert"
+        v-if="credentialConfig.row?.sharedTag"
+      >
+        <bk-alert
+          type="info"
+          :title="alertTitle"
+          closable
+        ></bk-alert>
+      </div>
+    </EditorSideslider>
 
     <!-- 删除实例 -->
     <DeleteDialog
@@ -220,6 +233,7 @@ import AssignInstanceDialog from './assign-instance-dialog.vue';
 import EditorSideslider from '@/components/editor-sideslider';
 import DeleteDialog from '@/components/delete-dialog';
 import RecycleSideslider from './recycle-sideslider.vue';
+import { debounce } from 'lodash';
 
 export default {
   components: {
@@ -232,6 +246,7 @@ export default {
     return {
       searchValue: '',
       serviceList: [],
+      filteredData: [],
       isTableLoading: false,
       // 分配实例
       instanceDialogConfig: {
@@ -276,6 +291,16 @@ export default {
       const { service, moduleName, env } = this.credentialConfig.row;
       return `${moduleName}模块 / ${this.envMap[env]} / ${service?.display_name}增强服务`;
     },
+    alertTitle() {
+      const { service, moduleName } = this.credentialConfig.row;
+      return this.$t('共享自 {m} 模块的 {s} 增强服务', {
+        m: moduleName,
+        s: service?.display_name,
+      });
+    },
+  },
+  watch: {
+    searchValue: 'filterServicesByKeyword',
   },
   created() {
     this.init();
@@ -313,6 +338,14 @@ export default {
     getEnvironmentName(key) {
       return key === 'prod' ? this.$t('方案（生产环境）') : this.$t('方案（预发布环境）');
     },
+    // 关键字搜索
+    filterServicesByKeyword: debounce(function () {
+      const searchTerm = this.searchValue && this.searchValue.trim().toLowerCase(); // 去除空格并转小写
+      // 如果有搜索条件则进行过滤，否则直接复制
+      this.filteredData = searchTerm
+        ? this.serviceList.filter((item) => item.moduleName.toLowerCase()?.includes(searchTerm))
+        : [...this.serviceList];
+    }, 300),
     // 获取增强服务数据
     async getServices() {
       this.isTableLoading = true;
@@ -350,6 +383,7 @@ export default {
             },
           ]);
         });
+        this.filteredData = [...this.serviceList];
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -390,7 +424,7 @@ export default {
       } finally {
         setTimeout(() => {
           this.instanceDialogConfig.loading = false;
-        }, 1000);
+        }, 200);
       }
     },
     // 删除实例弹窗
@@ -404,6 +438,7 @@ export default {
     },
     // 解绑服务实例
     async unassignServiceInstance() {
+      this.deleteDialogConfig.isLoading = true;
       try {
         const { service, moduleName, env, envInfos } = this.deleteDialogConfig.row;
         await this.$store.dispatch('tenantOperations/unassignServiceInstance', {
@@ -421,6 +456,8 @@ export default {
         this.toggleDelDialog(false);
       } catch (e) {
         this.catchErrorHandler(e);
+      } finally {
+        this.deleteDialogConfig.isLoading = false;
       }
     },
     // 查看凭证
@@ -467,6 +504,11 @@ export default {
 <style lang="scss" scoped>
 .mt8 {
   margin-top: 8px;
+}
+.aleat-wrapper {
+  /deep/ .bk-alert {
+    margin: 5px 8px;
+  }
 }
 .palt-app-service-container {
   .top-box {

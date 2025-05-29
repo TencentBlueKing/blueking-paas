@@ -297,4 +297,5 @@ export default {
   '共享 {m} 模块': 'Share {m} module',
   '确认给 {m} 模块的预发布环境分配 {n} 增强服务实例': 'Confirm assigning {n} enhanced service instances to the pre-release environment of {m} module',
   '确认删除 {m} 模块的{e} {n} 增强服务实例': 'Confirm deletion of {e} {n} enhanced service instances from {m} module',
+  '共享自 {m} 模块的 {s} 增强服务': 'Enhanced service {s} shared from the {m} module',
 };

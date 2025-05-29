@@ -22,6 +22,9 @@
       :class="['editor-sideslider-content', { 'full-screen': isFullscreen }]"
       slot="content"
     >
+      <template v-if="!isFullscreen">
+        <slot name="header-alert"></slot>
+      </template>
       <div class="tools">
         <i
           v-bk-tooltips="isFullscreen ? $t('收起') : $t('展开')"

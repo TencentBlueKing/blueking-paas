@@ -105,7 +105,6 @@ class TestPlanSelectorSelectWithPrecedenceRegionIn:
         bk_app.save(update_fields=["region"])
 
     def test_static_with_region_in_matches(self, service_obj, bk_prod_env, plan1, plan2, with_region1):
-        set_alloc_type_rule_based(service_obj, DEFAULT_TENANT_ID)
         self._setup_static_precedence_policies(service_obj, plan1, plan2)
         selected_plan = PlanSelector().select(service_obj, bk_prod_env)
         assert selected_plan == plan2

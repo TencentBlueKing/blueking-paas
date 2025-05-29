@@ -143,6 +143,11 @@ class TestMixedMgrBindService:
     """All test cases in this class test both local and remote services by using
     the parametrized fixture `service_obj`."""
 
+    @pytest.fixture(autouse=True)
+    def set_uniform(self, service_obj):
+        """Set the allocation type to uniform for the service object."""
+        set_alloc_type_uniform(service_obj, DEFAULT_TENANT_ID)
+
     def test_no_plans(self, bk_module, service_obj, plan1):
         with pytest.raises(BindServicePlanError):
             mixed_service_mgr.bind_service(service_obj, bk_module)
@@ -191,7 +196,6 @@ class TestMixedMgrBindService:
             mixed_service_mgr.bind_service_use_first_plan(service_obj, bk_module)
 
     def test_use_first_plan_ok(self, bk_module, service_obj, bk_stag_env, plan1, plan2):
-        set_alloc_type_uniform(service_obj, DEFAULT_TENANT_ID)
         ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan2, plan1])
         rel_pk = mixed_service_mgr.bind_service_use_first_plan(service_obj, bk_module)
         assert rel_pk is not None
@@ -204,7 +208,6 @@ class TestMixedMgrBindService:
 
     def test_list_binded(self, service_obj, bk_app, bk_module, plan1):
         assert list(mixed_service_mgr.list_binded(bk_module)) == []
-        set_alloc_type_uniform(service_obj, DEFAULT_TENANT_ID)
         for env in bk_app.envs.all():
             assert list(mixed_service_mgr.list_unprovisioned_rels(env.engine_app)) == []
 
@@ -258,6 +261,32 @@ class TestPolicyCombinationManager:
                 plans=[plan1.uuid],
             ),
         )
+
+    def test_create_rule_based_error(self, service_obj, bk_app, bk_module, plan1, plan2):
+        allocation_precedence_policies = [
+            RuleBasedAllocationPolicy(
+                cond_type=PrecedencePolicyCondType.REGION_IN,
+                cond_data={"regions": [bk_app.region]},
+                priority=2,
+                plans=[plan1.uuid],
+            ),
+            RuleBasedAllocationPolicy(
+                cond_type=PrecedencePolicyCondType.CLUSTER_IN,
+                cond_data={"cluster_name": ["cluster1", "cluster2"]},
+                priority=1,
+                env_plans={"stag": [plan2.uuid]},
+            ),
+        ]
+
+        cfg = PolicyCombinationConfig(
+            tenant_id=DEFAULT_TENANT_ID,
+            service_id=service_obj.uuid,
+            policy_type=ServiceAllocationPolicyType.RULE_BASED,
+            allocation_precedence_policies=allocation_precedence_policies,
+        )
+        mgr = PolicyCombinationManager(service_obj, DEFAULT_TENANT_ID)
+        with pytest.raises(ValueError, match=r"The policy with the minimum priority*"):
+            mgr.upsert(cfg)
 
     def test_create(self, service_obj, bk_app, bk_module, plan1, plan2, policy_config):
         mgr = PolicyCombinationManager(service_obj, DEFAULT_TENANT_ID)

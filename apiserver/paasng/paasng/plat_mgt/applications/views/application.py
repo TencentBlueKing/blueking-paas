@@ -98,18 +98,8 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         filtered_queryset = self.filter_queryset(self.get_queryset())
 
         tenant_id_list = []
-        # 查询全租户可用的应用
-        global_apps = filtered_queryset.filter(app_tenant_mode=AppTenantMode.GLOBAL.value)
-        tenant_id_list.append(
-            {
-                "tenant_id": AppTenantMode.GLOBAL.value,
-                "app_count": global_apps.count(),
-            }
-        )
         # 查询各个租户的应用数量
-        tenant_ids = filtered_queryset.filter(app_tenant_mode=AppTenantMode.SINGLE.value).values_list(
-            "app_tenant_id", flat=True
-        )
+        tenant_ids = filtered_queryset.values_list("tenant_id", flat=True)
         tenant_id_counts = Counter(tenant_ids)
         for tenant_id in sorted(tenant_id_counts.keys()):
             tenant_id_list.append({"tenant_id": tenant_id, "app_count": tenant_id_counts[tenant_id]})
@@ -200,17 +190,21 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="更新应用集群",
-        request_body=slzs.ApplicationClusterSLZ(),
+        request_body=slzs.UpdateClusterSLZ(),
         responses={status.HTTP_204_NO_CONTENT: None},
     )
     def update_cluster(self, request, app_code, module_name, env_name):
         """更新应用集群"""
-        slz = slzs.ApplicationClusterSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
 
         application = get_object_or_404(self.get_queryset(), code=app_code)
         module = application.get_module(module_name)
         env = get_object_or_404(module.envs, environment=env_name)
+
+        slz = slzs.UpdateClusterSLZ(
+            data=request.data,
+            context={"user": request.user, "environment": env.environment, "region": application.region},
+        )
+        slz.is_valid(raise_exception=True)
 
         cluster_name = slz.validated_data["name"]
         cluster = get_object_or_404(Cluster, name=cluster_name)
@@ -241,14 +235,3 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @swagger_auto_schema(
-        tags=["plat_mgt.applications"],
-        operation_description="获取应用集群列表",
-        responses={status.HTTP_200_OK: slzs.ApplicationClusterSLZ(many=True)},
-    )
-    def list_clusters(self, request, *args, **kwargs):
-        """获取应用集群列表"""
-        clusters = Cluster.objects.all()
-        slz = slzs.ApplicationClusterSLZ(clusters, many=True)
-        return Response(slz.data, status=status.HTTP_200_OK)

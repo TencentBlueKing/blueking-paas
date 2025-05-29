@@ -16,17 +16,19 @@
 # to the current version of the project delivered to anyone in the future.
 
 import datetime
+import json
 
 import pytest
 from django.urls import reverse
 
 from paas_wl.bk_app.applications.models.app import WlApp
 from paas_wl.infras.cluster.constants import ClusterType
-from paas_wl.infras.cluster.models import Cluster
+from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
 from paasng.accessories.publish.market.constant import AppType
 from paasng.accessories.publish.market.models import Product
 from paasng.accessories.publish.sync_market.handlers import register_app_core_data
 from paasng.core.tenant.constants import AppTenantMode
+from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from tests.utils.helpers import override_settings
@@ -46,6 +48,7 @@ class TestApplicationListView:
             name="全局应用1",
             type="default",
             app_tenant_id="global-tenant-1",
+            tenant_id="tenant1",
             app_tenant_mode=AppTenantMode.GLOBAL.value,
             is_active=True,
             created=datetime.datetime.now() - datetime.timedelta(days=1),
@@ -55,6 +58,7 @@ class TestApplicationListView:
             name="全局应用2",
             type="default",
             app_tenant_id="global-tenant-2",
+            tenant_id="tenant2",
             app_tenant_mode=AppTenantMode.GLOBAL.value,
             is_active=True,
             created=datetime.datetime.now() - datetime.timedelta(days=2),
@@ -66,6 +70,7 @@ class TestApplicationListView:
             name="单租户应用1",
             type="engineless_app",
             app_tenant_id="tenant1",
+            tenant_id="tenant1",
             app_tenant_mode=AppTenantMode.SINGLE.value,
             is_active=True,
             created=datetime.datetime.now() - datetime.timedelta(days=3),
@@ -75,6 +80,7 @@ class TestApplicationListView:
             name="单租户应用2",
             type="cloud_native",
             app_tenant_id="tenant1",
+            tenant_id="tenant1",
             app_tenant_mode=AppTenantMode.SINGLE.value,
             is_active=False,
             created=datetime.datetime.now() - datetime.timedelta(days=4),
@@ -84,6 +90,7 @@ class TestApplicationListView:
             name="单租户应用3",
             type="cloud_native",
             app_tenant_id="tenant2",
+            tenant_id="tenant2",
             app_tenant_mode=AppTenantMode.SINGLE.value,
             is_active=False,
             created=datetime.datetime.now() - datetime.timedelta(days=5),
@@ -99,7 +106,7 @@ class TestApplicationListView:
             ({"search": "single"}, 3, {"single-app1", "single-app2", "single-app3"}),
             # 测试过滤条件
             ({"name": "全局"}, 2, ["global-app1", "global-app2"]),
-            ({"app_tenant_id": "global-tenant-1"}, 1, ["global-app1"]),
+            ({"tenant_id": "tenant1"}, 3, ["global-app1", "single-app1", "single-app2"]),
             ({"type": "default"}, 2, ["global-app2", "global-app1"]),
             ({"app_tenant_mode": "global"}, 2, {"global-app1", "global-app2"}),
             ({"is_active": "true"}, 3, {"global-app1", "global-app2", "single-app1"}),
@@ -161,19 +168,17 @@ class TestApplicationListView:
         # 测试不带查询参数的情况
         rsp = plat_mgt_api_client.get(url)
         assert rsp.status_code == 200
-        assert len(rsp.data) == 3
+        assert len(rsp.data) == 2
         assert rsp.data == [
-            {"tenant_id": AppTenantMode.GLOBAL.value, "app_count": 2},
-            {"tenant_id": "tenant1", "app_count": 2},
-            {"tenant_id": "tenant2", "app_count": 1},
+            {"tenant_id": "tenant1", "app_count": 3},
+            {"tenant_id": "tenant2", "app_count": 2},
         ]
 
         # 测试携带查询参数的情况
         rsp = plat_mgt_api_client.get(url, {"app_tenant_mode": AppTenantMode.SINGLE.value})
         assert rsp.status_code == 200
-        assert len(rsp.data) == 3
+        assert len(rsp.data) == 2
         assert rsp.data == [
-            {"tenant_id": AppTenantMode.GLOBAL.value, "app_count": 0},
             {"tenant_id": "tenant1", "app_count": 2},
             {"tenant_id": "tenant2", "app_count": 1},
         ]
@@ -184,14 +189,36 @@ class TestApplicationDetailView:
     """测试平台管理 - 应用详情 API"""
 
     @pytest.fixture
-    def clusters(self):
+    def clusters(self, bk_user):
         """准备测试集群，并在测试完成后清理创建的集群"""
+        # 添加测试用户的租户 ID
+        tenant_id = get_tenant(bk_user).id
         cluster1 = Cluster.objects.create(
-            name="cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
+            name="cluster",
+            type=ClusterType.NORMAL.value,
+            description="test cluster",
+            ingress_config={},
+            tenant_id=tenant_id,
+            available_tenant_ids=[tenant_id],
         )
         cluster2 = Cluster.objects.create(
-            name="new-cluster", type=ClusterType.NORMAL.value, description="test cluster", ingress_config={}
+            name="new-cluster",
+            type=ClusterType.NORMAL.value,
+            description="test cluster",
+            ingress_config={},
+            tenant_id=tenant_id,
+            available_tenant_ids=[tenant_id],
         )
+
+        # 创建集群分配策略
+        policy_data = {
+            "type": "uniform",
+            "allocation_policy": {
+                "env_specific": False,
+                "clusters": ["tenant", "cluster", "new-cluster"],
+            },
+        }
+        ClusterAllocationPolicy.objects.update_or_create(tenant_id=tenant_id, defaults=policy_data)
 
         yield cluster1, cluster2
         # 清理测试集群
@@ -260,25 +287,17 @@ class TestApplicationDetailView:
         """测试更新应用集群"""
 
         env = bk_app.get_default_module().envs.get(environment="prod")
-        wl_app = WlApp.objects.create(name=env.engine_app.name)
+        wl_app = WlApp.objects.create(name=env.engine_app.name, region=bk_app.region)
 
         url = reverse(
             "plat_mgt.applications.update_cluster",
             kwargs={"app_code": bk_app.code, "module_name": bk_app.get_default_module().name, "env_name": "prod"},
         )
         data = {"name": "new-cluster"}
-        rsp = plat_mgt_api_client.post(url, data=data)
+        rsp = plat_mgt_api_client.put(url, data=json.dumps(data), content_type="application/json")
         assert rsp.status_code == 204
 
         # 验证集群是否更新成功
         wl_app.refresh_from_db()
         assert wl_app.latest_config is not None, "latest_config is None"
         assert wl_app.latest_config.cluster == "new-cluster"
-
-    def test_list_clusters(self, plat_mgt_api_client, clusters):
-        """测试获取应用集群列表"""
-
-        url = reverse("plat_mgt.applications.list_clusters")
-        rsp = plat_mgt_api_client.get(url)
-        assert rsp.status_code == 200
-        assert len(rsp.data) > 0

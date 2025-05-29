@@ -21,11 +21,11 @@ from unittest import mock
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
-from paasng.accessories.servicehub.constants import Category, ServiceAllocationPolicyType
+from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager, set_alloc_type_uniform
+from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.exceptions import DuplicatedServiceBoundError, ReferencedAttachmentNotFound
 from paasng.accessories.servicehub.manager import SharedServiceInfo, mixed_service_mgr
-from paasng.accessories.servicehub.models import ServiceAllocationPolicy, ServiceInstance
+from paasng.accessories.servicehub.models import ServiceInstance
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
@@ -91,16 +91,9 @@ def ref_module(bk_app, bk_module, service_obj):
 
 
 class TestServiceSharingManager:
-    @pytest.fixture
-    def uniform_allocation_policy(self, service_obj):
-        return ServiceAllocationPolicy.objects.create(
-            service_id=service_obj.uuid,
-            type=ServiceAllocationPolicyType.UNIFORM.value,
-            tenant_id=DEFAULT_TENANT_ID,
-        )
-
     @pytest.fixture(autouse=True)
-    def _with_static_binding_policy(self, service_obj, uniform_allocation_policy):
+    def _with_static_binding_policy(self, service_obj):
+        set_alloc_type_uniform(service_obj, DEFAULT_TENANT_ID)
         ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([service_obj.get_plans()[0]])
 
     def test_list_shareable(self, bk_app, bk_module, service_obj):
@@ -169,16 +162,9 @@ class TestServiceSharingManager:
 
 
 class TestSharingReferencesManager:
-    @pytest.fixture
-    def uniform_allocation_policy(self, service_obj):
-        return ServiceAllocationPolicy.objects.create(
-            service_id=service_obj.uuid,
-            type=ServiceAllocationPolicyType.UNIFORM.value,
-            tenant_id=DEFAULT_TENANT_ID,
-        )
-
     @pytest.fixture(autouse=True)
-    def _setup_data(self, bk_module, ref_module, service_obj, uniform_allocation_policy):
+    def _setup_data(self, bk_module, ref_module, service_obj):
+        set_alloc_type_uniform(service_obj, DEFAULT_TENANT_ID)
         # Initialize the binding policy
         ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([service_obj.get_plans()[0]])
 
@@ -200,18 +186,11 @@ class TestSharingReferencesManager:
 
 
 class TestGetEnvVariables:
-    @pytest.fixture
-    def uniform_allocation_policy(self, local_service):
-        return ServiceAllocationPolicy.objects.create(
-            service_id=local_service.uuid,
-            type=ServiceAllocationPolicyType.UNIFORM.value,
-            tenant_id=DEFAULT_TENANT_ID,
-        )
-
     @pytest.fixture(autouse=True)
-    def _with_static_binding_policy(self, local_service, uniform_allocation_policy):
+    def _with_static_binding_policy(self, local_service):
         """Initialize the service binding policy for local service."""
         service = mixed_service_mgr.get(local_service.uuid)
+        set_alloc_type_uniform(local_service, DEFAULT_TENANT_ID)
         ServiceBindingPolicyManager(local_service, DEFAULT_TENANT_ID).set_static([service.get_plans()[0]])
 
     def test_local_integrated(self, bk_app, bk_module, local_service):

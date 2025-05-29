@@ -24,7 +24,11 @@ from uuid import UUID
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.accessories.servicehub.binding_policy.manager import PolicyCombinationManager, ServiceBindingPolicyManager
+from paasng.accessories.servicehub.binding_policy.manager import (
+    PolicyCombinationManager,
+    ServiceBindingPolicyManager,
+    set_alloc_type_uniform,
+)
 from paasng.accessories.servicehub.binding_policy.policy import (
     PolicyCombinationConfig,
     RuleBasedAllocationPolicy,
@@ -39,7 +43,6 @@ from paasng.accessories.servicehub.exceptions import (
 from paasng.accessories.servicehub.local import LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import (
-    ServiceAllocationPolicy,
     ServiceBindingPolicy,
     ServiceBindingPrecedencePolicy,
     ServiceEngineAppAttachment,
@@ -140,14 +143,6 @@ class TestMixedMgrBindService:
     """All test cases in this class test both local and remote services by using
     the parametrized fixture `service_obj`."""
 
-    @pytest.fixture(autouse=True)
-    def uniform_allocation_policy(self, service_obj):
-        return ServiceAllocationPolicy.objects.create(
-            service_id=service_obj.uuid,
-            type=ServiceAllocationPolicyType.UNIFORM.value,
-            tenant_id=DEFAULT_TENANT_ID,
-        )
-
     def test_no_plans(self, bk_module, service_obj, plan1):
         with pytest.raises(BindServicePlanError):
             mixed_service_mgr.bind_service(service_obj, bk_module)
@@ -195,7 +190,8 @@ class TestMixedMgrBindService:
         with pytest.raises(BindServicePlanError):
             mixed_service_mgr.bind_service_use_first_plan(service_obj, bk_module)
 
-    def test_use_first_plan_ok(self, bk_module, service_obj, bk_stag_env, plan1, plan2, uniform_allocation_policy):
+    def test_use_first_plan_ok(self, bk_module, service_obj, bk_stag_env, plan1, plan2):
+        set_alloc_type_uniform(service_obj, DEFAULT_TENANT_ID)
         ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_static([plan2, plan1])
         rel_pk = mixed_service_mgr.bind_service_use_first_plan(service_obj, bk_module)
         assert rel_pk is not None
@@ -206,8 +202,9 @@ class TestMixedMgrBindService:
 
     # Tests for list_binded start
 
-    def test_list_binded(self, service_obj, bk_app, bk_module, plan1, uniform_allocation_policy):
+    def test_list_binded(self, service_obj, bk_app, bk_module, plan1):
         assert list(mixed_service_mgr.list_binded(bk_module)) == []
+        set_alloc_type_uniform(service_obj, DEFAULT_TENANT_ID)
         for env in bk_app.envs.all():
             assert list(mixed_service_mgr.list_unprovisioned_rels(env.engine_app)) == []
 
@@ -333,19 +330,12 @@ class TestLocalMgrProvisionAndInstance:
         plans = service.get_plans()
         return next((p for p in plans if p.name == "plan-stag"), None)
 
-    @pytest.fixture
-    def uniform_allocation_policy(self, service):
-        return ServiceAllocationPolicy.objects.create(
-            service_id=service.uuid,
-            type=ServiceAllocationPolicyType.UNIFORM.value,
-            tenant_id=DEFAULT_TENANT_ID,
-        )
-
     @pytest.fixture(autouse=True)
-    def _with_static_binding_policy(self, service, plan_stag, uniform_allocation_policy):
+    def _with_static_binding_policy(self, service, plan_stag):
         """Set the binding policy for the service to a static plan, so the binding can
         proceed by default.
         """
+        set_alloc_type_uniform(service, DEFAULT_TENANT_ID)
         ServiceBindingPolicyManager(service, DEFAULT_TENANT_ID).set_static([plan_stag])
 
     @pytest.fixture()

@@ -66,28 +66,6 @@ class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
     )
     allocation_policy = AllocationPolicySLZ(help_text="统一分配配置", allow_null=True, required=False)
 
-    def validate(self, attrs):
-        policy_type = attrs.get("policy_type")
-        allocation_precedence_policies = attrs.get("allocation_precedence_policies")
-        allocation_policy = attrs.get("allocation_policy")
-
-        if policy_type == ServiceAllocationPolicyType.RULE_BASED.value:
-            if allocation_precedence_policies in [None, []]:
-                raise serializers.ValidationError(
-                    "Allocation precedence policies cannot be None or empty when policy_type is rule_based."
-                )
-
-            # Check for the policy with minimum priority
-            min_priority_policy = min(allocation_precedence_policies, key=lambda p: p["priority"])
-            if min_priority_policy["cond_type"] != PrecedencePolicyCondType.ALWAYS_MATCH.value:
-                raise serializers.ValidationError("The policy with the minimum priority must be 'always_match.")
-
-        elif policy_type == ServiceAllocationPolicyType.UNIFORM.value:
-            if allocation_policy is None:
-                raise serializers.ValidationError("Allocation policy cannot be null when policy_type is uniform.")
-
-        return attrs
-
     def to_internal_value(self, data) -> PolicyCombinationConfig:
         attrs = super().to_internal_value(data)
         service_id = self.context.get("service_id")

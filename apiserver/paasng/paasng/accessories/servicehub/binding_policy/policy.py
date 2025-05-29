@@ -21,6 +21,7 @@ from attrs import define
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.constants import (
     PrecedencePolicyCondType,
+    ServiceAllocationPolicyType,
     ServiceBindingPolicyType,
 )
 from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
@@ -265,3 +266,20 @@ class PolicyCombinationConfig:
     allocation_precedence_policies: list[RuleBasedAllocationPolicy] | None = None
     # 统一分配
     allocation_policy: UnifiedAllocationPolicy | None = None
+
+    def validate_config(self):
+        if self.policy_type == ServiceAllocationPolicyType.RULE_BASED.value:
+            allocation_precedence_policies = self.allocation_precedence_policies
+            if not allocation_precedence_policies:
+                raise ValueError(
+                    "Allocation precedence policies cannot be None or empty when policy_type is rule_based."
+                )
+
+            # 检查最低优先级的策略是否为always_match
+            min_priority_policy = min(allocation_precedence_policies, key=lambda p: p.priority)
+            if min_priority_policy.cond_type != PrecedencePolicyCondType.ALWAYS_MATCH.value:
+                raise ValueError("The policy with the minimum priority must be 'always_match'.")
+
+        elif self.policy_type == ServiceAllocationPolicyType.UNIFORM.value:
+            if self.allocation_policy is None:
+                raise ValueError("Allocation policy cannot be None when policy_type is uniform.")

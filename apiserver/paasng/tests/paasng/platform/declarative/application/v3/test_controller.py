@@ -24,10 +24,9 @@ from django.utils.translation import override
 from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import Product, Tag
-from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
-from paasng.accessories.servicehub.constants import Category, ServiceAllocationPolicyType
+from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager, set_alloc_type_uniform
+from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.models import ServiceAllocationPolicy
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.region.models import get_all_regions
@@ -285,11 +284,7 @@ class TestServicesField:
 
             # Create a default binding polity so that the binding works by default
             service = mixed_service_mgr.get(svc.uuid)
-            ServiceAllocationPolicy.objects.create(
-                service_id=service.uuid,
-                type=ServiceAllocationPolicyType.UNIFORM.value,
-                tenant_id=app_tenant.tenant_id,
-            )
+            set_alloc_type_uniform(service, app_tenant.tenant_id)
             ServiceBindingPolicyManager(service, app_tenant.tenant_id).set_static([service.get_plans()[0]])
 
     @pytest.fixture()

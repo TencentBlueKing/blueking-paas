@@ -13,6 +13,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import logging
 from enum import StrEnum
 from typing import Dict, List
 
@@ -28,6 +29,8 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models.module import Module
 
 from .policy import binding_policy_factory, precedence_policy_factory
+
+logger = logging.getLogger(__name__)
 
 
 def get_plan_by_env(
@@ -104,6 +107,9 @@ class PlanSelector:
                 tenant_id=env.tenant_id,
             )
         except ServiceAllocationPolicy.DoesNotExist:
+            logger.warning(
+                "ServiceAllocationPolicy not found for service %s in tenant %s", service.uuid, env.tenant_id
+            )
             return []
 
         if allocation_policy.type == ServiceAllocationPolicyType.RULE_BASED.value:
@@ -111,7 +117,7 @@ class PlanSelector:
         elif allocation_policy.type == ServiceAllocationPolicyType.UNIFORM.value:
             return self._get_uniform_policy(service, env)
 
-        return []
+        raise ValueError("Unsupported ServiceAllocationPolicy type: %s" % allocation_policy.type)
 
     def _get_uniform_policy(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
         """get the plans based on the ServiceBindingPolicy.
@@ -144,9 +150,7 @@ class PlanSelector:
             if not policy_obj.match(env):
                 continue
             return self.plan_ids_to_objs(service, policy_obj.get_plan_ids(env))
-        raise ValueError(
-            "Must have at least one ServiceBindingPrecedencePolicy with cond_type=always_match as fallback"
-        )
+        raise ValueError("Can not match any plans")
 
     @staticmethod
     def plan_ids_to_objs(service: ServiceObj, plan_ids: List[str]) -> List[PlanObj]:

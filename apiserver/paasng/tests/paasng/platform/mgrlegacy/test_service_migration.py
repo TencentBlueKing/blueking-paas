@@ -20,13 +20,11 @@ from unittest import mock
 
 import pytest
 
-from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
-from paasng.accessories.servicehub.constants import ServiceAllocationPolicyType
+from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager, set_alloc_type_uniform
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import (
     RemoteServiceEngineAppAttachment,
     RemoteServiceModuleAttachment,
-    ServiceAllocationPolicy,
 )
 from paasng.accessories.servicehub.remote.manager import RemotePlanObj, RemoteServiceObj
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
@@ -64,11 +62,7 @@ dummy_service = RemoteServiceObj(
 def _mock_get_service():
     with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
-        ServiceAllocationPolicy.objects.create(
-            service_id=dummy_service.uuid,
-            type=ServiceAllocationPolicyType.UNIFORM.value,
-            tenant_id=DEFAULT_TENANT_ID,
-        )
+        set_alloc_type_uniform(dummy_service, DEFAULT_TENANT_ID)
         with mock.patch.object(mixed_service_mgr, "get") as get:
             get.return_value = dummy_service
             ServiceBindingPolicyManager(dummy_service, DEFAULT_TENANT_ID).set_static([dummy_service.get_plans()[0]])

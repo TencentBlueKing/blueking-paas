@@ -191,7 +191,8 @@ class PolicyCombinationManager:
         allocation_policy, _ = ServiceAllocationPolicy.objects.update_or_create(
             service_id=self.service.uuid, tenant_id=self.tenant_id, defaults={"type": cfg.policy_type}
         )
-
+        # 校验字段
+        cfg.validate_config()
         if cfg.policy_type == ServiceAllocationPolicyType.RULE_BASED.value:
             # 按规则分配
             allocation_precedence_policies = cfg.allocation_precedence_policies
@@ -240,6 +241,7 @@ class PolicyCombinationManager:
                 service_id=self.service.uuid,
                 policy_type=svc_allocation_policy.type,
                 allocation_precedence_policies=allocation_precedence_policies,
+                # TODO: 暂时和集群分配一直，后续修改为无论什么分配类型下都保存/渲染两种类型的数据
                 allocation_policy=None,
             )
         elif svc_allocation_policy.type == ServiceAllocationPolicyType.UNIFORM.value:
@@ -249,6 +251,7 @@ class PolicyCombinationManager:
                 tenant_id=self.tenant_id,
                 service_id=self.service.uuid,
                 policy_type=svc_allocation_policy.type,
+                # TODO: 暂时和集群分配一直，后续修改为无论什么分配类型下都保存/渲染两种类型的数据
                 allocation_precedence_policies=None,
                 allocation_policy=uniform_policy,
             )
@@ -282,3 +285,15 @@ def list_policy_combination_configs(service: ServiceObj) -> list[PolicyCombinati
         if policy_combination is not None:
             result.append(policy_combination)
     return result
+
+
+def set_alloc_type_uniform(svc_obj: ServiceObj, tenant_id: str):
+    ServiceAllocationPolicy.objects.create(
+        service_id=svc_obj.uuid, tenant_id=tenant_id, type=ServiceAllocationPolicyType.UNIFORM.value
+    )
+
+
+def set_alloc_type_rule_based(svc_obj: ServiceObj, tenant_id: str):
+    ServiceAllocationPolicy.objects.create(
+        service_id=svc_obj.uuid, tenant_id=tenant_id, type=ServiceAllocationPolicyType.RULE_BASED.value
+    )

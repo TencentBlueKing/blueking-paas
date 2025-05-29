@@ -75,7 +75,7 @@ class ApplicationListFilterInputSLZ(serializers.Serializer):
 
     search = serializers.CharField(required=False, help_text="应用名称/ID 关键字搜索")
     name = serializers.CharField(required=False, help_text="应用名称")
-    tenant_id = serializers.CharField(required=False, help_text="应用租户 ID")
+    tenant_id = serializers.CharField(required=False, help_text="应用所属租户")
     app_tenant_mode = serializers.ChoiceField(
         required=False,
         choices=AppTenantMode.get_choices(),

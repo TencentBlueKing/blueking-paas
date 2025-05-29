@@ -21,8 +21,6 @@ from bkpaas_auth.core.constants import ProviderType
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
 from django.db.transaction import atomic
-from django.http import HttpResponseRedirect
-from django.urls import reverse
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -70,12 +68,6 @@ class UserProfilesManageView(GenericTemplateView):
 class UserProfilesManageViewSet(viewsets.GenericViewSet):
     serializer_class = UserProfileSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-
-    def dispatch(self, request, *args, **kwargs):
-        if settings.AUTO_CREATE_REGULAR_USER:
-            # 如果AUTO_CREATE_REGULAR_USER为True，重定向到首页
-            return HttpResponseRedirect(reverse("admin.front_page"))
-        return super().dispatch(request, *args, **kwargs)
 
     @atomic
     def bulk_create(self, request):

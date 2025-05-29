@@ -394,28 +394,6 @@ urlpatterns = [
         deploy.DevelopersDeployStatisticsView.as_view({"get": "export"}),
         name="admin.operation.statistics.deploy.developers.export",
     ),
-    # 部署列表页
-    re_path(r"^deployments/$", deployments.DeploymentListView.as_view(), name="admin.deployments.list"),
-    re_path(
-        r"^operation/statistics/deploy/apps/$",
-        deploy.AppDeployStatisticsView.as_view({"get": "get", "post": "export"}),
-        name="admin.operation.statistics.deploy.apps",
-    ),
-    re_path(
-        r"^operation/statistics/deploy/apps/export/$",
-        deploy.AppDeployStatisticsView.as_view({"get": "export"}),
-        name="admin.operation.statistics.deploy.apps.export",
-    ),
-    re_path(
-        r"^operation/statistics/deploy/developers/$",
-        deploy.DevelopersDeployStatisticsView.as_view({"get": "get"}),
-        name="admin.operation.statistics.deploy.developers",
-    ),
-    re_path(
-        r"^operation/statistics/deploy/developers/export/$",
-        deploy.DevelopersDeployStatisticsView.as_view({"get": "export"}),
-        name="admin.operation.statistics.deploy.developers.export",
-    ),
 ]
 
 # 应用配置管理，可以提供给管理应用、插件模板的同学使用

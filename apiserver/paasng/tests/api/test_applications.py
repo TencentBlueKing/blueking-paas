@@ -578,30 +578,33 @@ class TestCreateCloudNativeApp:
         assert process_spec.get_target_replicas("prod") == 2
 
     @pytest.mark.usefixtures("_init_tmpls")
-    @mock.patch("paasng.platform.applications.views.creation.delete_repo")
-    @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
-    @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")
+    @mock.patch(
+        "paasng.platform.modules.serializers.get_sourcectl_type", return_value=mock.MagicMock(repo_creator_class=True)
+    )
     @mock.patch("paasng.platform.applications.views.creation.create_new_repo")
+    @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")
+    @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
+    @mock.patch("paasng.platform.applications.views.creation.delete_repo")
     @pytest.mark.parametrize(
-        ("source_control_type", "auto_create_repo", "init_error"),
+        ("auto_create_repo", "init_error"),
         [
             # 初始化模块信息正常
-            ("tc_git", True, False),
-            ("tc_git", False, False),
+            (True, False),
+            (False, False),
             # 初始化异常且自动创建的仓库
-            ("tc_git", True, True),
+            (True, True),
             # 初始化异常但未自动创建仓库
-            ("tc_git", False, True),
+            (False, True),
         ],
     )
     def test_create_with_buildpack(
         self,
-        mock_create_new_repo,
-        mocked_manager,
-        mocked_binder,
         mock_delete_repo,
+        mocked_binder,
+        mocked_manager,
+        mock_create_new_repo,
+        mock_get_sourcectl_type,
         api_client,
-        source_control_type,
         auto_create_repo,
         init_error,
     ):
@@ -626,7 +629,7 @@ class TestCreateCloudNativeApp:
                         "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
                         "source_config": {
                             "source_init_template": settings.DUMMY_TEMPLATE_NAME,
-                            "source_control_type": source_control_type,
+                            "source_control_type": "github",
                             "auto_create_repo": auto_create_repo,
                             "source_origin": SourceOrigin.AUTHORIZED_VCS,
                             "source_repo_url": "https://github.com/octocat/helloWorld.git",
@@ -644,7 +647,7 @@ class TestCreateCloudNativeApp:
                     "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
                     "source_config": {
                         "source_init_template": settings.DUMMY_TEMPLATE_NAME,
-                        "source_control_type": source_control_type,
+                        "source_control_type": "github",
                         "auto_create_repo": auto_create_repo,
                         "source_origin": SourceOrigin.AUTHORIZED_VCS,
                         "source_repo_url": "https://github.com/octocat/helloWorld.git",
@@ -665,7 +668,7 @@ class TestCreateCloudNativeApp:
 
         # 验证异常时的仓库清理
         if init_error and auto_create_repo:
-            mock_delete_repo.assert_called_once_with(source_control_type, mock.ANY)
+            mock_delete_repo.assert_called_once_with("github", mock.ANY)
         else:
             mock_delete_repo.assert_not_called()
 

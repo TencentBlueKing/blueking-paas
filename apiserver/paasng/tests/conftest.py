@@ -654,13 +654,6 @@ def _setup_default_sourcectl_types(dummy_svn_spec, dummy_gitlab_spec):
             server_config={"api_url": "https://gitee.com/api/v5/"},
             **dummy_oauth_config,
         ),
-        SourceTypeSpecConfig(
-            name="tc_git",
-            label_zh_cn="tc_git",
-            label_en="tc_git",
-            enabled=True,
-            spec_cls=f"{spec_cls_module_path}.TcGitSourceTypeSpec",
-        ),
     ]
 
     type_configs = [dummy_gitlab_spec, dummy_svn_spec]

@@ -93,7 +93,6 @@ def create_wl_release(wl_app: WlApp, build_params: Dict | None = None, release_p
         "source_type": "foo",
         "branch": "bar",
         "revision": "1",
-        "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
     }
 
     if build_params:

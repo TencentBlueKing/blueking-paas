@@ -294,8 +294,10 @@ def wl_app(bk_stag_wl_app) -> WlApp:
 def wl_release(wl_app):
     return create_wl_release(
         wl_app=wl_app,
-        build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
-        release_params={"version": 5},
+        release_params={
+            "version": 5,
+            "procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"},
+        },
     )
 
 

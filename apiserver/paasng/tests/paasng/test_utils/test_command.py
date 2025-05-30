@@ -30,8 +30,10 @@ class TestGetCommandName:
         self.app = create_wl_app()
         self.release = create_wl_release(
             wl_app=self.app,
-            build_params={"procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"}},
-            release_params={"version": 2},
+            release_params={
+                "version": 2,
+                "procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"},
+            },
         )
 
     def test_command_name_normal(self):

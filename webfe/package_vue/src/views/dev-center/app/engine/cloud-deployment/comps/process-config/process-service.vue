@@ -119,7 +119,7 @@ export default {
     // 判断是否为主入口
     isMainEntry(services) {
       if (!services?.length) return false;
-      return services.some((service) => service.exposed_type?.name === 'bk/http');
+      return services.some((service) => ['bk/http', 'bk/grpc'].includes(service.exposed_type?.name));
     },
   },
 };

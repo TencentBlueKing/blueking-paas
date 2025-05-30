@@ -3017,4 +3017,6 @@ export default {
   '有效期为永久，无需续期': 'Validity is permanent, no renewal needed',
   '尚未获得资源权限，不支持续期': 'Resource permissions not yet obtained, renewal not supported',
   '蓝鲸 AI 插件 ID 必须以 ai- 开头': 'BlueKing AI Plugin ID must start with ai-',
+  '确定设为访问入口？': 'Confirm set as access entry?',
+  访问协议: 'Access Protocol',
 };

@@ -1,7 +1,7 @@
 <template lang="html">
   <div class="right-main">
     <paas-content-loader
-      class="app-container middle role-container"
+      :class="contentClass"
       :is-loading="loading"
       placeholder="roles-loading"
     >
@@ -111,31 +111,49 @@
             width="220"
           >
             <template #default="props">
-              <template v-if="canManageMe(props.row)">
+              <!-- 平台管理 -->
+              <template v-if="isPlatformManage">
                 <bk-button
+                  text
+                  class="mr8"
+                  @click="showMemberSideslider(props.row)"
+                >
+                  {{ $t('更换角色') }}
+                </bk-button>
+                <bk-button
+                  text
+                  class="mr8"
+                  @click="delMember(props.row.user.username, props.row.user.id)"
+                >
+                  {{ $t('删除成员') }}
+                </bk-button>
+              </template>
+              <template v-else>
+                <bk-button
+                  v-if="canManageMe(props.row)"
                   text
                   class="mr8"
                   @click="leaveApp(props.row.user.id, props.row.user.username)"
                 >
                   {{ $t('退出应用') }}
                 </bk-button>
+                <bk-button
+                  v-if="canChangeMembers()"
+                  text
+                  class="mr8"
+                  @click="showMemberSideslider(props.row)"
+                >
+                  {{ $t('更换角色') }}
+                </bk-button>
+                <bk-button
+                  v-if="canManageMembers(props.row)"
+                  text
+                  class="mr8"
+                  @click="delMember(props.row.user.username, props.row.user.id)"
+                >
+                  {{ $t('删除成员') }}
+                </bk-button>
               </template>
-              <bk-button
-                v-if="canChangeMembers()"
-                text
-                class="mr8"
-                @click="showMemberSideslider(props.row)"
-              >
-                {{ $t('更换角色') }}
-              </bk-button>
-              <bk-button
-                v-if="canManageMembers(props.row)"
-                text
-                class="mr8"
-                @click="delMember(props.row.user.username, props.row.user.id)"
-              >
-                {{ $t('删除成员') }}
-              </bk-button>
             </template>
           </bk-table-column>
         </bk-table>
@@ -219,6 +237,12 @@ const ROLE_MAPPING = {
   operator: '运营者',
 };
 
+const ROLE_ID_TO_NAME_MAPPING = {
+  2: 'administrator',
+  3: 'developer',
+  4: 'operator',
+};
+
 export default {
   components: {
     user,
@@ -289,6 +313,19 @@ export default {
       const { pageData } = paginationFun(this.filteredData, this.pagination.current, this.pagination.limit);
       return pageData;
     },
+    contentClass() {
+      return this.isPlatformManage ? [] : ['app-container', 'middle', 'role-container'];
+    },
+    // 是否为平台管理
+    isPlatformManage() {
+      return this.$route.path.includes('/plat-mgt');
+    },
+    appCode() {
+      if (this.isPlatformManage) {
+        return this.$route.params.code;
+      }
+      return this.$route.params.id;
+    },
   },
   watch: {
     $route() {
@@ -299,48 +336,69 @@ export default {
     this.init();
   },
   methods: {
+    // 页码变化
     pageChange(page) {
       this.pagination.current = page;
     },
-
+    // 页容量变化
     limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
     },
 
     init() {
-      this.enableToAddRole = this.curAppInfo && this.curAppInfo.role.name === 'administrator';
-      this.fetchMemberList();
+      this.loading = !this.isPlatformManage;
+      if (this.isPlatformManage) {
+        this.getPlatformMemberList();
+        // 平台管理默认为管理员
+        this.enableToAddRole = true;
+      } else {
+        // 判断当前应用是否为管理员
+        this.enableToAddRole = this.curAppInfo && this.curAppInfo.role.name === 'administrator';
+        this.fetchMemberList();
+      }
     },
 
     // 获取成员列表
     async fetchMemberList() {
+      await this.fetchAndProcessMemberList('member/getMemberList', this.appCode);
+    },
+
+    // 获取平台管理成员列表
+    async getPlatformMemberList() {
+      await this.fetchAndProcessMemberList('tenantOperations/getMembers', this.appCode);
+    },
+
+    // 获取成员列表的通用方法
+    async fetchAndProcessMemberList(dispatchAction, appCode) {
       this.isTableLoading = true;
       try {
-        const res = await this.$store.dispatch('member/getMemberList', { appCode: this.appCode });
-        this.memberList = res.results.map((user) => {
-          const translatedRoles = user.roles.map((role) => this.$t(ROLE_MAPPING[role.name]));
-          return {
-            ...user,
-            displayRoles: translatedRoles.join('，'), // 转换为中文
-          };
-        });
+        const res = await this.$store.dispatch(dispatchAction, { appCode });
+        const results = this.isPlatformManage ? res : res.results;
+        this.memberList = this.processMembers(results);
         this.filteredData = [...this.memberList]; // 过滤数据
-        this.pagination.count = res.results.length;
-        // 更新角色计数
+        this.pagination.count = results.length;
         this.updateFilterCounts();
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
         this.tableEmptyConf.isAbnormal = true;
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       } finally {
         this.loading = false;
         this.isTableLoading = false;
       }
+    },
+
+    // 处理成员数据
+    processMembers(members) {
+      return members.map((user) => {
+        const translatedRoles = user.roles.map((role) => this.$t(ROLE_MAPPING[role.name]));
+        return {
+          ...user,
+          displayRoles: translatedRoles.join('，'), // 角色中文显示
+        };
+      });
     },
 
     // 更新 filterList 的 count
@@ -380,9 +438,13 @@ export default {
     async addMember(parmas) {
       this.toggleMemberSidesliderLoading(true);
       try {
-        await this.$store.dispatch('member/addMember', { appCode: this.appCode, postParams: parmas });
+        const dispatchName = this.isPlatformManage ? 'tenantOperations/addMember' : 'member/addMember';
+        await this.$store.dispatch(dispatchName, {
+          appCode: this.appCode,
+          postParams: parmas,
+        });
         this.toggleMemberSideslider(false);
-        this.fetchMemberList();
+        this.isPlatformManage ? this.getPlatformMemberList() : this.fetchMemberList();
         this.$paasMessage({
           theme: 'success',
           message: this.$t('新增成员成功！'),
@@ -447,19 +509,20 @@ export default {
     async updateSave(parmas) {
       this.toggleMemberSidesliderLoading(true);
       try {
-        await this.$store.dispatch('member/updateRole', {
+        const dispatchName = this.isPlatformManage ? 'tenantOperations/updateRole' : 'member/updateRole';
+        await this.$store.dispatch(dispatchName, {
           appCode: this.appCode,
           id: this.selectedMember.id,
           params: parmas,
         });
         this.toggleMemberSideslider(false);
-        this.fetchMemberList();
+        this.isPlatformManage ? this.getPlatformMemberList() : this.fetchMemberList();
         this.$paasMessage({
           theme: 'success',
           message: this.$t('角色更换成功！'),
         });
         if (this.selectedMember.name === this.currentUser && this.roleName !== 'administrator') {
-          this.enableToAddRole = false;
+          this.enableToAddRole = this.isPlatformManage;
         }
       } catch (e) {
         this.$paasMessage({
@@ -477,16 +540,20 @@ export default {
       this.removeUserDialog.visiable = true;
     },
 
+    /**
+     * 删除成员
+     */
     async delSave() {
       this.removeUserDialog.isLoading = true;
       try {
-        await this.$store.dispatch('member/deleteRole', { appCode: this.appCode, id: this.selectedMember.id });
+        const dispatchName = this.isPlatformManage ? 'tenantOperations/deleteMember' : 'member/deleteRole';
+        await this.$store.dispatch(dispatchName, { appCode: this.appCode, id: this.selectedMember.id });
         this.closeDelModal();
         this.$paasMessage({
           theme: 'success',
           message: this.$t('删除成员成功！'),
         });
-        this.fetchMemberList();
+        this.isPlatformManage ? this.getPlatformMemberList() : this.fetchMemberList();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -596,12 +663,24 @@ export default {
     toggleMemberSidesliderLoading(falg) {
       this.membersSidesliderConfig.loading = falg;
     },
+
+    // 格式多租户成员数据结构
+    formatPlatformParams(data) {
+      return data.map(({ application, ...rest }) => rest);
+    },
+
     // 侧栏确认事件处理
-    handleSidesliderConfirm(parmas) {
+    handleSidesliderConfirm(parmas, roleId) {
       if (this.membersSidesliderConfig.type === 'add') {
-        this.addMember(parmas);
+        const platformParmas = this.formatPlatformParams(parmas);
+        this.addMember(this.isPlatformManage ? platformParmas : parmas);
       } else {
-        this.updateSave(parmas);
+        const platformParmas = {
+          role: {
+            id: roleId,
+          },
+        };
+        this.updateSave(this.isPlatformManage ? platformParmas : parmas);
       }
     },
     /**
@@ -636,6 +715,7 @@ export default {
 .role-container {
   width: calc(100% - 48px);
   margin: 16px auto 30px;
+  padding-top: 15px;
 }
 .content-wrapper {
   margin-top: 16px;
@@ -671,10 +751,6 @@ export default {
   color: #999;
 }
 
-.middle {
-  padding-top: 15px;
-}
-
 .role-label {
   display: inline-block;
   background: #fafafa;
@@ -693,7 +769,7 @@ export default {
   color: #3c96ff;
 }
 
-.app-container .header {
+.right-main .header {
   display: flex;
   justify-content: space-between;
   .mr12 {

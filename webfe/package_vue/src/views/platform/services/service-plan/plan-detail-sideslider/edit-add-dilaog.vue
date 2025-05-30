@@ -146,8 +146,8 @@ export default {
             plan: this.data.planId,
             // 实例配置：JSON格式
             credentials: typeof this.valuesJson === 'object' ? JSON.stringify(this.valuesJson) : this.valuesJson,
-            // 可回收复用：：开启：{config: {recycle:true} } / 停用：{}
-            config: this.formData.recyclable ? { recycle: true } : {},
+            // 可回收复用：：开启：{config: {recyclable:true} } / 停用：{}
+            config: this.formData.recyclable ? { recyclable: true } : {},
           };
           if (this.isAdd) {
             this.addResourcePool(params);

@@ -17,7 +17,6 @@
 
 import logging
 
-from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.core.constants import ProviderType
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
@@ -27,12 +26,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.core.region.models import get_all_regions
-from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.constants import SiteRole
-from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
+from paasng.infras.accounts.models import UserProfile
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.infras.accounts.serializers import AccountFeatureFlagSLZ
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.accountmgr import (
@@ -144,46 +141,5 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             target=OperationTarget.PLAT_USER,
             data_before=data_before,
             data_after=DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data),
-        )
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class AccountFeatureFlagManageView(GenericTemplateView):
-    template_name = "admin42/accountmgr/account_feature_flags.html"
-    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-    name = "用户特性管理"
-
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        kwargs = super().get_context_data(**kwargs)
-        kwargs["ACCOUNT_FEATUREFLAG_CHOICES"] = dict(AFF.get_choices())
-        kwargs["feature_flag_list"] = AccountFeatureFlagSLZ(AccountFeatureFlag.objects.all(), many=True).data
-        return kwargs
-
-
-class AccountFeatureFlagManageViewSet(viewsets.GenericViewSet):
-    schema = None
-    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-
-    def list(self, request):
-        return Response(AccountFeatureFlagSLZ(AccountFeatureFlag.objects.all(), many=True).data)
-
-    def update_or_create(self, request):
-        slz = AccountFeatureFlagSLZ(data=dict(user=dict(username=request.data["username"]), **request.data))
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-        user = get_user_by_user_id(data["user"])
-        data_before = DataDetail(type=DataType.RAW_DATA, data=AccountFeatureFlag.objects.get_user_features(user))
-        AccountFeatureFlag.objects.set_feature(user, data["name"], data["effect"])
-
-        add_admin_audit_record(
-            user=self.request.user.pk,
-            operation=OperationEnum.MODIFY_USER_FEATURE_FLAG,
-            target=OperationTarget.PLAT_USER,
-            attribute=user.username,
-            data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=AccountFeatureFlag.objects.get_user_features(user)),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

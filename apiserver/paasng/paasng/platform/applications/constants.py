@@ -82,7 +82,7 @@ class AppEnvironment(StrStructuredEnum):
 class AppFeatureFlag(FeatureFlag):  # type: ignore
     """App feature 常量表"""
 
-    RELEASE_TO_WEIXIN_QIYE = FeatureFlagField(label="发布 移动端微信企业号(企业微信)")
+    RELEASE_TO_WEIXIN_QIYE = FeatureFlagField(label="发布移动端微信企业号(企业微信)")
     ACCESS_CONTROL_EXEMPT_MODE = FeatureFlagField(label="访问控制豁免模式")
     # 数据统计相关的 feature flag
     PA_WEBSITE_ANALYTICS = FeatureFlagField(label="网站访问统计功能")

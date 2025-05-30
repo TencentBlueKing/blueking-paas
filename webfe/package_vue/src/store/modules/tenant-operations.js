@@ -1,0 +1,114 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://opensource.org/licenses/MIT
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+/*
+ * 多租户
+ */
+import http from '@/api';
+import { json2Query } from '@/common/tools';
+
+export default {
+  namespaced: true,
+  state: {},
+  actions: {
+    /**
+     * 应用列表-获取平台管理应用列表
+     */
+    getPlatformApps({}, { queryParams }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/?${json2Query(queryParams)}`;
+      return http.get(url);
+    },
+    /**
+     * 应用列表-获取各租户应用数量信息
+     */
+    getTenantAppStatistics() {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/tenant_app_statistics/`;
+      return http.get(url);
+    },
+    /**
+     * 应用列表-获取应用类型
+     */
+    getAppTypes() {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/types/`;
+      return http.get(url);
+    },
+    /**
+     * 应用详情-获取应用详情数据
+     */
+    getAppDetails({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/`;
+      return http.get(url);
+    },
+    /**
+     * 应用详情-更新应用信息
+     */
+    updateAppInfo({}, { appCode, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/`;
+      return http.post(url, data);
+    },
+    /**
+     * 应用详情-更新部署集群
+     */
+    updateDeployCluster({}, { appCode, moduleId, env, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/envs/${env}/cluster/`;
+      return http.put(url, data);
+    },
+    /**
+     * 特性管理-获取特性列表
+     */
+    getFeatureList({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/feature_flags/`;
+      return http.get(url);
+    },
+    /**
+     * 特性管理-更新应用特性
+     */
+    updateFeatureFlags({}, { appCode, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/feature_flags/`;
+      return http.put(url, data);
+    },
+    /**
+     * 成员管理-获取成员列表
+     */
+    getMembers({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/`;
+      return http.get(url);
+    },
+    /**
+     * 成员管理-添加成员
+     */
+    addMember({}, { appCode, postParams }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/`;
+      return http.post(url, postParams);
+    },
+    /**
+     * 成员管理-角色更新
+     */
+    updateRole({}, { appCode, id, params }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/${id}/`;
+      return http.put(url, params);
+    },
+    /**
+     * 成员管理-删除成员
+     */
+    deleteMember({}, { appCode, id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/${id}/`;
+      return http.delete(url);
+    },
+  },
+};

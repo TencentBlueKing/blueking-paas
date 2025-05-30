@@ -29,5 +29,6 @@ def admin_config(request):
         "USER_SELECTOR_LIST_API": getattr(settings, "USER_SELECTOR_LIST_API", "").replace("http://", "//"),
         "BKPAAS_URL": settings.BKPAAS_URL,
         "REGION_CHOICES": dict(RegionType.get_choices()),
+        "AUTO_CREATE_REGULAR_USER": settings.AUTO_CREATE_REGULAR_USER,
         "BKPAAS_BUILD_VERSION": BKPAAS_BUILD_VERSION,
     }

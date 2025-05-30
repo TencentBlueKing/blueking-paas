@@ -40,20 +40,20 @@ class TestGetCommandName:
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=self.release)
         assert get_command_name(sample_process.runtime.proc_command) == "gunicorn"
 
-        self.release.build.procfile = {"web": "command -x -z -y"}
+        self.release.procfile = {"web": "command -x -z -y"}
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=self.release)
         assert get_command_name(sample_process.runtime.proc_command) == "command"
 
     def test_command_name_celery(self):
-        self.release.build.procfile = {"web": "python manage.py celery"}
+        self.release.procfile = {"web": "python manage.py celery"}
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=self.release)
         assert get_command_name(sample_process.runtime.proc_command) == "celery"
 
     def test_commnad_name_with_slash(self):
-        self.release.build.procfile = {"web": "/bin/test/fake"}
+        self.release.procfile = {"web": "/bin/test/fake"}
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=self.release)
         assert get_command_name(sample_process.runtime.proc_command) == "fake"
 
-        self.release.build.procfile = {"web": "/bin/test/fake -g -s"}
+        self.release.procfile = {"web": "/bin/test/fake -g -s"}
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=self.release)
         assert get_command_name(sample_process.runtime.proc_command) == "fake"

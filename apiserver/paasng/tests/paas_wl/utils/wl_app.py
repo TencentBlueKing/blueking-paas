@@ -109,9 +109,9 @@ def create_wl_release(wl_app: WlApp, build_params: Dict | None = None, release_p
         "failed": False,
         "build": fake_build,
         "config": wl_app.config_set.latest(),
+        "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
     }
     if release_params:
         default_release_params.update(release_params)
-
     release_info = default_release_params
     return Release.objects.create(**release_info)

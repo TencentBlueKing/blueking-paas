@@ -262,7 +262,7 @@ class TestPolicyCombinationManager:
             ),
         )
 
-    def test_create_rule_based_error(self, service_obj, bk_app, bk_module, plan1, plan2):
+    def test_create_with_invalid_cfg(self, service_obj, bk_app, bk_module, plan1, plan2):
         allocation_precedence_policies = [
             RuleBasedAllocationPolicy(
                 cond_type=PrecedencePolicyCondType.REGION_IN,

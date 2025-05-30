@@ -39,6 +39,7 @@ from paasng.utils.text import camel_to_snake, remove_suffix
 if TYPE_CHECKING:
     from paasng.platform.sourcectl.connector import ModuleRepoConnector
     from paasng.platform.sourcectl.repo_controller import RepoController
+    from paasng.platform.sourcectl.repo_creator import RepoCreator
 
 logger = logging.getLogger(__name__)
 
@@ -65,11 +66,14 @@ class DiffFeature:
 class SourceTypeSpec:
     """Source type specifications"""
 
-    # connector 是用于“连接”新应用模块与源码系统的类型，它最大的职责有两个：完成绑定与同步模板代码
+    # connector 是用于“连接”新应用模块与源码系统的类型，它最大的职责有两个：完成绑定、同步模板代码、初始化模板代码到代码仓库
     connector_class: Type["ModuleRepoConnector"]
 
     # 用来操作源码系统的功能类型，提供了导出项目源码、查看 diff 日志等能力
     repo_controller_class: Type["RepoController"]
+
+    # 用来创建代码仓库的类
+    repo_creator_class: Optional[Type["RepoCreator"]]
 
     # 处理用户通过 OAuth 协议连接到外部 VCS 系统的后端类，部分源码系统（比如 GitHub、GitLab）适用，
     # 为空时表示当前源码系统不支持 OAuth 功能

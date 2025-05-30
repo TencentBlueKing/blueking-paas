@@ -26,9 +26,14 @@ from paasng.accessories.servicehub.binding_policy.policy import (
 from paasng.accessories.servicehub.binding_policy.selector import PlanSelector
 from paasng.accessories.servicehub.constants import (
     PrecedencePolicyCondType,
+    ServiceAllocationPolicyType,
     ServiceBindingPolicyType,
 )
-from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
+from paasng.accessories.servicehub.models import (
+    ServiceAllocationPolicy,
+    ServiceBindingPolicy,
+    ServiceBindingPrecedencePolicy,
+)
 from paasng.accessories.servicehub.services import PlanObj, ServiceObj
 
 from .policy import get_service_type
@@ -171,58 +176,87 @@ class PolicyCombinationManager:
 
     def clean(self):
         """Remove policy combination"""
+        ServiceAllocationPolicy.objects.filter(
+            service_id=self.service.uuid,
+            tenant_id=self.tenant_id,
+        ).delete()
         self.service_binding_policy_mgr.clean_static_policies()
         self.service_binding_policy_mgr.clean_precedence_policies()
 
     @transaction.atomic()
-    def upsert(self, policy_combination_config: PolicyCombinationConfig):
+    def upsert(self, cfg: PolicyCombinationConfig):
         """Update or insert a combination of service binding policies."""
         self.clean()
 
-        allocation_precedence_policies = policy_combination_config.allocation_precedence_policies
-        allocation_policy = policy_combination_config.allocation_policy
+        allocation_policy, _ = ServiceAllocationPolicy.objects.update_or_create(
+            service_id=self.service.uuid, tenant_id=self.tenant_id, defaults={"type": cfg.policy_type}
+        )
+        # 校验字段
+        cfg.validate_config()
+        if cfg.policy_type == ServiceAllocationPolicyType.RULE_BASED.value:
+            # 按规则分配
+            allocation_precedence_policies = cfg.allocation_precedence_policies
+            if not allocation_precedence_policies:
+                return
+            for config in allocation_precedence_policies:
+                if config.plans:
+                    self.service_binding_policy_mgr.add_precedence_static(
+                        cond_type=PrecedencePolicyCondType(config.cond_type),
+                        cond_data=config.cond_data,
+                        plans=self._plan_ids_to_objs(config.plans),
+                        priority=config.priority,
+                    )
+                elif config.env_plans:
+                    self.service_binding_policy_mgr.add_precedence_env_specific(
+                        cond_type=PrecedencePolicyCondType(config.cond_type),
+                        cond_data=config.cond_data,
+                        env_plans=self._plan_ids_to_env_plan_objs(config.env_plans),
+                        priority=config.priority,
+                    )
 
-        # Set the base policy
-        if allocation_policy.plans:
-            self.service_binding_policy_mgr.set_static(plans=self._plan_ids_to_objs(allocation_policy.plans))
-        elif allocation_policy.env_plans:
-            self.service_binding_policy_mgr.set_env_specific(
-                env_plans=self._plan_ids_to_env_plan_objs(allocation_policy.env_plans)
-            )
-
-        # Add precedence policies with decreasing priority
-        for config in allocation_precedence_policies:
-            if config.plans:
-                self.service_binding_policy_mgr.add_precedence_static(
-                    cond_type=PrecedencePolicyCondType(config.cond_type),
-                    cond_data=config.cond_data,
-                    plans=self._plan_ids_to_objs(config.plans),
-                    priority=config.priority,
-                )
-            elif config.env_plans:
-                self.service_binding_policy_mgr.add_precedence_env_specific(
-                    cond_type=PrecedencePolicyCondType(config.cond_type),
-                    cond_data=config.cond_data,
-                    env_plans=self._plan_ids_to_env_plan_objs(config.env_plans),
-                    priority=config.priority,
+        elif cfg.policy_type == ServiceAllocationPolicyType.UNIFORM.value:
+            # 统一分配
+            allocation_policy = cfg.allocation_policy
+            if not allocation_policy:
+                return
+            if allocation_policy.plans:
+                self.service_binding_policy_mgr.set_static(plans=self._plan_ids_to_objs(allocation_policy.plans))
+            elif allocation_policy.env_plans:
+                self.service_binding_policy_mgr.set_env_specific(
+                    env_plans=self._plan_ids_to_env_plan_objs(allocation_policy.env_plans)
                 )
 
     def get(self) -> Optional[PolicyCombinationConfig]:
-        service_binding_policy = self.service_binding_policy_mgr.get_service_binding_policy()
-        # service_binding_policy 是必有的，如果没有表示没有正确配置或者没有配置过绑定策略
-        if service_binding_policy is None:
-            return None
-        precedence_policies = self.service_binding_policy_mgr.get_precedence_policies()
-        allocation_precedence_policies = [
-            RuleBasedAllocationPolicy.create_from_policy(policy) for policy in precedence_policies
-        ]
-        allocation_policy = UnifiedAllocationPolicy.create_from_policy(service_binding_policy)
-        return PolicyCombinationConfig(
-            tenant_id=self.tenant_id,
+        svc_allocation_policy = ServiceAllocationPolicy.objects.get(
             service_id=self.service.uuid,
-            allocation_precedence_policies=allocation_precedence_policies,
-            allocation_policy=allocation_policy,
+            tenant_id=self.tenant_id,
         )
+        if svc_allocation_policy.type == ServiceAllocationPolicyType.RULE_BASED.value:
+            precedence_policies = self.service_binding_policy_mgr.get_precedence_policies()
+            allocation_precedence_policies = [
+                RuleBasedAllocationPolicy.create_from_policy(policy) for policy in precedence_policies
+            ]
+            return PolicyCombinationConfig(
+                tenant_id=self.tenant_id,
+                service_id=self.service.uuid,
+                policy_type=svc_allocation_policy.type,
+                allocation_precedence_policies=allocation_precedence_policies,
+                # TODO: 暂时和集群分配一直，后续修改为无论什么分配类型下都保存/渲染两种类型的数据
+                allocation_policy=None,
+            )
+        elif svc_allocation_policy.type == ServiceAllocationPolicyType.UNIFORM.value:
+            service_binding_policy = self.service_binding_policy_mgr.get_service_binding_policy()
+            uniform_policy = UnifiedAllocationPolicy.create_from_policy(service_binding_policy)
+            return PolicyCombinationConfig(
+                tenant_id=self.tenant_id,
+                service_id=self.service.uuid,
+                policy_type=svc_allocation_policy.type,
+                # TODO: 暂时和集群分配一直，后续修改为无论什么分配类型下都保存/渲染两种类型的数据
+                allocation_precedence_policies=None,
+                allocation_policy=uniform_policy,
+            )
+
+        return None
 
     def _plan_ids_to_objs(self, plan_ids: list[str]) -> list[PlanObj]:
         selector = PlanSelector()
@@ -242,10 +276,7 @@ def list_policy_combination_configs(service: ServiceObj) -> list[PolicyCombinati
     Retrieve all service policy combination configs
     """
 
-    # Retrieve all policies and order them by tenant_id and priority (descending)
-    tenant_ids = set(ServiceBindingPrecedencePolicy.objects.values_list("tenant_id", flat=True)).union(
-        set(ServiceBindingPolicy.objects.values_list("tenant_id", flat=True))
-    )
+    tenant_ids = ServiceAllocationPolicy.objects.values_list("tenant_id", flat=True)
 
     result = []
     for tenant_id in tenant_ids:
@@ -254,3 +285,15 @@ def list_policy_combination_configs(service: ServiceObj) -> list[PolicyCombinati
         if policy_combination is not None:
             result.append(policy_combination)
     return result
+
+
+def set_alloc_type_uniform(svc_obj: ServiceObj, tenant_id: str):
+    ServiceAllocationPolicy.objects.create(
+        service_id=svc_obj.uuid, tenant_id=tenant_id, type=ServiceAllocationPolicyType.UNIFORM.value
+    )
+
+
+def set_alloc_type_rule_based(svc_obj: ServiceObj, tenant_id: str):
+    ServiceAllocationPolicy.objects.create(
+        service_id=svc_obj.uuid, tenant_id=tenant_id, type=ServiceAllocationPolicyType.RULE_BASED.value
+    )

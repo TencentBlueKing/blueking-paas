@@ -24,13 +24,16 @@ from unittest import mock
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager, set_alloc_type_uniform
 from paasng.accessories.servicehub.exceptions import (
     CanNotModifyPlan,
     UnboundSvcAttachmentDoesNotExist,
 )
 from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment, ServiceEngineAppAttachment
+from paasng.accessories.servicehub.models import (
+    RemoteServiceEngineAppAttachment,
+    ServiceEngineAppAttachment,
+)
 from paasng.accessories.servicehub.remote import RemoteServiceMgr, collector
 from paasng.accessories.servicehub.remote.manager import MetaInfo, RemoteEngineAppInstanceRel, RemotePlanObj
 from paasng.accessories.servicehub.remote.store import get_remote_store
@@ -111,7 +114,15 @@ class TestRemoteEngineAppInstanceRel:
 
     @mock.patch("paas_wl.workloads.networking.egress.shim.get_cluster_egress_info")
     @mock.patch("paasng.accessories.servicehub.remote.client.RemoteServiceClient.provision_instance")
-    def test_provision(self, mocked_provision, get_cluster_egress_info, store, bk_module, bk_service, bk_plan_1):
+    def test_provision(
+        self,
+        mocked_provision,
+        get_cluster_egress_info,
+        store,
+        bk_module,
+        bk_service,
+        bk_plan_1,
+    ):
         """Test service instance provision"""
         get_cluster_egress_info.return_value = {"egress_ips": ["1.1.1.1"], "digest_version": "foo"}
         plans = [bk_plan_1]
@@ -119,12 +130,12 @@ class TestRemoteEngineAppInstanceRel:
         bk_service.plans = plans
 
         # Set the binding policy and bind
+        set_alloc_type_uniform(bk_service, DEFAULT_TENANT_ID)
         ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([plans[0]])
         mgr.bind_service(bk_service, bk_module)
 
         with mock.patch.object(mgr, "get") as get_service:
             get_service.return_value = bk_service
-
             for env in bk_module.envs.all():
                 expected_plan = plans[0]
                 for rel in mgr.list_unprovisioned_rels(env.engine_app):
@@ -141,12 +152,21 @@ class TestRemoteEngineAppInstanceRel:
                     assert mocked_provision.call_args[1]["params"]["username"] == rel.db_engine_app.name
 
     @mock.patch("paasng.accessories.servicehub.remote.manager.EnvClusterInfo.get_egress_info")
-    def test_render_params(self, mock_get_egress_info, store, bk_app, bk_module, bk_service, bk_plan_1):
+    def test_render_params(
+        self,
+        mock_get_egress_info,
+        store,
+        bk_app,
+        bk_module,
+        bk_service,
+        bk_plan_1,
+    ):
         mock_get_egress_info.return_value = {}
         mgr = RemoteServiceMgr(store=store)
         bk_service.plans = [bk_plan_1]
 
         # Set the binding policy and bind
+        set_alloc_type_uniform(bk_service, DEFAULT_TENANT_ID)
         ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([bk_service.plans[0]])
         mgr.bind_service(bk_service, bk_module)
 
@@ -193,6 +213,7 @@ class TestRemoteMgrWithRealStore:
         mgr = RemoteServiceMgr(store=store)
 
         plans = bk_service.plans
+        set_alloc_type_uniform(bk_service, DEFAULT_TENANT_ID)
         ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([plans[0]])
         mgr.bind_service(bk_service, bk_module)
         env = bk_module.get_envs("stag")
@@ -220,6 +241,7 @@ class TestRemoteMgr:
         # Initialize with a static binding policy
         mgr = RemoteServiceMgr(store=store)
         svc = mgr.get(id_of_first_service)
+        set_alloc_type_uniform(svc, DEFAULT_TENANT_ID)
         ServiceBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_static([svc.get_plans()[0]])
 
     @pytest.fixture()

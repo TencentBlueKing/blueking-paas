@@ -34,7 +34,7 @@ from paas_wl.bk_app.processes.entities import (
     ProbeSet as WLProbeSet,
 )
 from paas_wl.bk_app.processes.entities import TCPSocketAction as WLTCPSocketAction
-from paas_wl.bk_app.processes.exceptions import PreviousInstanceNotFound
+from paas_wl.bk_app.processes.exceptions import InstanceNotFound
 from paas_wl.bk_app.processes.kres_entities import Process
 from paas_wl.bk_app.processes.kres_slzs import ProcessDeserializer, ProcessSerializer
 from paas_wl.bk_app.processes.processes import (
@@ -179,15 +179,28 @@ class TestProcessManager:
             body=construct_foo_pod(wl_app.scheduler_safe_name, restart_policy="Never"),
         )
 
-    def test_get_previous_logs_normal(self, setup_log_pod, bk_stag_env, wl_app):
-        logs = ProcessManager(bk_stag_env).get_previous_logs("", wl_app.scheduler_safe_name, "main")
-        assert logs is not None
-        assert isinstance(logs, str)
+    @pytest.mark.parametrize(
+        ("instance_name_suffix", "previous", "expected_exception"),
+        [
+            ("", False, None),  # 当前实例日志，正常情况
+            ("", True, None),  # 上一次实例日志，正常情况
+            ("-bad", False, InstanceNotFound),  # 不存在的当前实例
+            ("-bad", True, InstanceNotFound),  # 不存在的上一次实例
+        ],
+    )
+    def test_get_instance_logs(
+        self, setup_log_pod, bk_stag_env, wl_app, instance_name_suffix, previous, expected_exception
+    ):
+        """测试获取实例日志，包含正常和异常情况"""
+        instance_name = wl_app.scheduler_safe_name + instance_name_suffix
 
-    def test_get_previous_logs_inst_not_found(self, setup_log_pod, bk_stag_env, wl_app):
-        bad_inst_name = wl_app.scheduler_safe_name + "-bad"
-        with pytest.raises(PreviousInstanceNotFound):
-            _ = ProcessManager(bk_stag_env).get_previous_logs("", bad_inst_name, "main")
+        if expected_exception:
+            with pytest.raises(expected_exception):
+                ProcessManager(bk_stag_env).get_instance_logs("", instance_name, previous, "main")
+        else:
+            logs = ProcessManager(bk_stag_env).get_instance_logs("", instance_name, previous, "main")
+            assert logs is not None
+            assert isinstance(logs, str)
 
     @pytest.mark.usefixtures("bk_stag_wl_app")
     def test_list_cnative_processes_specs(self, bk_cnative_app, bk_stag_env):

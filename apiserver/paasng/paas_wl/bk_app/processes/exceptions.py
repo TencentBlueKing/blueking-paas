@@ -73,5 +73,5 @@ class UnknownProcessTypeError(AppEntityDeserializeError):
     """Unable to detect process type from Deployment/Pod"""
 
 
-class PreviousInstanceNotFound(Exception):
-    """Unable to find the previous instance"""
+class InstanceNotFound(Exception):
+    """Unable to find the instance"""

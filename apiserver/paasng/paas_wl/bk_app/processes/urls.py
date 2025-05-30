@@ -57,18 +57,16 @@ urlpatterns = [
         name="api.list_instance_events",
     ),
     re_path(
-        make_app_pattern(
-            r"/processes/(?P<process_type>[\w-]+)/instances/(?P<process_instance_name>[.\w-]+)/previous_logs/$"
-        ),
-        views.InstanceManageViewSet.as_view({"get": "retrieve_previous_logs"}),
-        name="api.instances.previous_logs",
+        make_app_pattern(r"/processes/(?P<process_type>[\w-]+)/instances/(?P<process_instance_name>[.\w-]+)/logs/$"),
+        views.InstanceManageViewSet.as_view({"get": "retrieve_logs"}),
+        name="api.instances.logs",
     ),
     re_path(
         make_app_pattern(
-            r"/processes/(?P<process_type>[\w-]+)/instances/(?P<process_instance_name>[.\w-]+)/previous_logs/download/$"
+            r"/processes/(?P<process_type>[\w-]+)/instances/(?P<process_instance_name>[.\w-]+)/logs/download/$"
         ),
-        views.InstanceManageViewSet.as_view({"get": "download_previous_logs"}),
-        name="api.instances.previous_logs_download",
+        views.InstanceManageViewSet.as_view({"get": "download_logs"}),
+        name="api.instances.logs_download",
     ),
     re_path(
         make_app_pattern(r"/instances/(?P<process_instance_name>[.\w-]+)/restart/$"),

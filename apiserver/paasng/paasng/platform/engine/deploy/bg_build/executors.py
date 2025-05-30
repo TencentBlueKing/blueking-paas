@@ -410,7 +410,6 @@ class PipelineBuildProcessExecutor(DeployStep):
             image=metadata.image,
             branch=self.bp.branch,
             revision=self.bp.revision,
-            procfile={},
             env_variables=generate_launcher_env_vars(slug_path=generate_slug_path(self.bp)),
             bkapp_revision_id=metadata.bkapp_revision_id,
             artifact_type=ArtifactType.IMAGE,

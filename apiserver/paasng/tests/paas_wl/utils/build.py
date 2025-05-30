@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, Optional
+from typing import Optional
 
 from django.utils.crypto import get_random_string
 
@@ -48,11 +48,9 @@ def create_build_proc(
 def create_build(
     env: ModuleEnvironment,
     image: str = "",
-    procfile: Optional[Dict] = None,
     bp: Optional[BuildProcess] = None,
     artifact_type: ArtifactType = ArtifactType.IMAGE,
 ):
-    procfile = procfile or {"web": "start web"}
     branch = bp.branch if bp is not None else "master"
     revision = bp.revision if bp is not None else "1"
     wl_app = env.wl_app
@@ -65,7 +63,6 @@ def create_build(
         "source_type": "foo",
         "branch": branch,
         "revision": revision,
-        "procfile": procfile,
         "artifact_type": artifact_type,
     }
     wl_build = Build.objects.create(tenant_id=wl_app.tenant_id, **build_params)

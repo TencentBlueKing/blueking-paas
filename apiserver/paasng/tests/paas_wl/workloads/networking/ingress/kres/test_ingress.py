@@ -49,8 +49,10 @@ class TestProcessIngress:
         settings.ENABLE_MODERN_INGRESS_SUPPORT = True
         create_wl_release(
             wl_app=bk_stag_wl_app,
-            build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
-            release_params={"version": 5},
+            release_params={
+                "version": 5,
+                "procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"},
+            },
         )
 
     @pytest.fixture()
@@ -65,7 +67,7 @@ class TestProcessIngress:
         service_kmodel.save(service)
         return service_kmodel.list_by_app(bk_stag_wl_app)[0]
 
-    @pytest.mark.auto_create_ns
+    @pytest.mark.auto_create_ns()
     def test_normal(self, bk_stag_wl_app, service):
         domains = [PIngressDomain(host="foo.com")]
         ingress = ProcessIngress(
@@ -85,7 +87,7 @@ class TestProcessIngress:
         assert item.server_snippet == "server"
         assert item.annotations == {"foo": "bar"}
 
-    @pytest.mark.auto_create_ns
+    @pytest.mark.auto_create_ns()
     def test_paths(self, bk_stag_wl_app, service):
         """Multiple hosts with paths"""
         domains = [

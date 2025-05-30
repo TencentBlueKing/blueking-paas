@@ -48,11 +48,10 @@ class TestObsoleteProcessesCleaner:
     )
     def test_find_all_latest_mapper_v2(self, wl_app, curr_procfile, prev_procfile, expected_diff):
         update_metadata(wl_app, mapper_version="v2")
-        prev_release = create_wl_release(wl_app, build_params={"procfile": prev_procfile})
+        prev_release = create_wl_release(wl_app, release_params={"procfile": prev_procfile})
         curr_release = create_wl_release(
             wl_app,
-            build_params={"procfile": curr_procfile},
-            release_params={"version": prev_release.version + 1},
+            release_params={"version": prev_release.version + 1, "procfile": curr_procfile},
         )
         proc_cleaner = ObsoleteProcessesCleaner(curr_release, prev_release)
         self._assert_equal_find_all_results(proc_cleaner.find_all(), expected_diff)
@@ -80,11 +79,10 @@ class TestObsoleteProcessesCleaner:
     )
     def test_find_all_latest_mapper_v1(self, wl_app, curr_procfile, prev_procfile, expected_diff):
         update_metadata(wl_app, mapper_version="v1")
-        prev_release = create_wl_release(wl_app, build_params={"procfile": prev_procfile})
+        prev_release = create_wl_release(wl_app, release_params={"procfile": prev_procfile})
         curr_release = create_wl_release(
             wl_app,
-            build_params={"procfile": curr_procfile},
-            release_params={"version": prev_release.version + 1},
+            release_params={"version": prev_release.version + 1, "procfile": curr_procfile},
         )
         proc_cleaner = ObsoleteProcessesCleaner(curr_release, prev_release)
         self._assert_equal_find_all_results(proc_cleaner.find_all(), expected_diff)

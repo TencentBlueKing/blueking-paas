@@ -216,17 +216,8 @@
                     <bk-col :span="24">
                         <bk-form-item label="BuildPack" :required="dialog.type !== 'detail'">
                             <bk-select
-                                v-model="dialog.form.buildpacks"
-                                multiple
-                                :disabled="dialog.type === 'detail'"
-                                placeholder="请选择 BuildPack"
-                            >
-                                <bk-option
-                                    v-for="bp in allBuildpacks"
-                                    :key="bp.id"
-                                    :id="bp.id"
-                                    :name="bp.name"
-                                ></bk-option>
+                                v-model="dialog.form.buildpacks" multiple :disabled="dialog.type === 'detail'" placeholder="请选择 BuildPack">
+                                <bk-option v-for="bp in allBuildpacks" :key="bp.id" :id="bp.id" :name="bp.name"></bk-option>
                             </bk-select>
                         </bk-form-item>
                     </bk-col>

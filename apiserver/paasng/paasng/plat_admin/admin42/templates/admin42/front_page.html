@@ -118,6 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         {% endif %}
                     {% endif %}
                     {% if perm.manage_platform %}
+                    {% if not AUTO_CREATE_REGULAR_USER %}
+                    // 如果平台不在用户登录的时候自动创建用户，则需要在用户列表中将用户添加为普通用户后，用户才能访问开发者中心
                     {
                         name: "用户管理",
                         url: "{% url 'admin.accountmgr.index' %}",
@@ -128,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             },
                         ]
                     },
+                    {% endif %}
                     {
                         name: "操作审计",
                         url: "{% url 'admin.audit.index' %}",

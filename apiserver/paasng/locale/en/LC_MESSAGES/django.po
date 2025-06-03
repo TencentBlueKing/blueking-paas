@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-05-28 15:15+0800\n"
+"POT-Creation-Date: 2025-05-28 16:48+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -280,7 +280,7 @@ msgstr ""
 msgid "scaling_config 配置格式有误：{}"
 msgstr "Incorrect format for scaling_config: {}"
 
-#: paas_wl/bk_app/processes/views.py:103
+#: paas_wl/bk_app/processes/views.py:105
 msgid "环境未就绪或已下架, 请尝试重新部署"
 msgstr ""
 "The environment is not ready or has been archived, please try to redeploy it."
@@ -384,75 +384,79 @@ msgstr "Operation process failure"
 msgid "进程操作过于频繁，请稍后再试"
 msgstr "The process is operating too often, please try again later"
 
-#: paas_wl/utils/error_codes.py:39
+#: paas_wl/utils/error_codes.py:37
+msgid "无法找到进程实例"
+msgstr "Unable to find process instance"
+
+#: paas_wl/utils/error_codes.py:40
 msgid "删除独立域名失败"
 msgstr "Failed to delete standalone domain"
 
-#: paas_wl/utils/error_codes.py:40
+#: paas_wl/utils/error_codes.py:41
 msgid "创建独立域名失败"
 msgstr "Failed to create standalone domain"
 
-#: paas_wl/utils/error_codes.py:41
+#: paas_wl/utils/error_codes.py:42
 msgid "修改独立域名失败"
 msgstr "Failed to modify standalone domain"
 
-#: paas_wl/utils/error_codes.py:44
+#: paas_wl/utils/error_codes.py:45
 msgid "该功能当前版本不支持"
 msgstr "This feature is not supported in the current version"
 
-#: paas_wl/utils/error_codes.py:47
+#: paas_wl/utils/error_codes.py:48
 msgid "未设置部署信息"
 msgstr "Deployment information not set"
 
-#: paas_wl/utils/error_codes.py:48
+#: paas_wl/utils/error_codes.py:49
 msgid "The bkapp is invalid"
 msgstr "The bkapp is invalid"
 
-#: paas_wl/utils/error_codes.py:49
+#: paas_wl/utils/error_codes.py:50
 msgid "Failed to find deployed version"
 msgstr "Failed to find deployed version"
 
-#: paas_wl/utils/error_codes.py:50
+#: paas_wl/utils/error_codes.py:51
 msgid "Failed to list tag from image repository"
 msgstr "Failed to list tag from image repository"
 
-#: paas_wl/utils/error_codes.py:51
+#: paas_wl/utils/error_codes.py:52
 msgid "Failed to create volume mount"
 msgstr "Failed to create volume mount"
 
-#: paas_wl/utils/error_codes.py:52
+#: paas_wl/utils/error_codes.py:53
 msgid "Failed to list volume mount"
 msgstr "Failed to list volume mount"
 
-#: paas_wl/utils/error_codes.py:53
+#: paas_wl/utils/error_codes.py:54
 msgid "Failed to update volume mount"
 msgstr "Failed to update volume mount"
 
-#: paas_wl/utils/error_codes.py:54
+#: paas_wl/utils/error_codes.py:55
 msgid "Failed to list volume mount sources"
 msgstr "Failed to list volume mount sources"
 
-#: paas_wl/utils/error_codes.py:55
+#: paas_wl/utils/error_codes.py:56
 msgid "Failed to create volume mount source"
 msgstr "Failed to create volume mount source"
 
-#: paas_wl/utils/error_codes.py:58
+#: paas_wl/utils/error_codes.py:59
 msgid "Failed to create credentials"
 msgstr "Failed to create credentials"
 
-#: paas_wl/utils/error_codes.py:59
+#: paas_wl/utils/error_codes.py:60
 msgid "Image credentials is invalid"
 msgstr "Image credentials is invalid"
 
-#: paas_wl/utils/error_codes.py:60
+#: paas_wl/utils/error_codes.py:61
 msgid "Failed to delete credentials"
 msgstr "Failed to delete credentials"
 
-#: paas_wl/utils/error_codes.py:63
+#: paas_wl/utils/error_codes.py:64
 msgid "Failed to switch default cluster"
 msgstr "Failed to switch default cluster"
 
-#: paas_wl/utils/error_codes.py:64
+#: paas_wl/utils/error_codes.py:65
 msgid "Cluster component not exist"
 msgstr "Cluster component not exist"
 
@@ -2339,13 +2343,13 @@ msgstr ""
 "The cluster deployed in the current environment does not support BCS Egress"
 
 #: paasng/plat_admin/admin42/views/services.py:108
-#: paasng/plat_mgt/applications/views/services.py:153
+#: paasng/plat_mgt/applications/views/services.py:120
 msgid "当前环境不存在未分配的增强服务实例"
 msgstr ""
 "There are no unallocated instances of Add-ons in the current environment"
 
 #: paasng/plat_admin/admin42/views/services.py:135
-#: paasng/plat_mgt/applications/views/services.py:186
+#: paasng/plat_mgt/applications/views/services.py:152
 msgid "迁移应用不支持回收增强服务实例"
 msgstr ""
 "Migrating applications does not support reclaiming enhanced service "

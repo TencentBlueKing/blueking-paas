@@ -414,3 +414,18 @@ class WatchProcessesQuerySLZ(serializers.Serializer):
     timeout_seconds = serializers.IntegerField(required=False, default=30, max_value=120)
     rv_proc = serializers.CharField(required=True)
     rv_inst = serializers.CharField(required=True)
+
+
+class InstanceLogDownloadInputSLZ(serializers.Serializer):
+    """Serializer for instance log download API"""
+
+    previous = serializers.BooleanField(help_text="是否获取上一个实例的日志")
+
+
+class InstanceLogQueryInputSLZ(serializers.Serializer):
+    """Serializer for query params of instance log API"""
+
+    previous = serializers.BooleanField(help_text="是否获取上一个实例的日志")
+    tail_lines = serializers.IntegerField(
+        required=False, default=400, min_value=1, max_value=10000, help_text="获取日志的行数"
+    )

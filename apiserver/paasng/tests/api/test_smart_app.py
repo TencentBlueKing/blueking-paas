@@ -182,9 +182,7 @@ class TestSmartBuilder:
 
         tarball_path = make_smart_tarball(tmp_path, _desc_updater, version="v3")
         with open(tarball_path, "rb") as file:
-            response = api_client.post(
-                reverse("api.tools.s-mart.builder.upload"), format="multipart", data={"package": file}
-            )
+            response = api_client.post(reverse("api.tools.s-mart.upload"), format="multipart", data={"package": file})
 
         assert response.status_code == 200
 

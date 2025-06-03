@@ -71,31 +71,36 @@
           </span>
         </template>
       </bk-table-column>
-      <bk-table-column
-        :label="$t('配置信息')"
-        show-overflow-tooltip
-      >
+      <bk-table-column :label="$t('配置信息')">
         <template slot-scope="{ row }">
           <div
             v-if="row.plans"
             class="config-info-tag"
           >
-            <span
-              class="border-tag text-ellipsis"
+            <div
+              class="border-tag"
               v-if="row.plans?.stag?.name === row.plans?.prod?.name"
-              v-bk-overflow-tips
             >
-              {{ row.plans.stag?.name }}
-            </span>
-            <span
+              <span
+                class="text-ellipsis"
+                v-bk-overflow-tips
+              >
+                {{ row.plans.stag?.name }}
+              </span>
+            </div>
+            <div
               v-else
               v-for="(value, key) in row.plans"
-              class="border-tag text-ellipsis"
+              class="border-tag"
               :key="key"
-              v-bk-overflow-tips
             >
-              {{ getEnvironmentName(key) }}：{{ value.name }}
-            </span>
+              <span
+                class="text-ellipsis"
+                v-bk-overflow-tips
+              >
+                {{ getEnvironmentName(key) }}：{{ value.name }}
+              </span>
+            </div>
           </div>
           <span v-else>--</span>
         </template>
@@ -115,7 +120,9 @@
         :width="120"
       >
         <template slot-scope="{ row }">
-          {{ row.envInfos?.is_provisioned ? $t('是') : $t('否') }}
+          <span :class="['tag', { yes: row.envInfos?.is_provisioned }]">
+            {{ row.envInfos?.is_provisioned ? $t('是') : $t('否') }}
+          </span>
         </template>
       </bk-table-column>
       <bk-table-column
@@ -205,7 +212,7 @@
       :loading="deleteDialogConfig.isLoading"
       @confirm="unassignServiceInstance"
     >
-      <div class="hint-text">
+      <div>
         {{
           $t('确认删除 {m} 模块的{e} {n} 增强服务实例', {
             m: deleteDialogConfig.row?.moduleName,
@@ -214,7 +221,7 @@
           })
         }}
       </div>
-      <div class="hint-text mt8">
+      <div class="mt8">
         <span>{{ $t('该操作不可撤销，请输入应用 ID') }}</span>
         <span>
           （
@@ -546,10 +553,11 @@ export default {
       padding: 0;
     }
   }
-  .service-table-cls {
-    /deep/ .environment-cell-cls {
+  /deep/ .service-table-cls {
+    .bk-table-body,
+    .bk-table-header {
       .cell {
-        padding: 0 15px;
+        padding-left: 15px;
       }
     }
     .shared {
@@ -570,10 +578,13 @@ export default {
       gap: 4px;
       padding: 10px 0;
       .border-tag {
+        display: flex;
+        align-items: center;
         max-width: 100%;
         width: fit-content;
         margin: 0px;
         border-radius: 12px;
+        line-height: normal;
       }
     }
   }

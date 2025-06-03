@@ -13,14 +13,11 @@
     @cancel="close"
   >
     <!-- 默认插槽用于提示内容 -->
-    <div v-if="!loading">
-      {{
-        $t('确认给 {m} 模块的预发布环境分配 {n} 增强服务实例', {
-          m: data?.moduleName,
-          n: data?.service?.display_name,
-        })
-      }}
-    </div>
+    <div
+      v-if="!loading"
+      v-html="confirmTip"
+      class="assign-instance-info"
+    ></div>
     <div
       class="dialog-instance-loading-wrapper"
       v-else
@@ -68,6 +65,12 @@ export default {
     isConfirmValid() {
       return this.inputValue === this.expectedConfirmText;
     },
+    confirmTip() {
+      return this.$t('确认给 <i>{m}</i> 模块的预发布环境分配 <i>{n}</i> 增强服务实例', {
+        m: this.data?.moduleName,
+        n: this.data?.service?.display_name,
+      });
+    },
   },
   watch: {
     dialogVisible(newVal) {
@@ -106,6 +109,10 @@ export default {
       font-size: 16px;
       color: #313238;
     }
+  }
+  .assign-instance-info i {
+    font-style: normal;
+    color: #e71818;
   }
 }
 </style>

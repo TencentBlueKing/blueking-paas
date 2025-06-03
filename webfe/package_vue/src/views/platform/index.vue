@@ -84,6 +84,11 @@ export default {
     $route() {
       this.routeIndex += 1;
     },
+    panels(newValue) {
+      if (newValue?.length) {
+        this.setDefaultTabActive();
+      }
+    },
   },
   created() {
     bus.$on('tool-table-change', (active) => {

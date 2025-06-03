@@ -167,7 +167,7 @@
 
 <script>
 import paginationMixin from '../pagination-mixin.js';
-import deleteDialog from '@/components/delete-dialog';
+import DeleteDialog from '@/components/delete-dialog';
 import { mapState } from 'vuex';
 
 export default {
@@ -175,7 +175,7 @@ export default {
   // 分页逻辑使用mixins导入
   mixins: [paginationMixin],
   components: {
-    deleteDialog,
+    DeleteDialog,
   },
   data() {
     return {

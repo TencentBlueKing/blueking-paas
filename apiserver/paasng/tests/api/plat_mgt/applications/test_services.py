@@ -137,7 +137,7 @@ class TestApplicationServicesViewSet:
         # 验证审计记录函数被调用
         mock_audit_record.assert_called_once()
 
-    def test_create_shared_service_bad(self, plat_mgt_api_client):
+    def test_provision_shared_service_instance_forbidden(self, plat_mgt_api_client):
         """测试创建共享服务实例"""
 
         # 构造API请求URL, 这里使用 module_2，因为它是共享服务的目标模块
@@ -167,7 +167,7 @@ class TestApplicationServicesViewSet:
         unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, uuid.UUID(instance_uuid))
         assert unbound_rel is not None
 
-    def test_shared_service_instance_bad(self, plat_mgt_api_client):
+    def test_unbound_shared_service_instance_forbidden(self, plat_mgt_api_client):
         # 创建服务实例和关联, 使用 module_1
         rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, self.svc), None)
         assert rel is not None

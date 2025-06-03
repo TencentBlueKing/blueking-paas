@@ -173,20 +173,20 @@
         <div slot="header" v-if="dialog.type === 'detail'">SlugBuilder 详情</div>
         <div slot="header" v-else>$[ dialog.type === 'create' ? '新建' : '修改' ] SlugBuilder</div>
         <bk-form ref="form">
-            <bk-container flex :col="32">
+            <bk-container flex :col="24">
 
                 <bk-row>
-                    <bk-col :span="16">
+                    <bk-col :span="12">
                         <bk-form-item label="名称" :required="dialog.type !== 'detail'">
                             <bk-input v-model="dialog.form.name" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="8">
+                    <bk-col :span="6">
                         <bk-form-item label="是否默认">
                             <bk-switcher v-model="dialog.form.is_default" :disabled="dialog.type === 'detail'"></bk-switcher>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="8">
+                    <bk-col :span="6">
                         <bk-form-item label="是否隐藏">
                             <bk-switcher v-model="dialog.form.is_hidden" :disabled="dialog.type === 'detail'"></bk-switcher>
                         </bk-form-item>
@@ -194,7 +194,7 @@
                 </bk-row>
 
                 <bk-row>
-                    <bk-col :span="8">
+                    <bk-col :span="10">
                         <bk-form-item label="镜像类型" :required="dialog.type !== 'detail'">
                             <bk-input v-model="dialog.form.type" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
                             <bk-select v-model="dialog.form.type" v-else>
@@ -202,7 +202,7 @@
                             </bk-select>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="16">
+                    <bk-col :span="14">
                         <bk-form-item label="构建步骤集">
                             <bk-input v-model="stepMetaSet" :readonly="true" v-if="dialog.type === 'detail'" placeholder="--"></bk-input>
                             <bk-select placeholder="--" v-model="dialog.form.step_meta_set" v-else>
@@ -213,12 +213,23 @@
                 </bk-row>
 
                 <bk-row>
-                    <bk-col :span="16">
+                    <bk-col :span="24">
+                        <bk-form-item label="BuildPack" :required="dialog.type !== 'detail'">
+                            <bk-select
+                                v-model="dialog.form.buildpacks" multiple :disabled="dialog.type === 'detail'" placeholder="请选择 BuildPack">
+                                <bk-option v-for="bp in allBuildpacks" :key="bp.id" :id="bp.id" :name="bp.name"></bk-option>
+                            </bk-select>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="12">
                         <bk-form-item label="镜像" :required="dialog.type !== 'detail'">
                             <bk-input v-model="dialog.form.image" v-bk-tooltips="dialog.form.image" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="16">
+                    <bk-col :span="12">
                         <bk-form-item label="标签" :required="dialog.type !== 'detail'">
                             <bk-input v-model="dialog.form.tag" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
@@ -226,13 +237,13 @@
                 </bk-row>
 
                 <bk-row>
-                    <bk-col :span="16">
+                    <bk-col :span="12">
                         <bk-form-item label="展示名称 / 中文">
                             <bk-input v-model="dialog.form.display_name_zh_cn" :readonly="dialog.type === 'detail'"
                                       placeholder=" "></bk-input>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="16">
+                    <bk-col :span="12">
                         <bk-form-item label="展示名称 / 英文">
                             <bk-input v-model="dialog.form.display_name_en" :readonly="dialog.type === 'detail'"
                                       placeholder=" "></bk-input>
@@ -241,13 +252,13 @@
                 </bk-row>
 
                 <bk-row>
-                    <bk-col :span="16">
+                    <bk-col :span="12">
                         <bk-form-item label="描述 / 中文">
                             <bk-input v-model="dialog.form.description_zh_cn" :readonly="dialog.type === 'detail'"
                                       placeholder=" "></bk-input>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="16">
+                    <bk-col :span="12">
                         <bk-form-item label="描述 / 英文">
                             <bk-input v-model="dialog.form.description_en" :readonly="dialog.type === 'detail'"
                                       placeholder=" "></bk-input>
@@ -256,7 +267,7 @@
                 </bk-row>
 
                 <bk-row>
-                    <bk-col :span="32">
+                    <bk-col :span="24">
                         <bk-form-item label="环境变量"></bk-form-item>
                     </bk-col>
                 </bk-row>
@@ -310,7 +321,7 @@
                 </bk-row>
 
                 <bk-row>
-                    <bk-col :span="32">
+                    <bk-col :span="24">
                         <bk-form-item label="镜像标记"></bk-form-item>
                     </bk-col>
                 </bk-row>
@@ -417,6 +428,7 @@
             delimiters: ['$[', ']'],
             data: function () {
                 return {
+                    allBuildpacks: [],
                     data: [],
                     dialog: {
                         visible: false,
@@ -477,6 +489,18 @@
                 }
             },
             methods: {
+                fetchAllBuildpacks: async function () {
+                    try {
+                        const url = "{% url 'admin.runtimes.buildpack' %}";
+                        const res = await this.$http.get(url);
+                        this.allBuildpacks = res;
+                    } catch (e) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: '获取 Buildpack 列表失败: ' + (e.response?.data?.detail || e.message)
+                        });
+                    }
+                },
                 fetchSlugBuilderList: async function () {
                     const el = this.$bkLoading({title: '加载中'});
                     try {
@@ -574,6 +598,7 @@
                         key: '',
                         value: '',
                         description: '',
+                        buildpacks: [],
                     };
                     this.envList = [];
                     this.labelList = [];
@@ -586,7 +611,10 @@
                 handleEdit: function (row) {
                     this.dialog.type = "edit";
                     this.dialog.row = row;
-                    this.dialog.form = {...row};
+                    this.dialog.form = {
+                        ...row,
+                        buildpacks: row.buildpacks || [],
+                    };
                     this.envList = this.jsonToList(this.dialog.form.env_vars || {});
                     this.labelList = this.jsonToList(this.dialog.form.labels || {});
                     this.$nextTick(() => {
@@ -762,6 +790,7 @@
             },
             mounted: async function () {
                 await this.fetchSlugBuilderList();
+                await this.fetchAllBuildpacks();
             },
         })
     })

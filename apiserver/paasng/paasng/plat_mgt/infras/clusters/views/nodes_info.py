@@ -1,0 +1,63 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from paas_wl.bk_app.applications.models.app import App
+from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
+from paasng.infras.accounts.permissions.constants import PlatMgtAction
+from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
+from paasng.plat_mgt.infras.clusters.serializers import ClusterNodesInfoListInputSLZ, ClusterNodesInfoListOutputSLZ
+
+
+class ClusterNodesInfoViewSet(viewsets.GenericViewSet):
+    """集群节点信息"""
+
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.infras.cluster_nodes_info"],
+        operation_description="集群节点信息",
+        request_body=ClusterNodesInfoListInputSLZ,
+        responses={status.HTTP_200_OK: ClusterNodesInfoListOutputSLZ()},
+    )
+    def list(self, request, *args, **kwargs):
+        slz = ClusterNodesInfoListInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+        cluster_name = data["cluster_name"]
+
+        # 根据 cluster_name 查 state
+        cluster_state = RegionClusterState.objects.get(cluster_name=cluster_name)
+        bindings = RCStateAppBinding.objects.filter(state_id=cluster_state.id)
+        # 拿到 app_id 的列表
+        app_ids = bindings.values_list("app__uuid", flat=True)
+        # 去重
+        binding_app_codes = list({app.paas_app_code for app in App.objects.filter(uuid__in=app_ids)})
+
+        created_at = cluster_state.created
+
+        info = {
+            "nodes": cluster_state.nodes_name or [],
+            "binding_apps": binding_app_codes,
+            "created_at": created_at,
+        }
+
+        return Response(ClusterNodesInfoListOutputSLZ(info).data)

@@ -30,8 +30,10 @@ class TestProcessService:
     def _setup_data(self, bk_stag_wl_app):
         create_wl_release(
             wl_app=bk_stag_wl_app,
-            build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
-            release_params={"version": 5},
+            release_params={
+                "version": 5,
+                "procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"},
+            },
         )
 
     @pytest.mark.auto_create_ns

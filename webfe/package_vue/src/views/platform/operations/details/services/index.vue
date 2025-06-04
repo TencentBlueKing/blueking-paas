@@ -10,7 +10,7 @@
         <div slot="title">
           <span>
             {{
-              $t('您有 {n} 个已解绑但未回收的增强服务实例，未回收的实例仍会计入应用成本，请及时回收。', {
+              $t('应用有 {n} 个已解绑但未回收的增强服务实例。', {
                 n: unboundServices?.length,
               })
             }}
@@ -63,7 +63,7 @@
         <template slot-scope="{ row }">
           <span>{{ row.service.display_name }}</span>
           <span
-            v-if="row.sharedTag"
+            v-if="row.sharedModule"
             class="shared"
             v-bk-tooltips="$t('共享 {m} 模块', { m: row?.ref_module?.name })"
           >
@@ -127,49 +127,65 @@
       </bk-table-column>
       <bk-table-column
         :label="$t('操作')"
-        :width="240"
+        :width="localLanguage === 'en' ? 280 : 240"
       >
         <template slot-scope="{ row }">
           <!-- instance_uuid 实例id为空允许分配实例 -->
           <span
             class="mr10"
             v-bk-tooltips="{
-              content: $t('实例已分配'),
-              disabled: !row.envInfos?.instance_uuid,
+              content: buttonDisabledMessage(row, 'assign'),
+              disabled: !isButtonDisabled(row),
+              maxWidth: 240,
             }"
           >
             <bk-button
               text
-              :disabled="!!row.envInfos?.instance_uuid"
+              :disabled="isButtonDisabled(row)"
               @click="showAssignInstanceDialog(row)"
             >
               {{ $t('分配实例') }}
             </bk-button>
           </span>
-          <span
-            class="mr10"
-            v-bk-tooltips="{
-              content: $t('未分配实例无法删除'),
-              disabled: !!row.envInfos?.instance_uuid,
-            }"
-          >
-            <!-- instance_uuid： null 未绑定服务实例 -->
-            <bk-button
-              text
-              :disabled="!row.envInfos?.instance_uuid"
-              @click="showDeleteDialog(row)"
-            >
-              {{ $t('删除实例') }}
-            </bk-button>
-          </span>
           <!-- provision_infos[env].instance_uuid 为 null 未分配实例，不能查看 -->
           <bk-button
+            class="mr10"
             text
             :disabled="!row.envInfos?.instance_uuid"
             @click="viewCredentials(row)"
           >
             {{ $t('查看凭证') }}
           </bk-button>
+          <!-- trigger="click" -->
+          <bk-popover
+            theme="light"
+            ext-cls="more-operations"
+            placement="bottom"
+            ref="moreRef"
+            :tippy-options="{ hideOnClick: false }"
+          >
+            <i class="paasng-icon paasng-icon-more"></i>
+            <div slot="content">
+              <div
+                class="option"
+                v-bk-tooltips="{
+                  content: buttonDisabledMessage(row, 'delete'),
+                  disabled: !(row.sharedModule || !row.envInfos?.instance_uuid),
+                  maxWidth: 240,
+                }"
+              >
+                <!-- instance_uuid： null 未绑定服务实例 -->
+                <bk-button
+                  class="f12"
+                  text
+                  :disabled="row.sharedModule || !row.envInfos?.instance_uuid"
+                  @click="showDeleteDialog(row)"
+                >
+                  {{ $t('删除实例') }}
+                </bk-button>
+              </div>
+            </div>
+          </bk-popover>
         </template>
       </bk-table-column>
     </bk-table>
@@ -194,7 +210,7 @@
       <div
         class="aleat-wrapper"
         slot="header-alert"
-        v-if="credentialConfig.row?.sharedTag"
+        v-if="credentialConfig.row?.sharedModule"
       >
         <bk-alert
           type="info"
@@ -234,6 +250,13 @@
         </span>
         {{ $t('进行确认') }}
       </div>
+      <bk-alert
+        v-if="deleteDialogConfig.row?.ref_modules?.length"
+        slot="alert"
+        class="mt10"
+        type="error"
+        :title="alertTips(deleteDialogConfig.row)"
+      />
     </DeleteDialog>
 
     <RecycleSideslider
@@ -251,6 +274,7 @@ import EditorSideslider from '@/components/editor-sideslider';
 import DeleteDialog from '@/components/delete-dialog';
 import RecycleSideslider from './recycle-sideslider.vue';
 import { debounce } from 'lodash';
+import { mapState } from 'vuex';
 
 export default {
   components: {
@@ -302,6 +326,7 @@ export default {
     };
   },
   computed: {
+    ...mapState(['localLanguage']),
     appCode() {
       return this.$route.params.code;
     },
@@ -310,7 +335,7 @@ export default {
     },
     subTitle() {
       const { service, moduleName, env } = this.credentialConfig.row;
-      return `${moduleName}模块 / ${this.envMap[env]} / ${service?.display_name}增强服务`;
+      return `${moduleName}${this.$t('模块')} / ${this.envMap[env]} / ${service?.display_name}${this.$t('增强服务')}`;
     },
     alertTitle() {
       const { service, moduleName } = this.credentialConfig.row;
@@ -379,7 +404,7 @@ export default {
           // shared_services 共享服务
           const sharedServices = item.shared_services.map((service) => ({
             ...service,
-            sharedTag: true,
+            sharedModule: true,
           }));
           // bound_services 绑定服务
           const boundServices = item.bound_services;
@@ -528,9 +553,51 @@ export default {
     updateTableEmptyConfig() {
       this.tableEmptyConf.keyword = this.searchValue ? 'placeholder' : '';
     },
+    // 是否分配是否禁用
+    isButtonDisabled(row) {
+      if (row.sharedModule) {
+        return true;
+      }
+      return !!row.envInfos?.instance_uuid;
+    },
+    // 分配禁用tips
+    buttonDisabledMessage(row, type) {
+      if (row.sharedModule) {
+        return this.$t('此服务共享自 {m} 模块的相应服务实例，请在 {m} 模块中直接进行操作。', {
+          m: row?.ref_module?.name,
+        });
+      }
+      return type === 'assign' ? this.$t('实例已分配') : this.$t('未分配实例无法删除');
+    },
+    alertTips(row) {
+      if (row.ref_modules?.length) {
+        const names = row.ref_modules.map((v) => v.name)?.join('、');
+        return `${this.$t('该实例被以下模块共享：')}${names}${this.$t('，删除后这些模块也将无法获取相关的环境变量。')}`;
+      }
+      return '';
+    },
   },
 };
 </script>
+
+<style lang="scss">
+.more-operations {
+  .tippy-tooltip.light-theme {
+    padding: 6px 0;
+  }
+  .option {
+    height: 32px;
+    line-height: 32px;
+    padding: 0 12px;
+    cursor: pointer;
+    color: #63656e;
+    &:hover {
+      background-color: #eaf3ff;
+      color: #3a84ff;
+    }
+  }
+}
+</style>
 
 <style lang="scss" scoped>
 .mt8 {
@@ -585,6 +652,17 @@ export default {
         margin: 0px;
         border-radius: 12px;
         line-height: normal;
+      }
+    }
+    i.paasng-icon-more {
+      padding: 3px;
+      font-size: 16px;
+      color: #63656e;
+      cursor: pointer;
+      border-radius: 50%;
+      transform: translateY(0px);
+      &:hover {
+        background: #f0f1f5;
       }
     }
   }

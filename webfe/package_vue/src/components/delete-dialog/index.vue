@@ -15,6 +15,7 @@
       v-model="inputValue"
       :placeholder="placeholder"
     ></bk-input>
+    <slot name="alert"></slot>
     <template slot="footer">
       <bk-button
         theme="danger"

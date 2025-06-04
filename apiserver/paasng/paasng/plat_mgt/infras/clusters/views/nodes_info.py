@@ -69,7 +69,7 @@ class ClusterNodesInfoViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ClusterNodesInfoListOutputSLZ()},
     )
     def list_nodes_info(self, request, *args, **kwargs):
-        slz = ClusterNodesInfoListInputSLZ(data=request.data)
+        slz = ClusterNodesInfoListInputSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
 
         info = self._get_nodes_info_data(slz.validated_data["cluster_name"])
@@ -82,7 +82,7 @@ class ClusterNodesInfoViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ClusterNodesSyncInfoOutputSLZ()},
     )
     def list_sync_records(self, request, *args, **kwargs):
-        slz = ClusterNodesInfoListInputSLZ(data=request.data)
+        slz = ClusterNodesInfoListInputSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
 
         info = self._get_sync_record_data(slz.validated_data["cluster_name"])

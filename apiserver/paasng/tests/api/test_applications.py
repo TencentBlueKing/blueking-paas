@@ -40,7 +40,7 @@ from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType, AvailabilityLevel
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -58,7 +58,6 @@ from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import configure_regions, create_app, generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
 
 logger = logging.getLogger(__name__)
 
@@ -389,16 +388,18 @@ class TestApplicationUpdate:
     def test_normal(self, api_client, bk_app_full, bk_user, random_name):
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app_full.code),
-            data={"name": random_name},
+            data={"name": random_name, "availability_level": AvailabilityLevel.BASE.value},
         )
+        app = Application.objects.get(pk=bk_app_full.pk)
         assert response.status_code == 200
-        assert Application.objects.get(pk=bk_app_full.pk).name == random_name
+        assert app.name == random_name
+        assert app.availability_level == AvailabilityLevel.BASE.value
 
     def test_duplicated(self, api_client, bk_app, bk_user, random_name):
         G(Application, name=random_name)
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app.code),
-            data={"name": random_name},
+            data={"name": random_name, "availability_level": AvailabilityLevel.BASE.value},
         )
         assert response.status_code == 400
         assert response.json()["code"] == "VALIDATION_ERROR"
@@ -418,11 +419,20 @@ class TestApplicationUpdate:
         app = Application.objects.get(code=random_name)
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(app.code),
-            data={"name": random_name},
+            data={"name": random_name, "availability_level": AvailabilityLevel.BASE.value},
         )
         assert response.status_code == 200
         # 描述文件定义的应用可以更新名称
         assert Application.objects.get(pk=app.pk).name == random_name
+
+    def test_invalid_availability_level(self, api_client, bk_app_full, bk_user, random_name):
+        response = api_client.put(
+            "/api/bkapps/applications/{}/".format(bk_app_full.code),
+            data={"name": random_name, "availability_level": AvailabilityLevel.NOT_SET.value},
+        )
+        assert response.status_code == 400
+        assert response.json()["code"] == "VALIDATION_ERROR"
+        assert "can not set availability level to NOT_SET" in response.json()["detail"]
 
 
 class TestApplicationDeletion:

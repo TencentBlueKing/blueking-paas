@@ -51,7 +51,7 @@ from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCo
 from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType, AvailabilityLevel
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter, UserMarkedApplication
 from paasng.platform.applications.pagination import ApplicationListPagination
@@ -502,6 +502,13 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         application = self.get_application()
         data = get_app_overview(application)
         return Response(data)
+
+    @swagger_auto_schema(operation_description="获取应用可用性保障等级")
+    def list_availability_levels(self, request, *args, **kwargs):
+        availability_levels = [
+            {"value": value, "label": label} for value, label in AvailabilityLevel.get_django_choices()
+        ]
+        return Response(availability_levels)
 
 
 class ApplicationExtraInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

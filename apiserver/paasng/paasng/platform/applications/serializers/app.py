@@ -107,6 +107,11 @@ class UpdateApplicationSLZ(UpdateApplicationNameSLZ):
     logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text="应用 Logo 访问地址")
     availability_level = serializers.ChoiceField(choices=AvailabilityLevel.get_choices(), help_text="可用性保障等级")
 
+    def validate_availability_level(self, value: str) -> str:
+        if value == AvailabilityLevel.NOT_SET.value:
+            raise serializers.ValidationError("can not set availability level to NOT_SET")
+        return value
+
     @atomic
     def update(self, instance: Application, validated_data: Dict) -> Application:
         super().update(instance, validated_data)

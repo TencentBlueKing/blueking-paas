@@ -63,10 +63,11 @@ class ProductInfoCondition(DeployCondition):
 
     def validate(self):
         app = self.env.module.application
-        if (
-            not Product.objects.filter(application=app).exists()
-            or app.availability_level == AvailabilityLevel.NOT_SET.value
-        ):
+        # 应用未设置分类
+        category_not_set = not Product.objects.filter(application=app).exists()
+        # 应用未设置可用性保障
+        availability_not_set = app.availability_level == AvailabilityLevel.NOT_SET.value
+        if category_not_set or availability_not_set:
             raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
 

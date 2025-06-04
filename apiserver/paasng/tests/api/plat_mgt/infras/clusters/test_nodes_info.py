@@ -99,6 +99,5 @@ class TestClusterNodesInfoViewSet:
         url = reverse("plat_mgt.infras.cluster_nodes_info.list")
         resp = plat_mgt_api_client.get(url, {"cluster_name": ""})
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        # 根据实际错误响应结构调整断言
         response_data = resp.json()
         assert "detail" in response_data or "cluster_name" in response_data

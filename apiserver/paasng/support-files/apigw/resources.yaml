@@ -1745,3 +1745,96 @@ paths:
           userVerifiedRequired: false
         disabledStages: []
         descriptionEn: Query the list of applications that the specified user has permission
+  /bkapps/applications/{app_code}/modules/{module}/config_vars/{config_var_key}/:
+    post:
+      operationId: set_config_var_value
+      description: 设置环境变量的值
+      tags: []
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/config_vars/{config_var_key}/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Set the value of an environment variable
+  /bkapps/cloud-native/:
+    post:
+      operationId: create_cloud_native_app
+      description: 创建云原生应用
+      tags: []
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          type: HTTP
+          method: post
+          path: /backend/api/bkapps/cloud-native/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Creating cloud-native applications
+  /bkapps/applications/{app_code}/modules/{module}/runtime/overview:
+    get:
+      operationId: get_runtime_overview
+      description: 获取模块的运行时概览信息
+      tags:
+      - 应用/模块信息查询
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/runtime/overview
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Get runtime overview information of a module
+  /bkapps/applications/{app_code}/modules/{module}/repo/branches/:
+    get:
+      operationId: get_repo_branches
+      description: 获取应用的代码仓库分支信息
+      tags:
+      - 应用/模块信息查询
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          type: HTTP
+          method: get
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/repo/branches/
+          matchSubpath: false
+          timeout: 0
+          upstreams: {}
+          transformHeaders: {}
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Get the application code repository branch information

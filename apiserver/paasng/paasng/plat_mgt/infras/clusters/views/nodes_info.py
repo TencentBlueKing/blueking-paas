@@ -24,7 +24,11 @@ from paas_wl.bk_app.applications.models.app import App
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.plat_mgt.infras.clusters.serializers import ClusterNodesInfoListInputSLZ, ClusterNodesInfoListOutputSLZ
+from paasng.plat_mgt.infras.clusters.serializers import (
+    ClusterNodesInfoListInputSLZ,
+    ClusterNodesInfoListOutputSLZ,
+    ClusterNodesSyncInfoOutputSLZ,
+)
 
 
 class ClusterNodesInfoViewSet(viewsets.GenericViewSet):
@@ -32,32 +36,54 @@ class ClusterNodesInfoViewSet(viewsets.GenericViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
+    def _get_cluster_info(self, cluster_name):
+        cluster_state = RegionClusterState.objects.get(cluster_name=cluster_name)
+        bindings = RCStateAppBinding.objects.filter(state_id=cluster_state.id)
+        app_uuids = bindings.values_list("app__uuid", flat=True)
+
+        return {
+            "cluster_state": cluster_state,
+            # 去重
+            "binding_app_codes": list({app.paas_app_code for app in App.objects.filter(uuid__in=app_uuids)}),
+        }
+
+    def _get_nodes_info_data(self, cluster_name):
+        cluster_info = self._get_cluster_info(cluster_name)
+        nodes = cluster_info["cluster_state"].nodes_name or []
+        binding_apps = cluster_info["binding_app_codes"]
+        created_at = cluster_info["cluster_state"].created
+        return {"nodes": nodes, "binding_apps": binding_apps, "created_at": created_at}
+
+    def _get_sync_record_data(self, cluster_name):
+        cluster_info = self._get_cluster_info(cluster_name)
+        nodes = cluster_info["cluster_state"].nodes_name or []
+        binding_apps = cluster_info["binding_app_codes"]
+        nodes_cnt = cluster_info["cluster_state"].nodes_cnt or 0
+        created_at = cluster_info["cluster_state"].created
+        return {"nodes": nodes, "binding_apps": binding_apps, "nodes_cnt": nodes_cnt, "created_at": created_at}
+
     @swagger_auto_schema(
         tags=["plat_mgt.infras.cluster_nodes_info"],
         operation_description="集群节点信息",
         request_body=ClusterNodesInfoListInputSLZ,
         responses={status.HTTP_200_OK: ClusterNodesInfoListOutputSLZ()},
     )
-    def list(self, request, *args, **kwargs):
+    def list_nodes_info(self, request, *args, **kwargs):
         slz = ClusterNodesInfoListInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-        data = slz.validated_data
-        cluster_name = data["cluster_name"]
 
-        # 根据 cluster_name 查 state
-        cluster_state = RegionClusterState.objects.get(cluster_name=cluster_name)
-        bindings = RCStateAppBinding.objects.filter(state_id=cluster_state.id)
-        # 拿到 app_id 的列表
-        app_ids = bindings.values_list("app__uuid", flat=True)
-        # 去重
-        binding_app_codes = list({app.paas_app_code for app in App.objects.filter(uuid__in=app_ids)})
-
-        created_at = cluster_state.created
-
-        info = {
-            "nodes": cluster_state.nodes_name or [],
-            "binding_apps": binding_app_codes,
-            "created_at": created_at,
-        }
-
+        info = self._get_nodes_info_data(slz.validated_data["cluster_name"])
         return Response(ClusterNodesInfoListOutputSLZ(info).data)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.infras.cluster_sync_records"],
+        operation_description="节点同步记录",
+        request_body=ClusterNodesInfoListInputSLZ,
+        responses={status.HTTP_200_OK: ClusterNodesSyncInfoOutputSLZ()},
+    )
+    def list_sync_records(self, request, *args, **kwargs):
+        slz = ClusterNodesInfoListInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        info = self._get_sync_record_data(slz.validated_data["cluster_name"])
+        return Response(ClusterNodesSyncInfoOutputSLZ(info).data)

@@ -93,11 +93,16 @@ urlpatterns = [
         views.ClusterFeatureFlagViewSet.as_view({"get": "list"}),
         name="plat_mgt.infras.cluster_feature_flag.list",
     ),
-    # 获取节点信息
+    # 获取节点信息与节点同步记录
     path(
-        "api/plat_mgt/infras/cluster_nodes_info/<str:cluster_name>/",
-        views.ClusterNodesInfoViewSet.as_view({"get": "list"}),
+        "api/plat_mgt/infras/cluster_nodes_info/",
+        views.ClusterNodesInfoViewSet.as_view({"get": "list_nodes_info"}),
         name="plat_mgt.infras.cluster_nodes_info.list",
+    ),
+    path(
+        "api/plat_mgt/infras/cluster_sync_records/",
+        views.ClusterNodesInfoViewSet.as_view({"get": "list_sync_records"}),
+        name="plat_mgt.infras.cluster_sync_records.list",
     ),
     # BCS 项目列表
     path(

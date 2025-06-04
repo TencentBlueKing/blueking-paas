@@ -18,6 +18,7 @@
 from rest_framework import serializers
 
 
+# 节点信息序列化器
 class ClusterNodesInfoListOutputSLZ(serializers.Serializer):
     nodes = serializers.ListField(child=serializers.CharField(), help_text="节点信息")
     binding_apps = serializers.ListField(child=serializers.CharField(), help_text="绑定应用")
@@ -26,3 +27,11 @@ class ClusterNodesInfoListOutputSLZ(serializers.Serializer):
 
 class ClusterNodesInfoListInputSLZ(serializers.Serializer):
     cluster_name = serializers.CharField(help_text="集群名称", required=True)
+
+
+# 节点同步记录序列化器
+class ClusterNodesSyncInfoOutputSLZ(serializers.Serializer):
+    nodes = serializers.ListField(child=serializers.CharField(), help_text="节点信息")
+    binding_apps = serializers.ListField(child=serializers.CharField(), help_text="绑定应用")
+    nodes_cnt = serializers.IntegerField(help_text="节点数")
+    created_at = serializers.DateTimeField(help_text="同步时间")

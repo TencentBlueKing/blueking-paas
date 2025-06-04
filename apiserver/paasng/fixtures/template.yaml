@@ -133,3 +133,47 @@
     processes: {}
     tags: []
     repo_url: ''
+- model: templates.template
+  pk: 7
+  fields:
+    created: !!timestamp '2023-12-26 12:00:00.000000+00:00'
+    updated: !!timestamp '2023-12-26 12:00:00.000000+00:00'
+    name: bk-apigw-plugin-python
+    type: 'plugin'
+    display_name_zh_cn: API 网关插件（Python）
+    display_name_en: API Gateway Plugin (Python)
+    description_zh_cn: 为开发者提供快速创建 API 的能力，并自动将 API 注册到 API 网关
+    description_en: Empowering developers to quickly create APIs and automatically register them with the API gateway.
+    language: Python
+    market_ready: False
+    preset_services_config:
+      mysql: {}
+    blob_url: {}
+    enabled_regions:
+      - default
+    required_buildpacks: []
+    processes: {}
+    tags: []
+    repo_url: ''
+- model: templates.template
+  pk: 8
+  fields:
+    created: !!timestamp '2023-12-26 12:00:00.000000+00:00'
+    updated: !!timestamp '2023-12-26 12:00:00.000000+00:00'
+    name: bk-apigw-plugin-go
+    type: 'plugin'
+    display_name_zh_cn: API 网关插件（Golang）
+    display_name_en: API Gateway Plugin (Golang)
+    description_zh_cn: 为开发者提供快速创建 API 的能力，并自动将 API 注册到 API 网关
+    description_en: Empowering developers to quickly create APIs and automatically register them with the API gateway.
+    language: Go
+    market_ready: False
+    preset_services_config:
+      mysql: {}
+    blob_url: {}
+    enabled_regions:
+      - default
+    required_buildpacks: []
+    processes: {}
+    tags: []
+    repo_url: ''

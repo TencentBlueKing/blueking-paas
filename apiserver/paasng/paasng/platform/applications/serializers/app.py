@@ -25,7 +25,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.core.region.states import get_region
-from paasng.platform.applications.constants import AppLanguage, ApplicationType
+from paasng.platform.applications.constants import AppLanguage, ApplicationType, AvailabilityLevel
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
 from paasng.platform.applications.operators import get_last_operator
@@ -65,11 +65,10 @@ class SysThirdPartyApplicationSLZ(AppTenantMixin):
 
 
 @i18n
-class UpdateApplicationSLZ(serializers.Serializer):
-    """Serializer for update application"""
+class UpdateApplicationNameSLZ(serializers.Serializer):
+    """Serializer for update application name"""
 
     name = I18NExtend(AppNameField(max_length=20, help_text="应用名称"))
-    logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text="应用 Logo 访问地址")
 
     def _validate_duplicated_field(self, data):
         """Universal validate method for code and name"""
@@ -99,6 +98,20 @@ class UpdateApplicationSLZ(serializers.Serializer):
         elif get_language() == "en":
             instance.name_en = validated_data["name_en"]
         instance.save()
+        return instance
+
+
+class UpdateApplicationSLZ(UpdateApplicationNameSLZ):
+    """Serializer for update application"""
+
+    logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text="应用 Logo 访问地址")
+    availability_level = serializers.ChoiceField(choices=AvailabilityLevel.get_choices(), help_text="可用性保障等级")
+
+    @atomic
+    def update(self, instance: Application, validated_data: Dict) -> Application:
+        super().update(instance, validated_data)
+        instance.availability_level = validated_data["availability_level"]
+        instance.save(update_fields=["availability_level"])
         return instance
 
 

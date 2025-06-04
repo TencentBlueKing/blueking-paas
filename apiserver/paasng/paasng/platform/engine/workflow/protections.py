@@ -24,7 +24,7 @@ from paasng.accessories.publish.market.models import Product
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.infras.iam.helpers import fetch_user_roles
-from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.applications.constants import AppEnvironment, AvailabilityLevel
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import DeployConditions, RuntimeType
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -62,9 +62,11 @@ class ProductInfoCondition(DeployCondition):
     action_name = DeployConditions.FILL_PRODUCT_INFO.value
 
     def validate(self):
-        if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
-            return
-        if not Product.objects.filter(application=self.env.module.application).exists():
+        app = self.env.module.application
+        if (
+            not Product.objects.filter(application=app).exists()
+            or app.availability_level == AvailabilityLevel.NOT_SET.value
+        ):
             raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
 

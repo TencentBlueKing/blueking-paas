@@ -43,7 +43,7 @@ from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 class ApplicationListOutputSLZ(serializers.Serializer):
     """应用序列化器"""
 
-    logo = serializers.CharField(read_only=True, help_text="应用 logo")
+    logo = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用 logo")
     code = serializers.CharField(read_only=True, help_text="应用的唯一标识")
     name = serializers.CharField(read_only=True, help_text="应用名称")
     app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")

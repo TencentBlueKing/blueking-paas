@@ -184,7 +184,11 @@
                   :placeholder="$t('请输入名称，如 default')"
                 ></bk-input>
               </bk-form-item>
-              <bk-form-item>
+              <bk-form-item
+                error-display-type="normal"
+                :property="'imageCredentialUserName'"
+                :rules="imageCredentialRule"
+              >
                 <bk-input
                   class="mr10"
                   v-model="formData.imageCredentialUserName"
@@ -192,7 +196,11 @@
                   :placeholder="$t('请输入账号')"
                 ></bk-input>
               </bk-form-item>
-              <bk-form-item>
+              <bk-form-item
+                error-display-type="normal"
+                :property="'imageCredentialPassWord'"
+                :rules="imageCredentialRule"
+              >
                 <bk-input
                   type="password"
                   v-model="formData.imageCredentialPassWord"
@@ -879,8 +887,21 @@ export default {
             message: this.$t('以英文字母、数字或下划线(_)组成，不超过40个字'),
             trigger: 'blur',
           },
+          {
+            validator: this.validateCredentials,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
         ],
       },
+      // 镜像凭证填写校验
+      imageCredentialRule: [
+        {
+          validator: this.validateCredentials,
+          message: this.$t('必填项'),
+          trigger: 'blur',
+        },
+      ],
       curCodeSource: 'default',
       activeIndex: 1,
       isShowAdvancedOptions: false,
@@ -1531,6 +1552,16 @@ export default {
           message: e.detail || e.message || this.$t('接口异常'),
         });
       }
+    },
+
+    // 镜像凭证是否必填校验
+    validateCredentials(value) {
+      const { imageCredentialName, imageCredentialUserName, imageCredentialPassWord } = this.formData;
+      // 如果三个都为空通过
+      if (!imageCredentialName && !imageCredentialUserName && !imageCredentialPassWord) {
+        return true;
+      }
+      return !!value;
     },
   },
 };

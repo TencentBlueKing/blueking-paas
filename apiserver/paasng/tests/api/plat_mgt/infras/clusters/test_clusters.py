@@ -823,4 +823,3 @@ class TestClusterNodesState:
         response = plat_mgt_api_client.get(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json() == {"detail": f"未找到集群 {invalid_cluster_name} 的状态记录"}

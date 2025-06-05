@@ -384,9 +384,8 @@ class ClusterViewSet(viewsets.GenericViewSet):
     def retrieve_nodes_state(self, request, cluster_name, *args, **kwargs):
         # 获取单条记录
         cluster_state = RegionClusterState.objects.filter(cluster_name=cluster_name).order_by("-created").first()
-
         if not cluster_state:
-            return Response({"detail": f"未找到集群 {cluster_name} 的状态记录"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         return Response(ClusterNodesStateRetrieveOutputSLZ(instance=cluster_state).data)
 

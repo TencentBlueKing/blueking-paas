@@ -53,6 +53,8 @@ __all__ = [
     "ClusterUpdateInputSLZ",
     "ClusterStatusRetrieveOutputSLZ",
     "ClusterUsageRetrieveOutputSLZ",
+    "ClusterNodesStateRetrieveOutputSLZ",
+    "ClusterNodesStateSyncRecordListOutputSLZ",
     # components
     "ClusterComponentListOutputSLZ",
     "ClusterComponentRetrieveOutputSLZ",
@@ -61,9 +63,6 @@ __all__ = [
     "ClusterDefaultConfigListOutputSLZ",
     # feature_flags
     "ClusterFeatureFlagListOutputSLZ",
-    # nodes_info
-    "ClusterNodesStateRetrieveOutputSLZ",
-    "ClusterNodesStateSyncRecordListOutputSLZ",
     # policies
     "ClusterAllocationPolicyListOutputSLZ",
     "ClusterAllocationPolicyCreateInputSLZ",

@@ -284,7 +284,7 @@ class TestServicesField:
 
             # Create a default binding polity so that the binding works by default
             service = mixed_service_mgr.get(svc.uuid)
-            SvcBindingPolicyManager(service, app_tenant.tenant_id).set_uniform(plans=[service.get_plans()[0]])
+            SvcBindingPolicyManager(service, app_tenant.tenant_id).set_uniform(plans=[service.get_plans()[0].uuid])
 
     @pytest.fixture()
     def app_desc(self, random_name, tag):

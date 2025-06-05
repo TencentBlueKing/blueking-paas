@@ -93,7 +93,7 @@ def ref_module(bk_app, bk_module, service_obj):
 class TestServiceSharingManager:
     @pytest.fixture(autouse=True)
     def _with_static_binding_policy(self, service_obj):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[service_obj.get_plans()[0]])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[service_obj.get_plans()[0].uuid])
 
     def test_list_shareable(self, bk_app, bk_module, service_obj):
         # Bind source module with a remote service
@@ -163,7 +163,7 @@ class TestServiceSharingManager:
 class TestSharingReferencesManager:
     @pytest.fixture(autouse=True)
     def _setup_data(self, bk_module, ref_module, service_obj):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[service_obj.get_plans()[0]])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[service_obj.get_plans()[0].uuid])
 
         # Create sharing relationship
         mixed_service_mgr.bind_service(service_obj, ref_module)
@@ -187,7 +187,7 @@ class TestGetEnvVariables:
     def _with_static_binding_policy(self, local_service):
         """Initialize the service binding policy for local service."""
         service = mixed_service_mgr.get(local_service.uuid)
-        SvcBindingPolicyManager(local_service, DEFAULT_TENANT_ID).set_uniform(plans=[service.get_plans()[0]])
+        SvcBindingPolicyManager(local_service, DEFAULT_TENANT_ID).set_uniform(plans=[service.get_plans()[0].uuid])
 
     def test_local_integrated(self, bk_app, bk_module, local_service):
         def _create_instance():

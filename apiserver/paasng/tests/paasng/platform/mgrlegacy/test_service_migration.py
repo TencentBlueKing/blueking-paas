@@ -64,7 +64,9 @@ def _mock_get_service():
         get_service.return_value = dummy_service
         with mock.patch.object(mixed_service_mgr, "get") as get:
             get.return_value = dummy_service
-            SvcBindingPolicyManager(dummy_service, DEFAULT_TENANT_ID).set_uniform(plans=[dummy_service.get_plans()[0]])
+            SvcBindingPolicyManager(dummy_service, DEFAULT_TENANT_ID).set_uniform(
+                plans=[dummy_service.get_plans()[0].uuid]
+            )
         yield
 
 

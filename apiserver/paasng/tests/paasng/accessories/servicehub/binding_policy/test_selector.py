@@ -62,16 +62,13 @@ def plan2(service_obj):
 
 class TestPlanSelectorSelect:
     def test_static(self, service_obj, bk_prod_env, plan1):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1.uuid])
 
         assert PlanSelector().select(service_obj, bk_prod_env) == plan1
 
     def test_env_specified(self, service_obj, bk_stag_env, bk_prod_env, plan1, plan2):
         SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(
-            env_plans=[
-                (AppEnvName.STAG, [plan1]),
-                (AppEnvName.PROD, [plan2]),
-            ],
+            env_plans={AppEnvName.STAG: [plan1.uuid], AppEnvName.PROD: [plan2.uuid]},
         )
         assert PlanSelector().select(service_obj, bk_stag_env) == plan1
         assert PlanSelector().select(service_obj, bk_prod_env) == plan2
@@ -81,7 +78,7 @@ class TestPlanSelectorSelect:
             PlanSelector().select(service_obj, bk_prod_env)
 
     def test_multiple_found(self, service_obj, bk_prod_env, plan1, plan2):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1, plan2])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1.uuid, plan2.uuid])
 
         with pytest.raises(MultiplePlanFoundError):
             PlanSelector().select(service_obj, bk_prod_env)
@@ -126,13 +123,13 @@ class TestPlanSelectorSelectWithPrecedenceRegionIn:
                 ServiceBindingPrecedencePolicyDTO(
                     cond_type=PrecedencePolicyCondType.REGION_IN,
                     cond_data={"regions": ["r1"]},
-                    plans=[plan2],
+                    plans=[plan2.uuid],
                     priority=1,
                 ),
                 ServiceBindingPrecedencePolicyDTO(
                     cond_type=PrecedencePolicyCondType.ALWAYS_MATCH,
                     cond_data={},
-                    plans=[plan1],
+                    plans=[plan1.uuid],
                     priority=0,
                 ),
             ]
@@ -149,13 +146,13 @@ class TestPlanSelectorSelectWithPrecedenceRegionIn:
                 ServiceBindingPrecedencePolicyDTO(
                     cond_type=PrecedencePolicyCondType.REGION_IN,
                     cond_data={"regions": ["r1"]},
-                    env_plans={AppEnvName.STAG: [plan2], AppEnvName.PROD: [plan1]},
+                    env_plans={AppEnvName.STAG: [plan2.uuid], AppEnvName.PROD: [plan1.uuid]},
                     priority=1,
                 ),
                 ServiceBindingPrecedencePolicyDTO(
                     cond_type=PrecedencePolicyCondType.ALWAYS_MATCH,
                     cond_data={},
-                    plans=[plan1],
+                    plans=[plan1.uuid],
                     priority=0,
                 ),
             ]
@@ -194,13 +191,13 @@ class TestPlanSelectorSelectWithPrecedenceClusterIn:
                 ServiceBindingPrecedencePolicyDTO(
                     cond_type=PrecedencePolicyCondType.CLUSTER_IN,
                     cond_data={"cluster_names": [cluster_name]},
-                    plans=[plan2],
+                    plans=[plan2.uuid],
                     priority=1,
                 ),
                 ServiceBindingPrecedencePolicyDTO(
                     cond_type=PrecedencePolicyCondType.ALWAYS_MATCH,
                     cond_data={},
-                    plans=[plan1],
+                    plans=[plan1.uuid],
                     priority=0,
                 ),
             ]
@@ -209,7 +206,7 @@ class TestPlanSelectorSelectWithPrecedenceClusterIn:
 
 class TestPlanSelectorListPossiblePlans:
     def test_static_single(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1.uuid])
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
 
         assert possible_plans.has_multiple_plans() is False
@@ -218,7 +215,7 @@ class TestPlanSelectorListPossiblePlans:
         assert possible_plans.get_env_specific_plans() is None
 
     def test_static_multiple(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1, plan2])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1.uuid, plan2.uuid])
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
 
         assert possible_plans.has_multiple_plans() is True
@@ -228,10 +225,7 @@ class TestPlanSelectorListPossiblePlans:
 
     def test_env_specific_single(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
         SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(
-            env_plans=[
-                (AppEnvName.STAG, [plan1]),
-                (AppEnvName.PROD, [plan2]),
-            ],
+            env_plans={AppEnvName.STAG: [plan1.uuid], AppEnvName.PROD: [plan2.uuid]},
         )
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
 
@@ -245,10 +239,7 @@ class TestPlanSelectorListPossiblePlans:
 
     def test_env_specific_has_multi(self, service_obj, bk_module, bk_prod_env, plan1, plan2):
         SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(
-            env_plans=[
-                (AppEnvName.STAG, [plan1]),
-                (AppEnvName.PROD, [plan1, plan2]),
-            ],
+            env_plans={AppEnvName.STAG: [plan1.uuid], AppEnvName.PROD: [plan1.uuid, plan2.uuid]},
         )
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
 
@@ -262,7 +253,7 @@ class TestPlanSelectorListPossiblePlans:
 
     def test_tenant_isolation(self, service_obj, bk_module, bk_prod_env, plan1, plan2, tenant_id):
         # 配置租户为 'system' 的 ServiceBindingPolicy
-        SvcBindingPolicyManager(service_obj, tenant_id).set_uniform(plans=[plan1, plan2])
+        SvcBindingPolicyManager(service_obj, tenant_id).set_uniform(plans=[plan1.uuid, plan2.uuid])
 
         possible_plans = PlanSelector().list_possible_plans(service_obj, bk_module)
         assert possible_plans.get_static_plans() == []
@@ -272,15 +263,12 @@ class Test__get_plan_by_env:
     @pytest.fixture
     def with_plans_env(self, service_obj, bk_module, plan1, plan2):
         SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(
-            env_plans=[
-                (AppEnvName.STAG, [plan1]),
-                (AppEnvName.PROD, [plan1, plan2]),
-            ],
+            env_plans={AppEnvName.STAG: [plan1.uuid], AppEnvName.PROD: [plan1.uuid, plan2.uuid]},
         )
 
     @pytest.fixture
     def with_plans_static(self, service_obj, bk_module, plan1, plan2):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1.uuid])
 
     def test_select_success(self, service_obj, bk_stag_env, plan1, with_plans_static):
         selected_plan = get_plan_by_env(service_obj, bk_stag_env, None, None)

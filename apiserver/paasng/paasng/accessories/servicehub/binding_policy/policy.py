@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import abc
-from typing import Any, Self, Sequence
+from typing import Any, Self
 
 from attrs import define
 
@@ -24,7 +24,7 @@ from paasng.accessories.servicehub.constants import (
     ServiceBindingPolicyType,
 )
 from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
-from paasng.accessories.servicehub.services import PlanObj, ServiceObj
+from paasng.accessories.servicehub.services import ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
 
 
@@ -160,16 +160,6 @@ class ServiceBindingPolicyDTO:
             env_plans=policy.data.get("env_plan_ids", None),
         )
 
-    def plans_as_obj(self, service: ServiceObj) -> list[PlanObj]:
-        """Get the plans field as plan objects."""
-        return plan_ids_to_objs(service, self.plans or [])
-
-    def env_plans_as_obj(self, service: ServiceObj) -> list[tuple[str, list[PlanObj]]]:
-        """Get the env_plans field as plan objects."""
-        if not self.env_plans:
-            return []
-        return [(env, plan_ids_to_objs(service, plan_ids)) for env, plan_ids in self.env_plans.items()]
-
 
 @define
 class ServiceBindingPrecedencePolicyDTO:
@@ -178,10 +168,8 @@ class ServiceBindingPrecedencePolicyDTO:
     cond_type: str
     cond_data: dict[str, list[str]]
     priority: int
-    # NOTE: To provide convenience, the plans and env_plans fields can be either a list
-    # of plan IDs or PlanObj instances.
-    plans: list[str | PlanObj] | None = None
-    env_plans: dict[str, list[str | PlanObj]] | None = None
+    plans: list[str] | None = None
+    env_plans: dict[str, list[str]] | None = None
 
     @classmethod
     def from_db_obj(cls, policy: ServiceBindingPrecedencePolicy) -> Self:
@@ -192,16 +180,6 @@ class ServiceBindingPrecedencePolicyDTO:
             plans=policy.data.get("plan_ids", None),
             env_plans=policy.data.get("env_plan_ids", None),
         )
-
-    def plans_as_obj(self, service: ServiceObj) -> list[PlanObj]:
-        """Get the plans field as plan objects."""
-        return plan_ids_to_objs(service, self.plans or [])
-
-    def env_plans_as_obj(self, service: ServiceObj) -> list[tuple[str, list[PlanObj]]]:
-        """Get the env_plans field as plan objects."""
-        if not self.env_plans:
-            return []
-        return [(env, plan_ids_to_objs(service, plan_ids)) for env, plan_ids in self.env_plans.items()]
 
 
 @define
@@ -279,11 +257,3 @@ class PolicyCombinationConfig:
     allocation_precedence_policies: list[ServiceBindingPrecedencePolicyDTO] | None = None
     # 统一分配
     allocation_policy: ServiceBindingPolicyDTO | None = None
-
-
-def plan_ids_to_objs(service: ServiceObj, plan_ids: Sequence[str | PlanObj]) -> list[PlanObj]:
-    """Turn service plan IDs to Plan objects."""
-    if not plan_ids:
-        return []
-    index = {p.uuid: p for p in service.get_plans()}
-    return [index[plan_id] if not isinstance(plan_id, PlanObj) else plan_id for plan_id in plan_ids]

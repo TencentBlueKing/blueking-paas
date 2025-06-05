@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import datetime
+import uuid
 from json import dumps
 from typing import Dict
 from unittest import mock
@@ -140,28 +141,28 @@ class TestMixedMgrBindService:
             mixed_service_mgr.bind_service(service_obj, bk_module)
 
     def test_static_single(self, bk_module, service_obj, plan1):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1.uuid])
         rel_pk = mixed_service_mgr.bind_service(service_obj, bk_module)
         assert rel_pk is not None
 
     def test_static_multi(self, bk_module, service_obj, plan1, plan2):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1, plan2])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1.uuid, plan2.uuid])
         with pytest.raises(BindServicePlanError):
             mixed_service_mgr.bind_service(service_obj, bk_module)
 
     def test_valid_plan_id(self, service_obj, bk_module, plan1):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1.uuid])
         rel_pk = mixed_service_mgr.bind_service(service_obj, bk_module, plan_id=plan1.uuid)
         assert rel_pk is not None
 
     def test_invalid_plan_id(self, service_obj, bk_module, plan1, plan2):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1.uuid])
         with pytest.raises(BindServicePlanError):
             mixed_service_mgr.bind_service(service_obj, bk_module, plan_id=plan2.uuid)
 
     def test_valid_env_plan_id_map(self, service_obj, bk_module, plan1, plan2):
         SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(
-            env_plans=[("stag", [plan1]), ("prod", [plan2])]
+            env_plans={"stag": [plan1.uuid], "prod": [plan2.uuid]}
         )
         rel_pk = mixed_service_mgr.bind_service(
             service_obj, bk_module, env_plan_id_map={"stag": plan1.uuid, "prod": plan2.uuid}
@@ -170,7 +171,7 @@ class TestMixedMgrBindService:
 
     def test_invalid_env_plan_id_map(self, service_obj, bk_module, plan1, plan2):
         SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(
-            env_plans=[("stag", [plan1]), ("prod", [plan1])],
+            env_plans={"stag": [plan1.uuid], "prod": [plan1.uuid]},
         )
         with pytest.raises(BindServicePlanError):
             mixed_service_mgr.bind_service(
@@ -183,7 +184,7 @@ class TestMixedMgrBindService:
             mixed_service_mgr.bind_service_use_first_plan(service_obj, bk_module)
 
     def test_use_first_plan_ok(self, bk_module, service_obj, bk_stag_env, plan1, plan2):
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan2, plan1])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan2.uuid, plan1.uuid])
         rel_pk = mixed_service_mgr.bind_service_use_first_plan(service_obj, bk_module)
         assert rel_pk is not None
 
@@ -198,7 +199,7 @@ class TestMixedMgrBindService:
         for env in bk_app.envs.all():
             assert list(mixed_service_mgr.list_unprovisioned_rels(env.engine_app)) == []
 
-        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1])
+        SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_uniform(plans=[plan1.uuid])
         rel_pk = mixed_service_mgr.bind_service(service_obj, bk_module)
 
         assert rel_pk is not None
@@ -268,6 +269,13 @@ class TestSvcBindingPolicyManager:
         mgr = SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID)
         with pytest.raises(ValueError, match=r"The policy with the minimum priority*"):
             mgr.save_comb_cfg(cfg)
+
+    def test_should_fail_when_save_invalid_plan_id(self, service_obj, uniform_policy_config):
+        mgr = SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID)
+        # Set an invalid plan ID
+        uniform_policy_config.allocation_policy.plans = [uuid.uuid4().hex]
+        with pytest.raises(ValueError, match=r".*does not belong to service.*"):
+            mgr.save_comb_cfg(uniform_policy_config)
 
     def test_save_comb_cfg(self, service_obj, bk_app, bk_module, plan1, plan2, policy_config):
         mgr = SvcBindingPolicyManager(service_obj, DEFAULT_TENANT_ID)
@@ -340,7 +348,7 @@ class TestLocalMgrProvisionAndInstance:
         """Set the binding policy for the service to a static plan, so the binding can
         proceed by default.
         """
-        SvcBindingPolicyManager(service, DEFAULT_TENANT_ID).set_uniform(plans=[plan_stag])
+        SvcBindingPolicyManager(service, DEFAULT_TENANT_ID).set_uniform(plans=[plan_stag.uuid])
 
     @pytest.fixture()
     def instance_factory(self, svc, plan_stag):

@@ -120,7 +120,7 @@ def _handel_single_service_default_policy(service, default_tenant_id):
                 logger.warning("No plans available for service(%s) under tenant(%s)", service.name, default_tenant_id)
                 return
 
-            SvcBindingPolicyManager(service, default_tenant_id).set_uniform(plans=plans)
+            SvcBindingPolicyManager(service, default_tenant_id).set_uniform(plans=[p.uuid for p in plans])
             # 添加初始化记录，避免重复初始化
             DefaultPolicyCreationRecord.objects.get_or_create(
                 service_id=service.uuid,

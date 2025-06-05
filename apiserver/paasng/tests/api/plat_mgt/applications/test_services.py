@@ -81,7 +81,7 @@ class TestApplicationServicesViewSet:
         # 绑定服务到模块
         svc1, svc2, svc3 = services
         for svc, module in [(svc1, bk_module), (svc2, bk_module), (svc3, bk_module_2)]:
-            SvcBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_uniform(plans=[svc.get_plans()[0]])
+            SvcBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_uniform(plans=[svc.get_plans()[0].uuid])
             mixed_service_mgr.bind_service(svc, module)
 
         # 共享服务

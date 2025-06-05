@@ -32,7 +32,7 @@ from paasng.accessories.servicehub.models import (
     ServiceBindingPolicy,
     ServiceBindingPrecedencePolicy,
 )
-from paasng.accessories.servicehub.services import PlanObj, ServiceObj
+from paasng.accessories.servicehub.services import ServiceObj
 
 from .policy import get_service_type
 
@@ -98,18 +98,17 @@ class SvcBindingPolicyManager:
             policy = cfg.allocation_policy
             if not policy:
                 raise ValueError("Allocation policy cannot be None when policy_type is uniform.")
-            self.set_uniform(policy.plans_as_obj(self.service), policy.env_plans_as_obj(self.service))
+            self.set_uniform(policy.plans, policy.env_plans)
 
     def set_uniform(
         self,
-        plans: list[PlanObj] | None = None,
-        env_plans: list[tuple[str, list[PlanObj]]] | None = None,
+        plans: list[str] | None = None,
+        env_plans: dict[str, list[str]] | None = None,
     ):
         """Set the binding policy for the service, it also set the policy type to UNIFORM.
 
         :param plans: The list of plan IDs.
-        :param env_plans: A list of tuples, where each tuple contains the environment
-            name and the list of plan IDs.
+        :param env_plans: A dict of env name and a list of plan IDs.
         """
         if plans and env_plans:
             raise ValueError("Cannot set both plans and env_plans at the same time.")
@@ -118,13 +117,13 @@ class SvcBindingPolicyManager:
 
         data: dict[str, Any]
         if plans:
-            data = {"plan_ids": [p.uuid for p in plans]}
+            self._validate_plans(plans)
+            data = {"plan_ids": plans}
             defaults = {"type": ServiceBindingPolicyType.STATIC.value, "data": data}
         elif env_plans:
-            if not all(plans for _, plans in env_plans):
-                raise ValueError("plans cannot be empty")
+            self._validate_env_plans(env_plans)
 
-            data = {"env_plan_ids": {env: [p.uuid for p in plans] for env, plans in env_plans}}
+            data = {"env_plan_ids": env_plans}
             defaults = {"type": ServiceBindingPolicyType.ENV_SPECIFIC.value, "data": data}
 
         ServiceAllocationPolicy.objects.set_type_uniform(self.service, self.tenant_id)
@@ -151,8 +150,8 @@ class SvcBindingPolicyManager:
             self._add_service_binding_precedence_policy(
                 PrecedencePolicyCondType(config.cond_type),
                 config.cond_data,
-                plans=config.plans_as_obj(self.service),
-                env_plans=config.env_plans_as_obj(self.service),
+                plans=config.plans,
+                env_plans=config.env_plans,
                 priority=config.priority,
             )
 
@@ -166,8 +165,8 @@ class SvcBindingPolicyManager:
         self,
         cond_type: PrecedencePolicyCondType,
         cond_data: dict[str, Any],
-        plans: list[PlanObj] | None = None,
-        env_plans: list[tuple[str, list[PlanObj]]] | None = None,
+        plans: list[str] | None = None,
+        env_plans: dict[str, list[str]] | None = None,
         priority: int = 0,
     ):
         """Add a service binding precedence policy object, if also set the policy type to RULE_BASED."""
@@ -178,14 +177,14 @@ class SvcBindingPolicyManager:
 
         data: dict[str, Any]
         if plans:
+            self._validate_plans(plans)
             type_ = ServiceBindingPolicyType.STATIC.value
-            data = {"plan_ids": [p.uuid for p in plans]}
+            data = {"plan_ids": plans}
         elif env_plans:
-            if not all(plans for _, plans in env_plans):
-                raise ValueError("plans cannot be empty")
+            self._validate_env_plans(env_plans)
 
             type_ = ServiceBindingPolicyType.ENV_SPECIFIC.value
-            data = {"env_plan_ids": {env: [p.uuid for p in plans] for env, plans in env_plans}}
+            data = {"env_plan_ids": env_plans}
 
         ServiceBindingPrecedencePolicy.objects.create(
             service_id=self.service.uuid,
@@ -214,6 +213,25 @@ class SvcBindingPolicyManager:
             return ServiceBindingPolicyDTO.from_db_obj(obj)
         except ServiceBindingPolicy.DoesNotExist:
             return None
+
+    def _validate_plans(self, plans: list[str] | None):
+        """Validate the given plan ids to check if them belongs to the current service."""
+        index = {p.uuid for p in self.service.get_plans()}
+        for plan_id in plans or []:
+            if plan_id not in index:
+                raise ValueError(f"Plan {plan_id} does not belong to service {self.service.uuid}.")
+
+    def _validate_env_plans(self, env_plans: dict[str, list[str]] | None):
+        """Validate the given environment plan ids to check if they belong to the current service."""
+        if not env_plans:
+            return
+        if not all(env_plans.values()):
+            raise ValueError("plans cannot be empty")
+        index = {p.uuid for p in self.service.get_plans()}
+        for plans in env_plans.values():
+            for plan_id in plans:
+                if plan_id not in index:
+                    raise ValueError(f"Plan {plan_id} does not belong to service {self.service.uuid}.")
 
 
 def list_policy_combination_configs(service: ServiceObj) -> list[PolicyCombinationConfig]:

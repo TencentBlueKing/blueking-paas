@@ -130,7 +130,7 @@ class TestRemoteEngineAppInstanceRel:
         bk_service.plans = plans
 
         # Set the binding policy and bind
-        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[plans[0]])
+        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[plans[0].uuid])
         mgr.bind_service(bk_service, bk_module)
 
         with mock.patch.object(mgr, "get") as get_service:
@@ -165,7 +165,7 @@ class TestRemoteEngineAppInstanceRel:
         bk_service.plans = [bk_plan_1]
 
         # Set the binding policy and bind
-        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[bk_service.plans[0]])
+        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[bk_service.plans[0].uuid])
         mgr.bind_service(bk_service, bk_module)
 
         env = bk_module.get_envs("stag")
@@ -211,7 +211,7 @@ class TestRemoteMgrWithRealStore:
         mgr = RemoteServiceMgr(store=store)
 
         plans = bk_service.plans
-        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[plans[0]])
+        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[plans[0].uuid])
         mgr.bind_service(bk_service, bk_module)
         env = bk_module.get_envs("stag")
 
@@ -220,7 +220,7 @@ class TestRemoteMgrWithRealStore:
             assert rel.is_provisioned() is True
 
         # Change the binding policy
-        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[plans[1]])
+        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[plans[1].uuid])
         with pytest.raises(CanNotModifyPlan):
             mgr.bind_service(bk_service, bk_module)
 
@@ -238,7 +238,7 @@ class TestRemoteMgr:
         # Initialize with a static binding policy
         mgr = RemoteServiceMgr(store=store)
         svc = mgr.get(id_of_first_service)
-        SvcBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_uniform(plans=[svc.get_plans()[0]])
+        SvcBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_uniform(plans=[svc.get_plans()[0].uuid])
 
     @pytest.fixture()
     def store(self):

@@ -56,11 +56,9 @@ class OperationAuditFilterBackend(BaseFilterBackend):
         # 时间过滤
         start_time = validate_params.get("start_time")
         end_time = validate_params.get("end_time")
-        if start_time and end_time:
-            queryset = queryset.filter(created__range=(start_time, end_time))
-        elif start_time:
+        if start_time:
             queryset = queryset.filter(created__gte=start_time)
-        elif end_time:
+        if end_time:
             queryset = queryset.filter(created__lte=end_time)
 
         return queryset

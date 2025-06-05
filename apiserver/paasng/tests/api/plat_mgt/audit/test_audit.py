@@ -28,7 +28,7 @@ class TestApplicationOperateAuditViewSet:
     """测试应用操作审计相关接口"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, bk_app, bk_user):
+    def create_app_op_record(self, bk_app, bk_user):
         # 创建应用操作审计日志
         AdminOperationRecord.objects.create(
             app_code=bk_app.code,
@@ -59,7 +59,7 @@ class TestPlatformOperationAuditViewSet:
     """测试平台操作审计相关接口"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, bk_app, bk_user):
+    def create_admin_op_record(self, bk_app, bk_user):
         # 创建一个平台操作审计日志
         AdminOperationRecord.objects.create(
             user=bk_user.pk,
@@ -87,19 +87,14 @@ class TestPlatformOperationAuditViewSet:
 
 
 class TestAuditEnumsViewSet:
-    """测试审计枚举相关接口"""
+    """测试审计过滤枚举 API"""
 
-    @pytest.mark.parametrize("enum_type", ["target", "operation", "status"])
-    def test_list_enum(self, plat_mgt_api_client, enum_type):
+    def test_list_enum(self, plat_mgt_api_client):
         url = reverse("plat_mgt.audit.enums.list_enum")
-        resp = plat_mgt_api_client.get(url, {"type": enum_type})
+        resp = plat_mgt_api_client.get(url)
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
-        assert isinstance(data, list)
-        assert all("value" in item and "label" in item for item in data)
-
-    def test_list_enum_invalid_type(self, plat_mgt_api_client):
-        url = reverse("plat_mgt.audit.enums.list_enum")
-        resp = plat_mgt_api_client.get(url, {"type": "invalid"})
-        assert resp.status_code == 400
-        assert "detail" in resp.json()
+        assert isinstance(data, dict)
+        assert len(data["target"]) > 0
+        assert len(data["operation"]) > 0
+        assert len(data["status"]) > 0

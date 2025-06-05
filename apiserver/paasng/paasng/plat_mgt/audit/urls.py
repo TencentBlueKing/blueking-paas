@@ -19,7 +19,7 @@ from django.urls import re_path
 
 from .views import (
     ApplicationOperateAuditViewSet,
-    AuditEnumsViewSet,
+    AuditFilterOptionsViewSet,
     PlatformOperationAuditViewSet,
 )
 
@@ -50,7 +50,7 @@ urlpatterns = [
 urlpatterns += [
     re_path(
         r"^api/plat_mgt/audit/enums/$",
-        AuditEnumsViewSet.as_view({"get": "list_enum"}),
+        AuditFilterOptionsViewSet.as_view({"get": "list_enum"}),
         name="plat_mgt.audit.enums.list_enum",
     ),
 ]

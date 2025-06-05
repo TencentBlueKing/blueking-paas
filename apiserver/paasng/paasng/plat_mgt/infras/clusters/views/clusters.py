@@ -381,21 +381,22 @@ class ClusterViewSet(viewsets.GenericViewSet):
         operation_description="获取集群节点信息",
         responses={status.HTTP_200_OK: ClusterNodesStateRetrieveOutputSLZ()},
     )
-    def list_nodes_state(self, request, cluster_name, *args, **kwargs):
+    def retrieve_nodes_state(self, request, cluster_name, *args, **kwargs):
         # 获取单条记录
         cluster_state = RegionClusterState.objects.filter(cluster_name=cluster_name).order_by("-created").first()
 
-        slz = ClusterNodesStateRetrieveOutputSLZ(instance=cluster_state)
-        return Response(slz.data)
+        if not cluster_state:
+            return Response({"detail": f"未找到集群 {cluster_name} 的状态记录"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(ClusterNodesStateRetrieveOutputSLZ(instance=cluster_state).data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.infras.cluster"],
         operation_description="获取节点同步记录",
         response={status.HTTP_200_OK: ClusterNodesStateSyncRecordListOutputSLZ()},
     )
-    def nodes_sync_records(self, request, cluster_name, *args, **kwargs):
+    def retrieve_nodes_sync_records(self, request, cluster_name, *args, **kwargs):
         # 获取和传入的 cluster_name 相关的所有记录
         cluster_state = RegionClusterState.objects.filter(cluster_name=cluster_name).order_by("-created")
 
-        slz = ClusterNodesStateSyncRecordListOutputSLZ(cluster_state, many=True)
-        return Response(slz.data)
+        return Response(ClusterNodesStateSyncRecordListOutputSLZ(cluster_state, many=True).data)

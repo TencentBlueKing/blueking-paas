@@ -23,6 +23,8 @@ from .bcs_resources import (
 from .clusters import (
     ClusterCreateInputSLZ,
     ClusterListOutputSLZ,
+    ClusterNodesStateRetrieveOutputSLZ,
+    ClusterNodesStateSyncRecordListOutputSLZ,
     ClusterRetrieveOutputSLZ,
     ClusterStatusRetrieveOutputSLZ,
     ClusterUpdateInputSLZ,
@@ -35,10 +37,6 @@ from .components import (
 )
 from .default_configs import ClusterDefaultConfigListOutputSLZ
 from .feature_flags import ClusterFeatureFlagListOutputSLZ
-from .nodes_state import (
-    ClusterNodesStateRetrieveOutputSLZ,
-    ClusterNodesStateSyncRecordListOutputSLZ,
-)
 from .policies import (
     ClusterAllocationPolicyCondTypeOutputSLZ,
     ClusterAllocationPolicyCreateInputSLZ,

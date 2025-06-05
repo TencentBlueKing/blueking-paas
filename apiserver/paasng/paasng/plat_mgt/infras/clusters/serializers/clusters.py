@@ -562,7 +562,7 @@ class ClusterNodesStateSLZ(serializers.Serializer):
     binding_apps = serializers.SerializerMethodField(help_text="绑定应用")
     created_at = serializers.DateTimeField(help_text="同步时间", source="created")
 
-    def get_binding_apps(self, obj: Any) -> List[str]:
+    def get_binding_apps(self, obj: RegionClusterState) -> List[str]:
         bindings: QuerySet[RCStateAppBinding] = RCStateAppBinding.objects.filter(state_id=obj.id).select_related("app")
         app_codes: Set[str] = set()
 
@@ -580,4 +580,4 @@ class ClusterNodesStateRetrieveOutputSLZ(ClusterNodesStateSLZ):
 class ClusterNodesStateSyncRecordListOutputSLZ(ClusterNodesStateSLZ):
     """节点同步记录序列化器"""
 
-    id = serializers.IntegerField(help_text="状态记录ID")
+    id = serializers.IntegerField(help_text="状态记录 ID")

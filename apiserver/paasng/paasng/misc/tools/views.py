@@ -100,8 +100,11 @@ class SMartBuilderViewSet(viewsets.ViewSet):
             filepath = get_filepath(slz.validated_data["package"], str(tmp_dir))
             stat = SourcePackageStatReader(filepath).read()
 
-            if not stat.meta_info or stat.relative_path != "./":
-                raise error_codes.MISSING_DESCRIPTION_INFO.f(_("解压后的根目录下缺少 app_desc.yaml 文件"))
+            if not stat.meta_info:
+                raise error_codes.MISSING_DESCRIPTION_INFO.f(_("解压后未找到 app_desc.yaml 文件"))
+
+            if stat.relative_path != "./":
+                raise error_codes.MISSING_DESCRIPTION_INFO.f(_("解压后未在根目录下找到 app_desc.yaml 文件"))
 
             try:
                 app_desc = get_desc_handler(stat.meta_info).app_desc

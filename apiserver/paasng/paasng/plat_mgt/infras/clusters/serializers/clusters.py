@@ -302,7 +302,9 @@ class ClusterCreateInputSLZ(serializers.Serializer):
     )
 
     elastic_search_config = ElasticSearchConfigSLZ(help_text="ES 集群配置", required=False, allow_null=True)
-    app_image_registry = ImageRegistrySLZ(help_text="应用镜像仓库，若未指定则使用默认", required=False, allow_null=True)
+    app_image_registry = ImageRegistrySLZ(
+        help_text="应用镜像仓库，若未指定则使用默认", required=False, allow_null=True
+    )
     available_tenant_ids = serializers.ListField(
         help_text="可用租户 ID 列表", child=serializers.CharField(), min_length=1
     )
@@ -327,7 +329,8 @@ class ClusterCreateInputSLZ(serializers.Serializer):
 
         return attrs
 
-    def _validate_cluster_configs(self, attrs: Dict[str, Any]):
+    @staticmethod
+    def _validate_cluster_configs(attrs: Dict[str, Any]):
         cluster_source = attrs["cluster_source"]
         api_address_type = attrs["api_address_type"]
 
@@ -355,7 +358,8 @@ class ClusterCreateInputSLZ(serializers.Serializer):
             if not srv.startswith("http"):
                 raise ValidationError(_("API Server 地址必须以 http 或 https 开头"))
 
-    def _validate_auth_configs(self, attrs: Dict[str, Any]):
+    @staticmethod
+    def _validate_auth_configs(attrs: Dict[str, Any]):
         auth_type = attrs["auth_type"]
         if auth_type == ClusterAuthType.CERT and not (attrs.get("ca") and attrs.get("cert") and attrs.get("key")):
             raise ValidationError(_("集群认证方式为证书时，CA 证书 + 证书 + 私钥 必须同时提供"))
@@ -363,7 +367,8 @@ class ClusterCreateInputSLZ(serializers.Serializer):
         if auth_type == ClusterAuthType.TOKEN and not attrs.get("token"):
             raise ValidationError(_("集群认证方式为 Token 时，Token 必须提供"))
 
-    def _validate_elastic_search_config(self, attrs: Dict[str, Any]):
+    @staticmethod
+    def _validate_elastic_search_config(attrs: Dict[str, Any]):
         # 若启用蓝鲸日志平台方案，则 ES 配置是可选的
         if BK_LOG_DEFAULT_ENABLED:
             return
@@ -511,6 +516,7 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
     def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
         data = super().to_internal_value(data)
 
+        cur_cluster = self.context["cur_cluster"]
         # 子路径 / 子域名相关转换
         domains = [
             Domain(name=d["name"], reserved=d["reserved"], https_enabled=d["https_enabled"])
@@ -518,8 +524,12 @@ class ClusterUpdateInputSLZ(ClusterCreateInputSLZ):
         ]
         if data["app_address_type"] == AddressType.SUBPATH:
             data["ingress_config"].sub_path_domains = domains
+            # 允许保留集群已有的子域名配置
+            data["ingress_config"].app_root_domains = cur_cluster.ingress_config.app_root_domains
         else:
             data["ingress_config"].app_root_domains = domains
+            # 允许保留集群已有的子路径配置
+            data["ingress_config"].sub_path_domains = cur_cluster.ingress_config.sub_path_domains
 
         return data
 

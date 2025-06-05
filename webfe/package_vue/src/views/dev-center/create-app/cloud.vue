@@ -187,7 +187,7 @@
               <bk-form-item
                 error-display-type="normal"
                 :property="'imageCredentialUserName'"
-                :rules="imageCredentialRule"
+                :rules="getImageCredentialRule('账号')"
               >
                 <bk-input
                   class="mr10"
@@ -199,7 +199,7 @@
               <bk-form-item
                 error-display-type="normal"
                 :property="'imageCredentialPassWord'"
-                :rules="imageCredentialRule"
+                :rules="getImageCredentialRule('密码')"
               >
                 <bk-input
                   type="password"
@@ -889,19 +889,11 @@ export default {
           },
           {
             validator: this.validateCredentials,
-            message: this.$t('必填项'),
+            message: `${this.$t('请填写镜像凭证')} ${this.$t('名称')}`,
             trigger: 'blur',
           },
         ],
       },
-      // 镜像凭证填写校验
-      imageCredentialRule: [
-        {
-          validator: this.validateCredentials,
-          message: this.$t('必填项'),
-          trigger: 'blur',
-        },
-      ],
       curCodeSource: 'default',
       activeIndex: 1,
       isShowAdvancedOptions: false,
@@ -1562,6 +1554,17 @@ export default {
         return true;
       }
       return !!value;
+    },
+
+    // 镜像凭证填写校验
+    getImageCredentialRule(msg) {
+      return [
+        {
+          validator: this.validateCredentials,
+          message: `${this.$t('请填写镜像凭证')} ${this.$t(msg)}`,
+          trigger: 'blur',
+        },
+      ];
     },
   },
 };

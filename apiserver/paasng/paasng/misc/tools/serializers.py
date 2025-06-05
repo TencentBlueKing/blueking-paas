@@ -15,9 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import re
-
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 
@@ -173,17 +170,6 @@ class PackageStashRequestSLZ(serializers.Serializer):
     """Handle package for S-mart build"""
 
     package = serializers.FileField(help_text="待构建的应用源码包")
-
-    def validate_package(self, package):
-        if not re.fullmatch("[a-zA-Z0-9-_. ]+", package.name):
-            raise serializers.ValidationError(
-                {
-                    "invalid": _(
-                        "包名格式错误，只能包含字母(a-zA-Z)、数字(0-9)和半角连接符(-)、下划线(_)、空格( )和点(.)"
-                    )
-                }
-            )
-        return package
 
 
 class PackageStashResponseSLZ(serializers.Serializer):

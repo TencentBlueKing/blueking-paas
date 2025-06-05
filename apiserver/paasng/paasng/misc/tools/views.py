@@ -27,8 +27,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
@@ -44,7 +42,7 @@ from .serializers import AppDescSpec2Serializer, PackageStashRequestSLZ, Package
 
 
 class AppDescTransformAPIView(APIView):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         tags=["应用描述文件版本转换"],
@@ -86,7 +84,7 @@ class AppDescTransformAPIView(APIView):
 
 
 class SMartBuilderViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         request_body=PackageStashRequestSLZ,

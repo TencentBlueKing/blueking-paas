@@ -25,5 +25,10 @@ urlpatterns = [
         r"^api/tools/app_desc/transform/",
         views.AppDescTransformAPIView.as_view(),
         name="api.tools.app_desc.transform",
-    )
+    ),
+    re_path(
+        r"^api/tools/s-mart/upload/",
+        views.SMartBuilderViewSet.as_view({"post": "upload"}),
+        name="api.tools.s-mart.upload",
+    ),
 ]

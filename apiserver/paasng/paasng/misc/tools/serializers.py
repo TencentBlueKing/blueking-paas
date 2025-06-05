@@ -164,3 +164,13 @@ class AppDescSpec2Serializer(serializers.Serializer):
         if ("modules" not in value and "module" not in value) or ("modules" in value and "module" in value):
             raise serializers.ValidationError("one of 'modules' or 'module' is required.")
         return value
+
+
+class PackageStashRequestSLZ(serializers.Serializer):
+    """Handle package for S-mart build"""
+
+    package = serializers.FileField(help_text="待构建的应用源码包")
+
+
+class PackageStashResponseSLZ(serializers.Serializer):
+    signature = serializers.CharField(help_text="数字签名")

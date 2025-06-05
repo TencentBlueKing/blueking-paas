@@ -148,6 +148,10 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
         env = module.envs.get(environment=environment)
         service = mixed_service_mgr.get_or_404(service_id)
 
+        # 检查当前模块是否是共享模块
+        if ServiceSharingManager(module).get_shared_info(service):
+            raise error_codes.CANNOT_PROVISION_INSTANCE.f(_("共享模块不能分配增强服务实例"))
+
         rel = next(mixed_service_mgr.list_unprovisioned_rels(engine_app=env.engine_app, service=service), None)
         if not rel:
             raise error_codes.CANNOT_PROVISION_INSTANCE.f(_("当前环境不存在未分配的增强服务实例"))
@@ -172,7 +176,16 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
     )
     def unbound_instance(self, request, code, module_name, environment, service_id, instance_id):
         """解绑增强服务实例"""
+        application = get_object_or_404(Application, code=code)
+        module = get_object_or_404(application.modules.all(), name=module_name)
         service = mixed_service_mgr.get_or_404(service_id)
+
+        if not mixed_service_mgr.module_is_bound_with(service, module):
+            sharing_mgr = ServiceSharingManager(module)
+            if sharing_mgr.get_shared_info(service):
+                raise error_codes.CANNOT_DESTROY_SERVICE.f(_("共享模块不能删除原始模块的增强服务实例"))
+            else:
+                raise error_codes.CANNOT_DESTROY_SERVICE.f(_("当前模块没有权限操作该增强服务实例"))
 
         try:
             instance_rel = mixed_service_mgr.get_instance_rel_by_instance_id(service, instance_id)

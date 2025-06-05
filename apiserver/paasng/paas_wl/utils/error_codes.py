@@ -34,6 +34,7 @@ class ErrorCodes:
     # Process related codes
     CANNOT_OPERATE_PROCESS = ErrorCode(_("操作进程失败"))
     PROCESS_OPERATION_TOO_OFTEN = ErrorCode(_("进程操作过于频繁，请稍后再试"))
+    PROCESS_INSTANCE_NOT_FOUND = ErrorCode(_("无法找到进程实例"))
 
     # Custom Domain Start
     DELETE_CUSTOM_DOMAIN_FAILED = ErrorCode(_("删除独立域名失败"))

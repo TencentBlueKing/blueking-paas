@@ -426,7 +426,7 @@ class TestUpdateCluster:
             "app_domains": [
                 {
                     "https_enabled": True,
-                    "name": "bkapps.example.com",
+                    "name": "bkapps-sz1.example.com",
                     "reserved": True,
                 }
             ],
@@ -456,7 +456,11 @@ class TestUpdateCluster:
         assert init_default_cluster.container_log_dir == "/var/lib/containerd"
         assert init_default_cluster.exposed_url_type == ExposedURLType.SUBDOMAIN
         assert init_default_cluster.ingress_config.app_root_domains == [
-            Domain(name="bkapps.example.com", https_enabled=True, reserved=True)
+            Domain(name="bkapps-sz1.example.com", https_enabled=True, reserved=True)
+        ]
+        # 旧的域名配置（子路径）也会被保留
+        assert init_default_cluster.ingress_config.sub_path_domains == [
+            Domain(name="bkapps.example.com", https_enabled=False, reserved=False)
         ]
         assert init_default_cluster.ingress_config.frontend_ingress_ip == "127.0.0.11"
         assert init_default_cluster.elastic_search_config.password == "admin123"

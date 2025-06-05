@@ -294,8 +294,10 @@ def wl_app(bk_stag_wl_app) -> WlApp:
 def wl_release(wl_app):
     return create_wl_release(
         wl_app=wl_app,
-        build_params={"procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"}},
-        release_params={"version": 5},
+        release_params={
+            "version": 5,
+            "procfile": {"web": "python manage.py runserver", "worker": "python manage.py celery"},
+        },
     )
 
 
@@ -323,7 +325,6 @@ def wl_build(bk_stag_wl_app, bk_user) -> Build:
         "source_type": "foo",
         "branch": "bar",
         "revision": "1",
-        "procfile": {"web": "legacycommand manage.py runserver", "worker": "python manage.py celery"},
         "artifact_type": "slug",
     }
     return Build.objects.create(tenant_id=bk_stag_wl_app.tenant_id, **build_params)

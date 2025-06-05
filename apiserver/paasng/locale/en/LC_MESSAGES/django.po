@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-05-28 16:48+0800\n"
+"POT-Creation-Date: 2025-06-03 17:58+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2343,13 +2343,13 @@ msgstr ""
 "The cluster deployed in the current environment does not support BCS Egress"
 
 #: paasng/plat_admin/admin42/views/services.py:108
-#: paasng/plat_mgt/applications/views/services.py:120
+#: paasng/plat_mgt/applications/views/services.py:157
 msgid "当前环境不存在未分配的增强服务实例"
 msgstr ""
 "There are no unallocated instances of Add-ons in the current environment"
 
 #: paasng/plat_admin/admin42/views/services.py:135
-#: paasng/plat_mgt/applications/views/services.py:152
+#: paasng/plat_mgt/applications/views/services.py:202
 msgid "迁移应用不支持回收增强服务实例"
 msgstr ""
 "Migrating applications does not support reclaiming enhanced service "
@@ -2383,7 +2383,21 @@ msgstr " {operation} {status} at {time}"
 #: paasng/plat_mgt/applications/serializers/application.py:228
 #, python-brace-format
 msgid "现有的分配策略下未找到匹配的集群(集群名: {name})"
-msgstr "No matching cluster was found under the existing allocation strategy (cluster name: {name})"
+msgstr ""
+"No matching cluster was found under the existing allocation strategy "
+"(cluster name: {name})"
+
+#: paasng/plat_mgt/applications/views/services.py:153
+msgid "共享模块不能分配增强服务实例"
+msgstr "Shared module cannot provision add-ons instance"
+
+#: paasng/plat_mgt/applications/views/services.py:189
+msgid "共享模块不能删除原始模块的增强服务实例"
+msgstr "Shared module cannot delete add-ons instance of the original module"
+
+#: paasng/plat_mgt/applications/views/services.py:191
+msgid "当前模块没有权限操作该增强服务实例"
+msgstr "The current module doesn't have permission to operate the add-ons instance"
 
 #: paasng/plat_mgt/infras/clusters/serializers/clusters.py:341
 msgid "BCS 集群必须提供项目，集群，业务信息"

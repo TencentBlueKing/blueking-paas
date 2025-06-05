@@ -784,7 +784,7 @@ class TestClusterNodesState:
         self._create_app_binding(state2, "app2")
         self._create_app_binding(state2, "app3")
 
-        url = reverse("plat_mgt.infras.retrieve_nodes_state", kwargs={"cluster_name": self.cluster_name})
+        url = reverse("plat_mgt.infras.cluster.retrieve_nodes_state", kwargs={"cluster_name": self.cluster_name})
         response = plat_mgt_api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
@@ -800,7 +800,9 @@ class TestClusterNodesState:
             self._create_app_binding(state, f"app-{i}")
             states.append(state)
 
-        url = reverse("plat_mgt.infras.retrieve_nodes_sync_records", kwargs={"cluster_name": self.cluster_name})
+        url = reverse(
+            "plat_mgt.infras.cluster.retrieve_nodes_sync_records", kwargs={"cluster_name": self.cluster_name}
+        )
         response = plat_mgt_api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
@@ -817,7 +819,7 @@ class TestClusterNodesState:
 
     def test_invalid_cluster_name(self, plat_mgt_api_client):
         invalid_cluster_name = "invalid-cluster-name"
-        url = reverse("plat_mgt.infras.retrieve_nodes_state", kwargs={"cluster_name": invalid_cluster_name})
+        url = reverse("plat_mgt.infras.cluster.retrieve_nodes_state", kwargs={"cluster_name": invalid_cluster_name})
         response = plat_mgt_api_client.get(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND

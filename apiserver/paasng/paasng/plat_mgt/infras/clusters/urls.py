@@ -52,12 +52,12 @@ urlpatterns = [
     path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/nodes_state/",
         views.ClusterViewSet.as_view({"get": "retrieve_nodes_state"}),
-        name="plat_mgt.infras.retrieve_nodes_state",
+        name="plat_mgt.infras.cluster.retrieve_nodes_state",
     ),
     path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/nodes_sync_records/",
         views.ClusterViewSet.as_view({"get": "retrieve_nodes_sync_records"}),
-        name="plat_mgt.infras.retrieve_nodes_sync_records",
+        name="plat_mgt.infras.cluster.retrieve_nodes_sync_records",
     ),
     # 集群组件安装信息
     path(

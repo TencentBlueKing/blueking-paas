@@ -48,6 +48,17 @@ urlpatterns = [
         views.ClusterViewSet.as_view({"post": "sync_nodes"}),
         name="plat_mgt.infras.cluster.sync_nodes",
     ),
+    # 获取节点信息与节点同步记录
+    path(
+        "api/plat_mgt/infras/clusters/<str:cluster_name>/nodes_state/",
+        views.ClusterViewSet.as_view({"get": "list_nodes_state"}),
+        name="plat_mgt.infras.list_nodes_state",
+    ),
+    path(
+        "api/plat_mgt/infras/clusters/<str:cluster_name>/nodes_sync_records/",
+        views.ClusterViewSet.as_view({"get": "nodes_sync_records"}),
+        name="plat_mgt.infras.nodes_sync_records",
+    ),
     # 集群组件安装信息
     path(
         "api/plat_mgt/infras/clusters/<str:cluster_name>/components/",
@@ -92,17 +103,6 @@ urlpatterns = [
         "api/plat_mgt/infras/cluster_feature_flags/",
         views.ClusterFeatureFlagViewSet.as_view({"get": "list"}),
         name="plat_mgt.infras.cluster_feature_flag.list",
-    ),
-    # 获取节点信息与节点同步记录
-    path(
-        "api/plat_mgt/infras/cluster_nodes_info/",
-        views.ClusterNodesInfoViewSet.as_view({"get": "list_nodes_info"}),
-        name="plat_mgt.infras.cluster_nodes_info.list",
-    ),
-    path(
-        "api/plat_mgt/infras/cluster_sync_records/",
-        views.ClusterNodesInfoViewSet.as_view({"get": "list_sync_records"}),
-        name="plat_mgt.infras.cluster_sync_records.list",
     ),
     # BCS 项目列表
     path(

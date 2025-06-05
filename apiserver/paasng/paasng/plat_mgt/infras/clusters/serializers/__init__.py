@@ -35,7 +35,10 @@ from .components import (
 )
 from .default_configs import ClusterDefaultConfigListOutputSLZ
 from .feature_flags import ClusterFeatureFlagListOutputSLZ
-from .nodes_info import ClusterNodesInfoListInputSLZ, ClusterNodesInfoListOutputSLZ, ClusterNodesSyncInfoOutputSLZ
+from .nodes_state import (
+    ClusterNodesStateRetrieveOutputSLZ,
+    ClusterNodesStateSyncRecordListOutputSLZ,
+)
 from .policies import (
     ClusterAllocationPolicyCondTypeOutputSLZ,
     ClusterAllocationPolicyCreateInputSLZ,
@@ -61,9 +64,8 @@ __all__ = [
     # feature_flags
     "ClusterFeatureFlagListOutputSLZ",
     # nodes_info
-    "ClusterNodesInfoListOutputSLZ",
-    "ClusterNodesInfoListInputSLZ",
-    "ClusterNodesSyncInfoOutputSLZ",
+    "ClusterNodesStateRetrieveOutputSLZ",
+    "ClusterNodesStateSyncRecordListOutputSLZ",
     # policies
     "ClusterAllocationPolicyListOutputSLZ",
     "ClusterAllocationPolicyCreateInputSLZ",

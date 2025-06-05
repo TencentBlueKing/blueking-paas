@@ -20,7 +20,6 @@ from .clusters import ClusterViewSet
 from .components import ClusterComponentViewSet
 from .default_configs import ClusterDefaultConfigViewSet
 from .feature_flags import ClusterFeatureFlagViewSet
-from .nodes_info import ClusterNodesInfoViewSet
 from .policies import ClusterAllocationPolicyViewSet
 
 __all__ = [
@@ -29,6 +28,5 @@ __all__ = [
     "ClusterComponentViewSet",
     "ClusterDefaultConfigViewSet",
     "ClusterFeatureFlagViewSet",
-    "ClusterNodesInfoViewSet",
     "ClusterAllocationPolicyViewSet",
 ]

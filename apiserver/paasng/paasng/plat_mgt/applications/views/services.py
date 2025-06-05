@@ -180,12 +180,9 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
         module = get_object_or_404(application.modules.all(), name=module_name)
         service = mixed_service_mgr.get_or_404(service_id)
 
-        # 检查当前模块是否为该服务的原始绑定模块，而非共享模块
         if not mixed_service_mgr.module_is_bound_with(service, module):
-            # 如果模块没有直接绑定该服务，检查是否为共享关系
             sharing_mgr = ServiceSharingManager(module)
-            shared_info = sharing_mgr.get_shared_info(service)
-            if shared_info:
+            if sharing_mgr.get_shared_info(service):
                 raise error_codes.CANNOT_DESTROY_SERVICE.f(_("共享模块不能删除原始模块的增强服务实例"))
             else:
                 raise error_codes.CANNOT_DESTROY_SERVICE.f(_("当前模块没有权限操作该增强服务实例"))

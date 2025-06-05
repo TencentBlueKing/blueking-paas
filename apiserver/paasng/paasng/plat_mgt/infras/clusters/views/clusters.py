@@ -386,7 +386,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster_state = RegionClusterState.objects.filter(cluster_name=cluster_name).order_by("-created").first()
 
         slz = ClusterNodesStateRetrieveOutputSLZ(instance=cluster_state)
-        return Response(slz.data, status=status.HTTP_200_OK)
+        return Response(slz.data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.infras.cluster"],
@@ -398,4 +398,4 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster_state = RegionClusterState.objects.filter(cluster_name=cluster_name).order_by("-created")
 
         slz = ClusterNodesStateSyncRecordListOutputSLZ(cluster_state, many=True)
-        return Response(slz.data, status=status.HTTP_200_OK)
+        return Response(slz.data)

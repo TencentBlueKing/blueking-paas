@@ -15,6 +15,7 @@
       v-model="inputValue"
       :placeholder="placeholder"
     ></bk-input>
+    <slot name="alert"></slot>
     <template slot="footer">
       <bk-button
         theme="danger"
@@ -114,7 +115,7 @@ export default {
   }
   .hint-text {
     font-size: 12px;
-    color: #63656e;
+    color: #4d4f56;
     letter-spacing: 0;
     line-height: 22px;
     word-break: break-all;

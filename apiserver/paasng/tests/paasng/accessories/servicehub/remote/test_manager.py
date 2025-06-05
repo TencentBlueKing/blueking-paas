@@ -24,7 +24,7 @@ from unittest import mock
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager, set_alloc_type_uniform
+from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
 from paasng.accessories.servicehub.exceptions import (
     CanNotModifyPlan,
     UnboundSvcAttachmentDoesNotExist,
@@ -130,8 +130,7 @@ class TestRemoteEngineAppInstanceRel:
         bk_service.plans = plans
 
         # Set the binding policy and bind
-        set_alloc_type_uniform(bk_service, DEFAULT_TENANT_ID)
-        ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([plans[0]])
+        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[plans[0]])
         mgr.bind_service(bk_service, bk_module)
 
         with mock.patch.object(mgr, "get") as get_service:
@@ -166,8 +165,7 @@ class TestRemoteEngineAppInstanceRel:
         bk_service.plans = [bk_plan_1]
 
         # Set the binding policy and bind
-        set_alloc_type_uniform(bk_service, DEFAULT_TENANT_ID)
-        ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([bk_service.plans[0]])
+        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[bk_service.plans[0]])
         mgr.bind_service(bk_service, bk_module)
 
         env = bk_module.get_envs("stag")
@@ -213,8 +211,7 @@ class TestRemoteMgrWithRealStore:
         mgr = RemoteServiceMgr(store=store)
 
         plans = bk_service.plans
-        set_alloc_type_uniform(bk_service, DEFAULT_TENANT_ID)
-        ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([plans[0]])
+        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[plans[0]])
         mgr.bind_service(bk_service, bk_module)
         env = bk_module.get_envs("stag")
 
@@ -223,7 +220,7 @@ class TestRemoteMgrWithRealStore:
             assert rel.is_provisioned() is True
 
         # Change the binding policy
-        ServiceBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_static([plans[1]])
+        SvcBindingPolicyManager(bk_service, DEFAULT_TENANT_ID).set_uniform(plans=[plans[1]])
         with pytest.raises(CanNotModifyPlan):
             mgr.bind_service(bk_service, bk_module)
 
@@ -241,8 +238,7 @@ class TestRemoteMgr:
         # Initialize with a static binding policy
         mgr = RemoteServiceMgr(store=store)
         svc = mgr.get(id_of_first_service)
-        set_alloc_type_uniform(svc, DEFAULT_TENANT_ID)
-        ServiceBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_static([svc.get_plans()[0]])
+        SvcBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_uniform(plans=[svc.get_plans()[0]])
 
     @pytest.fixture()
     def store(self):

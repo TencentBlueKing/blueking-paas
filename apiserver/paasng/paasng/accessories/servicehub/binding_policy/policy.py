@@ -14,18 +14,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import abc
-from typing import Any, Optional
+from typing import Any, Self, Sequence
 
 from attrs import define
 
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.servicehub.constants import (
     PrecedencePolicyCondType,
-    ServiceAllocationPolicyType,
     ServiceBindingPolicyType,
 )
 from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
-from paasng.accessories.servicehub.services import ServiceObj
+from paasng.accessories.servicehub.services import PlanObj, ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
 
 
@@ -148,40 +147,44 @@ def get_service_type(service: ServiceObj) -> str:
 
 
 @define
-class UnifiedAllocationPolicy:
-    """The configuration for unified allocation policy.
-
-    This class holds the necessary configuration data extracted from a ServiceBindingPolicy.
-    """
+class ServiceBindingPolicyDTO:
+    """The DTO object for ServiceBindingPolicy."""
 
     plans: list[str] | None = None
     env_plans: dict[str, list[str]] | None = None
 
     @classmethod
-    def create_from_policy(cls, policy: ServiceBindingPolicy | None) -> Optional["UnifiedAllocationPolicy"]:
-        if policy is None:
-            return None
+    def from_db_obj(cls, policy: ServiceBindingPolicy) -> Self:
         return cls(
             plans=policy.data.get("plan_ids", None),
             env_plans=policy.data.get("env_plan_ids", None),
         )
 
+    def plans_as_obj(self, service: ServiceObj) -> list[PlanObj]:
+        """Get the plans field as plan objects."""
+        return plan_ids_to_objs(service, self.plans or [])
+
+    def env_plans_as_obj(self, service: ServiceObj) -> list[tuple[str, list[PlanObj]]]:
+        """Get the env_plans field as plan objects."""
+        if not self.env_plans:
+            return []
+        return [(env, plan_ids_to_objs(service, plan_ids)) for env, plan_ids in self.env_plans.items()]
+
 
 @define
-class RuleBasedAllocationPolicy:
-    """The configuration for building precedence policy.
-
-    This class holds the necessary configuration data extracted from a ServiceBindingPrecedencePolicy.
-    """
+class ServiceBindingPrecedencePolicyDTO:
+    """The DTO object for ServiceBindingPrecedencePolicy."""
 
     cond_type: str
     cond_data: dict[str, list[str]]
     priority: int
-    plans: list[str] | None = None
-    env_plans: dict[str, list[str]] | None = None
+    # NOTE: To provide convenience, the plans and env_plans fields can be either a list
+    # of plan IDs or PlanObj instances.
+    plans: list[str | PlanObj] | None = None
+    env_plans: dict[str, list[str | PlanObj]] | None = None
 
     @classmethod
-    def create_from_policy(cls, policy: ServiceBindingPrecedencePolicy) -> "RuleBasedAllocationPolicy":
+    def from_db_obj(cls, policy: ServiceBindingPrecedencePolicy) -> Self:
         return cls(
             cond_type=policy.cond_type,
             cond_data=policy.cond_data,
@@ -189,6 +192,16 @@ class RuleBasedAllocationPolicy:
             plans=policy.data.get("plan_ids", None),
             env_plans=policy.data.get("env_plan_ids", None),
         )
+
+    def plans_as_obj(self, service: ServiceObj) -> list[PlanObj]:
+        """Get the plans field as plan objects."""
+        return plan_ids_to_objs(service, self.plans or [])
+
+    def env_plans_as_obj(self, service: ServiceObj) -> list[tuple[str, list[PlanObj]]]:
+        """Get the env_plans field as plan objects."""
+        if not self.env_plans:
+            return []
+        return [(env, plan_ids_to_objs(service, plan_ids)) for env, plan_ids in self.env_plans.items()]
 
 
 @define
@@ -219,19 +232,19 @@ class PolicyCombinationConfig:
         service_id="service_x",
         allocation_policy_type="rule_based",
         allocation_precedence_policies=[
-            RuleBasedAllocationPolicy(
+            ServiceBindingPrecedencePolicyDTO(
                 cond_type=PrecedencePolicyCondType.REGION_IN.value,
                 cond_data={"regions": ["region_default"]},
                 priority=2,
                 plans=["plan_region"]
             ),
-            RuleBasedAllocationPolicy(
+            ServiceBindingPrecedencePolicyDTO(
                 cond_type=PrecedencePolicyCondType.CLUSTER_IN.value,
                 cond_data={"cluster_names": ["cluster_default"]},
                 priority=1,
                 plans=["plan_cluster"]
             ),
-            RuleBasedAllocationPolicy(
+            ServiceBindingPrecedencePolicyDTO(
                 cond_type=PrecedencePolicyCondType.Always_Match.value.
                 cond_data={},
                 priority=0,
@@ -252,7 +265,7 @@ class PolicyCombinationConfig:
         service_id="service_x",
         allocation_policy_type="uniform",
         allocation_precedence_policies=None,
-        allocation_policy=UnifiedAllocationPolicy(
+        allocation_policy=ServiceBindingPolicyDTO(
             plans=["plan_unified"],
         )
     )
@@ -263,23 +276,14 @@ class PolicyCombinationConfig:
     # 枚举值 -> ServiceAllocationPolicyType
     policy_type: str
     # 按规则分配
-    allocation_precedence_policies: list[RuleBasedAllocationPolicy] | None = None
+    allocation_precedence_policies: list[ServiceBindingPrecedencePolicyDTO] | None = None
     # 统一分配
-    allocation_policy: UnifiedAllocationPolicy | None = None
+    allocation_policy: ServiceBindingPolicyDTO | None = None
 
-    def validate_config(self):
-        if self.policy_type == ServiceAllocationPolicyType.RULE_BASED.value:
-            allocation_precedence_policies = self.allocation_precedence_policies
-            if not allocation_precedence_policies:
-                raise ValueError(
-                    "Allocation precedence policies cannot be None or empty when policy_type is rule_based."
-                )
 
-            # 检查最低优先级的策略是否为always_match
-            min_priority_policy = min(allocation_precedence_policies, key=lambda p: p.priority)
-            if min_priority_policy.cond_type != PrecedencePolicyCondType.ALWAYS_MATCH.value:
-                raise ValueError("The policy with the minimum priority must be 'always_match'.")
-
-        elif self.policy_type == ServiceAllocationPolicyType.UNIFORM.value:
-            if self.allocation_policy is None:
-                raise ValueError("Allocation policy cannot be None when policy_type is uniform.")
+def plan_ids_to_objs(service: ServiceObj, plan_ids: Sequence[str | PlanObj]) -> list[PlanObj]:
+    """Turn service plan IDs to Plan objects."""
+    if not plan_ids:
+        return []
+    index = {p.uuid: p for p in service.get_plans()}
+    return [index[plan_id] if not isinstance(plan_id, PlanObj) else plan_id for plan_id in plan_ids]

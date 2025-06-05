@@ -101,26 +101,17 @@ class PlanSelector:
 
     def list(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
         """List the plans based on the service and the application"""
-        try:
-            allocation_policy = ServiceAllocationPolicy.objects.get(
-                service_id=service.uuid,
-                tenant_id=env.tenant_id,
-            )
-        except ServiceAllocationPolicy.DoesNotExist:
-            logger.warning(
-                "ServiceAllocationPolicy not found for service %s in tenant %s", service.uuid, env.tenant_id
-            )
-            return []
-
-        if allocation_policy.type == ServiceAllocationPolicyType.RULE_BASED.value:
+        alloc_type = ServiceAllocationPolicy.objects.get_type(service, env.tenant_id)
+        if alloc_type == ServiceAllocationPolicyType.RULE_BASED.value:
             return self._list_rule_based_policies(service, env)
-        elif allocation_policy.type == ServiceAllocationPolicyType.UNIFORM.value:
+        elif alloc_type == ServiceAllocationPolicyType.UNIFORM.value:
             return self._get_uniform_policy(service, env)
 
-        raise ValueError("Unsupported ServiceAllocationPolicy type: %s" % allocation_policy.type)
+        raise ValueError("Unsupported ServiceAllocationPolicy type: %s" % alloc_type)
 
     def _get_uniform_policy(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
         """get the plans based on the ServiceBindingPolicy.
+
         :return: A list plans based on the ServiceBindingPolicy.
         """
         # Get plans based on the binding policy
@@ -134,6 +125,7 @@ class PlanSelector:
 
     def _list_rule_based_policies(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
         """List the plans based on the ServiceBindingPrecedencePolicy.
+
         :return: A list plans based on the ServiceBindingPrecedencePolicy.
         :raise ValueError: If no precedence policy matches the env object.
         """

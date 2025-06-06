@@ -24,13 +24,17 @@ from uuid import UUID
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.accessories.servicehub.binding_policy.manager import PolicyCombinationManager, ServiceBindingPolicyManager
+from paasng.accessories.servicehub.binding_policy.manager import (
+    PolicyCombinationManager,
+    ServiceBindingPolicyManager,
+    set_alloc_type_uniform,
+)
 from paasng.accessories.servicehub.binding_policy.policy import (
     PolicyCombinationConfig,
     RuleBasedAllocationPolicy,
     UnifiedAllocationPolicy,
 )
-from paasng.accessories.servicehub.constants import Category, PrecedencePolicyCondType
+from paasng.accessories.servicehub.constants import Category, PrecedencePolicyCondType, ServiceAllocationPolicyType
 from paasng.accessories.servicehub.exceptions import (
     BindServicePlanError,
     ServiceObjNotFound,
@@ -139,6 +143,11 @@ class TestMixedMgrBindService:
     """All test cases in this class test both local and remote services by using
     the parametrized fixture `service_obj`."""
 
+    @pytest.fixture(autouse=True)
+    def set_uniform(self, service_obj):
+        """Set the allocation type to uniform for the service object."""
+        set_alloc_type_uniform(service_obj, DEFAULT_TENANT_ID)
+
     def test_no_plans(self, bk_module, service_obj, plan1):
         with pytest.raises(BindServicePlanError):
             mixed_service_mgr.bind_service(service_obj, bk_module)
@@ -165,7 +174,7 @@ class TestMixedMgrBindService:
 
     def test_valid_env_plan_id_map(self, service_obj, bk_module, plan1, plan2):
         ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_env_specific(
-            env_plans=[("stag", [plan1]), ("prod", [plan2])]
+            env_plans=[("stag", [plan1]), ("prod", [plan2])],
         )
         rel_pk = mixed_service_mgr.bind_service(
             service_obj, bk_module, env_plan_id_map={"stag": plan1.uuid, "prod": plan2.uuid}
@@ -174,7 +183,7 @@ class TestMixedMgrBindService:
 
     def test_invalid_env_plan_id_map(self, service_obj, bk_module, plan1, plan2):
         ServiceBindingPolicyManager(service_obj, DEFAULT_TENANT_ID).set_env_specific(
-            env_plans=[("stag", [plan1]), ("prod", [plan1])]
+            env_plans=[("stag", [plan1]), ("prod", [plan1])],
         )
         with pytest.raises(BindServicePlanError):
             mixed_service_mgr.bind_service(
@@ -214,7 +223,46 @@ class TestMixedMgrBindService:
 class TestPolicyCombinationManager:
     @pytest.fixture()
     def policy_config(self, bk_app, service_obj, plan1, plan2):
-        allocation_policy = UnifiedAllocationPolicy(plans=[plan1.uuid, plan2.uuid])
+        allocation_precedence_policies = [
+            RuleBasedAllocationPolicy(
+                cond_type=PrecedencePolicyCondType.REGION_IN,
+                cond_data={"regions": [bk_app.region]},
+                priority=2,
+                plans=[plan1.uuid],
+            ),
+            RuleBasedAllocationPolicy(
+                cond_type=PrecedencePolicyCondType.CLUSTER_IN,
+                cond_data={"cluster_name": ["cluster1", "cluster2"]},
+                priority=1,
+                env_plans={"stag": [plan2.uuid]},
+            ),
+            RuleBasedAllocationPolicy(
+                cond_type=PrecedencePolicyCondType.ALWAYS_MATCH,
+                cond_data={},
+                priority=0,
+                env_plans={"stag": [plan1.uuid]},
+            ),
+        ]
+
+        return PolicyCombinationConfig(
+            tenant_id=DEFAULT_TENANT_ID,
+            service_id=service_obj.uuid,
+            policy_type=ServiceAllocationPolicyType.RULE_BASED,
+            allocation_precedence_policies=allocation_precedence_policies,
+        )
+
+    @pytest.fixture()
+    def uniform_policy_config(self, bk_app, service_obj, plan1):
+        return PolicyCombinationConfig(
+            tenant_id=DEFAULT_TENANT_ID,
+            service_id=service_obj.uuid,
+            policy_type=ServiceAllocationPolicyType.UNIFORM,
+            allocation_policy=UnifiedAllocationPolicy(
+                plans=[plan1.uuid],
+            ),
+        )
+
+    def test_create_with_invalid_cfg(self, service_obj, bk_app, bk_module, plan1, plan2):
         allocation_precedence_policies = [
             RuleBasedAllocationPolicy(
                 cond_type=PrecedencePolicyCondType.REGION_IN,
@@ -230,15 +278,18 @@ class TestPolicyCombinationManager:
             ),
         ]
 
-        return PolicyCombinationConfig(
+        cfg = PolicyCombinationConfig(
             tenant_id=DEFAULT_TENANT_ID,
             service_id=service_obj.uuid,
+            policy_type=ServiceAllocationPolicyType.RULE_BASED,
             allocation_precedence_policies=allocation_precedence_policies,
-            allocation_policy=allocation_policy,
         )
+        mgr = PolicyCombinationManager(service_obj, DEFAULT_TENANT_ID)
+        with pytest.raises(ValueError, match=r"The policy with the minimum priority*"):
+            mgr.upsert(cfg)
 
-    def test_upsert(self, service_obj, bk_app, bk_module, plan1, plan2, policy_config):
-        mgr = PolicyCombinationManager(service=service_obj, tenant_id=DEFAULT_TENANT_ID)
+    def test_create(self, service_obj, bk_app, bk_module, plan1, plan2, policy_config):
+        mgr = PolicyCombinationManager(service_obj, DEFAULT_TENANT_ID)
         mgr.upsert(policy_config)
 
         precedence_policy1 = ServiceBindingPrecedencePolicy.objects.get(
@@ -247,19 +298,45 @@ class TestPolicyCombinationManager:
         precedence_policy2 = ServiceBindingPrecedencePolicy.objects.get(
             service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID, priority=1
         )
-        policy = ServiceBindingPolicy.objects.get(service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID)
+        precedence_policy3 = ServiceBindingPrecedencePolicy.objects.get(
+            service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID, priority=0
+        )
+        assert not ServiceBindingPolicy.objects.filter(
+            service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID
+        ).exists()
         assert precedence_policy1.cond_data == {"regions": [bk_app.region]}
         assert precedence_policy1.data == {"plan_ids": [plan1.uuid]}
         assert precedence_policy2.cond_data == {"cluster_name": ["cluster1", "cluster2"]}
         assert precedence_policy2.data == {"env_plan_ids": {"stag": [plan2.uuid]}}
-        assert policy.data == {"plan_ids": [plan1.uuid, plan2.uuid]}
+        assert precedence_policy3.cond_data == {}
+        assert precedence_policy3.data == {"env_plan_ids": {"stag": [plan1.uuid]}}
+
+    def test_update(self, service_obj, bk_app, bk_module, policy_config, uniform_policy_config):
+        mgr = PolicyCombinationManager(service_obj, DEFAULT_TENANT_ID)
+        mgr.upsert(policy_config)
+        mgr.upsert(uniform_policy_config)
+
+        policy_combination_config = mgr.get()
+        assert policy_combination_config == uniform_policy_config
 
     def test_get_policy_combination_configs(self, service_obj, policy_config):
-        mgr = PolicyCombinationManager(service=service_obj, tenant_id=DEFAULT_TENANT_ID)
+        mgr = PolicyCombinationManager(service_obj, DEFAULT_TENANT_ID)
         mgr.upsert(policy_config)
 
         policy_combination_config = mgr.get()
         assert policy_combination_config == policy_config
+
+    def test_delete(self, service_obj, policy_config):
+        mgr = PolicyCombinationManager(service_obj, DEFAULT_TENANT_ID)
+        mgr.upsert(policy_config)
+
+        mgr.clean()
+        assert not ServiceBindingPolicy.objects.filter(
+            service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID
+        ).exists()
+        assert not ServiceBindingPrecedencePolicy.objects.filter(
+            service_id=service_obj.uuid, tenant_id=DEFAULT_TENANT_ID
+        ).exists()
 
 
 class TestLocalMgrProvisionAndInstance:
@@ -287,6 +364,7 @@ class TestLocalMgrProvisionAndInstance:
         """Set the binding policy for the service to a static plan, so the binding can
         proceed by default.
         """
+        set_alloc_type_uniform(service, DEFAULT_TENANT_ID)
         ServiceBindingPolicyManager(service, DEFAULT_TENANT_ID).set_static([plan_stag])
 
     @pytest.fixture()

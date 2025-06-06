@@ -25,6 +25,7 @@ from django_dynamic_fixture import G
 from paasng.bk_plugins.pluginscenter.constants import PluginRevisionType, PluginRole
 from paasng.bk_plugins.pluginscenter.iam_adaptor.models import PluginGradeManager, PluginUserGroup
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition, PluginInstance
+from paasng.plat_mgt.bk_plugins.views import is_user_plugin_admin
 
 pytestmark = pytest.mark.django_db
 
@@ -100,13 +101,16 @@ class TestBKPluginMembersManageViewSet:
 
         return plugin_instance
 
-    def test_be_admin(self, bk_plugin_app, plat_mgt_api_client, create_plugin_instance):
+    def test_be_admin(self, bk_user, bk_plugin_app, plat_mgt_api_client, create_plugin_instance):
         """测试 BK 插件添加管理员"""
         # 应用租户与插件租户一致
         url = reverse("plat_mgt.applications.plugin.members.admin", kwargs={"app_code": bk_plugin_app.code})
         resp = plat_mgt_api_client.post(url)
         print(resp.data)
         assert resp.status_code == 200
+
+        # 检查用户是否被添加为管理员
+        assert is_user_plugin_admin(bk_plugin_app.code, bk_user.username)
 
     def test_be_admin_different_tenant(self, bk_plugin_app, plat_mgt_api_client, create_plugin_instance):
         """测试 BK 插件添加管理员，应用租户与插件租户不一致"""
@@ -121,6 +125,12 @@ class TestBKPluginMembersManageViewSet:
     def test_be_not_admin(self, bk_user, bk_plugin_app, plat_mgt_api_client, create_plugin_instance):
         """测试 BK 插件退出管理员"""
 
+        # 使用接口前，先添加用户为管理员
         url = reverse("plat_mgt.applications.plugin.members.admin", kwargs={"app_code": bk_plugin_app.code})
-        response = plat_mgt_api_client.delete(url)
-        assert response.status_code == 204
+        resp = plat_mgt_api_client.post(url)
+        print(resp.data)
+        assert resp.status_code == 200
+
+        # 现在测试退出管理员
+        resp = plat_mgt_api_client.delete(url)
+        assert resp.status_code == 204

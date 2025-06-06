@@ -26,7 +26,7 @@ from paasng.bk_plugins.bk_plugins.models import BkPluginTag
 from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
 from paasng.infras.iam.helpers import add_role_members, remove_user_all_roles
-from paasng.platform.applications.constants import ApplicationRole
+from paasng.platform.applications.constants import ApplicationRole, AvailabilityLevel
 from paasng.platform.engine.constants import DeployConditions
 from paasng.platform.engine.workflow.protections import (
     EnvProtectionCondition,
@@ -57,15 +57,28 @@ def git_client(bk_module):
 
 class TestProductInfoCondition:
     @pytest.mark.parametrize(
-        ("env", "create_product", "ok"),
-        [("prod", False, False), ("prod", True, True), ("stag", False, True), ("stag", True, True)],
+        ("env", "create_product", "set_availability_level", "ok"),
+        [
+            ("prod", False, False, False),
+            ("prod", True, True, True),
+            ("prod", True, False, False),
+            ("prod", False, True, False),
+            ("stag", False, False, False),
+            ("stag", True, True, True),
+            ("stag", True, False, False),
+            ("stag", False, True, False),
+        ],
     )
-    def test_validate(self, bk_user, bk_module, env, create_product, ok):
+    def test_validate(self, bk_user, bk_module, env, create_product, set_availability_level, ok):
         application = bk_module.application
         env = bk_module.get_envs(env)
 
         if create_product:
             G(Product, application=application)
+
+        if set_availability_level:
+            application.availability_level = AvailabilityLevel.BASE.value
+            application.save()
 
         if ok:
             ProductInfoCondition(bk_user, env).validate()
@@ -175,11 +188,12 @@ class TestRepoAccessCondition:
 
 class TestModuleEnvDeployInspector:
     @pytest.mark.parametrize(
-        ("user_role", "allowed_roles", "create_token", "create_product", "expected"),
+        ("user_role", "allowed_roles", "create_token", "create_product", "set_availability_level", "expected"),
         [
             (
                 ApplicationRole.DEVELOPER,
                 [ApplicationRole.ADMINISTRATOR],
+                False,
                 False,
                 False,
                 [
@@ -193,11 +207,21 @@ class TestModuleEnvDeployInspector:
                 [ApplicationRole.ADMINISTRATOR],
                 True,
                 False,
+                False,
                 [DeployConditions.FILL_PRODUCT_INFO, DeployConditions.CHECK_ENV_PROTECTION],
             ),
             (
                 ApplicationRole.ADMINISTRATOR,
                 ...,
+                True,
+                False,
+                False,
+                [DeployConditions.FILL_PRODUCT_INFO],
+            ),
+            (
+                ...,
+                ...,
+                True,
                 True,
                 False,
                 [DeployConditions.FILL_PRODUCT_INFO],
@@ -207,11 +231,23 @@ class TestModuleEnvDeployInspector:
                 ...,
                 True,
                 True,
+                True,
                 [],
             ),
         ],
     )
-    def test(self, bk_user, bk_module, git_client, user_role, allowed_roles, create_token, create_product, expected):
+    def test(
+        self,
+        bk_user,
+        bk_module,
+        git_client,
+        user_role,
+        allowed_roles,
+        create_token,
+        create_product,
+        set_availability_level,
+        expected,
+    ):
         application = bk_module.application
         env = bk_module.get_envs("prod")
         bk_module.source_type = get_sourcectl_names().GitLab
@@ -233,6 +269,10 @@ class TestModuleEnvDeployInspector:
 
         if create_product:
             G(Product, application=application)
+
+        if set_availability_level:
+            application.availability_level = AvailabilityLevel.BASE.value
+            application.save()
 
         inspector = ModuleEnvDeployInspector(bk_user, env)
         assert [item.action_name for item in inspector.perform().failed_conditions] == [c.value for c in expected]

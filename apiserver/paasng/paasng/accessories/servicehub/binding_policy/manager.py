@@ -109,29 +109,15 @@ class SvcBindingPolicyManager:
 
         :param plans: The list of plan IDs.
         :param env_plans: A dict of env name and a list of plan IDs.
+        :raises ValueError: When the given plans are invalid.
         """
-        if plans and env_plans:
-            raise ValueError("Cannot set both plans and env_plans at the same time.")
-        elif not plans and not env_plans:
-            raise ValueError("Must provide either plans or env_plans.")
-
-        data: dict[str, Any]
-        if plans:
-            self._validate_plans(plans)
-            data = {"plan_ids": plans}
-            defaults = {"type": ServiceBindingPolicyType.STATIC.value, "data": data}
-        elif env_plans:
-            self._validate_env_plans(env_plans)
-
-            data = {"env_plan_ids": env_plans}
-            defaults = {"type": ServiceBindingPolicyType.ENV_SPECIFIC.value, "data": data}
-
+        type_, data = self._to_policy_type_data(plans, env_plans)
         ServiceAllocationPolicy.objects.set_type_uniform(self.service, self.tenant_id)
         ServiceBindingPolicy.objects.update_or_create(
             service_id=self.service.uuid,
             service_type=get_service_type(self.service),
             tenant_id=self.tenant_id,
-            defaults=defaults,
+            defaults={"type": type_, "data": data},
         )
 
     def set_rule_based(self, policies: list[ServiceBindingPrecedencePolicyDTO]):
@@ -147,12 +133,17 @@ class SvcBindingPolicyManager:
         ServiceAllocationPolicy.objects.set_type_rule_based(self.service, self.tenant_id)
         ServiceBindingPrecedencePolicy.objects.filter(service_id=self.service.uuid, tenant_id=self.tenant_id).delete()
         for config in policies:
-            self._add_service_binding_precedence_policy(
-                PrecedencePolicyCondType(config.cond_type),
-                config.cond_data,
-                plans=config.plans,
-                env_plans=config.env_plans,
+            type_, data = self._to_policy_type_data(config.plans, config.env_plans)
+            cond_type = PrecedencePolicyCondType(config.cond_type)
+            ServiceBindingPrecedencePolicy.objects.create(
+                service_id=self.service.uuid,
+                service_type=get_service_type(self.service),
+                tenant_id=self.tenant_id,
                 priority=config.priority,
+                cond_type=cond_type.value,
+                cond_data=config.cond_data,
+                type=type_,
+                data=data,
             )
 
     def clean(self):
@@ -160,42 +151,6 @@ class SvcBindingPolicyManager:
         ServiceAllocationPolicy.objects.filter(service_id=self.service.uuid, tenant_id=self.tenant_id).delete()
         ServiceBindingPolicy.objects.filter(service_id=self.service.uuid, tenant_id=self.tenant_id).delete()
         ServiceBindingPrecedencePolicy.objects.filter(service_id=self.service.uuid, tenant_id=self.tenant_id).delete()
-
-    def _add_service_binding_precedence_policy(
-        self,
-        cond_type: PrecedencePolicyCondType,
-        cond_data: dict[str, Any],
-        plans: list[str] | None = None,
-        env_plans: dict[str, list[str]] | None = None,
-        priority: int = 0,
-    ):
-        """Add a service binding precedence policy object, if also set the policy type to RULE_BASED."""
-        if plans and env_plans:
-            raise ValueError("Cannot set both plans and env_plans at the same time.")
-        elif not plans and not env_plans:
-            raise ValueError("Must provide either plans or env_plans.")
-
-        data: dict[str, Any]
-        if plans:
-            self._validate_plans(plans)
-            type_ = ServiceBindingPolicyType.STATIC.value
-            data = {"plan_ids": plans}
-        elif env_plans:
-            self._validate_env_plans(env_plans)
-
-            type_ = ServiceBindingPolicyType.ENV_SPECIFIC.value
-            data = {"env_plan_ids": env_plans}
-
-        ServiceBindingPrecedencePolicy.objects.create(
-            service_id=self.service.uuid,
-            service_type=get_service_type(self.service),
-            tenant_id=self.tenant_id,
-            priority=priority,
-            cond_type=cond_type.value,
-            cond_data=cond_data,
-            type=type_,
-            data=data,
-        )
 
     def _get_precedence_policies(self) -> List[ServiceBindingPrecedencePolicyDTO] | None:
         """Get all precedence policies for the service."""
@@ -213,6 +168,29 @@ class SvcBindingPolicyManager:
             return ServiceBindingPolicyDTO.from_db_obj(obj)
         except ServiceBindingPolicy.DoesNotExist:
             return None
+
+    def _to_policy_type_data(
+        self, plans: list[str] | None, env_plans: dict[str, list[str]] | None
+    ) -> tuple[str, dict[str, Any]]:
+        """Convert the given plans and env_plans to a policy type and data dict for saving.
+
+        :return: (policy_type, policy_data)
+        """
+        if plans and env_plans:
+            raise ValueError("Cannot set both plans and env_plans at the same time.")
+        elif not plans and not env_plans:
+            raise ValueError("Must provide either plans or env_plans.")
+
+        data: dict[str, Any]
+        if plans:
+            self._validate_plans(plans)
+            data = {"plan_ids": plans}
+            return ServiceBindingPolicyType.STATIC.value, data
+        elif env_plans:
+            self._validate_env_plans(env_plans)
+            data = {"env_plan_ids": env_plans}
+            return ServiceBindingPolicyType.ENV_SPECIFIC.value, data
+        raise ValueError("Must provide either plans or env_plans.")
 
     def _validate_plans(self, plans: list[str] | None):
         """Validate the given plan ids to check if them belongs to the current service."""

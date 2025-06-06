@@ -20,20 +20,29 @@ from collections import OrderedDict
 import yaml
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseBadRequest
+from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from paasng.infras.accounts.permissions.application import application_perm_class
-from paasng.infras.iam.permissions.resources.application import AppAction
+from paasng.platform.declarative.application.resources import ApplicationDesc
+from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
+from paasng.platform.sourcectl.utils import generate_temp_dir
+from paasng.utils.error_codes import error_codes
+from paasng.utils.views import get_filepath
 from paasng.utils.yaml import IndentDumper
 
 from .app_desc import transform_app_desc_spec2_to_spec3
-from .serializers import AppDescSpec2Serializer
+from .serializers import AppDescSpec2Serializer, PackageStashRequestSLZ, PackageStashResponseSLZ
 
 
 class AppDescTransformAPIView(APIView):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         tags=["应用描述文件版本转换"],
@@ -72,3 +81,51 @@ class AppDescTransformAPIView(APIView):
             return HttpResponseBadRequest(f"Error generating YAML output: {str(e)}")
 
         return HttpResponse(output_yaml, content_type="application/yaml")
+
+
+class SMartBuilderViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        request_body=PackageStashRequestSLZ,
+        response_serializer=PackageStashResponseSLZ,
+        tags=["S-Mart 包构建"],
+    )
+    def upload(self, request):
+        """上传一个待构建的源码包，校验通过后将其暂存起来"""
+        slz = PackageStashRequestSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        with generate_temp_dir() as tmp_dir:
+            filepath = get_filepath(slz.validated_data["package"], str(tmp_dir))
+            stat = SourcePackageStatReader(filepath).read()
+
+            if not stat.meta_info:
+                raise error_codes.MISSING_DESCRIPTION_INFO.f(_("解压后未找到 app_desc.yaml 文件"))
+
+            if stat.relative_path != "./":
+                raise error_codes.MISSING_DESCRIPTION_INFO.f(_("解压后未在根目录下找到 app_desc.yaml 文件"))
+
+            try:
+                app_desc = get_desc_handler(stat.meta_info).app_desc
+                self._validate_app_desc(app_desc)
+            except DescriptionValidationError as e:
+                raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(str(e))
+
+            if not stat.version:
+                raise error_codes.MISSING_VERSION_INFO.f(_("app_desc.yaml 中缺少了 app version 信息"))
+
+            # Store as prepared package for later build
+            PreparedSourcePackage(request, namespace=self._get_store_namespace(app_desc.code)).store(filepath)
+
+        return Response(PackageStashResponseSLZ({"signature": stat.sha256_signature}).data)
+
+    @staticmethod
+    def _validate_app_desc(app_desc: ApplicationDesc):
+        # TODO 增加一些前置校验, 确保 app_desc 符合构建要求
+        if app_desc.market is None:
+            raise DescriptionValidationError({"market": "内容不能为空"})
+
+    @staticmethod
+    def _get_store_namespace(app_code: str) -> str:
+        return f"{app_code}:prepared_build"

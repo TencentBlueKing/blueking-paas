@@ -29,6 +29,7 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit import constants
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.utils.error_codes import error_codes
 
 
 class BKPluginMembersManageViewSet(ViewSet):
@@ -42,6 +43,10 @@ class BKPluginMembersManageViewSet(ViewSet):
         username = request.user.username
         plugin = get_object_or_404(PluginInstance, id=app_code)
         role = plugin_constants.PluginRole.ADMINISTRATOR.value
+
+        # 不允许添加不同租户的成员成为管理员
+        if plugin.tenant_id != request.user.tenant_id:
+            raise error_codes.MEMBERSHIP_CREATE_FAILED.f("不允许添加不同租户的成员")
 
         data_before = self._gen_data_detail(plugin, username)
 
@@ -58,11 +63,11 @@ class BKPluginMembersManageViewSet(ViewSet):
 
         return Response(status=status.HTTP_200_OK)
 
-    def be_not_admin(self, request, code):
+    def be_not_admin(self, request, app_code):
         """取消插件管理员身份"""
 
         username = request.user.username
-        plugin = get_object_or_404(PluginInstance, id=code)
+        plugin = get_object_or_404(PluginInstance, id=app_code)
         role = plugin_constants.PluginRole.ADMINISTRATOR.value
 
         data_before = self._gen_data_detail(plugin, username)
@@ -73,12 +78,12 @@ class BKPluginMembersManageViewSet(ViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.BKPLUGIN_MEMBER,
-            app_code=code,
+            app_code=app_code,
             data_before=data_before,
             data_after=self._gen_data_detail(plugin, username),
         )
 
-        return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @staticmethod
     def _gen_data_detail(code: str, username: str) -> DataDetail:

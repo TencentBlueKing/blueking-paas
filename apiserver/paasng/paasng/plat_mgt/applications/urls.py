@@ -75,13 +75,8 @@ urlpatterns = [
     ),
     re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/plugin/members/$",
-        BKPluginMembersManageViewSet.as_view({"post": "be_admin"}),
-        name="plat_mgt.applications.be_admin",
-    ),
-    re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/plugin/members/(?P<user_id>[0-9a-z]+)/$",
-        BKPluginMembersManageViewSet.as_view({"delete": "be_not_admin"}),
-        name="plat_mgt.applications.be_not_admin",
+        BKPluginMembersManageViewSet.as_view({"post": "be_admin", "delete": "be_not_admin"}),
+        name="plat_mgt.applications.plugin.members.admin",
     ),
     re_path(
         r"^api/plat_mgt/applications/members/roles/$",

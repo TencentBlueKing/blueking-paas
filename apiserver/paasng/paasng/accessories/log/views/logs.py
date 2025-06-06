@@ -424,8 +424,7 @@ class ModuleLogAPIMixin(_MixinBase):
         prod_config = self._get_log_query_config_by_env(prod)
         if stag_config != prod_config:
             logging.exception(
-                "log query config mismatch between stag and prod, " "please check the config of module %s",
-                module,
+                "log query config mismatch between stag and prod, please check the config of module %s", module
             )
         return prod_config
 

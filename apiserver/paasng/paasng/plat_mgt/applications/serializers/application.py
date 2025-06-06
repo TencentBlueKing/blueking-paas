@@ -200,6 +200,7 @@ class ApplicationDetailOutputSLZ(serializers.Serializer):
     """应用详情序列化器"""
 
     basic_info = ApplicationBasicInfoSLZ(read_only=True, help_text="应用基本信息")
+    app_admin = serializers.JSONField()
     modules_info = serializers.ListField(child=ApplicationModuleSLZ(), help_text="应用模块信息", read_only=True)
 
 

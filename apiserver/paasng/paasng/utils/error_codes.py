@@ -40,6 +40,7 @@ class ErrorCodes:
     NOTIFICATION_DISABLED = ErrorCode(_("暂不支持发送通知"))
     # 人员管理
     MEMBERSHIP_DELETE_FAILED = ErrorCode(_("应用应该至少拥有一个管理员"))
+    MEMBERSHIP_CREATE_FAILED = ErrorCode(_("成员创建失败"))
     MEMBERSHIP_OWNER_FAILED = ErrorCode(_("应用所有者不能执行该操作"))
     # 云 API 管理
     QUERY_API_LIST_FAILED = ErrorCode(_("查询API列表失败"))

@@ -171,6 +171,7 @@
               v-model="form.templateName"
               :clearable="false"
               :placeholder="$t('初始化模板')"
+              @change="templateChange"
             >
               <bk-option
                 v-for="option in pluginTemplateList"
@@ -552,6 +553,7 @@ export default {
       this.$nextTick(() => {
         this.handleBottomAdsorption();
         this.closeSpellcheck();
+        this.validatePluginField('plugin_id');
       });
     },
     // 切换插件重置参数
@@ -565,6 +567,9 @@ export default {
       // 初始化模板
       this.pluginTemplateList = this.pluginLanguage.filter((e) => e.language === this.languageData.language);
       this.form.templateName = '';
+      this.$nextTick(() => {
+        this.validatePluginField('plugin_id');
+      });
     },
     // 富文本编辑
     onEditorChange(e) {
@@ -602,9 +607,9 @@ export default {
           extra_fields: this.schemaFormData,
           // 仅当是 AI 插件时才包含 ai_extra_fields 参数
           ...(this.isAiPlugin && {
-            ai_extra_fields: { 
-              space_id: this.bkAiSpaces.spaceId 
-            }
+            ai_extra_fields: {
+              space_id: this.bkAiSpaces.spaceId,
+            },
           }),
         };
         const res = await this.$store.dispatch('plugin/savePlugins', params);
@@ -683,6 +688,54 @@ export default {
       } catch (e) {
         this.catchErrorHandler(e);
       }
+    },
+
+    // 校验某一项 form-item
+    validatePluginField(fieldName) {
+      if (this.$refs.pluginForm) {
+        this.$refs.pluginForm.validateField(fieldName).catch((e) => {
+          console.error(`Validation error on field ${fieldName}:`, e);
+        });
+      } else {
+        console.warn('pluginForm reference not available');
+      }
+    },
+
+    /**
+     * 根据当前表单类型切换校验规则
+     */
+    templateChange() {
+      if (this.form.pd_id === 'bk-saas') {
+        // 当模板类型为 ai 插件时，需要校验插件的id必须以 ai- 开头
+        this.rules.plugin_id = this.togglePrefixRule(this.rules.plugin_id, this.isAiPlugin);
+      }
+      this.validatePluginField('plugin_id');
+    },
+
+    /**
+     * ai插件动态切换前缀校验规则
+     * @param {Array} validationRules 原始校验规则数组
+     * @param {Boolean} needPrefix 是否需要添加前缀规则
+     * @returns {Array} 更新后的校验规则数组
+     */
+    togglePrefixRule(validationRules, needPrefix) {
+      const PREFIX_RULE = {
+        regex: /^ai-/,
+        message: this.$t('蓝鲸 AI 插件 ID 必须以 ai- 开头'),
+        trigger: 'blur',
+      };
+      // 查找是否已存在前缀规则
+      const hasPrefixRule = validationRules.some((rule) => rule.regex?.source === PREFIX_RULE.regex.source);
+      // 需要添加前缀但不存在时添加
+      if (needPrefix && !hasPrefixRule) {
+        return [...validationRules, PREFIX_RULE];
+      }
+      // 不需要前缀但存在时移除
+      if (!needPrefix && hasPrefixRule) {
+        return validationRules.filter((rule) => rule.regex?.source !== PREFIX_RULE.regex.source);
+      }
+      // 其他情况返回原规则
+      return validationRules;
     },
   },
 };

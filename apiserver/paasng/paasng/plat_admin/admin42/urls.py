@@ -60,6 +60,11 @@ urlpatterns = [
         proc_spec.ProcessSpecPlanManageView.as_view(),
         name="admin.process_spec_plan.manage",
     ),
+    re_path(
+        r"^platform/process_spec_plan/process_spec_manage/$",
+        proc_spec.ProcessSpecConfigView.as_view(),
+        name="admin.process_spec_plan.process_spec_manage",
+    ),
     # 平台管理-智能顾问-文档链接管理
     re_path(
         r"^platform/smart-advisor/documents/manage$",

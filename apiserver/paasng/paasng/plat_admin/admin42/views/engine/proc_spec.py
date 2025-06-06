@@ -17,6 +17,7 @@
 
 from typing import Dict, List
 
+import arrow
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -27,10 +28,11 @@ from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.text import remove_prefix
 
@@ -46,7 +48,7 @@ def get_path(request: Request) -> str:
 class ProcessSpecPlanManageView(GenericTemplateView):
     """ProcessSpecPlan 管理页"""
 
-    name = "应用资源方案"
+    name = "方案列表"
     serializer_class = ProcessSpecPlanSLZ
     queryset = ProcessSpecPlan.objects.all()
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -117,6 +119,80 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
             processes.extend(process_map.values())
 
         kwargs["processes"] = processes
+        return kwargs
+
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class ProcessSpecConfigView(GenericTemplateView):
+    """应用资源方案配置视图"""
+
+    name = "应用资源方案配置"
+    queryset = Application.objects.filter(type=ApplicationType.DEFAULT)
+    template_name = "admin42/platformmgr/process_spec_manage.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+    filter_backends = [ApplicationFilterBackend]
+
+    def get_context_data(self, **kwargs):
+        # 获取所有应用列表
+        self.paginator.default_limit = 10
+        if "view" not in kwargs:
+            kwargs["view"] = self
+
+        # 获取应用列表
+        applications = self.filter_queryset(self.get_queryset())
+        page_applications = self.paginate_queryset(applications)
+
+        # 获取应用的进程数据
+        app_process_data = []
+        for app in page_applications:
+            envs = ModuleEnvironment.objects.filter(module__in=app.modules.all()).all()
+            all_processes = []
+            for env in envs:
+                process_manager = ProcessManager(env)
+                process_spec_map = {}
+                for process_spec in process_manager.list_processes_specs():
+                    process_spec_map[process_spec["name"]] = process_spec
+
+                processes = process_manager.list_processes()
+                all_processes.extend(
+                    [
+                        {
+                            "type": proc.type,
+                            "engine_app": env.engine_app.name,
+                            "metadata": {
+                                "module": env.module.name,
+                                "env": env.environment,
+                            },
+                            "desired_replicas": proc.replicas,
+                            "command": proc.runtime.proc_command,
+                            "available_instance_count": proc.available_instance_count,
+                            "plan": {
+                                "id": ProcessSpecPlan.objects.get_by_name(process_spec["plan_name"]).pk,
+                                "name": process_spec_map[proc.type]["plan_name"],
+                                "limits": process_spec_map[proc.type]["resource_limit"],
+                                "requests": process_spec_map[proc.type]["resource_requests"],
+                                "max_replicas": process_spec_map[proc.type]["max_replicas"],
+                            },
+                        }
+                        for proc in processes
+                    ]
+                )
+
+            app_data = {
+                "logo_url": app.get_logo_url(),
+                "code": app.code,
+                "name": app.name,
+                "app_type": app.type,
+                "created": arrow.get(app.created).humanize(locale="zh"),
+                "creator": app.creator.username,
+                "process_spec": all_processes,
+            }
+            app_process_data.append(app_data)
+
+        kwargs["app_process_data"] = app_process_data
+        kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 
     def get(self, request, *args, **kwargs):

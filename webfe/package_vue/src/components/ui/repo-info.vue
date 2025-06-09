@@ -269,6 +269,9 @@ export default {
         };
       }
     },
+    'info.sourceDir'(newVal) {
+      this.$emit('dir-change', newVal);
+    },
   },
   methods: {
     async validate(callback) {

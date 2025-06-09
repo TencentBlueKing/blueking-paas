@@ -343,30 +343,42 @@
                 :default-account="repoData.account"
                 :default-password="repoData.password"
                 :default-dir="repoData.sourceDir"
+                @dir-change="($event) => (curRepoDir = $event)"
               />
               <!-- 用户自定义git、svn账号信息 end -->
             </template>
 
             <!-- Dockerfile 构建 -->
-            <template v-if="formData.buildMethod === 'dockerfile'">
-              <div
-                class="form-group-dir dockerfile-cls"
-                :class="{ 'repo-dockerfile': curSourceControl && curSourceControl.auth_method === 'basic' }"
-                style="margin-top: 10px;"
-              >
-                <label class="form-label mr10 pr8">
-                  {{ $t('Dockerfile 路径') }}
-                </label>
-                <div class="form-group-flex">
-                  <bk-input
-                    v-model="dockerfileData.dockerfilePath"
-                    class="form-input-width"
-                    :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
-                  />
-                </div>
+            <div
+              v-if="isDockerfile"
+              class="form-group-dir dockerfile-cls mt10"
+              :class="{ 'repo-dockerfile': curSourceControl && curSourceControl.auth_method === 'basic' }"
+            >
+              <label class="form-label mr10 pr8">
+                {{ $t('Dockerfile 路径') }}
+              </label>
+              <div class="form-group-flex">
+                <bk-input
+                  v-model="dockerfileData.dockerfilePath"
+                  class="form-input-width"
+                  :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
+                />
               </div>
+            </div>
+
+            <!-- 文件示例目录 -->
+            <ExamplesDirectory
+              style="margin-left: 100px"
+              :root-path="rootPath"
+              :append-path="appendPath"
+              :default-files="defaultFiles"
+              :is-dockerfile="isDockerfile"
+              :show-root="false"
+              :type="'string'"
+            />
 
               <!-- 构建参数 -->
+            <template v-if="isDockerfile">
               <bk-form
                 :model="dockerfileData"
                 form-type="vertical"
@@ -525,8 +537,9 @@
   </div>
 </template>
 
-<script>import { APP_LANGUAGES_IMAGE, DEFAULT_APP_SOURCE_CONTROL_TYPES, DEFAULR_LANG_NAME } from '@/common/constants';
-import _ from 'lodash';
+<script>
+import { APP_LANGUAGES_IMAGE, DEFAULT_APP_SOURCE_CONTROL_TYPES, DEFAULR_LANG_NAME } from '@/common/constants';
+import { cloneDeep, has } from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import appPreloadMixin from '@/mixins/app-preload';
@@ -534,6 +547,7 @@ import collapseContent from './comps/collapse-content.vue';
 import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
 import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
 import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
+import ExamplesDirectory from '@/components/examples-directory';
 
 export default {
   components: {
@@ -542,6 +556,7 @@ export default {
     collapseContent,
     deployProcess,
     deployHook,
+    ExamplesDirectory,
   },
   mixins: [appPreloadMixin],
   data() {
@@ -684,6 +699,7 @@ export default {
         dockerfilePath: '', // Dockerfile 路径
         buildParams: [], // 构建参数
       },
+      curRepoDir: ''
     };
   },
   computed: {
@@ -727,6 +743,31 @@ export default {
     mirrorExamplePlaceholder() {
       return `${this.$t('请输入镜像仓库，如')}：${this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE}`;
     },
+    isDockerfile() {
+      return this.formData.buildMethod === 'dockerfile';
+    },
+    // 根目录
+    rootPath() {
+      const { auth_method } = this.curSourceControl || {};
+      const authPathMap = {
+        oauth: this.sourceDirVal,
+        basic: this.curRepoDir,
+      };
+      return authPathMap[auth_method] || '';
+    },
+    appendPath() {
+      return this.isDockerfile ? this.dockerfileData.dockerfilePath : '';
+    },
+    // 默认文件
+    defaultFiles() {
+      const languageFileMap = {
+        Python: 'requirements.txt',
+        NodeJS: 'package.json',
+        Go: 'go.mod',
+      };
+      const file = languageFileMap[this.language || 'Python'];
+      return [{ name: file }];
+    },
   },
   watch: {
     sourceInitTemplate() {
@@ -761,7 +802,7 @@ export default {
     },
     'formData.name'(value) {
       if (Object.keys(this.createCloudAppData).length) {
-        this.localCloudAppData = _.cloneDeep(this.createCloudAppData);
+        this.localCloudAppData = cloneDeep(this.createCloudAppData);
         this.localCloudAppData.metadata.name = `${this.appCode}-m-${value}`;
 
         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
@@ -794,11 +835,11 @@ export default {
       this.localSourceOrigin = payload;
       if (payload === this.GLOBAL.APP_TYPES.NORMAL_APP) {
         this.sourceOrigin = payload;
-        this.curLanguages = _.cloneDeep(this.languages);
+        this.curLanguages = cloneDeep(this.languages);
         this.language = 'Python';
       } else {
         if (payload === 2) {
-          this.curLanguages = _.cloneDeep({
+          this.curLanguages = cloneDeep({
             NodeJS: [this.languages.NodeJS[0]],
           });
           this.language = 'NodeJS';
@@ -865,7 +906,7 @@ export default {
         const res = await this.$store.dispatch('module/getLanguageInfo');
         this.allRegionsSpecs = res;
 
-        if (!_.has(this.allRegionsSpecs, this.region)) {
+        if (!has(this.allRegionsSpecs, this.region)) {
           this.$paasMessage({
             theme: 'error',
             message: this.$t('版本配置未找到，您没有创建模块权限。'),
@@ -873,7 +914,7 @@ export default {
           return;
         }
         this.languages = this.allRegionsSpecs[this.region].languages;
-        this.curLanguages = _.cloneDeep(this.languages);
+        this.curLanguages = cloneDeep(this.languages);
       } catch (res) {
         this.$paasMessage({
           theme: 'error',
@@ -1038,7 +1079,7 @@ export default {
       };
 
       // dockerfile 构建方式
-      if (this.formData.buildMethod === 'dockerfile') {
+      if (this.isDockerfile) {
         // 构建参数
         const dockerBuild = {};
         this.dockerfileData.buildParams.forEach((item) => {
@@ -1198,7 +1239,7 @@ export default {
           ],
         },
       };
-      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
+      this.localCloudAppData = cloneDeep(this.initCloudAppData);
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
 
@@ -1208,7 +1249,7 @@ export default {
         this.$router.go(-1);
       } else {
         this.$refs?.processRef?.handleCancel();
-        this.cloudAppData = _.cloneDeep(this.localCloudAppData);
+        this.cloudAppData = cloneDeep(this.localCloudAppData);
         this.$store.commit('cloudApi/updateHookPageEdit', false);
         this.$store.commit('cloudApi/updateProcessPageEdit', false);
         // 返回模块配置

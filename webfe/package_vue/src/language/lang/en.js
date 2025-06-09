@@ -3022,4 +3022,9 @@ export default {
   '适用于外部 API 提供，适合 Web 和移动应用': 'Suitable for external API provision, ideal for web and mobile applications',
   '适用于高性能、实时、内部服务通信': 'Suitable for high-performance, real-time internal service communication',
   请填写镜像凭证: 'Please provide image credentials',
+  示例目录: 'Example Directory',
+  查看示例目录: 'View Example Directory',
+  'app_desc.yaml 文件位置说明': 'app_desc.yaml File Location Description',
+  '在根目录下执行如下命令构建镜像：': 'Execute the following command in the root directory to build the image:',
+  '在 <i>{p}</i> 目录下执行如下命令构建镜像：': 'Execute the following command in the <i>{p}</i> directory to build the image:',
 };

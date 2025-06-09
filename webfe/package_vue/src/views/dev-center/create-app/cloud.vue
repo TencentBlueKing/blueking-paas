@@ -357,9 +357,7 @@
               :label-width="100"
               class="from-content mt20"
             >
-              <div class="form-item-title mb10">
-                {{ $t('源码管理') }}
-              </div>
+              <div class="form-item-title mb10">{{ $t('源码管理') }}</div>
 
               <bk-form-item
                 :required="true"
@@ -426,26 +424,40 @@
                   :default-account="repoData.account"
                   :default-password="repoData.password"
                   :default-dir="repoData.sourceDir"
+                  @dir-change="($event) => (curRepoDir = $event)"
                 />
               </section>
 
               <!-- Dockerfile 构建 -->
-              <template v-if="formData.buildMethod === 'dockerfile'">
-                <bk-form-item
-                  :label="$t('Dockerfile 路径')"
-                  :property="'dockerfile_path'"
-                  error-display-type="normal"
-                  ext-cls="form-dockerfile-cls mt20"
-                >
-                  <div class="flex-row align-items-center code-depot">
-                    <bk-input
-                      v-model="dockerfileData.dockerfilePath"
-                      class="form-input-width"
-                      :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
-                    />
-                  </div>
-                </bk-form-item>
+              <bk-form-item
+                v-if="isDockerfile"
+                :label="$t('Dockerfile 路径')"
+                :property="'dockerfile_path'"
+                error-display-type="normal"
+                ext-cls="form-dockerfile-cls mt20"
+              >
+                <div class="flex-row align-items-center code-depot">
+                  <bk-input
+                    v-model="dockerfileData.dockerfilePath"
+                    class="form-input-width"
+                    :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
+                  />
+                </div>
+              </bk-form-item>
 
+              <!-- 用户输入 构建目录 + Dockerfile 路径文件示例目录 -->
+              <ExamplesDirectory
+                style="margin-left: 100px"
+                :root-path="rootPath"
+                :append-path="appendPath"
+                :default-files="defaultFiles"
+                :is-dockerfile="isDockerfile"
+                :show-root="false"
+                :type="'string'"
+              />
+
+              <!-- 构建参数 -->
+              <template v-if="isDockerfile">
                 <bk-form
                   :model="dockerfileData"
                   form-type="vertical"
@@ -683,11 +695,13 @@ import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
 import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
 import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
-import { TAG_MAP, TE_MIRROR_EXAMPLE } from '@/common/constants.js';
+import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import defaultAppType from './default-app-type';
 import createSmartApp from './smart';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import { mapGetters } from 'vuex';
+import ExamplesDirectory from '@/components/examples-directory';
+
 export default {
   components: {
     gitExtend,
@@ -697,6 +711,7 @@ export default {
     deployHook,
     defaultAppType,
     createSmartApp,
+    ExamplesDirectory,
   },
   mixins: [sidebarDiffMixin],
   data() {
@@ -900,6 +915,7 @@ export default {
       pluginTmpls: [],
       curPluginTemplate: '',
       codeSourceId: 'default',
+      curRepoDir: '',
     };
   },
   computed: {
@@ -952,6 +968,40 @@ export default {
     },
     isNextStepAllowed() {
       return this.codeSourceId === 'default' && !this.curExtendConfig?.isAuth;
+    },
+    isDockerfile() {
+      return this.formData.buildMethod === 'dockerfile';
+    },
+    // 根目录
+    rootPath() {
+      const { auth_method } = this.curSourceControl || {};
+      const authPathMap = {
+        oauth: this.formData.buildDir,
+        basic: this.curRepoDir,
+      };
+      return authPathMap[auth_method] || '';
+    },
+    appendPath() {
+      return this.isDockerfile ? this.dockerfileData.dockerfilePath : '';
+    },
+    // 默认文件
+    defaultFiles() {
+      // 语言对应文件映射表
+      const languageFileMap = {
+        Python: 'requirements.txt',
+        NodeJS: 'package.json',
+        Go: 'go.mod',
+      };
+      // Dockerfile 构建方式直接返回固定文件
+      if (this.isDockerfile) {
+        return [{ name: 'requirements.txt' }];
+      }
+      // 获取当前语言类型
+      const currentLanguage = this.isBkPlugin
+        ? this.pluginTmpls.find((v) => v.name === this.curPluginTemplate)?.language
+        : this.buttonActive || 'Python';
+
+      return [{ name: languageFileMap[currentLanguage] }];
     },
   },
   watch: {

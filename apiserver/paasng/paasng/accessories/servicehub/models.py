@@ -21,7 +21,7 @@ from typing import Collection, Dict
 
 from django.db import models
 
-from paasng.accessories.servicehub.constants import ServiceType
+from paasng.accessories.servicehub.constants import ServiceAllocationPolicyType, ServiceType
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.services.models import Plan, Service, ServiceInstance
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -267,6 +267,37 @@ class SharedServiceAttachment(TimestampedModel):
         unique_together = ("module", "service_type", "service_id")
 
 
+class ServiceAllocationPolicyManager(models.Manager):
+    """The custom manager for ServiceAllocationPolicy model, provide shortcut methods."""
+
+    def get_type(self, service: ServiceObj, tenant_id: str) -> ServiceAllocationPolicyType:
+        """Get the allocation type by service.
+
+        :return: the allocation type, use UNIFORM when the policy object does not exist.
+        """
+        try:
+            obj = self.get_queryset().get(service_id=service.uuid, tenant_id=tenant_id)
+        except ServiceAllocationPolicy.DoesNotExist:
+            return ServiceAllocationPolicyType.UNIFORM
+        return ServiceAllocationPolicyType(obj.type)
+
+    def set_type_uniform(self, service: ServiceObj, tenant_id: str):
+        """Set the allocation type to UNIFORM for the given service."""
+        self.get_queryset().update_or_create(
+            service_id=service.uuid,
+            tenant_id=tenant_id,
+            defaults={"type": ServiceAllocationPolicyType.UNIFORM.value},
+        )
+
+    def set_type_rule_based(self, service: ServiceObj, tenant_id: str):
+        """Set the allocation type to RULE_BASED for the given service."""
+        self.get_queryset().update_or_create(
+            service_id=service.uuid,
+            tenant_id=tenant_id,
+            defaults={"type": ServiceAllocationPolicyType.RULE_BASED.value},
+        )
+
+
 class ServiceAllocationPolicy(UuidAuditedModel):
     """服务分配策略"""
 
@@ -275,6 +306,8 @@ class ServiceAllocationPolicy(UuidAuditedModel):
     type = models.CharField(max_length=32, help_text="分配策略类型")
 
     tenant_id = tenant_id_field_factory()
+
+    objects = ServiceAllocationPolicyManager()
 
     class Meta:
         unique_together = ("tenant_id", "service_id")

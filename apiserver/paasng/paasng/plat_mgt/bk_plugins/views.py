@@ -37,7 +37,7 @@ class BKPluginMembersManageViewSet(ViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
-    def be_admin(self, request, app_code):
+    def become_admin(self, request, app_code):
         """成为插件管理员"""
 
         username = request.user.username
@@ -63,8 +63,8 @@ class BKPluginMembersManageViewSet(ViewSet):
 
         return Response(status=status.HTTP_200_OK)
 
-    def be_not_admin(self, request, app_code):
-        """取消插件管理员身份"""
+    def remove_admin(self, request, app_code):
+        """退出插件管理员身份"""
 
         username = request.user.username
         plugin = get_object_or_404(PluginInstance, id=app_code)

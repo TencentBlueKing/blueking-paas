@@ -75,7 +75,7 @@ urlpatterns = [
     ),
     re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/plugin/members/$",
-        BKPluginMembersManageViewSet.as_view({"post": "be_admin", "delete": "be_not_admin"}),
+        BKPluginMembersManageViewSet.as_view({"post": "become_admin", "delete": "remove_admin"}),
         name="plat_mgt.applications.plugin.members.admin",
     ),
     re_path(

@@ -86,11 +86,11 @@ class TestPlatformOperationAuditViewSet:
         assert "target" in resp.data
 
 
-class TestAuditEnumsViewSet:
-    """测试审计过滤枚举 API"""
+class TestAuditFilterOptionsViewSet:
+    """测试审计过滤选项 API"""
 
-    def test_list_enum(self, plat_mgt_api_client):
-        url = reverse("plat_mgt.audit.enums.list_enum")
+    def test_list(self, plat_mgt_api_client):
+        url = reverse("plat_mgt.audit.filter_options")
         resp = plat_mgt_api_client.get(url)
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()

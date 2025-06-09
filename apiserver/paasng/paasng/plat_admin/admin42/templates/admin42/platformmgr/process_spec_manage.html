@@ -22,7 +22,7 @@
         >
         <bk-table-column type="expand" width="30">
             <template slot-scope="props">
-                <bk-table :data="props.row.process_spec" :outer-border="false" :header-cell-style="{background: '#fff', borderRight: 'none'}">
+                <bk-table :data="props.row.processes" :outer-border="false" :header-cell-style="{background: '#fff', borderRight: 'none'}">
                     <bk-table-column prop="type" label="进程类型"></bk-table-column>
                     <bk-table-column prop="metadata.module" label="模块"></bk-table-column>
                     <bk-table-column prop="metadata.env" label="环境"></bk-table-column>

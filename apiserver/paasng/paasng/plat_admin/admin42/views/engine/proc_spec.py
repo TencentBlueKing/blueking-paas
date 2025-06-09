@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import arrow
 from django.conf import settings
@@ -128,7 +128,7 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
 class ProcessSpecConfigView(GenericTemplateView):
     """应用资源方案配置视图"""
 
-    name = "应用资源方案配置"
+    name = "方案配置"
     queryset = Application.objects.filter(type=ApplicationType.DEFAULT)
     template_name = "admin42/platformmgr/process_spec_manage.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -141,23 +141,61 @@ class ProcessSpecConfigView(GenericTemplateView):
             kwargs["view"] = self
 
         # 获取应用列表
-        applications = self.filter_queryset(self.get_queryset())
-        page_applications = self.paginate_queryset(applications)
+        apps = self.paginate_queryset(self.filter_queryset(self.get_queryset()))
+        app_ids = [app.id for app in apps]
 
-        # 获取应用的进程数据
+        # 预加载所有相关数据
+        envs = (
+            ModuleEnvironment.objects.filter(module__application_id__in=app_ids)
+            .select_related("module", "engine_app")
+            .all()
+        )
+
+        # 收集所有进程规格计划名称
+        all_plan_names = set()
+        env_process_specs_map = {}
+
+        # 获取每个环境的进程规格
+        for env in envs:
+            process_manager = ProcessManager(env)
+            process_specs = process_manager.list_processes_specs()
+            env_process_specs_map[env.id] = process_specs
+
+            for process_spec in process_specs:
+                all_plan_names.add(process_spec["plan_name"])
+
+        # 获取所有 ProcessSpecPlan 并缓存
+        plan_cache = {plan.name: plan for plan in ProcessSpecPlan.objects.filter(name__in=all_plan_names)}
+
+        # 按应用分组环境
+        app_envs_map: Dict[Any, List[ModuleEnvironment]] = {}
+        for env in envs:
+            app_id = env.module.application_id
+            app_envs_map.setdefault(app_id, []).append(env)
+
+        # 构建应用进程数据
         app_process_data = []
-        for app in page_applications:
-            envs = ModuleEnvironment.objects.filter(module__in=app.modules.all()).all()
-            all_processes = []
-            for env in envs:
-                process_manager = ProcessManager(env)
-                process_spec_map = {}
-                for process_spec in process_manager.list_processes_specs():
-                    process_spec_map[process_spec["name"]] = process_spec
+        for app in apps:
+            app_envs = app_envs_map.get(app.id, [])
+            processes = []
 
-                processes = process_manager.list_processes()
-                all_processes.extend(
-                    [
+            for env in app_envs:
+                process_manager = ProcessManager(env)
+                process_specs = env_process_specs_map[env.id]
+                process_spec_map = {spec["name"]: spec for spec in process_specs}
+
+                # 获取运行中的进程
+                for proc in process_manager.list_processes():
+                    if proc.type not in process_spec_map:
+                        continue
+
+                    process_spec = process_spec_map[proc.type]
+
+                    plan = plan_cache.get(process_spec["plan_name"])
+                    if plan is None:
+                        continue
+
+                    processes.append(
                         {
                             "type": proc.type,
                             "engine_app": env.engine_app.name,
@@ -169,16 +207,14 @@ class ProcessSpecConfigView(GenericTemplateView):
                             "command": proc.runtime.proc_command,
                             "available_instance_count": proc.available_instance_count,
                             "plan": {
-                                "id": ProcessSpecPlan.objects.get_by_name(process_spec["plan_name"]).pk,
-                                "name": process_spec_map[proc.type]["plan_name"],
-                                "limits": process_spec_map[proc.type]["resource_limit"],
-                                "requests": process_spec_map[proc.type]["resource_requests"],
-                                "max_replicas": process_spec_map[proc.type]["max_replicas"],
+                                "id": plan.pk,
+                                "name": plan.name,
+                                "limits": process_spec["resource_limit"],
+                                "requests": process_spec["resource_requests"],
+                                "max_replicas": process_spec["max_replicas"],
                             },
                         }
-                        for proc in processes
-                    ]
-                )
+                    )
 
             app_data = {
                 "logo_url": app.get_logo_url(),
@@ -187,7 +223,7 @@ class ProcessSpecConfigView(GenericTemplateView):
                 "app_type": app.type,
                 "created": arrow.get(app.created).humanize(locale="zh"),
                 "creator": app.creator.username,
-                "process_spec": all_processes,
+                "processes": processes,
             }
             app_process_data.append(app_data)
 

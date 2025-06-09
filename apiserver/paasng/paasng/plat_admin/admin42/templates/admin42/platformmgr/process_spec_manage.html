@@ -213,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (this.dialog.form.target_replicas !== undefined) {
                     this.dialog.row.plan.target_replicas = this.dialog.form.target_replicas
+                    this.dialog.row.desired_replicas = this.dialog.form.target_replicas
                 }
             },
             gotoCreateProcessSpecPlan: function () {
@@ -269,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return true;
                     }
                     let url = URLRouter.retrieve.replace("${engine_app_name}", engine_app)
-                            .replace("${process_type}", row.process_type)
+                            .replace("${process_type}", row.type)
                             .replace("${process_instance_name}", row.name)
                     let data = await this.$http.get(url)
                     row.envs = data.envs

@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from datetime import datetime, timedelta
 from typing import Any, Dict
 from unittest import mock
 from unittest.mock import patch
@@ -33,7 +34,7 @@ from paas_wl.infras.cluster.constants import (
 )
 from paas_wl.infras.cluster.entities import Domain, IngressConfig
 from paas_wl.infras.cluster.models import Cluster
-from paas_wl.workloads.networking.egress.models import RegionClusterState
+from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import ExposedURLType
@@ -744,3 +745,81 @@ class TestSyncClusterNodes:
         resp = plat_mgt_api_client.post(url)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         assert RegionClusterState.objects.filter(cluster_name=init_system_cluster.name).count() == 2
+
+
+class TestClusterNodesState:
+    """集群节点状态"""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, settings):
+        self.cluster_name = "test-cluster"
+        RegionClusterState.objects.all().delete()
+        RCStateAppBinding.objects.all().delete()
+
+    def _create_state(self, cluster_name, nodes_cnt=0, nodes=None, created=None):
+        if nodes is None:
+            nodes = [f"node-{i}" for i in range(nodes_cnt)]
+
+        if created is None:
+            created = datetime.now()
+
+        state = RegionClusterState.objects.create(
+            cluster_name=cluster_name,
+            name=f"state-{created.timestamp()}",
+            nodes_name=nodes,
+            nodes_cnt=nodes_cnt,
+            created=created,
+        )
+        return state
+
+    def _create_app_binding(self, state, app_code):
+        app = create_wl_app(paas_app_code=app_code)
+        return RCStateAppBinding.objects.create(state=state, app=app)
+
+    def test_retrieve_nodes_state(self, plat_mgt_api_client):
+        state1 = self._create_state(self.cluster_name, nodes_cnt=2, created=datetime.now() - timedelta(days=1))
+        self._create_app_binding(state1, "app1")
+
+        state2 = self._create_state(self.cluster_name, nodes_cnt=4, created=datetime.now())
+        self._create_app_binding(state2, "app2")
+        self._create_app_binding(state2, "app3")
+
+        url = reverse("plat_mgt.infras.cluster.retrieve_nodes_state", kwargs={"cluster_name": self.cluster_name})
+        response = plat_mgt_api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["nodes"]) == 4
+        assert set(data["binding_apps"]) == {"app2", "app3"}
+        assert data["created_at"] is not None
+
+    def test_retrieve_nodes_sync_records(self, plat_mgt_api_client):
+        states = []
+        for i in range(3):
+            state = self._create_state(self.cluster_name, nodes_cnt=i + 1, created=datetime.now() - timedelta(days=i))
+            self._create_app_binding(state, f"app-{i}")
+            states.append(state)
+
+        url = reverse(
+            "plat_mgt.infras.cluster.retrieve_nodes_sync_records", kwargs={"cluster_name": self.cluster_name}
+        )
+        response = plat_mgt_api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        assert len(data) == 3
+
+        assert [record["id"] for record in data] == [s.id for s in reversed(states)]
+
+        for i, record in enumerate(data):
+            assert len(record["nodes"]) == 3 - i
+            assert record["binding_apps"] == [f"app-{2 - i}"]
+            assert record["created_at"] is not None
+
+    def test_invalid_cluster_name(self, plat_mgt_api_client):
+        invalid_cluster_name = "invalid-cluster-name"
+        url = reverse("plat_mgt.infras.cluster.retrieve_nodes_state", kwargs={"cluster_name": invalid_cluster_name})
+        response = plat_mgt_api_client.get(url)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND

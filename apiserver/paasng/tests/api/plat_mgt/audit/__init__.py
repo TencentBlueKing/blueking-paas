@@ -14,21 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-
-from paasng.utils.basic import re_path
-
-from . import views
-
-urlpatterns = [
-    re_path(
-        r"^api/tools/app_desc/transform/",
-        views.AppDescTransformAPIView.as_view(),
-        name="api.tools.app_desc.transform",
-    ),
-    re_path(
-        r"^api/tools/s-mart/upload/",
-        views.SMartBuilderViewSet.as_view({"post": "upload"}),
-        name="api.tools.s-mart.upload",
-    ),
-]

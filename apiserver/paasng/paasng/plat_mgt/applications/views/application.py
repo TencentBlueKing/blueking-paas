@@ -146,16 +146,20 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         application = get_object_or_404(self.get_queryset(), code=app_code)
 
         # 获取应用管理员信息和插件管理信息
-        app_admin = {}
         user_is_admin_in_app = self.request.user.username in fetch_role_members(
             application.code, ApplicationRole.ADMINISTRATOR
         )
-        app_admin["user_is_admin_in_app"] = user_is_admin_in_app
 
-        if application.is_plugin_app and is_plugin_instance_exist(application.code):
-            # 如果是插件应用，则需要判断用户是否是插件管理员
-            user_is_admin_in_plugin = is_user_plugin_admin(application.code, self.request.user.username)
-            app_admin["user_is_admin_in_plugin"] = user_is_admin_in_plugin
+        # 判断是否为插件应用且插件实例存在
+        is_plugin_with_instance = application.is_plugin_app and is_plugin_instance_exist(application.code)
+
+        app_admin = {
+            "user_is_admin_in_app": user_is_admin_in_app,
+            "show_plugin_admin_operations": is_plugin_with_instance,
+            "user_is_admin_in_plugin": (
+                is_user_plugin_admin(request.user.username, application.code) if is_plugin_with_instance else None
+            ),
+        }
 
         slz = slzs.ApplicationDetailOutputSLZ(
             {

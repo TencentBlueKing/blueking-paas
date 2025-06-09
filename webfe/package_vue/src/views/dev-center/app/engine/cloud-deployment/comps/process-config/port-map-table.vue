@@ -7,6 +7,7 @@
       <bk-table-column
         :label="$t('端口名称')"
         prop="name"
+        show-overflow-tooltip
       >
         <template slot-scope="{ row, $index }">
           <div v-if="row.isEdit">
@@ -32,7 +33,7 @@
                 placement: 'bottom',
               }"
             >
-              {{ $t('访问入口') }}
+              {{ `${$t('访问入口')}（${row.exposed_type?.name === 'bk/http' ? 'HTTP' : 'gRPC'}）` }}
             </span>
           </div>
         </template>
@@ -147,7 +148,7 @@
             </bk-button>
             <bk-popconfirm
               v-else
-              width="280"
+              width="360"
               trigger="click"
               placement="bottom-end"
               @confirm="setAccessEntryPoint(row, 'set')"
@@ -160,10 +161,21 @@
                 <div class="content-cls">
                   <span class="label">{{ $t('访问协议') }}</span>
                   <bk-radio-group v-model="accessEntryType">
-                    <bk-radio :value="'bk/http'">HTTP</bk-radio>
-                    <bk-radio :value="'bk/grpc'">gRPC</bk-radio>
+                    <bk-radio
+                      :value="'bk/http'"
+                      class="f12"
+                    >
+                      HTTP
+                    </bk-radio>
+                    <bk-radio
+                      :value="'bk/grpc'"
+                      class="f12"
+                    >
+                      gRPC
+                    </bk-radio>
                   </bk-radio-group>
                 </div>
+                <p class="access-entry-tip">{{ accessEntryTip }}</p>
               </div>
               <span
                 v-bk-tooltips="{ content: $t('仅 TCP 协议的端口才能设置为访问入口'), disabled: row.protocol !== 'UDP' }"
@@ -309,6 +321,11 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    accessEntryTip() {
+      return this.accessEntryType === 'bk/http'
+        ? this.$t('适用于外部 API 提供，适合 Web 和移动应用')
+        : this.$t('适用于高性能、实时、内部服务通信');
     },
   },
   watch: {
@@ -487,6 +504,7 @@ export default {
   }
 }
 .popconfirm-content-cls {
+  margin-bottom: 16px;
   .popconfirm-title {
     font-weight: 400;
     font-size: 16px;
@@ -496,7 +514,7 @@ export default {
   .content-cls {
     display: flex;
     align-items: center;
-    margin: 12px 0 16px 0;
+    margin: 12px 0 8px 0;
     font-size: 12px;
     line-height: 20px;
     .label {
@@ -515,6 +533,10 @@ export default {
         transform: translate(3px, -50%);
       }
     }
+  }
+  .access-entry-tip {
+    color: #979ba5;
+    margin-left: 64px;
   }
 }
 </style>

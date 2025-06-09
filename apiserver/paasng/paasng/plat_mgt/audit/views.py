@@ -71,7 +71,7 @@ class AuditFilterOptionsViewSet(viewsets.ViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
-    def list_enum(self, request):
+    def list(self, request):
         """列出所有可用过滤的枚举类型"""
         enum_map = {
             "target": constants.OperationTarget,

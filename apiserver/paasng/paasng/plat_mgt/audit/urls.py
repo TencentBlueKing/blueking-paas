@@ -49,8 +49,8 @@ urlpatterns = [
 # 获取过滤枚举值
 urlpatterns += [
     re_path(
-        r"^api/plat_mgt/audit/enums/$",
-        AuditFilterOptionsViewSet.as_view({"get": "list_enum"}),
-        name="plat_mgt.audit.enums.list_enum",
+        r"^api/plat_mgt/audit/filter_options/$",
+        AuditFilterOptionsViewSet.as_view({"get": "list"}),
+        name="plat_mgt.audit.filter_options",
     ),
 ]

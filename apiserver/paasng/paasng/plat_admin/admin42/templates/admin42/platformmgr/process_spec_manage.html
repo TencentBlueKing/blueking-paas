@@ -18,7 +18,7 @@
         </div>
     </div>
     <bk-table
-        :data="data"
+        :data="app_process_data"
         >
         <bk-table-column type="expand" width="30">
             <template slot-scope="props">
@@ -110,7 +110,7 @@
 {% block main_script %}
 <script>
 const pagination = {{ pagination | to_json }}
-const data = {{ app_process_data | to_json }}
+const app_process_data = {{ app_process_data | to_json }}
 const SEARCH_PARAM = "search_term"
 
 const URLRouter = {
@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 filterKey = query[SEARCH_PARAM]
             }
             return {
-                data,
+                app_process_data,
                 pagination,
                 baseUrl: '{% url "admin.applications.detail.overview" "--placeholder--" %}',
                 SEARCH_PARAM,
@@ -223,14 +223,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 let url = this.urlForCreatingprocessSpecPlan + "?" + querystring.stringify({
                     mode: 'create',
                     env: row.metadata.env,
-                    region: this.application.region,
                     limits: btoa(JSON.stringify(row.plan.limits)),
                     requests: btoa(JSON.stringify(row.plan.requests)),
                 })
                 // 用于 sub windows 传参
                 window.form = {
                     environment: row.metadata.env,
-                    region: this.application.region,
                     limits: row.plan.limits,
                     requests: row.plan.requests,
                     max_replicas: row.plan.max_replicas,

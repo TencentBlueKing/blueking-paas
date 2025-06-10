@@ -15,12 +15,15 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import arrow
 from django.conf import settings
+from django.shortcuts import get_object_or_404
+from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
+from rest_framework.response import Response
 
 from paas_wl.apis.admin.serializers.processes import InstanceSerializer, ProcessSpecPlanSLZ
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
@@ -125,7 +128,7 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
         return super().get(request, *args, **kwargs)
 
 
-class ProcessSpecConfigView(GenericTemplateView):
+class ApplicationProcessSpecManageView(GenericTemplateView):
     """应用资源方案配置视图"""
 
     name = "方案配置"
@@ -140,82 +143,12 @@ class ProcessSpecConfigView(GenericTemplateView):
         if "view" not in kwargs:
             kwargs["view"] = self
 
-        # 获取应用列表
+        # 获取应用列表（不包含进程信息）
         apps = self.paginate_queryset(self.filter_queryset(self.get_queryset()))
-        app_ids = [app.id for app in apps]
 
-        # 预加载所有相关数据
-        envs = (
-            ModuleEnvironment.objects.filter(module__application_id__in=app_ids)
-            .select_related("module", "engine_app")
-            .all()
-        )
-
-        # 收集所有进程规格计划名称
-        all_plan_names = set()
-        env_process_specs_map = {}
-
-        # 获取每个环境的进程规格
-        for env in envs:
-            process_manager = ProcessManager(env)
-            process_specs = process_manager.list_processes_specs()
-            env_process_specs_map[env.id] = process_specs
-
-            for process_spec in process_specs:
-                all_plan_names.add(process_spec["plan_name"])
-
-        # 获取所有 ProcessSpecPlan 并缓存
-        plan_cache = {plan.name: plan for plan in ProcessSpecPlan.objects.filter(name__in=all_plan_names)}
-
-        # 按应用分组环境
-        app_envs_map: Dict[Any, List[ModuleEnvironment]] = {}
-        for env in envs:
-            app_id = env.module.application_id
-            app_envs_map.setdefault(app_id, []).append(env)
-
-        # 构建应用进程数据
+        # 构建应用基础数据
         app_process_data = []
         for app in apps:
-            app_envs = app_envs_map.get(app.id, [])
-            processes = []
-
-            for env in app_envs:
-                process_manager = ProcessManager(env)
-                process_specs = env_process_specs_map[env.id]
-                process_spec_map = {spec["name"]: spec for spec in process_specs}
-
-                # 获取运行中的进程
-                for proc in process_manager.list_processes():
-                    if proc.type not in process_spec_map:
-                        continue
-
-                    process_spec = process_spec_map[proc.type]
-
-                    plan = plan_cache.get(process_spec["plan_name"])
-                    if plan is None:
-                        continue
-
-                    processes.append(
-                        {
-                            "type": proc.type,
-                            "engine_app": env.engine_app.name,
-                            "metadata": {
-                                "module": env.module.name,
-                                "env": env.environment,
-                            },
-                            "desired_replicas": proc.replicas,
-                            "command": proc.runtime.proc_command,
-                            "available_instance_count": proc.available_instance_count,
-                            "plan": {
-                                "id": plan.pk,
-                                "name": plan.name,
-                                "limits": process_spec["resource_limit"],
-                                "requests": process_spec["resource_requests"],
-                                "max_replicas": process_spec["max_replicas"],
-                            },
-                        }
-                    )
-
             app_data = {
                 "logo_url": app.get_logo_url(),
                 "code": app.code,
@@ -223,7 +156,6 @@ class ProcessSpecConfigView(GenericTemplateView):
                 "app_type": app.type,
                 "created": arrow.get(app.created).humanize(locale="zh"),
                 "creator": app.creator.username,
-                "processes": processes,
             }
             app_process_data.append(app_data)
 
@@ -233,3 +165,47 @@ class ProcessSpecConfigView(GenericTemplateView):
 
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+
+class ApplicationProcessSpecViewSet(viewsets.GenericViewSet):
+    """获取指定普通应用的进程规格配置"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def list_processes(self, request, app_code):
+        app = get_object_or_404(Application, code=app_code, type=ApplicationType.DEFAULT)
+
+        envs = ModuleEnvironment.objects.filter(module__in=app.modules.all()).all()
+        processes: List[Dict] = []
+
+        # 获取每个环境的进程规格
+        for env in envs:
+            process_manager = ProcessManager(env)
+            process_spec_map = {}
+            for process_spec in process_manager.list_processes_specs():
+                process_spec_map[process_spec["name"]] = process_spec
+
+            process_map = {}
+            for process in process_manager.list_processes():
+                process_spec = process_spec_map[process.type]
+                process_map[process.type] = {
+                    "engine_app": env.engine_app.name,
+                    "type": process.type,
+                    "metadata": {
+                        "module": env.module.name,
+                        "env": env.environment,
+                    },
+                    "desired_replicas": process.replicas,
+                    "command": process.runtime.proc_command,
+                    "available_instance_count": process.available_instance_count,
+                    "plan": {
+                        "id": ProcessSpecPlan.objects.get_by_name(process_spec["plan_name"]).pk,
+                        "name": process_spec["plan_name"],
+                        "limits": process_spec["resource_limit"],
+                        "requests": process_spec["resource_requests"],
+                        "max_replicas": process_spec["max_replicas"],
+                    },
+                }
+            processes.extend(process_map.values())
+
+        return Response({"processes": processes, "processCount": len(processes)})

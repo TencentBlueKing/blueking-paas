@@ -18,10 +18,8 @@
 
 import logging
 
-from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Min
-from django.utils import translation
 
 from paasng.accessories.servicehub.binding_policy.policy import get_service_type
 from paasng.accessories.servicehub.constants import (
@@ -70,10 +68,7 @@ class Command(BaseCommand):
                 continue
             processed_pairs.add((service_id, tenant_id))
 
-            # mixed_service_mgr 会调用 django.utils.translation.get_language()
-            # 虽然配置了 settings.LANGUAGE_CODE 但是必须在国际化中间件 LocaleMiddleware 调用后才会有值
-            with translation.override(settings.LANGUAGE_CODE):
-                service_obj = mixed_service_mgr.get(uuid=service_id)
+            service_obj = mixed_service_mgr.get(uuid=service_id)
             policy = ServiceBindingPolicy.objects.get(
                 service_id=service_id,
                 tenant_id=tenant_id,
@@ -85,9 +80,9 @@ class Command(BaseCommand):
             ).aggregate(Min("priority"))["priority__min"]
             # 转换为 ServiceBindingPrecedencePolicy，即创建 always_match ServiceBindingPrecedencePolicy
             if policy.type == ServiceBindingPolicyType.STATIC.value:
-                precedence_policy_type = (ServiceBindingPolicyType.STATIC.value,)
+                precedence_policy_type = ServiceBindingPolicyType.STATIC.value
             elif policy.type == ServiceBindingPolicyType.ENV_SPECIFIC.value:
-                precedence_policy_type = (ServiceBindingPolicyType.ENV_SPECIFIC.value,)
+                precedence_policy_type = ServiceBindingPolicyType.ENV_SPECIFIC.value
             else:
                 raise ValueError("Invalid ServiceBindingPolicy type")
 
@@ -118,11 +113,13 @@ class Command(BaseCommand):
 
         # 根据孤立的 ServiceBindingPolicy 创建 uniform 类型的 ServiceAllocationPolicy
         for binding_policy in ServiceBindingPolicy.objects.all():
-            ServiceAllocationPolicy.objects.create(
-                service_id=binding_policy.service_id,
-                tenant_id=binding_policy.tenant_id,
-                type=ServiceAllocationPolicyType.UNIFORM.value,
-            )
+            service_obj = mixed_service_mgr.get(uuid=binding_policy.service_id)
+            if not dry_run:
+                ServiceAllocationPolicy.objects.create(
+                    service_id=binding_policy.service_id,
+                    tenant_id=binding_policy.tenant_id,
+                    type=ServiceAllocationPolicyType.UNIFORM.value,
+                )
             print(
                 f"service {service_obj.uuid},tenant_id {binding_policy.tenant_id}, "
                 f"create uniform allocation policy"

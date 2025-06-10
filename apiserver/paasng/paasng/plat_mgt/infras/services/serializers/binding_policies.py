@@ -76,6 +76,7 @@ class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
 class PolicyCombinationConfigOutputSLZ(serializers.Serializer):
     tenant_id = serializers.CharField(help_text="所属租户")
     service_id = serializers.CharField(help_text="服务 id")
+    policy_type = serializers.CharField(help_text="分配策略类型")
     allocation_precedence_policies = AllocationPrecedencePolicySLZ(many=True, help_text="规则分配配置")
     allocation_policy = AllocationPolicySLZ(help_text="统一分配配置")
 

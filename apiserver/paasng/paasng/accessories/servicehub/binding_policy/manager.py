@@ -214,7 +214,7 @@ class SvcBindingPolicyManager:
 
 def list_policy_combination_configs(service: ServiceObj) -> list[PolicyCombinationConfig]:
     """Retrieve all service policy combination configs"""
-    tenant_ids = ServiceAllocationPolicy.objects.values_list("tenant_id", flat=True)
+    tenant_ids = ServiceAllocationPolicy.objects.values_list("tenant_id", flat=True).distinct()
 
     result = []
     for tenant_id in tenant_ids:

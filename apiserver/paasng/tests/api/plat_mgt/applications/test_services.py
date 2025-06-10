@@ -29,6 +29,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, PreCreatedInstance, Service, ServiceCategory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.utils.error_codes import error_codes
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
@@ -48,7 +49,12 @@ class TestApplicationServicesViewSet:
         self.prod_env = bk_prod_env
 
         # 创建测试凭证
-        self.credentials = {"user": "test_user", "password": "test_password", "host": "127.0.0.1", "port": "3306"}
+        self.credentials = {
+            "user": "test_user",
+            "password": "test_password",
+            "host": "127.0.0.1",
+            "port": "3306",
+        }
 
         # 创建三个服务
         services = []
@@ -131,6 +137,18 @@ class TestApplicationServicesViewSet:
         # 验证审计记录函数被调用
         mock_audit_record.assert_called_once()
 
+    def test_provision_shared_service_instance_forbidden(self, plat_mgt_api_client):
+        """测试创建共享服务实例"""
+
+        # 构造API请求URL, 这里使用 module_2，因为它是共享服务的目标模块
+        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_2.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/"
+
+        # 模拟共享服务的创建
+        resp = plat_mgt_api_client.post(url)
+
+        assert resp.status_code == 400
+        assert resp.data["code"] == error_codes.CANNOT_PROVISION_INSTANCE.code
+
     def test_unbound_instance(self, plat_mgt_api_client):
         """测试解绑增强服务实例"""
 
@@ -148,6 +166,20 @@ class TestApplicationServicesViewSet:
         # 验证实例已解除关联
         unbound_rel = mixed_service_mgr.get_unbound_instance_rel_by_instance_id(self.svc, uuid.UUID(instance_uuid))
         assert unbound_rel is not None
+
+    def test_unbound_shared_service_instance_forbidden(self, plat_mgt_api_client):
+        # 创建服务实例和关联, 使用 module_1
+        rel = next(mixed_service_mgr.list_unprovisioned_rels(self.stag_env.engine_app, self.svc), None)
+        assert rel is not None
+        rel.provision()
+        instance_uuid = rel.get_instance().uuid
+
+        # 构造API请求URL, 这里使用 module_2，因为它是共享服务的目标模块
+        url = f"/api/plat_mgt/applications/{self.app.code}/modules/{self.module_2.name}/envs/{self.stag_env.environment}/services/{self.svc.uuid}/instance/{instance_uuid}/"
+        resp = plat_mgt_api_client.delete(url)
+
+        assert resp.status_code == 400
+        assert resp.data["code"] == error_codes.CANNOT_DESTROY_SERVICE.code
 
     def test_recycle_unbound_instance(self, plat_mgt_api_client):
         """测试回收已解绑的服务资源"""

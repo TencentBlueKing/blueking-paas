@@ -36,6 +36,7 @@ from paas_wl.infras.cluster.models import (
 )
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name, invalidate_global_configuration_pool
 from paas_wl.workloads.networking.egress.cluster_state import generate_state, sync_state_to_nodes
+from paas_wl.workloads.networking.egress.models import RegionClusterState
 from paas_wl.workloads.networking.entrance.constants import AddressType
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
@@ -49,6 +50,8 @@ from paasng.plat_mgt.infras.clusters.k8s import check_k8s_accessible
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterCreateInputSLZ,
     ClusterListOutputSLZ,
+    ClusterNodesStateRetrieveOutputSLZ,
+    ClusterNodesStateSyncRecordListOutputSLZ,
     ClusterRetrieveOutputSLZ,
     ClusterStatusRetrieveOutputSLZ,
     ClusterUpdateInputSLZ,
@@ -372,3 +375,27 @@ class ClusterViewSet(viewsets.GenericViewSet):
         sync_state_to_nodes(client, state)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.infras.cluster"],
+        operation_description="获取集群节点信息",
+        responses={status.HTTP_200_OK: ClusterNodesStateRetrieveOutputSLZ()},
+    )
+    def retrieve_nodes_state(self, request, cluster_name, *args, **kwargs):
+        # 获取单条记录
+        cluster_state = RegionClusterState.objects.filter(cluster_name=cluster_name).order_by("-created").first()
+        if not cluster_state:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        return Response(ClusterNodesStateRetrieveOutputSLZ(instance=cluster_state).data)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.infras.cluster"],
+        operation_description="获取节点同步记录",
+        response={status.HTTP_200_OK: ClusterNodesStateSyncRecordListOutputSLZ()},
+    )
+    def retrieve_nodes_sync_records(self, request, cluster_name, *args, **kwargs):
+        # 获取和传入的 cluster_name 相关的所有记录
+        cluster_state = RegionClusterState.objects.filter(cluster_name=cluster_name).order_by("-created")
+
+        return Response(ClusterNodesStateSyncRecordListOutputSLZ(cluster_state, many=True).data)

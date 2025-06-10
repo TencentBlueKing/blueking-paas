@@ -31,29 +31,31 @@ class TestProcess:
         self.app = create_wl_app()
         self.release = create_wl_release(
             wl_app=self.app,
-            build_params={"procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"}},
-            release_params={"version": 2},
+            release_params={
+                "version": 2,
+                "procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"},
+            },
         )
 
     def test_command_name_normal(self):
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=self.release)
         assert get_command_name(sample_process.runtime.proc_command) == "gunicorn"
 
-        self.release.build.procfile = {"web": "command -x -z -y"}
+        self.release.procfile = {"web": "command -x -z -y"}
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=self.release)
         assert get_command_name(sample_process.runtime.proc_command) == "command"
 
     def test_command_name_celery(self):
-        self.release.build.procfile = {"web": "python manage.py celery"}
+        self.release.procfile = {"web": "python manage.py celery"}
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=self.release)
         assert get_command_name(sample_process.runtime.proc_command) == "celery"
 
     def test_commnad_name_with_slash(self):
-        self.release.build.procfile = {"web": "/bin/test/fake"}
+        self.release.procfile = {"web": "/bin/test/fake"}
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=self.release)
         assert get_command_name(sample_process.runtime.proc_command) == "fake"
 
-        self.release.build.procfile = {"web": "/bin/test/fake -g -s"}
+        self.release.procfile = {"web": "/bin/test/fake -g -s"}
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=self.release)
         assert get_command_name(sample_process.runtime.proc_command) == "fake"
 
@@ -72,8 +74,10 @@ class TestProcessManager:
     def test_assemble_process(self):
         release = create_wl_release(
             wl_app=self.app,
-            build_params={"procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"}},
-            release_params={"version": 2},
+            release_params={
+                "version": 2,
+                "procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"},
+            },
         )
         sample_process = AppProcessManager(app=self.app).assemble_process(process_type="web", release=release)
 
@@ -88,14 +92,14 @@ class TestProcessManager:
     def test_assemble_processes(self):
         release = create_wl_release(
             wl_app=self.app,
-            build_params={
+            release_params={
+                "version": 2,
                 "procfile": {
                     "web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile",
                     "worker1": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile",
                     "worker2": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile",
-                }
+                },
             },
-            release_params={"version": 2},
         )
         sample_processes = list(AppProcessManager(app=self.app).assemble_processes(release=release))
         assert len(sample_processes) == 3

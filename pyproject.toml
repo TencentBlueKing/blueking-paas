@@ -86,7 +86,8 @@ ignore = [
   "PT003",
   # flake8-pytest-style：忽略后，不再关注 @pytest.fixture 无参数时是否需要加括号
   "PT001",
-
+  # flake8-pytest-style：忽略后，不在关注 @pytest.mark.<marker> 无参数时是否需要加括号
+  "PT023",
 
   # === 谨慎忽略 ===
   # pep8-naming: 忽略后，不强制 class 必须使用驼峰命名，部分单元测试代码中用下划线起名可能更方便

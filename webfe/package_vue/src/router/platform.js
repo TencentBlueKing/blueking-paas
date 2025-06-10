@@ -144,6 +144,7 @@ export const platformRouters = [
           panels: [
             { name: 'overview', label: i18n.t('概览') },
             { name: 'feature', label: i18n.t('特性管理') },
+            { name: 'services', label: i18n.t('增强服务') },
             { name: 'member', label: i18n.t('成员管理') },
           ],
           backRoute: {

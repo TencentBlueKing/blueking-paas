@@ -140,7 +140,7 @@
     </bk-dialog>
 
     <!-- 删除 -->
-    <delete-dialog
+    <DeleteDialog
       :show.sync="deleteDialogConfig.visible"
       :title="$t('确认删除已授权应用')"
       :expected-confirm-text="deleteDialogConfig.rowName"
@@ -161,13 +161,13 @@
         </span>
         {{ $t('进行确认') }}
       </div>
-    </delete-dialog>
+    </DeleteDialog>
   </div>
 </template>
 
 <script>
 import paginationMixin from '../pagination-mixin.js';
-import deleteDialog from '../components/delete-dialog.vue';
+import DeleteDialog from '@/components/delete-dialog';
 import { mapState } from 'vuex';
 
 export default {
@@ -175,7 +175,7 @@ export default {
   // 分页逻辑使用mixins导入
   mixins: [paginationMixin],
   components: {
-    deleteDialog,
+    DeleteDialog,
   },
   data() {
     return {

@@ -3021,4 +3021,5 @@ export default {
   访问协议: 'Access Protocol',
   '适用于外部 API 提供，适合 Web 和移动应用': 'Suitable for external API provision, ideal for web and mobile applications',
   '适用于高性能、实时、内部服务通信': 'Suitable for high-performance, real-time internal service communication',
+  请填写镜像凭证: 'Please provide image credentials',
 };

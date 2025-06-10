@@ -49,9 +49,7 @@
           >
             <div class="title-wrapper">
               <p class="title">{{ $t('应用初始化模板地址：') }}</p>
-              <div
-                class="icon-wrapper"
-              >
+              <div class="icon-wrapper">
                 <a
                   target="_blank"
                   :href="downloadableAddress"
@@ -69,7 +67,10 @@
                 </a>
               </div>
             </div>
-            <div class="template-url" v-bk-tooltips.top="downloadableAddress">
+            <div
+              class="template-url"
+              v-bk-tooltips.top="downloadableAddress"
+            >
               {{ downloadableAddress }}
             </div>
           </div>
@@ -84,7 +85,13 @@
                   class="icon-wrapper"
                   v-copy="pluginTips"
                 >
-                  <i :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']" />
+                  <i
+                    :class="[
+                      'paasng-icon',
+                      'paasng-general-copy',
+                      localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon',
+                    ]"
+                  />
                   {{ $t('复制') }}
                 </div>
               </div>
@@ -104,7 +111,14 @@
                   class="icon-wrapper"
                   v-copy="pushTips"
                 >
-                  <i :class="['paasng-icon', 'paasng-general-copy', 'copy-icon', localLanguage === 'en' ? 'copy-icon-two' : '']" />
+                  <i
+                    :class="[
+                      'paasng-icon',
+                      'paasng-general-copy',
+                      'copy-icon',
+                      localLanguage === 'en' ? 'copy-icon-two' : '',
+                    ]"
+                  />
                   {{ $t('复制') }}
                 </div>
               </div>
@@ -129,7 +143,13 @@
                   class="icon-wrapper"
                   v-copy="downloadTips"
                 >
-                  <i :class="['paasng-icon', 'paasng-general-copy', localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon']" />
+                  <i
+                    :class="[
+                      'paasng-icon',
+                      'paasng-general-copy',
+                      localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon',
+                    ]"
+                  />
                   {{ $t('复制') }}
                 </div>
               </div>
@@ -144,7 +164,14 @@
                   class="icon-wrapper"
                   v-copy="pushTips"
                 >
-                  <i :class="['paasng-icon', 'paasng-general-copy', 'copy-icon', localLanguage === 'en' ? 'copy-icon-two' : '']" />
+                  <i
+                    :class="[
+                      'paasng-icon',
+                      'paasng-general-copy',
+                      'copy-icon',
+                      localLanguage === 'en' ? 'copy-icon-two' : '',
+                    ]"
+                  />
                   {{ $t('复制') }}
                 </div>
               </div>
@@ -184,7 +211,8 @@
   </div>
 </template>
 
-<script>import topBar from './comps/top-bar.vue';
+<script>
+import topBar from './comps/top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import auth from '@/auth';
 export default {
@@ -208,6 +236,7 @@ export default {
       user: {},
       isRuntimeType: false,
       isRefresLoading: false,
+      appTemplateInfo: {},
     };
   },
   computed: {
@@ -219,12 +248,10 @@ export default {
       ].join('\n');
     },
     pluginTips() {
-      const queryTemplate = this.$route.query?.template;
-      const s = queryTemplate === 'bk-saas-plugin-go' ? 'bk-plugin-framework-go' : 'bk-plugin-framework-python';
-      return [
-        'pip install cookiecutter',
-        `cookiecutter https://github.com/TencentBlueKing/${s}/ --directory template`,
-      ].join('\n');
+      const { repo_url, source_dir } = this.appTemplateInfo;
+      const baseCommand = `cookiecutter ${repo_url}`;
+      const fullCommand = !source_dir || source_dir === '.' ? baseCommand : `${baseCommand} --directory ${source_dir}`;
+      return `pip install cookiecutter\n${fullCommand}`;
     },
     initTips() {
       return [
@@ -258,33 +285,15 @@ export default {
     },
   },
   created() {
-    const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/`;
-    const linkUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/accessories/advised_documentary_links/?plat_panel=app_created&limit=3`;
-    this.$http.get(url).then((response) => {
-      const body = response;
-      this.application = body.application;
-      const { modules } = this.application;
-
-      if (modules && modules.length) {
-        this.trunkURL = modules[0].repo?.trunk_url;
-        const defaultModule = modules.find(item => item.name === 'default');
-        this.isShowTips = defaultModule.source_origin === 1;
-        this.isRuntimeType = modules[0].web_config?.runtime_type !== 'custom_image';
-      }
-      this.$nextTick(() => {
-        const el = document.querySelector('.content');
-        // 没有子元素隐藏当前容器
-        this.hideNotChildElement(el);
-      });
-    });
-    this.$http.get(linkUrl).then((response) => {
-      this.advisedDocLinks = response.links;
-    });
-
+    this.getCreateAppData();
+    this.getDocLinks();
     this.getCurrentUser();
   },
   mounted() {
-    const objectKey = localStorage.getItem(this.$route.query.objectKey) === 'undefined' ? '' : localStorage.getItem(this.$route.query.objectKey);
+    const objectKey =
+      localStorage.getItem(this.$route.query.objectKey) === 'undefined'
+        ? ''
+        : localStorage.getItem(this.$route.query.objectKey);
     const extraInfo = JSON.parse(objectKey || '{}');
     this.downloadableAddress = extraInfo.downloadable_address;
     this.downloadableAddressExpiresIn = extraInfo.downloadable_address_expires_in;
@@ -311,7 +320,7 @@ export default {
       const { childNodes } = el;
 
       // 判断子元素是否存在
-      const allChildNodes = Array.from(childNodes).filter(node => node.nodeType !== 8); // 过滤掉注释节点
+      const allChildNodes = Array.from(childNodes).filter((node) => node.nodeType !== 8); // 过滤掉注释节点
       if (allChildNodes.length === 0) {
         el.style.display = 'none'; // 隐藏当前元素
       }
@@ -333,7 +342,57 @@ export default {
       } finally {
         this.isRefresLoading = false;
       }
-    }
+    },
+    // 获取已创建应用数据
+    async getCreateAppData() {
+      try {
+        const ret = await this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/`);
+        this.application = ret.application;
+        const { modules } = this.application;
+
+        if (modules?.length) {
+          const [firstModule] = modules;
+          this.trunkURL = firstModule.repo?.trunk_url;
+
+          const defaultModule = modules.find((item) => item.name === 'default');
+          this.isShowTips = defaultModule?.source_origin === 1;
+          this.isRuntimeType = firstModule.web_config?.runtime_type !== 'custom_image';
+        }
+
+        // 如果是插件应用，则获取模板信息
+        if (this.application.is_plugin_app) {
+          this.getAppTemplateInfo();
+        }
+
+        this.$nextTick(() => {
+          const el = document.querySelector('.content');
+          // 没有子元素隐藏当前容器
+          this.hideNotChildElement(el);
+        });
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    // 获取文档链接信息
+    getDocLinks() {
+      const linkUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/accessories/advised_documentary_links/?plat_panel=app_created&limit=3`;
+      this.$http.get(linkUrl).then((response) => {
+        this.advisedDocLinks = response.links;
+      });
+    },
+    // 获取应用模板信息
+    async getAppTemplateInfo() {
+      this.isSelectLoading = true;
+      try {
+        const res = await this.$store.dispatch('getAppTemplateInfo', {
+          appCode: this.appCode,
+          moduleId: 'default',
+        });
+        this.appTemplateInfo = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
   },
 };
 </script>

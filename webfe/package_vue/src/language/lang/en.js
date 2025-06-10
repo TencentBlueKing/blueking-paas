@@ -3016,4 +3016,5 @@ export default {
   '搜索网关名称/申请人': 'Search gateway name/applicant',
   '有效期为永久，无需续期': 'Validity is permanent, no renewal needed',
   '尚未获得资源权限，不支持续期': 'Resource permissions not yet obtained, renewal not supported',
+  '蓝鲸 AI 插件 ID 必须以 ai- 开头': 'BlueKing AI Plugin ID must start with ai-',
 };

@@ -174,7 +174,7 @@ class ModuleInitializer:
         repo_url: Optional[str] = None,
         repo_auth_info: Optional[dict] = None,
         source_dir: str = "",
-        init_template_to_repo: bool = False,
+        write_template_to_repo: bool = False,
     ):
         """Initialize module vcs with source template
 
@@ -182,7 +182,7 @@ class ModuleInitializer:
         :param repo_url: the address of repository, used when source_origin is `AUTHORIZED_VCS`
         :param repo_auth_info: the auth of repository
         :param source_dir: The work dir, which containing Procfile.
-        :param init_template_to_repo: whether to initialize template to repo
+        :param write_template_to_repo: whether to initialize template to repo
         """
         if not self._should_initialize_vcs():
             logger.info(
@@ -214,7 +214,7 @@ class ModuleInitializer:
                 result = {"code": syc_res.error}
 
         # 将模板代码初始化到应用的代码仓库中
-        if init_template_to_repo and repo_url:
+        if write_template_to_repo and repo_url:
             connector.init_repo(template, repo_url, context=context)
 
         # 返回应用初始化代码同步到对象存储的地址信息，用于前端创建成功页面的展示
@@ -437,7 +437,7 @@ def initialize_module(
     env_cluster_names: Dict[str, str],
     source_dir: str = "",
     bkapp_spec: Optional[Dict] = None,
-    init_template_to_repo: bool = False,
+    write_template_to_repo: bool = False,
 ) -> ModuleInitResult:
     """Initialize a module
 
@@ -447,7 +447,7 @@ def initialize_module(
     :param source_dir: The work dir, which containing Procfile.
     :param cluster_name: optional engine cluster name
     :param bkapp_spec: optional cnative module bkapp_spec
-    :param init_template_to_repo: whether to initialize template to repo
+    :param write_template_to_repo: whether to initialize template to repo
     :raises: ModuleInitializationError when any steps failed
     """
     module_initializer = ModuleInitializer(module)
@@ -466,7 +466,7 @@ def initialize_module(
                 repo_url,
                 repo_auth_info=repo_auth_info,
                 source_dir=source_dir,
-                init_template_to_repo=init_template_to_repo,
+                write_template_to_repo=write_template_to_repo,
             )
 
     build_config = bkapp_spec["build_config"] if bkapp_spec else None

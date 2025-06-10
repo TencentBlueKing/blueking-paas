@@ -322,7 +322,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 # 新模块集群配置复用默认模块的
                 env_cluster_names=get_app_cluster_names(application),
                 bkapp_spec=data["bkapp_spec"],
-                init_template_to_repo=source_config.get("init_template_to_repo"),
+                write_template_to_repo=source_config.get("write_template_to_repo"),
             )
         except Exception:
             # 创建应用失败，则需要删除由平台创建的代码仓库

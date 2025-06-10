@@ -176,7 +176,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                 source_dir=src_cfg.get("source_dir", ""),
                 env_cluster_names=env_cluster_names,
                 bkapp_spec=params["bkapp_spec"],
-                init_template_to_repo=src_cfg.get("init_template_to_repo"),
+                write_template_to_repo=src_cfg.get("write_template_to_repo"),
             ).source_init_result
 
             post_create_application.send(sender=self.__class__, application=application)

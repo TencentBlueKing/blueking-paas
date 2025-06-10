@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.shortcuts import get_object_or_404
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -38,11 +39,21 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.builtin_config_vars"],
+        operation_description="获取内建环境变量列表",
+        responses={status.HTTP_200_OK: BuiltinConfigVarOutputSLZ(many=True)},
+    )
     def list(self, request):
         """列出所有内建环境变量"""
         config_vars = BuiltinConfigVar.objects.order_by("-created")
         return Response(BuiltinConfigVarOutputSLZ(config_vars, many=True).data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.builtin_config_vars"],
+        operation_description="创建内建环境变量",
+        responses={status.HTTP_201_CREATED: BuiltinConfigVarOutputSLZ()},
+    )
     def create(self, request):
         """创建内建环境变量"""
         slz = BuiltinConfigVarCreateInputSLZ(data=request.data)
@@ -68,6 +79,11 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
         )
         return Response(status=status.HTTP_201_CREATED)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.builtin_config_vars"],
+        operation_description="更新内建环境变量",
+        responses={status.HTTP_204_NO_CONTENT: BuiltinConfigVarUpdateInputSLZ()},
+    )
     def update(self, request, pk):
         """更新内建环境变量"""
         slz = BuiltinConfigVarUpdateInputSLZ(data=request.data)
@@ -99,6 +115,11 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.builtin_config_vars"],
+        operation_description="删除内建环境变量",
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
     def destroy(self, request, pk):
         """删除内建环境变量"""
         config_var = get_object_or_404(BuiltinConfigVar, pk=pk)

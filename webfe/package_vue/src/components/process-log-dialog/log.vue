@@ -29,21 +29,21 @@
               </div>
               <div class="tools">
                 <bk-select
-                  v-model="logTime"
+                  v-model="selectValue"
                   :clearable="false"
                   class="ml20"
                   ext-cls="log-time-select-cls"
-                  :disabled="logType !== 'realtime'"
-                  @change="refresh"
+                  :disabled="isDisabledRestartLog"
+                  @selected="refresh"
                 >
                   <bk-option
-                    v-for="(option, i) in timeSelection"
+                    v-for="(option, i) in selectionList"
                     :id="option.id"
                     :key="i"
                     :name="option.name"
                   />
                   <bk-option
-                    v-if="logType === 'restart'"
+                    v-if="isDisabledRestartLog"
                     :id="'restart'"
                     :key="-1"
                     :name="$t('最近 400 条')"
@@ -54,12 +54,12 @@
                   class="paasng-icon paasng-refresh ml20"
                   @click="refresh"
                 ></i>
-                <!-- 下载 -->
+                <!-- 普通应用-实时日志不支持下载 -->
                 <i
-                  v-bk-tooltips="{ content: isRealTimeLog ? $t('暂不支持下载实时日志') : $t('下载完整日志') }"
+                  v-bk-tooltips="{ content: downloadNotSupported ? $t('暂不支持下载实时日志') : $t('下载完整日志') }"
                   class="paasng-icon paasng-download ml20"
-                  :class="{ disabled: isRealTimeLog }"
-                  @click="downloadPreviousLogs"
+                  :class="{ disabled: downloadNotSupported }"
+                  @click="download"
                 ></i>
               </div>
             </div>
@@ -73,12 +73,12 @@
             <template v-if="logs.length">
               <ul>
                 <li
-                  v-for="(log, idx) of logs"
+                  v-for="(log, idx) in logs"
                   :key="idx"
                   class="log-item"
                 >
-                  <!-- 实时进程 -->
-                  <template v-if="isRealTimeLog">
+                  <!-- 实时进程 & isDirect(直接展示当前行日志) -->
+                  <template v-if="isRealTimeLog && !isDirect">
                     <span
                       class="mr10"
                       style="min-width: 140px"
@@ -135,19 +135,28 @@ export default {
       type: Boolean,
       default: true,
     },
-    timeSelection: {
+    selectionList: {
       type: Array,
       default: () => [],
+    },
+    defaultCondition: {
+      type: String,
+      default: '1h',
     },
     logs: {
       type: Array | String,
       default: () => [],
     },
+    // 直接展示当前行日志
+    isDirect: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
       internalVisible: this.value,
-      logTime: '1h',
+      selectValue: this.defaultCondition,
       logType: 'realtime',
       logTypeOption: [
         { id: 'realtime', text: this.$t('实时日志') },
@@ -158,6 +167,13 @@ export default {
   computed: {
     isRealTimeLog() {
       return this.logType === 'realtime';
+    },
+    isDisabledRestartLog() {
+      return this.logType === 'restart' && this.defaultCondition === '1h';
+    },
+    // 普通应用-实时日志不支持下载
+    downloadNotSupported() {
+      return this.logType === 'realtime' && this.defaultCondition === '1h';
     },
   },
   watch: {
@@ -182,7 +198,7 @@ export default {
       this.internalVisible = false;
     },
     init() {
-      this.logTime = '1h';
+      this.selectValue = this.defaultCondition;
       this.logType = 'realtime';
     },
     // 滚动到当前日志底部
@@ -195,38 +211,26 @@ export default {
         });
       });
     },
+    // 切换日志类型
     changeLogType(type) {
       if (this.loading) return;
       this.logType = type;
-      this.logTime = this.logType === 'restart' ? 'restart' : '1h';
+      this.selectValue = this.isDisabledRestartLog ? 'restart' : this.defaultCondition;
+      this.$emit('change', {
+        type: this.logType,
+        value: this.selectValue,
+      });
     },
     // 刷新
     refresh() {
       this.$emit('refresh', {
         type: this.logType,
-        time: this.logTime,
+        value: this.selectValue,
       });
     },
     // 下载重启日志
-    async downloadPreviousLogs() {
-      if (this.isRealTimeLog) return;
-      try {
-        const logTxt = await this.$store.dispatch('log/downloadPreviousLogs', this.params);
-        if (!logTxt || !logTxt?.length) {
-          this.$paasMessage({
-            theme: 'warning',
-            message: this.$t('暂时没有日志记录'),
-          });
-          return;
-        }
-        downloadTxt(logTxt, this.params.instanceName);
-        // 404 处理
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      }
+    async download() {
+      this.$emit('download', this.logType);
     },
   },
 };
@@ -246,6 +250,7 @@ export default {
   flex-direction: row-reverse;
 
   .log-wrapper {
+    overflow: hidden;
     background-color: #1e1e1e;
     color: #fff;
     height: calc(100% - 32px);

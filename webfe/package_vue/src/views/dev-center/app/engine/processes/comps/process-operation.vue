@@ -662,9 +662,12 @@
       :title="logConfig.title"
       :logs="logConfig.logs"
       :loading="logConfig.isLoading"
-      :time-selection="chartRangeList"
+      :selection-list="logSelectionList"
       :params="logConfig.params"
+      :default-condition="'1h'"
+      @change="refreshLogs"
       @refresh="refreshLogs"
+      @download="downloadInstanceLog"
     ></process-log>
 
     <!-- 功能依赖项展示 -->
@@ -696,6 +699,7 @@ import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import eventDetail from '@/views/dev-center/app/engine/cloud-deploy-manage/comps/event-detail.vue';
 import processLog from '@/components/process-log-dialog/log.vue';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
+import { downloadTxt } from '@/common/tools';
 
 let maxReplicasNum = 0;
 
@@ -879,7 +883,7 @@ export default {
       isChartLoading: true,
       curChartTimeRange: '1h',
       curLogTimeRange: '1h',
-      chartRangeList: [
+      logSelectionList: [
         {
           id: '1h',
           name: i18n.t('最近1小时'),
@@ -2298,7 +2302,7 @@ export default {
     refreshLogs(data) {
       this.preOperation();
       if (data.type === 'realtime') {
-        this.curLogTimeRange = data.time;
+        this.curLogTimeRange = data.value;
         this.loadInstanceLog();
       } else {
         this.getPreviousLogs();
@@ -2321,6 +2325,29 @@ export default {
         });
       } finally {
         this.logConfig.isLoading = false;
+      }
+    },
+
+    // 下载日志
+    async downloadInstanceLog(type) {
+      if (type === 'realtime') {
+        return;
+      }
+      const { params } = this.logConfig;
+      try {
+        const logs = await this.$store.dispatch('log/downloadPreviousLogs', {
+          ...params,
+        });
+        if (!logs || !logs?.length) {
+          this.$paasMessage({
+            theme: 'warning',
+            message: this.$t('暂时没有日志记录'),
+          });
+          return;
+        }
+        downloadTxt(logs, params.instanceName);
+      } catch (e) {
+        this.catchErrorHandler(e);
       }
     },
 

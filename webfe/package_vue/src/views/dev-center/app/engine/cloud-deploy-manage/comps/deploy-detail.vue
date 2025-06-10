@@ -502,9 +502,13 @@
       :title="logConfig.title"
       :logs="logConfig.logs"
       :loading="logConfig.isLoading"
-      :time-selection="chartRangeList"
+      :selection-list="logSelectionList"
       :params="logConfig.params"
+      :is-direct="true"
+      :default-condition="'400'"
+      @change="refreshLogs"
       @refresh="refreshLogs"
+      @download="downloadInstanceLog"
     ></process-log>
 
     <!-- 功能依赖项展示 -->
@@ -532,7 +536,7 @@ import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
 import eventDetail from './event-detail.vue';
-import dayjs from 'dayjs';
+import { downloadTxt } from '@/common/tools';
 import processLog from '@/components/process-log-dialog/log.vue';
 import { cloneDeep, isEqual } from 'lodash';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
@@ -654,23 +658,27 @@ export default {
         isShow: false,
         title: '',
       },
-      curLogTimeRange: '1h',
-      chartRangeList: [
+      curTailLines: '400',
+      logSelectionList: [
         {
-          id: '1h',
-          name: this.$t('最近1小时'),
+          id: '400',
+          name: this.$t('最近 {n} 条', { n: 400 }),
         },
         {
-          id: '6h',
-          name: this.$t('最近6小时'),
+          id: '800',
+          name: this.$t('最近 {n} 条', { n: 800 }),
         },
         {
-          id: '12h',
-          name: this.$t('最近12小时'),
+          id: '2000',
+          name: this.$t('最近 {n} 条', { n: 2000 }),
         },
         {
-          id: '1d',
-          name: this.$t('最近24小时'),
+          id: '5000',
+          name: this.$t('最近 {n} 条', { n: 5000 }),
+        },
+        {
+          id: '10000',
+          name: this.$t('最近 {n} 条', { n: 10000 }),
         },
       ],
       currentClickObj: {
@@ -1402,38 +1410,58 @@ export default {
         instanceName: instance.name,
       };
       this.logConfig.title = `${this.$t('实例')} ${this.curInstance.display_name} ${this.$t('控制台输出日志')}`;
-      this.loadInstanceLog();
+      this.getInstanceLog(false);
+    },
+
+    // 无日志提示
+    noLogMessage() {
+      this.$paasMessage({
+        theme: 'warning',
+        message: this.$t('暂时没有日志记录'),
+      });
     },
 
     /**
-     * 加载实例日志
+     * 获取实时日志 | 最后一次重启日志
+     * @param {Boolean} previous false=实时日志、true=最后一次重启日志
      */
-    async loadInstanceLog() {
+    async getInstanceLog(previous = false) {
+      const { params } = this.logConfig;
       try {
-        const { appCode } = this;
-        const moduleId = this.curModuleId;
-        const params = this.getParams();
-        const filter = this.getFilterParams();
-
-        const res = await this.$store.dispatch('log/getStreamLogList', {
-          appCode,
-          moduleId,
-          params,
-          filter,
+        const res = await this.$store.dispatch('log/getInstanceLog', {
+          ...params,
+          previous,
+          lines: this.curTailLines,
         });
-        const data = res.logs.reverse();
-        data.forEach((item) => {
-          item.timestamp = dayjs.unix(item.timestamp).format('YYYY-MM-DD HH:mm:ss');
-          item.podShortName = item.pod_name.split('-').reverse()[0];
-        });
-        this.logConfig.logs = data;
+        this.logConfig.logs = res;
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        if (e.status === 404) {
+          this.this.noLogMessage();
+        }
+        this.catchErrorHandler(e);
       } finally {
         this.logConfig.isLoading = false;
+      }
+    },
+
+    // 下载日志重启日志，云原生
+    async downloadInstanceLog(type) {
+      const { params } = this.logConfig;
+      try {
+        const logs = await this.$store.dispatch('log/downloadInstanceLog', {
+          ...params,
+          previous: type !== 'realtime',
+        });
+        if (!logs) {
+          this.noLogMessage();
+          return;
+        }
+        downloadTxt(logs, params.instanceName);
+      } catch (e) {
+        if (e.status === 404) {
+          this.this.noLogMessage();
+        }
+        this.catchErrorHandler(e);
       }
     },
 
@@ -1474,31 +1502,6 @@ export default {
           });
         }
       }
-    },
-
-    getParams() {
-      return {
-        start_time: '',
-        end_time: '',
-        time_range: this.curLogTimeRange,
-        log_type: 'STANDARD_OUTPUT',
-      };
-    },
-
-    /**
-     * 构建过滤参数
-     */
-    getFilterParams() {
-      const params = {
-        query: {
-          terms: {},
-        },
-      };
-
-      params.query.terms.pod_name = [this.curInstance.name];
-      params.query.terms.environment = [this.environment];
-
-      return params;
     },
 
     closeServerPush() {
@@ -1542,31 +1545,8 @@ export default {
     // 刷新日志
     refreshLogs(data) {
       this.preOperation();
-      if (data.type === 'realtime') {
-        this.curLogTimeRange = data.time;
-        this.loadInstanceLog();
-      } else {
-        this.getPreviousLogs();
-      }
-    },
-
-    // 重启日志
-    async getPreviousLogs() {
-      try {
-        const logs = await this.$store.dispatch('log/getPreviousLogs', this.logConfig.params);
-        this.logConfig.logs = logs;
-      } catch (e) {
-        if (e.status === 404) {
-          this.logConfig.logs = [];
-          return;
-        }
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        this.logConfig.isLoading = false;
-      }
+      this.curTailLines = data.value;
+      this.getInstanceLog(data.type !== 'realtime');
     },
 
     // 重启进程、实例弹窗

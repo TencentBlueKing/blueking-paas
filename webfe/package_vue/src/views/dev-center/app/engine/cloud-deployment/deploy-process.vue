@@ -1685,7 +1685,7 @@ export default {
     // 判断是否为主入口
     isMainEntry(services) {
       if (!services?.length) return false;
-      return services.some((service) => service.exposed_type?.name === 'bk/http');
+      return services.some((service) => ['bk/http', 'bk/grpc'].includes(service.exposed_type?.name));
     },
     // 启停进程
     toggleServiceProcess(falg) {
@@ -1722,12 +1722,12 @@ export default {
     changeMainEntry(data) {
       const oldMainEntryName = this.curProcessMainEntryData?.name;
       const servieName = data.type === 'set' ? data.row.name : '';
-      this.setProcessMainEntry(oldMainEntryName, data.name, servieName);
+      this.setProcessMainEntry(oldMainEntryName, data.name, servieName, data.exposedType);
       this.panels = cloneDeep(this.processData);
     },
     // 设置主入口数据
-    setProcessMainEntry(oldMainEntryName, newMainEntryName, servieName) {
-      const newExposedType = { name: 'bk/http' }; // 主入口默认值
+    setProcessMainEntry(oldMainEntryName, newMainEntryName, servieName, exposedType) {
+      const newExposedType = { name: exposedType }; // 主入口默认值
 
       // 找到当前旧的主入口进程并将其 services 中的 exposed_type 设置为 null
       if (oldMainEntryName) {
@@ -1758,7 +1758,9 @@ export default {
     },
     getEntryNames() {
       if (!this.curProcessMainEntryData) return null;
-      const entry = this.curProcessMainEntryData?.services?.find((v) => v.exposed_type?.name === 'bk/http');
+      const entry = this.curProcessMainEntryData?.services?.find((v) =>
+        ['bk/http', 'bk/grpc'].includes(v.exposed_type?.name)
+      );
       return {
         processName: this.curProcessMainEntryData.name,
         servieName: entry.name,

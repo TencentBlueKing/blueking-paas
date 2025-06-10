@@ -196,10 +196,19 @@ class ApplicationModuleSLZ(serializers.Serializer):
     environment = ApplicationEnvironmentSLZ(source="envs.all", many=True, read_only=True, help_text="环境信息")
 
 
+class ApplicationAdminInfoSLZ(serializers.Serializer):
+    """应用管理员信息序列化器"""
+
+    user_is_admin_in_app = serializers.BooleanField(help_text="当前用户是否为应用管理员")
+    show_plugin_admin_operations = serializers.BooleanField(help_text="是否显示插件管理员相关操作")
+    user_is_admin_in_plugin = serializers.BooleanField(help_text="是否为插件管理员", allow_null=True)
+
+
 class ApplicationDetailOutputSLZ(serializers.Serializer):
     """应用详情序列化器"""
 
     basic_info = ApplicationBasicInfoSLZ(read_only=True, help_text="应用基本信息")
+    app_admin = ApplicationAdminInfoSLZ(read_only=True, help_text="应用管理员信息")
     modules_info = serializers.ListField(child=ApplicationModuleSLZ(), help_text="应用模块信息", read_only=True)
 
 

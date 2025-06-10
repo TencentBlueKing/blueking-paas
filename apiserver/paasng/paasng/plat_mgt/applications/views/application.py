@@ -34,11 +34,13 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
+from paasng.infras.iam.helpers import fetch_role_members
 from paasng.misc.audit import constants
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
-from paasng.platform.applications.constants import ApplicationType
+from paasng.plat_mgt.bk_plugins.views import is_plugin_instance_exist, is_user_plugin_admin
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tasks import cal_app_resource_quotas
 
@@ -143,9 +145,26 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         """获取应用详情"""
         application = get_object_or_404(self.get_queryset(), code=app_code)
 
+        # 获取应用管理员信息和插件管理信息
+        user_is_admin_in_app = self.request.user.username in fetch_role_members(
+            application.code, ApplicationRole.ADMINISTRATOR
+        )
+
+        # 判断是否为插件应用且插件实例存在
+        is_plugin_with_instance = application.is_plugin_app and is_plugin_instance_exist(application.code)
+
+        app_admin = {
+            "user_is_admin_in_app": user_is_admin_in_app,
+            "show_plugin_admin_operations": is_plugin_with_instance,
+            "user_is_admin_in_plugin": (
+                is_user_plugin_admin(request.user.username, application.code) if is_plugin_with_instance else None
+            ),
+        }
+
         slz = slzs.ApplicationDetailOutputSLZ(
             {
                 "basic_info": application,
+                "app_admin": app_admin,
                 "modules_info": application.modules.all(),
             }
         )

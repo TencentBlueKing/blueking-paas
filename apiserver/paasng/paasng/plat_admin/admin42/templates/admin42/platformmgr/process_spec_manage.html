@@ -111,6 +111,7 @@
 <script>
 const pagination = {{ pagination | to_json }}
 const data = {{ app_process_data | to_json }}
+const SEARCH_PARAM = "search_term"
 
 const URLRouter = {
     list: decodeURI("{% url 'wl_api.process_spec_plan' %}"),
@@ -127,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data: function () {
             let prefix = window.location.href
             let include_inactive = false
+            let filterKey = undefined 
 
             if (prefix.indexOf("?") > 0) {
                 let query = querystring.parse(prefix.substr(prefix.indexOf("?") + 1))
@@ -136,8 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 data,
                 pagination,
                 baseUrl: '{% url "admin.applications.detail.overview" "--placeholder--" %}',
-                SEARCH_PARAM: 'search_term',
-                filterKey: undefined,
+                SEARCH_PARAM,
+                filterKey,
                 dialog: {
                     type: 'edit',
                     visible: false,

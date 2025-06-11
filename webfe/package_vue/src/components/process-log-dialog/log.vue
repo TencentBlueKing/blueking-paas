@@ -67,44 +67,20 @@
         </div>
         <div
           class="log-content"
-          v-bkloading="{ isLoading: loading, opacity: 1, color: '#333030', zIndex: 10 }"
+          v-bkloading="{ isLoading: loading, color: 'rgba(255, 255, 255, 0.1)', zIndex: 10 }"
         >
           <slot name="content">
-            <template v-if="logs.length">
-              <ul>
-                <li
-                  v-for="(log, idx) in logs"
-                  :key="idx"
-                  class="log-item"
-                >
-                  <!-- 实时进程 & isDirect(直接展示当前行日志) -->
-                  <template v-if="isRealTimeLog && !isDirect">
-                    <span
-                      class="mr10"
-                      style="min-width: 140px"
-                    >
-                      {{ log.timestamp }}
-                    </span>
-                    <span class="pod-name">{{ log.podShortName }}</span>
-                    <pre
-                      class="message"
-                      v-html="log.message || '--'"
-                    />
-                  </template>
-                  <template v-else>
-                    <pre
-                      class="message"
-                      v-html="log"
-                    />
-                  </template>
-                </li>
-              </ul>
-            </template>
+            <bk-log
+              v-if="logs.length"
+              class="bk-log"
+              ref="bkLog"
+              :key="logIndex"
+            ></bk-log>
             <div
               v-else
               class="empty"
             >
-              {{ $t('暂时没有日志记录') }}
+              {{ loading ? '' : $t('暂时没有日志记录') }}
             </div>
           </slot>
         </div>
@@ -114,10 +90,13 @@
 </template>
 
 <script>
-import { downloadTxt } from '@/common/tools';
+import { bkLog } from '@blueking/log';
 
 export default {
   name: 'PaasLog',
+  components: {
+    bkLog,
+  },
   props: {
     value: {
       type: Boolean,
@@ -158,6 +137,7 @@ export default {
       internalVisible: this.value,
       selectValue: this.defaultCondition,
       logType: 'realtime',
+      logIndex: 0,
       logTypeOption: [
         { id: 'realtime', text: this.$t('实时日志') },
         { id: 'restart', text: this.$t('最近一次重启日志') },
@@ -189,27 +169,24 @@ export default {
         document.body.style.overflow = '';
       }
     },
-    'logs.length'() {
-      this.scrollBottom();
+    logs: {
+      handler(newLogs) {
+        this.logIndex += 1;
+        this.$nextTick(() => {
+          this.$refs.bkLog.addLogData(newLogs);
+        });
+      },
+      deep: true,
     },
   },
   methods: {
     handleClose() {
       this.internalVisible = false;
+      this.$emit('close');
     },
     init() {
       this.selectValue = this.defaultCondition;
       this.logType = 'realtime';
-    },
-    // 滚动到当前日志底部
-    scrollBottom() {
-      this.$nextTick(() => {
-        const box = document.querySelector('.log-wrapper .log-content');
-        box.scrollTo({
-          top: box?.scrollHeight || 0,
-          behavior: 'smooth',
-        });
-      });
     },
     // 切换日志类型
     changeLogType(type) {
@@ -258,6 +235,7 @@ export default {
     margin: 16px;
     border-radius: 6px;
     min-width: 300px;
+    font-size: 12px;
     transition: all 0.2s ease-in-out; /* 对话框本身的过渡 */
 
     .log-header {
@@ -320,46 +298,14 @@ export default {
     }
 
     .log-content {
-      overflow-y: auto;
       height: calc(100% - 48px);
-      padding: 10px 20px;
-
-      .log-item {
-        display: flex;
-        margin-bottom: 8px;
-        font-family: Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑',
-          'Arial';
-
-        .pod-name {
-          min-width: 95px;
-          text-align: right;
-          margin-right: 15px;
-          color: #979ba5;
-          cursor: pointer;
-
-          &:hover {
-            color: #3a84ff;
-          }
-        }
-        .message {
-          flex: 1;
-        }
+      .bk-log {
+        height: 100%;
+        transform: translateY(-5px);
       }
-
-      /* 自定义滚动条样式 */
-      ::-webkit-scrollbar {
-        width: 8px;
+      .empty {
+        padding: 16px;
       }
-      ::-webkit-scrollbar-track {
-        background: #1e1e1e;
-      }
-      ::-webkit-scrollbar-thumb {
-        background-color: #4c4c4c; /* 滚动条颜色 */
-        border: 2px solid #1e1e1e; /* 滚动条与轨道间隔 */
-      }
-
-      scrollbar-width: thin;
-      scrollbar-color: #4c4c4c #1e1e1e;
     }
   }
 }

@@ -498,6 +498,7 @@
 
     <!-- 日志弹窗 -->
     <process-log
+      v-if="logConfig.visiable"
       v-model="logConfig.visiable"
       :title="logConfig.title"
       :logs="logConfig.logs"
@@ -506,6 +507,7 @@
       :params="logConfig.params"
       :is-direct="true"
       :default-condition="'400'"
+      @close="handleClose"
       @change="refreshLogs"
       @refresh="refreshLogs"
       @download="downloadInstanceLog"
@@ -1410,7 +1412,9 @@ export default {
         instanceName: instance.name,
       };
       this.logConfig.title = `${this.$t('实例')} ${this.curInstance.display_name} ${this.$t('控制台输出日志')}`;
-      this.getInstanceLog(false);
+      this.$nextTick(() => {
+        this.getInstanceLog(false);
+      });
     },
 
     // 无日志提示
@@ -1433,8 +1437,11 @@ export default {
           previous,
           lines: this.curTailLines,
         });
-        this.logConfig.logs = res;
+        this.logConfig.logs = res.map((log) => {
+          return { message: log };
+        });
       } catch (e) {
+        this.logConfig.logs = [];
         if (e.status === 404) {
           this.this.noLogMessage();
         }
@@ -1537,14 +1544,15 @@ export default {
       this.instanceEventConfig.instanceName = data.name;
     },
 
-    preOperation() {
-      this.logConfig.isLoading = true;
+    handleClose() {
+      this.logConfig.visiable = false;
+      this.curTailLines = '400';
       this.logConfig.logs = [];
     },
 
     // 刷新日志
     refreshLogs(data) {
-      this.preOperation();
+      this.$set(this.logConfig, 'isLoading', true);
       this.curTailLines = data.value;
       this.getInstanceLog(data.type !== 'realtime');
     },

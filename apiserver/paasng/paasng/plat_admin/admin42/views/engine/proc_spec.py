@@ -153,7 +153,7 @@ class ApplicationProcessSpecManageView(GenericTemplateView):
                 "logo_url": app.get_logo_url(),
                 "code": app.code,
                 "name": app.name,
-                "app_type": app.type,
+                "app_type": ApplicationType.get_choice_label(app.type),
                 "created": arrow.get(app.created).humanize(locale="zh"),
                 "creator": app.creator.username,
             }

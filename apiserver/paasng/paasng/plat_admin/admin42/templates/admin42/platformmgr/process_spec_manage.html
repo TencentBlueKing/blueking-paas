@@ -13,7 +13,8 @@
                 :clearable="true"
                 :right-icon="'bk-icon icon-search'"
                 v-model="filterKey"
-                @enter="searchApp">
+                @enter="searchApp"
+                @clear="clearSearch">
             </bk-input>
         </div>
     </div>
@@ -57,11 +58,7 @@
                 <img :src="props.row.logo_url" width="30"/>
             </template>
         </bk-table-column>
-        <bk-table-column label="应用id">
-            <template slot-scope="props">
-                <a class="cell" :href="AppDetailUrl(props.row.code)">$[props.row.code] </a>
-            </template>
-        </bk-table-column>
+        <bk-table-column label="应用id" prop="code"></bk-table-column>
         <bk-table-column label="应用名称" prop="name"></bk-table-column>
         <bk-table-column label="应用类型" prop="app_type"></bk-table-column>
         <bk-table-column label="创建时间" prop="created">
@@ -167,10 +164,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         methods: {
-            AppDetailUrl(code) {
-                return this.baseUrl.replace("--placeholder--", code)
+            clearSearch() {
+                this.filterKey = '';
+                let prefix = window.location.href
+                if (prefix.indexOf("?") > 0) {
+                    prefix = prefix.substr(0, prefix.indexOf("?"))
+                }
+                window.location.href = prefix
             },
             searchApp() {
+                if (!this.filterKey || this.filterKey.trim() === '') {
+                    this.clearSearch();
+                    return;
+                }
                 let query = {
                     [this.SEARCH_PARAM]: this.filterKey, offset:0
                 }

@@ -60,6 +60,16 @@ urlpatterns = [
         proc_spec.ProcessSpecPlanManageView.as_view(),
         name="admin.process_spec_plan.manage",
     ),
+    re_path(
+        r"^platform/process_spec_plan/applications/$",
+        proc_spec.ApplicationProcessSpecManageView.as_view(),
+        name="admin.process_spec_plan.applications.manage",
+    ),
+    re_path(
+        r"^platform/process_spec_plan/applications/(?P<app_code>[^/]+)/processes/$",
+        proc_spec.ApplicationProcessSpecViewSet.as_view({"get": "list_processes"}),
+        name="admin.process_spec_plan.applications.processes",
+    ),
     # 平台管理-智能顾问-文档链接管理
     re_path(
         r"^platform/smart-advisor/documents/manage$",

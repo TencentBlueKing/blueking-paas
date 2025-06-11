@@ -25,7 +25,19 @@
         >
         <bk-table-column type="expand" width="30">
             <template slot-scope="props">
-                <div v-if="props.row.processes && props.row.processes.length > 0">
+                <div v-if="props.row.processesLoading" class="loading-wrapper">
+                    <div class="bk-loading">
+                        <div class="bk-loading-wrapper">
+                            <div class="bk-loading1">
+                                <div class="point point1"></div>
+                                <div class="point point2"></div>
+                                <div class="point point3"></div>
+                            </div>
+                            <div style="margin-top: 10px;">加载中...</div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else-if="props.row.processes && props.row.processes.length > 0">
                         <bk-table :data="props.row.processes" :outer-border="false" :header-cell-style="{background: '#fff', borderRight: 'none'}">
                         <bk-table-column prop="type" label="进程类型"></bk-table-column>
                         <bk-table-column prop="metadata.module" label="模块"></bk-table-column>
@@ -44,9 +56,6 @@
                             </template>
                         </bk-table-column>
                     </bk-table>
-                </div>
-                <div v-else-if="props.row.processesLoading" class="loading-wrapper">
-                    <bk-loading :loading="true" title="加载中..."></bk-loading>
                 </div>
                 <div v-else class="no-data">
                     <span>暂无进程数据</span>
@@ -142,8 +151,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 let query = querystring.parse(prefix.substr(prefix.indexOf("?") + 1))
                 filterKey = query[SEARCH_PARAM]
             }
+            const processedAppList = app_data_list.map(app => ({
+                ...app,
+                processesLoading: false,
+                processes: null
+            }));
             return {
-                app_data_list,
+                app_data_list: processedAppList,
                 pagination,
                 baseUrl: '{% url "admin.applications.detail.overview" "--placeholder--" %}',
                 SEARCH_PARAM,
@@ -190,8 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = `${prefix}?${query}`
             },
             async handleExpandChange(row, expandedRows) {
+                const isExpanding = expandedRows.includes(row);
                 if (expandedRows.includes(row) && !row.processes) {
-                    row.processesLoading = true;
+                    this.$set(row, 'processesLoading', true);
                     try {
                         await this.fetchAppProcesses(row);
                         this.$nextTick(() => {
@@ -206,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             message: '获取应用进程信息失败，请稍后重试'
                         });
                     } finally {
-                        row.processesLoading = false;
+                        this.$set(row, 'processesLoading', false);
                     }
                 }
             },
@@ -216,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // 使用 Vue.set 确保响应式更新
                     this.$set(appRow, 'processes', response.processes || []);
                     this.$set(appRow, 'processCount', response.processCount || 0);
+                    return response;
                 } catch (error) {
                     this.$set(appRow, 'processes', []);
                     throw error;

@@ -17,9 +17,13 @@
 
 from typing import Dict, List
 
+import arrow
 from django.conf import settings
+from django.shortcuts import get_object_or_404
+from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
+from rest_framework.response import Response
 
 from paas_wl.apis.admin.serializers.processes import InstanceSerializer, ProcessSpecPlanSLZ
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
@@ -27,10 +31,11 @@ from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.text import remove_prefix
 
@@ -46,7 +51,7 @@ def get_path(request: Request) -> str:
 class ProcessSpecPlanManageView(GenericTemplateView):
     """ProcessSpecPlan 管理页"""
 
-    name = "应用资源方案"
+    name = "方案列表"
     serializer_class = ProcessSpecPlanSLZ
     queryset = ProcessSpecPlan.objects.all()
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -121,3 +126,86 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
 
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+
+class ApplicationProcessSpecManageView(GenericTemplateView):
+    """应用资源方案配置视图"""
+
+    name = "方案配置"
+    queryset = Application.objects.filter(type=ApplicationType.DEFAULT)
+    template_name = "admin42/platformmgr/process_spec_manage.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+    filter_backends = [ApplicationFilterBackend]
+
+    def get_context_data(self, **kwargs):
+        # 获取所有应用列表
+        self.paginator.default_limit = 10
+        if "view" not in kwargs:
+            kwargs["view"] = self
+
+        # 获取应用列表
+        apps = self.paginate_queryset(self.filter_queryset(self.get_queryset()))
+
+        # 构建应用基础数据
+        app_data_list = []
+        for app in apps:
+            app_data = {
+                "logo_url": app.get_logo_url(),
+                "code": app.code,
+                "name": app.name,
+                "app_type": ApplicationType.get_choice_label(app.type),
+                "created": arrow.get(app.created).humanize(locale="zh"),
+                "creator": app.creator.username,
+            }
+            app_data_list.append(app_data)
+
+        kwargs["app_data_list"] = app_data_list
+        kwargs["pagination"] = self.get_pagination_context(self.request)
+        return kwargs
+
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class ApplicationProcessSpecViewSet(viewsets.GenericViewSet):
+    """获取指定普通应用的进程规格配置"""
+
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+
+    def list_processes(self, request, app_code):
+        app = get_object_or_404(Application, code=app_code, type=ApplicationType.DEFAULT)
+
+        envs = ModuleEnvironment.objects.filter(module__in=app.modules.all()).all()
+        processes: List[Dict] = []
+
+        # 获取每个环境的进程规格
+        for env in envs:
+            process_manager = ProcessManager(env)
+            process_spec_map = {}
+            for process_spec in process_manager.list_processes_specs():
+                process_spec_map[process_spec["name"]] = process_spec
+
+            process_map = {}
+            for process in process_manager.list_processes():
+                process_spec = process_spec_map[process.type]
+                process_map[process.type] = {
+                    "engine_app": env.engine_app.name,
+                    "type": process.type,
+                    "metadata": {
+                        "module": env.module.name,
+                        "env": env.environment,
+                    },
+                    "desired_replicas": process.replicas,
+                    "command": process.runtime.proc_command,
+                    "available_instance_count": process.available_instance_count,
+                    "plan": {
+                        "id": ProcessSpecPlan.objects.get_by_name(process_spec["plan_name"]).pk,
+                        "name": process_spec["plan_name"],
+                        "limits": process_spec["resource_limit"],
+                        "requests": process_spec["resource_requests"],
+                        "max_replicas": process_spec["max_replicas"],
+                    },
+                }
+            processes.extend(process_map.values())
+
+        return Response({"processes": processes, "processCount": len(processes)})

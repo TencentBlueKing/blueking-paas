@@ -19,7 +19,7 @@
     </div>
     <bk-table
         ref="appTable"
-        :data="app_process_data"
+        :data="app_data_list"
         @expand-change="handleExpandChange"
         >
         <bk-table-column type="expand" width="30">
@@ -120,7 +120,7 @@
 {% block main_script %}
 <script>
 const pagination = {{ pagination | to_json }}
-const app_process_data = {{ app_process_data | to_json }}
+const app_data_list = {{ app_data_list | to_json }}
 const SEARCH_PARAM = "search_term"
 
 const URLRouter = {
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 filterKey = query[SEARCH_PARAM]
             }
             return {
-                app_process_data,
+                app_data_list,
                 pagination,
                 baseUrl: '{% url "admin.applications.detail.overview" "--placeholder--" %}',
                 SEARCH_PARAM,

@@ -143,11 +143,11 @@ class ApplicationProcessSpecManageView(GenericTemplateView):
         if "view" not in kwargs:
             kwargs["view"] = self
 
-        # 获取应用列表（不包含进程信息）
+        # 获取应用列表
         apps = self.paginate_queryset(self.filter_queryset(self.get_queryset()))
 
         # 构建应用基础数据
-        app_process_data = []
+        app_data_list = []
         for app in apps:
             app_data = {
                 "logo_url": app.get_logo_url(),
@@ -157,9 +157,9 @@ class ApplicationProcessSpecManageView(GenericTemplateView):
                 "created": arrow.get(app.created).humanize(locale="zh"),
                 "creator": app.creator.username,
             }
-            app_process_data.append(app_data)
+            app_data_list.append(app_data)
 
-        kwargs["app_process_data"] = app_process_data
+        kwargs["app_data_list"] = app_data_list
         kwargs["pagination"] = self.get_pagination_context(self.request)
         return kwargs
 

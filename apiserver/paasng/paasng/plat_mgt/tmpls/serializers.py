@@ -1,0 +1,107 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+from typing import Dict, List, Union
+
+from django.utils.translation import gettext_lazy as _
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.templates.constants import TemplateType
+
+
+class TemplateMinimalOutputSLZ(serializers.Serializer):
+    """模板最小化序列化器"""
+
+    id = serializers.CharField(help_text="模板 ID")
+    name = serializers.CharField(help_text="模板名称")
+    display_name_zh_cn = serializers.CharField(help_text="模板中文名称")
+    display_name_en = serializers.CharField(help_text="模板英文名称")
+    type = serializers.CharField(help_text="模板类型")
+    language = serializers.ChoiceField(choices=AppLanguage.get_choices(), help_text="开发语言")
+    is_hidden = serializers.BooleanField(help_text="是否隐藏")
+
+
+class TemplateDetailOutputSLZ(TemplateMinimalOutputSLZ):
+    """模板详情序列化器"""
+
+    description_zh_cn = serializers.CharField(help_text="模板中文描述")
+    description_en = serializers.CharField(help_text="模板英文描述")
+    market_ready = serializers.BooleanField(help_text="是否已准备好在市场中展示")
+    preset_services_config = serializers.JSONField(help_text="预设增强服务配置")
+    blob_url = serializers.JSONField(help_text="二进制包存储路径")
+    required_buildpacks = serializers.JSONField(help_text="必须的构建工具")
+    processes = serializers.JSONField(help_text="进程配置")
+    tags = serializers.JSONField(help_text="标签")
+    repo_url = serializers.CharField(help_text="代码仓库地址")
+    render_method = serializers.CharField(help_text="模板代码渲染方式")
+    runtime_type = serializers.CharField(help_text="运行时类型")
+
+
+class TemplateUpsertInputSLZ(serializers.Serializer):
+    """模板创建或更新输入序列化器"""
+
+    name = serializers.CharField(help_text="模板名称", max_length=64)
+    type = serializers.ChoiceField(help_text="模板类型", choices=TemplateType.get_django_choices())
+    display_name_zh_cn = serializers.CharField(help_text="模板中文名称", max_length=64)
+    display_name_en = serializers.CharField(help_text="模板英文名称", max_length=64)
+    description_zh_cn = serializers.CharField(help_text="模板中文描述", max_length=128)
+    description_en = serializers.CharField(help_text="模板英文描述", max_length=128)
+    language = serializers.ChoiceField(help_text="开发语言", choices=AppLanguage.get_django_choices())
+    market_ready = serializers.BooleanField(help_text="是否科发布到应用市集", default=False)
+    preset_services_config = serializers.JSONField(help_text="预设增强服务配置", default=dict)
+    blob_url = serializers.JSONField(help_text="二进制包存储路径", default=dict)
+    required_buildpacks = serializers.JSONField(help_text="必须的构建工具", default=list)
+    processes = serializers.JSONField(help_text="进程配置", default=dict)
+    tags = serializers.JSONField(help_text="标签", default=list)
+    repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, default="")
+    is_hidden = serializers.BooleanField(help_text="是否显示", default=False)
+
+    def validate_preset_services_config(self, conf: Dict) -> Dict:
+        if not isinstance(conf, dict):
+            raise ValidationError(_("预设增强服务配置必须为 Dict 格式"))
+        return conf
+
+    def validate_required_buildpacks(self, required_buildpacks: Union[List, Dict]) -> Union[List, Dict]:
+        if isinstance(required_buildpacks, list):
+            if any(not isinstance(bp, str) for bp in required_buildpacks):
+                raise ValidationError(_("构建工具配置必须为 List[str] 格式"))
+        elif isinstance(required_buildpacks, dict):
+            if "__default__" not in required_buildpacks:
+                raise ValidationError(_("针对不同镜像配置 required_buildpacks 时必须配置默认值 __default__"))
+            for required_buildpacks_for_image in required_buildpacks.values():
+                if any(not isinstance(bp, str) for bp in required_buildpacks_for_image):
+                    raise ValidationError(_("构建工具配置必须为 Dict[str, List[str]] 格式"))
+        else:
+            raise ValidationError(_("构建工具必须为 List[str] 或 Dict[str, List[str]] 格式"))
+        return required_buildpacks
+
+    def validate_processes(self, processes: Dict) -> Dict:
+        if not isinstance(processes, dict):
+            raise ValidationError(_("进程配置必须为 Dict 格式"))
+        return processes
+
+    def validate_tags(self, tags: List) -> List:
+        if not isinstance(tags, list):
+            raise ValidationError(_("标签必须为 List 格式"))
+        return tags
+
+    def validate_blob_url(self, value: str) -> str:
+        if not value:
+            raise ValidationError(_("二进制包存储配置必须为有效的地址字符串"))
+        return value

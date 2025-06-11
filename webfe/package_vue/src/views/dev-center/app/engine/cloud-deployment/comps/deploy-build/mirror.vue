@@ -54,29 +54,6 @@
               <span class="form-text">
                 {{ $t(methodType[mirrorData.build_method]) || '--' }}
               </span>
-              <bk-popconfirm
-                width="400"
-                trigger="click"
-                ext-popover-cls="examples-directory-popconfirm"
-              >
-                <div slot="content">
-                  <ExamplesDirectory
-                    style="margin-top: 0"
-                    :root-path="sourceDir"
-                    :append-path="appendPath"
-                    :default-files="defaultFiles"
-                    :is-dockerfile="isDockerfile"
-                    :show-root="false"
-                    :type="'string'"
-                  />
-                </div>
-                <bk-button
-                  :text="true"
-                  class="ml10"
-                >
-                  {{ $t('查看示例目录') }}
-                </bk-button>
-              </bk-popconfirm>
             </bk-form-item>
             <bk-form-item
               :label="`${$t('蓝盾流水线构建')}：`"
@@ -986,10 +963,5 @@ export default {
       border-bottom: 1px dashed #666;
     }
   }
-}
-</style>
-<style>
-.examples-directory-popconfirm .popconfirm-operate {
-  display: none;
 }
 </style>

@@ -1,10 +1,16 @@
 <template>
   <div class="tree-text-wrapper">
-    <pre class="tree-text-display"><span v-html="formattedTree"></span></pre>
+    <div class="tip">{{ `<${$t('代码仓库根目录')}>` }}</div>
+    <pre
+      class="tree-text-display"
+      ref="dynamicContent"
+    ></pre>
   </div>
 </template>
 
 <script>
+import Vue from 'vue';
+
 export default {
   name: 'TreeTextDisplay',
   props: {
@@ -39,6 +45,10 @@ export default {
       type: Boolean,
       default: true,
     },
+    tipConfig: {
+      type: Object,
+      default: () => {},
+    },
   },
   computed: {
     displayTreeData() {
@@ -52,7 +62,7 @@ export default {
         name: '/',
         children: [
           { name: 'app_desc.yaml' },
-          ...(this.isDockerfile ? [{ name: 'Dockerfile' }] : []),
+          ...(this.isDockerfile ? [{ name: 'Dockerfile', tag: true }] : []),
           ...this.defaultFiles,
         ],
       };
@@ -65,6 +75,17 @@ export default {
         // 不显示根节点，直接从子节点开始
         return this.formatChildren(this.displayTreeData.children);
       }
+    },
+  },
+  watch: {
+    formattedTree: {
+      handler() {
+        this.$nextTick(() => {
+          this.$refs.dynamicContent.innerHTML = '';
+          this.renderDynamicContent();
+        });
+      },
+      immediate: true,
     },
   },
   methods: {
@@ -89,6 +110,18 @@ export default {
       return result;
     },
 
+    renderDynamicContent() {
+      const Component = Vue.extend({
+        data: () => ({
+          config: this.tipConfig,
+        }),
+        template: `<div>${this.formattedTree}</div>`,
+      });
+      const instance = new Component();
+      instance.$mount();
+      this.$refs.dynamicContent.appendChild(instance.$el);
+    },
+
     // 不显示根节点时的格式化方法
     formatChildren(children, prefix = '', isParentLast = true) {
       if (!children || children.length === 0) return '';
@@ -99,8 +132,12 @@ export default {
         const isLast = index === children.length - 1;
         const connector = isLast ? '└─ ' : '├─ ';
 
-        // 当前节点行
-        result += `${prefix}${connector}${child.name}\n`;
+        if (child.tag) {
+          const icon = `<i class="paasng-icon paasng-info-line ml10" v-bk-tooltips="config" />`;
+          result += `<span class="mark">${prefix}${connector}${child.name}${icon}</span>\n`;
+        } else {
+          result += `${prefix}${connector}${child.name}\n`;
+        }
 
         // 递归处理子节点
         if (child.children && child.children.length > 0) {
@@ -157,6 +194,7 @@ export default {
       // 如果 addPath 不为空，则转换为树结构并添加
       if (addPath) {
         const addPathTree = this.formatTreeData(addPath);
+        addPathTree.tag = true;
         currentNode.children.push(addPathTree);
       }
 
@@ -183,6 +221,7 @@ export default {
       } else {
         // 根路径为空 appendPath 为当前路径的根路径
         const appendTree = this.formatTreeData(appendPath?.trim());
+        appendTree.tag = true;
         return {
           name: '/',
           children: [{ ...appendTree }, ...this.defaultFiles, { name: 'app_desc.yaml' }],
@@ -194,15 +233,20 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.tree-text-display {
-  font-family: monospace;
-  white-space: pre;
-  margin: 0;
+.tree-text-wrapper {
+  font-size: 12px;
   padding: 8px 12px;
   background-color: #fff;
-  font-size: 12px;
-  color: #4d4f56;
   border-radius: 2px;
-  line-height: 1.5;
+  .tip {
+    margin-bottom: 8px;
+  }
+  .tree-text-display {
+    font-family: monospace;
+    white-space: pre;
+    margin: 0;
+    color: #4d4f56;
+    line-height: 1.5;
+  }
 }
 </style>

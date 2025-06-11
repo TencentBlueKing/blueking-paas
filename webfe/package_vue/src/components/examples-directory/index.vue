@@ -1,7 +1,10 @@
 <template>
   <div class="examples-directory-container">
     <div class="flex-row justify-content-between title-wrapper">
-      <div class="f14">{{ $t('示例目录') }}</div>
+      <div class="f14">
+        {{ $t('代码仓库推荐文件结构') }}
+        <span class="tips f12 ml10">{{ $t('为确保应用能够正常构建，代码仓库文件请参考以下结构') }}</span>
+      </div>
       <a
         :href="GLOBAL.DOC.FILE_LOCATION_DESCRIPTION"
         target="_blank"
@@ -16,14 +19,8 @@
       :rootPath="rootPath"
       :appendPath="appendPath"
       :is-dockerfile="isDockerfile"
+      :tip-config="tipConfig"
     />
-    <div
-      v-if="isDockerfile"
-      class="example-tips"
-    >
-      <p v-html="dockerfileTips"></p>
-      <p>{{ `docker build. -f ${appendPath ? appendPath : 'Dockerfile'} imagename` }}</p>
-    </div>
   </div>
 </template>
 
@@ -55,6 +52,16 @@ export default {
         ? this.$t('在根目录下执行如下命令构建镜像：')
         : this.$t('在 <i>{p}</i> 目录下执行如下命令构建镜像：', { p: this.rootPath });
     },
+    tipConfig() {
+      return {
+        theme: 'light',
+        extCls: 'dockerfile-tips-cls',
+        html: `<p class="paas-example-tips">${this.dockerfileTips}</p>
+        <p class="paas-example-tips">docker build. -f ${
+          this.appendPath ? this.appendPath : 'Dockerfile'
+        } imagename</p>`,
+      };
+    },
   },
 };
 </script>
@@ -70,14 +77,19 @@ export default {
     line-height: 1;
     margin-bottom: 8px;
   }
-  .example-tips {
-    font-size: 12px;
-    margin-top: 8px;
-    line-height: 20px;
-    /deep/ i {
-      font-style: normal;
-      color: #ea3636;
-    }
+  .tips {
+    color: #979ba5;
+  }
+}
+</style>
+<style lang="scss">
+.paas-example-tips {
+  font-size: 12px;
+  line-height: 20px;
+  font-family: monospace;
+  i {
+    font-style: normal;
+    color: #ea3636;
   }
 }
 </style>

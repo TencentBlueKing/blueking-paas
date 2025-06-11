@@ -407,7 +407,7 @@
                     <bk-input
                       v-model="formData.buildDir"
                       class="form-input-width"
-                      :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')"
+                      :placeholder="$t('请输入应用所在子目录，不填则默认为根目录')"
                     />
                   </div>
                 </bk-form-item>
@@ -579,7 +579,7 @@
           >
             <bk-alert type="info">
               <div slot="title">
-                {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+                {{ $t('进程配置、钩子命令在 app_desc.yaml 文件中定义。') }}
                 <a
                   target="_blank"
                   :href="GLOBAL.DOC.APP_DESC_DOC"

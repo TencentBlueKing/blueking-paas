@@ -24,7 +24,7 @@ from paasng.accessories.publish.market.models import Product
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.infras.iam.helpers import fetch_user_roles
-from paasng.platform.applications.constants import AppEnvironment, AvailabilityLevel
+from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import DeployConditions, RuntimeType
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -62,12 +62,9 @@ class ProductInfoCondition(DeployCondition):
     action_name = DeployConditions.FILL_PRODUCT_INFO.value
 
     def validate(self):
-        app = self.env.module.application
-        # 应用未设置分类
-        category_not_set = not Product.objects.filter(application=app).exists()
-        # 应用未设置可用性保障
-        availability_not_set = app.availability_level == AvailabilityLevel.NOT_SET.value
-        if category_not_set or availability_not_set:
+        if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
+            return
+        if not Product.objects.filter(application=self.env.module.application).exists():
             raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
 
@@ -154,6 +151,22 @@ class PluginTagValidationCondition(DeployCondition):
             raise ConditionNotMatched(_("未设置插件分类"), self.action_name)
 
 
+class ApplicationExtraInfoCondition(DeployCondition):
+    """检查是否已经完善应用分类或可用性保障信息"""
+
+    action_name = DeployConditions.FILL_EXTRA_INFO.value
+
+    def validate(self):
+        app = self.env.module.application
+        try:
+            extra_info = app.extra_info
+        except ObjectDoesNotExist:
+            raise ConditionNotMatched(_("未完善应用分类或可用性保障信息"), self.action_name)
+
+        if not extra_info.tag or not extra_info.availability_level:
+            raise ConditionNotMatched(_("未完善应用分类或可用性保障信息"), self.action_name)
+
+
 class ModuleEnvDeployInspector(BaseConditionChecker):
     """Prepare to deploy a ModuleEnvironment"""
 
@@ -163,6 +176,7 @@ class ModuleEnvDeployInspector(BaseConditionChecker):
         RepoAccessCondition,
         ProcfileCondition,
         PluginTagValidationCondition,
+        ApplicationExtraInfoCondition,
     ]
 
     def __init__(self, user: "User", env: "ModuleEnvironment"):

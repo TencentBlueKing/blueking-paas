@@ -49,6 +49,7 @@ from .app import (
     SearchApplicationSLZ,
     SysThirdPartyApplicationSLZ,
     UpdateApplicationSLZ,
+    UpsertAppExtraInfoSLZ,
 )
 from .creation import (
     AIAgentAppCreateInputSLZ,
@@ -117,4 +118,5 @@ __all__ = [
     "ApplicationMembersInfoSLZ",
     "ApplicationDeploymentModuleOrderSLZ",
     "ApplicationDeploymentModuleOrderReqSLZ",
+    "UpsertAppExtraInfoSLZ",
 ]

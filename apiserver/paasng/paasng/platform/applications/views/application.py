@@ -34,7 +34,7 @@ from paas_wl.bk_app.cnative.specs.resource import delete_bkapp, delete_networkin
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
-from paasng.accessories.publish.market.models import MarketConfig, Product
+from paasng.accessories.publish.market.models import ApplicationExtraInfo, MarketConfig, Product, Tag
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import (
@@ -51,7 +51,7 @@ from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCo
 from paasng.misc.audit.service import add_app_audit_record
 from paasng.platform.applications import serializers as slzs
 from paasng.platform.applications.cleaner import ApplicationCleaner, delete_all_modules
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType, AvailabilityLevel
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application, UserApplicationFilter, UserMarkedApplication
 from paasng.platform.applications.pagination import ApplicationListPagination
@@ -468,6 +468,20 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
         application = serializer.save()
 
+        # 更新 app extra info
+        extra_info_slz = slzs.UpsertAppExtraInfoSLZ(data=request.data)
+        extra_info_slz.is_valid(raise_exception=True)
+        extra_info_data = extra_info_slz.validated_data
+        tag = Tag.objects.get(id=extra_info_data["tag_id"])
+        ApplicationExtraInfo.objects.update_or_create(
+            application=application,
+            tenant_id=application.tenant_id,
+            defaults={
+                "tag": tag,
+                "availability_level": extra_info_data["availability_level"],
+            },
+        )
+
         Product.objects.filter(code=code).update(name_zh_cn=application.name, name_en=application.name_en)
 
         # 应用 LOGO，不传则不更新
@@ -502,13 +516,6 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         application = self.get_application()
         data = get_app_overview(application)
         return Response(data)
-
-    @swagger_auto_schema(operation_description="获取应用可用性保障等级")
-    def list_availability_levels(self, request, *args, **kwargs):
-        availability_levels = [
-            {"value": value, "label": label} for value, label in AvailabilityLevel.get_django_choices()
-        ]
-        return Response(availability_levels)
 
 
 class ApplicationExtraInfoViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

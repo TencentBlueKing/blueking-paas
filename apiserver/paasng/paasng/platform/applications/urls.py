@@ -48,11 +48,6 @@ urlpatterns = [
         name="api.applications.detail",
     ),
     re_path(
-        r"^api/bkapps/app_availability_levels/$",
-        views.ApplicationViewSet.as_view({"get": "list_availability_levels"}),
-        name="api.applications.availability_levels",
-    ),
-    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/overview/$",
         views.ApplicationViewSet.as_view({"get": "get_overview"}),
         name="api.applications.overview",

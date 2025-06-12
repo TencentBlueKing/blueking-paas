@@ -65,10 +65,11 @@ class SysThirdPartyApplicationSLZ(AppTenantMixin):
 
 
 @i18n
-class UpdateApplicationNameSLZ(serializers.Serializer):
-    """Serializer for update application name"""
+class UpdateApplicationSLZ(serializers.Serializer):
+    """Serializer for update application"""
 
     name = I18NExtend(AppNameField(max_length=20, help_text="应用名称"))
+    logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text="应用 Logo 访问地址")
 
     def _validate_duplicated_field(self, data):
         """Universal validate method for code and name"""
@@ -101,23 +102,31 @@ class UpdateApplicationNameSLZ(serializers.Serializer):
         return instance
 
 
-class UpdateApplicationSLZ(UpdateApplicationNameSLZ):
-    """Serializer for update application"""
+class AppExtraInfoSLZ(serializers.Serializer):
+    """Serializer for application extra info"""
 
-    logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text="应用 Logo 访问地址")
     availability_level = serializers.ChoiceField(choices=AvailabilityLevel.get_choices(), help_text="可用性保障等级")
+    tag_id = serializers.IntegerField(help_text="应用标签 ID")
 
-    def validate_availability_level(self, value: str) -> str:
-        if value == AvailabilityLevel.NOT_SET.value:
-            raise serializers.ValidationError("can not set availability level to NOT_SET")
-        return value
 
-    @atomic
-    def update(self, instance: Application, validated_data: Dict) -> Application:
-        super().update(instance, validated_data)
-        instance.availability_level = validated_data["availability_level"]
-        instance.save(update_fields=["availability_level"])
-        return instance
+class UpsertAppExtraInfoSLZ(AppExtraInfoSLZ):
+    """Serializer for upsert application extra info"""
+
+
+class TagOutputSLZ(serializers.Serializer):
+    """Serializer for application tag output"""
+
+    id = serializers.IntegerField(help_text="应用标签 ID")
+    name = serializers.CharField(help_text="应用标签名称")
+
+
+class AppExtraInfoOutputSLZ(serializers.Serializer):
+    """Serializer for application extra info output"""
+
+    availability_level = serializers.CharField(
+        help_text="可用性保障等级", required=False, allow_null=True, allow_blank=True
+    )
+    tag = TagOutputSLZ(help_text="应用标签", required=False, allow_null=True)
 
 
 class SearchApplicationSLZ(serializers.Serializer):
@@ -209,6 +218,7 @@ class ApplicationSLZ(serializers.ModelSerializer):
     logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的 Logo 地址")
     config_info = serializers.DictField(read_only=True, help_text="应用的额外状态信息")
     modules = serializers.SerializerMethodField(help_text="应用各模块信息列表")
+    extra_info = AppExtraInfoOutputSLZ(help_text="应用额外信息", read_only=True, allow_null=True)
     creator = UserNameField()
     owner = UserNameField()
 

@@ -112,6 +112,5 @@ class LightApplicationViewSetErrorCode(StrStructuredEnum):
 
 
 class AvailabilityLevel(StrStructuredEnum):
-    BASE = EnumField("base", label="基础")
-    HIGH = EnumField("high", label="高级别")
-    NOT_SET = EnumField("not_set", label="未设置")
+    STANDARD = EnumField("standard", label="基础")
+    PREMIUM = EnumField("premium", label="高级别")

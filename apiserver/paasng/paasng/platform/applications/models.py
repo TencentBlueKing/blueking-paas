@@ -35,7 +35,7 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType, AvailabilityLevel
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.applications.entities import SMartAppArtifactMetadata
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models.module import Module
@@ -339,10 +339,6 @@ class Application(OwnerTimestampedModel):
         default=False,
     )
     language = models.CharField(verbose_name="编程语言", max_length=32)
-    # 枚举值 -> AvailabilityLevel
-    availability_level = models.CharField(
-        verbose_name="可用性保障等级", max_length=32, default=AvailabilityLevel.NOT_SET.value
-    )
 
     creator = BkUserField()
     is_active = models.BooleanField(verbose_name="是否活跃", default=True)

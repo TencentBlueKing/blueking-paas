@@ -21,7 +21,7 @@ import gitlab.exceptions
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.accessories.publish.market.models import Product
+from paasng.accessories.publish.market.models import ApplicationExtraInfo, Product, Tag
 from paasng.bk_plugins.bk_plugins.models import BkPluginTag
 from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
@@ -29,6 +29,7 @@ from paasng.infras.iam.helpers import add_role_members, remove_user_all_roles
 from paasng.platform.applications.constants import ApplicationRole, AvailabilityLevel
 from paasng.platform.engine.constants import DeployConditions
 from paasng.platform.engine.workflow.protections import (
+    ApplicationExtraInfoCondition,
     EnvProtectionCondition,
     ModuleEnvDeployInspector,
     PluginTagValidationCondition,
@@ -57,28 +58,15 @@ def git_client(bk_module):
 
 class TestProductInfoCondition:
     @pytest.mark.parametrize(
-        ("env", "create_product", "set_availability_level", "ok"),
-        [
-            ("prod", False, False, False),
-            ("prod", True, True, True),
-            ("prod", True, False, False),
-            ("prod", False, True, False),
-            ("stag", False, False, False),
-            ("stag", True, True, True),
-            ("stag", True, False, False),
-            ("stag", False, True, False),
-        ],
+        ("env", "create_product", "ok"),
+        [("prod", False, False), ("prod", True, True), ("stag", False, True), ("stag", True, True)],
     )
-    def test_validate(self, bk_user, bk_module, env, create_product, set_availability_level, ok):
+    def test_validate(self, bk_user, bk_module, env, create_product, ok):
         application = bk_module.application
         env = bk_module.get_envs(env)
 
         if create_product:
             G(Product, application=application)
-
-        if set_availability_level:
-            application.availability_level = AvailabilityLevel.BASE.value
-            application.save()
 
         if ok:
             ProductInfoCondition(bk_user, env).validate()
@@ -186,9 +174,44 @@ class TestRepoAccessCondition:
             assert [item.action_name for item in inspector.perform().failed_conditions] == [action_name.value]
 
 
+class TestAppExtraInfoCondition:
+    @pytest.mark.parametrize(
+        ("create_extra_info", "set_availability_level", "set_tag", "ok"),
+        [
+            (False, False, False, False),
+            (False, True, False, False),
+            (False, False, True, False),
+            (True, True, True, True),
+        ],
+    )
+    def test_validate(self, bk_user, bk_module, create_extra_info, set_availability_level, set_tag, ok):
+        application = bk_module.application
+        env = bk_module.get_envs("stag")
+
+        if create_extra_info:
+            extra_info = G(ApplicationExtraInfo, application=application)
+
+            if set_availability_level:
+                extra_info.availability_level = AvailabilityLevel.STANDARD.value
+                extra_info.save(update_fields=["availability_level"])
+
+            if set_tag:
+                tag = G(Tag, name="sample-tag-1")
+                extra_info.tag = tag
+                extra_info.save(update_fields=["tag"])
+
+        if ok:
+            ApplicationExtraInfoCondition(bk_user, env).validate()
+        else:
+            with pytest.raises(ConditionNotMatched) as exc_info:
+                ApplicationExtraInfoCondition(bk_user, env).validate()
+
+            assert exc_info.value.action_name == DeployConditions.FILL_EXTRA_INFO.value
+
+
 class TestModuleEnvDeployInspector:
     @pytest.mark.parametrize(
-        ("user_role", "allowed_roles", "create_token", "create_product", "set_availability_level", "expected"),
+        ("user_role", "allowed_roles", "create_token", "create_product", "set_extra_info", "expected"),
         [
             (
                 ApplicationRole.DEVELOPER,
@@ -200,6 +223,7 @@ class TestModuleEnvDeployInspector:
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.CHECK_ENV_PROTECTION,
                     DeployConditions.NEED_TO_BIND_OAUTH_INFO,
+                    DeployConditions.FILL_EXTRA_INFO,
                 ],
             ),
             (
@@ -208,7 +232,11 @@ class TestModuleEnvDeployInspector:
                 True,
                 False,
                 False,
-                [DeployConditions.FILL_PRODUCT_INFO, DeployConditions.CHECK_ENV_PROTECTION],
+                [
+                    DeployConditions.FILL_PRODUCT_INFO,
+                    DeployConditions.CHECK_ENV_PROTECTION,
+                    DeployConditions.FILL_EXTRA_INFO,
+                ],
             ),
             (
                 ApplicationRole.ADMINISTRATOR,
@@ -216,7 +244,10 @@ class TestModuleEnvDeployInspector:
                 True,
                 False,
                 False,
-                [DeployConditions.FILL_PRODUCT_INFO],
+                [
+                    DeployConditions.FILL_PRODUCT_INFO,
+                    DeployConditions.FILL_EXTRA_INFO,
+                ],
             ),
             (
                 ...,
@@ -224,7 +255,7 @@ class TestModuleEnvDeployInspector:
                 True,
                 True,
                 False,
-                [DeployConditions.FILL_PRODUCT_INFO],
+                [DeployConditions.FILL_EXTRA_INFO],
             ),
             (
                 ...,
@@ -245,7 +276,7 @@ class TestModuleEnvDeployInspector:
         allowed_roles,
         create_token,
         create_product,
-        set_availability_level,
+        set_extra_info,
         expected,
     ):
         application = bk_module.application
@@ -270,9 +301,14 @@ class TestModuleEnvDeployInspector:
         if create_product:
             G(Product, application=application)
 
-        if set_availability_level:
-            application.availability_level = AvailabilityLevel.BASE.value
-            application.save()
+        if set_extra_info:
+            tag = G(Tag, name="sample-tag-1")
+            G(
+                ApplicationExtraInfo,
+                application=application,
+                tag=tag,
+                availability_level=AvailabilityLevel.STANDARD.value,
+            )
 
         inspector = ModuleEnvDeployInspector(bk_user, env)
         assert [item.action_name for item in inspector.perform().failed_conditions] == [c.value for c in expected]

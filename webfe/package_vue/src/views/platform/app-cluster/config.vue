@@ -252,11 +252,6 @@ export default {
       const lowerCaseKeyword = this.searchValue.toLowerCase();
       return list.filter((item) => item.name.toLowerCase().includes(lowerCaseKeyword));
     },
-    // 关键字搜索
-    filterByKeyword(list) {
-      const lowerCaseKeyword = this.searchValue.toLowerCase();
-      return list.filter((item) => item.name.toLowerCase().includes(lowerCaseKeyword));
-    },
     handlerChange(data) {
       this.filterValue = data.name;
     },

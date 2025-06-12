@@ -227,8 +227,8 @@ export default {
     this.initResizeObserver();
   },
   beforeDestroy() {
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
+    if (this.$refs.contentRef) {
+      this.resizeObserver.unobserve(this.$refs.contentRef);
     }
   },
   methods: {

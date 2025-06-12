@@ -33,13 +33,16 @@ def parse_assignment_list(assignments):
 
 
 def get_module_init_repo_context(module: Module, template_type: TemplateType):
-    """获取模块初始化代码仓库的上下文"""
+    """获取模块初始化代码仓库的上下文
+    NOTE: 插件应用的渲染字段名是由插件中心统一定义，与开发框架的变量含义一致但是字段名也是有差异，所以需要根据模板类型生成不同的上下文
+    """
     application = module.application
 
     client_secret = get_oauth2_client_secret(application.code)
     owner_username = get_username_by_bkpaas_user_id(application.owner)
 
     if template_type == TemplateType.PLUGIN:
+        # 插件模板专用字段
         return {
             "project_name": application.code,
             "plugin_desc": application.name,
@@ -47,11 +50,13 @@ def get_module_init_repo_context(module: Module, template_type: TemplateType):
             "init_apigw_maintainer": owner_username,
             "apigw_manager_url_tmpl": settings.BK_API_URL_TMPL,
         }
-
+    # 普通模板字段
     return {
         "region": application.region,
         "owner_username": owner_username,
         "app_code": application.code,
         "app_secret": client_secret,
         "app_name": application.name,
+        "BK_URL": settings.COMPONENT_SYSTEM_HOST_IN_TEST,
+        "BK_LOGIN_URL": settings.LOGIN_FULL,
     }

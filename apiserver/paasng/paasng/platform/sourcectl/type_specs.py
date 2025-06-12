@@ -43,7 +43,6 @@ from paasng.platform.sourcectl.source_types import DiffFeature, SourceTypeSpec
 class BkSvnSourceTypeSpec(SourceTypeSpec):
     connector_class = IntegratedSvnAppRepoConnector
     repo_controller_class = SvnRepoController
-    repo_creator_class = None
     oauth_backend_class = None
     basic_type = "svn"
     diff_feature = DiffFeature(method=DiffFeatureType.INTERNAL, enabled=True)
@@ -66,7 +65,6 @@ class BkSvnSourceTypeSpec(SourceTypeSpec):
 class GitHubSourceTypeSpec(SourceTypeSpec):
     connector_class = ExternalGitAppRepoConnector
     repo_controller_class = GitHubRepoController
-    repo_creator_class = None
     oauth_backend_class = GitHubBackend
     basic_type = "git"
 
@@ -80,7 +78,6 @@ class GitHubSourceTypeSpec(SourceTypeSpec):
 class GiteeSourceTypeSpec(SourceTypeSpec):
     connector_class = ExternalGitAppRepoConnector
     repo_controller_class = GiteeRepoController
-    repo_creator_class = None
     oauth_backend_class = GiteeBackend
     basic_type = "git"
 
@@ -94,7 +91,6 @@ class GiteeSourceTypeSpec(SourceTypeSpec):
 class BareGitSourceTypeSpec(SourceTypeSpec):
     connector_class = ExternalBasicAuthRepoConnector
     repo_controller_class = BareGitRepoController
-    repo_creator_class = None
     oauth_backend_class = None
     basic_type = "git"
     diff_feature = DiffFeature(method=None, enabled=False)
@@ -109,7 +105,6 @@ class BareGitSourceTypeSpec(SourceTypeSpec):
 class BareSvnSourceTypeSpec(SourceTypeSpec):
     connector_class = ExternalBasicAuthRepoConnector
     repo_controller_class = BareSvnRepoController
-    repo_creator_class = None
     oauth_backend_class = None
     basic_type = "svn"
     diff_feature = DiffFeature(method=None, enabled=False)
@@ -124,7 +119,6 @@ class BareSvnSourceTypeSpec(SourceTypeSpec):
 class GitLabSourceTypeSpec(SourceTypeSpec):
     connector_class = ExternalGitAppRepoConnector
     repo_controller_class = GitlabRepoController
-    repo_creator_class = None
     oauth_backend_class = GitLabBackend
     basic_type = "git"
 
@@ -138,12 +132,10 @@ class GitLabSourceTypeSpec(SourceTypeSpec):
 try:
     from paasng.infras.accounts.oauth.backends_ext import TcGitBackend
     from paasng.platform.sourcectl.controllers.tcgit import TcGitRepoController
-    from paasng.platform.sourcectl.repo_creator import TcGitRepoCreator
 
     class TcGitSourceTypeSpec(SourceTypeSpec):
         connector_class = ExternalGitAppRepoConnector
         repo_controller_class = TcGitRepoController
-        repo_creator_class = TcGitRepoCreator
         oauth_backend_class = TcGitBackend
         basic_type = "git"
 

@@ -60,7 +60,7 @@ from paasng.platform.applications.utils import (
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeGatewayServiceError
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
-from paasng.platform.modules.manager import create_new_repo, delete_repo, init_module_in_view
+from paasng.platform.modules.manager import create_new_repo, init_module_in_view, repo_cleanup_context
 from paasng.platform.templates.models import Template
 from paasng.utils.error_codes import error_codes
 
@@ -164,10 +164,12 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         repo_type = src_cfg.get("source_control_type")
         repo_url = src_cfg.get("source_repo_url")
         # 由平台创建代码仓库
+        auto_repo_url = None
         if src_cfg.get("auto_create_repo"):
-            repo_url = create_new_repo(module, repo_type, username=request.user.username)
+            auto_repo_url = create_new_repo(module, username=request.user.username)
+            repo_url = auto_repo_url
 
-        try:
+        with repo_cleanup_context(repo_type, auto_repo_url):
             source_init_result = init_module_in_view(
                 module,
                 repo_type=repo_type,
@@ -192,15 +194,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                     ExposedURLType(module.exposed_url_type),
                 ),
             )
-        except Exception:
-            # 创建应用失败，则需要删除由平台创建的代码仓库
-            if src_cfg.get("auto_create_repo"):
-                try:
-                    delete_repo(repo_type, repo_url)
-                except Exception:
-                    logger.exception(f"Failed to delete repository({repo_url}) during rollback")
-            raise
-
         return Response(
             data=ApplicationCreateOutputSLZ(
                 {"application": application, "source_init_result": source_init_result}

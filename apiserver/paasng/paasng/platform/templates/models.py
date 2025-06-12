@@ -50,6 +50,9 @@ class Template(AuditedModel):
     processes = models.JSONField(verbose_name=_("进程配置"), blank=True, default=dict)
     tags = models.JSONField(verbose_name=_("标签"), blank=True, default=list)
 
+    repo_type = models.CharField(
+        verbose_name=_("代码仓库类型"), max_length=32, default="", help_text="用于判断用什么命令将模板代码下载到本地"
+    )
     repo_url = models.CharField(verbose_name=_("代码仓库地址"), max_length=256, blank=True, default="")
     source_dir = models.CharField(verbose_name=_("模板代码所在目录"), max_length=256, blank=True, default="./")
     # 模板代码渲染方式，可选值：django_template / cookiecutter

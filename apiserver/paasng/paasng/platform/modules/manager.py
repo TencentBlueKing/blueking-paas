@@ -22,12 +22,10 @@
 """
 
 import logging
-from collections import namedtuple
 from contextlib import contextmanager
 from operator import attrgetter
 from typing import Any, Dict, List, Optional
 
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext as _
@@ -49,6 +47,7 @@ from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules import entities
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName, SourceOrigin
+from paasng.platform.modules.entities import ModuleInitResult, VcsInitResult
 from paasng.platform.modules.exceptions import ModuleInitializationError
 from paasng.platform.modules.handlers import on_module_initialized
 from paasng.platform.modules.helpers import (
@@ -66,6 +65,7 @@ from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.manager import AppBuildPack, TemplateRuntimeManager
 from paasng.platform.templates.models import Template
+from paasng.platform.templates.templater import generate_initial_code, upload_directory_to_storage
 from paasng.utils.addons import ReplaceableFunction
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.dictx import get_items
@@ -175,7 +175,7 @@ class ModuleInitializer:
         repo_auth_info: Optional[dict] = None,
         source_dir: str = "",
         write_template_to_repo: bool = False,
-    ):
+    ) -> VcsInitResult:
         """Initialize module vcs with source template
 
         :param repo_type: the type of repository provider, used when source_origin is `AUTHORIZED_VCS`
@@ -188,7 +188,7 @@ class ModuleInitializer:
             logger.info(
                 "Skip initializing template for application:<%s>/<%s>", self.application.code, self.module.name
             )
-            return {"code": "OK", "extra_info": {}, "dest_type": "null"}
+            return VcsInitResult(code="OK")
 
         if not repo_type:
             raise ValueError("repo type must not be None")
@@ -197,25 +197,36 @@ class ModuleInitializer:
         connector = get_repo_connector(repo_type, self.module)
         connector.bind(repo_url, source_dir=source_dir, repo_auth_info=repo_auth_info)
 
-        result = {"code": "OK", "extra_info": {}, "dest_type": "null"}
+        result = VcsInitResult(code="OK")
         # # Only run syncing procedure when `source_init_template` is valid
         try:
             template = Template.objects.get(name=self.module.source_init_template)
         except Template.DoesNotExist:
             return result
 
-        # 将模板（存储在对象存储中心）同步到对象存储，仅普通模板支持该功能
+        # 插件模板，且不需要初始化代码，则不需要下载模板代码直接返回
+        if template.type == TemplateType.PLUGIN and not write_template_to_repo:
+            return result
+
+        # 下载并渲染模板代码到本地目录
+        context = get_module_init_repo_context(self.module, template.type)
+        initial_code_path = generate_initial_code(template.name, context)
+
+        # 将普通模板的初始化代码上传到对象存储
         if template.type == TemplateType.NORMAL:
-            context = get_module_init_repo_context(self.module, template.type)
-            syc_res = connector.sync_templated_sources(context=context)
+            syc_res = upload_directory_to_storage(self.module, initial_code_path)
             if syc_res.is_success():
-                result = {"code": "OK", "extra_info": syc_res.extra_info, "dest_type": syc_res.dest_type}
+                result = VcsInitResult(code="OK", extra_info=syc_res.extra_info, dest_type=syc_res.dest_type)
             else:
-                result = {"code": syc_res.error}
+                result = VcsInitResult(code=syc_res.error, error=syc_res.error)
 
         # 将模板代码初始化到应用的代码仓库中
         if write_template_to_repo and repo_url:
-            connector.init_repo(template, repo_url, context=context)
+            source_type = get_sourcectl_type(self.module.source_type)
+            repo_controller = source_type.repo_controller_class.init_by_server_config(
+                self.module.source_type, repo_url
+            )
+            repo_controller.commit_and_push(initial_code_path, commit_message="init repo")
 
         # 返回应用初始化代码同步到对象存储的地址信息，用于前端创建成功页面的展示
         return result
@@ -349,9 +360,6 @@ class ModuleInitializer:
         return engine_app
 
 
-ModuleInitResult = namedtuple("ModuleInitResult", "source_init_result")
-
-
 @contextmanager
 def _humanize_exception(step_name: str, message: str):
     """Transform all exception when initialize module into ModuleInitializationError with human friendly message"""
@@ -362,39 +370,56 @@ def _humanize_exception(step_name: str, message: str):
         raise ModuleInitializationError(message) from e
 
 
-def create_new_repo(module: Module, repo_type: str, username: str) -> str:
-    """Create a new repo for module"""
-    # 使用平台代码仓库公共账号的 private_token 鉴权
-    conf = settings.APP_REPO_CONF
-    user_credentials = {"private_token": conf["private_token"]}
-    # 创建代码仓库，仓库名为应用 ID_模块名，仓库可见级别为 public
+def create_new_repo(module: Module, username: str) -> str:
+    """创建一个新的代码仓库，并将指定用户添加为成员
+
+    :param module: 需要创建仓库的模块对象
+    :param username: 需要添加为仓库成员的初始用户名
+    :return: 新创建的代码仓库地址
+
+    仓库命名规则：
+    - 格式: {应用ID}_{模块名}
+    - 仓库可见级别为: public
+    """
     repo_name = f"{module.application.code}_{module.name}"
     description = f"{module.application.name}({module.name} 模块)"
-    creator_cls = get_sourcectl_type(repo_type).repo_creator_class
-    if not creator_cls:
-        raise error_codes.CANNOT_CREATE_APP.f(_(f"源码仓库类型({repo_type})不支持新建代码仓库"))
 
-    try:
-        repo_url = creator_cls(
-            repository_group=settings.APP_REPOSITORY_GROUP, api_url=conf["api_url"], user_credentials=user_credentials
-        ).create_repo_and_add_member(repo_name=repo_name, description=description, username=username)
-    except Exception:
-        raise error_codes.CANNOT_CREATE_APP.f(_("新建代码仓库，请稍候再试"))
+    source_type = get_sourcectl_type(module.source_type)
+    repo_controller = source_type.repo_controller_class.init_by_server_config(module.source_type, repo_url="")
+
+    source_type_config = source_type.config_as_arguments()
+    if "repository_group" not in source_type_config:
+        logger.error("repository_group is not found in source type config")
+        raise error_codes.CANNOT_CREATE_APP.f("repository_group is not found in source type config")
+
+    repo_url = repo_controller.create_with_member(
+        repository_group=source_type_config["repository_group"],
+        repo_name=repo_name,
+        description=description,
+        username=username,
+    )
     return repo_url
 
 
 def delete_repo(repo_type: str, repo_url: str):
     """Delete the code repository created by the platform"""
-    # 使用平台代码仓库公共账号的 private_token 鉴权
-    conf = settings.APP_REPO_CONF
-    user_credentials = {"private_token": conf["private_token"]}
-    creator_cls = get_sourcectl_type(repo_type).repo_creator_class
-    if not creator_cls:
-        raise error_codes.CANNOT_CREATE_APP.f(_(f"源码仓库类型({repo_type})不支持删除代码仓库"))
+    source_type = get_sourcectl_type(repo_type)
+    repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url)
+    repo_controller.delete_project(repo_url)
 
-    creator_cls(
-        repository_group=settings.APP_REPOSITORY_GROUP, api_url=conf["api_url"], user_credentials=user_credentials
-    ).delete_project(repo_url)
+
+@contextmanager
+def repo_cleanup_context(repo_type: str, repo_url: Optional[str] = None):
+    """仓库清理上下文管理器，在异常时自动删除新建的仓库"""
+    try:
+        yield
+    except Exception:
+        if repo_url:
+            try:
+                delete_repo(repo_type, repo_url)
+            except Exception:
+                logger.exception(f"Failed to delete repository({repo_url}) during rollback")
+        raise
 
 
 def init_module_in_view(*args, **kwargs) -> ModuleInitResult:
@@ -426,7 +451,7 @@ def initialize_smart_module(module: Module, env_cluster_names: Dict[str, str]):
             module_initializer.bind_default_runtime()
 
     on_module_initialized.send(sender=initialize_smart_module, module=module)
-    return ModuleInitResult(source_init_result={})
+    return ModuleInitResult(source_init_result=VcsInitResult(code="OK"))
 
 
 def initialize_module(
@@ -457,7 +482,7 @@ def initialize_module(
     with _humanize_exception("create_engine_apps", _("服务暂时不可用，请稍候再试")):
         module_initializer.create_engine_apps(env_cluster_names=env_cluster_names)
 
-    source_init_result = {}
+    source_init_result = VcsInitResult(code="OK")
     if module_spec.has_vcs:
         # initialize module vcs with template if required
         with _humanize_exception("initialize_app_source", _("代码初始化过程失败，请稍候再试")):

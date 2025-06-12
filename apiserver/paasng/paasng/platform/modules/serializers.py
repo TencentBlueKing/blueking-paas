@@ -37,7 +37,6 @@ from paasng.platform.modules.models.build_cfg import ImageTagOptions
 from paasng.platform.modules.specs import ModuleSpecs, SourceOriginSpecs
 from paasng.platform.sourcectl.models import GitRepository, RepoBasicAuthHolder, SvnRepository
 from paasng.platform.sourcectl.serializers import RepositorySLZ
-from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.validators import validate_image_url
 from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.platform.templates.constants import TemplateType
@@ -285,9 +284,6 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
         if attrs["auto_create_repo"]:
             if not attrs.get("source_control_type"):
                 raise ValidationError(_("新建代码仓库时，源码仓库类型不能为空"))
-            # 检查源码仓库类型是否支持初始化代码
-            if get_sourcectl_type(attrs["source_control_type"]).repo_creator_class is None:
-                raise ValidationError(_(f"源码仓库类型({attrs['source_control_type']})不支持新建代码仓库"))
             # 由平台新建代码仓库，则用户填写的源码仓库地址无效
             if attrs.get("source_repo_url"):
                 raise ValidationError(_("新建代码仓库时，源码仓库地址无效"))

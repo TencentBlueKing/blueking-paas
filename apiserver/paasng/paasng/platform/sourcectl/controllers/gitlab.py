@@ -18,6 +18,7 @@
 import datetime
 import shutil
 from functools import wraps
+from os import PathLike
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -183,6 +184,42 @@ class GitlabRepoController(BaseGitRepoController):
 
     def commit_files(self, commit_info: CommitInfo) -> None:
         """gitlab 不支持该功能"""
+        raise NotImplementedError
+
+    def create_with_member(self, *args, **kwargs):
+        """创建代码仓库并添加成员"""
+        raise NotImplementedError
+
+    def create_project(self, *args, **kwargs):
+        """创建代码仓库"""
+        raise NotImplementedError
+
+    def delete_project(self, *args, **kwargs):
+        """删除在 VCS 上的源码项目"""
+        raise NotImplementedError
+
+    def download_directory(self, source_dir: str, local_path: PathLike) -> Path:
+        """下载指定目录到本地
+
+        :param source_dir: 代码仓库的指定目录
+        :param local_path: 本地路径
+        """
+        raise NotImplementedError
+
+    def commit_and_push(
+        self,
+        local_path: Path,
+        commit_message: str,
+        commit_name: Optional[str] = None,
+        commit_email: Optional[str] = None,
+    ) -> None:
+        """将本地文件目录提交并推送到远程仓库
+
+        :param local_path: 本地文件所有路径
+        :param commit_message: 提交信息
+        :param commit_name: 提交人名称，不传则使用平台的默认值
+        :param commit_email: 提交人邮箱，不传则使用平台的默认值
+        """
         raise NotImplementedError
 
     @error_converter

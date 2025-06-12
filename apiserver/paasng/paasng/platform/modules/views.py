@@ -46,6 +46,7 @@ from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.serializers.creation import SourceInitResultSLZ
 from paasng.platform.applications.signals import application_default_module_switch
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
@@ -64,7 +65,7 @@ from paasng.platform.modules.helpers import (
     get_image_labels_by_module,
     update_build_config_with_method,
 )
-from paasng.platform.modules.manager import ModuleCleaner, create_new_repo, delete_repo, init_module_in_view
+from paasng.platform.modules.manager import ModuleCleaner, create_new_repo, init_module_in_view, repo_cleanup_context
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
@@ -153,7 +154,10 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
         return Response(
-            data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},
+            data={
+                "module": ModuleSLZ(module).data,
+                "source_init_result": SourceInitResultSLZ(ret.source_init_result).data,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -309,10 +313,12 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         repo_type = source_config.get("source_control_type")
         repo_url = source_config.get("source_repo_url")
         # 由平台创建代码仓库
+        auto_repo_url = None
         if source_config.get("auto_create_repo"):
-            repo_url = create_new_repo(module, repo_type, username=request.user.username)
+            auto_repo_url = create_new_repo(module, username=request.user.username)
+            repo_url = auto_repo_url
 
-        try:
+        with repo_cleanup_context(repo_type, auto_repo_url):
             ret = init_module_in_view(
                 module,
                 repo_type=repo_type,
@@ -324,17 +330,12 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 bkapp_spec=data["bkapp_spec"],
                 write_template_to_repo=source_config.get("write_template_to_repo"),
             )
-        except Exception:
-            # 创建应用失败，则需要删除由平台创建的代码仓库
-            if source_config.get("auto_create_repo"):
-                try:
-                    delete_repo(repo_type, repo_url)
-                except Exception:
-                    logger.exception(f"Failed to delete repository({repo_url}) during rollback")
-            raise
 
         return Response(
-            data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},
+            data={
+                "module": ModuleSLZ(module).data,
+                "source_init_result": SourceInitResultSLZ(ret.source_init_result).data,
+            },
             status=status.HTTP_201_CREATED,
         )
 

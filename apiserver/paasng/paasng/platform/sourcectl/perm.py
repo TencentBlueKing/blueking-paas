@@ -72,8 +72,6 @@ def render_providers(providers: Sequence[str]) -> List[Dict[str, str]]:
         provider_info.update(
             {
                 "auth_method": spec.connector_class.auth_method,
-                # 是否支持自动创建代码仓库
-                "auto_create_repo": spec.repo_creator_class is not None,
             }
         )
         results.append(provider_info)

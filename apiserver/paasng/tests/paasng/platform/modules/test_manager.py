@@ -143,8 +143,9 @@ class TestModuleInitializer:
     def test_initialize_vcs(self, raw_module):
         with (
             mock.patch("paasng.platform.sourcectl.svn.client.RepoProvider") as mocked_provider,
-            mock.patch("paasng.platform.sourcectl.connector.SvnRepositoryClient") as mocked_client,
-            mock.patch("paasng.platform.templates.templater.Templater.download_tmpl") as mocked_download,
+            mock.patch(
+                "paasng.platform.templates.templater.TemplateRenderer.download_from_blob_storage"
+            ) as mocked_download,
         ):
             mocked_provider().provision.return_value = {"repo_url": "mocked_repo_url"}
             mocked_download.return_value = Path(tempfile.mkdtemp())
@@ -153,15 +154,12 @@ class TestModuleInitializer:
             raw_module.source_origin = SourceOrigin.AUTHORIZED_VCS
             raw_module.save()
 
-            # SVN 也需要添加 write_template_to_repo 参数才会执行初始化代码到仓库的操作，否则默认只会将模板代码上传到对象存储
             result = ModuleInitializer(raw_module).initialize_vcs_with_template(
-                "dft_bk_svn", repo_url="http://git.example.com/test-group/repo1.git", write_template_to_repo=True
+                "dft_bk_svn",
+                repo_url="http://git.example.com/test-group/repo1.git",
             )
-
-            mocked_client.assert_called()
-            mocked_client().sync_dir.assert_called()
-            assert result["code"] == "OK"
-            assert "extra_info" in result
+            assert result.code == "OK"
+            assert "downloadable_address" in result.extra_info
 
     @pytest.mark.parametrize(
         ("source_origin"),

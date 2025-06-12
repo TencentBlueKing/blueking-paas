@@ -302,6 +302,10 @@ export default {
       .bk-log {
         height: 100%;
         transform: translateY(-5px);
+        /deep/ .scroll-home .scroll-main .scroll-item {
+          font-family: Consolas, Courier New, monospace;
+          color: #fff !important;
+        }
       }
       .empty {
         padding: 16px;

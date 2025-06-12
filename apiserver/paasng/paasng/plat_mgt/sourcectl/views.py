@@ -31,9 +31,8 @@ from paasng.platform.sourcectl.models import SourceTypeSpecConfig
 from paasng.utils.error_codes import error_codes
 
 from .serializers import (
-    SourceTypeSpecConfigDetailOutputSLZ,
     SourceTypeSpecConfigMinimalOutputSLZ,
-    SourceTypeSpecConfigUpsertInputSLZ,
+    SourceTypeSpecConfigSLZ,
 )
 
 
@@ -57,12 +56,12 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.sourcectl"],
         operation_description="获取代码库配置详情",
-        responses={status.HTTP_200_OK: SourceTypeSpecConfigDetailOutputSLZ()},
+        responses={status.HTTP_200_OK: SourceTypeSpecConfigSLZ()},
     )
     def retrieve(self, request, pk):
         """获取单个代码库配置"""
         source_type_spec = get_object_or_404(SourceTypeSpecConfig, id=pk)
-        slz = SourceTypeSpecConfigDetailOutputSLZ(source_type_spec)
+        slz = SourceTypeSpecConfigSLZ(source_type_spec)
         return Response(slz.data)
 
     @swagger_auto_schema(
@@ -72,7 +71,7 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
     )
     def create(self, request):
         """创建代码库配置"""
-        slz = SourceTypeSpecConfigUpsertInputSLZ(data=request.data)
+        slz = SourceTypeSpecConfigSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -102,11 +101,9 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
     def update(self, request, pk):
         """更新代码库配置"""
         source_type_spec = get_object_or_404(SourceTypeSpecConfig, id=pk)
-        data_before = DataDetail(
-            type=DataType.RAW_DATA, data=SourceTypeSpecConfigDetailOutputSLZ(source_type_spec).data
-        )
+        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(source_type_spec).data)
 
-        slz = SourceTypeSpecConfigUpsertInputSLZ(source_type_spec, data=request.data)
+        slz = SourceTypeSpecConfigSLZ(source_type_spec, data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -132,9 +129,7 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         """删除代码库配置"""
 
         source_type_spec = get_object_or_404(SourceTypeSpecConfig, id=pk)
-        data_before = DataDetail(
-            type=DataType.RAW_DATA, data=SourceTypeSpecConfigUpsertInputSLZ(source_type_spec).data
-        )
+        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(source_type_spec).data)
 
         source_type_spec.delete()
 

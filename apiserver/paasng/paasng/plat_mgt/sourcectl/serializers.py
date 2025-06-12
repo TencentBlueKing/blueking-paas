@@ -37,29 +37,7 @@ class SourceTypeSpecConfigMinimalOutputSLZ(serializers.Serializer):
     client_id = serializers.CharField(help_text="OAuth Client ID")
 
 
-class SourceTypeSpecConfigDetailOutputSLZ(serializers.Serializer):
-    """详细的代码库配置 SLZ"""
-
-    name = serializers.CharField(help_text="服务名称")
-    label_zh_cn = serializers.CharField(help_text="中文标签")
-    label_en = serializers.CharField(help_text="英文标签")
-    enabled = serializers.BooleanField(help_text="是否启用")
-    spec_cls = serializers.CharField(help_text="配置类路径")
-    server_config = serializers.JSONField(help_text="服务配置")
-
-    authorization_base_url = serializers.CharField(help_text="OAuth 授权链接")
-    client_id = serializers.CharField(help_text="OAuth App Client ID")
-    client_secret = serializers.CharField(help_text="OAuth App Client Secret")
-    redirect_uri = serializers.CharField(help_text="OAuth 回调地址")
-    token_base_url = serializers.CharField(help_text="OAuth 获取 Token 链接")
-    oauth_display_info_zh_cn = serializers.JSONField(help_text="OAuth 展示信息（中文）")
-    oauth_display_info_en = serializers.JSONField(help_text="OAuth 展示信息（英文）")
-
-    display_info_zh_cn = serializers.JSONField(help_text="中文展示信息")
-    display_info_en = serializers.JSONField(help_text="英文展示信息")
-
-
-class SourceTypeSpecConfigUpsertInputSLZ(serializers.Serializer):
+class SourceTypeSpecConfigSLZ(serializers.Serializer):
     """创建或修改代码库配置的 SLZ"""
 
     name = serializers.CharField(help_text="服务名称")

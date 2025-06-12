@@ -1,7 +1,7 @@
 <template>
   <div class="examples-directory-container">
     <div class="flex-row justify-content-between title-wrapper">
-      <div class="f14">
+      <div class="f12">
         {{ $t('代码仓库推荐文件结构') }}
         <span class="tips f12 ml10">{{ $t('为确保应用能够正常构建，代码仓库文件请参考以下结构') }}</span>
       </div>

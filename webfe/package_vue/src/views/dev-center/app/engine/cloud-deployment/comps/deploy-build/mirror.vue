@@ -244,6 +244,8 @@
               <bk-form-item
                 :label="$t('Dockerfile 路径')"
                 :property="'dockerfile_path'"
+                :rules="absolutePathRule"
+                error-display-type="normal"
               >
                 <bk-input
                   v-model="mirrorData.dockerfile_path"
@@ -448,6 +450,13 @@ export default {
           },
         ],
       },
+      absolutePathRule: [
+        {
+          regex: /^(?!.*(^|\/|\\|)\.{1,2}($|\/|\\|)).*$/,
+          message: this.$t('不支持填写相对路径'),
+          trigger: 'blur',
+        },
+      ],
     };
   },
   computed: {
@@ -745,7 +754,7 @@ export default {
 }
 
 .mirror-main .content {
-  width: 800px;
+  width: 850px;
   .builder-item {
     padding: 0 10px;
     line-height: 32px;

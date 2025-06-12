@@ -362,7 +362,6 @@
               <bk-form-item
                 :required="true"
                 :label="$t('代码源')"
-                :rules="rules.name"
                 error-display-type="normal"
                 ext-cls="form-item-cls mt20"
               >
@@ -400,6 +399,7 @@
 
                 <bk-form-item
                   :label="$t('构建目录')"
+                  :property="'buildDir'"
                   error-display-type="normal"
                   ext-cls="form-item-cls mt20"
                 >
@@ -432,13 +432,14 @@
               <bk-form-item
                 v-if="isDockerfile"
                 :label="$t('Dockerfile 路径')"
-                :property="'dockerfile_path'"
+                :rules="absolutePathRule"
+                :property="'dockerfilePath'"
                 error-display-type="normal"
                 ext-cls="form-dockerfile-cls mt20"
               >
                 <div class="flex-row align-items-center code-depot">
                   <bk-input
-                    v-model="dockerfileData.dockerfilePath"
+                    v-model="formData.dockerfilePath"
                     class="form-input-width"
                     :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
                   />
@@ -536,7 +537,6 @@
 
           <bk-form
             v-if="isShowAdvancedOptions"
-            ref="formSourceRef"
             :model="formData"
             :rules="rules"
             :label-width="100"
@@ -730,9 +730,9 @@ export default {
         imageCredentialUserName: '', // 镜像账号
         imageCredentialPassWord: '', // 镜像密码
         buildMethod: 'buildpack', // 构建方式
+        dockerfilePath: '', // Dockerfile 路径
       },
       dockerfileData: {
-        dockerfilePath: '', // Dockerfile 路径
         buildParams: [], // 构建参数
       },
       sourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
@@ -908,7 +908,23 @@ export default {
             trigger: 'blur',
           },
         ],
+        sourceDir: [
+          {
+            regex: /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/,
+            message: this.$t(
+              '支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'
+            ),
+            trigger: 'blur',
+          },
+        ],
       },
+      absolutePathRule: [
+        {
+          regex: /^(?!.*(^|\/|\\|)\.{1,2}($|\/|\\|)).*$/,
+          message: this.$t('不支持填写相对路径'),
+          trigger: 'blur',
+        },
+      ],
       curCodeSource: 'default',
       activeIndex: 1,
       isShowAdvancedOptions: false,
@@ -982,7 +998,7 @@ export default {
       return authPathMap[auth_method] || '';
     },
     appendPath() {
-      return this.isDockerfile ? this.dockerfileData.dockerfilePath : '';
+      return this.isDockerfile ? this.formData.dockerfilePath || '' : '';
     },
     // 默认文件
     defaultFiles() {
@@ -1251,6 +1267,7 @@ export default {
       try {
         await this.$refs.formBaseRef.validate();
         await this.$refs?.formImageRef?.validate();
+        await this.$refs?.formSourceRef?.validate();
         await this.$refs?.repoInfo?.valid();
         // 构建参数校验
         const flag = await this.buildParamsValidate();
@@ -1361,12 +1378,9 @@ export default {
         this.dockerfileData.buildParams.forEach((item) => {
           dockerBuild[item.name] = item.value;
         });
-        if (this.dockerfileData.dockerfilePath === '') {
-          this.dockerfileData.dockerfilePath = null;
-        }
         params.bkapp_spec.build_config = {
           build_method: 'dockerfile',
-          dockerfile_path: this.dockerfileData.dockerfilePath,
+          dockerfile_path: this.formData.dockerfilePath || null,
           docker_build_args: dockerBuild,
         };
         delete params.source_config.source_init_template;

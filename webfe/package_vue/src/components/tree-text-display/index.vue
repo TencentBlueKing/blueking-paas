@@ -235,10 +235,11 @@ export default {
 <style lang="scss" scoped>
 .tree-text-wrapper {
   font-size: 12px;
-  padding: 8px 12px;
+  padding: 12px;
   background-color: #fff;
   border-radius: 2px;
   .tip {
+    line-height: 1;
     margin-bottom: 8px;
   }
   .tree-text-display {

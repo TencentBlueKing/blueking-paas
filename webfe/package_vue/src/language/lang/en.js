@@ -3029,6 +3029,7 @@ export default {
   '在 <i>{p}</i> 目录下执行如下命令构建镜像：': 'Execute the following command in the <i>{p}</i> directory to build the image:',
   代码仓库根目录: 'Code Repository Root Directory',
   代码仓库推荐文件结构: 'Recommended File Structure for Code Repository',
+  不支持填写相对路径: 'Relative paths are not supported',
   '请输入应用所在子目录，不填则默认为根目录': 'Please enter the subdirectory where the application is located, or leave empty to use the root directory by default',
   '为确保应用能够正常构建，代码仓库文件请参考以下结构': 'To ensure the application can be built correctly, please refer to the following file structure for the code repository',
 };

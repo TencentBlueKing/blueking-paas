@@ -21,7 +21,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.servicehub.binding_policy.manager import (
-    PolicyCombinationManager,
+    SvcBindingPolicyManager,
     list_policy_combination_configs,
 )
 from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
@@ -66,8 +66,8 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         service = mixed_service_mgr.get(uuid=service_id)
-        mgr = PolicyCombinationManager(service, getattr(data, "tenant_id"))
-        mgr.upsert(data)
+        mgr = SvcBindingPolicyManager(service, getattr(data, "tenant_id"))
+        mgr.save_comb_cfg(data)
         return Response(status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -82,7 +82,7 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         service = mixed_service_mgr.get(uuid=service_id)
-        mgr = PolicyCombinationManager(service, data.get("tenant_id"))
+        mgr = SvcBindingPolicyManager(service, data.get("tenant_id"))
         mgr.clean()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

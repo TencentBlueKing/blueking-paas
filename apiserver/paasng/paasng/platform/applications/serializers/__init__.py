@@ -48,6 +48,7 @@ from .app import (
     ProtectionStatusSLZ,
     SearchApplicationSLZ,
     SysThirdPartyApplicationSLZ,
+    UpdateApplicationNameSLZ,
     UpdateApplicationOutputSLZ,
     UpdateApplicationSLZ,
 )
@@ -103,6 +104,7 @@ __all__ = [
     "ApplicationEvaluationListResultSLZ",
     "SysThirdPartyApplicationSLZ",
     "UpdateApplicationSLZ",
+    "UpdateApplicationNameSLZ",
     "UpdateApplicationOutputSLZ",
     "AppIDField",
     "AppIDSMartField",

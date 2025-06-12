@@ -85,8 +85,6 @@ class UpdateApplicationNameSLZ(serializers.Serializer):
     """Serializer for update application name"""
 
     name = I18NExtend(AppNameField(max_length=20, help_text="应用名称"))
-    availability_level = serializers.ChoiceField(choices=AvailabilityLevel.get_choices(), help_text="可用性保障等级")
-    tag_id = serializers.IntegerField(help_text="应用标签 ID")
 
     def _validate_duplicated_field(self, data):
         """Universal validate method for code and name"""
@@ -122,8 +120,8 @@ class UpdateApplicationOutputSLZ(serializers.Serializer):
     name = I18NExtend(AppNameField(max_length=20, help_text="应用名称"))
     availability_level = serializers.CharField(source="extra_info.availability_level", help_text="可用性保障等级")
     tag_id = serializers.IntegerField(source="extra_info.tag.id", help_text="应用标签 ID")
-    tag_name = serializers.IntegerField(source="extra_info.tag.name", help_text="应用标签名称")
-    logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text="应用 Logo 访问地址")
+    tag_name = serializers.CharField(source="extra_info.tag.name", help_text="应用标签名称")
+    logo_url = serializers.CharField(source="get_logo_url", help_text="应用 Logo 访问地址")
 
 
 class SearchApplicationSLZ(serializers.Serializer):

@@ -48,8 +48,8 @@ from .app import (
     ProtectionStatusSLZ,
     SearchApplicationSLZ,
     SysThirdPartyApplicationSLZ,
+    UpdateApplicationOutputSLZ,
     UpdateApplicationSLZ,
-    UpsertAppExtraInfoSLZ,
 )
 from .creation import (
     AIAgentAppCreateInputSLZ,
@@ -103,6 +103,7 @@ __all__ = [
     "ApplicationEvaluationListResultSLZ",
     "SysThirdPartyApplicationSLZ",
     "UpdateApplicationSLZ",
+    "UpdateApplicationOutputSLZ",
     "AppIDField",
     "AppIDSMartField",
     "ApplicationField",
@@ -118,5 +119,4 @@ __all__ = [
     "ApplicationMembersInfoSLZ",
     "ApplicationDeploymentModuleOrderSLZ",
     "ApplicationDeploymentModuleOrderReqSLZ",
-    "UpsertAppExtraInfoSLZ",
 ]

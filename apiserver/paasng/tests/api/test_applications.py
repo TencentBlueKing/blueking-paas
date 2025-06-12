@@ -431,18 +431,18 @@ class TestApplicationUpdate:
         # 描述文件定义的应用可以更新名称
         assert Application.objects.get(pk=app.pk).name == random_name
 
-    def test_invalid_availability_level(self, api_client, bk_app_full, bk_user, random_name):
+    def test_invalid_availability_level(self, api_client, bk_app, bk_user, random_name):
         response = api_client.put(
-            "/api/bkapps/applications/{}/".format(bk_app_full.code),
+            "/api/bkapps/applications/{}/".format(bk_app.code),
             data={"name": random_name, "availability_level": "invalid_level"},
         )
         assert response.status_code == 400
         assert response.json()["code"] == "VALIDATION_ERROR"
         assert "availability_level: “invalid_level” 不是合法选项。" in response.json()["detail"]
 
-    def test_no_tag(self, api_client, bk_app_full, bk_user, random_name):
+    def test_no_tag(self, api_client, bk_app, bk_user, random_name):
         response = api_client.put(
-            "/api/bkapps/applications/{}/".format(bk_app_full.code),
+            "/api/bkapps/applications/{}/".format(bk_app.code),
             data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value},
         )
         assert response.status_code == 400

@@ -22,6 +22,7 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AdminOperationRecord
 
 from .filters import OperationAuditFilterBackend
@@ -31,7 +32,6 @@ from .serializers import (
     PlatformOperationAuditOutputSLZ,
     PlatformOperationAuditRetrieveOutputSLZ,
 )
-from ...misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 
 
 class ApplicationOperateAuditViewSet(viewsets.ReadOnlyModelViewSet):

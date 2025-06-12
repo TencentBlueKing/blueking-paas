@@ -133,9 +133,7 @@ class BuildPackAPIViewSet(GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.BUILDPACK,
             attribute=slz.data["name"],
-            data_after=DataDetail(
-                data=slz.data,
-            ),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -156,9 +154,7 @@ class BuildPackAPIViewSet(GenericViewSet):
             target=OperationTarget.BUILDPACK,
             attribute=buildpack.name,
             data_before=data_before,
-            data_after=DataDetail(
-                data=slz.data,
-            ),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -256,9 +252,7 @@ class SlugBuilderAPIViewSet(GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.SLUGBUILDER,
             attribute=slz.data["name"],
-            data_after=DataDetail(
-                data=slz.data,
-            ),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -279,9 +273,7 @@ class SlugBuilderAPIViewSet(GenericViewSet):
             target=OperationTarget.SLUGBUILDER,
             attribute=slugbuilder.name,
             data_before=data_before,
-            data_after=DataDetail(
-                data=slz.data,
-            ),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -335,9 +327,7 @@ class SlugRunnerAPIViewSet(GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.SLUGRUNNER,
             attribute=slz.data["name"],
-            data_after=DataDetail(
-                data=slz.data,
-            ),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 

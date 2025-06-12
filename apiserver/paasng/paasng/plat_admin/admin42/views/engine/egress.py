@@ -146,9 +146,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
         if not spec:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        data_before = DataDetail(
-            data=self._gen_spec_data(spec),
-        )
+        data_before = DataDetail(data=self._gen_spec_data(spec))
 
         # 从集群中删除 egress 资源
         manifest = spec.build_manifest()

@@ -131,7 +131,6 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
         user_id = user_id_encoder.encode(ProviderType(provider_type).value, request.query_params["username"])
         profile = UserProfile.objects.get(user=user_id)
         data_before = DataDetail(data=UserProfileSLZ(profile).data)
-        # profile.role = SiteRole.NOBODY.value
         profile.role = SiteRole.BANNED_USER.value
         profile.save()
 

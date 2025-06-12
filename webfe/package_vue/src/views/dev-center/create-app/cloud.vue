@@ -858,11 +858,6 @@ export default {
         ],
         buildDir: [
           {
-            required: true,
-            message: this.$t('该字段是必填项'),
-            trigger: 'blur',
-          },
-          {
             validator(val) {
               const reg = /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/;
               return reg.test(val);
@@ -905,15 +900,6 @@ export default {
           {
             validator: this.validateCredentials,
             message: `${this.$t('请填写镜像凭证')} ${this.$t('名称')}`,
-            trigger: 'blur',
-          },
-        ],
-        sourceDir: [
-          {
-            regex: /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/,
-            message: this.$t(
-              '支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'
-            ),
             trigger: 'blur',
           },
         ],

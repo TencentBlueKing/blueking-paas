@@ -198,7 +198,7 @@ class GiteeRepoController(BaseGitRepoController):
     ):
         """[private] 修复 git 的用户信息缺失问题
 
-        :param dest_dir: git 工作目录
+        :param dest_dir: git 工作路径
         :param commit_name: 提交人名称，不传则使用平台的默认值
         :param commit_email: 提交人邮箱，不传则使用平台的默认值
         """
@@ -212,8 +212,8 @@ class GiteeRepoController(BaseGitRepoController):
                 dedent(
                     f"""
             [user]
-                email = "{commit_name}"
-                name = "{commit_email}"
+                email = "{commit_email}"
+                name = "{commit_name}"
             """
                 )
             )

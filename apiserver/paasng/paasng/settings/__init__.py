@@ -1338,15 +1338,6 @@ DOCKER_REGISTRY_CONFIG = settings.get(
 )
 
 # -----------------
-# 初始化代码仓库配置项
-# 说明：该功能只对接了腾讯工蜂代码仓库的 API，仅对腾讯云工蜂代码仓库有效
-# -----------------
-# 代码仓库组，如果应用选择由平台创建仓库，则在仓库组下创建一个以应用 ID 为名的代码仓库
-APP_REPOSITORY_GROUP = settings.get("APP_REPOSITORY_GROUP", "")
-# 源码仓库 API、凭证等相关配置
-APP_REPO_CONF = settings.get("APP_REPO_CONF")
-
-# -----------------
 # 插件开发中心配置项
 # -----------------
 # 插件中心「源码仓库」相关配置

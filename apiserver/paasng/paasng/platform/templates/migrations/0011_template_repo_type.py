@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name="repo_type",
             field=models.CharField(
                 default="",
-                help_text="用于判断用什么命令将模板代码下载到本地",
+                help_text="将模板从代码仓库下载到本地时需要使用到",
                 max_length=32,
                 verbose_name="代码仓库类型",
             ),

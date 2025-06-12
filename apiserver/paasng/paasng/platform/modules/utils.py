@@ -34,7 +34,7 @@ def parse_assignment_list(assignments):
 
 def get_module_init_repo_context(module: Module, template_type: TemplateType):
     """获取模块初始化代码仓库的上下文
-    NOTE: 插件应用的渲染字段名是由插件中心统一定义，与开发框架的变量含义一致但是字段名也是有差异，所以需要根据模板类型生成不同的上下文
+    NOTE: 插件应用的渲染字段名是由插件中心统一定义，变量名与开发框架中定义的不一致，故需要根据模板类型生成不同的上下文
     """
     application = module.application
 

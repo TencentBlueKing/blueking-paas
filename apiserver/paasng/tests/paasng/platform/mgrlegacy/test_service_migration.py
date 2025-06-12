@@ -20,8 +20,12 @@ from unittest import mock
 
 import pytest
 
-from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
-from paasng.accessories.servicehub.models import RemoteServiceEngineAppAttachment, RemoteServiceModuleAttachment
+from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
+from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.models import (
+    RemoteServiceEngineAppAttachment,
+    RemoteServiceModuleAttachment,
+)
 from paasng.accessories.servicehub.remote.manager import RemotePlanObj, RemoteServiceObj
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.engine.constants import AppEnvName
@@ -58,7 +62,11 @@ dummy_service = RemoteServiceObj(
 def _mock_get_service():
     with mock.patch.object(BaseServiceMigration, "get_service") as get_service:
         get_service.return_value = dummy_service
-        ServiceBindingPolicyManager(dummy_service, DEFAULT_TENANT_ID).set_static([dummy_service.get_plans()[0]])
+        with mock.patch.object(mixed_service_mgr, "get") as get:
+            get.return_value = dummy_service
+            SvcBindingPolicyManager(dummy_service, DEFAULT_TENANT_ID).set_uniform(
+                plans=[dummy_service.get_plans()[0].uuid]
+            )
         yield
 
 

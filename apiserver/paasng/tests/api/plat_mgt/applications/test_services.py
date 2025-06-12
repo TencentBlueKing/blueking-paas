@@ -23,7 +23,7 @@ from unittest import mock
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
 from paasng.accessories.servicehub.exceptions import UnboundSvcAttachmentDoesNotExist
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
@@ -87,7 +87,7 @@ class TestApplicationServicesViewSet:
         # 绑定服务到模块
         svc1, svc2, svc3 = services
         for svc, module in [(svc1, bk_module), (svc2, bk_module), (svc3, bk_module_2)]:
-            ServiceBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_static([svc.get_plans()[0]])
+            SvcBindingPolicyManager(svc, DEFAULT_TENANT_ID).set_uniform(plans=[svc.get_plans()[0].uuid])
             mixed_service_mgr.bind_service(svc, module)
 
         # 共享服务

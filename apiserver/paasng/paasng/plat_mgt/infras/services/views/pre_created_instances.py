@@ -25,7 +25,11 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
-from paasng.plat_mgt.infras.services.serializers import PlanWithPreCreatedInstanceSLZ, PreCreatedInstanceUpsertSLZ
+from paasng.plat_mgt.infras.services.serializers import (
+    PlanWithPreCreatedInstanceSLZ,
+    PreCreatedInstanceOutputSLZ,
+    PreCreatedInstanceUpsertSLZ,
+)
 
 
 class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
@@ -77,7 +81,7 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.ADD_ON,
             attribute=ins.uuid,
-            data_after=DataDetail(data=PlanWithPreCreatedInstanceSLZ(ins).data),
+            data_after=DataDetail(data=PreCreatedInstanceOutputSLZ(ins).data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -92,13 +96,13 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         instance = PreCreatedInstance.objects.get(plan__uuid=plan_id, uuid=instance_id)
-        data_before = PlanWithPreCreatedInstanceSLZ(instance).data
+        data_before = PreCreatedInstanceOutputSLZ(instance).data
 
         instance.config = data["config"]
         instance.credentials = data["credentials"]
         instance.save(update_fields=["config", "credentials"])
 
-        data_after = PlanWithPreCreatedInstanceSLZ(instance).data
+        data_after = PreCreatedInstanceOutputSLZ(instance).data
         add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
@@ -116,7 +120,7 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
     )
     def destroy(self, request, plan_id, instance_id, *args, **kwargs):
         instance = PreCreatedInstance.objects.get(plan__uuid=plan_id, uuid=instance_id)
-        data_before = PlanWithPreCreatedInstanceSLZ(instance).data
+        data_before = PreCreatedInstanceOutputSLZ(instance).data
         instance.delete()
 
         add_plat_mgt_audit_record(

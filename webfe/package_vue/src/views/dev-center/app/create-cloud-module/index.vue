@@ -9,7 +9,7 @@
         @click="goBack"
       >
         <i class="paasng-icon paasng-back"></i>
-        <span> {{ $t('创建模块') }} </span>
+        <span>{{ $t('创建模块') }}</span>
       </div>
       <div
         v-if="canCreateModule"
@@ -24,7 +24,7 @@
               {{ $t('基本信息') }}
             </div>
             <div class="form-group pb0">
-              <label class="form-label"> {{ $t('所属应用') }} </label>
+              <label class="form-label">{{ $t('所属应用') }}</label>
               <div class="form-group-flex form-input-width">
                 <p class="app-name">
                   {{ curAppInfo.application.name }}
@@ -44,27 +44,21 @@
                 error-display-type="normal"
                 ext-cls="module-item-cls"
               >
-                <div
-                  class="form-group mt10"
-                >
-                  <label class="form-label"> {{ $t('模块名称') }} </label>
+                <div class="form-group mt10">
+                  <label class="form-label">{{ $t('模块名称') }}</label>
                   <div class="form-input-flex">
                     <bk-input
                       v-model="formData.name"
                       :placeholder="$t('由小写字母和数字以及连接符(-)组成，不能超过 16 个字符')"
                       class="mr10 mt10 form-input-width"
-                    >
-                    </bk-input>
+                    ></bk-input>
                   </div>
                 </div>
               </bk-form-item>
             </bk-form>
 
             <!-- 构建方式 -->
-            <div
-              class="form-group mt10 align-items-center"
-              style="margin-top: 10px;"
-            >
+            <div class="form-group mt10 align-items-center mt10">
               <label class="form-label mr10">
                 {{ $t('构建方式') }}
               </label>
@@ -77,9 +71,7 @@
                   <bk-radio :value="'buildpack'">
                     {{ $t('蓝鲸 Buildpack') }}
                   </bk-radio>
-                  <bk-radio :value="'dockerfile'">
-                    Dockerfile
-                  </bk-radio>
+                  <bk-radio :value="'dockerfile'">Dockerfile</bk-radio>
                   <bk-radio :value="'mirror'">
                     {{ $t('仅镜像') }}
                   </bk-radio>
@@ -88,7 +80,11 @@
             </div>
           </div>
 
-          <bk-steps ext-cls="step-cls" :steps="createSteps" :cur-step.sync="curStep"></bk-steps>
+          <bk-steps
+            ext-cls="step-cls"
+            :steps="createSteps"
+            :cur-step.sync="curStep"
+          ></bk-steps>
 
           <!-- 镜像管理 -->
           <div
@@ -117,11 +113,10 @@
                 <div class="form-input-flex">
                   <bk-input
                     v-model="mirrorData.url"
-                    style="width: 650px;"
+                    style="width: 650px"
                     clearable
                     :placeholder="mirrorExamplePlaceholder"
-                  >
-                  </bk-input>
+                  ></bk-input>
                 </div>
               </bk-form-item>
 
@@ -133,7 +128,7 @@
                 <bk-select
                   v-model="imageCredentialsData.name"
                   :disabled="false"
-                  style="width: 650px;"
+                  style="width: 650px"
                   ext-cls="select-custom"
                   ext-popover-cls="select-popover-custom"
                   searchable
@@ -152,7 +147,12 @@
                     <i class="bk-icon icon-plus-circle mr5" />{{ $t('新建凭证') }}
                   </div> -->
                 </bk-select>
-                <span slot="tip" class="input-tips">{{ $t('请选择镜像凭证以拉取私有镜像，也可在创建模块后在 "模块配置 - 构建配置“ 页面中添加') }}</span>
+                <span
+                  slot="tip"
+                  class="input-tips"
+                >
+                  {{ $t('请选择镜像凭证以拉取私有镜像，也可在创建模块后在 "模块配置 - 构建配置“ 页面中添加') }}
+                </span>
               </bk-form-item>
             </bk-form>
           </div>
@@ -167,7 +167,8 @@
             </div>
             <div class="establish-tab mt10">
               <section class="code-type">
-                <span class="pl20">{{$t('模板来源')}}：</span><span class="pl10 module-name">{{$t('蓝鲸开发框架')}}</span>
+                <span class="pl20">{{ $t('模板来源') }}：</span>
+                <span class="pl10 module-name">{{ $t('蓝鲸开发框架') }}</span>
               </section>
             </div>
 
@@ -178,12 +179,12 @@
               <section class="deploy-panel deploy-main">
                 <ul
                   class="ps-tab"
-                  style="position: relative; z-index: 10; padding: 0 10px;"
+                  style="position: relative; z-index: 10; padding: 0 10px"
                 >
                   <li
                     v-for="(langItem, langName) in curLanguages"
                     :key="langName"
-                    :class="['item', { 'active': language === langName }]"
+                    :class="['item', { active: language === langName }]"
                     @click="changeLanguage(langName)"
                   >
                     {{ $t(defaultlangName[langName]) }}
@@ -206,7 +207,7 @@
                       :key="langName"
                       class="options-card"
                     >
-                      <h2> {{ $t('初始化代码模板：') }} </h2>
+                      <h2>{{ $t('初始化代码模板：') }}</h2>
                       <ul class="establish-main-list">
                         <li
                           v-for="(item, itemIndex) in langItem"
@@ -220,7 +221,7 @@
                               :value="item.name"
                               class="ps-radio-default"
                               checked
-                            >
+                            />
                             {{ item.display_name }}
                           </label>
                           <p class="f12">
@@ -239,14 +240,18 @@
               class="ps-tip-block lesscode-info mt15"
             >
               <i
-                style="color: #3A84FF;"
+                style="color: #3a84ff"
                 class="paasng-icon paasng-info-circle"
               />
-              {{ $t('默认模块需要在') }} <a
+              {{ $t('默认模块需要在') }}
+              <a
                 target="_blank"
                 :href="GLOBAL.LINK.LESSCODE_INDEX"
                 style="color: #3a84ff"
-              > {{ $t('蓝鲸运维开发平台') }} </a> {{ $t('生成源码包部署，您也可以在应用中新增普通模块。') }}
+              >
+                {{ $t('蓝鲸运维开发平台') }}
+              </a>
+              {{ $t('生成源码包部署，您也可以在应用中新增普通模块。') }}
             </div>
             <div
               v-if="sourceOrigin !== GLOBAL.APP_TYPES.NORMAL_APP && lessCodeCorrectRules"
@@ -273,10 +278,10 @@
               <div
                 v-for="(item, index) in sourceControlTypes"
                 :key="index"
-                :class="['code-depot-item mr10', { 'on': item.value === sourceControlType }]"
+                :class="['code-depot-item mr10', { on: item.value === sourceControlType }]"
                 @click="changeSourceControl(item)"
               >
-                <img :src="'/static/images/' + item.imgSrc + '.png'">
+                <img :src="'/static/images/' + item.imgSrc + '.png'" />
                 <p class="sourceControlTypeInfo">
                   {{ item.name }}
                 </p>
@@ -303,18 +308,18 @@
                 />
                 <div
                   class="form-group-dir"
-                  style="margin-top: 10px;"
+                  style="margin-top: 10px"
                 >
                   <label class="form-label mr10 pr8">
                     {{ $t('构建目录') }}
                   </label>
                   <div class="form-group-flex">
-                    <p>
+                    <div>
                       <bk-input
                         v-model="sourceDirVal"
                         class="source-dir form-input-width"
                         :class="sourceDirError ? 'error' : ''"
-                        :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')"
+                        :placeholder="$t('请输入应用所在子目录，不填则默认为根目录')"
                         @blur="validSourceDir"
                       />
                       <ul
@@ -322,10 +327,14 @@
                         class="parsley-errors-list"
                       >
                         <li class="parsley-pattern">
-                          {{ $t('支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头') }}
+                          {{
+                            $t(
+                              '支持子目录、如 ab/test，允许字母、数字、点(.)、下划线(_)、和连接符(-)，但不允许以点(.)开头'
+                            )
+                          }}
                         </li>
                       </ul>
-                    </p>
+                    </div>
                   </div>
                 </div>
               </template>
@@ -343,66 +352,101 @@
                 :default-account="repoData.account"
                 :default-password="repoData.password"
                 :default-dir="repoData.sourceDir"
+                @dir-change="($event) => (curRepoDir = $event)"
               />
               <!-- 用户自定义git、svn账号信息 end -->
             </template>
 
             <!-- Dockerfile 构建 -->
-            <template v-if="formData.buildMethod === 'dockerfile'">
-              <div
-                class="form-group-dir dockerfile-cls"
-                :class="{ 'repo-dockerfile': curSourceControl && curSourceControl.auth_method === 'basic' }"
-                style="margin-top: 10px;"
+            <bk-form
+              v-if="isDockerfile"
+              :label-width="119"
+              :model="dockerfileData"
+              ref="dockerfileRef"
+              class="mt20"
+            >
+              <bk-form-item
+                :label="$t('Dockerfile 路径')"
+                :rules="absolutePathRule"
+                :property="'dockerfilePath'"
+                error-display-type="normal"
+                ext-cls="form-dockerfile-cls"
               >
-                <label class="form-label mr10 pr8">
-                  {{ $t('Dockerfile 路径') }}
-                </label>
-                <div class="form-group-flex">
-                  <bk-input
-                    v-model="dockerfileData.dockerfilePath"
-                    class="form-input-width"
-                    :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
-                  />
-                </div>
-              </div>
+                <bk-input
+                  style="width: 650px"
+                  v-model="dockerfileData.dockerfilePath"
+                  :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
+                ></bk-input>
+              </bk-form-item>
+            </bk-form>
 
-              <!-- 构建参数 -->
+            <!-- 文件示例目录 -->
+            <ExamplesDirectory
+              style="margin-left: 100px"
+              :root-path="rootPath"
+              :append-path="appendPath"
+              :default-files="defaultFiles"
+              :is-dockerfile="isDockerfile"
+              :show-root="false"
+              :type="'string'"
+            />
+
+            <!-- 构建参数 -->
+            <template v-if="isDockerfile">
               <bk-form
                 :model="dockerfileData"
                 form-type="vertical"
-                ext-cls="build-params-form">
+                ext-cls="build-params-form"
+              >
                 <div
                   class="form-label pr8"
                   :class="{ 'params-dockerfile': curSourceControl && curSourceControl.auth_method === 'basic' }"
                 >
-                  {{$t('构建参数')}}
+                  {{ $t('构建参数') }}
                 </div>
                 <div class="form-value-wrapper mt10">
                   <bk-button
                     v-if="!dockerfileData.buildParams.length"
                     :text="true"
                     title="primary"
-                    @click="addBuildParams">
+                    @click="addBuildParams"
+                  >
                     <i class="paasng-icon paasng-plus-thick" />
                     {{ $t('新建构建参数') }}
                   </bk-button>
                   <template v-if="dockerfileData.buildParams.length">
                     <div class="build-params-header">
-                      <div class="name">{{$t('参数名')}}</div>
-                      <div class="value">{{$t('参数值')}}</div>
+                      <div class="name">{{ $t('参数名') }}</div>
+                      <div class="value">{{ $t('参数值') }}</div>
                     </div>
                     <div
                       v-for="(item, index) in dockerfileData.buildParams"
                       class="build-params-item"
-                      :key="index">
-                      <bk-form :ref="`name-${index}`" :model="item">
-                        <bk-form-item :rules="rules.buildParams" :property="'name'">
-                          <bk-input v-model="item.name" :placeholder="$t('参数名')"></bk-input>
+                      :key="index"
+                    >
+                      <bk-form
+                        :ref="`name-${index}`"
+                        :model="item"
+                      >
+                        <bk-form-item
+                          :rules="rules.buildParams"
+                          :property="'name'"
+                        >
+                          <bk-input
+                            v-model="item.name"
+                            :placeholder="$t('参数名')"
+                          ></bk-input>
                         </bk-form-item>
                       </bk-form>
                       <span class="equal">=</span>
-                      <bk-form :ref="`value-${index}`" :model="item">
-                        <bk-form-item :rules="rules.buildParams" :property="'value'">
+                      <bk-form
+                        :ref="`value-${index}`"
+                        :model="item"
+                      >
+                        <bk-form-item
+                          :rules="rules.buildParams"
+                          :property="'value'"
+                        >
                           <bk-input v-model="item.value"></bk-input>
                         </bk-form-item>
                       </bk-form>
@@ -419,7 +463,8 @@
                 ext-cls="add-build-params"
                 :text="true"
                 title="primary"
-                @click="addBuildParams">
+                @click="addBuildParams"
+              >
                 <i class="paasng-icon paasng-plus-thick" />
                 {{ $t('新建构建参数') }}
               </bk-button>
@@ -427,17 +472,24 @@
           </div>
 
           <!-- 源码&镜像 部署配置内容 -->
-          <div class="mt20" v-if="structureType === 'soundCode' && curStep === 2">
-            <collapseContent :title="$t('进程配置')" collapse-item-name="process-config" active-name="process-config">
-              <bk-alert
-                type="info">
+          <div
+            class="mt20"
+            v-if="structureType === 'soundCode' && curStep === 2"
+          >
+            <collapseContent
+              :title="$t('进程配置')"
+              collapse-item-name="process-config"
+              active-name="process-config"
+            >
+              <bk-alert type="info">
                 <div slot="title">
-                  {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+                  {{ $t('进程配置、钩子命令在 app_desc.yaml 文件中定义。') }}
                   <a
                     target="_blank"
                     :href="GLOBAL.DOC.APP_DESC_DOC"
-                    style="color: #3a84ff">
-                    {{$t('应用描述文件')}}
+                    style="color: #3a84ff"
+                  >
+                    {{ $t('应用描述文件') }}
                   </a>
                 </div>
               </bk-alert>
@@ -445,25 +497,32 @@
           </div>
 
           <!-- 仅镜像，默认编辑态 -->
-          <div class="mt20" v-if="structureType === 'mirror' && curStep === 2">
+          <div
+            class="mt20"
+            v-if="structureType === 'mirror' && curStep === 2"
+          >
             <collapseContent
               active-name="process"
               collapse-item-name="process"
-              :title="$t('进程配置')">
+              :title="$t('进程配置')"
+            >
               <deploy-process
                 ref="processRef"
-                :cloud-form-data="{url: mirrorData.url, imageCredentialName: imageCredentialsData.name}"
-                :is-create="isCreate">
-              </deploy-process>
+                :cloud-form-data="{ url: mirrorData.url, imageCredentialName: imageCredentialsData.name }"
+                :is-create="isCreate"
+              ></deploy-process>
             </collapseContent>
 
             <collapseContent
               active-name="hook"
               collapse-item-name="hook"
               :title="$t('部署前置命令')"
-              class="mt20">
-              <deploy-hook ref="hookRef" :is-create="isCreate">
-              </deploy-hook>
+              class="mt20"
+            >
+              <deploy-hook
+                ref="hookRef"
+                :is-create="isCreate"
+              ></deploy-hook>
             </collapseContent>
           </div>
 
@@ -471,8 +530,8 @@
             v-if="formLoading"
             class="form-loading"
           >
-            <img src="/static/images/create-app-loading.svg">
-            <p> {{ $t('模块创建中，请稍候') }} </p>
+            <img src="/static/images/create-app-loading.svg" />
+            <p>{{ $t('模块创建中，请稍候') }}</p>
           </div>
           <div
             v-else
@@ -504,7 +563,7 @@
                 v-else
                 v-bk-tooltips="$t('非内部版应用目前无法创建其它模块')"
                 class="ps-btn-disabled"
-                style="text-align: center;"
+                style="text-align: center"
               >
                 {{ $t('提交') }}
               </div>
@@ -517,7 +576,7 @@
       </div>
       <div
         v-else
-        style="padding-top: 100px; text-align: center;"
+        style="padding-top: 100px; text-align: center"
       >
         {{ $t('非内部版应用 目前无法创建新模块') }}
       </div>
@@ -525,8 +584,9 @@
   </div>
 </template>
 
-<script>import { APP_LANGUAGES_IMAGE, DEFAULT_APP_SOURCE_CONTROL_TYPES, DEFAULR_LANG_NAME } from '@/common/constants';
-import _ from 'lodash';
+<script>
+import { APP_LANGUAGES_IMAGE, DEFAULT_APP_SOURCE_CONTROL_TYPES, DEFAULR_LANG_NAME } from '@/common/constants';
+import { cloneDeep, has } from 'lodash';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import appPreloadMixin from '@/mixins/app-preload';
@@ -534,6 +594,7 @@ import collapseContent from './comps/collapse-content.vue';
 import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
 import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
 import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
+import ExamplesDirectory from '@/components/examples-directory';
 
 export default {
   components: {
@@ -542,6 +603,7 @@ export default {
     collapseContent,
     deployProcess,
     deployHook,
+    ExamplesDirectory,
   },
   mixins: [appPreloadMixin],
   data() {
@@ -669,7 +731,10 @@ export default {
         ],
       },
       lessCodeCorrectRules: false,
-      createSteps: [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }],
+      createSteps: [
+        { title: this.$t('源码信息'), icon: 1 },
+        { title: this.$t('部署配置'), icon: 2 },
+      ],
       curStep: 1,
       formData: {
         name: '',
@@ -684,6 +749,14 @@ export default {
         dockerfilePath: '', // Dockerfile 路径
         buildParams: [], // 构建参数
       },
+      curRepoDir: '',
+      absolutePathRule: [
+        {
+          regex: /^(?!.*(^|\/|\\|)\.{1,2}($|\/|\\|)).*$/,
+          message: this.$t('不支持填写相对路径'),
+          trigger: 'blur',
+        },
+      ],
     };
   },
   computed: {
@@ -714,18 +787,49 @@ export default {
       return this.$store.state.userFeature;
     },
     curSourceControl() {
-      const match = this.sourceControlTypes.find(item => item.value === this.sourceControlType);
+      const match = this.sourceControlTypes.find((item) => item.value === this.sourceControlType);
       return match;
     },
     createCloudAppData() {
       return this.$store.state.cloudApi.cloudAppData;
     },
     isShowAppTemplate() {
-      return this.sourceOrigin !== this.GLOBAL.APP_TYPES.CNATIVE_IMAGE && this.curStep === 1 && this.formData.buildMethod === 'buildpack';
+      return (
+        this.sourceOrigin !== this.GLOBAL.APP_TYPES.CNATIVE_IMAGE &&
+        this.curStep === 1 &&
+        this.formData.buildMethod === 'buildpack'
+      );
     },
     // 示例镜像 placeholder
     mirrorExamplePlaceholder() {
-      return `${this.$t('请输入镜像仓库，如')}：${this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE}`;
+      return `${this.$t('请输入镜像仓库，如')}：${
+        this.GLOBAL.CONFIG.MIRROR_EXAMPLE === 'nginx' ? this.GLOBAL.CONFIG.MIRROR_EXAMPLE : TE_MIRROR_EXAMPLE
+      }`;
+    },
+    isDockerfile() {
+      return this.formData.buildMethod === 'dockerfile';
+    },
+    // 根目录
+    rootPath() {
+      const { auth_method } = this.curSourceControl || {};
+      const authPathMap = {
+        oauth: this.sourceDirVal,
+        basic: this.curRepoDir,
+      };
+      return authPathMap[auth_method] || '';
+    },
+    appendPath() {
+      return this.isDockerfile ? this.dockerfileData.dockerfilePath : '';
+    },
+    // 默认文件
+    defaultFiles() {
+      const languageFileMap = {
+        Python: 'requirements.txt',
+        NodeJS: 'package.json',
+        Go: 'go.mod',
+      };
+      const file = languageFileMap[this.language || 'Python'];
+      return [{ name: file }];
     },
   },
   watch: {
@@ -735,12 +839,18 @@ export default {
     structureType(value) {
       this.curStep = 1;
       if (value === 'mirror') {
-        this.sourceOrigin = this.GLOBAL.APP_TYPES.CNATIVE_IMAGE;   // 仅镜像的云原生
-        this.createSteps = [{ title: this.$t('镜像信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
+        this.sourceOrigin = this.GLOBAL.APP_TYPES.CNATIVE_IMAGE; // 仅镜像的云原生
+        this.createSteps = [
+          { title: this.$t('镜像信息'), icon: 1 },
+          { title: this.$t('部署配置'), icon: 2 },
+        ];
         this.getImageCredentialList(); // 获取镜像凭证
       } else if (value === 'soundCode') {
         this.sourceOrigin = this.GLOBAL.APP_TYPES.NORMAL_APP;
-        this.createSteps = [{ title: this.$t('源码信息'), icon: 1 }, { title: this.$t('部署配置'), icon: 2 }];
+        this.createSteps = [
+          { title: this.$t('源码信息'), icon: 1 },
+          { title: this.$t('部署配置'), icon: 2 },
+        ];
         this.handleCodeTypeChange(1);
       }
     },
@@ -761,10 +871,15 @@ export default {
     },
     'formData.name'(value) {
       if (Object.keys(this.createCloudAppData).length) {
-        this.localCloudAppData = _.cloneDeep(this.createCloudAppData);
+        this.localCloudAppData = cloneDeep(this.createCloudAppData);
         this.localCloudAppData.metadata.name = `${this.appCode}-m-${value}`;
 
         this.$store.commit('cloudApi/updateCloudAppData', this.localCloudAppData);
+      }
+    },
+    sourceDirVal(newVal) {
+      if (newVal === '') {
+        this.sourceDirError = false;
       }
     },
   },
@@ -787,18 +902,16 @@ export default {
         break;
     }
   },
-  mounted() {
-  },
   methods: {
     handleCodeTypeChange(payload) {
       this.localSourceOrigin = payload;
       if (payload === this.GLOBAL.APP_TYPES.NORMAL_APP) {
         this.sourceOrigin = payload;
-        this.curLanguages = _.cloneDeep(this.languages);
+        this.curLanguages = cloneDeep(this.languages);
         this.language = 'Python';
       } else {
         if (payload === 2) {
-          this.curLanguages = _.cloneDeep({
+          this.curLanguages = cloneDeep({
             NodeJS: [this.languages.NodeJS[0]],
           });
           this.language = 'NodeJS';
@@ -834,8 +947,8 @@ export default {
     },
 
     /**
-             * 获取代码库类型
-             */
+     * 获取代码库类型
+     */
     async getCodeTypes() {
       try {
         const res = await this.$store.dispatch('module/getCodeTypes');
@@ -865,7 +978,7 @@ export default {
         const res = await this.$store.dispatch('module/getLanguageInfo');
         this.allRegionsSpecs = res;
 
-        if (!_.has(this.allRegionsSpecs, this.region)) {
+        if (!has(this.allRegionsSpecs, this.region)) {
           this.$paasMessage({
             theme: 'error',
             message: this.$t('版本配置未找到，您没有创建模块权限。'),
@@ -873,7 +986,7 @@ export default {
           return;
         }
         this.languages = this.allRegionsSpecs[this.region].languages;
-        this.curLanguages = _.cloneDeep(this.languages);
+        this.curLanguages = cloneDeep(this.languages);
       } catch (res) {
         this.$paasMessage({
           theme: 'error',
@@ -883,16 +996,16 @@ export default {
     },
 
     /**
-             * 根据不同的 sourceControlType 生成对应的 fetchRepoList 方法
-             * @param {String} sourceControlType 代码库类型
-             */
+     * 根据不同的 sourceControlType 生成对应的 fetchRepoList 方法
+     * @param {String} sourceControlType 代码库类型
+     */
     generateFetchRepoListMethod(sourceControlType) {
       return async () => {
         const config = this.gitExtendConfig[sourceControlType];
         try {
           config.isLoading = true;
           const resp = await this.$store.dispatch('getRepoList', { sourceControlType });
-          config.repoList = resp.results.map(repo => ({ name: repo.fullname, id: repo.http_url_to_repo }));
+          config.repoList = resp.results.map((repo) => ({ name: repo.fullname, id: repo.http_url_to_repo }));
           config.isAuth = true;
         } catch (e) {
           const resp = e.response;
@@ -908,9 +1021,9 @@ export default {
     },
 
     /**
-             * 选择开发语言回调
-             * @param {String} language 开发语言
-             */
+     * 选择开发语言回调
+     * @param {String} language 开发语言
+     */
     changeLanguage(language) {
       const fromLanguage = this.language;
       this.language = language;
@@ -932,9 +1045,9 @@ export default {
     },
 
     /**
-             * 选择代码库回调
-             * @param {String} sourceControlType 代码库
-             */
+     * 选择代码库回调
+     * @param {String} sourceControlType 代码库
+     */
     changeSourceControl(item) {
       this.sourceControlType = item.value;
       this.sourceDirError = false;
@@ -972,17 +1085,7 @@ export default {
      * 创建应用模块
      */
     async createAppModule() {
-      // NORMAL_APP: 1,
-      //   LESSCODE_APP: 2,
-      //   SMART_APP: 3,
-      //   IMAGE: 4,
-      //   SCENE_APP: 5
-      //    //CNATIVE_IMAGE: 6
       let sourceRepoUrl = null;
-
-      if (this.sourceDirError) {
-        return;
-      }
 
       // 启动命令校验
       if (this.createCloudAppData.spec?.hooks) {
@@ -1038,7 +1141,7 @@ export default {
       };
 
       // dockerfile 构建方式
-      if (this.formData.buildMethod === 'dockerfile') {
+      if (this.isDockerfile) {
         // 构建参数
         const dockerBuild = {};
         this.dockerfileData.buildParams.forEach((item) => {
@@ -1078,7 +1181,10 @@ export default {
         }
       }
 
-      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && ['bare_git', 'bare_svn'].includes(this.sourceControlType)) {
+      if (
+        this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP &&
+        ['bare_git', 'bare_svn'].includes(this.sourceControlType)
+      ) {
         params.source_config.source_repo_url = this.repoData.url;
         params.source_config.source_repo_auth_info = {
           username: this.repoData.account,
@@ -1091,7 +1197,8 @@ export default {
         delete params.source_config.source_repo_url;
       }
 
-      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE) {  // 仅镜像
+      if (this.sourceOrigin === this.GLOBAL.APP_TYPES.CNATIVE_IMAGE) {
+        // 仅镜像
         params.source_config = {
           source_repo_url: this.mirrorData.url,
           source_origin: this.sourceOrigin,
@@ -1099,14 +1206,6 @@ export default {
         // params.manifest = { ...this.createCloudAppData };
       }
 
-      // // 空值端口过滤
-      // if (params.manifest?.spec && params.manifest.spec?.processes) {
-      //   params.manifest.spec?.processes?.forEach((process) => {
-      //     if (process.targetPort === '' || process.targetPort === null) {
-      //       delete process.targetPort;
-      //     }
-      //   });
-      // }
       try {
         this.formLoading = true;
 
@@ -1139,13 +1238,20 @@ export default {
 
     // 下一步按钮
     async handleNext() {
-      await this.$refs.formDataRef.validate();    // 基本信息检验
-      if (this.structureType === 'mirror') {      // 仅镜像
+      await this.$refs.formDataRef.validate(); // 基本信息检验
+      // 构建目录
+      if (this.sourceDirError) {
+        return;
+      }
+      if (this.isDockerfile) {
+        await this.$refs.dockerfileRef.validate();
+      }
+      if (this.structureType === 'mirror') {
+        // 仅镜像
         await this.$refs.validate2?.validate();
-        // 初始化
-        // this.initCloudAppDataFunc();
-      } else {      // 源码&镜像
-        await this.$refs?.extend?.valid();    // 代码仓库检验
+      } else {
+        // 源码&镜像
+        await this.$refs?.extend?.valid(); // 代码仓库检验
         // 构建参数校验
         const flag = await this.buildParamsValidate();
         if (!flag) {
@@ -1182,7 +1288,7 @@ export default {
         metadata: { name: `${this.appCode}-m-${this.formData.name}` },
         spec: {
           build: {
-            image: this.mirrorData.url,  // 镜像信息-镜像仓库
+            image: this.mirrorData.url, // 镜像信息-镜像仓库
             imageCredentialsName: this.imageCredentialsData.name, // 镜像信息-镜像凭证-名称
           },
           processes: [
@@ -1198,7 +1304,7 @@ export default {
           ],
         },
       };
-      this.localCloudAppData = _.cloneDeep(this.initCloudAppData);
+      this.localCloudAppData = cloneDeep(this.initCloudAppData);
       this.$store.commit('cloudApi/updateCloudAppData', this.initCloudAppData);
     },
 
@@ -1208,7 +1314,7 @@ export default {
         this.$router.go(-1);
       } else {
         this.$refs?.processRef?.handleCancel();
-        this.cloudAppData = _.cloneDeep(this.localCloudAppData);
+        this.cloudAppData = cloneDeep(this.localCloudAppData);
         this.$store.commit('cloudApi/updateHookPageEdit', false);
         this.$store.commit('cloudApi/updateProcessPageEdit', false);
         // 返回模块配置
@@ -1253,10 +1359,9 @@ export default {
       }
       for (const index in this.dockerfileData.buildParams) {
         try {
-          await this.$refs[`name-${index}`][0]?.validate()
-            .finally(async () => {
-              await this.$refs[`value-${index}`][0]?.validate();
-            });
+          await this.$refs[`name-${index}`][0]?.validate().finally(async () => {
+            await this.$refs[`value-${index}`][0]?.validate();
+          });
         } catch (error) {
           flag = false;
         }
@@ -1284,19 +1389,22 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-@import "./index.scss";
-.created-module-container{
-  background: #F5F7FA;
+@import './index.scss';
+.created-module-container {
+  background: #f5f7fa;
   .form-actions {
     button:first-child {
       margin-left: 0;
     }
   }
+  .form-dockerfile-cls {
+    transform: translateX(-19px);
+  }
 }
 .item-cls {
   /deep/ .bk-form-control .group-text {
     color: #3a84ff !important;
-    background: #FAFBFD;
+    background: #fafbfd;
     line-height: 30px;
     cursor: pointer;
   }
@@ -1316,12 +1424,12 @@ export default {
     padding-right: 18px;
   }
 }
-.dockerfile-cls{
+.dockerfile-cls {
   transform: translateX(-15px);
   .form-label {
     width: 105px;
   }
-  &.repo-dockerfile label{
+  &.repo-dockerfile label {
     transform: translateX(-6px);
   }
 }
@@ -1339,9 +1447,9 @@ export default {
 </style>
 <style lang="scss">
 .module-item-cls {
-  .bk-form-content{
-    .form-error-tip{
-        margin: 5px 0 0 100px;
+  .bk-form-content {
+    .form-error-tip {
+      margin: 5px 0 0 100px;
     }
   }
 }

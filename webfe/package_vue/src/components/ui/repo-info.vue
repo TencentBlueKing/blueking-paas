@@ -118,7 +118,7 @@
           ref="sourceDir"
           class="form-input-width"
           v-model="info.sourceDir"
-          :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')"
+          :placeholder="$t('请输入应用所在子目录，不填则默认为根目录')"
         />
         <p v-else>
           {{ info.sourceDir }}
@@ -268,6 +268,9 @@ export default {
           sourceDir: this.defaultDir,
         };
       }
+    },
+    'info.sourceDir'(newVal) {
+      this.$emit('dir-change', newVal);
     },
   },
   methods: {

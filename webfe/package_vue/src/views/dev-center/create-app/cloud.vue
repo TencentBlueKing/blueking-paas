@@ -357,14 +357,11 @@
               :label-width="100"
               class="from-content mt20"
             >
-              <div class="form-item-title mb10">
-                {{ $t('源码管理') }}
-              </div>
+              <div class="form-item-title mb10">{{ $t('源码管理') }}</div>
 
               <bk-form-item
                 :required="true"
                 :label="$t('代码源')"
-                :rules="rules.name"
                 error-display-type="normal"
                 ext-cls="form-item-cls mt20"
               >
@@ -402,6 +399,7 @@
 
                 <bk-form-item
                   :label="$t('构建目录')"
+                  :property="'buildDir'"
                   error-display-type="normal"
                   ext-cls="form-item-cls mt20"
                 >
@@ -409,7 +407,7 @@
                     <bk-input
                       v-model="formData.buildDir"
                       class="form-input-width"
-                      :placeholder="$t('请输入应用所在子目录，并确保 app_desc.yaml 文件在该目录下，不填则默认为根目录')"
+                      :placeholder="$t('请输入应用所在子目录，不填则默认为根目录')"
                     />
                   </div>
                 </bk-form-item>
@@ -426,26 +424,41 @@
                   :default-account="repoData.account"
                   :default-password="repoData.password"
                   :default-dir="repoData.sourceDir"
+                  @dir-change="($event) => (curRepoDir = $event)"
                 />
               </section>
 
               <!-- Dockerfile 构建 -->
-              <template v-if="formData.buildMethod === 'dockerfile'">
-                <bk-form-item
-                  :label="$t('Dockerfile 路径')"
-                  :property="'dockerfile_path'"
-                  error-display-type="normal"
-                  ext-cls="form-dockerfile-cls mt20"
-                >
-                  <div class="flex-row align-items-center code-depot">
-                    <bk-input
-                      v-model="dockerfileData.dockerfilePath"
-                      class="form-input-width"
-                      :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
-                    />
-                  </div>
-                </bk-form-item>
+              <bk-form-item
+                v-if="isDockerfile"
+                :label="$t('Dockerfile 路径')"
+                :rules="absolutePathRule"
+                :property="'dockerfilePath'"
+                error-display-type="normal"
+                ext-cls="form-dockerfile-cls mt20"
+              >
+                <div class="flex-row align-items-center code-depot">
+                  <bk-input
+                    v-model="formData.dockerfilePath"
+                    class="form-input-width"
+                    :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
+                  />
+                </div>
+              </bk-form-item>
 
+              <!-- 用户输入 构建目录 + Dockerfile 路径文件示例目录 -->
+              <ExamplesDirectory
+                style="margin-left: 100px"
+                :root-path="rootPath"
+                :append-path="appendPath"
+                :default-files="defaultFiles"
+                :is-dockerfile="isDockerfile"
+                :show-root="false"
+                :type="'string'"
+              />
+
+              <!-- 构建参数 -->
+              <template v-if="isDockerfile">
                 <bk-form
                   :model="dockerfileData"
                   form-type="vertical"
@@ -524,7 +537,6 @@
 
           <bk-form
             v-if="isShowAdvancedOptions"
-            ref="formSourceRef"
             :model="formData"
             :rules="rules"
             :label-width="100"
@@ -567,7 +579,7 @@
           >
             <bk-alert type="info">
               <div slot="title">
-                {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+                {{ $t('进程配置、钩子命令在 app_desc.yaml 文件中定义。') }}
                 <a
                   target="_blank"
                   :href="GLOBAL.DOC.APP_DESC_DOC"
@@ -683,11 +695,13 @@ import repoInfo from '@/components/ui/repo-info.vue';
 import collapseContent from '@/views/dev-center/app/create-cloud-module/comps/collapse-content.vue';
 import deployProcess from '@/views/dev-center/app/engine/cloud-deployment/deploy-process';
 import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-hook';
-import { TAG_MAP, TE_MIRROR_EXAMPLE } from '@/common/constants.js';
+import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import defaultAppType from './default-app-type';
 import createSmartApp from './smart';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import { mapGetters } from 'vuex';
+import ExamplesDirectory from '@/components/examples-directory';
+
 export default {
   components: {
     gitExtend,
@@ -697,6 +711,7 @@ export default {
     deployHook,
     defaultAppType,
     createSmartApp,
+    ExamplesDirectory,
   },
   mixins: [sidebarDiffMixin],
   data() {
@@ -715,9 +730,9 @@ export default {
         imageCredentialUserName: '', // 镜像账号
         imageCredentialPassWord: '', // 镜像密码
         buildMethod: 'buildpack', // 构建方式
+        dockerfilePath: '', // Dockerfile 路径
       },
       dockerfileData: {
-        dockerfilePath: '', // Dockerfile 路径
         buildParams: [], // 构建参数
       },
       sourceOrigin: this.GLOBAL.APP_TYPES.NORMAL_APP,
@@ -843,11 +858,6 @@ export default {
         ],
         buildDir: [
           {
-            required: true,
-            message: this.$t('该字段是必填项'),
-            trigger: 'blur',
-          },
-          {
             validator(val) {
               const reg = /^((?!\.)[a-zA-Z0-9_./-]+|\s*)$/;
               return reg.test(val);
@@ -894,12 +904,20 @@ export default {
           },
         ],
       },
+      absolutePathRule: [
+        {
+          regex: /^(?!.*(^|\/|\\|)\.{1,2}($|\/|\\|)).*$/,
+          message: this.$t('不支持填写相对路径'),
+          trigger: 'blur',
+        },
+      ],
       curCodeSource: 'default',
       activeIndex: 1,
       isShowAdvancedOptions: false,
       pluginTmpls: [],
       curPluginTemplate: '',
       codeSourceId: 'default',
+      curRepoDir: '',
     };
   },
   computed: {
@@ -952,6 +970,40 @@ export default {
     },
     isNextStepAllowed() {
       return this.codeSourceId === 'default' && !this.curExtendConfig?.isAuth;
+    },
+    isDockerfile() {
+      return this.formData.buildMethod === 'dockerfile';
+    },
+    // 根目录
+    rootPath() {
+      const { auth_method } = this.curSourceControl || {};
+      const authPathMap = {
+        oauth: this.formData.buildDir,
+        basic: this.curRepoDir,
+      };
+      return authPathMap[auth_method] || '';
+    },
+    appendPath() {
+      return this.isDockerfile ? this.formData.dockerfilePath || '' : '';
+    },
+    // 默认文件
+    defaultFiles() {
+      // 语言对应文件映射表
+      const languageFileMap = {
+        Python: 'requirements.txt',
+        NodeJS: 'package.json',
+        Go: 'go.mod',
+      };
+      // Dockerfile 构建方式直接返回固定文件
+      if (this.isDockerfile) {
+        return [{ name: 'requirements.txt' }];
+      }
+      // 获取当前语言类型
+      const currentLanguage = this.isBkPlugin
+        ? this.pluginTmpls.find((v) => v.name === this.curPluginTemplate)?.language
+        : this.buttonActive || 'Python';
+
+      return [{ name: languageFileMap[currentLanguage] }];
     },
   },
   watch: {
@@ -1201,6 +1253,7 @@ export default {
       try {
         await this.$refs.formBaseRef.validate();
         await this.$refs?.formImageRef?.validate();
+        await this.$refs?.formSourceRef?.validate();
         await this.$refs?.repoInfo?.valid();
         // 构建参数校验
         const flag = await this.buildParamsValidate();
@@ -1311,12 +1364,9 @@ export default {
         this.dockerfileData.buildParams.forEach((item) => {
           dockerBuild[item.name] = item.value;
         });
-        if (this.dockerfileData.dockerfilePath === '') {
-          this.dockerfileData.dockerfilePath = null;
-        }
         params.bkapp_spec.build_config = {
           build_method: 'dockerfile',
-          dockerfile_path: this.dockerfileData.dockerfilePath,
+          dockerfile_path: this.formData.dockerfilePath || null,
           docker_build_args: dockerBuild,
         };
         delete params.source_config.source_init_template;

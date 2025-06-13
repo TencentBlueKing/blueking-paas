@@ -19,6 +19,7 @@ import logging
 from collections import Counter
 
 from django.shortcuts import get_object_or_404
+from django.utils.translation import get_language
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
@@ -189,7 +190,13 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
 
         slz = slzs.ApplicationNameUpdateInputSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
-        application = slz.save()
+        data = slz.validated_data
+        # 仅修改对应语言的应用名称, 如果前端允许同时填写中英文的应用名称, 则可以去掉该逻辑.
+        if get_language() == "zh-cn":
+            application.name = data["name_zh_cn"]
+        elif get_language() == "en":
+            application.name_en = data["name_en"]
+        application.save(update_fields=["name", "name_en"])
 
         Product.objects.filter(code=app_code).update(name_zh_cn=application.name, name_en=application.name_en)
 

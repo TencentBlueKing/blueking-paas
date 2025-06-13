@@ -93,9 +93,9 @@ class TestBaseMigration(BaseMigrationTest):
         migration.set_log("test-set-log")
         new_migration_info = migration.get_info()
         assert old_migration_info != new_migration_info, "set_log 未修改 migration info"
-        assert context.migration_process.ongoing_migration == new_migration_info, (
-            "set_log 未持久化 migration info 到 migration_process"
-        )
+        assert (
+            context.migration_process.ongoing_migration == new_migration_info
+        ), "set_log 未持久化 migration info 到 migration_process"
 
     def test_update_ongoing(self, migration, context):
         # clear context.migration_process.ongoing_migration
@@ -180,9 +180,9 @@ class TestMainInfoMigration(BaseMigrationTest):
         with global_mock(context):
             migration.migrate()
 
-        assert app.envs.count() == len(ModuleInitializer.default_environments), (
-            f"app 默认提供的运行环境数量不为 {len(ModuleInitializer.default_environments)}"
-        )
+        assert app.envs.count() == len(
+            ModuleInitializer.default_environments
+        ), f"app 默认提供的运行环境数量不为 {len(ModuleInitializer.default_environments)}"
         assert app.modules.count() == 1, "迁移应用的模块数量不为 1"
         # TODO: 逐个判断 ADMINISTRATOR, DEVELOPER, OPERATOR 的人员
         assert len(fetch_application_members(app.code)) != 0, "绑定迁移应用的人员名单失败"
@@ -214,9 +214,9 @@ class TestSourceControlMigration(BaseMigrationTest):
         self.test_migrate(migration, context)
         assert context.app, "context 未绑定 app"
         migration.rollback()
-        assert SvnRepository.objects.filter(pk=context.app.default_module.source_repo_id).count() == 0, (
-            "模块绑定的源码仓库对象未移除"
-        )
+        assert (
+            SvnRepository.objects.filter(pk=context.app.default_module.source_repo_id).count() == 0
+        ), "模块绑定的源码仓库对象未移除"
 
 
 class TestProductMigration(BaseMigrationTest):
@@ -230,9 +230,9 @@ class TestProductMigration(BaseMigrationTest):
         assert product.introduction == context.legacy_app.introduction, "同步 product 的介绍信息错误"
         # 没有设置 桌面 db，则无法同步 tag信息
         if not getattr(settings, "BK_CONSOLE_DBCONF", None):
-            assert product.tag is None
+            assert product.get_tag() is None
         else:
-            assert product.tag.tagmap.remote_id == context.legacy_app.tags_id, "绑定 桌面tag 失败"
+            assert product.get_tag().tagmap.remote_id == context.legacy_app.tags_id, "绑定 桌面tag 失败"
         display_options = DisplayOptions.objects.get(product=product)
         assert display_options.contact is None, "# 写该单元测试时, 未同步contact"
 

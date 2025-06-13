@@ -109,3 +109,8 @@ class LightApplicationViewSetErrorCode(StrStructuredEnum):
     ESB_NOT_VALID = "1301103"
     APP_NOT_EXIST = "1301104"
     NO_PERMISSION = "1301105"
+
+
+class AvailabilityLevel(StrStructuredEnum):
+    STANDARD = EnumField("standard", label="基础")
+    PREMIUM = EnumField("premium", label="高级别")

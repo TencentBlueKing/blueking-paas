@@ -20,7 +20,7 @@ import logging
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
-from paasng.accessories.publish.market.models import DisplayOptions, Product, Tag
+from paasng.accessories.publish.market.models import ApplicationExtraInfo, DisplayOptions, Product, Tag
 from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
 from paasng.accessories.publish.sync_market.models import TagMap
 from paasng.platform.mgrlegacy.app_migrations.base import BaseMigration
@@ -59,6 +59,12 @@ class ProductMigration(BaseMigration):
         product = Product.objects.create(**kwargs)
         product.created = self.legacy_app.created_date
         product.save(update_fields=["created"])
+
+        ApplicationExtraInfo.objects.create(
+            application=app,
+            tenant_id=app.tenant_id,
+            tag=tag,
+        )
 
         DisplayOptions.objects.create(
             product=product,

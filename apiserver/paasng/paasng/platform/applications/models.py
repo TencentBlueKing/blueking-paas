@@ -52,10 +52,8 @@ from paasng.utils.models import (
 
 logger = logging.getLogger(__name__)
 
-
 if TYPE_CHECKING:
     from paasng.platform.sourcectl.models import RepositoryInstance
-
 
 LOGO_SIZE = (144, 144)
 

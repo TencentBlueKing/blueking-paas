@@ -31,7 +31,7 @@ from paas_wl.bk_app.processes.controllers import get_proc_ctl
 from paas_wl.bk_app.processes.models import ProcessSpec, ProcessSpecPlan
 from paas_wl.bk_app.processes.readers import instance_kmodel
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.platform.applications.models import ModuleEnvironment
 
@@ -75,14 +75,14 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.PROCESS_SPEC_PLAN,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.validated_data),
+            data_after=DataDetail(data=slz.validated_data),
         )
         return Response(slz.validated_data, status=status.HTTP_201_CREATED)
 
     def edit(self, request, **kwargs):
         """更新已有 ProcessSpecPlan"""
         plan = get_object_or_404(ProcessSpecPlan, pk=self.kwargs["id"])
-        data_before = DataDetail(type=DataType.RAW_DATA, data=ProcessSpecPlanSLZ(plan).data)
+        data_before = DataDetail(data=ProcessSpecPlanSLZ(plan).data)
 
         slz = ProcessSpecPlanSLZ(data=request.data, instance=plan)
         slz.is_valid(raise_exception=True)
@@ -93,7 +93,7 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
             operation=OperationEnum.MODIFY,
             target=OperationTarget.PROCESS_SPEC_PLAN,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=ProcessSpecPlanSLZ(plan).data),
+            data_after=DataDetail(data=ProcessSpecPlanSLZ(plan).data),
         )
         return Response(slz.validated_data, status=status.HTTP_200_OK)
 
@@ -152,8 +152,8 @@ class ProcessSpecManageViewSet(GenericViewSet):
             operation=OperationEnum.MODIFY_PLAN,
             target=OperationTarget.PROCESS,
             attribute=f"{wl_app.name}:{process_type}",
-            data_before=DataDetail(type=DataType.RAW_DATA, data={"plan": cur_plan_name}),
-            data_after=DataDetail(type=DataType.RAW_DATA, data={"plan": plan.name}),
+            data_before=DataDetail(data={"plan": cur_plan_name}),
+            data_after=DataDetail(data={"plan": plan.name}),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -164,7 +164,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
         ctl = get_proc_ctl(get_env_by_wl_app(wl_app))
 
         if process_spec.target_replicas != int(data["target_replicas"]):
-            data_before = DataDetail(type=DataType.RAW_DATA, data={"replicas": process_spec.target_replicas})
+            data_before = DataDetail(data={"replicas": process_spec.target_replicas})
             ctl.scale(process_spec.name, target_replicas=int(data["target_replicas"]))
             add_admin_audit_record(
                 user=request.user.pk,
@@ -172,7 +172,7 @@ class ProcessSpecManageViewSet(GenericViewSet):
                 target=OperationTarget.PROCESS,
                 attribute=wl_app.name,
                 data_before=data_before,
-                data_after=DataDetail(type=DataType.RAW_DATA, data={"replicas": data["target_replicas"]}),
+                data_after=DataDetail(data={"replicas": data["target_replicas"]}),
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)

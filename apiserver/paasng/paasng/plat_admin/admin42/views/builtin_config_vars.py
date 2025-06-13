@@ -24,7 +24,7 @@ from rest_framework.response import Response
 from paasng.core.region.models import get_all_regions
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.config_vars import (
     BuiltinConfigVarCreateInputSLZ,
@@ -77,7 +77,6 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
             target=OperationTarget.ENV_VAR,
             attribute=data["key"],
             data_after=DataDetail(
-                type=DataType.RAW_DATA,
                 data={"key": data["key"], "value": data["value"], "description": data["description"]},
             ),
         )
@@ -90,7 +89,6 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
 
         config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data={"key": config_var.key, "value": config_var.value, "description": config_var.description},
         )
 
@@ -106,7 +104,6 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
             attribute=config_var.key,
             data_before=data_before,
             data_after=DataDetail(
-                type=DataType.RAW_DATA,
                 data={"key": config_var.key, "value": data["value"], "description": data["description"]},
             ),
         )
@@ -123,7 +120,6 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
             target=OperationTarget.ENV_VAR,
             attribute=config_var.key,
             data_before=DataDetail(
-                type=DataType.RAW_DATA,
                 data={"key": config_var.key, "value": config_var.value, "description": config_var.description},
             ),
         )

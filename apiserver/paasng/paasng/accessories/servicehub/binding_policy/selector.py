@@ -13,16 +13,24 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import logging
 from enum import StrEnum
 from typing import Dict, List
 
+from paasng.accessories.servicehub.constants import ServiceAllocationPolicyType
 from paasng.accessories.servicehub.exceptions import MultiplePlanFoundError, NoPlanFoundError, PlanSelectorError
-from paasng.accessories.servicehub.models import ServiceBindingPolicy, ServiceBindingPrecedencePolicy
+from paasng.accessories.servicehub.models import (
+    ServiceAllocationPolicy,
+    ServiceBindingPolicy,
+    ServiceBindingPrecedencePolicy,
+)
 from paasng.accessories.servicehub.services import PlanObj, ServiceObj
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models.module import Module
 
 from .policy import binding_policy_factory, precedence_policy_factory
+
+logger = logging.getLogger(__name__)
 
 
 def get_plan_by_env(
@@ -93,10 +101,19 @@ class PlanSelector:
 
     def list(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
         """List the plans based on the service and the application"""
-        precedence_plans = self._list_precedence(service, env)
-        if precedence_plans is not None:
-            return precedence_plans
+        alloc_type = ServiceAllocationPolicy.objects.get_type(service, env.tenant_id)
+        if alloc_type == ServiceAllocationPolicyType.RULE_BASED.value:
+            return self._list_rule_based_policies(service, env)
+        elif alloc_type == ServiceAllocationPolicyType.UNIFORM.value:
+            return self._get_uniform_policy(service, env)
 
+        raise ValueError("Unsupported ServiceAllocationPolicy type: %s" % alloc_type)
+
+    def _get_uniform_policy(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
+        """get the plans based on the ServiceBindingPolicy.
+
+        :return: A list plans based on the ServiceBindingPolicy.
+        """
         # Get plans based on the binding policy
         try:
             policy = ServiceBindingPolicy.objects.get(service_id=service.uuid, tenant_id=env.tenant_id)
@@ -106,11 +123,11 @@ class PlanSelector:
         policy_obj = binding_policy_factory(policy.type, policy.data)
         return self.plan_ids_to_objs(service, policy_obj.get_plan_ids(env))
 
-    def _list_precedence(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj] | None:
-        """List the plans based on the precedence policies.
+    def _list_rule_based_policies(self, service: ServiceObj, env: ModuleEnvironment) -> List[PlanObj]:
+        """List the plans based on the ServiceBindingPrecedencePolicy.
 
-        :return: A list plans based on the precedence policies. `None` means no precedence
-            policies are evaluated.
+        :return: A list plans based on the ServiceBindingPrecedencePolicy.
+        :raise ValueError: If no precedence policy matches the env object.
         """
         precedence_policies = ServiceBindingPrecedencePolicy.objects.filter(
             service_id=service.uuid, tenant_id=env.tenant_id
@@ -125,7 +142,7 @@ class PlanSelector:
             if not policy_obj.match(env):
                 continue
             return self.plan_ids_to_objs(service, policy_obj.get_plan_ids(env))
-        return None
+        raise ValueError("Can not match any plans")
 
     @staticmethod
     def plan_ids_to_objs(service: ServiceObj, plan_ids: List[str]) -> List[PlanObj]:

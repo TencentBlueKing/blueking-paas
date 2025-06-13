@@ -38,7 +38,7 @@ from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paas_wl.core.resource import generate_bkapp_name
-from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
@@ -106,7 +106,7 @@ def local_service(bk_app):
     service = G(Service, name="mysql", category=G(ServiceCategory), logo_b64="dummy")
     _ = G(Plan, name=generate_random_string(), service=service)
     svc_obj = mixed_service_mgr.get(service.uuid)
-    ServiceBindingPolicyManager(svc_obj, DEFAULT_TENANT_ID).set_static([svc_obj.get_plans()[0]])
+    SvcBindingPolicyManager(svc_obj, DEFAULT_TENANT_ID).set_uniform(plans=[svc_obj.get_plans()[0].uuid])
     return svc_obj
 
 

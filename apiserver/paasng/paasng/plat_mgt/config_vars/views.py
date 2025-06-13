@@ -23,8 +23,8 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 
 from .serializers import (
@@ -67,13 +67,12 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
             operator=request.user,
         )
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.ENV_VAR,
             attribute=data["key"],
             data_after=DataDetail(
-                type=DataType.RAW_DATA,
                 data={"key": data["key"], "value": data["value"], "description": data["description"]},
             ),
         )
@@ -82,7 +81,7 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.builtin_config_vars"],
         operation_description="更新内建环境变量",
-        responses={status.HTTP_204_NO_CONTENT: BuiltinConfigVarUpdateInputSLZ()},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, pk):
         """更新内建环境变量"""
@@ -92,7 +91,6 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
 
         config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data={"key": config_var.key, "value": config_var.value, "description": config_var.description},
         )
 
@@ -101,14 +99,13 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
         config_var.operator = request.user
         config_var.save(update_fields=["value", "description", "operator", "updated"])
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ENV_VAR,
             attribute=config_var.key,
             data_before=data_before,
             data_after=DataDetail(
-                type=DataType.RAW_DATA,
                 data={"key": config_var.key, "value": data["value"], "description": data["description"]},
             ),
         )
@@ -118,20 +115,19 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.builtin_config_vars"],
         operation_description="删除内建环境变量",
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, pk):
         """删除内建环境变量"""
         config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
         config_var.delete()
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.ENV_VAR,
             attribute=config_var.key,
             data_before=DataDetail(
-                type=DataType.RAW_DATA,
                 data={"key": config_var.key, "value": config_var.value, "description": config_var.description},
             ),
         )

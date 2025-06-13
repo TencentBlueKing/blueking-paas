@@ -31,7 +31,7 @@ from paas_wl.workloads.networking.egress.models import RCStateAppBinding, Region
 from paas_wl.workloads.networking.egress.serializers import RCStateAppBindingSLZ
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.constants import AppFeatureFlag
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -91,7 +91,7 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
             target=OperationTarget.EXIT_IP,
             module_name=module_name,
             environment=environment,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=serializer.data),
+            data_after=DataDetail(data=serializer.data),
         )
         return Response({"name": "default", "rcs_binding_data": serializer.data}, status=status.HTTP_201_CREATED)
 
@@ -102,7 +102,7 @@ class EgressGatewayInfosViewSet(ApplicationCodeInPathMixin, GenericViewSet):
             binding = RCStateAppBinding.objects.get(app=wl_app)
         except RCStateAppBinding.DoesNotExist:
             raise error_codes.ERROR_RECYCLING_EGRESS_GATEWAY_INFO.f("未获取过网关信息")
-        data_before = DataDetail(type=DataType.RAW_DATA, data=RCStateAppBindingSLZ(binding).data)
+        data_before = DataDetail(data=RCStateAppBindingSLZ(binding).data)
         binding.delete()
 
         add_app_audit_record(

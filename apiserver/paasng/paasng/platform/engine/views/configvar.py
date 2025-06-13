@@ -27,7 +27,7 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -81,9 +81,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"], responses={201: ""})
     def create(self, request, *args, **kwargs):
         """创建环境变量"""
-        data_before = DataDetail(
-            type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
-        )
+        data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
         slz = self.get_serializer(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -100,9 +98,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             module_name=self.get_module_via_path().name,
             environment=request.data["environment_name"],
             data_before=data_before,
-            data_after=DataDetail(
-                type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
-            ),
+            data_after=DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)),
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
@@ -110,9 +106,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     def update(self, request, *args, **kwargs):
         """更新环境变量"""
         config_var = self.get_object()
-        data_before = DataDetail(
-            type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
-        )
+        data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
         slz = self.get_serializer(config_var, data=request.data)
         slz.is_valid(raise_exception=True)
@@ -129,9 +123,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             module_name=config_var.module.name,
             environment=request.data["environment_name"],
             data_before=data_before,
-            data_after=DataDetail(
-                type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
-            ),
+            data_after=DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)),
         )
 
         return Response(slz.data)
@@ -140,9 +132,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     def destroy(self, request, *args, **kwargs):
         """删除环境变量"""
         config_var = self.get_object()
-        data_before = DataDetail(
-            type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
-        )
+        data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
         config_var.delete()
 
         env = ENVIRONMENT_NAME_FOR_GLOBAL
@@ -159,9 +149,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             module_name=config_var.module.name,
             environment=env,
             data_before=data_before,
-            data_after=DataDetail(
-                type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
-            ),
+            data_after=DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -214,9 +202,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(tags=["环境配置"], responses={201: ConfigVarApplyResultSLZ()})
     def clone(self, request, **kwargs):
         """从某一模块克隆环境变量至当前模块"""
-        data_before = DataDetail(
-            type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
-        )
+        data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
         application = self.get_application()
         source = application.get_module(module_name=self.kwargs["source_module_name"])
@@ -235,9 +221,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.ENV_VAR,
             module_name=self.kwargs["source_module_name"],
             data_before=data_before,
-            data_after=DataDetail(
-                type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
-            ),
+            data_after=DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)),
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
@@ -248,9 +232,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     )
     def batch(self, request, **kwargs):
         """批量保存环境变量"""
-        data_before = DataDetail(
-            type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
-        )
+        data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
         module = self.get_module_via_path()
         slz = ConfigVarFormatWithIdSLZ(data=request.data, context={"module": module}, many=True)
@@ -270,9 +252,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.ENV_VAR,
             module_name=module.name,
             data_before=data_before,
-            data_after=DataDetail(
-                type=DataType.RAW_DATA, data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)
-            ),
+            data_after=DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)),
         )
         return Response(res.data, status=status.HTTP_201_CREATED)
 

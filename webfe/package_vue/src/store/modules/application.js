@@ -93,6 +93,14 @@ const actions = {
     const url = `${BACKEND_URL}/api/monitor/applications/${appCode}/builtin_dashboards/`;
     return http.get(url);
   },
+
+  /**
+   * 获取应用模板信息
+   */
+  getAppTemplateInfo({}, { appCode, moduleId }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/template/`;
+    return http.get(url);
+  },
 };
 
 export default {

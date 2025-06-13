@@ -89,7 +89,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications.members"],
         request_body=slzs.ApplicationMembershipUpdateInputSLZ(),
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, app_code, user_id):
         """更新成员"""
@@ -113,7 +113,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications.members"],
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, app_code, user_id):
         """删除成员"""

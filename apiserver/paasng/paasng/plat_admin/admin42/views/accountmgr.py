@@ -30,7 +30,7 @@ from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.accountmgr import (
     PROVIDER_TYPE_CHCOISE,
@@ -96,7 +96,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             user=self.request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.PLAT_USER,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=list(results)),
+            data_after=DataDetail(data=list(results)),
         )
         return Response(results)
 
@@ -112,7 +112,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
 
         user_id = data["user"]
         profile = UserProfile.objects.get(user=user_id)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data)
+        data_before = DataDetail(data=UserProfileSLZ(profile).data)
         profile.role = data["role"]
         profile.save()
 
@@ -122,7 +122,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.PLAT_USER,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data),
+            data_after=DataDetail(data=UserProfileSLZ(profile).data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -130,8 +130,7 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
         provider_type = int(request.query_params["provider_type"])
         user_id = user_id_encoder.encode(ProviderType(provider_type).value, request.query_params["username"])
         profile = UserProfile.objects.get(user=user_id)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data)
-        # profile.role = SiteRole.NOBODY.value
+        data_before = DataDetail(data=UserProfileSLZ(profile).data)
         profile.role = SiteRole.BANNED_USER.value
         profile.save()
 
@@ -140,6 +139,6 @@ class UserProfilesManageViewSet(viewsets.GenericViewSet):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.PLAT_USER,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=UserProfileSLZ(profile).data),
+            data_after=DataDetail(data=UserProfileSLZ(profile).data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

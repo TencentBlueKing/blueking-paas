@@ -28,8 +28,8 @@ from paasng.accessories.servicehub.remote.exceptions import UnsupportedOperation
 from paasng.accessories.servicehub.services import NOTSET, PlanObj, ServiceObj
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.infras.services.serializers import (
     BasePlanObjSLZ,
     PlanUpsertInputSLZ,
@@ -100,12 +100,12 @@ class PlanViewSet(viewsets.GenericViewSet):
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.ADDON_PLAN,
             attribute=f"{service.name} - {data['name']}",
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+            data_after=DataDetail(data=data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -116,14 +116,14 @@ class PlanViewSet(viewsets.GenericViewSet):
     )
     def destroy(self, request, service_id, tenant_id, plan_id, *args, **kwargs):
         service, plan = self.get_service_and_plan(service_id, plan_id, tenant_id)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=BasePlanObjSLZ(plan).data)
+        data_before = DataDetail(data=BasePlanObjSLZ(plan).data)
 
         try:
             mixed_plan_mgr.delete(service, plan_id)
         except UnsupportedOperationError as e:
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.ADDON_PLAN,
@@ -145,7 +145,7 @@ class PlanViewSet(viewsets.GenericViewSet):
         data["tenant_id"] = tenant_id
 
         service, plan = self.get_service_and_plan(service_id, plan_id, tenant_id)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=BasePlanObjSLZ(plan).data)
+        data_before = DataDetail(data=BasePlanObjSLZ(plan).data)
 
         try:
             mixed_plan_mgr.update(service, plan_id=plan_id, plan_data=data)
@@ -153,13 +153,13 @@ class PlanViewSet(viewsets.GenericViewSet):
             raise error_codes.FEATURE_FLAG_DISABLED.f(str(e))
 
         service, plan = self.get_service_and_plan(service_id, plan_id, tenant_id)
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ADDON_PLAN,
             attribute=f"{service.name}" + (f" - {plan.name}" if plan else ""),
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=BasePlanObjSLZ(plan).data),
+            data_after=DataDetail(data=BasePlanObjSLZ(plan).data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

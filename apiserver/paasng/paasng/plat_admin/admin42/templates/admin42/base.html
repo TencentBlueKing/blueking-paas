@@ -225,7 +225,7 @@
                 <li><a href="{% url 'admin.platform.index' %}">平台管理</a></li>
                 {% endif %}
                 {% if perm.manage_app_templates %}
-                <li><a href="{% url 'admin.configuration.tmpl.manage' %}">应用配置管理</a></li>
+                <li><a href="{% url 'admin.configuration.bk_plugins.tags.manage' %}">应用配置管理</a></li>
                 {% endif %}
                 {% if perm.operate_platform %}
                     {% url 'admin.operation.index' as operation_index %}

@@ -15,51 +15,47 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf import settings
 from django.shortcuts import get_object_or_404
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.core.region.models import get_all_regions
-from paasng.infras.accounts.permissions.constants import SiteAction
-from paasng.infras.accounts.permissions.global_site import site_perm_class
+from paasng.infras.accounts.permissions.constants import PlatMgtAction
+from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
-from paasng.plat_admin.admin42.serializers.config_vars import (
-    BuiltinConfigVarCreateInputSLZ,
-    BuiltinConfigVarListOutputSLZ,
-    BuiltinConfigVarUpdateInputSLZ,
-)
-from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 
-
-class BuiltinConfigVarView(GenericTemplateView):
-    name = "环境变量管理"
-    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-    template_name = "admin42/platformmgr/builtin_config_vars.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["system_prefix"] = settings.CONFIGVAR_SYSTEM_PREFIX
-        context["regions"] = list(get_all_regions().keys())
-        return context
-
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+from .serializers import (
+    BuiltinConfigVarCreateInputSLZ,
+    BuiltinConfigVarOutputSLZ,
+    BuiltinConfigVarUpdateInputSLZ,
+)
 
 
 class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
-    """环境变量管理 API 接口"""
+    """内建环境变量管理"""
 
-    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.builtin_config_vars"],
+        operation_description="获取内建环境变量列表",
+        responses={status.HTTP_200_OK: BuiltinConfigVarOutputSLZ(many=True)},
+    )
     def list(self, request):
-        config_vars = BuiltinConfigVar.objects.order_by("-updated")
-        return Response(BuiltinConfigVarListOutputSLZ(config_vars, many=True).data)
+        """列出所有内建环境变量"""
+        config_vars = BuiltinConfigVar.objects.order_by("-created")
+        return Response(BuiltinConfigVarOutputSLZ(config_vars, many=True).data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.builtin_config_vars"],
+        operation_description="创建内建环境变量",
+        responses={status.HTTP_201_CREATED: BuiltinConfigVarOutputSLZ()},
+    )
     def create(self, request):
+        """创建内建环境变量"""
         slz = BuiltinConfigVarCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -71,7 +67,7 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
             operator=request.user,
         )
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.ENV_VAR,
@@ -80,9 +76,15 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
                 data={"key": data["key"], "value": data["value"], "description": data["description"]},
             ),
         )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_201_CREATED)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.builtin_config_vars"],
+        operation_description="更新内建环境变量",
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
     def update(self, request, pk):
+        """更新内建环境变量"""
         slz = BuiltinConfigVarUpdateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -97,7 +99,7 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
         config_var.operator = request.user
         config_var.save(update_fields=["value", "description", "operator", "updated"])
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.ENV_VAR,
@@ -110,11 +112,17 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.builtin_config_vars"],
+        operation_description="删除内建环境变量",
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
     def destroy(self, request, pk):
+        """删除内建环境变量"""
         config_var = get_object_or_404(BuiltinConfigVar, pk=pk)
         config_var.delete()
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.ENV_VAR,
@@ -123,4 +131,5 @@ class BuiltinConfigVarViewSet(viewsets.GenericViewSet):
                 data={"key": config_var.key, "value": config_var.value, "description": config_var.description},
             ),
         )
+
         return Response(status=status.HTTP_204_NO_CONTENT)

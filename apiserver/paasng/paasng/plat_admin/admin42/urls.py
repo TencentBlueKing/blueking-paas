@@ -25,7 +25,6 @@ from .views import (
     applications,
     audit,
     bk_plugins,
-    builtin_config_vars,
     dashboard_templates,
     runtimes,
     services,
@@ -474,26 +473,6 @@ urlpatterns += [
     ),
 ]
 
-# 平台管理-环境变量管理
-urlpatterns += [
-    # 环境变量管理页
-    re_path(
-        r"^platform/builtin_config_vars/manage/$",
-        builtin_config_vars.BuiltinConfigVarView.as_view(),
-        name="admin.builtin_config_vars.manage",
-    ),
-    # 环境变量管理API
-    re_path(
-        r"^platform/builtin_config_vars/$",
-        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "list", "post": "create"}),
-        name="admin.builtin_config_vars",
-    ),
-    re_path(
-        r"^platform/builtin_config_vars/(?P<pk>[^/]+)/",
-        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
-        name="admin.builtin_config_vars.detail",
-    ),
-]
 
 # 操作审计
 urlpatterns += [

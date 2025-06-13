@@ -191,7 +191,8 @@ def transform_process(process_name: str, process_info: Dict[str, Any]) -> Ordere
         else:
             transformed_process[snake_to_camel(key)] = value
 
-    transformed_process["services"] = [create_service(process_name)]
+    if process_name == "web":
+        transformed_process["services"] = [create_service(process_name)]
 
     return transformed_process
 

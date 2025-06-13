@@ -330,14 +330,6 @@ def test_transform_module_spec(spec_input, expected_spec_output):
                                                 "liveness": {"exec": {"command": ["/bin/bash", "-c", "echo ready"]}},
                                                 "readiness": {"httpGet": {"path": "/healthz", "port": 80}},
                                             },
-                                            "services": [
-                                                {
-                                                    "name": "worker",
-                                                    "protocol": "TCP",
-                                                    "targetPort": settings.CONTAINER_PORT,
-                                                    "port": 80,
-                                                }
-                                            ],
                                         }
                                     )
                                 ],

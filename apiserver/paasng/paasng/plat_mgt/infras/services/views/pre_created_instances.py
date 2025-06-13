@@ -127,7 +127,7 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.ADD_ON,
-            attribute=instance.uuid,
-            data_before=data_before,
+            attribute=instance_id,
+            data_before=DataDetail(data=data_before),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

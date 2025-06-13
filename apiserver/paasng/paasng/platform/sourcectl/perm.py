@@ -69,6 +69,10 @@ def render_providers(providers: Sequence[str]) -> List[Dict[str, str]]:
     for provider_type in providers:
         spec = get_sourcectl_type(provider_type)
         provider_info = spec.display_info._asdict()
-        provider_info.update({"auth_method": spec.connector_class.auth_method})
+        provider_info.update(
+            {
+                "auth_method": spec.connector_class.auth_method,
+            }
+        )
         results.append(provider_info)
     return results

@@ -143,8 +143,9 @@ class TestModuleInitializer:
     def test_initialize_vcs(self, raw_module):
         with (
             mock.patch("paasng.platform.sourcectl.svn.client.RepoProvider") as mocked_provider,
-            mock.patch("paasng.platform.sourcectl.connector.SvnRepositoryClient") as mocked_client,
-            mock.patch("paasng.platform.templates.templater.Templater.download_tmpl") as mocked_download,
+            mock.patch(
+                "paasng.platform.templates.templater.TemplateRenderer.download_from_blob_storage"
+            ) as mocked_download,
         ):
             mocked_provider().provision.return_value = {"repo_url": "mocked_repo_url"}
             mocked_download.return_value = Path(tempfile.mkdtemp())
@@ -153,13 +154,12 @@ class TestModuleInitializer:
             raw_module.source_origin = SourceOrigin.AUTHORIZED_VCS
             raw_module.save()
 
-            result = ModuleInitializer(raw_module).initialize_vcs_with_template("dft_bk_svn")
-
-            mocked_client.assert_called()
-            mocked_client().sync_dir.assert_called()
-            assert result["code"] == "OK"
-            assert result["dest_type"] == "svn"
-            assert "extra_info" in result
+            result = ModuleInitializer(raw_module).initialize_vcs_with_template(
+                "dft_bk_svn",
+                repo_url="http://git.example.com/test-group/repo1.git",
+            )
+            assert result.code == "OK"
+            assert "downloadable_address" in result.extra_info
 
     @pytest.mark.parametrize(
         ("source_origin"),

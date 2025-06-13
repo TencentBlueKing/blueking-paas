@@ -91,7 +91,7 @@ def initialize_module(module, repo_type=None, repo_url="", additional_modules=No
 
     default_mockers: List[ContextManager] = [
         mock.patch("paasng.platform.modules.manager.make_app_metadata"),
-        mock.patch("paasng.platform.sourcectl.connector.SvnRepositoryClient"),
+        mock.patch("paasng.platform.sourcectl.svn.client.SvnRepositoryClient"),
         contextmanager(_mock_wl_services_in_creation)(),
         mock.patch(
             "paasng.platform.modules.handlers.apply_async_on_commit",

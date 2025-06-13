@@ -65,10 +65,10 @@ class DiffFeature:
 class SourceTypeSpec:
     """Source type specifications"""
 
-    # connector 是用于“连接”新应用模块与源码系统的类型，它最大的职责有两个：完成绑定与同步模板代码
+    # connector 是用于“连接”新应用模块与源码系统的类型，它的职责包含：完成绑定
     connector_class: Type["ModuleRepoConnector"]
 
-    # 用来操作源码系统的功能类型，提供了导出项目源码、查看 diff 日志等能力
+    # 用来操作源码系统的功能类型，提供了导出项目源码、查看 diff 日志、下载代码、提交推送代码等能力
     repo_controller_class: Type["RepoController"]
 
     # 处理用户通过 OAuth 协议连接到外部 VCS 系统的后端类，部分源码系统（比如 GitHub、GitLab）适用，

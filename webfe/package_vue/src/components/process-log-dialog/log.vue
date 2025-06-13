@@ -29,21 +29,21 @@
               </div>
               <div class="tools">
                 <bk-select
-                  v-model="logTime"
+                  v-model="selectValue"
                   :clearable="false"
                   class="ml20"
                   ext-cls="log-time-select-cls"
-                  :disabled="logType !== 'realtime'"
-                  @change="refresh"
+                  :disabled="isDisabledRestartLog"
+                  @selected="refresh"
                 >
                   <bk-option
-                    v-for="(option, i) in timeSelection"
+                    v-for="(option, i) in selectionList"
                     :id="option.id"
                     :key="i"
                     :name="option.name"
                   />
                   <bk-option
-                    v-if="logType === 'restart'"
+                    v-if="isDisabledRestartLog"
                     :id="'restart'"
                     :key="-1"
                     :name="$t('最近 400 条')"
@@ -54,12 +54,12 @@
                   class="paasng-icon paasng-refresh ml20"
                   @click="refresh"
                 ></i>
-                <!-- 下载 -->
+                <!-- 普通应用-实时日志不支持下载 -->
                 <i
-                  v-bk-tooltips="{ content: isRealTimeLog ? $t('暂不支持下载实时日志') : $t('下载完整日志') }"
+                  v-bk-tooltips="{ content: downloadNotSupported ? $t('暂不支持下载实时日志') : $t('下载完整日志') }"
                   class="paasng-icon paasng-download ml20"
-                  :class="{ disabled: isRealTimeLog }"
-                  @click="downloadPreviousLogs"
+                  :class="{ disabled: downloadNotSupported }"
+                  @click="download"
                 ></i>
               </div>
             </div>
@@ -67,44 +67,20 @@
         </div>
         <div
           class="log-content"
-          v-bkloading="{ isLoading: loading, opacity: 1, color: '#333030', zIndex: 10 }"
+          v-bkloading="{ isLoading: loading, color: 'rgba(255, 255, 255, 0.1)', zIndex: 10 }"
         >
           <slot name="content">
-            <template v-if="logs.length">
-              <ul>
-                <li
-                  v-for="(log, idx) of logs"
-                  :key="idx"
-                  class="log-item"
-                >
-                  <!-- 实时进程 -->
-                  <template v-if="isRealTimeLog">
-                    <span
-                      class="mr10"
-                      style="min-width: 140px"
-                    >
-                      {{ log.timestamp }}
-                    </span>
-                    <span class="pod-name">{{ log.podShortName }}</span>
-                    <pre
-                      class="message"
-                      v-html="log.message || '--'"
-                    />
-                  </template>
-                  <template v-else>
-                    <pre
-                      class="message"
-                      v-html="log"
-                    />
-                  </template>
-                </li>
-              </ul>
-            </template>
+            <bk-log
+              v-if="logs.length"
+              class="bk-log"
+              ref="bkLog"
+              :key="logIndex"
+            ></bk-log>
             <div
               v-else
               class="empty"
             >
-              {{ $t('暂时没有日志记录') }}
+              {{ loading ? '' : $t('暂时没有日志记录') }}
             </div>
           </slot>
         </div>
@@ -114,10 +90,13 @@
 </template>
 
 <script>
-import { downloadTxt } from '@/common/tools';
+import { bkLog } from '@blueking/log';
 
 export default {
   name: 'PaasLog',
+  components: {
+    bkLog,
+  },
   props: {
     value: {
       type: Boolean,
@@ -135,20 +114,30 @@ export default {
       type: Boolean,
       default: true,
     },
-    timeSelection: {
+    selectionList: {
       type: Array,
       default: () => [],
+    },
+    defaultCondition: {
+      type: String,
+      default: '1h',
     },
     logs: {
       type: Array | String,
       default: () => [],
     },
+    // 直接展示当前行日志
+    isDirect: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
       internalVisible: this.value,
-      logTime: '1h',
+      selectValue: this.defaultCondition,
       logType: 'realtime',
+      logIndex: 0,
       logTypeOption: [
         { id: 'realtime', text: this.$t('实时日志') },
         { id: 'restart', text: this.$t('最近一次重启日志') },
@@ -158,6 +147,13 @@ export default {
   computed: {
     isRealTimeLog() {
       return this.logType === 'realtime';
+    },
+    isDisabledRestartLog() {
+      return this.logType === 'restart' && this.defaultCondition === '1h';
+    },
+    // 普通应用-实时日志不支持下载
+    downloadNotSupported() {
+      return this.logType === 'realtime' && this.defaultCondition === '1h';
     },
   },
   watch: {
@@ -173,60 +169,45 @@ export default {
         document.body.style.overflow = '';
       }
     },
-    'logs.length'() {
-      this.scrollBottom();
+    logs: {
+      handler(newLogs) {
+        this.logIndex += 1;
+        this.$nextTick(() => {
+          this.$refs.bkLog.addLogData(newLogs);
+        });
+      },
+      deep: true,
     },
   },
   methods: {
     handleClose() {
       this.internalVisible = false;
+      this.$emit('close');
     },
     init() {
-      this.logTime = '1h';
+      this.selectValue = this.defaultCondition;
       this.logType = 'realtime';
     },
-    // 滚动到当前日志底部
-    scrollBottom() {
-      this.$nextTick(() => {
-        const box = document.querySelector('.log-wrapper .log-content');
-        box.scrollTo({
-          top: box?.scrollHeight || 0,
-          behavior: 'smooth',
-        });
-      });
-    },
+    // 切换日志类型
     changeLogType(type) {
       if (this.loading) return;
       this.logType = type;
-      this.logTime = this.logType === 'restart' ? 'restart' : '1h';
+      this.selectValue = this.isDisabledRestartLog ? 'restart' : this.defaultCondition;
+      this.$emit('change', {
+        type: this.logType,
+        value: this.selectValue,
+      });
     },
     // 刷新
     refresh() {
       this.$emit('refresh', {
         type: this.logType,
-        time: this.logTime,
+        value: this.selectValue,
       });
     },
     // 下载重启日志
-    async downloadPreviousLogs() {
-      if (this.isRealTimeLog) return;
-      try {
-        const logTxt = await this.$store.dispatch('log/downloadPreviousLogs', this.params);
-        if (!logTxt || !logTxt?.length) {
-          this.$paasMessage({
-            theme: 'warning',
-            message: this.$t('暂时没有日志记录'),
-          });
-          return;
-        }
-        downloadTxt(logTxt, this.params.instanceName);
-        // 404 处理
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      }
+    async download() {
+      this.$emit('download', this.logType);
     },
   },
 };
@@ -246,6 +227,7 @@ export default {
   flex-direction: row-reverse;
 
   .log-wrapper {
+    overflow: hidden;
     background-color: #1e1e1e;
     color: #fff;
     height: calc(100% - 32px);
@@ -253,6 +235,7 @@ export default {
     margin: 16px;
     border-radius: 6px;
     min-width: 300px;
+    font-size: 12px;
     transition: all 0.2s ease-in-out; /* 对话框本身的过渡 */
 
     .log-header {
@@ -315,46 +298,18 @@ export default {
     }
 
     .log-content {
-      overflow-y: auto;
       height: calc(100% - 48px);
-      padding: 10px 20px;
-
-      .log-item {
-        display: flex;
-        margin-bottom: 8px;
-        font-family: Consolas, 'source code pro', 'Bitstream Vera Sans Mono', Consolas, Courier, monospace, '微软雅黑',
-          'Arial';
-
-        .pod-name {
-          min-width: 95px;
-          text-align: right;
-          margin-right: 15px;
-          color: #979ba5;
-          cursor: pointer;
-
-          &:hover {
-            color: #3a84ff;
-          }
-        }
-        .message {
-          flex: 1;
+      .bk-log {
+        height: 100%;
+        transform: translateY(-5px);
+        /deep/ .scroll-home .scroll-main .scroll-item {
+          font-family: Consolas, Courier New, monospace;
+          color: #fff !important;
         }
       }
-
-      /* 自定义滚动条样式 */
-      ::-webkit-scrollbar {
-        width: 8px;
+      .empty {
+        padding: 16px;
       }
-      ::-webkit-scrollbar-track {
-        background: #1e1e1e;
-      }
-      ::-webkit-scrollbar-thumb {
-        background-color: #4c4c4c; /* 滚动条颜色 */
-        border: 2px solid #1e1e1e; /* 滚动条与轨道间隔 */
-      }
-
-      scrollbar-width: thin;
-      scrollbar-color: #4c4c4c #1e1e1e;
     }
   }
 }

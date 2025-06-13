@@ -77,6 +77,7 @@ class OperationTarget(StrStructuredEnum):
 
     # 以下是仅用于 Admin42 的操作对象
     CLUSTER = EnumField("cluster", label=_("集群"))
+    CLUSTER_COMPONENT = EnumField("cluster_component", label=_("集群组件"))
     PROCESS_SPEC_PLAN = EnumField("process_spec_plan", label=_("应用资源方案"))
     BKPLUGIN_TAG = EnumField("bkplugin_tag", label=_("插件分类"))
     BKPLUGIN_DISTRIBUTOR = EnumField("bkplugin_distributor", label=_("插件使用方"))

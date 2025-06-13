@@ -23,7 +23,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.templates import TemplateSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -66,14 +66,14 @@ class TemplateViewSet(ListModelMixin, GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.TEMPLATE,
             attribute=slz.data["name"],
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新模板配置"""
         template = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=TemplateSLZ(template).data)
+        data_before = DataDetail(data=TemplateSLZ(template).data)
 
         slz = TemplateSLZ(template, data=request.data)
         slz.is_valid(raise_exception=True)
@@ -85,14 +85,14 @@ class TemplateViewSet(ListModelMixin, GenericViewSet):
             target=OperationTarget.TEMPLATE,
             attribute=slz.data["name"],
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, *args, **kwargs):
         """删除模板配置"""
         template = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=TemplateSLZ(template).data)
+        data_before = DataDetail(data=TemplateSLZ(template).data)
         template.delete()
 
         add_admin_audit_record(

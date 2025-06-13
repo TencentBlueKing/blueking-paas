@@ -34,6 +34,8 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bcs.client import BCSUserClient
 from paasng.infras.bcs.exceptions import BCSGatewayServiceError, HelmChartNotFound
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.infras.clusters.constants import ClusterComponentStatus
 from paasng.plat_mgt.infras.clusters.helm import HelmClient
 from paasng.plat_mgt.infras.clusters.k8s import K8SWorkloadStateGetter, ensure_k8s_namespace
@@ -73,11 +75,11 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
         components = []
         for comp in self.get_queryset():
             # 从 helm release 中获取组件部署状态
-            status = ClusterComponentStatus.NOT_INSTALLED
+            comp_status = ClusterComponentStatus.NOT_INSTALLED
             if rel := release_map.get(comp.name):
-                status = ClusterComponentStatus.from_helm_release_status(rel.deploy_result.status)
+                comp_status = ClusterComponentStatus.from_helm_release_status(rel.deploy_result.status)
 
-            components.append({"name": comp.name, "required": comp.required, "status": status})
+            components.append({"name": comp.name, "required": comp.required, "status": comp_status})
 
         return Response(data=ClusterComponentListOutputSLZ(components, many=True).data)
 
@@ -173,6 +175,14 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
             # 2. 需要使用已有的 release 名称
             release_name = release.name
 
+        # 记录变更前的组件数据
+        data_before = DataDetail(
+            data={
+                "version": cur_version,
+                "values": release.values if release else None,
+            }
+        )
+
         # 确保命名空间一定存在
         ensure_k8s_namespace(cluster_name, namespace)
 
@@ -210,9 +220,21 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
             logger.exception("failed to upgrade cluster %s component %s", cluster_name, component_name)
             raise error_codes.CANNOT_UPSERT_CLUSTER_COMPONENT.f(str(e))
 
+        # 添加操作审计记录
+        add_plat_mgt_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.CLUSTER,
+            data_before=data_before,
+            data_after=DataDetail(
+                data={"version": latest_version, "values": values},
+            ),
+        )
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def _get_cluster_and_component(self, cluster_name, component_name) -> Tuple[Cluster, ClusterComponent]:
+    @staticmethod
+    def _get_cluster_and_component(cluster_name, component_name) -> Tuple[Cluster, ClusterComponent]:
         """获取集群和组件对象"""
         # FIXME:（多租户）有租户管理员后，得控制用户可访问的集群权限（也许得抽个 mixin？）
         cluster = Cluster.objects.filter(name=cluster_name).first()
@@ -225,8 +247,9 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
 
         return cluster, component
 
+    @staticmethod
     def _get_component_cur_and_latest_version(
-        self, request, cluster: Cluster, component: ClusterComponent
+        request, cluster: Cluster, component: ClusterComponent
     ) -> Tuple[str | None, str | None]:
         """获取组件在集群中的当前版本 & 可选的最新版本"""
         cur_version, latest_version = None, None

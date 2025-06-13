@@ -25,8 +25,8 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.sourcectl.models import SourceTypeSpecConfig
 from paasng.utils.error_codes import error_codes
 
@@ -67,7 +67,7 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.sourcectl"],
         operation_description="创建代码库配置",
-        responses={status.HTTP_201_CREATED: None},
+        responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request):
         """创建代码库配置"""
@@ -83,12 +83,12 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
                 raise error_codes.CANNOT_CREATE_CODEBASE_CONFIG.f(_("名称已存在，请使用其他名称"))
             raise
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.SOURCE_TYPE_SPEC,
             attribute=slz.data["name"],
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
 
         return Response(status=status.HTTP_201_CREATED)
@@ -96,12 +96,12 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.sourcectl"],
         operation_description="更新代码库配置",
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, pk):
         """更新代码库配置"""
         source_type_spec = get_object_or_404(SourceTypeSpecConfig, id=pk)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(source_type_spec).data)
+        data_before = DataDetail(data=SourceTypeSpecConfigSLZ(source_type_spec).data)
 
         slz = SourceTypeSpecConfigSLZ(source_type_spec, data=request.data)
         slz.is_valid(raise_exception=True)
@@ -109,13 +109,13 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
 
         SourceTypeSpecConfig.objects.filter(id=pk).update(**data)
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.SOURCE_TYPE_SPEC,
             attribute=slz.data["name"],
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -123,17 +123,17 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.sourcectl"],
         operation_description="删除代码库配置",
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, pk):
         """删除代码库配置"""
 
         source_type_spec = get_object_or_404(SourceTypeSpecConfig, id=pk)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(source_type_spec).data)
+        data_before = DataDetail(data=SourceTypeSpecConfigSLZ(source_type_spec).data)
 
         source_type_spec.delete()
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.SOURCE_TYPE_SPEC,

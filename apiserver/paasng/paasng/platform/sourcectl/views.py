@@ -42,7 +42,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.notifier.client import BkNotificationService
 from paasng.infras.notifier.exceptions import BaseNotifierError
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import SourceOrigin
@@ -335,7 +335,6 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         data_before = None
         if source_obj := module.get_source_obj():
             data_before = DataDetail(
-                type=DataType.RAW_DATA,
                 data={
                     "repo_type": source_obj.get_source_type(),
                     "repo_url": source_obj.get_repo_url(),
@@ -367,7 +366,6 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             module_name=module_name,
             data_before=data_before,
             data_after=DataDetail(
-                type=DataType.RAW_DATA,
                 data={"repo_type": repo_type, "repo_url": repo_url, "source_dir": data["source_dir"]},
             ),
         )

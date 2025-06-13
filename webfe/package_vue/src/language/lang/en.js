@@ -2716,7 +2716,7 @@ export default {
   '将在 6 个月内不出现在闲置应用列表中，若 6 个月后继续闲置，将重新提醒。': 'of this module will not appear in the idle application list for 6 months. If it remains idle after 6 months, you will be reminded again.',
   平台内置地址: 'Built-in Platform Address',
   自定义地址: 'Custom Address',
-  '最近 400 条': 'Most Recent 400 Entries',
+  '最近 {n} 条': 'Recent {n} entries',
   实时日志: 'Real-time Logs',
   最近一次重启日志: 'Last Restart Logs',
   暂不支持下载实时日志: 'Downloading real-time logs is not currently supported',

@@ -27,7 +27,7 @@ from paas_wl.workloads.networking.entrance.serializers import DomainForUpdateSLZ
 from paas_wl.workloads.networking.ingress.domains.manager import get_custom_domain_mgr
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.infras.accounts.permissions.global_site import SiteAction, site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.platform.applications.models import Application
 from paasng.utils.api_docs import openapi_empty_response
@@ -90,7 +90,7 @@ class AppDomainsViewSet(GenericViewSet):
             app_code=application.code,
             module_name=env.module.name,
             environment=env.environment,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data),
+            data_after=DataDetail(data=DomainSLZ(domain).data),
         )
         return Response(DomainSLZ(domain).data, status=status.HTTP_201_CREATED)
 
@@ -104,7 +104,7 @@ class AppDomainsViewSet(GenericViewSet):
         """更新一个独立域名的域名与路径信息"""
         application = get_object_or_404(Application, code=kwargs["code"])
         domain = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
-        data_before = DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data)
+        data_before = DataDetail(data=DomainSLZ(domain).data)
 
         data = validate_domain_payload(request.data, application, instance=domain, serializer_cls=DomainForUpdateSLZ)
         new_domain = get_custom_domain_mgr(application).update(
@@ -119,7 +119,7 @@ class AppDomainsViewSet(GenericViewSet):
             module_name=domain.module.name,
             environment=domain.environment.environment,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(new_domain).data),
+            data_after=DataDetail(data=DomainSLZ(new_domain).data),
         )
         return Response(DomainSLZ(new_domain).data)
 
@@ -128,7 +128,7 @@ class AppDomainsViewSet(GenericViewSet):
         """通过 ID 删除一个独立域名"""
         application = get_object_or_404(Application, code=kwargs["code"])
         domain = get_object_or_404(self.get_queryset(application), pk=self.kwargs["id"])
-        data_before = DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data)
+        data_before = DataDetail(data=DomainSLZ(domain).data)
 
         get_custom_domain_mgr(application).delete(domain)
 

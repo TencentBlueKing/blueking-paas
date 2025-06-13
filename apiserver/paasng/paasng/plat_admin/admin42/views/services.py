@@ -33,7 +33,7 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.services import EngineAppInstanceRel, UnboundEngineAppInstanceRel
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.services import (
     PlanObjSLZ,
@@ -67,7 +67,6 @@ class ApplicationServicesManageViewSet(GenericViewSet):
         service_data = ServiceObjSLZ(rel.get_service()).data
 
         return DataDetail(
-            type=DataType.RAW_DATA,
             data={
                 "instance": ServiceInstanceSLZ(rel.get_instance()).data,
                 "service": service_data,
@@ -159,7 +158,6 @@ class ApplicationUnboundServicesManageViewSet(GenericViewSet):
         service_data = ServiceObjSLZ(mixed_service_mgr.get_or_404(rel.db_obj.service_id)).data
 
         return DataDetail(
-            type=DataType.RAW_DATA,
             data={
                 "instance": ServiceInstanceSLZ(rel.get_instance()).data,
                 "service": service_data,

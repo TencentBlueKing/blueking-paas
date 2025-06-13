@@ -33,8 +33,8 @@ from paasng.accessories.servicehub.services import EngineAppInstanceRel, Service
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications.serializers import services as slzs
 from paasng.plat_mgt.infras.services.serializers import (
     PlanObjOutputSLZ,
@@ -158,7 +158,7 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
 
         rel.provision()
         data_after = self._gen_audit_detail(rel=rel)
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.PROVISION_INSTANCE,
             target=OperationTarget.APP,
@@ -172,7 +172,7 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
     @atomic
     @swagger_auto_schema(
         tags=["plat_mgt.applications.services"],
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def unbound_instance(self, request, code, module_name, environment, service_id, instance_id):
         """解绑增强服务实例"""
@@ -201,7 +201,7 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
         if instance_rel.is_provisioned():
             data_before = self._gen_audit_detail(rel=instance_rel)
             instance_rel.recycle_resource()
-            add_admin_audit_record(
+            add_plat_mgt_audit_record(
                 user=request.user.pk,
                 operation=OperationEnum.RECYCLE_RESOURCE,
                 target=OperationTarget.APP,
@@ -214,7 +214,7 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications.services"],
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def recycle_unbound_instance(self, request, code, module_name, service_id, instance_id):
         """回收未绑定的增强服务实例"""
@@ -229,7 +229,6 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
             raise Http404
 
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data={
                 "service": ServiceObjOutputSLZ(mixed_service_mgr.get_or_404(rel.db_obj.service_id)).data,
                 "instance": ServiceInstanceOutputSLZ(rel.get_instance()).data,
@@ -237,7 +236,7 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
         )
         rel.recycle_resource()
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.RECYCLE_RESOURCE,
             target=OperationTarget.APP,
@@ -301,4 +300,4 @@ class ApplicationServicesViewSet(viewsets.ViewSet):
             "plan": PlanObjOutputSLZ(rel.get_plan()).data,
         }
 
-        return DataDetail(type=DataType.RAW_DATA, data=data)
+        return DataDetail(data=data)

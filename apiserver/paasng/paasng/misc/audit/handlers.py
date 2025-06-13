@@ -27,7 +27,7 @@ from paas_wl.bk_app.cnative.specs.constants import DeployStatus
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
 from paas_wl.bk_app.cnative.specs.signals import post_cnative_env_deploy
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit import constants
+from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppLatestOperationRecord, AppOperationRecord
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.constants import ApplicationType
@@ -40,17 +40,17 @@ from paasng.platform.modules.models import Module
 logger = logging.getLogger(__name__)
 
 JOB_STATUS_TO_RESULT_CODE = {
-    JobStatus.SUCCESSFUL: constants.ResultCode.SUCCESS,
-    JobStatus.FAILED: constants.ResultCode.FAILURE,
-    JobStatus.PENDING: constants.ResultCode.ONGOING,
-    JobStatus.INTERRUPTED: constants.ResultCode.INTERRUPT,
+    JobStatus.SUCCESSFUL: ResultCode.SUCCESS,
+    JobStatus.FAILED: ResultCode.FAILURE,
+    JobStatus.PENDING: ResultCode.ONGOING,
+    JobStatus.INTERRUPTED: ResultCode.INTERRUPT,
 }
 DEPLOY_STATUS_TO_RESULT_CODE = {
-    DeployStatus.PENDING: constants.ResultCode.ONGOING,
-    DeployStatus.PROGRESSING: constants.ResultCode.ONGOING,
-    DeployStatus.READY: constants.ResultCode.SUCCESS,
-    DeployStatus.ERROR: constants.ResultCode.FAILURE,
-    DeployStatus.UNKNOWN: constants.ResultCode.ONGOING,
+    DeployStatus.PENDING: ResultCode.ONGOING,
+    DeployStatus.PROGRESSING: ResultCode.ONGOING,
+    DeployStatus.READY: ResultCode.SUCCESS,
+    DeployStatus.ERROR: ResultCode.FAILURE,
+    DeployStatus.UNKNOWN: ResultCode.ONGOING,
 }
 
 
@@ -86,8 +86,8 @@ def on_model_post_save(sender, instance, created, raw, using, update_fields, *ar
             # 创建应用未在权限中心注册，因此操作也不能上报到审计中心
             action_id="",
             user=instance.owner,
-            operation=constants.OperationEnum.CREATE_APP,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.CREATE_APP,
+            target=OperationTarget.APP,
         )
     # 创建模块
     elif isinstance(instance, Module) and created:
@@ -96,8 +96,8 @@ def on_model_post_save(sender, instance, created, raw, using, update_fields, *ar
             tenant_id=instance.application.tenant_id,
             user=instance.creator,
             action_id=AppAction.MANAGE_MODULE,
-            operation=constants.OperationEnum.CREATE,
-            target=constants.OperationTarget.MODULE,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.MODULE,
             attribute=instance.name,
         )
 
@@ -108,14 +108,14 @@ def on_deploy_finished(sender: ModuleEnvironment, deployment: Deployment, **kwar
     application = deployment.app_environment.application
     if application.type != ApplicationType.DEFAULT:
         return
-    result_code = JOB_STATUS_TO_RESULT_CODE.get(deployment.status, constants.ResultCode.ONGOING)
+    result_code = JOB_STATUS_TO_RESULT_CODE.get(deployment.status, ResultCode.ONGOING)
     add_app_audit_record(
         app_code=application.code,
         tenant_id=application.tenant_id,
         user=deployment.operator,
         action_id=AppAction.BASIC_DEVELOP,
-        operation=constants.OperationEnum.DEPLOY,
-        target=constants.OperationTarget.APP,
+        operation=OperationEnum.DEPLOY,
+        target=OperationTarget.APP,
         module_name=deployment.app_environment.module.name,
         environment=deployment.app_environment.environment,
         result_code=result_code,
@@ -126,7 +126,7 @@ def on_deploy_finished(sender: ModuleEnvironment, deployment: Deployment, **kwar
 def on_cnative_deploy_finished(sender: ModuleEnvironment, deploy: AppModelDeploy, **kwargs):
     """当云原生应用部署完成后，记录操作审计记录"""
     application = get_object_or_404(Application, id=deploy.application_id)
-    result_code = DEPLOY_STATUS_TO_RESULT_CODE.get(deploy.status, constants.ResultCode.ONGOING)
+    result_code = DEPLOY_STATUS_TO_RESULT_CODE.get(deploy.status, ResultCode.ONGOING)
     # 获取应用上一次的部署操作，用于操作详情的对比
     last_deploy = (
         AppModelDeploy.objects.filter(
@@ -141,11 +141,11 @@ def on_cnative_deploy_finished(sender: ModuleEnvironment, deploy: AppModelDeploy
         tenant_id=application.tenant_id,
         user=deploy.operator,
         action_id=AppAction.BASIC_DEVELOP,
-        operation=constants.OperationEnum.DEPLOY,
-        target=constants.OperationTarget.APP,
+        operation=OperationEnum.DEPLOY,
+        target=OperationTarget.APP,
         module_name=deploy.module.name,
         environment=deploy.environment_name,
         result_code=result_code,
-        data_after=DataDetail(type=constants.DataType.BKAPP_REVERSION, data=deploy.revision.id),
-        data_before=DataDetail(type=constants.DataType.BKAPP_REVERSION, data=last_revision_id),
+        data_after=DataDetail(type=DataType.BKAPP_REVERSION, data=deploy.revision.id),
+        data_before=DataDetail(type=DataType.BKAPP_REVERSION, data=last_revision_id),
     )

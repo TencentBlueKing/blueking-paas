@@ -40,7 +40,6 @@ from paasng.infras.iam.helpers import (
     fetch_user_roles,
     remove_user_all_roles,
 )
-from paasng.misc.audit import constants
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.application import (
@@ -330,7 +329,7 @@ class AppEnvConfManageView(viewsets.GenericViewSet):
         slz = BindEnvClusterSLZ(data=request.data, context={"module_env": env, "operator": request.user.username})
         slz.is_valid(raise_exception=True)
 
-        data_before = DataDetail(type=constants.DataType.RAW_DATA, data=EnvClusterService(env=env).get_cluster_name())
+        data_before = DataDetail(data=EnvClusterService(env=env).get_cluster_name())
         EnvClusterService(env=env).bind_cluster(cluster_name=slz.validated_data["cluster_name"])
 
         add_admin_audit_record(
@@ -341,9 +340,7 @@ class AppEnvConfManageView(viewsets.GenericViewSet):
             module_name=module_name,
             environment=environment,
             data_before=data_before,
-            data_after=DataDetail(
-                type=constants.DataType.RAW_DATA, data=EnvClusterService(env=env).get_cluster_name()
-            ),
+            data_after=DataDetail(data=EnvClusterService(env=env).get_cluster_name()),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -379,7 +376,6 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
     @staticmethod
     def _gen_data_detail(code: str, username: str) -> DataDetail:
         return DataDetail(
-            type=constants.DataType.RAW_DATA,
             data={
                 "username": username,
                 "roles": [ApplicationRole(role).name.lower() for role in fetch_user_roles(code, username)],
@@ -474,18 +470,14 @@ class ApplicationFeatureFlagsViewset(viewsets.GenericViewSet):
 
     def update(self, request, code):
         application = get_object_or_404(Application, code=code)
-        data_before = DataDetail(
-            type=constants.DataType.RAW_DATA, data=application.feature_flag.get_application_features()
-        )
+        data_before = DataDetail(data=application.feature_flag.get_application_features())
         application.feature_flag.set_feature(request.data["name"], request.data["effect"])
         add_admin_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.FEATURE_FLAG,
             app_code=application.code,
-            data_after=DataDetail(
-                type=constants.DataType.RAW_DATA, data=application.feature_flag.get_application_features()
-            ),
+            data_after=DataDetail(data=application.feature_flag.get_application_features()),
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

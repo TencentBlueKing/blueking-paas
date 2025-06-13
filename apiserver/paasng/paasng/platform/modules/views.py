@@ -42,7 +42,7 @@ from paasng.infras.accounts.permissions.application import (
 )
 from paasng.infras.accounts.permissions.user import user_can_operate_in_region
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
@@ -500,7 +500,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         module = self.get_module_via_path()
         build_config = BuildConfig.objects.get_or_create_by_module(module)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=self._gen_build_config_data(module, build_config))
+        data_before = DataDetail(data=self._gen_build_config_data(module, build_config))
 
         build_method = data["build_method"]
 
@@ -528,7 +528,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.BUILD_CONFIG,
             module_name=module_name,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

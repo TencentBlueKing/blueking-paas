@@ -1,7 +1,7 @@
 bkpkg: v1
 name: bkpaas3
 type: file+tar
-description: 开发者中心及SaaS运行环境。
+description: 开发者中心及 SaaS 运行环境。
 contains:
 relations:
 - rationale: "基础权限体系"
@@ -12,8 +12,11 @@ relations:
 - rationale: "为应用创建认证身份"
   requires:
   - bkauth^0.0.13
-- rationale: "为SaaS提供监控及日志服务"
+- rationale: "为 SaaS 提供监控及日志服务"
   suggests:
   - bk_log_search^4.7.2
   - bk_monitorv3^3.9.0
+- rationale: "注册资源到 API 网关"
+  requires:
+  - bk-apigateway^1.14.0
 bkimports:

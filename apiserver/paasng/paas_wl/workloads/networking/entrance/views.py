@@ -34,7 +34,7 @@ from paasng.infras.accounts.models import User
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.accounts.permissions.user import user_can_operate_in_region
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.api_docs import openapi_empty_response
@@ -108,7 +108,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.APP_DOMAIN,
             module_name=env.module.name,
             environment=env.environment,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data),
+            data_after=DataDetail(data=DomainSLZ(domain).data),
         )
         return Response(DomainSLZ(domain).data, status=status.HTTP_201_CREATED)
 
@@ -127,7 +127,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 "当前应用版本不允许手动管理独立域名，请联系平台管理员"
             )
 
-        data_before = DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data)
+        data_before = DataDetail(data=DomainSLZ(domain).data)
         data = validate_domain_payload(request.data, application, serializer_cls=DomainForUpdateSLZ, instance=domain)
         new_domain = get_custom_domain_mgr(application).update(
             domain, host=data["name"], path_prefix=data["path_prefix"], https_enabled=data["https_enabled"]
@@ -143,7 +143,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             module_name=domain.module.name,
             environment=domain.environment.environment,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(new_domain).data),
+            data_after=DataDetail(data=DomainSLZ(new_domain).data),
         )
         return Response(DomainSLZ(new_domain).data)
 
@@ -157,7 +157,7 @@ class AppDomainsViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 "当前应用版本不允许手动管理独立域名，请联系平台管理员"
             )
 
-        data_before = DataDetail(type=DataType.RAW_DATA, data=DomainSLZ(domain).data)
+        data_before = DataDetail(data=DomainSLZ(domain).data)
         get_custom_domain_mgr(application).delete(domain)
 
         add_app_audit_record(

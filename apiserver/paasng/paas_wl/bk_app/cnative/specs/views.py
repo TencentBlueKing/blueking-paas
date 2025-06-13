@@ -58,7 +58,7 @@ from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.models import BuildConfig
@@ -252,7 +252,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.VOLUME_MOUNT,
             attribute=mount_instance.name,
             module_name=module_name,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
+            data_after=DataDetail(data=data_after),
         )
         return Response(data=slz.data, status=status.HTTP_201_CREATED)
 
@@ -307,8 +307,8 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.VOLUME_MOUNT,
             attribute=mount_instance.name,
             module_name=module_name,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
+            data_before=DataDetail(data=data_before),
+            data_after=DataDetail(data=data_after),
         )
         return Response(data=slz.data, status=status.HTTP_200_OK)
 
@@ -337,7 +337,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.VOLUME_MOUNT,
             attribute=mount_instance.name,
             module_name=module_name,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
+            data_before=DataDetail(data=data_before),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

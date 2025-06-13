@@ -8,7 +8,10 @@
         @change="serviceChange"
       />
     </section>
-    <div class="config-content card-style">
+    <div
+      class="config-content card-style"
+      ref="contentRef"
+    >
       <div class="top-box flex-row justify-content-between">
         <SwitchDisplay
           class="mr10"
@@ -29,15 +32,16 @@
         :data="displayBindingPolicies"
         :size="'small'"
         :shift-multi-checked="true"
-        dark-header
+        :dark-header="true"
         :row-class-name="isConfigured"
+        :max-height="tableHeight"
         style="width: 100%"
         v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
         ext-cls="platform-table-cls"
       >
         <bk-table-column
           :label="$t('租户')"
-          prop="tenant_id"
+          prop="name"
           width="160"
         ></bk-table-column>
         <bk-table-column
@@ -47,7 +51,7 @@
           <template slot-scope="{ row }">
             <!-- 未配置 -->
             <div
-              v-if="!row.isConfig"
+              v-if="!row.policies"
               class="not-configured"
             >
               <span class="small-circle"></span>
@@ -63,22 +67,26 @@
             <template v-else>
               <!-- 统一分配 -->
               <div
-                v-if="!row.allocation_precedence_policies?.length"
+                v-if="row.policies?.policy_type === 'uniform'"
                 class="tag-list"
               >
                 <!-- 按环境分配 env_specific -->
-                <template v-if="row.allocation_policy?.env_plans">
+                <template v-if="row.policies.allocation_policy?.env_plans">
                   <span class="tag">
-                    {{ $t('方案（预发布环境）') }}：{{ getPlanNames(row.allocation_policy.env_plans.stag)?.join(', ') }}
+                    {{ $t('方案（预发布环境）') }}：{{
+                      getPlanNames(row.policies.allocation_policy.env_plans.stag)?.join(', ')
+                    }}
                   </span>
                   <span class="tag">
-                    {{ $t('方案（生产环境）') }}：{{ getPlanNames(row.allocation_policy.env_plans.prod)?.join(', ') }}
+                    {{ $t('方案（生产环境）') }}：{{
+                      getPlanNames(row.policies.allocation_policy.env_plans.prod)?.join(', ')
+                    }}
                   </span>
                 </template>
                 <!-- 不按环境分配 -->
                 <template v-else>
                   <span
-                    v-for="item in getPlanNames(row.allocation_policy.plans)"
+                    v-for="item in getPlanNames(row.policies.allocation_policy.plans)"
                     class="tag"
                     :key="item"
                   >
@@ -93,12 +101,12 @@
               >
                 <div
                   class="row-rules"
-                  v-for="(item, i) in row?.displayPolicies"
+                  v-for="(item, i) in row.policies?.allocation_precedence_policies"
                   :key="i"
                 >
                   <!-- 一行规则 -->
                   <span class="tag if">
-                    {{ getConditionalType(row?.displayPolicies?.length, i) }}
+                    {{ getConditionalType(row.policies?.allocation_precedence_policies?.length, i) }}
                   </span>
                   <!-- 匹配规则 - 属性值不固定 -->
                   <span
@@ -138,7 +146,7 @@
         >
           <template
             slot-scope="{ row }"
-            v-if="row.isConfig"
+            v-if="row.policies"
           >
             <bk-button
               theme="primary"
@@ -190,7 +198,7 @@ export default {
         { name: 'notConfigured', label: this.$t('未配置'), count: 0 },
       ],
       searchValue: '',
-      isTableLoading: false,
+      isTableLoading: true,
       // 所有服务
       services: [],
       bindingPolicies: [],
@@ -203,6 +211,8 @@ export default {
       // 当前服务id
       activeServiceId: '',
       isInit: false,
+      tableHeight: 500,
+      resizeObserver: null,
     };
   },
   computed: {
@@ -213,10 +223,18 @@ export default {
       return this.searchValue ? this.filterByKeyword(filteredTable) : filteredTable;
     },
   },
+  mounted() {
+    this.initResizeObserver();
+  },
+  beforeDestroy() {
+    if (this.$refs.contentRef) {
+      this.resizeObserver.unobserve(this.$refs.contentRef);
+    }
+  },
   methods: {
     // 是否配置，未配置添加指定样式
     isConfigured({ row }) {
-      return !row.isConfig ? 'cell-not-configured' : '';
+      return !row.policies ? 'cell-not-configured' : '';
     },
     /**
      * 根据 filterValue 过滤策略列表
@@ -224,9 +242,9 @@ export default {
     filterBindingPolicies(policies) {
       switch (this.filterValue) {
         case 'notConfigured':
-          return policies.filter((item) => !item.isConfig);
+          return policies.filter((item) => !item.policies);
         case 'configured':
-          return policies.filter((item) => item.isConfig);
+          return policies.filter((item) => item.policies);
         default:
           return policies;
       }
@@ -234,7 +252,7 @@ export default {
     // 关键字搜索
     filterByKeyword(list) {
       const lowerCaseKeyword = this.searchValue.toLocaleLowerCase();
-      return list.filter((item) => item.tenant_id.toLocaleLowerCase()?.includes(lowerCaseKeyword));
+      return list.filter((item) => item.name.toLocaleLowerCase()?.includes(lowerCaseKeyword));
     },
     handlerChange(data) {
       this.filterValue = data.name;
@@ -294,38 +312,33 @@ export default {
     async getBindingPolicies(serviceId) {
       this.isTableLoading = true;
       try {
-        const response = await this.$store.dispatch('tenant/getBindingPolicies', { serviceId });
+        const res = await this.$store.dispatch('tenant/getBindingPolicies', { serviceId });
 
-        // 创建租户策略映射表
-        const tenantPolicyMap = response.reduce((map, policy) => ((map[policy.tenant_id] = policy), map), {});
-        // 使用一次遍历完成数据转换和未配置计数
-        let notConfiguredCount = 0;
-        this.bindingPolicies = this.tenants.map((tenant) => {
-          const policy = tenantPolicyMap[tenant.id];
-          // 处理未配置情况
-          if (!policy) {
-            notConfiguredCount += 1;
-            return {
-              ...tenant,
-              allocation_precedence_policies: [],
-              allocation_policy: {},
-              tenant_id: tenant.id,
-              isConfig: false,
-            };
-          }
-          // 处理已配置情况
-          const { allocation_precedence_policies = [], allocation_policy = {} } = policy;
-          // 创建排序后的新数组避免副作用
-          const sortedPolicies = [...allocation_precedence_policies].sort((a, b) => b.priority - a.priority);
-          return {
+        // 创建租户ID到策略的映射
+        const policyMap = new Map(res.map((policy) => [policy.tenant_id, policy]));
+
+        // 数据处理，排序
+        this.bindingPolicies = this.tenants
+          .map((tenant) => ({
             ...tenant,
-            ...policy,
-            isConfig: true,
-            displayPolicies: [...sortedPolicies, allocation_policy],
-          };
-        });
+            policies: policyMap.get(tenant.id) || null,
+          }))
+          .sort((a, b) => {
+            if (a.policies === null && b.policies !== null) {
+              return -1;
+            }
+            if (a.policies !== null && b.policies === null) {
+              return 1;
+            }
+            return 0;
+          });
+
+        // 获取已配置服务的租户ID集合
+        const configuredTenantIds = new Set(res.map((service) => service.tenant_id));
+        // 筛选未配置的租户
+        const unconfiguredTenants = this.tenants.filter((tenant) => !configuredTenantIds.has(tenant.id));
         // 更新过滤统计
-        this.updateFilterCounts(this.tenants.length, notConfiguredCount);
+        this.updateFilterCounts(this.tenants.length, unconfiguredTenants.length);
       } catch (error) {
         this.catchErrorHandler(error);
       } finally {
@@ -354,9 +367,12 @@ export default {
     },
     // 生成分配配置（统一/规则）
     generateAllocationConfig(row, isUniform) {
+      if (row === null) {
+        return isUniform ? {} : [];
+      }
       return isUniform
         ? this.handleUniformAllocation(row.allocation_policy)
-        : this.handleRuleBasedAllocation(row.displayPolicies);
+        : this.handleRuleBasedAllocation(row.allocation_precedence_policies);
     },
     // 生成环境方案配置
     generateEnvPlan(envPlans) {
@@ -377,8 +393,8 @@ export default {
       };
     },
     // 处理规则分配配置
-    handleRuleBasedAllocation(displayPolicies) {
-      return displayPolicies.map((item) => {
+    handleRuleBasedAllocation(policies) {
+      return policies.map((item) => {
         const key = Object.keys(item.cond_data || {})[0];
         return {
           matcher: {
@@ -397,14 +413,13 @@ export default {
     },
     // 编辑/新建配置方案侧栏
     async handlerEdit(row, type) {
-      const plans = await this.getServicePlansUnderTenant(row.tenant_id, this.activeServiceId);
+      const plans = await this.getServicePlansUnderTenant(row.id, this.activeServiceId);
       if (!plans.length) {
-        this.showNoPlanInfo(row.tenant_id);
+        this.showNoPlanInfo(row.id);
         return;
       }
-      // 如果为规则分配 allocation_policy 为 else 数据项，统一分配数据也是 allocation_policy
-      const isUniform = !row.allocation_precedence_policies.length;
-      const config = this.generateAllocationConfig(row, isUniform);
+      const isUniform = row.policies?.policy_type === 'uniform';
+      const config = this.generateAllocationConfig(row.policies, isUniform);
       const commitData = {
         policies: {
           ...row,
@@ -429,7 +444,7 @@ export default {
         confirmFn: async () => {
           try {
             await this.$store.dispatch('tenant/deleteBindingPolicies', {
-              tenantId: row.tenant_id,
+              tenantId: row.id,
               serviceId: this.activeServiceId,
             });
             this.$paasMessage({
@@ -469,6 +484,21 @@ export default {
           this.$router.push({ params: { tenantId }, query: { active: 'plan' } });
         },
       });
+    },
+    initResizeObserver() {
+      this.resizeObserver = new ResizeObserver((entries) => {
+        window.requestAnimationFrame(() => {
+          for (let entry of entries) {
+            if (entry.target === this.$refs.contentRef) {
+              const height = entry.contentRect.height;
+              this.tableHeight = height - 50;
+            }
+          }
+        });
+      });
+      if (this.$refs.contentRef) {
+        this.resizeObserver.observe(this.$refs.contentRef);
+      }
     },
   },
 };

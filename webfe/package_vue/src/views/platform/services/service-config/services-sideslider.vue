@@ -259,8 +259,8 @@ export default {
     async formatUniformParams() {
       const { clusters, env_clusters: envClusters } = await this.$refs.uniformForm?.validate();
       return {
-        tenant_id: this.curTenantData.policies.tenant_id,
-        allocation_precedence_policies: [],
+        tenant_id: this.curTenantData.policies.id,
+        allocation_precedence_policies: null,
         allocation_policy: {
           ...(this.isAllocatedByEnv && {
             env_plans: this.generateEnvPlans(envClusters),
@@ -269,6 +269,7 @@ export default {
             plans: this.mapPlanNamesToIds(clusters),
           }),
         },
+        policy_type: 'uniform',
       };
     },
     // 方案配置项
@@ -284,17 +285,17 @@ export default {
         const ruleItem = this.conditionTypes.find((v) => v.key === matcher.key);
         return {
           // 将方案name反转为id
-          ...(ruleItem && { cond_type: ruleItem.name }),
-          // regions 不固定
-          ...(ruleItem && { cond_data: { [ruleItem.key]: matcher.value.split(',') } }),
+          cond_type: ruleItem ? ruleItem.name : 'always_match',
+          cond_data: ruleItem ? { [ruleItem.key]: matcher.value.split(',') } : {},
           priority: data.length - index,
           ...this.generatePolicyConfig(rule),
         };
       });
       return {
-        tenant_id: this.curTenantData.policies.tenant_id,
-        allocation_precedence_policies: policies.slice(0, -1),
-        allocation_policy: policies[policies.length - 1],
+        tenant_id: this.curTenantData.policies.id,
+        allocation_precedence_policies: policies,
+        allocation_policy: null,
+        policy_type: 'rule_based',
       };
     },
     // 创建/更新配置服务

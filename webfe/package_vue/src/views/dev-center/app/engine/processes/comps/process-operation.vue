@@ -658,13 +658,19 @@
 
     <!-- 日志弹窗 -->
     <process-log
+      v-if="logConfig.visiable"
+      ref="processLogRef"
       v-model="logConfig.visiable"
       :title="logConfig.title"
       :logs="logConfig.logs"
       :loading="logConfig.isLoading"
-      :time-selection="chartRangeList"
+      :selection-list="logSelectionList"
       :params="logConfig.params"
+      :default-condition="'1h'"
+      @close="handleClose"
+      @change="refreshLogs"
       @refresh="refreshLogs"
+      @download="downloadInstanceLog"
     ></process-log>
 
     <!-- 功能依赖项展示 -->
@@ -696,6 +702,7 @@ import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import eventDetail from '@/views/dev-center/app/engine/cloud-deploy-manage/comps/event-detail.vue';
 import processLog from '@/components/process-log-dialog/log.vue';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
+import { downloadTxt } from '@/common/tools';
 
 let maxReplicasNum = 0;
 
@@ -879,7 +886,7 @@ export default {
       isChartLoading: true,
       curChartTimeRange: '1h',
       curLogTimeRange: '1h',
-      chartRangeList: [
+      logSelectionList: [
         {
           id: '1h',
           name: i18n.t('最近1小时'),
@@ -963,6 +970,7 @@ export default {
         logs: [],
       },
       showFunctionalDependencyDialog: false,
+      defaultCondition: '1h',
     };
   },
   computed: {
@@ -1211,7 +1219,9 @@ export default {
         instanceName: instance.name,
       };
       this.logConfig.title = `${this.$t('实例')} ${this.curInstance.display_name}${this.$t('控制台输出日志')}`;
-      this.loadInstanceLog();
+      this.$nextTick(() => {
+        this.loadInstanceLog();
+      });
     },
 
     getParams() {
@@ -1261,6 +1271,7 @@ export default {
         });
         this.logConfig.logs = data;
       } catch (e) {
+        this.logConfig.logs = [];
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
@@ -2289,16 +2300,17 @@ export default {
       this.instanceEventConfig.instanceName = instance.name;
     },
 
-    preOperation() {
-      this.logConfig.isLoading = true;
+    handleClose() {
+      this.logConfig.visiable = false;
+      this.defaultCondition = '1h';
       this.logConfig.logs = [];
     },
 
     // 刷新日志
     refreshLogs(data) {
-      this.preOperation();
+      this.$set(this.logConfig, 'isLoading', true);
       if (data.type === 'realtime') {
-        this.curLogTimeRange = data.time;
+        this.curLogTimeRange = data.value;
         this.loadInstanceLog();
       } else {
         this.getPreviousLogs();
@@ -2311,16 +2323,36 @@ export default {
         const logs = await this.$store.dispatch('log/getPreviousLogs', this.logConfig.params);
         this.logConfig.logs = logs;
       } catch (e) {
-        if (e.status === 404) {
-          this.logConfig.logs = [];
-          return;
-        }
+        this.logConfig.logs = [];
         this.$paasMessage({
           theme: 'error',
           message: e.detail || e.message || this.$t('接口异常'),
         });
       } finally {
         this.logConfig.isLoading = false;
+      }
+    },
+
+    // 下载日志
+    async downloadInstanceLog(type) {
+      if (type === 'realtime') {
+        return;
+      }
+      const { params } = this.logConfig;
+      try {
+        const logs = await this.$store.dispatch('log/downloadPreviousLogs', {
+          ...params,
+        });
+        if (!logs || !logs?.length) {
+          this.$paasMessage({
+            theme: 'warning',
+            message: this.$t('暂时没有日志记录'),
+          });
+          return;
+        }
+        downloadTxt(logs, params.instanceName);
+      } catch (e) {
+        this.catchErrorHandler(e);
       }
     },
 

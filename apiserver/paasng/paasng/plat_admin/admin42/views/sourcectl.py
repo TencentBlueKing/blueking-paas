@@ -24,7 +24,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.sourcectl import SourceTypeSpecConfigSLZ
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
@@ -87,14 +87,14 @@ class SourceTypeSpecViewSet(ListModelMixin, GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.SOURCE_TYPE_SPEC,
             attribute=slz.data["name"],
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新代码库配置"""
         source_type_spec = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(source_type_spec).data)
+        data_before = DataDetail(data=SourceTypeSpecConfigSLZ(source_type_spec).data)
 
         slz = SourceTypeSpecConfigSLZ(source_type_spec, data=request.data)
         slz.is_valid(raise_exception=True)
@@ -106,14 +106,14 @@ class SourceTypeSpecViewSet(ListModelMixin, GenericViewSet):
             target=OperationTarget.SOURCE_TYPE_SPEC,
             attribute=slz.data["name"],
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, *args, **kwargs):
         """删除代码库配置"""
         source_type_spec = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=SourceTypeSpecConfigSLZ(source_type_spec).data)
+        data_before = DataDetail(data=SourceTypeSpecConfigSLZ(source_type_spec).data)
         source_type_spec.delete()
 
         add_admin_audit_record(

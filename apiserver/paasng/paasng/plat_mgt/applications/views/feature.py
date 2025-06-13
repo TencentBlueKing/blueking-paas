@@ -24,8 +24,8 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.misc.audit import constants
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
 from paasng.platform.applications.models import Application, ApplicationFeatureFlag
 
@@ -53,7 +53,7 @@ class ApplicationFeatureViewSet(viewsets.GenericViewSet):
         tags=["plat_mgt.applications"],
         operation_description="更新应用特性",
         request_body=slzs.ApplicationFeatureFlagUpdateInputSLZ(),
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, app_code):
         """更新应用特性"""
@@ -64,17 +64,15 @@ class ApplicationFeatureViewSet(viewsets.GenericViewSet):
 
         # 创建或更新应用特性
         name, effect = data["name"], data["effect"]
-        data_before = DataDetail(
-            type=constants.DataType.RAW_DATA, data=application.feature_flag.get_application_features()
-        )
+        data_before = DataDetail(data=application.feature_flag.get_application_features())
         application.feature_flag.set_feature(name, effect)
 
-        operation = constants.OperationEnum.ENABLE if effect else constants.OperationEnum.DISABLE
+        operation = OperationEnum.ENABLE if effect else OperationEnum.DISABLE
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=operation,
-            target=constants.OperationTarget.FEATURE_FLAG,
+            target=OperationTarget.FEATURE_FLAG,
             app_code=application.code,
             data_before=data_before,
         )

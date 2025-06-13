@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+
 from typing import Dict
 
 from django.utils.module_loading import import_string
@@ -25,10 +26,37 @@ from rest_framework.exceptions import ValidationError
 from paasng.platform.sourcectl.models import SourceTypeSpecConfig
 
 
-class SourceTypeSpecConfigSLZ(serializers.ModelSerializer):
-    class Meta:
-        model = SourceTypeSpecConfig
-        fields = "__all__"
+class SourceTypeSpecConfigMinimalOutputSLZ(serializers.Serializer):
+    """最小化的代码库配置 SLZ"""
+
+    id = serializers.CharField(help_text="服务 ID")
+    name = serializers.CharField(help_text="服务名称")
+    label_zh_cn = serializers.CharField(help_text="中文标签")
+    label_en = serializers.CharField(help_text="英文标签")
+    enabled = serializers.BooleanField(help_text="是否启用")
+    client_id = serializers.CharField(help_text="OAuth Client ID")
+
+
+class SourceTypeSpecConfigSLZ(serializers.Serializer):
+    """创建或修改代码库配置的 SLZ"""
+
+    name = serializers.CharField(help_text="服务名称")
+    label_zh_cn = serializers.CharField(help_text="中文标签")
+    label_en = serializers.CharField(help_text="英文标签")
+    enabled = serializers.BooleanField(help_text="是否启用")
+    spec_cls = serializers.CharField(help_text="配置类路径")
+    server_config = serializers.JSONField(help_text="服务配置")
+
+    authorization_base_url = serializers.CharField(help_text="OAuth 授权链接", allow_blank=True)
+    client_id = serializers.CharField(help_text="OAuth App Client ID", allow_blank=True)
+    client_secret = serializers.CharField(help_text="OAuth App Client Secret", allow_blank=True)
+    redirect_uri = serializers.CharField(help_text="OAuth 回调地址", allow_blank=True)
+    token_base_url = serializers.CharField(help_text="OAuth 获取 Token 链接", allow_blank=True)
+    oauth_display_info_zh_cn = serializers.JSONField(help_text="OAuth 展示信息（中文）")
+    oauth_display_info_en = serializers.JSONField(help_text="OAuth 展示信息（英文）")
+
+    display_info_zh_cn = serializers.JSONField(help_text="中文展示信息")
+    display_info_en = serializers.JSONField(help_text="英文展示信息")
 
     def validate_server_config(self, conf: Dict) -> Dict:
         if not isinstance(conf, dict):

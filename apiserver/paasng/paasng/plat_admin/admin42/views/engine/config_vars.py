@@ -25,7 +25,7 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.config_vars import ConfigVarSLZ
 from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
@@ -73,13 +73,12 @@ class ConfigVarViewSet(BaseConfigVarViewSet):
     @staticmethod
     def _gen_data_detail(config_var: ConfigVar) -> DataDetail:
         return DataDetail(
-            type=DataType.RAW_DATA,
             data={"key": config_var.key, "value": config_var.value, "description": config_var.description},
         )
 
     def create(self, request, *args, **kwargs):
         """创建应用内环境变量"""
-        data_after = DataDetail(type=DataType.RAW_DATA, data=copy.deepcopy(request.data))
+        data_after = DataDetail(data=copy.deepcopy(request.data))
         slz = self.get_serializer(data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()

@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 import logging
 from typing import Optional, Union
 
@@ -22,8 +23,8 @@ from bk_audit.log.models import AuditContext, AuditInstance
 from django.conf import settings
 from iam import Action
 
-from paasng.misc.audit import constants
 from paasng.misc.audit.client import bk_audit_client
+from paasng.misc.audit.constants import AccessType, DataType, ResultCode
 from paasng.misc.audit.models import AdminOperationRecord, AppOperationRecord
 from paasng.platform.applications.models import Application
 
@@ -38,8 +39,8 @@ class AppBaseObj:
 
 @define
 class DataDetail:
-    type: constants.DataType
-    data: Optional[Union[str, int, dict, list]]
+    type: DataType = DataType.RAW_DATA
+    data: Union[str, int, dict, list] | None = None
 
 
 class ApplicationInstance(AuditInstance):
@@ -49,7 +50,8 @@ class ApplicationInstance(AuditInstance):
         except Application.DoesNotExist:
             # 如果应用已经删除，则只记录应用 ID 即可
             self.instance = AppBaseObj(code=app_code, name=f"{app_code}__DELETE__")
-        self.instance = AppBaseObj(code=app_code, name=app.name)
+        else:
+            self.instance = AppBaseObj(code=app_code, name=app.name)
 
     @property
     def instance_id(self):
@@ -108,8 +110,8 @@ def add_app_audit_record(
     attribute: Optional[str] = None,
     module_name: Optional[str] = None,
     environment: Optional[str] = None,
-    access_type: int = constants.AccessType.WEB,
-    result_code: int = constants.ResultCode.SUCCESS,
+    access_type: int = AccessType.WEB,
+    result_code: int = ResultCode.SUCCESS,
     data_before: Optional[DataDetail] = None,
     data_after: Optional[DataDetail] = None,
 ) -> AppOperationRecord:
@@ -158,8 +160,8 @@ def add_admin_audit_record(
     attribute: Optional[str] = None,
     module_name: Optional[str] = None,
     environment: Optional[str] = None,
-    access_type: int = constants.AccessType.WEB,
-    result_code: int = constants.ResultCode.SUCCESS,
+    access_type: int = AccessType.WEB,
+    result_code: int = ResultCode.SUCCESS,
     data_before: Optional[DataDetail] = None,
     data_after: Optional[DataDetail] = None,
 ) -> AdminOperationRecord:
@@ -191,3 +193,7 @@ def add_admin_audit_record(
         data_before=asdict(data_before) if data_before else None,
         data_after=asdict(data_after) if data_after else None,
     )
+
+
+# 平台管理推荐使用该函数名以做区分，未来可能会废弃 admin42 的
+add_plat_mgt_audit_record = add_admin_audit_record

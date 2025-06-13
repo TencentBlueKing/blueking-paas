@@ -28,8 +28,7 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as membe
 from paasng.bk_plugins.pluginscenter.models import PluginInstance
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit import constants
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.bk_plugins import (
     BkPluginDistributorSLZ,
@@ -64,14 +63,14 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.BKPLUGIN_TAG,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新插件分类"""
         plugin_tag = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(plugin_tag).data)
+        data_before = DataDetail(data=BKPluginTagSLZ(plugin_tag).data)
 
         slz = BKPluginTagSLZ(plugin_tag, data=request.data)
         slz.is_valid(raise_exception=True)
@@ -82,14 +81,14 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.BKPLUGIN_TAG,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(plugin_tag).data),
+            data_after=DataDetail(data=BKPluginTagSLZ(plugin_tag).data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, *args, **kwargs):
         """删除插件分类"""
         plugin_tag = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=BKPluginTagSLZ(plugin_tag).data)
+        data_before = DataDetail(data=BKPluginTagSLZ(plugin_tag).data)
         plugin_tag.delete()
 
         add_admin_audit_record(
@@ -126,14 +125,14 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.BKPLUGIN_DISTRIBUTOR,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新插件使用方"""
         plugin_distributor = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(plugin_distributor).data)
+        data_before = DataDetail(data=BkPluginDistributorSLZ(plugin_distributor).data)
         slz = BkPluginDistributorSLZ(plugin_distributor, data=request.data)
         slz.is_valid(raise_exception=True)
         slz.save()
@@ -143,14 +142,14 @@ class BKPluginDistributorsView(GenericViewSet, ListModelMixin):
             operation=OperationEnum.MODIFY,
             target=OperationTarget.BKPLUGIN_DISTRIBUTOR,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(plugin_distributor).data),
+            data_after=DataDetail(data=BkPluginDistributorSLZ(plugin_distributor).data),
         )
         return Response(slz.data)
 
     def destroy(self, request, *args, **kwargs):
         """删除插件使用方"""
         plugin_distributor = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=BkPluginDistributorSLZ(plugin_distributor).data)
+        data_before = DataDetail(data=BkPluginDistributorSLZ(plugin_distributor).data)
         plugin_distributor.delete()
 
         add_admin_audit_record(
@@ -170,7 +169,6 @@ class BKPluginMembersManageViewSet(ViewSet):
     @staticmethod
     def _gen_data_detail(code: str, username: str) -> DataDetail:
         return DataDetail(
-            type=constants.DataType.RAW_DATA,
             data={
                 "username": username,
                 "roles": [

@@ -121,7 +121,7 @@ class TestApplicationServicesViewSet:
         assert resp.status_code == 200
         assert len(resp.data) > 0
 
-    @mock.patch("paasng.plat_mgt.applications.views.services.add_admin_audit_record", return_value=None)
+    @mock.patch("paasng.plat_mgt.applications.views.services.add_plat_mgt_audit_record", return_value=None)
     def test_provision_instance(self, mock_audit_record, plat_mgt_api_client):
         """测试分配服务实例"""
 

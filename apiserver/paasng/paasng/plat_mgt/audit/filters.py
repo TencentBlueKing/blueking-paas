@@ -53,6 +53,7 @@ class OperationAuditFilterBackend(BaseFilterBackend):
         # 操作人过滤
         operator = validate_params.get("operator")
         if operator is not None:
+            # 将用户名转换成用户对象 ID
             operator = user_id_encoder.encode(settings.USER_TYPE, operator)
             queryset = queryset.filter(user=operator)
 

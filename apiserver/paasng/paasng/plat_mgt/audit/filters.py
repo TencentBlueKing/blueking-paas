@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from bkpaas_auth.models import user_id_encoder
+from django.conf import settings
 from rest_framework.filters import BaseFilterBackend
 
 from paasng.misc.audit.models import AdminOperationRecord
@@ -51,6 +53,7 @@ class OperationAuditFilterBackend(BaseFilterBackend):
         # 操作人过滤
         operator = validate_params.get("operator")
         if operator:
+            operator = user_id_encoder.encode(settings.USER_TYPE, operator)
             queryset = queryset.filter(user=operator)
 
         # 时间过滤

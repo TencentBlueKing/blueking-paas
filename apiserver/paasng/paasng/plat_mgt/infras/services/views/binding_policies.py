@@ -30,6 +30,8 @@ from paasng.accessories.services.models import ServiceCategory
 from paasng.accessories.services.providers import get_active_provider_choices
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.infras.services.serializers import (
     DeletePolicyCombinationSLZ,
     PolicyCombinationConfigOutputSLZ,
@@ -66,8 +68,20 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         service = mixed_service_mgr.get(uuid=service_id)
-        mgr = SvcBindingPolicyManager(service, getattr(data, "tenant_id"))
+        tenant_id = getattr(data, "tenant_id")
+        mgr = SvcBindingPolicyManager(service, tenant_id)
+        comb_cfg = mgr.get_comb_cfg()
+        data_before = PolicyCombinationConfigOutputSLZ(comb_cfg).data if comb_cfg else None
         mgr.save_comb_cfg(data)
+        data_after = PolicyCombinationConfigOutputSLZ(mgr.get_comb_cfg()).data
+        add_plat_mgt_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ADD_ON,
+            attribute=f"{service.uuid}-{tenant_id}",
+            data_before=DataDetail(data=data_before),
+            data_after=DataDetail(data=data_after),
+        )
         return Response(status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -82,8 +96,19 @@ class BindingPolicyViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         service = mixed_service_mgr.get(uuid=service_id)
-        mgr = SvcBindingPolicyManager(service, data.get("tenant_id"))
+        tenant_id = data.get("tenant_id")
+        mgr = SvcBindingPolicyManager(service, tenant_id)
+        comb_cfg = mgr.get_comb_cfg()
+        data_before = PolicyCombinationConfigOutputSLZ(comb_cfg).data if comb_cfg else None
         mgr.clean()
+
+        add_plat_mgt_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.ADD_ON,
+            attribute=f"{service.uuid}-{tenant_id}",
+            data_before=DataDetail(data=data_before),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(

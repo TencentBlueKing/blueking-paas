@@ -15,9 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
-from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -28,12 +26,12 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.templates.models import Template
-from paasng.utils.error_codes import error_codes
 
 from .serializers import (
+    TemplateCreateInputSLZ,
     TemplateDetailOutputSLZ,
     TemplateMinimalOutputSLZ,
-    TemplateUpsertInputSLZ,
+    TemplateUpdateInputSLZ,
 )
 
 
@@ -59,30 +57,24 @@ class TemplateViewSet(viewsets.GenericViewSet):
         operation_description="获取模板详情",
         responses={status.HTTP_200_OK: TemplateDetailOutputSLZ()},
     )
-    def retrieve(self, request, template_id):
+    def retrieve(self, request, template_name):
         """获取单个模板详情"""
-        tmpl = get_object_or_404(Template, id=template_id)
+        tmpl = get_object_or_404(Template, name=template_name)
         slz = TemplateDetailOutputSLZ(tmpl)
         return Response(slz.data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.tmpls"],
         operation_description="创建模板",
-        responses={status.HTTP_201_CREATED: None},
+        responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request):
         """创建模板"""
-        slz = TemplateUpsertInputSLZ(data=request.data)
+        slz = TemplateCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        try:
-            Template.objects.create(**data)
-        except IntegrityError as e:
-            # 检查是否是名称唯一性约束错误
-            if "name" in str(e) or "UNIQUE constraint failed" in str(e):
-                raise error_codes.CANNOT_CREATE_TMPL.f(_("名称已存在，请使用其他名称"))
-            raise
+        Template.objects.create(**data)
 
         add_plat_mgt_audit_record(
             user=request.user.pk,
@@ -97,18 +89,21 @@ class TemplateViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.tmpls"],
         operation_description="更新模板",
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def update(self, request, template_id):
+    def update(self, request, template_name):
         """更新模板"""
-        tmpl = get_object_or_404(Template, id=template_id)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=TemplateDetailOutputSLZ(tmpl).data)
+        template = get_object_or_404(Template, name=template_name)
+        data_before = DataDetail(type=DataType.RAW_DATA, data=TemplateDetailOutputSLZ(template).data)
 
-        slz = TemplateUpsertInputSLZ(tmpl, data=request.data)
+        slz = TemplateUpdateInputSLZ(data=request.data, context={"instance": template})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        Template.objects.filter(id=template_id).update(**data)
+        # 更新模板
+        for field, value in data.items():
+            setattr(template, field, value)
+        template.save()
 
         add_plat_mgt_audit_record(
             user=request.user.pk,
@@ -123,11 +118,11 @@ class TemplateViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.tmpls"],
         operation_description="删除模板",
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def destroy(self, request, template_id):
+    def destroy(self, request, template_name):
         """删除模板"""
-        tmpl = get_object_or_404(Template, id=template_id)
+        tmpl = get_object_or_404(Template, name=template_name)
         data_before = DataDetail(data=TemplateDetailOutputSLZ(tmpl).data)
 
         tmpl.delete()

@@ -21,13 +21,13 @@ from .views import TemplateViewSet
 
 urlpatterns = [
     re_path(
-        r"^api/plat_mgt/tmpls/$",
+        r"^api/plat_mgt/templates/$",
         TemplateViewSet.as_view({"get": "list", "post": "create"}),
-        name="plat_mgt.tmpls.list_create",
+        name="plat_mgt.templates.list_create",
     ),
     re_path(
-        r"^api/plat_mgt/tmpls/(?P<template_id>[^/]+)/$",
+        r"^api/plat_mgt/templates/(?P<template_name>[^/]+)/$",
         TemplateViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
-        name="plat_mgt.tmpls.retrieve_update_destroy",
+        name="plat_mgt.templates.retrieve_update_destroy",
     ),
 ]

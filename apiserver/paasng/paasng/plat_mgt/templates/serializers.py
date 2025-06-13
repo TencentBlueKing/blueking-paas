@@ -23,6 +23,7 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.platform.applications.constants import AppLanguage
 from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.models import Template
 
 
 class TemplateMinimalOutputSLZ(serializers.Serializer):
@@ -53,8 +54,8 @@ class TemplateDetailOutputSLZ(TemplateMinimalOutputSLZ):
     runtime_type = serializers.CharField(help_text="运行时类型")
 
 
-class TemplateUpsertInputSLZ(serializers.Serializer):
-    """模板创建或更新输入序列化器"""
+class TemplateCreateInputSLZ(serializers.Serializer):
+    """模板创建输入序列化器"""
 
     name = serializers.CharField(help_text="模板名称", max_length=64)
     type = serializers.ChoiceField(help_text="模板类型", choices=TemplateType.get_django_choices())
@@ -71,6 +72,12 @@ class TemplateUpsertInputSLZ(serializers.Serializer):
     tags = serializers.JSONField(help_text="标签", default=list)
     repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, default="")
     is_hidden = serializers.BooleanField(help_text="是否显示", default=False)
+
+    def validate_name(self, name: str) -> str:
+        """验证模板名称唯一性"""
+        if Template.objects.filter(name=name).exists():
+            raise ValidationError(_("名称已存在，请使用其他名称"))
+        return name
 
     def validate_preset_services_config(self, conf: Dict) -> Dict:
         if not isinstance(conf, dict):
@@ -105,3 +112,20 @@ class TemplateUpsertInputSLZ(serializers.Serializer):
         if not value:
             raise ValidationError(_("二进制包存储配置必须为有效的地址字符串"))
         return value
+
+
+class TemplateUpdateInputSLZ(TemplateCreateInputSLZ):
+    """模板更新输入序列化器"""
+
+    def validate_name(self, name: str) -> str:
+        """验证模板名称唯一性（更新时排除自身）"""
+        # 获取当前更新的实例
+        instance = self.context.get("instance")
+
+        queryset = Template.objects.filter(name=name)
+        if instance:
+            queryset = queryset.exclude(id=instance.id)
+
+        if queryset.exists():
+            raise ValidationError(_("名称已存在，请使用其他名称"))
+        return name

@@ -43,7 +43,7 @@ from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.notifier.client import BkNotificationService
 from paasng.infras.notifier.exceptions import BaseNotifierError
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
@@ -168,7 +168,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.CREATE,
             target=OperationTarget.ACCESS_TOKEN,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+            data_after=DataDetail(data=data),
         )
         return Response(data=data)
 
@@ -197,7 +197,7 @@ class OauthTokenViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.REFRESH,
             target=OperationTarget.ACCESS_TOKEN,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+            data_after=DataDetail(data=data),
         )
         return Response(data=data)
 

@@ -35,8 +35,8 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
 from paasng.infras.iam.helpers import fetch_role_members
-from paasng.misc.audit import constants
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
 from paasng.plat_mgt.bk_plugins.views import is_plugin_instance_exist, is_user_plugin_admin
@@ -174,14 +174,13 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         tags=["plat_mgt.applications"],
         operation_description="更新应用名称",
         request_body=slzs.ApplicationNameUpdateInputSLZ(),
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update_app_name(self, request, app_code):
         """更新应用名称"""
         application = get_object_or_404(self.get_queryset(), code=app_code)
 
         data_before = DataDetail(
-            type=constants.DataType.RAW_DATA,
             data={
                 "name": application.name,
                 "name_en": application.name_en,
@@ -204,17 +203,16 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
             logger.exception("Failed to update app space on BK Monitor (unknown error)")
 
         data_after = DataDetail(
-            type=constants.DataType.RAW_DATA,
             data={
                 "name": application.name,
                 "name_en": application.name_en,
             },
         )
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY_BASIC_INFO,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.MODIFY_BASIC_INFO,
+            target=OperationTarget.APP,
             app_code=application.code,
             data_before=data_before,
             data_after=data_after,
@@ -225,7 +223,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         tags=["plat_mgt.applications"],
         operation_description="更新应用集群",
         request_body=slzs.UpdateClusterSLZ(),
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update_cluster(self, request, app_code, module_name, env_name):
         """更新应用集群"""
@@ -243,26 +241,16 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         cluster_name = slz.validated_data["name"]
         cluster = get_object_or_404(Cluster, name=cluster_name)
 
-        data_before = DataDetail(
-            type=constants.DataType.RAW_DATA,
-            data={
-                "cluster": env.wl_app.latest_config.cluster,
-            },
-        )
+        data_before = DataDetail(data={"cluster": env.wl_app.latest_config.cluster})
 
         EnvClusterService(env).bind_cluster(cluster.name)
 
-        data_after = DataDetail(
-            type=constants.DataType.RAW_DATA,
-            data={
-                "cluster": cluster.name,
-            },
-        )
+        data_after = DataDetail(data={"cluster": cluster.name})
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.CLUSTER,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.CLUSTER,
             app_code=application.code,
             data_before=data_before,
             data_after=data_after,

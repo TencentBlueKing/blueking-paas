@@ -26,9 +26,8 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as membe
 from paasng.bk_plugins.pluginscenter.models import PluginInstance
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.misc.audit import constants
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.utils.error_codes import error_codes
 
 
@@ -52,7 +51,7 @@ class BKPluginMembersManageViewSet(ViewSet):
 
         members_api.add_role_members(plugin, plugin_constants.PluginRole(role), [username])
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.BKPLUGIN_MEMBER,
@@ -74,7 +73,7 @@ class BKPluginMembersManageViewSet(ViewSet):
 
         members_api.delete_role_members(plugin, plugin_constants.PluginRole(role), [username])
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.BKPLUGIN_MEMBER,
@@ -88,7 +87,6 @@ class BKPluginMembersManageViewSet(ViewSet):
     @staticmethod
     def _gen_data_detail(code: str, username: str) -> DataDetail:
         return DataDetail(
-            type=constants.DataType.RAW_DATA,
             data={
                 "username": username,
                 "roles": [

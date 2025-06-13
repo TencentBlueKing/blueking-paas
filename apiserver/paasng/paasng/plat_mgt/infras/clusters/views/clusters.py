@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from typing import Any, Dict
 
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
@@ -44,6 +45,8 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bcs.client import BCSClient
 from paasng.infras.bcs.exceptions import BCSGatewayServiceError
 from paasng.infras.bk_user.client import BkUserClient
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.infras.clusters.constants import HelmChartDeployStatus
 from paasng.plat_mgt.infras.clusters.helm import HelmClient
 from paasng.plat_mgt.infras.clusters.k8s import check_k8s_accessible
@@ -186,6 +189,14 @@ class ClusterViewSet(viewsets.GenericViewSet):
         # 新添加集群后，需要刷新配置池
         invalidate_global_configuration_pool()
 
+        # 记录操作审计日志
+        add_plat_mgt_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.CLUSTER,
+            data_after=DataDetail(data=self.to_audit_data(cluster)),
+        )
+
         return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
@@ -196,6 +207,8 @@ class ClusterViewSet(viewsets.GenericViewSet):
     )
     def update(self, request, cluster_name, *args, **kwargs):
         cluster = self.get_object()
+        # 记录变更前的集群数据
+        data_before = DataDetail(data=self.to_audit_data(cluster))
 
         slz = ClusterUpdateInputSLZ(data=request.data, context={"cur_cluster": cluster})
         slz.is_valid(raise_exception=True)
@@ -276,6 +289,15 @@ class ClusterViewSet(viewsets.GenericViewSet):
         if auth_cfg_modified or api_servers_modified:
             invalidate_global_configuration_pool()
 
+        # 记录操作审计日志
+        add_plat_mgt_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.CLUSTER,
+            data_before=data_before,
+            data_after=DataDetail(data=self.to_audit_data(cluster)),
+        )
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
@@ -297,8 +319,15 @@ class ClusterViewSet(viewsets.GenericViewSet):
                 f"集群已被 {len(state.bound_app_module_envs)} 个应用部署环境绑定",
             )
 
-        # TODO（多租户）删除集群是个危险操作，需要补充审计
         logger.warning(f"user {request.user.username} delete cluster {cluster_name}")
+
+        # 记录操作审计日志
+        add_plat_mgt_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.CLUSTER,
+            data_after=DataDetail(data=self.to_audit_data(cluster)),
+        )
 
         ClusterElasticSearchConfig.objects.filter(cluster=cluster).delete()
         ClusterAppImageRegistry.objects.filter(cluster=cluster).delete()
@@ -399,3 +428,19 @@ class ClusterViewSet(viewsets.GenericViewSet):
         cluster_state = RegionClusterState.objects.filter(cluster_name=cluster_name).order_by("-created")
 
         return Response(ClusterNodesStateSyncRecordListOutputSLZ(cluster_state, many=True).data)
+
+    @staticmethod
+    def to_audit_data(cluster: Cluster) -> Dict[str, Any]:
+        data = ClusterRetrieveOutputSLZ(cluster).data
+
+        # 对特殊类型字段做转换，避免序列化时出错
+        if es_cfg := data.get("elastic_search_config"):
+            data["elastic_search_config"] = dict(es_cfg)
+
+        if reg := data.get("app_image_registry"):
+            data["app_image_registry"] = dict(reg)
+
+        # List 类型的直接全部转换
+        data["app_domains"] = [dict(d) for d in data["app_domains"]]
+
+        return dict(data)

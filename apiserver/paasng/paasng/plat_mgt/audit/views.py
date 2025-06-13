@@ -22,7 +22,7 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.misc.audit import constants
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AdminOperationRecord
 
 from .filters import OperationAuditFilterBackend
@@ -74,9 +74,9 @@ class AuditFilterOptionsViewSet(viewsets.ViewSet):
     def list(self, request):
         """列出所有可用过滤的枚举类型"""
         enum_map = {
-            "target": constants.OperationTarget,
-            "operation": constants.OperationEnum,
-            "status": constants.ResultCode,
+            "target": OperationTarget,
+            "operation": OperationEnum,
+            "status": ResultCode,
         }
         data = {}
         for key, enum_cls in enum_map.items():

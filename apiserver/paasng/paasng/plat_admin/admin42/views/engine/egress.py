@@ -31,7 +31,7 @@ from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.workloads.networking.egress.models import EgressRule, EgressSpec
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.egress import EgressSpecSLZ
 from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
@@ -85,7 +85,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
         data_before = None
         if spec:
             # 更新 EgressSpec
-            data_before = DataDetail(type=DataType.RAW_DATA, data=self._gen_spec_data(spec))
+            data_before = DataDetail(data=self._gen_spec_data(spec))
             spec.replicas = slz.data["replicas"]
             spec.cpu_limit = slz.data["cpu_limit"]
             spec.memory_limit = slz.data["memory_limit"]
@@ -124,7 +124,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
             module_name=module_name,
             environment=environment,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
 
         # 3. 下发 Egress 到 k8s 集群，支持更新或者创建
@@ -146,10 +146,7 @@ class EgressManageViewSet(ListModelMixin, GenericViewSet):
         if not spec:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        data_before = DataDetail(
-            type=DataType.RAW_DATA,
-            data=self._gen_spec_data(spec),
-        )
+        data_before = DataDetail(data=self._gen_spec_data(spec))
 
         # 从集群中删除 egress 资源
         manifest = spec.build_manifest()

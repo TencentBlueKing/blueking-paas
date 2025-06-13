@@ -168,8 +168,8 @@ class GiteeRepoController(BaseGitRepoController):
         self,
         local_path: Path,
         commit_message: str,
-        commit_name: Optional[str] = None,
-        commit_email: Optional[str] = None,
+        commit_name: str | None = None,
+        commit_email: str | None = None,
     ) -> None:
         """将本地文件目录提交并推送到远程仓库
 
@@ -193,9 +193,7 @@ class GiteeRepoController(BaseGitRepoController):
             git_client.commit(dest_dir, message=commit_message)
             git_client.push(dest_dir)
 
-    def _fix_git_user_config(
-        self, dest_dir: Path, commit_name: Optional[str] = None, commit_email: Optional[str] = None
-    ):
+    def _fix_git_user_config(self, dest_dir: Path, commit_name: str | None = None, commit_email: str | None = None):
         """[private] 修复 git 的用户信息缺失问题
 
         :param dest_dir: git 工作路径

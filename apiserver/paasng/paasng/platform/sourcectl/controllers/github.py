@@ -168,8 +168,8 @@ class GitHubRepoController(BaseGitRepoController):
         self,
         local_path: Path,
         commit_message: str,
-        commit_name: Optional[str] = None,
-        commit_email: Optional[str] = None,
+        commit_name: str | None = None,
+        commit_email: str | None = None,
     ) -> None:
         """将本地文件目录提交并推送到远程仓库
 

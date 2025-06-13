@@ -409,7 +409,7 @@ def delete_repo(repo_type: str, repo_url: str):
 
 
 @contextmanager
-def repo_cleanup_context(repo_type: str, repo_url: Optional[str] = None):
+def repo_cleanup_context(repo_type: str, repo_url: str | None = None):
     """仓库清理上下文管理器，在异常时自动删除新建的仓库"""
     try:
         yield

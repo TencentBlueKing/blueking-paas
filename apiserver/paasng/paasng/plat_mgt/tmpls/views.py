@@ -26,7 +26,7 @@ from rest_framework.response import Response
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.templates.models import Template
 from paasng.utils.error_codes import error_codes
 
@@ -84,12 +84,12 @@ class TemplateViewSet(viewsets.GenericViewSet):
                 raise error_codes.CANNOT_CREATE_TMPL.f(_("名称已存在，请使用其他名称"))
             raise
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.TEMPLATE,
             attribute=data["name"],
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+            data_after=DataDetail(data=data),
         )
 
         return Response(status=status.HTTP_201_CREATED)
@@ -110,13 +110,13 @@ class TemplateViewSet(viewsets.GenericViewSet):
 
         Template.objects.filter(id=template_id).update(**data)
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.TEMPLATE,
             attribute=data["name"],
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+            data_after=DataDetail(data=data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -128,11 +128,11 @@ class TemplateViewSet(viewsets.GenericViewSet):
     def destroy(self, request, template_id):
         """删除模板"""
         tmpl = get_object_or_404(Template, id=template_id)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=TemplateDetailOutputSLZ(tmpl).data)
+        data_before = DataDetail(data=TemplateDetailOutputSLZ(tmpl).data)
 
         tmpl.delete()
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.TEMPLATE,

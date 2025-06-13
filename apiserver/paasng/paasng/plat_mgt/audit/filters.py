@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from bkpaas_auth.models import user_id_encoder
+from django.conf import settings
 from rest_framework.filters import BaseFilterBackend
 
 from paasng.misc.audit.models import AdminOperationRecord
@@ -35,30 +37,32 @@ class OperationAuditFilterBackend(BaseFilterBackend):
 
         # 操作对象过滤
         target = validate_params.get("target")
-        if target:
+        if target is not None:
             queryset = queryset.filter(target=target)
 
         # 操作类型过滤
         operation = validate_params.get("operation")
-        if operation:
+        if operation is not None:
             queryset = queryset.filter(operation=operation)
 
         # 状态过滤
         status = validate_params.get("status")
-        if status:
+        if status is not None:
             queryset = queryset.filter(result_code=status)
 
         # 操作人过滤
         operator = validate_params.get("operator")
-        if operator:
+        if operator is not None:
+            # 将用户名转换成用户对象 ID
+            operator = user_id_encoder.encode(settings.USER_TYPE, operator)
             queryset = queryset.filter(user=operator)
 
         # 时间过滤
         start_time = validate_params.get("start_time")
         end_time = validate_params.get("end_time")
-        if start_time:
+        if start_time is not None:
             queryset = queryset.filter(created__gte=start_time)
-        if end_time:
+        if end_time is not None:
             queryset = queryset.filter(created__lte=end_time)
 
         return queryset

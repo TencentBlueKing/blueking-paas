@@ -22,7 +22,7 @@ from django.utils.translation import gettext_lazy as _
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.constants import AccessType, OperationTarget, ResultCode
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.basic import get_username_by_bkpaas_user_id
@@ -43,10 +43,12 @@ class BaseOperation(UuidAuditedModel):
     data_before = models.JSONField(verbose_name="操作前的数据", null=True, blank=True)
     data_after = models.JSONField(verbose_name="操作后的数据", null=True, blank=True)
 
-    operation = models.CharField(max_length=32, verbose_name="操作类型", choices=OperationEnum.get_choices())
-    target = models.CharField(max_length=32, verbose_name="操作对象", choices=OperationTarget.get_choices())
+    # 可选枚举值：OperationEnum
+    operation = models.CharField(max_length=32, verbose_name="操作类型")
+    # 可选枚举值：OperationTarget
+    target = models.CharField(max_length=32, verbose_name="操作对象")
     attribute = models.CharField(
-        max_length=32,
+        max_length=128,
         verbose_name="对象属性",
         help_text="如增强服务的属性可以为：mysql、bkrepo",
         null=True,

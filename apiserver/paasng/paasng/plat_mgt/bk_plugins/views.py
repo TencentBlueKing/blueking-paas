@@ -28,7 +28,6 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
-from paasng.utils.error_codes import error_codes
 
 
 class BKPluginMembersManageViewSet(ViewSet):
@@ -42,10 +41,6 @@ class BKPluginMembersManageViewSet(ViewSet):
         username = request.user.username
         plugin = get_object_or_404(PluginInstance, id=app_code)
         role = plugin_constants.PluginRole.ADMINISTRATOR.value
-
-        # 不允许添加不同租户的成员成为管理员
-        if plugin.tenant_id != request.user.tenant_id:
-            raise error_codes.MEMBERSHIP_CREATE_FAILED.f("不允许添加不同租户的成员")
 
         data_before = self._gen_data_detail(plugin, username)
 

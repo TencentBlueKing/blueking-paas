@@ -110,5 +110,47 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/${id}/`;
       return http.delete(url);
     },
+    /**
+     * 增强服务-获取服务列表
+     */
+    getBoundServices({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/services/bound_attachments/`;
+      return http.get(url);
+    },
+    /**
+     * 增强服务-分配增强服务实例
+     */
+    assignEnhancedServiceInstance({}, { appCode, moduleId, env, serviceId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/envs/${env}/services/${serviceId}/instance/`;
+      return http.post(url);
+    },
+    /**
+     * 增强服务-解绑服务实例
+     */
+    unassignServiceInstance({}, { appCode, moduleId, env, serviceId, instanceId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/envs/${env}/services/${serviceId}/instance/${instanceId}/`;
+      return http.delete(url);
+    },
+    /**
+     * 增强服务-获取增强服务实例凭证
+     */
+    getCredentials({}, { appCode, moduleId, env, serviceId, instanceId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/envs/${env}/services/${serviceId}/instance/${instanceId}/credentials/`;
+      return http.get(url);
+    },
+    /**
+     * 增强服务-获取未绑定增强服务实例（未回收）
+     */
+    getUnboundAttachments({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/services/unbound_attachments/`;
+      return http.get(url);
+    },
+    /**
+     * 增强服务-回收未绑定的增强服务实例
+     */
+    recycleServiceInstance({}, { appCode, moduleId, serviceId, instanceId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/services/${serviceId}/instance/${instanceId}/`;
+      return http.delete(url);
+    },
   },
 };

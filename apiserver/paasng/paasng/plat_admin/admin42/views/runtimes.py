@@ -23,7 +23,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.plat_admin.admin42.serializers.runtimes import (
     AppSlugBuilderBindInputSLZ,
@@ -96,7 +96,6 @@ class BuildPackAPIViewSet(GenericViewSet):
         slugbuilders = AppSlugBuilder.objects.filter(id__in=data["slugbuilder_ids"])
         existing_slugbuilders = buildpack.slugbuilders.all()
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data={"bound_slugbuilders": [slugbuilder.name for slugbuilder in existing_slugbuilders]},
         )
 
@@ -118,7 +117,6 @@ class BuildPackAPIViewSet(GenericViewSet):
             attribute=buildpack.name,
             data_before=data_before,
             data_after=DataDetail(
-                type=DataType.RAW_DATA,
                 data={"bound_slugbuilders": [slugbuilder.name for slugbuilder in slugbuilders]},
             ),
         )
@@ -135,10 +133,7 @@ class BuildPackAPIViewSet(GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.BUILDPACK,
             attribute=slz.data["name"],
-            data_after=DataDetail(
-                type=DataType.RAW_DATA,
-                data=slz.data,
-            ),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -146,7 +141,6 @@ class BuildPackAPIViewSet(GenericViewSet):
         """更新 BuildPack"""
         buildpack = AppBuildPack.objects.get(pk=pk)
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data=BuildPackUpdateInputSLZ(buildpack).data,
         )
 
@@ -160,10 +154,7 @@ class BuildPackAPIViewSet(GenericViewSet):
             target=OperationTarget.BUILDPACK,
             attribute=buildpack.name,
             data_before=data_before,
-            data_after=DataDetail(
-                type=DataType.RAW_DATA,
-                data=slz.data,
-            ),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -171,7 +162,6 @@ class BuildPackAPIViewSet(GenericViewSet):
         """删除 BuildPack"""
         buildpack = AppBuildPack.objects.get(pk=pk)
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data=BuildPackListOutputSLZ(buildpack).data,
         )
         buildpack.delete()
@@ -224,7 +214,6 @@ class SlugBuilderAPIViewSet(GenericViewSet):
         """设置绑定 BuildPack 列表"""
         slugbuilder = AppSlugBuilder.objects.get(pk=pk)
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data={"bound_buildpacks": [f"{bp.name}({bp.id})" for bp in slugbuilder.buildpacks.all()]},
         )
         slz = AppSlugBuilderBindInputSLZ(data=request.data, context={"slugbuilder_type": slugbuilder.type})
@@ -242,7 +231,6 @@ class SlugBuilderAPIViewSet(GenericViewSet):
             attribute=slugbuilder.name,
             data_before=data_before,
             data_after=DataDetail(
-                type=DataType.RAW_DATA,
                 data={"bound_buildpacks": [f"{bp.name}({bp.id})" for bp in buildpacks]},
             ),
         )
@@ -264,10 +252,7 @@ class SlugBuilderAPIViewSet(GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.SLUGBUILDER,
             attribute=slz.data["name"],
-            data_after=DataDetail(
-                type=DataType.RAW_DATA,
-                data=slz.data,
-            ),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -275,7 +260,6 @@ class SlugBuilderAPIViewSet(GenericViewSet):
         """更新 SlugBuilder"""
         slugbuilder = AppSlugBuilder.objects.get(pk=pk)
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data=AppSlugBuilderUpdateInputSLZ(slugbuilder).data,
         )
 
@@ -289,10 +273,7 @@ class SlugBuilderAPIViewSet(GenericViewSet):
             target=OperationTarget.SLUGBUILDER,
             attribute=slugbuilder.name,
             data_before=data_before,
-            data_after=DataDetail(
-                type=DataType.RAW_DATA,
-                data=slz.data,
-            ),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -300,7 +281,6 @@ class SlugBuilderAPIViewSet(GenericViewSet):
         """删除 SlugBuilder"""
         slugbuilder = AppSlugBuilder.objects.get(pk=pk)
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data=AppSlugBuilderListOutputSLZ(slugbuilder).data,
         )
         slugbuilder.delete()
@@ -347,10 +327,7 @@ class SlugRunnerAPIViewSet(GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.SLUGRUNNER,
             attribute=slz.data["name"],
-            data_after=DataDetail(
-                type=DataType.RAW_DATA,
-                data=slz.data,
-            ),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -358,7 +335,6 @@ class SlugRunnerAPIViewSet(GenericViewSet):
         """更新 SlugRunner"""
         slugrunner = AppSlugRunner.objects.get(pk=pk)
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data=AppSlugRunnerListOutputSLZ(slugrunner).data,
         )
         slz = AppSlugRunnerUpdateInputSLZ(slugrunner, data=request.data)
@@ -372,7 +348,6 @@ class SlugRunnerAPIViewSet(GenericViewSet):
             attribute=slugrunner.name,
             data_before=data_before,
             data_after=DataDetail(
-                type=DataType.RAW_DATA,
                 data=AppSlugRunnerListOutputSLZ(slugrunner).data,
             ),
         )
@@ -382,7 +357,6 @@ class SlugRunnerAPIViewSet(GenericViewSet):
         """删除 SlugRunner"""
         slugrunner = AppSlugRunner.objects.get(pk=pk)
         data_before = DataDetail(
-            type=DataType.RAW_DATA,
             data=AppSlugRunnerListOutputSLZ(slugrunner).data,
         )
         slugrunner.delete()

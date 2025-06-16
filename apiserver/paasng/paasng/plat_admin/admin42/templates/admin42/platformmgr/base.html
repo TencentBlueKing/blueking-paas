@@ -64,7 +64,17 @@
         {
             name: '应用资源方案',
             icon: 'icon-tree-module-shape',
-            url: "{% url 'admin.process_spec_plan.manage' %}"
+            url: '{% url "admin.process_spec_plan.manage" %}',
+            children: [
+                {
+                    name: '方案列表',
+                    url: '{% url "admin.process_spec_plan.manage" %}'
+                },
+                {
+                    name: '方案配置',
+                    url: '{% url "admin.process_spec_plan.applications.manage" %}'
+                }
+            ]
         },
         {
             name: '共享证书管理',

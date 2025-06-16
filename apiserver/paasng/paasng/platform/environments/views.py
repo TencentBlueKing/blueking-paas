@@ -23,7 +23,7 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.application import app_view_actions_perm
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.environments.utils import batch_save_protections
@@ -141,7 +141,7 @@ class ModuleEnvRoleProtectionViewSet(ApplicationCodeInPathMixin, viewsets.Generi
             operation=OperationEnum.MODIFY,
             target=OperationTarget.DEPLOY_RESTRICTION,
             module_name=module_name,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data["envs"]),
+            data_before=DataDetail(data=data_before),
+            data_after=DataDetail(data=data["envs"]),
         )
         return Response(self.serializer_class(qs, many=True).data)

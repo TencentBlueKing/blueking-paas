@@ -21,13 +21,13 @@ from typing import Collection, Dict
 
 from django.db import models
 
-from paasng.accessories.servicehub.constants import ServiceType
+from paasng.accessories.servicehub.constants import ServiceAllocationPolicyType, ServiceType
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.services.models import Plan, Service, ServiceInstance
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import ApplicationEnvironment
 from paasng.platform.modules.models import Module
-from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel
+from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel, UuidAuditedModel
 
 logger = logging.getLogger(__name__)
 
@@ -267,10 +267,54 @@ class SharedServiceAttachment(TimestampedModel):
         unique_together = ("module", "service_type", "service_id")
 
 
+class ServiceAllocationPolicyManager(models.Manager):
+    """The custom manager for ServiceAllocationPolicy model, provide shortcut methods."""
+
+    def get_type(self, service: ServiceObj, tenant_id: str) -> ServiceAllocationPolicyType:
+        """Get the allocation type by service.
+
+        :return: the allocation type, use UNIFORM when the policy object does not exist.
+        """
+        try:
+            obj = self.get_queryset().get(service_id=service.uuid, tenant_id=tenant_id)
+        except ServiceAllocationPolicy.DoesNotExist:
+            return ServiceAllocationPolicyType.UNIFORM
+        return ServiceAllocationPolicyType(obj.type)
+
+    def set_type_uniform(self, service: ServiceObj, tenant_id: str):
+        """Set the allocation type to UNIFORM for the given service."""
+        self.get_queryset().update_or_create(
+            service_id=service.uuid,
+            tenant_id=tenant_id,
+            defaults={"type": ServiceAllocationPolicyType.UNIFORM.value},
+        )
+
+    def set_type_rule_based(self, service: ServiceObj, tenant_id: str):
+        """Set the allocation type to RULE_BASED for the given service."""
+        self.get_queryset().update_or_create(
+            service_id=service.uuid,
+            tenant_id=tenant_id,
+            defaults={"type": ServiceAllocationPolicyType.RULE_BASED.value},
+        )
+
+
+class ServiceAllocationPolicy(UuidAuditedModel):
+    """服务分配策略"""
+
+    service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)
+    # 枚举值 -> ServiceAllocationPolicyType
+    type = models.CharField(max_length=32, help_text="分配策略类型")
+
+    tenant_id = tenant_id_field_factory()
+
+    objects = ServiceAllocationPolicyManager()
+
+    class Meta:
+        unique_together = ("tenant_id", "service_id")
+
+
 class ServiceBindingPolicy(AuditedModel):
-    """ServiceBindingPolicy 是增强服务所使用的绑定策略，负责在应用启用增强服务时确定应该
-    使用哪一个增强服务方案（Plan）。一个增强服务，必须有一个绑定策略才算完成“初始化”，否则
-    无法被应用正常使用。
+    """统一分配策略。
 
     - 当前支持两类策略：静态和分环境，详见 ServiceBindingPolicyType。
     """
@@ -289,11 +333,10 @@ class ServiceBindingPolicy(AuditedModel):
 
 
 class ServiceBindingPrecedencePolicy(AuditedModel):
-    """ServiceBindingPrecedencePolicy 是优先于普通 ServiceBindingPolicy 之上的特殊策略，
-    它并非必选，并且不像普通策略一样针对所有的情况生效。ServiceBindingPrecedencePolicy 总是
-    只对特定条件生效，例如：某些特殊的应用或某些特殊应用集群，等等。
+    """按规则匹配，一般由多个 ServiceBindingPrecedencePolicy 实例组合形成一个完整的规则匹配。
 
-    如果 ServiceBindingPrecedencePolicy 生效，将忽略其他已配置的 ServiceBindingPolicy。
+    - 当前支持三种规则匹配：Region.in Cluster.in 和 AlwaysMatch，详见 PrecedencePolicyCondType。
+    - 当前支持两类策略：静态和分环境，详见 ServiceBindingPolicyType。
     """
 
     service_id = models.UUIDField(verbose_name="增强服务 ID", db_index=True)

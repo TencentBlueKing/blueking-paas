@@ -24,7 +24,7 @@ from django.utils.translation import override
 from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import Product, Tag
-from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
@@ -284,7 +284,7 @@ class TestServicesField:
 
             # Create a default binding polity so that the binding works by default
             service = mixed_service_mgr.get(svc.uuid)
-            ServiceBindingPolicyManager(service, app_tenant.tenant_id).set_static([service.get_plans()[0]])
+            SvcBindingPolicyManager(service, app_tenant.tenant_id).set_uniform(plans=[service.get_plans()[0].uuid])
 
     @pytest.fixture()
     def app_desc(self, random_name, tag):

@@ -7,6 +7,7 @@
       <bk-table-column
         :label="$t('端口名称')"
         prop="name"
+        show-overflow-tooltip
       >
         <template slot-scope="{ row, $index }">
           <div v-if="row.isEdit">
@@ -25,15 +26,14 @@
               v-if="row.exposed_type?.name"
               class="tag"
               v-bk-tooltips="{
-                content: $t(
-                  '每个模块可以设置一个访问入口，请求访问地址时{t}会被转发到访问入口指向的目标服务上。',
-                  { t: address ? `（${$t('如：')}${address}）` : ''}
-                ),
+                content: $t('每个模块可以设置一个访问入口，请求访问地址时{t}会被转发到访问入口指向的目标服务上。', {
+                  t: address ? `（${$t('如：')}${address}）` : '',
+                }),
                 width: 260,
-                placement: 'bottom'
+                placement: 'bottom',
               }"
             >
-              {{ $t('访问入口') }}
+              {{ `${$t('访问入口')}（${row.exposed_type?.name === 'bk/http' ? 'HTTP' : 'gRPC'}）` }}
             </span>
           </div>
         </template>
@@ -112,7 +112,7 @@
             <bk-button
               theme="primary"
               text
-              :disabled="portMapList.filter(v => !v.isAdd).length === 1"
+              :disabled="portMapList.filter((v) => !v.isAdd).length === 1"
               @click="handleDelete(row)"
             >
               {{ $t('删除') }}
@@ -146,20 +146,50 @@
             >
               {{ $t('取消访问入口') }}
             </bk-button>
-            <span
+            <bk-popconfirm
               v-else
-              v-bk-tooltips="{ content: $t('仅 TCP 协议的端口才能设置为访问入口'), disabled: row.protocol !== 'UDP' }"
+              width="360"
+              trigger="click"
+              placement="bottom-end"
+              @confirm="setAccessEntryPoint(row, 'set')"
             >
-              <bk-button
-                theme="primary"
-                class="ml10"
-                text
-                :disabled="row.protocol === 'UDP' || row.isEdit"
-                @click="setAccessEntryPoint(row, 'set')"
+              <div
+                slot="content"
+                class="popconfirm-content-cls"
               >
-                {{ $t('设为访问入口') }}
-              </bk-button>
-            </span>
+                <p class="popconfirm-title">{{ $t('确定设为访问入口？') }}</p>
+                <div class="content-cls">
+                  <span class="label">{{ $t('访问协议') }}</span>
+                  <bk-radio-group v-model="accessEntryType">
+                    <bk-radio
+                      :value="'bk/http'"
+                      class="f12"
+                    >
+                      HTTP
+                    </bk-radio>
+                    <bk-radio
+                      :value="'bk/grpc'"
+                      class="f12"
+                    >
+                      gRPC
+                    </bk-radio>
+                  </bk-radio-group>
+                </div>
+                <p class="access-entry-tip">{{ accessEntryTip }}</p>
+              </div>
+              <span
+                v-bk-tooltips="{ content: $t('仅 TCP 协议的端口才能设置为访问入口'), disabled: row.protocol !== 'UDP' }"
+              >
+                <bk-button
+                  theme="primary"
+                  class="ml10"
+                  text
+                  :disabled="row.protocol === 'UDP' || row.isEdit"
+                >
+                  {{ $t('设为访问入口') }}
+                </bk-button>
+              </span>
+            </bk-popconfirm>
           </template>
         </template>
       </bk-table-column>
@@ -218,6 +248,7 @@ export default {
         visiable: false,
         type: 'set',
       },
+      accessEntryType: 'bk/http',
       rules: {
         name: [
           {
@@ -227,7 +258,7 @@ export default {
           },
           {
             validator: (val) => {
-              const list = this.portMapList.filter(v => String(v.name) === String(val));
+              const list = this.portMapList.filter((v) => String(v.name) === String(val));
               return list.length < 2;
             },
             message: this.$t('服务名称不允许重复'),
@@ -249,14 +280,14 @@ export default {
           },
           {
             validator: (val) => {
-              const list = this.portMapList.filter(v => String(v.port) === String(val));
+              const list = this.portMapList.filter((v) => String(v.port) === String(val));
               return list.length < 2;
             },
             message: this.$t('服务端口不允许重复'),
             trigger: 'blur',
           },
           {
-            validator: val => this.isValidPort(val),
+            validator: (val) => this.isValidPort(val),
             message: this.$t('1~65535 或者 $PORT'),
             trigger: 'blur',
           },
@@ -269,14 +300,14 @@ export default {
           },
           {
             validator: (val) => {
-              const list = this.portMapList.filter(v => String(v.target_port) === String(val));
+              const list = this.portMapList.filter((v) => String(v.target_port) === String(val));
               return list.length < 2;
             },
             message: this.$t('容器端口不允许重复'),
             trigger: 'blur',
           },
           {
-            validator: val => this.isValidPort(val),
+            validator: (val) => this.isValidPort(val),
             message: this.$t('1~65535 或者 $PORT'),
             trigger: 'blur',
           },
@@ -291,11 +322,16 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
+    accessEntryTip() {
+      return this.accessEntryType === 'bk/http'
+        ? this.$t('适用于外部 API 提供，适合 Web 和移动应用')
+        : this.$t('适用于高性能、实时、内部服务通信');
+    },
   },
   watch: {
     services: {
       handler(newValues) {
-        this.portMapList = newValues.map(item => ({
+        this.portMapList = newValues.map((item) => ({
           ...item,
           id: this.generateId(),
           isEdit: false,
@@ -379,7 +415,7 @@ export default {
       });
     },
     replacePortMapItem(name, newItem) {
-      const index = this.portMapList.findIndex(item => item.name === name);
+      const index = this.portMapList.findIndex((item) => item.name === name);
       if (index !== -1) {
         // 同步到父组件
         if (newItem) {
@@ -400,6 +436,13 @@ export default {
         name: this.name,
         type,
         row,
+        exposedType: this.accessEntryType,
+      });
+      this.resetExposedType();
+    },
+    resetExposedType() {
+      this.$nextTick(() => {
+        this.accessEntryType = 'bk/http';
       });
     },
   },
@@ -434,8 +477,6 @@ export default {
     border-radius: 2px;
     margin-left: 5px;
   }
-
-
 }
 .main-dialog-cls {
   .dialog-content {
@@ -454,12 +495,48 @@ export default {
       transform: translateY(0px);
       margin-right: 8px;
       font-size: 14px;
-      color: #FF9C01;
+      color: #ff9c01;
       line-height: 20px;
     }
     .tips p {
       line-height: 20px;
     }
+  }
+}
+.popconfirm-content-cls {
+  margin-bottom: 16px;
+  .popconfirm-title {
+    font-weight: 400;
+    font-size: 16px;
+    color: #313238;
+    line-height: 24px;
+  }
+  .content-cls {
+    display: flex;
+    align-items: center;
+    margin: 12px 0 8px 0;
+    font-size: 12px;
+    line-height: 20px;
+    .label {
+      position: relative;
+      flex-shrink: 0;
+      width: 64px;
+      color: #4d4f56;
+      &::after {
+        content: '*';
+        position: absolute;
+        top: 50%;
+        height: 8px;
+        line-height: 1;
+        color: #ea3636;
+        font-size: 12px;
+        transform: translate(3px, -50%);
+      }
+    }
+  }
+  .access-entry-tip {
+    color: #979ba5;
+    margin-left: 64px;
   }
 }
 </style>

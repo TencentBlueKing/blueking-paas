@@ -52,7 +52,6 @@ class ProductMigration(BaseMigration):
             introduction_zh_cn=self.legacy_app.introduction,
             description_en=self.context.legacy_app_proxy.get_app_description(),
             description_zh_cn=self.context.legacy_app_proxy.get_app_description(),
-            tag=tag,
             type=self.context.legacy_app_proxy.get_app_type(),
             tenant_id=app.tenant_id,
         )

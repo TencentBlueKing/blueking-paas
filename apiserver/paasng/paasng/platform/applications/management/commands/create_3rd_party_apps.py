@@ -213,7 +213,6 @@ class Command(BaseCommand):
             defaults={
                 "name_zh_cn": app_desc.name,
                 "name_en": app_desc.name_en,
-                "tag": Tag.objects.get(name=app_desc.tag),
                 "introduction_zh_cn": app_desc.introduction_zh_cn,
                 "introduction_en": app_desc.introduction_en,
                 "type": AppType.THIRD_PARTY.value,

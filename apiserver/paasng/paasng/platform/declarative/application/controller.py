@@ -248,7 +248,6 @@ class AppDeclarativeController:
                 tenant_id=application.tenant_id,
                 defaults={"tag_id": market_desc.tag_id},
             )
-            product_defaults["tag_id"] = market_desc.tag_id
 
         product_defaults["tenant_id"] = application.tenant_id
         product, created = Product.objects.update_or_create(application=application, defaults=product_defaults)

@@ -22,7 +22,7 @@ from django.utils.translation import gettext_lazy as _
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.infras.iam.constants import ResourceType
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import AccessType, OperationTarget, ResultCode
+from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget, ResultCode
 from paasng.platform.applications.models import Application
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.basic import get_username_by_bkpaas_user_id
@@ -111,8 +111,8 @@ class BaseOperation(UuidAuditedModel):
 
         ctx = {
             "user": self.username,
-            "operation": self.get_operation_display(),
-            "target": self.get_target_display(),
+            "operation": OperationEnum.get_choice_label(self.operation),
+            "target": OperationTarget.get_choice_label(self.target),
             "attribute": self.attribute,
             "module_env_info": module_env_info,
             "result": self.result_display,

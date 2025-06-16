@@ -26,12 +26,18 @@ class SourceConfigTemplateManager:
     """代码库配置模板管理器"""
 
     def __init__(self):
-        self._templates = {}
-        self._load_default_templates()
+        self._templates = self._get_default_templates()
 
-    def _load_default_templates(self):
-        """加载默认配置模板"""
-        self._templates = {
+    def get_all_templates(self) -> Dict[str, Any]:
+        """获取所有配置模板"""
+        return copy.deepcopy(self._templates)
+
+    def get_template(self, name: str) -> Dict[str, Any]:
+        """获取指定配置模板"""
+        return copy.deepcopy(self._templates.get(name, {}))
+
+    def _get_default_templates(self):
+        return {
             "github": self._build_github_template(),
             "gitee": self._build_gitee_template(),
         }
@@ -82,14 +88,6 @@ class SourceConfigTemplateManager:
             },
         }
 
-    def get_all_templates(self) -> Dict[str, Any]:
-        """获取所有配置模板"""
-        return copy.deepcopy(self._templates)
-
-    def get_template(self, name: str) -> Dict[str, Any]:
-        """获取指定配置模板"""
-        return copy.deepcopy(self._templates.get(name, {}))
-
 
 # 全局实例
-source_config_manager = SourceConfigTemplateManager()
+source_config_tpl_manager = SourceConfigTemplateManager()

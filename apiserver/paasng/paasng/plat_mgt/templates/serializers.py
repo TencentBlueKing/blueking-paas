@@ -64,7 +64,7 @@ class TemplateCreateInputSLZ(serializers.Serializer):
     description_zh_cn = serializers.CharField(help_text="模板中文描述", max_length=128)
     description_en = serializers.CharField(help_text="模板英文描述", max_length=128)
     language = serializers.ChoiceField(help_text="开发语言", choices=AppLanguage.get_django_choices())
-    market_ready = serializers.BooleanField(help_text="是否科发布到应用市集", default=False)
+    market_ready = serializers.BooleanField(help_text="是否可发布到应用市集", default=False)
     preset_services_config = serializers.JSONField(help_text="预设增强服务配置", default=dict)
     blob_url = serializers.JSONField(help_text="二进制包存储路径", default=dict)
     required_buildpacks = serializers.JSONField(help_text="必须的构建工具", default=list)
@@ -122,9 +122,7 @@ class TemplateUpdateInputSLZ(TemplateCreateInputSLZ):
         # 获取当前更新的实例
         instance = self.context.get("instance")
 
-        queryset = Template.objects.filter(name=name)
-        if instance:
-            queryset = queryset.exclude(id=instance.id)
+        queryset = Template.objects.filter(name=name).exclude(id=instance.id)
 
         if queryset.exists():
             raise ValidationError(_("名称已存在，请使用其他名称"))

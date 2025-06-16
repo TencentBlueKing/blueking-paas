@@ -23,7 +23,7 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.templates.models import Template
 
@@ -47,18 +47,16 @@ class TemplateViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: TemplateMinimalOutputSLZ(many=True)},
     )
     def list(self, request):
-        """获取模板列表"""
         queryset = self.get_queryset()
         slz = TemplateMinimalOutputSLZ(queryset, many=True)
         return Response(slz.data)
 
     @swagger_auto_schema(
         tags=["plat_mgt.tmpls"],
-        operation_description="获取模板详情",
+        operation_description="获取单个模板详情",
         responses={status.HTTP_200_OK: TemplateDetailOutputSLZ()},
     )
     def retrieve(self, request, template_name):
-        """获取单个模板详情"""
         tmpl = get_object_or_404(Template, name=template_name)
         slz = TemplateDetailOutputSLZ(tmpl)
         return Response(slz.data)
@@ -69,7 +67,6 @@ class TemplateViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request):
-        """创建模板"""
         slz = TemplateCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -92,18 +89,15 @@ class TemplateViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, template_name):
-        """更新模板"""
         template = get_object_or_404(Template, name=template_name)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=TemplateDetailOutputSLZ(template).data)
+        data_before = DataDetail(data=TemplateDetailOutputSLZ(template).data)
 
         slz = TemplateUpdateInputSLZ(data=request.data, context={"instance": template})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
         # 更新模板
-        for field, value in data.items():
-            setattr(template, field, value)
-        template.save()
+        Template.objects.filter(id=template.id).update(**data)
 
         add_plat_mgt_audit_record(
             user=request.user.pk,
@@ -121,7 +115,6 @@ class TemplateViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, template_name):
-        """删除模板"""
         tmpl = get_object_or_404(Template, name=template_name)
         data_before = DataDetail(data=TemplateDetailOutputSLZ(tmpl).data)
 

@@ -68,8 +68,8 @@ class TestSourceTypeSpecViewSet:
     def test_retrieve(self, plat_mgt_api_client, create_source_type_spec):
         """测试获取单个代码库配置详情接口"""
 
-        id = create_source_type_spec.id
-        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"pk": id})
+        name = create_source_type_spec.name
+        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"source_name": name})
         resp = plat_mgt_api_client.get(url)
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["name"] == create_source_type_spec.name
@@ -88,26 +88,26 @@ class TestSourceTypeSpecViewSet:
     def test_update(self, plat_mgt_api_client, create_source_type_spec):
         """测试更新代码库配置接口"""
 
-        id = create_source_type_spec.id
-        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"pk": id})
+        name = create_source_type_spec.name
+        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"source_name": name})
         update_data = create_test_source_type_spec_data(name="custom_sourcectl")
         resp = plat_mgt_api_client.put(url, update_data, format="json")
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
-        tmpl = SourceTypeSpecConfig.objects.get(id=id)
+        tmpl = SourceTypeSpecConfig.objects.get(id=create_source_type_spec.id)
         assert tmpl.name == update_data["name"]
 
     def test_delete(self, plat_mgt_api_client, create_source_type_spec):
         """测试删除代码库配置接口"""
-        id = create_source_type_spec.id
-        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"pk": id})
+        name = create_source_type_spec.name
+        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"source_name": name})
         resp = plat_mgt_api_client.delete(url)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         with pytest.raises(SourceTypeSpecConfig.DoesNotExist):
-            SourceTypeSpecConfig.objects.get(id=id)
+            SourceTypeSpecConfig.objects.get(name=name)
 
-    def test_default_configs_templates(self, plat_mgt_api_client):
+    def test__get_default_configs_templates(self, plat_mgt_api_client):
         """测试获取默认配置模板接口"""
         url = reverse("plat_mgt.sourcectl.source_type_spec.default_configs_templates")
         resp = plat_mgt_api_client.get(url)

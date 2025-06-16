@@ -225,6 +225,7 @@ class ClusterComponentViewSet(viewsets.GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.CLUSTER,
+            attribute=f"{cluster.name}/{component.name}",
             data_before=data_before,
             data_after=DataDetail(
                 data={"version": latest_version, "values": values},

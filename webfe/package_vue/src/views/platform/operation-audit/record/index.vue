@@ -53,7 +53,7 @@
         <bk-table-column
           v-for="column in columns"
           v-bind="column"
-          :label="column.label"
+          :label="$t(column.label)"
           :prop="column.prop"
           :key="column.user"
           show-overflow-tooltip
@@ -188,22 +188,22 @@ export default {
     searchData() {
       return [
         {
-          name: '操作对象',
+          name: this.$t('操作对象'),
           id: 'target',
           children: this.filterOptions.target ?? [],
         },
         {
-          name: '操作类型',
+          name: this.$t('操作类型'),
           id: 'operation',
           children: this.filterOptions.operation ?? [],
         },
         {
-          name: '状态',
+          name: this.$t('状态'),
           id: 'status',
           children: this.filterOptions.status ?? [],
         },
         {
-          name: '操作人',
+          name: this.$t('操作人'),
           id: 'operator',
           placeholder: this.$t('请输入操作人'),
           remote: true,

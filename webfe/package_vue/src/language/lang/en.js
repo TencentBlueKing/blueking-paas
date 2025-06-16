@@ -392,6 +392,7 @@ export default {
   已驳回: 'Rejected',
   今天: 'Today',
   最近7天: 'Last 7 days',
+  最近15天: 'Last 15 days',
   最近30天: 'Last 30 days',
   申请组件API单据详情: 'APP Component API Document Details',
   申请网关API单据详情: 'APP for gateway API document details',

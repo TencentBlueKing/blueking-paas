@@ -310,4 +310,8 @@ export default {
   共享: 'Share',
   实例已分配: 'Instance Allocated',
   未分配实例无法删除: 'Unallocated instances cannot be deleted',
+  操作审计: 'Operation Audit',
+  平台操作记录: 'Platform Operation Records',
+  应用操作记录: 'App Operation Records',
+  请输入操作人: 'Please enter the operator',
 };

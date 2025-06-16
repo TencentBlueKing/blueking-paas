@@ -92,10 +92,10 @@ export const createLongTermDatePresets = (i18n, setTimeRangeCache, setTimeShortC
   const ONE_DAY_MS = 3600 * 1000 * 24;
   const PRESETS = [
     { key: 'today', days: 0, textKey: '今天' },
-    { key: '7d', days: 7, textKey: '近7天' },
-    { key: '15d', days: 15, textKey: '近15天' },
-    { key: '30d', days: 30, textKey: '近30天' },
-    { key: '6m', days: 180, textKey: '近半年' },
+    { key: '7d', days: 7, textKey: '最近7天' },
+    { key: '15d', days: 15, textKey: '最近15天' },
+    { key: '30d', days: 30, textKey: '最近30天' },
+    { key: '6m', days: 180, textKey: '最近半年' },
   ];
 
   return PRESETS.map(({ key, days, textKey }) => {

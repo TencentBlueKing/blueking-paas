@@ -60,7 +60,8 @@ class BaseSourceTypeSpecConfigSLZ(serializers.Serializer):
 class SourceTypeSpecConfigMinimalOutputSLZ(serializers.Serializer):
     """代码库配置最小化输出序列化器
 
-    用于列表展示，只包含必要字段"""
+    用于列表展示，只包含必要字段
+    """
 
     id = serializers.CharField(help_text="服务 ID")
     name = serializers.CharField(help_text="服务名称")

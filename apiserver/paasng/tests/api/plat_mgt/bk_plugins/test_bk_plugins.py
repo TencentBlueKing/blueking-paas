@@ -102,6 +102,7 @@ class TestBKPluginMembersManageViewSet:
 
     def test_become_admin(self, plat_manager_user, bk_plugin_app, plat_mgt_api_client, create_plugin_instance):
         """测试 BK 插件添加管理员"""
+        # 应用租户与插件租户一致
         url = reverse("plat_mgt.applications.plugin.members.admin", kwargs={"app_code": bk_plugin_app.code})
         resp = plat_mgt_api_client.post(url)
         print(resp.data)
@@ -109,6 +110,16 @@ class TestBKPluginMembersManageViewSet:
 
         # 检查用户是否被添加为管理员
         assert is_user_plugin_admin(bk_plugin_app.code, plat_manager_user.username)
+
+    def test_become_admin_different_tenant(self, bk_plugin_app, plat_mgt_api_client, create_plugin_instance):
+        """测试 BK 插件添加管理员，应用租户与插件租户不一致"""
+        # 修改插件实例的租户
+        create_plugin_instance.tenant_id = "other_tenant"
+        create_plugin_instance.save()
+
+        url = reverse("plat_mgt.applications.plugin.members.admin", kwargs={"app_code": bk_plugin_app.code})
+        resp = plat_mgt_api_client.post(url)
+        assert resp.status_code == 400
 
     def test_remove_admin(self, plat_manager_user, bk_plugin_app, plat_mgt_api_client, create_plugin_instance):
         """测试 BK 插件退出管理员"""

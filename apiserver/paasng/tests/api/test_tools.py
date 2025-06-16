@@ -228,14 +228,6 @@ modules:
                                                 "failureThreshold": 3,
                                             },
                                         },
-                                        "services": [
-                                            {
-                                                "name": "server",
-                                                "protocol": "TCP",
-                                                "targetPort": settings.CONTAINER_PORT,
-                                                "port": 80,
-                                            }
-                                        ],
                                     }
                                 ],
                                 "hooks": {"preRelease": {"procCommand": "python manage.py migrate"}},
@@ -347,11 +339,6 @@ modules:
               periodSeconds: 10
               successThreshold: 1
               failureThreshold: 3
-          services:
-            - name: server
-              protocol: TCP
-              targetPort: {settings.CONTAINER_PORT}
-              port: 80
       hooks:
         preRelease:
           procCommand: python manage.py migrate
@@ -562,14 +549,6 @@ module:
                                 {
                                     "name": "worker",
                                     "procCommand": "celery -A app -l info",
-                                    "services": [
-                                        {
-                                            "name": "worker",
-                                            "protocol": "TCP",
-                                            "targetPort": settings.CONTAINER_PORT,
-                                            "port": 80,
-                                        }
-                                    ],
                                 },
                             ],
                             "observability": {
@@ -601,11 +580,6 @@ module:
             targetPort: 5001
       - name: worker
         procCommand: celery -A app -l info
-        services:
-          - name: worker
-            protocol: TCP
-            targetPort: {settings.CONTAINER_PORT}
-            port: 80
     observability:
       monitoring:
         metrics:

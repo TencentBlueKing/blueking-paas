@@ -194,6 +194,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.CLUSTER,
+            attribute=cluster.name,
             data_after=DataDetail(data=self.to_audit_data(cluster)),
         )
 
@@ -294,6 +295,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.CLUSTER,
+            attribute=cluster.name,
             data_before=data_before,
             data_after=DataDetail(data=self.to_audit_data(cluster)),
         )
@@ -326,6 +328,7 @@ class ClusterViewSet(viewsets.GenericViewSet):
             user=request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.CLUSTER,
+            attribute=cluster.name,
             data_after=DataDetail(data=self.to_audit_data(cluster)),
         )
 

@@ -34,6 +34,7 @@ from .serializers import (
     SourceTypeSpecConfigMinimalOutputSLZ,
     SourceTypeSpecConfigSLZ,
 )
+from .source_templates import source_config_manager
 
 
 class SourceTypeSpecViewSet(viewsets.GenericViewSet):
@@ -141,3 +142,15 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.sourcectl"],
+        operation_description="获取默认配置模板",
+        responses={status.HTTP_200_OK: ""},
+    )
+    def default_configs_templates(self, request):
+        """获取默认代码库配置模板"""
+
+        configs = source_config_manager.get_all_templates()
+
+        return Response(configs)

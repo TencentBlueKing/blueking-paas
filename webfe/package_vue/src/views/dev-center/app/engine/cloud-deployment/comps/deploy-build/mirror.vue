@@ -2,15 +2,22 @@
   <div class="mirror-main">
     <section class="mirror-info">
       <div class="header-wrapper mb20">
-        <span :class="['build-title', { 'edit': isMirrorEdit }]">{{ $t('镜像信息') }}</span>
-        <div class="edit-container" @click="handleEdit" v-if="!isMirrorEdit">
+        <span :class="['build-title', { edit: isMirrorEdit }]">{{ $t('镜像信息') }}</span>
+        <div
+          class="edit-container"
+          @click="handleEdit"
+          v-if="!isMirrorEdit"
+        >
           <i class="paasng-icon paasng-edit-2 pl10" />
           {{ $t('编辑') }}
         </div>
       </div>
 
       <!-- 查看态 -->
-      <div class="content" v-if="!isMirrorEdit">
+      <div
+        class="content"
+        v-if="!isMirrorEdit"
+      >
         <div class="code-detail form-edit">
           <bk-form :model="mirrorData">
             <bk-form-item :label="`${$t('镜像仓库')}：`">
@@ -22,21 +29,21 @@
               <template v-else-if="mirrorData.env_image_repositories">
                 <!-- 如果两个环境的镜像仓库是一样的，则只显示一个 -->
                 <div v-if="mirrorData.env_image_repositories.prod == mirrorData.env_image_repositories.stag">
-                  <span class="form-text"> {{ mirrorData.env_image_repositories.prod}} </span>
+                  <span class="form-text">{{ mirrorData.env_image_repositories.prod }}</span>
                 </div>
                 <!-- 否则两个环境分别展示 -->
                 <div v-else>
                   <div v-if="mirrorData.env_image_repositories.prod">
-                    <span class="form-text"> {{ mirrorData.env_image_repositories.prod}} （{{ $t('生产环境') }}）</span>
+                    <span class="form-text">{{ mirrorData.env_image_repositories.prod }} （{{ $t('生产环境') }}）</span>
                   </div>
                   <div v-if="mirrorData.env_image_repositories.stag">
-                    <span class="form-text"> {{ mirrorData.env_image_repositories.stag}} （{{ $t('预发布环境') }}）</span>
+                    <span class="form-text">
+                      {{ mirrorData.env_image_repositories.stag }} （{{ $t('预发布环境') }}）
+                    </span>
                   </div>
                 </div>
               </template>
-              <template v-else>
-                --
-              </template>
+              <template v-else>--</template>
             </bk-form-item>
             <bk-form-item :label="`${$t('镜像 tag 规则')}：`">
               <span class="form-text">
@@ -62,12 +69,14 @@
                 <span class="form-text">{{ baseImageText }}</span>
               </bk-form-item>
               <bk-form-item :label="`${$t('构建工具')}：`">
-                <template v-if="!mirrorData.buildpacks?.length">
-                  --
-                </template>
+                <template v-if="!mirrorData.buildpacks?.length">--</template>
                 <template v-else>
-                  <div class="builder-item" v-for="(item, index) in buildpacksList" :key="index">
-                    {{item}}
+                  <div
+                    class="builder-item"
+                    v-for="(item, index) in buildpacksList"
+                    :key="index"
+                  >
+                    {{ item }}
                   </div>
                 </template>
               </bk-form-item>
@@ -76,7 +85,7 @@
             <template v-else>
               <bk-form-item :label="`${$t('Dockerfile 路径')}：`">
                 <span class="form-text">
-                  {{ mirrorData.dockerfile_path || "--" }}
+                  {{ mirrorData.dockerfile_path || '--' }}
                 </span>
               </bk-form-item>
               <!-- 暂时方式 -->
@@ -90,9 +99,7 @@
                     {{ key }}={{ value }}
                   </div>
                 </template>
-                <template v-else>
-                  --
-                </template>
+                <template v-else>--</template>
               </bk-form-item>
             </template>
           </bk-form>
@@ -100,43 +107,51 @@
       </div>
 
       <!-- 编辑态 -->
-      <div class="content" v-else>
+      <div
+        class="content"
+        v-else
+      >
         <div class="form-wrapper">
-          <bk-form ref="mirrorInfoRef" :model="mirrorData">
+          <bk-form
+            ref="mirrorInfoRef"
+            :model="mirrorData"
+          >
             <bk-form-item :label="$t('镜像仓库')">
               <span class="form-text">
-                {{ mirrorData.image_repository || "--" }}
+                {{ mirrorData.image_repository || '--' }}
               </span>
             </bk-form-item>
             <bk-form-item
               :label="$t('镜像 tag 规则')"
               :property="'tag_options.prefix'"
               :rules="rules.prefix"
-              :icon-offset="518">
+              :icon-offset="518"
+            >
               <!-- 对应正则 -->
               <bk-input
                 v-model="mirrorData.tag_options.prefix"
                 :placeholder="$t('自定义前缀')"
                 :style="'width: 140px;'"
-              >
-              </bk-input>
+              ></bk-input>
               <span class="connector">+</span>
-              <bk-checkbox v-model="mirrorData.tag_options.with_version">{{$t('分支/标签')}}</bk-checkbox>
+              <bk-checkbox v-model="mirrorData.tag_options.with_version">{{ $t('分支/标签') }}</bk-checkbox>
               <span class="connector">+</span>
-              <bk-checkbox v-model="mirrorData.tag_options.with_build_time">{{$t('构建时间')}}</bk-checkbox>
+              <bk-checkbox v-model="mirrorData.tag_options.with_build_time">{{ $t('构建时间') }}</bk-checkbox>
               <span class="connector">+</span>
               <bk-checkbox v-model="mirrorData.tag_options.with_commit_id">CommitID</bk-checkbox>
             </bk-form-item>
             <bk-form-item
               :label="$t('构建方式')"
               :property="'build_method'"
-              :rules="rules.buildMethod">
+              :rules="rules.buildMethod"
+            >
               <bk-radio-group v-model="mirrorData.build_method">
                 <bk-radio
                   :value="item.id"
                   v-for="item in constructMethod"
                   :key="item.id"
-                >{{ $t(item.name) }}
+                >
+                  {{ $t(item.name) }}
                 </bk-radio>
               </bk-radio-group>
             </bk-form-item>
@@ -150,19 +165,26 @@
                 theme="primary"
                 size="small"
               />
-              <span class="tips" @click.stop>
+              <span
+                class="tips"
+                @click.stop
+              >
                 <bk-icon type="info-circle" />
-                {{ $t('支持从工蜂、Github 等平台拉取依赖，启用后需要调整代码添加凭证') }} <a
+                {{ $t('支持从工蜂、Github 等平台拉取依赖，启用后需要调整代码添加凭证') }}
+                <a
                   target="_blank"
                   :href="GLOBAL.DOC.BK_CI_PIPELINE_BUILD"
-                > {{ $t('查看使用指南') }} </a>
+                >
+                  {{ $t('查看使用指南') }}
+                </a>
               </span>
             </bk-form-item>
             <template v-if="mirrorData.build_method === 'buildpack'">
               <bk-form-item
                 :label="$t('基础镜像')"
                 :property="'bp_stack_name'"
-                :rules="rules.bp_stack_name">
+                :rules="rules.bp_stack_name"
+              >
                 <bk-select
                   :disabled="false"
                   v-model="mirrorData.bp_stack_name"
@@ -174,13 +196,15 @@
                     :key="option.image"
                     :id="option.image"
                     :name="option.name"
-                  >
-                  </bk-option>
+                  ></bk-option>
                 </bk-select>
               </bk-form-item>
               <bk-form-item ext-cls="customize-form-item-dashed">
                 <div class="build-label">
-                  <span class="text" v-bk-tooltips="$t('构建工具会逐个进行构建，请注意构建工具的选择顺序')">
+                  <span
+                    class="text"
+                    v-bk-tooltips="$t('构建工具会逐个进行构建，请注意构建工具的选择顺序')"
+                  >
                     {{ $t('构建工具') }}
                   </span>
                 </div>
@@ -219,47 +243,82 @@
             <template v-else>
               <bk-form-item
                 :label="$t('Dockerfile 路径')"
-                :property="'dockerfile_path'">
+                :property="'dockerfile_path'"
+                :rules="absolutePathRule"
+                error-display-type="normal"
+              >
                 <bk-input
                   v-model="mirrorData.dockerfile_path"
                   :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
                 ></bk-input>
+                <div
+                  slot="tip"
+                  class="examples-directory-cls"
+                >
+                  <!-- 示例目录 -->
+                  <ExamplesDirectory
+                    :root-path="sourceDir"
+                    :append-path="appendPath"
+                    :default-files="defaultFiles"
+                    :is-dockerfile="isDockerfile"
+                    :show-root="false"
+                    :type="'string'"
+                  />
+                </div>
               </bk-form-item>
 
               <!-- 构建参数 -->
               <bk-form
                 :model="mirrorData"
                 form-type="vertical"
-                ext-cls="build-params-form">
+                ext-cls="build-params-form"
+              >
                 <div class="form-label">
-                  {{$t('构建参数')}}
+                  {{ $t('构建参数') }}
                 </div>
                 <div class="form-value-wrapper">
                   <bk-button
                     v-if="!buildParams.length"
                     :text="true"
                     title="primary"
-                    @click="addBuildParams">
+                    @click="addBuildParams"
+                  >
                     <i class="paasng-icon paasng-plus-thick" />
                     {{ $t('新建构建参数') }}
                   </bk-button>
                   <template v-if="buildParams.length">
                     <div class="build-params-header">
-                      <div class="name">{{$t('参数名')}}</div>
-                      <div class="value">{{$t('参数值')}}</div>
+                      <div class="name">{{ $t('参数名') }}</div>
+                      <div class="value">{{ $t('参数值') }}</div>
                     </div>
                     <div
                       v-for="(item, index) in buildParams"
                       class="build-params-item"
-                      :key="index">
-                      <bk-form :ref="`name-${index}`" :model="item">
-                        <bk-form-item :rules="rules.buildParams" :property="'name'">
-                          <bk-input v-model="item.name" :placeholder="$t('参数名')"></bk-input>
+                      :key="index"
+                    >
+                      <bk-form
+                        :ref="`name-${index}`"
+                        :model="item"
+                      >
+                        <bk-form-item
+                          :rules="rules.buildParams"
+                          :property="'name'"
+                        >
+                          <bk-input
+                            v-model="item.name"
+                            :placeholder="$t('参数名')"
+                          ></bk-input>
                         </bk-form-item>
                       </bk-form>
                       <span class="equal">=</span>
-                      <bk-form :ref="`value-${index}`" :model="item">
-                        <bk-form-item :rules="rules.buildParams" :property="'value'">
+                      <bk-form
+                        :ref="`value-${index}`"
+                        :model="item"
+                      >
+                        <bk-form-item
+                          :rules="rules.buildParams"
+                          :property="'value'"
+                        >
                           <bk-input v-model="item.value"></bk-input>
                         </bk-form-item>
                       </bk-form>
@@ -276,12 +335,16 @@
                 ext-cls="add-build-params"
                 :text="true"
                 title="primary"
-                @click="addBuildParams">
+                @click="addBuildParams"
+              >
                 <i class="paasng-icon paasng-plus-thick" />
                 {{ $t('新建构建参数') }}
               </bk-button>
             </template>
-            <bk-form-item :label="''" class="mt20">
+            <bk-form-item
+              :label="''"
+              class="mt20"
+            >
               <bk-button
                 :theme="'primary'"
                 class="mr10"
@@ -306,10 +369,12 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import transferDrag from '@/mixins/transfer-drag';
 import { TAG_MAP } from '@/common/constants.js';
 import { cloneDeep } from 'lodash';
+import ExamplesDirectory from '@/components/examples-directory';
 
 const defaultMirrorData = {
   tag_options: {
@@ -324,6 +389,9 @@ const defaultMirrorData = {
 
 export default {
   mixins: [appBaseMixin, transferDrag],
+  components: {
+    ExamplesDirectory,
+  },
   data() {
     return {
       isMirrorEdit: false,
@@ -382,6 +450,13 @@ export default {
           },
         ],
       },
+      absolutePathRule: [
+        {
+          regex: /^(?!.*(^|\/|\\|)\.{1,2}($|\/|\\|)).*$/,
+          message: this.$t('不支持填写相对路径'),
+          trigger: 'blur',
+        },
+      ],
     };
   },
   computed: {
@@ -400,15 +475,31 @@ export default {
     },
     // 构建工具
     buildpacksList() {
-      const buildpacks = this.mirrorData.buildpacks.map(item => `${item.display_name || item.name} (${item.description || '--'})`);
+      const buildpacks = this.mirrorData.buildpacks.map(
+        (item) => `${item.display_name || item.name} (${item.description || '--'})`
+      );
       return buildpacks;
     },
     baseImageText() {
-      const result = this.baseImageList.find(item => item.image === this.mirrorData.bp_stack_name);
+      const result = this.baseImageList.find((item) => item.image === this.mirrorData.bp_stack_name);
       if (result) {
         return result.name || result.image;
       }
       return '--';
+    },
+    isDockerfile() {
+      return this.mirrorData.build_method === 'dockerfile';
+    },
+    appendPath() {
+      return this.mirrorData.dockerfile_path || '';
+    },
+    // 默认文件
+    defaultFiles() {
+      return [{ name: 'requirements.txt' }];
+    },
+    // 构建目录
+    sourceDir() {
+      return this.curAppModule?.repo?.source_dir || '';
     },
   },
   watch: {
@@ -419,7 +510,6 @@ export default {
   created() {
     this.init();
   },
-
   methods: {
     init() {
       this.getMirrorInfo();
@@ -457,14 +547,10 @@ export default {
           moduleId: this.curModuleId,
         });
         results.forEach((item) => {
-          item.name = `${item.slugbuilder.display_name || item.image} (${
-            item.slugbuilder.description || '--'
-          })`;
+          item.name = `${item.slugbuilder.display_name || item.image} (${item.slugbuilder.description || '--'})`;
 
           item.buildpacks.forEach((item) => {
-            item.name = `${item.display_name || item.name} (${
-              item.description || '--'
-            })`;
+            item.name = `${item.display_name || item.name} (${item.description || '--'})`;
           });
         });
         this.baseImageList = results;
@@ -493,7 +579,7 @@ export default {
     // 设置当前基础镜像构建工具
     setTools() {
       // 筛选当前镜像构建工具列表
-      const curTools = this.baseImageList.find(item => item.image === this.mirrorData.bp_stack_name);
+      const curTools = this.baseImageList.find((item) => item.image === this.mirrorData.bp_stack_name);
       const buildpacks = curTools?.buildpacks ? [...curTools?.buildpacks] : [];
       const result = [];
       // 兼容穿梭框右侧排序问题
@@ -511,7 +597,7 @@ export default {
 
       // 当已选工具项
       if (selectedToolList.length) {
-        this.targetToolList = selectedToolList.map(tool => tool.id);
+        this.targetToolList = selectedToolList.map((tool) => tool.id);
       }
     },
 
@@ -533,10 +619,9 @@ export default {
       let flag = true;
       for (const index in this.buildParams) {
         try {
-          await this.$refs[`name-${index}`][0]?.validate()
-            .finally(async () => {
-              await this.$refs[`value-${index}`][0]?.validate();
-            });
+          await this.$refs[`name-${index}`][0]?.validate().finally(async () => {
+            await this.$refs[`value-${index}`][0]?.validate();
+          });
         } catch (error) {
           flag = false;
         }
@@ -576,7 +661,7 @@ export default {
       if (data.build_method === 'buildpack') {
         const targetToolIds = this.mixinTargetBuildpackIds || this.targetToolValues;
         // 构建工具
-        data.buildpacks = targetToolIds.map(id => this.sourceToolList.find(tool => tool.id === id));
+        data.buildpacks = targetToolIds.map((id) => this.sourceToolList.find((tool) => tool.id === id));
       } else {
         data.bp_stack_name = null;
 
@@ -669,24 +754,24 @@ export default {
 }
 
 .mirror-main .content {
-  width: 800px;
+  width: 850px;
   .builder-item {
     padding: 0 10px;
     line-height: 32px;
     position: relative;
 
     &:before {
-        content: '';
-        font-size: 12px;
-        position: absolute;
-        left: 0;
-        top: 15px;
-        width: 3px;
-        height: 3px;
-        display: inline-block;
-        background: #656565;
+      content: '';
+      font-size: 12px;
+      position: absolute;
+      left: 0;
+      top: 15px;
+      width: 3px;
+      height: 3px;
+      display: inline-block;
+      background: #656565;
     }
-}
+  }
 }
 
 .mirror-info {
@@ -711,7 +796,7 @@ export default {
     display: inline-block;
     vertical-align: middle;
     top: 50%;
-    transform: translate(3px,-50%);
+    transform: translate(3px, -50%);
   }
 }
 
@@ -813,8 +898,8 @@ export default {
     padding-bottom: 42px;
   }
 
-   /* 穿梭框样式设置 */
- .transfer-source-item {
+  /* 穿梭框样式设置 */
+  .transfer-source-item {
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;

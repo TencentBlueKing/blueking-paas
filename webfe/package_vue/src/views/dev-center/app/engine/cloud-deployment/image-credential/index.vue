@@ -10,9 +10,7 @@
     >
       <div class="middle ps-main mirror-credentials">
         <div class="flex-row align-items-center">
-          <span class="base-info-title">
-            {{ $t('镜像凭证') }}
-          </span>
+          <span class="base-info-title">{{ $t('镜像凭证') }}</span>
           <div
             class="add-container"
             @click="handleCreate"
@@ -294,7 +292,6 @@ export default {
 
 <style lang="scss" scoped>
 .image-container {
-  padding: 0 24px;
   .image-content {
     background: #fff;
     padding-top: 0;

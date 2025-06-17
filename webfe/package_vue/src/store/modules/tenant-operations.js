@@ -187,5 +187,19 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/audit/filter_options/`;
       return http.get(url);
     },
+    /**
+     * 成为插件管理员
+     */
+    becomePluginAdmin({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/plugin/members/`;
+      return http.post(url);
+    },
+    /**
+     * 退出插件管理员
+     */
+    exitPlugin({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/plugin/members/`;
+      return http.delete(url);
+    },
   },
 };

@@ -140,7 +140,7 @@ export default {
       pagination: {
         current: 1,
         count: 0,
-        limit: 10,
+        limit: 20,
       },
       APP_OPERATION,
       APP_RESULT_CODE,

@@ -66,6 +66,17 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'config',
+    name: 'builtInEnvVariable',
+    label: i18n.t('内置环境变量'),
+    iconfontName: 'variable',
+    matchRouters: ['builtInEnvVariable'],
+    destRoute: {
+      name: 'builtInEnvVariable',
+    },
+    sublist: [],
+  },
+  {
     groupId: 'user',
     name: 'platformUserManagement',
     label: i18n.t('用户管理'),

@@ -1893,7 +1893,7 @@ export default {
   '删除凭证后，使用该凭证的镜像将无法部署': 'After deleting a credential, images using that credential will fail to deploy',
   '环境变量可以用来改变应用在不同环境下的行为；除自定义环境变量外，平台也会写入内置环境变量。': 'Environment variables can be used to change the behavior of APP in different environments; in addition to custom environment variables, the platform also writes built-in environment variables.',
   查看内置环境变量: 'View built-in environment variables',
-  内置环境变量: 'Built-in environment variables',
+  内置环境变量: 'Built-in Env Configs',
   应用基本信息: 'APP Basic Information',
   应用运行时信息: 'APP runtime information',
   蓝鲸体系内平台地址: 'The platform address in the BlueKing system',

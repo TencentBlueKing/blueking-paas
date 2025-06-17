@@ -157,7 +157,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
             "user_is_admin_in_app": user_is_admin_in_app,
             "show_plugin_admin_operations": is_plugin_with_instance,
             "user_is_admin_in_plugin": (
-                is_user_plugin_admin(request.user.username, application.code) if is_plugin_with_instance else None
+                is_user_plugin_admin(application.code, request.user.username) if is_plugin_with_instance else None
             ),
         }
 

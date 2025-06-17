@@ -34,7 +34,7 @@
         show-overflow-tooltip
       >
         <template slot-scope="{ row }">
-          <span v-if="column.prop === 'key'">{{ `BKPAAS_${row[column.prop]}` || '--' }}</span>
+          <span v-if="column.prop === 'key'">{{ `${prefix}${row[column.prop]}` || '--' }}</span>
           <bk-user-display-name
             v-else-if="column.prop === 'operator' && platformFeature.MULTI_TENANT_MODE"
             :user-id="row[column.prop]"
@@ -100,7 +100,7 @@
                 class="group-text"
                 style="line-height: 32px"
               >
-                BKPAAS_
+                {{ prefix }}
               </div>
             </template>
           </bk-input>
@@ -128,7 +128,7 @@
     <bk-dialog
       v-model="deleteDialogConfig.visible"
       width="480"
-      theme="danger"
+      theme="primary"
       :mask-close="false"
       :auto-close="false"
       header-position="left"
@@ -138,7 +138,7 @@
       @confirm="deleteBuiltinConfigVars"
     >
       {{ `${$t('内置环境变量')}key ：` }}
-      <span style="color: #313238">{{ deleteDialogConfig.row.key }}</span>
+      <span style="color: #313238">{{ `${prefix}${deleteDialogConfig.row.key}` }}</span>
     </bk-dialog>
   </div>
 </template>
@@ -152,6 +152,7 @@ export default {
     return {
       varList: [],
       isTableLoading: false,
+      prefix: 'BKPAAS_',
       columns: [
         {
           label: 'key',
@@ -265,7 +266,7 @@ export default {
         const successMessage = this.isEditVar ? this.$t('修改环境变量成功') : this.$t('添加环境变量成功');
         const payload = {
           params: this.dialogFormData,
-          ...(this.isEditVar && { id: this.varDialogConfig.row?.id }),
+          ...(this.isEditVar && { id: this.varDialogConfig.row.id }),
         };
         await this.$store.dispatch(`tenantConfig/${dispatchName}`, payload);
         this.$paasMessage({

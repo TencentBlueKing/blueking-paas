@@ -340,10 +340,7 @@ export default {
     },
     // 多租户：当前应用id与用户id不一致不允许添加成员
     isAddMemberDisabled() {
-      if (this.platformFeature.MULTI_TENANT_MODE) {
-        return this.appTenantId !== this.tenantId;
-      }
-      return false;
+      return this.platformFeature.MULTI_TENANT_MODE && this.appTenantId !== this.tenantId;
     },
     memberDisableTip() {
       return this.$t('当前应用所属租户为 {b}，您的租户为 {a}。暂不支持跨租户添加应用成员。', {

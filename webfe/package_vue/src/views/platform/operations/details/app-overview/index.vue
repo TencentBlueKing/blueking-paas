@@ -76,10 +76,110 @@
         </DetailsRow>
       </div>
     </section>
+
+    <section
+      class="base-info-wrapper card-style mb16"
+      v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
+    >
+      <div class="view-title">{{ $t('快捷操作') }}</div>
+      <DetailsRow
+        :label-width="150"
+        :label="`${$t('应用权限')}：`"
+        :align="'flex-start'"
+        class="mb10"
+      >
+        <div slot="value">
+          {{ isAppAdmin ? $t('你已经是该应用的管理员') : $t('你不具备管理员权限') }}
+          <!-- 非管理员 -->
+          <span
+            v-if="!isAppAdmin"
+            class="btn-wrapper ml10"
+            v-bk-tooltips="{
+              content: $t('应用所属租户为：{a}，您不是该租户下的用户，无法添加为管理员', { a: appTenantId }),
+              disabled: !isBecomeAdminDisabled,
+            }"
+          >
+            <!-- 跨租户不能操作 -->
+            <bk-button
+              theme="primary"
+              :disabled="isBecomeAdminDisabled"
+              :loading="adminConfig.appLoading"
+              @click="becomeAppAdmin"
+            >
+              {{ $t('成为管理员') }}
+            </bk-button>
+          </span>
+          <template v-else>
+            <bk-button
+              class="ml10"
+              theme="danger"
+              :loading="adminConfig.appLoading"
+              @click="exitApp"
+            >
+              {{ $t('退出应用') }}
+            </bk-button>
+            <bk-button
+              class="ml10"
+              text
+              @click="toAccessApp"
+            >
+              <i class="paasng-icon paasng-jump-link"></i>
+              {{ $t('访问应用') }}
+            </bk-button>
+          </template>
+        </div>
+      </DetailsRow>
+      <DetailsRow
+        v-if="appAdmin?.show_plugin_admin_operations"
+        :label-width="150"
+        :label="`${$t('插件权限')}：`"
+        :align="'flex-start'"
+      >
+        <div slot="value">
+          {{ isPluginAdmin ? $t('你已经是该插件的管理员') : $t('你不具备管理员权限') }}
+          <span
+            v-if="!isPluginAdmin"
+            class="btn-wrapper ml10"
+            v-bk-tooltips="{
+              content: $t('插件所属租户为：{a}，您不是该租户下的用户，无法添加为管理员', { a: appTenantId }),
+              disabled: !isBecomeAdminDisabled,
+            }"
+          >
+            <bk-button
+              theme="primary"
+              :disabled="isBecomeAdminDisabled"
+              :loading="adminConfig.pluginLoading"
+              @click="becomePluginAdmin"
+            >
+              {{ $t('成为管理员') }}
+            </bk-button>
+          </span>
+          <template v-else>
+            <bk-button
+              class="ml10"
+              theme="danger"
+              :loading="adminConfig.pluginLoading"
+              @click="exitPlugin"
+            >
+              {{ $t('退出插件管理员') }}
+            </bk-button>
+            <bk-button
+              class="ml10"
+              text
+              @click="toAccessPlugin"
+            >
+              <i class="paasng-icon paasng-jump-link"></i>
+              {{ $t('访问插件') }}
+            </bk-button>
+          </template>
+        </div>
+      </DetailsRow>
+    </section>
+
     <!-- 模块信息-外链应用不展示 -->
     <section
       v-if="!isEnginelessApp && !isLoading"
-      class="module-info-wrapper card-style mb16"
+      class="module-info-wrapper card-style"
       v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
     >
       <div class="view-title mb10">{{ $t('模块信息') }}</div>
@@ -168,96 +268,6 @@
           </div>
         </bk-collapse-item>
       </bk-collapse>
-    </section>
-
-    <section
-      class="base-info-wrapper card-style"
-      v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
-    >
-      <div class="view-title">{{ $t('快捷操作') }}</div>
-      <DetailsRow
-        :label-width="150"
-        :label="`${$t('应用权限')}：`"
-        :align="'flex-start'"
-        class="mb10"
-      >
-        <div slot="value">
-          {{ isAppAdmin ? $t('你已经是该应用的管理员') : $t('你不具备管理权限') }}
-          <!-- 非管理员 -->
-          <span
-            v-if="!isAppAdmin"
-            class="btn-wrapper ml10"
-            v-bk-tooltips="{
-              content: $t('应用所属租户为：{a}，您不是该租户下的用户，无法添加为管理员', { a: appTenantId }),
-              disabled: !isBecomeAdminDisabled,
-            }"
-          >
-            <!-- 跨租户不能操作 -->
-            <bk-button
-              theme="primary"
-              :disabled="isBecomeAdminDisabled"
-              :loading="adminConfig.appLoading"
-              @click="becomeAppAdmin"
-            >
-              {{ $t('成为管理员') }}
-            </bk-button>
-          </span>
-          <bk-button
-            v-else
-            class="ml10"
-            theme="danger"
-            :loading="adminConfig.appLoading"
-            @click="exitApp"
-          >
-            {{ $t('退出应用') }}
-          </bk-button>
-          <bk-button
-            v-if="isAppAdmin"
-            class="ml10"
-            text
-            @click="toAccessApp"
-          >
-            <i class="paasng-icon paasng-jump-link"></i>
-            {{ $t('访问应用') }}
-          </bk-button>
-        </div>
-      </DetailsRow>
-      <DetailsRow
-        v-if="appAdmin?.show_plugin_admin_operations"
-        :label-width="150"
-        :label="`${$t('插件权限')}：`"
-        :align="'flex-start'"
-      >
-        <div slot="value">
-          {{ isPluginAdmin ? $t('你已经是该插件的管理员') : $t('你不具备管理权限') }}
-          <span
-            v-if="!isPluginAdmin"
-            class="btn-wrapper ml10"
-            v-bk-tooltips="{
-              content: $t('插件所属租户为：{a}，您不是该租户下的用户，无法添加为管理员', { a: appTenantId }),
-              disabled: !isBecomeAdminDisabled,
-            }"
-          >
-            <bk-button
-              theme="primary"
-              :disabled="isBecomeAdminDisabled"
-              :loading="adminConfig.pluginLoading"
-              @click="becomePluginAdmin"
-            >
-              {{ $t('成为管理员') }}
-            </bk-button>
-          </span>
-          <bk-button
-            v-else
-            class="ml10"
-            theme="danger"
-            :loading="adminConfig.pluginLoading"
-            @click="exitPlugin"
-          >
-            {{ $t('退出插件管理员') }}
-          </bk-button>
-        </div>
-      </DetailsRow>
     </section>
 
     <!-- 修改部署集群弹窗 -->
@@ -374,10 +384,7 @@ export default {
       return this.$route.query.tenant;
     },
     isBecomeAdminDisabled() {
-      if (this.platformFeature.MULTI_TENANT_MODE) {
-        return this.appTenantId !== this.tenantId;
-      }
-      return false;
+      return this.platformFeature.MULTI_TENANT_MODE && this.appTenantId !== this.tenantId;
     },
     // 是否为应用的个管理员
     isAppAdmin() {
@@ -507,14 +514,22 @@ export default {
       const curEnv = envData.find((v) => v.name === envKey);
       return curEnv?.is_deployed ? this.$t('已部署') : this.$t('未部署');
     },
-    // 基本信息访问应用
+    // 访问应用
     toAccessApp() {
       const routeName = this.baseInfo.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary';
       const route = this.$router.resolve({
         name: routeName,
         params: { id: this.baseInfo.code },
       });
-      window.open(route.href, '_blank');
+      this.toLink(route.href);
+    },
+    // 访问插件
+    toAccessPlugin() {
+      const route = this.$router.resolve({
+        name: 'pluginSummary',
+        params: { pluginTypeId: 'bk-saas', id: this.baseInfo.code },
+      });
+      this.toLink(route.href);
     },
     toLink(url) {
       window.open(url, '_blank');

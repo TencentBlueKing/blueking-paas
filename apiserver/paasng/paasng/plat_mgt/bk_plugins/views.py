@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -43,11 +44,11 @@ class BKPluginMembersManageViewSet(ViewSet):
         plugin = get_object_or_404(PluginInstance, id=app_code)
         role = plugin_constants.PluginRole.ADMINISTRATOR.value
 
-        # 不允许添加不同租户的成员成为管理员
-        if plugin.tenant_id != request.user.tenant_id:
-            raise error_codes.MEMBERSHIP_CREATE_FAILED.f("不允许添加不同租户的成员")
-
         data_before = self._gen_data_detail(plugin, username)
+
+        # 多租户环境下不允许添加不同租户的成员成为管理员
+        if settings.ENABLE_MULTI_TENANT_MODE and plugin.tenant_id != request.user.tenant_id:
+            raise error_codes.MEMBERSHIP_CREATE_FAILED.f("不允许添加不同租户的成员")
 
         members_api.add_role_members(plugin, plugin_constants.PluginRole(role), [username])
 

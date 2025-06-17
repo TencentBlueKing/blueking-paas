@@ -64,81 +64,82 @@
           </bk-button>
         </template>
       </bk-table-column>
-
-      <!-- 添加、编辑内置环境变量 -->
-      <bk-dialog
-        v-model="varDialogConfig.visible"
-        width="480"
-        theme="primary"
-        :mask-close="false"
-        :auto-close="false"
-        header-position="left"
-        :title="isEditVar ? $t('编辑内置环境变量') : $t('添加内置环境变量')"
-        :loading="varDialogConfig.loading"
-        @after-leave="reset"
-        @confirm="handleAddConfirm"
-      >
-        <bk-form
-          :label-width="75"
-          :model="dialogFormData"
-          :rules="rules"
-          ref="addForm"
-        >
-          <bk-form-item
-            label="Key"
-            :required="true"
-            :property="'key'"
-            :error-display-type="'normal'"
-          >
-            <bk-input
-              v-model="dialogFormData.key"
-              :disabled="isEditVar"
-            >
-              <template slot="prepend">
-                <div
-                  class="group-text"
-                  style="line-height: 32px"
-                >
-                  BKPAAS_
-                </div>
-              </template>
-            </bk-input>
-          </bk-form-item>
-          <bk-form-item
-            label="Value"
-            :required="true"
-            :property="'value'"
-            :error-display-type="'normal'"
-          >
-            <bk-input v-model="dialogFormData.value"></bk-input>
-          </bk-form-item>
-          <bk-form-item
-            :label="$t('描述')"
-            :property="'description'"
-            :error-display-type="'normal'"
-          >
-            <bk-input v-model="dialogFormData.description"></bk-input>
-          </bk-form-item>
-        </bk-form>
-      </bk-dialog>
-
-      <!-- 删除内置环境变量 -->
-      <bk-dialog
-        v-model="deleteDialogConfig.visible"
-        width="480"
-        theme="danger"
-        :mask-close="false"
-        :auto-close="false"
-        header-position="left"
-        :title="$t('确认删除该内置环境变量？')"
-        :ok-text="$t('删除')"
-        :loading="deleteDialogConfig.loading"
-        @confirm="deleteBuiltinConfigVars"
-      >
-        {{ `${$t('内置环境变量')}key ：` }}
-        <span style="color: #313238">{{ deleteDialogConfig.row.key }}</span>
-      </bk-dialog>
     </bk-table>
+
+    <!-- 添加、编辑内置环境变量 -->
+    <bk-dialog
+      v-model="varDialogConfig.visible"
+      width="480"
+      theme="primary"
+      :mask-close="false"
+      :auto-close="false"
+      header-position="left"
+      :title="isEditVar ? $t('编辑内置环境变量') : $t('添加内置环境变量')"
+      :loading="varDialogConfig.loading"
+      @after-leave="reset"
+      @confirm="handleAddConfirm"
+    >
+      <bk-form
+        :label-width="75"
+        :model="dialogFormData"
+        :rules="rules"
+        ref="addForm"
+      >
+        <bk-form-item
+          label="Key"
+          :required="true"
+          :property="'key'"
+          :error-display-type="'normal'"
+        >
+          <bk-input
+            v-model="dialogFormData.key"
+            :disabled="isEditVar"
+          >
+            <template slot="prepend">
+              <div
+                class="group-text"
+                style="line-height: 32px"
+              >
+                BKPAAS_
+              </div>
+            </template>
+          </bk-input>
+        </bk-form-item>
+        <bk-form-item
+          label="Value"
+          :required="true"
+          :property="'value'"
+          :error-display-type="'normal'"
+        >
+          <bk-input v-model="dialogFormData.value"></bk-input>
+        </bk-form-item>
+        <bk-form-item
+          :label="$t('描述')"
+          :required="true"
+          :property="'description'"
+          :error-display-type="'normal'"
+        >
+          <bk-input v-model="dialogFormData.description"></bk-input>
+        </bk-form-item>
+      </bk-form>
+    </bk-dialog>
+
+    <!-- 删除内置环境变量 -->
+    <bk-dialog
+      v-model="deleteDialogConfig.visible"
+      width="480"
+      theme="danger"
+      :mask-close="false"
+      :auto-close="false"
+      header-position="left"
+      :title="$t('确认删除该内置环境变量？')"
+      :ok-text="$t('删除')"
+      :loading="deleteDialogConfig.loading"
+      @confirm="deleteBuiltinConfigVars"
+    >
+      {{ `${$t('内置环境变量')}key ：` }}
+      <span style="color: #313238">{{ deleteDialogConfig.row.key }}</span>
+    </bk-dialog>
   </div>
 </template>
 
@@ -194,7 +195,7 @@ export default {
         key: [
           {
             required: true,
-            message: this.$t('KEY是必填项'),
+            message: this.$t('必填项'),
             trigger: 'blur',
           },
           {
@@ -211,7 +212,7 @@ export default {
         value: [
           {
             required: true,
-            message: this.$t('VALUE是必填项'),
+            message: this.$t('必填项'),
             trigger: 'blur',
           },
           {
@@ -221,6 +222,11 @@ export default {
           },
         ],
         description: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
           {
             max: 200,
             message: this.$t('不能超过200个字符'),

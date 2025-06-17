@@ -57,7 +57,7 @@ export default {
         theme: 'light',
         extCls: 'dockerfile-tips-cls',
         html: `<p class="paas-example-tips">${this.dockerfileTips}</p>
-        <p class="paas-example-tips">docker build. -f ${
+        <p class="paas-example-tips">docker build . -f ${
           this.appendPath ? this.appendPath : 'Dockerfile'
         } imagename</p>`,
       };

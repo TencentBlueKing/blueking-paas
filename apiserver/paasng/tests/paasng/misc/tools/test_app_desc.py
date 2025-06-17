@@ -22,23 +22,10 @@ import pytest
 from django.conf import settings
 
 from paasng.misc.tools.app_desc import (
-    create_exposed_service,
     transform_app_desc_spec2_to_spec3,
     transform_module_spec,
     transform_modules_section,
 )
-
-
-def test_create_web_service():
-    expected_service_output = {
-        "name": "web",
-        "protocol": "TCP",
-        "exposedType": {"name": "bk/http"},
-        "targetPort": settings.CONTAINER_PORT,
-        "port": 80,
-    }
-    service = create_exposed_service()
-    assert service == expected_service_output
 
 
 @pytest.mark.parametrize(

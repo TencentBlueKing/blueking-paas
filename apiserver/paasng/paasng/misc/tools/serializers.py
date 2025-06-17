@@ -42,7 +42,7 @@ class AppSerializer(serializers.Serializer):
 
 class EnvVariableSerializer(serializers.Serializer):
     key = serializers.CharField()
-    value = serializers.CharField()
+    value = serializers.CharField(allow_blank=True)
     description = serializers.CharField(required=False)
     environment_name = serializers.CharField(required=False)
 

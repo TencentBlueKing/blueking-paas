@@ -65,7 +65,7 @@ class ProductInfoCondition(DeployCondition):
         if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
             return
         if not Product.objects.filter(application=self.env.module.application).exists():
-            raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
+            raise ConditionNotMatched(_("未完善应用市场信息"), self.action_name)
 
 
 class RepoAccessCondition(DeployCondition):
@@ -161,10 +161,10 @@ class ApplicationExtraInfoCondition(DeployCondition):
         try:
             extra_info = app.extra_info
         except ObjectDoesNotExist:
-            raise ConditionNotMatched(_("未完善应用分类或可用性保障信息"), self.action_name)
+            raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
         if not extra_info.tag or not extra_info.availability_level:
-            raise ConditionNotMatched(_("未完善应用分类或可用性保障信息"), self.action_name)
+            raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
 
 class ModuleEnvDeployInspector(BaseConditionChecker):

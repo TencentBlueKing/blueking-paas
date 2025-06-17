@@ -17,7 +17,7 @@
  */
 
 /*
- * 多租户
+ * 多租户-用户管理
  */
 import http from '@/api';
 import { json2Query } from '@/common/tools';
@@ -151,6 +151,41 @@ export default {
     recycleServiceInstance({}, { appCode, moduleId, serviceId, instanceId }) {
       const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/services/${serviceId}/instance/${instanceId}/`;
       return http.delete(url);
+    },
+    /**
+     * 平台管理-操作记录
+     */
+    getPlatformRecords({}, { queryParams }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/audit/platform/?${json2Query(queryParams)}`;
+      return http.get(url);
+    },
+    /**
+     * 获取平台管理操作记录详情
+     */
+    getPlatformRecordDetail({}, { recordId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/audit/platform/${recordId}/`;
+      return http.get(url);
+    },
+    /**
+     * 应用-操作记录
+     */
+    getAppRecords({}, { queryParams }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/audit/applications/?${json2Query(queryParams)}`;
+      return http.get(url);
+    },
+    /**
+     * 获取应用操作记录详情
+     */
+    getAppRecordDetail({}, { recordId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/audit/applications/${recordId}/`;
+      return http.get(url);
+    },
+    /**
+     * 获取操作记录过滤项
+     */
+    getFilterOptions() {
+      const url = `${BACKEND_URL}/api/plat_mgt/audit/filter_options/`;
+      return http.get(url);
     },
   },
 };

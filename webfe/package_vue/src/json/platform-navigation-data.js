@@ -76,4 +76,15 @@ export default [
     },
     sublist: [],
   },
+  {
+    groupId: 'user',
+    name: 'platformOperationAudit',
+    label: i18n.t('操作审计'),
+    iconfontName: 'caozuojilu',
+    matchRouters: ['platformOperationAudit'],
+    destRoute: {
+      name: 'platformOperationAudit',
+    },
+    sublist: [],
+  },
 ];

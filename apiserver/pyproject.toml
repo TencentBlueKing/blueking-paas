@@ -9,7 +9,7 @@ dependencies = [
   'apscheduler (==3.6.0)',
   'arrow (==1.3.0)',
   'bk-iam (==2.0.2)',
-  'bkpaas-auth (==3.1.1)',
+  'bkpaas-auth (==3.1.2)',
   'apigw-manager (==4.0.1)',
   'bkstorages (==2.0.0)',
   'bleach (==3.3.0)',

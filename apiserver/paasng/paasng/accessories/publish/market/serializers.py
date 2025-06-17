@@ -161,7 +161,7 @@ class ProductCreateSLZ(serializers.ModelSerializer, ProductBaseSLZ):
 
     class Meta:
         model = Product
-        exclude = ("region", "created", "updated", "owner")
+        exclude = ("region", "created", "updated", "owner", "tag")
 
     def validate(self, data: Dict):
         """Validate creation params"""
@@ -199,7 +199,7 @@ class ProductCombinedSLZ(serializers.ModelSerializer, ProductBaseSLZ):
 
     class Meta:
         model = Product
-        exclude = ("region", "created", "updated", "owner")
+        exclude = ("region", "created", "updated", "owner", "tag")
 
     @atomic
     def update(self, instance: Product, validated_data: Dict):

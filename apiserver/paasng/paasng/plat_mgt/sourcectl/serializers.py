@@ -63,7 +63,6 @@ class SourceTypeSpecConfigMinimalOutputSLZ(serializers.Serializer):
     用于列表展示，只包含必要字段
     """
 
-    id = serializers.CharField(help_text="服务 ID")
     name = serializers.CharField(help_text="服务名称")
     label_zh_cn = serializers.CharField(help_text="中文标签")
     label_en = serializers.CharField(help_text="英文标签")

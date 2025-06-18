@@ -107,9 +107,17 @@ class TestSourceTypeSpecViewSet:
         with pytest.raises(SourceTypeSpecConfig.DoesNotExist):
             SourceTypeSpecConfig.objects.get(name=name)
 
-    def test__get_default_configs_templates(self, plat_mgt_api_client):
+    def test_get_default_configs_templates(self, plat_mgt_api_client):
         """测试获取默认配置模板接口"""
         url = reverse("plat_mgt.sourcectl.source_type_spec.default_configs_templates")
+        resp = plat_mgt_api_client.get(url)
+        assert resp.status_code == status.HTTP_200_OK
+        assert isinstance(resp.data, dict)
+        assert len(resp.data) > 0
+
+    def test_get_spec_cls_choices(self, plat_mgt_api_client):
+        """测试获取 spec_cls 接口"""
+        url = reverse("plat_mgt.sourcectl.source_type_spec.spec_cls_choices")
         resp = plat_mgt_api_client.get(url)
         assert resp.status_code == status.HTTP_200_OK
         assert isinstance(resp.data, dict)

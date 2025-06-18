@@ -48,7 +48,6 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: SourceTypeSpecConfigMinimalOutputSLZ(many=True)},
     )
     def list(self, request):
-        """列出所有代码库配置"""
         queryset = self.get_queryset()
         slz = SourceTypeSpecConfigMinimalOutputSLZ(queryset, many=True)
         return Response(slz.data)
@@ -59,7 +58,6 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: SourceTypeSpecConfigDetailOutputSLZ()},
     )
     def retrieve(self, request, source_name):
-        """获取单个代码库配置"""
         source_type_spec = get_object_or_404(SourceTypeSpecConfig, name=source_name)
         slz = SourceTypeSpecConfigDetailOutputSLZ(source_type_spec)
         return Response(slz.data)
@@ -70,7 +68,6 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request):
-        """创建代码库配置"""
         slz = SourceTypeSpecConfigCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -93,7 +90,6 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, source_name):
-        """更新代码库配置"""
         source_type_spec = get_object_or_404(SourceTypeSpecConfig, name=source_name)
         data_before = DataDetail(data=SourceTypeSpecConfigUpdateInputSLZ(source_type_spec).data)
 
@@ -120,8 +116,6 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, source_name):
-        """删除代码库配置"""
-
         source_type_spec = get_object_or_404(SourceTypeSpecConfig, name=source_name)
         data_before = DataDetail(data=SourceTypeSpecConfigDetailOutputSLZ(source_type_spec).data)
 
@@ -142,8 +136,35 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ""},
     )
     def get_default_configs_templates(self, request):
-        """获取默认代码库配置模板"""
-
         configs = source_config_tpl_manager.get_all_templates()
 
         return Response(configs)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.sourcectl"],
+        operation_description="获取 spec_cls 列表",
+        responses={status.HTTP_200_OK: ""},
+    )
+    def get_spec_cls_choices(self, request):
+        available_spec_cls = [
+            "BkSvnSourceTypeSpec",
+            "GitHubSourceTypeSpec",
+            "GiteeSourceTypeSpec",
+            "BareGitSourceTypeSpec",
+            "BareSvnSourceTypeSpec",
+            "GitLabSourceTypeSpec",
+        ]
+
+        # 存在 TcGitSourceTypeSpec 才将其添加到可选项中
+        try:
+            from paasng.platform.sourcectl.type_specs import TcGitSourceTypeSpec  # noqa: F401
+
+            available_spec_cls.append("TcGitSourceTypeSpec")
+        except ImportError:
+            pass
+
+        spec_cls_choices = {
+            spec_cls: f"paasng.platform.sourcectl.type_specs.{spec_cls}" for spec_cls in available_spec_cls
+        }
+
+        return Response(spec_cls_choices)

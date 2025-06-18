@@ -125,5 +125,5 @@
     processes: {}
     tags: []
     repo_url: ''
-    render_method: 'jinja2_for_golang'
+    render_method: 'jinja2_double_square_bracket'
     is_hidden: false

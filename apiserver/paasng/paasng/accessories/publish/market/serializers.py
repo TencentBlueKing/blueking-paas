@@ -187,8 +187,6 @@ class ProductCreateSLZ(serializers.ModelSerializer, ProductBaseSLZ):
 
 
 class ProductCombinedSLZ(serializers.ModelSerializer, ProductBaseSLZ):
-    tag = ProductTagField(slug_field="id")
-
     # Read-only fields
     name = TranslatedCharField(read_only=True)
     introduction = TranslatedCharField(read_only=True)

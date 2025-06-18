@@ -105,8 +105,10 @@ class ProductManager(WithOwnerManager):
         )
         if created:
             # 创建标签
-            ApplicationExtraInfo.objects.create(
-                application=application, tenant_id=application.tenant_id, tag=Tag.objects.get_default_tag()
+            ApplicationExtraInfo.objects.update_or_create(
+                application=application,
+                tenant_id=application.tenant_id,
+                defaults={"tag": Tag.objects.get_default_tag()},
             )
             DisplayOptions.objects.create(product=product, tenant_id=application.tenant_id)
         return product

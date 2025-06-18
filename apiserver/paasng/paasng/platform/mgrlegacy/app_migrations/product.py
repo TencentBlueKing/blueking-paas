@@ -59,10 +59,10 @@ class ProductMigration(BaseMigration):
         product.created = self.legacy_app.created_date
         product.save(update_fields=["created"])
 
-        ApplicationExtraInfo.objects.create(
+        ApplicationExtraInfo.objects.update_or_create(
             application=app,
             tenant_id=app.tenant_id,
-            tag=tag,
+            defaults={"tag": tag},
         )
 
         DisplayOptions.objects.create(

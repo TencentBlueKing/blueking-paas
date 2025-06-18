@@ -38,8 +38,9 @@ class Command(BaseCommand):
     def handle(self, dry_run: bool, *args, **kwargs):
         for product in Product.objects.all():
             if not dry_run:
-                ApplicationExtraInfo.objects.create(
+                ApplicationExtraInfo.objects.update_or_create(
                     application=product.application,
-                    tag=product.tag,
+                    tenant_id=product.application.tenant_id,
+                    defaults={"tag": product.tag},
                 )
             print(f"app:{product.application.code} tag:{product.tag} 迁移至 ApplicationExtraInfo")

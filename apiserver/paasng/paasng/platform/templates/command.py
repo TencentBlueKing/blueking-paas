@@ -46,7 +46,7 @@ class EnhancedTemplateCommand:
 
     def __init__(self, render_method: RenderMethod, force_executable_files: List | None = None):
         # 渲染方式检查（注意：DjangoTemplate 其实也是通过 Jinja2 渲染的）
-        if render_method not in [RenderMethod.DJANGO_TEMPLATE, RenderMethod.JINJA2_FOR_GOLANG]:
+        if render_method not in [RenderMethod.DJANGO_TEMPLATE, RenderMethod.JINJA2_DOUBLE_SQUARE_BRACKET]:
             raise ValueError(f"Invalid render method: {render_method}")
 
         self.render_method = render_method
@@ -102,7 +102,14 @@ class EnhancedTemplateCommand:
 
         var_start_str, var_end_str = VARIABLE_START_STRING, VARIABLE_END_STRING
         # Golang 模板中默认使用 {{ 和 }}，因此按约定需要由开发者中心渲染的部分应使用 [[ 和 ]]
-        if self.render_method == RenderMethod.JINJA2_FOR_GOLANG:
+        if self.render_method == RenderMethod.JINJA2_DOUBLE_SQUARE_BRACKET:
             var_start_str, var_end_str = "[[", "]]"
 
-        return Template(source, variable_start_string=var_start_str, variable_end_string=var_end_str).render(context)
+        return Template(
+            source,
+            # 设置变量匹配的前后字符串
+            variable_start_string=var_start_str,
+            variable_end_string=var_end_str,
+            # 保留文件末尾的空行
+            keep_trailing_newline=True,
+        ).render(context)

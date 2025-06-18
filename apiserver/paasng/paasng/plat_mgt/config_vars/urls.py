@@ -15,13 +15,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from django.urls import re_path
+
+from .views import BuiltinConfigVarViewSet
 
 urlpatterns = [
-    path("", include("paasng.plat_mgt.applications.urls")),
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-    path("", include("paasng.plat_mgt.users.urls")),
-    path("", include("paasng.plat_mgt.config_vars.urls")),
-    path("", include("paasng.plat_mgt.audit.urls")),
+    # 环境变量管理
+    re_path(
+        r"api/plat_mgt/builtin_config_vars/$",
+        BuiltinConfigVarViewSet.as_view({"get": "list", "post": "create"}),
+        name="plat_mgt.builtin_config_vars.bulk",
+    ),
+    re_path(
+        r"api/plat_mgt/builtin_config_vars/(?P<pk>[^/]+)/",
+        BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
+        name="plat_mgt.builtin_config_vars.detail",
+    ),
 ]

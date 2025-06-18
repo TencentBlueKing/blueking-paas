@@ -2,7 +2,7 @@
   <div class="app-overview-container">
     <!-- 基本信息 -->
     <section
-      class="base-info-wrapper card-style"
+      class="base-info-wrapper card-style mb16"
       v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
     >
       <div class="view-title">{{ $t('基本信息') }}</div>
@@ -19,14 +19,6 @@
             <!-- 应用ID -->
             <div v-if="key === 'code'">
               <span>{{ baseInfo[key] }}</span>
-              <bk-button
-                style="padding: 0 6px"
-                text
-                @click="toAccessApp"
-              >
-                <i class="paasng-icon paasng-jump-link"></i>
-                {{ $t('访问应用') }}
-              </bk-button>
             </div>
             <!-- 应用名称 -->
             <div v-else-if="key === 'name'">
@@ -84,6 +76,106 @@
         </DetailsRow>
       </div>
     </section>
+
+    <section
+      class="base-info-wrapper card-style mb16"
+      v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
+    >
+      <div class="view-title">{{ $t('快捷操作') }}</div>
+      <DetailsRow
+        :label-width="150"
+        :label="`${$t('应用权限')}：`"
+        :align="'flex-start'"
+        class="mb10"
+      >
+        <div slot="value">
+          {{ isAppAdmin ? $t('你已经是该应用的管理员') : $t('你不具备管理员权限') }}
+          <!-- 非管理员 -->
+          <span
+            v-if="!isAppAdmin"
+            class="btn-wrapper ml10"
+            v-bk-tooltips="{
+              content: $t('应用所属租户为：{a}，您不是该租户下的用户，无法添加为管理员', { a: appTenantId }),
+              disabled: !isBecomeAdminDisabled,
+            }"
+          >
+            <!-- 跨租户不能操作 -->
+            <bk-button
+              theme="primary"
+              :disabled="isBecomeAdminDisabled"
+              :loading="adminConfig.appLoading"
+              @click="becomeAppAdmin"
+            >
+              {{ $t('成为管理员') }}
+            </bk-button>
+          </span>
+          <template v-else>
+            <bk-button
+              class="ml10"
+              theme="danger"
+              :loading="adminConfig.appLoading"
+              @click="exitApp"
+            >
+              {{ $t('退出应用') }}
+            </bk-button>
+            <bk-button
+              class="ml10"
+              text
+              @click="toAccessApp"
+            >
+              <i class="paasng-icon paasng-jump-link"></i>
+              {{ $t('访问应用') }}
+            </bk-button>
+          </template>
+        </div>
+      </DetailsRow>
+      <DetailsRow
+        v-if="appAdmin?.show_plugin_admin_operations"
+        :label-width="150"
+        :label="`${$t('插件权限')}：`"
+        :align="'flex-start'"
+      >
+        <div slot="value">
+          {{ isPluginAdmin ? $t('你已经是该插件的管理员') : $t('你不具备管理员权限') }}
+          <span
+            v-if="!isPluginAdmin"
+            class="btn-wrapper ml10"
+            v-bk-tooltips="{
+              content: $t('插件所属租户为：{a}，您不是该租户下的用户，无法添加为管理员', { a: appTenantId }),
+              disabled: !isBecomeAdminDisabled,
+            }"
+          >
+            <bk-button
+              theme="primary"
+              :disabled="isBecomeAdminDisabled"
+              :loading="adminConfig.pluginLoading"
+              @click="becomePluginAdmin"
+            >
+              {{ $t('成为管理员') }}
+            </bk-button>
+          </span>
+          <template v-else>
+            <bk-button
+              class="ml10"
+              theme="danger"
+              :loading="adminConfig.pluginLoading"
+              @click="exitPlugin"
+            >
+              {{ $t('退出插件管理员') }}
+            </bk-button>
+            <bk-button
+              class="ml10"
+              text
+              @click="toAccessPlugin"
+            >
+              <i class="paasng-icon paasng-jump-link"></i>
+              {{ $t('访问插件') }}
+            </bk-button>
+          </template>
+        </div>
+      </DetailsRow>
+    </section>
+
     <!-- 模块信息-外链应用不展示 -->
     <section
       v-if="!isEnginelessApp && !isLoading"
@@ -226,7 +318,7 @@
 
 <script>
 import DetailsRow from '@/components/details-row';
-import { mapState } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 import { PAAS_APP_TYPE } from '@/common/constants';
 
 export default {
@@ -271,15 +363,35 @@ export default {
       // 部署集群
       deployClusterList: [],
       PAAS_APP_TYPE,
+      appAdmin: {},
+      adminConfig: {
+        appLoading: false,
+        pluginLoading: false,
+      },
     };
   },
   computed: {
-    ...mapState(['platformFeature']),
+    ...mapState(['platformFeature', 'curUserInfo']),
+    ...mapGetters(['tenantId']),
     appCode() {
       return this.$route.params.code;
     },
     isEnginelessApp() {
       return this.baseInfo.type === 'engineless_app';
+    },
+    // 当前应用的租户id
+    appTenantId() {
+      return this.$route.query.tenant;
+    },
+    isBecomeAdminDisabled() {
+      return this.platformFeature.MULTI_TENANT_MODE && this.appTenantId !== this.tenantId;
+    },
+    // 是否为应用的个管理员
+    isAppAdmin() {
+      return !!this.appAdmin?.user_is_admin_in_app;
+    },
+    isPluginAdmin() {
+      return !!this.appAdmin?.user_is_admin_in_plugin;
     },
   },
   created() {
@@ -299,6 +411,7 @@ export default {
           this.activeNames.push(this.moduleData[0].name);
         }
         this.editApp.oldName = ret.basic_info?.name || '';
+        this.appAdmin = ret.app_admin || {};
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -401,16 +514,107 @@ export default {
       const curEnv = envData.find((v) => v.name === envKey);
       return curEnv?.is_deployed ? this.$t('已部署') : this.$t('未部署');
     },
-    // 基本信息访问应用
+    // 访问应用
     toAccessApp() {
       const routeName = this.baseInfo.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary';
-      this.$router.push({
+      const route = this.$router.resolve({
         name: routeName,
         params: { id: this.baseInfo.code },
       });
+      this.toLink(route.href);
+    },
+    // 访问插件
+    toAccessPlugin() {
+      const route = this.$router.resolve({
+        name: 'pluginSummary',
+        params: { pluginTypeId: 'bk-saas', id: this.baseInfo.code },
+      });
+      this.toLink(route.href);
     },
     toLink(url) {
       window.open(url, '_blank');
+    },
+    setAdminLoading(key, loading) {
+      this.$set(this.adminConfig, key, loading);
+    },
+    // 成为应用应用管理员
+    async becomeAppAdmin() {
+      this.setAdminLoading('appLoading', true);
+      try {
+        const params = [
+          {
+            roles: [{ id: 2 }],
+            user: { username: this.curUserInfo.username },
+          },
+        ];
+        await this.$store.dispatch('tenantOperations/addMember', {
+          appCode: this.appCode,
+          postParams: params,
+        });
+        await this.getAppDetails();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('您已成功成为应用管理员'),
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('添加用户角色失败：')} ${e.detail}`,
+        });
+      } finally {
+        this.setAdminLoading('appLoading', false);
+      }
+    },
+    // 退出应用
+    async exitApp() {
+      this.setAdminLoading('appLoading', true);
+      try {
+        await this.$store.dispatch('member/quitApplication', { appCode: this.appCode });
+        await this.getAppDetails();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('您已退出应用管理员角色'),
+        });
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('退出应用失败：')} ${e.detail}`,
+        });
+      } finally {
+        this.setAdminLoading('appLoading', false);
+      }
+    },
+    // 成为插件管理员
+    async becomePluginAdmin() {
+      this.setAdminLoading('pluginLoading', true);
+      try {
+        await this.$store.dispatch('tenantOperations/becomePluginAdmin', { appCode: this.appCode });
+        await this.getAppDetails();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('您已成功成为插件管理员'),
+        });
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.setAdminLoading('pluginLoading', false);
+      }
+    },
+    // 退出插件
+    async exitPlugin() {
+      this.setAdminLoading('pluginLoading', true);
+      try {
+        await this.$store.dispatch('tenantOperations/exitPlugin', { appCode: this.appCode });
+        await this.getAppDetails();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('您已退出插件管理员角色'),
+        });
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.setAdminLoading('pluginLoading', false);
+      }
     },
   },
 };
@@ -423,6 +627,9 @@ export default {
   }
   .mb16 {
     margin-bottom: 16px !important;
+  }
+  .btn-wrapper {
+    display: inline-block;
   }
   /deep/ .details-row {
     margin-top: 0;
@@ -466,7 +673,6 @@ export default {
     }
   }
   .module-info-wrapper {
-    margin-top: 16px;
     padding: 16px;
     .module-tit {
       height: 100%;

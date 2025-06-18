@@ -57,6 +57,9 @@ modules:
       - key: FOO
         value: value_of_foo
         description: 环境变量描述文件
+      - key: FOO1
+        value: ''
+        description: 测试空值
     processes:
       web:
         command: npm run server
@@ -158,7 +161,8 @@ modules:
                                 "addons": [{"name": "mysql"}, {"name": "rabbitmq"}],
                                 "configuration": {
                                     "env": [
-                                        {"name": "FOO", "value": "value_of_foo", "description": "环境变量描述文件"}
+                                        {"name": "FOO", "value": "value_of_foo", "description": "环境变量描述文件"},
+                                        {"name": "FOO1", "value": "", "description": "测试空值"},
                                     ]
                                 },
                                 "processes": [
@@ -268,6 +272,9 @@ modules:
           - name: FOO
             value: value_of_foo
             description: 环境变量描述文件
+          - name: FOO1
+            value: ''
+            description: 测试空值
       processes:
         - name: web
           procCommand: npm run server

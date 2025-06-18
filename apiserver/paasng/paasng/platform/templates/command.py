@@ -21,9 +21,12 @@ import os
 import shutil
 import stat
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from django.template import Context, Template
+from jinja2 import Template
+from jinja2.defaults import VARIABLE_END_STRING, VARIABLE_START_STRING
+
+from paasng.platform.templates.constants import RenderMethod
 
 logger = logging.getLogger(__name__)
 
@@ -34,37 +37,36 @@ class EnhancedTemplateCommand:
     - Only render files endswith "-tpl" suffix
     - Use extra after hooks to remove bad files and rename rendered files back to normal
 
+    :param render_method: Render method (Only support DjangoTemplate, Jinja2ForGolang)
     :param force_executable_files: Always make these files executable
     """
 
     IGNORE_PATTERNS = ("*.pyc", "*.pyo", "CVS", "tmp", ".git", ".svn")
     default_options: Dict[str, Any] = {}
 
-    def __init__(self, force_executable_files: Optional[List] = None):
+    def __init__(self, render_method: RenderMethod, force_executable_files: List | None = None):
+        # 渲染方式检查（注意：DjangoTemplate 其实也是通过 Jinja2 渲染的）
+        if render_method not in [RenderMethod.DJANGO_TEMPLATE, RenderMethod.JINJA2_DOUBLE_SQUARE_BRACKET]:
+            raise ValueError(f"Invalid render method: {render_method}")
+
+        self.render_method = render_method
+
+        # 强制设置为可执行的文件
         if force_executable_files is None:
             force_executable_files = []
+
         self.force_executable_files = set(force_executable_files)
 
-    def should_ignore(self, name) -> bool:
-        """Should ignore this file/directory or not"""
-        return any(fnmatch.fnmatch(name, p) for p in self.IGNORE_PATTERNS)
-
-    def render(self, filename, context) -> str:
-        with open(filename, "r", encoding="utf-8", errors="strict") as f:
-            source = f.read()
-        return Template(source).render(context)
-
-    def handle(self, target: str, template: str, **options):
+    def handle(self, target: str, template: str, context: Dict[str, str]):
         """Render templates to files"""
         if not Path(template).is_absolute():
             raise ValueError("template path must be absolute!")
 
-        context = Context({**self.default_options, **options}, autoescape=False)
         for root, dirs, all_files in os.walk(template, followlinks=False):
             # Ignore dirs and files which should be ignored
             # See: https://stackoverflow.com/questions/19859840/excluding-directories-in-os-walk
-            dirs[:] = [d for d in dirs if not self.should_ignore(d)]
-            files = [f for f in all_files if not self.should_ignore(f)]
+            dirs[:] = [d for d in dirs if not self._should_ignore(d)]
+            files = [f for f in all_files if not self._should_ignore(f)]
 
             rel_path = root[len(template) :].lstrip("/")
             dst_path = Path(os.path.join(target, rel_path))
@@ -79,7 +81,7 @@ class EnhancedTemplateCommand:
                 if filename.endswith("-tpl"):
                     dst_file = Path(str(dst_file)[: -len("-tpl")])
                     with open(dst_file, "w", encoding="utf-8") as f:
-                        f.write(self.render(src_file, context))
+                        f.write(self._render(src_file, context))
                 else:
                     shutil.copyfile(src_file, dst_file, follow_symlinks=False)
 
@@ -89,3 +91,25 @@ class EnhancedTemplateCommand:
                     logger.debug(f"File {rel_dst_filename} should be executable, change its attributes")
                     st = dst_file.stat()
                     os.chmod(dst_file, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    def _should_ignore(self, name: str) -> bool:
+        """Should ignore this file/directory or not"""
+        return any(fnmatch.fnmatch(name, p) for p in self.IGNORE_PATTERNS)
+
+    def _render(self, filepath: Path, context: Dict[str, str]) -> str:
+        with open(filepath, "r", encoding="utf-8", errors="strict") as f:
+            source = f.read()
+
+        var_start_str, var_end_str = VARIABLE_START_STRING, VARIABLE_END_STRING
+        # Golang 模板中默认使用 {{ 和 }}，因此按约定需要由开发者中心渲染的部分应使用 [[ 和 ]]
+        if self.render_method == RenderMethod.JINJA2_DOUBLE_SQUARE_BRACKET:
+            var_start_str, var_end_str = "[[", "]]"
+
+        return Template(
+            source,
+            # 设置变量匹配的前后字符串
+            variable_start_string=var_start_str,
+            variable_end_string=var_end_str,
+            # 保留文件末尾的空行
+            keep_trailing_newline=True,
+        ).render(context)

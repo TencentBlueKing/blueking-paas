@@ -18,6 +18,7 @@
 import shlex
 
 import cattr
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -166,3 +167,9 @@ class DeploymentDescSLZ(serializers.Serializer):
 
         # Formalize procfile data and return
         return {k.lower(): v for k, v in processes.items()}
+
+    def validate_source_dir(self, value: str):
+        if value.startswith("/") or ".." in value:
+            raise ValidationError(_("构建目录（source_dir）不合法，不能以 '/' 开头，不能包含 '..'"))
+
+        return value

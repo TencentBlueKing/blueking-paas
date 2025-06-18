@@ -15,7 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 
 class DisplayOptionsSerializer(serializers.Serializer):
@@ -149,6 +151,12 @@ class ModuleSerializer(serializers.Serializer):
     svc_discovery = SvcDiscoverySerializer(required=False)
     package_plans = serializers.DictField(required=False)
     bkmonitor = BkMonitorPortSerializer(required=False)
+
+    def validate_source_dir(self, value: str):
+        if value.startswith("/") or ".." in value:
+            raise ValidationError(_("构建目录（source_dir）不合法，不能以 '/' 开头，不能包含 '..'"))
+
+        return value
 
 
 class AppDescSpec2Serializer(serializers.Serializer):

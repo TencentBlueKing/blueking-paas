@@ -100,6 +100,7 @@ def get_app_actions_by_role(role: ApplicationRole) -> List[AppAction]:
     elif role == ApplicationRole.DEVELOPER:
         return [
             AppAction.VIEW_BASIC_INFO,
+            AppAction.EDIT_BASIC_INFO,
             AppAction.MANAGE_APP_MARKET,
             AppAction.DATA_STATISTICS,
             AppAction.BASIC_DEVELOP,

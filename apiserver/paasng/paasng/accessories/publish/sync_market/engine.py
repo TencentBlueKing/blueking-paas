@@ -301,16 +301,21 @@ class RemoteAppManager:
 
     def hybrate_tags_id(self):
         """app分类"""
-        try:
-            return self.product.tag.tagmap.remote_id
-        except ObjectDoesNotExist:
-            # 当出现未关联标签时, 启动兼容方案
-            logger.warning(f"`{self.product.tag.name}` 未关联桌面标签")
-        # 尝试关联桌面上的同名标签
-        tag = AppTagManger(self.session).get_tag_by_name(self.product.tag.name)
+        tag = self.product.get_tag()
         if not tag:
             raise FieldNotFound
-        return tag.id
+
+        try:
+            return tag.tagmap.remote_id
+        except ObjectDoesNotExist:
+            # 当出现未关联标签时, 启动兼容方案
+            logger.warning(f"`{tag.name}` 未关联桌面标签")
+
+        # 尝试关联桌面上的同名标签
+        console_tag = AppTagManger(self.session).get_tag_by_name(tag.name)
+        if not console_tag:
+            raise FieldNotFound
+        return console_tag.id
 
     def hybrate_use_celery(self):
         """app是否使用celery"""

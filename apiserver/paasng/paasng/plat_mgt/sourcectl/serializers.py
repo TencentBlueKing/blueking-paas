@@ -53,6 +53,20 @@ class BaseSourceTypeSpecConfigSLZ(serializers.Serializer):
     display_info_zh_cn = serializers.JSONField(help_text="中文展示信息")
     display_info_en = serializers.JSONField(help_text="英文展示信息")
 
+    def to_internal_value(self, data):
+        # 添加前缀 paasng.platform.sourcectl.type_specs.
+        prefix = "paasng.platform.sourcectl.type_specs."
+        data = super().to_internal_value(data)
+
+        data["spec_cls"] = prefix + data["spec_cls"]
+        return data
+
+    def to_representation(self, instance):
+        # 将 spec_cls 字段转换为可读格式
+        data = super().to_representation(instance)
+        data["spec_cls"] = data["spec_cls"].rsplit(".", 1)[-1]
+        return data
+
 
 # ===== 输出序列化器 =====
 

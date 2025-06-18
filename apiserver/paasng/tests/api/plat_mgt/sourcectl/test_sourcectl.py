@@ -78,7 +78,7 @@ class TestSourceTypeSpecViewSet:
         """测试创建代码库配置接口"""
 
         url = reverse("plat_mgt.sourcectl.source_type_spec.list_create")
-        custom_data = create_test_source_type_spec_data(name="custom_sourcectl")
+        custom_data = create_test_source_type_spec_data(name="custom_sourcectl", spec_cls="BareGitSourceTypeSpec")
         resp = plat_mgt_api_client.post(url, custom_data, format="json")
         assert resp.status_code == status.HTTP_201_CREATED
 
@@ -90,7 +90,7 @@ class TestSourceTypeSpecViewSet:
 
         name = create_source_type_spec.name
         url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"source_name": name})
-        update_data = create_test_source_type_spec_data(name="custom_sourcectl")
+        update_data = create_test_source_type_spec_data(name="custom_sourcectl", spec_cls="BareGitSourceTypeSpec")
         resp = plat_mgt_api_client.put(url, update_data, format="json")
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
@@ -120,5 +120,4 @@ class TestSourceTypeSpecViewSet:
         url = reverse("plat_mgt.sourcectl.source_type_spec.spec_cls_choices")
         resp = plat_mgt_api_client.get(url)
         assert resp.status_code == status.HTTP_200_OK
-        assert isinstance(resp.data, dict)
         assert len(resp.data) > 0

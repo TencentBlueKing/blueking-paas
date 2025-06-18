@@ -163,8 +163,4 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         except ImportError:
             pass
 
-        spec_cls_choices = {
-            spec_cls: f"paasng.platform.sourcectl.type_specs.{spec_cls}" for spec_cls in available_spec_cls
-        }
-
-        return Response(spec_cls_choices)
+        return Response(available_spec_cls)

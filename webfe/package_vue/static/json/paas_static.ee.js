@@ -287,20 +287,30 @@ export const PLATFORM_CONFIG = {
 
         // 日志高级功能介绍
         LOG_ADVANCED_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/log_advance.md',
+
         // 监控功能介绍
         MONITORING_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/monitoring/intro.md',
+
         // APM 增强服务功能介绍
         APM_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/services/svc_otel.md',
+
         // 令牌使用指引
         ACCESS_TOKEN_USAGE_GUIDE: DOCS_URL_PREFIX + '/topics/paas/access_token',
+
         // 沙箱开发指引
         SANDBOX_DEVELOPMENT_GUIDE: DOCS_URL_PREFIX + '/topics/paas/paas3_dev_sandbox_intro',
+
         // 监控仪表盘指引
         MONITORING_METRICS_GUIDE: DOCS_URL_PREFIX + '/topics/paas/monitoring/metrics',
+
         // 应用描述文件介绍
         APP_DESC_CNATIVE: DOCS_URL_PREFIX + '/topics/paas/app_desc_cnative',
+
         // 访问控制台
-        WEB_CONSOLE: DOCS_URL_PREFIX + '/topics/paas/webconsole'
+        WEB_CONSOLE: DOCS_URL_PREFIX + '/topics/paas/webconsole',
+
+        // 应用描述文件文件位置说明
+        FILE_LOCATION_DESCRIPTION: DOCS_URL_PREFIX + '/topics/paas/app_desc_cnative#%E5%BA%94%E7%94%A8%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6%E4%BD%8D%E7%BD%AE%E8%AF%B4%E6%98%8E'
     },
 
     CONFIG: {

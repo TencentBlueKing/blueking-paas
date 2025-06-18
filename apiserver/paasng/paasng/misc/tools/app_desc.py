@@ -191,35 +191,24 @@ def transform_process(process_name: str, process_info: Dict[str, Any]) -> Ordere
         else:
             transformed_process[snake_to_camel(key)] = value
 
-    transformed_process["services"] = [create_service(process_name)]
+    if process_name == "web":
+        transformed_process["services"] = [create_exposed_service()]
 
     return transformed_process
 
 
-def create_service(process_name: str) -> Dict[str, Union[str, int]]:
+def create_exposed_service() -> Dict:
     """
-    Creates service information for the given process name.
-
-    :param process_name: The name of the process.
-    :return: Service information for the process.
+    Creates service information for the web process.
     """
-    if process_name == "web":
-        service = {
-            "name": process_name,
-            "protocol": "TCP",
-            "exposedType": {"name": "bk/http"},
-            "targetPort": settings.CONTAINER_PORT,
-            "port": 80,
-        }
-    else:
-        service = {
-            "name": process_name,
-            "protocol": "TCP",
-            "targetPort": settings.CONTAINER_PORT,
-            "port": 80,
-        }
 
-    return service
+    return {
+        "name": "web",
+        "protocol": "TCP",
+        "exposedType": {"name": "bk/http"},
+        "targetPort": settings.CONTAINER_PORT,
+        "port": 80,
+    }
 
 
 def transform_process_probes(probes: Dict[str, Dict[str, Any]]) -> OrderedDict[str, OrderedDict[str, Any]]:

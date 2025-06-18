@@ -17,7 +17,7 @@
 
 from rest_framework import serializers
 
-from paasng.misc.audit.constants import AccessType, ResultCode
+from paasng.misc.audit.constants import AccessType, OperationEnum, OperationTarget, ResultCode
 
 
 class BaseOperationAuditSLZ(serializers.Serializer):
@@ -25,7 +25,7 @@ class BaseOperationAuditSLZ(serializers.Serializer):
 
     target = serializers.CharField(help_text="操作对象")
     operation = serializers.CharField(help_text="操作类型")
-    status = serializers.ChoiceField(source="result_code", choices=ResultCode.get_choices(), help_text="状态")
+    status = serializers.CharField(source="result_code", help_text="状态")
     operator = serializers.CharField(source="user.username", help_text="操作人")
     operated_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created", help_text="操作时间")
 
@@ -45,9 +45,13 @@ class ApplicationOperationAuditRetrieveOutputSLZ(BaseOperationAuditSLZ):
     app_code = serializers.CharField(help_text="应用 ID")
     module_name = serializers.CharField(allow_blank=True, allow_null=True, help_text="模块名称")
     environment = serializers.CharField(allow_blank=True, allow_null=True, help_text="环境名称")
-    access_type = serializers.ChoiceField(choices=AccessType.get_choices(), help_text="访问方式")
+    access_type = serializers.SerializerMethodField(help_text="访问方式")
     data_before = serializers.JSONField(allow_null=True, help_text="操作前的数据")
     data_after = serializers.JSONField(allow_null=True, help_text="操作后的数据")
+
+    def get_access_type(self, obj) -> str:
+        """获取访问方式"""
+        return AccessType.get_choice_label(obj.access_type)
 
 
 class PlatformOperationAuditOutputSLZ(BaseOperationAuditSLZ):
@@ -61,16 +65,20 @@ class PlatformOperationAuditRetrieveOutputSLZ(BaseOperationAuditSLZ):
     """平台操作审计详情序列化器"""
 
     attribute = serializers.CharField(allow_blank=True, allow_null=True, help_text="操作属性")
-    access_type = serializers.ChoiceField(choices=AccessType.get_choices(), help_text="访问方式")
+    access_type = serializers.SerializerMethodField(help_text="访问方式")
     data_before = serializers.JSONField(allow_null=True, help_text="操作前的数据")
     data_after = serializers.JSONField(allow_null=True, help_text="操作后的数据")
+
+    def get_access_type(self, obj) -> str:
+        """获取访问方式"""
+        return AccessType.get_choice_label(obj.access_type)
 
 
 class OperationAuditFilterInputSLZ(serializers.Serializer):
     """审计记录过滤器序列化器"""
 
-    target = serializers.CharField(help_text="操作对象", required=False)
-    operation = serializers.CharField(help_text="操作类型", required=False)
+    target = serializers.ChoiceField(choices=OperationTarget.get_choices(), help_text="操作对象", required=False)
+    operation = serializers.ChoiceField(choices=OperationEnum.get_choices(), help_text="操作类型", required=False)
     status = serializers.ChoiceField(choices=ResultCode.get_choices(), help_text="状态", required=False)
     operator = serializers.CharField(help_text="操作人", required=False)
     start_time = serializers.DateTimeField(

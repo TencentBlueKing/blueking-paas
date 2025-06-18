@@ -59,10 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 name: "共享证书管理",
                                 url: "{% url 'admin.shared.certs.manage' %}",
                             },
-                            {
-                                name: "环境变量管理",
-                                url: "{% url 'admin.builtin_config_vars.manage' %}"
-                            },
                         ]
                     },
                     {% endif %}

@@ -64,7 +64,14 @@ const platformOperationAudit = () =>
     });
 
 const builtInEnvVariable = () =>
-  import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/env-var')
+  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/env-var')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
+const repositoryConfig = () =>
+  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/repository-config')
     .then((module) => module)
     .catch((error) => {
       window.showDeployTip(error);
@@ -138,6 +145,14 @@ export const platformRouters = [
             { name: 'feature', label: i18n.t('用户特性') },
             { name: 'authorized', label: i18n.t('已授权应用') },
           ],
+        },
+      },
+      {
+        path: 'repository',
+        component: repositoryConfig,
+        name: 'repositoryConfig',
+        meta: {
+          title: i18n.t('代码库配置'),
         },
       },
       {

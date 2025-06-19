@@ -334,4 +334,5 @@ export default {
   编辑内置环境变量: 'Edit Built-in Env Variable',
   '此处定义的环境变量会覆盖系统内置的环境变量。环境变量优先级（由高到低）：平台管理自定义的内置环境变量 > 系统内置环境变量 > 单个应用中自定义环境变量': 'The env variables defined here will override system built-in env variables. Env variable priority (from high to low): Platform-managed custom built-in env variables > System built-in env variables > Custom env variables in individual applications',
   '确认删除该内置环境变量？': 'Confirm delete of this built-in env variable?',
+  '填充 {a} 默认设置': 'Populate {a} default settings',
 };

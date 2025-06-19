@@ -17,7 +17,9 @@
 
 import logging
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepositoryInstance, SvnAccount, SvnRepository
@@ -152,6 +154,12 @@ class RepoBackendModifySLZ(serializers.Serializer):
     source_dir = serializers.CharField(
         help_text="Procfile 所在目录, 如果是根目录可不填.", default="", allow_blank=True
     )
+
+    def validate_source_dir(self, value: str):
+        if value.startswith("/") or ".." in value:
+            raise ValidationError(_("构建目录（source_dir）不合法，不能以 '/' 开头，不能包含 '..'"))
+
+        return value
 
 
 ##########################

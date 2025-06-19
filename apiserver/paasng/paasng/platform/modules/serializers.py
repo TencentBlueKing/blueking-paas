@@ -172,6 +172,12 @@ class CreateModuleSLZ(serializers.Serializer):
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
         return tmpl_name
 
+    def validate_source_dir(self, value: str):
+        if value.startswith("/") or ".." in value:
+            raise ValidationError(_("构建目录（source_dir）不合法，不能以 '/' 开头，不能包含 '..'"))
+
+        return value
+
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
         source_origin = SourceOrigin(data["source_origin"])
@@ -274,6 +280,12 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
 
         return tmpl_name
+
+    def validate_source_dir(self, value: str):
+        if value.startswith("/") or ".." in value:
+            raise ValidationError(_("构建目录（source_dir）不合法，不能以 '/' 开头，不能包含 '..'"))
+
+        return value
 
 
 class ModuleBuildConfigSLZ(serializers.Serializer):

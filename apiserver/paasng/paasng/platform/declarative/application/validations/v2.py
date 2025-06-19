@@ -19,6 +19,7 @@ from typing import Dict
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.core.region.states import get_region
@@ -97,6 +98,12 @@ class ModuleDescriptionSLZ(serializers.Serializer):
     language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
     services = serializers.ListField(child=ServiceSLZ(), required=False, default=[])
     source_dir = serializers.CharField(help_text="源码目录", required=False, default="")
+
+    def validate_source_dir(self, value: str):
+        if value.startswith("/") or ".." in value:
+            raise ValidationError(_("构建目录（source_dir）不合法，不能以 '/' 开头，不能包含 '..'"))
+
+        return value
 
     def to_internal_value(self, data) -> ModuleDesc:
         """convert to cnative module desc format"""

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 """取消将应用的日志文件挂载到宿主机上，一般在将应用的日志查询链路切换到 BK-LOG 14 天后执行。
+
 Q1: 为什么需要禁用宿主机挂载点？
 A1: 日志平台的采集机制是在每个 pod 中采集日志，不禁用挂载会导致应用有多个 pod 时日志被重复采集。
 
@@ -25,10 +26,10 @@ A2: 切换到 BK-LOG 是整个应用级别生效，很多应用需要先在测�
 
 Examples:
 
-    # 应用所有环境都下发 bklog 日志采集超过 14 天，才取消应用所有环境的挂载
-    python manage.py batch_disable_mount_hostpath --app-code app-code-1 --days 14
+    # 应用所有环境的 bklog 日志采集下发都超过了 14 天，才取消应用所有环境的挂载
+    python manage.py batch_disable_mount_hostpath --app-code app-code-1
 
-    # 应用任意环境符合条件（下发 bklog 日志采集超过 1 天）即禁用该环境挂载
+    # 应用任意环境符合条件（bklog 日志采集下发超过 1 天）即禁用该环境挂载
     python manage.py batch_disable_mount_hostpath --app-code app-code-1  --days 1 --edger-disable
 
     # 关闭指定集群下应用的挂载

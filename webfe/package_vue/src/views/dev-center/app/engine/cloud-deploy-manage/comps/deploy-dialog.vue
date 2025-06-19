@@ -1295,91 +1295,65 @@ export default {
 
     /**
      * 处理部署前准备工作项
+     * @param {Object} preparation 错误对象
      */
     handleFixPreparation(preparation) {
-      let routeData = {};
-      switch (preparation.action_name) {
-        // 代码仓库没有授权
-        case 'NEED_TO_BIND_OAUTH_INFO':
-          routeData = this.$router.resolve({
-            name: 'serviceCode',
-          });
-          break;
+      const { action_name: actionName } = preparation;
 
-        // 没有访问源码仓库的权限
-        case 'DONT_HAVE_ENOUGH_PERMISSIONS':
-          routeData = this.$router.resolve({
-            name: 'serviceCode',
-          });
-          break;
-
-        // 蓝盾没有授权
-        case 'CHECK_CI_GIT_TOKEN':
-          routeData = this.$router.resolve({
-            name: 'serviceCi',
-          });
-          break;
-
-        // 完善市场信息
-        case 'FILL_PRODUCT_INFO':
-          routeData = this.$router.resolve({
-            name: 'appMarket',
-            params: {
-              id: this.appCode,
-            },
-            query: {
-              focus: 'baseInfo',
-            },
-          });
-          break;
-
-        // 自定义仓库源配置不正确
-        case 'NEED_TO_CORRECT_REPO_INFO':
-          // 模块配置
-          routeData = this.$router.resolve({
-            name: 'cloudAppDeployForBuild',
-            // 高亮第二项
-            params: {
-              id: this.appCode,
-              moduleId: this.curModuleId,
-            },
-          });
-          break;
-
-        // 没有部署权限
-        case 'CHECK_ENV_PROTECTION':
-          this.$paasMessage({
-            message: this.$t('请联系应用管理员'),
-          });
-          break;
-
-        // 未完善进程启动命令
-        case 'NEED_TO_COMPLETE_PROCFILE':
-          routeData = this.$router.resolve({
-            name: 'cloudAppDeployForProcess',
-            params: {
-              id: this.appCode,
-              moduleId: this.curModuleId,
-            },
-          });
-          break;
-
-        // 未设置插件分类
-        case 'FILL_PLUGIN_TAG_INFO':
-          routeData = this.$router.resolve({
-            name: 'appBasicInfo',
-            params: {
-              id: this.appCode,
-              moduleId: this.curModuleId,
-            },
-          });
-          break;
-      }
-
-      if (preparation.action_name === 'CHECK_ENV_PROTECTION') {
+      if (actionName === 'CHECK_ENV_PROTECTION') {
+        this.$paasMessage({
+          message: this.$t('请联系应用管理员'),
+        });
         return;
       }
 
+      // 路由映射配置
+      const routeMap = {
+        // 代码仓库没有授权
+        NEED_TO_BIND_OAUTH_INFO: {
+          name: 'serviceCode',
+        },
+        // 没有访问源码仓库的权限
+        DONT_HAVE_ENOUGH_PERMISSIONS: {
+          name: 'serviceCode',
+        },
+        // 蓝盾没有授权
+        CHECK_CI_GIT_TOKEN: {
+          name: 'serviceCi',
+        },
+        // 完善市场信息
+        FILL_PRODUCT_INFO: {
+          name: 'appMarket',
+          params: { id: this.appCode },
+          query: { focus: 'baseInfo' },
+        },
+        // 自定义仓库源配置不正确
+        NEED_TO_CORRECT_REPO_INFO: {
+          name: 'cloudAppDeployForBuild',
+          params: { id: this.appCode, moduleId: this.curModuleId },
+        },
+        // 未完善进程启动命令
+        NEED_TO_COMPLETE_PROCFILE: {
+          name: 'cloudAppDeployForProcess',
+          params: { id: this.appCode, moduleId: this.curModuleId },
+        },
+        // 未设置插件分类
+        FILL_PLUGIN_TAG_INFO: {
+          name: 'appBasicInfo',
+          params: { id: this.appCode, moduleId: this.curModuleId },
+        },
+        // 完善应用基本信息
+        FILL_EXTRA_INFO: {
+          name: 'appBasicInfo',
+          params: { id: this.appCode, moduleId: this.curModuleId },
+        },
+      };
+
+      // 获取路由配置
+      const routeConfig = routeMap[actionName];
+      if (!routeConfig) return;
+
+      const routeData = this.$router.resolve(routeConfig);
       window.open(routeData.href, '_blank');
     },
   },

@@ -56,8 +56,8 @@ class TemplateViewSet(viewsets.GenericViewSet):
         operation_description="获取单个模板详情",
         responses={status.HTTP_200_OK: TemplateDetailOutputSLZ()},
     )
-    def retrieve(self, request, template_name):
-        tmpl = get_object_or_404(Template, name=template_name)
+    def retrieve(self, request, pk):
+        tmpl = get_object_or_404(Template, pk=pk)
         slz = TemplateDetailOutputSLZ(tmpl)
         return Response(slz.data)
 
@@ -88,8 +88,8 @@ class TemplateViewSet(viewsets.GenericViewSet):
         operation_description="更新模板",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def update(self, request, template_name):
-        template = get_object_or_404(Template, name=template_name)
+    def update(self, request, pk):
+        template = get_object_or_404(Template, pk=pk)
         data_before = DataDetail(data=TemplateDetailOutputSLZ(template).data)
 
         slz = TemplateUpdateInputSLZ(data=request.data, context={"instance": template})
@@ -114,8 +114,8 @@ class TemplateViewSet(viewsets.GenericViewSet):
         operation_description="删除模板",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def destroy(self, request, template_name):
-        tmpl = get_object_or_404(Template, name=template_name)
+    def destroy(self, request, pk):
+        tmpl = get_object_or_404(Template, pk=pk)
         data_before = DataDetail(data=TemplateDetailOutputSLZ(tmpl).data)
 
         tmpl.delete()

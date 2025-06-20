@@ -71,7 +71,8 @@ class TestTemplateViewSet:
     def test_retrieve(self, plat_mgt_api_client, sample_template):
         """测试获取单个模板详情接口"""
 
-        url = reverse("plat_mgt.templates.retrieve_update_destroy", kwargs={"template_name": sample_template.name})
+        pk = sample_template.pk
+        url = reverse("plat_mgt.templates.retrieve_update_destroy", kwargs={"pk": pk})
         resp = plat_mgt_api_client.get(url)
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["name"] == sample_template.name
@@ -90,20 +91,22 @@ class TestTemplateViewSet:
     def test_update(self, plat_mgt_api_client, sample_template):
         """测试更新模板接口"""
 
-        url = reverse("plat_mgt.templates.retrieve_update_destroy", kwargs={"template_name": sample_template.name})
+        pk = sample_template.pk
+        url = reverse("plat_mgt.templates.retrieve_update_destroy", kwargs={"pk": pk})
         update_data = create_test_template_data(name="updated_template", language="Java")
         resp = plat_mgt_api_client.put(url, update_data, format="json")
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         # 使用 id 获取更新后的模板, 确保更新成功
-        template = Template.objects.get(id=sample_template.id)
+        template = Template.objects.get(pk=pk)
         assert template.name == update_data["name"]
 
     def test_delete(self, plat_mgt_api_client, sample_template):
         """测试删除模板接口"""
-        url = reverse("plat_mgt.templates.retrieve_update_destroy", kwargs={"template_name": sample_template.name})
+        pk = sample_template.pk
+        url = reverse("plat_mgt.templates.retrieve_update_destroy", kwargs={"pk": pk})
         resp = plat_mgt_api_client.delete(url)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         with pytest.raises(Template.DoesNotExist):
-            Template.objects.get(name=sample_template.name)
+            Template.objects.get(pk=pk)

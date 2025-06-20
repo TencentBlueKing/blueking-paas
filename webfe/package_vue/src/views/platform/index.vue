@@ -50,7 +50,12 @@ export default {
       minHeight: 700,
       navCategories: [],
       navItems: [],
-      groups: [{ platform: this.$t('服务接入') }, { operations: this.$t('运营管理') }, { user: this.$t('用户管理') }],
+      groups: [
+        { platform: this.$t('服务接入') },
+        { operations: this.$t('运营管理') },
+        { config: this.$t('配置管理') },
+        { user: this.$t('用户管理') },
+      ],
       active: '',
       routeIndex: 0,
     };
@@ -129,6 +134,7 @@ export default {
         newQuery = { ...query };
       } else {
         newQuery = {
+          ...query,
           ...(active === 'list' && query),
           ...(active && { active }),
         };

@@ -1061,6 +1061,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-unfinished:before {
 	content: "\e292";
 }
+.paasng-variable:before {
+	content: "\e29f";
+}
 .paasng-jiangxu:before {
 	content: "\e26d";
 }
@@ -1129,4 +1132,16 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 }
 .paasng-Application-list:before {
 	content: "\e29a";
+}
+.paasng-caozuoshenji:before {
+	content: "\e29c";
+}
+.paasng-daimakupeizhi:before {
+	content: "\e29b";
+}
+.paasng-mobanpeizhi:before {
+	content: "\e29d";
+}
+.paasng-neironghuanjingbianliang:before {
+	content: "\e29e";
 }

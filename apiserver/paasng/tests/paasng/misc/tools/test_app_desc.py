@@ -22,32 +22,10 @@ import pytest
 from django.conf import settings
 
 from paasng.misc.tools.app_desc import (
-    create_service,
     transform_app_desc_spec2_to_spec3,
     transform_module_spec,
     transform_modules_section,
 )
-
-
-@pytest.mark.parametrize(
-    ("service_input", "expected_service_output"),
-    [
-        (
-            "web",
-            {
-                "name": "web",
-                "protocol": "TCP",
-                "exposedType": {"name": "bk/http"},
-                "targetPort": settings.CONTAINER_PORT,
-                "port": 80,
-            },
-        ),
-        ("worker", {"name": "worker", "protocol": "TCP", "targetPort": settings.CONTAINER_PORT, "port": 80}),
-    ],
-)
-def test_create_service(service_input, expected_service_output):
-    service = create_service(service_input)
-    assert service == expected_service_output
 
 
 @pytest.mark.parametrize(
@@ -135,14 +113,6 @@ def test_create_service(service_input, expected_service_output):
                                     "liveness": {"exec": {"command": ["/bin/bash", "-c", "echo ready"]}},
                                     "readiness": {"httpGet": {"path": "/healthz", "port": 80}},
                                 },
-                                "services": [
-                                    {
-                                        "name": "worker",
-                                        "protocol": "TCP",
-                                        "targetPort": settings.CONTAINER_PORT,
-                                        "port": 80,
-                                    }
-                                ],
                             }
                         ),
                     ]
@@ -330,14 +300,6 @@ def test_transform_module_spec(spec_input, expected_spec_output):
                                                 "liveness": {"exec": {"command": ["/bin/bash", "-c", "echo ready"]}},
                                                 "readiness": {"httpGet": {"path": "/healthz", "port": 80}},
                                             },
-                                            "services": [
-                                                {
-                                                    "name": "worker",
-                                                    "protocol": "TCP",
-                                                    "targetPort": settings.CONTAINER_PORT,
-                                                    "port": 80,
-                                                }
-                                            ],
                                         }
                                     )
                                 ],

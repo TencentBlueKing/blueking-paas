@@ -120,9 +120,10 @@
     market_ready: True
     preset_services_config:
       mysql: {}
-    blob_url: 'bkrepo://bkpaas3-apps-tmpls/open/golang-gin-v2.tar.gz'
+    blob_url: 'bkrepo://bkpaas3-apps-tmpls/open/golang-gin-nova.tar.gz'
     required_buildpacks: []
     processes: {}
     tags: []
     repo_url: ''
+    render_method: 'jinja2_double_square_bracket'
     is_hidden: false

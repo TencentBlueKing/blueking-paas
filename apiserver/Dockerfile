@@ -25,7 +25,7 @@ RUN EDITION=${EDITION} npm run build
 FROM python:3.11.10-slim-bullseye
 USER root
 
-RUN apt-get update && apt-get install -y gcc subversion ssh default-libmysqlclient-dev pkg-config vim git
+RUN apt-get update && apt-get install -y gcc subversion ssh default-libmysqlclient-dev pkg-config vim git gettext
 
 RUN mkdir ~/.pip && printf '[global]\nindex-url = https://mirrors.cloud.tencent.com/pypi/simple/\n' > ~/.pip/pip.conf
 
@@ -56,10 +56,7 @@ RUN mkdir -p ./public
 COPY --from=admin42 /build/paasng/public ./public
 ADD ./paasng .
 
-# Add extra files: static assets & I18N .mo translation file. 
-
-# "gettext" package is required for running "compilemessages"
-RUN apt-get install -y gettext
+# Add extra files: static assets & I18N .mo translation file.
 
 # the "BKKRILL_ENCRYPT_SECRET_KEY" settings is required for starting the project,
 # set it to a non-empty value to run the manage.py command.

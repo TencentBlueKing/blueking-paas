@@ -56,6 +56,20 @@ const platformAppDetails = () =>
       window.showDeployTip(error);
     });
 
+const platformOperationAudit = () =>
+  import(/* webpackChunkName: 'platform-user' */ '@/views/platform/operation-audit')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
+const builtInEnvVariable = () =>
+  import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/env-var')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 export const platformRouters = [
   {
     path: '/plat-mgt/',
@@ -127,6 +141,14 @@ export const platformRouters = [
         },
       },
       {
+        path: 'env-var',
+        component: builtInEnvVariable,
+        name: 'builtInEnvVariable',
+        meta: {
+          title: i18n.t('内置环境变量'),
+        },
+      },
+      {
         path: 'apps',
         component: platformAppList,
         name: 'platformAppList',
@@ -150,6 +172,18 @@ export const platformRouters = [
           backRoute: {
             name: 'platformAppList',
           }
+        },
+      },
+      {
+        path: 'operation-audit',
+        component: platformOperationAudit,
+        name: 'platformOperationAudit',
+        meta: {
+          title: i18n.t('操作审计'),
+          panels: [
+            { name: 'platform', label: i18n.t('平台操作记录') },
+            { name: 'app', label: i18n.t('应用操作记录') },
+          ],
         },
       },
     ],

@@ -12,6 +12,7 @@
             theme="primary"
             icon="plus"
             class="mr12"
+            :disabled="isAddMemberDisabled"
             @click="toggleMemberSideslider(true, 'add')"
           >
             {{ $t('新增成员') }}
@@ -44,7 +45,13 @@
           @change="handleSearch"
         />
       </div>
-      <div class="content-wrapper card-style">
+      <div class="content-wrapper card-style mt16">
+        <bk-alert
+          v-if="isAddMemberDisabled"
+          class="mb16"
+          type="info"
+          :title="memberDisableTip"
+        ></bk-alert>
         <bk-table
           :data="paginatedData"
           size="small"
@@ -227,7 +234,7 @@ import auth from '@/auth';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import user from '@/components/user';
 import CustomRadioCapsule from '@/components/custom-radio-capsule';
-import { mapState } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 import { paginationFun } from '@/common/utils';
 import MembersSideslider from './members-sideslider.vue';
 
@@ -308,6 +315,7 @@ export default {
   },
   computed: {
     ...mapState(['platformFeature']),
+    ...mapGetters(['tenantId']),
     // 分页数据
     paginatedData() {
       const { pageData } = paginationFun(this.filteredData, this.pagination.current, this.pagination.limit);
@@ -325,6 +333,20 @@ export default {
         return this.$route.params.code;
       }
       return this.$route.params.id;
+    },
+    // 当前应用的租户id
+    appTenantId() {
+      return this.$route.query.tenant;
+    },
+    // 多租户：当前应用id与用户id不一致不允许添加成员
+    isAddMemberDisabled() {
+      return this.platformFeature.MULTI_TENANT_MODE && this.appTenantId !== this.tenantId;
+    },
+    memberDisableTip() {
+      return this.$t('当前应用所属租户为 {b}，您的租户为 {a}。暂不支持跨租户添加应用成员。', {
+        a: this.tenantId,
+        b: this.appTenantId,
+      });
     },
   },
   watch: {
@@ -721,6 +743,9 @@ export default {
   margin-top: 16px;
   padding: 16px;
   background: #fff;
+  .mb16 {
+    margin-bottom: 16px;
+  }
 }
 .user-photo {
   margin: 5px 8px 5px 0;

@@ -43,10 +43,12 @@ class BaseOperation(UuidAuditedModel):
     data_before = models.JSONField(verbose_name="操作前的数据", null=True, blank=True)
     data_after = models.JSONField(verbose_name="操作后的数据", null=True, blank=True)
 
-    operation = models.CharField(max_length=32, verbose_name="操作类型", choices=OperationEnum.get_choices())
-    target = models.CharField(max_length=32, verbose_name="操作对象", choices=OperationTarget.get_choices())
+    # 可选枚举值：OperationEnum
+    operation = models.CharField(max_length=32, verbose_name="操作类型")
+    # 可选枚举值：OperationTarget
+    target = models.CharField(max_length=32, verbose_name="操作对象")
     attribute = models.CharField(
-        max_length=32,
+        max_length=128,
         verbose_name="对象属性",
         help_text="如增强服务的属性可以为：mysql、bkrepo",
         null=True,
@@ -109,8 +111,8 @@ class BaseOperation(UuidAuditedModel):
 
         ctx = {
             "user": self.username,
-            "operation": self.get_operation_display(),
-            "target": self.get_target_display(),
+            "operation": OperationEnum.get_choice_label(self.operation),
+            "target": OperationTarget.get_choice_label(self.target),
             "attribute": self.attribute,
             "module_env_info": module_env_info,
             "result": self.result_display,

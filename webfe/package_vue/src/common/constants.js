@@ -336,6 +336,13 @@ export const APP_OPERATION = {
   renew: '续期',
   deploy: '部署',
   offline: '下架',
+  switch: '切换资源方案',
+  modify_user_feature_flag: '修改用户特性',
+  switch_default_cluster: '切换默认集群',
+  bind_cluster: '切换绑定集群',
+  modify_log_config: '日志采集管理',
+  provision_instance: '分配增强服务实例',
+  recycle_resource: '回收增强服务实例',
 };
 
 /**
@@ -408,4 +415,4 @@ export const COMPONENT_STATUS = {
   installing: '安装中',
   installed: '已安装',
   installation_failed: '安装失败',
- };
+};

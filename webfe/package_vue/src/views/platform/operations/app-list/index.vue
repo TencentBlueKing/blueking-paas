@@ -378,6 +378,7 @@ export default {
         },
         query: {
           active: 'overview',
+          tenant: data.tenant_id, // 当前应用的租户id
         },
       });
     },

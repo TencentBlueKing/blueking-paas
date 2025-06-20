@@ -104,7 +104,7 @@ def fetch_user_roles(app_code: str, username: str) -> List[ApplicationRole]:
     iam_client = BKIAMClient(tenant_id)
     for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role"):
         if username in iam_client.fetch_user_group_members(group.user_group_id):
-            user_roles.append(group.role)
+            user_roles.append(ApplicationRole(group.role))
 
     if not user_roles:
         return [ApplicationRole.NOBODY]
@@ -121,7 +121,7 @@ def fetch_user_main_role(app_code: str, username: str) -> ApplicationRole:
     iam_client = BKIAMClient(tenant_id)
     for group in ApplicationUserGroup.objects.filter(app_code=app_code).order_by("role"):
         if username in iam_client.fetch_user_group_members(group.user_group_id):
-            return group.role
+            return ApplicationRole(group.role)
 
     return ApplicationRole.NOBODY
 

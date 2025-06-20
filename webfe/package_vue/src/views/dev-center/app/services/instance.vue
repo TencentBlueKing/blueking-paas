@@ -54,6 +54,34 @@
 
           <template v-else>
             <bk-alert
+              v-if="serviceDetail.name === 'gcs_mysql'"
+              style="margin-bottom: 16px"
+              type="warning"
+              :show-icon="false"
+            >
+              <div
+                slot="title"
+                class="risk-warning flex-row"
+              >
+                <i class="paasng-icon paasng-remind f14"></i>
+                <div>
+                  {{
+                    $t(
+                      '平台提供的 GCS-MySQL 数据库为共享实例，无法支持高级别的可用性。请参考文档申请独立的数据库实例。'
+                    )
+                  }}
+                  <a
+                    v-if="GLOBAL.DOC.GCS_MySQL_LINK"
+                    :href="GLOBAL.DOC.GCS_MySQL_LINK"
+                    target="_blank"
+                  >
+                    {{ $t('申请独立的数据库指引') }}
+                  </a>
+                </div>
+              </div>
+            </bk-alert>
+
+            <bk-alert
               v-if="delAppDialog.moduleList.length > 0"
               style="margin-bottom: 16px"
               type="info"
@@ -365,7 +393,6 @@ export default {
       },
       formRemoveConfirmCode: '',
       servicePaths: [],
-      specifications: [],
       servicePlans: {},
       requestQueue: ['init', 'enabled'],
       isTableLoading: false,
@@ -373,6 +400,7 @@ export default {
       isEnhancedFeatureEnabled: true,
       isEnabled: false,
       isCollapsed: false,
+      serviceDetail: {},
     };
   },
   computed: {
@@ -480,6 +508,7 @@ export default {
           service: this.service,
         });
         const resData = res.result;
+        this.serviceDetail = resData;
         if (resData.instance_tutorial && resData.instance_tutorial.length > 0) {
           this.serviceMarkdown = resData.instance_tutorial;
         }
@@ -881,6 +910,14 @@ export default {
           font-size: 14px;
           color: #ffb848;
         }
+      }
+    }
+
+    .risk-warning {
+      display: flex;
+      .paasng-remind {
+        margin: 3px 9px 0 0;
+        color: #f59500;
       }
     }
   }

@@ -72,6 +72,7 @@ def render_providers(providers: Sequence[str]) -> List[Dict[str, str]]:
         provider_info.update(
             {
                 "auth_method": spec.connector_class.auth_method,
+                "repository_group": spec.server_config.get("repository_group", ""),
             }
         )
         results.append(provider_info)

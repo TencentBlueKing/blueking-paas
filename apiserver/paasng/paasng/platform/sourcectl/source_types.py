@@ -49,7 +49,6 @@ class DisplayInfo(NamedTuple):
     name: str
     value: str
     description: str
-    repository_group: str
 
 
 @dataclass

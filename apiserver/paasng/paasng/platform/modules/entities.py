@@ -58,8 +58,8 @@ class VcsInitResult:
 
     code: str
     extra_info: dict = field(factory=dict)
-    dest_type: str = field(default="null")
-    error: str = field(default="")
+    dest_type: str = "null"
+    error: str = ""
 
     def is_success(self) -> bool:
         return self.code == "OK"

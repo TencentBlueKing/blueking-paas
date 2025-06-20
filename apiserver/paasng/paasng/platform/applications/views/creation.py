@@ -60,7 +60,7 @@ from paasng.platform.applications.utils import (
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeGatewayServiceError
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
-from paasng.platform.modules.manager import create_new_repo, init_module_in_view, repo_cleanup_context
+from paasng.platform.modules.manager import create_new_repo, delete_repo_on_error, init_module_in_view
 from paasng.platform.templates.models import Template
 from paasng.utils.error_codes import error_codes
 
@@ -169,7 +169,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             auto_repo_url = create_new_repo(module, username=request.user.username)
             repo_url = auto_repo_url
 
-        with repo_cleanup_context(repo_type, auto_repo_url):
+        with delete_repo_on_error(repo_type, auto_repo_url):
             source_init_result = init_module_in_view(
                 module,
                 repo_type=repo_type,

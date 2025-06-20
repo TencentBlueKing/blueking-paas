@@ -19,7 +19,6 @@ import logging
 import shutil
 from os import PathLike
 from pathlib import Path
-from textwrap import dedent
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote
 
@@ -185,36 +184,19 @@ class GiteeRepoController(BaseGitRepoController):
             # 复制本地目录内容到工作目录
             shutil.copytree(local_path, dest_dir, dirs_exist_ok=True)
 
-            # 配置 Git 用户信息
-            self._fix_git_user_config(dest_dir / ".git" / "config", commit_name, commit_email)
+            # 设置环境变量传递Git用户配置
+            envs = {}
+            if commit_name:
+                envs["GIT_AUTHOR_NAME"] = commit_name
+                envs["GIT_COMMITTER_NAME"] = commit_name
+            if commit_email:
+                envs["GIT_AUTHOR_EMAIL"] = commit_email
+                envs["GIT_COMMITTER_EMAIL"] = commit_email
 
             # 提交并推送代码
             git_client.add(dest_dir, Path("."))
-            git_client.commit(dest_dir, message=commit_message)
-            git_client.push(dest_dir)
-
-    def _fix_git_user_config(self, dest_dir: Path, commit_name: str | None = None, commit_email: str | None = None):
-        """[private] 修复 git 的用户信息缺失问题
-
-        :param dest_dir: git 工作路径
-        :param commit_name: 提交人名称，不传则使用平台的默认值
-        :param commit_email: 提交人邮箱，不传则使用平台的默认值
-        """
-        if not commit_name:
-            commit_name = "blueking"
-        if not commit_email:
-            commit_email = "blueking@tencent.com"
-
-        with dest_dir.open(mode="a") as fh:
-            fh.write(
-                dedent(
-                    f"""
-            [user]
-                email = "{commit_email}"
-                name = "{commit_name}"
-            """
-                )
-            )
+            git_client.commit(dest_dir, message=commit_message, envs=envs)
+            git_client.push(dest_dir, envs=envs)
 
     def read_file(self, file_path: str, version_info: VersionInfo) -> bytes:
         """从当前仓库指定版本（version_info）的代码中读取指定文件（file_path）的内容"""

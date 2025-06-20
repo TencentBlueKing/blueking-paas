@@ -145,7 +145,7 @@ class ApplicationCreateOutputSLZ(serializers.Serializer):
     """应用创建成功后的返回结果"""
 
     application = ApplicationSLZ(help_text="应用详情")
-    source_init_result = SourceInitResultSLZ(help_text="源码初始化结果", allow_null=True, required=False, default=dict)
+    source_init_result = SourceInitResultSLZ(help_text="源码初始化结果", allow_null=True, default=dict)
 
 
 class AdvancedRegionClusterSLZ(serializers.Serializer):

@@ -373,13 +373,13 @@ def _humanize_exception(step_name: str, message: str):
 def create_new_repo(module: Module, username: str) -> str:
     """创建一个新的代码仓库，并将指定用户添加为成员
 
-    :param module: 需要创建仓库的模块对象
-    :param username: 需要添加为仓库成员的初始用户名
-    :return: 新创建的代码仓库地址
-
     仓库命名规则：
     - 格式: {应用ID}_{模块名}
     - 仓库可见级别为: public
+
+    :param module: 需要创建仓库的模块对象
+    :param username: 需要添加为仓库成员的初始用户名
+    :return: 新创建的代码仓库地址
     """
     repo_name = f"{module.application.code}_{module.name}"
     description = f"{module.application.name}({module.name} 模块)"
@@ -409,14 +409,19 @@ def delete_repo(repo_type: str, repo_url: str):
 
 
 @contextmanager
-def repo_cleanup_context(repo_type: str, repo_url: str | None = None):
-    """仓库清理上下文管理器，在异常时自动删除新建的仓库"""
+def delete_repo_on_error(repo_type: str, repo_url: str | None = None):
+    """仓库清理上下文管理器，在异常时自动删除新建的仓库
+
+    :param repo_type: 仓库类型
+    :param repo_url: 仓库地址
+    """
     try:
         yield
     except Exception:
         if repo_url:
             try:
                 delete_repo(repo_type, repo_url)
+                logger.info(f"Repository({repo_url}) deleted successfully  during rollback")
             except Exception:
                 logger.exception(f"Failed to delete repository({repo_url}) during rollback")
         raise

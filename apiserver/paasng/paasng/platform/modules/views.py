@@ -65,7 +65,7 @@ from paasng.platform.modules.helpers import (
     get_image_labels_by_module,
     update_build_config_with_method,
 )
-from paasng.platform.modules.manager import ModuleCleaner, create_new_repo, init_module_in_view, repo_cleanup_context
+from paasng.platform.modules.manager import ModuleCleaner, create_new_repo, delete_repo_on_error, init_module_in_view
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
@@ -318,7 +318,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             auto_repo_url = create_new_repo(module, username=request.user.username)
             repo_url = auto_repo_url
 
-        with repo_cleanup_context(repo_type, auto_repo_url):
+        with delete_repo_on_error(repo_type, auto_repo_url):
             ret = init_module_in_view(
                 module,
                 repo_type=repo_type,

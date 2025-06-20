@@ -115,7 +115,7 @@ class TemplateRenderer:
         :param source_path: 下载模板代码的路径
         :param target_path: 模板代码渲染到的路径
         """
-        if self.template.type == TemplateType.PLUGIN:
+        if self.template.render_method == "cookiecutter":
             # 插件模板用 cookiecutter 渲染
             with generate_temp_dir() as render_dir:
                 cookiecutter(str(source_path), no_input=True, extra_context=self.context, output_dir=str(render_dir))
@@ -164,6 +164,8 @@ def generate_initial_code(template_name: str, context: dict) -> Path:
 
     :param template_name: 模板名称
     :param context: 渲染模板用的上下文数据
+    :returns: 包含渲染后模板代码的临时目录路径
+    :note: 该函数返回的临时目录由调用方负责清理。调用方应在使用完目录后调用`shutil.rmtree()`删除该目录，以避免临时文件堆积。目录内容在函数返回后不会被自动清理。
     """
     target_path = Path(tempfile.mktemp())
     renderer = TemplateRenderer(template_name, context=context)
@@ -187,7 +189,7 @@ def upload_directory_to_storage(module: "Module", target_path: Path) -> SourceSy
     return sync_procedure.run(str(target_path))
 
 
-def upload_initial_code_to_storage(module: "Module", context: dict) -> SourceSyncResult:
+def upload_init_code_to_storage(module: "Module", context: dict) -> SourceSyncResult:
     """生成初始化代码并上传到对象存储
     FIXME：目前在构建配置等页面下载初始化模板时，是调用本函数重新生成初始化代码。
     正常来说应该只要重新生成下载链接即可，可能是希望用户下载的永远是最新的框架代码，所以每次下载都要重新走初始化逻辑。

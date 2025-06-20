@@ -69,7 +69,7 @@ from paasng.platform.sourcectl.svn.client import RepoProvider
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
 from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.templater import upload_initial_code_to_storage
+from paasng.platform.templates.templater import upload_init_code_to_storage
 from paasng.utils.error_codes import error_codes
 
 #############
@@ -306,7 +306,7 @@ class ModuleInitTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """生成新的可下载初始化模版源码包地址"""
         context = get_module_init_repo_context(module, TemplateType.NORMAL)
         try:
-            result = upload_initial_code_to_storage(module, context)
+            result = upload_init_code_to_storage(module, context)
         except Exception as e:
             raise error_codes.CANNOT_INIT_APP_TEMPLATE.f(str(e))
         if not result.is_success():

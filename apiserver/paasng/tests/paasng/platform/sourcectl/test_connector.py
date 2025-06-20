@@ -30,7 +30,7 @@ class TestIntegratedSvnAppRepoConnector:
         bk_module.source_init_template = settings.DUMMY_TEMPLATE_NAME
 
         connector = IntegratedSvnAppRepoConnector(bk_module, get_sourcectl_types().names.bk_svn)
-        repo_url = "svn://svn.x.com/app/a/"
+        repo_url = "svn://svn.example.com/app/a/"
         connector.bind(repo_url)
 
 
@@ -40,4 +40,4 @@ class TestExternalGitAppRepoConnector:
         bk_module.source_init_template = settings.DUMMY_TEMPLATE_NAME
 
         connector = ExternalGitAppRepoConnector(bk_module, "--placeholder--")
-        connector.bind("git://git.x.com/some-proj.git")
+        connector.bind("git://git.example.com/some-proj.git")

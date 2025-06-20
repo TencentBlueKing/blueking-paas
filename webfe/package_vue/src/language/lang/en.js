@@ -843,7 +843,7 @@ export default {
   '未开启部署权限控制，管理员、开发者都可以部署、下架生产环境': 'If the deployment permission control is not enabled, administrators and developers can deploy and remove the prod env',
   '镜像地址中不能包含版本(tag)信息': 'The mirror address cannot contain version (tag) information',
   主模块设置成功: 'The default module is set up successfully',
-  切换源码仓库成功: 'Switch source code repository successfully',
+  修改源码信息成功: 'Modify source code config successfully',
   请选择关联的远程仓库: 'Please select the associated remote repository',
   '请关联 git 账号': 'Please associate a git account',
   请输入源代码地址: 'Please enter the source code address',

@@ -20,15 +20,20 @@
                 <i :class="['bk-icon icon-angle-down',{'icon-flip': advancedFilterShow}]"></i>
             </div>
             <div slot="dropdown-content" style="width: 240px;" class="ml10">
-                <bk-checkbox
-                    :true-value="true"
-                    :false-value="false"
-                    v-model="advancedFilterForm.include_inactive"
-                    @change="searchApp">
-                    是否显示已下架应用
-                </bk-checkbox>
+                <div class="filter-label">应用活跃状态过滤:</div>
+                <bk-radio-group v-model="advancedFilterForm.is_active" @change="searchApp">
+                    <bk-radio :value="''" ext-cls="unset-visibility">
+                        <i class="bk-icon mr5"></i>全部
+                    </bk-radio>
+                    <bk-radio :value="true" ext-cls="unset-visibility">
+                        <i class="bk-icon mr5"></i>正常
+                    </bk-radio>
+                    <bk-radio :value="false" ext-cls="unset-visibility">
+                        <i class="bk-icon mr5"></i>下架
+                    </bk-radio>
+                </bk-radio-group>
+                <div class="filter-label">应用市场状态过滤:</div>
                 <bk-radio-group v-model="advancedFilterForm.market_enabled" @change="searchApp">
-                    应用市场状态过滤:
                     <bk-radio :value="''" ext-cls="unset-visibility">
                         <i class="bk-icon mr5"></i>不过滤
                     </bk-radio>
@@ -95,14 +100,16 @@ document.addEventListener('DOMContentLoaded', () => {
         delimiters: ['$[', ']'],
         data: function () {
             let prefix = window.location.href
-            let include_inactive = false
+            let is_active = undefined
             let market_enabled = undefined
             let filterKey = undefined
 
             if (prefix.indexOf("?") > 0) {
                 let query = querystring.parse(prefix.substr(prefix.indexOf("?") + 1))
                 filterKey = query[SEARCH_PARAM]
-                include_inactive = query.include_inactive === 'true'? true: false
+                if(query.is_active !== '') {
+                    is_active = query.is_active === 'true'? true: false
+                }
                 if (query.market_enabled !== '') {
                     market_enabled = query.market_enabled === 'true'? true: false
                 }
@@ -114,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 SEARCH_PARAM,
                 filterKey,
                 advancedFilterForm: {
-                    include_inactive,
+                    is_active,
                     market_enabled,
                 },
                 advancedFilterShow: false
@@ -126,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             searchApp() {
                 let query = {
-                    [this.SEARCH_PARAM]: this.filterKey, offset:0, include_inactive: this.advancedFilterForm.include_inactive,
+                    [this.SEARCH_PARAM]: this.filterKey, offset:0, is_active: this.advancedFilterForm.is_active,
                     market_enabled: this.advancedFilterForm.market_enabled
                 }
                 let prefix = window.location.href

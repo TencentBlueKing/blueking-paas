@@ -87,7 +87,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         # Get applications by given params
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=params["include_inactive"],
+            is_active=params.get("is_active"),
             languages=params.get("language"),
             regions=params.get("region"),
             search_term=params.get("search_term"),
@@ -164,7 +164,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         applications = UserApplicationFilter(request.user).filter(
             order_by=["name"],
-            include_inactive=params["include_inactive"],
+            is_active=params.get("is_active"),
             source_origin=params.get("source_origin", None),
         )
 
@@ -193,7 +193,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
         keyword = params.get("keyword")
         # Get applications which contains keywords
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=params["include_inactive"], order_by=["name"], search_term=keyword
+            is_active=params.get("is_active"), order_by=["name"], search_term=keyword
         )
 
         # get marked application ids
@@ -340,7 +340,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
         reports = AppOperationReport.objects.filter(app__code__in=app_codes)
 
         issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))
-        total = UserApplicationFilter(request.user).filter(include_inactive=True).count()
+        total = UserApplicationFilter(request.user).filter().count()
 
         data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": total}
 

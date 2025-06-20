@@ -104,7 +104,7 @@ class ApplicationFilterSLZ(serializers.Serializer):
 
     valid_order_by_fields = ("code", "created", "latest_operated_at")
 
-    include_inactive = serializers.BooleanField(default=False, help_text="是否包括已下架应用")
+    is_active = serializers.BooleanField(required=False, allow_null=True, help_text="应用是否活跃")
     regions = serializers.ListField(required=False, help_text="应用 region")
     languages = serializers.ListField(required=False, help_text="应用开发语言")
     search_term = serializers.CharField(required=False, help_text="搜索关键字")

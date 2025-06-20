@@ -74,10 +74,6 @@ class TemplateRenderer:
         except ObjectDoesNotExist:
             raise TmplNotExists(f"Template <{template_name}> does not exists")
         self.template = template
-        self.command = EnhancedTemplateCommand(
-            render_method=RenderMethod(template.render_method),
-            force_executable_files=DEFAULT_EXECUTABLE_FILES,
-        )
         self.context = context
 
     def download_from_blob_storage(self) -> Path:
@@ -127,7 +123,11 @@ class TemplateRenderer:
                 for item in items:
                     shutil.move(str(item), str(target_path / item.name))
         else:
-            self.command.handle(str(target_path), template=str(source_path), context=self.context)
+            command = EnhancedTemplateCommand(
+                render_method=RenderMethod(self.template.render_method),
+                force_executable_files=DEFAULT_EXECUTABLE_FILES,
+            )
+            command.handle(str(target_path), template=str(source_path), context=self.context)
             # 如果模板定义了进程配置信息，则需要手动将进程信息写到 Procfile 中
             # FIXME: 新的模板已不再使用 Procfile，仅用于兼容旧的模板
             if self.template.processes:

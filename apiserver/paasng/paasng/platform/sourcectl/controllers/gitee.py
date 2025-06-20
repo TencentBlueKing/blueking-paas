@@ -185,13 +185,16 @@ class GiteeRepoController(BaseGitRepoController):
             shutil.copytree(local_path, dest_dir, dirs_exist_ok=True)
 
             # 设置环境变量传递Git用户配置
-            envs = {}
-            if commit_name:
-                envs["GIT_AUTHOR_NAME"] = commit_name
-                envs["GIT_COMMITTER_NAME"] = commit_name
-            if commit_email:
-                envs["GIT_AUTHOR_EMAIL"] = commit_email
-                envs["GIT_COMMITTER_EMAIL"] = commit_email
+            if not commit_name:
+                commit_name = "blueking"
+            if not commit_email:
+                commit_email = "blueking@tencent.com"
+            envs = {
+                "GIT_AUTHOR_NAME": commit_name,
+                "GIT_COMMITTER_NAME": commit_name,
+                "GIT_AUTHOR_EMAIL": commit_email,
+                "GIT_COMMITTER_EMAIL": commit_email,
+            }
 
             # 提交并推送代码
             git_client.add(dest_dir, Path("."))

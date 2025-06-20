@@ -185,7 +185,7 @@ class BaseGitRepoController:
         if "api_url" not in source_config or "private_token" not in source_config:
             raise ValueError("Require api_url and private_token to init GitRepoController")
 
-        user_credentials = {"private_token": source_config["private_token"]}
+        user_credentials = {"private_token": source_config["private_token"], "scope_list": []}
         return cls(api_url=source_config["api_url"], repo_url=repo_url, user_credentials=user_credentials)
 
     @classmethod

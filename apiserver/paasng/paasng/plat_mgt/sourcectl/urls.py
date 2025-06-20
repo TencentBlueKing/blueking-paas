@@ -36,7 +36,7 @@ urlpatterns = [
         name="plat_mgt.sourcectl.source_type_spec.spec_cls_choices",
     ),
     re_path(
-        r"^api/plat_mgt/sourcectl/source_type_spec/(?P<source_name>[^/]+)/$",
+        r"^api/plat_mgt/sourcectl/source_type_spec/(?P<pk>[^/]+)/$",
         SourceTypeSpecViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy",
     ),

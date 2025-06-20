@@ -57,8 +57,8 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         operation_description="获取代码库配置详情",
         responses={status.HTTP_200_OK: SourceTypeSpecConfigDetailOutputSLZ()},
     )
-    def retrieve(self, request, source_name):
-        source_type_spec = get_object_or_404(SourceTypeSpecConfig, name=source_name)
+    def retrieve(self, request, pk):
+        source_type_spec = get_object_or_404(SourceTypeSpecConfig, pk=pk)
         slz = SourceTypeSpecConfigDetailOutputSLZ(source_type_spec)
         return Response(slz.data)
 
@@ -89,15 +89,15 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         operation_description="更新代码库配置",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def update(self, request, source_name):
-        source_type_spec = get_object_or_404(SourceTypeSpecConfig, name=source_name)
+    def update(self, request, pk):
+        source_type_spec = get_object_or_404(SourceTypeSpecConfig, pk=pk)
         data_before = DataDetail(data=SourceTypeSpecConfigUpdateInputSLZ(source_type_spec).data)
 
         slz = SourceTypeSpecConfigUpdateInputSLZ(data=request.data, context={"instance": source_type_spec})
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        SourceTypeSpecConfig.objects.filter(name=source_name).update(**data)
+        SourceTypeSpecConfig.objects.filter(pk=pk).update(**data)
 
         add_plat_mgt_audit_record(
             user=request.user.pk,
@@ -115,8 +115,8 @@ class SourceTypeSpecViewSet(viewsets.GenericViewSet):
         operation_description="删除代码库配置",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def destroy(self, request, source_name):
-        source_type_spec = get_object_or_404(SourceTypeSpecConfig, name=source_name)
+    def destroy(self, request, pk):
+        source_type_spec = get_object_or_404(SourceTypeSpecConfig, pk=pk)
         data_before = DataDetail(data=SourceTypeSpecConfigDetailOutputSLZ(source_type_spec).data)
 
         source_type_spec.delete()

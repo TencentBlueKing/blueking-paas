@@ -68,8 +68,8 @@ class TestSourceTypeSpecViewSet:
     def test_retrieve(self, plat_mgt_api_client, create_source_type_spec):
         """测试获取单个代码库配置详情接口"""
 
-        name = create_source_type_spec.name
-        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"source_name": name})
+        pk = create_source_type_spec.pk
+        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"pk": pk})
         resp = plat_mgt_api_client.get(url)
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["name"] == create_source_type_spec.name
@@ -88,24 +88,24 @@ class TestSourceTypeSpecViewSet:
     def test_update(self, plat_mgt_api_client, create_source_type_spec):
         """测试更新代码库配置接口"""
 
-        name = create_source_type_spec.name
-        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"source_name": name})
+        pk = create_source_type_spec.pk
+        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"pk": pk})
         update_data = create_test_source_type_spec_data(name="custom_sourcectl", spec_cls="BareGitSourceTypeSpec")
         resp = plat_mgt_api_client.put(url, update_data, format="json")
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
-        tmpl = SourceTypeSpecConfig.objects.get(id=create_source_type_spec.id)
+        tmpl = SourceTypeSpecConfig.objects.get(pk=pk)
         assert tmpl.name == update_data["name"]
 
     def test_delete(self, plat_mgt_api_client, create_source_type_spec):
         """测试删除代码库配置接口"""
-        name = create_source_type_spec.name
-        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"source_name": name})
+        pk = create_source_type_spec.pk
+        url = reverse("plat_mgt.sourcectl.source_type_spec.retrieve_update_destroy", kwargs={"pk": pk})
         resp = plat_mgt_api_client.delete(url)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         with pytest.raises(SourceTypeSpecConfig.DoesNotExist):
-            SourceTypeSpecConfig.objects.get(name=name)
+            SourceTypeSpecConfig.objects.get(pk=pk)
 
     def test_get_default_configs_templates(self, plat_mgt_api_client):
         """测试获取默认配置模板接口"""

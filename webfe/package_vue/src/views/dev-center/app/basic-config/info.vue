@@ -108,6 +108,39 @@
                       </span>
                     </bk-radio>
                   </bk-radio-group>
+                  <!-- 内部版需要展示风险提示 -->
+                  <bk-alert
+                    v-if="localeAppInfo.availabilityLevel === 'premium' && GLOBAL.DOC.GCS_MySQL_LINK"
+                    class="mt10"
+                    type="warning"
+                    :show-icon="false"
+                  >
+                    <div
+                      slot="title"
+                      class="risk-warning"
+                    >
+                      <i class="paasng-icon paasng-remind f14"></i>
+                      <div>
+                        {{
+                          $t(
+                            '平台提供的 GCS-MySQL 数据库为共享实例，无法支持高级别的可用性。请参考文档申请独立的数据库实例。'
+                          )
+                        }}
+                        <a
+                          v-if="GLOBAL.DOC.GCS_MySQL_LINK"
+                          :href="GLOBAL.DOC.GCS_MySQL_LINK"
+                          target="_blank"
+                        >
+                          {{ $t('申请独立的数据库指引') }}
+                        </a>
+                        <div class="mt15">
+                          <bk-checkbox v-model="isAwareOfRisk">
+                            <span class="f12">{{ $t('我已知晓风险') }}</span>
+                          </bk-checkbox>
+                        </div>
+                      </div>
+                    </div>
+                  </bk-alert>
                 </bk-form-item>
                 <bk-form-item label="LOGO">
                   <div :class="['logoupload-wrapper', { selected: curFileData.length }]">
@@ -130,6 +163,7 @@
                     ext-cls="mr8"
                     theme="primary"
                     :loading="appBaseInfoConfig.isLoading"
+                    :disabled="isSubmitDisabled"
                     @click.stop="handleSubmitBaseInfo"
                   >
                     {{ $t('提交') }}
@@ -354,9 +388,11 @@ export default {
       curAppData: {},
       // 应用分类下拉列表
       tagList: [],
+      // 是否知晓风险
+      isAwareOfRisk: false,
       tierMap: {
         standard: '基础',
-        premium: '高级',
+        premium: '高级别',
       },
     };
   },
@@ -385,6 +421,12 @@ export default {
     // 是否展示应用描述文件
     isShowAppDescriptionFile() {
       return !['engineless_app', 'cloud_native'].includes(this.applicationDetail.type);
+    },
+    // 高级别提交禁用
+    isSubmitDisabled() {
+      return this.GLOBAL.DOC.GCS_MySQL_LINK
+        ? this.localeAppInfo.availabilityLevel === 'premium' && !this.isAwareOfRisk
+        : false;
     },
     displayItems() {
       const { extra_info } = this.applicationDetail;
@@ -766,6 +808,14 @@ export default {
       i {
         color: #ff9c01;
       }
+    }
+  }
+  .risk-warning {
+    display: flex;
+    line-height: 20px;
+    .paasng-remind {
+      margin: 3px 9px 0 0;
+      color: #f59500;
     }
   }
 }

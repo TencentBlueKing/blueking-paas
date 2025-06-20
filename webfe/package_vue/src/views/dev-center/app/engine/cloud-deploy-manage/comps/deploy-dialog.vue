@@ -491,10 +491,10 @@ import deployStatusDetail from './deploy-status-detail';
 import { cloneDeep } from 'lodash';
 
 // 当前状态，禁用部署按钮
-const deployErrorStatus = ['FILL_PRODUCT_INFO', 'CHECK_ENV_PROTECTION', 'FILL_PLUGIN_TAG_INFO'];
+const DEPLOY_ERROR_STATES = ['FILL_PRODUCT_INFO', 'CHECK_ENV_PROTECTION', 'FILL_PLUGIN_TAG_INFO', 'FILL_EXTRA_INFO'];
 
 // 从源码构建，且为当前错误状态，禁用部署按钮
-const codeRepositoryErrorStatus = [
+const CODE_REPOSITORY_ERROR_STATES = [
   'NEED_TO_BIND_OAUTH_INFO',
   'DONT_HAVE_ENOUGH_PERMISSIONS',
   'NEED_TO_CORRECT_REPO_INFO',
@@ -671,23 +671,12 @@ export default {
 
     // 部署相关错误信息
     deployErrorData() {
-      const faileds = this.deployPreparations.failed_conditions;
-      if (faileds?.length) {
-        const deployErrorList = faileds.filter((v) => deployErrorStatus.includes(v.action_name));
-        return deployErrorList[0] || {};
-      }
-      return {};
+      return this.getFirstErrorData(DEPLOY_ERROR_STATES);
     },
 
     // 代码仓库相关错误信息
     codeRepositoryErrorData() {
-      const faileds = this.deployPreparations.failed_conditions;
-      if (faileds?.length) {
-        // 查找第一项进行展示，解决当前项，点击刷新重新获取，再处理下一天错误
-        const codeRepositoryErrorList = faileds.filter((v) => codeRepositoryErrorStatus.includes(v.action_name));
-        return codeRepositoryErrorList[0] || {};
-      }
-      return {};
+      return this.getFirstErrorData(CODE_REPOSITORY_ERROR_STATES);
     },
 
     // 部署按钮禁用状态
@@ -765,6 +754,12 @@ export default {
     },
   },
   methods: {
+    // 获取第一个匹配的错误数据
+    getFirstErrorData(errorStates) {
+      const failedConditions = this.deployPreparations.failed_conditions || [];
+      const errorList = failedConditions.find((v) => errorStates.includes(v.action_name));
+      return errorList || {};
+    },
     setCurData() {
       const versionInfo = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info || {};
       if (!Object.keys(versionInfo).length) return; // 没有数据就不处理
@@ -912,7 +907,10 @@ export default {
 
     handleAfterLeave() {
       this.branchValue = '';
-      this.isShowErrorAlert.deploy = false;
+      this.isShowErrorAlert = {
+        deploy: false,
+        code: false,
+      };
       this.isShowErrorAlert.code = false;
       this.deployAppDialog.disabled = true;
       this.$emit('update:show', false);
@@ -1237,43 +1235,35 @@ export default {
         type === 'deploy' ? (this.deployRefreshLoading = true) : (this.codeRefreshLoading = true);
       }
       try {
-        const res = await this.$store.dispatch('deploy/getDeployPreparations', {
+        const ret = await this.$store.dispatch('deploy/getDeployPreparations', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env: this.environment,
         });
-        this.deployPreparations = res;
+        this.deployPreparations = ret;
 
         // 将错误数据进行分类
-        if (!res.all_conditions_matched && res.failed_conditions.length) {
-          // 部署限制相关的，错误信息
-          const deployErrorList = res.failed_conditions.filter((v) => deployErrorStatus.includes(v.action_name));
-          // 代码仓库相关，错误信息
-          // eslint-disable-next-line max-len
-          const codeRepositoryErrorList = res.failed_conditions.filter((v) =>
-            codeRepositoryErrorStatus.includes(v.action_name)
-          );
-          if (deployErrorList.length) {
-            this.isShowErrorAlert.deploy = true;
-          } else {
-            this.isShowErrorAlert.deploy = false;
-          }
-          if (codeRepositoryErrorList.length) {
-            this.isShowErrorAlert.code = true;
-          } else {
-            this.isShowErrorAlert.code = false;
-          }
+        if (ret.failed_conditions?.length) {
+          // 标识错误类型并更新状态
+          const errorTypes = {
+            deploy: DEPLOY_ERROR_STATES,
+            code: CODE_REPOSITORY_ERROR_STATES,
+          };
+
+          Object.keys(errorTypes).forEach((type) => {
+            const errorList = ret.failed_conditions.filter((v) => errorTypes[type].includes(v.action_name));
+            this.isShowErrorAlert[type] = errorList.length > 0;
+          });
         } else {
           // 没有错误，隐藏错误提示alert
-          this.isShowErrorAlert.deploy = false;
-          this.isShowErrorAlert.code = false;
+          this.isShowErrorAlert = {
+            deploy: false,
+            code: false,
+          };
         }
         this.deployAppDialog.disabled = false;
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
         this.deployAppDialog.disabled = false;
       } finally {
         type === 'deploy' ? (this.deployRefreshLoading = false) : (this.codeRefreshLoading = false);

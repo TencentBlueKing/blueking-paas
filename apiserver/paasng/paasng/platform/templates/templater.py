@@ -116,7 +116,7 @@ class TemplateRenderer:
         :param source_path: 下载模板代码的路径
         :param target_path: 模板代码渲染到的路径
         """
-        if self.template.render_method == "cookiecutter":
+        if self.template.render_method == RenderMethod.COOKIECUTTER.value:
             # 插件模板用 cookiecutter 渲染
             with generate_temp_dir() as render_dir:
                 cookiecutter(str(source_path), no_input=True, extra_context=self.context, output_dir=str(render_dir))

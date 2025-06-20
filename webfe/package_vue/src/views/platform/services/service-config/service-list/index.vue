@@ -137,7 +137,7 @@ export default {
       selectedItem: '', // 当前选中项
       expand: {
         local: true,
-        remote: true,
+        remote: false,
       },
       sidesliderConfig: {
         isShow: false,

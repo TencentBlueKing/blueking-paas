@@ -34,12 +34,13 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
-from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit import constants
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record, add_app_audit_record
+from paasng.infras.iam.helpers import fetch_role_members
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
-from paasng.platform.applications.constants import ApplicationType
+from paasng.plat_mgt.bk_plugins.views import is_plugin_instance_exist, is_user_plugin_admin
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tasks import cal_app_resource_quotas
 
@@ -98,18 +99,8 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         filtered_queryset = self.filter_queryset(self.get_queryset())
 
         tenant_id_list = []
-        # 查询全租户可用的应用
-        global_apps = filtered_queryset.filter(app_tenant_mode=AppTenantMode.GLOBAL.value)
-        tenant_id_list.append(
-            {
-                "tenant_id": AppTenantMode.GLOBAL.value,
-                "app_count": global_apps.count(),
-            }
-        )
         # 查询各个租户的应用数量
-        tenant_ids = filtered_queryset.filter(app_tenant_mode=AppTenantMode.SINGLE.value).values_list(
-            "app_tenant_id", flat=True
-        )
+        tenant_ids = filtered_queryset.values_list("tenant_id", flat=True)
         tenant_id_counts = Counter(tenant_ids)
         for tenant_id in sorted(tenant_id_counts.keys()):
             tenant_id_list.append({"tenant_id": tenant_id, "app_count": tenant_id_counts[tenant_id]})
@@ -154,9 +145,26 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         """获取应用详情"""
         application = get_object_or_404(self.get_queryset(), code=app_code)
 
+        # 获取应用管理员信息和插件管理信息
+        user_is_admin_in_app = self.request.user.username in fetch_role_members(
+            application.code, ApplicationRole.ADMINISTRATOR
+        )
+
+        # 判断是否为插件应用且插件实例存在
+        is_plugin_with_instance = application.is_plugin_app and is_plugin_instance_exist(application.code)
+
+        app_admin = {
+            "user_is_admin_in_app": user_is_admin_in_app,
+            "show_plugin_admin_operations": is_plugin_with_instance,
+            "user_is_admin_in_plugin": (
+                is_user_plugin_admin(application.code, request.user.username) if is_plugin_with_instance else None
+            ),
+        }
+
         slz = slzs.ApplicationDetailOutputSLZ(
             {
                 "basic_info": application,
+                "app_admin": app_admin,
                 "modules_info": application.modules.all(),
             }
         )
@@ -166,11 +174,18 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         tags=["plat_mgt.applications"],
         operation_description="更新应用名称",
         request_body=slzs.ApplicationNameUpdateInputSLZ(),
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update_app_name(self, request, app_code):
         """更新应用名称"""
         application = get_object_or_404(self.get_queryset(), code=app_code)
+
+        data_before = DataDetail(
+            data={
+                "name": application.name,
+                "name_en": application.name_en,
+            },
+        )
 
         slz = slzs.ApplicationNameUpdateInputSLZ(data=request.data, instance=application)
         slz.is_valid(raise_exception=True)
@@ -187,68 +202,58 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         except Exception:
             logger.exception("Failed to update app space on BK Monitor (unknown error)")
 
-        add_app_audit_record(
-            app_code=application.code,
-            tenant_id=application.tenant_id,
+        data_after = DataDetail(
+            data={
+                "name": application.name,
+                "name_en": application.name_en,
+            },
+        )
+
+        add_plat_mgt_audit_record(
             user=request.user.pk,
-            action_id=AppAction.EDIT_BASIC_INFO,
-            operation=constants.OperationEnum.MODIFY_BASIC_INFO,
-            target=constants.OperationTarget.APP,
+            operation=OperationEnum.MODIFY_BASIC_INFO,
+            target=OperationTarget.APP,
+            app_code=application.code,
+            data_before=data_before,
+            data_after=data_after,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="更新应用集群",
-        request_body=slzs.ApplicationClusterSLZ(),
-        responses={status.HTTP_204_NO_CONTENT: None},
+        request_body=slzs.UpdateClusterSLZ(),
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update_cluster(self, request, app_code, module_name, env_name):
         """更新应用集群"""
-        slz = slzs.ApplicationClusterSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
 
         application = get_object_or_404(self.get_queryset(), code=app_code)
         module = application.get_module(module_name)
         env = get_object_or_404(module.envs, environment=env_name)
 
+        slz = slzs.UpdateClusterSLZ(
+            data=request.data,
+            context={"user": request.user, "environment": env.environment, "region": application.region},
+        )
+        slz.is_valid(raise_exception=True)
+
         cluster_name = slz.validated_data["name"]
         cluster = get_object_or_404(Cluster, name=cluster_name)
 
-        data_before = DataDetail(
-            type=constants.DataType.RAW_DATA,
-            data={
-                "cluster": env.wl_app.latest_config.cluster,
-            },
-        )
+        data_before = DataDetail(data={"cluster": env.wl_app.latest_config.cluster})
 
         EnvClusterService(env).bind_cluster(cluster.name)
 
-        data_after = DataDetail(
-            type=constants.DataType.RAW_DATA,
-            data={
-                "cluster": cluster.name,
-            },
-        )
+        data_after = DataDetail(data={"cluster": cluster.name})
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=request.user.pk,
-            operation=constants.OperationEnum.MODIFY,
-            target=constants.OperationTarget.CLUSTER,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.CLUSTER,
             app_code=application.code,
             data_before=data_before,
             data_after=data_after,
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @swagger_auto_schema(
-        tags=["plat_mgt.applications"],
-        operation_description="获取应用集群列表",
-        responses={status.HTTP_200_OK: slzs.ApplicationClusterSLZ(many=True)},
-    )
-    def list_clusters(self, request, *args, **kwargs):
-        """获取应用集群列表"""
-        clusters = Cluster.objects.all()
-        slz = slzs.ApplicationClusterSLZ(clusters, many=True)
-        return Response(slz.data, status=status.HTTP_200_OK)

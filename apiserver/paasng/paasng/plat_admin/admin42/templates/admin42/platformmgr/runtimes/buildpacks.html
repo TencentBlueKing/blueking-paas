@@ -465,6 +465,37 @@
                     }
                     if (success) {
                         this.cancelDialog();
+
+                        let loadingInstance = null;
+                        try {
+                            loadingInstance = ({
+                                title: '更新数据中...',
+                                global: true,
+                                delay: 0,
+                            });
+
+                            await this.fetchBuildPackList();
+
+                            this.$bkMessage({
+                                theme: 'success',
+                                message: '保存成功，数据已更新',
+                            });
+                        } catch (error) {
+                            console.error('刷新数据失败', error);
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: '数据刷新失败: ' + (error.message || '未知错误'),
+                            });
+                        } finally {
+                            if (loadingInstance && loadingInstance.close) {
+                                loadingInstance.close();
+                            } else if (loadingInstance && loadingInstance.hide) {
+                                loadingInstance.hide();
+                            } else {
+                                const loadings = document.querySelectorAll('.bk-loading-wrapper');
+                                loadings.forEach(el => el.remove());
+                            }
+                        }
                     }
                 },
                 handleCreate: function () {
@@ -501,6 +532,7 @@
                         confirmFn: async () => {
                             try {
                                 await this.deleteRow(row)
+                                await this.fetchBuildPackList();
                                 this.$bkMessage({
                                     theme: 'success',
                                     message: '删除成功',

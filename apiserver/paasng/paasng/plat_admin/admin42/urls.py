@@ -25,7 +25,6 @@ from .views import (
     applications,
     audit,
     bk_plugins,
-    builtin_config_vars,
     dashboard_templates,
     runtimes,
     services,
@@ -59,6 +58,16 @@ urlpatterns = [
         r"^platform/process_spec_plan/manage/$",
         proc_spec.ProcessSpecPlanManageView.as_view(),
         name="admin.process_spec_plan.manage",
+    ),
+    re_path(
+        r"^platform/process_spec_plan/applications/$",
+        proc_spec.ApplicationProcessSpecManageView.as_view(),
+        name="admin.process_spec_plan.applications.manage",
+    ),
+    re_path(
+        r"^platform/process_spec_plan/applications/(?P<app_code>[^/]+)/processes/$",
+        proc_spec.ApplicationProcessSpecViewSet.as_view({"get": "list_processes"}),
+        name="admin.process_spec_plan.applications.processes",
     ),
     # 平台管理-智能顾问-文档链接管理
     re_path(
@@ -372,18 +381,6 @@ urlpatterns = [
         accountmgr.UserProfilesManageViewSet.as_view({"post": "bulk_create", "put": "update", "delete": "destroy"}),
         name="admin.accountmgr.userprofile.api",
     ),
-    # 用户管理-用户特性管理
-    re_path(
-        r"^accountmgr/account_feature_flags/$",
-        accountmgr.AccountFeatureFlagManageView.as_view(),
-        name="admin.accountmgr.account_feature_flags.index",
-    ),
-    # 用户管理-用户特性管理 API
-    re_path(
-        r"^api/accountmgr/account_feature_flags/$",
-        accountmgr.AccountFeatureFlagManageViewSet.as_view({"get": "list", "post": "update_or_create"}),
-        name="admin.accountmgr.account_feature_flags.api",
-    ),
     # 部署列表页
     re_path(r"^deployments/$", deployments.DeploymentListView.as_view(), name="admin.deployments.list"),
     re_path(
@@ -476,26 +473,6 @@ urlpatterns += [
     ),
 ]
 
-# 平台管理-环境变量管理
-urlpatterns += [
-    # 环境变量管理页
-    re_path(
-        r"^platform/builtin_config_vars/manage/$",
-        builtin_config_vars.BuiltinConfigVarView.as_view(),
-        name="admin.builtin_config_vars.manage",
-    ),
-    # 环境变量管理API
-    re_path(
-        r"^platform/builtin_config_vars/$",
-        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "list", "post": "create"}),
-        name="admin.builtin_config_vars",
-    ),
-    re_path(
-        r"^platform/builtin_config_vars/(?P<pk>[^/]+)/",
-        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
-        name="admin.builtin_config_vars.detail",
-    ),
-]
 
 # 操作审计
 urlpatterns += [

@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from paasng.plat_mgt.applications import views
+from paasng.plat_mgt.bk_plugins.views import BKPluginMembersManageViewSet
 from paasng.utils.basic import make_app_pattern, re_path
 
 SERVICE_UUID = "(?P<service_id>[0-9a-f-]{32,36})"
@@ -52,13 +53,8 @@ urlpatterns = [
     re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/"
         r"envs/(?P<env_name>[^/]+)/cluster/$",
-        views.ApplicationDetailViewSet.as_view({"post": "update_cluster"}),
+        views.ApplicationDetailViewSet.as_view({"put": "update_cluster"}),
         name="plat_mgt.applications.update_cluster",
-    ),
-    re_path(
-        r"^api/plat_mgt/clusters/$",
-        views.ApplicationDetailViewSet.as_view({"get": "list_clusters"}),
-        name="plat_mgt.applications.list_clusters",
     ),
     # 平台管理 - 应用特性
     re_path(
@@ -76,6 +72,11 @@ urlpatterns = [
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/members/(?P<user_id>[0-9a-z]+)/?$",
         views.ApplicationMemberViewSet.as_view({"put": "update", "delete": "destroy"}),
         name="plat_mgt.applications.members.detail",
+    ),
+    re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/plugin/members/$",
+        BKPluginMembersManageViewSet.as_view({"post": "become_admin", "delete": "remove_admin"}),
+        name="plat_mgt.applications.plugin.members.admin",
     ),
     re_path(
         r"^api/plat_mgt/applications/members/roles/$",

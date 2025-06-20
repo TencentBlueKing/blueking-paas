@@ -45,6 +45,7 @@ class TemplateSLZ(serializers.Serializer):
     description = TranslatedCharField()
     tags = serializers.JSONField()
     repo_url = serializers.CharField()
+    language = serializers.CharField()
 
 
 class BuildConfigPreviewSLZ(serializers.Serializer):

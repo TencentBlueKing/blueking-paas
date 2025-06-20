@@ -7,9 +7,24 @@
     ext-cls="editor-sideslider-cls"
   >
     <div
+      slot="header"
+      class="flex-row align-items-center"
+    >
+      {{ title }}
+      <span
+        v-if="subTitle"
+        class="header-sub-title"
+      >
+        {{ subTitle }}
+      </span>
+    </div>
+    <div
       :class="['editor-sideslider-content', { 'full-screen': isFullscreen }]"
       slot="content"
     >
+      <template v-if="!isFullscreen">
+        <slot name="header-alert"></slot>
+      </template>
       <div class="tools">
         <i
           v-bk-tooltips="isFullscreen ? $t('收起') : $t('展开')"
@@ -41,6 +56,10 @@ export default {
       default: false,
     },
     title: {
+      type: String,
+      default: '',
+    },
+    subTitle: {
       type: String,
       default: '',
     },
@@ -191,11 +210,11 @@ export default {
     }
   }
 }
-</style>
-
-<style>
-.editor-sideslider-cls .bk-sideslider-content {
-  height: calc(100vh - 52px);
-  max-height: calc(100vh - 52px) !important;
+.editor-sideslider-cls {
+  .header-sub-title {
+    margin-left: 6px;
+    font-size: 12px;
+    color: #979ba5;
+  }
 }
 </style>

@@ -50,16 +50,24 @@ export default {
       minHeight: 700,
       navCategories: [],
       navItems: [],
-      groups: [{ platform: this.$t('服务接入') }, { user: this.$t('用户管理') }],
+      groups: [
+        { platform: this.$t('服务接入') },
+        { operations: this.$t('运营管理') },
+        { config: this.$t('配置管理') },
+        { user: this.$t('用户管理') },
+      ],
       active: '',
       routeIndex: 0,
     };
   },
   computed: {
     title() {
-      const { name, path, query } = this.$route;
+      const { name, path, params } = this.$route;
       if (name === 'clusterCreateEdit') {
         return path.endsWith('/add') ? this.$t('添加集群') : this.$t('编辑集群');
+      }
+      if (name === 'platformAppDetails') {
+        return `${this.$t('应用详情')}: ${params.code}`;
       }
       return this.$route.meta.title;
     },
@@ -80,6 +88,11 @@ export default {
   watch: {
     $route() {
       this.routeIndex += 1;
+    },
+    panels(newValue) {
+      if (newValue?.length) {
+        this.setDefaultTabActive();
+      }
     },
   },
   created() {
@@ -121,8 +134,9 @@ export default {
         newQuery = { ...query };
       } else {
         newQuery = {
+          ...query,
           ...(active === 'list' && query),
-          active,
+          ...(active && { active }),
         };
       }
       this.$router.push({

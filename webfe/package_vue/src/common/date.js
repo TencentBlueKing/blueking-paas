@@ -86,3 +86,37 @@ export const createTimeShortcuts = (i18n, setTimeRangeCache, setTimeShortCutText
     },
   },
 ];
+
+// 长时段快捷选项（天/月级）
+export const createLongTermDatePresets = (i18n, setTimeRangeCache, setTimeShortCutText) => {
+  const ONE_DAY_MS = 3600 * 1000 * 24;
+  const PRESETS = [
+    { key: 'today', days: 0, textKey: '今天' },
+    { key: '7d', days: 7, textKey: '最近7天' },
+    { key: '15d', days: 15, textKey: '最近15天' },
+    { key: '30d', days: 30, textKey: '最近30天' },
+    { key: '6m', days: 180, textKey: '最近半年' },
+  ];
+
+  return PRESETS.map(({ key, days, textKey }) => {
+    const text = i18n.t(textKey);
+    return {
+      text,
+      value() {
+        const end = new Date();
+        const start = new Date();
+
+        if (key === 'today') {
+          start.setHours(0, 0, 0, 0);
+        } else {
+          start.setTime(end.getTime() - ONE_DAY_MS * days);
+        }
+        return [start, end];
+      },
+      onClick() {
+        setTimeRangeCache?.(key);
+        setTimeShortCutText?.(text);
+      },
+    };
+  });
+};

@@ -30,7 +30,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
 from paasng.platform.templates.command import EnhancedTemplateCommand
-from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.constants import RenderMethod, TemplateType
 from paasng.platform.templates.exceptions import TmplNotExists
 from paasng.platform.templates.fixtures import ProcfileFixture
 from paasng.platform.templates.models import Template
@@ -74,7 +74,10 @@ class TemplateRenderer:
         except ObjectDoesNotExist:
             raise TmplNotExists(f"Template <{template_name}> does not exists")
         self.template = template
-        self.command = EnhancedTemplateCommand(force_executable_files=DEFAULT_EXECUTABLE_FILES)
+        self.command = EnhancedTemplateCommand(
+            render_method=RenderMethod(template.render_method),
+            force_executable_files=DEFAULT_EXECUTABLE_FILES,
+        )
         self.context = context
 
     def download_from_blob_storage(self) -> Path:
@@ -109,8 +112,6 @@ class TemplateRenderer:
 
     def render_template(self, source_path: Path, target_path: Path):
         """将模板渲染到目标目录，根据模板类型使用不同的渲染引擎：
-        - 插件模板使用 cookiecutter
-        - 普通模板使用 Django 模板引擎
 
         :param source_path: 下载模板代码的路径
         :param target_path: 模板代码渲染到的路径
@@ -126,8 +127,7 @@ class TemplateRenderer:
                 for item in items:
                     shutil.move(str(item), str(target_path / item.name))
         else:
-            # 默认使用 django 模板引擎渲染
-            self.command.handle(str(target_path), template=str(source_path), **self.context)
+            self.command.handle(str(target_path), template=str(source_path), context=self.context)
             # 如果模板定义了进程配置信息，则需要手动将进程信息写到 Procfile 中
             # FIXME: 新的模板已不再使用 Procfile，仅用于兼容旧的模板
             if self.template.processes:

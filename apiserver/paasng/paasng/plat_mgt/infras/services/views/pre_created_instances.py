@@ -23,7 +23,13 @@ from rest_framework.response import Response
 from paasng.accessories.services.models import Plan, PreCreatedInstance, Service
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
-from paasng.plat_mgt.infras.services.serializers import PlanWithPreCreatedInstanceSLZ, PreCreatedInstanceUpsertSLZ
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
+from paasng.plat_mgt.infras.services.serializers import (
+    PlanWithPreCreatedInstanceSLZ,
+    PreCreatedInstanceOutputSLZ,
+    PreCreatedInstanceUpsertSLZ,
+)
 
 
 class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
@@ -64,11 +70,18 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
         plan = Plan.objects.get(uuid=plan_id)
-        PreCreatedInstance.objects.create(
+        ins = PreCreatedInstance.objects.create(
             plan=plan,
             config=data["config"],
             credentials=data["credentials"],
             tenant_id=plan.tenant_id,
+        )
+        add_plat_mgt_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.CREATE,
+            target=OperationTarget.ADD_ON,
+            attribute=ins.uuid,
+            data_after=DataDetail(data=PreCreatedInstanceOutputSLZ(ins).data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
@@ -83,10 +96,21 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
         data = slz.validated_data
 
         instance = PreCreatedInstance.objects.get(plan__uuid=plan_id, uuid=instance_id)
+        data_before = PreCreatedInstanceOutputSLZ(instance).data
+
         instance.config = data["config"]
         instance.credentials = data["credentials"]
         instance.save(update_fields=["config", "credentials"])
 
+        data_after = PreCreatedInstanceOutputSLZ(instance).data
+        add_plat_mgt_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY,
+            target=OperationTarget.ADD_ON,
+            attribute=instance.uuid,
+            data_before=DataDetail(data=data_before),
+            data_after=DataDetail(data=data_after),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
@@ -96,5 +120,14 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
     )
     def destroy(self, request, plan_id, instance_id, *args, **kwargs):
         instance = PreCreatedInstance.objects.get(plan__uuid=plan_id, uuid=instance_id)
+        data_before = PreCreatedInstanceOutputSLZ(instance).data
         instance.delete()
+
+        add_plat_mgt_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.ADD_ON,
+            attribute=instance_id,
+            data_before=DataDetail(data=data_before),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

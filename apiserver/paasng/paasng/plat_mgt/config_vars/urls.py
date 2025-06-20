@@ -15,32 +15,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import cattr
+from django.urls import re_path
 
-from paas_wl.infras.cluster.entities import IngressConfig
+from .views import BuiltinConfigVarViewSet
 
-
-def test_find_subdomain_domain():
-    ing_cfg = cattr.structure(
-        {
-            "app_root_domains": [{"name": "foo-1.example.com", "https_enabled": True}],
-        },
-        IngressConfig,
-    )
-    d = ing_cfg.find_subdomain_domain("foo-1.example.com")
-    assert d is not None
-    assert d.https_enabled is True
-    assert ing_cfg.find_subdomain_domain("foo-2.example.com") is None
-
-
-def test_find_subpath_domain():
-    ing_cfg = cattr.structure(
-        {
-            "sub_path_domains": [{"name": "foo-1.example.com", "https_enabled": True}],
-        },
-        IngressConfig,
-    )
-    d = ing_cfg.find_subpath_domain("foo-1.example.com")
-    assert d is not None
-    assert d.https_enabled is True
-    assert ing_cfg.find_subpath_domain("bar.example.com") is None
+urlpatterns = [
+    # 环境变量管理
+    re_path(
+        r"api/plat_mgt/builtin_config_vars/$",
+        BuiltinConfigVarViewSet.as_view({"get": "list", "post": "create"}),
+        name="plat_mgt.builtin_config_vars.bulk",
+    ),
+    re_path(
+        r"api/plat_mgt/builtin_config_vars/(?P<pk>[^/]+)/",
+        BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
+        name="plat_mgt.builtin_config_vars.detail",
+    ),
+]

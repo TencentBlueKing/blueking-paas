@@ -32,8 +32,8 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.sysapi_client.constants import ClientRole
 from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, SysAPIClient
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
-from paasng.misc.audit.service import DataDetail, add_admin_audit_record
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
+from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.users.serializers import (
     AccountFeatureFlagKindSLZ,
     AccountFeatureFlagSLZ,
@@ -136,19 +136,19 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
             # 批量更新用户
             UserProfile.objects.bulk_update(profiles_to_update, ["role", "tenant_id"])
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.PLAT_USER,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
-            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+            data_before=DataDetail(data=before_data),
+            data_after=DataDetail(data=after_data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="删除平台管理员",
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, user, *args, **kwargs):
         """删除平台管理员, 后台对应的操作为将用户的权限修改为普通用户"""
@@ -172,12 +172,12 @@ class PlatformManagerViewSet(viewsets.GenericViewSet):
         userprofile.role = SiteRole.USER.value
         userprofile.save(update_fields=["role"])
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.PLAT_USER,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
-            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+            data_before=DataDetail(data=before_data),
+            data_after=DataDetail(data=after_data),
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -257,12 +257,12 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
         # 构建更新后的审计数据
         after_data = [{"user": user, "feature": feature, "is_effect": is_effect}]
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.MODIFY_USER_FEATURE_FLAG,
             target=OperationTarget.PLAT_USER,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
-            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+            data_before=DataDetail(data=before_data),
+            data_after=DataDetail(data=after_data),
         )
 
         return Response(status=status.HTTP_201_CREATED)
@@ -270,7 +270,7 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="删除用户特性",
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, id=None, *args, **kwargs):
         """删除用户特性"""
@@ -293,11 +293,11 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
                 {"detail": "Failed to delete user feature flag"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.PLAT_USER,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
+            data_before=DataDetail(data=before_data),
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -385,11 +385,11 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
         # 构建审计数据
         after_data = [{"bk_app_code": bk_app_code, "role": role}]
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.CREATE,
             target=OperationTarget.PLAT_USER,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+            data_after=DataDetail(data=after_data),
         )
 
         return Response(status=status.HTTP_201_CREATED)
@@ -399,7 +399,7 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
         tags=["plat_mgt.users"],
         operation_description="更新已授权应用的权限",
         request_body=UpsertSystemAPIClientSLZ,
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, *args, **kwargs):
         slz = UpsertSystemAPIClientSLZ(data=request.data)
@@ -428,12 +428,12 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
         after_data = [{"name": name, "bk_app_code": bk_app_code, "role": role}]
 
         # 记录审计日志
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.MODIFY,
             target=OperationTarget.PLAT_USER,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
-            data_after=DataDetail(type=DataType.RAW_DATA, data=after_data),
+            data_before=DataDetail(data=before_data),
+            data_after=DataDetail(data=after_data),
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -441,7 +441,7 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.users"],
         operation_description="删除已授权应用",
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     @atomic
     def destroy(self, request, name=None, *args, **kwargs):
@@ -462,10 +462,10 @@ class SystemApiClientViewSet(viewsets.GenericViewSet):
         # 删除应用认证关系
         app_client_relation.delete()
 
-        add_admin_audit_record(
+        add_plat_mgt_audit_record(
             user=self.request.user.pk,
             operation=OperationEnum.DELETE,
             target=OperationTarget.PLAT_USER,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=before_data),
+            data_before=DataDetail(data=before_data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

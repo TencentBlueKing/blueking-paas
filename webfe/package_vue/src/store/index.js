@@ -54,6 +54,8 @@ import migration from './modules/migration';
 import sandbox from './modules/sandbox';
 import tool from './modules/tool';
 import tenant from './modules/tenant';
+import tenantOperations from './modules/tenant-operations';
+import tenantConfig from './modules/tenant-config';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -430,6 +432,8 @@ export default new Vuex.Store({
     sandbox,
     tool,
     tenant,
+    tenantOperations,
+    tenantConfig,
   },
   state,
   getters,

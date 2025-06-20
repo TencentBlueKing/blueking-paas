@@ -268,8 +268,8 @@ export default {
     if (!this.isCreate) {
       this.$store.commit('cloudApi/updatePageEdit', false);
       this.$store.commit('cloudApi/updateHookPageEdit', false);
+      this.init();
     }
-    this.init();
   },
 
   methods: {

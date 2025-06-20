@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import abc
-from typing import Any
+from typing import Any, Self
 
 from attrs import define
 
@@ -85,6 +85,8 @@ def precedence_policy_factory(
             return RegionInPrecedencePolicy(cond_data=cond_data, binding_policy=binding_policy)
         case PrecedencePolicyCondType.CLUSTER_IN.value:
             return ClusterInPrecedencePolicy(cond_data=cond_data, binding_policy=binding_policy)
+        case PrecedencePolicyCondType.ALWAYS_MATCH.value:
+            return AlwaysMatchPrecedencePolicy(binding_policy=binding_policy)
         case _:
             raise ValueError(f"Invalid condition type: {cond_type}")
 
@@ -127,6 +129,16 @@ class ClusterInPrecedencePolicy(BindingPrecedencePolicy):
         return cluster_name in self.cond_data["cluster_names"]
 
 
+@define
+class AlwaysMatchPrecedencePolicy(BindingPrecedencePolicy):
+    """A guaranteed fallback precedence policy that matches all cases unconditionally."""
+
+    binding_policy: BindingPolicy
+
+    def match(self, env: ModuleEnvironment) -> bool:
+        return True
+
+
 def get_service_type(service: ServiceObj) -> str:
     # TODO: Fix the circular import issue
     from paasng.accessories.servicehub.manager import get_db_properties
@@ -135,19 +147,14 @@ def get_service_type(service: ServiceObj) -> str:
 
 
 @define
-class UnifiedAllocationPolicy:
-    """The configuration for unified allocation policy.
-
-    This class holds the necessary configuration data extracted from a ServiceBindingPolicy.
-    """
+class ServiceBindingPolicyDTO:
+    """The DTO object for ServiceBindingPolicy."""
 
     plans: list[str] | None = None
     env_plans: dict[str, list[str]] | None = None
 
     @classmethod
-    def create_from_policy(cls, policy: ServiceBindingPolicy) -> "UnifiedAllocationPolicy":
-        if policy is None:
-            return None
+    def from_db_obj(cls, policy: ServiceBindingPolicy) -> Self:
         return cls(
             plans=policy.data.get("plan_ids", None),
             env_plans=policy.data.get("env_plan_ids", None),
@@ -155,11 +162,8 @@ class UnifiedAllocationPolicy:
 
 
 @define
-class RuleBasedAllocationPolicy:
-    """The configuration for building precedence policy.
-
-    This class holds the necessary configuration data extracted from a ServiceBindingPrecedencePolicy.
-    """
+class ServiceBindingPrecedencePolicyDTO:
+    """The DTO object for ServiceBindingPrecedencePolicy."""
 
     cond_type: str
     cond_data: dict[str, list[str]]
@@ -168,7 +172,7 @@ class RuleBasedAllocationPolicy:
     env_plans: dict[str, list[str]] | None = None
 
     @classmethod
-    def create_from_policy(cls, policy: ServiceBindingPrecedencePolicy) -> "RuleBasedAllocationPolicy":
+    def from_db_obj(cls, policy: ServiceBindingPrecedencePolicy) -> Self:
         return cls(
             cond_type=policy.cond_type,
             cond_data=policy.cond_data,
@@ -182,10 +186,16 @@ class RuleBasedAllocationPolicy:
 class PolicyCombinationConfig:
     """The configuration for building policy combination.
 
+    This class provides two mutually exclusive approaches for service binding allocation:
 
-    This class integrates multiple rule-based policies to allocate service bindings
-    based on specific conditions like region or cluster, ensuring the selection of
-    appropriate plans and providing a fallback option if none of the conditions are met.
+    1. Rule-based Precedence Policies:
+       - Evaluates multiple conditions in priority order
+       - First matching condition determines the allocation
+       - Always uses cond_type=PrecedencePolicyCondType.ALWAYS_MATCH as the guaranteed fallback
+
+    2. Unified Allocation Policy:
+       - Applies a single allocation rule to all cases
+       - Simpler configuration for uniform allocation needs
 
     Example Usage:
     - If the region is "region_default", assign plans ["plan_region"].
@@ -197,29 +207,53 @@ class PolicyCombinationConfig:
     ```
     PolicyCombinationConfig(
         tenant_id="tenant_x",
-        service_id="service_x"
+        service_id="service_x",
+        allocation_policy_type="rule_based",
         allocation_precedence_policies=[
-            RuleBasedAllocationPolicy(
+            ServiceBindingPrecedencePolicyDTO(
                 cond_type=PrecedencePolicyCondType.REGION_IN.value,
                 cond_data={"regions": ["region_default"]},
                 priority=2,
                 plans=["plan_region"]
             ),
-            RuleBasedAllocationPolicy(
+            ServiceBindingPrecedencePolicyDTO(
                 cond_type=PrecedencePolicyCondType.CLUSTER_IN.value,
                 cond_data={"cluster_names": ["cluster_default"]},
                 priority=1,
                 plans=["plan_cluster"]
+            ),
+            ServiceBindingPrecedencePolicyDTO(
+                cond_type=PrecedencePolicyCondType.Always_Match.value.
+                cond_data={},
+                priority=0,
+                plans=["plan"]
             )
         ],
-        allocation_policy=UnifiedAllocationPolicy(plans=["plan_default"])
+        allocation_policy=None,
     )
     ```
+
+    Example Usage:
+    - Allocate the same plans ["plan_unified"] to all service bindings
+
+    Configuration Example:
+    ```
+    PolicyCombinationConfig(
+        tenant_id="tenant_x",
+        service_id="service_x",
+        allocation_policy_type="uniform",
+        allocation_precedence_policies=None,
+        allocation_policy=ServiceBindingPolicyDTO(
+            plans=["plan_unified"],
+        )
+    )
     """
 
     tenant_id: str
     service_id: str
+    # 枚举值 -> ServiceAllocationPolicyType
+    policy_type: str
     # 按规则分配
-    allocation_precedence_policies: list[RuleBasedAllocationPolicy]
-    # 统一分配，也是按规则分配最终的保底选项
-    allocation_policy: UnifiedAllocationPolicy
+    allocation_precedence_policies: list[ServiceBindingPrecedencePolicyDTO] | None = None
+    # 统一分配
+    allocation_policy: ServiceBindingPolicyDTO | None = None

@@ -88,9 +88,11 @@
       :position="{ top: deployDialogConfig.top }"
       :show-footer="false"
     >
-      <deployYaml
+      <DeployYaml
+        :key="isYamlLoading"
         :height="deployDialogConfig.height"
         :cloud-app-data="dialogCloudAppData"
+        :loading="isYamlLoading"
       />
     </bk-dialog>
   </div>
@@ -99,14 +101,14 @@
 <script>
 import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
-import deployYaml from './deploy-yaml';
+import DeployYaml from './deploy-yaml';
 import { throttle } from 'lodash';
 import { traceIds } from '@/common/trace-ids';
 
 export default {
   components: {
     moduleTopBar,
-    deployYaml,
+    DeployYaml,
   },
   mixins: [appBaseMixin],
   data() {
@@ -134,6 +136,7 @@ export default {
       isTab: true,
       dialogCloudAppData: [],
       topBarIndex: 0,
+      isYamlLoading: false,
     };
   },
   computed: {
@@ -186,11 +189,11 @@ export default {
   },
   watch: {
     $route(newRoute) {
-      if (this.active !== newRoute.name) {
+      if (this.active !== newRoute.name || newRoute.name === 'appServices') {
         this.handleGoPage(newRoute.name);
+        this.isTab = newRoute.name === 'appServices'; // 显示tab
       }
-      // eslint-disable-next-line no-plusplus
-      this.renderIndex++;
+      this.renderIndex += 1;
       this.$store.commit('cloudApi/updatePageEdit', false);
     },
     appCode() {
@@ -232,6 +235,7 @@ export default {
 
     // 查看yaml
     async handleYamlView() {
+      this.isYamlLoading = true;
       try {
         const res = await this.$store.dispatch('deploy/getAppYamlManiFests', {
           appCode: this.appCode,
@@ -245,7 +249,7 @@ export default {
           message: e.detail || e.message,
         });
       } finally {
-        this.isLoading = false;
+        this.isYamlLoading = false;
       }
     },
 

@@ -357,7 +357,7 @@
         </bk-table-column>
         <template v-if="isShowTenant">
           <bk-table-column
-            :label="$t('租户类型')"
+            :label="$t('租户模式')"
             prop="app_tenant_mode"
             column-key="app_tenant_mode"
             :filters="tenantFilters"
@@ -367,7 +367,7 @@
               {{ $t(appTenantMode[row.application.app_tenant_mode]) }}
             </template>
           </bk-table-column>
-          <bk-table-column :label="$t('所属租户')">
+          <bk-table-column :label="$t('租户 ID')">
             <template slot-scope="{ row }">
               {{ row.application.app_tenant_id || '--' }}
             </template>

@@ -57,6 +57,9 @@ modules:
       - key: FOO
         value: value_of_foo
         description: 环境变量描述文件
+      - key: FOO1
+        value: ''
+        description: 测试空值
     processes:
       web:
         command: npm run server
@@ -158,7 +161,8 @@ modules:
                                 "addons": [{"name": "mysql"}, {"name": "rabbitmq"}],
                                 "configuration": {
                                     "env": [
-                                        {"name": "FOO", "value": "value_of_foo", "description": "环境变量描述文件"}
+                                        {"name": "FOO", "value": "value_of_foo", "description": "环境变量描述文件"},
+                                        {"name": "FOO1", "value": "", "description": "测试空值"},
                                     ]
                                 },
                                 "processes": [
@@ -228,14 +232,6 @@ modules:
                                                 "failureThreshold": 3,
                                             },
                                         },
-                                        "services": [
-                                            {
-                                                "name": "server",
-                                                "protocol": "TCP",
-                                                "targetPort": settings.CONTAINER_PORT,
-                                                "port": 80,
-                                            }
-                                        ],
                                     }
                                 ],
                                 "hooks": {"preRelease": {"procCommand": "python manage.py migrate"}},
@@ -276,6 +272,9 @@ modules:
           - name: FOO
             value: value_of_foo
             description: 环境变量描述文件
+          - name: FOO1
+            value: ''
+            description: 测试空值
       processes:
         - name: web
           procCommand: npm run server
@@ -347,11 +346,6 @@ modules:
               periodSeconds: 10
               successThreshold: 1
               failureThreshold: 3
-          services:
-            - name: server
-              protocol: TCP
-              targetPort: {settings.CONTAINER_PORT}
-              port: 80
       hooks:
         preRelease:
           procCommand: python manage.py migrate
@@ -562,14 +556,6 @@ module:
                                 {
                                     "name": "worker",
                                     "procCommand": "celery -A app -l info",
-                                    "services": [
-                                        {
-                                            "name": "worker",
-                                            "protocol": "TCP",
-                                            "targetPort": settings.CONTAINER_PORT,
-                                            "port": 80,
-                                        }
-                                    ],
                                 },
                             ],
                             "observability": {
@@ -601,11 +587,6 @@ module:
             targetPort: 5001
       - name: worker
         procCommand: celery -A app -l info
-        services:
-          - name: worker
-            protocol: TCP
-            targetPort: {settings.CONTAINER_PORT}
-            port: 80
     observability:
       monitoring:
         metrics:

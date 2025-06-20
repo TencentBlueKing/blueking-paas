@@ -244,7 +244,7 @@ export default {
             id: this.formData.role,
           },
         };
-        this.$emit('confirm', updateParam);
+        this.$emit('confirm', updateParam, role);
         return;
       }
       // 新增成员
@@ -253,7 +253,7 @@ export default {
         user: { username },
         roles: [{ id: role }],
       }));
-      this.$emit('confirm', parmas);
+      this.$emit('confirm', parmas, role);
     },
   },
 };

@@ -166,7 +166,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         # 由平台创建代码仓库
         auto_repo_url = None
         if src_cfg.get("auto_create_repo"):
-            auto_repo_url = create_new_repo(module, username=request.user.username)
+            auto_repo_url = create_new_repo(module, repo_type, username=request.user.username)
             repo_url = auto_repo_url
 
         with delete_repo_on_error(repo_type, auto_repo_url):

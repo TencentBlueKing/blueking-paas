@@ -370,7 +370,7 @@ def _humanize_exception(step_name: str, message: str):
         raise ModuleInitializationError(message) from e
 
 
-def create_new_repo(module: Module, username: str) -> str:
+def create_new_repo(module: Module, repo_type: str, username: str) -> str:
     """创建一个新的代码仓库，并将指定用户添加为成员
 
     仓库命名规则：
@@ -378,14 +378,15 @@ def create_new_repo(module: Module, username: str) -> str:
     - 仓库可见级别为: public
 
     :param module: 需要创建仓库的模块对象
+    :param repo_type: 代码仓库类型
     :param username: 需要添加为仓库成员的初始用户名
     :return: 新创建的代码仓库地址
     """
     repo_name = f"{module.application.code}_{module.name}"
     description = f"{module.application.name}({module.name} 模块)"
 
-    source_type = get_sourcectl_type(module.source_type)
-    repo_controller = source_type.repo_controller_class.init_by_server_config(module.source_type, repo_url="")
+    source_type = get_sourcectl_type(repo_type)
+    repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url="")
 
     source_type_config = source_type.config_as_arguments()
     if "repository_group" not in source_type_config:

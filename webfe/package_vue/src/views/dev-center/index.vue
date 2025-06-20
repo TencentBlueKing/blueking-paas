@@ -588,7 +588,7 @@ export default {
       // 搜索条件筛选
       appFilter: {
         // 显示已下架应用
-        includeInactive: true,
+        isActive: null,
         // 显示我创建的
         excludeCollaborated: false,
         // 版本选择
@@ -608,8 +608,8 @@ export default {
         offset: 0,
         // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
         exclude_collaborated: false,
-        // 是否包含已下架应用，默认包含
-        include_inactive: true,
+        // 应用状态过滤
+        is_active: null,
         // limit
         limit: 0,
         order_by: 'code',
@@ -700,8 +700,8 @@ export default {
   },
   created() {
     this.handleFilterApp({ text: '操作时间', value: '-latest_operated_at' }, false);
-    if (this.$route.query.include_inactive) {
-      this.appFilter.includeInactive = true;
+    if (this.$route.query.is_active) {
+      this.appFilter.isActive = true;
     }
     this.fetchAppList();
   },
@@ -837,15 +837,18 @@ export default {
         limit: this.pagination.limit,
         // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
         exclude_collaborated: this.appFilter.excludeCollaborated,
-        // 是否包含已下架应用，默认包含
-        include_inactive: this.tableHeaderFilterValue === 'all',
         // 对应类型
         type: this.curAppType,
       });
-      if (this.tableHeaderFilterValue !== 'all') {
-        // 全部：include_inactive == true / 正常：不传参数
-        delete params.include_inactive;
+
+      // 根据状态筛选条件添加 is_active 参数
+      if (this.tableHeaderFilterValue === 'normal') {
+        params.is_active = true;
+      } else if (this.tableHeaderFilterValue === 'archive') {
+        params.is_active = false;
       }
+      // 当 tableHeaderFilterValue === 'all' 时, 不添加 is_active 参数
+
       this.isLoading = true;
       for (const key in params) {
         url += `&${key}=${params[key]}`;
@@ -898,8 +901,8 @@ export default {
 
     reset() {
       this.appFilter = {
-        // 默认包含已下架应用
-        includeInactive: true,
+        // 默认显示所有应用
+        isActive: null,
         // 我创建的
         excludeCollaborated: false,
         languageList: ['Python', 'PHP', 'Go', 'NodeJS'],
@@ -1001,7 +1004,7 @@ export default {
           filterList: [
             { text: this.$t('全部'), value: 'all' },
             { text: this.$t('正常'), value: 'normal' },
-            { text: this.$t('下架'), value: 'archive', disabled: true },
+            { text: this.$t('下架'), value: 'archive' },
           ],
         },
         on: {

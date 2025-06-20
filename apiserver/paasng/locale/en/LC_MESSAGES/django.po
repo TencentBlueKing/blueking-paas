@@ -1127,7 +1127,7 @@ msgid "上一次灰度发布还未审批完成"
 msgstr "The previous gray release has not yet been approved."
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:78
-#: paasng/utils/error_codes.py:226
+#: paasng/utils/error_codes.py:227
 msgid "| 错误码 | 描述 |"
 msgstr "| Error Code | Description |"
 
@@ -2305,36 +2305,44 @@ msgid "OAuth 展示信息不支持字段 {}"
 msgstr "OAuth display information does not support the field {}"
 
 #: paasng/plat_admin/admin42/serializers/templates.py:34
+#: paasng/plat_mgt/tmpls/serializers.py:77
 msgid "预设增强服务配置必须为 Dict 格式"
 msgstr "Preset enhanced service configuration must be in Dict format"
 
 #: paasng/plat_admin/admin42/serializers/templates.py:40
+#: paasng/plat_mgt/tmpls/serializers.py:83
 msgid "构建工具配置必须为 List[str] 格式"
 msgstr "Build tool configuration must be in List[str] format"
 
 #: paasng/plat_admin/admin42/serializers/templates.py:43
+#: paasng/plat_mgt/tmpls/serializers.py:86
 msgid "针对不同镜像配置 required_buildpacks 时必须配置默认值 __default__"
 msgstr ""
 "When configuring required_buildpacks for different images, the default value "
 "__default__ must be set"
 
 #: paasng/plat_admin/admin42/serializers/templates.py:46
+#: paasng/plat_mgt/tmpls/serializers.py:89
 msgid "构建工具配置必须为 Dict[str, List[str]] 格式"
 msgstr "Build tool configuration must be in Dict[str, List[str]] format"
 
 #: paasng/plat_admin/admin42/serializers/templates.py:48
+#: paasng/plat_mgt/tmpls/serializers.py:91
 msgid "构建工具必须为 List[str] 或 Dict[str, List[str]] 格式"
 msgstr "Build tools must be in List[str] or Dict[str, List[str]] format"
 
 #: paasng/plat_admin/admin42/serializers/templates.py:53
+#: paasng/plat_mgt/tmpls/serializers.py:96
 msgid "进程配置必须为 Dict 格式"
 msgstr "Process configuration must be in Dict format"
 
 #: paasng/plat_admin/admin42/serializers/templates.py:58
+#: paasng/plat_mgt/tmpls/serializers.py:101
 msgid "标签必须为 List 格式"
 msgstr "Tags must be in List format"
 
 #: paasng/plat_admin/admin42/serializers/templates.py:63
+#: paasng/plat_mgt/tmpls/serializers.py:106
 msgid "二进制包存储配置必须为有效的地址字符串"
 msgstr ""
 "The value of the binary package storage configuration must be a valid "
@@ -2356,7 +2364,7 @@ msgid "当前环境不存在未分配的增强服务实例"
 msgstr ""
 "There are no unallocated instances of Add-ons in the current environment"
 
-#: paasng/plat_admin/admin42/views/services.py:134
+#: paasng/plat_admin/admin42/views/services.py:135
 #: paasng/plat_mgt/applications/views/services.py:199
 msgid "迁移应用不支持回收增强服务实例"
 msgstr ""
@@ -2558,6 +2566,10 @@ msgid "获取组件版本信息失败，请确认操作人是否有权限"
 msgstr ""
 "Failed to get component version information. Please confirm whether the "
 "operator has permission."
+
+#: paasng/plat_mgt/tmpls/views.py:84
+msgid "名称已存在，请使用其他名称"
+msgstr "Name already exists, please use another name"
 
 #: paasng/platform/applications/constants.py:98
 msgid "开启出口 IP 管理"
@@ -4453,80 +4465,86 @@ msgstr "The specified application template does not exist or is unavailable"
 msgid "无效的应用模板"
 msgstr "Invalid application template"
 
-#: paasng/utils/error_codes.py:169
+#: paasng/utils/error_codes.py:167
+#, fuzzy
+#| msgid "初始化应用源码模板失败"
+msgid "创建应用模板失败"
+msgstr "Failed to initialise APP source code template"
+
+#: paasng/utils/error_codes.py:170
 msgid "创建蓝鲸运维开发平台应用错误"
 msgstr "Error creating BlueKing Operations Development Platform application"
 
-#: paasng/utils/error_codes.py:172
+#: paasng/utils/error_codes.py:173
 msgid "engine 服务错误"
 msgstr "Engine service error"
 
-#: paasng/utils/error_codes.py:175
+#: paasng/utils/error_codes.py:176
 msgid "初始化应用成员信息失败"
 msgstr "Failed to initialize application member information"
 
-#: paasng/utils/error_codes.py:176
+#: paasng/utils/error_codes.py:177
 msgid "添加应用成员失败"
 msgstr "Failed to add application member"
 
-#: paasng/utils/error_codes.py:177
+#: paasng/utils/error_codes.py:178
 msgid "修改应用成员失败"
 msgstr "Failed to modify application member"
 
-#: paasng/utils/error_codes.py:178
+#: paasng/utils/error_codes.py:179
 msgid "删除应用成员失败"
 msgstr "Failed to delete application member"
 
-#: paasng/utils/error_codes.py:181
+#: paasng/utils/error_codes.py:182
 msgid "指定环境的 Egress 配置不存在"
 msgstr "The Egress configuration for the specified environment does not exist"
 
-#: paasng/utils/error_codes.py:184
+#: paasng/utils/error_codes.py:185
 msgid "因该功能正在升级改造，操作暂不可用。"
 msgstr ""
 "Operation is temporarily unavailable as this function is being upgraded."
 
-#: paasng/utils/error_codes.py:185
+#: paasng/utils/error_codes.py:186
 msgid "暂不支持修改该配置"
 msgstr "Modifying this configuration is not supported at the moment"
 
-#: paasng/utils/error_codes.py:200
+#: paasng/utils/error_codes.py:201
 msgid "导入应用模型失败"
 msgstr "Failed to import application model"
 
-#: paasng/utils/error_codes.py:203
+#: paasng/utils/error_codes.py:204
 msgid "无法创建应用集群"
 msgstr "cannot create cluster"
 
-#: paasng/utils/error_codes.py:204
+#: paasng/utils/error_codes.py:205
 msgid "无法更新应用集群"
 msgstr "cannot update cluster"
 
-#: paasng/utils/error_codes.py:205
+#: paasng/utils/error_codes.py:206
 msgid "无法删除应用集群"
 msgstr "cannot delete cluster"
 
-#: paasng/utils/error_codes.py:207
+#: paasng/utils/error_codes.py:208
 msgid "无法更新集群组件"
 msgstr "cannot update cluster components"
 
-#: paasng/utils/error_codes.py:210
+#: paasng/utils/error_codes.py:211
 msgid "创建开发沙箱失败"
 msgstr "failed to create dev sandbox"
 
-#: paasng/utils/error_codes.py:211
+#: paasng/utils/error_codes.py:212
 msgid "开发沙箱已存在"
 msgstr "dev sandbox already exists"
 
-#: paasng/utils/error_codes.py:212
+#: paasng/utils/error_codes.py:213
 msgid "指定的开发沙箱不存在"
 msgstr "dev sandbox not found"
 
-#: paasng/utils/error_codes.py:213
+#: paasng/utils/error_codes.py:214
 msgid "开发沙箱总数量超过上限"
 msgstr "number of dev sandboxes exceeds the limit"
 
-#: paasng/utils/error_codes.py:214
+#: paasng/utils/error_codes.py:215
 msgid "开发沙箱 API 请求异常"
 msgstr "dev sandbox API request exception"
 

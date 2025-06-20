@@ -2178,7 +2178,7 @@ msgstr "disable user access restrictions"
 #: paasng/platform/declarative/deployment/validations/v2.py:173
 #: paasng/platform/modules/serializers.py:177
 #: paasng/platform/sourcectl/serializers.py:160
-msgid "构建目录（source_dir）不合法，不能以 '/' 开头，不能包含 '..'"
+msgid "构建目录不合法，不能以 '/' 开头，不能包含 '..'"
 msgstr "Invalid source_dir, cannot start with '/' or contain '..'"
 
 #: paasng/misc/tools/views.py:104

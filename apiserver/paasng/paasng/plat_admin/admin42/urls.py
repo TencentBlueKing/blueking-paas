@@ -29,7 +29,6 @@ from .views import (
     runtimes,
     services,
     smart_advisor,
-    sourcectl,
     templates,
 )
 from .views.engine import (
@@ -165,22 +164,6 @@ urlpatterns = [
     # 平台管理-共享证书管理
     re_path(
         r"^platform/certs/shared/manage/$", certs.SharedCertsManageView.as_view(), name="admin.shared.certs.manage"
-    ),
-    # 平台管理-代码库配置
-    re_path(
-        r"^platform/sourcectl/source_type_spec/manage/$",
-        sourcectl.SourceTypeSpecManageView.as_view(),
-        name="admin.sourcectl.source_type_spec.manage",
-    ),
-    re_path(
-        r"^platform/sourcectl/source_type_spec/$",
-        sourcectl.SourceTypeSpecViewSet.as_view(dict(post="create", get="list")),
-        name="admin.sourcectl.source_type_spec",
-    ),
-    re_path(
-        r"^platform/sourcectl/source_type_spec/(?P<pk>[^/]+)/",
-        sourcectl.SourceTypeSpecViewSet.as_view(dict(delete="destroy", put="update")),
-        name="admin.sourcectl.source_type_spec.detail",
     ),
     # 平台管理-应用列表页
     re_path(r"^applications/$", applications.ApplicationListView.as_view(), name="admin.applications.list"),

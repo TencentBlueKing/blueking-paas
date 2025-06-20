@@ -1105,12 +1105,12 @@ msgid "日志系统异常, 请稍后重试"
 msgstr "The logging system is experiencing an issue. Please try again later."
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:58
-#: paasng/utils/error_codes.py:100
+#: paasng/utils/error_codes.py:101
 msgid "查询日志失败"
 msgstr "Query log failure"
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:59
-#: paasng/utils/error_codes.py:101
+#: paasng/utils/error_codes.py:102
 msgid "查询日志失败，请检查查询条件"
 msgstr "Query log failed, please check the query criteria"
 
@@ -1127,7 +1127,7 @@ msgid "上一次灰度发布还未审批完成"
 msgstr "The previous gray release has not yet been approved."
 
 #: paasng/bk_plugins/pluginscenter/exceptions.py:78
-#: paasng/utils/error_codes.py:226
+#: paasng/utils/error_codes.py:227
 msgid "| 错误码 | 描述 |"
 msgstr "| Error Code | Description |"
 
@@ -2247,60 +2247,74 @@ msgstr ""
 "and end with a letter or number."
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:35
+#: paasng/plat_mgt/sourcectl/serializers.py:85
 msgid "服务配置格式必须为 Dict"
 msgstr "Service configuration format must be Dict"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:56
+#: paasng/plat_mgt/sourcectl/serializers.py:106
 msgid "配置类路径有误，导入失败"
 msgstr "Configuration class path is incorrect, import failed"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:61
+#: paasng/plat_mgt/sourcectl/serializers.py:111
 msgid "初始化 SourceTypeSpec 失败：{}"
 msgstr "Failed to initialize SourceTypeSpec: {}"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:68
+#: paasng/plat_mgt/sourcectl/serializers.py:118
 msgid "OAuth 授权链接"
 msgstr "OAuth Authorization Link"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:71
+#: paasng/plat_mgt/sourcectl/serializers.py:121
 msgid "回调地址"
 msgstr "Callback URL"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:72
+#: paasng/plat_mgt/sourcectl/serializers.py:122
 msgid "获取 Token 链接"
 msgstr "Token Retrieval Link"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:73
+#: paasng/plat_mgt/sourcectl/serializers.py:123
 msgid "OAuth 展示信息（英）"
 msgstr "OAuth Display Information (English)"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:74
+#: paasng/plat_mgt/sourcectl/serializers.py:124
 msgid "OAuth 展示信息（中）"
 msgstr "OAuth Display Information (Chinese)"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:78
+#: paasng/plat_mgt/sourcectl/serializers.py:128
 msgid "使用配置类 {} 时，字段 {} 不可为空"
 msgstr "When using configuration class {}, field {} cannot be empty"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:85
+#: paasng/plat_mgt/sourcectl/serializers.py:135
 msgid "展示信息格式必须为 Dict"
 msgstr "Display information format must be Dict"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:89
+#: paasng/plat_mgt/sourcectl/serializers.py:139
 msgid "展示信息有误，非空则必须包含 name，description 键"
 msgstr ""
 "Display information is incorrect; if not empty, it must include 'name' and "
 "'description' keys"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:93
+#: paasng/plat_mgt/sourcectl/serializers.py:143
 msgid "展示信息不支持字段 {}"
 msgstr "Display information does not support the field {}"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:100
+#: paasng/plat_mgt/sourcectl/serializers.py:150
 msgid "OAuth 展示信息格式必须为 Dict"
 msgstr "OAuth display information format must be Dict"
 
 #: paasng/plat_admin/admin42/serializers/sourcectl.py:104
+#: paasng/plat_mgt/sourcectl/serializers.py:154
 msgid "OAuth 展示信息不支持字段 {}"
 msgstr "OAuth display information does not support the field {}"
 
@@ -2558,6 +2572,10 @@ msgid "获取组件版本信息失败，请确认操作人是否有权限"
 msgstr ""
 "Failed to get component version information. Please confirm whether the "
 "operator has permission."
+
+#: paasng/plat_mgt/sourcectl/views.py:84
+msgid "名称已存在，请使用其他名称"
+msgstr "name already exists, please use another name"
 
 #: paasng/platform/applications/constants.py:98
 msgid "开启出口 IP 管理"
@@ -4268,265 +4286,271 @@ msgstr "Object Storage Service Exception"
 msgid "代码提交失败"
 msgstr "Code submission failed"
 
-#: paasng/utils/error_codes.py:98
+#: paasng/utils/error_codes.py:97
+#, fuzzy
+#| msgid "代码库配置"
+msgid "创建代码库配置失败"
+msgstr "Source Type Setting"
+
+#: paasng/utils/error_codes.py:99
 msgid "绑定运行时失败"
 msgstr "Failed to bind runtime"
 
-#: paasng/utils/error_codes.py:102
+#: paasng/utils/error_codes.py:103
 msgid "日志平台-「自定义上报」配置不存在"
 msgstr "Log platform - ‘Custom Reporting’ configuration does not exist"
 
-#: paasng/utils/error_codes.py:103
+#: paasng/utils/error_codes.py:104
 msgid "删除日志采集规则失败"
 msgstr "Failed to delete log collection rule"
 
-#: paasng/utils/error_codes.py:104
+#: paasng/utils/error_codes.py:105
 msgid "暂不支持自定义日志采集"
 msgstr "Custom log collection is not currently supported"
 
-#: paasng/utils/error_codes.py:105
+#: paasng/utils/error_codes.py:106
 msgid "ElasticSearch 未配置"
 msgstr "ElasticSearch is not configured"
 
-#: paasng/utils/error_codes.py:107
+#: paasng/utils/error_codes.py:108
 msgid "当前项不允许变更"
 msgstr "No changes are allowed to the current item"
 
-#: paasng/utils/error_codes.py:109
+#: paasng/utils/error_codes.py:110
 msgid "应用尚未在任何环境部署"
 msgstr "The APP has not been deployed in any environment"
 
-#: paasng/utils/error_codes.py:110
+#: paasng/utils/error_codes.py:111
 msgid "应用迁移确认, 切换入口失败"
 msgstr "APP migration confirmed, Switching portal failed"
 
-#: paasng/utils/error_codes.py:111
+#: paasng/utils/error_codes.py:112
 msgid "应用在新版开发者中心未完全下架"
 msgstr "APP not fully archive in new version of Developer Center"
 
-#: paasng/utils/error_codes.py:112
+#: paasng/utils/error_codes.py:113
 msgid "应用在旧版开发者中心未完全下架"
 msgstr "APP not fully archive from old  Developer Center"
 
-#: paasng/utils/error_codes.py:113
+#: paasng/utils/error_codes.py:114
 msgid "应用迁移失败"
 msgstr "Application migration failed"
 
-#: paasng/utils/error_codes.py:114
+#: paasng/utils/error_codes.py:115
 msgid "应用回滚失败"
 msgstr "APP rollback failed"
 
-#: paasng/utils/error_codes.py:115
+#: paasng/utils/error_codes.py:116
 msgid "应用迁移确认失败"
 msgstr "Application migration confirmation failed"
 
-#: paasng/utils/error_codes.py:117
+#: paasng/utils/error_codes.py:118
 msgid "查询下线信息失败"
 msgstr "Failed to check downline information"
 
-#: paasng/utils/error_codes.py:118
+#: paasng/utils/error_codes.py:119
 msgid "下线失败"
 msgstr "Failed to get offline"
 
-#: paasng/utils/error_codes.py:120
+#: paasng/utils/error_codes.py:121
 msgid "未满足应用市场服务开启条件"
 msgstr "The conditions for opening the market service have not been met"
 
-#: paasng/utils/error_codes.py:122
+#: paasng/utils/error_codes.py:123
 msgid "应用资源 metrics 暂不支持"
 msgstr "Unable to fetch APP resources metrics"
 
-#: paasng/utils/error_codes.py:123
+#: paasng/utils/error_codes.py:124
 msgid "无法获取应用资源 metrics"
 msgstr "Unable to fetch APP resources metrics"
 
-#: paasng/utils/error_codes.py:125
+#: paasng/utils/error_codes.py:126
 msgid "初始化告警规则失败"
 msgstr "Failed to initialize alert rules"
 
-#: paasng/utils/error_codes.py:126
+#: paasng/utils/error_codes.py:127
 msgid "查询告警失败"
 msgstr "Failed to query alert"
 
-#: paasng/utils/error_codes.py:127
+#: paasng/utils/error_codes.py:128
 msgid "查询告警策略失败"
 msgstr "Failed to query alert policies"
 
-#: paasng/utils/error_codes.py:129
+#: paasng/utils/error_codes.py:130
 msgid "无法更新独立域名"
 msgstr "Unable to update domain"
 
-#: paasng/utils/error_codes.py:130
+#: paasng/utils/error_codes.py:131
 msgid "无法添加独立域名"
 msgstr "Unable to add domain"
 
-#: paasng/utils/error_codes.py:131
+#: paasng/utils/error_codes.py:132
 msgid "无法删除独立域名"
 msgstr "Unable to delete domain"
 
-#: paasng/utils/error_codes.py:133
+#: paasng/utils/error_codes.py:134
 msgid "应用引擎未开启"
 msgstr "APP engine not turned on"
 
-#: paasng/utils/error_codes.py:135
+#: paasng/utils/error_codes.py:136
 msgid "访问量统计接口异常"
 msgstr "Exceptions to the access statistics interface"
 
-#: paasng/utils/error_codes.py:136
+#: paasng/utils/error_codes.py:137
 msgid "更新统计功能状态失败"
 msgstr "Failure to update the status of the statistics function"
 
-#: paasng/utils/error_codes.py:138
+#: paasng/utils/error_codes.py:139
 msgid "不是yaml文件"
 msgstr "Not a yaml file"
 
-#: paasng/utils/error_codes.py:139
+#: paasng/utils/error_codes.py:140
 msgid "文件格式错误"
 msgstr "Document format error"
 
-#: paasng/utils/error_codes.py:141
+#: paasng/utils/error_codes.py:142
 msgid "文档模板不存在"
 msgstr "Document template does not exist"
 
-#: paasng/utils/error_codes.py:143
+#: paasng/utils/error_codes.py:144
 msgid "没找到任何待创建的 S-Mart 应用包"
 msgstr "No S-mart APP packages were found to be created"
 
-#: paasng/utils/error_codes.py:144
+#: paasng/utils/error_codes.py:145
 msgid "预处理 S-Mart 应用包异常"
 msgstr "Preprocessing S-Mart application package exception"
 
-#: paasng/utils/error_codes.py:145
+#: paasng/utils/error_codes.py:146
 msgid "缺失应用描述文件"
 msgstr "Missing APP description file"
 
-#: paasng/utils/error_codes.py:146
+#: paasng/utils/error_codes.py:147
 msgid "分析应用描述文件异常"
 msgstr "Analyzing APP Description File Exceptions"
 
-#: paasng/utils/error_codes.py:147
+#: paasng/utils/error_codes.py:148
 msgid "访问容器镜像仓库异常"
 msgstr "Access to container image repository exception"
 
-#: paasng/utils/error_codes.py:148
+#: paasng/utils/error_codes.py:149
 msgid "S-Mart 应用源码文件损坏"
 msgstr "S-Mart application source file is corrupted"
 
-#: paasng/utils/error_codes.py:150
+#: paasng/utils/error_codes.py:151
 msgid "无法获取用户凭证"
 msgstr "Unable to obtain user credentials"
 
-#: paasng/utils/error_codes.py:152
+#: paasng/utils/error_codes.py:153
 msgid "Oauth 后端类型无效"
 msgstr "Oauth back-end type invalid"
 
-#: paasng/utils/error_codes.py:154
+#: paasng/utils/error_codes.py:155
 msgid "暂不支持该功能"
 msgstr "This feature is not supported at the moment"
 
-#: paasng/utils/error_codes.py:156
+#: paasng/utils/error_codes.py:157
 msgid "请求第三方接口错误"
 msgstr "Request for third party interface error"
 
-#: paasng/utils/error_codes.py:158
+#: paasng/utils/error_codes.py:159
 msgid "云API相关接口路径错误"
 msgstr "Cloud API related interface path error"
 
-#: paasng/utils/error_codes.py:159
+#: paasng/utils/error_codes.py:160
 msgid "云API中Region对应的用户类型未配置"
 msgstr ""
 "The user type corresponding to the Region in the Cloud API is not configured"
 
-#: paasng/utils/error_codes.py:162
+#: paasng/utils/error_codes.py:163
 msgid "应用不是“蓝鲸插件”类型"
 msgstr "The application is not of the 'BlueKing Plugin' type"
 
-#: paasng/utils/error_codes.py:163
+#: paasng/utils/error_codes.py:164
 msgid "无法设置插件使用方，请稍候重试"
 msgstr "Unable to set plug-in user, please wait and try again"
 
-#: paasng/utils/error_codes.py:165
+#: paasng/utils/error_codes.py:166
 msgid "指定的应用模板不存在或不可用"
 msgstr "The specified application template does not exist or is unavailable"
 
-#: paasng/utils/error_codes.py:166
+#: paasng/utils/error_codes.py:167
 msgid "无效的应用模板"
 msgstr "Invalid application template"
 
-#: paasng/utils/error_codes.py:169
+#: paasng/utils/error_codes.py:170
 msgid "创建蓝鲸运维开发平台应用错误"
 msgstr "Error creating BlueKing Operations Development Platform application"
 
-#: paasng/utils/error_codes.py:172
+#: paasng/utils/error_codes.py:173
 msgid "engine 服务错误"
 msgstr "Engine service error"
 
-#: paasng/utils/error_codes.py:175
+#: paasng/utils/error_codes.py:176
 msgid "初始化应用成员信息失败"
 msgstr "Failed to initialize application member information"
 
-#: paasng/utils/error_codes.py:176
+#: paasng/utils/error_codes.py:177
 msgid "添加应用成员失败"
 msgstr "Failed to add application member"
 
-#: paasng/utils/error_codes.py:177
+#: paasng/utils/error_codes.py:178
 msgid "修改应用成员失败"
 msgstr "Failed to modify application member"
 
-#: paasng/utils/error_codes.py:178
+#: paasng/utils/error_codes.py:179
 msgid "删除应用成员失败"
 msgstr "Failed to delete application member"
 
-#: paasng/utils/error_codes.py:181
+#: paasng/utils/error_codes.py:182
 msgid "指定环境的 Egress 配置不存在"
 msgstr "The Egress configuration for the specified environment does not exist"
 
-#: paasng/utils/error_codes.py:184
+#: paasng/utils/error_codes.py:185
 msgid "因该功能正在升级改造，操作暂不可用。"
 msgstr ""
 "Operation is temporarily unavailable as this function is being upgraded."
 
-#: paasng/utils/error_codes.py:185
+#: paasng/utils/error_codes.py:186
 msgid "暂不支持修改该配置"
 msgstr "Modifying this configuration is not supported at the moment"
 
-#: paasng/utils/error_codes.py:200
+#: paasng/utils/error_codes.py:201
 msgid "导入应用模型失败"
 msgstr "Failed to import application model"
 
-#: paasng/utils/error_codes.py:203
+#: paasng/utils/error_codes.py:204
 msgid "无法创建应用集群"
 msgstr "cannot create cluster"
 
-#: paasng/utils/error_codes.py:204
+#: paasng/utils/error_codes.py:205
 msgid "无法更新应用集群"
 msgstr "cannot update cluster"
 
-#: paasng/utils/error_codes.py:205
+#: paasng/utils/error_codes.py:206
 msgid "无法删除应用集群"
 msgstr "cannot delete cluster"
 
-#: paasng/utils/error_codes.py:207
+#: paasng/utils/error_codes.py:208
 msgid "无法更新集群组件"
 msgstr "cannot update cluster components"
 
-#: paasng/utils/error_codes.py:210
+#: paasng/utils/error_codes.py:211
 msgid "创建开发沙箱失败"
 msgstr "failed to create dev sandbox"
 
-#: paasng/utils/error_codes.py:211
+#: paasng/utils/error_codes.py:212
 msgid "开发沙箱已存在"
 msgstr "dev sandbox already exists"
 
-#: paasng/utils/error_codes.py:212
+#: paasng/utils/error_codes.py:213
 msgid "指定的开发沙箱不存在"
 msgstr "dev sandbox not found"
 
-#: paasng/utils/error_codes.py:213
+#: paasng/utils/error_codes.py:214
 msgid "开发沙箱总数量超过上限"
 msgstr "number of dev sandboxes exceeds the limit"
 
-#: paasng/utils/error_codes.py:214
+#: paasng/utils/error_codes.py:215
 msgid "开发沙箱 API 请求异常"
 msgstr "dev sandbox API request exception"
 

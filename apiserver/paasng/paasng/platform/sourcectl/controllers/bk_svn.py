@@ -17,7 +17,6 @@
 
 import logging
 import os
-from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
@@ -122,7 +121,7 @@ class SvnRepoController:
         """删除在 VCS 上的源码项目"""
         raise NotImplementedError
 
-    def download_directory(self, source_dir: str, local_path: PathLike) -> Path:
+    def download_directory(self, source_dir: str, local_path: Path) -> Path:
         """下载指定目录到本地
 
         :param source_dir: 代码仓库的指定目录

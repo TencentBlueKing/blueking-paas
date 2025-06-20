@@ -17,7 +17,6 @@
 
 import logging
 import shutil
-from os import PathLike
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote
@@ -145,23 +144,21 @@ class GiteeRepoController(BaseGitRepoController):
         """删除在 VCS 上的源码项目"""
         raise NotImplementedError
 
-    def download_directory(self, source_dir: str, local_path: PathLike) -> Path:
+    def download_directory(self, source_dir: str, local_path: Path) -> Path:
         """下载指定目录到本地
 
         :param source_dir: 代码仓库的指定目录
         :param local_path: 本地路径
         """
-        dest_path = Path(local_path)
-
         git_client = GitClient()
         with generate_temp_dir() as temp_dir:
             real_source_dir = temp_dir / source_dir
             git_client.clone(self._build_repo_url_with_auth(), path=temp_dir, depth=1)
             git_client.clean_meta_info(temp_dir)
             for path in real_source_dir.iterdir():
-                shutil.move(str(path), str(dest_path / path.relative_to(real_source_dir)))
+                shutil.move(str(path), str(local_path / path.relative_to(real_source_dir)))
 
-        return dest_path
+        return local_path
 
     def commit_and_push(
         self,

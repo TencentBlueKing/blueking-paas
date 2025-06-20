@@ -107,7 +107,7 @@ class TemplateRenderer:
         )
 
         dest_dir = Path(tempfile.mktemp())
-        repo_controller.download_directory(self.template.source_dir, dest_dir)
+        repo_controller.download_directory(self.template.get_source_dir(), dest_dir)
         return dest_dir
 
     def render_template(self, source_path: Path, target_path: Path):

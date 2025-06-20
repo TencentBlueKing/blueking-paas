@@ -85,6 +85,24 @@
                       :name="option.name"
                     />
                   </bk-select>
+                  <bk-button
+                    v-if="testTagId"
+                    class="p0 mt5"
+                    slot="tip"
+                    :text="true"
+                    size="small"
+                    theme="primary"
+                    @click="handleQuickSelectTest"
+                  >
+                    <div class="flex-row">
+                      <img
+                        class="lightening-icon"
+                        src="/static/images/lightening.svg"
+                        @click="handleExpand(row)"
+                      />
+                      {{ $t('快速标记为 “测试” 分类') }}
+                    </div>
+                  </bk-button>
                 </bk-form-item>
                 <bk-form-item
                   :label="$t('可用性保障登记')"
@@ -142,7 +160,10 @@
                     </div>
                   </bk-alert>
                 </bk-form-item>
-                <bk-form-item label="LOGO">
+                <bk-form-item
+                  label="LOGO"
+                  ext-cls="app-logo-cls"
+                >
                   <div :class="['logoupload-wrapper', { selected: curFileData.length }]">
                     <bk-upload
                       :files="curFileData"
@@ -153,9 +174,11 @@
                       :custom-request="customRequest"
                       @on-delete="curFileData = []"
                     ></bk-upload>
-                    <p class="tip">
-                      {{ $t('支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。') }}
-                    </p>
+                    <ul class="upload-tip">
+                      <li>{{ $t('支持 jpg、png 等图片格式') }}</li>
+                      <li>{{ $t('图片尺寸为 72 * 72px') }}</li>
+                      <li>{{ $t('不大于 2MB') }}</li>
+                    </ul>
                   </div>
                 </bk-form-item>
                 <bk-form-item class="mt20 base-info-form-btn">
@@ -167,14 +190,6 @@
                     @click.stop="handleSubmitBaseInfo"
                   >
                     {{ $t('提交') }}
-                  </bk-button>
-                  <bk-button
-                    ext-cls="mr8"
-                    theme="default"
-                    :disabled="!curFileData.length"
-                    @click="previewDialogConfig.visible = true"
-                  >
-                    {{ $t('预览') }}
                   </bk-button>
                   <bk-button
                     theme="default"
@@ -298,21 +313,6 @@
         </bk-button>
       </template>
     </bk-dialog>
-
-    <!-- 预览效果 -->
-    <bk-dialog
-      v-model="previewDialogConfig.visible"
-      ext-cls="base-info-preview-dialog-cls"
-      theme="primary"
-    >
-      <div class="content">
-        <img
-          id="dislog-preview-image"
-          :src="previewImageRrl"
-        />
-        <h3 class="title">{{ localeAppInfo.name }}</h3>
-      </div>
-    </bk-dialog>
   </div>
 </template>
 
@@ -379,9 +379,6 @@ export default {
         logoData: null,
         isLoading: false,
       },
-      previewDialogConfig: {
-        visible: false,
-      },
       curFileData: [],
       appTenantMode: APP_TENANT_MODE,
       // 当前应用详情
@@ -394,6 +391,7 @@ export default {
         standard: '基础',
         premium: '高级别',
       },
+      testTagId: '',
     };
   },
   computed: {
@@ -414,9 +412,6 @@ export default {
     },
     applicationDetail() {
       return this.curAppData.application || {};
-    },
-    previewImageRrl() {
-      return this.curFileData[0]?.url;
     },
     // 是否展示应用描述文件
     isShowAppDescriptionFile() {
@@ -480,8 +475,20 @@ export default {
     async init() {
       Promise.all([this.getAppInfo(), this.getDescAppStatus()]).finally(() => {
         this.isLoading = false;
+        this.handleAutoEditMode();
       });
       this.formRemoveConfirmCode = '';
+    },
+    // 页面进入后，判断是否开启编辑模式
+    handleAutoEditMode() {
+      if (this.$route.query.editMode) {
+        this.handleEditBaseInfo(); // 进入编辑模式
+        this.$nextTick(() => {
+          this.$refs.formNameRef?.validate().catch((e) => {
+            console.error(e);
+          });
+        });
+      }
     },
     async getDescAppStatus() {
       try {
@@ -688,9 +695,15 @@ export default {
       try {
         const res = await this.$store.dispatch('market/getTags');
         this.tagList = res;
+        this.testTagId = res.find((v) => v.name === '测试')?.id || '';
       } catch (e) {
         this.catchErrorHandler(e);
       }
+    },
+
+    // 快速选择为测试分类
+    handleQuickSelectTest() {
+      this.localeAppInfo.tagId = this.testTagId;
     },
   },
 };
@@ -985,12 +998,28 @@ export default {
   }
 
   .edit-mode {
+    position: relative;
     font-size: 12px;
-    width: 630px;
+    width: 480px;
     margin-top: 16px;
+    .lightening-icon {
+      width: 14px;
+      margin-right: 5px;
+    }
+    .app-logo-cls {
+      position: absolute;
+      width: 300px;
+      top: -8px;
+      left: 510px;
+      .upload-tip {
+        margin-left: 12px;
+        font-size: 12px;
+        color: #979ba5;
+        line-height: 20px;
+      }
+    }
     .logoupload-wrapper {
       display: flex;
-      align-items: center;
       &.selected {
         .app-logo-upload-cls /deep/ .file-wrapper .picture-btn {
           background: #fff;
@@ -998,15 +1027,19 @@ export default {
       }
       .app-logo-upload-cls {
         /deep/ .file-wrapper {
-          width: 96px;
-          height: 96px;
+          width: 104px;
+          height: 104px;
           padding-top: 0px;
           .picture-btn {
             background: #fafbfd;
+            .pic-item {
+              width: 104px;
+              height: 104px;
+            }
           }
           .upload-btn {
-            width: 96px;
-            height: 96px;
+            width: 104px;
+            height: 104px;
             display: flex;
             align-items: center;
             flex-direction: column;
@@ -1016,7 +1049,6 @@ export default {
       }
     }
     .tip {
-      margin-left: 12px;
       color: #979ba5;
     }
     .availability-item-cls {
@@ -1069,32 +1101,5 @@ export default {
 .paas-info-app-name-cls.plugin-name .bk-form-input {
   padding-right: 130px !important;
   @include ellipsis;
-}
-.base-info-preview-dialog-cls {
-  .bk-dialog-footer {
-    display: none;
-  }
-  .bk-dialog-body {
-    padding: 0;
-  }
-  .content {
-    display: flex;
-    align-items: center;
-    background: #182132;
-    margin: 0 24px 24px;
-    padding-left: 12px;
-    height: 45px;
-    #dislog-preview-image {
-      height: 32px;
-      width: 32px;
-    }
-    .title {
-      font-family: MicrosoftYaHei;
-      margin-left: 8px;
-      font-size: 14px;
-      font-weight: 400;
-      color: #eaebf0;
-    }
-  }
 }
 </style>

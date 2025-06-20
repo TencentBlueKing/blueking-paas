@@ -1336,6 +1336,9 @@ export default {
         FILL_EXTRA_INFO: {
           name: 'appBasicInfo',
           params: { id: this.appCode, moduleId: this.curModuleId },
+          query: {
+            editMode: true,
+          },
         },
       };
 

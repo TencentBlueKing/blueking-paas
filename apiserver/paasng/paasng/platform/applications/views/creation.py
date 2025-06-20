@@ -60,7 +60,7 @@ from paasng.platform.applications.utils import (
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
 from paasng.platform.bk_lesscode.exceptions import LessCodeGatewayServiceError
 from paasng.platform.modules.constants import ExposedURLType, ModuleName, SourceOrigin
-from paasng.platform.modules.manager import init_module_in_view
+from paasng.platform.modules.manager import create_new_repo, delete_repo_on_error, init_module_in_view
 from paasng.platform.templates.models import Template
 from paasng.utils.error_codes import error_codes
 
@@ -161,29 +161,39 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         if advanced_options := params.get("advanced_options"):
             env_cluster_names = advanced_options.get("env_cluster_names", {})
 
-        source_init_result = init_module_in_view(
-            module,
-            repo_type=src_cfg.get("source_control_type"),
-            repo_url=src_cfg.get("source_repo_url"),
-            repo_auth_info=src_cfg.get("source_repo_auth_info"),
-            source_dir=src_cfg.get("source_dir", ""),
-            env_cluster_names=env_cluster_names,
-            bkapp_spec=params["bkapp_spec"],
-        ).source_init_result
+        repo_type = src_cfg.get("source_control_type")
+        repo_url = src_cfg.get("source_repo_url")
+        # 由平台创建代码仓库
+        auto_repo_url = None
+        if src_cfg.get("auto_create_repo"):
+            auto_repo_url = create_new_repo(module, repo_type, username=request.user.username)
+            repo_url = auto_repo_url
 
-        post_create_application.send(sender=self.__class__, application=application)
+        with delete_repo_on_error(repo_type, auto_repo_url):
+            source_init_result = init_module_in_view(
+                module,
+                repo_type=repo_type,
+                repo_url=repo_url,
+                repo_auth_info=src_cfg.get("source_repo_auth_info"),
+                source_dir=src_cfg.get("source_dir", ""),
+                env_cluster_names=env_cluster_names,
+                bkapp_spec=params["bkapp_spec"],
+                write_template_to_repo=src_cfg.get("write_template_to_repo"),
+            ).source_init_result
 
-        create_market_config(
-            application=application,
-            # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
-            source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV,
-            # 对于新创建的应用, 如果生产环境集群支持 HTTPS, 则默认开启 HTTPS
-            prefer_https=self._get_cluster_entrance_https_enabled(
-                application,
-                env_cluster_names.get(AppEnvironment.PRODUCTION),
-                ExposedURLType(module.exposed_url_type),
-            ),
-        )
+            post_create_application.send(sender=self.__class__, application=application)
+
+            create_market_config(
+                application=application,
+                # 当应用开启引擎时, 则所有访问入口都与 Prod 一致
+                source_url_type=ProductSourceUrlType.ENGINE_PROD_ENV,
+                # 对于新创建的应用, 如果生产环境集群支持 HTTPS, 则默认开启 HTTPS
+                prefer_https=self._get_cluster_entrance_https_enabled(
+                    application,
+                    env_cluster_names.get(AppEnvironment.PRODUCTION),
+                    ExposedURLType(module.exposed_url_type),
+                ),
+            )
         return Response(
             data=ApplicationCreateOutputSLZ(
                 {"application": application, "source_init_result": source_init_result}

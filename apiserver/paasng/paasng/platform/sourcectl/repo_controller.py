@@ -18,6 +18,7 @@
 import abc
 import logging
 from os import PathLike
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
@@ -56,6 +57,15 @@ class RepoController(Protocol):
         :param module: Module
         :param operator: current operator's user_id, the credentials for fetching source files will
             be extracted from this user. eg. oauth2 token for git repositories.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def init_by_server_config(cls, source_type: str, repo_url: str):
+        """Return a RepoController object from given source_type
+
+        :param source_type: Code repository type, such as github
+        :param repo_url: repository url
         """
         raise NotImplementedError
 
@@ -106,6 +116,37 @@ class RepoController(Protocol):
     def commit_files(self, commit_info: CommitInfo) -> None:
         """批量提交文件"""
 
+    def create_with_member(self, *args, **kwargs):
+        """创建代码仓库并添加成员"""
+
+    def create_project(self, *args, **kwargs):
+        """创建代码仓库"""
+
+    def delete_project(self, *args, **kwargs):
+        """删除在 VCS 上的源码项目"""
+
+    def download_directory(self, source_dir: str, local_path: Path) -> Path:
+        """下载指定目录到本地
+
+        :param source_dir: 代码仓库的指定目录
+        :param local_path: 本地路径
+        """
+
+    def commit_and_push(
+        self,
+        local_path: Path,
+        commit_message: str,
+        commit_name: str | None = None,
+        commit_email: str | None = None,
+    ) -> None:
+        """将本地文件目录提交并推送到远程仓库
+
+        :param local_path: 本地文件所有路径
+        :param commit_message: 提交信息
+        :param commit_name: 提交人名称，不传则使用平台的默认值
+        :param commit_email: 提交人邮箱，不传则使用平台的默认值
+        """
+
     @abc.abstractmethod
     def read_file(self, file_path: str, version_info: VersionInfo) -> bytes:
         """从当前仓库指定版本(version_info)的代码中读取指定文件(file_path) 的内容
@@ -132,6 +173,20 @@ class BaseGitRepoController:
         project = GitProject.parse_from_repo_url(repo_url, sourcectl_type=module.source_type)
         user_credentials = cls.get_user_credentials(project, operator or module.owner)
         return cls(repo_url=repo_url, user_credentials=user_credentials, api_url=repo_info["api_url"])
+
+    @classmethod
+    def init_by_server_config(cls, source_type: str, repo_url: str):
+        """Return a RepoController object from given source_type
+
+        :param source_type: Code repository type, such as github
+        :param repo_url: repository url
+        """
+        source_config = get_sourcectl_type(source_type).config_as_arguments()
+        if "api_url" not in source_config or "private_token" not in source_config:
+            raise ValueError("Require api_url and private_token to init GitRepoController")
+
+        user_credentials = {"private_token": source_config["private_token"], "scope_list": []}
+        return cls(api_url=source_config["api_url"], repo_url=repo_url, user_credentials=user_credentials)
 
     @classmethod
     def get_user_credentials(cls, project: GitProject, operator: str) -> Dict[str, Any]:

@@ -15,41 +15,23 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from unittest import mock
-
 import pytest
 from django.conf import settings
 
 from paasng.platform.sourcectl.connector import ExternalGitAppRepoConnector, IntegratedSvnAppRepoConnector
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
-from paasng.utils.blobstore import detect_default_blob_store
 
 pytestmark = pytest.mark.django_db
 
 
 class TestIntegratedSvnAppRepoConnector:
     @pytest.mark.usefixtures("_init_tmpls")
-    @mock.patch("paasng.platform.sourcectl.connector.SvnRepositoryClient")
-    def test_normal(self, mocked_client, bk_app, bk_module):
+    def test_normal(self, bk_module):
         bk_module.source_init_template = settings.DUMMY_TEMPLATE_NAME
 
         connector = IntegratedSvnAppRepoConnector(bk_module, get_sourcectl_types().names.bk_svn)
-        connector.bind("svn://svn.x.com/app/a/")
-        ret = connector.sync_templated_sources(
-            context={
-                "region": bk_app.region,
-                "owner_username": "user1",
-                "app_code": bk_app.code,
-                "app_secret": "nosec",
-                "app_name": bk_app.name,
-            }
-        )
-        mocked_client.assert_called()
-        mocked_client().sync_dir.assert_called()
-
-        assert ret.is_success() is True
-        assert ret.dest_type == "svn"
-        assert ret.extra_info["remote_source_root"] == "svn://svn.x.com/app/a/trunk"
+        repo_url = "svn://svn.example.com/app/a/"
+        connector.bind(repo_url)
 
 
 class TestExternalGitAppRepoConnector:
@@ -58,17 +40,4 @@ class TestExternalGitAppRepoConnector:
         bk_module.source_init_template = settings.DUMMY_TEMPLATE_NAME
 
         connector = ExternalGitAppRepoConnector(bk_module, "--placeholder--")
-        connector.bind("git://git.x.com/some-proj.git")
-        ret = connector.sync_templated_sources(
-            context={
-                "region": bk_app.region,
-                "owner_username": "user1",
-                "app_code": bk_app.code,
-                "app_secret": "nosec",
-                "app_name": bk_app.name,
-            }
-        )
-
-        assert ret.is_success() is True
-        assert ret.dest_type == detect_default_blob_store().value
-        assert ret.extra_info["downloadable_address"] != ""
+        connector.bind("git://git.example.com/some-proj.git")

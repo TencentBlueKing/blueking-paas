@@ -112,6 +112,14 @@ class GetDockerIgnoreError(ExceptionWithMessage):
     """When .dockerignore can not be found in application directory"""
 
 
+class GitAPIError(ExceptionWithMessage):
+    """When git api return error"""
+
+
+class RepoNameConflict(ExceptionWithMessage):
+    """仓库名称冲突, 同名仓库已存在"""
+
+
 class GitLabBranchNameBugError(Exception):
     """existing bug in gitlab
     https://gitlab.com/gitlab-org/gitlab-ce/issues/42231

@@ -132,11 +132,20 @@ class ThirdPartyAppCreateInputSLZ(AppBasicInfoMixin):
         return attrs
 
 
+class SourceInitResultSLZ(serializers.Serializer):
+    """源码初始化结果"""
+
+    code = serializers.CharField(help_text="状态码", default="OK", allow_blank=True)
+    extra_info = serializers.DictField(help_text="额外信息，包含下载地址等", default=dict, allow_null=True)
+    dest_type = serializers.CharField(help_text="目标存储类型", allow_null=True, default=None)
+    error = serializers.CharField(help_text="错误信息", allow_blank=True, default="")
+
+
 class ApplicationCreateOutputSLZ(serializers.Serializer):
     """应用创建成功后的返回结果"""
 
     application = ApplicationSLZ(help_text="应用详情")
-    source_init_result = serializers.JSONField(help_text="源码初始化结果")
+    source_init_result = SourceInitResultSLZ(help_text="源码初始化结果", allow_null=True, default=dict)
 
 
 class AdvancedRegionClusterSLZ(serializers.Serializer):

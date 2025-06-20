@@ -266,6 +266,10 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
     source_dir = serializers.CharField(required=False, default="", allow_blank=True)
+    auto_create_repo = serializers.BooleanField(required=False, default=False, help_text="是否由平台新建代码仓库")
+    write_template_to_repo = serializers.BooleanField(
+        required=False, default=False, help_text="是否将模板代码初始化到代码仓库中"
+    )
 
     def validate_source_init_template(self, tmpl_name: str) -> str:
         if not tmpl_name:
@@ -280,6 +284,19 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
 
         return tmpl_name
+
+    def validate(self, attrs):
+        # 由平台新建代码仓库，则源码仓库类型必填，且需要检查是否支持创建仓库
+        if attrs["auto_create_repo"]:
+            if not attrs.get("source_control_type"):
+                raise ValidationError(_("新建代码仓库时，源码仓库类型不能为空"))
+            # 由平台新建代码仓库，则用户填写的源码仓库地址无效
+            if attrs.get("source_repo_url"):
+                raise ValidationError(_("新建代码仓库时，源码仓库地址无效"))
+
+        if attrs["write_template_to_repo"] and (not attrs.get("source_init_template")):
+            raise ValidationError(_("将模板代码初始化到代码仓库中时，必须选择应用模板"))
+        return attrs
 
     def validate_source_dir(self, value: str):
         if value.startswith("/") or ".." in value:

@@ -48,8 +48,9 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.modules.utils import get_module_init_repo_context
 from paasng.platform.sourcectl import serializers as slzs
-from paasng.platform.sourcectl.connector import generate_downloadable_app_template, get_repo_connector
+from paasng.platform.sourcectl.connector import get_repo_connector
 from paasng.platform.sourcectl.docker.models import init_image_repo
 from paasng.platform.sourcectl.exceptions import (
     AccessTokenForbidden,
@@ -67,6 +68,8 @@ from paasng.platform.sourcectl.svn.admin import promote_repo_privilege_temporary
 from paasng.platform.sourcectl.svn.client import RepoProvider
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
 from paasng.platform.sourcectl.version_services import get_version_service
+from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.templater import upload_init_code_to_storage
 from paasng.utils.error_codes import error_codes
 
 #############
@@ -301,8 +304,9 @@ class ModuleInitTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def _create_downloadable_address(self, module: Module) -> Response:
         """生成新的可下载初始化模版源码包地址"""
+        context = get_module_init_repo_context(module, TemplateType.NORMAL)
         try:
-            result = generate_downloadable_app_template(module)
+            result = upload_init_code_to_storage(module, context)
         except Exception as e:
             raise error_codes.CANNOT_INIT_APP_TEMPLATE.f(str(e))
         if not result.is_success():

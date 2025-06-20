@@ -34,8 +34,7 @@ from paasng.platform.sourcectl.source_types import get_sourcectl_names
 from paasng.platform.sourcectl.svn.admin import get_svn_authorization_manager
 from paasng.platform.sourcectl.svn.client import RepoProvider, SvnRepositoryClient, smart_repo_client
 from paasng.platform.sourcectl.utils import generate_temp_dir
-from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.templater import Templater
+from paasng.platform.templates.templater import TemplateRenderer
 from tests.utils import mock
 
 pytestmark = pytest.mark.django_db
@@ -74,15 +73,17 @@ class TestSvnRepositoryClientV2:
     def test_download_template_from_svn(self, rclient, lclient, bk_app, bk_user):
         client = SvnRepositoryClient(repo_url="svn://faked-repo", username="fake_username", password="fake_password")
         # Mock Remote and Local Instance
+        context = {
+            "region": settings.DEFAULT_REGION_NAME,
+            "owner_username": bk_user.username,
+            "app_code": bk_app.code,
+            "app_secret": "fake-secret-created-by-unittests",
+            "app_name": bk_app.name,
+        }
         with generate_temp_dir() as working_dir:
-            Templater(
-                tmpl_name=settings.DUMMY_TEMPLATE_NAME,
-                type=TemplateType.NORMAL,
-                region=settings.DEFAULT_REGION_NAME,
-                owner_username=bk_user.username,
-                app_code=bk_app.code,
-                app_secret="fake-secret-created-by-unittests",
-                app_name=bk_app.name,
+            TemplateRenderer(
+                settings.DUMMY_TEMPLATE_NAME,
+                context,
             ).write_to_dir(working_dir)
 
             client.sync_dir(local_path=working_dir, remote_path="trunk")

@@ -47,6 +47,7 @@ from paasng.platform.sourcectl.exceptions import (
     GetDockerIgnoreError,
     GetProcfileError,
     GetProcfileFormatError,
+    RequestTimeOutError,
 )
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
@@ -192,7 +193,7 @@ def get_deploy_desc_handler_by_version(
     if not _description_flag_disabled(module.application):
         try:
             app_desc = metadata_reader.get_app_desc(version_info)
-        except GetAppYamlFormatError as e:
+        except (GetAppYamlFormatError, RequestTimeOutError) as e:
             # The format error in app_desc is not tolerable
             raise InitDeployDescHandlerError(str(e))
         except GetAppYamlError as e:
@@ -201,7 +202,7 @@ def get_deploy_desc_handler_by_version(
     procfile_data, procfile_exc = None, None
     try:
         procfile_data = metadata_reader.get_procfile(version_info)
-    except GetProcfileFormatError as e:
+    except (GetProcfileFormatError, RequestTimeOutError) as e:
         # The format error in Procfile in not tolerable
         raise InitDeployDescHandlerError(str(e))
     except GetProcfileError as e:
@@ -274,7 +275,7 @@ def tag_module_from_source_files(module, source_files_path):
         tags = dig_tags_local_repo(str(source_files_path))
         cleanup_module(module)
 
-        logging.info(f"Tagging module[{module.pk}]: {tags}")
+        logger.info(f"Tagging module[{module.pk}]: {tags}")
         tag_module(module, tags, source="source_analyze")
     except Exception:
         logger.exception("Unable to tagging module")

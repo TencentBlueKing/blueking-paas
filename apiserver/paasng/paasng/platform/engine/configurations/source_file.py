@@ -81,14 +81,21 @@ class MetaDataFileReader:
         if self.source_dir != Path("."):
             possible_keys = [str(self.source_dir / "Procfile"), "Procfile"]
 
-        content = None
+        content, procfile_exc = None, None
         for possible_key in possible_keys:
             try:
                 content = self.read_file(possible_key, version_info)
                 break
-            except Exception:
+            except exceptions.RequestTimeOutError as e:
+                procfile_exc = e
+                continue
+            except exceptions.DoesNotExistsOnServer:
                 continue
         if content is None:
+            if procfile_exc:
+                # 如果 Procfile 读取超时, 则抛出相同的异常
+                raise procfile_exc
+
             error_msg = "Can not read Procfile file from repository"
             if self.error_tips:
                 error_msg += f", {self.error_tips}"
@@ -117,14 +124,22 @@ class MetaDataFileReader:
                 str(self.source_dir / "app_desc.yml"),
             ]
 
-        content = None
+        content, app_desc_exc = None, None
         for possible_key in possible_keys:
             try:
                 content = self.read_file(possible_key, version_info)
                 break
+            except exceptions.RequestTimeOutError as e:
+                app_desc_exc = e
+                continue
             except Exception:
                 continue
+
         if content is None:
+            if app_desc_exc:
+                # 如果 app_desc 读取超时, 则抛出相同的异常
+                raise app_desc_exc
+
             error_msg = "Can not read app description file from repository"
             if self.error_tips:
                 error_msg += f", {self.error_tips}"

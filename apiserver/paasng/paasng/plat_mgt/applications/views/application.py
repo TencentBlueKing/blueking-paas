@@ -129,6 +129,26 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         slz = slzs.ApplicationTypeOutputSLZ(app_types, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="获取软删除应用列表",
+        responses={status.HTTP_200_OK: slzs.ApplicationListOutputSLZ(many=True)},
+    )
+    def list_deleted(self, request, *args, **kwargs):
+        """获取软删除应用列表"""
+        deleted_apps = Application.default_objects.filter(is_deleted=True)
+        filter_queryset = self.filter_queryset(deleted_apps)
+
+        page = self.paginate_queryset(filter_queryset)
+        app_resource_quotas = self.get_app_resource_quotas()
+
+        slz = slzs.ApplicationListOutputSLZ(
+            page,
+            many=True,
+            context={"request": request, "app_resource_quotas": app_resource_quotas},
+        )
+        return self.get_paginated_response(slz.data)
+
 
 class ApplicationDetailViewSet(viewsets.GenericViewSet):
     """平台管理 - 应用详情 API"""

@@ -30,6 +30,11 @@ urlpatterns = [
         name="plat_mgt.applications.list_applications",
     ),
     re_path(
+        r"^api/plat_mgt/applications/is_deleted/$",
+        views.ApplicationListViewSet.as_view({"get": "list_deleted"}),
+        name="plat_mgt.applications.list_deleted_applications",
+    ),
+    re_path(
         r"^api/plat_mgt/applications/tenant_app_statistics/$",
         views.ApplicationListViewSet.as_view({"get": "list_tenant_app_statistics"}),
         name="plat_mgt.applications.list_tenant_app_statistics",

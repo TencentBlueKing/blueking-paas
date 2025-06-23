@@ -76,13 +76,14 @@
       :show.sync="repositorySideConfig.isShow"
       :data="repositorySideConfig.row"
       :type="repositorySideConfig.type"
+      :id="repositorySideConfig.id"
       @refresh="getSourceTypeSpec"
     />
 
     <!-- 详情 -->
     <DetailSideslider
       :show.sync="detailSideConfig.isShow"
-      :name="detailSideConfig.name"
+      :id="detailSideConfig.id"
     />
 
     <!-- 删除代码仓库配置 -->
@@ -100,7 +101,7 @@
     >
       <div class="f12">
         {{ `${$t('服务名称')}：` }}
-        <span style="color: #313238">{{ deleteDialogConfig.name }}</span>
+        <span style="color: #313238">{{ deleteDialogConfig.row.name }}</span>
       </div>
       <p class="f12 mt-4">{{ $t('删除后，应用将不能再使用这种类型的代码仓库。') }}</p>
     </bk-dialog>
@@ -148,15 +149,16 @@ export default {
         isShow: false,
         type: 'add',
         row: {},
+        id: -1,
       },
       detailSideConfig: {
         isShow: false,
-        name: '',
+        id: -1,
       },
       deleteDialogConfig: {
         visible: false,
         loading: false,
-        name: '',
+        row: {},
       },
     };
   },
@@ -196,10 +198,11 @@ export default {
       }
     },
     // 获取代码库详情
-    async getRepositoryDetail(name) {
+    async getRepositoryDetail(id) {
       try {
+        this.repositorySideConfig.id = id;
         const ret = await this.$store.dispatch('tenantConfig/getRepositoryDetail', {
-          name,
+          id,
         });
         this.repositorySideConfig.row = ret;
       } catch (e) {
@@ -211,7 +214,7 @@ export default {
       this.deleteDialogConfig.loading = true;
       try {
         await this.$store.dispatch('tenantConfig/deleteRepositoryConfig', {
-          name: this.deleteDialogConfig.name,
+          id: this.deleteDialogConfig.row.id,
         });
         this.$paasMessage({
           theme: 'success',
@@ -232,7 +235,7 @@ export default {
       this.repositorySideConfig.type = type;
       this.showRepository();
       if (type === 'edit') {
-        this.getRepositoryDetail(row.name);
+        this.getRepositoryDetail(row.id);
       }
     },
     toggleDeleteDialog(visible) {
@@ -240,12 +243,12 @@ export default {
     },
     handleShowDelDialog(row) {
       this.toggleDeleteDialog(true);
-      this.deleteDialogConfig.name = row.name;
+      this.deleteDialogConfig.row = row;
     },
     // 查看详情
     handleShowDetail(row) {
       this.detailSideConfig.isShow = true;
-      this.detailSideConfig.name = row.name;
+      this.detailSideConfig.id = row.id;
     },
   },
 };

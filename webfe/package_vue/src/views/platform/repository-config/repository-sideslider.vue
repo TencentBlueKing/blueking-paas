@@ -287,6 +287,10 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    id: {
+      type: Number,
+      default: -1,
+    },
   },
   data() {
     return {
@@ -328,6 +332,16 @@ export default {
         required: isRequired,
         rules: isRequired ? [{ ...requiredRule }] : [],
       }));
+    },
+  },
+  watch: {
+    data: {
+      handler(newVal) {
+        if (!this.isAdd) {
+          this.formData = { ...newVal };
+        }
+      },
+      deep: true,
     },
   },
   methods: {
@@ -450,7 +464,7 @@ export default {
         this.saveLoading = true;
         const data = this.formatData();
         const action = this.isAdd ? 'createRepositoryConfig' : 'updateRepositoryConfig';
-        const payload = this.isAdd ? { data } : { name: data.name, data };
+        const payload = this.isAdd ? { data } : { id: this.id, data };
         await this.$store.dispatch(`tenantConfig/${action}`, payload);
         this.$paasMessage({
           theme: 'success',

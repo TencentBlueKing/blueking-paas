@@ -21,7 +21,6 @@
         :active.sync="tabActive"
         type="card"
         ext-cls="paas-custom-tab-card-grid"
-        @tab-change="handleTabChange"
       >
         <bk-tab-panel
           v-for="(panel, index) in panels"
@@ -55,9 +54,9 @@ export default {
       type: Boolean,
       default: false,
     },
-    name: {
-      type: String,
-      default: '',
+    id: {
+      type: Number,
+      default: -1,
     },
   },
   data() {
@@ -95,7 +94,7 @@ export default {
       try {
         this.contentLoading = true;
         const ret = await this.$store.dispatch('tenantConfig/getRepositoryDetail', {
-          name: this.name,
+          id: this.id,
         });
         this.detail = ret;
       } catch (e) {

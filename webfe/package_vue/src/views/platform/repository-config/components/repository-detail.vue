@@ -25,7 +25,7 @@
             {{ data[key] ? $t('是') : $t('否') }}
           </span>
         </div>
-        <div v-else>{{ data[key] || '--' }}</div>
+        <span v-else>{{ data[key] || '--' }}</span>
       </template>
     </DetailsRow>
   </div>

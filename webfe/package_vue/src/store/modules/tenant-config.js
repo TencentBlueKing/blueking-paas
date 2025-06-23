@@ -76,8 +76,8 @@ export default {
     /**
      * 代码库配置-获取代码库配置详情
      */
-    getRepositoryDetail({}, { name }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/${name}/`;
+    getRepositoryDetail({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/${id}/`;
       return http.get(url);
     },
     /**
@@ -90,15 +90,15 @@ export default {
     /**
      * 代码库配置-修改代码库配置
      */
-    updateRepositoryConfig({}, { name, data }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/${name}/`;
+    updateRepositoryConfig({}, { id, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/${id}/`;
       return http.put(url, data);
     },
     /**
      * 代码库配置-删除代码库配置
      */
-    deleteRepositoryConfig({}, { name }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/${name}/`;
+    deleteRepositoryConfig({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/${id}/`;
       return http.delete(url);
     },
   },

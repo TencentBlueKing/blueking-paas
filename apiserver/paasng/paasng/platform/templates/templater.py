@@ -167,7 +167,7 @@ def generate_initial_code(template_name: str, context: dict) -> Path:
     :returns: 包含渲染后模板代码的临时目录路径
     :note: 该函数返回的临时目录由调用方负责清理。调用方应在使用完目录后调用`shutil.rmtree()`删除该目录，以避免临时文件堆积。目录内容在函数返回后不会被自动清理。
     """
-    target_path = Path(tempfile.mktemp())
+    target_path = Path(tempfile.mkdtemp())
     renderer = TemplateRenderer(template_name, context=context)
     renderer.write_to_dir(target_path)
     return target_path

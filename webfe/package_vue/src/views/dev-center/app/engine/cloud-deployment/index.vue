@@ -56,11 +56,11 @@
             <bk-tab-panel
               v-for="panel in panels"
               v-bind="panel"
-              :key="`${panel.name}-${isRiskIcon}`"
+              :key="`${panel.name}-${isGcsMysqlAlertIcon}`"
             >
               <div slot="label">
                 <i
-                  v-if="panel.name === 'appServices' && isRiskIcon"
+                  v-if="panel.name === 'appServices' && isGcsMysqlAlertIcon"
                   class="mr5 paasng-icon paasng-remind"
                   :key="curModuleId"
                 ></i>
@@ -145,18 +145,16 @@ export default {
       dialogCloudAppData: [],
       topBarIndex: 0,
       isYamlLoading: false,
-      isRiskIcon: false,
+      isGcsMysqlService: false,
     };
   },
   computed: {
     routeName() {
       return this.$route.name;
     },
-
     userFeature() {
       return this.$store.state.userFeature;
     },
-
     loaderPlaceholder() {
       if (this.routeName === 'appDeployForStag' || this.routeName === 'appDeployForProd') {
         return 'deploy-loading';
@@ -166,34 +164,36 @@ export default {
       }
       return 'deploy-top-loading';
     },
-
     routerRefs() {
       const curPenel = this.panels.find((e) => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
-
     curAppModuleList() {
       // 根据name的英文字母排序
       return (this.$store.state.curAppModuleList || []).sort((a, b) => a.name.localeCompare(b.name));
     },
-
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
     },
-
     firstTabActiveName() {
       return this.panels[0].name;
     },
-
     // 是否需要保存操作按钮
     isFooterActionBtn() {
       // 无需展示外部操作按钮组
       const hideTabItems = ['cloudAppDeployForProcess', 'cloudAppDeployForHook', 'cloudAppDeployForEnv'];
       return !hideTabItems.includes(this.active);
     },
-
     categoryText() {
       return this.isCloudNativeApp ? '云原生应用' : '普通应用';
+    },
+    // 是否显示高级别提示icon
+    isGcsMysqlAlertIcon() {
+      return (
+        this.isGcsMysqlService &&
+        this.userFeature.APP_AVAILABILITY_LEVEL &&
+        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+      );
     },
   },
   watch: {
@@ -323,10 +323,10 @@ export default {
           list.some((item) => (key === 'service' ? item?.service?.name : item.name) === RISK_SERVER);
 
         // 包含 gcs_mysql 服务，添加风险icon提示
-        this.isRiskIcon =
+        this.isGcsMysqlService =
           containsRiskServer(bound) || containsRiskServer(shared) || containsRiskServer(unbound, 'unbound');
       } catch (error) {
-        this.isRiskIcon = false;
+        this.isGcsMysqlService = false;
       }
     },
   },

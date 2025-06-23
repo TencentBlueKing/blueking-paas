@@ -105,6 +105,7 @@
                   </bk-button>
                 </bk-form-item>
                 <bk-form-item
+                  v-if="userFeature.APP_AVAILABILITY_LEVEL"
                   :label="$t('可用性保障登记')"
                   :required="true"
                   ext-cls="availability-item-cls"
@@ -126,9 +127,9 @@
                       </span>
                     </bk-radio>
                   </bk-radio-group>
-                  <!-- 内部版需要展示风险提示 -->
+                  <!-- 高级别展示风险提示 -->
                   <bk-alert
-                    v-if="localeAppInfo.availabilityLevel === 'premium' && GLOBAL.DOC.GCS_MySQL_LINK"
+                    v-if="localeAppInfo.availabilityLevel === 'premium'"
                     class="mt10"
                     type="warning"
                     :show-icon="false"
@@ -419,7 +420,7 @@ export default {
     },
     // 高级别提交禁用
     isSubmitDisabled() {
-      return this.GLOBAL.DOC.GCS_MySQL_LINK
+      return this.userFeature.APP_AVAILABILITY_LEVEL
         ? this.localeAppInfo.availabilityLevel === 'premium' && !this.isAwareOfRisk
         : false;
     },
@@ -456,7 +457,7 @@ export default {
           key: 'availability',
           label: '可用性保障登记',
           value: this.tierMap[extra_info?.availability_level],
-          visible: true,
+          visible: this.userFeature.APP_AVAILABILITY_LEVEL,
         },
         {
           key: 'created',

@@ -67,7 +67,7 @@
                   {{ row.display_name || '--' }}
                 </p>
                 <bk-popover
-                  v-if="row.name === 'gcs_mysql'"
+                  v-if="hasGcsMysqlAlert(row.name)"
                   placement="top"
                   width="220"
                 >
@@ -395,6 +395,7 @@ import SharedDialog from './comps/shared-dialog';
 import RecycleSideslider from '../../services/comps/recycle-sideslider.vue';
 import { marked } from 'marked';
 import { paginationFun } from '@/common/utils';
+import { mapState } from 'vuex';
 
 export default {
   components: {
@@ -457,11 +458,9 @@ export default {
     };
   },
   computed: {
+    ...mapState(['curAppCode', 'userFeature']),
     appCode() {
       return this.$route.params.id;
-    },
-    curAppCode() {
-      return this.$store.state.curAppCode;
     },
     region() {
       return this.curAppInfo.application.region;
@@ -867,6 +866,14 @@ export default {
       } finally {
         this.$refs.recycleSideslider?.toggleLoading(false);
       }
+    },
+    // 是否展示GcsMysql警告提示
+    hasGcsMysqlAlert(name) {
+      return (
+        name === 'gcs_mysql' &&
+        this.userFeature.APP_AVAILABILITY_LEVEL &&
+        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+      );
     },
   },
 };

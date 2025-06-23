@@ -54,7 +54,7 @@
 
           <template v-else>
             <bk-alert
-              v-if="serviceDetail.name === 'gcs_mysql'"
+              v-if="isGcsMysqlAlert"
               style="margin-bottom: 16px"
               type="warning"
               :show-icon="false"
@@ -361,6 +361,7 @@ import appTopBar from '@/components/paas-app-bar';
 import usageGuide from '@/components/usage-guide';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 import $ from 'jquery';
+import { mapState } from 'vuex';
 
 export default {
   components: {
@@ -404,6 +405,7 @@ export default {
     };
   },
   computed: {
+    ...mapState(['localLanguage', 'userFeature']),
     compiledMarkdown() {
       this.$nextTick(() => {
         $('#markdown')
@@ -425,9 +427,6 @@ export default {
     isLoading() {
       return this.requestQueue.length > 0;
     },
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
     isSmartApp() {
       return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
     },
@@ -444,6 +443,13 @@ export default {
     },
     isSamePlan() {
       return this.servicePlans.prod?.name === this.servicePlans.stag?.name;
+    },
+    isGcsMysqlAlert() {
+      return (
+        this.serviceDetail.name === 'gcs_mysql' &&
+        this.userFeature.APP_AVAILABILITY_LEVEL &&
+        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+      );
     },
   },
   watch: {

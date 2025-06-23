@@ -525,7 +525,7 @@ export default {
     height: calc(100vh - 100px) !important;
   }
   /deep/ .bk-sideslider-footer {
-    padding-left: 190px;
+    padding-left: 24px;
     border-top: 1px solid #dcdee5 !important;
     background-color: #dcdee5;
   }

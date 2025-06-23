@@ -2,7 +2,7 @@
   <div class="repository-config-container p-24">
     <bk-alert
       type="warning"
-      :title="$t('修改代码库配置，需要重启 apiserver-web、apiserver-worker进程才有效。 ')"
+      :title="$t('代码库配置变更后，需重启 apiserver 所有进程才会生效。')"
     ></bk-alert>
     <div class="top-box mt-16">
       <bk-button
@@ -87,36 +87,42 @@
     />
 
     <!-- 删除代码仓库配置 -->
-    <bk-dialog
-      v-model="deleteDialogConfig.visible"
-      width="480"
-      theme="primary"
-      :mask-close="false"
-      :auto-close="false"
-      header-position="left"
-      :title="$t('确认删除该代码库配置？')"
-      :ok-text="$t('删除')"
+    <DeleteDialog
+      :show.sync="deleteDialogConfig.visible"
+      :title="$t('确认删除代码库配置')"
+      :expected-confirm-text="deleteDialogConfig.row.name"
       :loading="deleteDialogConfig.loading"
       @confirm="deleteRepositoryConfig"
     >
-      <div class="f12">
-        {{ `${$t('服务名称')}：` }}
-        <span style="color: #313238">{{ deleteDialogConfig.row.name }}</span>
+      <div class="hint-text">
+        <p>{{ $t('删除后，应用将无法使用此类型的代码库，已使用该代码库的应用也无法部署。') }}</p>
+        <span>{{ $t('请输入要删除的代码库的服务名称') }}</span>
+        <span>
+          （
+          <span class="sign">{{ deleteDialogConfig.row.name }}</span>
+          <i
+            class="paasng-icon paasng-general-copy"
+            v-copy="deleteDialogConfig.row.name"
+          />
+          ）
+        </span>
+        {{ $t('进行确认') }}
       </div>
-      <p class="f12 mt-4">{{ $t('删除后，应用将不能再使用这种类型的代码仓库。') }}</p>
-    </bk-dialog>
+    </DeleteDialog>
   </div>
 </template>
 
 <script>
 import RepositorySideslider from './repository-sideslider.vue';
 import DetailSideslider from './detail-sideslider.vue';
+import DeleteDialog from '@/components/delete-dialog';
 
 export default {
   name: 'RepositoryConfig',
   components: {
     RepositorySideslider,
     DetailSideslider,
+    DeleteDialog,
   },
   data() {
     return {
@@ -139,10 +145,6 @@ export default {
           label: '是否默认开放',
           prop: 'enabled',
           'render-header': this.renderHeader,
-        },
-        {
-          label: 'ClientID',
-          prop: 'client_id',
         },
       ],
       repositorySideConfig: {

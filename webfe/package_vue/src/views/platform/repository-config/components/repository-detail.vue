@@ -101,7 +101,11 @@ export default {
     padding: 8px;
     background: #f5f7fa;
     border-radius: 2px;
-    overflow: auto;
+    .paas-vue-json-pretty-cls {
+      /deep/ .vjs-value {
+        white-space: pre-wrap !important;
+      }
+    }
   }
 }
 </style>

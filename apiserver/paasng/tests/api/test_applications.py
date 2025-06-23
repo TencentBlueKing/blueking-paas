@@ -456,7 +456,6 @@ class TestApplicationUpdate:
         )
         app = Application.objects.get(pk=bk_app.pk)
         assert response.status_code == 200
-        print(response.json())
         assert app.name == random_name
         assert app.extra_info.availability_level is None
         assert app.extra_info.tag == tag

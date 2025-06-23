@@ -837,17 +837,20 @@ export default {
         limit: this.pagination.limit,
         // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
         exclude_collaborated: this.appFilter.excludeCollaborated,
+        // 是否是活跃应用
+        is_active: undefined,
         // 对应类型
         type: this.curAppType,
       });
 
-      // 根据状态筛选条件添加 is_active 参数
-      if (this.tableHeaderFilterValue === 'normal') {
+      // 全部: 不传参数 / 正常: true / 下架: false
+      if (this.tableHeaderFilterValue === 'all') {
+        delete params.is_active;
+      } else if (this.tableHeaderFilterValue === 'normal') {
         params.is_active = true;
       } else if (this.tableHeaderFilterValue === 'archive') {
         params.is_active = false;
-      }
-      // 当 tableHeaderFilterValue === 'all' 时, 不添加 is_active 参数
+      } 
 
       this.isLoading = true;
       for (const key in params) {

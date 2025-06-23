@@ -23,7 +23,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.platform.templates.command import EnhancedTemplateCommand
-from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.constants import RenderMethod, TemplateType
 from paasng.platform.templates.exceptions import TmplNotExists
 from paasng.platform.templates.fixtures import ProcfileFixture
 from paasng.platform.templates.models import Template
@@ -54,8 +54,12 @@ class Templater:
             tmpl: Template = Template.objects.get(name=tmpl_name, type=type)
         except ObjectDoesNotExist:
             raise TmplNotExists(f"Template <{tmpl_name}>, Type <{type}> does not exists")
+
         self.tmpl = tmpl
-        self.command = EnhancedTemplateCommand(force_executable_files=DEFAULT_EXECUTABLE_FILES)
+        self.command = EnhancedTemplateCommand(
+            render_method=RenderMethod(tmpl.render_method),
+            force_executable_files=DEFAULT_EXECUTABLE_FILES,
+        )
         self.region = region
 
         # 渲染模板用的配置上下文
@@ -91,7 +95,7 @@ class Templater:
     def write_to_dir(self, target_path: Path):
         """Write the rendered templated source codes into one directory"""
         path = self.download_tmpl()
-        self.command.handle(str(target_path), template=str(path), **self.context)
+        self.command.handle(str(target_path), template=str(path), context=self.context)
 
         # Write procfile
         if self.tmpl.processes:

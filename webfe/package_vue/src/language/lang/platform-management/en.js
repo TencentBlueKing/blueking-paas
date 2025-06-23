@@ -330,4 +330,8 @@ export default {
   '当前应用所属租户为 {b}，您的租户为 {a}。暂不支持跨租户添加应用成员。': 'The current app belongs to tenant {b}, while your tenant is {a}. Adding app members across tenants is not supported.',
   '应用所属租户为：{a}，您不是该租户下的用户，无法添加为管理员': 'The app belongs to tenant {a}, and you are not a user under this tenant, so you cannot be added as an administrator.',
   '插件所属租户为：{a}，您不是该租户下的用户，无法添加为管理员': 'The plugin belongs to tenant {a}, and you are not a user under this tenant, so you cannot be added as an administrator.',
+  添加内置环境变量: 'Add Built-in Env Variable',
+  编辑内置环境变量: 'Edit Built-in Env Variable',
+  '此处定义的环境变量会覆盖系统内置的环境变量。环境变量优先级（由高到低）：平台管理自定义的内置环境变量 > 系统内置环境变量 > 单个应用中自定义环境变量': 'The env variables defined here will override system built-in env variables. Env variable priority (from high to low): Platform-managed custom built-in env variables > System built-in env variables > Custom env variables in individual applications',
+  '确认删除该内置环境变量？': 'Confirm delete of this built-in env variable?',
 };

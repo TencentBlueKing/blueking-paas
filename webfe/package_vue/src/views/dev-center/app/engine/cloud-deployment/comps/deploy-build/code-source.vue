@@ -700,7 +700,7 @@ export default {
           }
           this.$paasMessage({
             theme: 'success',
-            message: this.$t('切换源码仓库成功'),
+            message: this.$t('修改源码信息成功'),
           });
         }
         await this.fetchModuleInfo();

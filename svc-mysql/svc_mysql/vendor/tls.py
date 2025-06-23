@@ -60,8 +60,10 @@ class TLSCertificateManager:
         """Get Django SSL options"""
         # 重新构造以避免修改原始配置
         opts = {k: v for k, v in self.tmp_cert_filepaths.items() if k in ["ca", "cert", "key"]}
-        # 允许关闭主机名检查，因为证书可能不是由权威机构颁发的
-        opts["check_hostname"] = self.tls_cfg.get("check_hostname", False)
+        # 允许关闭主机名检查，因为证书可能不是由权威机构颁发的（仅当有任意证书时需要）
+        if opts:
+            opts["check_hostname"] = self.tls_cfg.get("check_hostname", False)
+
         return opts
 
     @staticmethod

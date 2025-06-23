@@ -431,6 +431,7 @@ class TestApplicationUpdate:
         # 描述文件定义的应用可以更新名称
         assert Application.objects.get(pk=app.pk).name == random_name
 
+    @pytest.mark.usefixtures("_register_app_core_data")
     def test_invalid_availability_level(self, api_client, bk_app, bk_user, random_name):
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app.code),
@@ -449,12 +450,13 @@ class TestApplicationUpdate:
         assert response.json()["code"] == "VALIDATION_ERROR"
         assert "tag_id: 该字段是必填项" in response.json()["detail"]
 
-    def test_no_availability_level(self, api_client, bk_app, bk_user, random_name, tag):
+    @pytest.mark.usefixtures("_register_app_core_data")
+    def test_no_availability_level(self, api_client, bk_app_full, bk_user, random_name, tag):
         response = api_client.put(
-            "/api/bkapps/applications/{}/".format(bk_app.code),
+            "/api/bkapps/applications/{}/".format(bk_app_full.code),
             data={"name": random_name, "tag_id": tag.id},
         )
-        app = Application.objects.get(pk=bk_app.pk)
+        app = Application.objects.get(pk=bk_app_full.pk)
         assert response.status_code == 200
         assert app.name == random_name
         assert app.extra_info.availability_level is None

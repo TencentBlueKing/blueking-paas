@@ -479,7 +479,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             tenant_id=application.tenant_id,
             defaults={
                 "tag_id": data["tag_id"],
-                "availability_level": data["availability_level"],
+                "availability_level": data.get("availability_level"),
             },
         )
         Product.objects.filter(code=code).update(name_zh_cn=application.name, name_en=application.name_en)

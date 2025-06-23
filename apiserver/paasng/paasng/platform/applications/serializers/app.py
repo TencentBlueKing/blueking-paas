@@ -111,7 +111,11 @@ class UpdateApplicationNameSLZ(serializers.Serializer):
 class UpdateApplicationSLZ(UpdateApplicationNameSLZ):
     """Serializer for update application"""
 
-    availability_level = serializers.ChoiceField(choices=AvailabilityLevel.get_choices(), help_text="可用性保障等级")
+    availability_level = serializers.ChoiceField(
+        choices=AvailabilityLevel.get_choices(),
+        help_text="可用性保障等级",
+        required=False,
+    )
     tag_id = serializers.IntegerField(help_text="应用标签 ID")
 
 

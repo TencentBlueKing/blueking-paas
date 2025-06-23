@@ -449,6 +449,18 @@ class TestApplicationUpdate:
         assert response.json()["code"] == "VALIDATION_ERROR"
         assert "tag_id: 该字段是必填项" in response.json()["detail"]
 
+    def test_no_availability_level(self, api_client, bk_app, bk_user, random_name, tag):
+        response = api_client.put(
+            "/api/bkapps/applications/{}/".format(bk_app.code),
+            data={"name": random_name, "tag_id": tag.id},
+        )
+        app = Application.objects.get(pk=bk_app.pk)
+        assert response.status_code == 200
+        print(response.json())
+        assert app.name == random_name
+        assert app.extra_info.availability_level is None
+        assert app.extra_info.tag == tag
+
 
 class TestApplicationDeletion:
     """Test delete application API"""

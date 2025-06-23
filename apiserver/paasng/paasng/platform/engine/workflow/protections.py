@@ -163,7 +163,7 @@ class ApplicationExtraInfoCondition(DeployCondition):
         except ObjectDoesNotExist:
             raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
-        if not extra_info.tag or not extra_info.availability_level:
+        if not extra_info.tag:
             raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
 

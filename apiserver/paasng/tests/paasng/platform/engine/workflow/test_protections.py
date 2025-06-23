@@ -180,7 +180,7 @@ class TestAppExtraInfoCondition:
         [
             (False, False, False, False),
             (False, True, False, False),
-            (False, False, True, False),
+            (True, False, True, True),
             (True, True, True, True),
         ],
     )
@@ -190,15 +190,16 @@ class TestAppExtraInfoCondition:
 
         if create_extra_info:
             extra_info = G(ApplicationExtraInfo, application=application)
-
             if set_availability_level:
                 extra_info.availability_level = AvailabilityLevel.STANDARD.value
                 extra_info.save(update_fields=["availability_level"])
+                extra_info.refresh_from_db()
 
             if set_tag:
                 tag = G(Tag, name="sample-tag-1")
                 extra_info.tag = tag
                 extra_info.save(update_fields=["tag"])
+                extra_info.refresh_from_db()
 
         if ok:
             ApplicationExtraInfoCondition(bk_user, env).validate()

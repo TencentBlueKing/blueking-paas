@@ -102,7 +102,7 @@ class TemplateRenderer:
             self.template.repo_type, self.template.repo_url
         )
 
-        dest_dir = Path(tempfile.mktemp())
+        dest_dir = Path(tempfile.mkdtemp())
         repo_controller.download_directory(self.template.get_source_dir(), dest_dir)
         return dest_dir
 

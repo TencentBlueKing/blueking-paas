@@ -84,7 +84,7 @@
               </bk-popover>
               <div
                 :class="['filter-right-icon', { active: filterActive }]"
-                v-bk-tooltips="{ content: filterTips }"
+                v-bk-tooltips="{ content: $t(filterTips) }"
                 @click.stop="handleTtogleOrder"
               >
                 <i :class="['paasng-icon', sortValue.indexOf('-') !== -1 ? 'paasng-shengxu' : 'paasng-jiangxu']" />

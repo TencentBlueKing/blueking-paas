@@ -46,6 +46,7 @@ from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCo
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.serializers.creation import SourceInitResultSLZ
 from paasng.platform.applications.signals import application_default_module_switch
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
@@ -64,7 +65,7 @@ from paasng.platform.modules.helpers import (
     get_image_labels_by_module,
     update_build_config_with_method,
 )
-from paasng.platform.modules.manager import ModuleCleaner, init_module_in_view
+from paasng.platform.modules.manager import ModuleCleaner, create_new_repo, delete_repo_on_error, init_module_in_view
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
@@ -153,7 +154,10 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
         return Response(
-            data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},
+            data={
+                "module": ModuleSLZ(module).data,
+                "source_init_result": SourceInitResultSLZ(ret.source_init_result).data,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -306,19 +310,32 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             tenant_id=application.tenant_id,
         )
 
-        ret = init_module_in_view(
-            module,
-            repo_type=source_config.get("source_control_type"),
-            repo_url=source_config.get("source_repo_url"),
-            repo_auth_info=source_config.get("source_repo_auth_info"),
-            source_dir=source_config.get("source_dir", ""),
-            # 新模块集群配置复用默认模块的
-            env_cluster_names=get_app_cluster_names(application),
-            bkapp_spec=data["bkapp_spec"],
-        )
+        repo_type = source_config.get("source_control_type")
+        repo_url = source_config.get("source_repo_url")
+        # 由平台创建代码仓库
+        auto_repo_url = None
+        if source_config.get("auto_create_repo"):
+            auto_repo_url = create_new_repo(module, repo_type, username=request.user.username)
+            repo_url = auto_repo_url
+
+        with delete_repo_on_error(repo_type, auto_repo_url):
+            ret = init_module_in_view(
+                module,
+                repo_type=repo_type,
+                repo_url=repo_url,
+                repo_auth_info=source_config.get("source_repo_auth_info"),
+                source_dir=source_config.get("source_dir", ""),
+                # 新模块集群配置复用默认模块的
+                env_cluster_names=get_app_cluster_names(application),
+                bkapp_spec=data["bkapp_spec"],
+                write_template_to_repo=source_config.get("write_template_to_repo"),
+            )
 
         return Response(
-            data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},
+            data={
+                "module": ModuleSLZ(module).data,
+                "source_init_result": SourceInitResultSLZ(ret.source_init_result).data,
+            },
             status=status.HTTP_201_CREATED,
         )
 

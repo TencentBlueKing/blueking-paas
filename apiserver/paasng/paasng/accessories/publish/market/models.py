@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
@@ -103,6 +104,12 @@ class ProductManager(WithOwnerManager):
             },
         )
         if created:
+            # 创建标签
+            ApplicationExtraInfo.objects.update_or_create(
+                application=application,
+                tenant_id=application.tenant_id,
+                defaults={"tag": Tag.objects.get_default_tag()},
+            )
             DisplayOptions.objects.create(product=product, tenant_id=application.tenant_id)
         return product
 
@@ -143,6 +150,7 @@ class Product(OwnerTimestampedModel):
     )
     introduction = TranslatedFieldWithFallback(models.TextField("应用简介", help_text="应用简介"))
     description = TranslatedFieldWithFallback(models.TextField("应用描述", help_text="应用描述", default=""))
+    # 该字段已废弃，应用 tag 信息将由 ApplicationExtraInfo 模型提供
     tag = models.ForeignKey(
         Tag,
         verbose_name="app分类",
@@ -171,6 +179,14 @@ class Product(OwnerTimestampedModel):
         # Read logo from application
         # TODO: Remove logo entirely from Product
         return self.application.get_logo_url()
+
+    def get_tag(self):
+        """获取应用的分类"""
+        try:
+            extra_info = self.application.extra_info
+        except ObjectDoesNotExist:
+            return None
+        return extra_info.tag
 
     def transform_visiable_labels(self):
         """可见范围转为蓝鲸桌面中存储的格式
@@ -326,3 +342,29 @@ except ImportError:
 
     def get_all_corp_products() -> List[CorpProduct]:
         return DEFAULT_CORP_PRODUCTS
+
+
+class ApplicationExtraInfo(models.Model):
+    """应用额外信息"""
+
+    application = models.OneToOneField(
+        Application,
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        related_name="extra_info",
+    )
+    # 枚举值 -> AvailabilityLevel
+    availability_level = models.CharField(
+        verbose_name="可用性保障等级", max_length=32, null=True, blank=True, default=None
+    )
+    tag = models.ForeignKey(
+        Tag,
+        verbose_name="app分类",
+        blank=True,
+        null=True,
+        default=None,
+        on_delete=models.SET_NULL,
+        help_text="按用途分类",
+    )
+
+    tenant_id = tenant_id_field_factory()

@@ -228,7 +228,7 @@
       :loading="deleteDialogConfig.isLoading"
       @confirm="unassignServiceInstance"
     >
-      <div>
+      <div class="hint-text">
         {{
           $t('确认删除 {m} 模块的{e} {n} 增强服务实例', {
             m: deleteDialogConfig.row?.moduleName,
@@ -237,7 +237,7 @@
           })
         }}
       </div>
-      <div class="mt8">
+      <div class="mt8 hint-text">
         <span>{{ $t('该操作不可撤销，请输入应用 ID') }}</span>
         <span>
           （

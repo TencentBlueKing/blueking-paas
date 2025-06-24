@@ -74,7 +74,7 @@
                 >
                   <bk-select
                     v-model="localeAppInfo.tagId"
-                    :clearable="false"
+                    :clearable="true"
                     :popover-min-width="200"
                     :searchable="true"
                   >
@@ -86,7 +86,7 @@
                     />
                   </bk-select>
                   <bk-button
-                    v-if="testTagId"
+                    v-if="testTagId && !localeAppInfo.tagId"
                     class="p0 mt5"
                     slot="tip"
                     :text="true"
@@ -183,15 +183,24 @@
                   </div>
                 </bk-form-item>
                 <bk-form-item class="mt20 base-info-form-btn">
-                  <bk-button
-                    ext-cls="mr8"
-                    theme="primary"
-                    :loading="appBaseInfoConfig.isLoading"
-                    :disabled="isSubmitDisabled"
-                    @click.stop="handleSubmitBaseInfo"
+                  <span
+                    style="display: inline-block"
+                    v-bk-tooltips="{
+                      content: $t('请点勾选 “我已知晓风险”'),
+                      disabled: !isSubmitDisabled,
+                      placement: 'bottom',
+                    }"
                   >
-                    {{ $t('提交') }}
-                  </bk-button>
+                    <bk-button
+                      ext-cls="mr8"
+                      theme="primary"
+                      :loading="appBaseInfoConfig.isLoading"
+                      :disabled="isSubmitDisabled"
+                      @click.stop="handleSubmitBaseInfo"
+                    >
+                      {{ $t('提交') }}
+                    </bk-button>
+                  </span>
                   <bk-button
                     theme="default"
                     @click="handlerBaseInfoCancel"
@@ -439,11 +448,13 @@ export default {
                 key: 'tenant-mode',
                 label: '租户模式',
                 value: this.$t(this.appTenantMode[this.applicationDetail.app_tenant_mode]),
+                visible: true,
               },
               {
                 key: 'tenant-id',
                 label: '租户 ID',
                 value: this.applicationDetail.app_tenant_id,
+                visible: true,
               },
             ]
           : []),
@@ -457,7 +468,7 @@ export default {
           key: 'availability',
           label: '可用性保障登记',
           value: this.tierMap[extra_info?.availability_level],
-          visible: this.userFeature.APP_AVAILABILITY_LEVEL,
+          visible: !!this.userFeature.APP_AVAILABILITY_LEVEL,
         },
         {
           key: 'created',
@@ -465,7 +476,7 @@ export default {
           value: this.applicationDetail.created,
           visible: true,
         },
-      ].filter((item) => item.visible !== false);
+      ].filter((item) => item.visible);
     },
   },
   mounted() {
@@ -989,8 +1000,8 @@ export default {
     .logo-wrapper {
       flex-shrink: 0;
       margin-right: 78px;
-      width: 96px;
-      height: 96px;
+      width: 104px;
+      height: 104px;
       img {
         width: 100%;
         height: 100%;
@@ -1033,7 +1044,8 @@ export default {
           padding-top: 0px;
           .picture-btn {
             background: #fafbfd;
-            .pic-item {
+            .pic-item,
+            .mask {
               width: 104px;
               height: 104px;
             }

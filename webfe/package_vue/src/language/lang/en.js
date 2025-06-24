@@ -3035,12 +3035,13 @@ export default {
   '为确保应用能够正常构建，代码仓库文件请参考以下结构': 'To ensure the application can be built correctly, please refer to the following file structure for the code repository',
   基础: 'Basic',
   高级别: 'Advanced Level',
-  可用性保障登记: 'Availability Assurance Registration',
+  可用性保障登记: 'Availability Registration',
   申请独立的数据库指引: 'Guidance for Applying for an Independent Database',
   '为其他 SaaS 或业务提供平台级服务，需要更高的可用性保障。': 'Providing platform-level services for other SaaS or businesses requires higher availability assurance.',
   '平台提供的 GCS-MySQL 数据库为共享实例，无法支持高级别的可用性。请参考文档申请独立的数据库实例。': 'The GCS-MySQL database provided by the platform is a shared instance and cannot support advanced level availability. Please refer to the documentation to apply for an independent database instance.',
   '快速标记为 “测试” 分类': 'Quickly tag as "Test" category',
   '支持 jpg、png 等图片格式': 'Supports image formats like jpg and png',
   '图片尺寸为 72 * 72px': 'Image dimensions are 72 * 72px',
-  '不大于 2MB': 'No larger than 2MB'
+  '不大于 2MB': 'No larger than 2MB',
+  '请点勾选 “我已知晓风险”': 'Please check "I am aware of the risks"',
 };

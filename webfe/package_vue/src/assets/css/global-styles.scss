@@ -15,3 +15,48 @@
   cursor: default;
 }
 /* tag 样式 end */
+
+/* 常用间距工具类 start */
+$spacing-values: 4, 6, 8, 12, 16, 20, 24;
+@each $size in $spacing-values {
+  /* ===== Margins ===== */
+  // 单向
+  .mt-#{$size} {
+    margin-top: #{$size}px !important;
+  }
+  .mb-#{$size} {
+    margin-bottom: #{$size}px !important;
+  }
+  .ml-#{$size} {
+    margin-left: #{$size}px !important;
+  }
+  .mr-#{$size} {
+    margin-right: #{$size}px !important;
+  }
+
+  // 全向
+  .m-#{$size} {
+    margin: #{$size}px !important;
+  }
+
+  /* ===== Paddings ===== */
+  // 单向
+  .pt-#{$size} {
+    padding-top: #{$size}px !important;
+  }
+  .pb-#{$size} {
+    padding-bottom: #{$size}px !important;
+  }
+  .pl-#{$size} {
+    padding-left: #{$size}px !important;
+  }
+  .pr-#{$size} {
+    padding-right: #{$size}px !important;
+  }
+
+  // 全向
+  .p-#{$size} {
+    padding: #{$size}px !important;
+  }
+}
+/* 常用间距工具类 end */

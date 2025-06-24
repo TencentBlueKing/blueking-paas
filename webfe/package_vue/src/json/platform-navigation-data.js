@@ -67,6 +67,17 @@ export default [
   },
   {
     groupId: 'config',
+    name: 'repositoryConfig',
+    label: i18n.t('代码库配置'),
+    iconfontName: 'daimakupeizhi',
+    matchRouters: ['repositoryConfig'],
+    destRoute: {
+      name: 'repositoryConfig',
+    },
+    sublist: [],
+  },
+  {
+    groupId: 'config',
     name: 'builtInEnvVariable',
     label: i18n.t('内置环境变量'),
     iconfontName: 'variable',

@@ -43,7 +43,7 @@
             ref="chart"
             :options="chartOption"
             auto-resize
-            style="width: 100%; height: 320px;"
+            style="width: 100%; height: 320px"
           />
         </div>
         <!-- 无数据统计模块 -->
@@ -61,7 +61,7 @@
             ref="notModuleChart"
             :options="notEnginelessOption"
             auto-resize
-            style="width: 100%; height: 420px;"
+            style="width: 100%; height: 420px"
           />
           <div
             v-else
@@ -73,12 +73,10 @@
       </div>
       <!-- right -->
       <div
-        class="overview-sub-fright"
+        class="overview-sub-fright card-style"
         data-test-id="summary_content_detail"
       >
-        <dynamic-state
-          :operations-list="operationsList"
-        />
+        <dynamic-state :operations-list="operationsList" />
       </div>
     </paas-content-loader>
     <render-sideslider
@@ -102,7 +100,6 @@ import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import moment from 'moment';
 import { formatDate } from '@/common/tools';
-import i18n from '@/language/i18n.js';
 export default {
   components: {
     overviewTopInfo,
@@ -124,8 +121,8 @@ export default {
       isChartLoading: false,
       operationsList: [],
       topInfo: {
-        type: i18n.t('外链应用'),
-        description: i18n.t('平台为该类应用提供云 API 权限、应用市场等功能'),
+        type: this.$t('外链应用'),
+        description: this.$t('平台为该类应用提供云 API 权限、应用市场等功能'),
       },
       chartOption: chartOption.pv_uv,
       notEnginelessOption: notEnginelessChartOption.config,
@@ -136,7 +133,6 @@ export default {
       },
       siteName: 'default',
       chartDataCache: [],
-      curEnv: 'stag',
       defaultRange: '1d',
       isShowSideslider: false,
       shortcuts: [
@@ -189,33 +185,25 @@ export default {
   },
   computed: {
     dateFormat() {
-      let isInDay = false; // 是否在一天内
-      if (this.dateRange.startTime && this.dateRange.endTime) {
-        const start = this.dateRange.startTime;
-        const end = this.dateRange.endTime;
-
-        const endSeconds = moment(end).valueOf();
-        const oneEndSeconds = moment(start).add(1, 'days')
-          .valueOf(); // 一天后
-        if (oneEndSeconds > endSeconds) {
-          isInDay = true;
-        }
+      if (!this.dateRange.startTime || !this.dateRange.endTime) {
+        return 'MM-DD'; // 返回一个默认格式
       }
+      const start = this.dateRange.startTime;
+      const end = this.dateRange.endTime;
 
-      if (this.defaultRange === '1d') {
-        return 'MM-DD';
-      } if (this.defaultRange === '1h') {
-        if (isInDay) {
-          return 'HH:mm';
-        }
-        return 'MM-DD HH:mm';
-      } if (this.defaultRange === '5m') {
-        if (isInDay) {
-          return 'HH:mm';
-        }
-        return 'MM-DD HH:mm';
+      const endSeconds = moment(end).valueOf();
+      const oneEndSeconds = moment(start).add(1, 'days').valueOf();
+      const isInDay = oneEndSeconds > endSeconds;
+
+      switch (this.defaultRange) {
+        case '1d':
+          return 'MM-DD';
+        case '1h':
+        case '5m':
+          return isInDay ? 'HH:mm' : 'MM-DD HH:mm';
+        default:
+          return 'MM-DD';
       }
-      return 'MM-DD';
     },
     chartData() {
       const data = this.$store.state.log.chartData;
@@ -234,9 +222,12 @@ export default {
     siteDisplayName() {
       return this.analysisConfig ? this.analysisConfig.site.name : '';
     },
+    isOperador() {
+      return this.curAppInfo.role?.name === 'operator';
+    },
   },
   watch: {
-    '$route'() {
+    $route() {
       if (this.curFeatureAnalytics) {
         this.refresh();
         this.getAnalysisConfig();
@@ -278,21 +269,22 @@ export default {
     },
     // 获取最新动态
     getModuleOperations() {
-      this.$http.get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/audit/records/?limit=6`).then((response) => {
-        this.operationsList = [];
-        for (const item of response.results) {
-          item.at_friendly = moment(item.at).startOf('minute')
-            .fromNow();
-          this.operationsList.push(item);
-        }
-      });
+      this.$http
+        .get(`${BACKEND_URL}/api/bkapps/applications/${this.appCode}/audit/records/?limit=6`)
+        .then((response) => {
+          this.operationsList = [];
+          for (const item of response.results) {
+            item.at_friendly = moment(item.at).startOf('minute').fromNow();
+            this.operationsList.push(item);
+          }
+        });
     },
     /**
-             * 图表初始化
-             * @param  {Object} chartData 数据
-             * @param  {String} type 类型
-             * @param  {Object} ref 图表对象
-             */
+     * 图表初始化
+     * @param  {Object} chartData 数据
+     * @param  {String} type 类型
+     * @param  {Object} ref 图表对象
+     */
     renderChart() {
       const series = [];
       const xAxisData = [];
@@ -437,31 +429,29 @@ export default {
         startTime: date[0],
         endTime: date[1],
       };
-      this.curTime = this.shortcuts.find(t => t.id === id) || {};
+      this.curTime = this.shortcuts.find((t) => t.id === id) || {};
     },
 
     /**
-             * 显示实例指标数据
-             */
+     * 显示实例指标数据
+     */
     showInstanceChart(instance, processes) {
       const chartRef = this.$refs.chart;
 
-      chartRef && chartRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [],
-      });
+      if (chartRef) {
+        chartRef.mergeOptions({
+          xAxis: [{ data: [] }],
+          series: [],
+        });
 
-      // loading
-      chartRef && chartRef.showLoading({
-        text: this.$t('正在加载'),
-        color: '#30d878',
-        textColor: '#fff',
-        maskColor: 'rgba(255, 255, 255, 0.8)',
-      });
+        // loading
+        chartRef.showLoading({
+          text: this.$t('正在加载'),
+          color: '#30d878',
+          textColor: '#fff',
+          maskColor: 'rgba(255, 255, 255, 0.8)',
+        });
+      }
 
       this.getChartData();
     },
@@ -490,31 +480,29 @@ export default {
     },
 
     /**
-             * 清空图表数据
-             */
+     * 清空图表数据
+     */
     clearChart() {
       const chartRef = this.$refs.chart;
 
-      chartRef && chartRef.mergeOptions({
-        xAxis: [
-          {
-            data: [],
-          },
-        ],
-        series: [
-          {
-            name: '',
-            type: 'line',
-            smooth: true,
-            areaStyle: {
-              normal: {
-                opacity: 0,
+      if (chartRef) {
+        chartRef.mergeOptions({
+          xAxis: [{ data: [] }],
+          series: [
+            {
+              name: '',
+              type: 'line',
+              smooth: true,
+              areaStyle: {
+                normal: {
+                  opacity: 0,
+                },
               },
+              data: [0],
             },
-            data: [0],
-          },
-        ],
-      });
+          ],
+        });
+      }
     },
 
     // 获取网关API
@@ -523,6 +511,10 @@ export default {
       if (!this.curFeatureAnalytics) {
         this.clearHistogramData();
         this.openHistogramLoading();
+      }
+      // 外链应用&当前角色为运营者无需请求
+      if (this.isOperador) {
+        return;
       }
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, { appCode: this.appCode });
@@ -545,12 +537,14 @@ export default {
     openHistogramLoading() {
       this.$nextTick(() => {
         const chartRef = this.$refs.notModuleChart;
-        chartRef && chartRef.showLoading({
-          text: this.$t('正在加载'),
-          color: '#30d878',
-          textColor: '#fff',
-          maskColor: 'rgba(255, 255, 255, 0.8)',
-        });
+        if (chartRef) {
+          chartRef.showLoading({
+            text: this.$t('正在加载'),
+            color: '#30d878',
+            textColor: '#fff',
+            maskColor: 'rgba(255, 255, 255, 0.8)',
+          });
+        }
       });
     },
 
@@ -618,434 +612,433 @@ export default {
 </script>
 
 <style scoped lang="scss">
-    .chart-wrapper,
-    .not-stats-module {
-        background: #FFFFFF;
-        border: 1px solid #DCDEE5;
-        border-radius: 2px;
-        padding: 16px 16px 42px;
+.chart-wrapper,
+.not-stats-module {
+  background: #ffffff;
+  border: 1px solid #dcdee5;
+  border-radius: 2px;
+  padding: 16px 16px 42px;
 
-        .desc {
-            font-size: 14px;
-            font-weight: bold;
-            color: #313238;
-        }
-        .info-button {
-            font-size: 12px;
-            font-weight: normal;
-        }
+  .desc {
+    font-size: 14px;
+    font-weight: bold;
+    color: #313238;
+  }
+  .info-button {
+    font-size: 12px;
+    font-weight: normal;
+  }
+}
+
+.middle h3 span.text {
+  font-size: 12px;
+  color: #999;
+  padding: 0 5px;
+  font-weight: normal;
+}
+
+.overview-middle {
+  // max-width: 1180px;
+  display: flex;
+  .summary-wrapper,
+  .coding {
+    flex: 1;
+  }
+
+  .header-warp {
+    display: flex;
+    .paasng-down-shape {
+      float: left !important;
+      line-height: 45px !important;
+      color: #63656e !important;
     }
-
-    .middle h3 span.text {
-        font-size: 12px;
-        color: #999;
-        padding: 0 5px;
-        font-weight: normal
+    .header-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #313238;
     }
+    .header-env {
+      font-size: 12px;
+      color: #979ba5;
+    }
+  }
 
-    .overview-middle {
-        // max-width: 1180px;
+  .header-info {
+    display: flex;
+  }
+
+  .header-info:nth-of-type(2) {
+    margin-left: 40px;
+  }
+  .header-info:nth-of-type(3) {
+    margin-left: 140px;
+  }
+  .content-warp {
+    display: flex;
+    align-items: center;
+    .content-info {
+      padding: 12px 0px;
+      flex: 1;
+      .info-env {
         display: flex;
-        .summary-wrapper,
-        .coding {
-            flex: 1;
+        align-items: center;
+        .env-name {
+          color: #313238;
         }
-
-        .header-warp{
-            display: flex;
-            .paasng-down-shape{
-                float: left !important;
-                line-height: 45px !important;
-                color: #63656e !important;
-            }
-            .header-title{
-                font-weight: 700;
-                font-size: 14px;
-                color: #313238;
-            }
-            .header-env{
-                font-size: 12px;
-                color: #979BA5;
-            }
+        .env-status {
+          font-size: 12px;
+          color: #979ba5;
         }
-
-        .header-info {
-            display: flex;
-        }
-
-        .header-info:nth-of-type(2) {
-            margin-left: 40px;
-        }
-        .header-info:nth-of-type(3) {
-            margin-left: 140px;
-        }
-        .content-warp{
-            display: flex;
-            align-items: center;
-            .content-info{
-                padding: 12px 0px;
-                flex: 1;
-                .info-env {
-                    display: flex;
-                    align-items: center;
-                    .env-name{
-                        color: #313238;
-                    }
-                    .env-status{
-                        font-size: 12px;
-                        color: #979BA5;
-                    }
-                }
-            }
-            .content-info:nth-of-type(1) {
-                padding-right: 10px;
-                border-right: solid 1px #F5F7FA;
-            }
-            .content-info:nth-of-type(2) {
-                padding-left: 10px;
-            }
-            .empty-warp{
-                text-align: center;
-                height: 220px;
-                .empty-img{
-                    margin-top: 20px;
-                }
-                .empty-tips{
-                    font-size: 12px;
-                }
-            }
-        }
+      }
     }
-
-    .paasng-cog,
-    .paasng-down-shape,
-    .paasng-up-shape {
-        float: right;
-        line-height: 22px;
-        cursor: pointer;
-        position: relative;
-        color: #a4a6ae;
-        margin: 0 3px;
-        font-size: 12px;
+    .content-info:nth-of-type(1) {
+      padding-right: 10px;
+      border-right: solid 1px #f5f7fa;
     }
-
-    .checkout-code {
-        position: relative;
+    .content-info:nth-of-type(2) {
+      padding-left: 10px;
     }
-
-    .code-checkout {
-        width: 430px;
-    }
-
-    .code-checkout h2 {
-        background: #fafafa;
-        line-height: 40px;
-        padding: 0 20px;
-        height: 40px;
-        overflow: hidden;
-        color: #52525d;
-        font-size: 14px;
-        border-bottom: solid 1px #e5e5e5;
-    }
-
-    .paasng-icon.paasng-download:hover,
-    .paasng-icon.paasng-clipboard:hover {
-        color: #3A84FF
-    }
-
-    .paasng-angle-up,
-    .paasng-angle-down {
-        padding-left: 6px;
-        transition: all .5s;
-    }
-
-    .svn-input-container {
-        width: 100%;
-        display: table;
-        box-sizing: border-box;
-
-        input.svn-input {
-            display: table-cell;
-            float: left;
-            width: 100%;
-            height: 30px;
-            color: #7b7d8a;
-            font-size: 13px;
-            box-sizing: border-box;
-        }
-
-        div.svn-input-button-group {
-            display: table-cell;
-            width: 62px;
-            white-space: nowrap;
-            box-sizing: border-box;
-            position: relative;
-
-            a {
-                display: inline-block;
-                float: left;
-            }
-        }
-    }
-
-    .btn-source-more {
-        float: right;
-        margin-top: 12px;
-    }
-
-    a.btn-deploy-panel-action {
-        padding-left: 24px;
-        padding-right: 24px;
-        float: left;
-        margin: 16px 10px 16px 0
-    }
-
-    div.none-summary-controls a {
-        width: 216px;
-        box-sizing: border-box;
-        margin: 36px 8px 0;
-    }
-
-    a.btn-deploy-panel-action {
-        padding-left: 24px;
-        padding-right: 24px;
-        float: left;
-        margin: 16px 10px 16px 0
-    }
-
-    .dateSelector {
-        input {
-            color: #666;
-        }
-    }
-
-    .visited-charts {
-        display: none;
-        width: 638px;
-        height: 309px;
-        margin-bottom: 40px;
-        margin-top: 36px;
-        position: relative;
-        padding-top: 48px;
-    }
-
-    .visited-charts.active {
-        display: block;
-    }
-
-    .resource-charts {
-        display: flex;
-        position: relative;
-        padding-bottom: 20px;
-
-        .title {
-            font-size: 12px;
-            font-weight: normal;
-            margin-bottom: 5px;
-        }
-    }
-
-    .ps-btn-checkout-code {
-        width: 100%;
-        padding-left: 0;
-        padding-right: 0;
-    }
-
-    .checkout_center {
-        display: table;
-        margin: 0 auto;
-    }
-
-    .summary-content {
-        padding-top: 20px;
-        flex: 1;
-        .overview-warp{
-            display: flex;
-            padding: 25px 16px;
-            border: 1px solid #DCDEE5;
-            border-radius: 2px;
-            font-size: 12px;
-            .over-fs{
-                font-weight: 700;
-                font-size: 24px;
-                color: #313238;
-            }
-            .desc-text{
-                padding-top: 13px;
-            }
-            .info {
-                padding-right: 90px;
-                border-right: 1px solid #F5F7FA;
-                .type-desc{
-                    line-height: 20px;
-                }
-            }
-            .process{
-                padding-right: 48px;
-                border-right: 1px solid #F5F7FA;
-            }
-            .img-warp {
-                width: 48px;
-                height: 48px;
-                background: #F0F5FF;
-                border-radius: 4px;
-                text-align: center;
-                img{
-                    margin-top: 8px;
-                    width: 32px;
-                    height: 32px;
-                }
-            }
-        }
-    }
-
-    .coding {
-        text-align: center;
-        line-height: 36px;
-        color: #666;
-        padding: 58px 0;
-        flex: 1;
-    }
-
-    .coding h2 {
-        font-size: 22px;
-        color: #333;
-        line-height: 46px;
-    }
-
-    .middle-list li {
-        width: 100%;
-        line-height: 32px;
-        color: #666;
-        overflow: hidden;
-        border-bottom: solid 1px #e6e9ea;
-        padding-bottom: 24px;
-    }
-
-    .middle-list li.lilast {
-        border-bottom: none;
-    }
-
-    .middle-list li p {
-        padding-left: 25px;
-        position: relative;
-    }
-
-    .middle-list dl {
-        overflow: hidden;
-        margin-left: -25px;
-        position: relative;
-    }
-
-    .middle-list dd {
-        width: 320px;
-        float: left;
-        padding-left: 25px;
-        line-height: 32px;
-    }
-
-    .middle-list dt {
-        line-height: 32px;
-    }
-
-    .middle-list dl:after {
-        content: "";
-        position: absolute;
-        left: 50%;
-        margin-left: -26px;
-        top: 10px;
-        width: 1px;
-        height: 100px;
-        background: #e9edee;
-    }
-
-    .middle-list .green {
-        color: #5bd18b;
-        padding: 0 6px;
-    }
-
-    .middle-list .danger {
-        color: #ff7979;
-        padding: 0 6px;
-    }
-
-    .http-list-fleft {
-        display: inline-block;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        width: 400px;
-    }
-
-    .http-list-fright {
-        width: 234px;
-        text-align: right;
-    }
-
-    .middle-http-list li {
-        overflow: hidden;
-        height: 42px;
-        line-height: 42px;
-        background: #fff;
-        color: #666;
-        font-size: 12px;
-        padding: 0 10px;
-    }
-
-    .middle-http-list li:nth-child(2n-1) {
-        background: #fafafa;
-    }
-
-    .fright-middle {
-        padding: 0 0 24px 0;
-        line-height: 30px;
-        color: #666;
-        border-bottom: solid 1px #e6e9ea;
-    }
-
-    .fright-middle h3 {
-        padding-bottom: 8px;
-    }
-
-    .svn-a {
-        line-height: 20px;
-        padding: 10px 0;
-    }
-
-    .overview-sub-fright {
-        width: 280px;
-        min-height: 741px;
-        padding: 0px;
-        margin-left: 24px;
+    .empty-warp {
+      text-align: center;
+      height: 220px;
+      .empty-img {
         margin-top: 20px;
-        background: #FAFBFD;
-        // border-left: solid 1px #e6e9ea;
+      }
+      .empty-tips {
+        font-size: 12px;
+      }
     }
+  }
+}
 
-    .fright-last {
-        border-bottom: none;
-        padding-top: 0;
-        padding: 0 20px 20px 20px;
-    }
+.paasng-cog,
+.paasng-down-shape,
+.paasng-up-shape {
+  float: right;
+  line-height: 22px;
+  cursor: pointer;
+  position: relative;
+  color: #a4a6ae;
+  margin: 0 3px;
+  font-size: 12px;
+}
 
-    .visited-span {
-        position: absolute;
-        right: 0;
-        top: 8px;
-        border: solid 1px #e9edee;
-        border-right: none;
-        border-radius: 2px;
-        overflow: hidden;
-        line-height: 33px;
-    }
+.checkout-code {
+  position: relative;
+}
 
-    .visited-span a,
-    .visited-span span {
-        line-height: 33px;
-        padding: 0 18px;
-        color: #333;
-        border-right: solid 1px #e9edee;
-        float: left;
-        font-weight: normal;
+.code-checkout {
+  width: 430px;
+}
+
+.code-checkout h2 {
+  background: #fafafa;
+  line-height: 40px;
+  padding: 0 20px;
+  height: 40px;
+  overflow: hidden;
+  color: #52525d;
+  font-size: 14px;
+  border-bottom: solid 1px #e5e5e5;
+}
+
+.paasng-icon.paasng-download:hover,
+.paasng-icon.paasng-clipboard:hover {
+  color: #3a84ff;
+}
+
+.paasng-angle-up,
+.paasng-angle-down {
+  padding-left: 6px;
+  transition: all 0.5s;
+}
+
+.svn-input-container {
+  width: 100%;
+  display: table;
+  box-sizing: border-box;
+
+  input.svn-input {
+    display: table-cell;
+    float: left;
+    width: 100%;
+    height: 30px;
+    color: #7b7d8a;
+    font-size: 13px;
+    box-sizing: border-box;
+  }
+
+  div.svn-input-button-group {
+    display: table-cell;
+    width: 62px;
+    white-space: nowrap;
+    box-sizing: border-box;
+    position: relative;
+
+    a {
+      display: inline-block;
+      float: left;
     }
+  }
+}
+
+.btn-source-more {
+  float: right;
+  margin-top: 12px;
+}
+
+a.btn-deploy-panel-action {
+  padding-left: 24px;
+  padding-right: 24px;
+  float: left;
+  margin: 16px 10px 16px 0;
+}
+
+div.none-summary-controls a {
+  width: 216px;
+  box-sizing: border-box;
+  margin: 36px 8px 0;
+}
+
+a.btn-deploy-panel-action {
+  padding-left: 24px;
+  padding-right: 24px;
+  float: left;
+  margin: 16px 10px 16px 0;
+}
+
+.dateSelector {
+  input {
+    color: #666;
+  }
+}
+
+.visited-charts {
+  display: none;
+  width: 638px;
+  height: 309px;
+  margin-bottom: 40px;
+  margin-top: 36px;
+  position: relative;
+  padding-top: 48px;
+}
+
+.visited-charts.active {
+  display: block;
+}
+
+.resource-charts {
+  display: flex;
+  position: relative;
+  padding-bottom: 20px;
+
+  .title {
+    font-size: 12px;
+    font-weight: normal;
+    margin-bottom: 5px;
+  }
+}
+
+.ps-btn-checkout-code {
+  width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.checkout_center {
+  display: table;
+  margin: 0 auto;
+}
+
+.summary-content {
+  padding-top: 20px;
+  flex: 1;
+  .overview-warp {
+    display: flex;
+    padding: 25px 16px;
+    border: 1px solid #dcdee5;
+    border-radius: 2px;
+    font-size: 12px;
+    .over-fs {
+      font-weight: 700;
+      font-size: 24px;
+      color: #313238;
+    }
+    .desc-text {
+      padding-top: 13px;
+    }
+    .info {
+      padding-right: 90px;
+      border-right: 1px solid #f5f7fa;
+      .type-desc {
+        line-height: 20px;
+      }
+    }
+    .process {
+      padding-right: 48px;
+      border-right: 1px solid #f5f7fa;
+    }
+    .img-warp {
+      width: 48px;
+      height: 48px;
+      background: #f0f5ff;
+      border-radius: 4px;
+      text-align: center;
+      img {
+        margin-top: 8px;
+        width: 32px;
+        height: 32px;
+      }
+    }
+  }
+}
+
+.coding {
+  text-align: center;
+  line-height: 36px;
+  color: #666;
+  padding: 58px 0;
+  flex: 1;
+}
+
+.coding h2 {
+  font-size: 22px;
+  color: #333;
+  line-height: 46px;
+}
+
+.middle-list li {
+  width: 100%;
+  line-height: 32px;
+  color: #666;
+  overflow: hidden;
+  border-bottom: solid 1px #e6e9ea;
+  padding-bottom: 24px;
+}
+
+.middle-list li.lilast {
+  border-bottom: none;
+}
+
+.middle-list li p {
+  padding-left: 25px;
+  position: relative;
+}
+
+.middle-list dl {
+  overflow: hidden;
+  margin-left: -25px;
+  position: relative;
+}
+
+.middle-list dd {
+  width: 320px;
+  float: left;
+  padding-left: 25px;
+  line-height: 32px;
+}
+
+.middle-list dt {
+  line-height: 32px;
+}
+
+.middle-list dl:after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  margin-left: -26px;
+  top: 10px;
+  width: 1px;
+  height: 100px;
+  background: #e9edee;
+}
+
+.middle-list .green {
+  color: #5bd18b;
+  padding: 0 6px;
+}
+
+.middle-list .danger {
+  color: #ff7979;
+  padding: 0 6px;
+}
+
+.http-list-fleft {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: 400px;
+}
+
+.http-list-fright {
+  width: 234px;
+  text-align: right;
+}
+
+.middle-http-list li {
+  overflow: hidden;
+  height: 42px;
+  line-height: 42px;
+  background: #fff;
+  color: #666;
+  font-size: 12px;
+  padding: 0 10px;
+}
+
+.middle-http-list li:nth-child(2n-1) {
+  background: #fafafa;
+}
+
+.fright-middle {
+  padding: 0 0 24px 0;
+  line-height: 30px;
+  color: #666;
+  border-bottom: solid 1px #e6e9ea;
+}
+
+.fright-middle h3 {
+  padding-bottom: 8px;
+}
+
+.svn-a {
+  line-height: 20px;
+  padding: 10px 0;
+}
+
+.overview-sub-fright {
+  width: 280px;
+  min-height: 741px;
+  padding: 0px;
+  margin-left: 24px;
+  margin-top: 20px;
+  // border-left: solid 1px #e6e9ea;
+}
+
+.fright-last {
+  border-bottom: none;
+  padding-top: 0;
+  padding: 0 20px 20px 20px;
+}
+
+.visited-span {
+  position: absolute;
+  right: 0;
+  top: 8px;
+  border: solid 1px #e9edee;
+  border-right: none;
+  border-radius: 2px;
+  overflow: hidden;
+  line-height: 33px;
+}
+
+.visited-span a,
+.visited-span span {
+  line-height: 33px;
+  padding: 0 18px;
+  color: #333;
+  border-right: solid 1px #e9edee;
+  float: left;
+  font-weight: normal;
+}
 </style>

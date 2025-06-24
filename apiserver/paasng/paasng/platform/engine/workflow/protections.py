@@ -69,7 +69,7 @@ class ProductInfoCondition(DeployCondition):
         if self.env.environment not in [AppEnvironment.PRODUCTION.value]:
             return
         if not Product.objects.filter(application=self.env.module.application).exists():
-            raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
+            raise ConditionNotMatched(_("未完善应用市场信息"), self.action_name)
 
 
 class RepoAccessCondition(DeployCondition):
@@ -220,6 +220,22 @@ class PluginTagValidationCondition(DeployCondition):
             raise ConditionNotMatched(_("未设置插件分类"), self.action_name)
 
 
+class ApplicationExtraInfoCondition(DeployCondition):
+    """检查是否已经完善应用分类或可用性保障信息"""
+
+    action_name = DeployConditions.FILL_EXTRA_INFO.value
+
+    def validate(self):
+        app = self.env.module.application
+        try:
+            extra_info = app.extra_info
+        except ObjectDoesNotExist:
+            raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
+
+        if not extra_info.tag:
+            raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
+
+
 class ModuleEnvDeployInspector(BaseConditionChecker):
     """Prepare to deploy a ModuleEnvironment"""
 
@@ -230,6 +246,7 @@ class ModuleEnvDeployInspector(BaseConditionChecker):
         ProcfileCondition,
         PluginTagValidationCondition,
         ImageRepositoryCondition,
+        ApplicationExtraInfoCondition,
     ]
 
     def __init__(self, user: "User", env: "ModuleEnvironment"):

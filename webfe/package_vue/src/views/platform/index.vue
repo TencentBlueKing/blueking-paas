@@ -226,4 +226,15 @@ export default {
     border: 1px solid #dcdee5;
   }
 }
+.paas-vue-json-pretty-cls {
+  .vjs-key {
+    color: #9d694c;
+  }
+  .vjs-value-number {
+    color: #098658;
+  }
+  .vjs-value-string {
+    color: #1f6d89;
+  }
+}
 </style>

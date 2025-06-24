@@ -123,9 +123,10 @@ class DeployConditions(ChoicesEnum):
     FILL_PLUGIN_TAG_INFO = "FILL_PLUGIN_TAG_INFO"
     CHECK_IMAGE_REPOSITORY = "CHECK_IMAGE_REPOSITORY"
     CHECK_IMAGE_CREDENTIAL = "CHECK_IMAGE_CREDENTIAL"
+    FILL_EXTRA_INFO = "FILL_EXTRA_INFO"
 
     _choices_labels = (
-        (FILL_PRODUCT_INFO, _("未完善应用基本信息")),
+        (FILL_PRODUCT_INFO, _("未完善应用市场信息")),
         (CHECK_ENV_PROTECTION, _("当前用户无部署该环境的权限")),
         (NEED_TO_BIND_OAUTH_INFO, _("当前用户尚未绑定 OAUTH 授权信息")),
         (DONT_HAVE_ENOUGH_PERMISSIONS, _("当前用户没有访问源码仓库的权限")),
@@ -135,6 +136,7 @@ class DeployConditions(ChoicesEnum):
         (FILL_PLUGIN_TAG_INFO, _("未设置插件分类")),
         (CHECK_IMAGE_REPOSITORY, _("未配置有效的镜像仓库地址")),
         (CHECK_IMAGE_CREDENTIAL, _("私有镜像需要添加镜像凭证")),
+        (FILL_EXTRA_INFO, _("未完善应用基本信息")),
     )
 
 

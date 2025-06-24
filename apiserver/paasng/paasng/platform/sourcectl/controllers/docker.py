@@ -69,6 +69,15 @@ class DockerRegistryController:
             password=password,
         )
 
+    @classmethod
+    def init_by_server_config(cls, source_type: str, repo_url: str):
+        """Return a RepoController object from given source_type
+
+        :param source_type: Code repository type, such as github
+        :param repo_url: repository url
+        """
+        raise NotImplementedError
+
     def __init__(
         self, endpoint: str, repo: str, username: Optional[str] = None, password: Optional[str] = None
     ) -> None:

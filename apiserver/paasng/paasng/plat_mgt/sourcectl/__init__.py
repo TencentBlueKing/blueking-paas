@@ -14,16 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from django.urls import include, path
-
-urlpatterns = [
-    path("", include("paasng.plat_mgt.applications.urls")),
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-    path("", include("paasng.plat_mgt.users.urls")),
-    path("", include("paasng.plat_mgt.config_vars.urls")),
-    path("", include("paasng.plat_mgt.audit.urls")),
-    path("", include("paasng.plat_mgt.templates.urls")),
-    path("", include("paasng.plat_mgt.sourcectl.urls")),
-]

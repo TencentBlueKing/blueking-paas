@@ -125,29 +125,40 @@
     </bk-dialog>
 
     <!-- 删除内置环境变量 -->
-    <bk-dialog
-      v-model="deleteDialogConfig.visible"
-      width="480"
-      theme="primary"
-      :mask-close="false"
-      :auto-close="false"
-      header-position="left"
-      :title="$t('确认删除该内置环境变量？')"
-      :ok-text="$t('删除')"
+    <DeleteDialog
+      :show.sync="deleteDialogConfig.visible"
+      :title="$t('确认删除内置环境变量')"
+      :expected-confirm-text="deletedKey"
       :loading="deleteDialogConfig.loading"
       @confirm="deleteBuiltinConfigVars"
     >
-      {{ `${$t('内置环境变量')}key ：` }}
-      <span style="color: #313238">{{ `${prefix}${deleteDialogConfig.row.key}` }}</span>
-    </bk-dialog>
+      <div class="hint-text">
+        <p>{{ $t('删除后，所有应用在重新部署时将不再下发该环境变量。') }}</p>
+        <span>{{ $t('请输入要删除的内置环境变量 key') }}</span>
+        <span class="hint-text">
+          （
+          <span class="sign">{{ deletedKey }}</span>
+          <i
+            class="paasng-icon paasng-general-copy"
+            v-copy="deletedKey"
+          />
+          ）
+        </span>
+        {{ $t('进行确认') }}
+      </div>
+    </DeleteDialog>
   </div>
 </template>
 
 <script>
+import DeleteDialog from '@/components/delete-dialog';
 import { mapState } from 'vuex';
 
 export default {
   name: 'BuiltInEnvVariable',
+  components: {
+    DeleteDialog,
+  },
   data() {
     return {
       varList: [],
@@ -241,6 +252,9 @@ export default {
     ...mapState(['platformFeature']),
     isEditVar() {
       return this.varDialogConfig.type === 'edit';
+    },
+    deletedKey() {
+      return `${this.prefix}${this.deleteDialogConfig.row.key}`;
     },
   },
   created() {

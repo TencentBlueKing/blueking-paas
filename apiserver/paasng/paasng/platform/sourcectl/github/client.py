@@ -158,3 +158,15 @@ class GitHubApiClient(BaseGitApiClient):
     def commit_files(self, project: GitProject, commit_info: CommitInfo) -> Dict:
         """批量提交修改文件"""
         raise NotImplementedError("GitHub don't support batch commit currently")
+
+    def create_with_member(self, *args, **kwargs):
+        """创建代码仓库并添加成员"""
+        raise NotImplementedError("GitHub don't support create repo and add members currently")
+
+    def create_project(self, *args, **kwargs):
+        """创建代码仓库"""
+        raise NotImplementedError("GitHub don't support create repo currently")
+
+    def delete_project(self, *args, **kwargs):
+        """删除在 VCS 上的源码项目"""
+        raise NotImplementedError("GitHub don't support delete repo currently")

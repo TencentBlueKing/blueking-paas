@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+
 from typing import Dict
 
 from django.utils.module_loading import import_string
@@ -25,11 +26,82 @@ from rest_framework.exceptions import ValidationError
 from paasng.platform.sourcectl.models import SourceTypeSpecConfig
 
 
-class SourceTypeSpecConfigSLZ(serializers.ModelSerializer):
-    class Meta:
-        model = SourceTypeSpecConfig
-        fields = "__all__"
+class BaseSourceTypeSpecConfigSLZ(serializers.Serializer):
+    """基础代码库配置 SLZ
 
+    包含代码库配置的所有基础字段定义
+    """
+
+    # === 基础配置字段 ===
+    name = serializers.CharField(help_text="服务名称")
+    label_zh_cn = serializers.CharField(help_text="中文标签")
+    label_en = serializers.CharField(help_text="英文标签")
+    enabled = serializers.BooleanField(help_text="是否启用")
+    spec_cls = serializers.CharField(help_text="配置类路径")
+    server_config = serializers.JSONField(help_text="服务配置")
+
+    # === OAuth 配置字段 ===
+    authorization_base_url = serializers.CharField(help_text="OAuth 授权链接", allow_blank=True)
+    client_id = serializers.CharField(help_text="OAuth App Client ID", allow_blank=True)
+    client_secret = serializers.CharField(help_text="OAuth App Client Secret", allow_blank=True)
+    redirect_uri = serializers.CharField(help_text="OAuth 回调地址", allow_blank=True)
+    token_base_url = serializers.CharField(help_text="OAuth 获取 Token 链接", allow_blank=True)
+    oauth_display_info_zh_cn = serializers.JSONField(help_text="OAuth 展示信息（中文）")
+    oauth_display_info_en = serializers.JSONField(help_text="OAuth 展示信息（英文）")
+
+    # === 展示信息字段 ===
+    display_info_zh_cn = serializers.JSONField(help_text="中文展示信息")
+    display_info_en = serializers.JSONField(help_text="英文展示信息")
+
+    def to_internal_value(self, data):
+        # 添加前缀 paasng.platform.sourcectl.type_specs.
+        prefix = "paasng.platform.sourcectl.type_specs."
+        data = super().to_internal_value(data)
+
+        data["spec_cls"] = prefix + data["spec_cls"]
+        return data
+
+    def to_representation(self, instance):
+        # 将 spec_cls 字段转换为可读格式
+        data = super().to_representation(instance)
+        data["spec_cls"] = data["spec_cls"].rsplit(".", 1)[-1]
+        return data
+
+
+# ===== 输出序列化器 =====
+
+
+class SourceTypeSpecConfigMinimalOutputSLZ(serializers.Serializer):
+    """代码库配置最小化输出序列化器
+
+    用于列表展示，只包含必要字段
+    """
+
+    id = serializers.IntegerField(help_text="配置 ID")
+    name = serializers.CharField(help_text="服务名称")
+    label_zh_cn = serializers.CharField(help_text="中文标签")
+    label_en = serializers.CharField(help_text="英文标签")
+    enabled = serializers.BooleanField(help_text="是否启用")
+    client_id = serializers.CharField(help_text="OAuth Client ID")
+
+
+class SourceTypeSpecConfigDetailOutputSLZ(BaseSourceTypeSpecConfigSLZ):
+    """代码库配置详情输出序列化器
+
+    用于详情展示，包含所有字段
+    """
+
+
+# ===== 输入序列化器 =====
+
+
+class BaseSourceTypeSpecConfigInputSLZ(BaseSourceTypeSpecConfigSLZ):
+    """代码库配置基础输入序列化器
+
+    包含输入验证的通用逻辑
+    """
+
+    # === 验证方法 ===
     def validate_server_config(self, conf: Dict) -> Dict:
         if not isinstance(conf, dict):
             raise ValidationError(_("服务配置格式必须为 Dict"))
@@ -104,3 +176,26 @@ class SourceTypeSpecConfigSLZ(serializers.ModelSerializer):
             raise ValidationError(_("OAuth 展示信息不支持字段 {}").format(unsupported_fields))
 
         return display_info
+
+
+class SourceTypeSpecConfigCreateInputSLZ(BaseSourceTypeSpecConfigInputSLZ):
+    """创建代码库配置输入 SLZ"""
+
+    def validate_name(self, name: str) -> str:
+        """代码库配置名称唯一性"""
+        if SourceTypeSpecConfig.objects.filter(name=name).exists():
+            raise ValidationError(_("名称已存在，请使用其他名称"))
+        return name
+
+
+class SourceTypeSpecConfigUpdateInputSLZ(BaseSourceTypeSpecConfigInputSLZ):
+    """更新代码库配置的 SLZ"""
+
+    def validate_name(self, name: str) -> str:
+        """验证代码库名称唯一性（更新时排除自身）"""
+        # 获取当前更新的实例
+        instance = self.context.get("instance")
+
+        if SourceTypeSpecConfig.objects.filter(name=name).exclude(id=instance.id).exists():
+            raise ValidationError(_("名称已存在，请使用其他名称"))
+        return name

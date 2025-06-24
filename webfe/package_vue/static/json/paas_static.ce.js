@@ -948,6 +948,7 @@ export const PAAS_STATIC_CONFIG = {
                     'appBasicInfo',
                     'appMembers',
                     'appMobileMarket',
+                    'docuManagement',
                 ],
                 "destRoute": {
                   "name": "appBasicInfo"

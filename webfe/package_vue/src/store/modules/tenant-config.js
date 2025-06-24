@@ -52,5 +52,54 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/builtin_config_vars/${id}/`;
       return http.delete(url);
     },
+    /**
+     * 代码库配置-获取代码库列表
+     */
+    getSourceTypeSpec() {
+      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/`;
+      return http.get(url);
+    },
+    /**
+     * 代码库配置-获取配置类下拉列表
+     */
+    getSpecClsChoices() {
+      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/spec_cls_choices/`;
+      return http.get(url);
+    },
+     /**
+     * 代码库配置-获取表单默认配置项
+     */
+    getDefaultConfigsTemplates() {
+      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/default_configs_templates/`;
+      return http.get(url);
+    },
+    /**
+     * 代码库配置-获取代码库配置详情
+     */
+    getRepositoryDetail({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/${id}/`;
+      return http.get(url);
+    },
+    /**
+     * 代码库配置-创建代码库配置
+     */
+    createRepositoryConfig({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/`;
+      return http.post(url, data);
+    },
+    /**
+     * 代码库配置-修改代码库配置
+     */
+    updateRepositoryConfig({}, { id, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/${id}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 代码库配置-删除代码库配置
+     */
+    deleteRepositoryConfig({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/${id}/`;
+      return http.delete(url);
+    },
   },
 };

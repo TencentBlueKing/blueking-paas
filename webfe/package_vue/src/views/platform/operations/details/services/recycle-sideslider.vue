@@ -289,7 +289,6 @@ export default {
   }
 }
 .hint-text {
-  font-size: 14px !important;
   .recycle-alert-cls {
     margin-bottom: 16px;
     font-size: 12px;

@@ -45,7 +45,7 @@ class ProductInfoCondition(PublishCondition):
 
     def validate(self):
         if not Product.objects.filter(application=self.application).exists():
-            raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
+            raise ConditionNotMatched(_("未完善应用市场信息"), self.action_name)
 
 
 class ProdEnvReadinessCondition(PublishCondition):

@@ -30,6 +30,7 @@ from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import user_id_encoder
 from blue_krill.data_types.enum import IntStructuredEnum
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 from rest_framework.fields import get_attribute
 from sqlalchemy import func
@@ -197,10 +198,15 @@ class DefaultAppDataBuilder(AppDataBuilder):
 
     @staticmethod
     def get_tag_display_name(app: Application):
-        product = app.get_product()
-        if not (product and product.tag):
+        try:
+            extra_info = app.extra_info
+        except ObjectDoesNotExist:
             return "--"
-        return product.tag.get_name_display()
+
+        if not extra_info.tag:
+            return "--"
+
+        return extra_info.tag.get_name_display()
 
     @staticmethod
     def get_market_address(application: Application) -> Optional[str]:

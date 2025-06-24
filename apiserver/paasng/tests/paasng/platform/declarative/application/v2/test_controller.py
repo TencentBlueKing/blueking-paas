@@ -244,7 +244,7 @@ class TestMarketField:
         declarative_controller.perform_action(get_app_description(app_desc))
 
         product = Product.objects.get(code=random_name)
-        assert product.tag == tag
+        assert product.get_tag() == tag
         assert product.introduction == random_name
         assert product.tenant_id == app_tenant.tenant_id
 
@@ -257,7 +257,7 @@ class TestMarketDisplayOptionsField:
         declarative_controller.perform_action(get_app_description(minimal_app_desc))
 
         product = Product.objects.get(code=random_name)
-        assert product.tag is None
+        assert product.get_tag() is None
         assert product.introduction == random_name
         assert product.displayoptions.width == 1280
         assert product.displayoptions.height == 600

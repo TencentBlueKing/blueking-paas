@@ -151,19 +151,17 @@ class ProductCreateSLZ(serializers.ModelSerializer, ProductBaseSLZ):
             UniqueValidator(queryset=Product.objects.all(), lookup="exact", message="该应用已经注册，请不要重复注册")
         ],
     )
-    tag = ProductTagField(slug_field="id")
 
     # Read-only fields
     name = TranslatedCharField(read_only=True)
     introduction = TranslatedCharField(read_only=True)
     description = TranslatedCharField(read_only=True)
     logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text="上传Logo之后，应用Logo图片的下载地址")
-    tag_name = serializers.ReadOnlyField(source="tag.get_name_display", help_text="Tag名称")
     code = serializers.ReadOnlyField(help_text="应用编码", source="application.code")
 
     class Meta:
         model = Product
-        exclude = ("region", "created", "updated", "owner")
+        exclude = ("region", "created", "updated", "owner", "tag")
 
     def validate(self, data: Dict):
         """Validate creation params"""
@@ -189,8 +187,6 @@ class ProductCreateSLZ(serializers.ModelSerializer, ProductBaseSLZ):
 
 
 class ProductCombinedSLZ(serializers.ModelSerializer, ProductBaseSLZ):
-    tag = ProductTagField(slug_field="id")
-
     # Read-only fields
     name = TranslatedCharField(read_only=True)
     introduction = TranslatedCharField(read_only=True)
@@ -198,11 +194,10 @@ class ProductCombinedSLZ(serializers.ModelSerializer, ProductBaseSLZ):
     application = serializers.ReadOnlyField(source="application__code")
     code = serializers.ReadOnlyField(help_text="应用编码")
     logo = serializers.ReadOnlyField(source="get_logo_url", help_text="应用的logo地址，需要单独用接口上传")
-    tag_name = serializers.ReadOnlyField(source="tag.get_name_display", help_text="Tag名称")
 
     class Meta:
         model = Product
-        exclude = ("region", "created", "updated", "owner")
+        exclude = ("region", "created", "updated", "owner", "tag")
 
     @atomic
     def update(self, instance: Product, validated_data: Dict):

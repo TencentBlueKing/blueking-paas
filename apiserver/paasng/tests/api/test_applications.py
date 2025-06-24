@@ -30,6 +30,7 @@ from rest_framework.test import APIClient
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType, ClusterFeatureFlag
 from paas_wl.infras.cluster.entities import AllocationPolicy
 from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
+from paasng.accessories.publish.market.models import Tag
 from paasng.accessories.publish.sync_market.handlers import (
     on_change_application_name,
     prepare_change_application_name,
@@ -40,7 +41,7 @@ from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType, AvailabilityLevel
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -57,7 +58,6 @@ from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import configure_regions, create_app, generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
 
 logger = logging.getLogger(__name__)
 
@@ -380,20 +380,27 @@ class TestApplicationUpdate:
             tenant_id=random_tenant_id,
         )
 
+    @pytest.fixture
+    def tag(self):
+        return G(Tag, name="test")
+
     @pytest.mark.usefixtures("_register_app_core_data")
-    def test_normal(self, api_client, bk_app_full, bk_user, random_name):
+    def test_normal(self, api_client, bk_app_full, bk_user, random_name, tag):
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app_full.code),
-            data={"name": random_name},
+            data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value, "tag_id": tag.id},
         )
+        app = Application.objects.get(pk=bk_app_full.pk)
         assert response.status_code == 200
-        assert Application.objects.get(pk=bk_app_full.pk).name == random_name
+        assert app.name == random_name
+        assert app.extra_info.availability_level == AvailabilityLevel.STANDARD.value
+        assert app.extra_info.tag == tag
 
-    def test_duplicated(self, api_client, bk_app, bk_user, random_name):
+    def test_duplicated(self, api_client, bk_app, bk_user, random_name, tag):
         G(Application, name=random_name)
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app.code),
-            data={"name": random_name},
+            data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value, "tag_id": tag.id},
         )
         assert response.status_code == 400
         assert response.json()["code"] == "VALIDATION_ERROR"
@@ -401,7 +408,7 @@ class TestApplicationUpdate:
 
     @pytest.mark.usefixtures("_mock_change_app_name_action")
     @pytest.mark.usefixtures("_setup_random_tenant_cluster_allocation_policy")
-    def test_desc_app(self, api_client, bk_user, random_name, random_tenant_id):
+    def test_desc_app(self, api_client, bk_user, random_name, random_tenant_id, tag):
         get_desc_handler(
             dict(
                 spec_version=2,
@@ -413,11 +420,42 @@ class TestApplicationUpdate:
         app = Application.objects.get(code=random_name)
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(app.code),
-            data={"name": random_name},
+            data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value, "tag_id": tag.id},
         )
         assert response.status_code == 200
         # 描述文件定义的应用可以更新名称
         assert Application.objects.get(pk=app.pk).name == random_name
+
+    @pytest.mark.usefixtures("_register_app_core_data")
+    def test_invalid_availability_level(self, api_client, bk_app, bk_user, random_name):
+        response = api_client.put(
+            "/api/bkapps/applications/{}/".format(bk_app.code),
+            data={"name": random_name, "availability_level": "invalid_level"},
+        )
+        assert response.status_code == 400
+        assert response.json()["code"] == "VALIDATION_ERROR"
+        assert "availability_level: “invalid_level” 不是合法选项。" in response.json()["detail"]
+
+    def test_no_tag(self, api_client, bk_app, bk_user, random_name):
+        response = api_client.put(
+            "/api/bkapps/applications/{}/".format(bk_app.code),
+            data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value},
+        )
+        assert response.status_code == 400
+        assert response.json()["code"] == "VALIDATION_ERROR"
+        assert "tag_id: 该字段是必填项" in response.json()["detail"]
+
+    @pytest.mark.usefixtures("_register_app_core_data")
+    def test_no_availability_level(self, api_client, bk_app_full, bk_user, random_name, tag):
+        response = api_client.put(
+            "/api/bkapps/applications/{}/".format(bk_app_full.code),
+            data={"name": random_name, "tag_id": tag.id},
+        )
+        app = Application.objects.get(pk=bk_app_full.pk)
+        assert response.status_code == 200
+        assert app.name == random_name
+        assert app.extra_info.availability_level is None
+        assert app.extra_info.tag == tag
 
 
 class TestApplicationDeletion:

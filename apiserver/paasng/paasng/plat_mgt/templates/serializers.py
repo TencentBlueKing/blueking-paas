@@ -42,40 +42,57 @@ class TemplateMinimalOutputSLZ(serializers.Serializer):
         return not obj.is_hidden
 
 
-class TemplateDetailOutputSLZ(TemplateMinimalOutputSLZ):
+class TemplateDetailOutputSLZ(serializers.Serializer):
     """模板详情序列化器"""
 
+    # 基本信息
+    name = serializers.CharField(help_text="模板名称")
+    type = serializers.CharField(help_text="模板类型")
+    render_method = serializers.CharField(help_text="模板代码渲染方式")
+    display_name_zh_cn = serializers.CharField(help_text="模板中文名称")
+    display_name_en = serializers.CharField(help_text="模板英文名称")
     description_zh_cn = serializers.CharField(help_text="模板中文描述")
     description_en = serializers.CharField(help_text="模板英文描述")
-    market_ready = serializers.BooleanField(help_text="是否已准备好在市场中展示")
-    preset_services_config = serializers.JSONField(help_text="预设增强服务配置")
+    language = serializers.ChoiceField(choices=AppLanguage.get_choices(), help_text="开发语言")
+    is_display = serializers.SerializerMethodField(help_text="是否显示")
+    # 模板信息
     blob_url = serializers.JSONField(help_text="二进制包存储路径")
+    repo_url = serializers.CharField(help_text="代码仓库地址")
+    source_dir = serializers.CharField(help_text="模板代码所在目录")
+    # 配置信息
+    preset_services_config = serializers.JSONField(help_text="预设增强服务配置")
     required_buildpacks = serializers.JSONField(help_text="必须的构建工具")
     processes = serializers.JSONField(help_text="进程配置")
-    tags = serializers.JSONField(help_text="标签")
-    repo_url = serializers.CharField(help_text="代码仓库地址")
-    render_method = serializers.CharField(help_text="模板代码渲染方式")
-    runtime_type = serializers.CharField(help_text="运行时类型")
+    market_ready = serializers.BooleanField(help_text="是否已准备好在市场中展示")
+
+    def get_is_display(self, obj: Template) -> bool:
+        """获取模板是否显示"""
+        return not obj.is_hidden
 
 
 class TemplateBaseInputSLZ(serializers.Serializer):
     """模板基础输入序列化器"""
 
+    # 基本信息
     name = serializers.CharField(help_text="模板名称", max_length=64)
     type = serializers.ChoiceField(help_text="模板类型", choices=TemplateType.get_django_choices())
+    # TODO: render_method should be an Enum
+    render_method = serializers.CharField(help_text="模板代码渲染方式")
     display_name_zh_cn = serializers.CharField(help_text="模板中文名称", max_length=64)
     display_name_en = serializers.CharField(help_text="模板英文名称", max_length=64)
     description_zh_cn = serializers.CharField(help_text="模板中文描述", max_length=128)
     description_en = serializers.CharField(help_text="模板英文描述", max_length=128)
     language = serializers.ChoiceField(help_text="开发语言", choices=AppLanguage.get_django_choices())
-    market_ready = serializers.BooleanField(help_text="是否可发布到应用市集", default=False)
-    preset_services_config = serializers.JSONField(help_text="预设增强服务配置", default=dict)
+    is_hidden = serializers.SerializerMethodField(help_text="是否隐藏")
+    # 模板信息
     blob_url = serializers.JSONField(help_text="二进制包存储路径", default=dict)
+    repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, allow_blank=True, default="")
+
+    # 配置信息
+    preset_services_config = serializers.JSONField(help_text="预设增强服务配置", default=dict)
     required_buildpacks = serializers.JSONField(help_text="必须的构建工具", default=list)
     processes = serializers.JSONField(help_text="进程配置", default=dict)
-    tags = serializers.JSONField(help_text="标签", default=list)
-    repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, allow_blank=True, default="")
-    is_hidden = serializers.SerializerMethodField(help_text="是否隐藏")
+    market_ready = serializers.BooleanField(help_text="是否可发布到应用市集", default=False)
 
     def get_is_hidden(self, obj) -> bool:
         """获取模板是否隐藏"""
@@ -104,11 +121,6 @@ class TemplateBaseInputSLZ(serializers.Serializer):
         if not isinstance(processes, dict):
             raise ValidationError(_("进程配置必须为 Dict 格式"))
         return processes
-
-    def validate_tags(self, tags: List) -> List:
-        if not isinstance(tags, list):
-            raise ValidationError(_("标签必须为 List 格式"))
-        return tags
 
     def validate_blob_url(self, value: str) -> str:
         if not value:

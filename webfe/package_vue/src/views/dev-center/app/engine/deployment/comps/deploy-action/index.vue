@@ -27,7 +27,7 @@
               ext-cls="deploy-round-loading"
             />
           </div>
-          <section style="position: relative; margin-left: 60px;">
+          <section style="position: relative; margin-left: 60px">
             <p class="deploy-pending-text">
               {{ $t('正在部署中...') }}
             </p>
@@ -35,12 +35,16 @@
               <span
                 v-if="!isLesscodeApp"
                 class="branch-text"
-              > {{ $t('分支：') }} {{ branchSelection.split(':')[1] }}</span>
-              <span class="version-text"> {{ $t('版本：') }} {{ curDeployId }}</span>
+              >
+                {{ $t('分支：') }} {{ branchSelection.split(':')[1] }}
+              </span>
+              <span class="version-text">{{ $t('版本：') }} {{ curDeployId }}</span>
               <span
                 v-if="deployTotalTime"
                 class="time-text"
-              > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
+              >
+                {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}
+              </span>
             </p>
             <section
               v-if="appearDeployState.includes('build') || appearDeployState.includes('release')"
@@ -71,7 +75,7 @@
               ext-cls="deploy-round-loading"
             />
           </div>
-          <section style="margin-left: 60px;">
+          <section style="margin-left: 60px">
             <p class="deploy-pending-text">
               {{ $t('正在下架中...') }}
             </p>
@@ -79,8 +83,10 @@
               <span
                 v-if="!isLesscodeApp"
                 class="branch-text"
-              > {{ $t('分支：') }} {{ deploymentInfo.repo.name }}</span>
-              <span class="version-text"> {{ $t('版本：') }} {{ deploymentInfo.repo.version }}</span>
+              >
+                {{ $t('分支：') }} {{ deploymentInfo.repo.name }}
+              </span>
+              <span class="version-text">{{ $t('版本：') }} {{ deploymentInfo.repo.version }}</span>
             </p>
           </section>
         </div>
@@ -97,7 +103,7 @@
           <div class="fl">
             <span class="paasng-icon paasng-info-circle-shape" />
           </div>
-          <section style="position: relative; margin-left: 50px;">
+          <section style="position: relative; margin-left: 50px">
             <p class="deploy-pending-text">
               {{ $t('部署失败') }}
             </p>
@@ -128,7 +134,7 @@
                 {{ $t('重新部署') }}
               </bk-button>
               <bk-button
-                style="margin-left: 6px;"
+                style="margin-left: 6px"
                 theme="danger"
                 ext-cls="paas-deploy-failed-btn"
                 outline
@@ -152,7 +158,7 @@
           <div class="fl">
             <span class="paasng-icon paasng-check-circle-shape" />
           </div>
-          <section style="position: relative; margin-left: 50px;">
+          <section style="position: relative; margin-left: 50px">
             <div class="deploy-pending-text">
               <div v-if="environment === 'stag'">
                 {{ $t('应用部署成功') }}
@@ -179,12 +185,16 @@
               <span
                 v-if="!isLesscodeApp"
                 class="branch-text"
-              > {{ $t('分支：') }} {{ branchSelection.split(':')[1] }}</span>
-              <span class="version-text"> {{ $t('版本：') }} {{ curDeployId }}</span>
+              >
+                {{ $t('分支：') }} {{ branchSelection.split(':')[1] }}
+              </span>
+              <span class="version-text">{{ $t('版本：') }} {{ curDeployId }}</span>
               <span
                 v-if="deployTotalTime"
                 class="time-text"
-              > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
+              >
+                {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}
+              </span>
             </p>
             <section class="action-wrapper">
               <bk-button
@@ -196,7 +206,7 @@
                 {{ $t('访问') }}
               </bk-button>
               <bk-button
-                style="margin-left: 6px;"
+                style="margin-left: 6px"
                 theme="success"
                 ext-cls="paas-deploy-success-btn"
                 outline
@@ -225,7 +235,7 @@
               ext-cls="deploy-round-loading"
             />
           </div>
-          <section style="position: relative; margin-left: 60px;">
+          <section style="position: relative; margin-left: 60px">
             <p class="deploy-pending-text">
               {{ $t('部署停止中...') }}
             </p>
@@ -233,12 +243,16 @@
               <span
                 v-if="!isLesscodeApp"
                 class="branch-text"
-              > {{ $t('分支：') }} {{ branchSelection.split(':')[1] }}</span>
-              <span class="version-text"> {{ $t('版本：') }} {{ curDeployId }}</span>
+              >
+                {{ $t('分支：') }} {{ branchSelection.split(':')[1] }}
+              </span>
+              <span class="version-text">{{ $t('版本：') }} {{ curDeployId }}</span>
               <span
                 v-if="deployTotalTime"
                 class="time-text"
-              > {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}</span>
+              >
+                {{ $t('耗时：') }} {{ deployTotalTimeDisplay }}
+              </span>
             </p>
             <section
               v-if="appearDeployState.includes('build') || appearDeployState.includes('release')"
@@ -263,24 +277,27 @@
         <div class="wrapper warning">
           <div class="fl">
             <span
-              style="position: relative; top: 4px; font-size: 32px;"
+              style="position: relative; top: 4px; font-size: 32px"
               class="paasng-icon paasng-info-circle-shape"
             />
           </div>
-          <section style="position: relative; margin-left: 50px;">
+          <section style="position: relative; margin-left: 50px">
             <p class="deploy-pending-text">
               {{ $t('部署已中断') }}
             </p>
             <p class="deploy-text-wrapper">
               <span>
-                {{ $t('由') }} {{ lastDeploymentInfo.operator.username }} {{ $t('于') }} {{ lastDeploymentInfo.created }} {{ $t(' 手动停止部署') }}
+                {{ $t('由') }} {{ lastDeploymentInfo.operator.username }} {{ $t('于') }}
+                {{ lastDeploymentInfo.created }} {{ $t(' 手动停止部署') }}
               </span>
               <span>
                 <bk-button
-                  style="vertical-align: top; font-size: 12px; margin-left: 20px;"
+                  style="vertical-align: top; font-size: 12px; margin-left: 20px"
                   :text="true"
                   @click="goProcessView"
-                > {{ $t('查看进程状态') }} </bk-button>
+                >
+                  {{ $t('查看进程状态') }}
+                </bk-button>
               </span>
             </p>
             <section class="action-wrapper">
@@ -293,7 +310,7 @@
                 {{ $t('重新部署') }}
               </bk-button>
               <bk-button
-                style="margin-left: 6px; "
+                style="margin-left: 6px"
                 class="paas-deploy-interrupt-btn"
                 theme="warning"
                 outline
@@ -310,9 +327,11 @@
     <template v-else>
       <!-- 最近部署失败 或者 停止部署 -->
       <div
-        v-if="lastDeploymentInfo && (lastDeploymentInfo.status === 'failed' || lastDeploymentInfo.status === 'interrupted')"
+        v-if="
+          lastDeploymentInfo && (lastDeploymentInfo.status === 'failed' || lastDeploymentInfo.status === 'interrupted')
+        "
         class="summary-box status"
-        style="position: relative; z-index: 1;"
+        style="position: relative; z-index: 1"
       >
         <div class="wrapper default-box warning">
           <div class="fl">
@@ -320,8 +339,8 @@
           </div>
           <div class="fl mr25">
             {{ $t('最近部署：') }}
-            <span> {{ $t('版本：') }} {{ lastDeploymentInfo.repo.version }}，</span>
-            <span v-if="!isLesscodeApp"> {{ $t('分支：') }} {{ lastDeploymentInfo.repo.name }}，</span>
+            <span>{{ $t('版本：') }} {{ lastDeploymentInfo.repo.version }}，</span>
+            <span v-if="!isLesscodeApp">{{ $t('分支：') }} {{ lastDeploymentInfo.repo.name }}，</span>
             <span>
               {{ $t('由') }} {{ lastDeploymentInfo.operator.username }} {{ $t('于') }} {{ lastDeploymentInfo.created }}
               <template>{{ lastDeploymentInfo.status === 'failed' ? $t('部署失败') : $t('手动停止部署') }}</template>
@@ -330,7 +349,11 @@
 
           <router-link
             class="fr mr5"
-            :to="{ name: 'appDeployForHistory', params: { id: appCode, moduleId: curModuleId } , query: { deployId: lastDeploymentInfo.id } }"
+            :to="{
+              name: 'appDeployForHistory',
+              params: { id: appCode, moduleId: curModuleId },
+              query: { deployId: lastDeploymentInfo.id },
+            }"
           >
             {{ $t('查看部署日志') }}
           </router-link>
@@ -344,9 +367,7 @@
         :style="{ 'margin-top': lastDeploymentInfo && lastDeploymentInfo.status === 'failed' ? '-5px' : '0' }"
       >
         <div class="wrapper default-box">
-          <div class="fl mr25">
-            {{ $t('当前版本') }}： {{ deploymentInfo.repo.version }}
-          </div>
+          <div class="fl mr25">{{ $t('当前版本') }}： {{ deploymentInfo.repo.version }}</div>
           <div
             v-if="!isLesscodeApp"
             class="fl"
@@ -355,14 +376,15 @@
           </div>
           <div class="span fl" />
           <div class="fl">
-            {{ $t('由') }} {{ deploymentInfo.operator && deploymentInfo.operator.username }} {{ $t('于') }} {{ deploymentInfo.created }} {{ isAppOffline ? $t('下架') : $t('部署') }}
+            {{ $t('由') }} {{ deploymentInfo.operator && deploymentInfo.operator.username }} {{ $t('于') }}
+            {{ deploymentInfo.created }} {{ isAppOffline ? $t('下架') : $t('部署') }}
           </div>
 
           <bk-dropdown-menu
             v-if="!isAppOffline"
             ref="dropdown"
             class="fr"
-            style="height: auto;"
+            style="height: auto"
           >
             <div
               slot="dropdown-trigger"
@@ -377,9 +399,11 @@
               <li>
                 <a
                   href="javascript:;"
-                  style="width: 66px;"
+                  style="width: 66px"
                   @click="handleOfflineApp"
-                > {{ $t('下架') }} </a>
+                >
+                  {{ $t('下架') }}
+                </a>
               </li>
             </ul>
           </bk-dropdown-menu>
@@ -388,7 +412,9 @@
             class="fr mr10"
             :href="exposedLink"
             target="_blank"
-          > {{ $t('点击访问') }} </a>
+          >
+            {{ $t('点击访问') }}
+          </a>
         </div>
       </div>
 
@@ -404,12 +430,12 @@
 
       <div class="deploy-action mt mt20">
         <div v-if="deployPreparations.all_conditions_matched">
-          <strong class="f14 mb10"> {{ $t('选择部署') }} {{ isLesscodeApp ? $t('版本') : $t('分支') }}</strong>
+          <strong class="f14 mb10">{{ $t('选择部署') }} {{ isLesscodeApp ? $t('版本') : $t('分支') }}</strong>
           <div class="branch">
             <bk-select
               v-model="branchSelection"
               :placeholder="$t('请选择')"
-              style="width: 420px; display: inline-block; vertical-align: middle;"
+              style="width: 420px; display: inline-block; vertical-align: middle"
               :popover-min-width="420"
               :clearable="false"
               :searchable="true"
@@ -441,16 +467,17 @@
               <div
                 v-if="curAppModule.repo && curAppModule.repo.type === 'bk_svn'"
                 slot="extension"
-                style="cursor: pointer;"
+                style="cursor: pointer"
                 @click="handleCreateBranch"
               >
-                <i class="bk-icon icon-plus-circle mr5" /> {{ $t('新建部署') }} {{ isLesscodeApp ? $t('版本') : $t('分支') }}
+                <i class="bk-icon icon-plus-circle mr5" />
+                {{ $t('新建部署') }} {{ isLesscodeApp ? $t('版本') : $t('分支') }}
               </div>
             </bk-select>
             <bk-button
               :theme="'primary'"
               class="ml10 mr15 vm"
-              style="min-width: 120px;"
+              style="min-width: 120px"
               :loading="isDeploying"
               :disabled="deployDisabled"
               @click="handleDeploy"
@@ -471,10 +498,10 @@
                 <div
                   slot="dropdown-trigger"
                   class="dropdown-trigger-btn-branch"
-                  style="padding-left: 19px;"
+                  style="padding-left: 19px"
                 >
-                  <span> {{ $t('更多操作') }} </span>
-                  <i :class="['bk-icon icon-angle-down',{ 'icon-flip': isDropdownShow }]" />
+                  <span>{{ $t('更多操作') }}</span>
+                  <i :class="['bk-icon icon-angle-down', { 'icon-flip': isDropdownShow }]" />
                 </div>
                 <ul
                   slot="dropdown-content"
@@ -484,13 +511,17 @@
                     <a
                       href="javascript: void(0);"
                       @click="handleShowCommits"
-                    > {{ $t('查看代码版本差异') }} </a>
+                    >
+                      {{ $t('查看代码版本差异') }}
+                    </a>
                   </li>
                   <li v-if="!isAppOffline">
                     <a
                       href="javascript:;"
                       @click="handleOfflineApp"
-                    > {{ $t('下架') }} </a>
+                    >
+                      {{ $t('下架') }}
+                    </a>
                   </li>
                 </ul>
               </bk-dropdown-menu>
@@ -517,7 +548,7 @@
               :min="0"
               :precision="0"
               placeholder=" "
-              style="display: inline-block; width: 50px;"
+              style="display: inline-block; width: 50px"
             />
             <span>{{ $t('时') }}</span>
             <bk-input
@@ -529,14 +560,14 @@
               :min="0"
               :precision="0"
               placeholder=" "
-              style="display: inline-block; width: 50px;"
+              style="display: inline-block; width: 50px"
             />
             <span>{{ $t('分') }}</span>
           </div>
         </div>
 
         <div v-else>
-          <strong class="f14 mb10"> {{ $t('部署前需完成以下准备工作') }} </strong>
+          <strong class="f14 mb10">{{ $t('部署前需完成以下准备工作') }}</strong>
           <div class="preparation-list">
             <div
               v-for="item of deployPreparations.failed_conditions"
@@ -555,12 +586,19 @@
                 href="javascript: void(0);"
                 class="action"
                 @click="handleFixPreparation(item)"
-              > {{ $t('立即处理') }} </a>
+              >
+                {{ $t('立即处理') }}
+              </a>
             </div>
           </div>
         </div>
 
-        <p class="error-tip" v-if="isShowSelectTip">{{ branchEmptyText }}</p>
+        <p
+          class="error-tip"
+          v-if="isShowSelectTip"
+        >
+          {{ branchEmptyText }}
+        </p>
       </div>
     </template>
 
@@ -603,7 +641,7 @@
           <strong class="card-title">
             {{ metadata.name }}
             <router-link
-              v-if="metadata.routerName "
+              v-if="metadata.routerName"
               v-bk-tooltips="metadata.name === $t('访问地址') ? $t('查看') : $t('配置')"
               class="card-edit"
               :to="{ name: metadata.routerName, params: { id: appCode, moduleId: curModuleId } }"
@@ -628,9 +666,7 @@
               class="card-item"
             >
               <template v-if="metadata && metadata.type === 'key-value'">
-                <div class="card-key">
-                  {{ item.text }}：
-                </div>
+                <div class="card-key">{{ item.text }}：</div>
                 <template v-if="Array.isArray(item.value)">
                   <div
                     v-if="item.value.length"
@@ -665,31 +701,45 @@
                           v-else
                           :href="item.value"
                           target="_blank"
-                        >{{ item.value }}</a>
+                        >
+                          {{ item.value }}
+                        </a>
                       </template>
                       <span v-else>{{ $t('无') }}</span>
                     </template>
                     <template v-else>
                       {{ item.value || $t('无') }}
                     </template>
-                    <span v-if="item.value && item.href"><a
-                      target="_blank"
-                      :href="item.href"
-                      style="color: #3a84ff"
-                    >{{ item.hrefText }}</a></span>
+                    <span v-if="item.value && item.href">
+                      <a
+                        target="_blank"
+                        :href="item.href"
+                        style="color: #3a84ff"
+                      >
+                        {{ item.hrefText }}
+                      </a>
+                    </span>
                     <a
                       v-if="!curAppModule.repo.linked_to_internal_svn && item.downloadBtn"
                       class="ml5"
                       href="javascript: void(0);"
                       @click="item.downloadBtn"
-                    >{{ item.downloadBtnText }}</a>
+                    >
+                      {{ item.downloadBtnText }}
+                    </a>
                     <!-- <a :href="item.value" target="_blank" v-if="item.text === $t('地址')"> {{ $t('点击访问') }} </a> -->
                     <a
-                      v-if="item.text === $t('源码管理') && lessCodeFlag && curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP"
+                      v-if="
+                        item.text === $t('源码管理') &&
+                        lessCodeFlag &&
+                        curAppModule.source_origin === GLOBAL.APP_TYPES.LESSCODE_APP
+                      "
                       :target="lessCodeData.address_in_lesscode ? '_blank' : ''"
                       :href="lessCodeData.address_in_lesscode || 'javascript:;'"
                       @click="handleLessCode"
-                    > {{ $t('我要开发') }} </a>
+                    >
+                      {{ $t('我要开发') }}
+                    </a>
                   </div>
                 </template>
               </template>
@@ -697,7 +747,9 @@
                 <a
                   :href="item.value"
                   target="_blank"
-                >{{ $t(item.text) }}</a>
+                >
+                  {{ $t(item.text) }}
+                </a>
               </template>
             </li>
           </ul>
@@ -728,7 +780,7 @@
                   {{ $t('已选中分支：') }}
                   <strong>{{ branchSelection.split(':')[1] || '--' }}</strong>
                 </span>
-                <span class="revision-diff-sep ml25 mr25"> &lt; &gt; </span>
+                <span class="revision-diff-sep ml25 mr25">&lt; &gt;</span>
                 <span class="">
                   {{ $t('已部署分支：') }}
                   <strong>
@@ -740,16 +792,16 @@
             </form>
             <table class="ps-table ps-table-default ps-table-outline">
               <colgroup>
-                <col style="width:150px">
-                <col style="width:150px">
-                <col style="width:170px">
-                <col style="width:250px">
+                <col style="width: 150px" />
+                <col style="width: 150px" />
+                <col style="width: 170px" />
+                <col style="width: 250px" />
               </colgroup>
               <tr class="ps-table-environment-header">
-                <th> {{ $t('版本号') }} </th>
-                <th> {{ $t('提交人') }} </th>
-                <th> {{ $t('提交时间') }} </th>
-                <th> {{ $t('注释') }} </th>
+                <th>{{ $t('版本号') }}</th>
+                <th>{{ $t('提交人') }}</th>
+                <th>{{ $t('提交时间') }}</th>
+                <th>{{ $t('注释') }}</th>
               </tr>
               <tr
                 v-if="!commitsList.length"
@@ -759,7 +811,7 @@
                   <div class="ps-no-result">
                     <div class="text">
                       <p><i class="paasng-icon paasng-empty no-data" /></p>
-                      <p> {{ $t('暂无版本差异记录') }} </p>
+                      <p>{{ $t('暂无版本差异记录') }}</p>
                     </div>
                   </div>
                 </td>
@@ -768,7 +820,7 @@
                 v-for="(cItem, index) in commitsList"
                 v-else
                 :key="index"
-                :class="['ps-table-template',{ 'open': commitDialog.curCommitsIndex === index }]"
+                :class="['ps-table-template', { open: commitDialog.curCommitsIndex === index }]"
               >
                 <tr
                   class="ps-table-slide-up"
@@ -803,7 +855,7 @@
       v-model="offlineAppDialog.visiable"
       ext-cls="remove-module-dialog-cls"
       width="450"
-      :title="`${$t('下架模块')}${curAppModule.name}${environment === 'stag' ? $t('预发布环境') : $t('生产环境') }`"
+      :title="`${$t('下架模块')}${curAppModule.name}${environment === 'stag' ? $t('预发布环境') : $t('生产环境')}`"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
@@ -857,10 +909,10 @@
           class="mb15"
         >
           <bk-col
-            class="pr0 f14 "
+            class="pr0 f14"
             :span="3"
           >
-            <span class="confirm-key"> {{ $t('镜像标签：') }} </span>
+            <span class="confirm-key">{{ $t('镜像标签：') }}</span>
           </bk-col>
           <bk-col
             class="pl0 f14"
@@ -874,10 +926,10 @@
           class="mb15"
         >
           <bk-col
-            class="pr0 f14 "
+            class="pr0 f14"
             :span="3"
           >
-            <span class="confirm-key"> {{ $t('分支名称：') }} </span>
+            <span class="confirm-key">{{ $t('分支名称：') }}</span>
           </bk-col>
           <bk-col
             class="pl0 f14"
@@ -891,10 +943,10 @@
           class="mb15"
         >
           <bk-col
-            class="pr0 f14 "
+            class="pr0 f14"
             :span="3"
           >
-            <span class="confirm-key"> {{ $t('版本：') }} </span>
+            <span class="confirm-key">{{ $t('版本：') }}</span>
           </bk-col>
           <bk-col
             class="pl0 f14"
@@ -912,7 +964,7 @@
               class="pr0 f14"
               :span="3"
             >
-              <span class="confirm-key"> {{ $t('最近更新时间：') }} </span>
+              <span class="confirm-key">{{ $t('最近更新时间：') }}</span>
             </bk-col>
             <bk-col
               class="pl0 f14"
@@ -929,7 +981,7 @@
               class="pr0 f14"
               :span="3"
             >
-              <span class="confirm-key"> {{ $t('版本描述：') }} </span>
+              <span class="confirm-key">{{ $t('版本描述：') }}</span>
             </bk-col>
             <bk-col
               class="pl0 f14"
@@ -976,7 +1028,7 @@
                 class="pr0 f14"
                 :span="3"
               >
-                <span class="confirm-key"> {{ $t('镜像架构：') }} </span>
+                <span class="confirm-key">{{ $t('镜像架构：') }}</span>
               </bk-col>
               <bk-col
                 class="pl0 f14"
@@ -990,7 +1042,7 @@
                 class="pr0 f14"
                 :span="3"
               >
-                <span class="confirm-key"> {{ $t('最近更新时间：') }} </span>
+                <span class="confirm-key">{{ $t('最近更新时间：') }}</span>
               </bk-col>
               <bk-col
                 class="pl0 f14"
@@ -1035,11 +1087,14 @@
                 >
                   <div :class="['ps-tip-block', 'error-wrapper', 'is-danger']">
                     <p>
-                      {{ $t('当前不支持') }} {{ confirmDeployConf.architecture }} {{ $t('架构的镜像部署，请参考') }} <a
+                      {{ $t('当前不支持') }} {{ confirmDeployConf.architecture }} {{ $t('架构的镜像部署，请参考') }}
+                      <a
                         :href="GLOBAL.DOC.ARCHITECTURE_PLATFORM_IMAGE"
                         target="_blank"
                         class="doc-style"
-                      > {{ $t('文档重新构建镜像') }} </a>
+                      >
+                        {{ $t('文档重新构建镜像') }}
+                      </a>
                     </p>
                   </div>
                 </bk-col>
@@ -1063,17 +1118,23 @@
       @after-leave="afterLeaveStopDeploy"
     >
       <div v-if="stopDeployConf.stage === 'build'">
-        {{ $t('数据库如有变更操作') }}， <span style="color: #f00;">
-          {{ $t('数据库变更可能会异常中断且无法回滚') }} </span> ，{{ $t('请留意表结构') }}。
+        {{ $t('数据库如有变更操作') }}，
+        <span style="color: #f00">
+          {{ $t('数据库变更可能会异常中断且无法回滚') }}
+        </span>
+        ，{{ $t('请留意表结构') }}。
       </div>
       <div v-else>
-        {{ $t('部署命令已经下发') }}， <span style="color: #f00;">{{ $t('仅停止检查部署结果') }} </span> ，{{ $t('请留意进程状态') }}。
+        {{ $t('部署命令已经下发') }}，
+        <span style="color: #f00">{{ $t('仅停止检查部署结果') }}</span>
+        ，{{ $t('请留意进程状态') }}。
       </div>
     </bk-dialog>
   </paas-content-loader>
 </template>
 
-<script>import moment from 'moment';
+<script>
+import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
 import deployTimeline from '../deploy-timeline';
 import deployLog from '../deploy-log';
@@ -1266,7 +1327,7 @@ export default {
   computed: {
     buildpacks() {
       if (this.overview.buildpacks && this.overview.buildpacks.length) {
-        const buildpacks = this.overview.buildpacks.map(item => item.display_name);
+        const buildpacks = this.overview.buildpacks.map((item) => item.display_name);
         return buildpacks.join('，');
       }
       return '--';
@@ -1300,7 +1361,12 @@ export default {
       return false;
     },
     curDeployStage() {
-      const flag = this.isWatchDeploying || this.isDeploySuccess || this.isDeployFail || this.isDeployInterrupted || this.isDeployInterrupting;
+      const flag =
+        this.isWatchDeploying ||
+        this.isDeploySuccess ||
+        this.isDeployFail ||
+        this.isDeployInterrupted ||
+        this.isDeployInterrupting;
       return flag ? 'deploy' : 'noDeploy';
     },
     deployTotalTimeDisplay() {
@@ -1346,7 +1412,8 @@ export default {
     platformFeature() {
       return this.$store.state.platformFeature;
     },
-    initTemplateTypeDisplay() { // 初始化模板类型
+    initTemplateTypeDisplay() {
+      // 初始化模板类型
       return `${this.initTemplateType}(${this.initLanguage})`;
     },
     localLanguage() {
@@ -1428,12 +1495,19 @@ export default {
   mounted() {
     // 初始化日志彩色组件
     // eslint-disable-next-line
-            const AU = require('ansi_up')
+    const AU = require('ansi_up');
     // eslint-disable-next-line
-            this.ansiUp = new AU.default
+    this.ansiUp = new AU.default();
 
     window.addEventListener('scroll', () => {
-      this.isScrollFixed = (this.isWatchDeploying || this.isWatchOfflineing || this.isDeploySuccess || this.isDeployFail || this.isDeployInterrupted || this.isDeployInterrupting) && (window.pageYOffset >= 260);
+      this.isScrollFixed =
+        (this.isWatchDeploying ||
+          this.isWatchOfflineing ||
+          this.isDeploySuccess ||
+          this.isDeployFail ||
+          this.isDeployInterrupted ||
+          this.isDeployInterrupting) &&
+        window.pageYOffset >= 260;
     });
 
     window.addEventListener('resize', () => {
@@ -1527,7 +1601,6 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env: this.environment,
-
         });
         this.deployPreparations = res;
       } catch (e) {
@@ -1573,7 +1646,7 @@ export default {
           };
 
           // 组装数据，实现分组
-          if (!branchesList.map(item => item.id).includes(branch.type)) {
+          if (!branchesList.map((item) => item.id).includes(branch.type)) {
             branchesList.push({
               id: branch.type,
               name: branch.type,
@@ -1581,7 +1654,7 @@ export default {
               children: [obj],
             });
           } else {
-            const curData = branchesList.find(item => item.id === branch.type);
+            const curData = branchesList.find((item) => item.id === branch.type);
             curData.children.push(obj);
           }
 
@@ -1692,13 +1765,15 @@ export default {
     },
 
     /**
-             * 准备部署模块
-             */
+     * 准备部署模块
+     */
     handleDeploy() {
       this.schemaIsLoading = true;
       this.getBranchInfoType();
 
-      this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.IMAGE ? this.getSchemaInfo() : this.schemaIsLoading = false;
+      this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.IMAGE
+        ? this.getSchemaInfo()
+        : (this.schemaIsLoading = false);
 
       if (this.deployDisabled) {
         return false;
@@ -1722,7 +1797,8 @@ export default {
         }
       }
 
-      this.confirmDeployConf.title = this.environment === 'stag' ? this.$t('确认部署预发布环境？') : this.$t('确认部署生产环境？');
+      this.confirmDeployConf.title =
+        this.environment === 'stag' ? this.$t('确认部署预发布环境？') : this.$t('确认部署生产环境？');
 
       const branchInfo = this.branchesMap[this.branchSelection];
 
@@ -1742,8 +1818,8 @@ export default {
     },
 
     /**
-             * 获取架构信息
-             */
+     * 获取架构信息
+     */
     async getSchemaInfo() {
       const branchInfo = this.branchesMap[this.branchSelection];
       try {
@@ -1766,8 +1842,8 @@ export default {
     },
 
     /**
-             * 发起模块部署
-             */
+     * 发起模块部署
+     */
     async createDeploy() {
       const { isDeployFail } = this;
 
@@ -1874,8 +1950,8 @@ export default {
     },
 
     /**
-             * 计算部署进程间的所花时间
-             */
+     * 计算部署进程间的所花时间
+     */
     computedDeployTime(startTime, endTime) {
       const start = new Date(startTime).getTime();
       const end = new Date(endTime).getTime();
@@ -1889,8 +1965,8 @@ export default {
     },
 
     /**
-             * 监听部署进度，打印日志
-             */
+     * 监听部署进度，打印日志
+     */
     watchDeployStatus(deployId) {
       this.serverLogEvent = null;
       this.timelineComKey = +new Date();
@@ -1958,7 +2034,8 @@ export default {
             this.isDeployInterrupting = false;
           }
           this.$nextTick(() => {
-            this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
+            this.$refs.deployTimelineRef &&
+              this.$refs.deployTimelineRef.editNodeStatus(item.name, item.status, content);
           });
         });
 
@@ -2008,37 +2085,45 @@ export default {
         };
 
         // 监听到部署结束
-        this.serverLogEvent.addEventListener('EOF', (event) => {
-          this.reConnectTimes = 0;
-          this.serverLogEvent.close();
-          this.closeServerPush();
-          this.isDeploySseEof = true;
-          // this.allProcesses = JSON.parse(JSON.stringify(this.allProcesses))
+        this.serverLogEvent.addEventListener(
+          'EOF',
+          (event) => {
+            this.reConnectTimes = 0;
+            this.serverLogEvent.close();
+            this.closeServerPush();
+            this.isDeploySseEof = true;
+            // this.allProcesses = JSON.parse(JSON.stringify(this.allProcesses))
 
-          // 判断是否在准备阶段就失败
-          const isReadyFailed = this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.handleGetIsInit();
+            // 判断是否在准备阶段就失败
+            const isReadyFailed = this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.handleGetIsInit();
 
-          isReadyFailed && this.$refs.deployTimelineRef.editNodeStatus('preparation', 'failed', '');
+            isReadyFailed && this.$refs.deployTimelineRef.editNodeStatus('preparation', 'failed', '');
 
-          this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.handleSetFailed();
+            this.$refs.deployTimelineRef && this.$refs.deployTimelineRef.handleSetFailed();
 
-          if (this.isDeploySuccess) {
-            this.$refs.deployTimelineRef.editNodeStatus('preparation', 'successful', '');
-          }
-          this.getDeployResult(deployId);
-          bus.$emit('update_entrance');
-        }, false);
+            if (this.isDeploySuccess) {
+              this.$refs.deployTimelineRef.editNodeStatus('preparation', 'successful', '');
+            }
+            this.getDeployResult(deployId);
+            bus.$emit('update_entrance');
+          },
+          false
+        );
 
         // 监听到部署slider title变化
-        this.serverLogEvent.addEventListener('title', (event) => {
-          this.curDeployResult.title = event.data;
-        }, true);
+        this.serverLogEvent.addEventListener(
+          'title',
+          (event) => {
+            this.curDeployResult.title = event.data;
+          },
+          true
+        );
       }
     },
 
     /**
-             * 获取最近部署记录
-             */
+     * 获取最近部署记录
+     */
     async getLastDeployHistory() {
       this.isPageLoading = true;
       const pageParams = {
@@ -2078,8 +2163,8 @@ export default {
     },
 
     /**
-             * 获取部署结果
-             */
+     * 获取部署结果
+     */
     async getDeployResult(deployId) {
       try {
         const res = await this.$store.dispatch('deploy/getDeployResult', {
@@ -2130,12 +2215,11 @@ export default {
       return version;
     },
 
-    handleBranchSelect(value, option) {
-    },
+    handleBranchSelect(value, option) {},
 
     /**
-             * 查看代码提交记录
-             */
+     * 查看代码提交记录
+     */
     async showCommits() {
       if (!this.branchSelection) {
         this.$paasMessage({
@@ -2171,8 +2255,8 @@ export default {
     },
 
     /**
-             * 查看代码对比
-             */
+     * 查看代码对比
+     */
     async showCompare() {
       if (!this.branchSelection) {
         this.$paasMessage({
@@ -2202,8 +2286,8 @@ export default {
     },
 
     /**
-             * 查看代码差异
-             */
+     * 查看代码差异
+     */
     async handleShowCommits() {
       if (this.curAppModule.repo.diff_feature.method === 'external') {
         this.showCompare();
@@ -2213,8 +2297,8 @@ export default {
     },
 
     /**
-             * 处理部署前准备工作项
-             */
+     * 处理部署前准备工作项
+     */
     handleFixPreparation(preparation) {
       switch (preparation.action_name) {
         // 代码仓库没有授权
@@ -2224,21 +2308,21 @@ export default {
           });
           break;
 
-          // 没有访问源码仓库的权限
+        // 没有访问源码仓库的权限
         case 'DONT_HAVE_ENOUGH_PERMISSIONS':
           this.$router.push({
             name: 'serviceCode',
           });
           break;
 
-          // 蓝盾没有授权
+        // 蓝盾没有授权
         case 'CHECK_CI_GIT_TOKEN':
           this.$router.push({
             name: 'serviceCi',
           });
           break;
 
-          // 完善市场信息
+        // 完善市场信息
         case 'FILL_PRODUCT_INFO':
           this.$router.push({
             name: 'appMarket',
@@ -2251,7 +2335,7 @@ export default {
           });
           break;
 
-          // 自定义仓库源配置不正确
+        // 自定义仓库源配置不正确
         case 'NEED_TO_CORRECT_REPO_INFO':
           this.$router.push({
             name: 'moduleManage',
@@ -2262,14 +2346,14 @@ export default {
           });
           break;
 
-          // 没有部署权限
+        // 没有部署权限
         case 'CHECK_ENV_PROTECTION':
           this.$paasMessage({
             message: this.$t('请联系应用管理员'),
           });
           break;
 
-          // 未完善进程启动命令
+        // 未完善进程启动命令
         case 'NEED_TO_COMPLETE_PROCFILE':
           this.$router.push({
             name: 'appDeployForConfig',
@@ -2279,7 +2363,7 @@ export default {
           });
           break;
 
-          // 未设置插件分类
+        // 未设置插件分类
         case 'FILL_PLUGIN_TAG_INFO':
           this.$router.push({
             name: 'appBaseInfo',
@@ -2289,19 +2373,27 @@ export default {
             },
           });
           break;
+
+        // 未完善应用基本信息
+        case 'FILL_EXTRA_INFO':
+          this.$router.push({
+            name: 'appBasicInfo',
+            params: { id: this.appCode, moduleId: this.curModuleId },
+          });
+          break;
       }
     },
 
     /**
-             * 应用下架
-             */
+     * 应用下架
+     */
     handleOfflineApp() {
       this.offlineAppDialog.visiable = true;
     },
 
     /**
-             * 确认应用下架
-             */
+     * 确认应用下架
+     */
     async confirmOfflineApp() {
       this.offlineAppDialog.isLoading = true;
       try {
@@ -2372,8 +2464,8 @@ export default {
     },
 
     /**
-             * 轮询获取应用下架进度
-             */
+     * 轮询获取应用下架进度
+     */
     watchOfflineOperation(offlineOperationId) {
       this.isWatchOfflineing = true;
       this.offlineTimer = setInterval(async () => {
@@ -2415,8 +2507,8 @@ export default {
     },
 
     /**
-             * 检测模块下架进度状况，如果进行中需要拉起“获取模块下架进度”
-             */
+     * 检测模块下架进度状况，如果进行中需要拉起“获取模块下架进度”
+     */
     async checkOfflineOperation() {
       try {
         const res = await this.$store.dispatch('deploy/getOfflineStatus', {
@@ -2442,8 +2534,8 @@ export default {
     },
 
     /**
-             * 检测模块部署进度状况
-             */
+     * 检测模块部署进度状况
+     */
     async checkDeployOperation() {
       try {
         const res = await this.$store.dispatch('deploy/getDeployStatus', {
@@ -2480,8 +2572,8 @@ export default {
     },
 
     /**
-             * 获取应用文档列表
-             */
+     * 获取应用文档列表
+     */
     async getAppDocLinks() {
       try {
         const res = await this.$store.dispatch('deploy/getAppDocLinks', {
@@ -2491,7 +2583,7 @@ export default {
             limit: 4,
           },
         });
-        const links = res.links.map(link => ({
+        const links = res.links.map((link) => ({
           text: link.title,
           value: link.location,
         }));
@@ -2514,8 +2606,8 @@ export default {
     },
 
     /**
-             * 获取部署前各阶段详情
-             */
+     * 获取部署前各阶段详情
+     */
     async getPreDeployDetail() {
       try {
         const res = await this.$store.dispatch('deploy/getPreDeployDetail', {
@@ -2620,8 +2712,8 @@ export default {
 
       processesData.processes.items.forEach((processItem) => {
         const { type } = processItem;
-        const extraInfo = extraInfos.find(item => item.type === type);
-        const packageInfo = packages.find(item => item.name === type);
+        const extraInfo = extraInfos.find((item) => item.type === type);
+        const packageInfo = packages.find((item) => item.name === type);
 
         const processInfo = {
           ...processItem,
@@ -2679,8 +2771,7 @@ export default {
 
         // 日期转换
         process.instances.forEach((item) => {
-          item.date_time = moment(item.start_time).startOf('minute')
-            .fromNow();
+          item.date_time = moment(item.start_time).startOf('minute').fromNow();
         });
 
         // 如果有当前展开项
@@ -2755,7 +2846,7 @@ export default {
           }
         });
       } else if (data.type === 'DELETED') {
-        this.allProcesses = this.allProcesses.filter(process => process.name !== processData.type);
+        this.allProcesses = this.allProcesses.filter((process) => process.name !== processData.type);
       }
     },
 
@@ -2764,8 +2855,7 @@ export default {
       const instanceData = data.object || {};
       this.prevInstanceVersion = data.resource_version || 0;
 
-      instanceData.date_time = moment(instanceData.start_time).startOf('minute')
-        .fromNow();
+      instanceData.date_time = moment(instanceData.start_time).startOf('minute').fromNow();
       this.allProcesses.forEach((process) => {
         if (process.name === instanceData.process_type) {
           // 新增
@@ -2883,16 +2973,22 @@ export default {
         }
 
         // 普通应用不展示
-        if (this.curAppModule.web_config.templated_source_enabled && this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
-          sourceInfo.push({
-            text: this.$t('初始化模板类型'),
-            value: this.initTemplateTypeDisplay || '--',
-          }, {
-            text: this.$t('初始化模板说明'),
-            value: this.initTemplateDesc || '--',
-            downloadBtn: this.handleDownloadTemplate,
-            downloadBtnText: this.initTemplateDesc === '--' ? '' : this.$t('下载模板代码'),
-          });
+        if (
+          this.curAppModule.web_config.templated_source_enabled &&
+          this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP
+        ) {
+          sourceInfo.push(
+            {
+              text: this.$t('初始化模板类型'),
+              value: this.initTemplateTypeDisplay || '--',
+            },
+            {
+              text: this.$t('初始化模板说明'),
+              value: this.initTemplateDesc || '--',
+              downloadBtn: this.handleDownloadTemplate,
+              downloadBtnText: this.initTemplateDesc === '--' ? '' : this.$t('下载模板代码'),
+            }
+          );
         }
 
         if (this.curAppModule.web_config.runtime_type !== 'custom_image') {
@@ -2904,7 +3000,11 @@ export default {
               },
             },
           ];
-          const value = this.isSmartApp ? smartRoute : (this.curAppModule.source_origin === 1 ? this.$t('代码库') : this.$t('蓝鲸运维开发平台提供源码包'));
+          const value = this.isSmartApp
+            ? smartRoute
+            : this.curAppModule.source_origin === 1
+            ? this.$t('代码库')
+            : this.$t('蓝鲸运维开发平台提供源码包');
           // 普通应用不展示
           if (this.curAppModule.source_origin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
             sourceInfo.push({
@@ -2918,7 +3018,10 @@ export default {
           // 源码信息
           case 'source_info':
             displayBlocks.push({
-              name: this.curAppModule.web_config.runtime_type === 'custom_image' ? this.$t('镜像信息') : this.$t('源码信息'),
+              name:
+                this.curAppModule.web_config.runtime_type === 'custom_image'
+                  ? this.$t('镜像信息')
+                  : this.$t('源码信息'),
               type: 'key-value',
               routerName: 'moduleManage',
               key,
@@ -2926,7 +3029,7 @@ export default {
             });
             break;
 
-            // 增强服务
+          // 增强服务
           case 'services_info':
             displayBlocks.push({
               name: this.$t('增强服务'),
@@ -2935,28 +3038,32 @@ export default {
               infos: [
                 {
                   text: this.$t('启用未创建'),
-                  value: displays[key].filter(item => !item.is_provisioned).map(item => item.display_name)
+                  value: displays[key]
+                    .filter((item) => !item.is_provisioned)
+                    .map((item) => item.display_name)
                     .join(', '),
                 },
                 {
                   text: this.$t('已创建实例'),
-                  value: displays[key].filter(item => item.is_provisioned).map(item => ({
-                    name: item.display_name,
-                    route: {
-                      name: 'appServiceInner',
-                      params: {
-                        id: this.appCode,
-                        service: item.service_id,
-                        category_id: item.category_id,
+                  value: displays[key]
+                    .filter((item) => item.is_provisioned)
+                    .map((item) => ({
+                      name: item.display_name,
+                      route: {
+                        name: 'appServiceInner',
+                        params: {
+                          id: this.appCode,
+                          service: item.service_id,
+                          category_id: item.category_id,
+                        },
                       },
-                    },
-                  })),
+                    })),
                 },
               ],
             });
             break;
 
-            // 运行时的信息
+          // 运行时的信息
           case 'runtime_info':
             displayBlocks.push({
               name: this.$t('运行时信息'),
@@ -2970,13 +3077,13 @@ export default {
                 },
                 {
                   text: this.$t('构建工具'),
-                  value: displays[key].buildpacks.map(item => item.display_name).join(', '),
+                  value: displays[key].buildpacks.map((item) => item.display_name).join(', '),
                 },
               ],
             });
             break;
 
-            // 访问地址
+          // 访问地址
           case 'access_info':
             displayBlocks.push({
               name: this.$t('访问地址'),
@@ -2986,7 +3093,8 @@ export default {
               infos: [
                 {
                   text: this.$t('当前类型'),
-                  value: displays[key] && displays[key].type === 'default_subdomain' ? this.$t('子域名') : this.$t('子路径'),
+                  value:
+                    displays[key] && displays[key].type === 'default_subdomain' ? this.$t('子域名') : this.$t('子路径'),
                 },
                 {
                   text: this.$t('访问地址'),
@@ -2996,7 +3104,7 @@ export default {
             });
             break;
 
-            // 帮助文档
+          // 帮助文档
           case 'prepare_help_docs':
           case 'build_help_docs':
           case 'release_help_docs':
@@ -3004,7 +3112,7 @@ export default {
               name: this.$t('帮助文档'),
               type: 'link',
               key,
-              infos: displays[key].map(doc => ({
+              infos: displays[key].map((doc) => ({
                 text: doc.name,
                 value: doc.link,
               })),
@@ -3016,8 +3124,8 @@ export default {
     },
 
     /**
-             * 创建svn分支
-             */
+     * 创建svn分支
+     */
     async handleCreateBranch() {
       if (this.createBranchLoading) {
         return false;
@@ -3085,8 +3193,8 @@ export default {
     },
 
     /**
-             * 跳转到进程详情页面
-             */
+     * 跳转到进程详情页面
+     */
     goProcessView() {
       this.$router.push({
         name: 'appProcess',
@@ -3101,8 +3209,8 @@ export default {
     },
 
     /**
-             * 获取基本模块信息
-             */
+     * 获取基本模块信息
+     */
     async fetchModuleInfo() {
       try {
         const res = await this.$store.dispatch('module/getModuleBasicInfo', {
@@ -3121,8 +3229,8 @@ export default {
     },
 
     /**
-             * 初始化模板说明
-             */
+     * 初始化模板说明
+     */
     async fetchLanguageInfo() {
       try {
         const res = await this.$store.dispatch('module/getLanguageInfo');
@@ -3131,7 +3239,7 @@ export default {
         this.initTemplateDesc = '';
         if (res[region] && res[region].languages) {
           const languages = res[region].languages[this.initLanguage] || [];
-          const lanObj = languages.find(item => item.display_name === this.initTemplateType) || {};
+          const lanObj = languages.find((item) => item.display_name === this.initTemplateType) || {};
           this.initTemplateDesc = lanObj.description || '--';
         }
       } catch (res) {
@@ -3243,52 +3351,51 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.dropdown-trigger-btn-branch{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #c4c6cc;
-    height: 32px;
-    min-width: 68px;
-    border-radius: 2px;
-    padding: 0 15px;
-    color: #63656E;
+.dropdown-trigger-btn-branch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #c4c6cc;
+  height: 32px;
+  min-width: 68px;
+  border-radius: 2px;
+  padding: 0 15px;
+  color: #63656e;
 }
 .dropdown-trigger-btn.bk-icon {
-    font-size: 18px;
+  font-size: 18px;
 }
 .dropdown-trigger-btn .bk-icon {
-    font-size: 22px;
+  font-size: 22px;
 }
 .dropdown-trigger-btn:hover {
-    cursor: pointer;
-    border-color: #979ba5;
+  cursor: pointer;
+  border-color: #979ba5;
 }
 .framework-wrapper {
-    margin-top: -10px;
+  margin-top: -10px;
 }
 .error-wrapper {
-    padding: 8px 15px 8px 35px;
-    color: #666666;;
+  padding: 8px 15px 8px 35px;
+  color: #666666;
 }
 .ps-tip-block::after {
-    top: 9px;
-    font-size: 14px;
+  top: 9px;
+  font-size: 14px;
 }
-
 </style>
 <style>
 .operate {
-    display: inline-block;
+  display: inline-block;
 }
 .operate .medium-font .bk-dropdown-trigger {
-    position: relative;
-    top: 2px;
+  position: relative;
+  top: 2px;
 }
-.mirrorInfo  {
-    font-size: 12px;
-    margin-left: 23px;
-    color: #979BA5;
+.mirrorInfo {
+  font-size: 12px;
+  margin-left: 23px;
+  color: #979ba5;
 }
 .error-tip {
   font-size: 12px;
@@ -3302,5 +3409,5 @@ export default {
 </style>
 
 <style lang="scss" scoped>
-    @import './index.scss'
+@import './index.scss';
 </style>

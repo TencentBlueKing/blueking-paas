@@ -18,6 +18,7 @@
 import logging
 from collections import Counter
 
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import get_language
 from drf_yasg.utils import swagger_auto_schema
@@ -29,13 +30,15 @@ from rest_framework.response import Response
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.market.models import Product
+from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.core.core.storages.redisdb import DefaultRediStore
+from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
-from paasng.infras.iam.helpers import fetch_role_members
+from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager, fetch_role_members
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
@@ -292,3 +295,38 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
             context={"request": request},
         )
         return self.get_paginated_response(slz.data)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="彻底删除应用",
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def destroy(self, request, app_code):
+        """彻底删除应用"""
+        to_del_apps = Application.default_objects.filter(code=app_code, is_deleted=True)
+
+        if not to_del_apps.exists():
+            logger.exception(f"{app_code} 应用不存在")
+            return None
+
+        if to_del_apps.filter(is_deleted=False).exists():
+            logger.exception(f"{app_code} 的应用页面上还未删除，不能强制删除")
+            return None
+
+        with transaction.atomic():
+            # 从 PaaS 2.0 中删除相关信息
+            with console_db.session_scope() as session:
+                try:
+                    AppManger(session).delete_by_code(code=app_code)
+                except Exception:
+                    logger.exception(f"{app_code} 从 PaaS2.0 中删除失败.")
+                    return None
+
+            # 删除权限中心相关数据
+            delete_builtin_user_groups(app_code)
+            delete_grade_manager(app_code)
+
+            # 从 PaaS 3.0 中删除相关信息
+            to_del_apps.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

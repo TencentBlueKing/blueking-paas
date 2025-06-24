@@ -132,8 +132,13 @@ urlpatterns = [
     ),
     # 平台管理 - 删除应用
     re_path(
-        r"^api/plat_mgt/deleted_applications/is_deleted/$",
+        r"^api/plat_mgt/deleted_applications/$",
         views.DeletedApplicationViewSet.as_view({"get": "list"}),
         name="plat_mgt.applications.list_deleted_applications",
+    ),
+    re_path(
+        r"^api/plat_mgt/deleted_applications/(?P<app_code>[^/]+)/$",
+        views.DeletedApplicationViewSet.as_view({"delete": "destroy"}),
+        name="plat_mgt.applications.deleted_applications",
     ),
 ]

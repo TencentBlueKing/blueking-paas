@@ -95,31 +95,7 @@ class TestApplicationListView:
             is_active=False,
             created=datetime.datetime.now() - datetime.timedelta(days=5),
         )
-
-        # 软删除的应用
-        app6 = Application.objects.create(
-            code="deleted-app1",
-            name="已删除应用1",
-            type="cloud_native",
-            app_tenant_id="tenant1",
-            tenant_id="tenant1",
-            app_tenant_mode=AppTenantMode.SINGLE.value,
-            is_active=False,
-            is_deleted=True,
-            created=datetime.datetime.now() - datetime.timedelta(days=4),
-        )
-        app7 = Application.objects.create(
-            code="deleted-app2",
-            name="已删除应用2",
-            type="default",
-            app_tenant_id="global-tenant-1",
-            tenant_id="tenant1",
-            app_tenant_mode=AppTenantMode.GLOBAL.value,
-            is_active=False,
-            is_deleted=True,
-            created=datetime.datetime.now() - datetime.timedelta(days=5),
-        )
-        return {"app1": app1, "app2": app2, "app3": app3, "app4": app4, "app5": app5, "app6": app6, "app7": app7}
+        return {"app1": app1, "app2": app2, "app3": app3, "app4": app4, "app5": app5}
 
     @pytest.mark.parametrize(
         ("filter_key", "expected_count", "expected_codes"),
@@ -206,58 +182,6 @@ class TestApplicationListView:
             {"tenant_id": "tenant1", "app_count": 2},
             {"tenant_id": "tenant2", "app_count": 1},
         ]
-
-    def test_list_deleted_applications(self, plat_mgt_api_client, prepare_applications):
-        """测试获取软删除应用列表"""
-        url = reverse("plat_mgt.applications.list_deleted_applications")
-
-        rsp = plat_mgt_api_client.get(url)
-
-        # 验证响应状态和结果数量
-        assert rsp.status_code == 200
-        assert rsp.data["count"] == 2
-
-        # 验证返回的应用代码
-        actual_codes = {item["code"] for item in rsp.data["results"]}
-        expected_codes = {"deleted-app1", "deleted-app2"}
-        assert actual_codes == expected_codes
-
-        # 验证活跃应用没有出现在结果中
-        active_codes = {"global-app1", "global-app2", "single-app1"}
-        assert not active_codes.intersection(actual_codes)
-
-    @pytest.mark.parametrize(
-        ("filter_key", "expected_count", "expected_codes"),
-        [
-            # 测试通过租户ID过滤
-            ({"tenant_id": "tenant1"}, 2, {"deleted-app1", "deleted-app2"}),
-            ({"tenant_id": "tenant2"}, 0, set()),
-            # 测试通过应用类型过滤
-            ({"type": "cloud_native"}, 1, {"deleted-app1"}),
-            ({"type": "default"}, 1, {"deleted-app2"}),
-            # 测试通过应用名称搜索
-            ({"search": "已删除"}, 2, {"deleted-app1", "deleted-app2"}),
-            ({"search": "应用1"}, 1, {"deleted-app1"}),
-            # 测试组合过滤条件
-            ({"tenant_id": "tenant1", "type": "default"}, 1, {"deleted-app2"}),
-            ({"search": "应用", "type": "cloud_native"}, 1, {"deleted-app1"}),
-        ],
-    )
-    def test_list_deleted_filtered(
-        self, plat_mgt_api_client, prepare_applications, filter_key, expected_count, expected_codes
-    ):
-        """测试已删除应用列表的过滤功能"""
-        url = reverse("plat_mgt.applications.list_deleted_applications")
-
-        rsp = plat_mgt_api_client.get(url, filter_key)
-        assert rsp.status_code == 200
-        assert rsp.data["count"] == expected_count
-
-        actual_codes = {item["code"] for item in rsp.data["results"]}
-        assert actual_codes == set(expected_codes)
-
-        active_codes = {"global-app1", "global-app2", "single-app1"}
-        assert not active_codes.intersection(actual_codes)
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])
@@ -377,3 +301,87 @@ class TestApplicationDetailView:
         wl_app.refresh_from_db()
         assert wl_app.latest_config is not None, "latest_config is None"
         assert wl_app.latest_config.cluster == "new-cluster"
+
+
+class TestDeletedApplicationView:
+    """测试平台管理 - 删除应用 API"""
+
+    @pytest.fixture
+    def prepare_applications(self):
+        """准备测试数据"""
+        # 软删除的应用
+        deleted_app1 = Application.objects.create(
+            code="deleted-app1",
+            name="已删除应用1",
+            type="cloud_native",
+            app_tenant_id="tenant1",
+            tenant_id="tenant1",
+            app_tenant_mode=AppTenantMode.SINGLE.value,
+            is_active=False,
+            is_deleted=True,
+            created=datetime.datetime.now() - datetime.timedelta(days=4),
+        )
+        deleted_app2 = Application.objects.create(
+            code="deleted-app2",
+            name="已删除应用2",
+            type="default",
+            app_tenant_id="global-tenant-1",
+            tenant_id="tenant1",
+            app_tenant_mode=AppTenantMode.GLOBAL.value,
+            is_active=False,
+            is_deleted=True,
+            created=datetime.datetime.now() - datetime.timedelta(days=5),
+        )
+        return {"deleted_app1": deleted_app1, "deleted_app2": deleted_app2}
+
+    def test_list_deleted_applications(self, plat_mgt_api_client, prepare_applications):
+        """测试获取软删除应用列表"""
+        url = reverse("plat_mgt.applications.list_deleted_applications")
+
+        rsp = plat_mgt_api_client.get(url)
+
+        # 验证响应状态和结果数量
+        assert rsp.status_code == 200
+        assert rsp.data["count"] == 2
+
+        # 验证返回的应用代码
+        actual_codes = {item["code"] for item in rsp.data["results"]}
+        expected_codes = {"deleted-app1", "deleted-app2"}
+        assert actual_codes == expected_codes
+
+        # 验证活跃应用没有出现在结果中
+        active_codes = {"global-app1", "global-app2", "single-app1"}
+        assert not active_codes.intersection(actual_codes)
+
+    @pytest.mark.parametrize(
+        ("filter_key", "expected_count", "expected_codes"),
+        [
+            # 测试通过租户ID过滤
+            ({"tenant_id": "tenant1"}, 2, {"deleted-app1", "deleted-app2"}),
+            ({"tenant_id": "tenant2"}, 0, set()),
+            # 测试通过应用类型过滤
+            ({"type": "cloud_native"}, 1, {"deleted-app1"}),
+            ({"type": "default"}, 1, {"deleted-app2"}),
+            # 测试通过应用名称搜索
+            ({"search": "已删除"}, 2, {"deleted-app1", "deleted-app2"}),
+            ({"search": "应用1"}, 1, {"deleted-app1"}),
+            # 测试组合过滤条件
+            ({"tenant_id": "tenant1", "type": "default"}, 1, {"deleted-app2"}),
+            ({"search": "应用", "type": "cloud_native"}, 1, {"deleted-app1"}),
+        ],
+    )
+    def test_list_deleted_filtered(
+        self, plat_mgt_api_client, prepare_applications, filter_key, expected_count, expected_codes
+    ):
+        """测试已删除应用列表的过滤功能"""
+        url = reverse("plat_mgt.applications.list_deleted_applications")
+
+        rsp = plat_mgt_api_client.get(url, filter_key)
+        assert rsp.status_code == 200
+        assert rsp.data["count"] == expected_count
+
+        actual_codes = {item["code"] for item in rsp.data["results"]}
+        assert actual_codes == set(expected_codes)
+
+        active_codes = {"global-app1", "global-app2", "single-app1"}
+        assert not active_codes.intersection(actual_codes)

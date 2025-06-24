@@ -2,8 +2,6 @@ apigateway:
   description: PaaS3.0 开发者中心 API 网关，包含应用信息查询、应用部署、增强服务、轻应用等 API。
   description_en: PaaS 3.0 Developer Center API Gateway, including APP information retrieval, APP deployment, Add-ons, Mini-App , and other APIs.
   is_public: true
-  # 标记网关为官方网关
-  api_type: 1
   maintainers:
     - "admin"
 

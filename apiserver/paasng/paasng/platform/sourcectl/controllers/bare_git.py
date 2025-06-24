@@ -23,7 +23,7 @@ from urllib.parse import quote, urlparse
 from blue_krill.data_types.url import MutableURL
 from django.core.exceptions import ObjectDoesNotExist
 
-from paasng.platform.sourcectl.exceptions import BasicAuthError, DoesNotExistsOnServer, RequestTimeOutError
+from paasng.platform.sourcectl.exceptions import BasicAuthError, DoesNotExistsOnServer
 from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
 from paasng.platform.sourcectl.utils import generate_temp_dir
 
@@ -150,11 +150,7 @@ class BareGitRepoController:
         """读取目标文件"""
 
         with generate_temp_dir() as temp_dir:
-            try:
-                self.client.clone(self.repo_url, temp_dir, depth=1, branch=version_info.version_name)
-            except GitCommandExecutionError as e:
-                if "timeout" in str(e).lower():
-                    raise RequestTimeOutError(str(e))
+            self.client.clone(self.repo_url, temp_dir, depth=1, branch=version_info.version_name)
 
             if not (temp_dir / file_path).exists():
                 raise DoesNotExistsOnServer(f"{file_path} not exists.")

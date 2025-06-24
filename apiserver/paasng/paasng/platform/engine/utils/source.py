@@ -47,7 +47,6 @@ from paasng.platform.sourcectl.exceptions import (
     GetDockerIgnoreError,
     GetProcfileError,
     GetProcfileFormatError,
-    RequestTimeOutError,
 )
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
@@ -193,7 +192,7 @@ def get_deploy_desc_handler_by_version(
     if not _description_flag_disabled(module.application):
         try:
             app_desc = metadata_reader.get_app_desc(version_info)
-        except (GetAppYamlFormatError, RequestTimeOutError) as e:
+        except GetAppYamlFormatError as e:
             # The format error in app_desc is not tolerable
             raise InitDeployDescHandlerError(str(e))
         except GetAppYamlError as e:
@@ -202,7 +201,7 @@ def get_deploy_desc_handler_by_version(
     procfile_data, procfile_exc = None, None
     try:
         procfile_data = metadata_reader.get_procfile(version_info)
-    except (GetProcfileFormatError, RequestTimeOutError) as e:
+    except GetProcfileFormatError as e:
         # The format error in Procfile in not tolerable
         raise InitDeployDescHandlerError(str(e))
     except GetProcfileError as e:

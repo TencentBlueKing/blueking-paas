@@ -39,6 +39,8 @@ def create_test_template_data(**overrides):
         "language": "Python",
         "market_ready": False,
         "preset_services_config": {},
+        "repo_type": "",
+        "source_dir": "./",
         "blob_url": "bkrepo://bkpaas3-apps-tmpls/open/dj_with_hello_world_dj2.tar.gz",
         "required_buildpacks": [],
         "processes": {},

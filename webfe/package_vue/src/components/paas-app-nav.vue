@@ -115,6 +115,7 @@ export default {
         ],
 
         operator: [
+          'appSummary', // 概览
           'appEngineOperator', // 运营者应用引擎
           'appPermissions', // 权限管理
           'appMarketing', // 市场推广
@@ -217,7 +218,6 @@ export default {
         // 当角色运营者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'operator') {
           navTree = navTree.filter((nav) => this.roleAllowRouters.operator.includes(nav.name));
-          this.simpleAddNavItem(navTree, 'appEngineOperator', 'appEntryConfig', this.$t('访问管理'));
         }
 
         // smart应用或lesscode应用，包管理

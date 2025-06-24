@@ -35,7 +35,11 @@ class TemplateMinimalOutputSLZ(serializers.Serializer):
     display_name_en = serializers.CharField(help_text="模板英文名称")
     type = serializers.CharField(help_text="模板类型")
     language = serializers.ChoiceField(choices=AppLanguage.get_choices(), help_text="开发语言")
-    is_hidden = serializers.BooleanField(help_text="是否隐藏")
+    is_display = serializers.SerializerMethodField(help_text="是否显示")
+
+    def get_is_display(self, obj: Template) -> bool:
+        """获取模板是否显示"""
+        return not obj.is_hidden
 
 
 class TemplateDetailOutputSLZ(TemplateMinimalOutputSLZ):
@@ -54,8 +58,8 @@ class TemplateDetailOutputSLZ(TemplateMinimalOutputSLZ):
     runtime_type = serializers.CharField(help_text="运行时类型")
 
 
-class TemplateCreateInputSLZ(serializers.Serializer):
-    """模板创建输入序列化器"""
+class TemplateBaseInputSLZ(serializers.Serializer):
+    """模板基础输入序列化器"""
 
     name = serializers.CharField(help_text="模板名称", max_length=64)
     type = serializers.ChoiceField(help_text="模板类型", choices=TemplateType.get_django_choices())
@@ -70,14 +74,12 @@ class TemplateCreateInputSLZ(serializers.Serializer):
     required_buildpacks = serializers.JSONField(help_text="必须的构建工具", default=list)
     processes = serializers.JSONField(help_text="进程配置", default=dict)
     tags = serializers.JSONField(help_text="标签", default=list)
-    repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, default="")
-    is_hidden = serializers.BooleanField(help_text="是否显示", default=False)
+    repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, allow_blank=True, default="")
+    is_hidden = serializers.SerializerMethodField(help_text="是否隐藏")
 
-    def validate_name(self, name: str) -> str:
-        """验证模板名称唯一性"""
-        if Template.objects.filter(name=name).exists():
-            raise ValidationError(_("名称已存在，请使用其他名称"))
-        return name
+    def get_is_hidden(self, obj) -> bool:
+        """获取模板是否隐藏"""
+        return not obj.is_display
 
     def validate_preset_services_config(self, conf: Dict) -> Dict:
         if not isinstance(conf, dict):
@@ -114,7 +116,17 @@ class TemplateCreateInputSLZ(serializers.Serializer):
         return value
 
 
-class TemplateUpdateInputSLZ(TemplateCreateInputSLZ):
+class TemplateCreateInputSLZ(TemplateBaseInputSLZ):
+    """模板更新输入序列化器"""
+
+    def validate_name(self, name: str) -> str:
+        """验证模板名称唯一性"""
+        if Template.objects.filter(name=name).exists():
+            raise ValidationError(_("名称已存在，请使用其他名称"))
+        return name
+
+
+class TemplateUpdateInputSLZ(TemplateBaseInputSLZ):
     """模板更新输入序列化器"""
 
     def validate_name(self, name: str) -> str:

@@ -19,7 +19,10 @@ from typing import TYPE_CHECKING
 
 from django.db.models import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
+from moby_distribution.registry.exceptions import AuthFailed, PermissionDeny
+from moby_distribution.registry.utils import parse_image
 
+from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.publish.market.models import Product
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.core.core.protections.exceptions import ConditionNotMatched
@@ -30,8 +33,9 @@ from paasng.platform.engine.constants import DeployConditions, RuntimeType
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
-from paasng.platform.modules.models import Module
+from paasng.platform.modules.models import BuildConfig, Module
 from paasng.platform.modules.specs import ModuleSpecs
+from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
 from paasng.platform.sourcectl.exceptions import (
     AccessTokenForbidden,
     BasicAuthError,
@@ -72,6 +76,10 @@ class RepoAccessCondition(DeployCondition):
     """检查用户是否有该模块的源码仓库的访问权限"""
 
     def validate(self):
+        module: Module = self.env.module
+        if ModuleSpecs(module).runtime_type == RuntimeType.CUSTOM_IMAGE:
+            return
+
         try:
             # TODO: We should also check the return value.
             get_version_service(self.env.module, operator=self.user.pk).touch()
@@ -96,6 +104,67 @@ class RepoAccessCondition(DeployCondition):
         except Exception as e:
             message = _("获取源码仓库信息失败，请确保仓库信息填写正确")
             action = DeployConditions.NEED_TO_CORRECT_REPO_INFO.value
+            raise ConditionNotMatched(message, action) from e
+
+
+class ImageRepositoryCondition(DeployCondition):
+    """检查镜像仓库的访问权限"""
+
+    def validate(self):
+        module: Module = self.env.module
+        if ModuleSpecs(module).runtime_type != RuntimeType.CUSTOM_IMAGE:
+            return
+
+        # 获取并检查镜像仓库配置
+        build_config = BuildConfig.objects.get_or_create_by_module(module=module)
+        if not build_config.image_repository:
+            message = _("模块未配置镜像仓库信息，请先配置镜像仓库")
+            action = DeployConditions.CHECK_IMAGE_REPOSITORY.value
+            raise ConditionNotMatched(message, action)
+
+        parsed = parse_image(build_config.image_repository)
+
+        # 尝试作为公共镜像访问（不带凭证）
+        registry_controller = DockerRegistryController(
+            endpoint=parsed.domain,
+            repo=parsed.name,
+        )
+
+        try:
+            # 尝试列出版本，成功则表示是公共镜像, 不关注具体版本信息
+            registry_controller.list_alternative_versions()
+        except PermissionDeny:
+            # 需要权限验证，继续后续流程
+            pass
+        except Exception:
+            # 其他错误，可能是仓库地址无效或网络问题
+            message = _("镜像仓库地址无效或无法访问，请检查仓库地址和网络连接")
+            action = DeployConditions.CHECK_IMAGE_REPOSITORY.value
+            raise ConditionNotMatched(message, action)
+
+        # 获取并验证镜像凭证
+        credential_refs = build_config.image_credential_name
+        try:
+            credential = AppUserCredential.objects.get(application_id=module.application_id, name=credential_refs)
+        except AppUserCredential.DoesNotExist as e:
+            message = _("镜像凭证不存在或已被删除，请先配置镜像凭证")
+            action = DeployConditions.CHECK_IMAGE_REPOSITORY.value
+            raise ConditionNotMatched(message, action) from e
+
+        # 使用凭证验证私有镜像仓库访问权限
+        registry_controller = DockerRegistryController(
+            endpoint=parsed.domain,
+            repo=parsed.name,
+            username=credential.username,
+            password=credential.password,
+        )
+
+        try:
+            # 尝试列出版本, 成功就表示凭证
+            registry_controller.list_alternative_versions()
+        except AuthFailed as e:
+            message = _("私有镜像凭证校验失败，请检查凭证是否正确")
+            action = DeployConditions.CHECK_IMAGE_REPOSITORY.value
             raise ConditionNotMatched(message, action) from e
 
 
@@ -160,6 +229,7 @@ class ModuleEnvDeployInspector(BaseConditionChecker):
         RepoAccessCondition,
         ProcfileCondition,
         PluginTagValidationCondition,
+        ImageRepositoryCondition,
     ]
 
     def __init__(self, user: "User", env: "ModuleEnvironment"):

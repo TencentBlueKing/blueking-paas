@@ -30,11 +30,6 @@ urlpatterns = [
         name="plat_mgt.applications.list_applications",
     ),
     re_path(
-        r"^api/plat_mgt/applications/is_deleted/$",
-        views.ApplicationListViewSet.as_view({"get": "list_deleted"}),
-        name="plat_mgt.applications.list_deleted_applications",
-    ),
-    re_path(
         r"^api/plat_mgt/applications/tenant_app_statistics/$",
         views.ApplicationListViewSet.as_view({"get": "list_tenant_app_statistics"}),
         name="plat_mgt.applications.list_tenant_app_statistics",
@@ -48,11 +43,6 @@ urlpatterns = [
         r"^api/plat_mgt/applications/types/$",
         views.ApplicationListViewSet.as_view({"get": "list_app_types"}),
         name="plat_mgt.applications.types",
-    ),
-    re_path(
-        r"^api/plat_mgt/applications/hard_delete/(?P<app_code>[^/]+)/$",
-        views.ApplicationListViewSet.as_view({"delete": "hard_delete"}),
-        name="plat_mgt.applications.hard_delete",
     ),
     # 平台管理 - 应用详情
     re_path(
@@ -139,5 +129,11 @@ urlpatterns = [
         ),
         views.ApplicationServicesViewSet.as_view({"delete": "recycle_unbound_instance"}),
         name="plat_mgt.applications.services.recycle_unbound_instance",
+    ),
+    # 平台管理 - 删除应用
+    re_path(
+        r"^api/plat_mgt/deleted_applications/is_deleted/$",
+        views.DeletedApplicationViewSet.as_view({"get": "list"}),
+        name="plat_mgt.applications.list_deleted_applications",
     ),
 ]

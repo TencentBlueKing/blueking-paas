@@ -41,9 +41,8 @@ from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
 from paasng.plat_mgt.bk_plugins.views import is_plugin_instance_exist, is_user_plugin_admin
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application, ApplicationEnvironment
+from paasng.platform.applications.models import Application
 from paasng.platform.applications.tasks import cal_app_resource_quotas
-from paasng.platform.engine.models.base import EngineApp
 
 logger = logging.getLogger(__name__)
 
@@ -129,47 +128,6 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         app_types = [{"type": type, "label": label} for type, label in ApplicationType.get_choices()]
         slz = slzs.ApplicationTypeOutputSLZ(app_types, many=True)
         return Response(slz.data, status=status.HTTP_200_OK)
-
-    @swagger_auto_schema(
-        tags=["plat_mgt.applications"],
-        operation_description="获取软删除应用列表",
-        responses={status.HTTP_200_OK: slzs.ApplicationListOutputSLZ(many=True)},
-    )
-    def list_deleted(self, request, *args, **kwargs):
-        """获取软删除应用列表"""
-        deleted_apps = Application.default_objects.filter(is_deleted=True)
-        filter_queryset = self.filter_queryset(deleted_apps)
-
-        page = self.paginate_queryset(filter_queryset)
-        app_resource_quotas = self.get_app_resource_quotas()
-
-        slz = slzs.ApplicationListOutputSLZ(
-            page,
-            many=True,
-            context={"request": request, "app_resource_quotas": app_resource_quotas},
-        )
-        return self.get_paginated_response(slz.data)
-
-    @swagger_auto_schema(
-        tags=["plat_mgt.applications"],
-        operation_description="彻底删除应用",
-        responses={status.HTTP_204_NO_CONTENT: ""},
-    )
-    def hard_delete(self, request, app_code):
-        """彻底删除应用"""
-        app = Application.default_objects.get(code=app_code)
-        app_id = app.id
-        # 获取删除应用关联的环境信息
-        envs = ApplicationEnvironment.objects.filter(application_id=app_id)
-        # 根据环境信息获取引擎应用信息
-        engine_app_ids = list(envs.values_list("engine_app_id", flat=True))
-
-        # 硬删除操作
-        envs.delete()
-        EngineApp.objects.filter(id__in=engine_app_ids).delete()
-        Application.default_objects.filter(id=app_id).delete()
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ApplicationDetailViewSet(viewsets.GenericViewSet):
@@ -299,3 +257,31 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DeletedApplicationViewSet(viewsets.GenericViewSet):
+    """平台管理 - 删除应用 API"""
+
+    queryset = Application.objects.all()
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+    filter_backends = [ApplicationFilterBackend]
+    pagination_class = LimitOffsetPagination
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="获取软删除应用列表",
+        responses={status.HTTP_200_OK: slzs.DeletedApplicationListOutputSLZ(many=True)},
+    )
+    def list(self, request, *args, **kwargs):
+        """获取软删除应用列表"""
+        deleted_apps = Application.default_objects.filter(is_deleted=True)
+        filter_queryset = self.filter_queryset(deleted_apps)
+
+        page = self.paginate_queryset(filter_queryset)
+
+        slz = slzs.DeletedApplicationListOutputSLZ(
+            page,
+            many=True,
+            context={"request": request},
+        )
+        return self.get_paginated_response(slz.data)

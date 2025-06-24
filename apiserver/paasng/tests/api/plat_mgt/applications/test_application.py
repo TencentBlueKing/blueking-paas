@@ -17,7 +17,6 @@
 
 import datetime
 import json
-import uuid
 
 import pytest
 from django.urls import reverse
@@ -31,8 +30,7 @@ from paasng.accessories.publish.sync_market.handlers import register_app_core_da
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application, ApplicationEnvironment
-from paasng.platform.engine.models.base import EngineApp
+from paasng.platform.applications.models import Application
 from tests.utils.helpers import override_settings
 
 pytestmark = pytest.mark.django_db
@@ -260,40 +258,6 @@ class TestApplicationListView:
 
         active_codes = {"global-app1", "global-app2", "single-app1"}
         assert not active_codes.intersection(actual_codes)
-
-    def test_hard_delete_success(self, plat_mgt_api_client, prepare_applications):
-        """测试硬删除功能"""
-        app = prepare_applications["app6"]
-        engine_apps = []
-        envs = []
-
-        for env_name in ["stag", "prod"]:
-            engine_app = EngineApp.objects.create(
-                id=uuid.uuid4(),
-                name=f"engine-{app.code}-{env_name}",
-                region="default",
-                is_active=True,
-            )
-            env = ApplicationEnvironment.objects.create(
-                application=app,
-                environment=env_name,
-                engine_app=engine_app,
-                is_offlined=False,
-            )
-            engine_apps.append(engine_app)
-            envs.append(env)
-
-        url = reverse("plat_mgt.applications.hard_delete", kwargs={"app_code": app.code})
-        rsp = plat_mgt_api_client.delete(url)
-
-        assert rsp.status_code == 204
-        assert not Application.objects.filter(id=app.id).exists()
-
-        for env in envs:
-            assert not ApplicationEnvironment.objects.filter(id=env.id).exists()
-
-        for engine_app in engine_apps:
-            assert not EngineApp.objects.filter(id=engine_app.id).exists()
 
 
 @pytest.mark.django_db(databases=["default", "workloads"])

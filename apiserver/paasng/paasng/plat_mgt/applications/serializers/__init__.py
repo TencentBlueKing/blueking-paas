@@ -21,6 +21,7 @@ from .application import (
     ApplicationListOutputSLZ,
     ApplicationNameUpdateInputSLZ,
     ApplicationTypeOutputSLZ,
+    DeletedApplicationListOutputSLZ,
     TenantAppStatisticsOutputSLZ,
     TenantModeListOutputSLZ,
     UpdateClusterSLZ,
@@ -49,6 +50,7 @@ __all__ = [
     "TenantAppStatisticsOutputSLZ",
     "TenantModeListOutputSLZ",
     "UpdateClusterSLZ",
+    "DeletedApplicationListOutputSLZ",
     # feature
     "ApplicationFeatureFlagListOutputSLZ",
     "ApplicationFeatureFlagUpdateInputSLZ",

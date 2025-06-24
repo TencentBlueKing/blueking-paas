@@ -25,7 +25,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.core.region.states import get_region
-from paasng.platform.applications.constants import AppLanguage, ApplicationType
+from paasng.platform.applications.constants import AppLanguage, ApplicationType, AvailabilityLevel
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
 from paasng.platform.applications.operators import get_last_operator
@@ -64,12 +64,27 @@ class SysThirdPartyApplicationSLZ(AppTenantMixin):
         return code
 
 
+class TagOutputSLZ(serializers.Serializer):
+    """Serializer for application tag output"""
+
+    id = serializers.IntegerField(help_text="应用标签 ID")
+    name = serializers.CharField(help_text="应用标签名称")
+
+
+class AppExtraInfoOutputSLZ(serializers.Serializer):
+    """Serializer for application extra info output"""
+
+    availability_level = serializers.CharField(
+        help_text="可用性保障等级", required=False, allow_null=True, allow_blank=True
+    )
+    tag = TagOutputSLZ(help_text="应用标签", required=False, allow_null=True)
+
+
 @i18n
-class UpdateApplicationSLZ(serializers.Serializer):
-    """Serializer for update application"""
+class UpdateApplicationNameSLZ(serializers.Serializer):
+    """Serializer for update application name"""
 
     name = I18NExtend(AppNameField(max_length=20, help_text="应用名称"))
-    logo_url = serializers.ReadOnlyField(source="get_logo_url", help_text="应用 Logo 访问地址")
 
     def _validate_duplicated_field(self, data):
         """Universal validate method for code and name"""
@@ -92,14 +107,25 @@ class UpdateApplicationSLZ(serializers.Serializer):
     def validate(self, data):
         return self._validate_duplicated_field(data)
 
-    def update(self, instance, validated_data):
-        # 仅修改对应语言的应用名称, 如果前端允许同时填写中英文的应用名称, 则可以去掉该逻辑.
-        if get_language() == "zh-cn":
-            instance.name = validated_data["name_zh_cn"]
-        elif get_language() == "en":
-            instance.name_en = validated_data["name_en"]
-        instance.save()
-        return instance
+
+class UpdateApplicationSLZ(UpdateApplicationNameSLZ):
+    """Serializer for update application"""
+
+    availability_level = serializers.ChoiceField(
+        choices=AvailabilityLevel.get_choices(),
+        help_text="可用性保障等级",
+        required=False,
+    )
+    tag_id = serializers.IntegerField(help_text="应用标签 ID")
+
+
+@i18n
+class UpdateApplicationOutputSLZ(serializers.Serializer):
+    name = I18NExtend(AppNameField(max_length=20, help_text="应用名称"))
+    availability_level = serializers.CharField(source="extra_info.availability_level", help_text="可用性保障等级")
+    tag_id = serializers.IntegerField(source="extra_info.tag.id", help_text="应用标签 ID")
+    tag_name = serializers.CharField(source="extra_info.tag.name", help_text="应用标签名称")
+    logo_url = serializers.CharField(source="get_logo_url", help_text="应用 Logo 访问地址")
 
 
 class SearchApplicationSLZ(serializers.Serializer):
@@ -191,6 +217,7 @@ class ApplicationSLZ(serializers.ModelSerializer):
     logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的 Logo 地址")
     config_info = serializers.DictField(read_only=True, help_text="应用的额外状态信息")
     modules = serializers.SerializerMethodField(help_text="应用各模块信息列表")
+    extra_info = AppExtraInfoOutputSLZ(help_text="应用额外信息", read_only=True, allow_null=True)
     creator = UserNameField()
     owner = UserNameField()
 

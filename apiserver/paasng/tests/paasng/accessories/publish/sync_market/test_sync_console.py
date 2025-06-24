@@ -218,7 +218,7 @@ class TestProduct:
     def test_create_default_product(self, bk_app_full, create_default_tag):
         product = Product.objects.create_default_product(bk_app_full)
         assert product == bk_app_full.get_product()
-        assert product.tag is not None
+        assert product.get_tag() is not None
 
         # 将应用部署到生产环境
         on_product_deploy_success(product, "prod")

@@ -21,14 +21,15 @@ import gitlab.exceptions
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.accessories.publish.market.models import Product
+from paasng.accessories.publish.market.models import ApplicationExtraInfo, Product, Tag
 from paasng.bk_plugins.bk_plugins.models import BkPluginTag
 from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
 from paasng.infras.iam.helpers import add_role_members, remove_user_all_roles
-from paasng.platform.applications.constants import ApplicationRole
+from paasng.platform.applications.constants import ApplicationRole, AvailabilityLevel
 from paasng.platform.engine.constants import DeployConditions
 from paasng.platform.engine.workflow.protections import (
+    ApplicationExtraInfoCondition,
     EnvProtectionCondition,
     ModuleEnvDeployInspector,
     PluginTagValidationCondition,
@@ -173,19 +174,57 @@ class TestRepoAccessCondition:
             assert [item.action_name for item in inspector.perform().failed_conditions] == [action_name.value]
 
 
+class TestAppExtraInfoCondition:
+    @pytest.mark.parametrize(
+        ("create_extra_info", "set_availability_level", "set_tag", "ok"),
+        [
+            (False, False, False, False),
+            (False, True, False, False),
+            (True, False, True, True),
+            (True, True, True, True),
+        ],
+    )
+    def test_validate(self, bk_user, bk_module, create_extra_info, set_availability_level, set_tag, ok):
+        application = bk_module.application
+        env = bk_module.get_envs("stag")
+
+        if create_extra_info:
+            extra_info = G(ApplicationExtraInfo, application=application)
+            if set_availability_level:
+                extra_info.availability_level = AvailabilityLevel.STANDARD.value
+                extra_info.save(update_fields=["availability_level"])
+                extra_info.refresh_from_db()
+
+            if set_tag:
+                tag = G(Tag, name="sample-tag-1")
+                extra_info.tag = tag
+                extra_info.save(update_fields=["tag"])
+                extra_info.refresh_from_db()
+
+        if ok:
+            ApplicationExtraInfoCondition(bk_user, env).validate()
+        else:
+            with pytest.raises(ConditionNotMatched) as exc_info:
+                ApplicationExtraInfoCondition(bk_user, env).validate()
+
+            assert exc_info.value.action_name == DeployConditions.FILL_EXTRA_INFO.value
+
+
 class TestModuleEnvDeployInspector:
     @pytest.mark.parametrize(
-        ("user_role", "allowed_roles", "create_token", "create_product", "expected"),
+        ("user_role", "allowed_roles", "create_token", "create_product", "set_extra_info", "expected"),
         [
             (
                 ApplicationRole.DEVELOPER,
                 [ApplicationRole.ADMINISTRATOR],
                 False,
                 False,
+                False,
                 [
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.CHECK_ENV_PROTECTION,
                     DeployConditions.NEED_TO_BIND_OAUTH_INFO,
+                    DeployConditions.FILL_EXTRA_INFO,
                 ],
             ),
             (
@@ -193,25 +232,54 @@ class TestModuleEnvDeployInspector:
                 [ApplicationRole.ADMINISTRATOR],
                 True,
                 False,
-                [DeployConditions.FILL_PRODUCT_INFO, DeployConditions.CHECK_ENV_PROTECTION],
+                False,
+                [
+                    DeployConditions.FILL_PRODUCT_INFO,
+                    DeployConditions.CHECK_ENV_PROTECTION,
+                    DeployConditions.FILL_EXTRA_INFO,
+                ],
             ),
             (
                 ApplicationRole.ADMINISTRATOR,
                 ...,
                 True,
                 False,
-                [DeployConditions.FILL_PRODUCT_INFO],
+                False,
+                [
+                    DeployConditions.FILL_PRODUCT_INFO,
+                    DeployConditions.FILL_EXTRA_INFO,
+                ],
             ),
             (
                 ...,
                 ...,
                 True,
                 True,
+                False,
+                [DeployConditions.FILL_EXTRA_INFO],
+            ),
+            (
+                ...,
+                ...,
+                True,
+                True,
+                True,
                 [],
             ),
         ],
     )
-    def test(self, bk_user, bk_module, git_client, user_role, allowed_roles, create_token, create_product, expected):
+    def test(
+        self,
+        bk_user,
+        bk_module,
+        git_client,
+        user_role,
+        allowed_roles,
+        create_token,
+        create_product,
+        set_extra_info,
+        expected,
+    ):
         application = bk_module.application
         env = bk_module.get_envs("prod")
         bk_module.source_type = get_sourcectl_names().GitLab
@@ -233,6 +301,15 @@ class TestModuleEnvDeployInspector:
 
         if create_product:
             G(Product, application=application)
+
+        if set_extra_info:
+            tag = G(Tag, name="sample-tag-1")
+            G(
+                ApplicationExtraInfo,
+                application=application,
+                tag=tag,
+                availability_level=AvailabilityLevel.STANDARD.value,
+            )
 
         inspector = ModuleEnvDeployInspector(bk_user, env)
         assert [item.action_name for item in inspector.perform().failed_conditions] == [c.value for c in expected]

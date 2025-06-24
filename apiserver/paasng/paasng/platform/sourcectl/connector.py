@@ -19,42 +19,26 @@
 
 import abc
 import logging
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, Optional, Type
-from urllib.parse import urljoin
+from typing import Any, Optional, Type
 
-from django.conf import settings
 from django.db.models import Model
 
-from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.models import Application
 from paasng.platform.modules.models import Module
-from paasng.platform.sourcectl.models import GitRepository, RepoBasicAuthHolder, RepositoryInstance, SvnRepository
+from paasng.platform.sourcectl.git.client import GitClient
+from paasng.platform.sourcectl.models import (
+    GitRepository,
+    RepoBasicAuthHolder,
+    RepositoryInstance,
+    SvnRepository,
+)
 from paasng.platform.sourcectl.source_types import get_sourcectl_type, get_sourcectl_types
-from paasng.platform.sourcectl.svn.admin import get_svn_authorization_manager, promote_repo_privilege_temporary
-from paasng.platform.sourcectl.svn.client import SvnRepositoryClient, acquire_repo
-from paasng.platform.sourcectl.svn.exceptions import CannotInitNonEmptyTrunk
+from paasng.platform.sourcectl.svn.admin import get_svn_authorization_manager
+from paasng.platform.sourcectl.svn.client import acquire_repo
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
-from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, generate_temp_file
-from paasng.platform.templates.constants import TemplateType
-from paasng.platform.templates.templater import Templater
-from paasng.utils.basic import get_username_by_bkpaas_user_id, unique_id_generator
-from paasng.utils.blobstore import BlobStore, make_blob_store
+from paasng.utils.basic import unique_id_generator
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class SourceSyncResult:
-    """The result of one templated source sync procedure"""
-
-    dest_type: str
-    error: str = ""
-    extra_info: Dict = field(default_factory=dict)
-
-    def is_success(self):
-        return not self.error
 
 
 class ModuleRepoConnector(abc.ABC):
@@ -70,19 +54,6 @@ class ModuleRepoConnector(abc.ABC):
     @abc.abstractmethod
     def bind(self, repo_url: Optional[str] = "", source_dir: str = "", **kwargs) -> RepositoryInstance:
         """Bind a repo address to current module"""
-
-    @abc.abstractmethod
-    def sync_templated_sources(self, context: dict) -> SourceSyncResult:
-        """Sync the templated source to remote"""
-
-    def write_templates_to_dir(self, target_path: Path, templater_name: str, context: dict):
-        """Create the templated module source files and write them into target_path"""
-        try:
-            templater = Templater(tmpl_name=templater_name, type=TemplateType.NORMAL, **context)
-            templater.write_to_dir(target_path)
-        except Exception:
-            logger.exception("unable to render app source template %s", templater_name)
-            raise
 
 
 class DBBasedMixin:
@@ -195,16 +166,6 @@ class IntegratedSvnAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
 
         return self.save_repo_info(repo_url, source_dir=source_dir)
 
-    def sync_templated_sources(self, context) -> SourceSyncResult:
-        """Sync the source to svn server with an initial commit"""
-        repo_url = self.get_repo().get_repo_url()
-        with generate_temp_dir() as source_path, promote_repo_privilege_temporary(self.application):
-            self.write_templates_to_dir(source_path, self.module.source_init_template, context)
-            svn_credentials = get_bksvn_config(name=self.repo_type).get_admin_credentials()
-
-            sync_procedure = SvnSyncProcedure(repo_url, svn_credentials["username"], svn_credentials["password"])
-            return sync_procedure.run(source_path=str(source_path))
-
 
 class ExternalGitAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
     """RepoBinder for external git repository, features:
@@ -215,15 +176,12 @@ class ExternalGitAppRepoConnector(ModuleRepoConnector, DBBasedMixin):
 
     auth_method = "oauth"
     repository_model = GitRepository
+    client = GitClient()
 
     def bind(self, repo_url: Optional[str] = "", source_dir: str = "", **kwargs):
         if not repo_url:
             raise ValueError('must provide "repo_url" when connecting to git')
         return self.save_repo_info(repo_url, source_dir=source_dir)
-
-    def sync_templated_sources(self, context) -> SourceSyncResult:
-        """Publish templated source to external storage"""
-        return generate_downloadable_app_template(self.module, context)
 
 
 class ExternalBasicAuthRepoConnector(ModuleRepoConnector, DBBasedMixin):
@@ -272,57 +230,6 @@ class ExternalBasicAuthRepoConnector(ModuleRepoConnector, DBBasedMixin):
         self.update_repo_basic_auth(repo_obj, repo_auth_info)
         return repo_obj
 
-    def sync_templated_sources(self, context) -> SourceSyncResult:
-        """Generate downloadable app template to s3, not updating to repo"""
-        return generate_downloadable_app_template(self.module, context)
-
-
-@dataclass
-class SvnSyncProcedure:
-    """Sync templated sources to SVN repo with a commit"""
-
-    repo_url: str
-    username: str
-    password: str
-
-    def run(self, source_path: str, sub_path: str = "trunk"):
-        client = SvnRepositoryClient(self.repo_url, self.username, self.password)
-        try:
-            client.sync_dir(local_path=source_path, remote_path=sub_path)
-        except CannotInitNonEmptyTrunk as e:
-            return SourceSyncResult(dest_type="svn", error="already synced: {}".format(e))
-        else:
-            return SourceSyncResult(
-                dest_type="svn", extra_info={"remote_source_root": urljoin(self.repo_url, "trunk")}
-            )
-
-
-@dataclass
-class BlobStoreSyncProcedure:
-    """Sync templated source to Blob Store."""
-
-    blob_store: BlobStore
-    key: str
-
-    downloadable_address_expires_in = 3600 * 4
-
-    def run(self, source_path: str) -> SourceSyncResult:
-        """Compress the source_path and upload the content to given key"""
-        with generate_temp_file(suffix=".tar.gz") as package_path:
-            logger.debug("compressing templated source, key=%s...", self.key)
-            compress_directory(source_path, package_path)
-            self.blob_store.upload_file(package_path, self.key, ExtraArgs={"ACL": "private"})
-
-        # Generate a temporary accessible url for source codes
-        url = self.blob_store.generate_presigned_url(key=self.key, expires_in=self.downloadable_address_expires_in)
-        return SourceSyncResult(
-            dest_type=self.blob_store.STORE_TYPE,
-            extra_info={
-                "downloadable_address": url,
-                "downloadable_address_expires_in": self.downloadable_address_expires_in,
-            },
-        )
-
 
 def get_repo_connector(repo_type: str, module: Module) -> ModuleRepoConnector:
     """Get a connector object by given repository type
@@ -334,33 +241,3 @@ def get_repo_connector(repo_type: str, module: Module) -> ModuleRepoConnector:
 
     type_ = get_sourcectl_type(repo_type).connector_class
     return type_(module, repo_type)
-
-
-def generate_downloadable_app_template(module: Module, context: Optional[Dict[str, Any]] = None) -> SourceSyncResult:
-    """Generate a downloadable URL for templated app source code
-
-    :param context: Context for rendering the source code
-    """
-    application = module.application
-    if context is None:
-        # generate default context
-        client_secret = get_oauth2_client_secret(application.code)
-        context = {
-            "region": application.region,
-            "owner_username": get_username_by_bkpaas_user_id(application.owner),
-            "app_code": application.code,
-            "app_secret": client_secret,
-            "app_name": application.name,
-        }
-    key = f"app-template-instances/{application.region}/{application.code}-{module.name}.tar.gz"
-    sync_procedure = BlobStoreSyncProcedure(
-        blob_store=make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE), key=key
-    )
-    with generate_temp_dir() as source_path:
-        try:
-            templater = Templater(tmpl_name=module.source_init_template, type=TemplateType.NORMAL, **context)
-            templater.write_to_dir(source_path)
-        except Exception:
-            logger.exception("unable to render app source template %s", module.source_init_template)
-            raise
-        return sync_procedure.run(str(source_path))

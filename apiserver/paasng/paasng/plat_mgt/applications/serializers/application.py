@@ -31,7 +31,7 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.serializers import UpdateApplicationSLZ
+from paasng.platform.applications.serializers.app import UpdateApplicationNameSLZ
 from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.utils.models import OrderByField
@@ -214,7 +214,7 @@ class ApplicationDetailOutputSLZ(serializers.Serializer):
     modules_info = serializers.ListField(child=ApplicationModuleSLZ(), help_text="应用模块信息", read_only=True)
 
 
-class ApplicationNameUpdateInputSLZ(UpdateApplicationSLZ):
+class ApplicationNameUpdateInputSLZ(UpdateApplicationNameSLZ):
     """更新应用名称序列化器"""
 
 

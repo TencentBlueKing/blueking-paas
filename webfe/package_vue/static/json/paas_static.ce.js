@@ -310,7 +310,9 @@ export const PLATFORM_CONFIG = {
         WEB_CONSOLE: DOCS_URL_PREFIX + '/topics/paas/webconsole',
 
         // 应用描述文件文件位置说明
-        FILE_LOCATION_DESCRIPTION: DOCS_URL_PREFIX + '/topics/paas/app_desc_cnative#%E5%BA%94%E7%94%A8%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6%E4%BD%8D%E7%BD%AE%E8%AF%B4%E6%98%8E'
+        FILE_LOCATION_DESCRIPTION: DOCS_URL_PREFIX + '/topics/paas/app_desc_cnative#%E5%BA%94%E7%94%A8%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6%E4%BD%8D%E7%BD%AE%E8%AF%B4%E6%98%8E',
+
+        GCS_MySQL_LINK: ''
     },
 
     CONFIG: {

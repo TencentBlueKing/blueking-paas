@@ -17,7 +17,7 @@
 
 from typing import Dict, List, Optional
 
-from attrs import define
+from attrs import define, field
 
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
@@ -44,3 +44,29 @@ class BuildConfig:
     buildpacks: Optional[List[AppBuildPack]] = None
     buildpack_builder: Optional[AppSlugBuilder] = None
     buildpack_runner: Optional[AppSlugRunner] = None
+
+
+@define(frozen=True)
+class VcsInitResult:
+    """代码初始化结果
+
+    :param code: 状态码，"OK" 表示成功，其他表示错误码
+    :param extra_info: 额外信息，包含下载地址等
+    :param dest_type: 目标存储类型（如: s3/bkrepo)
+    :param error: 错误信息，成功时为空字符串
+    """
+
+    code: str
+    extra_info: dict = field(factory=dict)
+    dest_type: str = "null"
+    error: str = ""
+
+    def is_success(self) -> bool:
+        return self.code == "OK"
+
+
+@define
+class ModuleInitResult:
+    """模块初始化结果数据类"""
+
+    source_init_result: VcsInitResult = field(factory=lambda: VcsInitResult(code="OK"))

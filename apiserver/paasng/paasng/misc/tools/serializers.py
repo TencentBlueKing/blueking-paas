@@ -154,7 +154,7 @@ class ModuleSerializer(serializers.Serializer):
 
     def validate_source_dir(self, value: str):
         if value.startswith("/") or ".." in value:
-            raise ValidationError(_("构建目录（source_dir）不合法，不能以 '/' 开头，不能包含 '..'"))
+            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
 
         return value
 

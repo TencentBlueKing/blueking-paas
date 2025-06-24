@@ -98,19 +98,19 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         slz = slzs.ApplicationMembershipUpdateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        role = ApplicationRole(slz.data["role"]["id"])
+        target_role = ApplicationRole(slz.data["role"]["id"])
         username = get_username_by_bkpaas_user_id(user_id)
 
         # 获取用户当前角色
         current_role = fetch_user_main_role(application.code, username)
 
         # 只有当角色发生变化的时候才进行检查和更新
-        if current_role != role:
+        if current_role != target_role:
             self.check_admin_count(application.code, username)
 
             try:
                 remove_user_all_roles(application.code, username)
-                add_role_members(application.code, role, username)
+                add_role_members(application.code, target_role, username)
             except BKIAMGatewayServiceError as e:
                 raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 

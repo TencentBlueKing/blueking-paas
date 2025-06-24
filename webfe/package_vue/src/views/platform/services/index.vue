@@ -61,16 +61,3 @@ export default {
   }
 }
 </style>
-<style lang="scss">
-.paas-vue-json-pretty-cls {
-  .vjs-key {
-    color: #9d694c;
-  }
-  .vjs-value-number {
-    color: #098658;
-  }
-  .vjs-value-string {
-    color: #1f6d89;
-  }
-}
-</style>

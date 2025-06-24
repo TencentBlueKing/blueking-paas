@@ -85,19 +85,19 @@ class TemplateRenderOutputSLZ(serializers.Serializer):
     display_name = TranslatedCharField()
     description = TranslatedCharField()
     repo_url = serializers.CharField(help_text="代码仓库地址")
-    render_method = serializers.MethodField(help_text="模版代码渲染方式")
-    source_dir = serializers.MethodField(help_text="模板代码所在相对目录")
+    render_method = serializers.SerializerMethodField(help_text="模版代码渲染方式")
+    source_dir = serializers.SerializerMethodField(help_text="模板代码所在相对目录")
 
-    def get_render_method(self, obj):
+    def get_render_method(self, tmpl):
         """Note: release1.7 版本已经在 Template 表中添加 render_method 字段，release1.7 之前的版本根据插件类型来判断"""
-        if obj.type == TemplateType.PLUGIN:
+        if tmpl.type == TemplateType.PLUGIN:
             return "cookiecutter"
         else:
             return "django_template"
 
-    def get_source_dir(self, obj):
+    def get_source_dir(self, tmpl):
         """Note: release1.7 版本已经在 Template 表中添加 source_dir 字段，release1.7 之前的版本根据插件类型来判断"""
-        if obj.type == TemplateType.PLUGIN:
+        if tmpl.type == TemplateType.PLUGIN:
             return "template"
         else:
             return ""

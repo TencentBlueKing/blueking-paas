@@ -108,7 +108,7 @@
     required_buildpacks: []
     processes: {}
     tags: []
-    repo_url: ''
+    repo_url: 'https://github.com/TencentBlueKing/bk-plugin-framework-python'
     runtime_type: buildpack
 - model: templates.template
   pk: 6
@@ -149,12 +149,11 @@
     preset_services_config:
       mysql: {}
     blob_url: {}
-    enabled_regions:
-      - default
+    enabled_regions: []
     required_buildpacks: []
     processes: {}
     tags: []
-    repo_url: ''
+    repo_url: 'https://github.com/TencentBlueKing/bk-apigateway-framework'
 - model: templates.template
   pk: 8
   fields:
@@ -171,9 +170,30 @@
     preset_services_config:
       mysql: {}
     blob_url: {}
+    enabled_regions: []
+    required_buildpacks: []
+    processes: {}
+    tags: []
+    repo_url: 'https://github.com/TencentBlueKing/bk-apigateway-framework'
+- model: templates.template
+  pk: 9
+  fields:
+    created: !!timestamp '2023-12-26 12:00:00.000000+00:00'
+    updated: !!timestamp '2023-12-26 12:00:00.000000+00:00'
+    name: bk-ai-plugin-python
+    type: 'plugin'
+    display_name_zh_cn: AI 智能体插件（Python）
+    display_name_en: AI Agent Plugin (Python)
+    description_zh_cn: 为开发者提供快速创建 AIDev 智能体的能力，并自动对接 AI 小鲸、API 网关
+    description_en: Enables developers to quickly create AIDev agents with automatic integration to AI Xiaojing (AI Assistant) and API Gateway.
+    language: Python
+    market_ready: False
+    preset_services_config:
+      mysql: {}
+    blob_url: {}
     enabled_regions:
       - default
     required_buildpacks: []
     processes: {}
     tags: []
-    repo_url: ''
+    repo_url: 'https://github.com/TencentBlueKing/bk-aidev-agent'

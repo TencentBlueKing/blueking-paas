@@ -167,7 +167,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         # 硬删除操作
         envs.delete()
         EngineApp.objects.filter(id__in=engine_app_ids).delete()
-        Application._base_manager.filter(id=app_id).delete()
+        Application.default_objects.filter(id=app_id).delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

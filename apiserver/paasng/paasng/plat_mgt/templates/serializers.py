@@ -22,7 +22,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.applications.constants import AppLanguage
-from paasng.platform.templates.constants import TemplateType
+from paasng.platform.templates.constants import RenderMethod, TemplateType
 from paasng.platform.templates.models import Template
 
 
@@ -76,8 +76,7 @@ class TemplateBaseInputSLZ(serializers.Serializer):
     # 基本信息
     name = serializers.CharField(help_text="模板名称", max_length=64)
     type = serializers.ChoiceField(help_text="模板类型", choices=TemplateType.get_django_choices())
-    # TODO: render_method should be an Enum
-    render_method = serializers.CharField(help_text="模板代码渲染方式")
+    render_method = serializers.ChoiceField(help_text="模板代码渲染方式", choices=RenderMethod.get_django_choices())
     display_name_zh_cn = serializers.CharField(help_text="模板中文名称", max_length=64)
     display_name_en = serializers.CharField(help_text="模板英文名称", max_length=64)
     description_zh_cn = serializers.CharField(help_text="模板中文描述", max_length=128)

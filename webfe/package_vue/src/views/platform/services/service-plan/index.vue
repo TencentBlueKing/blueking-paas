@@ -14,6 +14,7 @@
         <div class="flex-row left">
           <bk-button
             :theme="'primary'"
+            icon="plus"
             class="mr10 flex-shrink-0"
             @click="showSideslider('add')"
           >

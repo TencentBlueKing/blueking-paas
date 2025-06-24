@@ -87,9 +87,7 @@ class TemplateBaseInputSLZ(serializers.Serializer):
     is_hidden = serializers.SerializerMethodField(help_text="是否隐藏")
     # 模板信息
     blob_url = serializers.JSONField(help_text="二进制包存储路径", default=dict)
-    repo_type = serializers.ChoiceField(
-        help_text="代码仓库类型", choices=get_sourcectl_types().get_choices(), allow_blank=True
-    )
+    repo_type = serializers.CharField(help_text="代码仓库类型", allow_blank=True, default="")
     repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, allow_blank=True, default="")
     source_dir = serializers.CharField(help_text="模板代码所在目录")
 
@@ -102,6 +100,13 @@ class TemplateBaseInputSLZ(serializers.Serializer):
     def get_is_hidden(self, obj) -> bool:
         """获取模板是否隐藏"""
         return not obj.is_display
+
+    def validate_repo_type(self, value: str) -> str:
+        """验证代码仓库类型"""
+        repo_types = [item[0] for item in get_sourcectl_types().get_choices()]
+        if value and value not in repo_types:
+            raise ValidationError(_("不支持的代码仓库类型"))
+        return value
 
     def validate_preset_services_config(self, conf: Dict) -> Dict:
         if not isinstance(conf, dict):

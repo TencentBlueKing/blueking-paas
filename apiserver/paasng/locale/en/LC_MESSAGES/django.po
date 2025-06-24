@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-06-24 12:26+0800\n"
+"POT-Creation-Date: 2025-06-24 15:38+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -144,8 +144,8 @@ msgstr ""
 
 #: paas_wl/bk_app/cnative/specs/serializers.py:57
 msgid ""
-"挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。例如："
-"{'file1.yaml': 'file1 content', 'file2.yaml': 'file2 content'}"
+"挂载卷内容为一个字典，其中键表示文件名称，值表示文件内容。例如：{'file1."
+"yaml': 'file1 content', 'file2.yaml': 'file2 content'}"
 msgstr ""
 "Volume Contents are a dictionary where keys are file names and values are "
 "file contents. For example:{'file1.yaml': 'file1 content', 'file2.yaml': "
@@ -589,7 +589,7 @@ msgstr "The current secret is built-in and cannot be deleted"
 
 #: paasng/accessories/app_secret/views.py:172
 #: paasng/accessories/servicehub/views.py:782
-#: paasng/platform/applications/views/application.py:522
+#: paasng/platform/applications/views/application.py:535
 #: paasng/platform/sourcectl/views.py:152
 msgid "验证码错误"
 msgstr "Verification code error"
@@ -807,7 +807,7 @@ msgid "{url} 并非 {module_name} 模块的访问入口"
 msgstr "{url} is not an access entry for the {module_name} module"
 
 #: paasng/accessories/publish/market/serializers.py:442
-#: paasng/platform/modules/serializers.py:330
+#: paasng/platform/modules/serializers.py:347
 msgid "This field is required."
 msgstr "This field is required."
 
@@ -1869,7 +1869,7 @@ msgstr "Access URL"
 msgid "应用成员"
 msgstr "APP Member"
 
-#: paasng/misc/audit/constants.py:69 paasng/platform/modules/serializers.py:386
+#: paasng/misc/audit/constants.py:69 paasng/platform/modules/serializers.py:403
 msgid "构建配置"
 msgstr "Build Configuration"
 
@@ -2195,7 +2195,7 @@ msgstr "disable user access restrictions"
 #: paasng/platform/declarative/application/validations/v2.py:104
 #: paasng/platform/declarative/deployment/validations/v2.py:173
 #: paasng/platform/modules/serializers.py:177
-#: paasng/platform/modules/serializers.py:286
+#: paasng/platform/modules/serializers.py:303
 #: paasng/platform/sourcectl/serializers.py:160
 msgid "构建目录不合法，不能以 '/' 开头，不能包含 '..'"
 msgstr "Invalid source_dir, cannot start with '/' or contain '..'"
@@ -2546,38 +2546,44 @@ msgstr "OAuth display information does not support the field {}"
 
 #: paasng/plat_mgt/sourcectl/serializers.py:187
 #: paasng/plat_mgt/sourcectl/serializers.py:200
-#: paasng/plat_mgt/templates/serializers.py:136
-#: paasng/plat_mgt/templates/serializers.py:151
+#: paasng/plat_mgt/templates/serializers.py:147
+#: paasng/plat_mgt/templates/serializers.py:162
 msgid "名称已存在，请使用其他名称"
 msgstr "name already exists, please use another name"
 
-#: paasng/plat_mgt/templates/serializers.py:102
+#: paasng/plat_mgt/templates/serializers.py:108
+#, fuzzy
+#| msgid "代码仓库地址"
+msgid "不支持的代码仓库类型"
+msgstr "Unsupported Code Repository type"
+
+#: paasng/plat_mgt/templates/serializers.py:113
 msgid "预设增强服务配置必须为 Dict 格式"
 msgstr "Preset enhanced service configuration must be in Dict format"
 
-#: paasng/plat_mgt/templates/serializers.py:108
+#: paasng/plat_mgt/templates/serializers.py:119
 msgid "构建工具配置必须为 List[str] 格式"
 msgstr "Build tool configuration must be in List[str] format"
 
-#: paasng/plat_mgt/templates/serializers.py:111
+#: paasng/plat_mgt/templates/serializers.py:122
 msgid "针对不同镜像配置 required_buildpacks 时必须配置默认值 __default__"
 msgstr ""
 "When configuring required_buildpacks for different images, the default value "
 "__default__ must be set"
 
-#: paasng/plat_mgt/templates/serializers.py:114
+#: paasng/plat_mgt/templates/serializers.py:125
 msgid "构建工具配置必须为 Dict[str, List[str]] 格式"
 msgstr "Build tool configuration must be in Dict[str, List[str]] format"
 
-#: paasng/plat_mgt/templates/serializers.py:116
+#: paasng/plat_mgt/templates/serializers.py:127
 msgid "构建工具必须为 List[str] 或 Dict[str, List[str]] 格式"
 msgstr "Build tools must be in List[str] or Dict[str, List[str]] format"
 
-#: paasng/plat_mgt/templates/serializers.py:121
+#: paasng/plat_mgt/templates/serializers.py:132
 msgid "进程配置必须为 Dict 格式"
 msgstr "Process configuration must be in Dict format"
 
-#: paasng/plat_mgt/templates/serializers.py:126
+#: paasng/plat_mgt/templates/serializers.py:137
 msgid "二进制包存储配置必须为有效的地址字符串"
 msgstr ""
 "The value of the binary package storage configuration must be a valid "
@@ -3456,6 +3462,11 @@ msgstr ""
 "The current APP has not been deployed to the prod env, skip creating a "
 "database instance for the prod env."
 
+#: paasng/platform/mgrlegacy/app_migrations/service_rabbitmq.py:59
+#, python-brace-format
+msgid "正在为 {environment} 环境创建 RabbitMQ 服务实例..."
+msgstr ""
+
 #: paasng/platform/mgrlegacy/legacy_proxy.py:79
 msgid "暂不支持轻应用迁移"
 msgstr " Mini-APP migration is not currently supported"
@@ -3548,7 +3559,7 @@ msgid "模板名称"
 msgstr "Template name"
 
 #: paasng/platform/modules/serializers.py:166
-#: paasng/platform/modules/serializers.py:425
+#: paasng/platform/modules/serializers.py:442
 msgid "名称为 {} 的模块已存在"
 msgstr " APP name %s already exists "
 
@@ -3557,16 +3568,28 @@ msgstr " APP name %s already exists "
 msgid "模板 {} 不可用"
 msgstr "Template {} is unavailable"
 
-#: paasng/platform/modules/serializers.py:364
+#: paasng/platform/modules/serializers.py:292
+msgid "新建代码仓库时，源码仓库类型不能为空"
+msgstr ""
+
+#: paasng/platform/modules/serializers.py:295
+msgid "新建代码仓库时，源码仓库地址无效"
+msgstr ""
+
+#: paasng/platform/modules/serializers.py:298
+msgid "将模板代码初始化到代码仓库中时，必须选择应用模板"
+msgstr ""
+
+#: paasng/platform/modules/serializers.py:381
 msgid "镜像凭证信息"
 msgstr "Image credential information"
 
-#: paasng/platform/modules/serializers.py:404
+#: paasng/platform/modules/serializers.py:421
 msgid "源码配置"
 msgstr "Source code configuration"
 
-#: paasng/platform/modules/serializers.py:467
-#: paasng/platform/modules/serializers.py:477
+#: paasng/platform/modules/serializers.py:484
+#: paasng/platform/modules/serializers.py:494
 msgid "指令不能以 'start ' 开头."
 msgstr "The command cannot begin with 'start '."
 

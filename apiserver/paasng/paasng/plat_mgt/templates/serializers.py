@@ -22,6 +22,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.platform.templates.constants import RenderMethod, TemplateType
 from paasng.platform.templates.models import Template
 
@@ -34,7 +35,7 @@ class TemplateMinimalOutputSLZ(serializers.Serializer):
     display_name_zh_cn = serializers.CharField(help_text="模板中文名称")
     display_name_en = serializers.CharField(help_text="模板英文名称")
     type = serializers.CharField(help_text="模板类型")
-    language = serializers.ChoiceField(choices=AppLanguage.get_choices(), help_text="开发语言")
+    language = serializers.CharField(help_text="开发语言")
     is_display = serializers.SerializerMethodField(help_text="是否显示")
 
     def get_is_display(self, obj: Template) -> bool:
@@ -53,10 +54,11 @@ class TemplateDetailOutputSLZ(serializers.Serializer):
     display_name_en = serializers.CharField(help_text="模板英文名称")
     description_zh_cn = serializers.CharField(help_text="模板中文描述")
     description_en = serializers.CharField(help_text="模板英文描述")
-    language = serializers.ChoiceField(choices=AppLanguage.get_choices(), help_text="开发语言")
+    language = serializers.CharField(help_text="开发语言")
     is_display = serializers.SerializerMethodField(help_text="是否显示")
     # 模板信息
     blob_url = serializers.JSONField(help_text="二进制包存储路径")
+    repo_type = serializers.CharField(help_text="代码仓库类型")
     repo_url = serializers.CharField(help_text="代码仓库地址")
     source_dir = serializers.CharField(help_text="模板代码所在目录")
     # 配置信息
@@ -85,7 +87,11 @@ class TemplateBaseInputSLZ(serializers.Serializer):
     is_hidden = serializers.SerializerMethodField(help_text="是否隐藏")
     # 模板信息
     blob_url = serializers.JSONField(help_text="二进制包存储路径", default=dict)
+    repo_type = serializers.ChoiceField(
+        help_text="代码仓库类型", choices=get_sourcectl_types().get_choices(), allow_blank=True, default=""
+    )
     repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, allow_blank=True, default="")
+    source_dir = serializers.CharField(help_text="模板代码所在目录")
 
     # 配置信息
     preset_services_config = serializers.JSONField(help_text="预设增强服务配置", default=dict)

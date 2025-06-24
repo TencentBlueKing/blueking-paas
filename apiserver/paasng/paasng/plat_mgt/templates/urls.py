@@ -26,6 +26,11 @@ urlpatterns = [
         name="plat_mgt.templates.list_create",
     ),
     re_path(
+        r"^api/plat_mgt/templates/metadata/$",
+        TemplateViewSet.as_view({"get": "get_templates_metadata"}),
+        name="plat_mgt.templates.get_templates_metadata",
+    ),
+    re_path(
         r"^api/plat_mgt/templates/(?P<pk>[^/]+)/$",
         TemplateViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
         name="plat_mgt.templates.retrieve_update_destroy",

@@ -25,6 +25,9 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
+from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.sourcectl.source_types import get_sourcectl_types
+from paasng.platform.templates.constants import RenderMethod, TemplateType
 from paasng.platform.templates.models import Template
 
 from .serializers import (
@@ -42,7 +45,7 @@ class TemplateViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
 
     @swagger_auto_schema(
-        tags=["plat_mgt.tmpls"],
+        tags=["plat_mgt.templates"],
         operation_description="获取模板列表",
         responses={status.HTTP_200_OK: TemplateMinimalOutputSLZ(many=True)},
     )
@@ -52,7 +55,7 @@ class TemplateViewSet(viewsets.GenericViewSet):
         return Response(slz.data)
 
     @swagger_auto_schema(
-        tags=["plat_mgt.tmpls"],
+        tags=["plat_mgt.templates"],
         operation_description="获取单个模板详情",
         responses={status.HTTP_200_OK: TemplateDetailOutputSLZ()},
     )
@@ -62,7 +65,7 @@ class TemplateViewSet(viewsets.GenericViewSet):
         return Response(slz.data)
 
     @swagger_auto_schema(
-        tags=["plat_mgt.tmpls"],
+        tags=["plat_mgt.templates"],
         operation_description="创建模板",
         responses={status.HTTP_201_CREATED: ""},
     )
@@ -84,7 +87,7 @@ class TemplateViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
-        tags=["plat_mgt.tmpls"],
+        tags=["plat_mgt.templates"],
         operation_description="更新模板",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
@@ -110,7 +113,7 @@ class TemplateViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
-        tags=["plat_mgt.tmpls"],
+        tags=["plat_mgt.templates"],
         operation_description="删除模板",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
@@ -128,3 +131,22 @@ class TemplateViewSet(viewsets.GenericViewSet):
             data_before=data_before,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.templates"],
+        operation_description="获取模板相关的元数据",
+        responses={status.HTTP_200_OK: ""},
+    )
+    def get_templates_metadata(self, request):
+        result = {}
+        repo_types = [item[0] for item in get_sourcectl_types().get_choices()]
+        application_types = AppLanguage.get_values()
+        template_types = TemplateType.get_values()
+        render_methods = RenderMethod.get_values()
+        result = {
+            "repo_types": repo_types,
+            "application_types": application_types,
+            "template_types": template_types,
+            "render_methods": render_methods,
+        }
+        return Response(result)

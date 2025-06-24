@@ -1,9 +1,7 @@
 <template lang="html">
   <div class="top-info-wrapper">
     <div class="text-wrapper">
-      <h3 class="app-type">
-        {{ $t('应用类型') }}：{{ appInfo.type }}
-      </h3>
+      <h3 class="app-type">{{ $t('应用类型') }}：{{ appInfo.type }}</h3>
       <p>{{ appInfo.description }}</p>
     </div>
     <!-- 普通应用 -->
@@ -23,15 +21,22 @@
             <span
               v-bk-tooltips="$t('所有进程 CPU limit 的总和')"
               v-dashed
-            >CPU:</span>
-            {{ appInfo.data.cpuProd || '-- ' }}{{ $t('核（生产环境）') }}、{{ appInfo.data.cpuStag || '-- ' }}{{ $t('核（预发布环境）') }}
+            >
+              CPU:
+            </span>
+            {{ appInfo.data.cpuProd || '-- ' }}{{ $t('核（生产环境）') }}、{{ appInfo.data.cpuStag || '-- '
+            }}{{ $t('核（预发布环境）') }}
           </p>
           <p>
             <span
               v-bk-tooltips="$t('所有进程 Memory limit 的总和')"
               v-dashed
-            >{{ $t('内存') }}:</span>
-            {{ appInfo.data.memProd || '-- ' }}G{{ $t('（生产环境 ）') }}、{{ appInfo.data.memStag || '-- ' }}G{{ $t('（预发布环境）') }}
+            >
+              {{ $t('内存') }}:
+            </span>
+            {{ appInfo.data.memProd || '-- ' }}G{{ $t('（生产环境 ）') }}、{{ appInfo.data.memStag || '-- ' }}G{{
+              $t('（预发布环境）')
+            }}
           </p>
         </div>
       </div>
@@ -57,7 +62,7 @@
       >
         <div
           class="icon-box mr8"
-          style="cursor: pointer;"
+          style="cursor: pointer"
           @click="toDataDetails(item)"
         >
           <i :class="`paasng-icon paasng-${item.icon}`" />
@@ -71,42 +76,9 @@
   </div>
 </template>
 
-<script>import i18n from '@/language/i18n.js';
-const enginelessMapList = [
-  {
-    icon: 'pv',
-    quantity: 0,
-    text: i18n.t('访问数(pv)'),
-    id: 'pv',
-  },
-  {
-    icon: 'member',
-    quantity: 0,
-    text: i18n.t('访客数(uv)'),
-    id: 'uv',
-  },
-  {
-    icon: 'api-2',
-    quantity: 0,
-    text: i18n.t('已申请权限的API数'),
-    id: 'apiNumber',
-  },
-];
+<script>
+import { mapState } from 'vuex';
 
-const notAnalyticsMapList = [
-  {
-    icon: 'wangguan',
-    quantity: 0,
-    text: i18n.t('已申请权限的网关数'),
-    id: 'gateway',
-  },
-  {
-    icon: 'api-2',
-    quantity: 0,
-    text: i18n.t('已申请权限的API数'),
-    id: 'apiNumber',
-  },
-];
 export default {
   props: {
     appInfo: {
@@ -124,31 +96,60 @@ export default {
   },
   data() {
     return {
-      enginelessList: enginelessMapList,
-      notAnalyticsList: notAnalyticsMapList,
+      enginelessList: [
+        {
+          icon: 'pv',
+          quantity: 0,
+          text: this.$t('访问数(pv)'),
+          id: 'pv',
+        },
+        {
+          icon: 'member',
+          quantity: 0,
+          text: this.$t('访客数(uv)'),
+          id: 'uv',
+        },
+        {
+          icon: 'api-2',
+          quantity: 0,
+          text: this.$t('已申请权限的API数'),
+          id: 'apiNumber',
+        },
+      ],
+      notAnalyticsList: [
+        {
+          icon: 'wangguan',
+          quantity: 0,
+          text: this.$t('已申请权限的网关数'),
+          id: 'gateway',
+        },
+        {
+          icon: 'api-2',
+          quantity: 0,
+          text: this.$t('已申请权限的API数'),
+          id: 'apiNumber',
+        },
+      ],
     };
   },
   computed: {
-    curAppInfo() {
-      return this.$store.state.curAppInfo;
-    },
+    ...mapState(['curAppInfo', 'userFeature', 'curAppModule']),
     isEngineless() {
       return this.curAppInfo.web_config.engine_enabled;
     },
+    isOperador() {
+      return this.curAppInfo.role?.name === 'operator';
+    },
     viewList() {
-      return this.isModule ? this.enginelessList : this.notAnalyticsList;
+      return (this.isModule ? this.enginelessList : this.notAnalyticsList).filter(
+        (item) => !(this.isOperador && item.id === 'apiNumber')
+      );
     },
     appCode() {
       return this.$route.params.id;
     },
-    curAppModule() {
-      return this.$store.state.curAppModule;
-    },
     curModuleId() {
       return this.curAppModule.name;
-    },
-    userFeature() {
-      return this.$store.state.userFeature;
     },
   },
   watch: {
@@ -202,83 +203,83 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
-    @import '~@/assets/css/mixins/dashed.scss';
-    @mixin flex {
-        display: flex;
-        align-items: center;
+@import '~@/assets/css/mixins/dashed.scss';
+@mixin flex {
+  display: flex;
+  align-items: center;
+}
+.default-top-info.top-info-wrapper {
+  margin-bottom: 0;
+}
+.top-info-wrapper {
+  display: flex;
+  min-height: 100px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #dcdee5;
+  border-radius: 2px;
+  background: #fff;
+  font-size: 12px;
+  color: #63656e;
+  .text-wrapper,
+  .process-info {
+    flex: 1;
+    border-right: 1px solid #f5f7fa;
+  }
+  .icon-box {
+    width: 48px;
+    height: 48px;
+    background: #f0f5ff;
+    border-radius: 4px;
+    @include flex;
+    justify-content: center;
+    i {
+      font-size: 32px;
+      color: #3a84ff;
     }
-    .default-top-info.top-info-wrapper {
-        margin-bottom: 0;
+  }
+  .description {
+    h4 {
+      font-size: 24px;
+      color: #313238;
     }
-    .top-info-wrapper {
-        display: flex;
-        min-height: 100px;
-        padding: 16px;
-        margin-bottom: 16px;
-        border: 1px solid #DCDEE5;
-        border-radius: 2px;
-        background: #fff;
-        font-size: 12px;
-        color: #63656E;
-        .text-wrapper,
-        .process-info {
-            flex: 1;
-            border-right: 1px solid #F5F7FA;
-        }
-        .icon-box {
-            width: 48px;
-            height: 48px;
-            background: #F0F5FF;
-            border-radius: 4px;
-            @include flex;
-            justify-content: center;
-            i {
-                font-size: 32px;
-                color: #3A84FF;
-            }
-        }
-        .description {
-            h4 {
-                font-size: 24px;
-                color: #313238;
-            }
-        }
-        .text-wrapper {
-            padding-right: 34px;
-            .app-type {
-                font-size: 12px;
-                color: #313238;
-                line-height: 22px;
-            }
-            p {
-                line-height: 22px;
-            }
-        }
-        .process-info  {
-            padding-left: 24px;
-            @include flex;
-            .left {
-                display: flex;
-                align-items: center;
-                margin-right: 15px;
-            }
-            .right {
-                height: 48px;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-around;
-            }
-        }
-        .alarm  {
-            flex: 1;
-            padding-left: 24px;
-            @include flex;
-        }
-        .mr8 {
-            margin-right: 8px;
-        }
-        .flex-more {
-            flex: 1.5;
-        }
+  }
+  .text-wrapper {
+    padding-right: 34px;
+    .app-type {
+      font-size: 12px;
+      color: #313238;
+      line-height: 22px;
     }
+    p {
+      line-height: 22px;
+    }
+  }
+  .process-info {
+    padding-left: 24px;
+    @include flex;
+    .left {
+      display: flex;
+      align-items: center;
+      margin-right: 15px;
+    }
+    .right {
+      height: 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+    }
+  }
+  .alarm {
+    flex: 1;
+    padding-left: 24px;
+    @include flex;
+  }
+  .mr8 {
+    margin-right: 8px;
+  }
+  .flex-more {
+    flex: 1.5;
+  }
+}
 </style>

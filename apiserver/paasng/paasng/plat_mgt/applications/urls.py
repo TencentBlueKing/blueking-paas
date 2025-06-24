@@ -49,6 +49,11 @@ urlpatterns = [
         views.ApplicationListViewSet.as_view({"get": "list_app_types"}),
         name="plat_mgt.applications.types",
     ),
+    re_path(
+        r"^api/plat_mgt/applications/hard_delete/(?P<app_code>[^/]+)/$",
+        views.ApplicationListViewSet.as_view({"delete": "hard_delete", "get": "hard_delete"}),
+        name="plat_mgt.applications.hard_delete",
+    ),
     # 平台管理 - 应用详情
     re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/$",

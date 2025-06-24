@@ -41,8 +41,9 @@ from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
 from paasng.plat_mgt.bk_plugins.views import is_plugin_instance_exist, is_user_plugin_admin
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, ApplicationEnvironment
 from paasng.platform.applications.tasks import cal_app_resource_quotas
+from paasng.platform.engine.models.base import EngineApp
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +149,27 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
             context={"request": request, "app_resource_quotas": app_resource_quotas},
         )
         return self.get_paginated_response(slz.data)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="彻底删除应用",
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def hard_delete(self, request, app_code):
+        """彻底删除应用"""
+        app = Application.default_objects.get(code=app_code)
+        app_id = app.id
+        # 获取删除应用关联的环境信息
+        envs = ApplicationEnvironment.objects.filter(application_id=app_id)
+        # 根据环境信息获取引擎应用信息
+        engine_app_ids = list(envs.values_list("engine_app_id", flat=True))
+
+        # 硬删除操作
+        envs.delete()
+        EngineApp.objects.filter(id__in=engine_app_ids).delete()
+        Application._base_manager.filter(id=app_id).delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ApplicationDetailViewSet(viewsets.GenericViewSet):

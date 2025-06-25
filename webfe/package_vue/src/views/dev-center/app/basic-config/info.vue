@@ -12,7 +12,7 @@
             {{ $t('基本信息-title') }}
             <div
               v-if="!appBaseInfoConfig.isEdit"
-              :class="['edit-container', { disabled: !isBasicInfoEditable }]"
+              class="edit-container"
               @click="handleEditBaseInfo"
             >
               <i class="paasng-icon paasng-edit-2 pl10" />
@@ -20,7 +20,7 @@
             </div>
           </div>
           <div class="info">
-            {{ $t('管理员、运营者可以修改应用名称等基本信息。') }}
+            {{ $t('管理员、开发者、运营者可以修改应用名称等基本信息。') }}
           </div>
           <section class="main">
             <!-- 查看态 -->
@@ -29,37 +29,18 @@
               v-if="!appBaseInfoConfig.isEdit"
             >
               <section class="info-warpper">
-                <div class="item">
-                  <div class="label">{{ $t('应用名称') }}：</div>
+                <div
+                  class="item"
+                  v-for="item in displayItems"
+                  :key="item.label"
+                >
+                  <div class="label">{{ $t(item.label) }}：</div>
                   <div
                     class="value"
                     v-bk-overflow-tips
                   >
-                    {{ localeAppInfo.name || '--' }}
+                    {{ item.value || '--' }}
                   </div>
-                </div>
-                <div
-                  class="item"
-                  v-if="platformFeature.REGION_DISPLAY"
-                >
-                  <div class="label">{{ $t('应用版本') }}：</div>
-                  <div class="value">{{ curAppInfo.application.region_name || '--' }}</div>
-                </div>
-                <template v-if="isShowTenant">
-                  <div class="item">
-                    <div class="label">{{ $t('租户模式') }}：</div>
-                    <div class="value">
-                      {{ $t(appTenantMode[curAppInfo.application.app_tenant_mode]) }}
-                    </div>
-                  </div>
-                  <div class="item">
-                    <div class="label">{{ $t('租户 ID') }}：</div>
-                    <div class="value">{{ curAppInfo.application.app_tenant_id || '--' }}</div>
-                  </div>
-                </template>
-                <div class="item">
-                  <div class="label">{{ $t('创建时间') }}：</div>
-                  <div class="value">{{ curAppInfo.application.created || '--' }}</div>
                 </div>
               </section>
               <div class="logo-wrapper">
@@ -72,30 +53,118 @@
               v-else
             >
               <bk-form
-                :label-width="200"
                 :model="localeAppInfo"
                 form-type="vertical"
                 ref="formNameRef"
+                :rules="rules"
               >
                 <bk-form-item
                   :label="$t('应用名称')"
                   :property="'name'"
-                  :rules="rules.name"
                   :required="true"
                   :error-display-type="'normal'"
                 >
                   <bk-input v-model="localeAppInfo.name"></bk-input>
                 </bk-form-item>
                 <bk-form-item
-                  :label="$t('应用版本')"
-                  v-if="platformFeature.REGION_DISPLAY"
+                  :label="$t('应用分类')"
+                  :property="'tagId'"
+                  :required="true"
+                  :error-display-type="'normal'"
                 >
-                  <bk-input
-                    disabled
-                    v-model="curAppInfo.application.region_name"
-                  ></bk-input>
+                  <bk-select
+                    v-model="localeAppInfo.tagId"
+                    :clearable="true"
+                    :popover-min-width="200"
+                    :searchable="true"
+                  >
+                    <bk-option
+                      v-for="(option, index) in tagList"
+                      :id="option.id"
+                      :key="`${option.name}-${index}`"
+                      :name="option.name"
+                    />
+                  </bk-select>
+                  <bk-button
+                    v-if="testTagId && !localeAppInfo.tagId"
+                    class="p0 mt5"
+                    slot="tip"
+                    :text="true"
+                    size="small"
+                    theme="primary"
+                    @click="handleQuickSelectTest"
+                  >
+                    <div class="flex-row">
+                      <img
+                        class="lightening-icon"
+                        src="/static/images/lightening.svg"
+                        @click="handleExpand(row)"
+                      />
+                      {{ $t('快速标记为 “测试” 分类') }}
+                    </div>
+                  </bk-button>
                 </bk-form-item>
-                <bk-form-item label="LOGO">
+                <bk-form-item
+                  v-if="userFeature.APP_AVAILABILITY_LEVEL"
+                  :label="$t('可用性保障登记')"
+                  :required="true"
+                  ext-cls="availability-item-cls"
+                >
+                  <bk-radio-group v-model="localeAppInfo.availabilityLevel">
+                    <bk-radio
+                      v-for="(val, key) in tierMap"
+                      :value="key"
+                      :key="key"
+                      ext-cls="block"
+                    >
+                      {{ $t(val) }}
+                      <span
+                        v-if="key === 'premium'"
+                        class="tip ml10 f12"
+                      >
+                        <i class="paasng-icon paasng-info-line"></i>
+                        {{ $t('为其他 SaaS 或业务提供平台级服务，需要更高的可用性保障。') }}
+                      </span>
+                    </bk-radio>
+                  </bk-radio-group>
+                  <!-- 高级别展示风险提示 -->
+                  <bk-alert
+                    v-if="localeAppInfo.availabilityLevel === 'premium'"
+                    class="mt10"
+                    type="warning"
+                    :show-icon="false"
+                  >
+                    <div
+                      slot="title"
+                      class="risk-warning"
+                    >
+                      <i class="paasng-icon paasng-remind f14"></i>
+                      <div>
+                        {{
+                          $t(
+                            '平台提供的 GCS-MySQL 数据库为共享实例，无法支持高级别的可用性。请参考文档申请独立的数据库实例。'
+                          )
+                        }}
+                        <a
+                          v-if="GLOBAL.DOC.GCS_MySQL_LINK"
+                          :href="GLOBAL.DOC.GCS_MySQL_LINK"
+                          target="_blank"
+                        >
+                          {{ $t('申请独立的数据库指引') }}
+                        </a>
+                        <div class="mt15">
+                          <bk-checkbox v-model="isAwareOfRisk">
+                            <span class="f12">{{ $t('我已知晓风险') }}</span>
+                          </bk-checkbox>
+                        </div>
+                      </div>
+                    </div>
+                  </bk-alert>
+                </bk-form-item>
+                <bk-form-item
+                  label="LOGO"
+                  ext-cls="app-logo-cls"
+                >
                   <div :class="['logoupload-wrapper', { selected: curFileData.length }]">
                     <bk-upload
                       :files="curFileData"
@@ -104,30 +173,34 @@
                       :multiple="false"
                       ext-cls="app-logo-upload-cls"
                       :custom-request="customRequest"
-                      @on-delete="handleDelete"
+                      @on-delete="curFileData = []"
                     ></bk-upload>
-                    <p class="tip">
-                      {{ $t('支持jpg、png等图片格式，图片尺寸为72*72px，不大于2MB。') }}
-                    </p>
+                    <ul class="upload-tip">
+                      <li>{{ $t('支持 jpg、png 等图片格式') }}</li>
+                      <li>{{ $t('图片尺寸为 72 * 72px') }}</li>
+                      <li>{{ $t('不大于 2MB') }}</li>
+                    </ul>
                   </div>
                 </bk-form-item>
                 <bk-form-item class="mt20 base-info-form-btn">
-                  <bk-button
-                    ext-cls="mr8"
-                    theme="primary"
-                    :loading="appBaseInfoConfig.isLoading"
-                    @click.stop="handleSubmitBaseInfo"
+                  <span
+                    style="display: inline-block"
+                    v-bk-tooltips="{
+                      content: $t('请点勾选 “我已知晓风险”'),
+                      disabled: !isSubmitDisabled,
+                      placement: 'bottom',
+                    }"
                   >
-                    {{ $t('提交') }}
-                  </bk-button>
-                  <bk-button
-                    ext-cls="mr8"
-                    theme="default"
-                    :disabled="!curFileData.length"
-                    @click="handlePreview"
-                  >
-                    {{ $t('预览') }}
-                  </bk-button>
+                    <bk-button
+                      ext-cls="mr8"
+                      theme="primary"
+                      :loading="appBaseInfoConfig.isLoading"
+                      :disabled="isSubmitDisabled"
+                      @click.stop="handleSubmitBaseInfo"
+                    >
+                      {{ $t('提交') }}
+                    </bk-button>
+                  </span>
                   <bk-button
                     theme="default"
                     @click="handlerBaseInfoCancel"
@@ -207,7 +280,7 @@
     <bk-dialog
       v-model="delAppDialog.visiable"
       width="540"
-      :title="$t(`确认删除应用【{name}】？`, { name: curAppInfo.application.name })"
+      :title="$t(`确认删除应用【{name}】？`, { name: applicationDetail.name })"
       :theme="'primary'"
       :header-position="'left'"
       :mask-close="false"
@@ -216,7 +289,7 @@
       <div class="ps-form">
         <div class="spacing-x1">
           {{ $t('请完整输入') }}
-          <code>{{ curAppInfo.application.code }}</code>
+          <code>{{ applicationDetail.code }}</code>
           {{ $t('来确认删除应用！') }}
         </div>
         <div class="ps-form-group">
@@ -234,7 +307,7 @@
       </div>
       <template slot="footer">
         <bk-button
-          theme="primary"
+          theme="danger"
           :disabled="!formRemoveValidated"
           :loading="delAppDialog.isLoading"
           @click="submitRemoveApp"
@@ -250,31 +323,15 @@
         </bk-button>
       </template>
     </bk-dialog>
-
-    <!-- 预览效果 -->
-    <bk-dialog
-      v-model="previewDialogConfig.visible"
-      ext-cls="base-info-preview-dialog-cls"
-      theme="primary"
-    >
-      <div class="content">
-        <img
-          id="dislog-preview-image"
-          :src="previewImageRrl"
-        />
-        <h3 class="title">{{ localeAppInfo.name }}</h3>
-      </div>
-    </bk-dialog>
   </div>
 </template>
 
 <script>
-import moment from 'moment';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import authenticationInfo from '@/components/authentication-info.vue';
 import pluginInfo from './plugin-info.vue';
 import { APP_TENANT_MODE } from '@/common/constants';
-import { mapGetters } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 
 export default {
   components: {
@@ -284,19 +341,19 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
-      isLoading: false,
+      isLoading: true,
       formRemoveConfirmCode: '',
       localeAppInfo: {
         name: '',
         logo: '',
-        introduction: '',
-        contact: [],
+        tagId: '',
+        availabilityLevel: 'standard',
       },
       rules: {
         name: [
           {
             required: true,
-            message: this.$t('该字段是必填项'),
+            message: this.$t('必填项'),
             trigger: 'blur',
           },
           {
@@ -313,6 +370,13 @@ export default {
             trigger: 'blur',
           },
         ],
+        tagId: [
+          {
+            required: true,
+            message: this.$t('必填项'),
+            trigger: 'blur',
+          },
+        ],
       },
       delAppDialog: {
         visiable: false,
@@ -325,14 +389,24 @@ export default {
         logoData: null,
         isLoading: false,
       },
-      previewDialogConfig: {
-        visible: false,
-      },
       curFileData: [],
       appTenantMode: APP_TENANT_MODE,
+      // 当前应用详情
+      curAppData: {},
+      // 应用分类下拉列表
+      tagList: [],
+      // 是否知晓风险
+      isAwareOfRisk: false,
+      tierMap: {
+        standard: '基础',
+        premium: '高级别',
+      },
+      testTagId: '',
     };
   },
   computed: {
+    ...mapState(['platformFeature', 'userFeature', 'localLanguage']),
+    ...mapGetters(['isShowTenant']),
     canDeleteApp() {
       return this.curAppInfo.role.name === 'administrator';
     },
@@ -344,56 +418,90 @@ export default {
       return ['administrator', 'operator'].indexOf(this.curAppInfo.role.name) !== -1;
     },
     formRemoveValidated() {
-      return this.curAppInfo.application.code === this.formRemoveConfirmCode;
+      return this.applicationDetail.code === this.formRemoveConfirmCode;
     },
-    platformFeature() {
-      return this.$store.state.platformFeature;
-    },
-    userFeature() {
-      return this.$store.state.userFeature;
-    },
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
-    curAppName() {
-      return this.curAppInfo.application?.name;
-    },
-    previewImageRrl() {
-      return this.curFileData[0]?.url;
+    applicationDetail() {
+      return this.curAppData.application || {};
     },
     // 是否展示应用描述文件
     isShowAppDescriptionFile() {
-      return !['engineless_app', 'cloud_native'].includes(this.curAppInfo.application.type);
+      return !['engineless_app', 'cloud_native'].includes(this.applicationDetail.type);
     },
-    ...mapGetters(['isShowTenant']),
-  },
-  watch: {
-    curAppInfo(value) {
-      this.isLoading = true;
-      this.localeAppInfo.name = value.application.name;
-      this.localeAppInfo.logo = value.application.logo_url;
-      this.$refs.authenticationRef?.resetAppSecret();
-      setTimeout(() => {
-        this.isLoading = false;
-      }, 500);
+    // 高级别提交禁用
+    isSubmitDisabled() {
+      return this.userFeature.APP_AVAILABILITY_LEVEL
+        ? this.localeAppInfo.availabilityLevel === 'premium' && !this.isAwareOfRisk
+        : false;
     },
-  },
-  created() {
-    moment.locale(this.localLanguage);
+    displayItems() {
+      const { extra_info } = this.applicationDetail;
+      return [
+        {
+          key: 'name',
+          label: '应用名称',
+          value: this.applicationDetail.name,
+          visible: true,
+        },
+        ...(this.isShowTenant
+          ? [
+              {
+                key: 'tenant-mode',
+                label: '租户模式',
+                value: this.$t(this.appTenantMode[this.applicationDetail.app_tenant_mode]),
+                visible: true,
+              },
+              {
+                key: 'tenant-id',
+                label: '租户 ID',
+                value: this.applicationDetail.app_tenant_id,
+                visible: true,
+              },
+            ]
+          : []),
+        {
+          key: 'category',
+          label: '应用分类',
+          value: extra_info?.tag?.name,
+          visible: true,
+        },
+        {
+          key: 'availability',
+          label: '可用性保障登记',
+          value: this.tierMap[extra_info?.availability_level],
+          visible: !!this.userFeature.APP_AVAILABILITY_LEVEL,
+        },
+        {
+          key: 'created',
+          label: '创建时间',
+          value: this.applicationDetail.created,
+          visible: true,
+        },
+      ].filter((item) => item.visible);
+    },
   },
   mounted() {
     this.descAppStatus = this.curAppInfo.feature.APPLICATION_DESCRIPTION;
-    this.isLoading = true;
-    this.getDescAppStatus();
     this.init();
-    if (this.curAppName) {
-      this.localeAppInfo.name = this.curAppName;
-    }
-    setTimeout(() => {
-      this.isLoading = false;
-    }, 300);
   },
   methods: {
+    async init() {
+      Promise.all([this.getAppInfo(), this.getDescAppStatus()]).finally(() => {
+        this.isLoading = false;
+        this.handleAutoEditMode();
+      });
+      this.formRemoveConfirmCode = '';
+    },
+    // 页面进入后，判断是否开启编辑模式
+    handleAutoEditMode() {
+      if (this.$route.query.editMode) {
+        this.handleEditBaseInfo(); // 进入编辑模式
+        this.$nextTick(() => {
+          this.$refs.formNameRef?.validate().catch((e) => {
+            console.error(e);
+          });
+        });
+      }
+    },
     async getDescAppStatus() {
       try {
         const res = await this.$store.dispatch('market/getDescAppStatus', this.appCode);
@@ -405,52 +513,42 @@ export default {
         });
       }
     },
-    async init() {
-      this.initAppMarketInfo();
-      this.formRemoveConfirmCode = '';
-    },
+    // 准备接口数据
+    prepareFormData() {
+      const formData = new FormData();
+      const { name, tagId, availabilityLevel } = this.localeAppInfo;
+      const { logoData } = this.appBaseInfoConfig;
 
-    // 应用名称校验
-    handleSaveCheck() {
-      // 应用名称保存
-      this.$refs.appNmaeRef.validate().then(
-        () => {
-          this.updateAppBasicInfo();
-        },
-        (e) => {
-          console.error(e.content || e);
-        }
+      // 添加必填字段
+      Object.entries({ name, tag_id: tagId, availability_level: availabilityLevel }).forEach(
+        ([key, value]) => value !== undefined && formData.append(key, value)
       );
-    },
 
+      if (logoData) {
+        formData.append('logo', logoData);
+      }
+
+      return formData;
+    },
     // 更新基本信息
     async updateAppBasicInfo() {
       try {
         this.appBaseInfoConfig.isLoading = true;
-        const data = new FormData();
-        data.append('name', this.localeAppInfo.name);
-        if (this.appBaseInfoConfig.logoData) {
-          data.append('logo', this.appBaseInfoConfig.logoData);
-        }
+        const data = this.prepareFormData();
         const res = await this.$store.dispatch('baseInfo/updateAppBasicInfo', {
           appCode: this.appCode,
           data,
         });
+        this.getAppInfo();
         this.$paasMessage({
           theme: 'success',
           message: this.$t('信息修改成功！'),
         });
         this.resetAppBaseInfoConfig();
-        this.localeAppInfo.logo = res.logo_url;
         this.$store.commit('updateCurAppBaseInfo', res);
       } catch (e) {
-        this.localeAppInfo.name = this.curAppName;
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       } finally {
-        this.$refs.appNmaeRef?.clearError();
         this.appBaseInfoConfig.isLoading = false;
       }
     },
@@ -488,16 +586,25 @@ export default {
         this.delAppDialog.isLoading = false;
       }
     },
-
-    async initAppMarketInfo() {
+    // 初始化表单数据
+    initFromData(data) {
+      const { name, logo_url, extra_info } = data || {};
+      this.localeAppInfo = {
+        name,
+        logo: logo_url,
+        tagId: extra_info?.tag?.id || '',
+        availabilityLevel: extra_info?.availability_level || 'standard',
+      };
+    },
+    // 获取应用所有信息
+    async getAppInfo() {
       try {
-        const res = await this.$store.dispatch('market/getAppBaseInfo', this.appCode);
-        this.localeAppInfo.logo = res.application.logo_url;
+        const ret = await this.$store.dispatch('market/getAppBaseInfo', this.appCode);
+        this.initFromData(ret.application);
+        this.curAppData = ret || {};
+        this.$refs.authenticationRef?.resetAppSecret();
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       }
     },
     async toggleDescSwitch() {
@@ -525,52 +632,40 @@ export default {
         this.descAppStatus = res.APPLICATION_DESCRIPTION;
         this.$store.commit('updateCurDescAppStatus', this.descAppStatus);
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       }
     },
 
     // 基本信息编辑
     handleEditBaseInfo() {
-      if (!this.isBasicInfoEditable) return;
-      if (this.localeAppInfo.logo) {
-        this.curFileData = [
-          {
-            url: this.localeAppInfo.logo,
-          },
-        ];
+      // 获取应用分类列表
+      if (!this.tagList.length) {
+        this.getTagList();
       }
+      this.curFileData = this.localeAppInfo.logo ? [{ url: this.localeAppInfo.logo }] : [];
       this.appBaseInfoConfig.isEdit = true;
-    },
-
-    // 预览
-    handlePreview() {
-      this.previewDialogConfig.visible = true;
     },
 
     // 基本信息取消
     handlerBaseInfoCancel() {
-      this.localeAppInfo.name = this.curAppName;
+      this.initFromData(this.applicationDetail);
       this.resetAppBaseInfoConfig();
     },
 
     // 数据重置
     resetAppBaseInfoConfig() {
-      this.appBaseInfoConfig.isEdit = false;
-      this.appBaseInfoConfig.logoData = null;
-      this.appBaseInfoConfig.isLoading = false;
+      this.appBaseInfoConfig = {
+        isEdit: false,
+        logoData: null,
+        isLoading: false,
+      };
     },
 
     // 基本信息提交
     handleSubmitBaseInfo() {
       // 检查 logo 是否上传
       if (!this.curFileData.length) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('必须上传 logo'),
-        });
+        this.catchErrorHandler({ detail: this.$t('必须上传 logo') });
         return;
       }
       this.$refs.formNameRef?.validate().then(
@@ -606,8 +701,21 @@ export default {
         },
       ];
     },
-    handleDelete() {
-      this.curFileData = [];
+
+    // 获取应用分类下拉数据
+    async getTagList() {
+      try {
+        const res = await this.$store.dispatch('market/getTags');
+        this.tagList = res;
+        this.testTagId = res.find((v) => v.name === '测试')?.id || '';
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+
+    // 快速选择为测试分类
+    handleQuickSelectTest() {
+      this.localeAppInfo.tagId = this.testTagId;
     },
   },
 };
@@ -727,6 +835,14 @@ export default {
       }
     }
   }
+  .risk-warning {
+    display: flex;
+    line-height: 20px;
+    .paasng-remind {
+      margin: 3px 9px 0 0;
+      color: #f59500;
+    }
+  }
 }
 
 .app-main-container {
@@ -842,10 +958,6 @@ export default {
   z-index: 11 !important;
 }
 
-h2.basic-information {
-  box-shadow: 0 3px 4px 0 #0000000a;
-}
-
 .info-card-style {
   .title {
     font-weight: 700;
@@ -888,8 +1000,8 @@ h2.basic-information {
     .logo-wrapper {
       flex-shrink: 0;
       margin-right: 78px;
-      width: 96px;
-      height: 96px;
+      width: 104px;
+      height: 104px;
       img {
         width: 100%;
         height: 100%;
@@ -898,12 +1010,28 @@ h2.basic-information {
   }
 
   .edit-mode {
+    position: relative;
     font-size: 12px;
-    width: 630px;
+    width: 480px;
     margin-top: 16px;
+    .lightening-icon {
+      width: 14px;
+      margin-right: 5px;
+    }
+    .app-logo-cls {
+      position: absolute;
+      width: 300px;
+      top: -8px;
+      left: 510px;
+      .upload-tip {
+        margin-left: 12px;
+        font-size: 12px;
+        color: #979ba5;
+        line-height: 20px;
+      }
+    }
     .logoupload-wrapper {
       display: flex;
-      align-items: center;
       &.selected {
         .app-logo-upload-cls /deep/ .file-wrapper .picture-btn {
           background: #fff;
@@ -911,15 +1039,20 @@ h2.basic-information {
       }
       .app-logo-upload-cls {
         /deep/ .file-wrapper {
-          width: 96px;
-          height: 96px;
+          width: 104px;
+          height: 104px;
           padding-top: 0px;
           .picture-btn {
             background: #fafbfd;
+            .pic-item,
+            .mask {
+              width: 104px;
+              height: 104px;
+            }
           }
           .upload-btn {
-            width: 96px;
-            height: 96px;
+            width: 104px;
+            height: 104px;
             display: flex;
             align-items: center;
             flex-direction: column;
@@ -927,9 +1060,18 @@ h2.basic-information {
           }
         }
       }
-      .tip {
-        margin-left: 12px;
-        color: #979ba5;
+    }
+    .tip {
+      color: #979ba5;
+    }
+    .availability-item-cls {
+      /deep/ .bk-form-control {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        .bk-form-radio {
+          margin-left: 0;
+        }
       }
     }
   }
@@ -972,32 +1114,5 @@ h2.basic-information {
 .paas-info-app-name-cls.plugin-name .bk-form-input {
   padding-right: 130px !important;
   @include ellipsis;
-}
-.base-info-preview-dialog-cls {
-  .bk-dialog-footer {
-    display: none;
-  }
-  .bk-dialog-body {
-    padding: 0;
-  }
-  .content {
-    display: flex;
-    align-items: center;
-    background: #182132;
-    margin: 0 24px 24px;
-    padding-left: 12px;
-    height: 45px;
-    #dislog-preview-image {
-      height: 32px;
-      width: 32px;
-    }
-    .title {
-      font-family: MicrosoftYaHei;
-      margin-left: 8px;
-      font-size: 14px;
-      font-weight: 400;
-      color: #eaebf0;
-    }
-  }
 }
 </style>

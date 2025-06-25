@@ -29,48 +29,6 @@
             :model="baseInfo"
           >
             <bk-form-item
-              :label="$t('应用分类：')"
-              :required="true"
-              :rules="baseInfoRules.appArrange"
-              :icon-offset="380"
-              :property="'parentTag'"
-            >
-              <bk-select
-                v-model="baseInfo.parentTag"
-                class="mr20"
-                style="width: 365px; display: inline-block"
-                :placeholder="$t('请选择')"
-                :clearable="false"
-                :popover-min-width="200"
-                :searchable="true"
-                @selected="handleTagSelect"
-              >
-                <bk-option
-                  v-for="(option, index) in parentTagList"
-                  :id="option.id"
-                  :key="`${option.text}-${index}`"
-                  :name="option.text"
-                />
-              </bk-select>
-              <bk-select
-                v-if="childTagList.length"
-                v-model="baseInfo.childTag"
-                style="width: 365px; display: inline-block"
-                :placeholder="$t('请选择')"
-                :clearable="false"
-                :popover-min-width="200"
-                :searchable="true"
-              >
-                <bk-option
-                  v-for="(option, index) in childTagList"
-                  :id="option.id"
-                  :key="`${option.text}-${index}`"
-                  :name="option.text"
-                />
-              </bk-select>
-            </bk-form-item>
-
-            <bk-form-item
               :label="$t('应用简介：')"
               :required="true"
               :property="'introduction'"
@@ -307,13 +265,6 @@
             form-type="inline"
           >
             <bk-form-item
-              :label="$t('应用分类：')"
-              :rules="baseInfoRules.appArrange"
-              :icon-offset="380"
-            >
-              <p class="form-text">{{ baseInfo.parentTag || '--' }} / {{ baseInfo.childTag || '--' }}</p>
-            </bk-form-item>
-            <bk-form-item
               :label="$t('应用简介：')"
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
@@ -331,7 +282,24 @@
               :rules="baseInfoRules.appArrange"
               :icon-offset="380"
             >
-              <p class="form-text">{{ baseInfo.contactArr.join('; ') || '--' }}</p>
+              <!-- 多租户展示 -->
+              <template v-if="platformFeature.MULTI_TENANT_MODE && baseInfo.contactArr.length">
+                <div class="form-text">
+                  <span
+                    v-for="(user, index) in baseInfo.contactArr"
+                    :key="user"
+                  >
+                    <bk-user-display-name :user-id="user"></bk-user-display-name>
+                    <span v-if="baseInfo.contactArr.length > index + 1">;&nbsp;</span>
+                  </span>
+                </div>
+              </template>
+              <p
+                v-else
+                class="form-text"
+              >
+                {{ baseInfo.contactArr.join('; ') || '--' }}
+              </p>
             </bk-form-item>
             <bk-form-item
               v-if="GLOBAL.CONFIG.MARKET_INFO && baseInfo.related_corp_products.length"
@@ -432,10 +400,7 @@ export default {
       baseInfo: {
         name: '',
         introduction: '',
-        tag: '',
         logo: '',
-        parentTag: '',
-        childTag: '',
         description: '',
         is_win_maximize: 0,
         type: 1,
@@ -452,10 +417,6 @@ export default {
         visiable_labels: [],
       },
       appStatus: '',
-      // tagsDictionary: {},
-      // 应用一级分类列表
-      parentTagList: [],
-      parentTagSet: {},
       businessList: [],
       winResizeList: [
         {
@@ -505,17 +466,8 @@ export default {
     };
   },
   computed: {
-    ...mapState({
-      platformFeature: (state) => state.platformFeature,
-    }),
+    ...mapState(['platformFeature']),
     ...mapGetters(['tenantId', 'tenantApiBaseUrl']),
-    childTagList() {
-      const { parentTag } = this.baseInfo;
-      if (parentTag && this.parentTagSet[parentTag]) {
-        return this.parentTagSet[parentTag].subList;
-      }
-      return [];
-    },
     users() {
       return (this.baseInfo.visiable_labels || []).filter((item) => item.type === 'user');
     },
@@ -550,17 +502,6 @@ export default {
     async init() {
       this.initAppMarketInfo();
       this.getBusinessList();
-      this.getTags();
-    },
-
-    handleTagSelect(parentTag) {
-      this.$nextTick(() => {
-        if (this.parentTagSet[parentTag].subList.length) {
-          this.baseInfo.childTag = this.parentTagSet[parentTag].subList[0].id;
-        } else {
-          this.baseInfo.childTag = '';
-        }
-      });
     },
 
     handleSubmit(payload) {
@@ -597,80 +538,6 @@ export default {
     },
 
     /**
-     * 获取分类数据并进行二次组装
-     */
-    async getTags() {
-      try {
-        const tagList = await this.$store.dispatch('market/getTags');
-        const childTagList = [];
-
-        this.parentTagSet = {};
-        this.parentTagList = [];
-        tagList.forEach((item) => {
-          if (item.parent) {
-            // 子节点
-            childTagList.push({
-              parentId: item.parent,
-              id: item.id,
-              name: item.name,
-              url: item.url,
-            });
-          } else {
-            // 父节点
-            this.parentTagList.push({
-              _id: item.id,
-              id: item.name,
-              text: item.name,
-              url: item.url,
-            });
-
-            // 用于通过prentId得到parentName
-            this.parentTagSet[item.id] = item.name;
-
-            // 用于通过parentName得到二级下拉列表
-            this.parentTagSet[item.name] = {
-              id: item.id,
-              name: item.name,
-              childTagSet: {},
-              url: item.url,
-              subList: [],
-            };
-          }
-        });
-
-        // 将二级列表按照父节点来进行分类合并
-        childTagList.forEach((item) => {
-          if (this.parentTagSet[item.parentId]) {
-            const parentName = this.parentTagSet[item.parentId];
-            const parent = this.parentTagSet[parentName];
-
-            // 通过 parentNme+childName 得到 Tag.id
-            parent.childTagSet[item.name] = item.id;
-
-            parent.subList.push({
-              _id: item.id,
-              id: item.name,
-              text: item.name,
-            });
-          }
-        });
-
-        // 如果没选过，默认选择第一项
-        if (this.parentTagList.length && !this.baseInfo.parentTag) {
-          this.baseInfo.parentTag = this.parentTagList[0].id;
-          if (this.parentTagSet[this.baseInfo.parentTag].subList.length) {
-            this.baseInfo.childTag = this.parentTagSet[this.baseInfo.parentTag].subList[0].id;
-          }
-        }
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      }
-    },
-
-    /**
      * 获取应用的市场基础信息
      *
      * appStatus:
@@ -682,8 +549,7 @@ export default {
       this.isDataLoading = loading;
       try {
         const res = await this.$store.dispatch('market/getAppBaseInfo', this.appCode);
-        const { product } = res;
-        const { application } = res;
+        const { product, application } = res;
 
         // 如果没注册过，应用市场name为空，初始化与应用名称一样
         this.baseInfo.name = application.name;
@@ -761,17 +627,20 @@ export default {
     formatMarketInfo() {
       this.baseInfo.contactArr = this.baseInfo.contact.split('; ');
       this.baseInfo.resizableKey = this.baseInfo.resizable ? 'able' : 'disable';
-      this.baseInfo.parentTag = this.baseInfo.tag_name && this.baseInfo.tag_name.split('-')[0];
-      this.baseInfo.childTag = this.baseInfo.tag_name && this.baseInfo.tag_name.split('-')[1];
     },
 
     /**
      * 提交基础信息数据
      */
     submitMarketInfo() {
-      this.$refs.baseInfoForm.validate().then(() => {
-        this.saveMarketInfo();
-      });
+      this.$refs.baseInfoForm
+        .validate()
+        .then(() => {
+          this.saveMarketInfo();
+        })
+        .catch((e) => {
+          console.error(e);
+        });
     },
 
     /**
@@ -781,14 +650,7 @@ export default {
       if (this.isInfoSaving) return;
 
       this.isInfoSaving = true;
-      this.baseInfo.tag_name = [this.baseInfo.parentTag, this.baseInfo.childTag].join('-');
       this.baseInfo.resizable = this.baseInfo.resizableKey === 'able';
-
-      if (this.baseInfo.parentTag && this.baseInfo.childTag) {
-        this.baseInfo.tag = this.parentTagSet[this.baseInfo.parentTag].childTagSet[this.baseInfo.childTag];
-      } else {
-        this.baseInfo.tag = this.parentTagSet[this.baseInfo.parentTag].id;
-      }
 
       let params = JSON.parse(JSON.stringify(this.baseInfo));
       delete params.logo;

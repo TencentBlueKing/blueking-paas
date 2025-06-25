@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-06-18 16:24+0800\n"
+"POT-Creation-Date: 2025-06-23 17:59+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -571,7 +571,7 @@ msgstr "The current secret is built-in and cannot be deleted"
 
 #: paasng/accessories/app_secret/views.py:172
 #: paasng/accessories/servicehub/views.py:782
-#: paasng/platform/applications/views/application.py:522
+#: paasng/platform/applications/views/application.py:535
 #: paasng/platform/sourcectl/views.py:149
 msgid "验证码错误"
 msgstr "Verification code error"
@@ -742,10 +742,12 @@ msgid "其它"
 msgstr "Other"
 
 #: paasng/accessories/publish/market/protections.py:48
-#: paasng/platform/engine/constants.py:126
+#: paasng/platform/engine/constants.py:127
 #: paasng/platform/engine/workflow/protections.py:68
-msgid "未完善应用基本信息"
-msgstr "Incomplete app basic information"
+#, fuzzy
+#| msgid "未完善应用市场信息"
+msgid "未完善应用市场信息"
+msgstr "Incomplete app market information"
 
 #: paasng/accessories/publish/market/protections.py:66
 msgid "应用未在生产环境成功部署"
@@ -771,22 +773,22 @@ msgstr "File size too large, no more than 2M"
 msgid "文件名格式非法"
 msgstr "Illegal file name format"
 
-#: paasng/accessories/publish/market/serializers.py:250
+#: paasng/accessories/publish/market/serializers.py:245
 msgid "不支持的操作类型"
 msgstr "Types of operations not supported"
 
-#: paasng/accessories/publish/market/serializers.py:338
-#: paasng/accessories/publish/market/serializers.py:461
+#: paasng/accessories/publish/market/serializers.py:333
+#: paasng/accessories/publish/market/serializers.py:456
 #, python-brace-format
 msgid "{url} 并非 {module_name} 模块的访问入口"
 msgstr "{url} is not an access entry for the {module_name} module"
 
-#: paasng/accessories/publish/market/serializers.py:447
-#: paasng/platform/modules/serializers.py:329
+#: paasng/accessories/publish/market/serializers.py:442
+#: paasng/platform/modules/serializers.py:330
 msgid "This field is required."
 msgstr "This field is required."
 
-#: paasng/accessories/publish/market/serializers.py:453
+#: paasng/accessories/publish/market/serializers.py:448
 #, python-brace-format
 msgid "{module_name} 模块不存在"
 msgstr "Module {module_name} does not exist"
@@ -1567,15 +1569,6 @@ msgstr "user"
 msgid "users"
 msgstr "users"
 
-#: paasng/infras/accounts/oauth/backends_ext.py:15
-#: paasng/platform/sourcectl/type_specs.py:142
-msgid "工蜂 Git"
-msgstr "Tc_git"
-
-#: paasng/infras/accounts/oauth/backends_ext.py:17
-msgid "腾讯内部 Git 源码托管系统"
-msgstr "Tencent's internal Git source code hosting system"
-
 #: paasng/infras/accounts/permissions/constants.py:25
 msgid "平台页面查看"
 msgstr "View platform pages"
@@ -1851,7 +1844,7 @@ msgstr "Access URL"
 msgid "应用成员"
 msgstr "APP Member"
 
-#: paasng/misc/audit/constants.py:69 paasng/platform/modules/serializers.py:385
+#: paasng/misc/audit/constants.py:69 paasng/platform/modules/serializers.py:386
 msgid "构建配置"
 msgstr "Build Configuration"
 
@@ -2177,6 +2170,7 @@ msgstr "disable user access restrictions"
 #: paasng/platform/declarative/application/validations/v2.py:104
 #: paasng/platform/declarative/deployment/validations/v2.py:173
 #: paasng/platform/modules/serializers.py:177
+#: paasng/platform/modules/serializers.py:286
 #: paasng/platform/sourcectl/serializers.py:160
 msgid "构建目录不合法，不能以 '/' 开头，不能包含 '..'"
 msgstr "Invalid source_dir, cannot start with '/' or contain '..'"
@@ -2187,7 +2181,9 @@ msgstr "app_desc.yaml file not found after decompression"
 
 #: paasng/misc/tools/views.py:107
 msgid "解压后未在根目录下找到 app_desc.yaml 文件"
-msgstr "After decompression, the app_desc.yaml file was not found in the root directory"
+msgstr ""
+"After decompression, the app_desc.yaml file was not found in the root "
+"directory"
 
 #: paasng/misc/tools/views.py:116
 msgid "app_desc.yaml 中缺少了 app version 信息"
@@ -2377,19 +2373,19 @@ msgstr ""
 "Migrating applications does not support reclaiming enhanced service "
 "instances."
 
-#: paasng/plat_admin/numbers/app.py:539
+#: paasng/plat_admin/numbers/app.py:545
 msgid "未上线"
 msgstr "Not yet online"
 
-#: paasng/plat_admin/numbers/app.py:540
+#: paasng/plat_admin/numbers/app.py:546
 msgid "已上线"
 msgstr "Now online"
 
-#: paasng/plat_admin/numbers/app.py:541
+#: paasng/plat_admin/numbers/app.py:547
 msgid "已下架"
 msgstr "Archived"
 
-#: paasng/plat_admin/numbers/app.py:542
+#: paasng/plat_admin/numbers/app.py:548
 msgid "测试中"
 msgstr "Testing in progress"
 
@@ -2597,25 +2593,25 @@ msgstr "APP Name"
 msgid "S-Mart 不可关闭应用描述文件"
 msgstr "S-Mart cannot close the APP description file"
 
-#: paasng/platform/applications/serializers/app.py:88
+#: paasng/platform/applications/serializers/app.py:103
 msgid "{}已经被占用"
 msgstr "{} is occupied"
 
-#: paasng/platform/applications/serializers/app.py:162
+#: paasng/platform/applications/serializers/app.py:188
 msgid "排序字段不合法"
 msgstr "Invalid sort fields"
 
-#: paasng/platform/applications/serializers/app.py:249
+#: paasng/platform/applications/serializers/app.py:276
 #, python-format
 msgid "无效的选项: %s"
 msgstr "Invalid option: %s"
 
-#: paasng/platform/applications/serializers/app.py:284
+#: paasng/platform/applications/serializers/app.py:311
 #, python-format
 msgid "无效的分类选项: %s"
 msgstr "Invalid classification option: %s"
 
-#: paasng/platform/applications/serializers/app.py:374
+#: paasng/platform/applications/serializers/app.py:401
 msgid "已经标记该应用"
 msgstr "Application marked"
 
@@ -2689,7 +2685,7 @@ msgid "当前不允许创建全租户可用的应用"
 msgstr ""
 "Creating applications available to all tenants is currently not allowed."
 
-#: paasng/platform/applications/views/application.py:396
+#: paasng/platform/applications/views/application.py:397
 msgid "删除应用前, 请先从到「应用市场」下架该应用"
 msgstr "Before deleting an APP, please archive it from the App Market."
 
@@ -2708,7 +2704,10 @@ msgstr ""
 msgid ""
 "服务名应仅包含小写字母，数字字符和连字符\"-\"，且必须以字母数字字符开头和结"
 "尾，最大长度不超过 63"
-msgstr "The service name should only contain lowercase letters, numeric characters, and hyphens \"-\", and must start and end with alphanumeric characters. The maximum length is 63"
+msgstr ""
+"The service name should only contain lowercase letters, numeric characters, "
+"and hyphens \"-\", and must start and end with alphanumeric characters. The "
+"maximum length is 63"
 
 #: paasng/platform/bkapp_model/serializers/serializers.py:146
 msgid "至多设置一个探活配置"
@@ -2750,7 +2749,7 @@ msgstr ""
 "abnormally in the market. Please turn off the market switch and operate "
 "again."
 
-#: paasng/platform/declarative/application/controller.py:329
+#: paasng/platform/declarative/application/controller.py:334
 msgid "不允许使用非默认版本"
 msgstr "Using nondefault regions is not allowed"
 
@@ -2967,76 +2966,82 @@ msgstr "Stag Env"
 msgid "生产环境"
 msgstr "Prod Env"
 
-#: paasng/platform/engine/constants.py:127
+#: paasng/platform/engine/constants.py:128
 msgid "当前用户无部署该环境的权限"
 msgstr "The current user does not have permission to deploy this environment"
 
-#: paasng/platform/engine/constants.py:128
+#: paasng/platform/engine/constants.py:129
 msgid "当前用户尚未绑定 OAUTH 授权信息"
 msgstr "The current user has not yet bound the OAUTH authorization information"
 
-#: paasng/platform/engine/constants.py:129
+#: paasng/platform/engine/constants.py:130
 msgid "当前用户没有访问源码仓库的权限"
 msgstr "The current user does not have permission to access the repository"
 
-#: paasng/platform/engine/constants.py:130
+#: paasng/platform/engine/constants.py:131
 msgid "当前源码仓库信息异常"
 msgstr "The current source code repository information is abnormal"
 
-#: paasng/platform/engine/constants.py:131
+#: paasng/platform/engine/constants.py:132
 #: paasng/platform/engine/workflow/protections.py:127
 msgid "未完善进程启动命令"
 msgstr "Incomplete process start command"
 
-#: paasng/platform/engine/constants.py:132
+#: paasng/platform/engine/constants.py:133
 msgid "当前用户未授权 CI 组件访问仓库的权限"
 msgstr ""
 "The current user does not authorize the CI component to access the repository"
 
-#: paasng/platform/engine/constants.py:133
+#: paasng/platform/engine/constants.py:134
 #: paasng/platform/engine/workflow/protections.py:151
 msgid "未设置插件分类"
 msgstr "Plugin category not set"
 
-#: paasng/platform/engine/constants.py:138
+#: paasng/platform/engine/constants.py:135
+#: paasng/platform/engine/workflow/protections.py:164
+#: paasng/platform/engine/workflow/protections.py:167
+msgid "未完善应用基本信息"
+msgstr "Incomplete app basic information"
+
+#: paasng/platform/engine/constants.py:140
 msgid "使用 Buildpacks 构建"
 msgstr "Build using Buildpacks"
 
-#: paasng/platform/engine/constants.py:139
+#: paasng/platform/engine/constants.py:141
 msgid "使用 Dockerfile 构建"
 msgstr "Build using Dockerfile"
 
-#: paasng/platform/engine/constants.py:146
+#: paasng/platform/engine/constants.py:148
 msgid "蓝鲸应用ID"
 msgstr "BK APP ID"
 
-#: paasng/platform/engine/constants.py:147
+#: paasng/platform/engine/constants.py:149
 msgid "蓝鲸应用密钥"
 msgstr "BK APP Secret"
 
-#: paasng/platform/engine/constants.py:148
+#: paasng/platform/engine/constants.py:150
 msgid "蓝鲸应用租户 ID"
 msgstr "BK APP Tenant ID"
 
-#: paasng/platform/engine/constants.py:154
+#: paasng/platform/engine/constants.py:156
 msgid "应用当前模块名"
 msgstr "Current Module Name"
 
-#: paasng/platform/engine/constants.py:155
+#: paasng/platform/engine/constants.py:157
 msgid "应用当前环境，预发布环境为 stag、生产环境为 prod"
 msgstr ""
 "Current environment, the pre-release environment is stag, and the production "
 "environment is prod"
 
-#: paasng/platform/engine/constants.py:156
+#: paasng/platform/engine/constants.py:158
 msgid "应用当前运行的开发者中心版本，值为 3"
 msgstr "The currently running Dev Center version, the value is 3"
 
-#: paasng/platform/engine/constants.py:157
+#: paasng/platform/engine/constants.py:159
 msgid "应用版本，默认版本为 default"
 msgstr "APP version, the default version is default"
 
-#: paasng/platform/engine/constants.py:160
+#: paasng/platform/engine/constants.py:162
 msgid ""
 "应用模块各环境的访问地址，如 {\"stag\": \"http://stag.com\", \"prod\": "
 "\"http://prod.com\"}"
@@ -3349,50 +3354,6 @@ msgstr "Creating APP objects"
 msgid "同步应用基本信息"
 msgstr "Basic information about the Sync APP"
 
-#: paasng/platform/mgrlegacy/app_migrations/code.py:97
-msgid "变更应用代码"
-msgstr "Change of APP code"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:40
-msgid "部署到预发布环境和生产环境"
-msgstr "Deployment to s'tag and prod env"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:147
-msgid "旧版本测试环境没有部署或者已经下架，跳过测试环境部署"
-msgstr ""
-"Older versions of the test environment are not deployed or have been "
-"archive, skip the test environment deployment"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:151
-msgid "开始部署预发布环境"
-msgstr "Start deploying a stag e'nv"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:154
-msgid "预发布环境部署失败"
-msgstr "stag env deployment failure"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:156
-msgid "预发布环境部署成功"
-msgstr "stag env deployed successfully"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:160
-msgid "旧版本正式环境没有部署或者已经下架，跳过正式环境部署"
-msgstr ""
-"Older versions of the test environment are not deployed or have been "
-"archive, Skip formal environment deployment"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:162
-msgid "开始部署生产环境"
-msgstr "Start deploying a prod env"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:167
-msgid "生产环境部署失败"
-msgstr "Failure to deploy to a prod env"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:169
-msgid "生产环境部署成功"
-msgstr "Successful deployment in prod env"
-
 #: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:48
 #, python-brace-format
 msgid "{env} 环境绑定出口 IP 异常, 详情: 找不到集群或集群状态信息"
@@ -3442,26 +3403,6 @@ msgstr "Synchronising environment variables"
 msgid "同步应用市场信息"
 msgstr "Synchronise Market information"
 
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:27
-msgid "迁移权限管理: 用户白名单及IP白名单"
-msgstr "Relocation  Permissions : user whitelisting and IP whitelisting"
-
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:38
-msgid "开始迁移白名单"
-msgstr "Start migration whitelist"
-
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:62
-msgid "白名单迁移成功"
-msgstr "Whitelist migration successful"
-
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:69
-msgid "开始回滚白名单"
-msgstr "Start rolling back the whitelist"
-
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:91
-msgid "白名单回滚成功"
-msgstr "Whitelist rollback successful"
-
 #: paasng/platform/mgrlegacy/app_migrations/product.py:35
 msgid "同步产品信息"
 msgstr "Synchronised product information"
@@ -3500,40 +3441,17 @@ msgstr ""
 "The current APP has not been deployed to the prod env, skip creating a "
 "database instance for the prod env."
 
-#: paasng/platform/mgrlegacy/app_migrations/service_mysql_te.py:15
-msgid "同步 MySQL 配置"
-msgstr "Sync MySQL Configuration"
-
-#: paasng/platform/mgrlegacy/app_migrations/service_rabbitmq_te.py:13
-msgid "同步 RabbitMQ 配置"
-msgstr "Sync the RabbitMQ Configuration"
-
-#: paasng/platform/mgrlegacy/app_migrations/sourcectl_te.py:20
-msgid "同步SVN版本库信息"
-msgstr "Sync SVN repository information"
-
 #: paasng/platform/mgrlegacy/legacy_proxy.py:79
-#: paasng/platform/mgrlegacy/legacy_proxy_te.py:101
 msgid "暂不支持轻应用迁移"
 msgstr " Mini-APP migration is not currently supported"
 
 #: paasng/platform/mgrlegacy/legacy_proxy.py:83
-#: paasng/platform/mgrlegacy/legacy_proxy_te.py:107
 msgid "暂不支持该类型应用迁移"
 msgstr "This type of APP migration is not currently supported"
 
 #: paasng/platform/mgrlegacy/legacy_proxy.py:86
-#: paasng/platform/mgrlegacy/legacy_proxy_te.py:116
 msgid "目前仅支持Python应用迁移"
 msgstr "Previously only supported Python APP migration"
-
-#: paasng/platform/mgrlegacy/legacy_proxy_te.py:120
-msgid "该项目没有trunk分支，请先添加trunk分支"
-msgstr "This project has no trunk branch, please add the trunk branch first"
-
-#: paasng/platform/mgrlegacy/legacy_proxy_te.py:128
-msgid "未知原因, 请联系管理员处理"
-msgstr "No known reason, please contact the administrator"
 
 #: paasng/platform/mgrlegacy/views.py:196
 msgid "已确认后的应用无法回滚"
@@ -3615,7 +3533,7 @@ msgid "模板名称"
 msgstr "Template name"
 
 #: paasng/platform/modules/serializers.py:166
-#: paasng/platform/modules/serializers.py:424
+#: paasng/platform/modules/serializers.py:425
 msgid "名称为 {} 的模块已存在"
 msgstr " APP name %s already exists "
 
@@ -3624,16 +3542,16 @@ msgstr " APP name %s already exists "
 msgid "模板 {} 不可用"
 msgstr "Template {} is unavailable"
 
-#: paasng/platform/modules/serializers.py:363
+#: paasng/platform/modules/serializers.py:364
 msgid "镜像凭证信息"
 msgstr "Image credential information"
 
-#: paasng/platform/modules/serializers.py:403
+#: paasng/platform/modules/serializers.py:404
 msgid "源码配置"
 msgstr "Source code configuration"
 
-#: paasng/platform/modules/serializers.py:466
-#: paasng/platform/modules/serializers.py:476
+#: paasng/platform/modules/serializers.py:467
+#: paasng/platform/modules/serializers.py:477
 msgid "指令不能以 'start ' 开头."
 msgstr "The command cannot begin with 'start '."
 
@@ -3805,7 +3723,6 @@ msgstr "Access to Git<{fullname}> project error"
 
 #: paasng/platform/sourcectl/gitee/client.py:62
 #: paasng/platform/sourcectl/github/client.py:70
-#: paasng/platform/sourcectl/tc_git/client.py:83
 msgid "当前仅支持 base64 编码格式"
 msgstr "Only base64 encoding format is supported"
 
@@ -3864,6 +3781,10 @@ msgstr "(need to provide account and password information)"
 #: paasng/platform/sourcectl/type_specs.py:114
 msgid "SVN 代码库"
 msgstr "SVN repository"
+
+#: paasng/platform/sourcectl/type_specs.py:142
+msgid "工蜂 Git"
+msgstr "Tc_git"
 
 #: paasng/platform/sourcectl/type_specs.py:144
 msgid "腾讯工蜂服务"
@@ -4007,28 +3928,6 @@ msgstr "Is Hidden"
 msgid "被隐藏的模板不会出现在创建应用时的列表中"
 msgstr ""
 "hidden templates will not appear in the list when creating new applications"
-
-#: paasng/security/access_control/views.py:94
-msgid "该应用对外网开放，白名单禁止关闭"
-msgstr "The APP is open to the extranet, whitelisting is disabled"
-
-#: paasng/security/access_control/views.py:96
-msgid "白名单禁止关闭"
-msgstr "Whitelist ban off"
-
-#: paasng/security/access_control/views.py:148
-#: paasng/security/access_control/views.py:199
-#: paasng/security/access_control/views.py:267
-msgid "存在相同的策略"
-msgstr "The same strategy exists"
-
-#: paasng/security/access_control/views.py:408
-msgid "已经在审核中,请勿重复申请"
-msgstr "Already under review, please do not repeat your APP"
-
-#: paasng/security/access_control/views.py:411
-msgid "提交申请成功"
-msgstr "Submitted successfully"
 
 #: paasng/settings/__init__.py:888
 msgid "蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"
@@ -4586,6 +4485,88 @@ msgstr "This value does not match the required pattern."
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:42
 msgid "zh-cn"
 msgstr "zh-cn"
+
+#~ msgid "腾讯内部 Git 源码托管系统"
+#~ msgstr "Tencent's internal Git source code hosting system"
+
+#~ msgid "变更应用代码"
+#~ msgstr "Change of APP code"
+
+#~ msgid "部署到预发布环境和生产环境"
+#~ msgstr "Deployment to s'tag and prod env"
+
+#~ msgid "旧版本测试环境没有部署或者已经下架，跳过测试环境部署"
+#~ msgstr ""
+#~ "Older versions of the test environment are not deployed or have been "
+#~ "archive, skip the test environment deployment"
+
+#~ msgid "开始部署预发布环境"
+#~ msgstr "Start deploying a stag e'nv"
+
+#~ msgid "预发布环境部署失败"
+#~ msgstr "stag env deployment failure"
+
+#~ msgid "预发布环境部署成功"
+#~ msgstr "stag env deployed successfully"
+
+#~ msgid "旧版本正式环境没有部署或者已经下架，跳过正式环境部署"
+#~ msgstr ""
+#~ "Older versions of the test environment are not deployed or have been "
+#~ "archive, Skip formal environment deployment"
+
+#~ msgid "开始部署生产环境"
+#~ msgstr "Start deploying a prod env"
+
+#~ msgid "生产环境部署失败"
+#~ msgstr "Failure to deploy to a prod env"
+
+#~ msgid "生产环境部署成功"
+#~ msgstr "Successful deployment in prod env"
+
+#~ msgid "迁移权限管理: 用户白名单及IP白名单"
+#~ msgstr "Relocation  Permissions : user whitelisting and IP whitelisting"
+
+#~ msgid "开始迁移白名单"
+#~ msgstr "Start migration whitelist"
+
+#~ msgid "白名单迁移成功"
+#~ msgstr "Whitelist migration successful"
+
+#~ msgid "开始回滚白名单"
+#~ msgstr "Start rolling back the whitelist"
+
+#~ msgid "白名单回滚成功"
+#~ msgstr "Whitelist rollback successful"
+
+#~ msgid "同步 MySQL 配置"
+#~ msgstr "Sync MySQL Configuration"
+
+#~ msgid "同步 RabbitMQ 配置"
+#~ msgstr "Sync the RabbitMQ Configuration"
+
+#~ msgid "同步SVN版本库信息"
+#~ msgstr "Sync SVN repository information"
+
+#~ msgid "该项目没有trunk分支，请先添加trunk分支"
+#~ msgstr "This project has no trunk branch, please add the trunk branch first"
+
+#~ msgid "未知原因, 请联系管理员处理"
+#~ msgstr "No known reason, please contact the administrator"
+
+#~ msgid "该应用对外网开放，白名单禁止关闭"
+#~ msgstr "The APP is open to the extranet, whitelisting is disabled"
+
+#~ msgid "白名单禁止关闭"
+#~ msgstr "Whitelist ban off"
+
+#~ msgid "存在相同的策略"
+#~ msgstr "The same strategy exists"
+
+#~ msgid "已经在审核中,请勿重复申请"
+#~ msgstr "Already under review, please do not repeat your APP"
+
+#~ msgid "提交申请成功"
+#~ msgstr "Submitted successfully"
 
 #~ msgid ""
 #~ "进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"

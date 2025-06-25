@@ -54,6 +54,34 @@
 
           <template v-else>
             <bk-alert
+              v-if="isGcsMysqlAlert"
+              style="margin-bottom: 16px"
+              type="warning"
+              :show-icon="false"
+            >
+              <div
+                slot="title"
+                class="risk-warning flex-row"
+              >
+                <i class="paasng-icon paasng-remind f14"></i>
+                <div>
+                  {{
+                    $t(
+                      '平台提供的 GCS-MySQL 数据库为共享实例，无法支持高级别的可用性。请参考文档申请独立的数据库实例。'
+                    )
+                  }}
+                  <a
+                    v-if="GLOBAL.DOC.GCS_MySQL_LINK"
+                    :href="GLOBAL.DOC.GCS_MySQL_LINK"
+                    target="_blank"
+                  >
+                    {{ $t('申请独立的数据库指引') }}
+                  </a>
+                </div>
+              </div>
+            </bk-alert>
+
+            <bk-alert
               v-if="delAppDialog.moduleList.length > 0"
               style="margin-bottom: 16px"
               type="info"
@@ -333,6 +361,7 @@ import appTopBar from '@/components/paas-app-bar';
 import usageGuide from '@/components/usage-guide';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
 import $ from 'jquery';
+import { mapState } from 'vuex';
 
 export default {
   components: {
@@ -365,7 +394,6 @@ export default {
       },
       formRemoveConfirmCode: '',
       servicePaths: [],
-      specifications: [],
       servicePlans: {},
       requestQueue: ['init', 'enabled'],
       isTableLoading: false,
@@ -373,9 +401,11 @@ export default {
       isEnhancedFeatureEnabled: true,
       isEnabled: false,
       isCollapsed: false,
+      serviceDetail: {},
     };
   },
   computed: {
+    ...mapState(['localLanguage', 'userFeature']),
     compiledMarkdown() {
       this.$nextTick(() => {
         $('#markdown')
@@ -397,9 +427,6 @@ export default {
     isLoading() {
       return this.requestQueue.length > 0;
     },
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
     isSmartApp() {
       return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
     },
@@ -416,6 +443,13 @@ export default {
     },
     isSamePlan() {
       return this.servicePlans.prod?.name === this.servicePlans.stag?.name;
+    },
+    isGcsMysqlAlert() {
+      return (
+        this.serviceDetail.name === 'gcs_mysql' &&
+        this.userFeature.APP_AVAILABILITY_LEVEL &&
+        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+      );
     },
   },
   watch: {
@@ -480,6 +514,7 @@ export default {
           service: this.service,
         });
         const resData = res.result;
+        this.serviceDetail = resData;
         if (resData.instance_tutorial && resData.instance_tutorial.length > 0) {
           this.serviceMarkdown = resData.instance_tutorial;
         }
@@ -881,6 +916,14 @@ export default {
           font-size: 14px;
           color: #ffb848;
         }
+      }
+    }
+
+    .risk-warning {
+      display: flex;
+      .paasng-remind {
+        margin: 3px 9px 0 0;
+        color: #f59500;
       }
     }
   }

@@ -66,9 +66,31 @@
                 >
                   {{ row.display_name || '--' }}
                 </p>
+                <bk-popover
+                  v-if="hasGcsMysqlAlert(row.name)"
+                  placement="top"
+                  width="220"
+                >
+                  <i class="paasng-icon paasng-remind mysql-tip-icon ml5"></i>
+                  <div slot="content">
+                    {{
+                      $t(
+                        '平台提供的 GCS-MySQL 数据库为共享实例，无法支持高级别的可用性。请参考文档申请独立的数据库实例。'
+                      )
+                    }}
+                    <a
+                      v-if="GLOBAL.DOC.GCS_MySQL_LINK"
+                      :href="GLOBAL.DOC.GCS_MySQL_LINK"
+                      target="_blank"
+                      class="f12"
+                    >
+                      {{ $t('申请独立的数据库指引') }}
+                    </a>
+                  </div>
+                </bk-popover>
                 <i
                   v-if="$index === rowIndex"
-                  class="row-icon paasng-icon paasng-process-file pl5"
+                  class="row-icon paasng-icon paasng-process-file ml5 f14"
                   v-bk-tooltips="{ content: $t('使用指南') }"
                   @click="handleShowGuideDialog(row)"
                 />
@@ -373,6 +395,7 @@ import SharedDialog from './comps/shared-dialog';
 import RecycleSideslider from '../../services/comps/recycle-sideslider.vue';
 import { marked } from 'marked';
 import { paginationFun } from '@/common/utils';
+import { mapState } from 'vuex';
 
 export default {
   components: {
@@ -435,11 +458,9 @@ export default {
     };
   },
   computed: {
+    ...mapState(['curAppCode', 'userFeature']),
     appCode() {
       return this.$route.params.id;
-    },
-    curAppCode() {
-      return this.$store.state.curAppCode;
     },
     region() {
       return this.curAppInfo.application.region;
@@ -846,6 +867,14 @@ export default {
         this.$refs.recycleSideslider?.toggleLoading(false);
       }
     },
+    // 是否展示GcsMysql警告提示
+    hasGcsMysqlAlert(name) {
+      return (
+        name === 'gcs_mysql' &&
+        this.userFeature.APP_AVAILABILITY_LEVEL &&
+        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+      );
+    },
   },
 };
 </script>
@@ -878,7 +907,6 @@ export default {
   }
   .row-icon {
     color: #63656e;
-    margin-top: 3px;
 
     &:hover {
       cursor: pointer;
@@ -890,6 +918,11 @@ export default {
     font-size: 24px;
     color: #2dcb56;
     transform: translateX(-6px);
+  }
+
+  .mysql-tip-icon {
+    font-size: 14px;
+    color: #ea3636;
   }
 }
 .header-title {

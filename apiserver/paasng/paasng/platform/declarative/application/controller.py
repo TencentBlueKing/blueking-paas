@@ -26,7 +26,7 @@ from django.utils.translation import gettext_lazy as _
 
 from paas_wl.infras.cluster.shim import get_app_cluster_names
 from paasng.accessories.publish.market.constant import AppType, ProductSourceUrlType
-from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product
+from paasng.accessories.publish.market.models import ApplicationExtraInfo, DisplayOptions, MarketConfig, Product
 from paasng.accessories.publish.market.protections import ModulePublishPreparer
 from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
@@ -242,7 +242,12 @@ class AppDeclarativeController:
         )
         logo = product_defaults.pop("logo", None)
         if market_desc.tag_id:
-            product_defaults["tag_id"] = market_desc.tag_id
+            # 创建标签
+            ApplicationExtraInfo.objects.update_or_create(
+                application=application,
+                tenant_id=application.tenant_id,
+                defaults={"tag_id": market_desc.tag_id},
+            )
 
         product_defaults["tenant_id"] = application.tenant_id
         product, created = Product.objects.update_or_create(application=application, defaults=product_defaults)

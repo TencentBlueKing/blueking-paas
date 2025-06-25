@@ -138,15 +138,10 @@ class TemplateViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ""},
     )
     def get_templates_metadata(self, request):
-        result = {}
-        repo_types = [item[0] for item in get_sourcectl_types().get_choices()]
-        application_types = AppLanguage.get_values()
-        template_types = TemplateType.get_values()
-        render_methods = RenderMethod.get_values()
         result = {
-            "repo_types": repo_types,
-            "application_types": application_types,
-            "template_types": template_types,
-            "render_methods": render_methods,
+            "repo_types": [{"name": name, "label": label} for name, label in get_sourcectl_types().get_choices()],
+            "application_types": [{"name": name, "label": label} for name, label in AppLanguage.get_django_choices()],
+            "template_types": [{"name": name, "label": label} for name, label in TemplateType.get_django_choices()],
+            "render_methods": [{"name": name, "label": label} for name, label in RenderMethod.get_django_choices()],
         }
         return Response(result)

@@ -110,7 +110,7 @@ var _ = Describe("Test ingresses.go", func() {
 			Expect(ingresses[0].Name).To(Equal("demo-subdomain"))
 			Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
 			Expect(ingresses[0].Annotations[SkipFilterCLBAnnoKey]).To(Equal("true"))
-			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("nginx"))
+			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("bk-ingress-nginx"))
 		})
 
 		DescribeTable(

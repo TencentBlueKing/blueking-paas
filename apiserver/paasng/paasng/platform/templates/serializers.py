@@ -23,6 +23,7 @@ from paasng.platform.modules.serializers import (
     ImageTagOptionsSLZ,
     RuntimeType,
 )
+from paasng.platform.templates.constants import TemplateType
 from paasng.utils.i18n.serializers import TranslatedCharField
 
 
@@ -75,3 +76,28 @@ class TemplateDetailSLZ(serializers.Serializer):
 
     slugbuilder = AppSlugBuilderMinimalSLZ(help_text="基础镜像详细信息")
     build_config = BuildConfigPreviewSLZ()
+
+
+class TemplateRenderOutputSLZ(serializers.Serializer):
+    """模板渲染信息"""
+
+    name = serializers.CharField(help_text="模板名称")
+    display_name = TranslatedCharField()
+    description = TranslatedCharField()
+    repo_url = serializers.CharField(help_text="代码仓库地址")
+    render_method = serializers.SerializerMethodField(help_text="模版代码渲染方式")
+    source_dir = serializers.SerializerMethodField(help_text="模板代码所在相对目录")
+
+    def get_render_method(self, tmpl):
+        """Note: release1.7 版本已经在 Template 表中添加 render_method 字段，release1.7 之前的版本根据插件类型来判断"""
+        if tmpl.type == TemplateType.PLUGIN:
+            return "cookiecutter"
+        else:
+            return "django_template"
+
+    def get_source_dir(self, tmpl):
+        """Note: release1.7 版本已经在 Template 表中添加 source_dir 字段，release1.7 之前的版本根据插件类型来判断"""
+        if tmpl.type == TemplateType.PLUGIN:
+            return "template"
+        else:
+            return ""

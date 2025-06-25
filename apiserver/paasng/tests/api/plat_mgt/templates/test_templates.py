@@ -48,7 +48,7 @@ def create_test_template_data(**overrides):
         "repo_url": "http://test.com/test/test",
         "render_method": "django_template",
         "runtime_type": "buildpack",
-        "is_hidden": False,
+        "is_display": False,
     }
     default_data.update(overrides)
     return default_data
@@ -60,7 +60,10 @@ class TestTemplateViewSet:
     @pytest.fixture
     def sample_template(self) -> Template:
         """辅助方法：创建一个模板"""
-        return G(Template, **create_test_template_data())
+        # 将模板中的 is_display 字段改为数据库中存储的 is_hidden 字段
+        template_data = create_test_template_data()
+        template_data["is_hidden"] = not template_data.pop("is_display")
+        return G(Template, **template_data)
 
     def test_list(self, plat_mgt_api_client, sample_template):
         """测试获取模板列表接口"""
@@ -85,6 +88,7 @@ class TestTemplateViewSet:
         url = reverse("plat_mgt.templates.list_create")
         custom_data = create_test_template_data(name="custom_template", language="Go")
         resp = plat_mgt_api_client.post(url, custom_data, format="json")
+        print(resp.data)
         assert resp.status_code == status.HTTP_201_CREATED
 
         template = Template.objects.filter(name="custom_template").first()

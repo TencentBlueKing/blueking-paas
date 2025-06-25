@@ -89,8 +89,9 @@ class MetaDataFileReader:
             except exceptions.RequestTimeOutError as e:
                 error_msg = str(e)
                 break
-            except exceptions.DoesNotExistsOnServer:
+            except Exception:
                 continue
+
         if content is None:
             error_msg_prefix = "Can not read Procfile file from repository"
             error_msg = f"{error_msg_prefix}, {error_msg}" if error_msg else error_msg_prefix

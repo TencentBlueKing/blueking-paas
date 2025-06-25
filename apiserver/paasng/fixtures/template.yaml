@@ -127,3 +127,72 @@
     repo_url: ''
     render_method: 'jinja2_double_square_bracket'
     is_hidden: false
+- model: templates.template
+  pk: 7
+  fields:
+    created: !!timestamp '2024-11-18 12:00:00.000000+00:00'
+    updated: !!timestamp '2024-11-18 12:00:00.000000+00:00'
+    name: bk-apigw-plugin-python
+    type: 'plugin'
+    display_name_zh_cn: API 网关插件（Python）
+    display_name_en: API Gateway Plugin (Python)
+    description_zh_cn: 为开发者提供快速创建 API 的能力，并自动将 API 注册到 API 网关
+    description_en: Empowering developers to quickly create APIs and automatically register them with the API gateway.
+    language: Python
+    market_ready: True
+    preset_services_config:
+      mysql: {}
+    blob_url: ''
+    required_buildpacks: []
+    processes: {}
+    tags: []
+    repo_url: 'https://github.com/TencentBlueKing/bk-apigateway-framework'
+    source_dir: './templates/python'
+    render_method: 'cookiecutter'
+    is_hidden: true
+- model: templates.template
+  pk: 8
+  fields:
+    created: !!timestamp '2024-11-18 12:00:00.000000+00:00'
+    updated: !!timestamp '2024-11-18 12:00:00.000000+00:00'
+    name: bk-apigw-plugin-python
+    type: 'plugin'
+    display_name_zh_cn: API 网关插件（Golang）
+    display_name_en: API Gateway Plugin (Golang)
+    description_zh_cn: 为开发者提供快速创建 API 的能力，并自动将 API 注册到 API 网关
+    description_en: Empowering developers to quickly create APIs and automatically register them with the API gateway.
+    language: Go
+    market_ready: True
+    preset_services_config:
+      mysql: {}
+    blob_url: ''
+    required_buildpacks: []
+    processes: {}
+    tags: []
+    repo_url: 'https://github.com/TencentBlueKing/bk-apigateway-framework'
+    source_dir: './templates/golang'
+    render_method: 'cookiecutter'
+    is_hidden: true
+- model: templates.template
+  pk: 9
+  fields:
+    created: !!timestamp '2024-11-18 12:00:00.000000+00:00'
+    updated: !!timestamp '2024-11-18 12:00:00.000000+00:00'
+    name: bk-ai-plugin-python
+    type: 'plugin'
+    display_name_zh_cn: AI 智能体插件（Python）
+    display_name_en: AI Agent Plugin (Python)
+    description_zh_cn: 为开发者提供快速创建 AIDev 智能体的能力，并自动对接 AI 小鲸、API 网关
+    description_en: Enables developers to quickly create AIDev agents with automatic integration to AI Xiaojing (AI Assistant) and API Gateway.
+    language: Python
+    market_ready: True
+    preset_services_config:
+      mysql: {}
+    blob_url: ''
+    required_buildpacks: []
+    processes: {}
+    tags: []
+    repo_url: 'https://github.com/TencentBlueKing/bk-aidev-agent'
+    source_dir: './template'
+    render_method: 'cookiecutter'
+    is_hidden: false

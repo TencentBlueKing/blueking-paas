@@ -26,6 +26,7 @@ from django.core.management.base import BaseCommand
 
 from paasng.accessories.services.models import Service
 from paasng.accessories.services.serializers import PreCreatedInstanceImportSLZ
+from paasng.core.tenant.user import get_init_tenant_id
 
 
 def _get_service_choices():
@@ -55,13 +56,22 @@ class Command(BaseCommand):
             type=argparse.FileType(),
             help="yaml file path describing the instance configuration",
         )
+        parser.add_argument(
+            "--tenant_id",
+            dest="tenant_id",
+            required=False,
+            default=get_init_tenant_id(),
+            help="tenant id",
+        )
 
-    def handle(self, service_name: str, file_, **options):
+    def handle(self, service_name: str, file_, tenant_id, **options):
         svc = Service.objects.get_by_natural_key(service_name)
 
         with file_ as fh:
             data = list(yaml.safe_load_all(fh))
 
+        for d in data:
+            d["tenant_id"] = tenant_id
         slz = PreCreatedInstanceImportSLZ(data=data, context={"service": svc}, many=True)
         slz.is_valid(raise_exception=True)
         slz.save()

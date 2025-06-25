@@ -28,6 +28,8 @@ from typing import Dict, Generator, List, Optional, Tuple, Union
 from blue_krill.data_types.url import MutableURL
 from django.utils.encoding import force_str
 
+from paasng.platform.sourcectl.exceptions import RequestTimeOutError
+
 logger = logging.getLogger(__name__)
 
 
@@ -345,7 +347,7 @@ class GitClient:
 
             # 不能在 except 中抛异常, 否则 TimeoutExpired 会自动被 traceback 跟踪导致暴露明文的 command 指令
             if timeout:
-                raise GitCommandExecutionError(
+                raise RequestTimeOutError(
                     f"Command failed: cmd <{command}> execution timeout({self._default_timeout}s)"
                 )
 

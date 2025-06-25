@@ -77,7 +77,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         slz = slzs.ApplicationListOutputSLZ(
             page,
             many=True,
-            context={"request": request, "app_resource_quotas": app_resource_quotas},
+            context={"app_resource_quotas": app_resource_quotas},
         )
         return self.get_paginated_response(slz.data)
 
@@ -294,7 +294,6 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
         slz = slzs.DeletedApplicationListOutputSLZ(
             page,
             many=True,
-            context={"request": request},
         )
         return self.get_paginated_response(slz.data)
 

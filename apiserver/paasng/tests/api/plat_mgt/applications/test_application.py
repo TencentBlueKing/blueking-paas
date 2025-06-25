@@ -359,10 +359,6 @@ class TestDeletedApplicationView:
         expected_codes = {"deleted-app1", "deleted-app2"}
         assert actual_codes == expected_codes
 
-        # 验证活跃应用没有出现在结果中
-        active_codes = {"global-app1", "global-app2", "single-app1"}
-        assert not active_codes.intersection(actual_codes)
-
     @pytest.mark.parametrize(
         ("filter_key", "expected_count", "expected_codes"),
         [

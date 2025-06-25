@@ -84,7 +84,7 @@ class TemplateBaseInputSLZ(serializers.Serializer):
     description_zh_cn = serializers.CharField(help_text="模板中文描述", max_length=128)
     description_en = serializers.CharField(help_text="模板英文描述", max_length=128)
     language = serializers.ChoiceField(help_text="开发语言", choices=AppLanguage.get_django_choices())
-    is_hidden = serializers.SerializerMethodField(help_text="是否隐藏")
+    is_display = serializers.BooleanField(help_text="是否显示")
     # 模板信息
     blob_url = serializers.JSONField(help_text="二进制包存储路径", default=dict)
     repo_type = serializers.CharField(help_text="代码仓库类型", allow_blank=True, default="")
@@ -97,9 +97,12 @@ class TemplateBaseInputSLZ(serializers.Serializer):
     processes = serializers.JSONField(help_text="进程配置", default=dict)
     market_ready = serializers.BooleanField(help_text="是否可发布到应用市集", default=False)
 
-    def get_is_hidden(self, obj) -> bool:
-        """获取模板是否隐藏"""
-        return not obj.is_display
+    def to_internal_value(self, data):
+        validated_data = super().to_internal_value(data)
+
+        # 处理 is_display 字段，将其转换为数据库中存储的 is_hidden
+        validated_data["is_hidden"] = not validated_data.pop("is_display")
+        return validated_data
 
     def validate_repo_type(self, value: str) -> str:
         """验证代码仓库类型"""

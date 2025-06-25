@@ -155,7 +155,7 @@
   fields:
     created: !!timestamp '2024-11-18 12:00:00.000000+00:00'
     updated: !!timestamp '2024-11-18 12:00:00.000000+00:00'
-    name: bk-apigw-plugin-python
+    name: bk-apigw-plugin-go
     type: 'plugin'
     display_name_zh_cn: API 网关插件（Golang）
     display_name_en: API Gateway Plugin (Golang)

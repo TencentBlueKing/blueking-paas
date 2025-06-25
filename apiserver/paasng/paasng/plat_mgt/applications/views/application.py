@@ -47,6 +47,7 @@ from paasng.plat_mgt.bk_plugins.views import is_plugin_instance_exist, is_user_p
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tasks import cal_app_resource_quotas
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -232,7 +233,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="更新应用集群",
-        request_body=slzs.UpdateClusterSLZ(),
+        request_body=slzs.UpdateApplicationBindClusterSLZ(),
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update_cluster(self, request, app_code, module_name, env_name):
@@ -242,7 +243,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         module = application.get_module(module_name)
         env = get_object_or_404(module.envs, environment=env_name)
 
-        slz = slzs.UpdateClusterSLZ(
+        slz = slzs.UpdateApplicationBindClusterSLZ(
             data=request.data,
             context={"user": request.user, "environment": env.environment, "region": application.region},
         )
@@ -303,15 +304,15 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
     )
     def destroy(self, request, app_code):
         """彻底删除应用"""
-        to_del_apps = Application.default_objects.filter(code=app_code, is_deleted=True)
+        to_del_app = Application.default_objects.filter(code=app_code, is_deleted=True).first()
 
-        if not to_del_apps.exists():
+        if not to_del_app:
             logger.exception(f"{app_code} 应用不存在")
-            return None
+            raise error_codes.APP_NOT_FOUND
 
-        if to_del_apps.filter(is_deleted=False).exists():
+        if not to_del_app.is_deleted:
             logger.exception(f"{app_code} 的应用页面上还未删除，不能强制删除")
-            return None
+            raise error_codes.CANNOT_HARD_DELETE_APP
 
         with transaction.atomic():
             # 从 PaaS 2.0 中删除相关信息
@@ -320,13 +321,13 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
                     AppManger(session).delete_by_code(code=app_code)
                 except Exception:
                     logger.exception(f"{app_code} 从 PaaS2.0 中删除失败.")
-                    return None
+                    raise error_codes.CANNOT_HARD_DELETE_APP
 
             # 删除权限中心相关数据
             delete_builtin_user_groups(app_code)
             delete_grade_manager(app_code)
 
             # 从 PaaS 3.0 中删除相关信息
-            to_del_apps.delete()
+            to_del_app.delete(hard=True)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

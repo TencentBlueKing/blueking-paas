@@ -218,7 +218,7 @@ class ApplicationNameUpdateInputSLZ(UpdateApplicationNameSLZ):
     """更新应用名称序列化器"""
 
 
-class UpdateClusterSLZ(serializers.Serializer):
+class UpdateApplicationBindClusterSLZ(serializers.Serializer):
     """更新应用集群序列化器"""
 
     name = serializers.CharField(required=True, help_text="集群名称")

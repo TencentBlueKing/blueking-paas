@@ -26,7 +26,6 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, SuspiciousOperation
 from django.db import models
 from django.db.models import Q, QuerySet
-from django.utils import timezone
 from pilkit.processors import ResizeToFill
 
 from paasng.core.core.storages.object_storage import app_logo_storage
@@ -477,11 +476,15 @@ class Application(OwnerTimestampedModel):
                 return default_url
         return default_url
 
-    def delete(self, *args, **kwargs):
-        # 不会删除数据, 而是通过标记删除字段 is_deleted 来软删除
-        self.is_deleted = True
-        self.updated = timezone.now()
-        self.save()
+    def delete(self, hard: bool = False, *args, **kwargs):
+        # 软删除时不会删除数据, 而是通过标记删除字段 is_deleted 来软删除
+        if not hard:
+            self.is_deleted = True
+            self.save(update_fields=["is_deleted", "updated"])
+            return None
+
+        # 硬删除时会彻底删除应用
+        return super().delete(*args, **kwargs)
 
     def __str__(self):
         return "{name}[{code}]".format(name=self.name, code=self.code)

@@ -17,6 +17,8 @@
 
 import datetime
 import json
+import uuid
+from unittest import mock
 
 import pytest
 from django.urls import reverse
@@ -30,7 +32,15 @@ from paasng.accessories.publish.sync_market.handlers import register_app_core_da
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import (
+    Application,
+    ApplicationEnvironment,
+    ApplicationFeatureFlag,
+    Module,
+    SMartAppExtraInfo,
+    UserMarkedApplication,
+)
+from paasng.platform.engine.models import EngineApp
 from tests.utils.helpers import override_settings
 
 pytestmark = pytest.mark.django_db
@@ -385,3 +395,60 @@ class TestDeletedApplicationView:
 
         active_codes = {"global-app1", "global-app2", "single-app1"}
         assert not active_codes.intersection(actual_codes)
+
+    def test_destroy_applications(self, plat_mgt_api_client, prepare_applications):
+        """测试彻底删除应用"""
+        app = prepare_applications["deleted_app1"]
+
+        engine_app = EngineApp.objects.create(
+            id=uuid.uuid4(),
+            name=f"engine-{app.code}",
+            region=app.region,
+            owner=app.owner,
+            is_active=True,
+        )
+        env = ApplicationEnvironment.objects.create(
+            application=app,
+            environment="stag",
+            engine_app=engine_app,
+            tenant_id=app.tenant_id,
+        )
+        feature_flag = ApplicationFeatureFlag.objects.create(application=app, name="test_feature", effect=True)
+        user_mark = UserMarkedApplication.objects.create(application=app, owner=app.owner)
+        smart_info = SMartAppExtraInfo.objects.create(app=app, original_code="test_original", artifact_metadata={})
+        module = Module.objects.create(application=app, name="test_module", is_default=True)
+
+        url = reverse("plat_mgt.applications.deleted_applications", kwargs={"app_code": app.code})
+
+        with (
+            mock.patch(
+                "paasng.accessories.publish.sync_market.managers.AppManger.delete_by_code"
+            ) as mock_delete_by_code,
+            mock.patch("paasng.plat_mgt.applications.views.application.delete_builtin_user_groups") as mock_del_groups,
+            mock.patch("paasng.plat_mgt.applications.views.application.delete_grade_manager") as mock_del_manager,
+            mock.patch("paasng.core.core.storages.sqlalchemy.console_db.session_scope") as mock_session_scope,
+        ):
+            mock_session = mock.MagicMock()
+            mock_session_scope.return_value = mock.MagicMock()
+            mock_session_scope.return_value.__enter__.return_value = mock_session
+
+            rsp = plat_mgt_api_client.delete(url)
+
+            assert rsp.status_code == 204
+
+            # 验证应用已被删除
+            assert not Application.default_objects.filter(code=app.code).exists()
+
+            # 验证关联资源被级联删除
+            assert not ApplicationEnvironment.objects.filter(id=env.id).exists()
+            assert not ApplicationFeatureFlag.objects.filter(id=feature_flag.id).exists()
+            assert not UserMarkedApplication.objects.filter(id=user_mark.id).exists()
+            assert not SMartAppExtraInfo.objects.filter(id=smart_info.id).exists()
+            assert not Module.objects.filter(id=module.id).exists()
+
+            mock_session_scope.assert_called_once()
+            # 验证 PaaS 2.0 中删除操作调用
+            mock_delete_by_code.assert_called_once()
+
+            mock_del_groups.assert_called_once_with(app.code)
+            mock_del_manager.assert_called_once_with(app.code)

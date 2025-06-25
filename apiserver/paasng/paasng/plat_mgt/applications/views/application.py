@@ -21,6 +21,7 @@ from collections import Counter
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import get_language
+from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
@@ -307,12 +308,10 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
         to_del_app = Application.default_objects.filter(code=app_code, is_deleted=True).first()
 
         if not to_del_app:
-            logger.exception(f"{app_code} 应用不存在")
-            raise error_codes.APP_NOT_FOUND
+            raise error_codes.APP_NOT_FOUND.f(_("应用不存在或已被删除"))
 
         if not to_del_app.is_deleted:
-            logger.exception(f"{app_code} 的应用页面上还未删除，不能强制删除")
-            raise error_codes.CANNOT_HARD_DELETE_APP
+            raise error_codes.CANNOT_HARD_DELETE_APP.f(_("应用未被软删除，无法硬删除"))
 
         with transaction.atomic():
             # 从 PaaS 2.0 中删除相关信息
@@ -320,7 +319,7 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
                 try:
                     AppManger(session).delete_by_code(code=app_code)
                 except Exception:
-                    logger.exception(f"{app_code} 从 PaaS2.0 中删除失败.")
+                    logger.exception("Failed to delete application %s from PaaS2.0", app_code)
                     raise error_codes.CANNOT_HARD_DELETE_APP
 
             # 删除权限中心相关数据

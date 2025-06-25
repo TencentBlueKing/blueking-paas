@@ -346,7 +346,7 @@ class TestDeletedApplicationView:
 
     def test_list_deleted_applications(self, plat_mgt_api_client, prepare_applications):
         """测试获取软删除应用列表"""
-        url = reverse("plat_mgt.applications.list_deleted_applications")
+        url = reverse("plat_mgt.applications.list_deleted")
 
         rsp = plat_mgt_api_client.get(url)
 
@@ -384,7 +384,7 @@ class TestDeletedApplicationView:
         self, plat_mgt_api_client, prepare_applications, filter_key, expected_count, expected_codes
     ):
         """测试已删除应用列表的过滤功能"""
-        url = reverse("plat_mgt.applications.list_deleted_applications")
+        url = reverse("plat_mgt.applications.list_deleted")
 
         rsp = plat_mgt_api_client.get(url, filter_key)
         assert rsp.status_code == 200
@@ -418,7 +418,7 @@ class TestDeletedApplicationView:
         smart_info = SMartAppExtraInfo.objects.create(app=app, original_code="test_original", artifact_metadata={})
         module = Module.objects.create(application=app, name="test_module", is_default=True)
 
-        url = reverse("plat_mgt.applications.deleted_applications", kwargs={"app_code": app.code})
+        url = reverse("plat_mgt.applications.force_delete", kwargs={"app_code": app.code})
 
         with (
             mock.patch(

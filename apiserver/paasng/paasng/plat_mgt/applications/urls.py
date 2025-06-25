@@ -134,11 +134,11 @@ urlpatterns = [
     re_path(
         r"^api/plat_mgt/deleted_applications/$",
         views.DeletedApplicationViewSet.as_view({"get": "list"}),
-        name="plat_mgt.applications.list_deleted_applications",
+        name="plat_mgt.applications.list_deleted",
     ),
     re_path(
         r"^api/plat_mgt/deleted_applications/(?P<app_code>[^/]+)/$",
         views.DeletedApplicationViewSet.as_view({"delete": "destroy"}),
-        name="plat_mgt.applications.deleted_applications",
+        name="plat_mgt.applications.force_delete",
     ),
 ]

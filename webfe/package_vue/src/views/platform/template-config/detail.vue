@@ -20,7 +20,7 @@
             :highlight-mouseover-node="true"
           />
         </div>
-        <div v-else-if="key === 'is_hidden'">
+        <div v-else-if="key === 'is_display'">
           <span :class="['tag', { yes: data[key] }]">
             {{ data[key] ? $t('是') : $t('否') }}
           </span>
@@ -64,12 +64,13 @@ export default {
         description_zh_cn: '描述（中）',
         description_en: '描述（英）',
         language: '开发语言',
-        is_hidden: '是否展示',
+        is_display: '是否展示',
       },
       default: {
         blob_url: '二进制包存储路径',
       },
       plugin: {
+        repo_type: '代码仓库类型',
         repo_url: '代码仓库地址',
         source_dir: '代码目录',
       },

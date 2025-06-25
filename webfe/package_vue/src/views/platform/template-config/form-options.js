@@ -44,7 +44,7 @@ export const BASE_INFO_FORM_CONFIG = [
     metadataKey: 'application_types',
   },
   {
-    property: 'is_hidden',
+    property: 'is_display',
     label: '是否展示',
     type: 'switcher',
   },
@@ -52,6 +52,12 @@ export const BASE_INFO_FORM_CONFIG = [
 
 // 模板信息（插件模块）
 export const PLUGIN_FORM_CONFIG = [
+  {
+    property: 'repo_type',
+    label: '代码仓库类型',
+    type: 'select',
+    metadataKey: 'repo_types',
+  },
   {
     property: 'repo_url',
     label: '代码仓库地址',

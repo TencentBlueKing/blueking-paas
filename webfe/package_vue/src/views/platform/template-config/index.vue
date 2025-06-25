@@ -28,10 +28,10 @@
       >
         <template slot-scope="{ row }">
           <span
-            :class="['tag', { yes: row.is_hidden }]"
-            v-if="column.prop === 'is_hidden'"
+            :class="['tag', { yes: row.is_display }]"
+            v-if="column.prop === 'is_display'"
           >
-            {{ row.is_hidden ? $t('是') : $t('否') }}
+            {{ row.is_display ? $t('是') : $t('否') }}
           </span>
           <span v-else>{{ row[column.prop] || '--' }}</span>
         </template>
@@ -81,7 +81,7 @@
     <!-- 详情 -->
     <DetailSide
       :show.sync="detailSideConfig.isShow"
-      :title="$t('代码库配置')"
+      :title="$t('模版配置')"
       :panels="panels"
       :width="690"
     >
@@ -91,7 +91,7 @@
       >
         <Detail
           :data="curTemplateDetail"
-          :tabActive="active"
+          :tab-active="active"
         />
       </div>
     </DetailSide>
@@ -170,7 +170,12 @@ export default {
   computed: {
     ...mapState(['localLanguage']),
     templateTypes() {
-      return this.templateMetadata.template_types || [];
+      return (
+        this.templateMetadata.template_types?.map((v) => ({
+          text: v.label,
+          value: v.name,
+        })) || []
+      );
     },
     columns() {
       return [
@@ -195,7 +200,7 @@ export default {
         },
         {
           label: '是否展示',
-          prop: 'is_hidden',
+          prop: 'is_display',
         },
       ];
     },
@@ -227,25 +232,11 @@ export default {
         this.isTableLoading = false;
       }
     },
-    transformData(obj = {}) {
-      const result = {};
-      for (const key in obj) {
-        if (Array.isArray(obj[key])) {
-          result[key] = obj[key].map((item) => ({
-            text: item,
-            value: item,
-          }));
-        } else {
-          result[key] = obj[key];
-        }
-      }
-      return result;
-    },
     // 获取模板配置元数据
     async getTemplateMetadata() {
       try {
         const ret = await this.$store.dispatch('tenantConfig/getTemplateMetadata');
-        this.templateMetadata = this.transformData(ret);
+        this.templateMetadata = ret;
       } catch (e) {
         this.catchErrorHandler(e);
       }

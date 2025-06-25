@@ -42,9 +42,9 @@
           >
             <bk-option
               v-for="option in metadata[item.metadataKey] || []"
-              :id="option.value"
-              :name="option.value"
-              :key="option.value"
+              :id="option.name"
+              :name="option.label"
+              :key="option.name"
             ></bk-option>
           </bk-select>
           <bk-switcher
@@ -83,7 +83,22 @@
           :rules="item.rules"
           :key="item.label"
         >
-          <bk-input v-model="formData[item.property]"></bk-input>
+          <bk-input
+            v-if="item.type === 'input'"
+            v-model="formData[item.property]"
+          ></bk-input>
+          <bk-select
+            v-else-if="item.type === 'select'"
+            v-model="formData[item.property]"
+            searchable
+          >
+            <bk-option
+              v-for="option in metadata[item.metadataKey] || []"
+              :id="option.name"
+              :name="option.label"
+              :key="option.name"
+            ></bk-option>
+          </bk-select>
         </bk-form-item>
       </bk-form>
 
@@ -140,6 +155,7 @@
 <script>
 import i18n from '@/language/i18n.js';
 import JsonEditorVue from 'json-editor-vue';
+import { cloneDeep } from 'lodash';
 import { validateJson } from '../services/validators';
 import { BASE_INFO_FORM_CONFIG, PLUGIN_FORM_CONFIG, CONFIG_INFO_FORM_CONFIG } from './form-options';
 
@@ -154,10 +170,11 @@ const INITIAL_FORM_DATA = {
   description_zh_cn: '',
   description_en: '',
   language: '',
-  is_hidden: false,
+  is_display: false,
   // 模块信息（模块）
   blob_url: '',
   // 模块信息（插件）
+  repo_type: '',
   repo_url: '',
   source_dir: '',
   // 配置信息
@@ -172,6 +189,8 @@ const requiredRule = {
   message: i18n.t('必填项'),
   trigger: 'blur',
 };
+
+const nonRequiredFields = ['repo_url'];
 
 export default {
   name: 'EditAddTemplateConfig',
@@ -203,7 +222,7 @@ export default {
   data() {
     return {
       saveLoading: false,
-      formData: { ...INITIAL_FORM_DATA },
+      formData: cloneDeep(INITIAL_FORM_DATA),
       // 基本信息 form 配置
       baseInfoFormItems: BASE_INFO_FORM_CONFIG.map((item) => ({
         ...item,
@@ -214,8 +233,8 @@ export default {
       pluginFormItems: Object.freeze(
         PLUGIN_FORM_CONFIG.map((item) => ({
           ...item,
-          required: true,
-          rules: [{ ...requiredRule }],
+          required: !nonRequiredFields.includes(item.property),
+          rules: nonRequiredFields.includes(item.property) ? [] : [{ ...requiredRule }],
         }))
       ),
       blobUrlRules: [{ ...requiredRule }],
@@ -257,7 +276,7 @@ export default {
       }
     },
     reset() {
-      this.formData = { ...INITIAL_FORM_DATA };
+      this.formData = cloneDeep(INITIAL_FORM_DATA);
     },
     // JSON 验证方法
     validateAllJsonFields() {

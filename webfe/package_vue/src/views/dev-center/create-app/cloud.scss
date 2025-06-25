@@ -171,6 +171,9 @@
   /deep/ .bk-label {
     width: 119px !important;
   }
+  /deep/ .form-error-tip {
+    transform: translateX(19px);
+  }
 }
 
 .lesscode-info {

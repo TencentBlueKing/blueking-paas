@@ -207,6 +207,24 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/${processType}/instances/${instanceName}/previous_logs/download/`;
     return http.get(url, { responseType: 'blob' });
   },
+
+  /**
+   * 获取实例实时日志、最近一次重启日志
+   * @param {Object} params 请求参数：appCode, moduleId, env, instanceName, processType, previous(true=重启日志、false=实时日志)
+   */
+  getInstanceLog({}, { appCode, moduleId, env, processType, instanceName, previous, lines }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/${processType}/instances/${instanceName}/logs/?previous=${previous}&tail_lines=${lines}`;
+    return http.get(url);
+  },
+
+  /**
+   * 下载实例重启日志、最近一次重启日志
+   *  @param {Object} params 请求参数：appCode, moduleId, env, instanceName, processType
+   */
+  downloadInstanceLog({}, { appCode, moduleId, env, processType, instanceName, previous }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/${processType}/instances/${instanceName}/logs/download/?previous=${previous}`;
+    return http.get(url, { responseType: 'blob' });
+  },
 };
 
 export default {

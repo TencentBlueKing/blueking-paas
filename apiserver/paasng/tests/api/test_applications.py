@@ -30,6 +30,7 @@ from rest_framework.test import APIClient
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType, ClusterFeatureFlag
 from paas_wl.infras.cluster.entities import AllocationPolicy
 from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
+from paasng.accessories.publish.market.models import Tag
 from paasng.accessories.publish.sync_market.handlers import (
     on_change_application_name,
     prepare_change_application_name,
@@ -40,7 +41,7 @@ from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import UserProfile
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
-from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
+from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType, AvailabilityLevel
 from paasng.platform.applications.handlers import post_create_application, turn_on_bk_log_feature_for_app
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -50,7 +51,6 @@ from paasng.platform.evaluation.models import AppOperationReport, AppOperationRe
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
-from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from tests.utils.auth import create_user
@@ -58,7 +58,6 @@ from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import configure_regions, create_app, generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
 
 logger = logging.getLogger(__name__)
 
@@ -240,31 +239,27 @@ class TestApplicationCreateWithEngine:
         mock_initialize_vcs_with_template,
         settings,
     ):
-        with mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync:
-            # Mock return value of syncing template
-            mocked_sync.return_value = SourceSyncResult(dest_type="mock")
-
-            random_suffix = generate_random_string(length=6)
-            response = api_client.post(
-                "/api/bkapps/applications/v2/",
-                data={
-                    "region": settings.DEFAULT_REGION_NAME,
-                    "type": type,
-                    "code": f"uta-{random_suffix}",
-                    "name": f"uta-{random_suffix}",
-                    "engine_params": {
-                        "source_origin": SourceOrigin.AUTHORIZED_VCS.value,
-                        "source_control_type": "dft_bk_svn",
-                        "source_init_template": settings.DUMMY_TEMPLATE_NAME,
-                    },
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            "/api/bkapps/applications/v2/",
+            data={
+                "region": settings.DEFAULT_REGION_NAME,
+                "type": type,
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
+                "engine_params": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS.value,
+                    "source_control_type": "dft_bk_svn",
+                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                 },
-            )
-            if creation_succeeded:
-                assert response.status_code == 201
-                assert response.json()["application"]["type"] == desired_type
-            else:
-                assert response.status_code == 400
-                assert response.json()["detail"] == '已开启引擎，类型不能为 "engineless_app"'
+            },
+        )
+        if creation_succeeded:
+            assert response.status_code == 201
+            assert response.json()["application"]["type"] == desired_type
+        else:
+            assert response.status_code == 400
+            assert response.json()["detail"] == '已开启引擎，类型不能为 "engineless_app"'
 
     @pytest.mark.usefixtures("_init_tmpls")
     @pytest.mark.parametrize(
@@ -385,20 +380,27 @@ class TestApplicationUpdate:
             tenant_id=random_tenant_id,
         )
 
+    @pytest.fixture
+    def tag(self):
+        return G(Tag, name="test")
+
     @pytest.mark.usefixtures("_register_app_core_data")
-    def test_normal(self, api_client, bk_app_full, bk_user, random_name):
+    def test_normal(self, api_client, bk_app_full, bk_user, random_name, tag):
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app_full.code),
-            data={"name": random_name},
+            data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value, "tag_id": tag.id},
         )
+        app = Application.objects.get(pk=bk_app_full.pk)
         assert response.status_code == 200
-        assert Application.objects.get(pk=bk_app_full.pk).name == random_name
+        assert app.name == random_name
+        assert app.extra_info.availability_level == AvailabilityLevel.STANDARD.value
+        assert app.extra_info.tag == tag
 
-    def test_duplicated(self, api_client, bk_app, bk_user, random_name):
+    def test_duplicated(self, api_client, bk_app, bk_user, random_name, tag):
         G(Application, name=random_name)
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(bk_app.code),
-            data={"name": random_name},
+            data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value, "tag_id": tag.id},
         )
         assert response.status_code == 400
         assert response.json()["code"] == "VALIDATION_ERROR"
@@ -406,7 +408,7 @@ class TestApplicationUpdate:
 
     @pytest.mark.usefixtures("_mock_change_app_name_action")
     @pytest.mark.usefixtures("_setup_random_tenant_cluster_allocation_policy")
-    def test_desc_app(self, api_client, bk_user, random_name, random_tenant_id):
+    def test_desc_app(self, api_client, bk_user, random_name, random_tenant_id, tag):
         get_desc_handler(
             dict(
                 spec_version=2,
@@ -418,11 +420,42 @@ class TestApplicationUpdate:
         app = Application.objects.get(code=random_name)
         response = api_client.put(
             "/api/bkapps/applications/{}/".format(app.code),
-            data={"name": random_name},
+            data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value, "tag_id": tag.id},
         )
         assert response.status_code == 200
         # 描述文件定义的应用可以更新名称
         assert Application.objects.get(pk=app.pk).name == random_name
+
+    @pytest.mark.usefixtures("_register_app_core_data")
+    def test_invalid_availability_level(self, api_client, bk_app, bk_user, random_name):
+        response = api_client.put(
+            "/api/bkapps/applications/{}/".format(bk_app.code),
+            data={"name": random_name, "availability_level": "invalid_level"},
+        )
+        assert response.status_code == 400
+        assert response.json()["code"] == "VALIDATION_ERROR"
+        assert "availability_level: “invalid_level” 不是合法选项。" in response.json()["detail"]
+
+    def test_no_tag(self, api_client, bk_app, bk_user, random_name):
+        response = api_client.put(
+            "/api/bkapps/applications/{}/".format(bk_app.code),
+            data={"name": random_name, "availability_level": AvailabilityLevel.STANDARD.value},
+        )
+        assert response.status_code == 400
+        assert response.json()["code"] == "VALIDATION_ERROR"
+        assert "tag_id: 该字段是必填项" in response.json()["detail"]
+
+    @pytest.mark.usefixtures("_register_app_core_data")
+    def test_no_availability_level(self, api_client, bk_app_full, bk_user, random_name, tag):
+        response = api_client.put(
+            "/api/bkapps/applications/{}/".format(bk_app_full.code),
+            data={"name": random_name, "tag_id": tag.id},
+        )
+        app = Application.objects.get(pk=bk_app_full.pk)
+        assert response.status_code == 200
+        assert app.name == random_name
+        assert app.extra_info.availability_level is None
+        assert app.extra_info.tag == tag
 
 
 class TestApplicationDeletion:
@@ -578,34 +611,96 @@ class TestCreateCloudNativeApp:
         assert process_spec.get_target_replicas("prod") == 2
 
     @pytest.mark.usefixtures("_init_tmpls")
-    @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
+    @mock.patch("paasng.platform.applications.views.creation.create_new_repo")
     @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")
-    def test_create_with_buildpack(self, mocked_binder, mocked_manager, api_client):
+    @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
+    @mock.patch("paasng.platform.modules.manager.delete_repo")
+    @pytest.mark.parametrize(
+        ("auto_create_repo", "init_error"),
+        [
+            # 初始化模块信息正常
+            (True, False),
+            (False, False),
+            # 初始化异常且自动创建的仓库
+            (True, True),
+            # 初始化异常但未自动创建仓库
+            (False, True),
+        ],
+    )
+    def test_create_with_buildpack(
+        self,
+        mock_delete_repo,
+        mocked_binder,
+        mocked_manager,
+        mock_create_new_repo,
+        api_client,
+        auto_create_repo,
+        init_error,
+    ):
         """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
         mocked_binder().bind_bp_stack.return_value = None
         mocked_manager().get_slug_builder.return_value = mock.MagicMock(is_cnb_runtime=True, environments={})
 
         random_suffix = generate_random_string(length=6)
-        response = api_client.post(
-            "/api/bkapps/cloud-native/",
-            data={
-                "region": settings.DEFAULT_REGION_NAME,
-                "code": f"uta-{random_suffix}",
-                "name": f"uta-{random_suffix}",
-                "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
-                "source_config": {
-                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
-                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
-                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
-                    "source_repo_auth_info": {},
+
+        source_repo_url = "" if auto_create_repo else "https://git.example.com/helloWorld.git"
+        if init_error:
+            with pytest.raises(RuntimeError, match="forced error"), mock.patch(
+                "paasng.platform.applications.views.creation.init_module_in_view",
+                side_effect=RuntimeError("forced error"),
+            ):
+                api_client.post(
+                    "/api/bkapps/cloud-native/",
+                    data={
+                        "region": settings.DEFAULT_REGION_NAME,
+                        "code": f"uta-{random_suffix}",
+                        "name": f"uta-{random_suffix}",
+                        "": True,
+                        "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
+                        "source_config": {
+                            "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                            "source_control_type": "github",
+                            "auto_create_repo": auto_create_repo,
+                            "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                            "source_repo_url": source_repo_url,
+                            "source_repo_auth_info": {},
+                        },
+                    },
+                )
+        else:
+            response = api_client.post(
+                "/api/bkapps/cloud-native/",
+                data={
+                    "region": settings.DEFAULT_REGION_NAME,
+                    "code": f"uta-{random_suffix}",
+                    "name": f"uta-{random_suffix}",
+                    "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
+                    "source_config": {
+                        "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                        "source_control_type": "github",
+                        "auto_create_repo": auto_create_repo,
+                        "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                        "source_repo_url": source_repo_url,
+                        "source_repo_auth_info": {},
+                    },
                 },
-            },
-        )
-        assert response.status_code == 201, f"error: {response.json()['detail']}"
-        app_data = response.json()["application"]
-        assert app_data["type"] == "cloud_native"
-        assert app_data["modules"][0]["web_config"]["build_method"] == "buildpack"
-        assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
+            )
+            assert response.status_code == 201, f"error: {response.json()['detail']}"
+            app_data = response.json()["application"]
+            assert app_data["type"] == "cloud_native"
+            assert app_data["modules"][0]["web_config"]["build_method"] == "buildpack"
+            assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
+
+        if auto_create_repo:
+            mock_create_new_repo.assert_called_once()
+        else:
+            mock_create_new_repo.assert_not_called()
+
+        # 验证异常时的仓库清理
+        if init_error and auto_create_repo:
+            mock_delete_repo.assert_called_once_with("github", mock.ANY)
+        else:
+            mock_delete_repo.assert_not_called()
 
     @pytest.mark.usefixtures("_init_tmpls")
     def test_create_with_dockerfile(self, api_client):

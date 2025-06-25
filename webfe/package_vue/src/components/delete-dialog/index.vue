@@ -15,6 +15,7 @@
       v-model="inputValue"
       :placeholder="placeholder"
     ></bk-input>
+    <slot name="alert"></slot>
     <template slot="footer">
       <bk-button
         theme="danger"
@@ -114,7 +115,7 @@ export default {
   }
   .hint-text {
     font-size: 12px;
-    color: #63656e;
+    color: #4d4f56;
     letter-spacing: 0;
     line-height: 22px;
     word-break: break-all;
@@ -126,6 +127,22 @@ export default {
     margin-left: 3px;
     color: #3a84ff;
     cursor: pointer;
+  }
+  .delete-alert-cls {
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: #4d4f56;
+    i.paasng-remind {
+      margin-right: 9px;
+      transform: translateY(0px);
+      font-size: 14px;
+      color: #ea3636;
+    }
+    .bk-button-text {
+      line-height: 1 !important;
+      height: 12px !important;
+      padding: 0;
+    }
   }
 }
 </style>

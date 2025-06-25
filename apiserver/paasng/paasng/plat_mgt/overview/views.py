@@ -57,11 +57,11 @@ class PlatMgtOverviewViewSet(viewsets.GenericViewSet):
         )
         # 增强服务绑定策略
         service_binding_policy_tenant_service_ids = {
-            (p.tenant_id, p.service_id) for p in ServiceBindingPolicy.objects.filter(tenant_id__in=tenant_ids)
+            (p.tenant_id, str(p.service_id)) for p in ServiceBindingPolicy.objects.filter(tenant_id__in=tenant_ids)
         }
         # 增强服务绑定策略（带优先级）
         service_binding_precedence_policy_tenant_service_ids = {
-            (p.tenant_id, p.service_id)
+            (p.tenant_id, str(p.service_id))
             for p in ServiceBindingPrecedencePolicy.objects.filter(tenant_id__in=tenant_ids)
         }
 

@@ -15,7 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 
 class DisplayOptionsSerializer(serializers.Serializer):
@@ -42,7 +44,7 @@ class AppSerializer(serializers.Serializer):
 
 class EnvVariableSerializer(serializers.Serializer):
     key = serializers.CharField()
-    value = serializers.CharField()
+    value = serializers.CharField(allow_blank=True)
     description = serializers.CharField(required=False)
     environment_name = serializers.CharField(required=False)
 
@@ -150,6 +152,12 @@ class ModuleSerializer(serializers.Serializer):
     package_plans = serializers.DictField(required=False)
     bkmonitor = BkMonitorPortSerializer(required=False)
 
+    def validate_source_dir(self, value: str):
+        if value.startswith("/") or ".." in value:
+            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
+
+        return value
+
 
 class AppDescSpec2Serializer(serializers.Serializer):
     spec_version = serializers.IntegerField(required=False)
@@ -164,3 +172,13 @@ class AppDescSpec2Serializer(serializers.Serializer):
         if ("modules" not in value and "module" not in value) or ("modules" in value and "module" in value):
             raise serializers.ValidationError("one of 'modules' or 'module' is required.")
         return value
+
+
+class PackageStashRequestSLZ(serializers.Serializer):
+    """Handle package for S-mart build"""
+
+    package = serializers.FileField(help_text="待构建的应用源码包")
+
+
+class PackageStashResponseSLZ(serializers.Serializer):
+    signature = serializers.CharField(help_text="数字签名")

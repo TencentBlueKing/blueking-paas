@@ -31,7 +31,6 @@ from paasng.platform.bkapp_model.models import ModuleDeployHook, ModuleProcessSp
 from paasng.platform.modules.constants import DeployHookType, SourceOrigin
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.modules.models.module import Module
-from paasng.platform.sourcectl.connector import IntegratedSvnAppRepoConnector, SourceSyncResult
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import (
     create_pending_wl_apps,
@@ -71,20 +70,16 @@ class TestModuleCreation:
         mock_initialize_vcs_with_template,
         creation_params,
     ):
-        with mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync:
-            # Mock return value of syncing template
-            mocked_sync.return_value = SourceSyncResult(dest_type="mock")
-
-            random_suffix = generate_random_string(length=6)
-            response = api_client.post(
-                f"/api/bkapps/applications/{bk_app.code}/modules/",
-                data={
-                    "name": f"uta-{random_suffix}",
-                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
-                    **creation_params,
-                },
-            )
-            assert response.status_code == 201
+        random_suffix = generate_random_string(length=6)
+        response = api_client.post(
+            f"/api/bkapps/applications/{bk_app.code}/modules/",
+            data={
+                "name": f"uta-{random_suffix}",
+                "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                **creation_params,
+            },
+        )
+        assert response.status_code == 201
 
     @pytest.mark.usefixtures("_init_tmpls")
     def test_create_nondefault_origin(
@@ -95,12 +90,8 @@ class TestModuleCreation:
         mock_wl_services_in_creation,
     ):
         with (
-            mock.patch.object(IntegratedSvnAppRepoConnector, "sync_templated_sources") as mocked_sync,
             override_settings(ENABLE_BK_LESSCODE=False),
         ):
-            # Mock return value of syncing template
-            mocked_sync.return_value = SourceSyncResult(dest_type="mock")
-
             random_suffix = generate_random_string(length=6)
             response = api_client.post(
                 f"/api/bkapps/applications/{bk_app.code}/modules/",
@@ -172,31 +163,89 @@ class TestCreateCloudNativeModule:
         assert deploy_hook.args == ["-c", "echo 'hello world'"]
 
     @pytest.mark.usefixtures("_init_tmpls")
+    @mock.patch("paasng.platform.modules.views.create_new_repo")
     @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
     @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")
-    def test_create_with_buildpack(self, mocked_binder, mocked_manager, api_client, bk_cnative_app):
+    @mock.patch("paasng.platform.modules.manager.delete_repo")
+    @pytest.mark.parametrize(
+        ("auto_create_repo", "init_error"),
+        [
+            # 初始化模块信息正常
+            (True, False),
+            (False, False),
+            # 初始化异常且自动创建的仓库
+            (True, True),
+            # 初始化异常但未自动创建仓库
+            (False, True),
+        ],
+    )
+    def test_create_with_buildpack(
+        self,
+        mock_delete_repo,
+        mocked_binder,
+        mocked_manager,
+        mock_create_new_repo,
+        api_client,
+        bk_cnative_app,
+        auto_create_repo,
+        init_error,
+    ):
         """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
         mocked_binder().bind_bp_stack.return_value = None
         mocked_manager().get_slug_builder.return_value = mock.MagicMock(is_cnb_runtime=True, environments={})
 
         random_suffix = generate_random_string(length=6)
-        response = api_client.post(
-            f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
-            data={
-                "name": f"uta-{random_suffix}",
-                "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
-                "source_config": {
-                    "source_init_template": settings.DUMMY_TEMPLATE_NAME,
-                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
-                    "source_repo_url": "https://github.com/octocat/helloWorld.git",
-                    "source_repo_auth_info": {},
+
+        source_repo_url = "" if auto_create_repo else "https://git.example.com/helloWorld.git"
+        if init_error:
+            with pytest.raises(RuntimeError, match="forced error"), mock.patch(
+                "paasng.platform.modules.views.init_module_in_view", side_effect=RuntimeError("forced error")
+            ):
+                api_client.post(
+                    f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
+                    data={
+                        "name": f"uta-{random_suffix}",
+                        "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
+                        "source_config": {
+                            "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                            "source_control_type": "github",
+                            "auto_create_repo": auto_create_repo,
+                            "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                            "source_repo_url": source_repo_url,
+                            "source_repo_auth_info": {},
+                        },
+                    },
+                )
+        else:
+            response = api_client.post(
+                f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
+                data={
+                    "name": f"uta-{random_suffix}",
+                    "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
+                    "source_config": {
+                        "source_init_template": settings.DUMMY_TEMPLATE_NAME,
+                        "source_control_type": "github",
+                        "auto_create_repo": auto_create_repo,
+                        "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                        "source_repo_url": source_repo_url,
+                        "source_repo_auth_info": {},
+                    },
                 },
-            },
-        )
-        assert response.status_code == 201, f"error: {response.json()['detail']}"
-        module_data = response.json()["module"]
-        assert module_data["web_config"]["build_method"] == "buildpack"
-        assert module_data["web_config"]["artifact_type"] == "image"
+            )
+            assert response.status_code == 201, f"error: {response.json()['detail']}"
+            module_data = response.json()["module"]
+            assert module_data["web_config"]["build_method"] == "buildpack"
+            assert module_data["web_config"]["artifact_type"] == "image"
+        if auto_create_repo:
+            mock_create_new_repo.assert_called_once()
+        else:
+            mock_create_new_repo.assert_not_called()
+
+        # 验证异常时的仓库清理
+        if init_error and auto_create_repo:
+            mock_delete_repo.assert_called_once_with("github", mock.ANY)
+        else:
+            mock_delete_repo.assert_not_called()
 
     @pytest.mark.usefixtures("_init_tmpls")
     def test_create_with_dockerfile(self, api_client, bk_cnative_app):

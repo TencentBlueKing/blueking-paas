@@ -267,19 +267,20 @@ class GitClient:
         command = GitCommand(git_filepath=self._git_filepath, command="add", args=args, cwd=str(path))
         return self.run(command)
 
-    def commit(self, path: Path, message: str) -> str:
+    def commit(self, path: Path, message: str, envs: Optional[dict] = None) -> str:
         """提交 git 暂存区对象到版本库"""
         command = GitCommand(
             git_filepath=self._git_filepath,
             command="commit",
             args=["-m", message],
             cwd=str(path),
+            envs=envs,
         )
         return self.run(command)
 
-    def push(self, path: Path) -> str:
+    def push(self, path: Path, envs: Optional[dict] = None) -> str:
         """推送 git 提交记录到远程仓库"""
-        command = GitCommand(git_filepath=self._git_filepath, command="push", cwd=str(path))
+        command = GitCommand(git_filepath=self._git_filepath, command="push", cwd=str(path), envs=envs)
         return self.run(command)
 
     def _get_commit_info(self, path: Path, commit_id: str) -> dict:

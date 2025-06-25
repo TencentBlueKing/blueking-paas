@@ -40,6 +40,7 @@ class ErrorCodes:
     NOTIFICATION_DISABLED = ErrorCode(_("暂不支持发送通知"))
     # 人员管理
     MEMBERSHIP_DELETE_FAILED = ErrorCode(_("应用应该至少拥有一个管理员"))
+    MEMBERSHIP_CREATE_FAILED = ErrorCode(_("成员创建失败"))
     MEMBERSHIP_OWNER_FAILED = ErrorCode(_("应用所有者不能执行该操作"))
     # 云 API 管理
     QUERY_API_LIST_FAILED = ErrorCode(_("查询API列表失败"))
@@ -93,6 +94,7 @@ class ErrorCodes:
     MISSING_VERSION_INFO = ErrorCode(_("缺失版本信息"), code_num=4312010)
     OBJECT_STORE_EXCEPTION = ErrorCode(_("对象存储服务异常"), code_num=4312011)
     CANNOT_COMMIT_TO_REPOSITORY = ErrorCode(_("代码提交失败"), code_num=4312012)
+    CANNOT_CREATE_CODEBASE_CONFIG = ErrorCode(_("创建代码库配置失败"))
     # 部署配置
     BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志

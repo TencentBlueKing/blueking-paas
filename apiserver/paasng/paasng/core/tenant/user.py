@@ -70,7 +70,6 @@ def get_tenant(user: User) -> Tenant:
     if not settings.ENABLE_MULTI_TENANT_MODE:
         return Tenant(id=DEFAULT_TENANT_ID, is_stub=True)
 
-    # TODO: Get the tenant info directly from the user object when bkpaas_auth is ready
     try:
         _id = getattr(user, "tenant_id")
     except AttributeError:

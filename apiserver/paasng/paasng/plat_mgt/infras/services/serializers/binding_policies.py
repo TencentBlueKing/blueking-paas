@@ -19,7 +19,7 @@ import cattr
 from rest_framework import serializers
 
 from paasng.accessories.servicehub.binding_policy.policy import PolicyCombinationConfig
-from paasng.accessories.servicehub.constants import PrecedencePolicyCondType
+from paasng.accessories.servicehub.constants import PrecedencePolicyCondType, ServiceAllocationPolicyType
 
 
 class BaseAllocationPolicySLZ(serializers.Serializer):
@@ -60,8 +60,11 @@ class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
     """
 
     tenant_id = serializers.CharField(help_text="所属租户")
-    allocation_precedence_policies = AllocationPrecedencePolicySLZ(many=True, help_text="规则分配配置")
-    allocation_policy = AllocationPolicySLZ(help_text="统一分配配置")
+    policy_type = serializers.ChoiceField(choices=ServiceAllocationPolicyType.get_choices())
+    allocation_precedence_policies = AllocationPrecedencePolicySLZ(
+        many=True, help_text="规则分配配置", allow_null=True, required=False
+    )
+    allocation_policy = AllocationPolicySLZ(help_text="统一分配配置", allow_null=True, required=False)
 
     def to_internal_value(self, data) -> PolicyCombinationConfig:
         attrs = super().to_internal_value(data)
@@ -73,6 +76,7 @@ class PolicyCombinationConfigUpsertSLZ(serializers.Serializer):
 class PolicyCombinationConfigOutputSLZ(serializers.Serializer):
     tenant_id = serializers.CharField(help_text="所属租户")
     service_id = serializers.CharField(help_text="服务 id")
+    policy_type = serializers.CharField(help_text="分配策略类型")
     allocation_precedence_policies = AllocationPrecedencePolicySLZ(many=True, help_text="规则分配配置")
     allocation_policy = AllocationPolicySLZ(help_text="统一分配配置")
 

@@ -56,6 +56,27 @@ const platformAppDetails = () =>
       window.showDeployTip(error);
     });
 
+const platformOperationAudit = () =>
+  import(/* webpackChunkName: 'platform-user' */ '@/views/platform/operation-audit')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
+const builtInEnvVariable = () =>
+  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/env-var')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
+const repositoryConfig = () =>
+  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/repository-config')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 export const platformRouters = [
   {
     path: '/plat-mgt/',
@@ -127,6 +148,22 @@ export const platformRouters = [
         },
       },
       {
+        path: 'repository',
+        component: repositoryConfig,
+        name: 'repositoryConfig',
+        meta: {
+          title: i18n.t('代码库配置'),
+        },
+      },
+      {
+        path: 'env-var',
+        component: builtInEnvVariable,
+        name: 'builtInEnvVariable',
+        meta: {
+          title: i18n.t('内置环境变量'),
+        },
+      },
+      {
         path: 'apps',
         component: platformAppList,
         name: 'platformAppList',
@@ -144,11 +181,24 @@ export const platformRouters = [
           panels: [
             { name: 'overview', label: i18n.t('概览') },
             { name: 'feature', label: i18n.t('特性管理') },
+            { name: 'services', label: i18n.t('增强服务') },
             { name: 'member', label: i18n.t('成员管理') },
           ],
           backRoute: {
             name: 'platformAppList',
           }
+        },
+      },
+      {
+        path: 'operation-audit',
+        component: platformOperationAudit,
+        name: 'platformOperationAudit',
+        meta: {
+          title: i18n.t('操作审计'),
+          panels: [
+            { name: 'platform', label: i18n.t('平台操作记录') },
+            { name: 'app', label: i18n.t('应用操作记录') },
+          ],
         },
       },
     ],

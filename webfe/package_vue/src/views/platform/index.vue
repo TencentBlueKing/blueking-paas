@@ -50,7 +50,12 @@ export default {
       minHeight: 700,
       navCategories: [],
       navItems: [],
-      groups: [{ platform: this.$t('服务接入') }, { operations: this.$t('运营管理') }, { user: this.$t('用户管理') }],
+      groups: [
+        { platform: this.$t('服务接入') },
+        { operations: this.$t('运营管理') },
+        { config: this.$t('配置管理') },
+        { user: this.$t('用户管理') },
+      ],
       active: '',
       routeIndex: 0,
     };
@@ -83,6 +88,11 @@ export default {
   watch: {
     $route() {
       this.routeIndex += 1;
+    },
+    panels(newValue) {
+      if (newValue?.length) {
+        this.setDefaultTabActive();
+      }
     },
   },
   created() {
@@ -124,6 +134,7 @@ export default {
         newQuery = { ...query };
       } else {
         newQuery = {
+          ...query,
           ...(active === 'list' && query),
           ...(active && { active }),
         };
@@ -213,6 +224,17 @@ export default {
   .border-tag {
     background: #fafbfd;
     border: 1px solid #dcdee5;
+  }
+}
+.paas-vue-json-pretty-cls {
+  .vjs-key {
+    color: #9d694c;
+  }
+  .vjs-value-number {
+    color: #098658;
+  }
+  .vjs-value-string {
+    color: #1f6d89;
   }
 }
 </style>

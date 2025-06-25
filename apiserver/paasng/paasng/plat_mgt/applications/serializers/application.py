@@ -31,7 +31,7 @@ from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.serializers import UpdateApplicationSLZ
+from paasng.platform.applications.serializers.app import UpdateApplicationNameSLZ
 from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.utils.models import OrderByField
@@ -43,7 +43,7 @@ from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 class ApplicationListOutputSLZ(serializers.Serializer):
     """应用序列化器"""
 
-    logo = serializers.CharField(read_only=True, help_text="应用 logo")
+    logo = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用 logo")
     code = serializers.CharField(read_only=True, help_text="应用的唯一标识")
     name = serializers.CharField(read_only=True, help_text="应用名称")
     app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
@@ -53,6 +53,7 @@ class ApplicationListOutputSLZ(serializers.Serializer):
     is_active = serializers.BooleanField(read_only=True, help_text="应用是否处于激活状态")
     creator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
+    tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
 
     def get_type(self, instance: Application) -> str:
         return ApplicationType.get_choice_label(instance.type)
@@ -137,6 +138,7 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     is_active = serializers.BooleanField(read_only=True, help_text="应用状态")
     creator = UserNameField(read_only=True, help_text="创建人")
     created_humanized = HumanizeDateTimeField(source="created", help_text="创建时间")
+    tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
 
 
 class ApplicationEnvironmentOperationSLZ(serializers.Serializer):
@@ -196,14 +198,23 @@ class ApplicationModuleSLZ(serializers.Serializer):
     environment = ApplicationEnvironmentSLZ(source="envs.all", many=True, read_only=True, help_text="环境信息")
 
 
+class ApplicationAdminInfoSLZ(serializers.Serializer):
+    """应用管理员信息序列化器"""
+
+    user_is_admin_in_app = serializers.BooleanField(help_text="当前用户是否为应用管理员")
+    show_plugin_admin_operations = serializers.BooleanField(help_text="是否显示插件管理员相关操作")
+    user_is_admin_in_plugin = serializers.BooleanField(help_text="是否为插件管理员", allow_null=True)
+
+
 class ApplicationDetailOutputSLZ(serializers.Serializer):
     """应用详情序列化器"""
 
     basic_info = ApplicationBasicInfoSLZ(read_only=True, help_text="应用基本信息")
+    app_admin = ApplicationAdminInfoSLZ(read_only=True, help_text="应用管理员信息")
     modules_info = serializers.ListField(child=ApplicationModuleSLZ(), help_text="应用模块信息", read_only=True)
 
 
-class ApplicationNameUpdateInputSLZ(UpdateApplicationSLZ):
+class ApplicationNameUpdateInputSLZ(UpdateApplicationNameSLZ):
     """更新应用名称序列化器"""
 
 

@@ -423,7 +423,9 @@ class ModuleLogAPIMixin(_MixinBase):
         stag_config = self._get_log_query_config_by_env(stag)
         prod_config = self._get_log_query_config_by_env(prod)
         if stag_config != prod_config:
-            raise ValueError("`env` field must be specified for this module")
+            logging.error(
+                "log query config mismatch between stag and prod, please check the config of module %s", module
+            )
         return prod_config
 
     def _make_base_search(

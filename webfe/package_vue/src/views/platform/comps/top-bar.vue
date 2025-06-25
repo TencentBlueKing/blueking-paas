@@ -49,14 +49,6 @@ export default {
     };
   },
   computed: {
-    displayTabPanels() {
-      return this.tabPanels.map((item) => {
-        return {
-          name: item,
-          label: this.$t(item),
-        };
-      });
-    },
     showBackIcon() {
       return this.$route.meta?.supportBack;
     },

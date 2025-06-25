@@ -27,7 +27,6 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit import constants
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications import serializers as slzs
@@ -130,8 +129,8 @@ class ApplicationDeploymentModuleOrderViewSet(viewsets.ViewSet, ApplicationCodeI
             operation=OperationEnum.MODIFY,
             target=OperationTarget.MODULE,
             result_code=ResultCode.SUCCESS,
-            data_before=DataDetail(type=constants.DataType.RAW_DATA, data=old_module_orders),
-            data_after=DataDetail(type=constants.DataType.RAW_DATA, data=new_module_orders),
+            data_before=DataDetail(data=old_module_orders),
+            data_after=DataDetail(data=new_module_orders),
         )
 
         serializer = slzs.ApplicationDeploymentModuleOrderSLZ(new_module_orders, many=True)

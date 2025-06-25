@@ -17,6 +17,7 @@
 
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from paasng.platform.sourcectl.exceptions import BasicAuthError
@@ -43,6 +44,10 @@ class SvnRepoController:
         repo_url = module.get_source_obj().get_repo_url()
         repo_admin_credentials = get_bksvn_config(name=module.source_type).get_admin_credentials()
         return cls(repo_url=repo_url, repo_admin_credentials=repo_admin_credentials)
+
+    @classmethod
+    def init_by_server_config(cls, source_type: str, repo_url: str):
+        raise NotImplementedError
 
     @classmethod
     def list_all_repositories(cls, **kwargs) -> List[Repository]:
@@ -102,6 +107,42 @@ class SvnRepoController:
 
     def commit_files(self, commit_info: CommitInfo) -> None:
         """bk_svn 不支持该功能"""
+        raise NotImplementedError
+
+    def create_with_member(self, *args, **kwargs):
+        """创建代码仓库并添加成员"""
+        raise NotImplementedError
+
+    def create_project(self, *args, **kwargs):
+        """创建代码仓库"""
+        raise NotImplementedError
+
+    def delete_project(self, *args, **kwargs):
+        """删除在 VCS 上的源码项目"""
+        raise NotImplementedError
+
+    def download_directory(self, source_dir: str, local_path: Path) -> Path:
+        """下载指定目录到本地
+
+        :param source_dir: 代码仓库的指定目录
+        :param local_path: 本地路径
+        """
+        raise NotImplementedError
+
+    def commit_and_push(
+        self,
+        local_path: Path,
+        commit_message: str,
+        commit_name: str | None = None,
+        commit_email: str | None = None,
+    ) -> None:
+        """将本地文件目录提交并推送到远程仓库
+
+        :param local_path: 本地文件所有路径
+        :param commit_message: 提交信息
+        :param commit_name: 提交人名称，不传则使用平台的默认值
+        :param commit_email: 提交人邮箱，不传则使用平台的默认值
+        """
         raise NotImplementedError
 
     def read_file(self, file_path: str, version_info: VersionInfo) -> bytes:

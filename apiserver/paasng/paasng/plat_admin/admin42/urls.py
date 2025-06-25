@@ -25,12 +25,10 @@ from .views import (
     applications,
     audit,
     bk_plugins,
-    builtin_config_vars,
     dashboard_templates,
     runtimes,
     services,
     smart_advisor,
-    sourcectl,
     templates,
 )
 from .views.engine import (
@@ -59,6 +57,16 @@ urlpatterns = [
         r"^platform/process_spec_plan/manage/$",
         proc_spec.ProcessSpecPlanManageView.as_view(),
         name="admin.process_spec_plan.manage",
+    ),
+    re_path(
+        r"^platform/process_spec_plan/applications/$",
+        proc_spec.ApplicationProcessSpecManageView.as_view(),
+        name="admin.process_spec_plan.applications.manage",
+    ),
+    re_path(
+        r"^platform/process_spec_plan/applications/(?P<app_code>[^/]+)/processes/$",
+        proc_spec.ApplicationProcessSpecViewSet.as_view({"get": "list_processes"}),
+        name="admin.process_spec_plan.applications.processes",
     ),
     # 平台管理-智能顾问-文档链接管理
     re_path(
@@ -156,22 +164,6 @@ urlpatterns = [
     # 平台管理-共享证书管理
     re_path(
         r"^platform/certs/shared/manage/$", certs.SharedCertsManageView.as_view(), name="admin.shared.certs.manage"
-    ),
-    # 平台管理-代码库配置
-    re_path(
-        r"^platform/sourcectl/source_type_spec/manage/$",
-        sourcectl.SourceTypeSpecManageView.as_view(),
-        name="admin.sourcectl.source_type_spec.manage",
-    ),
-    re_path(
-        r"^platform/sourcectl/source_type_spec/$",
-        sourcectl.SourceTypeSpecViewSet.as_view(dict(post="create", get="list")),
-        name="admin.sourcectl.source_type_spec",
-    ),
-    re_path(
-        r"^platform/sourcectl/source_type_spec/(?P<pk>[^/]+)/",
-        sourcectl.SourceTypeSpecViewSet.as_view(dict(delete="destroy", put="update")),
-        name="admin.sourcectl.source_type_spec.detail",
     ),
     # 平台管理-应用列表页
     re_path(r"^applications/$", applications.ApplicationListView.as_view(), name="admin.applications.list"),
@@ -464,26 +456,6 @@ urlpatterns += [
     ),
 ]
 
-# 平台管理-环境变量管理
-urlpatterns += [
-    # 环境变量管理页
-    re_path(
-        r"^platform/builtin_config_vars/manage/$",
-        builtin_config_vars.BuiltinConfigVarView.as_view(),
-        name="admin.builtin_config_vars.manage",
-    ),
-    # 环境变量管理API
-    re_path(
-        r"^platform/builtin_config_vars/$",
-        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "list", "post": "create"}),
-        name="admin.builtin_config_vars",
-    ),
-    re_path(
-        r"^platform/builtin_config_vars/(?P<pk>[^/]+)/",
-        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
-        name="admin.builtin_config_vars.detail",
-    ),
-]
 
 # 操作审计
 urlpatterns += [

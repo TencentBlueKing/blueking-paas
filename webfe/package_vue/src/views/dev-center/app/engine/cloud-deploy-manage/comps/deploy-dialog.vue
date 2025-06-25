@@ -491,10 +491,10 @@ import deployStatusDetail from './deploy-status-detail';
 import { cloneDeep } from 'lodash';
 
 // 当前状态，禁用部署按钮
-const deployErrorStatus = ['FILL_PRODUCT_INFO', 'CHECK_ENV_PROTECTION', 'FILL_PLUGIN_TAG_INFO'];
+const DEPLOY_ERROR_STATES = ['FILL_PRODUCT_INFO', 'CHECK_ENV_PROTECTION', 'FILL_PLUGIN_TAG_INFO', 'FILL_EXTRA_INFO'];
 
 // 从源码构建，且为当前错误状态，禁用部署按钮
-const codeRepositoryErrorStatus = [
+const CODE_REPOSITORY_ERROR_STATES = [
   'NEED_TO_BIND_OAUTH_INFO',
   'DONT_HAVE_ENOUGH_PERMISSIONS',
   'NEED_TO_CORRECT_REPO_INFO',
@@ -671,23 +671,12 @@ export default {
 
     // 部署相关错误信息
     deployErrorData() {
-      const faileds = this.deployPreparations.failed_conditions;
-      if (faileds?.length) {
-        const deployErrorList = faileds.filter((v) => deployErrorStatus.includes(v.action_name));
-        return deployErrorList[0] || {};
-      }
-      return {};
+      return this.getFirstErrorData(DEPLOY_ERROR_STATES);
     },
 
     // 代码仓库相关错误信息
     codeRepositoryErrorData() {
-      const faileds = this.deployPreparations.failed_conditions;
-      if (faileds?.length) {
-        // 查找第一项进行展示，解决当前项，点击刷新重新获取，再处理下一天错误
-        const codeRepositoryErrorList = faileds.filter((v) => codeRepositoryErrorStatus.includes(v.action_name));
-        return codeRepositoryErrorList[0] || {};
-      }
-      return {};
+      return this.getFirstErrorData(CODE_REPOSITORY_ERROR_STATES);
     },
 
     // 部署按钮禁用状态
@@ -765,6 +754,12 @@ export default {
     },
   },
   methods: {
+    // 获取第一个匹配的错误数据
+    getFirstErrorData(errorStates) {
+      const failedConditions = this.deployPreparations.failed_conditions || [];
+      const errorList = failedConditions.find((v) => errorStates.includes(v.action_name));
+      return errorList || {};
+    },
     setCurData() {
       const versionInfo = this.deploymentInfoBackUp.state.deployment.latest_succeeded?.version_info || {};
       if (!Object.keys(versionInfo).length) return; // 没有数据就不处理
@@ -912,7 +907,10 @@ export default {
 
     handleAfterLeave() {
       this.branchValue = '';
-      this.isShowErrorAlert.deploy = false;
+      this.isShowErrorAlert = {
+        deploy: false,
+        code: false,
+      };
       this.isShowErrorAlert.code = false;
       this.deployAppDialog.disabled = true;
       this.$emit('update:show', false);
@@ -1237,43 +1235,35 @@ export default {
         type === 'deploy' ? (this.deployRefreshLoading = true) : (this.codeRefreshLoading = true);
       }
       try {
-        const res = await this.$store.dispatch('deploy/getDeployPreparations', {
+        const ret = await this.$store.dispatch('deploy/getDeployPreparations', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           env: this.environment,
         });
-        this.deployPreparations = res;
+        this.deployPreparations = ret;
 
         // 将错误数据进行分类
-        if (!res.all_conditions_matched && res.failed_conditions.length) {
-          // 部署限制相关的，错误信息
-          const deployErrorList = res.failed_conditions.filter((v) => deployErrorStatus.includes(v.action_name));
-          // 代码仓库相关，错误信息
-          // eslint-disable-next-line max-len
-          const codeRepositoryErrorList = res.failed_conditions.filter((v) =>
-            codeRepositoryErrorStatus.includes(v.action_name)
-          );
-          if (deployErrorList.length) {
-            this.isShowErrorAlert.deploy = true;
-          } else {
-            this.isShowErrorAlert.deploy = false;
-          }
-          if (codeRepositoryErrorList.length) {
-            this.isShowErrorAlert.code = true;
-          } else {
-            this.isShowErrorAlert.code = false;
-          }
+        if (ret.failed_conditions?.length) {
+          // 标识错误类型并更新状态
+          const errorTypes = {
+            deploy: DEPLOY_ERROR_STATES,
+            code: CODE_REPOSITORY_ERROR_STATES,
+          };
+
+          Object.keys(errorTypes).forEach((type) => {
+            const errorList = ret.failed_conditions.filter((v) => errorTypes[type].includes(v.action_name));
+            this.isShowErrorAlert[type] = errorList.length > 0;
+          });
         } else {
           // 没有错误，隐藏错误提示alert
-          this.isShowErrorAlert.deploy = false;
-          this.isShowErrorAlert.code = false;
+          this.isShowErrorAlert = {
+            deploy: false,
+            code: false,
+          };
         }
         this.deployAppDialog.disabled = false;
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
         this.deployAppDialog.disabled = false;
       } finally {
         type === 'deploy' ? (this.deployRefreshLoading = false) : (this.codeRefreshLoading = false);
@@ -1295,91 +1285,68 @@ export default {
 
     /**
      * 处理部署前准备工作项
+     * @param {Object} preparation 错误对象
      */
     handleFixPreparation(preparation) {
-      let routeData = {};
-      switch (preparation.action_name) {
-        // 代码仓库没有授权
-        case 'NEED_TO_BIND_OAUTH_INFO':
-          routeData = this.$router.resolve({
-            name: 'serviceCode',
-          });
-          break;
+      const { action_name: actionName } = preparation;
 
-        // 没有访问源码仓库的权限
-        case 'DONT_HAVE_ENOUGH_PERMISSIONS':
-          routeData = this.$router.resolve({
-            name: 'serviceCode',
-          });
-          break;
-
-        // 蓝盾没有授权
-        case 'CHECK_CI_GIT_TOKEN':
-          routeData = this.$router.resolve({
-            name: 'serviceCi',
-          });
-          break;
-
-        // 完善市场信息
-        case 'FILL_PRODUCT_INFO':
-          routeData = this.$router.resolve({
-            name: 'appMarket',
-            params: {
-              id: this.appCode,
-            },
-            query: {
-              focus: 'baseInfo',
-            },
-          });
-          break;
-
-        // 自定义仓库源配置不正确
-        case 'NEED_TO_CORRECT_REPO_INFO':
-          // 模块配置
-          routeData = this.$router.resolve({
-            name: 'cloudAppDeployForBuild',
-            // 高亮第二项
-            params: {
-              id: this.appCode,
-              moduleId: this.curModuleId,
-            },
-          });
-          break;
-
-        // 没有部署权限
-        case 'CHECK_ENV_PROTECTION':
-          this.$paasMessage({
-            message: this.$t('请联系应用管理员'),
-          });
-          break;
-
-        // 未完善进程启动命令
-        case 'NEED_TO_COMPLETE_PROCFILE':
-          routeData = this.$router.resolve({
-            name: 'cloudAppDeployForProcess',
-            params: {
-              id: this.appCode,
-              moduleId: this.curModuleId,
-            },
-          });
-          break;
-
-        // 未设置插件分类
-        case 'FILL_PLUGIN_TAG_INFO':
-          routeData = this.$router.resolve({
-            name: 'appBasicInfo',
-            params: {
-              id: this.appCode,
-              moduleId: this.curModuleId,
-            },
-          });
-          break;
-      }
-
-      if (preparation.action_name === 'CHECK_ENV_PROTECTION') {
+      if (actionName === 'CHECK_ENV_PROTECTION') {
+        this.$paasMessage({
+          message: this.$t('请联系应用管理员'),
+        });
         return;
       }
 
+      // 路由映射配置
+      const routeMap = {
+        // 代码仓库没有授权
+        NEED_TO_BIND_OAUTH_INFO: {
+          name: 'serviceCode',
+        },
+        // 没有访问源码仓库的权限
+        DONT_HAVE_ENOUGH_PERMISSIONS: {
+          name: 'serviceCode',
+        },
+        // 蓝盾没有授权
+        CHECK_CI_GIT_TOKEN: {
+          name: 'serviceCi',
+        },
+        // 完善市场信息
+        FILL_PRODUCT_INFO: {
+          name: 'appMarket',
+          params: { id: this.appCode },
+          query: { focus: 'baseInfo' },
+        },
+        // 自定义仓库源配置不正确
+        NEED_TO_CORRECT_REPO_INFO: {
+          name: 'cloudAppDeployForBuild',
+          params: { id: this.appCode, moduleId: this.curModuleId },
+        },
+        // 未完善进程启动命令
+        NEED_TO_COMPLETE_PROCFILE: {
+          name: 'cloudAppDeployForProcess',
+          params: { id: this.appCode, moduleId: this.curModuleId },
+        },
+        // 未设置插件分类
+        FILL_PLUGIN_TAG_INFO: {
+          name: 'appBasicInfo',
+          params: { id: this.appCode, moduleId: this.curModuleId },
+        },
+        // 完善应用基本信息
+        FILL_EXTRA_INFO: {
+          name: 'appBasicInfo',
+          params: { id: this.appCode, moduleId: this.curModuleId },
+          query: {
+            editMode: true,
+          },
+        },
+      };
+
+      // 获取路由配置
+      const routeConfig = routeMap[actionName];
+      if (!routeConfig) return;
+
+      const routeData = this.$router.resolve(routeConfig);
       window.open(routeData.href, '_blank');
     },
   },

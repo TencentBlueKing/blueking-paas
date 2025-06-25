@@ -65,12 +65,12 @@ func (d defaultConfig) GetProcDefaultMemRequest() string {
 }
 
 func (d defaultConfig) GetIngressClassName() string {
-	return "bk-ingress-nginx"
+	return "nginx"
 }
 
 // GetCustomDomainIngressClassName returns the ingress class name for custom domain ingress
 func (d defaultConfig) GetCustomDomainIngressClassName() string {
-	return "nginx"
+	return d.GetIngressClassName()
 }
 
 func (d defaultConfig) IsAutoscalingEnabled() bool {

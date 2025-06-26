@@ -72,6 +72,6 @@ class Command(BaseCommand):
 
         for d in data:
             d["tenant_id"] = tenant_id
-        slz = PreCreatedInstanceImportSLZ(data=data, context={"service": svc}, many=True)
+        slz = PreCreatedInstanceImportSLZ(data=data, context={"service": svc, "tenant_id": tenant_id}, many=True)
         slz.is_valid(raise_exception=True)
         slz.save()

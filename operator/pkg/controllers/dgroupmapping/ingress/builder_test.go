@@ -29,11 +29,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
+	testingutils "bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
 var _ = Describe("Test ingresses.go", func() {
 	var bkapp *paasv1alpha2.BkApp
+
+	config.SetConfig(testingutils.Config{})
 
 	BeforeEach(func() {
 		bkapp = &paasv1alpha2.BkApp{
@@ -110,7 +114,7 @@ var _ = Describe("Test ingresses.go", func() {
 			Expect(ingresses[0].Name).To(Equal("demo-subdomain"))
 			Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
 			Expect(ingresses[0].Annotations[SkipFilterCLBAnnoKey]).To(Equal("true"))
-			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("nginx"))
+			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("test-nginx"))
 		})
 
 		DescribeTable(
@@ -180,7 +184,7 @@ var _ = Describe("Test ingresses.go", func() {
 			Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
 			Expect(ingresses[1].Spec.Rules[0].Host).To(Equal("with-name.example.com"))
 			Expect(ingresses[1].Annotations[SkipFilterCLBAnnoKey]).To(Equal("true"))
-			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("nginx"))
+			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("test-custom-domain-nginx"))
 		})
 	})
 

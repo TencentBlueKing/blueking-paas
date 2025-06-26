@@ -63,8 +63,8 @@
           :render-header="$renderHeader"
           #default="{ row }"
         >
-          <div :class="['cell-child-cls', { 'not-configured': !bindMap[row.tenant_id]?.[item.id] }]">
-            <IconStatus :configured="bindMap[row.tenant_id]?.[item.id]" />
+          <div :class="['cell-child-cls', { 'not-configured': !bindMap[row.tenant_id]?.[item.uuid] }]">
+            <IconStatus :configured="bindMap[row.tenant_id]?.[item.uuid]" />
             <bk-button
               :text="true"
               title="primary"
@@ -106,12 +106,13 @@ export default {
   },
   created() {
     Promise.all([this.getOverviewServices(), this.getTenantConfigStatuses()]).finally(() => {
-      this.tenants.forEach((tenant) => {
-        this.$set(this.bindMap, tenant.tenant_id, {});
-        tenant.addons_services.forEach((addon) => {
-          this.$set(this.bindMap[tenant.tenant_id], addon.id, addon.bind || false);
-        });
-      });
+      this.bindMap = this.tenants.reduce((map, tenant) => {
+        map[tenant.tenant_id] = tenant.addons_services.reduce((acc, addon) => {
+          acc[addon.id] = addon.bind || false;
+          return acc;
+        }, {});
+        return map;
+      }, {});
       this.tableKey += 1;
       this.isLoading = false;
     });

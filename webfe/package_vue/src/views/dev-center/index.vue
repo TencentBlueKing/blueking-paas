@@ -1522,6 +1522,9 @@ section.app-filter-module {
   &.en {
     width: 105px;
   }
+  .tippy-content {
+    padding: 0 !important;
+  }
   .tippy-tooltip.light-theme {
     height: 100%;
     transform: translateY(0px) !important;

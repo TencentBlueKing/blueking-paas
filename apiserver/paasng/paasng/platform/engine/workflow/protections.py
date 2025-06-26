@@ -131,7 +131,7 @@ class ImageRepositoryCondition(DeployCondition):
         )
 
         try:
-            # 尝试列出版本，成功则表示是公共镜像, 不关注具体版本信息
+            # 尝试列出版本，不关注具体版本信息
             registry_controller.list_alternative_versions()
         except PermissionDeny:
             # 需要权限验证，继续后续流程
@@ -141,6 +141,8 @@ class ImageRepositoryCondition(DeployCondition):
             message = _("镜像仓库地址无效或无法访问，请检查仓库地址和网络连接")
             action = DeployConditions.CHECK_IMAGE_REPOSITORY.value
             raise ConditionNotMatched(message, action)
+        else:
+            return  # 成功访问公共镜像仓库，直接返回
 
         # 获取并验证镜像凭证
         credential_refs = build_config.image_credential_name
@@ -160,7 +162,7 @@ class ImageRepositoryCondition(DeployCondition):
         )
 
         try:
-            # 尝试列出版本, 成功就表示凭证
+            # 尝试列出版本, 成功就表示凭证校验通过
             registry_controller.list_alternative_versions()
         except AuthFailed as e:
             message = _("私有镜像凭证校验失败，请检查凭证是否正确")

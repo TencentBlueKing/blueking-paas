@@ -289,10 +289,7 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
 
         page = self.paginate_queryset(filter_queryset)
 
-        slz = slzs.DeletedApplicationListOutputSLZ(
-            page,
-            many=True,
-        )
+        slz = slzs.DeletedApplicationListOutputSLZ(page, many=True)
         return self.get_paginated_response(slz.data)
 
     @swagger_auto_schema(

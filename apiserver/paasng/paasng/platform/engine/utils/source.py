@@ -274,7 +274,7 @@ def tag_module_from_source_files(module, source_files_path):
         tags = dig_tags_local_repo(str(source_files_path))
         cleanup_module(module)
 
-        logging.info(f"Tagging module[{module.pk}]: {tags}")
+        logger.info(f"Tagging module[{module.pk}]: {tags}")
         tag_module(module, tags, source="source_analyze")
     except Exception:
         logger.exception("Unable to tagging module")

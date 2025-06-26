@@ -483,7 +483,7 @@ class Application(OwnerTimestampedModel):
 
     def hard_delete(self, *args, **kwargs):
         # 硬删除时直接删除表中数据
-        super().delete()
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         return "{name}[{code}]".format(name=self.name, code=self.code)

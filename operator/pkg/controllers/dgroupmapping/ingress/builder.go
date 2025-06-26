@@ -206,13 +206,19 @@ func (builder CustomIngressBuilder) Build(domains []Domain) ([]*networkingv1.Ing
 		if d.Name != "" {
 			name += ("-" + d.Name)
 		}
+
+		annotations := makeAnnotations(bkapp, domains)
+		if ingClassName := config.Global.GetCustomDomainIngressClassName(); ingClassName != "" {
+			annotations[paasv1alpha2.IngressClassAnnoKey] = ingClassName
+		}
+
 		val := networkingv1.Ingress{
 			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Ingress"},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        name,
 				Namespace:   bkapp.Namespace,
 				Labels:      labels.AppDefault(bkapp),
-				Annotations: makeAnnotations(bkapp, domains),
+				Annotations: annotations,
 			},
 			Spec: networkingv1.IngressSpec{
 				Rules: makeRules(builder.bkapp, []Domain{d}),

@@ -26,7 +26,7 @@
         </router-link>
         <router-link
           v-if="isShowOffAppAction"
-          :to="{ name: 'myApplications', query: { include_inactive: true } }"
+          :to="{ name: 'myApplications' }"
           style="margin-left: 0"
           class="btn-link spacing-h-x2"
         >

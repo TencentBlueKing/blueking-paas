@@ -83,7 +83,7 @@ export default {
     return promise;
   },
   requestHasApp () {
-    const endpoint = BACKEND_URL + '/api/bkapps/applications/lists/minimal';
+    const endpoint = BACKEND_URL + '/api/bkapps/applications/lists/minimal?is_active=true';
     const req = http.get(endpoint);
 
     const promise = new Promise((resolve, reject) => {
@@ -98,7 +98,7 @@ export default {
     return promise;
   },
   requestOffApp () {
-    const endpoint = BACKEND_URL + '/api/bkapps/applications/lists/minimal?include_inactive=true';
+    const endpoint = BACKEND_URL + '/api/bkapps/applications/lists/minimal';
     const req = http.get(endpoint);
 
     const promise = new Promise((resolve, reject) => {

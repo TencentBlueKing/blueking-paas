@@ -130,7 +130,7 @@ class UpdateApplicationOutputSLZ(serializers.Serializer):
 
 class SearchApplicationSLZ(serializers.Serializer):
     keyword = serializers.RegexField(RE_APP_SEARCH, max_length=20, default="", allow_blank=False)
-    include_inactive = serializers.BooleanField(default=False)
+    is_active = serializers.BooleanField(required=False, allow_null=True)
     prefer_marked = serializers.BooleanField(default=True)
 
 
@@ -250,7 +250,7 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
 
     valid_order_by_fields = ("code", "created", "latest_operated_at", "name")
     exclude_collaborated = serializers.BooleanField(default=False)
-    include_inactive = serializers.BooleanField(default=False)
+    is_active = serializers.BooleanField(required=False, allow_null=True)
     region = serializers.ListField(required=False)
     language = serializers.ListField(required=False)
     search_term = serializers.CharField(required=False)
@@ -294,7 +294,7 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
 
 
 class ApplicationListMinimalSLZ(serializers.Serializer):
-    include_inactive = serializers.BooleanField(default=False)
+    is_active = serializers.BooleanField(required=False, allow_null=True)
     source_origin = serializers.ChoiceField(
         choices=SourceOrigin.get_choices(), default=None, allow_blank=True, allow_null=True
     )
@@ -303,7 +303,7 @@ class ApplicationListMinimalSLZ(serializers.Serializer):
 class ApplicationGroupFieldSLZ(serializers.Serializer):
     """Serializer for detailed app list"""
 
-    include_inactive = serializers.BooleanField(default=False)
+    is_active = serializers.BooleanField(required=False, allow_null=True)
     field = serializers.CharField(default="region")
 
     def validate_field(self, value):

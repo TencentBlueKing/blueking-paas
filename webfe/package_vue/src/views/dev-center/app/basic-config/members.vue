@@ -47,7 +47,7 @@
       </div>
       <div class="content-wrapper card-style mt16">
         <bk-alert
-          v-if="isAddMemberDisabled"
+          v-if="isPlatformManage && isAddMemberDisabled"
           class="mb16"
           type="info"
           :title="memberDisableTip"
@@ -338,9 +338,12 @@ export default {
     appTenantId() {
       return this.$route.query.tenant;
     },
-    // 多租户：当前应用id与用户id不一致不允许添加成员
     isAddMemberDisabled() {
-      return this.platformFeature.MULTI_TENANT_MODE && this.appTenantId !== this.tenantId;
+      // 多租户模式 & 当前应用tenant_id与用户tennat_id不一致不允许添加成员
+      if (this.isPlatformManage) {
+        return this.platformFeature.MULTI_TENANT_MODE && this.appTenantId !== this.tenantId;
+      }
+      return false;
     },
     memberDisableTip() {
       return this.$t('当前应用所属租户为 {b}，您的租户为 {a}。暂不支持跨租户添加应用成员。', {

@@ -18,7 +18,6 @@
 import logging
 from collections import Counter
 
-from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import get_language
 from django.utils.translation import gettext as _
@@ -274,7 +273,6 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
 class DeletedApplicationViewSet(viewsets.GenericViewSet):
     """平台管理 - 删除应用 API"""
 
-    queryset = Application.objects.all()
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
     filter_backends = [ApplicationFilterBackend]
     pagination_class = LimitOffsetPagination
@@ -304,28 +302,24 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
     )
     def destroy(self, request, app_code):
         """彻底删除应用"""
-        to_del_app = Application.default_objects.filter(code=app_code, is_deleted=True).first()
+        try:
+            to_del_app = Application.default_objects.get(code=app_code, is_deleted=True)
+        except Application.DoesNotExist:
+            raise error_codes.APP_NOT_FOUND.f(_("应用不存在或未被软删除"))
 
-        if not to_del_app:
-            raise error_codes.APP_NOT_FOUND.f(_("应用不存在或已被删除"))
+        # 从 PaaS 2.0 中删除相关信息
+        with console_db.session_scope() as session:
+            try:
+                AppManger(session).delete_by_code(code=app_code)
+            except Exception:
+                logger.exception("Failed to delete application %s from PaaS2.0", app_code)
+                raise error_codes.CANNOT_HARD_DELETE_APP.f(_("PaaS 2.0 中信息删除失败，无法硬删除应用"))
 
-        if not to_del_app.is_deleted:
-            raise error_codes.CANNOT_HARD_DELETE_APP.f(_("应用未被软删除，无法硬删除"))
+        # 删除权限中心相关数据
+        delete_builtin_user_groups(app_code)
+        delete_grade_manager(app_code)
 
-        with transaction.atomic():
-            # 从 PaaS 2.0 中删除相关信息
-            with console_db.session_scope() as session:
-                try:
-                    AppManger(session).delete_by_code(code=app_code)
-                except Exception:
-                    logger.exception("Failed to delete application %s from PaaS2.0", app_code)
-                    raise error_codes.CANNOT_HARD_DELETE_APP.f(_("PaaS 2.0 中信息删除失败，无法硬删除应用"))
-
-            # 删除权限中心相关数据
-            delete_builtin_user_groups(app_code)
-            delete_grade_manager(app_code)
-
-            # 从 PaaS 3.0 中删除相关信息
-            to_del_app.delete(hard=True)
+        # 从 PaaS 3.0 中删除相关信息
+        to_del_app.hard_delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)

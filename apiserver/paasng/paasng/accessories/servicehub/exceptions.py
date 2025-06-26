@@ -69,6 +69,10 @@ class DuplicatedServiceBoundError(BaseServicesException):
 class BindServicePlanError(Exception):
     """Unable to get the right plan object when binding a service."""
 
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
 
 # Plan Selector Errors start
 

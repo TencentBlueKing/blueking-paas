@@ -27,7 +27,7 @@ import { json2Query } from '@/common/tools';
 // actions
 const actions = {
   async fetchSearchApp(_, { filterKey, params }) {
-    return Vue.http.get(`${BACKEND_URL}/api/bkapps/applications/lists/search?keyword=${filterKey}`, {
+    return Vue.http.get(`${BACKEND_URL}/api/bkapps/applications/lists/search?is_active=true&keyword=${filterKey}`, {
       params,
     }).then(res => res.results.map(data => ({
       code: data.application.code,

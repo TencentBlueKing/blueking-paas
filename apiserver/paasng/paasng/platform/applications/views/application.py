@@ -99,15 +99,15 @@ class ApplicationListViewSet(viewsets.ViewSet):
             app_tenant_mode=params.get("app_tenant_mode"),
         )
 
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.filter(is_plugin_app=False)
+
         # 查询我创建的应用时，也需要返回总的应用数量给前端
         all_app_count = applications.count()
         # 仅查询我创建的应用
         if params.get("exclude_collaborated") is True:
             applications = applications.filter(owner=request.user.pk)
-
-        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
-        if not settings.DISPLAY_BK_PLUGIN_APPS:
-            applications = applications.filter(is_plugin_app=False)
 
         paginator = ApplicationListPagination()
         # 如果将用户标记的应用排在前面，需要特殊处理一下

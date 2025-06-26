@@ -570,7 +570,7 @@ class LocalServiceBinder:
         for env in module.envs.all():
             plans = PlanSelector().list(self.service, env)
             if not plans:
-                raise BindServicePlanError("no plans found")
+                raise BindServicePlanError(f"增强服务{self.service.name}方案未配置")
 
             # Use the first plan
             plan = cast(LocalPlanObj, plans[0])

@@ -92,7 +92,7 @@ class Command(BaseCommand):
             delete_grade_manager(app.code)
 
         # 从 PaaS 3.0 中删除相关的信息
-        to_del_apps.hard_delete()
+        to_del_apps.delete()
         logger.info(f"{filter_key} 为 {filter_value} 的应用鉴权信息已经从 Application 表中删除")
         self.stdout.write(self.style.SUCCESS(f"{filter_key} 为 {filter_value} 的应用鉴权信息已经被强制删除成功"))
         return

@@ -476,12 +476,12 @@ class Application(OwnerTimestampedModel):
                 return default_url
         return default_url
 
-    def delete(self):
+    def delete(self, *args, **kwargs):
         # 软删除时不会删除数据, 而是通过标记删除字段 is_deleted 来软删除
         self.is_deleted = True
         self.save(update_fields=["is_deleted", "updated"])
 
-    def hard_delete(self):
+    def hard_delete(self, *args, **kwargs):
         # 硬删除时直接删除表中数据
         super().delete()
 

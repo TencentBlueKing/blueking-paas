@@ -150,18 +150,13 @@ export default {
       detailSideConfig: {
         isShow: false,
         loading: false,
+        type: 'normal',
       },
       deleteDialogConfig: {
         visible: false,
         loading: false,
         row: {},
       },
-      panels: [
-        { name: 'baseInfo', label: this.$t('基本信息') },
-        { name: 'default', label: this.$t('模版信息（普通模块）') },
-        { name: 'plugin', label: this.$t('模版信息（插件模块）') },
-        { name: 'config', label: this.$t('配置信息') },
-      ],
       curTemplateDetail: {},
       templateMetadata: {},
       filterValue: '',
@@ -209,6 +204,13 @@ export default {
         return this.templateList;
       }
       return this.templateList.filter((v) => v.type === this.filterValue);
+    },
+    panels() {
+      return [
+        { name: 'baseInfo', label: this.$t('基本信息') },
+        { name: this.detailSideConfig.type === 'normal' ? 'default' : 'plugin', label: this.$t('模版信息') },
+        { name: 'config', label: this.$t('配置信息') },
+      ];
     },
   },
   created() {
@@ -293,6 +295,7 @@ export default {
     // 查看详情
     handleShowDetail(row) {
       this.detailSideConfig.isShow = true;
+      this.detailSideConfig.type = row.type;
       this.getTemplateDetail(row.id);
     },
   },

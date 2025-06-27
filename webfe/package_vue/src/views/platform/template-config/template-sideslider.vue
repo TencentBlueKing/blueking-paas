@@ -57,57 +57,63 @@
         </bk-form-item>
       </bk-form>
 
-      <div class="form-sub-title mt-24">{{ $t('模板信息（普通模块）') }}</div>
-      <bk-form
-        :model="formData"
-        ref="defaultFormRef"
-      >
-        <bk-form-item
-          :label="$t('二进制包存储路径')"
-          :property="'blob_url'"
-          :required="true"
-          :rules="blobUrlRules"
+      <!-- 普通模块 -->
+      <template v-if="!isPluginType">
+        <div class="form-sub-title mt-24">{{ $t('模板信息') }}</div>
+        <bk-form
+          :model="formData"
+          ref="defaultFormRef"
         >
-          <bk-input
-            v-model="formData.blob_url"
-            :placeholder="$t('请输入对象存储中的包路径')"
-          ></bk-input>
-        </bk-form-item>
-      </bk-form>
-
-      <div class="form-sub-title mt-24">{{ $t('模板信息（插件模块）') }}</div>
-      <bk-form
-        :model="formData"
-        ref="pluginFormRef"
-      >
-        <bk-form-item
-          v-for="item in pluginFormItems"
-          :label="$t(item.label)"
-          :required="item.required"
-          :property="item.property"
-          :rules="item.rules"
-          :key="item.label"
-          :desc="$t(item.desc)"
-        >
-          <bk-input
-            v-if="item.type === 'input'"
-            v-model="formData[item.property]"
-            :placeholder="$t(item.placeholder)"
-          ></bk-input>
-          <bk-select
-            v-else-if="item.type === 'select'"
-            v-model="formData[item.property]"
-            searchable
+          <bk-form-item
+            :label="$t('二进制包存储路径')"
+            :property="'blob_url'"
+            :required="isDisplay"
+            :rules="isDisplay ? blobUrlRules : []"
           >
-            <bk-option
-              v-for="option in metadata[item.metadataKey] || []"
-              :id="option.name"
-              :name="option.label"
-              :key="option.name"
-            ></bk-option>
-          </bk-select>
-        </bk-form-item>
-      </bk-form>
+            <bk-input
+              v-model="formData.blob_url"
+              :placeholder="$t('请输入对象存储中的包路径')"
+            ></bk-input>
+          </bk-form-item>
+        </bk-form>
+      </template>
+
+      <!-- 插件模块 -->
+      <template v-else>
+        <div class="form-sub-title mt-24">{{ $t('模板信息') }}</div>
+        <bk-form
+          :model="formData"
+          ref="pluginFormRef"
+        >
+          <bk-form-item
+            v-for="item in pluginFormItems"
+            :label="$t(item.label)"
+            :required="item.required"
+            :property="item.property"
+            :rules="item.rules"
+            :key="item.label"
+            :desc="$t(item.desc)"
+          >
+            <bk-input
+              v-if="item.type === 'input'"
+              v-model="formData[item.property]"
+              :placeholder="$t(item.placeholder)"
+            ></bk-input>
+            <bk-select
+              v-else-if="item.type === 'select'"
+              v-model="formData[item.property]"
+              searchable
+            >
+              <bk-option
+                v-for="option in metadata[item.metadataKey] || []"
+                :id="option.name"
+                :name="option.label"
+                :key="option.name"
+              ></bk-option>
+            </bk-select>
+          </bk-form-item>
+        </bk-form>
+      </template>
 
       <div class="form-sub-title mt-24">{{ $t('配置信息') }}</div>
       <bk-form
@@ -170,7 +176,7 @@ import { BASE_INFO_FORM_CONFIG, PLUGIN_FORM_CONFIG, CONFIG_INFO_FORM_CONFIG } fr
 const INITIAL_FORM_DATA = {
   // 基本信息
   name: '',
-  type: '',
+  type: 'normal',
   render_method: '', // 渲染方式
   display_name_zh_cn: '',
   display_name_en: '',
@@ -261,6 +267,12 @@ export default {
     isAdd() {
       return this.type === 'add';
     },
+    isPluginType() {
+      return this.formData.type === 'plugin';
+    },
+    isDisplay() {
+      return this.formData.is_display;
+    },
   },
   watch: {
     data: {
@@ -270,6 +282,11 @@ export default {
         }
       },
       deep: true,
+    },
+    'formData.is_display'(newVal) {
+      if (!newVal) {
+        this.$refs.defaultFormRef?.clearError();
+      }
     },
   },
   methods: {
@@ -324,11 +341,9 @@ export default {
       if (!this.validateAllJsonFields()) {
         return;
       }
-      const validateArr = [
-        this.$refs.infoFormRef?.validate(),
-        this.$refs.defaultFormRef?.validate(),
-        this.$refs.pluginFormRef?.validate(),
-      ];
+      const validateArr = [this.$refs.infoFormRef?.validate()];
+      const formRef = this.isPluginType ? 'pluginFormRef' : 'defaultFormRef';
+      validateArr.push(this.$refs[formRef]?.validate());
       Promise.all(validateArr)
         .then(() => {
           this.handleRepositoryConfig();
@@ -352,9 +367,17 @@ export default {
           return acc;
         }, {});
       };
-
+      const getUrlFields = () =>
+        this.isPluginType
+          ? { blob_url: '' }
+          : {
+              repo_type: '',
+              repo_url: '',
+              source_dir: '',
+            };
       return {
         ...this.formData,
+        ...getUrlFields(),
         ...transformFields(jsonFields, this.formData),
       };
     },

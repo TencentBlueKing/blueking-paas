@@ -21,9 +21,10 @@ from .application import (
     ApplicationListOutputSLZ,
     ApplicationNameUpdateInputSLZ,
     ApplicationTypeOutputSLZ,
+    DeletedApplicationListOutputSLZ,
     TenantAppStatisticsOutputSLZ,
     TenantModeListOutputSLZ,
-    UpdateClusterSLZ,
+    UpdateApplicationBindClusterSLZ,
 )
 from .feature import (
     ApplicationFeatureFlagListOutputSLZ,
@@ -48,7 +49,8 @@ __all__ = [
     "ApplicationTypeOutputSLZ",
     "TenantAppStatisticsOutputSLZ",
     "TenantModeListOutputSLZ",
-    "UpdateClusterSLZ",
+    "UpdateApplicationBindClusterSLZ",
+    "DeletedApplicationListOutputSLZ",
     # feature
     "ApplicationFeatureFlagListOutputSLZ",
     "ApplicationFeatureFlagUpdateInputSLZ",

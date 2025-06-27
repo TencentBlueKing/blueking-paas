@@ -1,9 +1,24 @@
+import i18n from '@/language/i18n.js';
+
 // 基本信息
 export const BASE_INFO_FORM_CONFIG = [
   {
     property: 'name',
     label: '模板名称',
     type: 'input',
+    placeholder: '只能由字符 [a-zA-Z0-9-_] 组成',
+    rules: [
+      {
+        required: true,
+        message: i18n.t('必填项'),
+        trigger: 'blur',
+      },
+      {
+        regex: /^[a-zA-Z0-9\-_]+$/,
+        message: i18n.t('以英文字母、数字或下划线(_)组成'),
+        trigger: 'blur',
+      },
+    ],
   },
   {
     property: 'type',
@@ -47,6 +62,7 @@ export const BASE_INFO_FORM_CONFIG = [
     property: 'is_display',
     label: '是否展示',
     type: 'switcher',
+    desc: '隐藏该模板后，用户在创建应用时将无法看到它',
   },
 ];
 
@@ -57,16 +73,19 @@ export const PLUGIN_FORM_CONFIG = [
     label: '代码仓库类型',
     type: 'select',
     metadataKey: 'repo_types',
+    desc: '若需平台将模板代码初始化到应用代码仓库，请选择代码仓库类型',
   },
   {
     property: 'repo_url',
     label: '代码仓库地址',
     type: 'input',
+    placeholder: '请输入代码仓库地址',
   },
   {
     property: 'source_dir',
     label: '代码目录',
     type: 'input',
+    placeholder: '请输入代码所在目录，不填则为根目录',
   },
 ];
 
@@ -91,4 +110,3 @@ export const CONFIG_INFO_FORM_CONFIG = [
     ref: 'processesEditor',
   },
 ];
-

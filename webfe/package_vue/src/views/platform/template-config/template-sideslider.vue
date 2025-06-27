@@ -30,10 +30,12 @@
           :property="item.property"
           :rules="item.rules"
           :key="item.label"
+          :desc="$t(item.desc)"
         >
           <bk-input
             v-if="item.type === 'input'"
             v-model="formData[item.property]"
+            :placeholder="$t(item.placeholder)"
           ></bk-input>
           <bk-select
             v-else-if="item.type === 'select'"
@@ -66,7 +68,10 @@
           :required="true"
           :rules="blobUrlRules"
         >
-          <bk-input v-model="formData.blob_url"></bk-input>
+          <bk-input
+            v-model="formData.blob_url"
+            :placeholder="$t('请输入对象存储中的包路径')"
+          ></bk-input>
         </bk-form-item>
       </bk-form>
 
@@ -82,10 +87,12 @@
           :property="item.property"
           :rules="item.rules"
           :key="item.label"
+          :desc="$t(item.desc)"
         >
           <bk-input
             v-if="item.type === 'input'"
             v-model="formData[item.property]"
+            :placeholder="$t(item.placeholder)"
           ></bk-input>
           <bk-select
             v-else-if="item.type === 'select'"
@@ -190,7 +197,7 @@ const requiredRule = {
   trigger: 'blur',
 };
 
-const nonRequiredFields = ['repo_url'];
+const nonRequiredFields = ['repo_type'];
 
 export default {
   name: 'EditAddTemplateConfig',
@@ -227,7 +234,7 @@ export default {
       baseInfoFormItems: BASE_INFO_FORM_CONFIG.map((item) => ({
         ...item,
         required: true,
-        rules: [{ ...requiredRule }],
+        rules: item.rules ? item.rules : [{ ...requiredRule }],
       })),
       // 插件模块 form 配置
       pluginFormItems: Object.freeze(

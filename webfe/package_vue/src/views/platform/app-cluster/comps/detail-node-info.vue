@@ -15,7 +15,7 @@
               {{ $t('集群名称') }}：
               <span style="color: #313238">{{ clusterName }}</span>
             </p>
-            <p class="mt-4">{{ $t('同步集群节点到开发中心，以便应用开启出口 IP 时能绑定到集群所有节点上。') }}</p>
+            <p class="mt-4">{{ $t('同步集群节点到开发者中心，以便应用开启出口 IP 时能绑定到集群所有节点上。') }}</p>
           </div>
         </div>
         <bk-button
@@ -77,7 +77,7 @@
       :is-show.sync="sideConfig.isShow"
       :quick-close="true"
       :title="$t('节点同步记录')"
-      :width="640"
+      :width="960"
     >
       <div
         class="sync-records-container"
@@ -92,13 +92,13 @@
           <bk-table-column
             :label="$t('同步时间')"
             prop="createdAt"
-            width="80"
+            width="120"
             :render-header="$renderHeader"
           ></bk-table-column>
           <bk-table-column
             :label="$t('节点数')"
             prop="nodeCount"
-            width="60"
+            width="100"
             :render-header="$renderHeader"
           ></bk-table-column>
           <bk-table-column
@@ -106,18 +106,14 @@
             :show-overflow-tooltip="true"
           >
             <template slot-scope="{ row }">
-              <section
-                class="info node-info"
-                v-bk-overflow-tips
-              >
-                <div class="node-list-wrapper">
-                  <div
-                    v-for="node in row.nodes"
-                    :key="node"
-                    class="node-width"
-                  >
-                    {{ node }}
-                  </div>
+              <section class="info node-info">
+                <div
+                  v-for="node in row.nodes"
+                  :key="node"
+                  class="node-width"
+                  v-bk-overflow-tips
+                >
+                  {{ node }}
                 </div>
                 <i
                   class="paasng-icon paasng-general-copy copy-icon"
@@ -127,7 +123,7 @@
             </template>
           </bk-table-column>
           <bk-table-column
-            :label="$t('绑定的应用')"
+            :label="$t('绑定应用')"
             :show-overflow-tooltip="true"
           >
             <template slot-scope="{ row }">
@@ -283,9 +279,7 @@ export default {
     padding: 5px 0;
   }
   .info {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
+    width: calc(100% - 30px);
     color: #4d4f56;
     overflow: hidden;
     line-height: 20px;
@@ -300,11 +294,18 @@ export default {
       overflow: hidden;
     }
     .apps {
-      flex: 1;
+      display: -webkit-box;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3; /* 限制显示的行数 */
     }
     .copy-icon {
       display: none;
-      margin: auto;
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
     }
   }
 }

@@ -18,6 +18,7 @@
 import datetime
 import json
 import logging
+import time
 from operator import attrgetter
 from typing import Dict, Optional
 
@@ -46,6 +47,7 @@ from paas_wl.bk_app.processes.serializers import (
     EventSerializer,
     InstanceLogDownloadInputSLZ,
     InstanceLogQueryInputSLZ,
+    InstanceLogStreamInputSLZ,
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,
     ModuleScopedData,
@@ -55,6 +57,7 @@ from paas_wl.bk_app.processes.serializers import (
     UpdateProcessSLZ,
     WatchEventSLZ,
     WatchProcessesQuerySLZ,
+    rfc3339nano_to_unix_timestamp,
 )
 from paas_wl.bk_app.processes.watch import ProcInstByEnvListWatcher, ProcInstByModuleEnvListWatcher, WatchEvent
 from paas_wl.infras.resources.base.kres import KDeployment, KPod
@@ -494,6 +497,62 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         log_type = "previous" if data["previous"] else "current"
         response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-{log_type}-logs.txt"'
         return response
+
+    def logs_stream(self, request, code, module_name, environment, process_type, process_instance_name):
+        """实时获取进程实例的日志"""
+        env = self.get_env_via_path()
+        manager = ProcessManager(env)
+
+        slz = InstanceLogStreamInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        since_time_nano = data.get("since_time")
+        since_seconds = None
+
+        if since_time_nano is None:
+            # 如果前端不传 since_time 参数, 则使用当前时间戳
+            since_time_nano = time.time_ns()
+
+        # 将 Unix 时间戳转换为 k8s 需要的 since_seconds
+        # 需要获取前一秒的日志, 否则会丢失一些日志
+        since_seconds = time.time_ns() // 1_000_000_000 - since_time_nano // 1_000_000_000 + 1
+
+        def resp():
+            # 发送初始 ping 事件
+            # 避免 stream 无新事件时, 前端请求表现为服务端长时间挂起(无法查看响应头)
+            yield "event: ping\n"
+            yield "data: \n\n"
+
+            # 获取日志流
+            for log_line in manager.get_instance_logs_stream(
+                process_type=process_type,
+                instance_name=process_instance_name,
+                since_seconds=since_seconds,
+            ):
+                # 日志格式通常为: "2023-05-01T12:34:56.123456789Z 实际日志内容" 分离时间戳和消息内容
+                timestamp_str, message = log_line.split(" ", 1)
+                # 将时间戳转换为 Unix 时间戳格式
+                timestamp_unix = rfc3339nano_to_unix_timestamp(timestamp_str)
+                # 比较日志时间戳和传入的时间戳, 如果小于等于传入的时间戳, 丢弃该日志
+                if since_time_nano is not None and timestamp_unix <= since_time_nano:
+                    continue
+
+                # 构造 SSE 消息
+                data = json.dumps(
+                    {
+                        "timestamp": timestamp_str,
+                        "message": message,
+                    }
+                )
+                yield f"data: {data}\n\n"
+
+            # 发送结束事件
+            yield "id: -1\n"
+            yield "event: EOF\n"
+            yield "data: \n\n"
+
+        return StreamingHttpResponse(resp(), content_type="text/event-stream")
 
     def restart(self, request, code, module_name, environment, process_instance_name):
         """重启进程实例"""

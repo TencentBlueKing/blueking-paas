@@ -163,7 +163,7 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
                     }
                 )
             logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
-            raise error_codes.LIST_TAGS_FAILED.f(_("%s的仓库信息查询异常") % code)
+            raise error_codes.LIST_TAGS_FAILED.f(_("请手动输入，例如： latest"))
         return Response(data=alternative_versions)
 
 

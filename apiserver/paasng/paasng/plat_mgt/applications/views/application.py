@@ -20,6 +20,7 @@ from collections import Counter
 
 from django.shortcuts import get_object_or_404
 from django.utils.translation import get_language
+from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
@@ -29,13 +30,15 @@ from rest_framework.response import Response
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.market.models import Product
+from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.core.core.storages.redisdb import DefaultRediStore
+from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bkmonitorv3.exceptions import BkMonitorApiError, BkMonitorGatewayServiceError
 from paasng.infras.bkmonitorv3.shim import update_or_create_bk_monitor_space
-from paasng.infras.iam.helpers import fetch_role_members
+from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager, fetch_role_members
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
@@ -44,6 +47,7 @@ from paasng.plat_mgt.bk_plugins.views import is_plugin_instance_exist, is_user_p
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tasks import cal_app_resource_quotas
+from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +76,7 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         slz = slzs.ApplicationListOutputSLZ(
             page,
             many=True,
-            context={"request": request, "app_resource_quotas": app_resource_quotas},
+            context={"app_resource_quotas": app_resource_quotas},
         )
         return self.get_paginated_response(slz.data)
 
@@ -229,7 +233,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="更新应用集群",
-        request_body=slzs.UpdateClusterSLZ(),
+        request_body=slzs.UpdateApplicationBindClusterSLZ(),
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update_cluster(self, request, app_code, module_name, env_name):
@@ -239,7 +243,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         module = application.get_module(module_name)
         env = get_object_or_404(module.envs, environment=env_name)
 
-        slz = slzs.UpdateClusterSLZ(
+        slz = slzs.UpdateApplicationBindClusterSLZ(
             data=request.data,
             context={"user": request.user, "environment": env.environment, "region": application.region},
         )
@@ -262,5 +266,57 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
             data_before=data_before,
             data_after=data_after,
         )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DeletedApplicationViewSet(viewsets.GenericViewSet):
+    """平台管理 - 删除应用 API"""
+
+    permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+    filter_backends = [ApplicationFilterBackend]
+    pagination_class = LimitOffsetPagination
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="获取软删除应用列表",
+        responses={status.HTTP_200_OK: slzs.DeletedApplicationListOutputSLZ(many=True)},
+    )
+    def list(self, request, *args, **kwargs):
+        """获取软删除应用列表"""
+        deleted_apps = Application.default_objects.filter(is_deleted=True)
+        filter_queryset = self.filter_queryset(deleted_apps)
+
+        page = self.paginate_queryset(filter_queryset)
+
+        slz = slzs.DeletedApplicationListOutputSLZ(page, many=True)
+        return self.get_paginated_response(slz.data)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="彻底删除应用",
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def destroy(self, request, app_code):
+        """彻底删除应用"""
+        try:
+            to_del_app = Application.default_objects.get(code=app_code, is_deleted=True)
+        except Application.DoesNotExist:
+            raise error_codes.APP_NOT_FOUND.f(_("应用不存在或未被软删除"))
+
+        # 从 PaaS 2.0 中删除相关信息
+        with console_db.session_scope() as session:
+            try:
+                AppManger(session).delete_by_code(code=app_code)
+            except Exception:
+                logger.exception("Failed to delete application %s from PaaS2.0", app_code)
+                raise error_codes.CANNOT_HARD_DELETE_APP.f(_("PaaS 2.0 中信息删除失败，无法硬删除应用"))
+
+        # 删除权限中心相关数据
+        delete_builtin_user_groups(app_code)
+        delete_grade_manager(app_code)
+
+        # 从 PaaS 3.0 中删除相关信息
+        to_del_app.hard_delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)

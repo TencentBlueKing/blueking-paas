@@ -218,6 +218,7 @@ export default {
         // 当角色运营者时，过滤部分功能入口
         if (this.curAppInfo.role.name === 'operator') {
           navTree = navTree.filter((nav) => this.roleAllowRouters.operator.includes(nav.name));
+          this.simpleAddNavItem(navTree, 'appEngineOperator', 'appEntryConfig', this.$t('访问管理'));
         }
 
         // smart应用或lesscode应用，包管理
@@ -446,14 +447,16 @@ export default {
 
     simpleAddNavItem(navTree, categoryName, destRouter, name) {
       const category = navTree.find((item) => item.name === categoryName);
-      category.children.push({
-        categoryName,
-        name,
-        matchRouters: [destRouter],
-        destRoute: {
-          name: destRouter,
-        },
-      });
+      if (category) {
+        category.children.push({
+          categoryName,
+          name,
+          matchRouters: [destRouter],
+          destRoute: {
+            name: destRouter,
+          },
+        });
+      }
 
       return navTree;
     },

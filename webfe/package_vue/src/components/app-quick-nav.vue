@@ -143,7 +143,6 @@
             ref="searchAppList"
             :filter-key="filterKey"
             :search-apps-router-name="'customed'"
-            :params="{ include_inactive: true }"
             @selectAppCallback="selectAppCallback"
             @search-ready="handlerSearchReady"
           />

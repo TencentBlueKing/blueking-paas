@@ -12,14 +12,6 @@
     >
       <div class="top-bar flex-row justify-content-between">
         <div class="flex-row left">
-          <bk-button
-            :theme="'primary'"
-            icon="plus"
-            class="mr10 flex-shrink-0"
-            @click="showSideslider('add')"
-          >
-            {{ $t('添加方案') }}
-          </bk-button>
           <div
             class="capsule-tab-wrapper"
             v-if="tabData.length"
@@ -31,6 +23,14 @@
               :count-map="tenantPlanCountMap"
             />
           </div>
+          <bk-button
+            :theme="'primary'"
+            icon="plus"
+            class="ml10 flex-shrink-0"
+            @click="showSideslider('add')"
+          >
+            {{ $t('添加方案') }}
+          </bk-button>
         </div>
         <bk-input
           style="width: 350px"

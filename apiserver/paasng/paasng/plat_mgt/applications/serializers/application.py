@@ -218,7 +218,7 @@ class ApplicationNameUpdateInputSLZ(UpdateApplicationNameSLZ):
     """更新应用名称序列化器"""
 
 
-class UpdateClusterSLZ(serializers.Serializer):
+class UpdateApplicationBindClusterSLZ(serializers.Serializer):
     """更新应用集群序列化器"""
 
     name = serializers.CharField(required=True, help_text="集群名称")
@@ -239,3 +239,21 @@ class UpdateClusterSLZ(serializers.Serializer):
             raise ValidationError(_("现有的分配策略下未找到匹配的集群(集群名: {name})").format(name=name))
 
         return name
+
+
+class DeletedApplicationListOutputSLZ(serializers.Serializer):
+    """软删除应用序列化器"""
+
+    logo = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用 logo")
+    code = serializers.CharField(read_only=True, help_text="应用的唯一标识")
+    name = serializers.CharField(read_only=True, help_text="应用名称")
+    app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
+    app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
+    type = serializers.SerializerMethodField(read_only=True)
+    creator = UserNameField()
+    created_humanized = HumanizeDateTimeField(source="created")
+    tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
+    deleted_time = HumanizeDateTimeField(source="updated")
+
+    def get_type(self, instance: Application) -> str:
+        return ApplicationType.get_choice_label(instance.type)

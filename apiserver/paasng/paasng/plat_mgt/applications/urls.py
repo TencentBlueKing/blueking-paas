@@ -130,4 +130,15 @@ urlpatterns = [
         views.ApplicationServicesViewSet.as_view({"delete": "recycle_unbound_instance"}),
         name="plat_mgt.applications.services.recycle_unbound_instance",
     ),
+    # 平台管理 - 删除应用
+    re_path(
+        r"^api/plat_mgt/deleted_applications/$",
+        views.DeletedApplicationViewSet.as_view({"get": "list"}),
+        name="plat_mgt.applications.list_deleted",
+    ),
+    re_path(
+        r"^api/plat_mgt/deleted_applications/(?P<app_code>[^/]+)/$",
+        views.DeletedApplicationViewSet.as_view({"delete": "destroy"}),
+        name="plat_mgt.applications.force_delete",
+    ),
 ]

@@ -69,9 +69,7 @@ class ApplicationsSearchViewset(ViewSet):
         slz = UniversalSearchSLZ(data=request.GET)
         slz.is_valid(raise_exception=True)
 
-        applications = UserApplicationFilter(request.user).filter(
-            include_inactive=True, order_by=["name"], search_term=slz.data["keyword"]
-        )
+        applications = UserApplicationFilter(request.user).filter(order_by=["name"], search_term=slz.data["keyword"])
         paged_applications = self.paginator.paginate_queryset(applications, self.request, view=self)
         # Set exposed links property, to be used by the serializer later
         for app in paged_applications:

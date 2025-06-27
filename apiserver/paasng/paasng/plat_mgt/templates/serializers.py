@@ -86,7 +86,9 @@ class TemplateBaseInputSLZ(serializers.Serializer):
     language = serializers.ChoiceField(help_text="开发语言", choices=AppLanguage.get_django_choices())
     is_display = serializers.BooleanField(help_text="是否显示")
     # 模板信息
+    ## TemplateType.NORMAL 独有的信息
     blob_url = serializers.JSONField(help_text="二进制包存储路径", default=dict)
+    ## TemplateType.PLUGIN 独有的信息
     repo_type = serializers.CharField(help_text="代码仓库类型", allow_blank=True, default="")
     repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, allow_blank=True, default="")
     source_dir = serializers.CharField(help_text="模板代码所在目录", allow_blank=True, default="")
@@ -135,10 +137,38 @@ class TemplateBaseInputSLZ(serializers.Serializer):
             raise ValidationError(_("进程配置必须为 Dict 格式"))
         return processes
 
-    def validate_blob_url(self, value: str) -> str:
-        if not value:
-            raise ValidationError(_("二进制包存储配置必须为有效的地址字符串"))
-        return value
+    def validate(self, attrs: Dict) -> Dict:
+        """根据特定字段验证其他相应字段"""
+
+        # 隐藏模板时不做严格验证
+        if attrs.get("is_hidden", True):
+            return attrs
+
+        template_type = attrs["type"]
+
+        # 普通应用模板验证
+        if template_type == TemplateType.NORMAL:
+            # 确保插件模板独有字段为默认值, 空字符串
+            for field, default in [("repo_type", ""), ("repo_url", ""), ("source_dir", "")]:
+                if attrs.get(field) != default:
+                    attrs[field] = default
+            # blob_url 必须有值
+            if not attrs.get("blob_url"):
+                raise ValidationError(_("二进制包存储配置必须为有效的地址字符串"))
+
+        # 插件模板验证
+        elif template_type == TemplateType.PLUGIN:
+            # 验证插件模板必填字段
+            if not attrs.get("repo_url"):
+                raise ValidationError({"repo_url": _("插件模板必须配置代码仓库地址")})
+            if not attrs.get("source_dir"):
+                raise ValidationError({"source_dir": _("插件模板必须配置代码所在目录")})
+
+            # 确保普通应用模板独有字段为默认值
+            if attrs.get("blob_url") != {}:
+                attrs["blob_url"] = {}
+
+        return attrs
 
 
 class TemplateCreateInputSLZ(TemplateBaseInputSLZ):

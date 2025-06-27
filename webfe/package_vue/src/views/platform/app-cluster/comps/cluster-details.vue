@@ -73,7 +73,9 @@
           >
             <template slot="label">
               <span>{{ panel.label }}</span>
-              <template v-if="Object.keys(curClustersStatus)?.length && curClustersStatus?.hasIcon">
+              <template
+                v-if="panel.key !== 'node' && Object.keys(curClustersStatus)?.length && curClustersStatus?.hasIcon"
+              >
                 <i
                   v-if="!curClustersStatus?.[panel.key]"
                   class="paasng-icon paasng-unfinished"
@@ -87,6 +89,7 @@
               <component
                 :is="tabActive"
                 :data="curDetailData"
+                :cluster-name="activeName"
                 :default-config="clusterDefaultConfigs"
               />
             </keep-alive>
@@ -101,6 +104,7 @@
 import DetailInfo from './detail-info.vue';
 import DetailComponents from './detail-components.vue';
 import DetailFeature from './detail-feature.vue';
+import DetailNodeInfo from './detail-node-info.vue';
 import { mapState } from 'vuex';
 export default {
   name: 'ClusterDetails',
@@ -108,6 +112,7 @@ export default {
     DetailInfo,
     DetailComponents,
     DetailFeature,
+    DetailNodeInfo,
   },
   data() {
     return {
@@ -121,6 +126,7 @@ export default {
         { name: 'DetailInfo', label: this.$t('集群信息'), key: 'basic' },
         { name: 'DetailComponents', label: this.$t('集群组件'), key: 'component' },
         { name: 'DetailFeature', label: this.$t('集群特性'), key: 'feature' },
+        { name: 'DetailNodeInfo', label: this.$t('节点信息'), key: 'node' },
       ],
       searchValue: '',
       leftLoading: false,
@@ -134,6 +140,7 @@ export default {
     ...mapState('tenant', {
       clustersStatus: (state) => state.clustersStatus,
       detailActiveName: (state) => state.detailActiveName,
+      detailTabActive: (state) => state.detailTabActive,
     }),
     curClustersStatus() {
       return this.clustersStatus[this.activeName] ?? {};
@@ -153,10 +160,14 @@ export default {
   created() {
     this.init();
   },
+  beforeDestroy() {
+    this.$store.commit('tenant/updatedDtailTabActive', 'DetailInfo');
+  },
   methods: {
     init() {
       this.getClusterList();
       this.getClusterDefaultConfigs();
+      this.tabActive = this.detailTabActive || 'DetailInfo';
     },
     switchDetails(name) {
       this.activeName = name || '';

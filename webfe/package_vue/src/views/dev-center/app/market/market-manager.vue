@@ -4,7 +4,7 @@
     placeholder="market-visit-loading"
   >
     <section class="market-manager">
-      <div class="market-info mb25 shadow-card-style">
+      <div class="market-info mb-16 shadow-card-style">
         <div class="flex-row justify-content-between align-items-center">
           <div class="market-info-title-wrapper">
             <strong class="market-info-title">{{ $t('市场信息') }}</strong>

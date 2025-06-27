@@ -312,18 +312,15 @@ export default {
                 jsonp: `callback${uuid()}`,
                 data: Object.assign({ language }),
                 success: () => {
-                  this.$router.go(0);
+                  window.location.reload();
                 },
               });
             } else {
-              this.$router.go(0);
+              window.location.reload();
             }
           },
           (e) => {
-            this.$paasMessage({
-              theme: 'error',
-              message: e.detail || e.message || this.$t('接口异常'),
-            });
+            this.catchErrorHandler(e);
           }
         );
     },

@@ -740,7 +740,7 @@ export default {
 .role-container {
   width: calc(100% - 48px);
   margin: 16px auto 30px;
-  padding-top: 15px;
+  padding-top: 0;
 }
 .content-wrapper {
   margin-top: 16px;

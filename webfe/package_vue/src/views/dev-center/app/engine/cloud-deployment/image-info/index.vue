@@ -5,38 +5,41 @@
         <span class="base-info-title">
           {{ $t('基本信息-title') }}
         </span>
-        <div class="edit-container" @click="handleEdit('isBasePageEdit')" v-if="!isBasePageEdit">
+        <div
+          class="edit-container"
+          @click="handleEdit('isBasePageEdit')"
+          v-if="!isBasePageEdit"
+        >
           <i class="paasng-icon paasng-edit-2 pl10" />
           {{ $t('编辑') }}
         </div>
       </div>
       <div
-        class="form-detail mt20 pb20 border-b" v-if="!isBasePageEdit">
-        <bk-form
-          :model="buildConfig">
-          <bk-form-item
-            :label="`${$t('托管方式')}：`">
+        class="form-detail mt20 pb20 border-b"
+        v-if="!isBasePageEdit"
+      >
+        <bk-form :model="buildConfig">
+          <bk-form-item :label="`${$t('托管方式')}：`">
             <span class="form-text">{{ artifactType || '--' }}</span>
           </bk-form-item>
-          <bk-form-item
-            :label="`${$t('镜像仓库')}：`">
+          <bk-form-item :label="`${$t('镜像仓库')}：`">
             <span class="form-text">{{ buildConfig.image_repository || '--' }}</span>
           </bk-form-item>
-          <bk-form-item
-            :label="`${$t('镜像凭证')}：`">
+          <bk-form-item :label="`${$t('镜像凭证')}：`">
             <span class="form-text">{{ buildConfig.image_credential_name || '--' }}</span>
           </bk-form-item>
         </bk-form>
       </div>
 
       <div
-        class="form-edit mt20 pb20 border-b" v-if="isBasePageEdit">
+        class="form-edit mt20 pb20 border-b"
+        v-if="isBasePageEdit"
+      >
         <bk-form
           :model="buildConfig"
           ref="baseInfoRef"
         >
-          <bk-form-item
-            :label="`${$t('托管方式')}：`">
+          <bk-form-item :label="`${$t('托管方式')}：`">
             <span class="form-text">{{ artifactType || '--' }}</span>
           </bk-form-item>
 
@@ -50,18 +53,21 @@
             <bk-input
               ref="imageRef"
               v-model="buildConfig.image_repository"
-              style="width: 450px;"
+              style="width: 450px"
               :placeholder="$t('请输入镜像仓库，如') + '：mirrors.tencent.com/bkpaas/django-helloworld'"
+            ></bk-input>
+            <p
+              slot="tip"
+              class="input-tips"
             >
-            </bk-input>
-            <p slot="tip" class="input-tips">{{ $t('一个模块只可以配置一个镜像仓库，"进程配置"中的所有进程都会使用该镜像。') }}</p>
+              {{ $t('一个模块只可以配置一个镜像仓库，"进程配置"中的所有进程都会使用该镜像。') }}
+            </p>
           </bk-form-item>
 
-          <bk-form-item
-            :label="`${$t('镜像凭证')}：`">
+          <bk-form-item :label="`${$t('镜像凭证')}：`">
             <bk-select
               v-model="buildConfig.image_credential_name"
-              style="width: 450px;"
+              style="width: 450px"
               searchable
             >
               <bk-option
@@ -79,7 +85,8 @@
             theme="primary"
             title="保存"
             class="mt20"
-            @click="handleSave">
+            @click="handleSave"
+          >
             {{ $t('保存') }}
           </bk-button>
 
@@ -87,7 +94,8 @@
             :theme="'default'"
             title="取消"
             class="mt20 ml8"
-            @click="handleCancel">
+            @click="handleCancel"
+          >
             {{ $t('取消') }}
           </bk-button>
         </div>
@@ -96,7 +104,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin.js';
 import { cloneDeep } from 'lodash';
 export default {
   name: 'ImageBaseInfo',
@@ -172,8 +181,6 @@ export default {
           theme: 'error',
           message: e.detail || e.message,
         });
-      } finally {
-        this.$emit('closeContentLoader');
       }
     },
 
@@ -226,23 +233,22 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-
 .image-info-container {
-    border-bottom: 1px solid #dcdee5;
-    .base-info-title{
-      color: #313238;
-      font-size: 14px;
-      font-weight: bold;
-      text-align: right;
-    }
-    .edit-container{
-      color: #3A84FF;
-      font-size: 12px;
-      cursor: pointer;
-      padding-left: 10px;
-    }
-    .ml150 {
-      margin-left: 150px;
-    }
+  border-bottom: 1px solid #dcdee5;
+  .base-info-title {
+    color: #313238;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: right;
+  }
+  .edit-container {
+    color: #3a84ff;
+    font-size: 12px;
+    cursor: pointer;
+    padding-left: 10px;
+  }
+  .ml150 {
+    margin-left: 150px;
+  }
 }
 </style>

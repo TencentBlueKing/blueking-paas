@@ -20,12 +20,10 @@
 * 工具
 */
 import http from '@/api';
+import { json2Query } from '@/common/tools';
 
 export default {
   namespaced: true,
-  state: {},
-  getters: {},
-  mutations: {},
   actions: {
     /**
      * 获取应用描述文件转换内容
@@ -33,6 +31,13 @@ export default {
     getDescriptionFileConversion({}, { data, config }) {
       const url = `${BACKEND_URL}/api/tools/app_desc/transform/`;
       return http.post(url, data, config);
+    },
+    /**
+     * tool-获取当前已启用服务的应用列表
+     */
+    getEnabledServiceAppList({}, { name, params }) {
+      const url = `${BACKEND_URL}/api/services/name/${name}/application-attachments/?${json2Query(params)}`;
+      return http.get(url);
     },
   },
 };

@@ -2,17 +2,19 @@
   <div class="right-main bk-service-overview">
     <div class="overview-tit">
       <h2>
-        <span class="expert"><router-link :to="{ name: 'serviceVas' }"> {{ $t('增强服务') }} </router-link></span>
+        <span class="expert">
+          <router-link :to="{ name: 'serviceVas' }">{{ $t('增强服务') }}</router-link>
+        </span>
         {{ serviceObject.display_name }}
       </h2>
     </div>
 
     <paas-content-loader
-      class="services-overview-container"
+      class="services-overview-container card-style"
       :is-loading="loading"
       placeholder="service-inner-loading"
     >
-      <div :class="{ 'fadeIn': !loading }">
+      <div :class="{ fadeIn: !loading }">
         <div
           v-if="!loading"
           class="middle bnone"
@@ -22,35 +24,44 @@
               :src="serviceObject.logo"
               class="service-ex-img"
               alt=""
-            >
+            />
             <h2>{{ serviceObject.display_name }}</h2>
             <p>
               <span
                 v-for="(item, index) in serviceObject.available_languages"
                 :key="index"
-                :class="['box green',{ 'purple1': index === 1 },{ 'purple2': index === 2 }]"
-              >{{ item }}</span>
+                :class="['box green', { purple1: index === 1 }, { purple2: index === 2 }]"
+              >
+                {{ item }}
+              </span>
             </p>
           </div>
           <div class="service-p">
-            <h3> {{ $t('服务简介：') }} </h3>
+            <h3>{{ $t('服务简介：') }}</h3>
             <p>{{ serviceObject.description }}</p>
           </div>
           <div class="service-p">
-            <h3> {{ $t('服务说明：') }} </h3>
+            <h3>{{ $t('服务说明：') }}</h3>
             <p>
-              <span v-if="serviceObject.long_description">{{ serviceObject.long_description }}，</span><a
+              <span v-if="serviceObject.long_description">{{ serviceObject.long_description }}，</span>
+              <a
                 :href="GLOBAL.DOC.SERVICE_INDEX"
                 target="_blank"
-              > {{ $t('查看帮助文档') }} </a>
+              >
+                {{ $t('查看帮助文档') }}
+              </a>
             </p>
           </div>
         </div>
 
         <div class="enable">
-          <h2> {{ $t('您有') }} <span class="ps-btn-xs">{{ pageConf.count }}</span> {{ $t('款应用已启用该服务') }} </h2>
+          <h2>
+            {{ $t('您有') }}
+            <span class="ps-btn-xs">{{ pageConf.count }}</span>
+            {{ $t('款应用已启用该服务') }}
+          </h2>
           <bk-table
-            v-bkloading="{ isLoading: isDataLoading }"
+            v-bkloading="{ isLoading: isTableLoading }"
             :data="attList"
             :size="'small'"
             :empty-text="$t('暂无应用启用该服务')"
@@ -70,14 +81,19 @@
             >
               <template slot-scope="props">
                 <div
-                  class="ps-table-app"
+                  class="ps-table-app flex-row"
                   @click="toServiceInner(props.row)"
                 >
                   <img
-                    :src="props.row.application ?
-                      (props.row.application.logo_url ? props.row.application.logo_url : defaultImg) : defaultImg"
+                    :src="
+                      props.row.application
+                        ? props.row.application.logo_url
+                          ? props.row.application.logo_url
+                          : defaultImg
+                        : defaultImg
+                    "
                     class="fleft applogo"
-                  >
+                  />
                   <span class="app-name-text">
                     <em>{{ props.row.application.name }}</em>
                   </span>
@@ -122,7 +138,8 @@
   </div>
 </template>
 
-<script>export default {
+<script>
+export default {
   data() {
     return {
       serviceObject: {
@@ -132,23 +149,12 @@
         description: '',
         long_description: '',
       },
-      wordsList: [],
       attList: [],
-      length: 0,
-      uuid: '',
-      app_id: '',
-      name: '',
-      display_name: '',
-      appName: '',
-      logo: '',
-      sortRules: '',
-      pagelimit: 5,
-      pages: 1,
+      orderBy: 'created',
       is_up: true,
       loading: true,
       defaultImg: '/static/images/default_logo.png',
-      routerEnglishName: '',
-      isDataLoading: false,
+      isTableLoading: false,
       pageConf: {
         current: 1,
         limit: 10,
@@ -169,39 +175,36 @@
   },
   watch: {
     'pageConf.current'(value) {
-      this.getDataByPage(value, true);
+      this.getDataByPage(value);
     },
   },
   created() {
-    this.getDataByPage(1, false);
+    this.getDataByPage(1);
   },
   methods: {
     renderHeader(h) {
-      return h(
-        'div',
-        [
-          h('span', {
-            domProps: {
-              innerHTML: this.$t('启用时间'),
-            },
-          }),
-          h('img', {
-            style: {
-              position: 'relative',
-              top: '1px',
-              left: '1px',
-              cursor: 'pointer',
-              transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)',
-            },
-            attrs: {
-              src: '/static/images/sort-icon.png',
-            },
-            on: {
-              click: this.sortTab,
-            },
-          }),
-        ],
-      );
+      return h('div', [
+        h('span', {
+          domProps: {
+            innerHTML: this.$t('启用时间'),
+          },
+        }),
+        h('img', {
+          style: {
+            position: 'relative',
+            top: '1px',
+            left: '1px',
+            cursor: 'pointer',
+            transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)',
+          },
+          attrs: {
+            src: '/static/images/sort-icon.png',
+          },
+          on: {
+            click: this.sortTab,
+          },
+        }),
+      ]);
     },
 
     toServiceInner(item) {
@@ -217,11 +220,7 @@
     },
 
     sortTab() {
-      if (this.sortRules === '') {
-        this.sortRules = '&order_by=created';
-      } else {
-        this.sortRules = '';
-      }
+      this.orderBy = this.orderBy === 'created' ? '' : 'created';
       this.getDataByPage(1);
       this.is_up = !this.is_up;
     },
@@ -243,133 +242,135 @@
 
     handlePageSizeChange(newVal) {
       this.pageConf.limit = newVal;
-      this.$nextTick(() => {
-        this.getDataByPage(1);
-      });
+      this.getDataByPage(1);
     },
 
-    getDataByPage(page = 1, loadingFlag = true) {
-      const getnum = (page - 1) * this.pageConf.limit;
-      const getUrl = `${BACKEND_URL}/api/services/name/${this.$route.params.name}/application-attachments/?offset=${getnum}&limit=${this.pageConf.limit}${this.sortRules}`;
-      if (loadingFlag) {
-        this.isDataLoading = true;
-      }
-      this.$http.get(getUrl).then((response) => {
-        const resData = response;
-
-        this.serviceObject = Object.assign({}, {
-          logo: resData.results.logo || '',
-          display_name: resData.results.display_name || '',
-          available_languages: (resData.results.available_languages || '').split(','),
-          description: resData.results.description || '',
-          long_description: resData.results.long_description || '',
+    async getDataByPage(page = 1) {
+      try {
+        this.isTableLoading = true;
+        const response = await this.$store.dispatch('tool/getEnabledServiceAppList', {
+          name: this.$route.params.name,
+          params: {
+            offset: (page - 1) * this.pageConf.limit,
+            limit: this.pageConf.limit,
+            order_by: this.orderBy,
+          },
         });
-
-        this.pageConf.count = resData.count || 0;
-        this.length = this.pageConf.count;
-        this.attList = resData.results.instances;
+        const { results, count } = response;
+        this.serviceObject = {
+          ...results,
+          available_languages: (results.available_languages || '').split(','),
+        };
+        this.pageConf.count = count || 0;
+        this.attList = results.instances;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
         this.loading = false;
-
-        this.isDataLoading = false;
-      });
+        this.isTableLoading = false;
+      }
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-    .sort-time,
-    .shaixuan,
-    .shaixuan input {
-        cursor: pointer;
-    }
+.sort-time,
+.shaixuan,
+.shaixuan input {
+  cursor: pointer;
+}
 
-    .sort-time {
-        margin-left: 3px;
-        vertical-align: -1px;
-        transform: rotate(180deg);
-    }
+.sort-time {
+  margin-left: 3px;
+  vertical-align: -1px;
+  transform: rotate(180deg);
+}
 
-    .upsort {
-        transform: rotate(0);
-    }
+.upsort {
+  transform: rotate(0);
+}
 
-    .shaixuan:hover {
-        color: #3A84FF;
-    }
+.shaixuan:hover {
+  color: #3a84ff;
+}
 
-    .itsname {
-        display: inline-block;
-        position: relative;
-        width: 150px;
-        line-height: 16px;
-    }
+.itsname {
+  display: inline-block;
+  position: relative;
+  width: 150px;
+  line-height: 16px;
+}
 
-    .applogo {
-        margin-right: 13px;
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-    }
+.applogo {
+  margin-right: 13px;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+}
 
-    .app-name-text {
-        display: inline-block;
-        width: 210px;
-        height: 32px;
-        line-height: 32px;
-        vertical-align: top;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        color: #3a84ff;
-        &:hover {
-            color: #699df4;
-        }
-    }
+.app-name-text {
+  display: inline-block;
+  width: 210px;
+  height: 32px;
+  line-height: 32px;
+  vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #3a84ff;
+  &:hover {
+    color: #699df4;
+  }
+}
 
-    .app-name-text em {
-        display: inline-block;
-        line-height: 16px;
-        vertical-align: middle;
-    }
+.app-name-text em {
+  display: inline-block;
+  line-height: 16px;
+  vertical-align: middle;
+}
 
-    .ps-table-app {
-        cursor: pointer;
-    }
+.ps-table-app {
+  cursor: pointer;
+}
 
-    .ps-table th.pl30,
-    .ps-table td.pl30 {
-        padding-left: 30px;
-    }
+.ps-table th.pl30,
+.ps-table td.pl30 {
+  padding-left: 30px;
+}
 
-    .ps-table tr:hover {
-        .ps-table-app {
-            color: #3a84ff;
-        }
-    }
+.ps-table tr:hover {
+  .ps-table-app {
+    color: #3a84ff;
+  }
+}
 
-    .enable h2 {
-        padding: 0 0 7px 0;
-        font-size: 14px;
-        line-height: 40px;
-        color: #55545a;
-        font-weight: bold;
-        span {
-            color: #2dcb56;
-        }
-    }
+.enable h2 {
+  padding: 0 0 7px 0;
+  font-size: 14px;
+  line-height: 40px;
+  color: #55545a;
+  font-weight: bold;
+  span {
+    color: #2dcb56;
+  }
+}
 
-    .page-wrapper {
-        text-align: center;
-        margin-top: 20px;
-    }
+.page-wrapper {
+  text-align: center;
+  margin-top: 20px;
+}
 
-    .services-overview-container{
-      background: #fff;
-      padding: 10px 24px;
-      margin: 20px 24px;
-    }
+.services-overview-container {
+  background: #fff;
+  padding: 10px 24px;
+  margin: 20px 24px;
+}
 
-    .overview-tit{
-      background: #fff;
-    }
+.overview-tit {
+  background: #fff;
+  box-shadow: 0 2px 4px 0 #1919290d;
+  h2 {
+    border: none;
+  }
+}
 </style>

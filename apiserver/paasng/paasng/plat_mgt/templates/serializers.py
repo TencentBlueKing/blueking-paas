@@ -89,7 +89,7 @@ class TemplateBaseInputSLZ(serializers.Serializer):
     blob_url = serializers.JSONField(help_text="二进制包存储路径", default=dict)
     repo_type = serializers.CharField(help_text="代码仓库类型", allow_blank=True, default="")
     repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, allow_blank=True, default="")
-    source_dir = serializers.CharField(help_text="模板代码所在目录")
+    source_dir = serializers.CharField(help_text="模板代码所在目录", allow_blank=True, default="")
 
     # 配置信息
     preset_services_config = serializers.JSONField(help_text="预设增强服务配置", default=dict)

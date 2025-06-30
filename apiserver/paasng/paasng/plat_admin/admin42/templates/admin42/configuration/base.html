@@ -4,7 +4,7 @@
 {% block content_header %}
 <ul class="paas-breadcrumb">
     <li><a href="{% url 'admin.front_page' %}">首页</a></li>
-    <li><a href="{% url 'admin.configuration.tmpl.manage' %}">应用配置管理</a></li>
+    <li><a href="{% url 'admin.configuration.bk_plugins.tags.manage' %}">应用配置管理</a></li>
     <li class="active">{{ view.name }}</li>
 </ul>
 {% endblock %}
@@ -12,11 +12,6 @@
 {% block nav_list %}
 <script>
     var navList = [
-        {
-            name: "模板配置",
-            icon: 'icon-tree-module-shape',
-            url: "{% url 'admin.configuration.tmpl.manage' %}",
-        },
         {
             name: "插件分类配置",
             icon: 'icon-tree-module-shape',

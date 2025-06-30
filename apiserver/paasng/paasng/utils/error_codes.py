@@ -166,6 +166,7 @@ class ErrorCodes:
     # 应用模板相关
     NORMAL_TMPL_NOT_FOUND = ErrorCode(_("指定的应用模板不存在或不可用"))
     UNKNOWN_TEMPLATE = ErrorCode(_("无效的应用模板"))
+    CANNOT_CREATE_TMPL = ErrorCode(_("创建应用模板失败"))
 
     # lesscode app 相关
     CREATE_LESSCODE_APP_ERROR = ErrorCode(_("创建蓝鲸运维开发平台应用错误"))

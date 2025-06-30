@@ -23,7 +23,7 @@ class TemplateType(StrStructuredEnum):
     """模板类型"""
 
     NORMAL = EnumField("normal", _("普通应用"))
-    PLUGIN = EnumField("plugin", _("插件模板"))
+    PLUGIN = EnumField("plugin", _("插件应用"))
 
 
 class RenderMethod(StrStructuredEnum):

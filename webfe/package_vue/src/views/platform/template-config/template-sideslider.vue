@@ -177,13 +177,13 @@ const INITIAL_FORM_DATA = {
   // 基本信息
   name: '',
   type: 'normal',
-  render_method: '', // 渲染方式
+  render_method: 'django_template', // 渲染方式
   display_name_zh_cn: '',
   display_name_en: '',
   description_zh_cn: '',
   description_en: '',
   language: '',
-  is_display: false,
+  is_display: true,
   // 模块信息（模块）
   blob_url: '',
   // 模块信息（插件）
@@ -203,7 +203,8 @@ const requiredRule = {
   trigger: 'blur',
 };
 
-const nonRequiredFields = ['repo_type'];
+// 模块信息-插件非必填项
+const nonRequiredFields = ['repo_type', 'source_dir'];
 
 export default {
   name: 'EditAddTemplateConfig',
@@ -273,6 +274,9 @@ export default {
     isDisplay() {
       return this.formData.is_display;
     },
+    defaultRenderMethod() {
+      return this.isPluginType ? 'cookiecutter' : 'django_template';
+    },
   },
   watch: {
     data: {
@@ -286,6 +290,11 @@ export default {
     'formData.is_display'(newVal) {
       if (!newVal) {
         this.$refs.defaultFormRef?.clearError();
+      }
+    },
+    'formData.type'() {
+      if (this.isAdd) {
+        this.formData.render_method = this.defaultRenderMethod;
       }
     },
   },

@@ -33,6 +33,9 @@
           >
             {{ row.is_display ? $t('是') : $t('否') }}
           </span>
+          <span v-else-if="column.prop === 'type'">
+            {{ templateTypeMap[row.type] }}
+          </span>
           <span v-else>{{ row[column.prop] || '--' }}</span>
         </template>
       </bk-table-column>
@@ -160,6 +163,7 @@ export default {
       curTemplateDetail: {},
       templateMetadata: {},
       filterValue: '',
+      templateTypeMap: {},
     };
   },
   computed: {
@@ -238,6 +242,10 @@ export default {
     async getTemplateMetadata() {
       try {
         const ret = await this.$store.dispatch('tenantConfig/getTemplateMetadata');
+        this.templateTypeMap = (ret.template_types || []).reduce((obj, item) => {
+          obj[item.name] = item.label;
+          return obj;
+        }, {});
         this.templateMetadata = ret;
       } catch (e) {
         this.catchErrorHandler(e);

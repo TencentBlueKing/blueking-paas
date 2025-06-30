@@ -62,19 +62,12 @@ export const BASE_INFO_FORM_CONFIG = [
     property: 'is_display',
     label: '是否展示',
     type: 'switcher',
-    desc: '隐藏该模板后，用户在创建应用时将无法看到它',
+    desc: '用户在创建应用/模块时仅能使用未隐藏的模板，但现有应用仍可下载已隐藏的模板。',
   },
 ];
 
 // 模板信息（插件模块）
 export const PLUGIN_FORM_CONFIG = [
-  {
-    property: 'repo_type',
-    label: '代码仓库类型',
-    type: 'select',
-    metadataKey: 'repo_types',
-    desc: '若需平台将模板代码初始化到应用代码仓库，请选择代码仓库类型',
-  },
   {
     property: 'repo_url',
     label: '代码仓库地址',
@@ -86,6 +79,12 @@ export const PLUGIN_FORM_CONFIG = [
     label: '代码目录',
     type: 'input',
     placeholder: '请输入代码所在目录，不填则为根目录',
+  },
+  {
+    property: 'repo_type',
+    label: '代码仓库类型',
+    type: 'select',
+    metadataKey: 'repo_types',
   },
 ];
 

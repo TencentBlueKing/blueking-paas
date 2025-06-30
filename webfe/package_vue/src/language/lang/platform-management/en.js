@@ -356,4 +356,10 @@ export default {
   确认删除代码库配置: 'Confirm deletion of repository configuration',
   请输入要删除的代码库的服务名称: 'Please enter the service name of the repository to be deleted',
   '删除后，应用将无法使用此类型的代码库，已使用该代码库的应用也无法部署。': 'After deletion, applications will not be able to use this type of repository, and applications that have used this repository will not be deployed.',
+  节点信息: 'Node Info',
+  查看同步记录: 'View Sync Records',
+  节点同步记录: 'Node Sync Records',
+  绑定应用: 'Bind App',
+  同步时间: 'Sync Time',
+  节点数: 'Number of Nodes',
 };

@@ -10,7 +10,7 @@
   >
     <div slot="header">
       <div class="header-box">
-        <span>{{ $t(isAdd ? '添加模板配置' : '修改模板配置') }}</span>
+        <span>{{ $t(isAdd ? '添加模版配置' : '修改模版配置') }}</span>
       </div>
     </div>
     <div
@@ -59,7 +59,7 @@
 
       <!-- 普通模块 -->
       <template v-if="!isPluginType">
-        <div class="form-sub-title mt-24">{{ $t('模板信息') }}</div>
+        <div class="form-sub-title mt-24">{{ $t('模版信息') }}</div>
         <bk-form
           :model="formData"
           ref="defaultFormRef"
@@ -80,7 +80,7 @@
 
       <!-- 插件模块 -->
       <template v-else>
-        <div class="form-sub-title mt-24">{{ $t('模板信息') }}</div>
+        <div class="form-sub-title mt-24">{{ $t('模版信息') }}</div>
         <bk-form
           :model="formData"
           ref="pluginFormRef"

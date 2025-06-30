@@ -79,7 +79,7 @@ export default [
   {
     groupId: 'config',
     name: 'templateConfig',
-    label: i18n.t('模板配置'),
+    label: i18n.t('模版配置'),
     iconfontName: 'mobanpeizhi',
     matchRouters: ['templateConfig'],
     destRoute: {

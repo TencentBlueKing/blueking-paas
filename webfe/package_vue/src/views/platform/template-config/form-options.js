@@ -4,7 +4,7 @@ import i18n from '@/language/i18n.js';
 export const BASE_INFO_FORM_CONFIG = [
   {
     property: 'name',
-    label: '模板名称',
+    label: '模版名称',
     type: 'input',
     placeholder: '只能由字符 [a-zA-Z0-9-_] 组成',
     rules: [
@@ -22,7 +22,7 @@ export const BASE_INFO_FORM_CONFIG = [
   },
   {
     property: 'type',
-    label: '模板类型',
+    label: '模版类型',
     type: 'select',
     metadataKey: 'template_types',
   },

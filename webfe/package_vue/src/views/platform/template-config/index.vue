@@ -7,7 +7,7 @@
         icon="plus"
         @click="handleShowRepository('add')"
       >
-        {{ $t('模板配置') }}
+        {{ $t('模版配置') }}
       </bk-button>
     </div>
     <bk-table
@@ -179,7 +179,7 @@ export default {
     columns() {
       return [
         {
-          label: '模板名称',
+          label: '模版名称',
           prop: 'name',
         },
         {
@@ -187,7 +187,7 @@ export default {
           prop: this.localLanguage === 'en' ? 'display_name_en' : 'display_name_zh_cn',
         },
         {
-          label: '模板类型',
+          label: '模版类型',
           prop: 'type',
           columnKey: 'type',
           filters: this.templateTypes,
@@ -226,7 +226,7 @@ export default {
     handleFilterChange(filds) {
       this.filterValue = filds.type?.[0] || '';
     },
-    // 获取模板配置列表
+    // 获取模版配置列表
     async getTemplates() {
       this.isTableLoading = true;
       try {
@@ -238,7 +238,7 @@ export default {
         this.isTableLoading = false;
       }
     },
-    // 获取模板配置元数据
+    // 获取模版配置元数据
     async getTemplateMetadata() {
       try {
         const ret = await this.$store.dispatch('tenantConfig/getTemplateMetadata');
@@ -251,7 +251,7 @@ export default {
         this.catchErrorHandler(e);
       }
     },
-    // 获取模板配置详情
+    // 获取模版配置详情
     async getTemplateDetail(templateId) {
       this.detailSideConfig.loading = true;
       try {

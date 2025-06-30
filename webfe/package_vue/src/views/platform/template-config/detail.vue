@@ -56,8 +56,8 @@ export default {
     return {
       jsonProps: ['preset_services_config', 'required_buildpacks', 'processes'],
       baseInfo: {
-        name: '模板名称',
-        type: '模板类型',
+        name: '模版名称',
+        type: '模版类型',
         render_method: '渲染方式',
         display_name_zh_cn: '展示名称（中）',
         display_name_en: '展示名称（英）',

@@ -15,10 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import calendar
 import copy
-import datetime
-import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 from uuid import UUID
@@ -35,15 +32,13 @@ from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.kres_entities import Instance, Process
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.infras.resources.kube_res.base import WatchEvent
+from paas_wl.utils.text import rfc3339nano_to_unix_timestamp
 from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paas_wl.workloads.networking.ingress.utils import get_service_dns_name
 from paasng.platform.engine.constants import JobStatus, RuntimeType
 from paasng.platform.engine.models import Deployment, OfflineOperation
 from paasng.platform.sourcectl.models import VersionInfo
-
-# RFC3339Nano regex pattern
-RFC3339_NANO_REGEX = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d{9})([Zz]|[+-]\d{2}:\d{2})$")
 
 
 class HumanizeDateTimeField(serializers.DateTimeField):
@@ -449,39 +444,8 @@ class InstanceLogStreamInputSLZ(serializers.Serializer):
     def validate_since_time(self, value) -> Optional[int]:
         """
         Convert RFC3339Nano format to Unix timestamp in nanoseconds.
-
-        :param value: RFC3339Nano formatted string
         """
         try:
             return rfc3339nano_to_unix_timestamp(value)
-        except ValidationError as e:
-            raise serializers.ValidationError(_("Invalid since_time format: {error}").format(error=str(e)))
-
-
-def rfc3339nano_to_unix_timestamp(value: str) -> int:
-    """Convert RFC3339Nano format to Unix timestamp in nanoseconds"""
-
-    match = RFC3339_NANO_REGEX.match(value)
-    if not match:
-        raise ValidationError(_("Invalid RFC3339Nano format"))
-
-    base_time_str = match.group(1)
-    fraction_str = match.group(2)
-    tz_str = match.group(3)
-
-    # 解析时间和时区
-    dt = datetime.datetime.strptime(base_time_str, "%Y-%m-%dT%H:%M:%S")
-    if tz_str.upper() != "Z":
-        # parse the timezone offset
-        sign = -1 if tz_str.startswith("-") else 1
-        hour_str, minute_str = tz_str[1:].split(":")
-        hours, minutes = int(hour_str), int(minute_str)
-        tz_offset = datetime.timedelta(hours=hours, minutes=minutes)
-        dt = dt - sign * tz_offset
-    timestamp_seconds = calendar.timegm(dt.timetuple())
-
-    # 解析纳秒部分
-    nano_str = fraction_str[1:]
-    nanoseconds = int(nano_str)
-
-    return timestamp_seconds * 1_000_000_000 + nanoseconds
+        except ValueError as e:
+            raise serializers.ValidationError("Invalid since_time format: {error}").format(error=str(e))

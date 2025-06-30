@@ -57,12 +57,12 @@ from paas_wl.bk_app.processes.serializers import (
     UpdateProcessSLZ,
     WatchEventSLZ,
     WatchProcessesQuerySLZ,
-    rfc3339nano_to_unix_timestamp,
 )
 from paas_wl.bk_app.processes.watch import ProcInstByEnvListWatcher, ProcInstByModuleEnvListWatcher, WatchEvent
 from paas_wl.infras.resources.base.kres import KDeployment, KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.utils.error_codes import error_codes
+from paas_wl.utils.text import rfc3339nano_to_unix_timestamp
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported

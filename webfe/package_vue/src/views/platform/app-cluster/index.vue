@@ -1,5 +1,8 @@
 <template>
-  <div class="right-main platform-cluster">
+  <div
+    class="right-main platform-cluster"
+    :style="{ height: computedHeight }"
+  >
     <Config v-if="tabActive === 'config'" />
     <List v-else />
   </div>
@@ -9,7 +12,7 @@
 import Config from './config.vue';
 import List from './list.vue';
 export default {
-  name: 'PlatformOverview',
+  name: 'PlatformCluster',
   props: {
     tabActive: {
       type: String,
@@ -19,6 +22,14 @@ export default {
   components: {
     Config,
     List,
+  },
+  computed: {
+    isDetail() {
+      return Boolean(this.$route.query?.type);
+    },
+    computedHeight() {
+      return this.tabActive !== 'config' && this.isDetail ? '100%' : 'auto';
+    },
   },
   beforeRouteEnter(to, from, next) {
     if (!to.query.active) {

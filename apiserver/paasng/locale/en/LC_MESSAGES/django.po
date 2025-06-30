@@ -3922,8 +3922,8 @@ msgid "普通应用"
 msgstr "Normal Application"
 
 #: paasng/platform/templates/constants.py:26
-msgid "插件模板"
-msgstr "Plugin Template"
+msgid "插件应用"
+msgstr "Plugin Application"
 
 #: paasng/platform/templates/models.py:38
 msgid "模板类型"

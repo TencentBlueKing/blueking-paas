@@ -117,19 +117,10 @@
         <template slot-scope="{ row }">
           <span
             class="nodes"
-            v-bk-tooltips="{
-              content: row.nodes.join(),
-              html: row.nodes.join('<br/>'),
-              allowHTML: true,
-            }"
+            @click="toNodeDetail(row)"
           >
             {{ row.nodes.length }}
           </span>
-          <i
-            v-if="row.nodes.length"
-            class="paasng-icon paasng-general-copy"
-            v-copy="row.nodes.join('\n')"
-          ></i>
         </template>
       </bk-table-column>
       <bk-table-column
@@ -418,6 +409,11 @@ export default {
         },
       });
     },
+    // 详情-节点
+    toNodeDetail(row) {
+      this.$emit('toggle', { flag: true, name: row.name });
+      this.$store.commit('tenant/updatedDtailTabActive', 'DetailNodeInfo');
+    },
   },
 };
 </script>
@@ -439,9 +435,6 @@ export default {
   }
   .nodes {
     padding: 0 5px;
-  }
-  .paasng-general-copy {
-    display: none;
     color: #3a84ff;
     cursor: pointer;
   }

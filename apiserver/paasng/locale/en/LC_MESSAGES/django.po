@@ -213,8 +213,8 @@ msgid "查看镜像 Tag"
 msgstr "View image Tag"
 
 #: paas_wl/bk_app/cnative/specs/views.py:166
-msgid "请手动输入，例如： latest"
-msgstr "Please enter manually, for example: latest"
+msgid "拉取镜像 Tag 失败，请手动输入，例如： latest"
+msgstr "Failed to list tag from image repository, please enter manually, for example: latest"
 
 #: paas_wl/bk_app/cnative/specs/views.py:223
 #: paas_wl/bk_app/cnative/specs/views.py:282

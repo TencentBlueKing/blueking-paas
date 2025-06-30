@@ -27,7 +27,7 @@ from paasng.accessories.publish.market.models import Product
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.infras.iam.helpers import fetch_user_roles
-from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import DeployConditions, RuntimeType
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -112,7 +112,11 @@ class ImageRepositoryCondition(DeployCondition):
 
     def validate(self):
         module: Module = self.env.module
-        if ModuleSpecs(module).runtime_type != RuntimeType.CUSTOM_IMAGE:
+        application = module.application
+        if (
+            application.type == ApplicationType.CLOUD_NATIVE
+            and ModuleSpecs(module).runtime_type != RuntimeType.CUSTOM_IMAGE
+        ):
             return
 
         # 获取并检查镜像仓库配置
@@ -125,14 +129,14 @@ class ImageRepositoryCondition(DeployCondition):
         parsed = parse_image(build_config.image_repository)
 
         # 尝试作为公共镜像访问（不带凭证）
-        registry_controller = DockerRegistryController(
+        public_registry_ctl = DockerRegistryController(
             endpoint=parsed.domain,
             repo=parsed.name,
         )
 
         try:
             # 尝试列出版本，不关注具体版本信息
-            registry_controller.list_alternative_versions()
+            public_registry_ctl.list_alternative_versions()
         except PermissionDeny:
             # 需要权限验证，继续后续流程
             pass
@@ -145,16 +149,16 @@ class ImageRepositoryCondition(DeployCondition):
             return  # 成功访问公共镜像仓库，直接返回
 
         # 获取并验证镜像凭证
-        credential_refs = build_config.image_credential_name
+        credential_name = build_config.image_credential_name
         try:
-            credential = AppUserCredential.objects.get(application_id=module.application_id, name=credential_refs)
+            credential = AppUserCredential.objects.get(application_id=module.application_id, name=credential_name)
         except AppUserCredential.DoesNotExist as e:
             message = _("镜像凭证不存在或已被删除，请先配置镜像凭证")
             action = DeployConditions.CHECK_IMAGE_REPOSITORY.value
             raise ConditionNotMatched(message, action) from e
 
         # 使用凭证验证私有镜像仓库访问权限
-        registry_controller = DockerRegistryController(
+        private_registry_ctl = DockerRegistryController(
             endpoint=parsed.domain,
             repo=parsed.name,
             username=credential.username,
@@ -163,7 +167,7 @@ class ImageRepositoryCondition(DeployCondition):
 
         try:
             # 尝试列出版本, 成功就表示凭证校验通过
-            registry_controller.list_alternative_versions()
+            private_registry_ctl.list_alternative_versions()
         except AuthFailed as e:
             message = _("私有镜像凭证校验失败，请检查凭证是否正确")
             action = DeployConditions.CHECK_IMAGE_REPOSITORY.value

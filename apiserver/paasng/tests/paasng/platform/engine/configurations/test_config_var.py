@@ -145,6 +145,23 @@ class TestGetEnvVariables:
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
+class TestUserVarsConflictsWithBuiltIn:
+    """测试当用户自定义的环境变量与系统内置的环境变量冲突时，行为是否符合预期。"""
+
+    def test_should_overwrite_builtin_vars(self, bk_module, bk_stag_env):
+        """用户定义的环境变量应当覆盖内置的环境变量。
+
+        - 仅覆盖普通应用的逻辑，因为只有普通应用才会不带参数调用 get_env_variables() 来获得带 ConfigVar 的结果。
+        - 云原生应用采用其他方式合并环境变量，并且是以内置变量最为优先（见 `test_builtin_env_has_high_priority()`），
+          两类应用的这个行为差异主要是历史原因造成，因为调整会影响存量应用行为，所以暂无修复计划。
+        """
+        ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="BK_API_URL_TMPL", value="(new_value)")
+
+        env_vars = get_env_variables(bk_stag_env)
+        assert env_vars["BK_API_URL_TMPL"] == "(new_value)"
+
+
+@pytest.mark.usefixtures("_with_wl_apps")
 class TestBuiltInEnvVars:
     @pytest.mark.parametrize(("provide_env_vars_platform", "contain_bk_envs"), [(True, True), (False, True)])
     def test_bk_platform_envs(self, bk_app, provide_env_vars_platform, contain_bk_envs):

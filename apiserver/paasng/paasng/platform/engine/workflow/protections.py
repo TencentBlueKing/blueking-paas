@@ -114,7 +114,9 @@ class ImageRepositoryCondition(DeployCondition):
         module: Module = self.env.module
         application = module.application
         build_config = BuildConfig.objects.get_or_create_by_module(module=module)
-        if application.type == ApplicationType.CLOUD_NATIVE and build_config.build_method == RuntimeType.CUSTOM_IMAGE:
+        if not (
+            application.type == ApplicationType.CLOUD_NATIVE and build_config.build_method == RuntimeType.CUSTOM_IMAGE
+        ):
             return
 
         # 获取并检查镜像仓库配置

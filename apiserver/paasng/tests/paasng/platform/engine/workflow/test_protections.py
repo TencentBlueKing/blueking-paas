@@ -116,20 +116,21 @@ class TestImageRepositoryCondition:
             "expected_result",
         ),
         [
-            # 自定义镜像类型且是云原生应用 - 直接通过
-            (ApplicationType.CLOUD_NATIVE, RuntimeType.CUSTOM_IMAGE, False, None, False, None, True),
-            # 未配置镜像仓库 - 失败
-            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, False, None, False, None, False),
-            # 公共镜像仓库访问成功 - 通过
-            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, True, "public_success", False, None, True),
-            # 需要权限但私有凭证访问成功 - 通过
-            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, True, "private_success", True, True, True),
-            # 镜像仓库地址无效 - 失败
-            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, True, "invalid_repo", False, None, False),
-            # 凭证不存在 - 失败
-            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, True, "private_required", False, None, False),
-            # 凭证验证失败 - 失败
-            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, True, "private_required", True, False, False),
+            # 只有 CLOUD_NATIVE 和 CUSTOM_IMAGE 类型的应用需要验证镜像仓库
+            ## 应用是云原生应用但不是自定义镜像类型 - 直接通过
+            (ApplicationType.CLOUD_NATIVE, RuntimeType.BUILDPACK, False, None, False, None, True),
+            ## 未配置镜像仓库 - 失败
+            (ApplicationType.CLOUD_NATIVE, RuntimeType.CUSTOM_IMAGE, False, None, False, None, False),
+            ## 公共镜像仓库访问成功 - 通过
+            (ApplicationType.CLOUD_NATIVE, RuntimeType.CUSTOM_IMAGE, True, "public_success", False, None, True),
+            ## 需要权限但私有凭证访问成功 - 通过
+            (ApplicationType.CLOUD_NATIVE, RuntimeType.CUSTOM_IMAGE, True, "private_success", True, True, True),
+            ## 镜像仓库地址无效 - 失败
+            (ApplicationType.CLOUD_NATIVE, RuntimeType.CUSTOM_IMAGE, True, "invalid_repo", False, None, False),
+            ## 凭证不存在 - 失败
+            (ApplicationType.CLOUD_NATIVE, RuntimeType.CUSTOM_IMAGE, True, "private_required", False, None, False),
+            ## 凭证验证失败 - 失败
+            (ApplicationType.CLOUD_NATIVE, RuntimeType.CUSTOM_IMAGE, True, "private_required", True, False, False),
         ],
     )
     def test_validate(

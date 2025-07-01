@@ -296,9 +296,10 @@ class TestApplicationDetailView:
     def test_update_app_category(self, bk_app, plat_mgt_api_client):
         """测试更新应用分类"""
 
-        # 获取 Tag 数据库中默认分类的 id 和 name
-        category = Tag.objects.get_default_tag()
-        category_id, category_name = category.id, category.name
+        # 创建一个分类用于测试
+        category_name = "test_category"
+        tag = Tag.objects.create(name=category_name)
+        category_id = tag.pk
 
         url = reverse("plat_mgt.applications.update_app_category", kwargs={"app_code": bk_app.code})
         data = {"category": category_id}

@@ -94,7 +94,7 @@ class ApplicationListFilterInputSLZ(serializers.Serializer):
     )
     order_by = StringArrayField(required=False, help_text="排序字段")
 
-    def validate_order_by(self, fields: List[str]) -> list:
+    def validate_order_by(self, fields: List[str]) -> List[str]:
         """校验排序字段"""
         for field in fields:
             f = OrderByField.from_string(field)

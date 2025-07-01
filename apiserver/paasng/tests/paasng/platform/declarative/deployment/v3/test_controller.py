@@ -23,6 +23,7 @@ from django_dynamic_fixture import G
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.entities import Component
 from paasng.platform.bkapp_model.entities import DomainResolution as DomainResolutionEntity
 from paasng.platform.bkapp_model.entities.hooks import HookCmd, Hooks
 from paasng.platform.bkapp_model.entities.svc_discovery import SvcDiscEntryBkSaaS
@@ -76,6 +77,14 @@ class TestProcessesField:
                             '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"',
                         ],
                         "replicas": 1,
+                        "components": [
+                            {"type": "cl5", "version": "v2"},
+                            {
+                                "type": "env_cover",
+                                "version": "v1",
+                                "properties": {"envs": [{"procName": "FOO", "value": "1"}]},
+                            },
+                        ],
                     }
                 ]
             },
@@ -93,6 +102,10 @@ class TestProcessesField:
             bk_deployment.declarative_config.spec.processes[0].get_proc_command()
             == 'bash -c \'"$(eval echo \\"$0\\")" "$(eval echo \\"${1}\\")" "$(eval echo \\"${2}\\")" "$(eval echo \\"${3}\\")" "$(eval echo \\"${4}\\")" "$(eval echo \\"${5}\\")" "$(eval echo \\"${6}\\")" "$(eval echo \\"${7}\\")" "$(eval echo \\"${8}\\")" "$(eval echo \\"${9}\\")" "$(eval echo \\"${10}\\")" "$(eval echo \\"${11}\\")"\' gunicorn wsgi -w 4 -b \'[::]:${PORT:-5000}\' --access-logfile - --error-logfile - --access-logformat \'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
         )
+        assert web.components == [
+            Component(type="cl5", version="v2"),
+            Component(type="env_cover", version="v1", properties={"envs": [{"procName": "FOO", "value": "1"}]}),
+        ]
 
 
 class TestEnvVariablesField:

@@ -21,6 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.utils.camel_converter import camel_to_snake_case
 from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
     ImagePullPolicy,
@@ -226,6 +227,21 @@ class ProcServiceInputSLZ(serializers.Serializer):
         return value
 
 
+class ComponentInputSLZ(serializers.Serializer):
+    type = serializers.CharField(help_text="组件类型", max_length=32)
+    version = serializers.CharField(help_text="组件版本", max_length=32)
+    properties = serializers.DictField(help_text="组件参数", required=False)
+
+    def to_internal_value(self, data):
+        internal_value = super().to_internal_value(data)
+        # 检查是否存在properties字段
+        if "properties" in data:
+            # 转换properties中的键名
+            data["properties"] = camel_to_snake_case(internal_value["properties"])
+
+        return internal_value
+
+
 class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
@@ -248,6 +264,7 @@ class ProcessInputSLZ(serializers.Serializer):
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=NOTSET)
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
     services = serializers.ListField(child=ProcServiceInputSLZ(), allow_null=True, default=None)
+    components = serializers.ListField(child=ComponentInputSLZ(), allow_null=True, default=None)
 
 
 class HooksInputSLZ(serializers.Serializer):

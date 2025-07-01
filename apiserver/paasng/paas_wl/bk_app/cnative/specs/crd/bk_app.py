@@ -145,6 +145,20 @@ class ProcService(BaseModel):
     port: int | None = None
 
 
+class ProcComponent(BaseModel):
+    """
+    Process component model
+
+    :param type: The type of the component
+    :param version: The version of the component
+    :param properties: A dictionary of component properties
+    """
+
+    type: str
+    version: str
+    properties: Dict[str, Any] = {}
+
+
 class BkAppProcess(BaseModel):
     """Process resource"""
 
@@ -159,6 +173,7 @@ class BkAppProcess(BaseModel):
     autoscaling: AutoscalingSpec | None = None
     probes: ProbeSet | None = None
     services: List[ProcService] | None = None
+    components: List[ProcComponent] | None = None
 
 
 class Hook(BaseModel):

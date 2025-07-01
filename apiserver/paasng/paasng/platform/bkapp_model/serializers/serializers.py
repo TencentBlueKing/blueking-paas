@@ -168,6 +168,14 @@ class MonitoringSLZ(serializers.Serializer):
     metric = MetricSLZ(help_text="metric 配置", required=False, allow_null=True)
 
 
+class ComponentSLZ(serializers.Serializer):
+    """组件配置"""
+
+    type = serializers.CharField(help_text="组件类型")
+    version = serializers.CharField(help_text="组件版本")
+    properties = serializers.DictField(help_text="组件属性", required=False, allow_null=True)
+
+
 class ModuleProcessSpecSLZ(serializers.Serializer):
     """进程配置"""
 
@@ -192,6 +200,9 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
     probes = ProbeSetSLZ(help_text="容器探针配置", required=False, allow_null=True)
     monitoring = MonitoringSLZ(help_text="可观测性监控配置", required=False, allow_null=True)
+    components = serializers.ListSerializer(
+        child=ComponentSLZ(), help_text="进程组件列表", allow_null=True, required=False
+    )
 
     def validate_services(self, value):
         """check whether name, target_port or port are duplicated"""

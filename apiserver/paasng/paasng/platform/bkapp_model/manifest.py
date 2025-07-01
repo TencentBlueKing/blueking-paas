@@ -205,6 +205,15 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 autoscaling=process_spec.scaling_config,
                 probes=process_spec.probes.render_port() if process_spec.probes else None,
                 services=([svc.render_port() for svc in process_spec.services] if process_spec.services else None),
+                # 渲染默认参数 processName
+                components=(
+                    [
+                        component.render_default_properties({"process_name": process_spec.name})
+                        for component in process_spec.components
+                    ]
+                    if process_spec.components
+                    else None
+                ),
             )
             processes.append(crd.BkAppProcess(**dict_to_camel(process_entity.dict())))
 

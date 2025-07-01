@@ -51,10 +51,12 @@
           :property="item.property"
           :rules="item.rules"
           :key="item.label"
+          :desc="$t(item.desc)"
         >
           <bk-input
-            v-model="formData[item.property]"
             v-if="item.type === 'input'"
+            v-model="formData[item.property]"
+            :placeholder="$t(item.placeholder)"
           ></bk-input>
           <bk-select
             v-else-if="item.type === 'select'"
@@ -105,6 +107,7 @@
           :property="item.property"
           :rules="item.rules"
           :key="item.label"
+          :desc="$t(item.desc)"
         >
           <bk-input
             v-model="formData[item.property]"
@@ -133,6 +136,7 @@
         <bk-form-item
           :label="$t('绑定信息（中）')"
           :property="'display_info_zh_cn'"
+          :desc="$t('若填写该项则必须包含字段：name，description')"
         >
           <div class="editor-wrapper">
             <JsonEditorVue
@@ -148,6 +152,7 @@
         <bk-form-item
           :label="$t('绑定信息（英）')"
           :property="'display_info_en'"
+          :desc="$t('若填写该项则必须包含字段：name，description')"
         >
           <div class="editor-wrapper">
             <JsonEditorVue
@@ -197,6 +202,19 @@ const BASE_INFO_FORM_CONFIG = [
     property: 'name',
     label: '服务名称',
     type: 'input',
+    placeholder: '只能由字符 [a-zA-Z0-9-_] 组成',
+    rules: [
+      {
+        required: true,
+        message: i18n.t('必填项'),
+        trigger: 'blur',
+      },
+      {
+        regex: /^[a-zA-Z0-9\-_]+$/,
+        message: i18n.t('以英文字母、数字或下划线(_)组成'),
+        trigger: 'blur',
+      },
+    ],
   },
   {
     property: 'label_zh_cn',
@@ -212,6 +230,7 @@ const BASE_INFO_FORM_CONFIG = [
     property: 'enabled',
     label: '是否默认开放',
     type: 'switcher',
+    desc: '关闭后，用户将无法创建与该源码类型仓库关联的新应用，可以通过 “用户特性” 为特定用户单独开启此功能。',
   },
   {
     property: 'spec_cls',
@@ -232,12 +251,14 @@ const OAUTH_FORM_CONFIG = [
     label: 'OAuth 信息（中）',
     type: 'json',
     ref: 'zhCnEditor',
+    desc: '可用字段：icon，display_name，address，description，auth_docs',
   },
   {
     property: 'oauth_display_info_en',
     label: 'OAuth 信息（英）',
     type: 'json',
     ref: 'enEditor',
+    desc: '可用字段：icon，display_name，address，description，auth_docs',
   },
 ];
 
@@ -305,7 +326,7 @@ export default {
         BASE_INFO_FORM_CONFIG.map((item) => ({
           ...item,
           required: true,
-          rules: [{ ...requiredRule }],
+          rules: item.rules ? item.rules : [{ ...requiredRule }],
         }))
       ),
       defaultConfig: {},

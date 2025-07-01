@@ -78,6 +78,17 @@ export default [
   },
   {
     groupId: 'config',
+    name: 'templateConfig',
+    label: i18n.t('模版配置'),
+    iconfontName: 'mobanpeizhi',
+    matchRouters: ['templateConfig'],
+    destRoute: {
+      name: 'templateConfig',
+    },
+    sublist: [],
+  },
+  {
+    groupId: 'config',
     name: 'builtInEnvVariable',
     label: i18n.t('内置环境变量'),
     iconfontName: 'variable',
@@ -102,7 +113,7 @@ export default [
     groupId: 'user',
     name: 'platformOperationAudit',
     label: i18n.t('操作审计'),
-    iconfontName: 'caozuojilu',
+    iconfontName: 'caozuoshenji',
     matchRouters: ['platformOperationAudit'],
     destRoute: {
       name: 'platformOperationAudit',

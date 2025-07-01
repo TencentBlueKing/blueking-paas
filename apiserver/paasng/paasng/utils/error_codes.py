@@ -50,6 +50,7 @@ class ErrorCodes:
     CANNOT_INIT_APP_TEMPLATE = ErrorCode(_("初始化应用源码模板失败"))
     CANNOT_DELETE_APP = ErrorCode(_("应用删除失败"))
     APP_RES_PROTECTED = ErrorCode(_("访问受保护资源失败"))
+    CANNOT_HARD_DELETE_APP = ErrorCode(_("无法彻底删除软删除的应用"))
     # 模块
     CANNOT_CREATE_MODULE = ErrorCode(_("模块创建失败"))
     CANNOT_SET_DEFAULT = ErrorCode(_("设置默认访问模块失败"))
@@ -165,6 +166,7 @@ class ErrorCodes:
     # 应用模板相关
     NORMAL_TMPL_NOT_FOUND = ErrorCode(_("指定的应用模板不存在或不可用"))
     UNKNOWN_TEMPLATE = ErrorCode(_("无效的应用模板"))
+    CANNOT_CREATE_TMPL = ErrorCode(_("创建应用模板失败"))
 
     # lesscode app 相关
     CREATE_LESSCODE_APP_ERROR = ErrorCode(_("创建蓝鲸运维开发平台应用错误"))

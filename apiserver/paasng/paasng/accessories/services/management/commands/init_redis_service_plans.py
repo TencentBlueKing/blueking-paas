@@ -35,11 +35,11 @@ class Command(BaseCommand):
                 plan, created = Plan.objects.get_or_create(
                     service=svc,
                     name=config["name"],
+                    tenant_id=tenant_id,
                     defaults={
                         "config": json.dumps({"specifications": {"type": config["spec_type"]}}),
                         "is_active": True,
                         "description": config["description"],
-                        "tenant_id": tenant_id,
                     },
                 )
                 if created:

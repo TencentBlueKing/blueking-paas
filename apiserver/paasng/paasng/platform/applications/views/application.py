@@ -88,7 +88,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         # Get applications by given params
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=params["include_inactive"],
+            is_active=params.get("is_active"),
             languages=params.get("language"),
             regions=params.get("region"),
             search_term=params.get("search_term"),
@@ -99,15 +99,15 @@ class ApplicationListViewSet(viewsets.ViewSet):
             app_tenant_mode=params.get("app_tenant_mode"),
         )
 
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.filter(is_plugin_app=False)
+
         # 查询我创建的应用时，也需要返回总的应用数量给前端
         all_app_count = applications.count()
         # 仅查询我创建的应用
         if params.get("exclude_collaborated") is True:
             applications = applications.filter(owner=request.user.pk)
-
-        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
-        if not settings.DISPLAY_BK_PLUGIN_APPS:
-            applications = applications.filter(is_plugin_app=False)
 
         paginator = ApplicationListPagination()
         # 如果将用户标记的应用排在前面，需要特殊处理一下
@@ -165,7 +165,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         applications = UserApplicationFilter(request.user).filter(
             order_by=["name"],
-            include_inactive=params["include_inactive"],
+            is_active=params.get("is_active"),
             source_origin=params.get("source_origin", None),
         )
 
@@ -194,7 +194,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
         keyword = params.get("keyword")
         # Get applications which contains keywords
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=params["include_inactive"], order_by=["name"], search_term=keyword
+            is_active=params.get("is_active"), order_by=["name"], search_term=keyword
         )
 
         # get marked application ids
@@ -341,7 +341,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
         reports = AppOperationReport.objects.filter(app__code__in=app_codes)
 
         issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))
-        total = UserApplicationFilter(request.user).filter(include_inactive=True).count()
+        total = UserApplicationFilter(request.user).filter().count()
 
         data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": total}
 

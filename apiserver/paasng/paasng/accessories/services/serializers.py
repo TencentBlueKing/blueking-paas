@@ -23,7 +23,7 @@ from paasng.accessories.services.models import PreCreatedInstance, Service
 class PlanSlugField(serializers.SlugRelatedField):
     def get_queryset(self):
         svc: Service = self.context["service"]
-        return svc.plan_set.all()
+        return svc.plan_set.filter(tenant_id=self.context["tenant_id"])
 
 
 class PreCreatedInstanceImportSLZ(serializers.ModelSerializer):

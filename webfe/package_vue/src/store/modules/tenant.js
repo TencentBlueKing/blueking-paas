@@ -28,6 +28,7 @@ export default {
     curTenantData: {},
     clustersStatus: {},
     detailActiveName: '',
+    detailTabActive: '',
   },
   mutations: {
     updateAvailableClusters(state, data) {
@@ -45,6 +46,9 @@ export default {
     updateDetailActiveName(state, data) {
       state.detailActiveName = data;
     },
+    updatedDtailTabActive(state, data) {
+      state.detailTabActive = data;
+    }
   },
   actions: {
     /**
@@ -126,9 +130,13 @@ export default {
     /**
      * 获取集群状态
      */
-    getClustersStatus({}, { clusterName }) {
+    getClustersStatus({ state }, { clusterName }) {
+      // 检查缓存
+      if (state.clustersStatusCache?.[clusterName]) {
+        return Promise.resolve(state.clustersStatusCache[clusterName]);
+      }
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/status/`;
-      return http.get(url);
+      return http.get(url, {}, { cancelWhenRouteChange: true, fromCache: true });
     },
     /**
      * 同步节点
@@ -136,6 +144,20 @@ export default {
     syncNodes({}, { clusterName }) {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/operations/sync_nodes/`;
       return http.post(url);
+    },
+    /**
+     * 获取节点信息
+     */
+    getNodesState({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/nodes_state/`;
+      return http.get(url);
+    },
+    /**
+     * 获取节点同步记录
+     */
+    getNodesSyncRecords({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/nodes_sync_records/`;
+      return http.get(url);
     },
     /**
      * 删除集群

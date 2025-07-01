@@ -24,5 +24,6 @@ urlpatterns = [
     path("", include("paasng.plat_mgt.users.urls")),
     path("", include("paasng.plat_mgt.config_vars.urls")),
     path("", include("paasng.plat_mgt.audit.urls")),
+    path("", include("paasng.plat_mgt.templates.urls")),
     path("", include("paasng.plat_mgt.sourcectl.urls")),
 ]

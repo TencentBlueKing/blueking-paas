@@ -65,12 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     {% if perm.manage_app_templates %}
                     {
                         name: "应用配置管理",
-                        url: "{% url 'admin.configuration.tmpl.manage' %}",
+                        url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}",
                         children: [
-                            {
-                                name: "模板配置",
-                                url: "{% url 'admin.configuration.tmpl.manage' %}",
-                            },
                             {
                                 name: "插件分类配置",
                                 url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}"

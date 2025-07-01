@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 
-from typing import Optional
+from typing import List, Optional
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -35,7 +35,7 @@ from paasng.platform.applications.serializers.app import UpdateApplicationNameSL
 from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.utils.models import OrderByField
-from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
+from paasng.utils.serializers import HumanizeDateTimeField, StringArrayField, UserNameField
 
 # 应用列表序列化器
 
@@ -72,7 +72,7 @@ class ApplicationListOutputSLZ(serializers.Serializer):
 class ApplicationListFilterInputSLZ(serializers.Serializer):
     """应用列表过滤器序列化器"""
 
-    valid_order_by_fields = ("is_active", "created")
+    valid_order_by_fields = {"is_active", "created", "updated"}
 
     search = serializers.CharField(required=False, help_text="应用名称/ID 关键字搜索")
     name = serializers.CharField(required=False, help_text="应用名称")
@@ -92,14 +92,15 @@ class ApplicationListFilterInputSLZ(serializers.Serializer):
         allow_null=True,
         help_text="应用状态: true(正常) / false(下架), null 或不传表示不进行过滤",
     )
-    order_by = serializers.ListField(child=serializers.CharField(), default=["-created"], help_text="排序字段")
+    order_by = StringArrayField(required=False, help_text="排序字段")
 
-    def validate_order_by(self, fields) -> list:
+    def validate_order_by(self, fields: List[str]) -> List[str]:
         """校验排序字段"""
         for field in fields:
             f = OrderByField.from_string(field)
             if f.name not in self.valid_order_by_fields:
-                raise serializers.ValidationError(f"Invalid order_by field: {field}")
+                raise ValidationError(f"Invalid order_by field: {field}")
+
         return fields
 
 
@@ -218,7 +219,7 @@ class ApplicationNameUpdateInputSLZ(UpdateApplicationNameSLZ):
     """更新应用名称序列化器"""
 
 
-class UpdateClusterSLZ(serializers.Serializer):
+class UpdateApplicationBindClusterSLZ(serializers.Serializer):
     """更新应用集群序列化器"""
 
     name = serializers.CharField(required=True, help_text="集群名称")
@@ -239,3 +240,21 @@ class UpdateClusterSLZ(serializers.Serializer):
             raise ValidationError(_("现有的分配策略下未找到匹配的集群(集群名: {name})").format(name=name))
 
         return name
+
+
+class DeletedApplicationListOutputSLZ(serializers.Serializer):
+    """软删除应用序列化器"""
+
+    logo = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用 logo")
+    code = serializers.CharField(read_only=True, help_text="应用的唯一标识")
+    name = serializers.CharField(read_only=True, help_text="应用名称")
+    app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
+    app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
+    type = serializers.SerializerMethodField(read_only=True)
+    creator = UserNameField()
+    created_humanized = HumanizeDateTimeField(source="created")
+    tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
+    deleted_time = HumanizeDateTimeField(source="updated")
+
+    def get_type(self, instance: Application) -> str:
+        return ApplicationType.get_choice_label(instance.type)

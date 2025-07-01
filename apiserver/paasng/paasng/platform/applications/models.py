@@ -145,7 +145,7 @@ class BaseApplicationFilter:
     def filter_queryset(  # noqa: C901
         cls,
         queryset: QuerySet,
-        include_inactive=False,
+        is_active=None,
         regions=None,
         languages=None,
         search_term="",
@@ -171,8 +171,8 @@ class BaseApplicationFilter:
         if has_deployed is not None:
             # When application has been deployed, it's `last_deployed_date` will not be empty.
             queryset = queryset.filter(last_deployed_date__isnull=not has_deployed)
-        if not include_inactive:
-            queryset = queryset.only_active()
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active)
         if order_by:
             queryset = cls.process_order_by(order_by, queryset)
         if source_origin:
@@ -245,7 +245,7 @@ class UserApplicationFilter:
     def filter(
         self,
         exclude_collaborated=False,
-        include_inactive=False,
+        is_active=None,
         regions=None,
         languages=None,
         search_term="",
@@ -268,7 +268,7 @@ class UserApplicationFilter:
 
         return BaseApplicationFilter.filter_queryset(
             applications,
-            include_inactive=include_inactive,
+            is_active=is_active,
             regions=regions,
             languages=languages,
             search_term=search_term,
@@ -477,9 +477,13 @@ class Application(OwnerTimestampedModel):
         return default_url
 
     def delete(self, *args, **kwargs):
-        # 不会删除数据, 而是通过标记删除字段 is_deleted 来软删除
+        # 软删除时不会删除数据, 而是通过标记删除字段 is_deleted 来软删除
         self.is_deleted = True
-        self.save()
+        self.save(update_fields=["is_deleted", "updated"])
+
+    def hard_delete(self, *args, **kwargs):
+        # 硬删除时直接删除表中数据
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         return "{name}[{code}]".format(name=self.name, code=self.code)

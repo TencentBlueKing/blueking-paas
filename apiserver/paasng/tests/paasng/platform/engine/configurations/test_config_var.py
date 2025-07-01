@@ -31,9 +31,11 @@ from paasng.platform.engine.configurations.config_var import (
     generate_wl_builtin_env_vars,
     get_builtin_env_variables,
     get_env_variables,
+    get_user_conflicted_keys,
 )
-from paasng.platform.engine.constants import AppRunTimeBuiltinEnv
+from paasng.platform.engine.constants import AppEnvName, AppRunTimeBuiltinEnv
 from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
+from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.models.module import Module
 from tests.utils.helpers import override_region_configs
 
@@ -221,3 +223,16 @@ def test_generate_wl_builtin_env_vars(bk_stag_env):
     assert "BKPAAS_SUB_PATH" in env_vars
     assert env_vars["BKPAAS_PROCESS_TYPE"] == "{{bk_var_process_type}}"
     assert env_vars["BKPAAS_LOG_NAME_PREFIX"].endswith("-{{bk_var_process_type}}")
+
+
+@pytest.mark.usefixtures("_with_wl_apps")
+class Test__get_user_conflicted_keys:
+    def test_should_return_empty_by_default(self, bk_module):
+        assert get_user_conflicted_keys(bk_module) == []
+
+    def test_found_conflicts(self, bk_module, bk_stag_env):
+        # Test both `ConfigVar` and `PresetEnvVariable` models
+        for key in ["BK_COMPONENT_API_URL", "BK_API_URL_TMPL", "ANOTHER_NORMAL_VALUE"]:
+            ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key=key, value="")
+        PresetEnvVariable.objects.create(module=bk_module, environment_name=AppEnvName.STAG, key="PORT", value="")
+        assert get_user_conflicted_keys(bk_module) == ["BK_API_URL_TMPL", "BK_COMPONENT_API_URL", "PORT"]

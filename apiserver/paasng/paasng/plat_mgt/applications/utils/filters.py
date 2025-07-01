@@ -63,6 +63,11 @@ class ApplicationFilterBackend(BaseFilterBackend):
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active)
 
+        # 应用分类过滤
+        category = params.get("category")
+        if category is not None:
+            queryset = queryset.filter(extra_info__tag_id=category)
+
         # 处理排序
         if order_by := params.get("order_by"):
             queryset = queryset.order_by(*order_by)

@@ -31,7 +31,6 @@ from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.market.models import Product
 from paasng.accessories.publish.sync_market.managers import AppManger
-from paasng.core.core.storages.redisdb import DefaultRediStore
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
@@ -46,7 +45,6 @@ from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
 from paasng.plat_mgt.bk_plugins.views import is_plugin_instance_exist, is_user_plugin_admin
 from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application
-from paasng.platform.applications.tasks import cal_app_resource_quotas
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)
@@ -71,27 +69,9 @@ class ApplicationListViewSet(viewsets.GenericViewSet):
         filter_queryset = self.filter_queryset(queryset)
 
         page = self.paginate_queryset(filter_queryset)
-        app_resource_quotas = self.get_app_resource_quotas()
 
-        slz = slzs.ApplicationListOutputSLZ(
-            page,
-            many=True,
-            context={"app_resource_quotas": app_resource_quotas},
-        )
+        slz = slzs.ApplicationListOutputSLZ(page, many=True)
         return self.get_paginated_response(slz.data)
-
-    def get_app_resource_quotas(self) -> dict:
-        """获取应用资源配额信息，优先从 Redis 缓存获取，缺失时触发异步任务计算"""
-        # 尝试从 Redis 中获取资源配额
-        store = DefaultRediStore(rkey="quotas::app")
-        app_resource_quotas = store.get()
-
-        if not app_resource_quotas:
-            # 触发异步任务计算资源配额
-            # 计算完成后会将结果存入 Redis 中
-            cal_app_resource_quotas.delay()
-
-        return app_resource_quotas or {}
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
@@ -233,7 +213,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications"],
         operation_description="更新应用集群",
-        request_body=slzs.UpdateApplicationBindClusterSLZ(),
+        request_body=slzs.ApplicationBindClusterUpdateInputSLZ(),
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update_cluster(self, request, app_code, module_name, env_name):
@@ -243,7 +223,7 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         module = application.get_module(module_name)
         env = get_object_or_404(module.envs, environment=env_name)
 
-        slz = slzs.UpdateApplicationBindClusterSLZ(
+        slz = slzs.ApplicationBindClusterUpdateInputSLZ(
             data=request.data,
             context={"user": request.user, "environment": env.environment, "region": application.region},
         )

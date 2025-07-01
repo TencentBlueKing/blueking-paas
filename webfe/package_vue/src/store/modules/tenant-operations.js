@@ -48,6 +48,13 @@ export default {
       return http.get(url);
     },
     /**
+     * 应用列表-获取应用分类
+     */
+    getCategoryTypes() {
+      const url = `${BACKEND_URL}/api/market/tags`;
+      return http.get(url);
+    },
+    /**
      * 应用详情-获取应用详情数据
      */
     getAppDetails({}, { appCode }) {

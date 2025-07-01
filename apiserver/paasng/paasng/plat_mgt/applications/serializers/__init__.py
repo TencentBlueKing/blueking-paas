@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .application import (
+    ApplicationBindClusterUpdateInputSLZ,
     ApplicationDetailOutputSLZ,
     ApplicationListFilterInputSLZ,
     ApplicationListOutputSLZ,
@@ -24,7 +25,6 @@ from .application import (
     DeletedApplicationListOutputSLZ,
     TenantAppStatisticsOutputSLZ,
     TenantModeListOutputSLZ,
-    UpdateApplicationBindClusterSLZ,
 )
 from .feature import (
     ApplicationFeatureFlagListOutputSLZ,
@@ -42,15 +42,15 @@ from .services import (
 
 __all__ = [
     # application
+    "ApplicationBindClusterUpdateInputSLZ",
     "ApplicationDetailOutputSLZ",
     "ApplicationListFilterInputSLZ",
     "ApplicationListOutputSLZ",
     "ApplicationNameUpdateInputSLZ",
     "ApplicationTypeOutputSLZ",
+    "DeletedApplicationListOutputSLZ",
     "TenantAppStatisticsOutputSLZ",
     "TenantModeListOutputSLZ",
-    "UpdateApplicationBindClusterSLZ",
-    "DeletedApplicationListOutputSLZ",
     # feature
     "ApplicationFeatureFlagListOutputSLZ",
     "ApplicationFeatureFlagUpdateInputSLZ",

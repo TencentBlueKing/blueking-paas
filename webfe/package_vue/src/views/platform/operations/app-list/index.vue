@@ -317,6 +317,10 @@ export default {
         offset: limit * (current - 1),
         ...filteredData,
       };
+      // 已下架的应用永远排在最后
+      if (queryParams.order_by) {
+        queryParams.order_by = `-is_active,${queryParams.order_by}`
+      }
       if (this.searchValue) {
         queryParams.search = this.searchValue;
       }

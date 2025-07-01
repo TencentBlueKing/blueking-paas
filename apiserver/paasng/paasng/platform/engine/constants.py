@@ -135,7 +135,7 @@ class DeployConditions(ChoicesEnum):
         (CHECK_CI_GIT_TOKEN, _("当前用户未授权 CI 组件访问仓库的权限")),
         (FILL_PLUGIN_TAG_INFO, _("未设置插件分类")),
         (CHECK_IMAGE_REPOSITORY, _("未配置有效的镜像仓库地址")),
-        (CHECK_IMAGE_CREDENTIAL, _("私有镜像需要添加镜像凭证")),
+        (CHECK_IMAGE_CREDENTIAL, _("私有镜像需要有效的镜像凭证")),
         (FILL_EXTRA_INFO, _("未完善应用基本信息")),
     )
 

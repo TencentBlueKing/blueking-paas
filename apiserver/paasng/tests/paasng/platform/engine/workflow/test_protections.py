@@ -20,17 +20,20 @@ from unittest import mock
 import gitlab.exceptions
 import pytest
 from django_dynamic_fixture import G
+from moby_distribution.registry.exceptions import AuthFailed, PermissionDeny
 
+from paas_wl.workloads.images.models import AppUserCredential
 from paasng.accessories.publish.market.models import ApplicationExtraInfo, Product, Tag
 from paasng.bk_plugins.bk_plugins.models import BkPluginTag
 from paasng.core.core.protections.exceptions import ConditionNotMatched
 from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
 from paasng.infras.iam.helpers import add_role_members, remove_user_all_roles
-from paasng.platform.applications.constants import ApplicationRole, AvailabilityLevel
-from paasng.platform.engine.constants import DeployConditions
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType, AvailabilityLevel
+from paasng.platform.engine.constants import DeployConditions, RuntimeType
 from paasng.platform.engine.workflow.protections import (
     ApplicationExtraInfoCondition,
     EnvProtectionCondition,
+    ImageRepositoryCondition,
     ModuleEnvDeployInspector,
     PluginTagValidationCondition,
     ProductInfoCondition,
@@ -38,6 +41,7 @@ from paasng.platform.engine.workflow.protections import (
 )
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.models import EnvRoleProtection
+from paasng.platform.modules.models import BuildConfig
 from paasng.platform.sourcectl.models import GitProject
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
 
@@ -97,6 +101,138 @@ class TestPluginTagCondition:
                 PluginTagValidationCondition(bk_user, env).validate()
 
             assert exc_info.value.action_name == DeployConditions.FILL_PLUGIN_TAG_INFO.value
+
+
+@pytest.mark.django_db(databases=["default", "workloads"])
+class TestImageRepositoryCondition:
+    @pytest.mark.parametrize(
+        (
+            "app_type",
+            "runtime_type",
+            "set_image_repo",
+            "repo_access_result",
+            "set_credential",
+            "credential_valid",
+            "expected_result",
+        ),
+        [
+            # 自定义镜像类型且是云原生应用 - 直接通过
+            (ApplicationType.CLOUD_NATIVE, RuntimeType.CUSTOM_IMAGE, False, None, False, None, True),
+            # 未配置镜像仓库 - 失败
+            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, False, None, False, None, False),
+            # 公共镜像仓库访问成功 - 通过
+            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, True, "public_success", False, None, True),
+            # 需要权限但私有凭证访问成功 - 通过
+            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, True, "private_success", True, True, True),
+            # 镜像仓库地址无效 - 失败
+            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, True, "invalid_repo", False, None, False),
+            # 凭证不存在 - 失败
+            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, True, "private_required", False, None, False),
+            # 凭证验证失败 - 失败
+            (ApplicationType.DEFAULT, RuntimeType.CUSTOM_IMAGE, True, "private_required", True, False, False),
+        ],
+    )
+    def test_validate(
+        self,
+        bk_user,
+        bk_module,
+        mocker,
+        app_type,
+        runtime_type,
+        set_image_repo,
+        repo_access_result,
+        set_credential,
+        credential_valid,
+        expected_result,
+    ):
+        # 设置应用类型和运行时类型
+        build_config = self._setup_module_and_build_config(bk_module, app_type, runtime_type, mocker)
+        if set_image_repo:
+            build_config.image_repository = "registry.example.com/test/image:latest"
+
+            # 设置凭证名称
+            if set_credential:
+                credential_name = "test-credential"
+                build_config.image_credential_name = credential_name
+
+                # 创建凭证信息
+                if credential_valid:
+                    G(
+                        AppUserCredential,
+                        application_id=bk_module.application_id,
+                        name=credential_name,
+                        username="test_user",
+                        password="test_pass",
+                    )
+
+            build_config.save()
+
+        # 模拟 DockerRegistryController 行为
+        self._setup_docker_registry_mock(mocker, repo_access_result, credential_valid)
+
+        # 执行验证
+        env = bk_module.get_envs().first()
+        condition = ImageRepositoryCondition(bk_user, env)
+
+        if expected_result:
+            assert condition.validate() is None
+        else:
+            with pytest.raises(ConditionNotMatched) as exc_info:
+                condition.validate()
+
+            # 根据不同情况确定正确的 action_name
+            if not set_image_repo or repo_access_result == "invalid_repo":
+                expected_action = DeployConditions.CHECK_IMAGE_REPOSITORY.value
+            else:
+                expected_action = DeployConditions.CHECK_IMAGE_CREDENTIAL.value
+
+            assert exc_info.value.action_name == expected_action
+
+    def _setup_module_and_build_config(self, bk_module, app_type, runtime_type, mocker):
+        """设置应用类型和模块运行时类型"""
+        bk_module.application.type = app_type
+        bk_module.application.save()
+
+        module_specs_mock = mocker.patch("paasng.platform.modules.specs.ModuleSpecs")
+        module_specs_mock.return_value.runtime_type = runtime_type
+
+        build_config = BuildConfig.objects.get_or_create_by_module(module=bk_module)
+
+        build_config.build_method = runtime_type
+        build_config.save()
+
+        return build_config
+
+    def _setup_docker_registry_mock(self, mocker, repo_access_result, credential_valid):
+        """设置 DockerRegistryController 的模拟行为"""
+        mock = mocker.patch("paasng.platform.engine.workflow.protections.DockerRegistryController")
+        registry_instance = mock.return_value
+
+        if repo_access_result == "public_success":
+            registry_instance.list_alternative_versions.return_value = ["v1.0", "v2.0"]
+        elif repo_access_result == "invalid_repo":
+            registry_instance.list_alternative_versions.side_effect = Exception("invalid repository")
+        elif repo_access_result == "private_required":
+            # 私有镜像
+            def create_side_effect(credential_valid):
+                call_count = 0
+
+                def side_effect(*args, **kwargs):
+                    nonlocal call_count
+                    call_count += 1
+
+                    if call_count == 1:
+                        raise PermissionDeny("permission denied")
+                    elif credential_valid:
+                        return ["v1.0", "v2.0"]
+                    else:
+                        raise AuthFailed("auth failed")
+
+                return side_effect
+
+            registry_instance.list_alternative_versions.side_effect = create_side_effect(credential_valid)
+
+        return registry_instance
 
 
 class TestEnvProtectionCondition:

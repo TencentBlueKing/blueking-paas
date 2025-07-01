@@ -213,8 +213,8 @@ msgid "查看镜像 Tag"
 msgstr "View image Tag"
 
 #: paas_wl/bk_app/cnative/specs/views.py:166
-msgid "拉取镜像 Tag 失败，请手动输入，例如： latest"
-msgstr "Failed to list tag from image repository, please enter manually, for example: latest"
+msgid "拉取镜像 Tag 失败"
+msgstr "Failed to list tag from image repository"
 
 #: paas_wl/bk_app/cnative/specs/views.py:223
 #: paas_wl/bk_app/cnative/specs/views.py:282
@@ -3015,7 +3015,7 @@ msgstr "No valid access address set"
 
 #: paasng/platform/engine/constants.py:138
 msgid "私有镜像需要添加镜像凭证"
-msgstr "Private images need to add image credentials"
+msgstr "Private images need to add valid image credentials"
 
 #: paasng/platform/engine/constants.py:139
 #: paasng/platform/engine/workflow/protections.py:235

@@ -113,14 +113,11 @@ class ImageRepositoryCondition(DeployCondition):
     def validate(self):
         module: Module = self.env.module
         application = module.application
-        if (
-            application.type == ApplicationType.CLOUD_NATIVE
-            and ModuleSpecs(module).runtime_type != RuntimeType.CUSTOM_IMAGE
-        ):
+        build_config = BuildConfig.objects.get_or_create_by_module(module=module)
+        if application.type == ApplicationType.CLOUD_NATIVE and build_config.build_method == RuntimeType.CUSTOM_IMAGE:
             return
 
         # 获取并检查镜像仓库配置
-        build_config = BuildConfig.objects.get_or_create_by_module(module=module)
         if not build_config.image_repository:
             message = _("模块未配置镜像仓库信息，请先配置镜像仓库")
             action = DeployConditions.CHECK_IMAGE_REPOSITORY.value
@@ -154,7 +151,7 @@ class ImageRepositoryCondition(DeployCondition):
             credential = AppUserCredential.objects.get(application_id=module.application_id, name=credential_name)
         except AppUserCredential.DoesNotExist as e:
             message = _("镜像凭证不存在或已被删除，请先配置镜像凭证")
-            action = DeployConditions.CHECK_IMAGE_REPOSITORY.value
+            action = DeployConditions.CHECK_IMAGE_CREDENTIAL.value
             raise ConditionNotMatched(message, action) from e
 
         # 使用凭证验证私有镜像仓库访问权限
@@ -170,7 +167,7 @@ class ImageRepositoryCondition(DeployCondition):
             private_registry_ctl.list_alternative_versions()
         except AuthFailed as e:
             message = _("私有镜像凭证校验失败，请检查凭证是否正确")
-            action = DeployConditions.CHECK_IMAGE_REPOSITORY.value
+            action = DeployConditions.CHECK_IMAGE_CREDENTIAL.value
             raise ConditionNotMatched(message, action) from e
 
 

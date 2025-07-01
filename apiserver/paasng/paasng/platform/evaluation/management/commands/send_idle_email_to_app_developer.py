@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Collect application resource usage report
+"""Send idle email to application developers
 
 Examples:
 
@@ -71,7 +71,7 @@ class Command(BaseCommand):
 
         if async_run:
             send_idle_email_to_app_developers.delay(
-                app_codes, only_specified_users, exclude_specified_users, tenant_id
+                tenant_id, app_codes, only_specified_users, exclude_specified_users
             )
         else:
-            send_idle_email_to_app_developers(app_codes, only_specified_users, exclude_specified_users, tenant_id)
+            send_idle_email_to_app_developers(tenant_id, app_codes, only_specified_users, exclude_specified_users)

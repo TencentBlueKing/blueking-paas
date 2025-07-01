@@ -319,7 +319,9 @@ export default {
       };
       // 已下架的应用永远排在最后
       if (queryParams.order_by) {
-        queryParams.order_by = `-is_active,${queryParams.order_by}`
+        queryParams.order_by = `-is_active,${queryParams.order_by}`;
+      } else {
+        queryParams.order_by = '-is_active';
       }
       if (this.searchValue) {
         queryParams.search = this.searchValue;

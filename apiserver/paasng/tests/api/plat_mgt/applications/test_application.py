@@ -27,7 +27,7 @@ from paas_wl.bk_app.applications.models.app import WlApp
 from paas_wl.infras.cluster.constants import ClusterType
 from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
 from paasng.accessories.publish.market.constant import AppType
-from paasng.accessories.publish.market.models import Product
+from paasng.accessories.publish.market.models import ApplicationExtraInfo, Product, Tag
 from paasng.accessories.publish.sync_market.handlers import register_app_core_data
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
@@ -292,6 +292,22 @@ class TestApplicationDetailView:
             assert app_with_market_product.name_en == "new_name"
             product = Product.objects.get(code=app_with_market_product.code)
             assert product.name_en == app_with_market_product.name_en
+
+    def test_update_app_category(self, bk_app, plat_mgt_api_client):
+        """测试更新应用分类"""
+
+        # 获取 Tag 数据库中默认分类的 id 和 name
+        category = Tag.objects.get_default_tag()
+        category_id, category_name = category.id, category.name
+
+        url = reverse("plat_mgt.applications.update_app_category", kwargs={"app_code": bk_app.code})
+        data = {"category": category_id}
+        rsp = plat_mgt_api_client.post(url, data=json.dumps(data), content_type="application/json")
+        assert rsp.status_code == 204
+
+        # 验证应用分类是否更新成功
+        extra_info = ApplicationExtraInfo.objects.get(application=bk_app)
+        assert extra_info.tag.name == category_name
 
     def test_update_cluster(self, bk_app, plat_mgt_api_client, clusters):
         """测试更新应用集群"""

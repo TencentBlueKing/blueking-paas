@@ -62,6 +62,13 @@ export default {
       return http.get(url);
     },
     /**
+     * 应用详情-更新应用分类
+     */
+    updateAppCategory({}, { appCode, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/app_category/`;
+      return http.post(url, data);
+    },
+    /**
      * 应用详情-更新应用信息
      */
     updateAppInfo({}, { appCode, data }) {

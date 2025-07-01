@@ -17,6 +17,7 @@
 
 from .application import (
     ApplicationBindClusterUpdateInputSLZ,
+    ApplicationCategoryUpdateInputSLZ,
     ApplicationDetailOutputSLZ,
     ApplicationListFilterInputSLZ,
     ApplicationListOutputSLZ,
@@ -43,6 +44,7 @@ from .services import (
 __all__ = [
     # application
     "ApplicationBindClusterUpdateInputSLZ",
+    "ApplicationCategoryUpdateInputSLZ",
     "ApplicationDetailOutputSLZ",
     "ApplicationListFilterInputSLZ",
     "ApplicationListOutputSLZ",

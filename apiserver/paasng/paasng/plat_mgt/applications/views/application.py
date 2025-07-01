@@ -29,7 +29,7 @@ from rest_framework.response import Response
 
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
-from paasng.accessories.publish.market.models import Product
+from paasng.accessories.publish.market.models import ApplicationExtraInfo, Product, Tag
 from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.core.tenant.constants import AppTenantMode
@@ -43,7 +43,7 @@ from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
 from paasng.plat_mgt.bk_plugins.views import is_plugin_instance_exist, is_user_plugin_admin
-from paasng.platform.applications.constants import ApplicationRole, ApplicationType
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType, AvailabilityLevel
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
@@ -199,6 +199,52 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
                 "name_en": application.name_en,
             },
         )
+
+        add_plat_mgt_audit_record(
+            user=request.user.pk,
+            operation=OperationEnum.MODIFY_BASIC_INFO,
+            target=OperationTarget.APP,
+            app_code=application.code,
+            data_before=data_before,
+            data_after=data_after,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications"],
+        operation_description="更新应用分类",
+        request_body=slzs.ApplicationCategoryUpdateInputSLZ(),
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def update_app_category(self, request, app_code):
+        application = get_object_or_404(self.get_queryset(), code=app_code)
+
+        try:
+            extra_info = ApplicationExtraInfo.objects.get(application=application)
+            current_tag_name = extra_info.tag.name if extra_info and extra_info.tag else None
+        except ApplicationExtraInfo.DoesNotExist:
+            extra_info = None
+            current_tag_name = None
+
+        data_before = DataDetail(data={"category": current_tag_name})
+
+        slz = slzs.ApplicationCategoryUpdateInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+        category = data["category"]
+        tag = Tag.objects.get(pk=category)
+
+        # 更新应用分类
+        ApplicationExtraInfo.objects.update_or_create(
+            application=application,
+            defaults={
+                "availability_level": AvailabilityLevel.STANDARD.value,
+                "tag": tag,
+                "tenant_id": application.tenant_id,
+            },
+        )
+
+        data_after = DataDetail(data={"category": tag.name})
 
         add_plat_mgt_audit_record(
             user=request.user.pk,

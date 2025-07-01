@@ -849,68 +849,66 @@ export default {
       }
     },
 
+    /**
+     * 清理环境变量数据中的冗余字段
+     * @param {Object} data - 环境变量数据
+     * @param {Boolean} includeGlobal - 是否删除is_global字段
+     * @return {Object} 清理后的数据
+     */
+    cleanEnvVarData(data, includeGlobal = false) {
+      const cleanedData = { ...data };
+      const redundantFields = ['isEdit', 'isAdd', 'isPresent', 'conflictingService'];
+      if (includeGlobal) {
+        redundantFields.push('is_global');
+      }
+      redundantFields.forEach((field) => delete cleanedData[field]);
+      return cleanedData;
+    },
+
     // 新增加单个环境变量
     async createdEnvVariable(data, i) {
-      // 删除冗余数据
-      delete data.isEdit;
-      delete data.isAdd;
-      delete data.isPresent;
-      delete data.conflictingService;
       try {
         await this.$store.dispatch('envVar/createdEnvVariable', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
-          data,
+          data: this.cleanEnvVarData(data),
         });
         this.handleEnvVarChange(this.$t('添加'));
+        this.envVarList[i].isEdit = false;
+        this.getEnvVarList();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: `${this.$t('添加环境变量失败')}，${e.message}`,
         });
-      } finally {
-        this.envVarList[i].isEdit = false;
-        // 更新数据
-        this.getEnvVarList();
       }
     },
 
     // 修改加单个环境变量
     async updateEnvVariable(data, i) {
-      // 删除冗余数据
-      delete data.isEdit;
-      delete data.isPresent;
       try {
         await this.$store.dispatch('envVar/updateEnvVariable', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           varId: data.id,
-          data,
+          data: this.cleanEnvVarData(data),
         });
         this.handleEnvVarChange(this.$t('修改'));
+        this.envVarList[i].isEdit = false;
+        this.getEnvVarList();
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
           message: `${this.$t('修改环境变量失败')}，${e.message}`,
         });
-      } finally {
-        this.envVarList[i].isEdit = false;
-        this.getEnvVarList();
       }
     },
 
     // 保存
     async save() {
       try {
-        const params = cloneDeep(this.envVarList);
-
-        // 保存环境变，无需传递 is_global
-        params.forEach((v) => {
-          delete v.is_global;
-          delete v.isEdit;
-          delete v.isPresent;
-          delete v.conflictingService;
-        });
+        // 保存环境变量，无需传递 is_global
+        const params = cloneDeep(this.envVarList).map((item) => this.cleanEnvVarData(item, true));
 
         await this.$store.dispatch('envVar/saveEnvItem', {
           appCode: this.appCode,

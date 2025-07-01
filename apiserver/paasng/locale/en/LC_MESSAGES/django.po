@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-06-27 18:06+0800\n"
+"POT-Creation-Date: 2025-07-01 13:04+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2265,42 +2265,6 @@ msgstr ""
 "letters, numbers, hyphens (-) or underscores (_), must start with a letter "
 "and end with a letter or number."
 
-#: paasng/plat_admin/admin42/serializers/templates.py:34
-msgid "预设增强服务配置必须为 Dict 格式"
-msgstr "Preset enhanced service configuration must be in Dict format"
-
-#: paasng/plat_admin/admin42/serializers/templates.py:40
-msgid "构建工具配置必须为 List[str] 格式"
-msgstr "Build tool configuration must be in List[str] format"
-
-#: paasng/plat_admin/admin42/serializers/templates.py:43
-msgid "针对不同镜像配置 required_buildpacks 时必须配置默认值 __default__"
-msgstr ""
-"When configuring required_buildpacks for different images, the default value "
-"__default__ must be set"
-
-#: paasng/plat_admin/admin42/serializers/templates.py:46
-msgid "构建工具配置必须为 Dict[str, List[str]] 格式"
-msgstr "Build tool configuration must be in Dict[str, List[str]] format"
-
-#: paasng/plat_admin/admin42/serializers/templates.py:48
-msgid "构建工具必须为 List[str] 或 Dict[str, List[str]] 格式"
-msgstr "Build tools must be in List[str] or Dict[str, List[str]] format"
-
-#: paasng/plat_admin/admin42/serializers/templates.py:53
-msgid "进程配置必须为 Dict 格式"
-msgstr "Process configuration must be in Dict format"
-
-#: paasng/plat_admin/admin42/serializers/templates.py:58
-msgid "标签必须为 List 格式"
-msgstr "Tags must be in List format"
-
-#: paasng/plat_admin/admin42/serializers/templates.py:63
-msgid "二进制包存储配置必须为有效的地址字符串"
-msgstr ""
-"The value of the binary package storage configuration must be a valid "
-"address string"
-
 #: paasng/plat_admin/admin42/utils/__init__.py:35
 #, python-brace-format
 msgid "由于: {reason}, 该功能暂不支持"
@@ -2344,12 +2308,12 @@ msgstr "Testing in progress"
 msgid "无法获取到有效的配置信息."
 msgstr "No valid configuration information is available."
 
-#: paasng/plat_mgt/applications/serializers/application.py:188
+#: paasng/plat_mgt/applications/serializers/application.py:189
 #, python-brace-format
 msgid "于{time}{operation}{status}"
 msgstr " {operation} {status} at {time}"
 
-#: paasng/plat_mgt/applications/serializers/application.py:239
+#: paasng/plat_mgt/applications/serializers/application.py:240
 #, python-brace-format
 msgid "现有的分配策略下未找到匹配的集群(集群名: {name})"
 msgstr ""
@@ -3051,7 +3015,7 @@ msgid "当前源码仓库信息异常"
 msgstr "The current source code repository information is abnormal"
 
 #: paasng/platform/engine/constants.py:134
-#: paasng/platform/engine/workflow/protections.py:198
+#: paasng/platform/engine/workflow/protections.py:201
 msgid "未完善进程启动命令"
 msgstr "Incomplete process start command"
 
@@ -3061,7 +3025,7 @@ msgstr ""
 "The current user does not authorize the CI component to access the repository"
 
 #: paasng/platform/engine/constants.py:136
-#: paasng/platform/engine/workflow/protections.py:222
+#: paasng/platform/engine/workflow/protections.py:225
 msgid "未设置插件分类"
 msgstr "Plugin category not set"
 
@@ -3072,12 +3036,14 @@ msgid "未配置有效的镜像仓库地址"
 msgstr "No valid access address set"
 
 #: paasng/platform/engine/constants.py:138
-msgid "私有镜像需要添加镜像凭证"
+#, fuzzy
+#| msgid "私有镜像需要添加镜像凭证"
+msgid "私有镜像需要有效的镜像凭证"
 msgstr "Private images need to add valid image credentials"
 
 #: paasng/platform/engine/constants.py:139
-#: paasng/platform/engine/workflow/protections.py:235
 #: paasng/platform/engine/workflow/protections.py:238
+#: paasng/platform/engine/workflow/protections.py:241
 msgid "未完善应用基本信息"
 msgstr "Incomplete app basic information"
 
@@ -3379,25 +3345,25 @@ msgstr ""
 "Failed to obtain source code repository information, please make sure that "
 "the repository information is filled in correctly"
 
-#: paasng/platform/engine/workflow/protections.py:121
+#: paasng/platform/engine/workflow/protections.py:124
 msgid "模块未配置镜像仓库信息，请先配置镜像仓库"
 msgstr "Module image repository not configured, please configure first."
 
-#: paasng/platform/engine/workflow/protections.py:141
+#: paasng/platform/engine/workflow/protections.py:144
 msgid "镜像仓库地址无效或无法访问，请检查仓库地址和网络连接"
 msgstr ""
 "Image repository address invalid or inaccessible, please check the "
 "repository address and network connection."
 
-#: paasng/platform/engine/workflow/protections.py:152
+#: paasng/platform/engine/workflow/protections.py:155
 msgid "镜像凭证不存在或已被删除，请先配置镜像凭证"
 msgstr "Image certificate does not exist, please configure first."
 
-#: paasng/platform/engine/workflow/protections.py:168
+#: paasng/platform/engine/workflow/protections.py:171
 msgid "私有镜像凭证校验失败，请检查凭证是否正确"
 msgstr "Image credential verification failed, please check the credential."
 
-#: paasng/platform/engine/workflow/protections.py:183
+#: paasng/platform/engine/workflow/protections.py:186
 msgid "当前用户无部署该环境的权限, 请联系应用管理员"
 msgstr ""
 "The current user does not have permission to deploy this environment, please "
@@ -4616,6 +4582,16 @@ msgstr "\"{input}\" is not a valid format, please startswith \"base64,\""
 #, python-brace-format
 msgid "\"{input}\" is not a valid base64, please check it."
 msgstr "\"{input}\" is not a valid base64, please check it."
+
+#: paasng/utils/serializers.py:296
+#, python-brace-format
+msgid "至多包含 {max_items} 个对象."
+msgstr ""
+
+#: paasng/utils/serializers.py:297
+#, python-brace-format
+msgid "至少包含 {min_items} 个对象."
+msgstr ""
 
 #: paasng/utils/views.py:43
 msgid "参数格式错误"

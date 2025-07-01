@@ -34,10 +34,16 @@ from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
 from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
 from paasng.platform.engine.configurations.provider import env_vars_providers
-from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
-from paasng.platform.engine.models.config_var import add_prefix_to_key, get_config_vars, get_custom_builtin_config_vars
+from paasng.platform.engine.constants import AppEnvName, AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
+from paasng.platform.engine.models.config_var import (
+    ConfigVar,
+    add_prefix_to_key,
+    get_config_vars,
+    get_custom_builtin_config_vars,
+)
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.helpers import ModuleRuntimeManager
+from paasng.platform.modules.models import Module
 from paasng.utils.blobstore import make_blob_store_env
 
 if TYPE_CHECKING:
@@ -109,6 +115,26 @@ def get_env_variables(
     result.update(AppDefaultDomains(env).as_env_vars())
     result.update(AppDefaultSubpaths(env).as_env_vars())
     return result
+
+
+def get_user_conflicted_keys(module: Module) -> List[str]:
+    """Get user defined config vars keys that conflict with built-in env vars, the result can be
+    an useful hint for users to avoid conflicts.
+
+    :param module: The module to check for conflicts.
+    :return: List of conflicting keys.
+    """
+    # Get user defined config vars keys, the keys are environment-agnostic
+    keys = ConfigVar.objects.filter(module=module, is_builtin=False).values_list("key", flat=True)
+    preset_keys = PresetEnvVariable.objects.filter(module=module).values_list("key", flat=True)
+
+    # Call `get_env_variables` with special parameters to get all built-in env variables,
+    # Always use the "prod" environment.
+    env = module.get_envs(AppEnvName.PROD)
+    sys_keys = get_env_variables(env, include_config_vars=False, include_preset_env_vars=False).keys()
+
+    conflicted_keys = set(sys_keys) & (set(keys) | set(preset_keys))
+    return sorted(conflicted_keys)
 
 
 def generate_env_vars_for_app(app: "Application", config_vars_prefix: str) -> Dict[str, str]:

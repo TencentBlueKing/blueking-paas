@@ -35,6 +35,7 @@ from paasng.platform.engine.configurations.config_var import (
     generate_env_vars_by_region_and_env,
     generate_env_vars_for_bk_platform,
     generate_wl_builtin_env_vars,
+    get_user_conflicted_keys,
 )
 from paasng.platform.engine.constants import (
     AppInfoBuiltinEnv,
@@ -387,3 +388,22 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
             ]
         )
         return self.make_exported_vars_response(config_vars, "bk_paas3_config_vars_template.yaml")
+
+
+class ConflictedConfigVarsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """与内置变量冲突的用户环境变量相关 ViewSet"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def get_conflicted_keys(self, request, code, module_name):
+        """获取当前模块中有冲突的环境变量 Key 列表，“冲突”指用户自定义变量与平台内置变量同名。
+        不同类型的应用，平台处理冲突变量的行为有所不同，本接口返回的 key 列表主要作引导和提示用。
+
+        附冲突变量处理策略：
+
+        - 普通应用：以用户配置的变量为准；
+        - 云原生应用：以平台内置变量为准。
+        """
+        module = self.get_module_via_path()
+        keys = get_user_conflicted_keys(module)
+        return Response(keys)

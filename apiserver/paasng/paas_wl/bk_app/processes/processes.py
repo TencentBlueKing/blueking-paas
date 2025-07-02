@@ -42,6 +42,7 @@ from paas_wl.bk_app.processes.readers import process_kmodel
 from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.bcs.client import bcs_client_cls
+from paas_wl.infras.resources.base.constants import QUERY_LOG_STREAM_DEFAULT_TIMEOUT
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -339,7 +340,6 @@ class ProcessManager:
         instance_name: str,
         container_name: str | None = None,
         since_seconds: Optional[int] = None,
-        follow: bool = True,
         timestamps: bool = True,
     ):
         """获取进程实例日志流
@@ -348,7 +348,6 @@ class ProcessManager:
         :param instance_name: 进程实例名称
         :param container_name: 容器名称
         :param since_seconds: 获取日志的起始时间
-        :param follow: 是否持续获取日志
         :param timestamps: 是否在日志前添加时间戳
         :return: Generator yielding log lines
         :raise: InstanceNotFound when instance not found
@@ -360,8 +359,9 @@ class ProcessManager:
             "name": instance_name,
             "namespace": self.wl_app.namespace,
             "container": container_name,
-            "follow": follow,
+            "follow": True,
             "timestamps": timestamps,
+            "timeout": QUERY_LOG_STREAM_DEFAULT_TIMEOUT,
         }
         if since_seconds:
             params["since_seconds"] = since_seconds

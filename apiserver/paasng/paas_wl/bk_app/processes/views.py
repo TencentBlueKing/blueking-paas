@@ -450,6 +450,9 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
+    # Use special negotiation class to accept "text/event-stream" content type
+    content_negotiation_class = IgnoreClientContentNegotiation
+
     # 下载日志时，默认最大下载的行数一万
     download_log_lines_limit = 10000
 

@@ -540,6 +540,8 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 # 比较日志时间戳和传入的时间戳, 如果小于等于传入的时间戳, 丢弃该日志
                 if since_time_nano is not None and timestamp_unix <= since_time_nano:
                     continue
+                # 去除 message 末尾的换行
+                message = message.rstrip("\n")
 
                 # 构造 SSE 消息
                 data = json.dumps(

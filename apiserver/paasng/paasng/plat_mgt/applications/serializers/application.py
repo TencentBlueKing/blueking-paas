@@ -35,7 +35,7 @@ from paasng.platform.applications.serializers.app import UpdateApplicationNameSL
 from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.utils.models import OrderByField
-from paasng.utils.serializers import HumanizeDateTimeField, StringArrayField, UserNameField
+from paasng.utils.serializers import StringArrayField, UserNameField
 
 # 应用列表序列化器
 
@@ -138,7 +138,7 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     type = serializers.CharField(read_only=True, help_text="应用类型")
     is_active = serializers.BooleanField(read_only=True, help_text="应用状态")
     creator = UserNameField(read_only=True, help_text="创建人")
-    created_humanized = HumanizeDateTimeField(source="created", help_text="创建时间")
+    created = serializers.DateTimeField(read_only=True)
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
 
 

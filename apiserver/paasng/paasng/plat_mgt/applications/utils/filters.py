@@ -31,41 +31,40 @@ class ApplicationFilterBackend(BaseFilterBackend):
 
         slz = slzs.ApplicationListFilterInputSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
-        validate_params = slz.data
+        params = slz.validated_data
 
         # 搜索应用 名称/ID 过滤
-        search = validate_params.get("search")
+        search = params.get("search")
         if search:
             queryset = queryset.filter(Q(name__icontains=search) | Q(code__icontains=search))
 
         # 应用名称过滤
-        name = validate_params.get("name")
+        name = params.get("name")
         if name:
             queryset = queryset.filter(name__icontains=name)
 
         # 应用租户ID过滤
-        tenant_id = validate_params.get("tenant_id")
+        tenant_id = params.get("tenant_id")
         if tenant_id:
             queryset = queryset.filter(tenant_id=tenant_id)
 
         # 应用租户模式过滤
-        app_tenant_mode = validate_params.get("app_tenant_mode")
+        app_tenant_mode = params.get("app_tenant_mode")
         if app_tenant_mode:
             queryset = queryset.filter(app_tenant_mode=app_tenant_mode)
 
         # 应用类型过滤
-        app_type = validate_params.get("type")
+        app_type = params.get("type")
         if app_type:
             queryset = queryset.filter(type=app_type)
 
         # 应用激活状态过滤
-        is_active = validate_params.get("is_active")
+        is_active = params.get("is_active")
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active)
 
         # 处理排序
-        ## 已下架的应用永远排在最后
-        order_by = ["-is_active"] + (validate_params.get("order_by") or [])
-        queryset = queryset.order_by(*order_by)
+        if order_by := params.get("order_by"):
+            queryset = queryset.order_by(*order_by)
 
         return queryset

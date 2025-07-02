@@ -163,7 +163,6 @@ export default {
     z-index: 999;
   }
   .right-content {
-    overflow: auto;
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -173,6 +172,7 @@ export default {
     .content-area {
       flex: 1;
       min-height: 0;
+      overflow: auto;
     }
     .sub-title {
       display: flex;

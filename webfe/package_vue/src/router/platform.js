@@ -77,6 +77,13 @@ const repositoryConfig = () =>
       window.showDeployTip(error);
     });
 
+const templateConfig = () =>
+  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/template-config')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 export const platformRouters = [
   {
     path: '/plat-mgt/',
@@ -153,6 +160,14 @@ export const platformRouters = [
         name: 'repositoryConfig',
         meta: {
           title: i18n.t('代码库配置'),
+        },
+      },
+      {
+        path: 'template',
+        component: templateConfig,
+        name: 'templateConfig',
+        meta: {
+          title: i18n.t('模版配置'),
         },
       },
       {

@@ -1,6 +1,11 @@
 <template>
   <div class="platform-app-list-container">
-    <div class="top-box flex-row justify-content-between">
+    <bk-alert
+      v-if="isSoftDeletePage"
+      type="info"
+      :title="$t('用户在应用页面删除应用时，仅在数据库中进行了标记，应用 ID 和名称仍然保留未释放。')"
+    ></bk-alert>
+    <div class="mt-16 top-box flex-row justify-content-between">
       <div class="tenants">
         <TenantSelect
           class="tenant-select-cls"
@@ -8,6 +13,7 @@
           :panels="tabData"
           :label="$t('所属租户')"
           :count-map="appCountInfo"
+          :has-count="!isSoftDeletePage"
           @change="getPlatformApps"
         />
       </div>
@@ -100,19 +106,73 @@
             <span v-else>{{ row[column.prop] || '--' }}</span>
           </template>
         </bk-table-column>
+        <!-- 软删除-操作列 -->
+        <bk-table-column
+          v-if="isSoftDeletePage"
+          :label="$t('操作')"
+          :width="120"
+        >
+          <template slot-scope="{ row }">
+            <bk-button
+              theme="primary"
+              text
+              @click="showDeleteDialog(row)"
+            >
+              {{ $t('彻底删除') }}
+            </bk-button>
+          </template>
+        </bk-table-column>
       </bk-table>
     </div>
+
+    <!-- 软删除应用弹窗 -->
+    <DeleteDialog
+      :show.sync="deleteDialogConfig.visible"
+      :title="$t('确认删除应用')"
+      :expected-confirm-text="deleteDialogConfig.deletedKey"
+      :loading="deleteDialogConfig.loading"
+      @confirm="permanentDeleteApp"
+    >
+      <div class="hint-text">
+        <bk-alert
+          type="error"
+          :show-icon="false"
+          class="delete-alert-cls"
+        >
+          <div
+            slot="title"
+            class="flex-row"
+          >
+            <i class="paasng-icon paasng-remind"></i>
+            <div>{{ $t('将应用信息永久的从数据库删除，删除后也不能再使用该应用 ID 调用云 API') }}</div>
+          </div>
+        </bk-alert>
+        <span>{{ $t('该操作不可撤销，请输入应用 ID') }}</span>
+        <span class="hint-text">
+          （
+          <span class="sign">{{ deleteDialogConfig.deletedKey }}</span>
+          <i
+            class="paasng-icon paasng-general-copy"
+            v-copy="deleteDialogConfig.deletedKey"
+          />
+          ）
+        </span>
+        {{ $t('进行确认') }}
+      </div>
+    </DeleteDialog>
   </div>
 </template>
 
 <script>
 import TenantSelect from '../../services/service-plan/tenant-select';
+import DeleteDialog from '@/components/delete-dialog';
 import { mapState } from 'vuex';
 
 export default {
   name: 'PlatformAppList',
   components: {
     TenantSelect,
+    DeleteDialog,
   },
   props: {
     tenants: {
@@ -151,6 +211,11 @@ export default {
         keyword: '',
         isAbnormal: false,
       },
+      deleteDialogConfig: {
+        visible: false,
+        loading: false,
+        deletedKey: '',
+      },
     };
   },
   computed: {
@@ -170,8 +235,12 @@ export default {
         ...tenantList,
       ];
     },
+    // 软删除应用列
+    isSoftDeletePage() {
+      return this.$route.name === 'platformSoftDeleteApps';
+    },
     columns() {
-      return [
+      const commonColumns = [
         {
           label: this.$t('应用'),
           prop: 'code',
@@ -196,6 +265,31 @@ export default {
           'filter-multiple': false,
           'column-key': 'type',
         },
+      ];
+      if (this.isSoftDeletePage) {
+        return [
+          ...commonColumns,
+          {
+            label: this.$t('创建人'),
+            prop: 'creator',
+            userDisplay: true,
+          },
+          {
+            label: this.$t('创建时间'),
+            prop: 'created_humanized',
+            sortable: 'custom',
+            'column-key': 'order_by',
+          },
+          {
+            label: this.$t('删除时间'),
+            prop: 'deleted_time',
+            sortable: 'custom',
+            'column-key': 'order_by',
+          },
+        ];
+      }
+      return [
+        ...commonColumns,
         {
           label: this.$t('应用分类'),
           prop: 'category',
@@ -283,7 +377,16 @@ export default {
     },
     // 表头排序-时间
     handleSortChange(sort) {
-      const orderBy = sort.order ? (sort.order === 'ascending' ? '-created' : 'created') : undefined;
+      const propMap = {
+        created_humanized: 'created',
+        deleted_time: 'updated',
+      };
+
+      const orderBy = sort.order
+        ? sort.order === 'ascending'
+          ? `-${propMap[sort.prop]}`
+          : propMap[sort.prop]
+        : undefined;
       this.$set(this.tableFilterMap, 'order_by', orderBy);
       this.getPlatformApps();
     },
@@ -338,12 +441,13 @@ export default {
       }
       return queryParams;
     },
-    // 获取应用列表
+    // 获取应用列表 | 获取软删除应用列表
     async getPlatformApps() {
       this.isTableLoading = true;
       const queryParams = this.constructQueryParams();
       try {
-        const res = await this.$store.dispatch('tenantOperations/getPlatformApps', { queryParams });
+        const actionName = this.isSoftDeletePage ? 'getDeletedApplications' : 'getPlatformApps';
+        const res = await this.$store.dispatch(`tenantOperations/${actionName}`, { queryParams });
         this.appList = res.results;
         this.pagination.count = res.count;
         this.tableEmptyConf.isAbnormal = false;
@@ -390,6 +494,30 @@ export default {
         }));
       } catch (e) {
         this.catchErrorHandler(e);
+      }
+    },
+    // 删除应用弹窗
+    showDeleteDialog(row) {
+      this.deleteDialogConfig.visible = true;
+      this.deleteDialogConfig.deletedKey = row.code;
+    },
+    // 软删除：确认彻底删除
+    async permanentDeleteApp() {
+      try {
+        this.deleteDialogConfig.loading = true;
+        await this.$store.dispatch('tenantOperations/deletedApplications', {
+          appCode: this.deleteDialogConfig.deletedKey,
+        });
+        this.deleteDialogConfig.visible = false;
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除成功'),
+        });
+        this.getPlatformApps();
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.deleteDialogConfig.loading = false;
       }
     },
     // 跳转应用详情

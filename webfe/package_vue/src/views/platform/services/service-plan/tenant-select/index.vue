@@ -21,7 +21,7 @@
         :id="option.name"
         :name="option.label"
       >
-        <template>{{ `${option.label}（${countMap[option.name] || 0}）` }}</template>
+        <template>{{ hasCount ? `${option.label}（${countMap[option.name] || 0}）` : option.label }}</template>
       </bk-option>
     </bk-select>
   </div>
@@ -47,6 +47,10 @@ export default {
     countMap: {
       type: Object,
       default: () => {},
+    },
+    hasCount: {
+      type: Boolean,
+      default: true,
     },
   },
   data() {

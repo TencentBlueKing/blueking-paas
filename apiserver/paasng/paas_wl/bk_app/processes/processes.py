@@ -354,7 +354,7 @@ class ProcessManager:
         if not container_name:
             container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
 
-        # 设置超时时间
+        # 设置超时时间 seconds
         timeout = 30
         params = {
             "name": instance_name,

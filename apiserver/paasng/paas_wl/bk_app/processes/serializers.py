@@ -32,7 +32,6 @@ from paas_wl.bk_app.processes.constants import ProcessUpdateType
 from paas_wl.bk_app.processes.kres_entities import Instance, Process
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paas_wl.infras.resources.kube_res.base import WatchEvent
-from paas_wl.utils.text import rfc3339nano_to_unix_timestamp
 from paas_wl.workloads.autoscaling.constants import ScalingMetric, ScalingMetricSourceType
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paas_wl.workloads.networking.ingress.utils import get_service_dns_name
@@ -435,15 +434,4 @@ class InstanceLogQueryInputSLZ(serializers.Serializer):
 class InstanceLogStreamInputSLZ(serializers.Serializer):
     """Serializer for instance log stream API"""
 
-    since_time = serializers.CharField(
-        required=False, help_text="断线重连的时间戳，格式为 RFC3339Nano（如 2023-01-01T12:00:00.123456789Z）"
-    )
-
-    def validate_since_time(self, value) -> Optional[int]:
-        """
-        Convert RFC3339Nano format to Unix timestamp in nanoseconds.
-        """
-        try:
-            return rfc3339nano_to_unix_timestamp(value)
-        except ValueError as e:
-            raise serializers.ValidationError("Invalid since_time format: {error}").format(error=str(e))
+    since_time = serializers.DateTimeField(help_text="断线重连的时间戳")

@@ -18,10 +18,10 @@
 import datetime
 import json
 import logging
-import time
 from operator import attrgetter
 from typing import Dict, Optional
 
+import arrow
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
@@ -63,7 +63,6 @@ from paas_wl.bk_app.processes.watch import ProcInstByEnvListWatcher, ProcInstByM
 from paas_wl.infras.resources.base.kres import KDeployment, KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paas_wl.utils.error_codes import error_codes
-from paas_wl.utils.text import rfc3339nano_to_unix_timestamp
 from paas_wl.utils.views import IgnoreClientContentNegotiation
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paas_wl.workloads.autoscaling.exceptions import AutoscalingUnsupported
@@ -511,56 +510,47 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        since_time_nano = data.get("since_time")
-        since_seconds = None
+        current_time = arrow.utcnow()
+        log_start_time = data.get("since_time")
+        if log_start_time is None:
+            log_start_time = current_time
+        else:
+            log_start_time = arrow.get(log_start_time)
 
-        if since_time_nano is None:
-            # 如果前端不传 since_time 参数, 则使用当前时间戳
-            since_time_nano = time.time_ns()
-
-        # 将 Unix 时间戳转换为 k8s 需要的 since_seconds
-        # 需要获取前一秒的日志, 否则会丢失一些日志
-        since_seconds = time.time_ns() // 1_000_000_000 - since_time_nano // 1_000_000_000 + 1
+        # 计算时间差(秒)，并加1确保不会因为精度问题漏掉日志
+        seconds_elapsed = int((current_time - log_start_time).total_seconds()) + 1
 
         def resp():
-            # 发送初始 ping 事件
-            # 避免 stream 无新事件时, 前端请求表现为服务端长时间挂起(无法查看响应头)
             yield "event: ping\n"
             yield "data: \n\n"
 
-            # 获取日志流
             try:
                 for log_line in manager.get_instance_logs_stream(
                     process_type=process_type,
                     instance_name=process_instance_name,
-                    since_seconds=since_seconds,
+                    since_seconds=seconds_elapsed,
                 ):
-                    # 日志格式通常为: "2023-05-01T12:34:56.123456789Z 实际日志内容" 分离时间戳和消息内容
-                    timestamp_str, message = log_line.split(" ", 1)
-                    # 将时间戳转换为 Unix 时间戳格式
-                    timestamp_unix = rfc3339nano_to_unix_timestamp(timestamp_str)
-                    # 比较日志时间戳和传入的时间戳, 如果小于等于传入的时间戳, 丢弃该日志
-                    if since_time_nano is not None and timestamp_unix <= since_time_nano:
-                        continue
-                    # 去除 message 末尾的换行
-                    message = message.rstrip("\n")
+                    # log format: "2023-05-01T12:34:56.123456789Z ..."
+                    log_timestamp_str, log_message = log_line.split(" ", 1)
+                    log_datetime = arrow.get(log_timestamp_str)
 
-                    # 构造 SSE 消息
+                    # TODO: 使用微秒级时间戳进行比较, 当纳秒级出现多条日志记录时, 可能会造成日志数据丢失
+                    if log_datetime <= log_start_time:
+                        # 跳过早于请求时间的日志
+                        continue
+
                     data = json.dumps(
                         {
-                            "timestamp": timestamp_str,
-                            "message": message,
+                            "timestamp": log_timestamp_str,
+                            "message": log_message.rstrip("\n"),
                         }
                     )
-                    yield "event: message\n"
-                    yield f"data: {data}\n\n"
+                    yield "event: message\ndata: {}\n\n".format(data)
             except ReadTimeoutError as e:
-                # 处理读取超时异常，可能是因为日志流没有新内容
                 logger.warning("Log stream read timeout: %s", e)
             finally:
                 # 发送结束事件
-                yield "event: EOF\n"
-                yield "data: \n\n"
+                yield "event: EOF\ndata: \n\n"
 
         return StreamingHttpResponse(resp(), content_type="text/event-stream")
 

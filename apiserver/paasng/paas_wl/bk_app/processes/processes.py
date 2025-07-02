@@ -42,7 +42,6 @@ from paas_wl.bk_app.processes.readers import process_kmodel
 from paas_wl.bk_app.processes.serializers import ProcessSpecSLZ
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.bcs.client import bcs_client_cls
-from paas_wl.infras.resources.base.constants import QUERY_LOG_STREAM_DEFAULT_TIMEOUT
 from paas_wl.infras.resources.base.kres import KPod
 from paas_wl.infras.resources.utils.basic import get_client_by_app
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -355,13 +354,15 @@ class ProcessManager:
         if not container_name:
             container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
 
+        # 设置超时时间
+        timeout = 30
         params = {
             "name": instance_name,
             "namespace": self.wl_app.namespace,
             "container": container_name,
             "follow": True,
             "timestamps": timestamps,
-            "timeout": QUERY_LOG_STREAM_DEFAULT_TIMEOUT,
+            "timeout": timeout,
         }
         if since_seconds:
             params["since_seconds"] = since_seconds

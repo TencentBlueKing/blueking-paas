@@ -435,8 +435,6 @@ class InstanceLogQueryInputSLZ(serializers.Serializer):
 class InstanceLogStreamInputSLZ(serializers.Serializer):
     """Serializer for instance log stream API"""
 
-    # 将 RFC3339Nano 格式转化为 Unix 时间戳
-    # 例如：2023-01-01T12:00:00.123456789Z
     since_time = serializers.CharField(
         required=False, help_text="断线重连的时间戳，格式为 RFC3339Nano（如 2023-01-01T12:00:00.123456789Z）"
     )

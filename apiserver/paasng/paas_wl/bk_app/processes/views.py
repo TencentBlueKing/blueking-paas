@@ -30,6 +30,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
+from urllib3.exceptions import ReadTimeoutError
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
@@ -528,34 +529,38 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             yield "data: \n\n"
 
             # 获取日志流
-            for log_line in manager.get_instance_logs_stream(
-                process_type=process_type,
-                instance_name=process_instance_name,
-                since_seconds=since_seconds,
-            ):
-                # 日志格式通常为: "2023-05-01T12:34:56.123456789Z 实际日志内容" 分离时间戳和消息内容
-                timestamp_str, message = log_line.split(" ", 1)
-                # 将时间戳转换为 Unix 时间戳格式
-                timestamp_unix = rfc3339nano_to_unix_timestamp(timestamp_str)
-                # 比较日志时间戳和传入的时间戳, 如果小于等于传入的时间戳, 丢弃该日志
-                if since_time_nano is not None and timestamp_unix <= since_time_nano:
-                    continue
-                # 去除 message 末尾的换行
-                message = message.rstrip("\n")
+            try:
+                for log_line in manager.get_instance_logs_stream(
+                    process_type=process_type,
+                    instance_name=process_instance_name,
+                    since_seconds=since_seconds,
+                ):
+                    # 日志格式通常为: "2023-05-01T12:34:56.123456789Z 实际日志内容" 分离时间戳和消息内容
+                    timestamp_str, message = log_line.split(" ", 1)
+                    # 将时间戳转换为 Unix 时间戳格式
+                    timestamp_unix = rfc3339nano_to_unix_timestamp(timestamp_str)
+                    # 比较日志时间戳和传入的时间戳, 如果小于等于传入的时间戳, 丢弃该日志
+                    if since_time_nano is not None and timestamp_unix <= since_time_nano:
+                        continue
+                    # 去除 message 末尾的换行
+                    message = message.rstrip("\n")
 
-                # 构造 SSE 消息
-                data = json.dumps(
-                    {
-                        "timestamp": timestamp_str,
-                        "message": message,
-                    }
-                )
-                yield f"data: {data}\n\n"
-
-            # 发送结束事件
-            yield "id: -1\n"
-            yield "event: EOF\n"
-            yield "data: \n\n"
+                    # 构造 SSE 消息
+                    data = json.dumps(
+                        {
+                            "timestamp": timestamp_str,
+                            "message": message,
+                        }
+                    )
+                    yield "event: message\n"
+                    yield f"data: {data}\n\n"
+            except ReadTimeoutError as e:
+                # 处理读取超时异常，可能是因为日志流没有新内容
+                logger.warning("Log stream read timeout: %s", e)
+            finally:
+                # 发送结束事件
+                yield "event: EOF\n"
+                yield "data: \n\n"
 
         return StreamingHttpResponse(resp(), content_type="text/event-stream")
 

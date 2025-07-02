@@ -18,6 +18,7 @@
 
 from typing import List, Optional
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -26,7 +27,7 @@ from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
-from paasng.accessories.publish.market.models import ApplicationExtraInfo, Tag
+from paasng.accessories.publish.market.models import Tag
 from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
@@ -62,11 +63,14 @@ class ApplicationListOutputSLZ(serializers.Serializer):
     def get_category(self, instance: Application) -> str:
         """获取应用分类名"""
         try:
-            extra_info = ApplicationExtraInfo.objects.get(application=instance)
-        except ApplicationExtraInfo.DoesNotExist:
+            extra_info = instance.extra_info
+        except ObjectDoesNotExist:
             return ""
-        else:
-            return extra_info.tag.name or ""
+
+        if not extra_info.tag:
+            return ""
+
+        return extra_info.tag.name
 
 
 class ApplicationListFilterInputSLZ(serializers.Serializer):
@@ -146,11 +150,14 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     def get_category(self, instance: Application) -> str:
         """获取应用分类名"""
         try:
-            extra_info = ApplicationExtraInfo.objects.get(application=instance)
-        except ApplicationExtraInfo.DoesNotExist:
+            extra_info = instance.extra_info
+        except ObjectDoesNotExist:
             return ""
-        else:
-            return extra_info.tag.name or ""
+
+        if not extra_info.tag:
+            return ""
+
+        return extra_info.tag.name
 
 
 class ApplicationEnvironmentOperationSLZ(serializers.Serializer):

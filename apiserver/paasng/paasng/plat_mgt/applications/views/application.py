@@ -43,7 +43,7 @@ from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.applications import serializers as slzs
 from paasng.plat_mgt.applications.utils.filters import ApplicationFilterBackend
 from paasng.plat_mgt.bk_plugins.views import is_plugin_instance_exist, is_user_plugin_admin
-from paasng.platform.applications.constants import ApplicationRole, ApplicationType, AvailabilityLevel
+from paasng.platform.applications.constants import ApplicationRole, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.utils.error_codes import error_codes
 
@@ -238,7 +238,6 @@ class ApplicationDetailViewSet(viewsets.GenericViewSet):
         ApplicationExtraInfo.objects.update_or_create(
             application=application,
             defaults={
-                "availability_level": AvailabilityLevel.STANDARD.value,
                 "tag": tag,
                 "tenant_id": application.tenant_id,
             },

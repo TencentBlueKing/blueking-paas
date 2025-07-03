@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-03 17:57+0800\n"
+"POT-Creation-Date: 2025-07-03 18:52+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -210,11 +210,15 @@ msgstr "Image credentials not found"
 
 #: paas_wl/bk_app/cnative/specs/views.py:153
 msgid "镜像仓库权限不足, 请检查是否配置镜像凭证"
-msgstr "Image repository has no permission, please check whether the image credentials are configured."
+msgstr ""
+"Image repository has no permission, please check whether the image "
+"credentials are configured."
 
 #: paas_wl/bk_app/cnative/specs/views.py:155
 msgid "镜像凭证错误, 请检查镜像凭证配置是否正确"
-msgstr "Image credential verification failed, please check the credential is correctly."
+msgstr ""
+"Image credential verification failed, please check the credential is "
+"correctly."
 
 #: paas_wl/bk_app/cnative/specs/views.py:163
 msgid "查看镜像 Tag"
@@ -2316,26 +2320,30 @@ msgstr "Testing in progress"
 msgid "无法获取到有效的配置信息."
 msgstr "No valid configuration information is available."
 
-#: paasng/plat_mgt/applications/serializers/application.py:189
+#: paasng/plat_mgt/applications/serializers/application.py:209
 #, python-brace-format
 msgid "于{time}{operation}{status}"
 msgstr " {operation} {status} at {time}"
 
-#: paasng/plat_mgt/applications/serializers/application.py:240
+#: paasng/plat_mgt/applications/serializers/application.py:252
+msgid "应用分类不存在"
+msgstr ""
+
+#: paasng/plat_mgt/applications/serializers/application.py:274
 #, python-brace-format
 msgid "现有的分配策略下未找到匹配的集群(集群名: {name})"
 msgstr ""
 "No matching cluster was found under the existing allocation strategy "
 "(cluster name: {name})"
 
-#: paasng/plat_mgt/applications/views/application.py:305
+#: paasng/plat_mgt/applications/views/application.py:330
 #, fuzzy
 #| msgid "应用不存在"
 msgid "应用不存在或未被软删除"
 msgstr "application does not exist"
 
-#: paasng/plat_mgt/applications/views/application.py:313
-msgid "PaaS 2.0 中信息删除失败，无法硬删除应用"
+#: paasng/plat_mgt/applications/views/application.py:338
+msgid "PaaS 2.0 中信息删除失败"
 msgstr ""
 
 #: paasng/plat_mgt/applications/views/services.py:153
@@ -3023,7 +3031,7 @@ msgid "当前源码仓库信息异常"
 msgstr "The current source code repository information is abnormal"
 
 #: paasng/platform/engine/constants.py:132
-#: paasng/platform/engine/workflow/protections.py:131
+#: paasng/platform/engine/workflow/protections.py:127
 msgid "未完善进程启动命令"
 msgstr "Incomplete process start command"
 
@@ -3033,13 +3041,13 @@ msgstr ""
 "The current user does not authorize the CI component to access the repository"
 
 #: paasng/platform/engine/constants.py:134
-#: paasng/platform/engine/workflow/protections.py:155
+#: paasng/platform/engine/workflow/protections.py:151
 msgid "未设置插件分类"
 msgstr "Plugin category not set"
 
 #: paasng/platform/engine/constants.py:135
-#: paasng/platform/engine/workflow/protections.py:168
-#: paasng/platform/engine/workflow/protections.py:171
+#: paasng/platform/engine/workflow/protections.py:164
+#: paasng/platform/engine/workflow/protections.py:167
 msgid "未完善应用基本信息"
 msgstr "Incomplete app basic information"
 
@@ -3312,36 +3320,36 @@ msgstr "Error in step [{title}], reason: {reason}."
 msgid "步骤 [{title}] 出错了，请稍候重试。"
 msgstr "Error in step [{title}], please try again later"
 
-#: paasng/platform/engine/workflow/protections.py:84
+#: paasng/platform/engine/workflow/protections.py:80
 msgid "当前用户尚未授权访问仓库"
 msgstr "The current user is not authorized to access the repository"
 
-#: paasng/platform/engine/workflow/protections.py:86
+#: paasng/platform/engine/workflow/protections.py:82
 #, python-brace-format
 msgid "当前用户尚未授权访问仓库: {source_type}"
 msgstr ""
 "The current user is not authorized to access the repository: {source_type}"
 
-#: paasng/platform/engine/workflow/protections.py:93
+#: paasng/platform/engine/workflow/protections.py:89
 #, python-brace-format
 msgid "当前用户没有访问源码仓库的权限，请给 {repo} 授权"
 msgstr ""
 "The current user does not have permission to access the source code "
 "repository, please authorize {repo}"
 
-#: paasng/platform/engine/workflow/protections.py:97
+#: paasng/platform/engine/workflow/protections.py:93
 msgid "当前账户没有访问源码仓库的权限，请确保账户名/密码正确"
 msgstr ""
 "The current account does not have permission to access the source code "
 "repository, please make sure the account name/password is correct"
 
-#: paasng/platform/engine/workflow/protections.py:101
+#: paasng/platform/engine/workflow/protections.py:97
 msgid "获取源码仓库信息失败，请确保仓库信息填写正确"
 msgstr ""
 "Failed to obtain source code repository information, please make sure that "
 "the repository information is filled in correctly"
 
-#: paasng/platform/engine/workflow/protections.py:116
+#: paasng/platform/engine/workflow/protections.py:112
 msgid "当前用户无部署该环境的权限, 请联系应用管理员"
 msgstr ""
 "The current user does not have permission to deploy this environment, please "
@@ -4118,8 +4126,10 @@ msgid "访问受保护资源失败"
 msgstr "Failed to access protected resources"
 
 #: paasng/utils/error_codes.py:53
-msgid "无法彻底删除软删除的应用"
-msgstr ""
+#, fuzzy
+#| msgid "无法删除应用集群"
+msgid "无法彻底删除应用"
+msgstr "cannot delete cluster"
 
 #: paasng/utils/error_codes.py:55
 msgid "模块创建失败"

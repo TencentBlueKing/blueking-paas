@@ -434,4 +434,4 @@ class InstanceLogQueryInputSLZ(serializers.Serializer):
 class InstanceLogStreamInputSLZ(serializers.Serializer):
     """Serializer for instance log stream API"""
 
-    since_time = serializers.DateTimeField(help_text="断线重连的时间戳")
+    since_time = serializers.DateTimeField(required=False, help_text="断线重连的时间戳")

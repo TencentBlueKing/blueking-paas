@@ -18,6 +18,7 @@
 
 from typing import List, Optional
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -26,6 +27,7 @@ from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import ClusterAllocator, EnvClusterService
 from paasng.accessories.publish.entrance.exposer import env_is_deployed, get_exposed_url
+from paasng.accessories.publish.market.models import Tag
 from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
@@ -48,8 +50,8 @@ class ApplicationListOutputSLZ(serializers.Serializer):
     name = serializers.CharField(read_only=True, help_text="应用名称")
     app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
-    type = serializers.SerializerMethodField(read_only=True)
-    resource_quotas = serializers.SerializerMethodField(read_only=True)
+    type = serializers.SerializerMethodField(read_only=True, help_text="应用类型")
+    category = serializers.SerializerMethodField(read_only=True, help_text="应用分类")
     is_active = serializers.BooleanField(read_only=True, help_text="应用是否处于激活状态")
     creator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
@@ -58,15 +60,17 @@ class ApplicationListOutputSLZ(serializers.Serializer):
     def get_type(self, instance: Application) -> str:
         return ApplicationType.get_choice_label(instance.type)
 
-    def get_resource_quotas(self, instance: Application) -> dict:
-        """从 context 中获取应用的资源配额"""
-        default_quotas = {"memory": "--", "cpu": "--"}
-        app_resource_quotas = self.context.get("app_resource_quotas")
+    def get_category(self, instance: Application) -> str:
+        """获取应用分类名"""
+        try:
+            extra_info = instance.extra_info
+        except ObjectDoesNotExist:
+            return ""
 
-        if not app_resource_quotas:
-            return default_quotas
+        if not extra_info.tag:
+            return ""
 
-        return app_resource_quotas.get(instance.code, default_quotas)
+        return extra_info.tag.name
 
 
 class ApplicationListFilterInputSLZ(serializers.Serializer):
@@ -76,6 +80,7 @@ class ApplicationListFilterInputSLZ(serializers.Serializer):
 
     search = serializers.CharField(required=False, help_text="应用名称/ID 关键字搜索")
     name = serializers.CharField(required=False, help_text="应用名称")
+    category = serializers.IntegerField(required=False, help_text="应用分类 ID")
     tenant_id = serializers.CharField(required=False, help_text="应用所属租户")
     app_tenant_mode = serializers.ChoiceField(
         required=False,
@@ -133,6 +138,7 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
 
     code = serializers.CharField(read_only=True, help_text="应用 ID")
     name = serializers.CharField(read_only=True, help_text="应用名称")
+    category = serializers.SerializerMethodField(read_only=True, help_text="应用分类")
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
     app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
     type = serializers.CharField(read_only=True, help_text="应用类型")
@@ -140,6 +146,18 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     creator = UserNameField(read_only=True, help_text="创建人")
     created_humanized = HumanizeDateTimeField(source="created", help_text="创建时间")
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
+
+    def get_category(self, instance: Application) -> str:
+        """获取应用分类名"""
+        try:
+            extra_info = instance.extra_info
+        except ObjectDoesNotExist:
+            return ""
+
+        if not extra_info.tag:
+            return ""
+
+        return extra_info.tag.name
 
 
 class ApplicationEnvironmentOperationSLZ(serializers.Serializer):
@@ -219,7 +237,21 @@ class ApplicationNameUpdateInputSLZ(UpdateApplicationNameSLZ):
     """更新应用名称序列化器"""
 
 
-class UpdateApplicationBindClusterSLZ(serializers.Serializer):
+class ApplicationCategoryUpdateInputSLZ(serializers.Serializer):
+    """更新应用分类 SLZ"""
+
+    category = serializers.IntegerField(help_text="应用分类 ID")
+
+    def validate_category(self, category: int) -> int:
+        """验证应用分类"""
+        try:
+            Tag.objects.get(pk=category)
+        except Tag.DoesNotExist:
+            raise ValidationError(_("应用分类不存在"))
+        return category
+
+
+class ApplicationBindClusterUpdateInputSLZ(serializers.Serializer):
     """更新应用集群序列化器"""
 
     name = serializers.CharField(required=True, help_text="集群名称")

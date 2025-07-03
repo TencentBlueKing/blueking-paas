@@ -81,8 +81,8 @@
             <div v-else-if="column.prop === 'app_tenant_mode'">
               {{ row[column.prop] === 'single' ? $t('单租户') : $t('全租户') }}
             </div>
-            <div v-else-if="column.prop === 'resource_quotas'">
-              {{ row[column.prop] ? `${row[column.prop].cpu}/${row[column.prop].memory}` : '--' }}
+            <div v-else-if="column.prop === 'category'">
+              {{ row[column.prop] || '--' }}
             </div>
             <div
               v-else-if="column.prop === 'is_active'"
@@ -137,6 +137,8 @@ export default {
       appCountInfo: {},
       // 应用类型
       appTypes: [],
+      // 应用分类
+      categoryTypes: [],
       tenantTypes: [
         { value: 'global', text: this.$t('全租户') },
         { value: 'single', text: this.$t('单租户') },
@@ -195,8 +197,11 @@ export default {
           'column-key': 'type',
         },
         {
-          label: this.$t('资源配额'),
-          prop: 'resource_quotas',
+          label: this.$t('应用分类'),
+          prop: 'category',
+          filters: this.categoryTypes,
+          'filter-multiple': false,
+          'column-key': 'category',
           'render-header': this.renderHeader,
         },
         {
@@ -234,6 +239,7 @@ export default {
     this.getPlatformApps();
     this.getTenantAppStatistics();
     this.getAppTypes();
+    this.getCategoryTypes();
   },
   methods: {
     // 页码重置
@@ -286,7 +292,7 @@ export default {
       const isTenantIdColumn = data.column?.property === 'app_tenant_id';
       const msg = isTenantIdColumn
         ? this.$t('应用对哪个租户的用户可用，当应用租户模式为全租户时，租户 ID 值为空')
-        : this.$t('所有进程的内存/CPU limit 的总和');
+        : this.$t('应用所属的分类标签');
       const directive = {
         name: 'bkTooltips',
         content: msg,
@@ -370,6 +376,17 @@ export default {
         this.appTypes = res.map((item) => ({
           value: item.type,
           text: item.label,
+        }));
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    async getCategoryTypes() {
+      try {
+        const res = await this.$store.dispatch('tenantOperations/getCategoryTypes');
+        this.categoryTypes = res.map((item) => ({
+          value: item.id,
+          text: item.name,
         }));
       } catch (e) {
         this.catchErrorHandler(e);

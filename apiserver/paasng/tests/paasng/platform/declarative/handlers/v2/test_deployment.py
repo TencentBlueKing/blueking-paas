@@ -192,15 +192,27 @@ class TestAppDescriptionHandler:
         handler = get_deploy_desc_handler(
             yaml.safe_load(content), procfile_data={"web": "gunicorn app", "worker": "celery"}
         )
-        handler.handle(bk_deployment)
-
-        assert query_proc_dict(bk_module, bk_deployment) == {"web": ("gunicorn app", 1), "worker": ("celery", 1)}
+        with pytest.raises(DescriptionValidationError, match="Process definitions conflict.*"):
+            handler.handle(bk_deployment)
 
     def test_procfile_only(self, bk_module, bk_deployment):
         handler = get_deploy_desc_handler(None, procfile_data={"web": "gunicorn app", "worker": "celery"})
         handler.handle(bk_deployment)
 
         assert query_proc_dict(bk_module, bk_deployment) == {"web": ("gunicorn app", 1), "worker": ("celery", 1)}
+
+    def test_desc_empty_procs_use_procfile(self, bk_module, bk_deployment):
+        content = dedent(
+            """
+            spec_version: 2
+            module:
+                language: python
+            """
+        )
+        handler = get_deploy_desc_handler(yaml.safe_load(content), procfile_data={"web": "python manage.py runserver"})
+        handler.handle(bk_deployment)
+
+        assert query_proc_dict(bk_module, bk_deployment) == {"web": ("python manage.py runserver", 1)}
 
     def test_invalid_desc_and_valid_procfile(self, bk_module, bk_deployment):
         handler = get_deploy_desc_handler(

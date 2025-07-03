@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-01 13:04+0800\n"
+"POT-Creation-Date: 2025-07-03 17:57+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -200,28 +200,36 @@ msgstr "Bound module information"
 msgid "显示名称"
 msgstr "Display name"
 
-#: paas_wl/bk_app/cnative/specs/views.py:119
+#: paas_wl/bk_app/cnative/specs/views.py:120
 msgid "权限不足或仓库不可达"
 msgstr "Insufficient permissions or repository unreachable"
 
-#: paas_wl/bk_app/cnative/specs/views.py:141
+#: paas_wl/bk_app/cnative/specs/views.py:142
 msgid "镜像凭证不存在"
 msgstr "Image credentials not found"
 
-#: paas_wl/bk_app/cnative/specs/views.py:158
+#: paas_wl/bk_app/cnative/specs/views.py:153
+msgid "镜像仓库权限不足, 请检查是否配置镜像凭证"
+msgstr "Image repository has no permission, please check whether the image credentials are configured."
+
+#: paas_wl/bk_app/cnative/specs/views.py:155
+msgid "镜像凭证错误, 请检查镜像凭证配置是否正确"
+msgstr "Image credential verification failed, please check the credential is correctly."
+
+#: paas_wl/bk_app/cnative/specs/views.py:163
 msgid "查看镜像 Tag"
 msgstr "View image Tag"
 
-#: paas_wl/bk_app/cnative/specs/views.py:166
+#: paas_wl/bk_app/cnative/specs/views.py:171
 msgid "拉取镜像 Tag 失败"
 msgstr "Failed to list tag from image repository"
 
-#: paas_wl/bk_app/cnative/specs/views.py:223
-#: paas_wl/bk_app/cnative/specs/views.py:282
+#: paas_wl/bk_app/cnative/specs/views.py:228
+#: paas_wl/bk_app/cnative/specs/views.py:287
 msgid "同环境和路径挂载卷已存在"
 msgstr "Mount volume already exists in the same environment and path."
 
-#: paas_wl/bk_app/cnative/specs/views.py:373
+#: paas_wl/bk_app/cnative/specs/views.py:378
 msgid "当前应用暂不支持持久存储功能，请联系管理员"
 msgstr ""
 "The current application does not support persistent storage functionality. "
@@ -763,8 +771,8 @@ msgid "其它"
 msgstr "Other"
 
 #: paasng/accessories/publish/market/protections.py:48
-#: paasng/platform/engine/constants.py:129
-#: paasng/platform/engine/workflow/protections.py:72
+#: paasng/platform/engine/constants.py:127
+#: paasng/platform/engine/workflow/protections.py:68
 #, fuzzy
 #| msgid "未完善应用基本信息"
 msgid "未完善应用市场信息"
@@ -2998,94 +3006,82 @@ msgstr "Stag Env"
 msgid "生产环境"
 msgstr "Prod Env"
 
-#: paasng/platform/engine/constants.py:130
+#: paasng/platform/engine/constants.py:128
 msgid "当前用户无部署该环境的权限"
 msgstr "The current user does not have permission to deploy this environment"
 
-#: paasng/platform/engine/constants.py:131
+#: paasng/platform/engine/constants.py:129
 msgid "当前用户尚未绑定 OAUTH 授权信息"
 msgstr "The current user has not yet bound the OAUTH authorization information"
 
-#: paasng/platform/engine/constants.py:132
+#: paasng/platform/engine/constants.py:130
 msgid "当前用户没有访问源码仓库的权限"
 msgstr "The current user does not have permission to access the repository"
 
-#: paasng/platform/engine/constants.py:133
+#: paasng/platform/engine/constants.py:131
 msgid "当前源码仓库信息异常"
 msgstr "The current source code repository information is abnormal"
 
-#: paasng/platform/engine/constants.py:134
-#: paasng/platform/engine/workflow/protections.py:201
+#: paasng/platform/engine/constants.py:132
+#: paasng/platform/engine/workflow/protections.py:131
 msgid "未完善进程启动命令"
 msgstr "Incomplete process start command"
 
-#: paasng/platform/engine/constants.py:135
+#: paasng/platform/engine/constants.py:133
 msgid "当前用户未授权 CI 组件访问仓库的权限"
 msgstr ""
 "The current user does not authorize the CI component to access the repository"
 
-#: paasng/platform/engine/constants.py:136
-#: paasng/platform/engine/workflow/protections.py:225
+#: paasng/platform/engine/constants.py:134
+#: paasng/platform/engine/workflow/protections.py:155
 msgid "未设置插件分类"
 msgstr "Plugin category not set"
 
-#: paasng/platform/engine/constants.py:137
-#, fuzzy
-#| msgid "未设置有效的访问地址"
-msgid "未配置有效的镜像仓库地址"
-msgstr "No valid access address set"
-
-#: paasng/platform/engine/constants.py:138
-#, fuzzy
-#| msgid "私有镜像需要添加镜像凭证"
-msgid "私有镜像需要有效的镜像凭证"
-msgstr "Private images need to add valid image credentials"
-
-#: paasng/platform/engine/constants.py:139
-#: paasng/platform/engine/workflow/protections.py:238
-#: paasng/platform/engine/workflow/protections.py:241
+#: paasng/platform/engine/constants.py:135
+#: paasng/platform/engine/workflow/protections.py:168
+#: paasng/platform/engine/workflow/protections.py:171
 msgid "未完善应用基本信息"
 msgstr "Incomplete app basic information"
 
-#: paasng/platform/engine/constants.py:144
+#: paasng/platform/engine/constants.py:140
 msgid "使用 Buildpacks 构建"
 msgstr "Build using Buildpacks"
 
-#: paasng/platform/engine/constants.py:145
+#: paasng/platform/engine/constants.py:141
 msgid "使用 Dockerfile 构建"
 msgstr "Build using Dockerfile"
 
-#: paasng/platform/engine/constants.py:152
+#: paasng/platform/engine/constants.py:148
 msgid "蓝鲸应用ID"
 msgstr "BK APP ID"
 
-#: paasng/platform/engine/constants.py:153
+#: paasng/platform/engine/constants.py:149
 msgid "蓝鲸应用密钥"
 msgstr "BK APP Secret"
 
-#: paasng/platform/engine/constants.py:154
+#: paasng/platform/engine/constants.py:150
 msgid "蓝鲸应用租户 ID"
 msgstr "BK APP Tenant ID"
 
-#: paasng/platform/engine/constants.py:160
+#: paasng/platform/engine/constants.py:156
 msgid "应用当前模块名"
 msgstr "Current Module Name"
 
-#: paasng/platform/engine/constants.py:161
+#: paasng/platform/engine/constants.py:157
 msgid "应用当前环境，预发布环境为 stag、生产环境为 prod"
 msgstr ""
 "Current environment, the pre-release environment is stag, and the production "
 "environment is prod"
 
-#: paasng/platform/engine/constants.py:162
+#: paasng/platform/engine/constants.py:158
 msgid "应用当前运行的开发者中心版本，值为 3"
 msgstr "The currently running Dev Center version, the value is 3"
 
-#: paasng/platform/engine/constants.py:163
+#: paasng/platform/engine/constants.py:159
 msgid "应用版本，默认版本为 default"
 msgstr "APP version, the default version is default"
 
-#: paasng/platform/engine/constants.py:166
+#: paasng/platform/engine/constants.py:162
 msgid ""
 "应用模块各环境的访问地址，如 {\"stag\": \"http://stag.com\", \"prod\": "
 "\"http://prod.com\"}"
@@ -3316,54 +3312,36 @@ msgstr "Error in step [{title}], reason: {reason}."
 msgid "步骤 [{title}] 出错了，请稍候重试。"
 msgstr "Error in step [{title}], please try again later"
 
-#: paasng/platform/engine/workflow/protections.py:88
+#: paasng/platform/engine/workflow/protections.py:84
 msgid "当前用户尚未授权访问仓库"
 msgstr "The current user is not authorized to access the repository"
 
-#: paasng/platform/engine/workflow/protections.py:90
+#: paasng/platform/engine/workflow/protections.py:86
 #, python-brace-format
 msgid "当前用户尚未授权访问仓库: {source_type}"
 msgstr ""
 "The current user is not authorized to access the repository: {source_type}"
 
-#: paasng/platform/engine/workflow/protections.py:97
+#: paasng/platform/engine/workflow/protections.py:93
 #, python-brace-format
 msgid "当前用户没有访问源码仓库的权限，请给 {repo} 授权"
 msgstr ""
 "The current user does not have permission to access the source code "
 "repository, please authorize {repo}"
 
-#: paasng/platform/engine/workflow/protections.py:101
+#: paasng/platform/engine/workflow/protections.py:97
 msgid "当前账户没有访问源码仓库的权限，请确保账户名/密码正确"
 msgstr ""
 "The current account does not have permission to access the source code "
 "repository, please make sure the account name/password is correct"
 
-#: paasng/platform/engine/workflow/protections.py:105
+#: paasng/platform/engine/workflow/protections.py:101
 msgid "获取源码仓库信息失败，请确保仓库信息填写正确"
 msgstr ""
 "Failed to obtain source code repository information, please make sure that "
 "the repository information is filled in correctly"
 
-#: paasng/platform/engine/workflow/protections.py:124
-msgid "模块未配置镜像仓库信息，请先配置镜像仓库"
-msgstr "Module image repository not configured, please configure first."
-
-#: paasng/platform/engine/workflow/protections.py:144
-msgid "镜像仓库地址无效或无法访问，请检查仓库地址和网络连接"
-msgstr ""
-"Image repository address invalid or inaccessible, please check the "
-"repository address and network connection."
-
-#: paasng/platform/engine/workflow/protections.py:155
-msgid "镜像凭证不存在或已被删除，请先配置镜像凭证"
-msgstr "Image certificate does not exist, please configure first."
-
-#: paasng/platform/engine/workflow/protections.py:171
-msgid "私有镜像凭证校验失败，请检查凭证是否正确"
-msgstr "Image credential verification failed, please check the credential."
-
-#: paasng/platform/engine/workflow/protections.py:186
+#: paasng/platform/engine/workflow/protections.py:116
 msgid "当前用户无部署该环境的权限, 请联系应用管理员"
 msgstr ""
 "The current user does not have permission to deploy this environment, please "

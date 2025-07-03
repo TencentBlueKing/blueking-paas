@@ -72,10 +72,6 @@ class RepoAccessCondition(DeployCondition):
     """检查用户是否有该模块的源码仓库的访问权限"""
 
     def validate(self):
-        module: Module = self.env.module
-        if ModuleSpecs(module).runtime_type == RuntimeType.CUSTOM_IMAGE:
-            return
-
         try:
             # TODO: We should also check the return value.
             get_version_service(self.env.module, operator=self.user.pk).touch()

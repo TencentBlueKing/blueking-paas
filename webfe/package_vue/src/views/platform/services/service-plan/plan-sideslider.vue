@@ -43,7 +43,7 @@
             <bk-option
               v-for="option in services"
               :id="option.name"
-              :name="option.name"
+              :name="`${option.display_name} (${option.name})`"
               :key="option.uuid"
             ></bk-option>
           </bk-select>

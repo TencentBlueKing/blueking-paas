@@ -354,15 +354,12 @@ class ProcessManager:
         if not container_name:
             container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
 
-        # 设置超时时间 seconds
-        timeout = 30
         params = {
             "name": instance_name,
             "namespace": self.wl_app.namespace,
             "container": container_name,
             "follow": True,
             "timestamps": timestamps,
-            "timeout": timeout,
         }
         if since_seconds:
             params["since_seconds"] = since_seconds

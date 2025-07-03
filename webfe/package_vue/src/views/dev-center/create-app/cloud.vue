@@ -1337,7 +1337,6 @@ export default {
       this.formLoading = true;
       const params = {
         is_plugin_app: this.isBkPlugin,
-        region: this.regionChoose,
         code: this.formData.code,
         name: this.formData.name,
         // 租户模式

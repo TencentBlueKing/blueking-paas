@@ -154,6 +154,7 @@
     <PlanSideslider
       :show.sync="isShowPlanSideslider"
       :tenant-id="curTenantId"
+      :service-name="activeService.name"
       :data="sidesliderConfig.row"
       :services="platformServices"
       :config="sidesliderConfig"

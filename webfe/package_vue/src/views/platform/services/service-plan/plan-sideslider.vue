@@ -122,6 +122,10 @@ export default {
       type: String,
       default: '',
     },
+    serviceName: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -212,6 +216,7 @@ export default {
       this.saveLoading = false;
     },
     shown() {
+      this.formData.service_name = this.serviceName || '';
       if (!this.isAdd) {
         // 编辑回填
         const { name, service_name, description, is_active, config } = this.data;

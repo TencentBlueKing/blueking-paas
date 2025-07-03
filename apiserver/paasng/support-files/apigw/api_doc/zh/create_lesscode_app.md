@@ -25,7 +25,7 @@ engine_params
 
 ### 请求示例
 ```
-curl -X POST -H 'content-type: application/json' -H 'x-bkapi-authorization: {"access_token": "your access_token", "bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' -d '{"region": "default", "code": "testappcode", "name": "testappcode", "type": "default", "engine_enabled": true, "engine_params": {"source_origin": 2, "source_init_template": "nodejs_bk_magic_vue_spa"}}' --insecure https://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/lesscode/
+curl -X POST -H 'content-type: application/json' -H 'x-bkapi-authorization: {"access_token": "your access_token", "bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' -d '{"code": "testappcode", "name": "testappcode", "type": "default", "engine_enabled": true, "engine_params": {"source_origin": 2, "source_init_template": "nodejs_bk_magic_vue_spa"}}' --insecure https://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/lesscode/
 ```
 
 ### 返回结果示例

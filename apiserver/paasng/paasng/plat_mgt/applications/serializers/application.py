@@ -285,6 +285,7 @@ class DeletedApplicationListOutputSLZ(serializers.Serializer):
     app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
     type = serializers.SerializerMethodField(read_only=True, help_text="应用类型")
+    category = serializers.SerializerMethodField(read_only=True, help_text="应用分类")
     creator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
     created_at = serializers.DateTimeField(read_only=True, source="created")
@@ -293,3 +294,15 @@ class DeletedApplicationListOutputSLZ(serializers.Serializer):
 
     def get_type(self, instance: Application) -> str:
         return ApplicationType.get_choice_label(instance.type)
+
+    def get_category(self, instance: Application) -> str:
+        """获取应用分类名"""
+        try:
+            extra_info = instance.extra_info
+        except ObjectDoesNotExist:
+            return ""
+
+        if not extra_info.tag:
+            return ""
+
+        return extra_info.tag.name

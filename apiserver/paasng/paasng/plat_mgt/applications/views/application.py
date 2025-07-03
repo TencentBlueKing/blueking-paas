@@ -335,7 +335,7 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
                 AppManger(session).delete_by_code(code=app_code)
             except Exception:
                 logger.exception("Failed to delete application %s from PaaS2.0", app_code)
-                raise error_codes.CANNOT_HARD_DELETE_APP.f(_("PaaS 2.0 中信息删除失败，无法硬删除应用"))
+                raise error_codes.CANNOT_HARD_DELETE_APP.f(_("PaaS 2.0 中信息删除失败"))
 
         # 删除权限中心相关数据
         delete_builtin_user_groups(app_code)

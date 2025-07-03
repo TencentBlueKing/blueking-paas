@@ -61,9 +61,16 @@ class DeploymentDeclarativeController:
 
         :param desc: The deployment specification
         :param procfile_procs: The processes list defined by the Procfile
+        :raise: DescriptionValidationError: when any validation error occurs
         """
         if procfile_procs:
-            desc.use_procfile_procs_if_conflict(procfile_procs)
+            try:
+                desc.use_procfile_procs(procfile_procs)
+            except ValueError:
+                raise DescriptionValidationError(
+                    "Process definitions conflict between Procfile and app description file. "
+                    "Please remove the Procfile to resolve this conflict."
+                )
 
         self.handle_desc(desc)
 

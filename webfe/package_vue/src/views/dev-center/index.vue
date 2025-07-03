@@ -84,7 +84,7 @@
               </bk-popover>
               <div
                 :class="['filter-right-icon', { active: filterActive }]"
-                v-bk-tooltips="{ content: filterTips }"
+                v-bk-tooltips="{ content: $t(filterTips) }"
                 @click.stop="handleTtogleOrder"
               >
                 <i :class="['paasng-icon', sortValue.indexOf('-') !== -1 ? 'paasng-shengxu' : 'paasng-jiangxu']" />
@@ -1521,6 +1521,9 @@ section.app-filter-module {
   padding: 4px 0;
   &.en {
     width: 105px;
+  }
+  .tippy-content {
+    padding: 0 !important;
   }
   .tippy-tooltip.light-theme {
     height: 100%;

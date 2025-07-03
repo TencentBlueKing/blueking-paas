@@ -60,7 +60,13 @@
                   </div>
                 </section>
               </template>
-              <template v-else>{{ nodeDetail[key]?.join(' / ') || '' }}</template>
+              <div
+                v-else
+                class="apps"
+                v-bk-overflow-tips
+              >
+                <span>{{ nodeDetail[key]?.join(' / ') || '' }}</span>
+              </div>
               <i
                 v-bk-tooltips="$t('复制')"
                 class="paasng-icon paasng-general-copy"
@@ -265,6 +271,14 @@ export default {
     color: #3a84ff;
     cursor: pointer;
   }
+  .apps {
+    white-space: pre-wrap;
+    display: -webkit-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3; /* 限制显示的行数 */
+  }
 }
 .sync-records-container {
   padding: 24px 40px;
@@ -292,13 +306,6 @@ export default {
       white-space: nowrap;
       text-overflow: ellipsis;
       overflow: hidden;
-    }
-    .apps {
-      display: -webkit-box;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 3; /* 限制显示的行数 */
     }
     .copy-icon {
       display: none;

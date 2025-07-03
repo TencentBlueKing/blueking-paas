@@ -141,10 +141,8 @@ class TestCnativeAppDescriptionHandler:
                 yaml.safe_load(yaml_v3_example), procfile_data={"worker": "celery worker"}
             )
 
-            handler.handle(bk_deployment)
-
-            # Should use the process data in procfile when conflicts
-            assert query_proc_dict(bk_module) == {"worker": ("celery worker", 1)}
+            with pytest.raises(DescriptionValidationError, match="Process definitions conflict.*"):
+                handler.handle(bk_deployment)
 
     def test_with_modules_found(self, bk_deployment, bk_module):
         _yaml_content = dedent(

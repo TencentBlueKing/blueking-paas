@@ -35,7 +35,7 @@ from paasng.platform.applications.serializers.app import UpdateApplicationNameSL
 from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.utils.models import OrderByField
-from paasng.utils.serializers import StringArrayField, UserNameField
+from paasng.utils.serializers import HumanizeDateTimeField, StringArrayField, UserNameField
 
 # 应用列表序列化器
 
@@ -52,6 +52,7 @@ class ApplicationListOutputSLZ(serializers.Serializer):
     resource_quotas = serializers.SerializerMethodField(read_only=True)
     is_active = serializers.BooleanField(read_only=True, help_text="应用是否处于激活状态")
     creator = UserNameField()
+    created_humanized = HumanizeDateTimeField(source="created")
     created_at = serializers.DateTimeField(read_only=True, source="created")
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
 
@@ -138,6 +139,7 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     type = serializers.CharField(read_only=True, help_text="应用类型")
     is_active = serializers.BooleanField(read_only=True, help_text="应用状态")
     creator = UserNameField(read_only=True, help_text="创建人")
+    created_humanized = HumanizeDateTimeField(source="created")
     created_at = serializers.DateTimeField(read_only=True, source="created")
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
 
@@ -250,8 +252,10 @@ class DeletedApplicationListOutputSLZ(serializers.Serializer):
     name = serializers.CharField(read_only=True, help_text="应用名称")
     app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
-    type = serializers.SerializerMethodField(read_only=True)
+    type = serializers.SerializerMethodField(read_only=True, help_text="应用类型")
+    category = serializers.SerializerMethodField(read_only=True, help_text="应用分类")
     creator = UserNameField()
+    created_humanized = HumanizeDateTimeField(source="created")
     created_at = serializers.DateTimeField(read_only=True, source="created")
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
     deleted_at = serializers.DateTimeField(read_only=True, source="updated")

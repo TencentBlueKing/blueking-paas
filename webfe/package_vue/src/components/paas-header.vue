@@ -176,7 +176,7 @@ import logVersion from './log-version.vue';
 import { ajaxRequest, uuid } from '@/common/utils';
 import logoSvg from '/static/images/logo.svg';
 import globalInput from './global-search/search-input.vue';
-import { mapState } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 
 export default {
   components: {
@@ -208,6 +208,7 @@ export default {
   },
   computed: {
     ...mapState(['localLanguage', 'userFeature', 'platformConfig', 'platformFeature']),
+    ...mapGetters(['tenantId']),
     displayNavList() {
       const nav = this.headerStaticInfo.list.nav || [];
       return this.transformNavData(nav);
@@ -220,6 +221,12 @@ export default {
     },
     isShowInput() {
       return !this.$route.meta.hideGlobalSearch;
+    },
+    defaultSwitchLanguageUrl() {
+      return `${window.BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fe_update_user_language/`;
+    },
+    isMultiTenant() {
+      return this.platformFeature.MULTI_TENANT_MODE;
     },
   },
   watch: {
@@ -292,37 +299,57 @@ export default {
         window.location.href
       )}`;
     },
+    makeAjaxRequest(url, language) {
+      return new Promise((resolve, reject) => {
+        ajaxRequest({
+          url,
+          jsonp: `callback${uuid()}`,
+          data: { language },
+          success: resolve,
+          error: reject,
+        });
+      });
+    },
+    /**
+     * 切换系统语言
+     * @param {string} language - 目标语言
+     */
     async switchLanguage(language) {
-      const data = new URLSearchParams();
-      data.append('language', language);
-      this.$http
-        .post(`${BACKEND_URL}/i18n/setlang/`, data, {
+      try {
+        const data = new URLSearchParams();
+        data.append('language', language);
+        await this.$http.post(`${BACKEND_URL}/i18n/setlang/`, data, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-        })
-        .then(
-          (res) => {
-            this.$i18n.locale = language;
-            this.$store.commit('updateLocalLanguage', language);
-            // 设置cookies持续化
-            if (window.BK_COMPONENT_API_URL) {
-              ajaxRequest({
-                url: `${window.BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fe_update_user_language/`,
-                jsonp: `callback${uuid()}`,
-                data: Object.assign({ language }),
-                success: () => {
-                  window.location.reload();
-                },
-              });
-            } else {
-              window.location.reload();
-            }
-          },
-          (e) => {
-            this.catchErrorHandler(e);
-          }
-        );
+        });
+
+        // 更新本地语言状态
+        this.$i18n.locale = language;
+        this.$store.commit('updateLocalLanguage', language);
+
+        // 根据环境变量判断是否需要额外请求
+        const needAjaxRequest = this.isMultiTenant ? window.BK_API_URL_TMPL : window.BK_COMPONENT_API_URL;
+
+        if (!needAjaxRequest) {
+          return window.location.reload();
+        }
+
+        // 处理多租户和非多租户环境请求
+        if (this.isMultiTenant) {
+          await this.$store.dispatch('tenant/tenantLocaleSwitch', {
+            tenantId: this.tenantId,
+            data: {
+              language,
+            },
+          });
+        } else {
+          await this.makeAjaxRequest(this.defaultSwitchLanguageUrl, language);
+        }
+        window.location.reload();
+      } catch (error) {
+        this.catchErrorHandler(error);
+      }
     },
     handlerLogVersion() {
       this.showLogVersion = true;

@@ -48,11 +48,25 @@ export default {
       return http.get(url);
     },
     /**
+     * 应用列表-获取应用分类
+     */
+    getCategoryTypes() {
+      const url = `${BACKEND_URL}/api/market/tags`;
+      return http.get(url);
+    },
+    /**
      * 应用详情-获取应用详情数据
      */
     getAppDetails({}, { appCode }) {
       const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/`;
       return http.get(url);
+    },
+    /**
+     * 应用详情-更新应用分类
+     */
+    updateAppCategory({}, { appCode, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/app_category/`;
+      return http.post(url, data);
     },
     /**
      * 应用详情-更新应用信息

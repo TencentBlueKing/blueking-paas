@@ -173,6 +173,7 @@
                       :multiple="false"
                       ext-cls="app-logo-upload-cls"
                       :custom-request="customRequest"
+                      :title="''"
                       @on-delete="curFileData = []"
                     ></bk-upload>
                     <ul class="upload-tip">

@@ -68,6 +68,18 @@
               ></bk-user-display-name>
               <span v-else>{{ baseInfo[key] }}</span>
             </template>
+            <template v-else-if="key === 'category'">
+              <span>{{ baseInfo[key] || '--' }}</span>
+              <bk-button
+                style="padding: 0 6px"
+                text
+                :loading="editCategory.loading"
+                @click="handleEditCategory"
+              >
+                <i class="paasng-icon paasng-edit-2" />
+                {{ $t('编辑') }}
+              </bk-button>
+            </template>
             <span v-else-if="key === 'is_active'">{{ baseInfo[key] ? $t('正常') : $t('下架') }}</span>
             <template v-else>
               {{ key === 'type' ? PAAS_APP_TYPE[baseInfo[key]] : baseInfo[key] || '--' }}
@@ -270,6 +282,40 @@
       </bk-collapse>
     </section>
 
+    <!-- 修改应用分类弹窗 -->
+    <bk-dialog
+      v-model="editCategory.visible"
+      header-position="left"
+      theme="primary"
+      width="560"
+      :mask-close="false"
+      :loading="editCategory.loading"
+      @confirm="handleConfirmCategory"
+    >
+      <div
+        slot="header"
+        class="deploy-cluster-header-cls"
+      >
+        {{ $t('修改应用分类') }}
+      </div>
+      <div class="cluster-select-cls">
+        <div class="label">{{ $t('应用分类') }}</div>
+        <bk-select
+          style="width: 100%"
+          v-model="editCategory.selectedCategory"
+          :clearable="false"
+          :searchable="true"
+        >
+          <bk-option
+            v-for="option in editCategory.categoryList"
+            :key="option.id"
+            :id="option.id"
+            :name="option.name"
+          ></bk-option>
+        </bk-select>
+      </div>
+    </bk-dialog>
+
     <!-- 修改部署集群弹窗 -->
     <bk-dialog
       v-model="editDeployCluster.visible"
@@ -335,6 +381,7 @@ export default {
         app_tenant_mode: '租户模式',
         app_tenant_id: '租户 ID',
         type: '应用类型',
+        category: "应用分类",
         is_active: '状态',
         creator: '创建人',
         created_humanized: '创建时间',
@@ -353,6 +400,12 @@ export default {
         name: '',
         loading: false,
         oldName: '',
+      },
+      editCategory: {
+        visible: false,
+        loading: false,
+        categoryList: [],
+        selectedCategory: null,
       },
       editDeployCluster: {
         visible: false,
@@ -418,7 +471,7 @@ export default {
         this.isLoading = false;
       }
     },
-    // 编辑
+    // 编辑应用名
     handleEditAppName(appName) {
       this.editApp.isEdit = true;
       this.editApp.name = this.editApp.name || appName;
@@ -426,7 +479,7 @@ export default {
         this.$refs.appNameInput[0]?.focus();
       });
     },
-    // 取消
+    // 取消编辑应用名
     handleCancel() {
       this.editApp.isEdit = false;
       this.editApp.name = this.editApp.oldName;
@@ -459,7 +512,54 @@ export default {
         this.$set(this.editApp, 'loading', false);
       }
     },
-    // 取部署集群列表
+    // 显示编辑分类对话框
+    async handleEditCategory() {
+      this.editCategory.visible = true;
+      this.editCategory.loading = false;
+      await this.getCategoryList();
+      
+      // 查找当前分类的ID
+      const currentCategory = this.editCategory.categoryList.find(item => item.name === this.baseInfo.category);
+      this.editCategory.selectedCategory = currentCategory ? currentCategory.id : null;
+    },
+    // 获取分类列表
+    async getCategoryList() {
+      try {
+        const res = await this.$store.dispatch('market/getTags');
+        this.editCategory.categoryList = res;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
+    // 更新应用分类
+    async updateAppCategory() {
+      try {
+        await this.$store.dispatch('tenantOperations/updateAppCategory', {
+          appCode: this.appCode,
+          data: {
+            category: this.editCategory.selectedCategory
+          }
+        });
+        this.editCategory.loading = false;
+        this.editCategory.visible = false;
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('应用分类修改成功'),
+        });
+        this.getAppDetails();
+      } catch (e) {
+        this.catchErrorHandler(e);
+        this.editCategory.loading = false;
+      }
+    },
+    // 确认修改分类
+    handleConfirmCategory() {
+      if (!this.editCategory.selectedCategory) return;
+      
+      this.editCategory.loading = true;
+      this.updateAppCategory();
+    },
+    // 获取部署集群列表
     async getClusters() {
       try {
         const res = await this.$store.dispatch('tenant/getClusterList');

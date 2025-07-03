@@ -10,10 +10,7 @@
     >
       <!-- 仅镜像 -->
       <template v-if="isCustomImage">
-        <image-info
-          :credential-list="credentialList"
-          @close-content-loader="closeContentLoader"
-        ></image-info>
+        <image-info :credential-list="credentialList"></image-info>
         <image-credential
           :list="credentialList"
           @reacquire="getCredentialList"
@@ -23,25 +20,19 @@
           v-if="curAppInfo.feature?.IMAGE_APP_BIND_REPO"
           class="custom-image-modle"
           :build-method="buildMethod"
-          @close-content-loader="closeContentLoader"
         />
       </template>
       <template v-else>
         <!-- lesscode/smart应用 源码信息 -->
-        <packages-view
-          v-if="isLesscodeApp || isSmartApp || isAidevPlugin"
-          @close-content-loader="closeContentLoader"
-        />
+        <packages-view v-if="isLesscodeApp || isSmartApp || isAidevPlugin" />
         <!-- 代码源 -->
         <code-source
           v-else
           :build-method="buildMethod"
-          @close-content-loader="closeContentLoader"
         />
         <!-- 镜像信息 -->
         <mirror
           v-if="!isSmartApp"
-          @close-content-loader="closeContentLoader"
           @set-build-method="setBuildMethod"
         />
       </template>
@@ -86,6 +77,10 @@ export default {
   created() {
     if (this.isCustomImage) {
       this.getCredentialList();
+    } else {
+      setTimeout(() => {
+        this.closeContentLoader();
+      }, 1000);
     }
   },
   methods: {
@@ -99,7 +94,6 @@ export default {
 
     // 获取凭证列表
     async getCredentialList() {
-      // loading处理
       try {
         const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode: this.appCode });
         this.credentialList = res;
@@ -107,10 +101,9 @@ export default {
           item.password = '';
         });
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
+      } finally {
+        this.closeContentLoader();
       }
     },
   },

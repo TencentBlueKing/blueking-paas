@@ -137,7 +137,7 @@ export default {
         ?.validate()
         .then(() => {
           // 基础JSON校验
-          const validateResult = validateJson(this.valuesJson);
+          const validateResult = validateJson(this.valuesJson, this.$refs.jsonEditor?.jsonEditor);
           if (!validateResult) {
             return;
           }
@@ -160,7 +160,7 @@ export default {
         });
     },
     // 添加资源池
-    async addResourcePool(data) {
+    async addResourcePool(data, isClone = false) {
       try {
         await this.$store.dispatch('tenant/addResourcePool', {
           planId: this.data.planId,
@@ -168,7 +168,7 @@ export default {
         });
         this.$paasMessage({
           theme: 'success',
-          message: this.$t('添加成功'),
+          message: isClone ? this.$t('克隆成功') : this.$t('添加成功'),
         });
         this.$emit('refresh', true);
         // 关闭弹窗

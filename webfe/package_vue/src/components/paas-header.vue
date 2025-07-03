@@ -419,9 +419,6 @@ export default {
     left: 0;
     width: 100%;
     height: 50px;
-    background: #191929;
-    -webkit-transition-timing-function: cubic-bezier(0.2, 1, 0.3, 1);
-    transition-timing-function: cubic-bezier(0.2, 1, 0.3, 1);
   }
 
   .ps-logo {
@@ -533,7 +530,6 @@ export default {
 }
 
 .ps-head-right {
-  background: #191929;
   position: relative;
   margin: 0;
   padding: 8px 10px 8px 0px;

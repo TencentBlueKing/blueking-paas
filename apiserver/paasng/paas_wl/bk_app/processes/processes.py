@@ -297,6 +297,7 @@ class ProcessManager:
         process_type: str,
         instance_name: str,
         previous: bool,
+        timestamps: bool = False,
         container_name: str | None = None,
         tail_lines: Optional[int] = None,
     ):
@@ -305,6 +306,7 @@ class ProcessManager:
         :param process_type: 进程类型
         :param instance_name: 进程实例名称
         :param previous: 是否获取上一次运行的日志
+        :param timestamps: 是否在日志前添加时间戳
         :param container_name: 容器名称
         :param tail_lines: 获取日志末尾的行数
         :return: str
@@ -320,6 +322,7 @@ class ProcessManager:
                 name=instance_name,
                 namespace=self.wl_app.namespace,
                 previous=previous,
+                timestamps=timestamps,
                 container=container_name,
                 tail_lines=tail_lines,
             )

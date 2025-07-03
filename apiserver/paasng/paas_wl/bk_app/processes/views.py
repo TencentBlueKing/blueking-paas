@@ -468,6 +468,7 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         try:
             logs = manager.get_instance_logs(
                 process_type=process_type,
+                timestamps=True,  # Always add timestamps to logs
                 instance_name=process_instance_name,
                 previous=data["previous"],
                 tail_lines=data["tail_lines"],
@@ -475,7 +476,13 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except InstanceNotFound:
             raise error_codes.PROCESS_INSTANCE_NOT_FOUND
 
-        return Response(status=status.HTTP_200_OK, data=logs.splitlines())
+        # 拆分时间戳和具体日志, 用于开启流式日志时流畅过渡
+        date = []
+        for log in logs.splitlines():
+            log_timestamp_str, log_message = log.split(" ", 1)
+            date.append({"timestamp": log_timestamp_str, "message": log_message})
+
+        return Response(status=status.HTTP_200_OK, data=date)
 
     def download_logs(self, request, code, module_name, environment, process_type, process_instance_name):
         """下载进程实例的日志"""

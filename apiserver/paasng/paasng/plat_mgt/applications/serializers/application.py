@@ -253,7 +253,6 @@ class DeletedApplicationListOutputSLZ(serializers.Serializer):
     app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
     type = serializers.SerializerMethodField(read_only=True, help_text="应用类型")
-    category = serializers.SerializerMethodField(read_only=True, help_text="应用分类")
     creator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
     created_at = serializers.DateTimeField(read_only=True, source="created")

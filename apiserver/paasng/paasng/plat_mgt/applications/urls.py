@@ -51,6 +51,11 @@ urlpatterns = [
         name="plat_mgt.applications.retrieve_app_name",
     ),
     re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/app_category/$",
+        views.ApplicationDetailViewSet.as_view({"post": "update_app_category"}),
+        name="plat_mgt.applications.update_app_category",
+    ),
+    re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/"
         r"envs/(?P<env_name>[^/]+)/cluster/$",
         views.ApplicationDetailViewSet.as_view({"put": "update_cluster"}),

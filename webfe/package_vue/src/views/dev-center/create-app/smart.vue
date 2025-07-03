@@ -47,8 +47,7 @@
               >
                 <p
                   slot="tip"
-                  class="uploader-tip"
-                  style="font-size: 12px"
+                  class="uploader-tip f12 mt10"
                 >
                   {{ $t('将文件拖到此处或') }}
                   <span style="color: #3a84ff">{{ $t('点击上传') }}</span>
@@ -361,13 +360,6 @@ export default {
 .smart-app {
   width: 1200px;
   margin: auto;
-  .uploader-tip {
-    font-size: 12px;
-    font-weight: 400;
-    span {
-      color: #3a84ff;
-    }
-  }
   .smart-upload {
     padding: 24px;
     margin-bottom: 16px;
@@ -391,24 +383,19 @@ export default {
     }
     /deep/ .config-upload-content,
     /deep/ .config-upload-file {
-      height: 180px;
+      height: 96px;
       padding: 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      .content-icon {
+        height: 28px;
+        width: 28px;
+        i {
+          font-size: 28px;
+        }
+      }
     }
-    // /deep/ .config-upload-content {
-    //   height: 180px;
-    //   padding: 0;
-    //   display: flex;
-    //   justify-content: center;
-    // }
-    // /deep/ .config-upload-file {
-    //   height: 180px;
-    //   display: flex;
-    //   align-items: center;
-    //   padding: 0;
-    // }
   }
 }
 

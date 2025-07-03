@@ -52,6 +52,19 @@ export default {
   },
   actions: {
     /**
+     * 多租户语言环境切换
+     */
+    tenantLocaleSwitch({}, { tenantId, data }) {
+      const config = {
+        headers: {
+          'X-Bk-Tenant-Id': tenantId,
+        }
+      };
+      const apiUrl = window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web');
+      const url = `${apiUrl}/prod/api/v3/open-web/tenant/current-user/language/`;
+      return http.put(url, data, config);
+    },
+    /**
      * 获取租户下的人员信息
      */
     searchTenantUsers({}, { keyword, tenantId }) {

@@ -89,7 +89,7 @@ class DeploymentDesc:
         """
         # TODO/FIXME: 让函数接受当前环境 environment 参数，因为对于一份完整的应用描述来说，
         # 可能针对不同环境配置了不同的值（通过 envOverlay），这些值包括 replicas, plan 等。
-        # 以此不同的环境可能会又不同的 replicas 设置。
+        # 因此不同的环境可能会有不同的 replicas 设置。
         #
         # 而这又带来了其他问题：配置解析阶段，因为 deployment 上下文的存在，这里可以拿到和
         # 当前环境强相关的进程对象。但是到了后续的将进程数据同步到 ModuleProcessSpec 时，
@@ -107,27 +107,27 @@ class DeploymentDesc:
             result[process.name] = process
         return result
 
-    def use_procfile_procs_if_conflict(self, procfile_procs: List[ProcfileProc]):
-        """Use the processes defined in the Procfile if it's not identical with the
-        process list in current spec object.
+    def use_procfile_procs(self, procfile_procs: List[ProcfileProc]):
+        """Use the processes defined in the Procfile to replace the current processes.
+
+        :raise ValueError: if there are any conflicted process definitions.
         """
-        if self._equal_with_procs(procfile_procs):
+        d_specs = {p.name: p.get_proc_command() for p in self.get_processes().values()}
+        d_procf = {p.name: p.command for p in procfile_procs}
+        if d_specs == d_procf:
+            # No need to update, the processes are the same
             return
 
-        # Replace the processes with the data defined by the Procfile
-        self.spec.processes = []
-        for proc in procfile_procs:
-            self.spec.processes.append(Process(name=proc.name, proc_command=proc.command))
+        if not d_specs:
+            # If the current spec has no processes, replace the processes with the data defined
+            # by the Procfile.
+            self.spec.processes = []
+            for proc in procfile_procs:
+                self.spec.processes.append(Process(name=proc.name, proc_command=proc.command))
+            return
 
-    def _equal_with_procs(self, procfile_procs: List[ProcfileProc]) -> bool:
-        """Check if current process list is equal with given Procfile processes.
-
-        Only "name" and "command" fields are compared because the ProcfileProc object
-        do not contain any other fields.
-        """
-        d1 = {p.name: p.get_proc_command() for p in self.get_processes().values()}
-        d2 = {p.name: p.command for p in procfile_procs}
-        return d1 == d2
+        # The process definitions in the spec and the Procfile are different, raise an error
+        raise ValueError("proc definitions conflict")
 
     @staticmethod
     def to_proc_tmpl(process: Process) -> ProcessTmpl:

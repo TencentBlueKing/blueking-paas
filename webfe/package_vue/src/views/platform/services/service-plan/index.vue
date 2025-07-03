@@ -69,7 +69,10 @@
           prop="conditions"
           :min-width="200"
         >
-          <div slot-scope="{ row }">
+          <div
+            class="json-pretty-wrapper"
+            slot-scope="{ row }"
+          >
             <!-- JSON格式预览 -->
             <vue-json-pretty
               class="paas-vue-json-pretty-cls"
@@ -78,6 +81,11 @@
               :show-length="true"
               :highlight-mouseover-node="true"
             />
+            <i
+              v-bk-tooltips="$t('复制')"
+              class="paasng-icon paasng-general-copy"
+              v-copy="JSON.stringify(row.config, null, 2)"
+            ></i>
           </div>
         </bk-table-column>
         <bk-table-column
@@ -146,6 +154,7 @@
     <PlanSideslider
       :show.sync="isShowPlanSideslider"
       :tenant-id="curTenantId"
+      :service-name="activeService.name"
       :data="sidesliderConfig.row"
       :services="platformServices"
       :config="sidesliderConfig"
@@ -363,6 +372,27 @@ export default {
     padding: 16px;
     .plan-table-cls {
       margin-top: 12px;
+      /deep/ .bk-table-row.hover-row {
+        i.paasng-general-copy {
+          display: block !important;
+        }
+      }
+      .json-pretty-wrapper {
+        display: flex;
+        .paas-vue-json-pretty-cls {
+          flex: 1;
+          margin-right: 16px;
+        }
+        i.paasng-general-copy {
+          display: none;
+          position: absolute;
+          top: 50%;
+          right: 0;
+          color: #3a84ff;
+          cursor: pointer;
+          transform: translateY(-50%);
+        }
+      }
     }
     .top-bar {
       .left {

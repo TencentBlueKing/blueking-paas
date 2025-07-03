@@ -389,4 +389,6 @@ export default {
   请输入对象存储中的包路径: 'Please enter the package path in object storage',
   请输入代码仓库地址: 'Please enter the code repository URL',
   '请输入代码所在目录，不填则为根目录': 'Please enter the directory where the code is located, leave blank for the root directory',
+  克隆: 'Clone',
+  克隆成功: 'Clone Successful',
 };

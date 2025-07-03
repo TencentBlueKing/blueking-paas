@@ -55,6 +55,7 @@ class ApplicationListOutputSLZ(serializers.Serializer):
     is_active = serializers.BooleanField(read_only=True, help_text="应用是否处于激活状态")
     creator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
+    created_at = serializers.DateTimeField(read_only=True, source="created")
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
 
     def get_type(self, instance: Application) -> str:
@@ -144,7 +145,8 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     type = serializers.CharField(read_only=True, help_text="应用类型")
     is_active = serializers.BooleanField(read_only=True, help_text="应用状态")
     creator = UserNameField(read_only=True, help_text="创建人")
-    created_humanized = HumanizeDateTimeField(source="created", help_text="创建时间")
+    created_humanized = HumanizeDateTimeField(source="created")
+    created_at = serializers.DateTimeField(read_only=True, source="created")
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
 
     def get_category(self, instance: Application) -> str:
@@ -282,11 +284,25 @@ class DeletedApplicationListOutputSLZ(serializers.Serializer):
     name = serializers.CharField(read_only=True, help_text="应用名称")
     app_tenant_id = serializers.CharField(read_only=True, help_text="应用租户 ID")
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
-    type = serializers.SerializerMethodField(read_only=True)
+    type = serializers.SerializerMethodField(read_only=True, help_text="应用类型")
+    category = serializers.SerializerMethodField(read_only=True, help_text="应用分类")
     creator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
+    created_at = serializers.DateTimeField(read_only=True, source="created")
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
-    deleted_time = HumanizeDateTimeField(source="updated")
+    deleted_at = serializers.DateTimeField(read_only=True, source="updated")
 
     def get_type(self, instance: Application) -> str:
         return ApplicationType.get_choice_label(instance.type)
+
+    def get_category(self, instance: Application) -> str:
+        """获取应用分类名"""
+        try:
+            extra_info = instance.extra_info
+        except ObjectDoesNotExist:
+            return ""
+
+        if not extra_info.tag:
+            return ""
+
+        return extra_info.tag.name

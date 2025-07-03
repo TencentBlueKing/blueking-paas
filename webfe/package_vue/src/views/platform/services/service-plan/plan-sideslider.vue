@@ -43,7 +43,7 @@
             <bk-option
               v-for="option in services"
               :id="option.name"
-              :name="option.name"
+              :name="`${option.display_name} (${option.name})`"
               :key="option.uuid"
             ></bk-option>
           </bk-select>
@@ -119,6 +119,10 @@ export default {
       default: () => [],
     },
     tenantId: {
+      type: String,
+      default: '',
+    },
+    serviceName: {
       type: String,
       default: '',
     },
@@ -212,6 +216,7 @@ export default {
       this.saveLoading = false;
     },
     shown() {
+      this.formData.service_name = this.serviceName || '';
       if (!this.isAdd) {
         // 编辑回填
         const { name, service_name, description, is_active, config } = this.data;

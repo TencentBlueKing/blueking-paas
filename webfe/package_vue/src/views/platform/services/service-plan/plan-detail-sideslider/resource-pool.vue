@@ -20,7 +20,10 @@
         :label="$t('实例配置')"
         prop="conditions"
       >
-        <div slot-scope="{ row }">
+        <div
+          class="json-pretty-wrapper"
+          slot-scope="{ row }"
+        >
           <!-- JSON格式预览 -->
           <vue-json-pretty
             class="paas-vue-json-pretty-cls"
@@ -29,6 +32,11 @@
             :show-length="true"
             :highlight-mouseover-node="true"
           />
+          <i
+            v-bk-tooltips="$t('复制')"
+            class="paasng-icon paasng-general-copy"
+            v-copy="handleCopy(row.jsonData)"
+          ></i>
         </div>
       </bk-table-column>
       <bk-table-column
@@ -57,9 +65,17 @@
       </bk-table-column>
       <bk-table-column
         :label="$t('操作')"
-        :width="100"
+        :width="140"
       >
         <template slot-scope="{ row }">
+          <bk-button
+            theme="primary"
+            text
+            class="mr10"
+            @click="handleClone(row)"
+          >
+            {{ $t('克隆') }}
+          </bk-button>
           <bk-button
             theme="primary"
             text
@@ -92,7 +108,8 @@
     </bk-table>
 
     <!-- 添加/编辑方案 -->
-    <EditAddDilaog
+    <EditAddDialog
+      ref="dialogRef"
       :show.sync="dialogConfig.isShow"
       :data="dialogConfig"
       @refresh="getPreCreatedInstances"
@@ -101,7 +118,7 @@
 </template>
 
 <script>
-import EditAddDilaog from './edit-add-dilaog.vue';
+import EditAddDialog from './edit-add-dialog.vue';
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 export default {
@@ -117,7 +134,7 @@ export default {
   },
   components: {
     VueJsonPretty,
-    EditAddDilaog,
+    EditAddDialog,
   },
   data() {
     return {
@@ -197,6 +214,27 @@ export default {
         this.catchErrorHandler(e);
       }
     },
+    handleCopy(data) {
+      try {
+        return JSON.stringify(data, null, 2);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('JSON格式化失败', e),
+        });
+      }
+    },
+    // 克隆
+    handleClone(row) {
+      this.dialogConfig.planId = row?.plan_id;
+      const { plan_id, credentials, config } = row;
+      const params = {
+        plan: plan_id,
+        credentials,
+        config,
+      };
+      this.$refs.dialogRef?.addResourcePool(params, true);
+    },
   },
 };
 </script>
@@ -205,6 +243,27 @@ export default {
 .resource-pool-container {
   .resource-pool-cls {
     margin-top: 16px;
+    /deep/ .bk-table-row.hover-row {
+      i.paasng-general-copy {
+        display: block !important;
+      }
+    }
+    .json-pretty-wrapper {
+      display: flex;
+      .paas-vue-json-pretty-cls {
+        flex: 1;
+        margin-right: 16px;
+      }
+      i.paasng-general-copy {
+        display: none;
+        position: absolute;
+        top: 50%;
+        right: 0;
+        color: #3a84ff;
+        cursor: pointer;
+        transform: translateY(-50%);
+      }
+    }
   }
 }
 .sandbox-destroy-cls {

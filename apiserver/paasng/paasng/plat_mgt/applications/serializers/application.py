@@ -52,7 +52,7 @@ class ApplicationListOutputSLZ(serializers.Serializer):
     resource_quotas = serializers.SerializerMethodField(read_only=True)
     is_active = serializers.BooleanField(read_only=True, help_text="应用是否处于激活状态")
     creator = UserNameField()
-    created = serializers.DateTimeField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True, source="created")
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
 
     def get_type(self, instance: Application) -> str:
@@ -138,7 +138,7 @@ class ApplicationBasicInfoSLZ(serializers.Serializer):
     type = serializers.CharField(read_only=True, help_text="应用类型")
     is_active = serializers.BooleanField(read_only=True, help_text="应用状态")
     creator = UserNameField(read_only=True, help_text="创建人")
-    created = serializers.DateTimeField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True, source="created")
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
 
 
@@ -252,9 +252,9 @@ class DeletedApplicationListOutputSLZ(serializers.Serializer):
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
     type = serializers.SerializerMethodField(read_only=True)
     creator = UserNameField()
-    created = serializers.DateTimeField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True, source="created")
     tenant_id = serializers.CharField(read_only=True, help_text="应用所属租户 ID")
-    deleted_time = serializers.DateTimeField(read_only=True, source="updated")
+    deleted_at = serializers.DateTimeField(read_only=True, source="updated")
 
     def get_type(self, instance: Application) -> str:
         return ApplicationType.get_choice_label(instance.type)

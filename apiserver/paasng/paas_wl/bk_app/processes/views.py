@@ -480,8 +480,8 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 拆分时间戳和具体日志, 用于开启流式日志时流畅过渡
         result_data = []
         for log in logs.splitlines():
-            log_timestamp_str, log_message = log.split(" ", 1)
-            result_data.append({"timestamp": log_timestamp_str, "message": log_message})
+            rfc_timestamp, log_message = log.split(" ", 1)
+            result_data.append({"timestamp": rfc_timestamp, "message": log_message})
 
         return Response(status=status.HTTP_200_OK, data=result_data)
 
@@ -519,8 +519,8 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         data = slz.validated_data
 
         # 计算时间差(秒)，并加1确保不会因为精度问题漏掉日志
-        log_start_time = data["since_time"]
-        seconds_elapsed = int((timezone.now() - log_start_time).total_seconds()) + 1
+        start_rfc_timestamp = data["since_time"]
+        seconds_elapsed = int((timezone.now() - parser.parse(start_rfc_timestamp)).total_seconds()) + 1
 
         def resp():
             yield "event: ping\n"
@@ -532,18 +532,15 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                     instance_name=process_instance_name,
                     since_seconds=seconds_elapsed,
                 ):
-                    # log format: "2023-05-01T12:34:56.123456789Z ..."
-                    log_timestamp_str, log_message = log_line.split(" ", 1)
-                    log_datetime = parser.isoparse(log_timestamp_str)
-
-                    # TODO: 使用微秒级时间戳进行比较, 当纳秒级出现多条日志记录时, 可能会造成日志数据丢失
-                    if log_datetime <= log_start_time:
+                    # log format: "2023-01-01T01:01:01.123456789Z ..."
+                    rfc_timestamp, log_message = log_line.split(" ", 1)
+                    if rfc_timestamp <= start_rfc_timestamp:
                         # 跳过早于请求时间的日志
                         continue
 
                     data = json.dumps(
                         {
-                            "timestamp": log_timestamp_str,
+                            "timestamp": rfc_timestamp,
                             "message": log_message.rstrip("\n"),
                         }
                     )

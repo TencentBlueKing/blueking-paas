@@ -383,8 +383,8 @@ export default {
     }
     /deep/ .config-upload-content,
     /deep/ .config-upload-file {
-      height: 96px;
-      padding: 0;
+      min-height: 96px;
+      padding: 12px 0;
       display: flex;
       align-items: center;
       justify-content: center;

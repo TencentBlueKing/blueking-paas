@@ -297,19 +297,30 @@ class TestUnifiedEnvVarsReader:
         env_vars = UnifiedEnvVarsReader(bk_stag_env).get_all(exclude_sources=[EnvVarSource.USER_CONFIGURED])
         assert "FOO" not in env_vars
 
-    def test_get_user_conflicted_keys(self, bk_module, bk_stag_env):
+    def test_get_user_conflicted_keys_normal(self, bk_module, bk_stag_env):
         vars_reader = UnifiedEnvVarsReader(bk_stag_env)
 
-        for key in ["FOOBAR", "BK_API_URL_TMPL", "BKPAAS_SUB_PATH"]:
+        for key in ["FOOBAR", "BK_API_URL_TMPL", "BKPAAS_DEFAULT_SUBPATH_ADDRESS"]:
             ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key=key, value="")
 
         conflicts = vars_reader.get_user_conflicted_keys()
 
         assert len(conflicts) == 2
-        assert conflicts[0].key == "BKPAAS_SUB_PATH"
+        assert conflicts[0].key == "BKPAAS_DEFAULT_SUBPATH_ADDRESS"
         assert conflicts[0].conflicted_source == "builtin_default_entrance"
         assert conflicts[0].takes_effect is False
 
         assert conflicts[1].key == "BK_API_URL_TMPL"
         assert conflicts[1].conflicted_source == "builtin_misc"
         assert conflicts[1].takes_effect is True
+
+    def test_get_user_conflicted_keys_exclude_sources(self, bk_module, bk_stag_env):
+        vars_reader = UnifiedEnvVarsReader(bk_stag_env)
+
+        for key in ["FOOBAR", "BK_API_URL_TMPL", "BKPAAS_DEFAULT_SUBPATH_ADDRESS"]:
+            ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key=key, value="")
+
+        conflicts = vars_reader.get_user_conflicted_keys(exclude_sources=[EnvVarSource.BUILTIN_DEFAULT_ENTRANCE])
+
+        assert len(conflicts) == 1
+        assert conflicts[0].key == "BK_API_URL_TMPL"

@@ -63,7 +63,7 @@ class ConfigVar(TimestampedModel):
     key = models.CharField(max_length=128, null=False)
     value = models.TextField(null=False)
     description = models.CharField(max_length=200, null=True)
-    # is_builtin 表示该环境变量是否为“系统内置”，目前仅从 v2 迁移的旧应用会把一些内置变量的该字段设为 True
+    # is_builtin 表示该环境变量是否为“系统内置”，目前仅当旧应用从 v2 迁移时，写入一些内置环境变量数据会将该字段设为 True
     is_builtin = models.BooleanField(default=False)
 
     tenant_id = tenant_id_field_factory()

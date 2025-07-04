@@ -144,10 +144,8 @@ class UnifiedEnvVarsReader:
                         takes_effect=not after_source,
                     )
 
-        # Sort the result
-        items = list(conflicted_keys.values())
-        items.sort(key=lambda x: x.key)
-        return items
+        # Sort and return the result
+        return sorted(conflicted_keys.values(), key=lambda x: x.key)
 
 
 def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":

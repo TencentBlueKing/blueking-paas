@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-06-27 18:06+0800\n"
+"POT-Creation-Date: 2025-07-04 14:01+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -200,30 +200,44 @@ msgstr "Bound module information"
 msgid "显示名称"
 msgstr "Display name"
 
-#: paas_wl/bk_app/cnative/specs/views.py:119
+#: paas_wl/bk_app/cnative/specs/views.py:120
 msgid "权限不足或仓库不可达"
 msgstr "Insufficient permissions or repository unreachable"
 
-#: paas_wl/bk_app/cnative/specs/views.py:141
+#: paas_wl/bk_app/cnative/specs/views.py:142
 msgid "镜像凭证不存在"
 msgstr "Image credentials not found"
 
-#: paas_wl/bk_app/cnative/specs/views.py:158
+#: paas_wl/bk_app/cnative/specs/views.py:153
+msgid "镜像仓库不存在，请检查仓库地址是否正确"
+msgstr "Image repository not exist, please check whether the repository address is correct."
+
+#: paas_wl/bk_app/cnative/specs/views.py:155
+msgid "镜像仓库权限不足, 请检查是否配置镜像凭证"
+msgstr ""
+"Image repository has no permission, please check whether the image "
+"credentials are configured."
+
+#: paas_wl/bk_app/cnative/specs/views.py:157
+msgid "镜像仓库凭证错误, 请检查镜像凭证配置是否正确"
+msgstr ""
+"Image repository credential verification failed, please check the credential is "
+"correctly."
+
+#: paas_wl/bk_app/cnative/specs/views.py:165
 msgid "查看镜像 Tag"
 msgstr "View image Tag"
 
-#: paas_wl/bk_app/cnative/specs/views.py:166
-#: paasng/platform/sourcectl/views.py:418
-#, python-format
-msgid "%s的仓库信息查询异常"
-msgstr "The warehouse information query of %s is abnormal"
+#: paas_wl/bk_app/cnative/specs/views.py:173
+msgid "拉取镜像 Tag 失败"
+msgstr "Failed to list tag from image repository"
 
-#: paas_wl/bk_app/cnative/specs/views.py:223
-#: paas_wl/bk_app/cnative/specs/views.py:282
+#: paas_wl/bk_app/cnative/specs/views.py:230
+#: paas_wl/bk_app/cnative/specs/views.py:289
 msgid "同环境和路径挂载卷已存在"
 msgstr "Mount volume already exists in the same environment and path."
 
-#: paas_wl/bk_app/cnative/specs/views.py:373
+#: paas_wl/bk_app/cnative/specs/views.py:380
 msgid "当前应用暂不支持持久存储功能，请联系管理员"
 msgstr ""
 "The current application does not support persistent storage functionality. "
@@ -768,9 +782,9 @@ msgstr "Other"
 #: paasng/platform/engine/constants.py:127
 #: paasng/platform/engine/workflow/protections.py:68
 #, fuzzy
-#| msgid "未完善应用市场信息"
+#| msgid "未完善应用基本信息"
 msgid "未完善应用市场信息"
-msgstr "Incomplete app market information"
+msgstr "Incomplete app basic information"
 
 #: paasng/accessories/publish/market/protections.py:66
 msgid "应用未在生产环境成功部署"
@@ -2310,26 +2324,30 @@ msgstr "Testing in progress"
 msgid "无法获取到有效的配置信息."
 msgstr "No valid configuration information is available."
 
-#: paasng/plat_mgt/applications/serializers/application.py:188
+#: paasng/plat_mgt/applications/serializers/application.py:209
 #, python-brace-format
 msgid "于{time}{operation}{status}"
 msgstr " {operation} {status} at {time}"
 
-#: paasng/plat_mgt/applications/serializers/application.py:239
+#: paasng/plat_mgt/applications/serializers/application.py:252
+msgid "应用分类不存在"
+msgstr ""
+
+#: paasng/plat_mgt/applications/serializers/application.py:274
 #, python-brace-format
 msgid "现有的分配策略下未找到匹配的集群(集群名: {name})"
 msgstr ""
 "No matching cluster was found under the existing allocation strategy "
 "(cluster name: {name})"
 
-#: paasng/plat_mgt/applications/views/application.py:305
+#: paasng/plat_mgt/applications/views/application.py:330
 #, fuzzy
 #| msgid "应用不存在"
 msgid "应用不存在或未被软删除"
 msgstr "application does not exist"
 
-#: paasng/plat_mgt/applications/views/application.py:313
-msgid "PaaS 2.0 中信息删除失败，无法硬删除应用"
+#: paasng/plat_mgt/applications/views/application.py:338
+msgid "PaaS 2.0 中信息删除失败"
 msgstr ""
 
 #: paasng/plat_mgt/applications/views/services.py:153
@@ -3483,7 +3501,7 @@ msgstr ""
 #: paasng/platform/mgrlegacy/app_migrations/service_rabbitmq.py:59
 #, python-brace-format
 msgid "正在为 {environment} 环境创建 RabbitMQ 服务实例..."
-msgstr ""
+msgstr "Creating RabbitMQ service instance for {environment} environment..."
 
 #: paasng/platform/mgrlegacy/legacy_proxy.py:79
 msgid "暂不支持轻应用迁移"
@@ -3902,6 +3920,11 @@ msgstr ""
 "Unable to get SVN branch information, please check the warehouse address and "
 "authentication information"
 
+#: paasng/platform/sourcectl/views.py:418
+#, python-format
+msgid "%s的仓库信息查询异常"
+msgstr "The warehouse information query of %s is abnormal"
+
 #: paasng/platform/sourcectl/views.py:488
 #, python-brace-format
 msgid "仓库信息查询异常: {e}"
@@ -4107,8 +4130,10 @@ msgid "访问受保护资源失败"
 msgstr "Failed to access protected resources"
 
 #: paasng/utils/error_codes.py:53
-msgid "无法彻底删除软删除的应用"
-msgstr ""
+#, fuzzy
+#| msgid "无法删除应用集群"
+msgid "无法彻底删除应用"
+msgstr "cannot delete cluster"
 
 #: paasng/utils/error_codes.py:55
 msgid "模块创建失败"
@@ -4549,6 +4574,16 @@ msgstr "\"{input}\" is not a valid format, please startswith \"base64,\""
 #, python-brace-format
 msgid "\"{input}\" is not a valid base64, please check it."
 msgstr "\"{input}\" is not a valid base64, please check it."
+
+#: paasng/utils/serializers.py:296
+#, python-brace-format
+msgid "至多包含 {max_items} 个对象."
+msgstr ""
+
+#: paasng/utils/serializers.py:297
+#, python-brace-format
+msgid "至少包含 {min_items} 个对象."
+msgstr ""
 
 #: paasng/utils/views.py:43
 msgid "参数格式错误"

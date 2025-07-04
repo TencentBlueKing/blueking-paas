@@ -27,17 +27,20 @@ from paasng.platform.applications.models import Application
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from paasng.platform.engine.configurations.config_var import (
+    ConflictedKey,
+    EnvVarSource,
+    UnifiedEnvVarsReader,
     _flatten_envs,
     generate_wl_builtin_env_vars,
     get_builtin_env_variables,
     get_env_variables,
     get_user_conflicted_keys,
 )
-from paasng.platform.engine.constants import AppEnvName, AppRunTimeBuiltinEnv
+from paasng.platform.engine.constants import AppRunTimeBuiltinEnv
 from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
-from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.models.module import Module
 from tests.utils.helpers import override_region_configs
+from tests.utils.mocks.services import create_local_mysql_service, provision_with_credentials
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -51,14 +54,10 @@ class TestGetEnvVariables:
         app = G(Application, code="bar-app")
         G(Module, name="api", application=app)
 
-    @pytest.mark.parametrize(
-        ("include_config_vars", "ctx"), [(True, does_not_raise("bar")), (False, pytest.raises(KeyError))]
-    )
-    def test_param_include_config_vars(self, bk_module, bk_stag_env, include_config_vars, ctx):
+    def test_normal_config_var(self, bk_module, bk_stag_env):
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="FOO", value="bar")
-        env_vars = get_env_variables(bk_stag_env, include_config_vars=include_config_vars)
-        with ctx as expected:
-            assert env_vars["FOO"] == expected
+        env_vars = get_env_variables(bk_stag_env)
+        assert env_vars["FOO"] == "bar"
 
     def test_builtin_id_and_secret(self, bk_app, bk_stag_env):
         env_vars = get_env_variables(bk_stag_env)
@@ -230,9 +229,87 @@ class Test__get_user_conflicted_keys:
     def test_should_return_empty_by_default(self, bk_module):
         assert get_user_conflicted_keys(bk_module) == []
 
-    def test_found_conflicts(self, bk_module, bk_stag_env):
-        # Test both `ConfigVar` and `PresetEnvVariable` models
-        for key in ["BK_COMPONENT_API_URL", "BK_API_URL_TMPL", "ANOTHER_NORMAL_VALUE"]:
+    def test_normal_found_conflicts(self, bk_module, bk_stag_env):
+        expected_take_effect_map = {
+            "BK_API_URL_TMPL": True,
+            "BK_COMPONENT_API_URL": True,
+            "MYSQL_HOST": False,
+        }
+        self._setup_and_test_conflicts(bk_module, bk_stag_env, expected_take_effect_map)
+
+    def test_cnative_found_conflicts(self, bk_cnative_app, bk_module, bk_stag_env):
+        # For cnative apps, the take_effect value should always be False
+        expected_take_effect_map = {
+            "BK_API_URL_TMPL": False,
+            "BK_COMPONENT_API_URL": False,
+            "MYSQL_HOST": False,
+        }
+        self._setup_and_test_conflicts(bk_module, bk_stag_env, expected_take_effect_map)
+
+    def _setup_and_test_conflicts(self, bk_module, bk_stag_env, expected_take_effect_map):
+        """Helper method to setup and test the results."""
+        # Setup service and credentials
+        local_mysql_service = create_local_mysql_service()
+        provision_with_credentials(bk_module, local_mysql_service, credentials={"MYSQL_HOST": "localhost"})
+
+        # Create config vars for testing
+        for key in [
+            "BK_COMPONENT_API_URL",
+            "BK_API_URL_TMPL",
+            "ANOTHER_NORMAL_VALUE",
+            "MYSQL_HOST",
+            "FOOBAR",
+        ]:
             ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key=key, value="")
-        PresetEnvVariable.objects.create(module=bk_module, environment_name=AppEnvName.STAG, key="PORT", value="")
-        assert get_user_conflicted_keys(bk_module) == ["BK_API_URL_TMPL", "BK_COMPONENT_API_URL", "PORT"]
+
+        # Get conflicted keys and assert
+        conflicted_keys = get_user_conflicted_keys(bk_module)
+
+        assert len(conflicted_keys) == 3
+        assert conflicted_keys[0] == ConflictedKey(
+            key="BK_API_URL_TMPL",
+            conflicted_source="builtin_misc",
+            conflicted_detail="misc built-in",
+            takes_effect=expected_take_effect_map["BK_API_URL_TMPL"],
+        )
+        assert conflicted_keys[1] == ConflictedKey(
+            key="BK_COMPONENT_API_URL",
+            conflicted_source="builtin_misc",
+            conflicted_detail="misc built-in",
+            takes_effect=expected_take_effect_map["BK_COMPONENT_API_URL"],
+        )
+        assert conflicted_keys[2] == ConflictedKey(
+            key="MYSQL_HOST",
+            conflicted_source="builtin_addons",
+            conflicted_detail="MySQL",
+            takes_effect=expected_take_effect_map["MYSQL_HOST"],
+        )
+
+
+@pytest.mark.usefixtures("_with_wl_apps")
+class TestUnifiedEnvVarsReader:
+    def test_exclude_sources(self, bk_module, bk_stag_env):
+        ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="FOO", value="bar")
+
+        env_vars = UnifiedEnvVarsReader(bk_stag_env).get_all()
+        assert env_vars["FOO"] == "bar"
+
+        env_vars = UnifiedEnvVarsReader(bk_stag_env).get_all(exclude_sources=[EnvVarSource.USER_CONFIGURED])
+        assert "FOO" not in env_vars
+
+    def test_get_user_conflicted_keys(self, bk_module, bk_stag_env):
+        vars_reader = UnifiedEnvVarsReader(bk_stag_env)
+
+        for key in ["FOOBAR", "BK_API_URL_TMPL", "BKPAAS_SUB_PATH"]:
+            ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key=key, value="")
+
+        conflicts = vars_reader.get_user_conflicted_keys()
+
+        assert len(conflicts) == 2
+        assert conflicts[0].key == "BKPAAS_SUB_PATH"
+        assert conflicts[0].conflicted_source == "builtin_default_entrance"
+        assert conflicts[0].takes_effect is False
+
+        assert conflicts[1].key == "BK_API_URL_TMPL"
+        assert conflicts[1].conflicted_source == "builtin_misc"
+        assert conflicts[1].takes_effect is True

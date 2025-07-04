@@ -56,6 +56,7 @@ from paasng.platform.engine.serializers import (
     ConfigVarImportSLZ,
     ConfigVarSLZ,
     ConfigVarWithoutKeyFormatSLZ,
+    ConflictedKeyOutputSLZ,
     ListConfigVarsSLZ,
 )
 
@@ -395,15 +396,17 @@ class ConflictedConfigVarsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    def get_conflicted_keys(self, request, code, module_name):
+    def get_user_conflicted_keys(self, request, code, module_name):
         """获取当前模块中有冲突的环境变量 Key 列表，“冲突”指用户自定义变量与平台内置变量同名。
         不同类型的应用，平台处理冲突变量的行为有所不同，本接口返回的 key 列表主要作引导和提示用。
 
-        附冲突变量处理策略：
+        客户端展示建议：
 
-        - 普通应用：以用户配置的变量为准；
-        - 云原生应用：以平台内置变量为准。
+        - 对于 conflicted_source 为 builtin_addons 的增强服务环境变量冲突，建议前端读取 conflicted_detail
+          直接详细展示与哪一个环境变量冲突。
+        - 其他 conflicted_source 建议统一展示为“与平台内置变量冲突”，然后补充 conflicted_detail 里的信息。
+        - 按照 take_effect 字段的值，展示字段是否生效。
         """
         module = self.get_module_via_path()
         keys = get_user_conflicted_keys(module)
-        return Response(keys)
+        return Response(ConflictedKeyOutputSLZ(keys, many=True).data)

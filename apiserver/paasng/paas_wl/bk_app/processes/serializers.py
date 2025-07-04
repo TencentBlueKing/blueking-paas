@@ -22,6 +22,7 @@ from uuid import UUID
 
 import arrow
 import cattr
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from kubernetes.utils.quantity import parse_quantity
 from rest_framework import serializers
@@ -434,4 +435,4 @@ class InstanceLogQueryInputSLZ(serializers.Serializer):
 class InstanceLogStreamInputSLZ(serializers.Serializer):
     """Serializer for instance log stream API"""
 
-    since_time = serializers.DateTimeField(required=False, help_text="断线重连的时间戳")
+    since_time = serializers.DateTimeField(default=timezone.now, help_text="查询日志的起始时间 (UTC格式)")

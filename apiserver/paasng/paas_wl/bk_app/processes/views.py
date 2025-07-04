@@ -21,9 +21,10 @@ import logging
 from operator import attrgetter
 from typing import Dict, Optional
 
-import arrow
+from dateutil import parser
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -468,7 +469,7 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         try:
             logs = manager.get_instance_logs(
                 process_type=process_type,
-                timestamps=True,  # Always add timestamps to logs
+                timestamps=True,
                 instance_name=process_instance_name,
                 previous=data["previous"],
                 tail_lines=data["tail_lines"],
@@ -477,12 +478,12 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             raise error_codes.PROCESS_INSTANCE_NOT_FOUND
 
         # 拆分时间戳和具体日志, 用于开启流式日志时流畅过渡
-        date = []
+        result_data = []
         for log in logs.splitlines():
             log_timestamp_str, log_message = log.split(" ", 1)
-            date.append({"timestamp": log_timestamp_str, "message": log_message})
+            result_data.append({"timestamp": log_timestamp_str, "message": log_message})
 
-        return Response(status=status.HTTP_200_OK, data=date)
+        return Response(status=status.HTTP_200_OK, data=result_data)
 
     def download_logs(self, request, code, module_name, environment, process_type, process_instance_name):
         """下载进程实例的日志"""
@@ -517,15 +518,9 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        current_time = arrow.utcnow()
-        log_start_time = data.get("since_time")
-        if log_start_time is None:
-            log_start_time = current_time
-        else:
-            log_start_time = arrow.get(log_start_time)
-
         # 计算时间差(秒)，并加1确保不会因为精度问题漏掉日志
-        seconds_elapsed = int((current_time - log_start_time).total_seconds()) + 1
+        log_start_time = data["since_time"]
+        seconds_elapsed = int((timezone.now() - log_start_time).total_seconds()) + 1
 
         def resp():
             yield "event: ping\n"
@@ -539,7 +534,7 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 ):
                     # log format: "2023-05-01T12:34:56.123456789Z ..."
                     log_timestamp_str, log_message = log_line.split(" ", 1)
-                    log_datetime = arrow.get(log_timestamp_str)
+                    log_datetime = parser.isoparse(log_timestamp_str)
 
                     # TODO: 使用微秒级时间戳进行比较, 当纳秒级出现多条日志记录时, 可能会造成日志数据丢失
                     if log_datetime <= log_start_time:

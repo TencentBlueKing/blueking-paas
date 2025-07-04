@@ -43,9 +43,6 @@ class Permission:
             bk_tenant_id=get_init_tenant_id(),
         )
 
-    def _make_request_without_resources(self, username: str, action_id: str) -> "Request":
-        return Request(settings.IAM_SYSTEM_ID, Subject("user", username), Action(action_id), None, None)
-
     def allowed_manage_smart(self, username):
         """smart管理权限"""
         try:
@@ -66,4 +63,10 @@ class Permission:
             filters = self._iam.make_filter(request, converter_class=SQLConverter, key_mapping=key_mapping)
         except AuthAPIError:
             return None
+
+        # NOTE: paas 2.0 应用无租户概念，暂时不需要考虑租户过滤问题
         return filters
+
+    @staticmethod
+    def _make_request_without_resources(username: str, action_id: str) -> "Request":
+        return Request(settings.IAM_SYSTEM_ID, Subject("user", username), Action(action_id), None, None)

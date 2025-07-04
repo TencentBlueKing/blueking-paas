@@ -76,6 +76,7 @@ class DevSandboxCreateInputSLZ(serializers.Serializer):
     enable_code_editor = serializers.BooleanField(help_text="是否启用代码编辑器", default=False)
     inject_staging_env_vars = serializers.BooleanField(help_text="是否注入预发布环境变量", default=False)
     source_code_version_info = SourceCodeVersionInfoSLZ(help_text="源代码配置", required=False)
+    enhanced_services = serializers.ListField(help_text="增强服务可选", child=serializers.CharField())
 
 
 class DevSandboxCreateOutputSLZ(serializers.Serializer):

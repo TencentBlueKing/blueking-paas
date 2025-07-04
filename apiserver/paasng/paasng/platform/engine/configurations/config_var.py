@@ -17,7 +17,7 @@
 """Config variables related functions"""
 
 import logging
-from typing import TYPE_CHECKING, Dict, Iterator, List
+from typing import TYPE_CHECKING, Dict, Iterator, List, Optional
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
 
 def get_env_variables(
     env: ModuleEnvironment,
+    service_names: Optional[List[str]] = None,
     include_config_vars: bool = True,
     include_preset_env_vars: bool = True,
     include_svc_disc: bool = True,
@@ -103,7 +104,9 @@ def get_env_variables(
     result.update(ServiceSharingManager(env.module).get_env_variables(env, True))
 
     # Part: env vars provided by services
-    result.update(mixed_service_mgr.get_env_vars(engine_app, filter_enabled=True))
+    result.update(
+        mixed_service_mgr.get_env_vars_by_names(engine_app, filter_enabled=True, service_names=service_names)
+    )
 
     # Part: Application's default sub domains/paths
     result.update(AppDefaultDomains(env).as_env_vars())

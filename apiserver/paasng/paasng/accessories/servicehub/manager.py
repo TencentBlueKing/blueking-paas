@@ -227,7 +227,11 @@ class MixedServiceMgr:
     # Proxied generator methods end
 
     def get_env_vars(
-        self, engine_app: EngineApp, service: Optional[ServiceObj] = None, filter_enabled: bool = False
+        self,
+        engine_app: EngineApp,
+        service: Optional[ServiceObj] = None,
+        filter_enabled: bool = False,
+        enabled_addons_services: List[str] | None = None,
     ) -> Dict[str, str]:
         """Get all provisioned services env variables
 
@@ -235,47 +239,21 @@ class MixedServiceMgr:
         :param service: Optional service object. if given, will only return credentials of the specified service,
             otherwise return the credentials of all services.
         :param filter_enabled: Whether to filter enabled service instances
+        :param enabled_addons_services: Optional list of addons services to filter services
         :returns: Dict of env variables.
         """
         rels = list(self.list_provisioned_rels(engine_app, service=service))
-        if filter_enabled:
-            instances = [rel.get_instance() for rel in rels if rel.db_obj.credentials_enabled]
-        else:
-            instances = [rel.get_instance() for rel in rels]
-        # 新的覆盖旧的
-        instances.sort(key=operator.attrgetter("create_time"))
 
-        result = {}
-        for i in instances:
-            result.update(i.credentials)
-        return result
-
-    def get_env_vars_by_names(
-        self, engine_app: EngineApp, service_names: Optional[List[str]] = None, filter_enabled: bool = False
-    ) -> Dict[str, str]:
-        """
-        Get provisioned services env variables by names
-
-        :param engine_app: EngineApp object
-        :param service_names: List of service names
-        :param filter_enabled: Whether to filter enabled service instances
-        :returns: Dict of env variables.
-        """
-        rels = list(self.list_provisioned_rels(engine_app))
-
-        # 根据用户选择的增强服务名称筛选
-        if service_names is not None:
-            valid_names = set(service_names)
+        if enabled_addons_services:
+            valid_names = set(enabled_addons_services)
             rels = [rel for rel in rels if rel.get_service().name in valid_names]
 
-        # 复用 stag 环境启用的增强服务
         if filter_enabled:
             instances = [rel.get_instance() for rel in rels if rel.db_obj.credentials_enabled]
         else:
             instances = [rel.get_instance() for rel in rels]
 
         instances.sort(key=operator.attrgetter("create_time"))
-
         result = {}
         for i in instances:
             result.update(i.credentials)

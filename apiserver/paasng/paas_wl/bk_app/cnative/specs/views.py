@@ -19,12 +19,13 @@ import logging
 from contextlib import suppress
 from urllib.parse import quote
 
+import requests
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
-from moby_distribution.registry.exceptions import AuthFailed, PermissionDeny
+from moby_distribution.registry.exceptions import AuthFailed, PermissionDeny, ResourceNotFound
 from moby_distribution.registry.utils import parse_image
 from rest_framework import status
 from rest_framework.pagination import LimitOffsetPagination
@@ -149,10 +150,14 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
 
         try:
             alternative_versions = AlternativeVersionSLZ(registry_service.list_alternative_versions(), many=True).data
+        except ResourceNotFound:
+            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库不存在，请检查仓库地址是否正确"), replace=True)
         except PermissionDeny:
             raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库权限不足, 请检查是否配置镜像凭证"), replace=True)
         except AuthFailed:
-            raise error_codes.INVALID_CREDENTIALS.f(_("镜像凭证错误, 请检查镜像凭证配置是否正确"), replace=True)
+            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库凭证错误, 请检查镜像凭证配置是否正确"), replace=True)
+        except requests.exceptions.Timeout:
+            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库请求超时, 请检查网络连接"), replace=True)
         except Exception:
             if endpoint == "mirrors.tencent.com":
                 # 镜像源迁移期间不能保证 registry 所有接口可用, 迁移期间增量镜像仓库无法查询 tag

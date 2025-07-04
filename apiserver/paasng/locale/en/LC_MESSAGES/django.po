@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-03 18:52+0800\n"
+"POT-Creation-Date: 2025-07-04 14:01+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -209,31 +209,35 @@ msgid "镜像凭证不存在"
 msgstr "Image credentials not found"
 
 #: paas_wl/bk_app/cnative/specs/views.py:153
+msgid "镜像仓库不存在，请检查仓库地址是否正确"
+msgstr "Image repository not exist, please check whether the repository address is correct."
+
+#: paas_wl/bk_app/cnative/specs/views.py:155
 msgid "镜像仓库权限不足, 请检查是否配置镜像凭证"
 msgstr ""
 "Image repository has no permission, please check whether the image "
 "credentials are configured."
 
-#: paas_wl/bk_app/cnative/specs/views.py:155
-msgid "镜像凭证错误, 请检查镜像凭证配置是否正确"
+#: paas_wl/bk_app/cnative/specs/views.py:157
+msgid "镜像仓库凭证错误, 请检查镜像凭证配置是否正确"
 msgstr ""
-"Image credential verification failed, please check the credential is "
+"Image repository credential verification failed, please check the credential is "
 "correctly."
 
-#: paas_wl/bk_app/cnative/specs/views.py:163
+#: paas_wl/bk_app/cnative/specs/views.py:165
 msgid "查看镜像 Tag"
 msgstr "View image Tag"
 
-#: paas_wl/bk_app/cnative/specs/views.py:171
+#: paas_wl/bk_app/cnative/specs/views.py:173
 msgid "拉取镜像 Tag 失败"
 msgstr "Failed to list tag from image repository"
 
-#: paas_wl/bk_app/cnative/specs/views.py:228
-#: paas_wl/bk_app/cnative/specs/views.py:287
+#: paas_wl/bk_app/cnative/specs/views.py:230
+#: paas_wl/bk_app/cnative/specs/views.py:289
 msgid "同环境和路径挂载卷已存在"
 msgstr "Mount volume already exists in the same environment and path."
 
-#: paas_wl/bk_app/cnative/specs/views.py:378
+#: paas_wl/bk_app/cnative/specs/views.py:380
 msgid "当前应用暂不支持持久存储功能，请联系管理员"
 msgstr ""
 "The current application does not support persistent storage functionality. "

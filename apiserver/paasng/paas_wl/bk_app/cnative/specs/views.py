@@ -118,7 +118,7 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
             # bkrepo 的 docker 仓库，镜像凭证没有填写正确时，.touch() 时会抛出异常
             if registry_service.touch():
                 return
-            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足或仓库不可达"))
+            raise error_codes.LIST_TAGS_FAILED.f(_("权限不足或仓库不可达"))
 
     @swagger_auto_schema(response_serializer=AlternativeVersionSLZ(many=True))
     def list_tags(self, request, code, module_name):
@@ -151,13 +151,13 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
         try:
             alternative_versions = AlternativeVersionSLZ(registry_service.list_alternative_versions(), many=True).data
         except ResourceNotFound:
-            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库不存在，请检查仓库地址是否正确"), replace=True)
+            raise error_codes.LIST_TAGS_FAILED.f(_("镜像仓库不存在，请检查仓库地址是否正确"), replace=True)
         except PermissionDeny:
-            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库权限不足, 请检查是否配置镜像凭证"), replace=True)
+            raise error_codes.LIST_TAGS_FAILED.f(_("镜像仓库权限不足, 请检查是否配置镜像凭证"), replace=True)
         except AuthFailed:
-            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库凭证错误, 请检查镜像凭证配置是否正确"), replace=True)
+            raise error_codes.LIST_TAGS_FAILED.f(_("镜像仓库凭证错误, 请检查镜像凭证配置是否正确"), replace=True)
         except requests.exceptions.Timeout:
-            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库请求超时, 请检查网络连接"), replace=True)
+            raise error_codes.LIST_TAGS_FAILED.f(_("镜像仓库请求超时, 请检查网络连接"), replace=True)
         except Exception:
             if endpoint == "mirrors.tencent.com":
                 # 镜像源迁移期间不能保证 registry 所有接口可用, 迁移期间增量镜像仓库无法查询 tag

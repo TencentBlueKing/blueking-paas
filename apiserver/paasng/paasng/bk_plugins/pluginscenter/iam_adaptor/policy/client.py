@@ -36,6 +36,7 @@ class BKIAMClient:
             settings.BK_IAM_APIGATEWAY_URL,
             bk_tenant_id=tenant_id,
         )
+        self.tenant_id = tenant_id
 
     def is_action_allowed(
         self,
@@ -128,4 +129,6 @@ class BKIAMClient:
             [],
             None,
         )
-        return self._iam.make_filter(request, converter_class=PluginPolicyConverter)
+        filters = self._iam.make_filter(request, converter_class=PluginPolicyConverter)
+        # 过滤掉非当前租户的插件
+        return filters & Q(tenant_id=self.tenant_id)

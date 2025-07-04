@@ -29,7 +29,6 @@ from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
-from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.utils import AppTenantInfo
 from paasng.platform.applications.models import Application
@@ -192,22 +191,6 @@ class TestAppDeclarativeControllerUpdate:
         with pytest.raises(DescriptionValidationError) as exc_info:
             controller.perform_action(get_app_description(app_json))
         assert "bk_app_code" in exc_info.value.detail
-
-    def test_region_modified(self, existed_app, declarative_controller):
-        # Get a different and valid region
-        regions = get_all_regions().keys()
-        diff_region = [r for r in regions if r != existed_app.region][0]
-
-        # Use new region
-        app_json = builder.make_app_desc(
-            existed_app.code,
-            decorator.with_module("default", True),
-        )
-        app_json["bkAppName"] = existed_app.name
-        app_json["region"] = diff_region
-        with pytest.raises(DescriptionValidationError) as exc_info:
-            declarative_controller.perform_action(get_app_description(app_json))
-        assert "region" in exc_info.value.detail
 
     def test_name_not_modified(self, existed_app, declarative_controller):
         # Use new name

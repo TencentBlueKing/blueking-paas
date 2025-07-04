@@ -16,7 +16,12 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .build import BuildProcessViewSet, ImageArtifactViewSet
-from .configvar import ConfigVarBuiltinViewSet, ConfigVarImportExportViewSet, ConfigVarViewSet
+from .configvar import (
+    ConfigVarBuiltinViewSet,
+    ConfigVarImportExportViewSet,
+    ConfigVarViewSet,
+    ConflictedConfigVarsViewSet,
+)
 from .configvar_preset import PresetConfigVarViewSet
 from .deploy import DeploymentViewSet, DeployPhaseViewSet
 from .misc import OfflineViewset, OperationsViewset, ProcessResourceMetricsViewset
@@ -36,4 +41,5 @@ __all__ = [
     "ReleasedInfoViewSet",
     "ReleasesViewset",
     "PresetConfigVarViewSet",
+    "ConflictedConfigVarsViewSet",
 ]

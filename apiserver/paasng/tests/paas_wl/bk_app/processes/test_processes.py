@@ -196,9 +196,9 @@ class TestProcessManager:
 
         if expected_exception:
             with pytest.raises(expected_exception):
-                ProcessManager(bk_stag_env).get_instance_logs("", instance_name, previous, "main")
+                ProcessManager(bk_stag_env).get_instance_logs("", instance_name, previous, True, "main")
         else:
-            logs = ProcessManager(bk_stag_env).get_instance_logs("", instance_name, previous, "main")
+            logs = ProcessManager(bk_stag_env).get_instance_logs("", instance_name, previous, True, "main")
             assert logs is not None
             assert isinstance(logs, str)
 

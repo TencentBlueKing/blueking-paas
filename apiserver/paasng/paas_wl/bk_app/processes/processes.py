@@ -297,6 +297,7 @@ class ProcessManager:
         process_type: str,
         instance_name: str,
         previous: bool,
+        timestamps: bool = False,
         container_name: str | None = None,
         tail_lines: Optional[int] = None,
     ):
@@ -305,6 +306,7 @@ class ProcessManager:
         :param process_type: 进程类型
         :param instance_name: 进程实例名称
         :param previous: 是否获取上一次运行的日志
+        :param timestamps: 是否在日志前添加时间戳
         :param container_name: 容器名称
         :param tail_lines: 获取日志末尾的行数
         :return: str
@@ -320,6 +322,7 @@ class ProcessManager:
                 name=instance_name,
                 namespace=self.wl_app.namespace,
                 previous=previous,
+                timestamps=timestamps,
                 container=container_name,
                 tail_lines=tail_lines,
             )
@@ -332,6 +335,50 @@ class ProcessManager:
                 raise
 
         return ensure_text(rsp.data)
+
+    def get_instance_logs_stream(
+        self,
+        process_type: str,
+        instance_name: str,
+        container_name: str | None = None,
+        since_seconds: Optional[int] = None,
+        timestamps: bool = True,
+    ):
+        """获取进程实例日志流
+
+        :param process_type: 进程类型
+        :param instance_name: 进程实例名称
+        :param container_name: 容器名称
+        :param since_seconds: 获取日志的起始时间
+        :param timestamps: 是否在日志前添加时间戳
+        :return: Generator yielding log lines
+        :raise: InstanceNotFound when instance not found
+        """
+        if not container_name:
+            container_name = process_kmodel.get_by_type(self.wl_app, type=process_type).main_container_name
+
+        params = {
+            "name": instance_name,
+            "namespace": self.wl_app.namespace,
+            "container": container_name,
+            "follow": True,
+            "timestamps": timestamps,
+        }
+        if since_seconds:
+            params["since_seconds"] = since_seconds
+
+        k8s_client = get_client_by_app(self.wl_app)
+
+        try:
+            for line in KPod(k8s_client).get_log(**params):
+                yield ensure_text(line)
+        except ApiException as e:
+            if e.status == 400 and "previous terminated container" in json.loads(e.body)["message"]:
+                raise InstanceNotFound("Terminated container not found")
+            elif e.status == 404:
+                raise InstanceNotFound("Instance not found")
+            else:
+                raise
 
     def _list_default_specs(self, target_status: Optional[str] = None) -> list[dict]:
         """查询普通应用的进程 specs"""

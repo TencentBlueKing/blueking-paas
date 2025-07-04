@@ -439,21 +439,21 @@ class InstanceLogStreamInputSLZ(serializers.Serializer):
 
     since_time = serializers.CharField(required=False, help_text="查询日志的起始时间 (UTC格式)")
 
-    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        since_time = data.get("since_time")
-
-        # 如果没有提供 since_time，则使用当前时间, 并转化为 RFC3339Nano 字符串
-        if not since_time:
-            since_time = timezone.now().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-
+    def validate_since_time(self, since_time: str) -> str:
         # 验证是否是合法的时间格式
         try:
             parser.parse(since_time)
-        except ValueError:
-            raise ValidationError("format must be RFC3339Nano")
+        except Exception:
+            raise ValidationError({"since_time": "format must be RFC3339Nano"})
         # 验证 since_time 是否是 RFC3339Nano 格式
         rfc3339nano_pattern = re.compile(r"^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})\.(\d{9})Z$")
         if not re.match(rfc3339nano_pattern, since_time):
-            raise ValidationError("format must be RFC3339Nano")
+            raise ValidationError({"since_time": "format must be RFC3339Nano"})
 
-        return data
+        return since_time
+
+    def validate(self, attrs):
+        # 如果没有传递 since_time, 则使用当前时间, 并转化为 RFC3339Nano 字符串
+        if "since_time" not in attrs or not attrs["since_time"]:
+            attrs["since_time"] = timezone.now().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        return attrs

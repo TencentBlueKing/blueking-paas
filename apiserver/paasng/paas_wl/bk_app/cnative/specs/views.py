@@ -153,9 +153,9 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
         except ResourceNotFound:
             raise error_codes.LIST_TAGS_FAILED.f(_("镜像仓库不存在，请检查仓库地址是否正确"), replace=True)
         except PermissionDeny:
-            raise error_codes.LIST_TAGS_FAILED.f(_("镜像仓库权限不足, 请检查是否配置镜像凭证"), replace=True)
+            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库权限不足, 请检查是否配置镜像凭证"), replace=True)
         except AuthFailed:
-            raise error_codes.LIST_TAGS_FAILED.f(_("镜像仓库凭证错误, 请检查镜像凭证配置是否正确"), replace=True)
+            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库凭证错误, 请检查镜像凭证配置是否正确"), replace=True)
         except requests.exceptions.Timeout:
             raise error_codes.LIST_TAGS_FAILED.f(_("镜像仓库请求超时, 请检查网络连接"), replace=True)
         except Exception:

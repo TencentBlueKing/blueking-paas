@@ -52,6 +52,7 @@ def get_env_variables(
     include_config_vars: bool = True,
     include_preset_env_vars: bool = True,
     include_svc_disc: bool = True,
+    enabled_addons_services: List[str] | None = None,
 ) -> Dict[str, str]:
     """Get env vars for current environment, this will include:
 
@@ -63,6 +64,7 @@ def get_env_variables(
     :param include_config_vars: if True, will add envs defined in ConfigVar models to result
     :param include_preset_env_vars: if True, will add preset env vars defined in PresetEnvVariable models to result
     :param include_svc_disc: if True, will add svc discovery as env vars to result
+    :param enabled_addons_services: list of addons services to include
     :returns: Dict of env vars
 
     ---
@@ -103,7 +105,14 @@ def get_env_variables(
     result.update(ServiceSharingManager(env.module).get_env_variables(env, True))
 
     # Part: env vars provided by services
-    result.update(mixed_service_mgr.get_env_vars(engine_app, filter_enabled=True))
+    if enabled_addons_services:
+        result.update(
+            mixed_service_mgr.get_env_vars(
+                engine_app, filter_enabled=True, enabled_addons_services=enabled_addons_services
+            )
+        )
+    else:
+        result.update(mixed_service_mgr.get_env_vars(engine_app, filter_enabled=True))
 
     # Part: Application's default sub domains/paths
     result.update(AppDefaultDomains(env).as_env_vars())

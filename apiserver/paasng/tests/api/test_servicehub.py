@@ -84,27 +84,6 @@ class TestServiceEngineAppAttachmentViewSet:
         assert response.data[0]["credentials_enabled"] is False
         assert response.data[1]["credentials_enabled"] is False
 
-    @mock.patch("paasng.accessories.servicehub.manager.MixedServiceMgr.list_provisioned_rels")
-    def test_config_vars(self, list_provisioned_rels, api_client, bk_app, bk_module):
-        service = G(Service)
-        credentials_disabled_service = G(Service)
-        list_provisioned_rels.return_value = [
-            self.create_mock_rel(service, True, datetime.datetime(2020, 1, 1), a=1, b=1),
-            # 增强服务环境变量不写入
-            self.create_mock_rel(credentials_disabled_service, False, datetime.datetime(2020, 1, 1), c=1),
-        ]
-
-        response = api_client.get(
-            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/services/config_var_keys/",
-        )
-        assert response.status_code == 200
-        # 返回的增强服务名称列表
-        return_svc_names = list(response.data.keys())
-        assert service.display_name in return_svc_names
-        assert set(response.data[service.display_name]) == {"a", "b"}
-        # 增强服务环境变量设置为不写入则不返回
-        assert credentials_disabled_service.display_name not in return_svc_names
-
 
 class TestUnboundServiceEngineAppAttachmentViewSet:
     def create_instance(self, create_time, should_hidden_fields, should_remove_fields, **credentials):

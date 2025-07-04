@@ -17,34 +17,29 @@
 """Config variables related functions"""
 
 import logging
+from enum import StrEnum
 from typing import TYPE_CHECKING, Dict, Iterator, List
 
+from attrs import define
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
-from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.core.region.app import BuiltInEnvsRegionHelper, BuiltInEnvVarDetail
 from paasng.core.region.models import get_region
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.models import get_svc_disc_as_env_variables
-from paasng.platform.engine.configurations.ingress import AppDefaultDomains, AppDefaultSubpaths
-from paasng.platform.engine.configurations.provider import env_vars_providers
-from paasng.platform.engine.constants import AppEnvName, AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
+from paasng.platform.engine.configurations.env_var import listers as vars_listers
+from paasng.platform.engine.configurations.env_var.listers import EnvVariableList
+from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
 from paasng.platform.engine.models.config_var import (
-    ConfigVar,
     add_prefix_to_key,
-    get_config_vars,
     get_custom_builtin_config_vars,
 )
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
-from paasng.platform.modules.helpers import ModuleRuntimeManager
 from paasng.platform.modules.models import Module
-from paasng.utils.blobstore import make_blob_store_env
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
@@ -53,88 +48,154 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def get_env_variables(
-    env: ModuleEnvironment,
-    include_config_vars: bool = True,
-    include_preset_env_vars: bool = True,
-    include_svc_disc: bool = True,
-) -> Dict[str, str]:
-    """Get env vars for current environment, this will include:
+def get_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
+    """Get env vars for current environment, the result includes user defined and builtin env vars.
 
-    - env vars from services
-    - user defined config vars
-    - built-in env vars
-    - (optional) vars defined by deployment description file
-
-    :param include_config_vars: if True, will add envs defined in ConfigVar models to result
-    :param include_preset_env_vars: if True, will add preset env vars defined in PresetEnvVariable models to result
-    :param include_svc_disc: if True, will add svc discovery as env vars to result
-    :returns: Dict of env vars
-
-    ---
-    for cloud native application, should not include config_var, preset_env_vars and svc_disc.
-    Because these are already provided via `ManifestConstructor`
+    :param env: The environment object.
+    :return: A dict of env variables.
     """
-    result = {}
-    engine_app = env.get_engine_app()
-
-    # Part: Gather values from registered env variables providers, it has lowest priority
-    result.update(env_vars_providers.gather(env))
-    if include_preset_env_vars:
-        result.update(get_preset_env_variables(env))
-    if include_svc_disc:
-        result.update(get_svc_disc_as_env_variables(env))
-
-    # Part: system-wide env vars
-    result.update(get_builtin_env_variables(engine_app, settings.CONFIGVAR_SYSTEM_PREFIX))
-
-    # Port: workloads related env vars
-    vars_wl = _flatten_envs(generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX, env))
-    result.update(vars_wl)
-
-    # Part: insert blobstore env vars
-    if env.application.type != ApplicationType.CLOUD_NATIVE:
-        result.update(generate_blobstore_env_vars(engine_app))
-
-    # Part: user defined env vars
-    # Q: Why don't we use engine_app directly to get ConfigVars?
-    #
-    # Because Config Vars, unlike ServiceInstance, is not bind to EngineApp. It
-    # has application global type which shares under every engine_app/environment of an
-    # application.
-    if include_config_vars:
-        result.update(get_config_vars(engine_app.env.module, engine_app.env.environment))
-
-    # Part: env vars shared from other modules
-    result.update(ServiceSharingManager(env.module).get_env_variables(env, True))
-
-    # Part: env vars provided by services
-    result.update(mixed_service_mgr.get_env_vars(engine_app, filter_enabled=True))
-
-    # Part: Application's default sub domains/paths
-    result.update(AppDefaultDomains(env).as_env_vars())
-    result.update(AppDefaultSubpaths(env).as_env_vars())
-    return result
+    return UnifiedEnvVarsReader(env).get_all()
 
 
-def get_user_conflicted_keys(module: Module) -> List[str]:
+class EnvVarSource(StrEnum):
+    """Enum for environment variable sources."""
+
+    # Configured by user
+    USER_PRESET = "user_preset"
+    USER_CONFIGURED = "user_configured"
+
+    # Provided by the platform
+    BUILTIN_BLOBSTORE = "builtin_blobstore"
+    BUILTIN_MISC = "builtin_misc"
+    BUILTIN_SVC_DISC = "builtin_svc_disc"
+    BUILTIN_ADDONS = "builtin_addons"
+    BUILTIN_DEFAULT_ENTRANCE = "builtin_default_entrance"
+
+
+class UnifiedEnvVarsReader:
+    """A class to merge env variables from different sources."""
+
+    def __init__(self, env: ModuleEnvironment):
+        self.env = env
+
+        # Register the functions in the lister module
+        self._source_map = {source: getattr(vars_listers, f"list_vars_{source}") for source in EnvVarSource}
+
+        # The default order for merging env variables. In this order, the preset vars has lowest
+        # priority and the user configured vars has higher priority and can override
+        # some built-in env vars except builtin-addons and builtin-default-entrance.
+        self.default_order = [
+            EnvVarSource.USER_PRESET,
+            EnvVarSource.BUILTIN_SVC_DISC,
+            EnvVarSource.BUILTIN_MISC,
+            EnvVarSource.BUILTIN_BLOBSTORE,
+            EnvVarSource.USER_CONFIGURED,
+            # Below builtin vars won't be touched by user
+            EnvVarSource.BUILTIN_ADDONS,
+            EnvVarSource.BUILTIN_DEFAULT_ENTRANCE,
+        ]
+
+    def get_all(self, exclude_sources: list[EnvVarSource] | None = None) -> Dict[str, str]:
+        """Get all env variables.
+
+        :param exclude_sources: A list of sources to exclude from the result.
+        :return: A dict of env variables.
+        """
+        env_list = EnvVariableList()
+        for source in self.default_order:
+            if exclude_sources and source in exclude_sources:
+                continue
+            env_list.extend(self._source_map[source](self.env))
+        return env_list.kv_map
+
+    def get_user_conflicted_keys(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedKey]":
+        """Get the conflicted keys. A conflicted key is a key that defined in the USER_CONFIGURED
+        source, but also exists in other sources.
+
+        :param exclude_sources: A list of sources to exclude when checking conflicts.
+        :return: A list of ConflictedKey objects.
+        """
+        # Whether the current source being checked is after the USER_CONFIGURED source
+        after_source = False
+        # Get all keys defined by the user in the USER_CONFIGURED source
+        user_keys = {item.key for item in self._source_map[EnvVarSource.USER_CONFIGURED](self.env)}
+
+        # Use a dict to store the result in case a key conflicts with multiple sources
+        conflicted_keys = {}
+        for current_source in self.default_order:
+            # Skip all user preset source, because they will be overridden anyway so conflict checking
+            # is not needed.
+            if current_source == EnvVarSource.USER_PRESET:
+                continue
+            # Skip the source itself because it won't conflict with itself.
+            if current_source == EnvVarSource.USER_CONFIGURED:
+                after_source = True
+                continue
+            if exclude_sources and current_source in exclude_sources:
+                continue
+
+            data = self._source_map[current_source](self.env).map
+            for key in user_keys:
+                if key in data:
+                    conflicted_keys[key] = ConflictedKey(
+                        key=key,
+                        conflicted_source=current_source,
+                        conflicted_detail=data[key].description,
+                        takes_effect=not after_source,
+                    )
+
+        # Sort the result
+        items = list(conflicted_keys.values())
+        items.sort(key=lambda x: x.key)
+        return items
+
+
+def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
     """Get user defined config vars keys that conflict with built-in env vars, the result can be
     an useful hint for users to avoid conflicts.
 
     :param module: The module to check for conflicts.
     :return: List of conflicting keys.
     """
-    # Get user defined config vars keys, the keys are environment-agnostic
-    keys = ConfigVar.objects.filter(module=module, is_builtin=False).values_list("key", flat=True)
-    preset_keys = PresetEnvVariable.objects.filter(module=module).values_list("key", flat=True)
+    app = module.application
+    # Use a dict remove duplicated keys between different environments
+    results = {}
+    # Check all environments in the module and merge the results
+    for env in module.get_envs():
+        if app.type == ApplicationType.CLOUD_NATIVE:
+            keys = UnifiedEnvVarsReader(env).get_user_conflicted_keys(
+                # Exclude some sources because cloud-native apps does use them directly,
+                # see `apply_builtin_env_vars()` for more details.
+                exclude_sources=[
+                    EnvVarSource.BUILTIN_SVC_DISC,
+                    EnvVarSource.BUILTIN_BLOBSTORE,
+                ],
+            )
+            # Any conflicted keys should not take effect because the special mechanism used for cloud-native apps
+            for item in keys:
+                item.takes_effect = False
 
-    # Call `get_env_variables` with special parameters to get all built-in env variables,
-    # Always use the "prod" environment.
-    env = module.get_envs(AppEnvName.PROD)
-    sys_keys = get_env_variables(env, include_config_vars=False, include_preset_env_vars=False).keys()
+            results.update({item.key: item for item in keys})
+        else:
+            keys = UnifiedEnvVarsReader(env).get_user_conflicted_keys()
+            results.update({item.key: item for item in keys})
+    return list(results.values())
 
-    conflicted_keys = set(sys_keys) & (set(keys) | set(preset_keys))
-    return sorted(conflicted_keys)
+
+@define
+class ConflictedKey:
+    """A conflicted config var key object.
+
+    :param key: The key of the config var.
+    :param conflicted_source: The source of the conflict, such as "builtin_addons", "builtin_blobstore".
+    :param conflicted_detail: Additional details about the conflict, if any.
+    :param takes_effect: Whether the config var takes effect.
+    """
+
+    key: str
+    conflicted_source: str
+    takes_effect: bool
+    conflicted_detail: str | None = None
 
 
 def generate_env_vars_for_app(app: "Application", config_vars_prefix: str) -> Dict[str, str]:
@@ -358,14 +419,6 @@ def generate_env_vars_for_bk_platform(config_vars_prefix: str) -> List[BuiltInEn
         ]
     )
     return system_envs_with_prefix
-
-
-def generate_blobstore_env_vars(engine_app: "EngineApp") -> Dict[str, str]:
-    """Generate blobstore env vars by engine_app"""
-    m = ModuleRuntimeManager(engine_app.env.module)
-    if not m.is_need_blobstore_env:
-        return {}
-    return make_blob_store_env(encrypt=m.is_secure_encrypted_runtime)
 
 
 def get_builtin_env_variables(engine_app: "EngineApp", config_vars_prefix: str) -> Dict[str, str]:

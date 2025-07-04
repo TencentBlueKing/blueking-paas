@@ -17,9 +17,11 @@
 
 import pytest
 from django.test.utils import override_settings
+from django_dynamic_fixture import G
 
 from paas_wl.bk_app.applications.models import BuildProcess, WlApp
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
 from tests.paas_wl.utils.build import create_build_proc
 
 
@@ -40,3 +42,27 @@ def build_proc(wl_app) -> BuildProcess:
     """A new BuildProcess object with random info"""
     env = ModuleEnvironment.objects.get(engine_app_id=wl_app.uuid)
     return create_build_proc(env)
+
+
+@pytest.fixture()
+def config_var_maker():
+    """A shortcut fixture for creating ConfigVar objects."""
+
+    def maker(environment_name, module, **kwargs):
+        kwargs["module"] = module
+        if environment_name == ENVIRONMENT_NAME_FOR_GLOBAL:
+            kwargs["environment"] = None
+            kwargs["is_global"] = True
+            kwargs["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
+        else:
+            kwargs["environment"] = module.get_envs(environment_name)
+            kwargs["is_global"] = False
+
+        var = G(ConfigVar, **kwargs)
+        # G 不支持设置 environment_id
+        if environment_name == ENVIRONMENT_NAME_FOR_GLOBAL:
+            var.environment_id = ENVIRONMENT_ID_FOR_GLOBAL
+            var.save()
+        return var
+
+    return maker

@@ -24,6 +24,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from paasng.accessories.servicehub.manager import (
     DuplicatedBindingValidator,
+    EnvVariableGroup,
     SharedServiceInfo,
     get_db_properties,
     get_db_properties_by_service_type,
@@ -130,37 +131,29 @@ class ServiceSharingManager:
 
         :param env: ModuleEnvironment object, must belongs to self.module
         :param filter_enabled: Whether to filter enabled service instances
+        :return: A dict of environment variables.
+        """
+        ret = {}
+        for g in self.get_env_variable_groups(env, filter_enabled):
+            ret.update(g.data)
+        return ret
+
+    def get_env_variable_groups(self, env: ModuleEnvironment, filter_enabled: bool = False) -> List[EnvVariableGroup]:
+        """Get all env variable groups shared from other modules.
+
+        :param env: ModuleEnvironment object, must belongs to self.module
+        :param filter_enabled: Whether to filter enabled service instances
+        :return: A list of EnvVariableGroup objects.
         """
         if env.module != self.module:
             raise RuntimeError("Invalid env object, must belongs to self.module")
 
-        ret = {}
+        results = []
         for referenced_info in self.list_all_shared_info():
             ref_env = referenced_info.ref_module.get_envs(env.environment)
-            env_variables = mixed_service_mgr.get_env_vars(ref_env.engine_app, referenced_info.service, filter_enabled)
-            ret.update(env_variables)
-        return ret
-
-    def get_enabled_env_keys(self, env: ModuleEnvironment) -> Dict[str, List[str]]:
-        """
-        Retrieve all environment variable keys shared from other modules.
-
-        :param env: ModuleEnvironment object that must belong to self.module
-        :return: Dictionary of service display names to their respective env keys list.
-        """
-        if env.module != self.module:
-            raise RuntimeError("Invalid env object, must belong to self.module")
-
-        result = {}
-        for referenced_info in self.list_all_shared_info():
-            ref_env = referenced_info.ref_module.get_envs(env.environment)
-            ref_service = referenced_info.service
-            env_keys = mixed_service_mgr.get_env_vars(ref_env.engine_app, ref_service, True)
-            # display_name 会被国际化处理为殊字符串类型（__proxy__类型），必须首先将它们转化为标准的字符串
-            service_name = str(ref_service.display_name)
-            result[service_name] = list(env_keys.keys())
-
-        return result
+            groups = mixed_service_mgr.get_env_var_groups(ref_env.engine_app, referenced_info.service, filter_enabled)
+            results.extend(groups)
+        return results
 
 
 def extract_shared_info(attachment: SharedServiceAttachment) -> Optional[SharedServiceInfo]:

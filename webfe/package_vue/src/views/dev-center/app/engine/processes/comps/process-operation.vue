@@ -234,7 +234,16 @@
                         </span>
                       </td>
                       <td class="restarts">
-                        {{ instance.restart_count }}
+                        <span
+                          v-bk-tooltips="{
+                            content: `<p>reason: ${instance.terminated_info?.reason}</p>exit_code: ${instance.terminated_info?.exit_code}`,
+                            disabled: !instance.terminated_info?.reason,
+                            allowHTML: true,
+                          }"
+                          :style="{ 'border-bottom': instance.terminated_info?.reason ? '1px dashed' : 'none' }"
+                        >
+                          {{ instance.restart_count }}
+                        </span>
                       </td>
                       <td class="time">
                         <template v-if="instance.date_time !== 'Invalid date'">
@@ -1892,14 +1901,14 @@ export default {
         // 发起服务监听
         this.$store.commit('updataEnvEventData', []);
         this.watchServerPush();
-        this.$emit('data-ready', this.environment);
       } catch (e) {
-        console.error(e);
         // 无法获取进程目前状态
         this.$paasMessage({
           theme: 'error',
           message: this.$t('查询进程状态失败，请稍后再试。'),
         });
+      } finally {
+        this.$emit('data-ready', this.environment);
       }
     },
 

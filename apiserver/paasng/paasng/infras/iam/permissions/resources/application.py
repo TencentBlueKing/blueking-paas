@@ -234,4 +234,5 @@ class ApplicationPermission(Permission):
         if not filters:
             return perm_exempt_filter
 
-        return filters | perm_exempt_filter
+        # 过滤掉非当前租户的应用
+        return (filters & Q(tenant_id=tenant_id)) | perm_exempt_filter

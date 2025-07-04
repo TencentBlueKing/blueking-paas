@@ -199,6 +199,10 @@ def send_idle_email_to_app_developers(
     )
     for idx, username in enumerate(waiting_notify_usernames):
         filters = ApplicationPermission().gen_develop_app_filters(username, tenant_id)
+        # 如果无法获取到用户有权限的应用，直接跳过
+        if not filters:
+            continue
+
         app_codes = Application.objects.filter(is_active=True).filter(filters).values_list("code", flat=True)
 
         # 从缓存拿刚刚退出的应用 code exclude 掉，避免出现退出用户组，权限中心权限未同步的情况

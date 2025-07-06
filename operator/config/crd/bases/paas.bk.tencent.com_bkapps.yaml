@@ -1579,8 +1579,8 @@ spec:
                       description: Components is a list of component
                       items:
                         properties:
-                          parameters:
-                            description: parameters of component
+                          properties:
+                            description: Properties of component
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
                           type:

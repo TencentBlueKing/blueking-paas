@@ -22,8 +22,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"text/template"
+
+	"github.com/pkg/errors"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -99,8 +100,8 @@ func (c *ComponentsMutator) renderTemplate(templateContent string) ([]byte, erro
 	}
 
 	var paramValues map[string]interface{}
-	if len(c.component.Parameters.Raw) > 0 {
-		if err = json.Unmarshal(c.component.Parameters.Raw, &paramValues); err != nil {
+	if len(c.component.Properties.Raw) > 0 {
+		if err = json.Unmarshal(c.component.Properties.Raw, &paramValues); err != nil {
 			return nil, err
 		}
 	} else {

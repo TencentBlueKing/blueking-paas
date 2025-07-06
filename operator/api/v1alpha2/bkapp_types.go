@@ -219,8 +219,8 @@ type Component struct {
 	Type string `json:"type"`
 	// Version of component
 	Version string `json:"version"`
-	// parameters of component
-	Parameters runtime.RawExtension `json:"parameters,omitempty"`
+	// Properties of component
+	Properties runtime.RawExtension `json:"properties,omitempty"`
 }
 
 // Addon is used to specify add-on service

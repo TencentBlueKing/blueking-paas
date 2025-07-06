@@ -115,14 +115,14 @@ var _ = Describe("ComponentsMutator", func() {
 					{
 						Type:    "label-component",
 						Version: "v1",
-						Parameters: runtime.RawExtension{
+						Properties: runtime.RawExtension{
 							Raw: []byte(`{"componentName":"web"}`),
 						},
 					},
 					{
 						Type:    "sidecar-component",
 						Version: "v1",
-						Parameters: runtime.RawExtension{
+						Properties: runtime.RawExtension{
 							Raw: []byte(`{
             				    "sidecarName": "log-collector",
             				    "image": "docker.io/fluentd:latest",

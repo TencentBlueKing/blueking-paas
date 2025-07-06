@@ -33,6 +33,7 @@ from paasng.platform.bkapp_model.entities_syncer.svc_discovery import sync_svc_d
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
+    ProcessComponent,
     SvcDiscConfig,
     get_svc_disc_as_env_variables,
 )
@@ -55,7 +56,30 @@ pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.
 
 
 class TestProcessesField:
-    def test_python_framework_case(self, bk_module, bk_deployment):
+    @pytest.fixture
+    def property_json_schema(self):
+        return {
+            "type": "object",
+            "properties": {
+                "envs": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "procName": {"type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$"},
+                            "value": {"type": "string", "minLength": 1},
+                        },
+                        "required": ["procName", "value"],
+                        "additionalProperties": False,
+                    },
+                    "minItems": 1,
+                }
+            },
+            "required": ["envs"],
+            "additionalProperties": False,
+        }
+
+    def test_python_framework_case(self, bk_module, bk_deployment, property_json_schema):
         json_data = builder.make_module(
             module_name="test",
             module_spec={
@@ -78,7 +102,6 @@ class TestProcessesField:
                         ],
                         "replicas": 1,
                         "components": [
-                            {"type": "cl5", "version": "v2"},
                             {
                                 "type": "env_cover",
                                 "version": "v1",
@@ -89,6 +112,8 @@ class TestProcessesField:
                 ]
             },
         )
+        # 创建进程组件
+        ProcessComponent.objects.create(type="env_cover", version="v1", property_json_schema=property_json_schema)
 
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
@@ -103,9 +128,62 @@ class TestProcessesField:
             == 'bash -c \'"$(eval echo \\"$0\\")" "$(eval echo \\"${1}\\")" "$(eval echo \\"${2}\\")" "$(eval echo \\"${3}\\")" "$(eval echo \\"${4}\\")" "$(eval echo \\"${5}\\")" "$(eval echo \\"${6}\\")" "$(eval echo \\"${7}\\")" "$(eval echo \\"${8}\\")" "$(eval echo \\"${9}\\")" "$(eval echo \\"${10}\\")" "$(eval echo \\"${11}\\")"\' gunicorn wsgi -w 4 -b \'[::]:${PORT:-5000}\' --access-logfile - --error-logfile - --access-logformat \'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
         )
         assert web.components == [
-            Component(type="cl5", version="v2"),
             Component(type="env_cover", version="v1", properties={"envs": [{"procName": "FOO", "value": "1"}]}),
         ]
+
+    def test_proc_component_not_exists(self, bk_module, bk_deployment):
+        json_data = builder.make_module(
+            module_name="test",
+            module_spec={
+                "processes": [
+                    {
+                        "name": "web",
+                        "command": ["gunicorn"],
+                        "replicas": 1,
+                        "components": [
+                            {
+                                "type": "not_exists",
+                                "version": "v1",
+                                "properties": {"envs": [{"procName": "FOO", "value": "1"}]},
+                            },
+                        ],
+                    }
+                ]
+            },
+        )
+
+        controller = DeploymentDeclarativeController(bk_deployment)
+        with pytest.raises(
+            DescriptionValidationError, match="spec.processes.0.components.0: 组件 not_exists-v1 不存在"
+        ):
+            controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+    def test_proc_component_with_invalid_properties(self, bk_module, bk_deployment, property_json_schema):
+        json_data = builder.make_module(
+            module_name="test",
+            module_spec={
+                "processes": [
+                    {
+                        "name": "web",
+                        "command": ["gunicorn"],
+                        "replicas": 1,
+                        "components": [
+                            {
+                                "type": "env_cover",
+                                "version": "v1",
+                                "properties": {"envs": [{"procXX": "FOO", "value": "1"}]},
+                            },
+                        ],
+                    }
+                ]
+            },
+        )
+        # 创建进程组件
+        ProcessComponent.objects.create(type="env_cover", version="v1", property_json_schema=property_json_schema)
+
+        controller = DeploymentDeclarativeController(bk_deployment)
+        with pytest.raises(DescriptionValidationError, match="spec.processes.0.components.0: 参数校验失败"):
+            controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
 
 class TestEnvVariablesField:

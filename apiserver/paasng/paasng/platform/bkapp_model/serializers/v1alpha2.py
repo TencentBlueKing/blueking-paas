@@ -18,6 +18,8 @@
 from typing import List
 
 from django.utils.translation import gettext_lazy as _
+from jsonschema import validate as jsonschema_validate
+from jsonschema.exceptions import ValidationError as SchemaValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -30,6 +32,7 @@ from paasng.platform.bkapp_model.constants import (
     ScalingPolicy,
 )
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
+from paasng.platform.bkapp_model.models import ProcessComponent
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.structure import NOTSET
@@ -240,6 +243,24 @@ class ComponentInputSLZ(serializers.Serializer):
             data["properties"] = camel_to_snake_case(internal_value["properties"])
 
         return internal_value
+
+    def validate(self, attrs):
+        # 1. 校验 type 和 version 对应的 ProcessComponent 是否存在
+        try:
+            component = ProcessComponent.objects.get(type=attrs["type"], version=attrs["version"])
+        except ProcessComponent.DoesNotExist:
+            raise serializers.ValidationError(f"组件 {attrs['type']}-{attrs['version']} 不存在")
+
+        # 2. 如果 properties 不为空，校验是否符合 JSON Schema
+        if attrs.get("properties") is not None:
+            schema = component.property_json_schema
+            if schema:
+                try:
+                    jsonschema_validate(instance=attrs["properties"], schema=schema)
+                except SchemaValidationError as e:
+                    raise serializers.ValidationError("参数校验失败") from e
+
+        return attrs
 
 
 class ProcessInputSLZ(serializers.Serializer):

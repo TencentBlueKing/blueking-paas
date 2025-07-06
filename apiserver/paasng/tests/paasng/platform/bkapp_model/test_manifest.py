@@ -355,8 +355,8 @@ class TestProcessesManifestConstructor:
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
         data = blank_resource.spec.dict(exclude_none=True, include={"processes"})["processes"][0]
         assert data["components"] == [
-            {"type": "cl5", "version": "v1", "properties": {"processName": "web"}},
-            {"type": "env_cover", "version": "v2", "properties": {"envs": [{"foo": "bar"}], "processName": "web"}},
+            {"type": "cl5", "version": "v1", "properties": '{"processName": "web"}'},
+            {"type": "env_cover", "version": "v2", "properties": '{"envs": [{"foo": "bar"}], "processName": "web"}'},
         ]
 
 

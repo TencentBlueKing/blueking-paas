@@ -18,6 +18,8 @@
 from typing import Any, Dict, List, Optional
 
 from django.utils.translation import gettext_lazy as _
+from jsonschema import validate as jsonschema_validate
+from jsonschema.exceptions import ValidationError as SchemaValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from typing_extensions import TypeAlias
@@ -26,6 +28,7 @@ from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
+from paasng.platform.bkapp_model.models import ProcessComponent
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
@@ -174,6 +177,24 @@ class ComponentSLZ(serializers.Serializer):
     type = serializers.CharField(help_text="组件类型")
     version = serializers.CharField(help_text="组件版本")
     properties = serializers.DictField(help_text="组件属性", required=False, allow_null=True)
+
+    def validate(self, attrs):
+        # 1. 校验 type 和 version 对应的 ProcessComponent 是否存在
+        try:
+            component = ProcessComponent.objects.get(type=attrs["type"], version=attrs["version"])
+        except ProcessComponent.DoesNotExist:
+            raise serializers.ValidationError(f"组件 {attrs['type']}-{attrs['version']} 不存在")
+
+        # 2. 如果 properties 不为空，校验是否符合 JSON Schema
+        if attrs.get("properties") is not None:
+            schema = component.property_json_schema
+            if schema:
+                try:
+                    jsonschema_validate(instance=attrs["properties"], schema=schema)
+                except SchemaValidationError as e:
+                    raise serializers.ValidationError("参数校验失败") from e
+
+        return attrs
 
 
 class ModuleProcessSpecSLZ(serializers.Serializer):

@@ -22,6 +22,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // BkApp is the Schema for the bkapps API
@@ -208,6 +209,18 @@ type Process struct {
 
 	// Probes specifies the probe configuration
 	Probes *ProbeSet `json:"probes,omitempty"`
+
+	// Components is a list of component
+	Components []Component `json:"components,omitempty"`
+}
+
+type Component struct {
+	// Type of component
+	Type string `json:"type"`
+	// Version of component
+	Version string `json:"version"`
+	// parameters of component
+	Parameters runtime.RawExtension `json:"parameters,omitempty"`
 }
 
 // Addon is used to specify add-on service

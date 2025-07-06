@@ -1575,6 +1575,25 @@ spec:
                       items:
                         type: string
                       type: array
+                    components:
+                      description: Components is a list of component
+                      items:
+                        properties:
+                          parameters:
+                            description: parameters of component
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                          type:
+                            description: Type of component
+                            type: string
+                          version:
+                            description: Version of component
+                            type: string
+                        required:
+                        - type
+                        - version
+                        type: object
+                      type: array
                     name:
                       description: Name of process
                       type: string

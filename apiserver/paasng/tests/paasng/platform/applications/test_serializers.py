@@ -111,7 +111,13 @@ class SourceDirSLZ(serializers.Serializer):
 
 class TestSourceDirField:
     def test_valid(self):
+        slz = SourceDirSLZ(data={"source_dir": ""})
+        assert slz.is_valid() is True
+
         slz = SourceDirSLZ(data={"source_dir": "foo"})
+        assert slz.is_valid() is True
+
+        slz = SourceDirSLZ(data={"source_dir": "foo/"})
         assert slz.is_valid() is True
 
         slz = SourceDirSLZ(data={"source_dir": "foo/bar"})

@@ -110,6 +110,11 @@ class SourceDirField(serializers.CharField):
     def run_validation(self, data=empty):
         data = super().run_validation(data)
 
+        # 为空时使用当前目录，是允许的
+        if data == "":
+            return data
+
+        # 检查是否使用 .. 来访问上层目录，或者使用绝对路径
         if ".." in data or data.startswith("/"):
             self.fail("invalid", source_dir=data)
 

@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from attrs import define, field
 
@@ -35,15 +35,15 @@ class BuildConfig:
     build_method: RuntimeType
     tag_options: ImageTagOptions
 
-    image_repository: Optional[str] = None
-    image_credential: Optional[Dict] = None
+    image_repository: str | None = None
+    image_credential: Dict | None = None
 
-    dockerfile_path: Optional[str] = None
-    docker_build_args: Optional[Dict] = None
+    dockerfile_path: str | None = None
+    docker_build_args: Dict | None = None
 
-    buildpacks: Optional[List[AppBuildPack]] = None
-    buildpack_builder: Optional[AppSlugBuilder] = None
-    buildpack_runner: Optional[AppSlugRunner] = None
+    buildpacks: List[AppBuildPack] | None = None
+    buildpack_builder: AppSlugBuilder | None = None
+    buildpack_runner: AppSlugRunner | None = None
 
 
 @define(frozen=True)

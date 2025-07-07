@@ -22,6 +22,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.applications.constants import AppLanguage
+from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.platform.templates.constants import RenderMethod, TemplateType
 from paasng.platform.templates.models import Template
@@ -91,7 +92,7 @@ class TemplateBaseInputSLZ(serializers.Serializer):
     ## TemplateType.PLUGIN 独有的信息
     repo_type = serializers.CharField(help_text="代码仓库类型", allow_blank=True, default="")
     repo_url = serializers.CharField(help_text="代码仓库地址", max_length=256, allow_blank=True, default="")
-    source_dir = serializers.CharField(help_text="模板代码所在目录", allow_blank=True, default="")
+    source_dir = SourceDirField(help_text="模板代码所在目录")
 
     # 配置信息
     preset_services_config = serializers.JSONField(help_text="预设增强服务配置", default=dict)

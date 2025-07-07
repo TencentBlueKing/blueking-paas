@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from rest_framework import serializers
+from rest_framework.fields import empty
 
 from paasng.platform.applications.serializers.fields import SourceDirField
 
@@ -142,7 +143,7 @@ class BkMonitorPortSerializer(serializers.Serializer):
 
 class ModuleSerializer(serializers.Serializer):
     is_default = serializers.BooleanField(required=False)
-    source_dir = SourceDirField(help_text="源码目录")
+    source_dir = SourceDirField(required=False, default=empty)
     language = serializers.CharField()
     services = ServiceSerializer(many=True, required=False)
     env_variables = EnvVariableSerializer(many=True, required=False)

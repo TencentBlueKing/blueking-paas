@@ -350,12 +350,12 @@ class SafePathField(serializers.RegexField):
             self.fail("escape_risk", path=data)
 
         # 模拟实际使用情况，对用户输入进行拼接
-        root = f"/var/folders/{generate_random_string(12)}/T/"
+        root = f"/var/folders/{generate_random_string(12)}/T"
         full_path = os.path.abspath(os.path.join(root, data))
         resolved_root = os.path.abspath(root) + os.sep
 
-        # 通过前缀路径检查是否逃逸
-        if not full_path.startswith(resolved_root):
+        # 通过前缀路径检查是否逃逸（与当前路径相同是允许的）
+        if full_path != root and not full_path.startswith(resolved_root):
             self.fail("escape_risk", path=data)
 
         return data

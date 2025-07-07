@@ -16,12 +16,15 @@
 # to the current version of the project delivered to anyone in the future.
 
 import copy
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 from uuid import UUID
 
 import arrow
 import cattr
+from dateutil import parser
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from kubernetes.utils.quantity import parse_quantity
 from rest_framework import serializers
@@ -429,3 +432,27 @@ class InstanceLogQueryInputSLZ(serializers.Serializer):
     tail_lines = serializers.IntegerField(
         required=False, default=400, min_value=1, max_value=10000, help_text="获取日志的行数"
     )
+
+
+class InstanceLogStreamInputSLZ(serializers.Serializer):
+    """Serializer for instance log stream API"""
+
+    since_time = serializers.CharField(required=False, help_text="查询日志的起始时间 (UTC格式)")
+
+    def validate(self, attrs):
+        since_time = attrs.get("since_time")
+        # 如果没有传递 since_time, 则使用当前时间, 并转化为 RFC3339Nano 字符串
+        if not since_time:
+            attrs["since_time"] = timezone.now().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+        # 验证是否是合法的时间格式
+        try:
+            parser.parse(since_time)
+        except Exception:
+            raise ValidationError({"since_time": "format must be RFC3339Nano"})
+        # 验证 since_time 是否是 RFC3339Nano 格式
+        rfc3339nano_pattern = re.compile(r"^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})\.(\d{9})Z$")
+        if not re.match(rfc3339nano_pattern, since_time):
+            raise ValidationError({"since_time": "format must be RFC3339Nano"})
+
+        return attrs

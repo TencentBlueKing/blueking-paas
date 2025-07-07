@@ -214,6 +214,7 @@ type Process struct {
 	Components []Component `json:"components,omitempty"`
 }
 
+// Component is used to specify process component
 type Component struct {
 	// Type of component
 	Type string `json:"type"`

@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -138,7 +137,7 @@ var _ = Describe("ComponentsMutator", func() {
 					Name: "test-deploy",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointer.Int32(1),
+					Replicas: paasv1alpha2.ReplicasOne,
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{

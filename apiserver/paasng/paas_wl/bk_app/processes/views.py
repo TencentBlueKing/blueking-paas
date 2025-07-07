@@ -21,14 +21,17 @@ import logging
 from operator import attrgetter
 from typing import Dict, Optional
 
+from dateutil import parser
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
+from urllib3.exceptions import ReadTimeoutError
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.models import WlApp
@@ -46,6 +49,7 @@ from paas_wl.bk_app.processes.serializers import (
     EventSerializer,
     InstanceLogDownloadInputSLZ,
     InstanceLogQueryInputSLZ,
+    InstanceLogStreamInputSLZ,
     ListProcessesQuerySLZ,
     ListWatcherRespSLZ,
     ModuleScopedData,
@@ -447,6 +451,9 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
+    # Use special negotiation class to accept "text/event-stream" content type
+    content_negotiation_class = IgnoreClientContentNegotiation
+
     # 下载日志时，默认最大下载的行数一万
     download_log_lines_limit = 10000
 
@@ -462,6 +469,7 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         try:
             logs = manager.get_instance_logs(
                 process_type=process_type,
+                timestamps=True,
                 instance_name=process_instance_name,
                 previous=data["previous"],
                 tail_lines=data["tail_lines"],
@@ -469,7 +477,13 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except InstanceNotFound:
             raise error_codes.PROCESS_INSTANCE_NOT_FOUND
 
-        return Response(status=status.HTTP_200_OK, data=logs.splitlines())
+        # 拆分时间戳和具体日志, 用于开启流式日志时流畅过渡
+        result_data = []
+        for log in logs.splitlines():
+            rfc_timestamp, log_message = log.split(" ", 1)
+            result_data.append({"timestamp": rfc_timestamp, "message": log_message})
+
+        return Response(status=status.HTTP_200_OK, data=result_data)
 
     def download_logs(self, request, code, module_name, environment, process_type, process_instance_name):
         """下载进程实例的日志"""
@@ -494,6 +508,50 @@ class InstanceManageViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         log_type = "previous" if data["previous"] else "current"
         response["Content-Disposition"] = f'attachment; filename="{code}-{process_instance_name}-{log_type}-logs.txt"'
         return response
+
+    def logs_stream(self, request, code, module_name, environment, process_type, process_instance_name):
+        """实时获取进程实例的日志"""
+        env = self.get_env_via_path()
+        manager = ProcessManager(env)
+
+        slz = InstanceLogStreamInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        # 计算时间差(秒)，并加1确保不会因为精度问题漏掉日志
+        start_rfc_timestamp = data["since_time"]
+        seconds_elapsed = int((timezone.now() - parser.parse(start_rfc_timestamp)).total_seconds()) + 1
+
+        def resp():
+            yield "event: ping\n"
+            yield "data: \n\n"
+
+            try:
+                for log_line in manager.get_instance_logs_stream(
+                    process_type=process_type,
+                    instance_name=process_instance_name,
+                    since_seconds=seconds_elapsed,
+                ):
+                    # log format: "2023-01-01T01:01:01.123456789Z ..."
+                    rfc_timestamp, log_message = log_line.split(" ", 1)
+                    if rfc_timestamp <= start_rfc_timestamp:
+                        # 跳过早于请求时间的日志
+                        continue
+
+                    data = json.dumps(
+                        {
+                            "timestamp": rfc_timestamp,
+                            "message": log_message.rstrip("\n"),
+                        }
+                    )
+                    yield "event: message\ndata: {}\n\n".format(data)
+            except ReadTimeoutError as e:
+                logger.warning("Log stream read timeout: %s", e)
+            finally:
+                # 发送结束事件
+                yield "event: EOF\ndata: \n\n"
+
+        return StreamingHttpResponse(resp(), content_type="text/event-stream")
 
     def restart(self, request, code, module_name, environment, process_instance_name):
         """重启进程实例"""

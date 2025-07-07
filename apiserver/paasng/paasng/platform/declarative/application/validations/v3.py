@@ -23,6 +23,7 @@ from rest_framework import serializers
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.core.region.states import get_region
 from paasng.platform.applications.serializers import AppIDSMartField, AppNameField
+from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.bkapp_model.serializers import v1alpha2
 from paasng.platform.declarative.application.resources import ApplicationDesc, DisplayOptions, MarketDesc, ModuleDesc
 from paasng.platform.declarative.constants import AppDescPluginType
@@ -82,7 +83,7 @@ class MarketSLZ(serializers.Serializer):
 class ModuleDescriptionSLZ(serializers.Serializer):
     name = ModuleNameField()
     language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
-    sourceDir = serializers.CharField(help_text="源码目录", default="", source="source_dir")
+    sourceDir = SourceDirField(help_text="源码目录", source="source_dir")
     isDefault = serializers.BooleanField(default=False, help_text="是否为主模块", source="is_default")
     spec = v1alpha2.BkAppSpecInputSLZ(required=True)
 

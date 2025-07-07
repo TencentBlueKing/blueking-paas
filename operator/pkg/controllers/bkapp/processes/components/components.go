@@ -25,7 +25,6 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
@@ -39,14 +38,14 @@ const (
 	TEMPLATE_NAMESPACE = "bkapp-proc-component-tpl"
 )
 
-// ComponentsMutator inject component to deployment
-type ComponentsMutator struct {
+// ComponentMutator inject component to deployment
+type ComponentMutator struct {
 	component paasv1alpha2.Component
 	client    client.Client
 }
 
 // PatchToDeployment inject component to deployment
-func (c *ComponentsMutator) PatchToDeployment(ctx context.Context, deployment *appsv1.Deployment) error {
+func (c *ComponentMutator) PatchToDeployment(ctx context.Context, deployment *appsv1.Deployment) error {
 	patchBytes, err := c.getTemplate(ctx)
 	if err != nil {
 		return errors.Wrapf(err, "get template %s:%s", c.component.Type, c.component.Version)
@@ -69,7 +68,7 @@ func (c *ComponentsMutator) PatchToDeployment(ctx context.Context, deployment *a
 }
 
 // getTemplate get component template from configmap
-func (c *ComponentsMutator) getTemplate(ctx context.Context) ([]byte, error) {
+func (c *ComponentMutator) getTemplate(ctx context.Context) ([]byte, error) {
 	configMap := &corev1.ConfigMap{}
 	if err := c.client.Get(ctx, client.ObjectKey{
 		Namespace: TEMPLATE_NAMESPACE,
@@ -93,19 +92,19 @@ func (c *ComponentsMutator) getTemplate(ctx context.Context) ([]byte, error) {
 }
 
 // renderTemplate render component template using params
-func (c *ComponentsMutator) renderTemplate(templateContent string) ([]byte, error) {
+func (c *ComponentMutator) renderTemplate(templateContent string) ([]byte, error) {
 	tmpl, err := template.New("component").Parse(templateContent)
 	if err != nil {
 		return nil, err
 	}
 
-	var paramValues map[string]interface{}
+	var paramValues map[string]any
 	if len(c.component.Properties.Raw) > 0 {
 		if err = json.Unmarshal(c.component.Properties.Raw, &paramValues); err != nil {
 			return nil, err
 		}
 	} else {
-		paramValues = make(map[string]interface{})
+		paramValues = make(map[string]any)
 	}
 
 	var buf bytes.Buffer
@@ -118,18 +117,18 @@ func (c *ComponentsMutator) renderTemplate(templateContent string) ([]byte, erro
 
 // PatchAllComponentToDeployment patch all components to deployment
 func PatchAllComponentToDeployment(
-	client client.Client,
 	ctx context.Context,
+	client client.Client,
 	proc *paasv1alpha2.Process,
 	deployment *appsv1.Deployment,
 ) error {
 	components := proc.Components
 	for _, component := range components {
-		configMapBasedComponent := &ComponentsMutator{
+		mutator := &ComponentMutator{
 			component: component,
 			client:    client,
 		}
-		err := configMapBasedComponent.PatchToDeployment(ctx, deployment)
+		err := mutator.PatchToDeployment(ctx, deployment)
 		if err != nil {
 			return err
 		}

@@ -21,8 +21,6 @@ package components_test
 import (
 	"context"
 
-	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/components"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,9 +31,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/components"
 )
 
-var _ = Describe("ComponentsMutator", func() {
+var _ = Describe("ComponentMutator", func() {
 	var (
 		ctx        context.Context
 		fakeClient client.Client
@@ -165,7 +164,7 @@ var _ = Describe("ComponentsMutator", func() {
 		})
 
 		It("should apply all components to deployment", func() {
-			err := components.PatchAllComponentToDeployment(fakeClient, ctx, proc, deploy)
+			err := components.PatchAllComponentToDeployment(ctx, fakeClient, proc, deploy)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(deploy.Spec.Template.Labels).To(HaveKeyWithValue("component", "web"))
@@ -193,7 +192,7 @@ var _ = Describe("ComponentsMutator", func() {
 			})
 
 			It("should return error and stop processing", func() {
-				err := components.PatchAllComponentToDeployment(fakeClient, ctx, proc, deploy)
+				err := components.PatchAllComponentToDeployment(ctx, fakeClient, proc, deploy)
 				Expect(err).To(HaveOccurred())
 
 				Expect(deploy.Spec.Template.Labels).To(BeEmpty())

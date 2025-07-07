@@ -27,7 +27,7 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.serializers import ClusterSLZ
 from paas_wl.infras.cluster.shim import EnvClusterService
-from paasng.platform.applications.serializers.fields import SourceDirField
+from paasng.platform.applications.serializers.fields import DockerfilePathField, SourceDirField
 from paasng.platform.bkapp_model.serializers import ModuleDeployHookSLZ as CNativeModuleDeployHookSLZ
 from paasng.platform.bkapp_model.serializers import ModuleProcessSpecSLZ
 from paasng.platform.engine.constants import RuntimeType
@@ -305,7 +305,7 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
     buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), required=False, allow_null=True)
 
     # docker build 相关字段
-    dockerfile_path = serializers.CharField(
+    dockerfile_path = DockerfilePathField(
         help_text="Dockerfile 路径", required=False, allow_blank=True, allow_null=True
     )
     docker_build_args = serializers.DictField(
@@ -359,7 +359,7 @@ class CreateModuleBuildConfigSLZ(serializers.Serializer):
     tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
 
     # docker build 相关字段
-    dockerfile_path = serializers.CharField(
+    dockerfile_path = DockerfilePathField(
         help_text="Dockerfile 路径", required=False, allow_blank=True, allow_null=True
     )
     docker_build_args = serializers.DictField(

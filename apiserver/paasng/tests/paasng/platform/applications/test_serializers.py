@@ -110,31 +110,33 @@ class SourceDirSLZ(serializers.Serializer):
 
 
 class TestSourceDirField:
-    def test_valid(self):
-        slz = SourceDirSLZ(data={"source_dir": ""})
+    @pytest.mark.parametrize(
+        "source_dir",
+        [
+            "",
+            "foo",
+            "foo/",
+            "foo/bar",
+            "foo/bar/baz",
+            "./foo/bar/baz",
+        ],
+    )
+    def test_valid(self, source_dir):
+        slz = SourceDirSLZ(data={"source_dir": source_dir})
         assert slz.is_valid() is True
 
-        slz = SourceDirSLZ(data={"source_dir": "foo"})
-        assert slz.is_valid() is True
-
-        slz = SourceDirSLZ(data={"source_dir": "foo/"})
-        assert slz.is_valid() is True
-
-        slz = SourceDirSLZ(data={"source_dir": "foo/bar"})
-        assert slz.is_valid() is True
-
-        slz = SourceDirSLZ(data={"source_dir": "foo/bar/baz"})
-        assert slz.is_valid() is True
-
-        slz = SourceDirSLZ(data={"source_dir": "./foo/bar/baz"})
-        assert slz.is_valid() is True
-
-    def test_invalid(self):
-        slz = SourceDirSLZ(data={"source_dir": "/etc/passwd"})
-        assert slz.is_valid() is False
-
-        slz = SourceDirSLZ(data={"source_dir": "../foo/bar/baz"})
-        assert slz.is_valid() is False
-
-        slz = SourceDirSLZ(data={"source_dir": "foo/../bar/baz"})
+    @pytest.mark.parametrize(
+        "source_dir",
+        [
+            "..",
+            "/etc/passwd",
+            "../foo/bar/baz",
+            "foo/../bar/baz",
+            "foo/%2e%2e/bar/baz",
+            "foo/%2e%2e%2fbar/baz",
+            "/safe////../etc/passwd",
+        ],
+    )
+    def test_invalid(self, source_dir):
+        slz = SourceDirSLZ(data={"source_dir": source_dir})
         assert slz.is_valid() is False

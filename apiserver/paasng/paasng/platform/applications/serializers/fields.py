@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import os
 import re
 
 from django.utils.translation import gettext_lazy as _
@@ -24,7 +23,7 @@ from rest_framework.fields import empty
 
 from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.models import Application
-from paasng.utils.serializers import NickNameField
+from paasng.utils.serializers import NickNameField, SafePathField
 from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedWordValidator
 
 from .validators import AppIDUniqueValidator, AppNameUniqueValidator
@@ -94,12 +93,12 @@ class AppNameField(NickNameField):
         super().__init__(*args, **preset_kwargs)
 
 
-class SourceDirField(serializers.CharField):
+class SourceDirField(SafePathField):
     """Field for validating source directory"""
 
     default_error_messages = {
-        "invalid": _("构建目录 {source_dir} 不合法"),
-        "danger": _("构建目录 {source_dir} 存在路径逃逸风险"),
+        "invalid": _("构建目录 {path} 不合法"),
+        "escape_risk": _("构建目录 {path} 存在逃逸风险"),
     }
 
     def __init__(self, **kwargs):
@@ -108,23 +107,17 @@ class SourceDirField(serializers.CharField):
         super().__init__(**preset_kwargs)
 
     def run_validation(self, data=empty):
-        data = super().run_validation(data)
-
         # 为空时使用当前目录，是允许的
         if data == "":
             return data
 
-        # 检查是否使用 .. 来访问上层目录，或者使用绝对路径
-        if ".." in data or data.startswith("/"):
-            self.fail("invalid", source_dir=data)
+        return super().run_validation(data)
 
-        # 模拟实际使用情况，对用户输入进行拼接
-        root = "/tmp/"
-        full_path = os.path.realpath(os.path.join(root, data))
-        resolved_root = os.path.realpath(root) + os.sep
 
-        # 通过前缀路径检查是否逃逸
-        if not full_path.startswith(resolved_root):
-            self.fail("danger", source_dir=data)
+class DockerfilePathField(SourceDirField):
+    """Field for validating Dockerfile path"""
 
-        return data
+    default_error_messages = {
+        "invalid": _("Dockerfile 目录 {path} 不合法"),
+        "escape_risk": _("Dockerfile 目录 {path} 存在逃逸风险"),
+    }

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-07 16:55+0800\n"
+"POT-Creation-Date: 2025-07-07 20:16+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -228,7 +228,8 @@ msgstr ""
 
 #: paas_wl/bk_app/cnative/specs/views.py:160
 msgid "镜像仓库请求超时, 请检查网络连接"
-msgstr "Image repository request timed out, please check the network connection"
+msgstr ""
+"Image repository request timed out, please check the network connection"
 
 #: paas_wl/bk_app/cnative/specs/views.py:168
 msgid "查看镜像 Tag"
@@ -764,8 +765,6 @@ msgstr "Other"
 #: paasng/accessories/publish/market/protections.py:48
 #: paasng/platform/engine/constants.py:127
 #: paasng/platform/engine/workflow/protections.py:68
-#, fuzzy
-#| msgid "未完善应用基本信息"
 msgid "未完善应用市场信息"
 msgstr "Incomplete app basic information"
 
@@ -2214,7 +2213,7 @@ msgstr "app_desc.yaml is missing app version information"
 #: paasng/plat_admin/admin42/serializers/config_vars.py:35
 #: paasng/plat_admin/admin42/serializers/config_vars.py:44
 #: paasng/plat_mgt/config_vars/serializers.py:45
-#: paasng/utils/serializers.py:264
+#: paasng/utils/serializers.py:266
 msgid "格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。"
 msgstr ""
 "incorrect format, can only start with an uppercase letter, and consist of "
@@ -2324,8 +2323,6 @@ msgstr ""
 "(cluster name: {name})"
 
 #: paasng/plat_mgt/applications/views/application.py:330
-#, fuzzy
-#| msgid "应用不存在"
 msgid "应用不存在或未被软删除"
 msgstr "application does not exist"
 
@@ -2563,8 +2560,6 @@ msgid "名称已存在，请使用其他名称"
 msgstr "name already exists, please use another name"
 
 #: paasng/plat_mgt/templates/serializers.py:114
-#, fuzzy
-#| msgid "代码仓库地址"
 msgid "不支持的代码仓库类型"
 msgstr "Unsupported Code Repository type"
 
@@ -2694,14 +2689,21 @@ msgstr ""
 "half-width hyphens (-) and underscores (_), length between 3-20."
 
 #: paasng/platform/applications/serializers/fields.py:101
-#, python-brace-format
-msgid "构建目录 {source_dir} 不合法"
-msgstr "Invalid build directory {source_dir}"
+msgid "构建目录 {path} 不合法"
+msgstr "Invalid build directory {path}"
 
 #: paasng/platform/applications/serializers/fields.py:102
+msgid "构建目录 {path} 存在逃逸风险"
+msgstr "The build directory {path} has a path escape risk"
+
+#: paasng/platform/applications/serializers/fields.py:122
 #, python-brace-format
-msgid "构建目录 {source_dir} 存在路径逃逸风险"
-msgstr "The build directory {source_dir} has a path escape risk"
+msgid "Dockerfile 目录 {path} 不合法"
+msgstr "Invalid dockerfile path {path}"
+
+#: paasng/platform/applications/serializers/fields.py:123
+msgid "Dockerfile 目录 {path} 存在逃逸风险"
+msgstr "The dockerfile path {path} has a path escape risk"
 
 #: paasng/platform/applications/serializers/member_role.py:40
 #, python-format
@@ -2803,27 +2805,27 @@ msgid "当前应用未定义主模块"
 msgstr "The current APP does not define a default module"
 
 #: paasng/platform/declarative/application/validations/v2.py:137
-#: paasng/platform/declarative/application/validations/v3.py:127
+#: paasng/platform/declarative/application/validations/v3.py:128
 msgid "一个应用只能有一个主模块"
 msgstr "An app can only have one default module"
 
 #: paasng/platform/declarative/application/validations/v2.py:140
-#: paasng/platform/declarative/application/validations/v3.py:130
+#: paasng/platform/declarative/application/validations/v3.py:131
 msgid "一个应用必须有一个主模块"
 msgstr "An APP must have a default module"
 
 #: paasng/platform/declarative/application/validations/v2.py:152
-#: paasng/platform/declarative/application/validations/v3.py:143
+#: paasng/platform/declarative/application/validations/v3.py:144
 msgid "提供共享增强服务的模块不存在"
 msgstr "module providing shared Add-ons does not exist"
 
 #: paasng/platform/declarative/application/validations/v2.py:161
-#: paasng/platform/declarative/application/validations/v3.py:152
+#: paasng/platform/declarative/application/validations/v3.py:153
 msgid "提供共享增强服务的模块未启用该服务"
 msgstr "the shared Add-ons is not enabled in this module"
 
 #: paasng/platform/declarative/application/validations/v2.py:166
-#: paasng/platform/declarative/application/validations/v3.py:157
+#: paasng/platform/declarative/application/validations/v3.py:158
 msgid "不允许嵌套共享增强服务"
 msgstr "nested shared Add-ons are not allowed"
 
@@ -3680,15 +3682,21 @@ msgstr "Template {} is unavailable"
 
 #: paasng/platform/modules/serializers.py:287
 msgid "新建代码仓库时，源码仓库类型不能为空"
-msgstr "When creating a new code repository, the source repository type cannot be empty"
+msgstr ""
+"When creating a new code repository, the source repository type cannot be "
+"empty"
 
 #: paasng/platform/modules/serializers.py:290
 msgid "新建代码仓库时，源码仓库地址无效"
-msgstr "When creating a new code repository, the source code repository address is invalid"
+msgstr ""
+"When creating a new code repository, the source code repository address is "
+"invalid"
 
 #: paasng/platform/modules/serializers.py:293
 msgid "将模板代码初始化到代码仓库中时，必须选择应用模板"
-msgstr "When initializing the template code into the code repository, you must select the application template"
+msgstr ""
+"When initializing the template code into the code repository, you must "
+"select the application template"
 
 #: paasng/platform/modules/serializers.py:370
 msgid "镜像凭证信息"
@@ -4055,8 +4063,6 @@ msgid "标签"
 msgstr "Tags"
 
 #: paasng/platform/templates/models.py:54
-#, fuzzy
-#| msgid "代码仓库地址"
 msgid "代码仓库类型"
 msgstr "Code Repository Address"
 
@@ -4218,8 +4224,6 @@ msgid "访问受保护资源失败"
 msgstr "Failed to access protected resources"
 
 #: paasng/utils/error_codes.py:53
-#, fuzzy
-#| msgid "无法删除应用集群"
 msgid "无法彻底删除应用"
 msgstr "cannot delete cluster"
 
@@ -4370,10 +4374,8 @@ msgid "代码提交失败"
 msgstr "Code submission failed"
 
 #: paasng/utils/error_codes.py:98
-#, fuzzy
-#| msgid "代码库配置"
 msgid "创建代码库配置失败"
-msgstr "Source Type Setting"
+msgstr "Failed to create code repository configuration"
 
 #: paasng/utils/error_codes.py:100
 msgid "绑定运行时失败"
@@ -4561,8 +4563,6 @@ msgid "无效的应用模板"
 msgstr "Invalid application template"
 
 #: paasng/utils/error_codes.py:169
-#, fuzzy
-#| msgid "初始化应用源码模板失败"
 msgid "创建应用模板失败"
 msgstr "Failed to initialise APP source code template"
 
@@ -4648,30 +4648,40 @@ msgstr "dev sandbox API request exception"
 msgid "错误码: {code_num}, {msg}"
 msgstr "Error code: {code_num}, {msg}"
 
-#: paasng/utils/serializers.py:173
+#: paasng/utils/serializers.py:175
 #, python-brace-format
 msgid "\"{input}\" is not a valid bytes."
 msgstr "\"{input}\" is not a valid bytes."
 
-#: paasng/utils/serializers.py:174
+#: paasng/utils/serializers.py:176
 #, python-brace-format
 msgid "\"{input}\" is not a valid format, please startswith \"base64,\""
 msgstr "\"{input}\" is not a valid format, please startswith \"base64,\""
 
-#: paasng/utils/serializers.py:175
+#: paasng/utils/serializers.py:177
 #, python-brace-format
 msgid "\"{input}\" is not a valid base64, please check it."
 msgstr "\"{input}\" is not a valid base64, please check it."
 
-#: paasng/utils/serializers.py:296
+#: paasng/utils/serializers.py:298
 #, python-brace-format
 msgid "至多包含 {max_items} 个对象."
 msgstr "Contains at most {max_items} objects."
 
-#: paasng/utils/serializers.py:297
+#: paasng/utils/serializers.py:299
 #, python-brace-format
 msgid "至少包含 {min_items} 个对象."
 msgstr "Contains at least {min_items} objects."
+
+#: paasng/utils/serializers.py:332
+#, python-brace-format
+msgid "路径 {path} 不合法"
+msgstr "path {path} invalid"
+
+#: paasng/utils/serializers.py:333
+#, python-brace-format
+msgid "路径 {path} 存在逃逸风险"
+msgstr "The path {path} has a path escape risk"
 
 #: paasng/utils/views.py:43
 msgid "参数格式错误"

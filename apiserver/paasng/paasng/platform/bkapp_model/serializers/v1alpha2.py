@@ -235,12 +235,12 @@ class ComponentInputSLZ(serializers.Serializer):
     version = serializers.CharField(help_text="组件版本", max_length=32)
     properties = serializers.DictField(help_text="组件参数", required=False)
 
-    def to_internal_value(self, data):
+    def to_internal_value(self, data: Dict) -> Dict:
         internal_value = super().to_internal_value(data)
         # 检查是否存在properties字段
         if "properties" in data:
             # 转换 properties 中的键名
-            data["properties"] = camel_to_snake_case(internal_value["properties"])
+            internal_value["properties"] = camel_to_snake_case(data["properties"])
 
         return internal_value
 

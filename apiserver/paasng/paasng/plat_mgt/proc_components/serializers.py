@@ -21,7 +21,7 @@ from rest_framework import serializers
 class ProcessComponentCreateInputSLZ(serializers.Serializer):
     type = serializers.CharField(max_length=32)
     version = serializers.CharField(max_length=32)
-    enabled = serializers.BooleanField()
+    enabled = serializers.BooleanField(required=False, default=True)
     description = serializers.CharField(allow_null=True, required=False)
     docs_url = serializers.CharField(max_length=255, allow_null=True, required=False)
     properties_json_schema = serializers.JSONField(required=False, default=dict)
@@ -38,7 +38,7 @@ class ProcessComponentOutputSLZ(serializers.Serializer):
 
 
 class ProcessComponentUpdateInputSLZ(serializers.Serializer):
-    enabled = serializers.BooleanField()
+    enabled = serializers.BooleanField(required=False)
     description = serializers.CharField(allow_null=True, required=False)
     docs_url = serializers.CharField(max_length=255, allow_null=True, required=False)
     properties_json_schema = serializers.JSONField(required=False, default=dict)

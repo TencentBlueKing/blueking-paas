@@ -63,14 +63,7 @@ class ProcessComponentViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        component = ProcessComponent.objects.create(
-            type=data["type"],
-            version=data["version"],
-            enabled=data["enabled"],
-            description=data["description"],
-            docs_url=data["docs_url"],
-            properties_json_schema=data["properties_json_schema"],
-        )
+        component = ProcessComponent.objects.create(**data)
 
         add_plat_mgt_audit_record(
             user=request.user.pk,
@@ -88,22 +81,23 @@ class ProcessComponentViewSet(viewsets.GenericViewSet):
         operation_description="更新进程组件",
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def update(self, request, pk):
+    def update(self, request, uuid):
         """更新进程组件"""
         slz = ProcessComponentUpdateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        component = get_object_or_404(ProcessComponent, pk=pk)
+        component = get_object_or_404(ProcessComponent, uuid=uuid)
         data_before = DataDetail(
             data=ProcessComponentOutputSLZ(component).data,
         )
 
-        component.enabled = data["enabled"]
-        component.description = data["description"]
-        component.docs_url = data["docs_url"]
-        component.properties_json_schema = data["properties_json_schema"]
-        component.save(update_fields=["enabled", "description", "docs_url", "properties_json_schema"])
+        update_fields = []
+        for field in ["enabled", "description", "docs_url", "properties_json_schema"]:
+            if field in data:
+                setattr(component, field, data[field])
+                update_fields.append(field)
+        component.save(update_fields=update_fields)
 
         add_plat_mgt_audit_record(
             user=request.user.pk,

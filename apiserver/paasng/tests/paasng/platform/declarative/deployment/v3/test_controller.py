@@ -66,10 +66,10 @@ class TestProcessesField:
                     "items": {
                         "type": "object",
                         "properties": {
-                            "procName": {"type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$"},
+                            "proc_name": {"type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$"},
                             "value": {"type": "string", "minLength": 1},
                         },
-                        "required": ["procName", "value"],
+                        "required": ["proc_name", "value"],
                         "additionalProperties": False,
                     },
                     "minItems": 1,
@@ -128,7 +128,7 @@ class TestProcessesField:
             == 'bash -c \'"$(eval echo \\"$0\\")" "$(eval echo \\"${1}\\")" "$(eval echo \\"${2}\\")" "$(eval echo \\"${3}\\")" "$(eval echo \\"${4}\\")" "$(eval echo \\"${5}\\")" "$(eval echo \\"${6}\\")" "$(eval echo \\"${7}\\")" "$(eval echo \\"${8}\\")" "$(eval echo \\"${9}\\")" "$(eval echo \\"${10}\\")" "$(eval echo \\"${11}\\")"\' gunicorn wsgi -w 4 -b \'[::]:${PORT:-5000}\' --access-logfile - --error-logfile - --access-logformat \'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
         )
         assert web.components == [
-            Component(type="env_cover", version="v1", properties={"envs": [{"procName": "FOO", "value": "1"}]}),
+            Component(type="env_cover", version="v1", properties={"envs": [{"proc_name": "FOO", "value": "1"}]}),
         ]
 
     def test_proc_component_not_exists(self, bk_module, bk_deployment):
@@ -144,7 +144,7 @@ class TestProcessesField:
                             {
                                 "type": "not_exists",
                                 "version": "v1",
-                                "properties": {"envs": [{"procName": "FOO", "value": "1"}]},
+                                "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]},
                             },
                         ],
                     }

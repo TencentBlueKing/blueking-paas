@@ -34,7 +34,6 @@ class Component(BaseModel):
 
     type: str
     version: str
-    # 内部流程过程中，一直保持驼峰格式
     properties: Dict[str, Any] = {}
 
     def render_default_properties(self, properties: Dict[str, Any]):

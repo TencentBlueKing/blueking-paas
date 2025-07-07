@@ -49,7 +49,7 @@ class ProcessComponentViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: ProcessComponentOutputSLZ(many=True)},
     )
     def list(self, request):
-        """列出所有内建环境变量"""
+        """列出所有进程组件"""
         proc_components = ProcessComponent.objects.order_by("-created")
         return Response(ProcessComponentOutputSLZ(proc_components, many=True).data, status=status.HTTP_200_OK)
 

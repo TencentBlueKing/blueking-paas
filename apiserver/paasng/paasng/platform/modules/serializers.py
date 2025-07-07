@@ -305,9 +305,7 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
     buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), required=False, allow_null=True)
 
     # docker build 相关字段
-    dockerfile_path = DockerfilePathField(
-        help_text="Dockerfile 路径", required=False, allow_blank=True, allow_null=True
-    )
+    dockerfile_path = DockerfilePathField(help_text="Dockerfile 路径", required=False)
     docker_build_args = serializers.DictField(
         child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
     )
@@ -359,9 +357,7 @@ class CreateModuleBuildConfigSLZ(serializers.Serializer):
     tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
 
     # docker build 相关字段
-    dockerfile_path = DockerfilePathField(
-        help_text="Dockerfile 路径", required=False, allow_blank=True, allow_null=True
-    )
+    dockerfile_path = DockerfilePathField(help_text="Dockerfile 路径", required=False)
     docker_build_args = serializers.DictField(
         child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
     )

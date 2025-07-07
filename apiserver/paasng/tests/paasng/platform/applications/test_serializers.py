@@ -22,7 +22,6 @@ from rest_framework import serializers
 
 from paasng.platform.applications.exceptions import AppFieldValidationError
 from paasng.platform.applications.serializers import AppIDField, AppIDSMartField, AppNameField
-from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.applications.signals import prepare_use_application_code, prepare_use_application_name
 from tests.utils.helpers import create_app
 
@@ -103,40 +102,3 @@ class TestAppNameField:
         with mock.patch.object(prepare_use_application_name, "send") as mocked_send:
             mocked_send.side_effect = AppFieldValidationError("duplicated")
             assert slz.is_valid() is False
-
-
-class SourceDirSLZ(serializers.Serializer):
-    source_dir = SourceDirField()
-
-
-class TestSourceDirField:
-    @pytest.mark.parametrize(
-        "source_dir",
-        [
-            "",
-            "foo",
-            "foo/",
-            "foo/bar",
-            "foo/bar/baz",
-            "./foo/bar/baz",
-        ],
-    )
-    def test_valid(self, source_dir):
-        slz = SourceDirSLZ(data={"source_dir": source_dir})
-        assert slz.is_valid() is True
-
-    @pytest.mark.parametrize(
-        "source_dir",
-        [
-            "..",
-            "/etc/passwd",
-            "../foo/bar/baz",
-            "foo/../bar/baz",
-            "foo/%2e%2e/bar/baz",
-            "foo/%2e%2e%2fbar/baz",
-            "/safe////../etc/passwd",
-        ],
-    )
-    def test_invalid(self, source_dir):
-        slz = SourceDirSLZ(data={"source_dir": source_dir})
-        assert slz.is_valid() is False

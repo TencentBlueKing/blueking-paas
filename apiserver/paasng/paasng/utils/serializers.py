@@ -18,7 +18,6 @@
 import base64
 import os
 import re
-import tempfile
 from typing import List, Optional, Union
 
 import arrow
@@ -40,6 +39,7 @@ from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.sanitizer import clean_html
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
+from tests.utils.basic import generate_random_string
 
 
 class VerificationCodeField(serializers.RegexField):
@@ -339,12 +339,18 @@ class SafePathField(serializers.RegexField):
     def run_validation(self, data=empty):
         data = super().run_validation(data)
 
+        # 允许空字符串 / None
+        if self.allow_blank and data == "":
+            return data
+        if self.allow_null and data is None:
+            return data
+
         # 检查是否使用 .. 来访问上层目录或者使用绝对路径
         if ".." in data or data.startswith("/"):
             self.fail("escape_risk", path=data)
 
         # 模拟实际使用情况，对用户输入进行拼接
-        root = tempfile.mkdtemp()
+        root = f"/var/folders/{generate_random_string(12)}/T/"
         full_path = os.path.abspath(os.path.join(root, data))
         resolved_root = os.path.abspath(root) + os.sep
 

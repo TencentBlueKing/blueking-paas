@@ -19,7 +19,6 @@ import re
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework.fields import empty
 
 from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.models import Application
@@ -106,18 +105,16 @@ class SourceDirField(SafePathField):
         preset_kwargs.update(kwargs)
         super().__init__(**preset_kwargs)
 
-    def run_validation(self, data=empty):
-        # 为空时使用当前目录，是允许的
-        if data == "":
-            return data
 
-        return super().run_validation(data)
-
-
-class DockerfilePathField(SourceDirField):
+class DockerfilePathField(SafePathField):
     """Field for validating Dockerfile path"""
 
     default_error_messages = {
         "invalid": _("Dockerfile 目录 {path} 不合法"),
         "escape_risk": _("Dockerfile 目录 {path} 存在逃逸风险"),
     }
+
+    def __init__(self, **kwargs):
+        preset_kwargs = dict(max_length=255, allow_blank=True, allow_null=True)
+        preset_kwargs.update(kwargs)
+        super().__init__(**preset_kwargs)

@@ -29,11 +29,11 @@ class ProcessComponentCreateInputSLZ(serializers.Serializer):
 
 class ProcessComponentOutputSLZ(serializers.Serializer):
     uuid = serializers.UUIDField(help_text="UUID of process component")
-    type = serializers.CharField(max_length=32)
-    version = serializers.CharField(max_length=32)
+    type = serializers.CharField()
+    version = serializers.CharField()
     enabled = serializers.BooleanField()
     description = serializers.CharField(allow_null=True, required=False)
-    docs_url = serializers.CharField(max_length=255, allow_null=True, required=False)
+    docs_url = serializers.CharField(allow_null=True, required=False)
     properties_json_schema = serializers.JSONField(required=False, default=dict)
 
 

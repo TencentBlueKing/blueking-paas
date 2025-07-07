@@ -77,7 +77,7 @@ class DevSandboxCreateInputSLZ(serializers.Serializer):
     inject_staging_env_vars = serializers.BooleanField(help_text="是否注入预发布环境变量", default=False)
     source_code_version_info = SourceCodeVersionInfoSLZ(help_text="源代码配置", required=False)
     enabled_addons_services = serializers.ListField(
-        help_text="需要复用的增强服务", child=serializers.CharField(), required=False
+        help_text="启用的增强服务", child=serializers.CharField(), required=False
     )
 
 

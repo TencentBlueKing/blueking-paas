@@ -245,14 +245,14 @@ class MixedServiceMgr:
         rels = list(self.list_provisioned_rels(engine_app, service=service))
 
         if enabled_addons_services:
-            valid_names = set(enabled_addons_services)
-            rels = [rel for rel in rels if rel.get_service().name in valid_names]
+            rels = [rel for rel in rels if rel.get_service().name in enabled_addons_services]
 
         if filter_enabled:
             instances = [rel.get_instance() for rel in rels if rel.db_obj.credentials_enabled]
         else:
             instances = [rel.get_instance() for rel in rels]
 
+        # 新的覆盖旧的
         instances.sort(key=operator.attrgetter("create_time"))
         result = {}
         for i in instances:

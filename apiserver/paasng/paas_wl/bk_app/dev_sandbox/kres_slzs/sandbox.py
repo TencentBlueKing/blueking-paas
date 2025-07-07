@@ -68,7 +68,8 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
 
         return spec
 
-    def _construct_dev_sandbox_container(self, obj: "DevSandbox") -> Dict:
+    @staticmethod
+    def _construct_dev_sandbox_container(obj: "DevSandbox") -> Dict:
         return {
             "name": DEV_SERVER_CONTAINER_NAME,
             "image": obj.runtime.image,
@@ -95,7 +96,8 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             "resources": DEV_SERVER_RESOURCE_QUOTA.to_dict(),
         }
 
-    def _construct_code_editor_container(self, obj: "DevSandbox") -> Dict:
+    @staticmethod
+    def _construct_code_editor_container(obj: "DevSandbox") -> Dict:
         return {
             "name": CODE_EDITOR_CONTAINER_NAME,
             "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
@@ -126,7 +128,8 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             "resources": CODE_EDITOR_RESOURCE_QUOTA.to_dict(),
         }
 
-    def _set_volume_mounts(self, spec: Dict):
+    @staticmethod
+    def _set_volume_mounts(spec: Dict):
         """为开发沙箱设置挂载卷"""
         spec["volumes"] = [
             {

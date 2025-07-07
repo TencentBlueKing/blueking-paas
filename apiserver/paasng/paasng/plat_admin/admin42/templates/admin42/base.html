@@ -1,396 +1,391 @@
 {% load render_bundle from webpack_loader %}
-
 {% load admin_utils %}
 
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>蓝鲸 PaaS Admin</title>
-    {% block header %}
-    {% endblock %}
-    <style type="text/css">
-        .navbar-brand {
-            padding-left: 0;
-        }
-        #top-nav {
-            display: flex;
-            padding: 0 20px;
-        }
-        html,
-        body {
-            height: 100%;
-            display: flex;
-            background: #f5f7fa;
-        }
-        a {
-            text-decoration: none;
-        }
-        a:hover,
-        a:focus {
-            text-decoration: none;
-        }
-        .navbar-brand {
-            padding-left: 0;
-        }
-        #top-nav {
-            display: flex;
-            padding: 0 20px;
-        }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width" />
+        <title>蓝鲸开发者中心 Admin</title>
+        {% block header %}
+        {% endblock %}
+        <style type="text/css">
+            html,
+            body {
+                height: 100%;
+                display: flex;
+                background: #f5f7fa;
+            }
 
-        .navbar-nav {
-            display: flex;
-            flex-grow: 1;
-        }
+            a,
+            a:hover,
+            a:focus {
+                text-decoration: none;
+            }
 
-        #top-nav .navbar-brand-light {
-            color: #96a2b9;
-        }
-        .navbar-inverse {
-            background: rgb(24, 33, 50);
-        }
-        .container-content {
-            min-width: 100vw;
-            overflow: auto;
-        }
+            .navbar-brand {
+                padding-left: 0;
+            }
 
-        .navbar-inverse .navbar-nav>li>a {
-            color: #96a2b9;
-        }
-        .navbar-inverse .navbar-text {
-            color: #96a2b9;
-        }
-        .main-content {
-            min-height: calc(100% - 100px);
-            min-width: 800px;
-            margin: 20px;
-            flex: 1;
-            overflow: auto;
-            background: #fff;
-            box-shadow: 0 2px 4px 0 rgba(25, 25, 41, .05);
-            border-radius: 2px;
-            border: 1px solid #dcdee5;
-            display: flex;
-        }
-        .footer {
-            text-align: center;
-            height: 50px;
-            margin: 30px 20px 0 20px;
-            border-top: 1px solid #dcdee5;
-            color: #63656e;
-            padding-top: 20px;
-        }
-        .paas-container {
-            min-width: 800px;
-            overflow: visible;
-        }
-        .paas-side-bar {
-            width: 260px;
-            border-right: 1px solid rgb(220, 222, 229);
-            background: #f9fbfd;
-        }
-        .paas-side-bar:before {
-            content: '目录列表';
-            height: 48px;
-            line-height: 48px;
-            box-shadow: 0px 3px 4px 0px rgba(64, 112, 203, 0.06);
-            border-bottom: 1px solid #dcdee5;
-            display: block;
-            padding-left: 25px;
-            color: #526e8e;
-        }
+            .navbar-brand {
+                padding-left: 0;
+            }
 
-        .monitor-navigation-header .header-title {
-            line-height: 40px;
-        }
-        .monitor-navigation-content {
-            padding: 15px 25px;
-        }
-        .monitor-navigation-content h4,
-        .monitor-navigation-content .h4 {
-            font-size: 14px;
-        }
+            #top-nav {
+                display: flex;
+                margin: 0;
+                padding: 0;
+            }
 
-        .flex-panel-container {
-            width: 100%;
-            display: flex;
-            flex-flow: row wrap;
-            justify-content: flex-start;
-            align-content: flex-start;
-        }
-        .flex-item {
-            width: 33%;
-            padding: 10px;
-        }
-        .common-links {
-            display: flex;
-            flex-flow: row wrap;
-        }
+            .navbar-nav {
+                display: flex;
+                flex-grow: 1;
+            }
 
-        .monitor-navigation-header .header-title-icon {
-            width: 28px;
-            height: 28px;
-            font-size: 28px;
-            color: #3a84ff;
-            cursor: pointer;
-        }
+            #top-nav .navbar-brand-light,
+            .navbar-inverse .navbar-nav > li > a,
+            .navbar-inverse .navbar-text {
+                color: #96a2b9;
+            }
 
-        .paas-side-bar-title {
-            content: '目录列表';
-            height: 48px;
-            line-height: 48px;
-            box-shadow: 0px 3px 4px 0px rgba(64, 112, 203, 0.06);
-            border-bottom: 1px solid #dcdee5;
-            display: flex;
-            align-items: center;
-            padding-left: 25px;
-            color: #526e8e;
+            .navbar-inverse {
+                background: rgb(24, 33, 50);
+            }
 
-        }
-        .overview-title-pic {
-            width: 30px;
-            height: 30px;
-            border-radius: 4px;
-        }
-        .overview-title-text {
-            padding: 4px 0px 4px 10px;
-            height: 48px;
-            line-height: 20px;
-            font-size: 12px;
-            max-width: 200px;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            display: inline-block;
-        }
+            .nav-group-title {
+                font-size: 12px;
+                color: #999;
+                font-weight: bold;
+                padding: 18px 0 6px 22px;
+                cursor: default;
+                pointer-events: none;
+            }
 
-        .paas-breadcrumb {
-            list-style: none;
-            border-radius: 4px;
-            padding-left: 4px;
-            margin: 2.5px;
-        }
-        .paas-breadcrumb>li {
-            display: inline-block;
-        }
-        .paas-breadcrumb>li+li:before {
-            padding: 0 5px;
-            content: "/\A0";
-        }
-        .paas-breadcrumb>li>a {
-            font-family: inherit;
-            font-weight: 500;
-            line-height: 1.1;
-            color: black;
-        }
+            .content-card {
+                border: 1px solid #dcdee5;
+                border-radius: 4px;
+                background: #fff;
+                box-shadow: 0 2px 4px 0 rgba(25, 25, 41, 0.03);
+                padding: 24px 24px 12px 24px;
+                margin: 0 0 16px 0;
+            }
 
-        .json-view .cell{
-            display: block !important;
-        }
+            .container-content {
+                min-width: 100vw;
+                overflow: auto;
+            }
 
-        .ps-tip {
-            margin-top: 7px;
-            font-size: 12px;
-            color: #999 !important;
-            line-height: 1;
-        }
+            .main-content {
+                min-height: calc(100% - 100px);
+                min-width: 800px;
+                margin: 0px;
+                flex: 1;
+                overflow: auto;
+                background: #fff;
+                box-shadow: 0 2px 4px 0 rgba(25, 25, 41, 0.05);
+                border-radius: 2px;
+                border: 1px solid #dcdee5;
+                display: flex;
+            }
 
-    </style>
-    {% render_bundle 'vendors' 'css' %}
-    {% render_bundle 'default' 'css' %}
-</head>
+            .footer {
+                text-align: center;
+                height: 50px;
+                margin: 30px 20px 0 20px;
+                border-top: 1px solid #dcdee5;
+                color: #63656e;
+                padding-top: 20px;
+            }
 
-<body>
-    <div class="bk-loading" style="position: absolute; z-index: 99999; background-color: rgba(255, 255, 255, 1);">
-        <div class="bk-loading-wrapper">
-            <div class="bk-loading1 bk-colorful bk-size-large">
-                <div class="point point1"></div>
-                <div class="point point2"></div>
-                <div class="point point3"></div>
-                <div class="point point4"></div>
+            .paas-container {
+                min-width: 800px;
+                overflow: visible;
+            }
+
+            .paas-side-bar {
+                width: 260px;
+                border-right: 1px solid rgb(220, 222, 229);
+                background: #f9fbfd;
+            }
+
+            .monitor-navigation-header .header-title {
+                line-height: 40px;
+            }
+
+            .monitor-navigation-content {
+                padding: 15px 25px;
+            }
+
+            .monitor-navigation-content h4,
+            .monitor-navigation-content .h4 {
+                font-size: 14px;
+            }
+
+            .flex-panel-container {
+                width: 100%;
+                display: flex;
+                flex-flow: row wrap;
+                justify-content: flex-start;
+                align-content: flex-start;
+            }
+
+            .flex-item {
+                width: 33%;
+                padding: 10px;
+            }
+
+            .common-links {
+                display: flex;
+                flex-flow: row wrap;
+            }
+
+            .monitor-navigation-header .header-title-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 28px;
+                color: #3a84ff;
+                cursor: pointer;
+            }
+
+            .overview-title-pic {
+                width: 30px;
+                height: 30px;
+                border-radius: 4px;
+            }
+
+            .overview-title-text {
+                padding: 4px 0px 4px 10px;
+                height: 48px;
+                line-height: 20px;
+                font-size: 12px;
+                max-width: 200px;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+                display: inline-block;
+            }
+
+            .paas-breadcrumb {
+                list-style: none;
+                border-radius: 4px;
+                padding-left: 4px;
+                margin: 2.5px;
+            }
+
+            .paas-breadcrumb > li {
+                display: inline-block;
+            }
+
+            .paas-breadcrumb > li + li:before {
+                padding: 0 5px;
+                content: '/\A0';
+            }
+
+            .paas-breadcrumb > li > a {
+                font-family: inherit;
+                font-weight: 500;
+                line-height: 1.1;
+                color: black;
+            }
+
+            .json-view .cell {
+                display: block !important;
+            }
+
+            .ps-tip {
+                margin-top: 7px;
+                font-size: 12px;
+                color: #999 !important;
+                line-height: 1;
+            }
+        </style>
+        {% render_bundle 'vendors' 'css' %}
+        {% render_bundle 'default' 'css' %}
+    </head>
+
+    <body>
+        <div
+            class="bk-loading"
+            style="
+                position: absolute;
+                z-index: 99999;
+                background-color: rgba(255, 255, 255, 1);
+            "
+        >
+            <div class="bk-loading-wrapper">
+                <div class="bk-loading1 bk-colorful bk-size-large">
+                    <div class="point point1"></div>
+                    <div class="point point2"></div>
+                    <div class="point point3"></div>
+                    <div class="point point4"></div>
+                </div>
+                <div class="bk-loading-title">加载中...</div>
             </div>
-            <div class="bk-loading-title">加载中...</div>
         </div>
-    </div>
-    <div style="display: flex; flex-direction: column;">
-        <nav id="top-nav" class="navbar navbar-inverse" style="border-radius: 0px;">
-            <div class="navbar-header">
-                <a class="navbar-brand navbar-brand-light" href="{% url 'admin.front_page' %}">蓝鲸 PaaS Admin</a>
-            </div>
-            <ul class="nav navbar-nav">
-                {% get_user_site_perms as perm %}
-                <li><a href="{% url 'admin.front_page' %}">首页</a></li>
-                {% if perm.manage_platform %}
-                <li><a href="{% url 'admin.platform.index' %}">平台管理</a></li>
-                {% endif %}
-                {% if perm.manage_app_templates %}
-                <li><a href="{% url 'admin.configuration.bk_plugins.tags.manage' %}">应用配置管理</a></li>
-                {% endif %}
-                {% if perm.operate_platform %}
-                    {% url 'admin.operation.index' as operation_index %}
-                    {% if operation_index %}
-                    <li><a href="{% url 'admin.operation.index' %}">运营数据</a></li>
-                    {% endif %}
-                {% endif %}
-                {% if perm.manage_platform %}
-                {# 如果平台不在用户登录的时候自动创建用户，则需要在用户列表中将用户添加为普通用户后，用户才能访问开发者中心 #}
-                {% if not AUTO_CREATE_REGULAR_USER %}
-                <li><a href="{% url 'admin.accountmgr.index' %}">用户管理</a></li>
-                {% endif %}
-                {% endif %}
-            </ul>
-            <p class="navbar-text">{{ request.user.username }}</p>
-        </nav>
+        <div style="display: flex; flex-direction: column">
+            <nav
+                id="top-nav"
+                class="navbar navbar-inverse"
+                style="border-radius: 0px"
+            >
+                <div class="navbar-header">
+                    <a
+                        class="navbar-brand navbar-brand-light"
+                        href="{% url 'admin.front_page' %}"
+                        >蓝鲸开发者中心 Admin</a
+                    >
+                </div>
+                <p class="navbar-text" style="margin-left: auto">
+                    {{ request.user.username }}
+                </p>
+            </nav>
 
-        <div class="container-content">
-            <div class="main-content">
-                {% block container %}
-                {% endblock %}
+            <div class="container-content">
+                <div class="main-content">
+                    {% block container %}
+                    {% endblock %}
+                </div>
+                <footer class="footer">
+                    <p>Copyright © 2012-2024 Tencent BlueKing. All Rights Reserved.</p>
+                </footer>
             </div>
-            <footer class="footer">
-                <p>Copyright © 2012-2024 Tencent BlueKing. All Rights Reserved.</p>
-            </footer>
         </div>
-    </div>
     </body>
-    {% render_bundle 'vendors' 'js' %}
-    {% render_bundle 'default' 'js' %}
+    {% render_bundle 'vendors' 'js' %} {% render_bundle 'default' 'js' %}
     <script>
-    // 控制台输出版本信息
-    const BKPAAS_BUILD_VERSION = decodeURIComponent('{{ BKPAAS_BUILD_VERSION }}');
-    console.log(
-      `%c版本信息%c${ BKPAAS_BUILD_VERSION }%c >> ${new Date().toString().slice(0, 16)}<<`,
-      'padding: 2px 5px; background: #ea3636; color: #fff; border-radius: 3px 0 0 3px;',
-      'padding: 2px 5px; background: #42c02e; color: #fff; border-radius: 0 3px 3px 0; font-weight: bold;',
-      'background-color: #3A84FF; color: #fff; padding: 2px 5px; border-radius: 3px; font-weight: bold;margin-left: 16px;',
-    );
+        // 控制台输出版本信息
+        const BKPAAS_BUILD_VERSION = decodeURIComponent('{{ BKPAAS_BUILD_VERSION }}');
+        console.log(
+            `%c版本信息%c${ BKPAAS_BUILD_VERSION }%c >> ${new Date().toString().slice(0, 16)}<<`,
+            'padding: 2px 5px; background: #ea3636; color: #fff; border-radius: 3px 0 0 3px;',
+            'padding: 2px 5px; background: #42c02e; color: #fff; border-radius: 0 3px 3px 0; font-weight: bold;',
+            'background-color: #3A84FF; color: #fff; padding: 2px 5px; border-radius: 3px; font-weight: bold;margin-left: 16px;',
+        );
 
-    Vue.filter("env2zh", function (value) {
-        switch (value) {
-            case "stag":
-                return "预发布环境"
-            case "prod":
-                return "生产环境"
-            case "_global_":
-                return "所有环境"
-        }
-    })
-    Vue.filter("region2zh", function (value) {
-        switch (value) {
-            {% for region, display_name in REGION_CHOICES.items %}
-            case "{{ region }}":
-                return "{{ display_name }}"
-            {% endfor %}
-        }
-    })
+        Vue.filter("env2zh", function (value) {
+            switch (value) {
+                case "stag":
+                    return "预发布环境"
+                case "prod":
+                    return "生产环境"
+                case "_global_":
+                    return "所有环境"
+            }
+        })
+        Vue.filter("region2zh", function (value) {
+            switch (value) {
+                {% for region, display_name in REGION_CHOICES.items %}
+                case "{{ region }}":
+                    return "{{ display_name }}"
+                {% endfor %}
+            }
+        })
 
-    Vue.mixin({
-        data () {
-            return {
-                'GLOBAL_CONFIG': {
-                    LIST_USERS_API: '{{ USER_SELECTOR_LIST_API }}',
+        Vue.mixin({
+            data () {
+                return {
+                    'GLOBAL_CONFIG': {
+                        LIST_USERS_API: '{{ USER_SELECTOR_LIST_API }}',
+                    }
                 }
             }
-        }
-    })
+        })
 
-    // 通用 dialog 表单提交 mixin
-    let SubmitMixin = {
-        data: function () {
-          return {
-              dialog: {
-                  visible: false,
-                  // create, edit, delete
-                  type: '',
-                  // modify by inherit
-                  form: {
+        // 通用 dialog 表单提交 mixin
+        let SubmitMixin = {
+            data: function () {
+                return {
+                    dialog: {
+                        visible: false,
+                        // create, edit, delete
+                        type: '',
+                        // modify by inherit
+                        form: {
 
-                  },
-              }
-          }
-        },
-        methods: {
-            fillUrlTemplate: function (url_template, {form, row}) {
-              return url_template
-            },
-            processData: function (data) {
-                return new Promise(resolve => resolve(data))
-            },
-            submitCallback: function () {
-
-            },
-            submitDialog: function () {
-                let url_template = this.dialog.type === "create" ? URLRouter['create'] : URLRouter['detail']
-                let form = this.dialog.form
-                let url = this.fillUrlTemplate(url_template, this.dialog)
-
-                let method = this.$http.get
-
-                switch (this.dialog.type) {
-                    case "create":
-                        method = this.$http.post
-                        break
-                    case "edit":
-                        method = this.$http.put
-                        break
-                    case "delete":
-                        method = this.$http.delete
-                        break
+                        },
+                    }
                 }
+            },
+            methods: {
+                fillUrlTemplate: function (url_template, {form, row}) {
+                    return url_template
+                },
+                processData: function (data) {
+                    return new Promise(resolve => resolve(data))
+                },
+                submitCallback: function () {
 
-                const el = this.$bkLoading({
-                    title: '处理中'
-                })
-                this.processData(form).then(data => {
-                    method(url, data).then(res => {
-                        this.$paasMessage({
-                            message: '处理完毕'
-                        })
-                        this.dialog.visible = false
-                        this.submitCallback()
-                    }, res => {
-                        if (res.response.status === 400) {
-                            this.$paasMessage({
-                                theme: 'error',
-                                message: res.detail
-                            })
-                        } else if (res.response.status === 404) {
-                            this.$paasMessage({
-                                theme: 'error',
-                                message: '资源不存在或登录态已失效'
-                            })
-                        } else {
-                            this.$paasMessage({
-                                theme: 'error',
-                                message: `程序异常, 状态码: ${res.response.status}`
-                            })
-                        }
-                        this.handleRequestError(res)
-                    }).finally(() => {el.hide = true})
-                }).catch(error => {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: error
+                },
+                submitDialog: function () {
+                    let url_template = this.dialog.type === "create" ? URLRouter['create'] : URLRouter['detail']
+                    let form = this.dialog.form
+                    let url = this.fillUrlTemplate(url_template, this.dialog)
+
+                    let method = this.$http.get
+
+                    switch (this.dialog.type) {
+                        case "create":
+                            method = this.$http.post
+                            break
+                        case "edit":
+                            method = this.$http.put
+                            break
+                        case "delete":
+                            method = this.$http.delete
+                            break
+                    }
+
+                    const el = this.$bkLoading({
+                        title: '处理中'
                     })
+                    this.processData(form).then(data => {
+                        method(url, data).then(res => {
+                            this.$paasMessage({
+                                message: '处理完毕'
+                            })
+                            this.dialog.visible = false
+                            this.submitCallback()
+                        }, res => {
+                            if (res.response.status === 400) {
+                                this.$paasMessage({
+                                    theme: 'error',
+                                    message: res.detail
+                                })
+                            } else if (res.response.status === 404) {
+                                this.$paasMessage({
+                                    theme: 'error',
+                                    message: '资源不存在或登录态已失效'
+                                })
+                            } else {
+                                this.$paasMessage({
+                                    theme: 'error',
+                                    message: `程序异常, 状态码: ${res.response.status}`
+                                })
+                            }
+                            this.handleRequestError(res)
+                        }).finally(() => {el.hide = true})
+                    }).catch(error => {
+                        this.$paasMessage({
+                            theme: 'error',
+                            message: error
+                        })
+                        console.error(error)
+                        el.hide = true
+                    })
+                },
+                handleRequestError(error) {
                     console.error(error)
-                    el.hide = true
-                })
-            },
-            handleRequestError(error) {
-                console.error(error)
+                }
             }
         }
-    }
     </script>
-    {% block footer %}
-    {% endblock %}
+    {% block footer %} {% endblock %}
     <script>
         setTimeout(() => {
-            var loadingNode = document.querySelector('.bk-loading')
+            var loadingNode = document.querySelector('.bk-loading');
             if (loadingNode) {
-                loadingNode.style.display = 'none'
+                loadingNode.style.display = 'none';
             }
-        }, 500)
+        }, 500);
     </script>
 </html>

@@ -26,7 +26,6 @@ from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.bkapp_model.models import ProcessComponent
-from paasng.platform.engine.models.config_var import BuiltinConfigVar
 
 from .serializers import (
     ProcessComponentCreateInputSLZ,
@@ -95,7 +94,7 @@ class ProcessComponentViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        component = get_object_or_404(BuiltinConfigVar, pk=pk)
+        component = get_object_or_404(ProcessComponent, pk=pk)
         data_before = DataDetail(
             data=ProcessComponentOutputSLZ(component).data,
         )
@@ -109,7 +108,7 @@ class ProcessComponentViewSet(viewsets.GenericViewSet):
         add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.MODIFY,
-            target=OperationTarget.ENV_VAR,
+            target=OperationTarget.PROC_COMPONENT,
             attribute=f"{component.type}:{component.version}",
             data_before=data_before,
             data_after=DataDetail(
@@ -132,7 +131,7 @@ class ProcessComponentViewSet(viewsets.GenericViewSet):
         add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.DELETE,
-            target=OperationTarget.ENV_VAR,
+            target=OperationTarget.PROC_COMPONENT,
             attribute=f"{component.type}:{component.version}",
             data_before=DataDetail(
                 data=ProcessComponentOutputSLZ(component).data,

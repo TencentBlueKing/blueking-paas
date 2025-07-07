@@ -27,6 +27,7 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.serializers import ClusterSLZ
 from paas_wl.infras.cluster.shim import EnvClusterService
+from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.bkapp_model.serializers import ModuleDeployHookSLZ as CNativeModuleDeployHookSLZ
 from paasng.platform.bkapp_model.serializers import ModuleProcessSpecSLZ
 from paasng.platform.engine.constants import RuntimeType
@@ -159,7 +160,7 @@ class CreateModuleSLZ(serializers.Serializer):
     source_control_type = SourceControlField(allow_blank=True, required=False, default=None)
     source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
-    source_dir = serializers.CharField(required=False, default="", allow_blank=True)
+    source_dir = SourceDirField(help_text=_("构建目录"))
 
     def validate_name(self, name):
         if Module.objects.filter(application=self.context["application"], name=name).exists():
@@ -171,12 +172,6 @@ class CreateModuleSLZ(serializers.Serializer):
         if not Template.objects.filter(name=tmpl_name, type=TemplateType.NORMAL).exists():
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
         return tmpl_name
-
-    def validate_source_dir(self, value: str):
-        if value.startswith("/") or ".." in value:
-            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
-
-        return value
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
@@ -265,7 +260,7 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     source_control_type = SourceControlField(allow_blank=True, required=False, default=None)
     source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
-    source_dir = serializers.CharField(required=False, default="", allow_blank=True)
+    source_dir = SourceDirField(help_text="源码目录")
     auto_create_repo = serializers.BooleanField(required=False, default=False, help_text="是否由平台新建代码仓库")
     write_template_to_repo = serializers.BooleanField(
         required=False, default=False, help_text="是否将模板代码初始化到代码仓库中"
@@ -297,12 +292,6 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
         if attrs["write_template_to_repo"] and (not attrs.get("source_init_template")):
             raise ValidationError(_("将模板代码初始化到代码仓库中时，必须选择应用模板"))
         return attrs
-
-    def validate_source_dir(self, value: str):
-        if value.startswith("/") or ".." in value:
-            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
-
-        return value
 
 
 class ModuleBuildConfigSLZ(serializers.Serializer):

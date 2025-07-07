@@ -15,10 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import os
 import re
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.fields import empty
 
 from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.models import Application
@@ -90,3 +92,34 @@ class AppNameField(NickNameField):
         preset_kwargs = dict(max_length=20, help_text="应用名称", validators=[AppNameUniqueValidator()])
         preset_kwargs.update(kwargs)
         super().__init__(*args, **preset_kwargs)
+
+
+class SourceDirField(serializers.CharField):
+    """Field for validating source directory"""
+
+    default_error_messages = {
+        "invalid": _("构建目录 {source_dir} 不合法"),
+        "danger": _("构建目录 {source_dir} 存在路径逃逸风险"),
+    }
+
+    def __init__(self, **kwargs):
+        preset_kwargs = dict(max_length=255, default="", allow_blank=True)
+        preset_kwargs.update(kwargs)
+        super().__init__(**preset_kwargs)
+
+    def run_validation(self, data=empty):
+        data = super().run_validation(data)
+
+        if ".." in data or data.startswith("/"):
+            self.fail("invalid", source_dir=data)
+
+        # 模拟实际使用情况，对用户输入进行拼接
+        root = "/tmp/"
+        full_path = os.path.realpath(os.path.join(root, data))
+        resolved_root = os.path.realpath(root) + os.sep
+
+        # 通过前缀路径检查是否逃逸
+        if not full_path.startswith(resolved_root):
+            self.fail("danger", source_dir=data)
+
+        return data

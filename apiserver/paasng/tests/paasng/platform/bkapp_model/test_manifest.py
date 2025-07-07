@@ -307,6 +307,7 @@ class TestProcessesManifestConstructor:
                     "autoscaling": None,
                     "probes": None,
                     "services": None,
+                    "components": None,
                 }
             ],
             "envOverlay": {

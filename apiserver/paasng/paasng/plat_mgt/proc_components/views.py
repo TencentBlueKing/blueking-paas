@@ -69,7 +69,7 @@ class ProcessComponentViewSet(viewsets.GenericViewSet):
             enabled=data["enabled"],
             description=data["description"],
             docs_url=data["docs_url"],
-            property_json_schema=data["property_json_schema"],
+            properties_json_schema=data["properties_json_schema"],
         )
 
         add_plat_mgt_audit_record(
@@ -102,8 +102,8 @@ class ProcessComponentViewSet(viewsets.GenericViewSet):
         component.enabled = data["enabled"]
         component.description = data["description"]
         component.docs_url = data["docs_url"]
-        component.property_json_schema = data["property_json_schema"]
-        component.save(update_fields=["enabled", "description", "docs_url", "property_json_schema"])
+        component.properties_json_schema = data["properties_json_schema"]
+        component.save(update_fields=["enabled", "description", "docs_url", "properties_json_schema"])
 
         add_plat_mgt_audit_record(
             user=request.user.pk,

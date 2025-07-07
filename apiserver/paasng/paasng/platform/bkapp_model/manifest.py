@@ -208,7 +208,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 # 渲染默认参数 processName
                 components=(
                     [
-                        component.render_default_properties({"process_name": process_spec.name})
+                        component.render_extra_properties({"process_name": process_spec.name})
                         for component in process_spec.components
                     ]
                     if process_spec.components

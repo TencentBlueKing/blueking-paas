@@ -21,24 +21,24 @@ from rest_framework import serializers
 class ProcessComponentCreateInputSLZ(serializers.Serializer):
     type = serializers.CharField(max_length=32)
     version = serializers.CharField(max_length=32)
-    enabled = serializers.BooleanField(max_length=32)
+    enabled = serializers.BooleanField()
     description = serializers.CharField(allow_null=True, required=False)
     docs_url = serializers.CharField(max_length=255, allow_null=True, required=False)
-    property_json_schema = serializers.JSONField(required=False, default=dict)
+    properties_json_schema = serializers.JSONField(required=False, default=dict)
 
 
 class ProcessComponentOutputSLZ(serializers.Serializer):
     uuid = serializers.UUIDField(help_text="UUID of process component")
     type = serializers.CharField(max_length=32)
     version = serializers.CharField(max_length=32)
-    enabled = serializers.BooleanField(max_length=32)
+    enabled = serializers.BooleanField()
     description = serializers.CharField(allow_null=True, required=False)
     docs_url = serializers.CharField(max_length=255, allow_null=True, required=False)
-    property_json_schema = serializers.JSONField(required=False, default=dict)
+    properties_json_schema = serializers.JSONField(required=False, default=dict)
 
 
 class ProcessComponentUpdateInputSLZ(serializers.Serializer):
-    enabled = serializers.BooleanField(max_length=32)
+    enabled = serializers.BooleanField()
     description = serializers.CharField(allow_null=True, required=False)
     docs_url = serializers.CharField(max_length=255, allow_null=True, required=False)
-    property_json_schema = serializers.JSONField(required=False, default=dict)
+    properties_json_schema = serializers.JSONField(required=False, default=dict)

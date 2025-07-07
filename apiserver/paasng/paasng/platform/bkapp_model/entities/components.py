@@ -36,7 +36,7 @@ class Component(BaseModel):
     version: str
     properties: Dict[str, Any] = {}
 
-    def render_default_properties(self, properties: Dict[str, Any]):
-        """渲染组件默认参数"""
+    def render_extra_properties(self, properties: Dict[str, Any]):
+        """渲染组件额外参数"""
         self.properties.update(properties)
         return self

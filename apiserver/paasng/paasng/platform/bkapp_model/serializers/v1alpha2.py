@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import List
+from typing import Dict, List
 
 from django.utils.translation import gettext_lazy as _
 from jsonschema import validate as jsonschema_validate
@@ -239,26 +239,24 @@ class ComponentInputSLZ(serializers.Serializer):
         internal_value = super().to_internal_value(data)
         # 检查是否存在properties字段
         if "properties" in data:
-            # 转换properties中的键名
+            # 转换 properties 中的键名
             data["properties"] = camel_to_snake_case(internal_value["properties"])
 
         return internal_value
 
-    def validate(self, attrs):
+    def validate(self, attrs: Dict) -> Dict:
         # 1. 校验 type 和 version 对应的 ProcessComponent 是否存在
         try:
             component = ProcessComponent.objects.get(type=attrs["type"], version=attrs["version"])
         except ProcessComponent.DoesNotExist:
-            raise serializers.ValidationError(f"组件 {attrs['type']}-{attrs['version']} 不存在")
+            raise ValidationError(_("组件 {}-{} 不存在").format(attrs["type"], attrs["version"]))
 
         # 2. 如果 properties 不为空，校验是否符合 JSON Schema
-        if attrs.get("properties") is not None:
-            schema = component.property_json_schema
-            if schema:
-                try:
-                    jsonschema_validate(instance=attrs["properties"], schema=schema)
-                except SchemaValidationError as e:
-                    raise serializers.ValidationError("参数校验失败") from e
+        if attrs.get("properties") is not None and (schema := component.properties_json_schema):
+            try:
+                jsonschema_validate(instance=attrs["properties"], schema=schema)
+            except SchemaValidationError as e:
+                raise ValidationError(_("参数校验失败")) from e
 
         return attrs
 

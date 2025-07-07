@@ -57,7 +57,7 @@ pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.
 
 class TestProcessesField:
     @pytest.fixture
-    def property_json_schema(self):
+    def properties_json_schema(self):
         return {
             "type": "object",
             "properties": {
@@ -79,7 +79,7 @@ class TestProcessesField:
             "additionalProperties": False,
         }
 
-    def test_python_framework_case(self, bk_module, bk_deployment, property_json_schema):
+    def test_python_framework_case(self, bk_module, bk_deployment, properties_json_schema):
         json_data = builder.make_module(
             module_name="test",
             module_spec={
@@ -113,7 +113,7 @@ class TestProcessesField:
             },
         )
         # 创建进程组件
-        ProcessComponent.objects.create(type="env_cover", version="v1", property_json_schema=property_json_schema)
+        ProcessComponent.objects.create(type="env_cover", version="v1", properties_json_schema=properties_json_schema)
 
         controller = DeploymentDeclarativeController(bk_deployment)
         controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
@@ -158,7 +158,7 @@ class TestProcessesField:
         ):
             controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
-    def test_proc_component_with_invalid_properties(self, bk_module, bk_deployment, property_json_schema):
+    def test_proc_component_with_invalid_properties(self, bk_module, bk_deployment, properties_json_schema):
         json_data = builder.make_module(
             module_name="test",
             module_spec={
@@ -179,7 +179,7 @@ class TestProcessesField:
             },
         )
         # 创建进程组件
-        ProcessComponent.objects.create(type="env_cover", version="v1", property_json_schema=property_json_schema)
+        ProcessComponent.objects.create(type="env_cover", version="v1", properties_json_schema=properties_json_schema)
 
         controller = DeploymentDeclarativeController(bk_deployment)
         with pytest.raises(DescriptionValidationError, match="spec.processes.0.components.0: 参数校验失败"):

@@ -171,28 +171,26 @@ class MonitoringSLZ(serializers.Serializer):
     metric = MetricSLZ(help_text="metric 配置", required=False, allow_null=True)
 
 
-class ComponentSLZ(serializers.Serializer):
-    """组件配置"""
+class ProcComponentSLZ(serializers.Serializer):
+    """进程组件配置"""
 
     type = serializers.CharField(help_text="组件类型")
     version = serializers.CharField(help_text="组件版本")
     properties = serializers.DictField(help_text="组件属性", required=False, allow_null=True)
 
-    def validate(self, attrs):
+    def validate(self, attrs: Dict) -> Dict:
         # 1. 校验 type 和 version 对应的 ProcessComponent 是否存在
         try:
             component = ProcessComponent.objects.get(type=attrs["type"], version=attrs["version"])
         except ProcessComponent.DoesNotExist:
-            raise serializers.ValidationError(f"组件 {attrs['type']}-{attrs['version']} 不存在")
+            raise ValidationError(_("组件 {}-{} 不存在").format(attrs["type"], attrs["version"]))
 
         # 2. 如果 properties 不为空，校验是否符合 JSON Schema
-        if attrs.get("properties") is not None:
-            schema = component.property_json_schema
-            if schema:
-                try:
-                    jsonschema_validate(instance=attrs["properties"], schema=schema)
-                except SchemaValidationError as e:
-                    raise serializers.ValidationError("参数校验失败") from e
+        if attrs.get("properties") is not None and (schema := component.properties_json_schema):
+            try:
+                jsonschema_validate(instance=attrs["properties"], schema=schema)
+            except SchemaValidationError as e:
+                raise ValidationError(_("参数校验失败")) from e
 
         return attrs
 
@@ -222,7 +220,7 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     probes = ProbeSetSLZ(help_text="容器探针配置", required=False, allow_null=True)
     monitoring = MonitoringSLZ(help_text="可观测性监控配置", required=False, allow_null=True)
     components = serializers.ListSerializer(
-        child=ComponentSLZ(), help_text="进程组件列表", allow_null=True, required=False
+        child=ProcComponentSLZ(), help_text="进程组件列表", allow_null=True, required=False
     )
 
     def validate_services(self, value):

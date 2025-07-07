@@ -413,13 +413,13 @@ class BkAppManagedFields(TimestampedModel):
 
 
 class ProcessComponent(UuidAuditedModel):
-    type = models.CharField("类型", max_length=64)
+    type = models.CharField("类型", max_length=32)
     version = models.CharField("版本", max_length=32)
     enabled = models.BooleanField("是否可用", default=True, help_text="是否可用")
     description = models.TextField("描述", null=True)
     docs_url = models.CharField("文档地址", max_length=255, null=True)
-    # 组件参数配置规范,用于校验用户输入的参数是否规范
-    property_json_schema = models.JSONField("组件配置规范", default=None, null=True)
+    # 组件参数配置描述
+    properties_json_schema = models.JSONField("组件配置规范", default=None, null=True)
 
     tenant_id = tenant_id_field_factory()
 

@@ -61,7 +61,7 @@ class Process(AllowNotsetModel):
     autoscaling: AutoscalingConfig | NotSetType | None = NOTSET
 
     probes: Optional[ProbeSet] = None
-    components: Optional[List[Component]] = None
+    components: List[Component] | None = None
 
     def __init__(self, **data):
         data["name"] = data["name"].lower()

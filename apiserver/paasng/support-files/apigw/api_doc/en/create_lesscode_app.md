@@ -10,7 +10,6 @@ None.
 
 | Field | Type | Required | Description |
 | ------ | ------ | ------ | ------ |
-| region | string | Yes | Region, default is "default" |
 | code | string | Yes | Application code |
 | name | string | Yes | Application name |
 | type | string | Yes | Application type, default is "default" |

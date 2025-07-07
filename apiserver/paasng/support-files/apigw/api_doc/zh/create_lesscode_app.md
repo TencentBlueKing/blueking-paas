@@ -10,7 +10,6 @@
 
 | 字段 |   类型 |  是否必填 | 描述 |
 | ------ | ------ | ------ | ------ |
-| region | string | 是   | 区域，默认为 "default" |
 | code | string | 是 | 应用编码 |
 | name | string | 是 | 应用名称 |
 | type | string | 是 | 应用类型，默认为 "default" |

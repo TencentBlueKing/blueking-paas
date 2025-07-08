@@ -23,7 +23,7 @@ from django.conf import settings
 from requests.auth import AuthBase
 
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
-from paasng.infras.ai_agent.exceptions import AIAgentServiceError
+from paasng.misc.ai_agent.exceptions import AIAgentServiceError
 from paasng.utils import masked_curlify
 
 logger = logging.getLogger(__name__)

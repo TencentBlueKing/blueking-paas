@@ -1,6 +1,11 @@
-{% extends "admin42/base.html" %}
-
+{% extends "./base.html" %} 
 {% block container %}
+
 <h2>{{ message }}</h2>
-<input action="action" onclick="window.history.go(-1); return false;" type="button" value="返回" />
+<input
+    action="action"
+    onclick="window.history.go(-1); return false;"
+    type="button"
+    value="返回"
+/>
 {% endblock %}

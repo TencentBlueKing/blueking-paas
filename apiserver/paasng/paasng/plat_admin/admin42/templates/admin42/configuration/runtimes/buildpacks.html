@@ -1,5 +1,4 @@
-{% extends "admin42/platformmgr/base.html" %}
-
+{% extends "admin42/configuration/base.html" %}
 {% load admin_utils %}
 
 {% block content_header %}
@@ -10,40 +9,87 @@
 
 {% block main_content %}
 <div id="buildpack-list" class="p20">
-    <bk-alert class="mb20" title="Buildpack 是用于构建的最小单位，用于将源代码转换成镜像层，一般多个 Buildpack 会同属于一个 Slugbuilder。"></bk-alert>
+    <bk-alert
+        class="mb20"
+        title="Buildpack 是用于构建的最小单位，用于将源代码转换成镜像层，一般多个 Buildpack 会同属于一个 Slugbuilder。"
+    ></bk-alert>
 
-    <bk-button theme="primary" icon="plus" class="create-button" @click="handleCreate">
+    <bk-button
+        theme="primary"
+        icon="plus"
+        class="create-button"
+        @click="handleCreate"
+    >
         新建
     </bk-button>
 
     <!--  数据列表  -->
-    <bk-table :data="data" size="medium" :row-key="rowKey" :expand-row-keys="expandRowKeys">
+    <bk-table
+        :data="data"
+        size="medium"
+        :row-key="rowKey"
+        :expand-row-keys="expandRowKeys"
+    >
         <bk-table-column type="expand" width="0">
             <template slot-scope="props">
-                <bk-table :data="props.row.allBuilders" :outer-border="false" ext-cls="child-table-cls">
+                <bk-table
+                    :data="props.row.allBuilders"
+                    :outer-border="false"
+                    ext-cls="child-table-cls"
+                >
                     <bk-table-column label="是否绑定" width="80">
                         <template slot-scope="props">
-                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.is_bound ? '是' : '否' ] </span>
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'"
+                                >$[ props.row.is_bound ? '是' : '否' ]
+                            </span>
                         </template>
                     </bk-table-column>
-                    <bk-table-column label="名称" prop="name" show-overflow-tooltip="true" min-width="250">
+                    <bk-table-column
+                        label="名称"
+                        prop="name"
+                        show-overflow-tooltip="true"
+                        min-width="250"
+                    >
                         <template slot-scope="props">
-                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.name ] </span>
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'"
+                                >$[ props.row.name ]
+                            </span>
                         </template>
                     </bk-table-column>
-                    <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true" min-width="200">
+                    <bk-table-column
+                        label="展示名称"
+                        prop="display_name"
+                        show-overflow-tooltip="true"
+                        min-width="200"
+                    >
                         <template slot-scope="props">
-                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.display_name ] </span>
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'"
+                                >$[ props.row.display_name ]
+                            </span>
                         </template>
                     </bk-table-column>
-                    <bk-table-column label="描述" prop="description" show-overflow-tooltip="true">
+                    <bk-table-column
+                        label="描述"
+                        prop="description"
+                        show-overflow-tooltip="true"
+                    >
                         <template slot-scope="props">
-                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.description ] </span>
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'"
+                                >$[ props.row.description ]
+                            </span>
                         </template>
                     </bk-table-column>
-                    <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" min-width="350">
+                    <bk-table-column
+                        label="镜像"
+                        prop="image"
+                        show-overflow-tooltip="true"
+                        min-width="350"
+                    >
                         <template slot-scope="props">
-                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.image + ':' + props.row.tag ]</span>
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'"
+                                >$[ props.row.image + ':' + props.row.tag
+                                ]</span
+                            >
                         </template>
                     </bk-table-column>
                 </bk-table>
@@ -51,48 +97,120 @@
         </bk-table-column>
         <bk-table-column label="名称" prop="name" min-width="250">
             <template slot-scope="props">
-                <span class="name" :class="props.row.is_hidden ? 'off-shelf' : ''" @click="showDetailDialog(props.row)">$[ props.row.name ]</span>
-                <span class="display_name" :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.display_name ]</span>
+                <span
+                    class="name"
+                    :class="props.row.is_hidden ? 'off-shelf' : ''"
+                    @click="showDetailDialog(props.row)"
+                    >$[ props.row.name ]</span
+                >
+                <span
+                    class="display_name"
+                    :class="props.row.is_hidden ? 'off-shelf' : ''"
+                    >$[ props.row.display_name ]</span
+                >
             </template>
         </bk-table-column>
         <bk-table-column label="Builder 绑定情况" width="120">
             <template slot-scope="props">
-                <span class="bind-info" :class="props.row.is_hidden ? 'off-shelf' : ''" @click="handleExpandRow(props.row)">已绑定 $[props.row.slugbuilders.length] 个
-                    <bk-icon class="paasng-icon" :type="expandRowKeys.includes(props.row.id) ? 'angle-double-up' : 'angle-double-down'"></bk-icon>
+                <span
+                    class="bind-info"
+                    :class="props.row.is_hidden ? 'off-shelf' : ''"
+                    @click="handleExpandRow(props.row)"
+                    >已绑定 $[props.row.slugbuilders.length] 个
+                    <bk-icon
+                        class="paasng-icon"
+                        :type="expandRowKeys.includes(props.row.id) ? 'angle-double-up' : 'angle-double-down'"
+                    ></bk-icon>
                 </span>
             </template>
         </bk-table-column>
-        <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"
-                         v-if="setting.selectedFields.find(item => item.id === 'description') !== undefined">
+        <bk-table-column
+            label="描述"
+            prop="description"
+            show-overflow-tooltip="true"
+            v-if="setting.selectedFields.find(item => item.id === 'description') !== undefined"
+        >
             <template slot-scope="props">
-                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.description ]</span>
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''"
+                    >$[ props.row.description ]</span
+                >
             </template>
         </bk-table-column>
-        <bk-table-column label="引用类型" prop="type" :filters="typeFilters" :filter-multiple="true" :filter-method="filterMethod" width="100">
+        <bk-table-column
+            label="引用类型"
+            prop="type"
+            :filters="typeFilters"
+            :filter-multiple="true"
+            :filter-method="filterMethod"
+            width="100"
+        >
             <template slot-scope="props">
-                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.type ]</span>
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''"
+                    >$[ props.row.type ]</span
+                >
             </template>
         </bk-table-column>
-        <bk-table-column label="编程语言" prop="language" :filters="languageFilters" :filter-multiple="false" :filter-method="filterMethod">
+        <bk-table-column
+            label="编程语言"
+            prop="language"
+            :filters="languageFilters"
+            :filter-multiple="false"
+            :filter-method="filterMethod"
+        >
             <template slot-scope="props">
-                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.language ]</span>
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''"
+                    >$[ props.row.language ]</span
+                >
             </template>
         </bk-table-column>
-        <bk-table-column label="版本" prop="version" v-if="setting.selectedFields.find(item => item.id === 'version') !== undefined">
+        <bk-table-column
+            label="版本"
+            prop="version"
+            v-if="setting.selectedFields.find(item => item.id === 'version') !== undefined"
+        >
             <template slot-scope="props">
-                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.version ]</span>
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''"
+                    >$[ props.row.version ]</span
+                >
             </template>
         </bk-table-column>
-        <bk-table-column label="是否显示" prop="is_hidden" width="100" :filters="isHiddenFilters" :filter-multiple="false" :filter-method="filterMethod">
+        <bk-table-column
+            label="是否显示"
+            prop="is_hidden"
+            width="100"
+            :filters="isHiddenFilters"
+            :filter-multiple="false"
+            :filter-method="filterMethod"
+        >
             <template slot-scope="props">
-                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.is_hidden ? '否' : '是' ] </span>
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''"
+                    >$[ props.row.is_hidden ? '否' : '是' ]
+                </span>
             </template>
         </bk-table-column>
         <bk-table-column label="操作" width="150">
             <template slot-scope="props">
-                <bk-button class="mr5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
-                <bk-button class="mr5" theme="primary" text @click="handleBind(props.row)">修改绑定</bk-button>
-                <bk-button class="mr5" theme="danger" text @click="handleDelete(props.row)">删除</bk-button>
+                <bk-button
+                    class="mr5"
+                    theme="primary"
+                    text
+                    @click="handleEdit(props.row)"
+                    >编辑</bk-button
+                >
+                <bk-button
+                    class="mr5"
+                    theme="primary"
+                    text
+                    @click="handleBind(props.row)"
+                    >修改绑定</bk-button
+                >
+                <bk-button
+                    class="mr5"
+                    theme="danger"
+                    text
+                    @click="handleDelete(props.row)"
+                    >删除</bk-button
+                >
             </template>
         </bk-table-column>
         <bk-table-column type="setting" :tippy-options="{ zIndex: 3000 }">
@@ -101,18 +219,34 @@
                 :selected="setting.selectedFields"
                 :max="setting.max"
                 :size="setting.size"
-                @setting-change="handleSettingChange">
+                @setting-change="handleSettingChange"
+            >
             </bk-table-setting-content>
         </bk-table-column>
     </bk-table>
 
     <!--  修改绑定弹窗  -->
-    <bk-dialog v-model="bindDialog.visible" width="900" theme="primary" :mask-close="false" header-position="left" :confirm-fn="submitBindDialog" :title="bindDialog.title">
+    <bk-dialog
+        v-model="bindDialog.visible"
+        width="900"
+        theme="primary"
+        :mask-close="false"
+        header-position="left"
+        :confirm-fn="submitBindDialog"
+        :title="bindDialog.title"
+    >
         <div class="draggable-wrapper">
             <div class="draggable-box">
-                <div class="draggable-box-header"> 未绑定的 slugbuilder (共$[ bindDialog.unselectedBuilders.length ]条)</div>
+                <div class="draggable-box-header">
+                    未绑定的 slugbuilder (共$[
+                    bindDialog.unselectedBuilders.length ]条)
+                </div>
                 <div class="beauty-scrollbar">
-                    <draggable :list="bindDialog.unselectedBuilders" group="buildpack" style="min-height: 320px;">
+                    <draggable
+                        :list="bindDialog.unselectedBuilders"
+                        group="buildpack"
+                        style="min-height: 320px"
+                    >
                         <div
                             class="draggable-content"
                             v-for="(element, index) in bindDialog.unselectedBuilders"
@@ -124,16 +258,26 @@
                             </span>
                         </div>
                         <template slot="footer" key="footer">
-                            <div v-if="bindDialog.unselectedBuilders.length === 0" style="min-height: 0px;"></div>
+                            <div
+                                v-if="bindDialog.unselectedBuilders.length === 0"
+                                style="min-height: 0px"
+                            ></div>
                         </template>
                     </draggable>
                 </div>
             </div>
             <div class="transfer-icon"></div>
             <div class="draggable-box">
-                <div class="draggable-box-header"> 已绑定的 slugbuilder (共$[ bindDialog.selectedBuilders.length ]条)</div>
+                <div class="draggable-box-header">
+                    已绑定的 slugbuilder (共$[
+                    bindDialog.selectedBuilders.length ]条)
+                </div>
                 <div class="beauty-scrollbar">
-                    <draggable :list="bindDialog.selectedBuilders" group="buildpack" style="min-height: 320px;">
+                    <draggable
+                        :list="bindDialog.selectedBuilders"
+                        group="buildpack"
+                        style="min-height: 320px"
+                    >
                         <div
                             class="draggable-content"
                             v-for="(element, index) in bindDialog.selectedBuilders"
@@ -145,7 +289,10 @@
                             </span>
                         </div>
                         <template slot="footer" key="footer">
-                            <div v-if="bindDialog.selectedBuilders.length === 0" style="min-height: 0px;"></div>
+                            <div
+                                v-if="bindDialog.selectedBuilders.length === 0"
+                                style="min-height: 0px"
+                            ></div>
                         </template>
                     </draggable>
                 </div>
@@ -157,68 +304,116 @@
     <bk-dialog
         header-position="left"
         v-model="dialog.visible"
-        theme="primary" width="1200"
+        theme="primary"
+        width="1200"
         :confirm-fn="submitDialog"
         @cancel="cancelDialog"
         :mask-close="dialog.type === 'detail'"
         :show-footer="dialog.type !== 'detail'"
     >
         <div slot="header" v-if="dialog.type === 'detail'">BuildPack 详情</div>
-        <div slot="header" v-else>$[ dialog.type === 'create' ? '新建' : '修改' ] BuildPack</div>
+        <div slot="header" v-else>
+            $[ dialog.type === 'create' ? '新建' : '修改' ] BuildPack
+        </div>
         <bk-form ref="form">
             <bk-container flex :col="32">
                 <bk-row>
                     <bk-col :span="16">
-                        <bk-form-item label="名称" :required="dialog.type !== 'detail'">
-                            <bk-input v-model="dialog.form.name" :readonly="dialog.type === 'detail'"></bk-input>
+                        <bk-form-item
+                            label="名称"
+                            :required="dialog.type !== 'detail'"
+                        >
+                            <bk-input
+                                v-model="dialog.form.name"
+                                :readonly="dialog.type === 'detail'"
+                            ></bk-input>
                         </bk-form-item>
                     </bk-col>
                     <bk-col :span="16">
-                        <bk-form-item label="编程语言" :required="dialog.type !== 'detail'">
-                            <bk-input v-model="dialog.form.language" :readonly="dialog.type === 'detail'"></bk-input>
+                        <bk-form-item
+                            label="编程语言"
+                            :required="dialog.type !== 'detail'"
+                        >
+                            <bk-input
+                                v-model="dialog.form.language"
+                                :readonly="dialog.type === 'detail'"
+                            ></bk-input>
                         </bk-form-item>
                     </bk-col>
                 </bk-row>
 
                 <bk-row>
                     <bk-col :span="8">
-                        <bk-form-item label="引用类型" :required="dialog.type !== 'detail'">
-                            <bk-input v-model="dialog.form.type" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
+                        <bk-form-item
+                            label="引用类型"
+                            :required="dialog.type !== 'detail'"
+                        >
+                            <bk-input
+                                v-model="dialog.form.type"
+                                :readonly="true"
+                                v-if="dialog.type === 'detail'"
+                            ></bk-input>
                             <bk-select v-model="dialog.form.type" v-else>
-                                <bk-option v-for="type in buildpack_types" :key="type" :id="type" :name="type"></bk-option>
+                                <bk-option
+                                    v-for="type in buildpack_types"
+                                    :key="type"
+                                    :id="type"
+                                    :name="type"
+                                ></bk-option>
                             </bk-select>
                         </bk-form-item>
                     </bk-col>
                     <bk-col :span="8">
-                        <bk-form-item label="版本" :required="dialog.type !== 'detail'">
-                            <bk-input v-model="dialog.form.version" :readonly="dialog.type === 'detail'"></bk-input>
+                        <bk-form-item
+                            label="版本"
+                            :required="dialog.type !== 'detail'"
+                        >
+                            <bk-input
+                                v-model="dialog.form.version"
+                                :readonly="dialog.type === 'detail'"
+                            ></bk-input>
                         </bk-form-item>
                     </bk-col>
                     <bk-col :span="8">
                         <bk-form-item label="是否隐藏">
-                            <bk-switcher v-model="dialog.form.is_hidden" :disabled="dialog.type === 'detail'"></bk-switcher>
+                            <bk-switcher
+                                v-model="dialog.form.is_hidden"
+                                :disabled="dialog.type === 'detail'"
+                            ></bk-switcher>
                         </bk-form-item>
                     </bk-col>
                 </bk-row>
 
                 <bk-row>
                     <bk-col :span="32">
-                        <bk-form-item label="地址" :required="dialog.type !== 'detail'">
-                            <bk-input v-model="dialog.form.address" :readonly="dialog.type === 'detail'"></bk-input>
+                        <bk-form-item
+                            label="地址"
+                            :required="dialog.type !== 'detail'"
+                        >
+                            <bk-input
+                                v-model="dialog.form.address"
+                                :readonly="dialog.type === 'detail'"
+                            ></bk-input>
                         </bk-form-item>
                     </bk-col>
                 </bk-row>
                 <bk-row>
                     <bk-col :span="16">
                         <bk-form-item label="展示名称 / 中文">
-                            <bk-input v-model="dialog.form.display_name_zh_cn" :readonly="dialog.type === 'detail'"
-                                      placeholder=" "></bk-input>
+                            <bk-input
+                                v-model="dialog.form.display_name_zh_cn"
+                                :readonly="dialog.type === 'detail'"
+                                placeholder=" "
+                            ></bk-input>
                         </bk-form-item>
                     </bk-col>
                     <bk-col :span="16">
                         <bk-form-item label="展示名称 / 英文">
-                            <bk-input v-model="dialog.form.display_name_en" :readonly="dialog.type === 'detail'"
-                                      placeholder=" "></bk-input>
+                            <bk-input
+                                v-model="dialog.form.display_name_en"
+                                :readonly="dialog.type === 'detail'"
+                                placeholder=" "
+                            ></bk-input>
                         </bk-form-item>
                     </bk-col>
                 </bk-row>
@@ -226,14 +421,20 @@
                 <bk-row>
                     <bk-col :span="16">
                         <bk-form-item label="描述 / 中文">
-                            <bk-input v-model="dialog.form.description_zh_cn" :readonly="dialog.type === 'detail'"
-                                      placeholder=" "></bk-input>
+                            <bk-input
+                                v-model="dialog.form.description_zh_cn"
+                                :readonly="dialog.type === 'detail'"
+                                placeholder=" "
+                            ></bk-input>
                         </bk-form-item>
                     </bk-col>
                     <bk-col :span="16">
                         <bk-form-item label="描述 / 英文">
-                            <bk-input v-model="dialog.form.description_en" :readonly="dialog.type === 'detail'"
-                                      placeholder=" "></bk-input>
+                            <bk-input
+                                v-model="dialog.form.description_en"
+                                :readonly="dialog.type === 'detail'"
+                                placeholder=" "
+                            ></bk-input>
                         </bk-form-item>
                     </bk-col>
                 </bk-row>
@@ -249,42 +450,86 @@
                     <bk-col :span="30">
                         <bk-table :data="envList">
                             <!-- 新建环境变量 -->
-                            <template slot="append" v-if="dialog.type !== 'detail'">
+                            <template
+                                slot="append"
+                                v-if="dialog.type !== 'detail'"
+                            >
                                 <div class="add-wrapper">
                                     <span class="add-single-variable">
-                                        <bk-link theme="primary" @click="handleAddSingleVariable">添加环境变量</bk-link>
+                                        <bk-link
+                                            theme="primary"
+                                            @click="handleAddSingleVariable"
+                                            >添加环境变量</bk-link
+                                        >
                                     </span>
                                 </div>
                             </template>
 
-                            <bk-table-column label="Key" :width="dialog.type === 'detail' ? '300px' : '250px'">
+                            <bk-table-column
+                                label="Key"
+                                :width="dialog.type === 'detail' ? '300px' : '250px'"
+                            >
                                 <template slot-scope="props">
-                                    <bk-input v-model="props.row.key" v-if="props.row.isEdit"></bk-input>
+                                    <bk-input
+                                        v-model="props.row.key"
+                                        v-if="props.row.isEdit"
+                                    ></bk-input>
                                     <span v-else>$[ props.row.key ]</span>
                                 </template>
                             </bk-table-column>
 
-                            <bk-table-column label="Value" :width="dialog.type === 'detail' ? '700px' : '650px'">
+                            <bk-table-column
+                                label="Value"
+                                :width="dialog.type === 'detail' ? '700px' : '650px'"
+                            >
                                 <template slot-scope="props">
-                                    <bk-input v-model="props.row.value" v-if="props.row.isEdit"></bk-input>
-                                    <span v-else v-bk-tooltips="props.row.value">$[ props.row.value ]</span>
+                                    <bk-input
+                                        v-model="props.row.value"
+                                        v-if="props.row.isEdit"
+                                    ></bk-input>
+                                    <span v-else v-bk-tooltips="props.row.value"
+                                        >$[ props.row.value ]</span
+                                    >
                                 </template>
                             </bk-table-column>
 
-                            <bk-table-column label="操作" v-if="dialog.type !== 'detail'">
+                            <bk-table-column
+                                label="操作"
+                                v-if="dialog.type !== 'detail'"
+                            >
                                 <template slot-scope="props">
-                                    <bk-button class="mr5" theme="primary" text @click="handleEditEnv(props.row)"
-                                               v-if="props.row.isEdit">保存
+                                    <bk-button
+                                        class="mr5"
+                                        theme="primary"
+                                        text
+                                        @click="handleEditEnv(props.row)"
+                                        v-if="props.row.isEdit"
+                                        >保存
                                     </bk-button>
-                                    <bk-button class="mr5" theme="primary" text @click="handleEditEnv(props.row)"
-                                               v-else>
+                                    <bk-button
+                                        class="mr5"
+                                        theme="primary"
+                                        text
+                                        @click="handleEditEnv(props.row)"
+                                        v-else
+                                    >
                                         编辑
                                     </bk-button>
-                                    <bk-button class="mr5" theme="primary" text @click="handleCancelEnv(props.row)"
-                                               v-if="props.row.isEdit">取消
+                                    <bk-button
+                                        class="mr5"
+                                        theme="primary"
+                                        text
+                                        @click="handleCancelEnv(props.row)"
+                                        v-if="props.row.isEdit"
+                                        >取消
                                     </bk-button>
-                                    <bk-button class="mr5" theme="danger" text @click="handleDeleteEnv(props.row)"
-                                               v-else>
+                                    <bk-button
+                                        class="mr5"
+                                        theme="danger"
+                                        text
+                                        @click="handleDeleteEnv(props.row)"
+                                        v-else
+                                    >
                                         删除
                                     </bk-button>
                                 </template>
@@ -705,7 +950,7 @@
     .name {
         display: flex;
         font-weight: 700;
-        color: #3A84FF;
+        color: #3a84ff;
         cursor: pointer;
     }
 
@@ -713,7 +958,7 @@
         display: inline-block;
         padding: 5px 5px 5px 0px;
         user-select: none;
-        color: #3A84FF;
+        color: #3a84ff;
         cursor: pointer;
     }
 
@@ -736,7 +981,7 @@
 
     .child-table-cls {
         .bk-table-header-wrapper thead tr th {
-            background: #FFF !important;
+            background: #fff !important;
         }
 
         .bk-table-body-wrapper table tbody > tr {
@@ -750,7 +995,7 @@
 
         .link {
             cursor: pointer;
-            color: #3A84FF;
+            color: #3a84ff;
         }
     }
 
@@ -778,7 +1023,8 @@
     .transfer-icon {
         width: 30px;
         height: 30px;
-        background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAKCAYAAABv7tTEAAAAV0lEQVQokZXQQQrAIAxE0W/JvU3O1nXXHqdd1EBbqYwDIgGfMCn70RBSgchhUwTgHQJgwLkAAcJE8IIGlEUodxqQc/eST6IYvpskF+H9rggdn9vzv0ffXGG8Ffrmgf5jAAAAAElFTkSuQmCC) no-repeat 50%;
+        background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAKCAYAAABv7tTEAAAAV0lEQVQokZXQQQrAIAxE0W/JvU3O1nXXHqdd1EBbqYwDIgGfMCn70RBSgchhUwTgHQJgwLkAAcJE8IIGlEUodxqQc/eST6IYvpskF+H9rggdn9vzv0ffXGG8Ffrmgf5jAAAAAElFTkSuQmCC)
+            no-repeat 50%;
     }
 
     .draggable-wrapper {

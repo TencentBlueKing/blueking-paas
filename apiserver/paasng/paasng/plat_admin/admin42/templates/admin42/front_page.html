@@ -1,4 +1,4 @@
-{% extends "admin42/base_with_nav.html" %} 
+{% extends "./base_with_nav.html" %} 
 {% load admin_utils %} 
 
 {% block content_header %}
@@ -18,12 +18,12 @@
             children: [
                 {
                     name: '应用列表',
-                    icon: 'icon-tree-module-shape',
+                    icon: 'icon-block-shape',
                     url: "{% url 'admin.applications.list' %}",
                 },
                 {
                     name: '运行时管理',
-                    icon: 'icon-tree-module-shape',
+                    icon: 'icon-block-shape',
                     url: "{% url 'admin.runtimes.buildpack.manage' %}",
                     children: [
                         {
@@ -42,7 +42,7 @@
                 },
                 {
                     name: '应用资源方案',
-                    icon: 'icon-tree-module-shape',
+                    icon: 'icon-block-shape',
                     url: '{% url "admin.process_spec_plan.manage" %}',
                     children: [
                         {
@@ -57,7 +57,7 @@
                 },
                 {
                     name: '智能顾问',
-                    icon: 'icon-tree-module-shape',
+                    icon: 'icon-block-shape',
                     url: "{% url 'admin.smart_advisor.documents.manage' %}",
                     children: [
                         {
@@ -72,18 +72,18 @@
                 },
                 {
                     name: '共享证书管理',
-                    icon: 'icon-tree-module-shape',
+                    icon: 'icon-block-shape',
                     url: "{% url 'admin.shared.certs.manage' %}",
                 },
                 {% if perm.manage_app_templates %}
                     {
                         name: '仪表盘模板配置',
-                        icon: 'icon-tree-module-shape',
+                        icon: 'icon-block-shape',
                         url: "{% url 'admin.configuration.dashboard_tmpl.manage' %}",
                     },
                     {
                         name: '插件配置',
-                        icon: 'icon-tree-module-shape',
+                        icon: 'icon-block-shape',
                         url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}",
                         children: [
                             {
@@ -104,12 +104,12 @@
             children: [
                 {
                     name: '应用运营评估',
-                    icon: 'icon-tree-module-shape',
+                    icon: 'icon-block-shape',
                     url: "{% url 'admin.applications.operation_evaluation.list' %}",
                 },
                 {
                     name: '部署概览',
-                    icon: 'icon-tree-module-shape',
+                    icon: 'icon-block-shape',
                     url: "{% url 'admin.deployments.list' %}",
                 },
                 {% if perm.operate_platform %}
@@ -117,7 +117,7 @@
                     {% if operation_index_view %}
                     {
                         name: '应用统计',
-                        icon: 'icon-tree-module-shape',
+                        icon: 'icon-block-shape',
                         url: "{% url 'admin.operation.mgrlegacy.progress' %}",
                         children: [
                             {
@@ -126,7 +126,6 @@
                             },
                             {
                                 name: '应用部署统计',
-                                icon: 'icon-tree-module-shape',
                                 url: "{% url 'admin.operation.statistics.deploy.apps' %}",
                             },
                             {
@@ -149,7 +148,7 @@
                     children: [
                         {
                             name: '用户列表',
-                            icon: 'icon-tree-module-shape',
+                            icon: 'icon-block-shape',
                             url: "{% url 'admin.accountmgr.userprofiles.index' %}",
                         },
                     ],

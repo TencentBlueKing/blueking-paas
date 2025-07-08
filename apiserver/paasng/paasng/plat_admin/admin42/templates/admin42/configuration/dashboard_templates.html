@@ -1,5 +1,6 @@
-{% extends "admin42/configuration/base.html" %}
+{% extends "./base.html" %}
 {% load admin_utils %}
+
 {% block main_content %}
 <div id="platform-dashboard-tmpl-list" class="p20">
     <bk-button theme="primary" class="mb20" @click="handleCreate">
@@ -25,8 +26,20 @@
         </bk-table-column>
         <bk-table-column label="操作">
             <template slot-scope="props">
-                <bk-button class="ml5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
-                <bk-button class="ml5" theme="danger" text @click="handleDelete(props.row)">删除</bk-button>
+                <bk-button
+                    class="ml5"
+                    theme="primary"
+                    text
+                    @click="handleEdit(props.row)"
+                    >编辑</bk-button
+                >
+                <bk-button
+                    class="ml5"
+                    theme="danger"
+                    text
+                    @click="handleDelete(props.row)"
+                    >删除</bk-button
+                >
             </template>
         </bk-table-column>
     </bk-table>
@@ -39,21 +52,30 @@
         :mask-close="false"
     >
         <div slot="header">
-            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]仪表盘模板
+            $[ dialog.type === 'create'?'添加':(dialog.type ===
+            'edit'?'编辑':'删除') ]仪表盘模板
         </div>
         <bk-form :label-width="140" :model="dialog.form" :rules="rules">
             <bk-form-item label="名称" :property="name" :required="true">
-                <bk-input v-model="dialog.form.name" placeholder="与蓝鲸监控约定的仪表盘名称，如：bksaas/framework-python"></bk-input>
+                <bk-input
+                    v-model="dialog.form.name"
+                    placeholder="与蓝鲸监控约定的仪表盘名称，如：bksaas/framework-python"
+                ></bk-input>
             </bk-form-item>
             <bk-form-item label="展示名称" :required="true">
-                <bk-input v-model="dialog.form.display_name" placeholder="仪表盘展示名称，如：Python 开发框架内置仪表盘"></bk-input>
+                <bk-input
+                    v-model="dialog.form.display_name"
+                    placeholder="仪表盘展示名称，如：Python 开发框架内置仪表盘"
+                ></bk-input>
             </bk-form-item>
             <bk-form-item label="语言" :required="true">
                 <bk-select v-model="dialog.form.language" searchable>
-                   <bk-option v-for="choice in getChoices(langChoices)"
+                    <bk-option
+                        v-for="choice in getChoices(langChoices)"
                         :key="choice.id"
                         :id="choice.id"
-                        :name="choice.name">
+                        :name="choice.name"
+                    >
                     </bk-option>
                 </bk-select>
             </bk-form-item>
@@ -61,177 +83,176 @@
                 <bk-input v-model="dialog.form.version"></bk-input>
             </bk-form-item>
             <bk-form-item label="是否为插件模板">
-                <bk-switcher v-model="dialog.form.is_plugin_template"></bk-switcher>
+                <bk-switcher
+                    v-model="dialog.form.is_plugin_template"
+                ></bk-switcher>
             </bk-form-item>
         </bk-form>
     </bk-dialog>
 </div>
-
 {% endblock %}
-
 
 {% block main_script %}
 <script>
-const langChoices = {{ language_choices | to_json }}
+    const langChoices = {{ language_choices | to_json }}
 
-const URLRouter = {
-    create: decodeURI("{% url 'admin.configuration.dashboard_tmpl' %}"),
-    list: decodeURI("{% url 'admin.configuration.dashboard_tmpl' %}"),
-    detail: decodeURI("{% url 'admin.configuration.dashboard_tmpl.detail' '${id}' %}"),
-}
+    const URLRouter = {
+        create: decodeURI("{% url 'admin.configuration.dashboard_tmpl' %}"),
+        list: decodeURI("{% url 'admin.configuration.dashboard_tmpl' %}"),
+        detail: decodeURI("{% url 'admin.configuration.dashboard_tmpl.detail' '${id}' %}"),
+    }
 
-document.addEventListener('DOMContentLoaded', () => {
-    new Vue({
-        el: "#platform-dashboard-tmpl-list",
-        delimiters: ['$[', ']'],
-        mixins: [SubmitMixin],
-        data: function () {
-            return {
-                langChoices: langChoices,
-                data: [],
-                dialog: {
-                    form: {
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: "#platform-dashboard-tmpl-list",
+            delimiters: ['$[', ']'],
+            mixins: [SubmitMixin],
+            data: function () {
+                return {
+                    langChoices: langChoices,
+                    data: [],
+                    dialog: {
+                        form: {
+                            id: undefined,
+                            name: '',
+                            display_name: '',
+                            language: '',
+                            version: '',
+                            is_plugin_template: false,
+                        },
+                        row: undefined
+                    },
+                    rules: {
+                        name: [
+                            {
+                                required: true,
+                                message: '必填项',
+                                trigger: 'blur'
+                            },
+                            {
+                                max: 64,
+                                message: '不能多于64个字符',
+                                trigger: 'blur'
+                            },
+                        ],
+                        display_name: [
+                            {
+                                required: true,
+                                message: '必填项',
+                                trigger: 'blur'
+                            },
+                            {
+                                max: 512,
+                                message: '不能多于512个字符',
+                                trigger: 'blur'
+                            },
+                        ],
+                        language: [
+                            {
+                                required: true,
+                                message: '必填项',
+                                trigger: 'blur'
+                            }
+                        ],
+                        version: [
+                            {
+                                required: true,
+                                message: '必填项',
+                                trigger: 'blur'
+                            }
+                        ],
+                    }
+                }
+            },
+            mounted: function () {
+                this.fetchDashboardTmplList()
+            },
+            methods: {
+                fillUrlTemplate: function (url_template, {row}) {
+                    if (!row)
+                        row = {}
+                    return url_template.replace("${id}", row.id)
+                },
+                processData: function (data) {
+                    return new Promise(resolve => {
+                      resolve(data)
+                    }
+                  )
+                },
+                fetchDashboardTmplList: async function () {
+                    const el = this.$bkLoading({title: '加载中'})
+                    try {
+                        await this.$http.get(URLRouter['list']).then(res => {
+                            this.data = res.results
+                        })
+                    } finally {
+                        el.hide = true
+                    }
+                },
+                submitCallback: function () {
+                    return this.fetchDashboardTmplList()
+                },
+                handleCreate: function () {
+                    this.dialog.type = "create"
+                    this.dialog.row = undefined
+
+                    this.dialog.form = {
                         id: undefined,
                         name: '',
                         display_name: '',
                         language: '',
                         version: '',
                         is_plugin_template: false,
-                    },
-                    row: undefined
+                    }
+                    this.dialog.visible = true
                 },
-                rules: {
-                    name: [
-                        {
-                            required: true,
-                            message: '必填项',
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 64,
-                            message: '不能多于64个字符',
-                            trigger: 'blur'
-                        },
-                    ],
-                    display_name: [
-                        {
-                            required: true,
-                            message: '必填项',
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 512,
-                            message: '不能多于512个字符',
-                            trigger: 'blur'
-                        },
-                    ],
-                    language: [
-                        {
-                            required: true,
-                            message: '必填项',
-                            trigger: 'blur'
+                handleEdit: function (row){
+                    this.dialog.type = "edit"
+                    this.dialog.row = row
+
+                    this.dialog.form = {...row}
+                    this.dialog.visible = true
+                },
+                handleDelete: function (row) {
+                    this.$bkInfo({
+                        title: `确定要删除 ${row.name}？`,
+                        confirmLoading: true,
+                        theme: "danger",
+                        confirmFn: async () => {
+                            try {
+                                await this.deleteRow(row)
+                                this.$bkMessage({
+                                    theme: "success",
+                                    message: "删除成功",
+                                });
+                            } catch (e) {
+                                this.$bkMessage({
+                                    theme: "error",
+                                    message: e.response.data.detail,
+                                });
+                            }
                         }
-                    ],
-                    version: [
-                        {
-                            required: true,
-                            message: '必填项',
-                            trigger: 'blur'
-                        }
-                    ],
-                }
-            }
-        },
-        mounted: function () {
-            this.fetchDashboardTmplList()
-        },
-        methods: {
-            fillUrlTemplate: function (url_template, {row}) {
-                if (!row)
-                    row = {}
-                return url_template.replace("${id}", row.id)
-            },
-            processData: function (data) {
-                return new Promise(resolve => {
-                  resolve(data)
-                }
-              )
-            },
-            fetchDashboardTmplList: async function () {
-                const el = this.$bkLoading({title: '加载中'})
-                try {
-                    await this.$http.get(URLRouter['list']).then(res => {
-                        this.data = res.results
                     })
-                } finally {
-                    el.hide = true
-                }
-            },
-            submitCallback: function () {
-                return this.fetchDashboardTmplList()
-            },
-            handleCreate: function () {
-                this.dialog.type = "create"
-                this.dialog.row = undefined
-
-                this.dialog.form = {
-                    id: undefined,
-                    name: '',
-                    display_name: '',
-                    language: '',
-                    version: '',
-                    is_plugin_template: false,
-                }
-                this.dialog.visible = true
-            },
-            handleEdit: function (row){
-                this.dialog.type = "edit"
-                this.dialog.row = row
-
-                this.dialog.form = {...row}
-                this.dialog.visible = true
-            },
-            handleDelete: function (row) {
-                this.$bkInfo({
-                    title: `确定要删除 ${row.name}？`,
-                    confirmLoading: true,
-                    theme: "danger",
-                    confirmFn: async () => {
-                        try {
-                            await this.deleteRow(row)
-                            this.$bkMessage({
-                                theme: "success",
-                                message: "删除成功",
-                            });
-                        } catch (e) {
-                            this.$bkMessage({
-                                theme: "error",
-                                message: e.response.data.detail,
-                            });
+                },
+                deleteRow: async function (row) {
+                    const url = this.fillUrlTemplate(URLRouter.detail, {row})
+                    await this.$http.delete(url)
+                    await this.fetchDashboardTmplList()
+                },
+                handleView: function (row) {
+                    this.readOnlyDialog.form = {...row}
+                    this.readOnlyDialog.visible = true
+                },
+                getChoices: function (choices) {
+                    return Object.keys(choices).map(key => {
+                        return {
+                            id: key,
+                            name: choices[key],
                         }
-                    }
-                })
+                    })
+                },
             },
-            deleteRow: async function (row) {
-                const url = this.fillUrlTemplate(URLRouter.detail, {row})
-                await this.$http.delete(url)
-                await this.fetchDashboardTmplList()
-            },
-            handleView: function (row) {
-                this.readOnlyDialog.form = {...row}
-                this.readOnlyDialog.visible = true
-            },
-            getChoices: function (choices) {
-                return Object.keys(choices).map(key => {
-                    return {
-                        id: key,
-                        name: choices[key],
-                    }
-                })
-            },
-        },
+        })
     })
-})
-
 </script>
 {% endblock %}

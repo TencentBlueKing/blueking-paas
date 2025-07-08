@@ -41,7 +41,7 @@ from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 class BKPluginTagManageView(GenericTemplateView):
     """平台服务管理-插件分类配置"""
 
-    template_name = "admin42/configuration/bk_plugin_tag.html"
+    template_name = "admin42/configuration/bk_plugin/bk_plugin_tag.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
     name = "插件分类配置"
 
@@ -103,7 +103,7 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
 class BKPluginDistributorsManageView(GenericTemplateView):
     """平台服务管理-插件使用方配置"""
 
-    template_name = "admin42/configuration/bk_plugin_distributor.html"
+    template_name = "admin42/configuration/bk_plugin/bk_plugin_distributor.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
     name = "插件使用方配置"
 

@@ -21,30 +21,27 @@
                 <div class="nav-group-title" :key="group.name">
                     $[group.name]
                 </div>
-                <bk-navigation-menu-item
-                    v-for="item in group.children"
-                    :key="item.name"
-                    :has-child="item.children && !!item.children.length"
-                    :icon="item.icon"
-                    :disabled="item.disabled"
-                    :url="item.url"
-                    :id="item.name"
-                >
-                    <span>$[item.name]</span>
-                    <div slot="child">
-                        <bk-navigation-menu-item
-                            v-for="child in item.children"
-                            :key="child.name"
-                            :id="child.name"
-                            :disabled="child.disabled"
-                            :icon="child.icon"
-                            :url="child.url"
-                            :default-active="child.active"
-                        >
-                            <span>$[child.name]</span>
-                        </bk-navigation-menu-item>
-                    </div>
-                </bk-navigation-menu-item>
+                <template v-for="item in group.children">
+                    <bk-navigation-menu-item
+                        :key="item.name"
+                        :icon="item.icon"
+                        :disabled="item.disabled"
+                        :url="item.url"
+                        :id="item.name"
+                    >
+                        <span>$[item.name]</span>
+                    </bk-navigation-menu-item>
+                    <bk-navigation-menu-item
+                        v-for="child in item.children"
+                        :key="child.name"
+                        :id="child.name"
+                        :icon="'navigation-menu-item-default'"
+                        :disabled="child.disabled"
+                        :url="child.url"
+                    >
+                        <span>$[child.name]</span>
+                    </bk-navigation-menu-item>
+                </template>
             </template>
         </bk-navigation-menu>
     </div>

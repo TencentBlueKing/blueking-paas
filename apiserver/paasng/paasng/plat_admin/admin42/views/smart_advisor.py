@@ -33,7 +33,7 @@ from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 class DocumentaryLinkView(GenericTemplateView):
     """文档链接管理页"""
 
-    template_name = "admin42/platformmgr/documentary_link.html"
+    template_name = "admin42/configuration/smart-advisor/documentary_link.html"
     queryset = DocumentaryLink.objects.all()
     serializer_class = DocumentaryLinkSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -106,7 +106,7 @@ class DocumentaryLinkManageViewSet(ListModelMixin, GenericViewSet):
 class DeployFailurePatternView(GenericTemplateView):
     """失败提示管理"""
 
-    template_name = "admin42/platformmgr/deploy_failure_tips.html"
+    template_name = "admin42/configuration/smart-advisor/deploy_failure_tips.html"
     queryset = DeployFailurePattern.objects.all()
     serializer_class = DeployFailurePatternSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]

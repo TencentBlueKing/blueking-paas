@@ -1,5 +1,4 @@
-{% extends "admin42/platformmgr/base.html" %}
-
+{% extends "admin42/configuration/base.html" %}
 {% load admin_utils %}
 
 {% block main_content %}
@@ -266,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (form.type === '资源方案') {
                     url_template = URLRouter['switch_process_plan']
                 }
-              return url_template.replace("${engine_app_name}", row.engine_app)
+                return url_template.replace("${engine_app_name}", row.engine_app)
                         .replace("${process_type}", row.type)
             },
             submitCallback: function () {
@@ -378,5 +377,4 @@ document.addEventListener('DOMContentLoaded', () => {
         color: #c4c6cc;
     }
 </style>
-
 {% endblock %}

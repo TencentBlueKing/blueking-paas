@@ -27,6 +27,7 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.serializers import ClusterSLZ
 from paas_wl.infras.cluster.shim import EnvClusterService
+from paasng.platform.applications.serializers.fields import DockerfilePathField, SourceDirField
 from paasng.platform.bkapp_model.serializers import ModuleDeployHookSLZ as CNativeModuleDeployHookSLZ
 from paasng.platform.bkapp_model.serializers import ModuleProcessSpecSLZ
 from paasng.platform.engine.constants import RuntimeType
@@ -159,7 +160,7 @@ class CreateModuleSLZ(serializers.Serializer):
     source_control_type = SourceControlField(allow_blank=True, required=False, default=None)
     source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
-    source_dir = serializers.CharField(required=False, default="", allow_blank=True)
+    source_dir = SourceDirField(help_text=_("构建目录"))
 
     def validate_name(self, name):
         if Module.objects.filter(application=self.context["application"], name=name).exists():
@@ -171,12 +172,6 @@ class CreateModuleSLZ(serializers.Serializer):
         if not Template.objects.filter(name=tmpl_name, type=TemplateType.NORMAL).exists():
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
         return tmpl_name
-
-    def validate_source_dir(self, value: str):
-        if value.startswith("/") or ".." in value:
-            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
-
-        return value
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
@@ -265,7 +260,7 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     source_control_type = SourceControlField(allow_blank=True, required=False, default=None)
     source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
-    source_dir = serializers.CharField(required=False, default="", allow_blank=True)
+    source_dir = SourceDirField(help_text="源码目录")
     auto_create_repo = serializers.BooleanField(required=False, default=False, help_text="是否由平台新建代码仓库")
     write_template_to_repo = serializers.BooleanField(
         required=False, default=False, help_text="是否将模板代码初始化到代码仓库中"
@@ -298,12 +293,6 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
             raise ValidationError(_("将模板代码初始化到代码仓库中时，必须选择应用模板"))
         return attrs
 
-    def validate_source_dir(self, value: str):
-        if value.startswith("/") or ".." in value:
-            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
-
-        return value
-
 
 class ModuleBuildConfigSLZ(serializers.Serializer):
     """模块镜像构建信息"""
@@ -316,9 +305,7 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
     buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), required=False, allow_null=True)
 
     # docker build 相关字段
-    dockerfile_path = serializers.CharField(
-        help_text="Dockerfile 路径", required=False, allow_blank=True, allow_null=True
-    )
+    dockerfile_path = DockerfilePathField(help_text="Dockerfile 路径", required=False)
     docker_build_args = serializers.DictField(
         child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
     )
@@ -370,9 +357,7 @@ class CreateModuleBuildConfigSLZ(serializers.Serializer):
     tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
 
     # docker build 相关字段
-    dockerfile_path = serializers.CharField(
-        help_text="Dockerfile 路径", required=False, allow_blank=True, allow_null=True
-    )
+    dockerfile_path = DockerfilePathField(help_text="Dockerfile 路径", required=False)
     docker_build_args = serializers.DictField(
         child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
     )

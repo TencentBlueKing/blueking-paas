@@ -929,7 +929,7 @@ export default {
     },
     clusterList() {
       // TODO（mh）目前先取 prod 的集群，后续前端按多租户设计稿开发时，需要分环境处理
-      return this.advancedOptionsObj[this.regionChoose]['prod'] || [];
+      return this.advancedOptionsObj[this.regionChoose]?.['prod'] || [];
     },
     mirrorExamplePlaceholder() {
       return `${this.$t('请输入镜像仓库，如')}：${

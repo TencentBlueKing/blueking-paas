@@ -38,7 +38,7 @@ class AssistantView(ViewSet):
         inputs = slz.validated_data["inputs"]
         bk_ticket = request.COOKIES.get(settings.BK_COOKIE_NAME, "")
         username = request.user.username
-        tenant_id = request.user.tenant.id
+        tenant_id = request.user.tenant_id
 
         try:
             client = AIAgentClient(tenant_id=tenant_id, credentials=bk_ticket)

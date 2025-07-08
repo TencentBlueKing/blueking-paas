@@ -91,7 +91,7 @@
               <ul class="monitor-navigation-admin">
                 <li class="nav-item">
                   <a
-                    :href="GLOBAL.DOC.PRODUCT_DOC"
+                    :href="productDocLink"
                     target="_blank"
                   >
                     {{ $t('产品文档') }}
@@ -227,6 +227,11 @@ export default {
     },
     isMultiTenant() {
       return this.platformFeature.MULTI_TENANT_MODE;
+    },
+    productDocLink() {
+      const link = this.GLOBAL.DOC.PRODUCT_DOC;
+      const language = this.localLanguage === 'en' ? 'EN' : 'ZH';
+      return link?.includes('ZH') ? link.replace(/ZH/g, language) : link;
     },
   },
   watch: {

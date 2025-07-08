@@ -112,7 +112,9 @@ class TarClient(BasePackageClient):
 
     def export(self, local_path: str):
         """导出指定当前 Tar 包到local_path"""
-        self.tar.extractall(local_path)
+        # set filter="data" explicitly to fix CVE-2007-4559
+        # see https://docs.python.org/3.11/library/tarfile.html#tarfile-extraction-filter
+        self.tar.extractall(local_path, filter="data")  # type: ignore[call-arg]
 
     def close(self):
         """关闭文件句柄"""
@@ -192,16 +194,12 @@ class BinaryTarClient(BasePackageClient):
     @staticmethod
     def _is_invalid_file_format_error(message: str) -> bool:
         """Check if the stderr message indicates an invalid file format."""
-        if re.search(r"tar:.* not look like a tar archive", message):
-            return True
-        return False
+        return bool(re.search(r"tar:.* not look like a tar archive", message))
 
     @staticmethod
     def _is_not_found_error(message: str) -> bool:
         """Check if the stderr message indicates a file not found."""
-        if re.search(r"tar:.*: Not found in archive", message):
-            return True
-        return False
+        return bool(re.search(r"tar:.*: Not found in archive", message))
 
 
 class ZipClient(BasePackageClient):

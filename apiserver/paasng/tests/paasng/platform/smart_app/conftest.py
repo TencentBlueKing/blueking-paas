@@ -53,7 +53,8 @@ def zip_path(contents):
 @pytest.fixture()
 def untar_path(tar_path):
     with tarfile.open(tar_path) as tar, generate_temp_dir() as worker_dir:
-        tar.extractall(worker_dir)
+        # set filter="data" explicitly to fix CVE-2007-4559
+        tar.extractall(worker_dir, filter="data")  # type: ignore[call-arg]
         yield worker_dir
 
 

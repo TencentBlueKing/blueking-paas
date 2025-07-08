@@ -17,7 +17,6 @@
 
 import string
 from datetime import timedelta
-from typing import Dict, List
 
 from blue_krill.models.fields import EncryptField
 from django.db import models
@@ -55,7 +54,6 @@ class DevSandboxQuerySet(models.QuerySet):
         owner: str,
         version_info: VersionInfo | None,
         enable_code_editor: bool = False,
-        env_vars: List[Dict[str, str]] | None = None,
     ) -> "DevSandbox":
         charsets = string.ascii_lowercase + string.digits
 
@@ -85,7 +83,6 @@ class DevSandboxQuerySet(models.QuerySet):
             token=generate_password(),
             code_editor_config=code_editor_cfg,
             tenant_id=module.tenant_id,
-            env_vars=env_vars,
         )
 
 
@@ -102,7 +99,6 @@ class DevSandbox(OwnerTimestampedModel):
     token = EncryptField(help_text="访问令牌", null=True)
     code_editor_config = CodeEditorConfigField(help_text="代码编辑器配置", default=None, null=True)
     tenant_id = tenant_id_field_factory()
-    env_vars = EncryptField(help_text="环境变量列表", default=list)
 
     objects = DevSandboxManager()
 

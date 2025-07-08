@@ -166,7 +166,7 @@ class BinaryTarClient(BasePackageClient):
             real_path = os.path.realpath(filepath)
             if os.path.commonpath([temp_dir, real_path]) != str(temp_dir):
                 raise RuntimeError(f"Extracted file {filepath} is outside the target directory.")
-            return real_path.read_bytes()
+            return filepath.read_bytes()
 
     def export(self, local_path: str):
         """Extract all members from the archive to the current working directory

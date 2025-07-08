@@ -130,11 +130,19 @@ export default {
         this.$refs.stagComponent.closeLogDetail();
       }
     },
-    loadAdvisedDocLinks() {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/accessories/advised_documentary_links/?plat_panel=app_processes&limit=4`;
-      this.$http.get(url).then((response) => {
-        this.advisedDocLinks = response.links;
-      });
+    async loadAdvisedDocLinks() {
+      try {
+        const res = await this.$store.dispatch('deploy/getAppDocLinks', {
+          appCode: this.appCode,
+          params: {
+            plat_panel: 'app_processes',
+            limit: 4,
+          },
+        });
+        this.advisedDocLinks = res.links;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
     },
     handlerDataReady() {
       setTimeout(() => {

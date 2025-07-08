@@ -18,6 +18,7 @@
 import cattr
 from rest_framework import serializers
 
+from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.bkapp_model.serializers import v1alpha2
 from paasng.platform.declarative.constants import AppSpecVersion
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
@@ -29,7 +30,7 @@ module_name_field = ModuleNameField()
 
 class DeploymentDescSLZ(serializers.Serializer):
     language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
-    sourceDir = serializers.CharField(help_text="源码目录", default="", source="source_dir")
+    sourceDir = SourceDirField(help_text="源码目录", source="source_dir")
     spec = v1alpha2.BkAppSpecInputSLZ(required=True)
 
     def to_internal_value(self, data) -> DeploymentDesc:

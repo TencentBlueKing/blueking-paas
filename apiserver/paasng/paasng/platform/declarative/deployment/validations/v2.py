@@ -18,10 +18,10 @@
 import shlex
 
 import cattr
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.bkapp_model.entities import v1alpha2
 from paasng.platform.bkapp_model.serializers import ProbeSetSLZ, SvcDiscConfigSLZ
 from paasng.platform.declarative.constants import AppSpecVersion
@@ -70,7 +70,7 @@ class DeploymentDescSLZ(serializers.Serializer):
     """Serializer for describing application's deployment part."""
 
     language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
-    source_dir = serializers.CharField(help_text="源码目录", default="")
+    source_dir = SourceDirField(help_text="源码目录")
     env_variables = serializers.ListField(child=EnvVariableSLZ(), required=False)
     processes = serializers.DictField(
         help_text="key: 进程名称, value: 进程信息", default=dict, child=ProcessSLZ(), allow_empty=False
@@ -167,9 +167,3 @@ class DeploymentDescSLZ(serializers.Serializer):
 
         # Formalize procfile data and return
         return {k.lower(): v for k, v in processes.items()}
-
-    def validate_source_dir(self, value: str):
-        if value.startswith("/") or ".." in value:
-            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
-
-        return value

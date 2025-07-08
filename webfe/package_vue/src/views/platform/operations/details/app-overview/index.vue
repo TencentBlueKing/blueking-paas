@@ -381,7 +381,7 @@ export default {
         app_tenant_mode: '租户模式',
         app_tenant_id: '租户 ID',
         type: '应用类型',
-        category: "应用分类",
+        category: '应用分类',
         is_active: '状态',
         creator: '创建人',
         created_humanized: '创建时间',
@@ -517,9 +517,9 @@ export default {
       this.editCategory.visible = true;
       this.editCategory.loading = false;
       await this.getCategoryList();
-      
+
       // 查找当前分类的ID
-      const currentCategory = this.editCategory.categoryList.find(item => item.name === this.baseInfo.category);
+      const currentCategory = this.editCategory.categoryList.find((item) => item.name === this.baseInfo.category);
       this.editCategory.selectedCategory = currentCategory ? currentCategory.id : null;
     },
     // 获取分类列表
@@ -537,10 +537,9 @@ export default {
         await this.$store.dispatch('tenantOperations/updateAppCategory', {
           appCode: this.appCode,
           data: {
-            category: this.editCategory.selectedCategory
-          }
+            category: this.editCategory.selectedCategory,
+          },
         });
-        this.editCategory.loading = false;
         this.editCategory.visible = false;
         this.$paasMessage({
           theme: 'success',
@@ -549,13 +548,14 @@ export default {
         this.getAppDetails();
       } catch (e) {
         this.catchErrorHandler(e);
+      } finally {
         this.editCategory.loading = false;
       }
     },
     // 确认修改分类
     handleConfirmCategory() {
       if (!this.editCategory.selectedCategory) return;
-      
+
       this.editCategory.loading = true;
       this.updateAppCategory();
     },
@@ -619,7 +619,7 @@ export default {
       const routeName = this.baseInfo.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary';
       const route = this.$router.resolve({
         name: routeName,
-        params: { id: this.baseInfo.code },
+        params: { id: this.baseInfo.code, moduleId: 'default' },
       });
       this.toLink(route.href);
     },

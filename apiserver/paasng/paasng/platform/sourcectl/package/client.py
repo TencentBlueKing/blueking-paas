@@ -18,6 +18,7 @@
 import abc
 import logging
 import os
+import os.path
 import re
 import subprocess
 import tarfile
@@ -97,7 +98,7 @@ class TarClient(BasePackageClient):
             raise ValueError("nothing to open")
         if file_path and file_obj:
             raise ValueError("file_path and file_obj cannot be provided at the same time")
-        self.tar = tarfile.open(name=file_path, fileobj=file_obj, mode=mode)
+        self.tar = tarfile.open(name=file_path, fileobj=file_obj, mode=mode)  # noqa: SIM115
         self.relative_path = relative_path
 
     def read_file(self, file_path: str) -> bytes:
@@ -112,7 +113,9 @@ class TarClient(BasePackageClient):
 
     def export(self, local_path: str):
         """导出指定当前 Tar 包到local_path"""
-        self.tar.extractall(local_path)
+        # set filter="data" explicitly to fix CVE-2007-4559
+        # see https://docs.python.org/3.11/library/tarfile.html#tarfile-extraction-filter
+        self.tar.extractall(local_path, filter="data")  # type: ignore[call-arg]
 
     def close(self):
         """关闭文件句柄"""
@@ -128,8 +131,8 @@ class BinaryTarClient(BasePackageClient):
     When handling big tarball(>=100mb), will faster than tarfile 10 seconds in the special testcase.
     """
 
-    def __init__(self, filepath: Union[str, Path]):
-        self.filepath = Path(filepath)
+    def __init__(self, file_path: Union[str, Path]):
+        self.filepath = Path(file_path)
 
     def read_file(self, filename) -> bytes:
         """Extract a filename from the archive as bytes.
@@ -138,6 +141,7 @@ class BinaryTarClient(BasePackageClient):
         :return: bytes contents of the file.
         :raises InvalidPackageFileFormatError: The file is not a valid tar file, it's content
             might be corrupt.
+        :raise RuntimeError: Raised if unexpected errors occur.
         """
         with generate_temp_dir() as temp_dir:
             p = subprocess.Popen(
@@ -155,13 +159,31 @@ class BinaryTarClient(BasePackageClient):
                     raise FileDoesNotExistError(f"Failed to extractfile from the tarball, error: {stderr!r}")
                 else:
                     raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
-            return (temp_dir / filename).read_bytes()
+
+            filepath = temp_dir / filename
+
+            # Check if the file is a symbolic link and it's inside the directory
+            real_path = os.path.realpath(filepath)
+            if os.path.commonpath([temp_dir, real_path]) != str(temp_dir):
+                raise RuntimeError(f"Extracted file {filepath} is outside the target directory.")
+            return filepath.read_bytes()
 
     def export(self, local_path: str):
         """Extract all members from the archive to the current working directory
+
         :param working_dir: working directory
+        :raise RuntimeError: Raised if unexpected errors occur.
         """
         uncompress_directory(source_path=self.filepath, target_path=local_path)
+
+        # Security check: traverse the directory to check if any link files is outside the target directory
+        for dirpath, dirnames, filenames in os.walk(local_path):
+            for name in dirnames + filenames:
+                if not Path(os.path.join(dirpath, name)).is_symlink():
+                    continue
+                real_path = os.path.realpath(os.path.join(dirpath, name))
+                if os.path.commonpath([local_path, real_path]) != str(local_path):
+                    raise RuntimeError(f"Extracted file {real_path} is outside the target directory.")
 
     def close(self):
         """Nothing need to close."""
@@ -192,16 +214,12 @@ class BinaryTarClient(BasePackageClient):
     @staticmethod
     def _is_invalid_file_format_error(message: str) -> bool:
         """Check if the stderr message indicates an invalid file format."""
-        if re.search(r"tar:.* not look like a tar archive", message):
-            return True
-        return False
+        return bool(re.search(r"tar:.* not look like a tar archive", message))
 
     @staticmethod
     def _is_not_found_error(message: str) -> bool:
         """Check if the stderr message indicates a file not found."""
-        if re.search(r"tar:.*: Not found in archive", message):
-            return True
-        return False
+        return bool(re.search(r"tar:.*: Not found in archive", message))
 
 
 class ZipClient(BasePackageClient):

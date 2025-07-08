@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import base64
+import os
 import re
 from typing import List, Optional, Union
 
@@ -38,6 +39,7 @@ from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.sanitizer import clean_html
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
+from tests.utils.basic import generate_random_string
 
 
 class VerificationCodeField(serializers.RegexField):
@@ -320,3 +322,40 @@ class StringArrayField(fields.CharField):
         # convert string to list
         data = super().to_internal_value(data)
         return [x.strip() for x in data.split(self.delimiter) if x]
+
+
+class SafePathField(serializers.RegexField):
+    """安全路径字段，只允许包含字母、数字、下划线、横线、点、斜杠，不允许绝对路径 & 路径逃逸（../）"""
+
+    regex = re.compile(r"^[a-zA-Z0-9_\-./]+$")
+    default_error_messages = {
+        "invalid": _("路径 {path} 不合法"),
+        "escape_risk": _("路径 {path} 存在逃逸风险"),
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(regex=self.regex, **kwargs)
+
+    def run_validation(self, data=empty):
+        data = super().run_validation(data)
+
+        # 允许空字符串 / None
+        if self.allow_blank and data == "":
+            return data
+        if self.allow_null and data is None:
+            return data
+
+        # 检查是否使用 .. 来访问上层目录或者使用绝对路径
+        if ".." in data or data.startswith("/"):
+            self.fail("escape_risk", path=data)
+
+        # 模拟实际使用情况，对用户输入进行拼接
+        root = f"/var/folders/{generate_random_string(12)}/T"
+        full_path = os.path.abspath(os.path.join(root, data))
+        resolved_root = os.path.abspath(root) + os.sep
+
+        # 通过前缀路径检查是否逃逸（与当前路径相同是允许的）
+        if full_path != root and not full_path.startswith(resolved_root):
+            self.fail("escape_risk", path=data)
+
+        return data

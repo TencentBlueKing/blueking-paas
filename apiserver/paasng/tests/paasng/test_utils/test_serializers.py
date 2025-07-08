@@ -22,7 +22,7 @@ from blue_krill.contextlib import nullcontext
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.utils.serializers import Base64FileField, ConfigVarReservedKeyValidator, IntegerOrCharField
+from paasng.utils.serializers import Base64FileField, ConfigVarReservedKeyValidator, IntegerOrCharField, SafePathField
 
 
 class Base64FileFieldSLZ(serializers.Serializer):
@@ -111,3 +111,40 @@ class TestIntegerOrCharField:
     def test_to_representation(self, data, expected):
         slz = IntegerOrCharFieldSLZ({"port": data})
         assert slz.data == {"port": expected}
+
+
+class SafePathSLZ(serializers.Serializer):
+    safe_path = SafePathField(allow_blank=True)
+
+
+class TestSafePathField:
+    @pytest.mark.parametrize(
+        "safe_path",
+        [
+            "",
+            "foo",
+            "foo/",
+            "foo/bar",
+            "foo/bar/baz",
+            "./foo/bar/baz",
+        ],
+    )
+    def test_valid(self, safe_path):
+        slz = SafePathSLZ(data={"safe_path": safe_path})
+        assert slz.is_valid() is True
+
+    @pytest.mark.parametrize(
+        "safe_path",
+        [
+            "..",
+            "/etc/passwd",
+            "../foo/bar/baz",
+            "foo/../bar/baz",
+            "foo/%2e%2e/bar/baz",
+            "foo/%2e%2e%2fbar/baz",
+            "/safe////../etc/passwd",
+        ],
+    )
+    def test_invalid(self, safe_path):
+        slz = SafePathSLZ(data={"safe_path": safe_path})
+        assert slz.is_valid() is False

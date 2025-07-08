@@ -113,6 +113,7 @@ class TarClient(BasePackageClient):
     def export(self, local_path: str):
         """导出指定当前 Tar 包到local_path"""
         # set filter="data" explicitly to fix CVE-2007-4559
+        # see https://docs.python.org/3.11/library/tarfile.html#tarfile-extraction-filter
         self.tar.extractall(local_path, filter="data")  # type: ignore[call-arg]
 
     def close(self):

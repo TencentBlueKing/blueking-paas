@@ -197,7 +197,7 @@
         size="large"
         style="font-size: 14px"
         type="submit"
-        :disabled="!packageData || isConflict"
+        :disabled="!isAllowCreateApp || !packageData || isConflict"
         @click="handleCommit"
       >
         {{ $t('确认并创建应用') }}
@@ -226,6 +226,13 @@ export default {
     SmartFilePreview,
     SmartInfo,
     KeyValueRow,
+  },
+  props: {
+    // 没有配置集群，无法创建应用
+    isAllowCreateApp: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     return {

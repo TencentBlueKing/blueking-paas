@@ -6,11 +6,13 @@
     >
       <bk-alert
         class="mb20 mt20"
-        type="info"
+        :type="isAllowCreateApp ? 'info' : 'warning'"
         :title="
-          $t(
-            '基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力'
-          )
+          isAllowCreateApp
+            ? $t(
+                '基于容器镜像来部署应用，支持用 YAML 格式文件描述应用模型，可使用进程管理、云 API 权限及各类增强服务等平台基础能力'
+              )
+            : $t('{a} 租户还未添加应用集群，无法创建应用。请联系平台管理员添加应用集群。', { a: tenantId })
         "
       ></bk-alert>
 
@@ -93,7 +95,7 @@
             >
               <bk-input
                 class="form-input-width"
-                :value="curUserInfo.tenantId"
+                :value="tenantId"
                 :disabled="true"
               ></bk-input>
             </bk-form-item>
@@ -244,7 +246,7 @@
                       {{ $t('蓝鲸开发框架') }}
                     </div>
                     <div
-                      v-if="curUserFeature.BK_PLUGIN_TYPED_APPLICATION"
+                      v-if="userFeature.BK_PLUGIN_TYPED_APPLICATION"
                       class="tab-item template"
                       :class="[{ active: activeIndex === 3 }]"
                       @click="handleCodeTypeChange(3)"
@@ -650,6 +652,7 @@
             <bk-button
               theme="primary"
               class="mr10"
+              :disabled="!isAllowCreateApp"
               :loading="formLoading"
               @click="handleCreateApp"
             >
@@ -668,6 +671,7 @@
           <bk-button
             theme="primary"
             class="ml20 mr20"
+            :disabled="!isAllowCreateApp"
             :loading="formLoading"
             @click="handleCreateApp"
           >
@@ -683,6 +687,7 @@
       <create-smart-app
         v-if="curCodeSource === 'smart'"
         key="smart"
+        :is-allow-create-app="isAllowCreateApp"
       />
     </div>
   </section>
@@ -699,7 +704,7 @@ import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import defaultAppType from './default-app-type';
 import createSmartApp from './smart';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
-import { mapGetters } from 'vuex';
+import { mapGetters, mapState } from 'vuex';
 import ExamplesDirectory from '@/components/examples-directory';
 
 export default {
@@ -918,9 +923,13 @@ export default {
       curPluginTemplate: '',
       codeSourceId: 'default',
       curRepoDir: '',
+      // 是否允许创建应用
+      isAllowCreateApp: true,
     };
   },
   computed: {
+    ...mapState(['userFeature', 'platformFeature']),
+    ...mapGetters(['tenantId', 'isShowTenant']),
     curSourceControl() {
       return this.sourceControlTypes.find((item) => item.value === this.sourceControlTypeItem);
     },
@@ -952,21 +961,8 @@ export default {
     isBkDevOps() {
       return this.activeIndex === 1;
     },
-    curUserFeature() {
-      return this.$store.state.userFeature;
-    },
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
     curExtendConfig() {
       return this.gitExtendConfig[this.sourceControlTypeItem];
-    },
-    platformFeature() {
-      return this.$store.state.platformFeature;
-    },
-    ...mapGetters(['isShowTenant']),
-    curUserInfo() {
-      return this.$store.state.curUserInfo;
     },
     isNextStepAllowed() {
       return this.codeSourceId === 'default' && !this.curExtendConfig?.isAuth;
@@ -1185,30 +1181,34 @@ export default {
 
     // 获取高级选项 集群列表
     async fetchAdvancedOptions() {
-      let res;
       try {
-        res = await this.$store.dispatch('createApp/getOptions');
+        const res = await this.$store.dispatch('createApp/getOptions');
+
+        // 提取高级选项信息
+        const { adv_region_clusters = [], allow_adv_options } = res;
+
+        // 没有配置集群，无法创建应用
+        this.isAllowCreateApp = adv_region_clusters.length > 0;
+
+        // 如果当前用户不支持“高级选项”，则停止后续处理
+        if (!allow_adv_options) {
+          this.isShowAdvancedOptions = false;
+          return;
+        }
+
+        // 高级选项可用，显示高级选项
+        this.isShowAdvancedOptions = true;
+
+        // 解析分 Region 的集群信息
+        adv_region_clusters.forEach((item) => {
+          if (!this.advancedOptionsObj.hasOwnProperty(item.region)) {
+            this.$set(this.advancedOptionsObj, item.region, item.env_cluster_names);
+          }
+        });
       } catch (e) {
         // 请求接口报错时则不显示高级选项
         this.isShowAdvancedOptions = false;
-        return;
       }
-
-      // 如果返回当前用户不支持“高级选项”，停止后续处理
-      if (!res.allow_adv_options) {
-        this.isShowAdvancedOptions = false;
-        return;
-      }
-
-      // 高级选项：解析分 Region 的集群信息
-      this.isShowAdvancedOptions = true;
-      const advancedRegionClusters = res.adv_region_clusters || [];
-      advancedRegionClusters.forEach((item) => {
-        // eslint-disable-next-line no-prototype-builtins
-        if (!this.advancedOptionsObj.hasOwnProperty(item.region)) {
-          this.$set(this.advancedOptionsObj, item.region, item.env_cluster_names);
-        }
-      });
     },
 
     generateFetchRepoListMethod(sourceControlTypeItem) {

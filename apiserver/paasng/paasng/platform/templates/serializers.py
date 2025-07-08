@@ -17,6 +17,7 @@
 
 from rest_framework import serializers
 
+from paasng.platform.applications.serializers.fields import DockerfilePathField
 from paasng.platform.modules.serializers import (
     AppBuildPackMinimalSLZ,
     AppSlugBuilderMinimalSLZ,
@@ -65,7 +66,7 @@ class BuildConfigPreviewSLZ(serializers.Serializer):
     buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), allow_null=True, required=False)
 
     # docker build 相关字段
-    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", allow_null=True, required=False)
+    dockerfile_path = DockerfilePathField(help_text="Dockerfile 路径", required=False)
     docker_build_args = serializers.DictField(
         child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
     )

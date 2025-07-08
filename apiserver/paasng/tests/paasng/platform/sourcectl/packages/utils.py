@@ -57,30 +57,45 @@ def ensure_parent_exists(path: Path):
 
 
 @contextmanager
-def dump_contents_to_fs(contents: Dict[str, Union[str, bytes]]):
+def dump_contents_to_fs(
+    contents: Dict[str, Union[str, bytes]] | None = None,
+    symbolic_links: Dict[str, str] | None = None,
+):
     """a helper to dumps contents fo file-system
 
     :param contents Dict[str, str]: a dict, the key is filename, and value is the content.
+    :param symbolic_links: a dict, format: {link_name: target_file}.
     """
     with generate_temp_dir() as source_dir:
-        for file_name, content in contents.items():
-            target = source_dir / file_name
-            ensure_parent_exists(target)
+        if contents:
+            for file_name, content in contents.items():
+                target = source_dir / file_name
+                ensure_parent_exists(target)
 
-            if isinstance(content, bytes):
-                target.write_bytes(content)
-            else:
-                target.write_text(content)
+                if isinstance(content, bytes):
+                    target.write_bytes(content)
+                else:
+                    target.write_text(content)
+
+        if symbolic_links:
+            for link_name, target_file in symbolic_links.items():
+                target = source_dir / link_name
+                ensure_parent_exists(target)
+                target.symlink_to(target_file, target_is_directory=Path(target_file).is_dir())
         yield source_dir
 
 
-def gen_tar(target_path, contents: Dict[str, Union[str, bytes]]):
-    with dump_contents_to_fs(contents) as source_dir:
+def gen_tar(
+    target_path, contents: Dict[str, Union[str, bytes]] | None = None, symbolic_links: Dict[str, str] | None = None
+):
+    with dump_contents_to_fs(contents=contents, symbolic_links=symbolic_links) as source_dir:
         compress_directory(source_dir, target_path)
 
 
-def gen_zip(target_path, contents: Dict[str, Union[str, bytes]]):
-    with dump_contents_to_fs(contents) as source_dir:
+def gen_zip(
+    target_path, contents: Dict[str, Union[str, bytes]] | None = None, symbolic_links: Dict[str, str] | None = None
+):
+    with dump_contents_to_fs(contents=contents, symbolic_links=symbolic_links) as source_dir:
         filename = shutil.make_archive(target_path, format="zip", root_dir=source_dir)
         if filename != target_path:
             shutil.move(filename, target_path)

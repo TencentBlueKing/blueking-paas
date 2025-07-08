@@ -12,7 +12,7 @@
     <div slot="header">
       <div class="header-box">
         <span>{{ $t('配置服务') }}</span>
-        <span class="desc">{{ `${$t('租户')}：${data.tenant_id}` }}</span>
+        <span class="desc">{{ `${$t('租户')}：${data.name}` }}</span>
       </div>
     </div>
     <div

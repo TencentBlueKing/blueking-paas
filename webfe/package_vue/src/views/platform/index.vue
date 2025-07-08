@@ -134,7 +134,6 @@ export default {
         newQuery = { ...query };
       } else {
         newQuery = {
-          ...query,
           ...(active === 'list' && query),
           ...(active && { active }),
         };

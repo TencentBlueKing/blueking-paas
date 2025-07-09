@@ -27,6 +27,7 @@ export default {
     availableClusters: {},
     curTenantData: {},
     clustersStatus: Object.create(null),
+    clustersStatusCache: Object.create(null),
     detailActiveName: '',
     detailTabActive: '',
   },
@@ -42,13 +43,10 @@ export default {
       //   ...state.clustersStatus,
       //   [clusterName]: status,
       // };
-
       // 防止远程属性注入
       if (typeof clusterName !== 'string' || !clusterName) {
         return;
       }
-
-      // state.clustersStatus = Object.assign({}, state.clustersStatus, { [clusterName]: status });
 
       // 确保 clustersStatus 是无原型对象，防止原型污染
       if (!state.clustersStatus || Object.getPrototypeOf(state.clustersStatus) !== null) {
@@ -56,7 +54,7 @@ export default {
         state.clustersStatus = Object.assign(Object.create(null), oldStatus);
       }
 
-      // 直接设置属性，由于使用了无原型对象，不会造成原型污染
+      // 设置属性，由于使用了无原型对象，不会造成原型污染
       state.clustersStatus[clusterName] = status;
     },
     updateDetailActiveName(state, data) {

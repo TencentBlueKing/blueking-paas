@@ -80,7 +80,7 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
     """应用 ProcessSpec 管理页"""
 
     name = "进程管理"
-    template_name = "admin42/configuration/applications/detail/engine/processes.html"
+    template_name = "admin42/operation/applications/detail/engine/processes.html"
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)

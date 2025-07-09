@@ -17,11 +17,6 @@
             name: '配置管理',
             children: [
                 {
-                    name: '应用列表',
-                    icon: 'icon-block-shape',
-                    url: "{% url 'admin.applications.list' %}",
-                },
-                {
                     name: '运行时管理',
                     icon: 'icon-block-shape',
                     url: '{% url "admin.runtimes.buildpack.manage" %}',
@@ -81,6 +76,11 @@
                     name: '部署概览',
                     icon: 'icon-block-shape',
                     url: "{% url 'admin.deployments.list' %}",
+                },
+                {
+                    name: '应用列表',
+                    icon: 'icon-block-shape',
+                    url: "{% url 'admin.applications.list' %}",
                 },
                 {% if perm.operate_platform %}
                     {% url 'admin.operation.index' as operation_index_view %}

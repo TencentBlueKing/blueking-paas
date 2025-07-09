@@ -1,7 +1,7 @@
-{% extends "admin42/configuration/base.html" %}
+{% extends "./base.html" %}
 {% load admin_utils %}
 
-{% block main_content %}
+{% block bk_plugin_content %}
 <div id="platform-shared-tag-list" style="width: 100%" class="p20">
     <bk-button
         :theme="'primary'"
@@ -102,7 +102,7 @@
 </div>
 {% endblock %}
 
-{% block main_script %}
+{% block bk_plugin_script %}
 <script>
     const URLRouter = {
         create: decodeURI(

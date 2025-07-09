@@ -51,7 +51,7 @@ def get_path(request: Request) -> str:
 class ProcessSpecPlanManageView(GenericTemplateView):
     """ProcessSpecPlan 管理页"""
 
-    name = "方案列表"
+    name = "应用资源方案"
     serializer_class = ProcessSpecPlanSLZ
     queryset = ProcessSpecPlan.objects.all()
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -131,7 +131,7 @@ class ProcessSpecManageView(ApplicationDetailBaseView):
 class ApplicationProcessSpecManageView(GenericTemplateView):
     """应用资源方案配置视图"""
 
-    name = "方案配置"
+    name = "应用资源方案"
     queryset = Application.objects.filter(type=ApplicationType.DEFAULT)
     template_name = "admin42/configuration/process_spec/process_spec_manage.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]

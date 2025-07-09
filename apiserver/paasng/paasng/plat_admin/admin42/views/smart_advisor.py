@@ -37,7 +37,7 @@ class DocumentaryLinkView(GenericTemplateView):
     queryset = DocumentaryLink.objects.all()
     serializer_class = DocumentaryLinkSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-    name = "文档管理"
+    name = "智能顾问"
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)
@@ -110,7 +110,7 @@ class DeployFailurePatternView(GenericTemplateView):
     queryset = DeployFailurePattern.objects.all()
     serializer_class = DeployFailurePatternSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-    name = "失败提示管理"
+    name = "智能顾问"
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)

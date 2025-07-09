@@ -1,7 +1,7 @@
 {% extends "./base.html" %}
 {% load admin_utils %}
 
-{% block main_content %}
+{% block statistics_content %}
 <div id="data-list" style="width: 100%" class="p20">
     <div>
         <div class="mb15 fr">
@@ -52,7 +52,7 @@
 </div>
 {% endblock %}
 
-{% block main_script %}
+{% block statistics_script %}
 <script>
     const pagination = {{ pagination | to_json }}
     const data = {{ data_list | to_json }}

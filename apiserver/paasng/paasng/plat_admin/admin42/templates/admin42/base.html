@@ -61,15 +61,6 @@
                 pointer-events: none;
             }
 
-            .content-card {
-                border: 1px solid #dcdee5;
-                border-radius: 4px;
-                background: #fff;
-                box-shadow: 0 2px 4px 0 rgba(25, 25, 41, 0.03);
-                padding: 24px 24px 12px 24px;
-                margin: 0 0 16px 0;
-            }
-
             .container-content {
                 min-width: 100vw;
                 overflow: auto;
@@ -199,11 +190,22 @@
                 color: #999 !important;
                 line-height: 1;
             }
+
+            .bk-navigation-wrapper .navigation-container .container-header {
+                height: auto !important;
+                min-height: 60px;
+                flex-basis: auto !important;
+                align-items: flex-start !important;
+                padding-bottom: 0;
+            }
+
+            .bk-tab-section {
+                padding: 0 !important;
+            }
         </style>
         {% render_bundle 'vendors' 'css' %}
         {% render_bundle 'default' 'css' %}
     </head>
-
     <body>
         <div
             class="bk-loading"
@@ -240,7 +242,6 @@
                     {{ request.user.username }}
                 </p>
             </nav>
-
             <div class="container-content">
                 <div class="main-content">
                     {% block container %}
@@ -252,7 +253,8 @@
             </div>
         </div>
     </body>
-    {% render_bundle 'vendors' 'js' %} {% render_bundle 'default' 'js' %}
+    {% render_bundle 'vendors' 'js' %}
+    {% render_bundle 'default' 'js' %}
     <script>
         // 控制台输出版本信息
         const BKPAAS_BUILD_VERSION = decodeURIComponent('{{ BKPAAS_BUILD_VERSION }}');

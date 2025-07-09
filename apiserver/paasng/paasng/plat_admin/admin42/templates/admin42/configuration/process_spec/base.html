@@ -5,52 +5,52 @@
 <ul class="paas-breadcrumb">
     <li class="active">{{ view.name }}</li>
 </ul>
-{% endblock %} 
+{% endblock %}
 
 {% block content_label %}
-<div id="smart-advisor-tab-root">
+<div id="spec_plan-tab-root">
     <bk-tab
         :active.sync="activeTab"
         type="unborder-card"
         @tab-change="handleTabChange"
     >
-        <bk-tab-panel name="document" label="文档管理"></bk-tab-panel>
-        <bk-tab-panel name="failure" label="失败提示管理"></bk-tab-panel>
+        <bk-tab-panel name="plan_list" label="方案列表"></bk-tab-panel>
+        <bk-tab-panel name="plan_manage" label="方案配置"></bk-tab-panel>
     </bk-tab>
 </div>
-{% endblock %}
+{% endblock %} 
 
 {% block main_content %}
 
-{% block smart_advisor_content %}
+{% block spec_plan_content %}
 {% endblock %}
 
-{% endblock %} 
+{% endblock %}
 
 {% block main_script %}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         new Vue({
-            el: '#smart-advisor-tab-root',
+            el: '#spec_plan-tab-root',
             delimiters: ['$[', ']'],
             data: function () {
                 return {
                     activeTab: window.location.pathname.includes(
-                        'deploy_failure_tips'
+                        'applications'
                     )
-                        ? 'failure'
-                        : 'document',
+                        ? 'plan_manage'
+                        : 'plan_list',
                 };
             },
             methods: {
                 handleTabChange(name) {
-                    if (name === 'document') {
+                    if (name === 'plan_list') {
                         this.gotoTab(
-                            '{% url "admin.smart_advisor.documents.manage" %}'
+                            '{% url "admin.process_spec_plan.manage" %}'
                         );
-                    } else if (name === 'failure') {
+                    } else if (name === 'plan_manage') {
                         this.gotoTab(
-                            '{% url "admin.smart_advisor.deploy_failure_tips.manage" %}'
+                            '{% url "admin.process_spec_plan.applications.manage" %}'
                         );
                     }
                 },
@@ -63,6 +63,6 @@
         });
     });
 </script>
-{% block smart_advisor_script %}
+{% block spec_plan_script %}
 {% endblock %}
 {% endblock %}

@@ -24,10 +24,11 @@
                 <template v-for="item in group.children">
                     <bk-navigation-menu-item
                         :key="item.name"
+                        :id="item.name"
+                        :group="item.group"
                         :icon="item.icon"
                         :disabled="item.disabled"
                         :url="item.url"
-                        :id="item.name"
                     >
                         <span>$[item.name]</span>
                     </bk-navigation-menu-item>
@@ -35,11 +36,15 @@
                         v-for="child in item.children"
                         :key="child.name"
                         :id="child.name"
-                        :icon="'navigation-menu-item-default'"
                         :disabled="child.disabled"
                         :url="child.url"
                     >
+                    <span style="display: inline-flex; align-items: center;">
+                        <span class="navigation-menu-item-default">
+                            <i class="navigation-menu-item-default-icon"></i>
+                        </span>
                         <span>$[child.name]</span>
+                    </span>
                     </bk-navigation-menu-item>
                 </template>
             </template>
@@ -67,17 +72,20 @@
                     </ul>
                     {% endblock %}
                 </div>
+                <div>
+                    {% block content_label %}
+                    <!-- 用于有标签的导航显示标签 -->
+                    {% endblock %}
+                </div>
             </div>
         </div>
         <div
             class="monitor-navigation-content"
             style="width: 100%; overflow-x: visible"
         >
-            <div class="content-card">
-                <div>
-                    {% block main_content %} 
-                    {% endblock %}
-                </div>
+            <div>
+                {% block main_content %} 
+                {% endblock %}
             </div>
         </div>
     </div>
@@ -140,6 +148,6 @@
     {% endblock %}
 
     {% block main_script %} 
-    {% endblock %} 
+    {% endblock %}
 
 {% endblock %}

@@ -43,7 +43,7 @@ class BKPluginTagManageView(GenericTemplateView):
 
     template_name = "admin42/configuration/bk_plugin/bk_plugin_tag.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
-    name = "插件分类配置"
+    name = "插件配置"
 
 
 class BKPluginTagView(GenericViewSet, ListModelMixin):
@@ -105,7 +105,7 @@ class BKPluginDistributorsManageView(GenericTemplateView):
 
     template_name = "admin42/configuration/bk_plugin/bk_plugin_distributor.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
-    name = "插件使用方配置"
+    name = "插件配置"
 
 
 class BKPluginDistributorsView(GenericViewSet, ListModelMixin):

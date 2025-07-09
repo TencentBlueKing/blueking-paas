@@ -5,52 +5,53 @@
 <ul class="paas-breadcrumb">
     <li class="active">{{ view.name }}</li>
 </ul>
-{% endblock %} 
+{% endblock %}
 
 {% block content_label %}
-<div id="smart-advisor-tab-root">
+<div id="bk_plugin-tab-root">
     <bk-tab
         :active.sync="activeTab"
         type="unborder-card"
         @tab-change="handleTabChange"
     >
-        <bk-tab-panel name="document" label="文档管理"></bk-tab-panel>
-        <bk-tab-panel name="failure" label="失败提示管理"></bk-tab-panel>
+        <bk-tab-panel name="tags" label="插件分类配置"></bk-tab-panel>
+        <bk-tab-panel name="distributors" label="插件使用方配置"></bk-tab-panel>
     </bk-tab>
 </div>
+
 {% endblock %}
 
 {% block main_content %}
 
-{% block smart_advisor_content %}
+{% block bk_plugin_content %}
 {% endblock %}
 
-{% endblock %} 
+{% endblock %}
 
 {% block main_script %}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         new Vue({
-            el: '#smart-advisor-tab-root',
+            el: '#bk_plugin-tab-root',
             delimiters: ['$[', ']'],
             data: function () {
                 return {
                     activeTab: window.location.pathname.includes(
-                        'deploy_failure_tips'
+                        'tags'
                     )
-                        ? 'failure'
-                        : 'document',
+                        ? 'tags'
+                        : 'distributors',
                 };
             },
             methods: {
                 handleTabChange(name) {
-                    if (name === 'document') {
+                    if (name === 'tags') {
                         this.gotoTab(
-                            '{% url "admin.smart_advisor.documents.manage" %}'
+                            '{% url "admin.configuration.bk_plugins.tags.manage" %}'
                         );
-                    } else if (name === 'failure') {
+                    } else if (name === 'distributors') {
                         this.gotoTab(
-                            '{% url "admin.smart_advisor.deploy_failure_tips.manage" %}'
+                            '{% url "admin.configuration.bk_plugins.distributors.manage" %}'
                         );
                     }
                 },
@@ -63,6 +64,6 @@
         });
     });
 </script>
-{% block smart_advisor_script %}
+{% block bk_plugin_script %}
 {% endblock %}
 {% endblock %}

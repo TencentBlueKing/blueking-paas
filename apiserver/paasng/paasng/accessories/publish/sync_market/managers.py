@@ -173,7 +173,7 @@ class AppManger(AppAdaptor):
         result = self.session.execute(sql, {"target_table": target_table})
         return [dict(row) for row in result]
 
-    def _build_dependency_graph(self, start_table: str):
+    def _build_dependency_graph(self, start_table: str) -> dict:
         """构建完整的依赖关系图"""
         graph = defaultdict(list)
         visited = set()

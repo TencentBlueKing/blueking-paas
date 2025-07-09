@@ -34,7 +34,7 @@ from svn.common import SvnException
 from svn.local import LocalClient as OrigLocalClient
 from svn.remote import RemoteClient as OrigRemoteClient
 
-from paasng.platform.sourcectl.exceptions import DoesNotExistsOnSvnServer
+from paasng.platform.sourcectl.exceptions import ReadFileNotFoundError
 from paasng.platform.sourcectl.svn.exceptions import AlreadyInitializedSvnRepo, CannotInitNonEmptyTrunk
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir, get_all_intermediate_dirs
 
@@ -231,7 +231,7 @@ class SvnRepositoryClient:
             # Will raise svn: E200009 is file does not exists
             if "svn: E200009" not in str(e):
                 raise
-            raise DoesNotExistsOnSvnServer
+            raise ReadFileNotFoundError()
 
     def export(self, subdir, local_path, revision=None):
         """Export contents in a subdir to local_path

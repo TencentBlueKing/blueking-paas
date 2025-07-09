@@ -245,6 +245,17 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
     else:
         raise NotImplementedError
 
+    # NOTE: After exporting, the server may need to read some files in the repository.
+    # Remember to verify symlink security before performing any reads, as the files
+    # were created by the user and cannot be trusted.
+    #
+    # See `dig_tags_local_repo()` for an example, it ignores symlink files when reading
+    # requirements.
+    #
+    # Q: Why don't we perform a full directory scan for malicious symlinks?
+    # A: The repository might be extremely large and contain a vast number of files;
+    #    scanning the entire directory would be too slow.
+
     try:
         SourceCodePatcherWithDBDriver(module, working_path, deployment).add_procfile()
     except SkipPatchCode as e:

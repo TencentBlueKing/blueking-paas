@@ -17,12 +17,12 @@
 
 import logging
 import tempfile
+from pathlib import Path
 from textwrap import dedent
 from unittest import mock
 
 import pytest
 from django_dynamic_fixture import G
-from unipath import Path
 
 from paasng.accessories.smart_advisor.constants import DeployFailurePatternType
 from paasng.accessories.smart_advisor.models import DeployFailurePattern
@@ -39,7 +39,7 @@ class TestTaggingLocalPath:
     @pytest.mark.parametrize("encoding", ["utf-8", "gbk"])
     def test_tagging_python_using_different_encodings(self, encoding):
         repo_path = Path(tempfile.mkdtemp())
-        with open(repo_path.child("requirements.txt"), "w", encoding=encoding) as fp:
+        with open(repo_path / "requirements.txt", "w", encoding=encoding) as fp:
             fp.write(
                 dedent(
                     """\
@@ -61,7 +61,7 @@ class TestTaggingLocalPath:
 
     def test_tagging_php(self):
         repo_path = Path(tempfile.mkdtemp())
-        with open(repo_path.child("server.php"), "w") as fp:
+        with open(repo_path / "server.php", "w") as fp:
             fp.write("")
 
         assert set(dig_tags_local_repo(repo_path)) == {
@@ -70,7 +70,7 @@ class TestTaggingLocalPath:
 
     def test_tagging_go(self):
         repo_path = Path(tempfile.mkdtemp())
-        with open(repo_path.child("main.go"), "w") as fp:
+        with open(repo_path / "main.go", "w") as fp:
             fp.write("")
 
         assert set(dig_tags_local_repo(repo_path)) == {
@@ -79,9 +79,9 @@ class TestTaggingLocalPath:
 
     def test_tagging_nodejs(self):
         repo_path = Path(tempfile.mkdtemp())
-        with open(repo_path.child("package.json"), "w") as fp:
+        with open(repo_path / "package.json", "w") as fp:
             fp.write("")
-        with open(repo_path.child("index.js"), "w") as fp:
+        with open(repo_path / "index.js", "w") as fp:
             fp.write("")
 
         assert set(dig_tags_local_repo(repo_path)) == {

@@ -35,13 +35,13 @@ from paasng.platform.declarative.constants import AppDescPluginType, AppSpecVers
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import detect_spec_version, get_desc_handler
 from paasng.platform.smart_app.services.path import PathProtocol
-from paasng.platform.sourcectl.models import SPStat
-from paasng.platform.sourcectl.package.client import (
-    BinaryTarClient,
-    FileDoesNotExistError,
-    InvalidPackageFileFormatError,
-    ZipClient,
+from paasng.platform.sourcectl.exceptions import (
+    PackageInvalidFileFormatError,
+    ReadFileNotFoundError,
+    ReadLinkFileOutsideDirectoryError,
 )
+from paasng.platform.sourcectl.models import SPStat
+from paasng.platform.sourcectl.package.client import BinaryTarClient, ZipClient
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ class SourcePackageStatReader:
         :returns: Tuple[str, Dict]
         - the relative path of app_desc.yaml (to the root dir in the tar file), "./" is returned by default
         - the raw meta info of source package, `{}` is returned by default
-        :raises InvalidPackageFileFormatError: The file is not valid, it's content might be corrupt.
+        :raises PackageInvalidFileFormatError: The file is not valid, it's content might be corrupt.
         :raises ValidationError: The file content is not valid YAML.
         """
         relative_path = "./"
@@ -172,8 +172,10 @@ class SourcePackageStatReader:
         logger.debug("parsing source package's stats object.")
         try:
             relative_path, meta_info = self.get_meta_info()
-        except InvalidPackageFileFormatError:
+        except PackageInvalidFileFormatError:
             raise ValidationError(_("源码包文件格式错误，文件可能已经损坏"))
+        except ReadLinkFileOutsideDirectoryError:
+            raise ValidationError(_("源码包文件格式错误，使用了不合法的符号链接"))
         # 当从源码包解析 app version 失败时, 需要由其他途径保证能获取到 version. 例如上传源码包的接口中的 version 参数
         version = self._try_extract_version(meta_info) or ""
         return SPStat(
@@ -192,9 +194,9 @@ class SourcePackageStatReader:
             # Q: 为什么需要进行 base64 编码?
             # A: 因为 meta_info 会被归档存储进数据库, bytes 类型无法序列化成 json
             logo_b64data = "base64," + base64.b64encode(archive.read_file(relative_path + "logo.png")).decode()
-        except FileDoesNotExistError:
+        except ReadFileNotFoundError:
             logger.info("The logo.png does not exist, using default logo.")
-        except (RuntimeError, KeyError):
+        except RuntimeError:
             logger.exception("Can't read logo.png.")
         return logo_b64data
 

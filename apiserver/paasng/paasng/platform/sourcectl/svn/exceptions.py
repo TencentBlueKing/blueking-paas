@@ -30,7 +30,3 @@ class RelatedServiceError(Exception):
 
 class SVNServiceError(RelatedServiceError):
     pass
-
-
-class DoesNotExistsOnSvnServer(Exception):
-    pass

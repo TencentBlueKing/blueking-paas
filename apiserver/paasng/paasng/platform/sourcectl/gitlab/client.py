@@ -24,7 +24,7 @@ import gitlab
 from gitlab.exceptions import GitlabGetError
 from gitlab.v4.objects import ProjectFile
 
-from paasng.platform.sourcectl.exceptions import DoesNotExistsOnGitServer
+from paasng.platform.sourcectl.exceptions import ReadFileNotFoundError
 from paasng.platform.sourcectl.models import GitProject
 
 
@@ -55,6 +55,7 @@ class GitLabApiClient:
     def repo_get_raw_file(self, project: GitProject, file_path, ref="master", **kwargs) -> bytes:
         """
         从远程仓库下载 file_path 的文件
+
         :param project: 项目对象
         :param file_path: 需要下载的文件路径
         :param ref: branch 或 commit 的 hash 值
@@ -64,7 +65,7 @@ class GitLabApiClient:
         try:
             file = project_obj.files.get(file_path=file_path, ref=ref)
         except GitlabGetError:
-            raise DoesNotExistsOnGitServer(f"file: {file_path} not found")
+            raise ReadFileNotFoundError(f"file: {file_path} not found")
         return base64.b64decode(file.attributes["content"])
 
     def repo_list_branches(self, project: GitProject, **kwargs) -> List[dict]:

@@ -131,6 +131,11 @@ class AppManger(AppAdaptor):
         self.session.query(self.model).filter_by(name=name).delete()
         self.session.commit()
 
+    def cascade_delete_by_name(self, name: str):
+        """根据 name 从 db 中级联删除应用"""
+        app = self.session.query(self.model).filter_by(name=name).scalar()
+        self.cascade_delete_by_id(app.id)
+
     def cascade_delete_by_code(self, code: str):
         """根据 id 从 db 中级联删除应用"""
         app = self.session.query(self.model).filter_by(code=code).scalar()
@@ -139,11 +144,12 @@ class AppManger(AppAdaptor):
     def cascade_delete_by_id(self, app_id: int):
         """根据 id 从 db 中级联删除应用"""
         try:
+            app_table_name = self.model.__name__
             # 构建完整的依赖关系图
-            dependency_graph = self._build_dependency_graph("app_app")
+            dependency_graph = self._build_dependency_graph(app_table_name)
 
             # 递归删除
-            self._delete_records_recursively(dependency_graph, self.model.__name__, app_id)
+            self._delete_records_recursively(dependency_graph, app_table_name, app_id)
             self.session.commit()
 
         except Exception:
@@ -191,25 +197,29 @@ class AppManger(AppAdaptor):
         return graph
 
     def _find_records_referencing(self, table: str, column: str, referenced_id: int):
-        """查找引用特定ID的记录"""
+        """查找引用特定 ID 的记录"""
         sql = f"SELECT id FROM {table} WHERE {column} = :ref_id"
         result = self.session.execute(sql, {"ref_id": referenced_id})
         return [row[0] for row in result]
 
+    def _delete_records(self, table: str, column: str, referenced_id: int):
+        """删除引用特定 ID 的记录"""
+        sql = f"DELETE FROM {table} WHERE {column} = :ref_id"
+        self.session.execute(sql, {"ref_id": referenced_id})
+
     def _delete_records_recursively(self, graph: dict, table: str, record_id: int):
         """递归删除记录"""
-        # 存在循环依赖的情况，因此当没有记录时打断递归
+        # 存在循环依赖的情况(如 User.parent = User)，因此当没有记录时打断递归
         referenced_ids = self._find_records_referencing(table, "id", record_id)
         if not referenced_ids:
             return
 
         # 该表没有被其他表引用，直接删除记录
         if table not in graph:
-            sql = f"DELETE FROM {table} WHERE id = :record_id"
-            self.session.execute(sql, {"record_id": record_id})
+            self._delete_records(table, "id", record_id)
             return
 
-        # 先处理所有引用这个表的记录
+        # 先处理所有引用该表的记录
         for ref in graph[table]:
             referencing_table = ref["referencing_table"]
             foreign_key_column = ref["foreign_key_column"]
@@ -221,8 +231,7 @@ class AppManger(AppAdaptor):
                 self._delete_records_recursively(graph, referencing_table, ref_id)
 
         # 所有引用记录都删除后，删除当前记录
-        sql = f"DELETE FROM {table} WHERE id = :record_id"
-        self.session.execute(sql, {"record_id": record_id})
+        self._delete_records(table, "id", record_id)
 
 
 class AppUseRecordManger(AppUseRecordAdaptor):

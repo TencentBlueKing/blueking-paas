@@ -147,6 +147,10 @@ const mutations = {
     state.isAppLoading = data;
   },
   updateAppFeature(state, { appCode, data }) {
+    // 防止远程属性注入，验证 appCode
+    if (typeof appCode !== 'string' || !appCode || appCode.includes('__proto__') || appCode.includes('prototype') || appCode.includes('constructor')) {
+      return;
+    }
     if (state.appInfo[appCode]) {
       // 合并用户功能开关和应用功能开关
       state.appInfo[appCode].feature = {
@@ -158,6 +162,11 @@ const mutations = {
   },
   // curAppInfo && curAppModule 的信息都在这里获取
   updateAppInfo(state, { appCode, moduleId, data }) {
+    // 防止远程属性注入，验证 appCode
+    if (typeof appCode !== 'string' || !appCode || appCode.includes('__proto__') || appCode.includes('prototype') || appCode.includes('constructor')) {
+      return;
+    }
+
     if (!data.feature) {
       data.feature = {};
     }
@@ -216,6 +225,11 @@ const mutations = {
     });
   },
   updateCurAppByCode(state, { appCode, moduleId }) {
+    // 防止远程属性注入，验证 appCode
+    if (typeof appCode !== 'string' || !appCode || appCode.includes('__proto__') || appCode.includes('prototype') || appCode.includes('constructor')) {
+      return;
+    }
+
     if (state.appInfo[appCode]) {
       const data = state.appInfo[appCode];
       state.curAppInfo = data;

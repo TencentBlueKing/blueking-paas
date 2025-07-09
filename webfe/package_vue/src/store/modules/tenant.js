@@ -38,17 +38,22 @@ export default {
       state.curTenantData = data;
     },
     updateClustersStatus(state, { clusterName, status }) {
-      state.clustersStatus = {
-        ...state.clustersStatus,
-        [clusterName]: status,
-      };
+      // state.clustersStatus = {
+      //   ...state.clustersStatus,
+      //   [clusterName]: status,
+      // };
+      // 防止远程属性注入
+      if (typeof clusterName !== 'string' || !clusterName || clusterName.includes('__proto__') || clusterName.includes('prototype') || clusterName.includes('constructor')) {
+        return;
+      }
+      state.clustersStatus = Object.assign({}, state.clustersStatus, { [clusterName]: status });
     },
     updateDetailActiveName(state, data) {
       state.detailActiveName = data;
     },
     updatedDtailTabActive(state, data) {
       state.detailTabActive = data;
-    }
+    },
   },
   actions: {
     /**
@@ -58,7 +63,7 @@ export default {
       const config = {
         headers: {
           'X-Bk-Tenant-Id': tenantId,
-        }
+        },
       };
       const apiUrl = window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web');
       const url = `${apiUrl}/prod/api/v3/open-web/tenant/current-user/language/`;
@@ -71,7 +76,7 @@ export default {
       const config = {
         headers: {
           'X-Bk-Tenant-Id': tenantId,
-        }
+        },
       };
       const apiUrl = window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod');
       const url = `${apiUrl}/api/v3/open-web/tenant/users/-/search/?keyword=${keyword}`;
@@ -196,7 +201,7 @@ export default {
     /**
      * 获取集群组件详情
      */
-     getComponentDetail({}, { clusterName, componentName }) {
+    getComponentDetail({}, { clusterName, componentName }) {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/`;
       return http.get(url);
     },
@@ -333,7 +338,7 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/${planId}/`;
       return http.delete(url);
     },
-     /**
+    /**
      * 获取租户下的服务-方案
      */
     getServicePlansUnderTenant({}, { tenantId, serviceId }) {

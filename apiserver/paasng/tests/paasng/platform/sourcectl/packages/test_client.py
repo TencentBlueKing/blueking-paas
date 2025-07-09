@@ -155,6 +155,75 @@ class TestLocalClient:
             assert {str(child.relative_to(working_dir)) for child in working_dir.iterdir()} == set(contents.keys())
 
 
+@pytest.mark.parametrize(
+    ("client_cls", "archive_maker"),
+    [
+        (TarClient, gen_tar),
+        (GenericLocalClient, gen_tar),
+    ],
+)
+class TestTarClientsShouldNotReadOutside:
+    @pytest.mark.parametrize(
+        ("symbolic_links", "filename"),
+        [
+            ({"passwd": "/etc/passwd"}, "./passwd"),
+            ({"passwd": "../../../../../../../../../etc/passwd"}, "./passwd"),
+        ],
+    )
+    def test_read_file_should_fail(self, client_cls, archive_maker, symbolic_links, filename):
+        with generate_temp_file() as file_path:
+            archive_maker(file_path, symbolic_links=symbolic_links)
+            cli: BasePackageClient = client_cls(file_path=file_path)
+            with pytest.raises(KeyError, match="linkname .* not found"):
+                cli.read_file(filename)
+
+    @pytest.mark.parametrize(
+        "symbolic_links",
+        [
+            ({"passwd": "/etc"}),
+            ({"passwd": "../../../../../../../../../etc/passwd"}),
+        ],
+    )
+    def test_export_should_fail(self, client_cls, archive_maker, symbolic_links):
+        with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
+            archive_maker(file_path, symbolic_links=symbolic_links)
+            cli = client_cls(file_path)
+            with pytest.raises(tarfile.FilterError):  # type: ignore[attr-defined]
+                cli.export(working_dir)
+
+    # TODO: Add malformed tar file which uses bad names
+
+
+class TestBinaryTarClientsShouldNotReadOutside:
+    @pytest.mark.parametrize(
+        ("symbolic_links", "filename"),
+        [
+            ({"passwd": "/etc/passwd"}, "./passwd"),
+            ({"passwd": "../../../../../../../../../etc/passwd"}, "./passwd"),
+        ],
+    )
+    def test_read_file_should_fail(self, symbolic_links, filename):
+        with generate_temp_file() as file_path:
+            gen_tar(file_path, symbolic_links=symbolic_links)
+            cli = BinaryTarClient(file_path=file_path)
+            with pytest.raises(RuntimeError, match=".*outside the target directory."):
+                cli.read_file(filename)
+
+    @pytest.mark.parametrize(
+        "symbolic_links",
+        [
+            ({"passwd": "/etc"}),
+            ({"passwd": "../../../../../../../../../etc/passwd"}),
+        ],
+    )
+    def test_export_should_fail(self, symbolic_links):
+        with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
+            gen_tar(file_path, symbolic_links=symbolic_links)
+            cli = BinaryTarClient(file_path)
+            with pytest.raises(RuntimeError):
+                cli.export(str(working_dir))
+
+
 @pytest.mark.parametrize("archive_maker", [gen_tar, gen_zip])
 class TestGenericRemoteClient:
     @pytest.mark.parametrize(

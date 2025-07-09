@@ -16,12 +16,14 @@
 # to the current version of the project delivered to anyone in the future.
 
 from .application import (
-    ApplicationClusterSLZ,
+    ApplicationBindClusterUpdateInputSLZ,
+    ApplicationCategoryUpdateInputSLZ,
     ApplicationDetailOutputSLZ,
     ApplicationListFilterInputSLZ,
     ApplicationListOutputSLZ,
     ApplicationNameUpdateInputSLZ,
     ApplicationTypeOutputSLZ,
+    DeletedApplicationListOutputSLZ,
     TenantAppStatisticsOutputSLZ,
     TenantModeListOutputSLZ,
 )
@@ -34,15 +36,21 @@ from .member import (
     ApplicationMembershipListOutputSLZ,
     ApplicationMembershipUpdateInputSLZ,
 )
+from .services import (
+    ServiceListOutputSLZ,
+    UnboundServiceInstanceSLZ,
+)
 
 __all__ = [
     # application
-    "ApplicationClusterSLZ",
+    "ApplicationBindClusterUpdateInputSLZ",
+    "ApplicationCategoryUpdateInputSLZ",
     "ApplicationDetailOutputSLZ",
     "ApplicationListFilterInputSLZ",
     "ApplicationListOutputSLZ",
     "ApplicationNameUpdateInputSLZ",
     "ApplicationTypeOutputSLZ",
+    "DeletedApplicationListOutputSLZ",
     "TenantAppStatisticsOutputSLZ",
     "TenantModeListOutputSLZ",
     # feature
@@ -52,4 +60,7 @@ __all__ = [
     "ApplicationMembershipCreateInputSLZ",
     "ApplicationMembershipListOutputSLZ",
     "ApplicationMembershipUpdateInputSLZ",
+    # services
+    "UnboundServiceInstanceSLZ",
+    "ServiceListOutputSLZ",
 ]

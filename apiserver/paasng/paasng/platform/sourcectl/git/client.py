@@ -28,6 +28,8 @@ from typing import Dict, Generator, List, Optional, Tuple, Union
 from blue_krill.data_types.url import MutableURL
 from django.utils.encoding import force_str
 
+from paasng.platform.sourcectl.exceptions import RequestTimeOutError
+
 logger = logging.getLogger(__name__)
 
 
@@ -267,19 +269,20 @@ class GitClient:
         command = GitCommand(git_filepath=self._git_filepath, command="add", args=args, cwd=str(path))
         return self.run(command)
 
-    def commit(self, path: Path, message: str) -> str:
+    def commit(self, path: Path, message: str, envs: Optional[dict] = None) -> str:
         """提交 git 暂存区对象到版本库"""
         command = GitCommand(
             git_filepath=self._git_filepath,
             command="commit",
             args=["-m", message],
             cwd=str(path),
+            envs=envs,
         )
         return self.run(command)
 
-    def push(self, path: Path) -> str:
+    def push(self, path: Path, envs: Optional[dict] = None) -> str:
         """推送 git 提交记录到远程仓库"""
-        command = GitCommand(git_filepath=self._git_filepath, command="push", cwd=str(path))
+        command = GitCommand(git_filepath=self._git_filepath, command="push", cwd=str(path), envs=envs)
         return self.run(command)
 
     def _get_commit_info(self, path: Path, commit_id: str) -> dict:
@@ -344,7 +347,7 @@ class GitClient:
 
             # 不能在 except 中抛异常, 否则 TimeoutExpired 会自动被 traceback 跟踪导致暴露明文的 command 指令
             if timeout:
-                raise GitCommandExecutionError(
+                raise RequestTimeOutError(
                     f"Command failed: cmd <{command}> execution timeout({self._default_timeout}s)"
                 )
 

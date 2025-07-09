@@ -25,23 +25,18 @@ from .views import (
     applications,
     audit,
     bk_plugins,
-    builtin_config_vars,
     dashboard_templates,
     runtimes,
     services,
     smart_advisor,
-    sourcectl,
-    templates,
 )
 from .views.engine import (
     certs,
-    clusters,
     config_vars,
     custom_domain,
     deployments,
     egress,
     log_config,
-    operator,
     package,
     proc_spec,
     runtime,
@@ -61,6 +56,16 @@ urlpatterns = [
         r"^platform/process_spec_plan/manage/$",
         proc_spec.ProcessSpecPlanManageView.as_view(),
         name="admin.process_spec_plan.manage",
+    ),
+    re_path(
+        r"^platform/process_spec_plan/applications/$",
+        proc_spec.ApplicationProcessSpecManageView.as_view(),
+        name="admin.process_spec_plan.applications.manage",
+    ),
+    re_path(
+        r"^platform/process_spec_plan/applications/(?P<app_code>[^/]+)/processes/$",
+        proc_spec.ApplicationProcessSpecViewSet.as_view({"get": "list_processes"}),
+        name="admin.process_spec_plan.applications.processes",
     ),
     # 平台管理-智能顾问-文档链接管理
     re_path(
@@ -155,35 +160,9 @@ urlpatterns = [
         runtimes.SlugRunnerAPIViewSet.as_view(dict(put="update", delete="destroy")),
         name="admin.runtimes.slugrunner.detail",
     ),
-    # 平台管理-集群管理页
-    re_path(r"^platform/clusters/manage/$", clusters.ClusterManageView.as_view(), name="admin.clusters.manage"),
-    # 平台管理-集群组件页
-    re_path(
-        r"^platform/clusters/components/manage/$",
-        clusters.ClusterComponentManageView.as_view(),
-        name="admin.cluster_components.manage",
-    ),
-    # 平台管理-集群 Operator 管理页
-    re_path(r"^platform/operators/manage/$", operator.OperatorManageView.as_view(), name="admin.operators.manage"),
     # 平台管理-共享证书管理
     re_path(
         r"^platform/certs/shared/manage/$", certs.SharedCertsManageView.as_view(), name="admin.shared.certs.manage"
-    ),
-    # 平台管理-代码库配置
-    re_path(
-        r"^platform/sourcectl/source_type_spec/manage/$",
-        sourcectl.SourceTypeSpecManageView.as_view(),
-        name="admin.sourcectl.source_type_spec.manage",
-    ),
-    re_path(
-        r"^platform/sourcectl/source_type_spec/$",
-        sourcectl.SourceTypeSpecViewSet.as_view(dict(post="create", get="list")),
-        name="admin.sourcectl.source_type_spec",
-    ),
-    re_path(
-        r"^platform/sourcectl/source_type_spec/(?P<pk>[^/]+)/",
-        sourcectl.SourceTypeSpecViewSet.as_view(dict(delete="destroy", put="update")),
-        name="admin.sourcectl.source_type_spec.detail",
     ),
     # 平台管理-应用列表页
     re_path(r"^applications/$", applications.ApplicationListView.as_view(), name="admin.applications.list"),
@@ -384,18 +363,6 @@ urlpatterns = [
         accountmgr.UserProfilesManageViewSet.as_view({"post": "bulk_create", "put": "update", "delete": "destroy"}),
         name="admin.accountmgr.userprofile.api",
     ),
-    # 用户管理-用户特性管理
-    re_path(
-        r"^accountmgr/account_feature_flags/$",
-        accountmgr.AccountFeatureFlagManageView.as_view(),
-        name="admin.accountmgr.account_feature_flags.index",
-    ),
-    # 用户管理-用户特性管理 API
-    re_path(
-        r"^api/accountmgr/account_feature_flags/$",
-        accountmgr.AccountFeatureFlagManageViewSet.as_view({"get": "list", "post": "update_or_create"}),
-        name="admin.accountmgr.account_feature_flags.api",
-    ),
     # 部署列表页
     re_path(r"^deployments/$", deployments.DeploymentListView.as_view(), name="admin.deployments.list"),
     re_path(
@@ -422,22 +389,6 @@ urlpatterns = [
 
 # 应用配置管理，可以提供给管理应用、插件模板的同学使用
 urlpatterns += [
-    # 应用配置管理-模板配置
-    re_path(
-        r"^configuration/tmpls/manage/$",
-        templates.TemplateManageView.as_view(),
-        name="admin.configuration.tmpl.manage",
-    ),
-    re_path(
-        r"^configuration/tmpls/$",
-        templates.TemplateViewSet.as_view(dict(post="create", get="list")),
-        name="admin.configuration.tmpl",
-    ),
-    re_path(
-        r"^configuration/tmpls/(?P<pk>[^/]+)/",
-        templates.TemplateViewSet.as_view(dict(delete="destroy", put="update")),
-        name="admin.configuration.tmpl.detail",
-    ),
     # 应用配置管理-插件分类配置
     re_path(
         r"^configuration/bk_plugins/tags/manage/$",
@@ -488,26 +439,6 @@ urlpatterns += [
     ),
 ]
 
-# 平台管理-环境变量管理
-urlpatterns += [
-    # 环境变量管理页
-    re_path(
-        r"^platform/builtin_config_vars/manage/$",
-        builtin_config_vars.BuiltinConfigVarView.as_view(),
-        name="admin.builtin_config_vars.manage",
-    ),
-    # 环境变量管理API
-    re_path(
-        r"^platform/builtin_config_vars/$",
-        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"get": "list", "post": "create"}),
-        name="admin.builtin_config_vars",
-    ),
-    re_path(
-        r"^platform/builtin_config_vars/(?P<pk>[^/]+)/",
-        builtin_config_vars.BuiltinConfigVarViewSet.as_view({"delete": "destroy", "put": "update"}),
-        name="admin.builtin_config_vars.detail",
-    ),
-]
 
 # 操作审计
 urlpatterns += [

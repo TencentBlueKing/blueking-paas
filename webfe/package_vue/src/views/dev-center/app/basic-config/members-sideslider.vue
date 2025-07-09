@@ -181,7 +181,7 @@ export default {
         基础开发: [2, 3],
         '云 API 管理': [2, 3],
         告警策略配置: [2, 3],
-        基本信息编辑: [2, 4],
+        基本信息编辑: [2, 3, 4],
         权限管理: [2, 4],
         应用删除: [2],
         成员管理: [2],
@@ -244,7 +244,7 @@ export default {
             id: this.formData.role,
           },
         };
-        this.$emit('confirm', updateParam);
+        this.$emit('confirm', updateParam, role);
         return;
       }
       // 新增成员
@@ -253,7 +253,7 @@ export default {
         user: { username },
         roles: [{ id: role }],
       }));
-      this.$emit('confirm', parmas);
+      this.$emit('confirm', parmas, role);
     },
   },
 };

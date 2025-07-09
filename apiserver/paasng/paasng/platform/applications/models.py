@@ -33,7 +33,7 @@ from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.fields import tenant_id_field_factory
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.user import DEFAULT_TENANT_ID, get_tenant
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType
 from paasng.platform.applications.entities import SMartAppArtifactMetadata
@@ -52,10 +52,8 @@ from paasng.utils.models import (
 
 logger = logging.getLogger(__name__)
 
-
 if TYPE_CHECKING:
     from paasng.platform.sourcectl.models import RepositoryInstance
-
 
 LOGO_SIZE = (144, 144)
 
@@ -81,13 +79,14 @@ class ApplicationQuerySet(models.QuerySet):
 
         return get_username_by_bkpaas_user_id(user)
 
-    def _filter_by_user(self, user):
+    def _filter_by_user(self, user, tenant_id: str):
         """Filter applications, take application only if user play a role in it.
 
         :param user: User object or user_id
+        :param tenant_id: the user's tenant ID
         """
         username = self.get_username(user)
-        filters = ApplicationPermission().gen_user_app_filters(username)
+        filters = ApplicationPermission().gen_user_app_filters(username, tenant_id)
         if not filters:
             return self.none()
 
@@ -115,8 +114,8 @@ class ApplicationQuerySet(models.QuerySet):
         # Generate a new QuerySet object
         return self.model.objects.filter(id__in=ids)
 
-    def filter_by_user(self, user, exclude_collaborated=False):
-        qs = self._filter_by_user(user)
+    def filter_by_user(self, user, tenant_id: str, exclude_collaborated=False):
+        qs = self._filter_by_user(user, tenant_id)
         if exclude_collaborated:
             qs = qs.filter(owner=self.get_user_id(user))
         return qs
@@ -146,7 +145,7 @@ class BaseApplicationFilter:
     def filter_queryset(  # noqa: C901
         cls,
         queryset: QuerySet,
-        include_inactive=False,
+        is_active=None,
         regions=None,
         languages=None,
         search_term="",
@@ -172,8 +171,8 @@ class BaseApplicationFilter:
         if has_deployed is not None:
             # When application has been deployed, it's `last_deployed_date` will not be empty.
             queryset = queryset.filter(last_deployed_date__isnull=not has_deployed)
-        if not include_inactive:
-            queryset = queryset.only_active()
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active)
         if order_by:
             queryset = cls.process_order_by(order_by, queryset)
         if source_origin:
@@ -246,7 +245,7 @@ class UserApplicationFilter:
     def filter(
         self,
         exclude_collaborated=False,
-        include_inactive=False,
+        is_active=None,
         regions=None,
         languages=None,
         search_term="",
@@ -258,7 +257,9 @@ class UserApplicationFilter:
         """Filter applications by given parameters"""
         if order_by is None:
             order_by = []
-        applications = Application.objects.filter_by_user(self.user.pk, exclude_collaborated=exclude_collaborated)
+        applications = Application.objects.filter_by_user(
+            self.user.pk, tenant_id=get_tenant(self.user).id, exclude_collaborated=exclude_collaborated
+        )
 
         # 从缓存拿刚刚退出的应用 code exclude 掉，避免出现退出用户组，权限中心权限未同步的情况
         mgr = JustLeaveAppManager(get_username_by_bkpaas_user_id(self.user.pk))
@@ -267,7 +268,7 @@ class UserApplicationFilter:
 
         return BaseApplicationFilter.filter_queryset(
             applications,
-            include_inactive=include_inactive,
+            is_active=is_active,
             regions=regions,
             languages=languages,
             search_term=search_term,
@@ -476,9 +477,13 @@ class Application(OwnerTimestampedModel):
         return default_url
 
     def delete(self, *args, **kwargs):
-        # 不会删除数据, 而是通过标记删除字段 is_deleted 来软删除
+        # 软删除时不会删除数据, 而是通过标记删除字段 is_deleted 来软删除
         self.is_deleted = True
-        self.save()
+        self.save(update_fields=["is_deleted", "updated"])
+
+    def hard_delete(self, *args, **kwargs):
+        # 硬删除时直接删除表中数据
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         return "{name}[{code}]".format(name=self.name, code=self.code)

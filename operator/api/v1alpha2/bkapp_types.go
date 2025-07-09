@@ -67,6 +67,19 @@ func (bkapp *BkApp) HasProcServices() bool {
 	return false
 }
 
+// FindExposedProcService find process service which with valid exposed type
+func (bkapp *BkApp) FindExposedProcService() *ExposedProcService {
+	for _, proc := range bkapp.Spec.Processes {
+		for _, procSvc := range proc.Services {
+			// 每个 BkApp 最多只能有一个 exposed 类型的服务，因此返回第一个即可
+			if err := validateExposedType(procSvc.ExposedType); err == nil {
+				return &ExposedProcService{proc.Name, &procSvc, procSvc.ExposedType.Name}
+			}
+		}
+	}
+	return nil
+}
+
 //+kubebuilder:object:root=true
 
 // BkAppList contains a list of BkApp

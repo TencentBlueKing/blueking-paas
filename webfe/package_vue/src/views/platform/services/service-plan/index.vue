@@ -12,13 +12,6 @@
     >
       <div class="top-bar flex-row justify-content-between">
         <div class="flex-row left">
-          <bk-button
-            :theme="'primary'"
-            class="mr10 flex-shrink-0"
-            @click="showSideslider('add')"
-          >
-            {{ $t('添加方案') }}
-          </bk-button>
           <div
             class="capsule-tab-wrapper"
             v-if="tabData.length"
@@ -26,10 +19,18 @@
             <TenantSelect
               v-model="curTenantId"
               :panels="tabData"
-              :label="$t('租户')"
+              :label="$t('所属租户')"
               :count-map="tenantPlanCountMap"
             />
           </div>
+          <bk-button
+            :theme="'primary'"
+            icon="plus"
+            class="ml10 flex-shrink-0"
+            @click="showSideslider('add')"
+          >
+            {{ $t('添加方案') }}
+          </bk-button>
         </div>
         <bk-input
           style="width: 350px"
@@ -68,7 +69,10 @@
           prop="conditions"
           :min-width="200"
         >
-          <div slot-scope="{ row }">
+          <div
+            class="json-pretty-wrapper"
+            slot-scope="{ row }"
+          >
             <!-- JSON格式预览 -->
             <vue-json-pretty
               class="paas-vue-json-pretty-cls"
@@ -77,6 +81,11 @@
               :show-length="true"
               :highlight-mouseover-node="true"
             />
+            <i
+              v-bk-tooltips="$t('复制')"
+              class="paasng-icon paasng-general-copy"
+              v-copy="JSON.stringify(row.config, null, 2)"
+            ></i>
           </div>
         </bk-table-column>
         <bk-table-column
@@ -145,6 +154,7 @@
     <PlanSideslider
       :show.sync="isShowPlanSideslider"
       :tenant-id="curTenantId"
+      :service-name="activeService.name"
       :data="sidesliderConfig.row"
       :services="platformServices"
       :config="sidesliderConfig"
@@ -229,7 +239,7 @@ export default {
     displayPlans() {
       return this.planList.filter((item) => item.tenant_id === this.curTenantId);
     },
-    // 字段搜索、服务名、租户类型过滤
+    // 字段搜索、服务名、租户模式过滤
     searchPlans() {
       const { searchValue, activeServiceId, activeType, displayPlans = [] } = this;
       const lowerCaseSearchTerm = searchValue?.toLocaleLowerCase() || '';
@@ -362,6 +372,27 @@ export default {
     padding: 16px;
     .plan-table-cls {
       margin-top: 12px;
+      /deep/ .bk-table-row.hover-row {
+        i.paasng-general-copy {
+          display: block !important;
+        }
+      }
+      .json-pretty-wrapper {
+        display: flex;
+        .paas-vue-json-pretty-cls {
+          flex: 1;
+          margin-right: 16px;
+        }
+        i.paasng-general-copy {
+          display: none;
+          position: absolute;
+          top: 50%;
+          right: 0;
+          color: #3a84ff;
+          cursor: pointer;
+          transform: translateY(-50%);
+        }
+      }
     }
     .top-bar {
       .left {

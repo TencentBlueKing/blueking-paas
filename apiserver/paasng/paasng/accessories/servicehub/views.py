@@ -52,6 +52,7 @@ from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.servicehub.sharing import ServiceSharingManager, SharingReferencesManager
 from paasng.accessories.services.models import ServiceCategory
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import (
@@ -61,7 +62,7 @@ from paasng.infras.accounts.permissions.application import (
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.misc.metrics import SERVICE_BIND_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -181,7 +182,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.ADD_ON,
             attribute=service_obj.name,
             module_name=module.name,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=service_obj.config),
+            data_after=DataDetail(data=service_obj.config),
         )
         return Response(serializer.data)
 
@@ -287,7 +288,7 @@ class ModuleServicesViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.ADD_ON,
             attribute=service.name,
             module_name=module_name,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=service.config if service else None),
+            data_before=DataDetail(data=service.config if service else None),
         )
         return Response(status=status.HTTP_200_OK)
 
@@ -358,7 +359,9 @@ class ServiceViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         serializer.is_valid(raise_exception=True)
 
         param = serializer.data
-        application_ids = list(Application.objects.filter_by_user(request.user).values_list("id", flat=True))
+        application_ids = list(
+            Application.objects.filter_by_user(request.user, get_tenant(request.user).id).values_list("id", flat=True)
+        )
 
         service = mixed_service_mgr.get(uuid=service_id)
         qs = mixed_service_mgr.get_provisioned_queryset(service, application_ids=application_ids).order_by(

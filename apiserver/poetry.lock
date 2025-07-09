@@ -213,18 +213,18 @@ wrapt = ">=1.15.0,<2.0.0"
 
 [[package]]
 name = "bk-iam"
-version = "1.1.20"
+version = "2.0.2"
 description = "bk-iam python sdk"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, <4"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,<4,>3"
 groups = ["main"]
 files = [
-    {file = "bk-iam-1.1.20.tar.gz", hash = "sha256:5f6d717af9c6e0069f98176e50eefa3acaebbcd9df79cec916f735e705f0cbf7"},
-    {file = "bk_iam-1.1.20-py2.py3-none-any.whl", hash = "sha256:e94089eed968f968f1022d0c95004a4704e0f84ee714830029b2f2025c750f21"},
+    {file = "bk_iam-2.0.2-py2.py3-none-any.whl", hash = "sha256:27e2751f5faa3ec973866a99a26d041d4ca0f4f0995b1645eafe2d73094fe8dc"},
+    {file = "bk_iam-2.0.2.tar.gz", hash = "sha256:c498bb6c0fa6020d5e146402a883f8dba88caf453eed567afbe5b5d70bd4a361"},
 ]
 
 [package.dependencies]
-cachetools = "3.1.1"
+cachetools = ">=3.1.1,<6.0"
 curlify = "2.2.1"
 requests = "*"
 six = ">=1.11.0"
@@ -297,14 +297,14 @@ bkapi-client-core = ">=1.1.0,<2.0.0"
 
 [[package]]
 name = "bkpaas-auth"
-version = "3.1.1"
+version = "3.1.2"
 description = "User authentication django app for blueking internal projects"
 optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main"]
 files = [
-    {file = "bkpaas-auth-3.1.1.tar.gz", hash = "sha256:56d2f21784d51e89b7127bc8a8c44c6ed72572a4293d9846b1275aab91b68d4f"},
-    {file = "bkpaas_auth-3.1.1-py3-none-any.whl", hash = "sha256:b7ca99c58ada3b836b66c8e4a73f6b132999baa97219223076cda8aa59f1bc11"},
+    {file = "bkpaas_auth-3.1.2.tar.gz", hash = "sha256:20595bcfbce7ea6f7fd0cd21cd7136cdb1452752cf5ebbc3c610dd5658f6950e"},
+    {file = "bkpaas_auth-3.1.2-py3-none-any.whl", hash = "sha256:4bb5614d38679144f7c1ec82d54529f956e5fa2e778b6d14e420d40f14164d13"},
 ]
 
 [package.dependencies]
@@ -4365,4 +4365,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "e88126344d325ae7befc1374bcb04f8b0a7dcef7a72cfa2e8cf4d90e1a684a0e"
+content-hash = "a68668803396eb89b7df5c565579f68d9eacb1288a040de647bcf4c4e27f7896"

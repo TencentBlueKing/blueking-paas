@@ -28,7 +28,7 @@ from django.db import IntegrityError as DjangoIntegrityError
 from django.db.transaction import atomic
 
 from paasng.accessories.publish.market.constant import AppState, AppType, OpenMode, ProductSourceUrlType
-from paasng.accessories.publish.market.models import DisplayOptions, MarketConfig, Product, Tag
+from paasng.accessories.publish.market.models import ApplicationExtraInfo, DisplayOptions, MarketConfig, Product, Tag
 from paasng.accessories.publish.market.signals import product_create_or_update_by_operator
 from paasng.accessories.publish.sync_market.handlers import (
     market_config_update_handler,
@@ -213,13 +213,17 @@ class Command(BaseCommand):
             defaults={
                 "name_zh_cn": app_desc.name,
                 "name_en": app_desc.name_en,
-                "tag": Tag.objects.get(name=app_desc.tag),
                 "introduction_zh_cn": app_desc.introduction_zh_cn,
                 "introduction_en": app_desc.introduction_en,
                 "type": AppType.THIRD_PARTY.value,
                 "state": AppState.RELEASED.value,
                 "tenant_id": application.tenant_id,
             },
+        )
+        ApplicationExtraInfo.objects.update_or_create(
+            application=application,
+            tenant_id=application.tenant_id,
+            defaults={"tag": Tag.objects.get(name=app_desc.tag)},
         )
         img_format, img_str = app_desc.logo.split(";base64,")
         ext = img_format.split("/")[-1]

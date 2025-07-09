@@ -1,7 +1,8 @@
 <template>
   <div class="deploy-process-config">
+    <!-- 查看模式 & 无进程的情况 -->
     <section
-      v-if="isShowPage"
+      v-if="isReadOnlyMode && !hasProcess"
       style="margin-top: 38px"
     >
       <bk-exception
@@ -13,7 +14,7 @@
           class="mt10"
           style="color: #979ba5; font-size: 12px"
         >
-          {{ $t('进程配置、钩子命令在构建目录下的 app_desc.yaml 文件中定义。') }}
+          {{ $t('进程配置、钩子命令请在 app_desc.yaml 文件中定义。') }}
         </p>
         <p
           class="guide-link mt15"
@@ -33,18 +34,56 @@
         :offset-left="20"
         class="deploy-action-box"
       >
+        <!-- 非镜像模块为查看态 -->
+        <bk-alert
+          v-if="isReadOnlyMode"
+          class="guide-alert-cls"
+          type="info"
+          :show-icon="false"
+        >
+          <div
+            slot="title"
+            class="flex-row align-items-center justify-content-between"
+          >
+            <span>
+              <i class="paasng-icon paasng-remind"></i>
+              {{
+                $t(
+                  '当前模块为 “代码仓库” 类型，仅支持查看进程配置。如需修改，请通过源码中的 app_desc.yaml 文件更改（更改将在部署后生效）'
+                )
+              }}
+            </span>
+            <bk-button
+              size="small"
+              text
+              @click="handleViewGuide"
+            >
+              {{ $t('查看使用指南') }}
+            </bk-button>
+          </div>
+        </bk-alert>
         <div
           class="title-wrapper"
           v-if="!isCreate"
         >
           <span class="title">{{ $t('进程配置') }}</span>
           <div
-            v-if="!isPageEdit"
+            v-if="!isPageEdit && !isReadOnlyMode"
             class="edit-container"
             @click="handleEditClick"
           >
             <i class="paasng-icon paasng-edit-2 pl10" />
             {{ $t('编辑') }}
+          </div>
+          <div
+            v-if="isReadOnlyMode"
+            class="view-only"
+            v-bk-tooltips.right="{
+              content: recentOperations,
+              disabled: !recentOperations,
+            }"
+          >
+            {{ $t('仅支持查看') }}
           </div>
         </div>
         <div class="process-container">
@@ -107,41 +146,6 @@
                   </p>
                 </bk-form-item>
 
-                <!-- 镜像凭证 -->
-                <bk-form-item
-                  v-if="panels[panelActive] && allowMultipleImage"
-                  :label="$t('镜像凭证')"
-                  :label-width="labelWidth"
-                  :property="'command'"
-                >
-                  <bk-select
-                    v-model="formData.image_credential_name"
-                    :disabled="false"
-                    style="width: 500px"
-                    ext-cls="select-custom"
-                    ext-popover-cls="select-popover-custom"
-                    searchable
-                  >
-                    <bk-option
-                      v-for="option in imageCredentialList"
-                      :id="option.name"
-                      :key="option.name"
-                      :name="option.name"
-                    />
-                    <div
-                      slot="extension"
-                      style="cursor: pointer"
-                      @click="handlerCreateImageCredential"
-                    >
-                      <i class="bk-icon icon-plus-circle mr5" />
-                      {{ $t('新建凭证') }}
-                    </div>
-                  </bk-select>
-                  <p class="whole-item-tips">
-                    {{ $t('私有镜像需要填写镜像凭证才能拉取镜像') }}
-                  </p>
-                </bk-form-item>
-
                 <bk-form-item
                   :label="$t('启动命令')"
                   :label-width="labelWidth"
@@ -159,7 +163,7 @@
                     :key="tagInputIndex"
                   />
                   <p class="whole-item-tips">
-                    {{ $t('数组类型，示例数据：[\'/serverctl\', \'start\']，按回车键分隔每个元素') }}
+                    {{ $t("数组类型，示例数据：['/serverctl', 'start']，按回车键分隔每个元素") }}
                   </p>
                 </bk-form-item>
 
@@ -179,7 +183,7 @@
                     :paste-fn="copyCommandParameter"
                   />
                   <p class="whole-item-tips">
-                    {{ $t('数组类型，示例数据：[\'--port\', \'8081\']，按回车键分隔每个元素') }}
+                    {{ $t("数组类型，示例数据：['--port', '8081']，按回车键分隔每个元素") }}
                   </p>
                 </bk-form-item>
                 <!-- 进程服务编辑态 -->
@@ -203,7 +207,7 @@
                       <i class="paasng-icon paasng-info-line" />
                       {{
                         $t(
-                          '开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。',
+                          '开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。'
                         )
                       }}
                       <a
@@ -327,7 +331,7 @@
                                 content: $t(
                                   isCreate
                                     ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。'
-                                    : '该环境暂不支持自动扩缩容',
+                                    : '该环境暂不支持自动扩缩容'
                                 ),
                                 disabled: autoScalDisableConfig.stag.ENABLE_AUTOSCALING,
                               }"
@@ -506,7 +510,7 @@
                                 content: $t(
                                   isCreate
                                     ? '请创建成功后，到“模块配置”页面开启自动调节扩缩容。'
-                                    : '该环境暂不支持自动扩缩容',
+                                    : '该环境暂不支持自动扩缩容'
                                 ),
                                 disabled: autoScalDisableConfig.prod.ENABLE_AUTOSCALING,
                               }"
@@ -639,7 +643,7 @@
             >
               <!-- v1alpha1 是镜像地址，v1alpha2是镜像仓库不带tag -->
               <bk-form-item
-                v-if="!allowMultipleImage"
+                v-if="!allowMultipleImage && !isReadOnlyMode"
                 :label="`${$t('镜像仓库')}：`"
               >
                 <span class="form-text">{{ formData.image || '--' }}</span>
@@ -650,44 +654,52 @@
               >
                 <span class="form-text">{{ formData.image || '--' }}</span>
               </bk-form-item>
-              <bk-form-item :label="`${$t('启动命令')}：`">
-                <span
-                  class="process-tag-cls"
-                  v-if="formData.command && formData.command.length"
-                >
-                  <bk-tag
-                    v-for="item in formData.command"
-                    :key="item"
-                  >
-                    {{ item }}
-                  </bk-tag>
-                </span>
-                <span
-                  class="form-text"
-                  v-else
-                >
-                  --
-                </span>
+              <bk-form-item
+                :label="`${$t('启动命令')}：`"
+                v-if="isReadOnlyMode && readonlyStartupCommand"
+              >
+                <p class="startup-command">{{ readonlyStartupCommand }}</p>
               </bk-form-item>
-              <bk-form-item :label="`${$t('命令参数')}：`">
-                <span
-                  class="process-tag-cls"
-                  v-if="formData.args && formData.args.length"
-                >
-                  <bk-tag
-                    v-for="item in formData.args"
-                    :key="item"
+              <template v-else>
+                <bk-form-item :label="`${$t('启动命令')}：`">
+                  <span
+                    class="process-tag-cls"
+                    v-if="formData.command && formData.command.length"
                   >
-                    {{ item }}
-                  </bk-tag>
-                </span>
-                <span
-                  class="form-text"
-                  v-else
-                >
-                  --
-                </span>
-              </bk-form-item>
+                    <bk-tag
+                      v-for="item in formData.command"
+                      :key="item"
+                    >
+                      {{ item }}
+                    </bk-tag>
+                  </span>
+                  <span
+                    class="form-text"
+                    v-else
+                  >
+                    --
+                  </span>
+                </bk-form-item>
+                <bk-form-item :label="`${$t('命令参数')}：`">
+                  <span
+                    class="process-tag-cls"
+                    v-if="formData.args && formData.args.length"
+                  >
+                    <bk-tag
+                      v-for="item in formData.args"
+                      :key="item"
+                    >
+                      {{ item }}
+                    </bk-tag>
+                  </span>
+                  <span
+                    class="form-text"
+                    v-else
+                  >
+                    --
+                  </span>
+                </bk-form-item>
+              </template>
               <!-- 进程服务查看态 -->
               <bk-form-item :label="`${$t('进程服务')}：`">
                 <div class="view-process-service">
@@ -698,7 +710,7 @@
                     <i class="paasng-icon paasng-info-line" />
                     {{
                       $t(
-                        '开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。',
+                        '开启后，应用内部通信可通过“进程服务名称 + 服务端口”访问，通信地址可在“部署管理”页面的进程详情中查看。'
                       )
                     }}
                     <a
@@ -928,6 +940,9 @@ import metricViewMode from './comps/metric/view-mode.vue';
 import processService from './comps/process-config/process-service.vue';
 import portMapTable from './comps/process-config/port-map-table.vue';
 import entryChangeDialog from './comps/process-config/entry-change-dialog.vue';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/zh-cn';
 
 export default {
   components: {
@@ -1125,7 +1140,6 @@ export default {
         ],
       },
       imageCredential: '',
-      imageCredentialList: [],
       targetPortErrTips: '',
       isTargetPortErrTips: false,
       ifopen: false,
@@ -1164,6 +1178,8 @@ export default {
       },
       // 初始访问入口
       initEntryData: null,
+      recentOperations: '',
+      hasProcess: true,
     };
   },
   computed: {
@@ -1189,7 +1205,8 @@ export default {
     labelWidth() {
       return this.localLanguage === 'en' ? 190 : 150;
     },
-    isShowPage() {
+    // 非镜像模块、创建模块、应用为查看模式
+    isReadOnlyMode() {
       return !this.isCustomImage && !this.isCreate;
     },
     isCurProcessMainEntry() {
@@ -1202,6 +1219,10 @@ export default {
     metricTipsHtml() {
       const monitoringDashboard = `<a href="${this.dashboardUrl}" target="_blank">${this.$t('蓝鲸监控仪表盘')}</a>`;
       return this.$t('配置 Metric 采集后，您可以在 {s} 功能中进行配置并查看您的仪表盘。', { s: monitoringDashboard });
+    },
+    // 只读模式展示的启动命令
+    readonlyStartupCommand() {
+      return this.formData?.proc_command;
     },
   },
   watch: {
@@ -1267,15 +1288,23 @@ export default {
       this.getAutoScalFlag('prod');
       this.getAppDashboardInfo();
       this.getEntryList();
-    }
-    // 镜像需要调用进程配置、且不能是创建应用的时候
-    if (this.isCustomImage && !this.isCreate) {
       this.init();
+    }
+    if (this.isReadOnlyMode) {
+      this.configureDayjsLocale();
+      // 查看模式获取最近一条操作记录
+      this.getDeploymentOperations();
     }
     // 获取资源配额数据
     await this.getQuotaPlans();
   },
   methods: {
+    configureDayjsLocale() {
+      dayjs.extend(relativeTime);
+      if (this.localLanguage !== 'en') {
+        dayjs.locale('zh-cn');
+      }
+    },
     async init() {
       try {
         this.isLoading = true;
@@ -1283,11 +1312,8 @@ export default {
           appCode: this.appCode,
           moduleId: this.curModuleId,
         });
+        this.hasProcess = !!res.proc_specs?.length;
         this.processData = this.formatData(res.proc_specs);
-        this.allowMultipleImage = res.metadata.allow_multiple_image; // 是否允许多条镜像
-        if (this.allowMultipleImage) {
-          this.getImageCredentialList();
-        }
         this.processDataBackUp = cloneDeep(this.processData);
         if (this.processData.length) {
           this.formData = this.processData[this.btnIndex];
@@ -1378,25 +1404,6 @@ export default {
       this.formData.command = ['bash', '/app/start_web.sh'];
       this.formData.args = [];
       this.formData.port = 5000;
-    },
-
-    // 获取凭证列表
-    async getImageCredentialList() {
-      try {
-        const { appCode } = this;
-        const res = await this.$store.dispatch('credential/getImageCredentialList', { appCode });
-        this.imageCredentialList = res;
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      }
-    },
-
-    // 前往创建镜像凭证页面
-    handlerCreateImageCredential() {
-      this.$router.push({ name: 'imageCredential' });
     },
 
     // 按扭组点击
@@ -1678,7 +1685,7 @@ export default {
     // 判断是否为主入口
     isMainEntry(services) {
       if (!services?.length) return false;
-      return services.some((service) => service.exposed_type?.name === 'bk/http');
+      return services.some((service) => ['bk/http', 'bk/grpc'].includes(service.exposed_type?.name));
     },
     // 启停进程
     toggleServiceProcess(falg) {
@@ -1715,12 +1722,12 @@ export default {
     changeMainEntry(data) {
       const oldMainEntryName = this.curProcessMainEntryData?.name;
       const servieName = data.type === 'set' ? data.row.name : '';
-      this.setProcessMainEntry(oldMainEntryName, data.name, servieName);
+      this.setProcessMainEntry(oldMainEntryName, data.name, servieName, data.exposedType);
       this.panels = cloneDeep(this.processData);
     },
     // 设置主入口数据
-    setProcessMainEntry(oldMainEntryName, newMainEntryName, servieName) {
-      const newExposedType = { name: 'bk/http' }; // 主入口默认值
+    setProcessMainEntry(oldMainEntryName, newMainEntryName, servieName, exposedType) {
+      const newExposedType = { name: exposedType }; // 主入口默认值
 
       // 找到当前旧的主入口进程并将其 services 中的 exposed_type 设置为 null
       if (oldMainEntryName) {
@@ -1751,7 +1758,9 @@ export default {
     },
     getEntryNames() {
       if (!this.curProcessMainEntryData) return null;
-      const entry = this.curProcessMainEntryData?.services?.find((v) => v.exposed_type?.name === 'bk/http');
+      const entry = this.curProcessMainEntryData?.services?.find((v) =>
+        ['bk/http', 'bk/grpc'].includes(v.exposed_type?.name)
+      );
       return {
         processName: this.curProcessMainEntryData.name,
         servieName: entry.name,
@@ -1800,10 +1809,50 @@ export default {
         this.catchErrorHandler(e);
       }
     },
+    // 获取当前模块最近部署操作
+    async getDeploymentOperations() {
+      try {
+        const res = await this.$store.dispatch('deploy/getDeployHistory', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          pageParams: {
+            limit: 1,
+            offset: 0,
+          },
+        });
+        const operation = res.results[0];
+        if (operation) {
+          const time = dayjs(operation.created).fromNow(true);
+          const env = operation.deployment?.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境');
+          this.recentOperations = this.$t('更新时间：{t}前，来源于{e}部署。', { t: time, e: env });
+        }
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
   },
 };
 </script>
 <style lang="scss" scoped>
+.guide-alert-cls {
+  margin: 0 24px;
+  margin-bottom: 16px;
+  i {
+    margin-right: 5px;
+    font-size: 14px;
+    color: #3a84ff;
+    transform: translateY(0px);
+  }
+  /deep/ .bk-alert-wraper {
+    height: 32px;
+    align-items: center;
+    font-size: 12px;
+    color: #63656e;
+  }
+  /deep/ .bk-button-text.bk-button-small {
+    padding: 0;
+  }
+}
 .process-container {
   border-top: none;
   .port-mapping-wrapper {
@@ -1954,6 +2003,9 @@ export default {
   }
 }
 .form-detail {
+  .startup-command {
+    padding-right: 24px;
+  }
   .form-text {
     color: #313238;
   }
@@ -2048,6 +2100,16 @@ export default {
     font-size: 12px;
     cursor: pointer;
     padding-left: 10px;
+  }
+  .view-only {
+    margin-left: 6px;
+    height: 22px;
+    line-height: 22px;
+    padding: 0 8px;
+    background: #f0f1f5;
+    border-radius: 2px;
+    font-size: 12px;
+    color: #4d4f56;
   }
 }
 .more-config-item .bk-form-content {

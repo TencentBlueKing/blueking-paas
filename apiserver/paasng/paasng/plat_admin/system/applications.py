@@ -207,6 +207,7 @@ def query_default_apps_by_username(username: str, tenant_id: str) -> List[UniSim
     :param tenant_id: Tenant ID of the app;
     """
     user = BasicUser(settings.USER_TYPE, username)
+    user.tenant_id = tenant_id
     applications = UserApplicationFilter(user).filter()
     applications = applications.filter(tenant_id=tenant_id)
 

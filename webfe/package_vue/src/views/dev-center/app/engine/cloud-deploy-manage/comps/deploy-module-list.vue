@@ -386,18 +386,27 @@ export default {
       await this.getModuleOrder();
       await this.getModuleReleaseInfo();
     },
+
+    /**
+     * 处理模块面板展开/收起状态变更
+     * @param {Object} payload - 包含模块状态信息的对象
+     * @param {string} payload.module_name - 模块名称
+     * @param {boolean} payload.isExpand - 当前展开状态
+     */
     handleChangePanel(payload) {
-      if (payload.isExpand) {
-        // 收起
-        this.currentAllExpandedItems = this.currentAllExpandedItems.filter((name) => name !== payload.module_name);
-      } else {
-        this.currentAllExpandedItems.push(payload.module_name);
-      }
       payload.isExpand = !payload.isExpand;
+      // 更新当前展开项列表
       if (payload.isExpand) {
+        this.currentAllExpandedItems.push(payload.module_name);
         this.handleRefresh();
+      } else {
+        this.currentAllExpandedItems = this.currentAllExpandedItems.filter((name) => name !== payload.module_name);
       }
       this.curDeploymentInfoItem = payload || {};
+
+      // 模块列表展开/收起，同步外界状态
+      const allCollapsed = this.deploymentInfoData.every((item) => !item.isExpand);
+      this.$emit('expand', allCollapsed);
     },
 
     // 部署
@@ -564,14 +573,17 @@ export default {
       this.deploymentInfoData.forEach((e) => {
         e.isExpand = false;
       });
+      this.currentAllExpandedItems = [];
     },
 
     // 将模块的进程实例全部展开
     handleSetOpenExpand() {
       this.curDeploymentInfoItem.isExpand = true;
-      this.deploymentInfoData.forEach((instance) => {
-        if (instance.processes.length || instance.proc_specs.length) {
-          instance.isExpand = true;
+      this.deploymentInfoData.forEach((module) => {
+        if (module.processes.length || module.proc_specs.length) {
+          module.isExpand = true;
+          // 记录当前模块展开项
+          this.currentAllExpandedItems.push(module.module_name);
         }
       });
     },

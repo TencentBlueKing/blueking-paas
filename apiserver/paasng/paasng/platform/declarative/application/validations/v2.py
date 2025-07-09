@@ -23,6 +23,7 @@ from rest_framework import serializers
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
 from paasng.core.region.states import get_region
 from paasng.platform.applications.serializers import AppIDSMartField, AppNameField
+from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.declarative.application.resources import (
     ApplicationDesc,
     DisplayOptions,
@@ -96,7 +97,7 @@ class ModuleDescriptionSLZ(serializers.Serializer):
     is_default = serializers.BooleanField(default=False, help_text="是否为主模块")
     language = serializers.CharField(help_text="模块开发语言", validators=[validate_language])
     services = serializers.ListField(child=ServiceSLZ(), required=False, default=[])
-    source_dir = serializers.CharField(help_text="源码目录", required=False, default="")
+    source_dir = SourceDirField(help_text="源码目录")
 
     def to_internal_value(self, data) -> ModuleDesc:
         """convert to cnative module desc format"""

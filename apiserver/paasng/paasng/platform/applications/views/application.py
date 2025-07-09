@@ -22,6 +22,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
+from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -34,7 +35,7 @@ from paas_wl.bk_app.cnative.specs.resource import delete_bkapp, delete_networkin
 from paas_wl.infras.cluster.constants import ClusterFeatureFlag
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
-from paasng.accessories.publish.market.models import MarketConfig, Product
+from paasng.accessories.publish.market.models import ApplicationExtraInfo, MarketConfig, Product
 from paasng.infras.accounts.constants import FunctionType
 from paasng.infras.accounts.models import make_verifier
 from paasng.infras.accounts.permissions.application import (
@@ -87,7 +88,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         # Get applications by given params
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=params["include_inactive"],
+            is_active=params.get("is_active"),
             languages=params.get("language"),
             regions=params.get("region"),
             search_term=params.get("search_term"),
@@ -98,15 +99,15 @@ class ApplicationListViewSet(viewsets.ViewSet):
             app_tenant_mode=params.get("app_tenant_mode"),
         )
 
+        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
+        if not settings.DISPLAY_BK_PLUGIN_APPS:
+            applications = applications.filter(is_plugin_app=False)
+
         # 查询我创建的应用时，也需要返回总的应用数量给前端
         all_app_count = applications.count()
         # 仅查询我创建的应用
         if params.get("exclude_collaborated") is True:
             applications = applications.filter(owner=request.user.pk)
-
-        # 插件开发者中心正式上线前需要根据配置来决定应用列表中是否展示插件应用
-        if not settings.DISPLAY_BK_PLUGIN_APPS:
-            applications = applications.filter(is_plugin_app=False)
 
         paginator = ApplicationListPagination()
         # 如果将用户标记的应用排在前面，需要特殊处理一下
@@ -164,7 +165,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
 
         applications = UserApplicationFilter(request.user).filter(
             order_by=["name"],
-            include_inactive=params["include_inactive"],
+            is_active=params.get("is_active"),
             source_origin=params.get("source_origin", None),
         )
 
@@ -193,7 +194,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
         keyword = params.get("keyword")
         # Get applications which contains keywords
         applications = UserApplicationFilter(request.user).filter(
-            include_inactive=params["include_inactive"], order_by=["name"], search_term=keyword
+            is_active=params.get("is_active"), order_by=["name"], search_term=keyword
         )
 
         # get marked application ids
@@ -340,7 +341,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
         reports = AppOperationReport.objects.filter(app__code__in=app_codes)
 
         issue_type_counts = reports.values("issue_type").annotate(count=Count("issue_type"))
-        total = UserApplicationFilter(request.user).filter(include_inactive=True).count()
+        total = UserApplicationFilter(request.user).filter().count()
 
         data = {"collected_at": latest_collected_at, "issue_type_counts": issue_type_counts, "total": total}
 
@@ -463,11 +464,24 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         - param: logo, file, 应用LOGO，不传则不更新
         """
         application = self.get_application()
-
         serializer = slzs.UpdateApplicationSLZ(data=request.data, instance=application)
         serializer.is_valid(raise_exception=True)
-        application = serializer.save()
+        data = serializer.validated_data
+        # 仅修改对应语言的应用名称, 如果前端允许同时填写中英文的应用名称, 则可以去掉该逻辑.
+        if get_language() == "zh-cn":
+            application.name = data["name_zh_cn"]
+        elif get_language() == "en":
+            application.name_en = data["name_en"]
+        application.save(update_fields=["name", "name_en"])
 
+        ApplicationExtraInfo.objects.update_or_create(
+            application=application,
+            tenant_id=application.tenant_id,
+            defaults={
+                "tag_id": data["tag_id"],
+                "availability_level": data.get("availability_level"),
+            },
+        )
         Product.objects.filter(code=code).update(name_zh_cn=application.name, name_en=application.name_en)
 
         # 应用 LOGO，不传则不更新
@@ -484,7 +498,6 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             logger.info(f"Failed to update app space on BK Monitor, {e}")
         except Exception:
             logger.exception("Failed to update app space on BK Monitor")
-
         # 审计记录
         add_app_audit_record(
             app_code=application.code,
@@ -494,7 +507,7 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             operation=OperationEnum.MODIFY_BASIC_INFO,
             target=OperationTarget.APP,
         )
-        return Response(serializer.data)
+        return Response(slzs.UpdateApplicationOutputSLZ(instance=application).data)
 
     @swagger_auto_schema(tags=["普通应用概览数据"])
     def get_overview(self, request, code):

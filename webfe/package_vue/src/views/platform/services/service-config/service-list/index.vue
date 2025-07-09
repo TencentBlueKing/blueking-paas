@@ -203,6 +203,10 @@ export default {
           const activeItem = this.groupedServices?.remote[0] || res[0];
           this.handleSelected(activeItem);
         });
+        // 无远程服务收起
+        if (!res.find((s) => s.origin === 'remote')) {
+          this.expand.remote = false;
+        }
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {

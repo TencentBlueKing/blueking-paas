@@ -23,7 +23,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_admin_audit_record
 from paasng.misc.monitoring.monitor.models import AppDashboardTemplate
 from paasng.plat_admin.admin42.serializers.dashboard_templates import DashboardTemplateSLZ
@@ -62,14 +62,14 @@ class DashboardTemplateViewSet(ListModelMixin, GenericViewSet):
             operation=OperationEnum.CREATE,
             target=OperationTarget.DASHBOARD_TEMPLATE,
             attribute=slz.data["name"],
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """更新仪表盘模板"""
         dashboard_template = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=DashboardTemplateSLZ(dashboard_template).data)
+        data_before = DataDetail(data=DashboardTemplateSLZ(dashboard_template).data)
 
         slz = DashboardTemplateSLZ(dashboard_template, data=request.data)
         slz.is_valid(raise_exception=True)
@@ -81,14 +81,14 @@ class DashboardTemplateViewSet(ListModelMixin, GenericViewSet):
             target=OperationTarget.DASHBOARD_TEMPLATE,
             attribute=slz.data["name"],
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, *args, **kwargs):
         """删除仪表盘模板"""
         dashboard_template = self.get_object()
-        data_before = DataDetail(type=DataType.RAW_DATA, data=DashboardTemplateSLZ(dashboard_template).data)
+        data_before = DataDetail(data=DashboardTemplateSLZ(dashboard_template).data)
         dashboard_template.delete()
 
         add_admin_audit_record(

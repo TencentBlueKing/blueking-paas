@@ -47,8 +47,7 @@
               >
                 <p
                   slot="tip"
-                  class="uploader-tip"
-                  style="font-size: 12px"
+                  class="uploader-tip f12 mt10"
                 >
                   {{ $t('将文件拖到此处或') }}
                   <span style="color: #3a84ff">{{ $t('点击上传') }}</span>
@@ -75,7 +74,7 @@
               :required="true"
               :property="'tenant'"
               error-display-type="normal"
-              :label="$t('租户类型')"
+              :label="$t('租户模式')"
             >
               <bk-radio-group v-model="formData.app_tenant_mode">
                 <bk-radio-button value="single">{{ $t('单租户') }}</bk-radio-button>
@@ -85,7 +84,7 @@
             <bk-form-item
               v-if="formData.app_tenant_mode === 'single'"
               :required="true"
-              :label="$t('所属租户')"
+              :label="$t('租户 ID')"
             >
               <bk-input
                 class="form-input-width"
@@ -361,13 +360,6 @@ export default {
 .smart-app {
   width: 1200px;
   margin: auto;
-  .uploader-tip {
-    font-size: 12px;
-    font-weight: 400;
-    span {
-      color: #3a84ff;
-    }
-  }
   .smart-upload {
     padding: 24px;
     margin-bottom: 16px;
@@ -391,24 +383,19 @@ export default {
     }
     /deep/ .config-upload-content,
     /deep/ .config-upload-file {
-      height: 180px;
-      padding: 0;
+      min-height: 96px;
+      padding: 12px 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      .content-icon {
+        height: 28px;
+        width: 28px;
+        i {
+          font-size: 28px;
+        }
+      }
     }
-    // /deep/ .config-upload-content {
-    //   height: 180px;
-    //   padding: 0;
-    //   display: flex;
-    //   justify-content: center;
-    // }
-    // /deep/ .config-upload-file {
-    //   height: 180px;
-    //   display: flex;
-    //   align-items: center;
-    //   padding: 0;
-    // }
   }
 }
 

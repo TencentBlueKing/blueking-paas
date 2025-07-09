@@ -144,7 +144,7 @@
           </bk-radio>
         </bk-form-item>
 
-        <section class="source-form-cls">
+        <section class="source-form-cls card-style">
           <bk-form-item
             v-if="appMarketConfig.source_url_type === 3"
             :label="$t('访问地址：')"

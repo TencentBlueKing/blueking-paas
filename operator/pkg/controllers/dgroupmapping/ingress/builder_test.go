@@ -29,11 +29,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/common/names"
+	testingutils "bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
 var _ = Describe("Test ingresses.go", func() {
 	var bkapp *paasv1alpha2.BkApp
+
+	config.SetConfig(testingutils.Config{})
 
 	BeforeEach(func() {
 		bkapp = &paasv1alpha2.BkApp{
@@ -110,38 +114,54 @@ var _ = Describe("Test ingresses.go", func() {
 			Expect(ingresses[0].Name).To(Equal("demo-subdomain"))
 			Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
 			Expect(ingresses[0].Annotations[SkipFilterCLBAnnoKey]).To(Equal("true"))
-			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("nginx"))
+			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("test-nginx"))
 		})
 
-		It("test if bkapp has one process service with exposed type bk/http", func() {
-			bkapp.EnableProcServicesFeature()
-			bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
-				{
-					Name:        "foo",
-					ExposedType: &paasv1alpha2.ExposedType{Name: paasv1alpha2.ExposedTypeNameBkHttp},
-					TargetPort:  8000,
-					Port:        80,
-				},
-				{
-					Name:       "web",
-					TargetPort: 8080,
-					Port:       80,
-				},
-			}
-			domains := DomainGroup{
-				SourceType: DomainSubDomain,
-				Domains: []Domain{
-					{Host: "foo.example.com", PathPrefixList: []string{"/foo/", "/foo-bar/"}},
-				},
-			}
-			builder := MonoIngressBuilder{bkapp, domains.SourceType}
-			ingresses, err := builder.Build(domains.Domains)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
-			ingressServiceBackend := ingresses[0].Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.Service
-			Expect(ingressServiceBackend.Name).To(Equal(names.Service(bkapp, "web")))
-			Expect(ingressServiceBackend.Port.Name).To(Equal("foo"))
-		})
+		DescribeTable(
+			"test if bkapp has one process service with exposed type",
+			func(exposedType paasv1alpha2.ExposedTypeName, expectedBackendProtocol, pathPrefix, expectedPath string) {
+				bkapp.EnableProcServicesFeature()
+				bkapp.Spec.Processes[0].Services = []paasv1alpha2.ProcService{
+					{
+						Name:       "bar",
+						TargetPort: 8080,
+						Port:       80,
+					},
+					{
+						Name:        "foo",
+						ExposedType: &paasv1alpha2.ExposedType{Name: exposedType},
+						TargetPort:  8000,
+						Port:        80,
+					},
+				}
+				domains := DomainGroup{
+					SourceType: DomainSubDomain,
+					Domains: []Domain{
+						{Host: "foo.example.com", PathPrefixList: []string{pathPrefix}, TLSSecretName: "grpc-tls"},
+					},
+				}
+				builder := MonoIngressBuilder{bkapp, domains.SourceType}
+				ingresses, err := builder.Build(domains.Domains)
+
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(ingresses[0].GetAnnotations()[BackendProtocolAnnoKey]).To(Equal(expectedBackendProtocol))
+				Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
+
+				ingressPath := ingresses[0].Spec.Rules[0].IngressRuleValue.HTTP.Paths[0]
+				Expect(ingressPath.Path).To(Equal(expectedPath))
+
+				ingressServiceBackend := ingresses[0].Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.Service
+				Expect(ingressServiceBackend.Name).To(Equal(names.Service(bkapp, "web")))
+				Expect(ingressServiceBackend.Port.Name).To(Equal("foo"))
+
+				tls := ingresses[0].Spec.TLS
+				Expect(tls[0].SecretName).To(Equal("grpc-tls"))
+				Expect(tls[0].Hosts).To(Equal([]string{"foo.example.com"}))
+			},
+			Entry("When bk/http", paasv1alpha2.ExposedTypeNameBkHTTP, "", "/", "/()(.*)"),
+			Entry("When bk/grpc", paasv1alpha2.ExposedTypeNameBkGRPC, "GRPC", "/", "/"),
+		)
 	})
 
 	Context("CustomIngressBuilder", func() {
@@ -164,7 +184,7 @@ var _ = Describe("Test ingresses.go", func() {
 			Expect(ingresses[0].Spec.Rules[0].Host).To(Equal("foo.example.com"))
 			Expect(ingresses[1].Spec.Rules[0].Host).To(Equal("with-name.example.com"))
 			Expect(ingresses[1].Annotations[SkipFilterCLBAnnoKey]).To(Equal("true"))
-			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("nginx"))
+			Expect(ingresses[0].Annotations[paasv1alpha2.IngressClassAnnoKey]).To(Equal("test-custom-domain-nginx"))
 		})
 	})
 

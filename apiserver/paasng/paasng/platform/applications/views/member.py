@@ -30,6 +30,7 @@ from paasng.infras.iam.helpers import (
     add_role_members,
     fetch_application_members,
     fetch_role_members,
+    fetch_user_main_role,
     remove_user_all_roles,
 )
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -93,16 +94,24 @@ class ApplicationMembersViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixi
         serializer = ApplicationMemberRoleOnlySLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        target_role = ApplicationRole(serializer.data["role"]["id"])
         username = get_username_by_bkpaas_user_id(kwargs["user_id"])
-        self.check_admin_count(application.code, username)
-        try:
-            remove_user_all_roles(application.code, username)
-            add_role_members(application.code, ApplicationRole(serializer.data["role"]["id"]), username)
-        except BKIAMGatewayServiceError as e:
-            raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
 
-        sync_developers_to_sentry.delay(application.id)
-        application_member_updated.send(sender=application, application=application)
+        # 获取用户当前角色
+        current_role = fetch_user_main_role(application.code, username)
+
+        # 只有当角色发生变化的时候才进行检查和更新
+        if current_role != target_role:
+            self.check_admin_count(application.code, username)
+            try:
+                remove_user_all_roles(application.code, username)
+                add_role_members(application.code, target_role, username)
+            except BKIAMGatewayServiceError as e:
+                raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
+
+            sync_developers_to_sentry.delay(application.id)
+            application_member_updated.send(sender=application, application=application)
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def leave(self, request, *args, **kwargs):

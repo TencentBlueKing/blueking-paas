@@ -28,23 +28,21 @@ logger = logging.getLogger(__name__)
 
 
 class ApplyURLGenerator:
-    iam = IAM(
-        settings.IAM_APP_CODE,
-        settings.IAM_APP_SECRET,
-        settings.BK_IAM_V3_INNER_URL,
-        settings.BK_PAAS2_URL,
-        settings.BK_IAM_APIGATEWAY_URL,
-    )
-
     @classmethod
-    def generate_apply_url(cls, username: str, action_request_list: List[ActionResourcesRequest]) -> str:
+    def generate_apply_url(cls, tenant_id: str, action_request_list: List[ActionResourcesRequest]) -> str:
         """
         生成权限申请跳转 url
 
         参考 https://github.com/TencentBlueKing/iam-python-sdk/blob/master/docs/usage.md#14-获取无权限申请跳转url
         """
         app = cls._make_application(action_request_list)
-        ok, message, url = cls.iam.get_apply_url(app, bk_username=username)
+        _iam = IAM(
+            settings.IAM_APP_CODE,
+            settings.IAM_APP_SECRET,
+            settings.BK_IAM_APIGATEWAY_URL,
+            bk_tenant_id=tenant_id,
+        )
+        ok, message, url = _iam.get_apply_url(app)
         if not ok:
             logger.error("generate_apply_url failed: %s", message)
             return settings.BK_IAM_URL

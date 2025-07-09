@@ -3,7 +3,9 @@
 {% load admin_utils %}
 
 {% block main_content %}
-<div id="proc-spec-plan-list" style="width: 100%;" class="p20">
+<div id="spec-plan-list" style="width: 100%;" class="p20">
+    <bk-alert class="mb20" title="资源方案仅对“普通应用”生效，对“云原生应用”无效。请注意，调整后将影响所有已绑定的应用"></bk-alert>
+
     <bk-button :theme="'primary'" :title="'新建方案'" class="mr10" @click="handleCreate">
         新建方案
     </bk-button>
@@ -188,7 +190,7 @@ class ProcessSpecPlanBindingDetail {
 
 document.addEventListener('DOMContentLoaded', () => {
     new Vue({
-        el: "#proc-spec-plan-list",
+        el: "#spec-plan-list",
         delimiters: ['$[', ']'],
         mixins: [SubmitMixin],
         data: function () {

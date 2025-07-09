@@ -167,7 +167,7 @@ def collect_and_update_app_operation_reports(app_codes: List[str]):
 
 @shared_task
 def send_idle_email_to_app_developers(
-    app_codes: List[str], only_specified_users: List[str], exclude_specified_users: List[str]
+    tenant_id: str, app_codes: List[str], only_specified_users: List[str], exclude_specified_users: List[str]
 ):
     """发送应用闲置模块邮件给应用管理员/开发者"""
     reports = AppOperationReport.objects.filter(issue_type=OperationIssueType.IDLE)
@@ -198,7 +198,11 @@ def send_idle_email_to_app_developers(
         total_count=total_cnt, notification_type=EmailNotificationType.IDLE_APP_MODULE_ENVS
     )
     for idx, username in enumerate(waiting_notify_usernames):
-        filters = ApplicationPermission().gen_develop_app_filters(username)
+        filters = ApplicationPermission().gen_develop_app_filters(username, tenant_id)
+        # 如果无法获取到用户有权限的应用，直接跳过
+        if not filters:
+            continue
+
         app_codes = Application.objects.filter(is_active=True).filter(filters).values_list("code", flat=True)
 
         # 从缓存拿刚刚退出的应用 code exclude 掉，避免出现退出用户组，权限中心权限未同步的情况

@@ -54,6 +54,8 @@ import migration from './modules/migration';
 import sandbox from './modules/sandbox';
 import tool from './modules/tool';
 import tenant from './modules/tenant';
+import tenantOperations from './modules/tenant-operations';
+import tenantConfig from './modules/tenant-config';
 import http from '@/api';
 import cookie from 'cookie';
 
@@ -100,6 +102,7 @@ const state = {
 const getters = {
   tenantId: state => state.curUserInfo?.tenantId,
   isShowTenant: state => state.curUserInfo?.tenantId === window.GLOBAL_CONFIG.OP_TYPE_TENANT_ID,
+  tenantApiBaseUrl: () => window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod'),
 };
 
 const mutations = {
@@ -429,6 +432,8 @@ export default new Vuex.Store({
     sandbox,
     tool,
     tenant,
+    tenantOperations,
+    tenantConfig,
   },
   state,
   getters,

@@ -10,9 +10,7 @@
     >
       <div class="middle ps-main mirror-credentials">
         <div class="flex-row align-items-center">
-          <span class="base-info-title">
-            {{ $t('镜像凭证') }}
-          </span>
+          <span class="base-info-title">{{ $t('镜像凭证') }}</span>
           <div
             class="add-container"
             @click="handleCreate"
@@ -21,7 +19,9 @@
             {{ $t('新建镜像凭证') }}
           </div>
         </div>
-        <div class="credential-tips">{{ $t('私有镜像需要提供镜像凭证来拉取镜像，镜像凭证添加后应用下所有模块都可以使用。') }}</div>
+        <div class="credential-tips">
+          {{ $t('私有镜像需要提供镜像凭证来拉取镜像，镜像凭证添加后应用下所有模块都可以使用。') }}
+        </div>
         <bk-table
           v-if="credentialList.length"
           v-bkloading="{ isLoading: tableLoading, opacity: 1 }"
@@ -148,7 +148,6 @@ export default {
     this.getCredentialList();
   },
   methods: {
-
     // 获取凭证列表
     async getCredentialList() {
       this.tableLoading = true;
@@ -293,9 +292,6 @@ export default {
 
 <style lang="scss" scoped>
 .image-container {
-  .ps-top-bar {
-    padding: 0 20px;
-  }
   .image-content {
     background: #fff;
     padding-top: 0;
@@ -328,19 +324,19 @@ export default {
     font-weight: bold;
     text-align: right;
   }
-  .add-container{
-    color: #3A84FF;
+  .add-container {
+    color: #3a84ff;
     font-size: 12px;
     cursor: pointer;
     padding-left: 10px;
-    i{
+    i {
       padding-right: 3px;
     }
   }
 
   .credential-tips {
     margin-top: 8px;
-    color: #979BA5;
+    color: #979ba5;
     font-size: 12px;
   }
 }

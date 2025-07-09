@@ -22,10 +22,15 @@ import pytest
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.client import BKIAMClient
 
 
+class FakeIAMClient(BKIAMClient):
+    def __init__(self, tenant_id: str): ...
+
+
 @pytest.fixture()
 def iam_management_client():
     with mock.patch(
-        "paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim.lazy_iam_client", new=BKIAMClient()
+        "paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim.BKIAMClient",
+        new=FakeIAMClient,
     ) as mocked_client:
         stub = StubManagementClient()
         mocked_client.client = mock.MagicMock(spec=StubManagementClient)

@@ -56,20 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 url: "{% url 'admin.process_spec_plan.manage' %}",
                             },
                             {
-                                name: "应用集群",
-                                url: "{% url 'admin.clusters.manage' %}",
-                            },
-                            {
                                 name: "共享证书管理",
                                 url: "{% url 'admin.shared.certs.manage' %}",
-                            },
-                            {
-                                name: "代码库配置",
-                                url: "{% url 'admin.sourcectl.source_type_spec.manage' %}"
-                            },
-                            {
-                                name: "环境变量管理",
-                                url: "{% url 'admin.builtin_config_vars.manage' %}"
                             },
                         ]
                     },
@@ -77,12 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     {% if perm.manage_app_templates %}
                     {
                         name: "应用配置管理",
-                        url: "{% url 'admin.configuration.tmpl.manage' %}",
+                        url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}",
                         children: [
-                            {
-                                name: "模板配置",
-                                url: "{% url 'admin.configuration.tmpl.manage' %}",
-                            },
                             {
                                 name: "插件分类配置",
                                 url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}"
@@ -122,6 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         {% endif %}
                     {% endif %}
                     {% if perm.manage_platform %}
+                    {% if not AUTO_CREATE_REGULAR_USER %}
+                    // 如果平台不在用户登录的时候自动创建用户，则需要在用户列表中将用户添加为普通用户后，用户才能访问开发者中心
                     {
                         name: "用户管理",
                         url: "{% url 'admin.accountmgr.index' %}",
@@ -130,12 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 name: "用户列表",
                                 url: "{% url 'admin.accountmgr.userprofiles.index' %}"
                             },
-                            {
-                                name: "用户特性管理",
-                                url: "{% url 'admin.accountmgr.account_feature_flags.index' %}",
-                            },
                         ]
                     },
+                    {% endif %}
                     {
                         name: "操作审计",
                         url: "{% url 'admin.audit.index' %}",

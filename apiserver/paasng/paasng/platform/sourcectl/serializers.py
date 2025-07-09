@@ -19,6 +19,7 @@ import logging
 
 from rest_framework import serializers
 
+from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepositoryInstance, SvnAccount, SvnRepository
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
@@ -149,9 +150,7 @@ class RepoBackendModifySLZ(serializers.Serializer):
 
     source_repo_url = serializers.CharField()
     source_repo_auth_info = serializers.JSONField(required=False, default={})
-    source_dir = serializers.CharField(
-        help_text="Procfile 所在目录, 如果是根目录可不填.", default="", allow_blank=True
-    )
+    source_dir = SourceDirField(help_text="Procfile 所在目录, 如果是根目录可不填.")
 
 
 ##########################

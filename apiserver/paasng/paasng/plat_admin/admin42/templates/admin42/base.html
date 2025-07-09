@@ -225,7 +225,7 @@
                 <li><a href="{% url 'admin.platform.index' %}">平台管理</a></li>
                 {% endif %}
                 {% if perm.manage_app_templates %}
-                <li><a href="{% url 'admin.configuration.tmpl.manage' %}">应用配置管理</a></li>
+                <li><a href="{% url 'admin.configuration.bk_plugins.tags.manage' %}">应用配置管理</a></li>
                 {% endif %}
                 {% if perm.operate_platform %}
                     {% url 'admin.operation.index' as operation_index %}
@@ -234,7 +234,10 @@
                     {% endif %}
                 {% endif %}
                 {% if perm.manage_platform %}
+                {# 如果平台不在用户登录的时候自动创建用户，则需要在用户列表中将用户添加为普通用户后，用户才能访问开发者中心 #}
+                {% if not AUTO_CREATE_REGULAR_USER %}
                 <li><a href="{% url 'admin.accountmgr.index' %}">用户管理</a></li>
+                {% endif %}
                 <li><a href="{% url 'admin.audit.index' %}">操作审计</a></li>
                 {% endif %}
             </ul>

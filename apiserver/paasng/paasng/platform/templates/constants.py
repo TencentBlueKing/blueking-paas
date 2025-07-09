@@ -23,4 +23,17 @@ class TemplateType(StrStructuredEnum):
     """模板类型"""
 
     NORMAL = EnumField("normal", _("普通应用"))
-    PLUGIN = EnumField("plugin", _("插件模板"))
+    PLUGIN = EnumField("plugin", _("插件应用"))
+
+
+class RenderMethod(StrStructuredEnum):
+    """模板渲染方式
+
+    - cookiecutter: 使用 Cookiecutter 模板系统进行渲染，支持目录结构生成和复杂交互，目前插件都使用该方式
+    - django_template: 使用 Django 模板引擎进行渲染，支持变量替换和简单逻辑，目前开发框架都使用该方式
+    - jinja2_double_square_bracket: 使用 Jinja2 模板引擎进行渲染，通过 [[ ]] 匹配渲染点，新版 Golang 框架需使用该方式
+    """
+
+    COOKIECUTTER = EnumField("cookiecutter")
+    DJANGO_TEMPLATE = EnumField("django_template")
+    JINJA2_DOUBLE_SQUARE_BRACKET = EnumField("jinja2_double_square_bracket")

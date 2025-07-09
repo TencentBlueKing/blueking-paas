@@ -19,7 +19,6 @@ from typing import Dict, List, Optional
 
 from django.conf import settings
 from django.db.models import Q
-from django.utils.functional import SimpleLazyObject
 from iam import IAM, Action, MultiActionRequest, Request, Resource, Subject
 
 from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissionActions
@@ -30,14 +29,14 @@ from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.converter import PluginP
 class BKIAMClient:
     """bk-iam 通过 SDK 提供的 API client"""
 
-    def __init__(self):
-        self.iam = IAM(
+    def __init__(self, tenant_id: str):
+        self._iam = IAM(
             settings.IAM_APP_CODE,
             settings.IAM_APP_SECRET,
-            settings.BK_IAM_V3_INNER_URL,
-            settings.BKPAAS_URL,
             settings.BK_IAM_APIGATEWAY_URL,
+            bk_tenant_id=tenant_id,
         )
+        self.tenant_id = tenant_id
 
     def is_action_allowed(
         self,
@@ -59,12 +58,16 @@ class BKIAMClient:
         request = Request(
             settings.IAM_PLUGINS_CENTER_SYSTEM_ID, Subject("user", username), Action(action), sdk_resources, None
         )
+
         if use_cache:
-            return self.iam.is_allowed_with_cache(request)
-        return self.iam.is_allowed(request)
+            return self._iam.is_allowed_with_cache(request)
+        return self._iam.is_allowed(request)
 
     def is_actions_allowed(
-        self, username: str, actions: List[PluginPermissionActions], resources: Optional[List[IAMResource]] = None
+        self,
+        username: str,
+        actions: List[PluginPermissionActions],
+        resources: Optional[List[IAMResource]] = None,
     ) -> Dict[str, bool]:
         """
         判断用户对某个(单个)资源实例是否具有多个操作的权限.
@@ -85,10 +88,13 @@ class BKIAMClient:
         request = MultiActionRequest(
             settings.IAM_PLUGINS_CENTER_SYSTEM_ID, Subject("user", username), sdk_actions, sdk_resources, None
         )
-        return self.iam.resource_multi_actions_allowed(request)
+        return self._iam.resource_multi_actions_allowed(request)
 
     def is_batch_resource_actions_allowed(
-        self, username: str, actions: List[PluginPermissionActions], resources_list: List[List[Resource]]
+        self,
+        username: str,
+        actions: List[PluginPermissionActions],
+        resources_list: List[List[Resource]],
     ) -> Dict[str, Dict[str, bool]]:
         """
         判断用户对多个资源组合是否具有多个指定操作的权限. 当前sdk仅支持同类型的资源
@@ -112,7 +118,7 @@ class BKIAMClient:
         request = MultiActionRequest(
             settings.IAM_PLUGINS_CENTER_SYSTEM_ID, Subject("user", username), sdk_actions, [], None
         )
-        return self.iam.batch_resource_multi_actions_allowed(request, sdk_resources_list)
+        return self._iam.batch_resource_multi_actions_allowed(request, sdk_resources_list)
 
     def build_plugin_filters(self, username: str) -> Q:
         """用户有基础开发权限的插件列表"""
@@ -123,7 +129,6 @@ class BKIAMClient:
             [],
             None,
         )
-        return self.iam.make_filter(request, converter_class=PluginPolicyConverter)
-
-
-lazy_iam_client: BKIAMClient = SimpleLazyObject(BKIAMClient)
+        filters = self._iam.make_filter(request, converter_class=PluginPolicyConverter)
+        # 过滤掉非当前租户的插件
+        return filters & Q(tenant_id=self.tenant_id)

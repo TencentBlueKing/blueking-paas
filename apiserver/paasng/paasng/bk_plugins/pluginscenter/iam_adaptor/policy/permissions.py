@@ -24,7 +24,7 @@ from rest_framework.permissions import BasePermission
 from paasng.bk_plugins.pluginscenter.iam_adaptor.constants import PluginPermissionActions
 from paasng.bk_plugins.pluginscenter.iam_adaptor.definitions import gen_iam_resource
 from paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim import user_group_apply_url
-from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.client import lazy_iam_client
+from paasng.bk_plugins.pluginscenter.iam_adaptor.policy.client import BKIAMClient
 from paasng.bk_plugins.pluginscenter.models import PluginInstance
 
 
@@ -41,13 +41,14 @@ def plugin_action_permission_class(actions: List[PluginPermissionActions], use_c
                 return False
 
             iam_resource = gen_iam_resource(obj)
+            iam_client = BKIAMClient(obj.tenant_id)
             if len(actions) == 1:
-                is_allowed = lazy_iam_client.is_action_allowed(
+                is_allowed = iam_client.is_action_allowed(
                     request.user.username, actions[0], [iam_resource], use_cache=use_cache
                 )
             else:
                 is_allowed = all(
-                    lazy_iam_client.is_actions_allowed(request.user.username, actions, [iam_resource]).values()
+                    iam_client.is_actions_allowed(request.user.username, actions, [iam_resource]).values()
                 )
             # 无插件应用权限时，需要返回应用权限申请链接
             if not is_allowed:
@@ -89,13 +90,14 @@ def plugin_view_actions_perm(
                 raise ValueError('No plugin actions found for view action "%s".' % view.action)
 
             iam_resource = gen_iam_resource(obj)
+            iam_client = BKIAMClient(obj.tenant_id)
             if len(actions) == 1:
-                is_allowed = lazy_iam_client.is_action_allowed(
+                is_allowed = iam_client.is_action_allowed(
                     request.user.username, actions[0], [iam_resource], use_cache=use_cache
                 )
             else:
                 is_allowed = all(
-                    lazy_iam_client.is_actions_allowed(request.user.username, actions, [iam_resource]).values()
+                    iam_client.is_actions_allowed(request.user.username, actions, [iam_resource]).values()
                 )
             # 无插件应用权限时，需要返回应用权限申请链接
             if not is_allowed:

@@ -16,6 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 from rest_framework import serializers
+from rest_framework.fields import empty
+
+from paasng.platform.applications.serializers.fields import SourceDirField
 
 
 class DisplayOptionsSerializer(serializers.Serializer):
@@ -42,7 +45,7 @@ class AppSerializer(serializers.Serializer):
 
 class EnvVariableSerializer(serializers.Serializer):
     key = serializers.CharField()
-    value = serializers.CharField()
+    value = serializers.CharField(allow_blank=True)
     description = serializers.CharField(required=False)
     environment_name = serializers.CharField(required=False)
 
@@ -140,7 +143,7 @@ class BkMonitorPortSerializer(serializers.Serializer):
 
 class ModuleSerializer(serializers.Serializer):
     is_default = serializers.BooleanField(required=False)
-    source_dir = serializers.CharField(required=False)
+    source_dir = SourceDirField(required=False, default=empty)
     language = serializers.CharField()
     services = ServiceSerializer(many=True, required=False)
     env_variables = EnvVariableSerializer(many=True, required=False)
@@ -164,3 +167,13 @@ class AppDescSpec2Serializer(serializers.Serializer):
         if ("modules" not in value and "module" not in value) or ("modules" in value and "module" in value):
             raise serializers.ValidationError("one of 'modules' or 'module' is required.")
         return value
+
+
+class PackageStashRequestSLZ(serializers.Serializer):
+    """Handle package for S-mart build"""
+
+    package = serializers.FileField(help_text="待构建的应用源码包")
+
+
+class PackageStashResponseSLZ(serializers.Serializer):
+    signature = serializers.CharField(help_text="数字签名")

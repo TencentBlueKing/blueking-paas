@@ -14,25 +14,32 @@ class Command(BaseCommand):
         {"name": "0shared", "spec_type": "共享实例", "description": "共享实例"},
     ]
 
-    def handle(self, *args, **kwargs):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--tenant_id",
+            dest="tenant_id",
+            required=False,
+            default=get_init_tenant_id(),
+            help="tenant id",
+        )
+
+    def handle(self, tenant_id, *args, **kwargs):
         svc = Service.objects.filter(name="redis").first()
         if not svc:
             self.stdout.write(self.style.WARNING("redis service not exists, skip init plan"))
             return
 
-        # 根据是否启用多租户来确认 Plan 所属的租户
-        tenant_id = get_init_tenant_id()
         success_count = 0
         try:
             for config in self.PLAN_CONFIGS:
                 plan, created = Plan.objects.get_or_create(
                     service=svc,
                     name=config["name"],
+                    tenant_id=tenant_id,
                     defaults={
                         "config": json.dumps({"specifications": {"type": config["spec_type"]}}),
                         "is_active": True,
                         "description": config["description"],
-                        "tenant_id": tenant_id,
                     },
                 )
                 if created:

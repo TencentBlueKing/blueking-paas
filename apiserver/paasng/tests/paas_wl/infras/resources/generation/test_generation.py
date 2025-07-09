@@ -30,8 +30,10 @@ class TestGeneration:
     def release(self, wl_app):
         return create_wl_release(
             wl_app=wl_app,
-            build_params={"procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"}},
-            release_params={"version": 2},
+            release_params={
+                "version": 2,
+                "procfile": {"web": "gunicorn wsgi -w 4 -b :$PORT --access-logfile - --error-logfile"},
+            },
         )
 
     @pytest.fixture()

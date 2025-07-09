@@ -440,9 +440,6 @@ export default {
           this.changeSourceControl(key);
         }
       }
-      this.$nextTick(() => {
-        this.$emit('close-content-loader');
-      });
     },
 
     // 获取代码源列表
@@ -700,7 +697,7 @@ export default {
           }
           this.$paasMessage({
             theme: 'success',
-            message: this.$t('切换源码仓库成功'),
+            message: this.$t('修改源码信息成功'),
           });
         }
         await this.fetchModuleInfo();

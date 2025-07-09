@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="detail-components-container"
-    v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
-  >
+  <div class="detail-components-container">
     <!-- 安装信息编辑 -->
     <bk-button
       class="clustertab-edit-btn-cls"
@@ -49,68 +46,70 @@
         </span>
       </template>
     </DetailsRow>
-    <div class="view-title comps-details">
-      {{ $t('组件详情') }}
-      <!-- 组件安装编辑 -->
-      <bk-button
-        v-if="componentList.length"
-        theme="primary"
-        :outline="true"
-        @click="handleEdit(3)"
-      >
-        {{ $t('管理') }}
-      </bk-button>
-    </div>
-    <bk-exception
-      v-if="!componentList.length"
-      class="exception-wrap-item exception-part"
-      type="empty"
-      scene="part"
-    >
-      {{ $t('暂无数据') }}
-    </bk-exception>
-    <bk-tab
-      v-else
-      :active.sync="tabActive"
-      type="card"
-      ext-cls="components-tab-cls"
-      @tab-change="handleTabChange"
-      :key="tabKey"
-    >
-      <bk-tab-panel
-        v-for="(panel, index) in componentList"
-        v-bind="panel"
-        :key="index"
-      >
-        <div
-          slot="label"
-          class="tab-panel-wrapper"
+    <div v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
+      <div class="view-title comps-details">
+        {{ $t('组件详情') }}
+        <!-- 组件安装编辑 -->
+        <bk-button
+          v-if="componentList.length"
+          theme="primary"
+          :outline="true"
+          @click="handleEdit(3)"
         >
-          <!-- icon -->
-          <i
-            class="paasng-icon paasng-check-circle-shape"
-            v-if="panel.status === 'installed'"
-          ></i>
-          <i
-            class="paasng-icon paasng-close-circle-shape"
-            v-else-if="panel.status === 'installation_failed'"
-          ></i>
-          <i
-            class="paasng-icon paasng-time-filled"
-            v-else
-          ></i>
-          <span class="panel-name">{{ panel.name }}</span>
-        </div>
-      </bk-tab-panel>
-      <!-- 四个默认组件定制 -->
-      <section v-bkloading="{ isLoading: cardLoading, zIndex: 10 }">
-        <DefaultComponentDetails
-          v-if="!isLoading"
-          :data="curActiveTabData"
-          :detail-data="componentDetail"
-        />
-      </section>
-    </bk-tab>
+          {{ $t('管理') }}
+        </bk-button>
+      </div>
+      <bk-exception
+        v-if="!componentList.length"
+        class="exception-wrap-item exception-part"
+        type="empty"
+        scene="part"
+      >
+        {{ $t('暂无数据') }}
+      </bk-exception>
+      <bk-tab
+        v-else
+        :active.sync="tabActive"
+        type="card"
+        ext-cls="components-tab-cls"
+        @tab-change="handleTabChange"
+        :key="tabKey"
+      >
+        <bk-tab-panel
+          v-for="(panel, index) in componentList"
+          v-bind="panel"
+          :key="index"
+        >
+          <div
+            slot="label"
+            class="tab-panel-wrapper"
+          >
+            <!-- icon -->
+            <i
+              class="paasng-icon paasng-check-circle-shape"
+              v-if="panel.status === 'installed'"
+            ></i>
+            <i
+              class="paasng-icon paasng-close-circle-shape"
+              v-else-if="panel.status === 'installation_failed'"
+            ></i>
+            <i
+              class="paasng-icon paasng-time-filled"
+              v-else
+            ></i>
+            <span class="panel-name">{{ panel.name }}</span>
+          </div>
+        </bk-tab-panel>
+        <!-- 四个默认组件定制 -->
+        <section v-bkloading="{ isLoading: cardLoading, zIndex: 10 }">
+          <DefaultComponentDetails
+            v-if="!isLoading"
+            :data="curActiveTabData"
+            :detail-data="componentDetail"
+          />
+        </section>
+      </bk-tab>
+    </div>
   </div>
 </template>
 

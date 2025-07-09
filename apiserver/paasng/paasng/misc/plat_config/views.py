@@ -50,6 +50,8 @@ class FrontendFeatureViewSet(ViewSet):
             "APP_ACCESS_TOKEN": settings.FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN,
             # 是否显示沙箱开发
             "DEV_SANDBOX": settings.FE_FEATURE_SETTINGS_DEV_SANDBOX,
+            # 是否展示应用可用性保障
+            "APP_AVAILABILITY_LEVEL": settings.FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL,
         }
         # 部分前端的特性复用了后端的配置
         features_reuses_backend_settings = {

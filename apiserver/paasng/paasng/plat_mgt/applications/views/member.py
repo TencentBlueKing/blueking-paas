@@ -16,6 +16,8 @@
 # to the current version of the project delivered to anyone in the future.
 
 
+from collections import defaultdict
+
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -29,6 +31,7 @@ from paasng.infras.iam.helpers import (
     add_role_members,
     fetch_application_members,
     fetch_role_members,
+    fetch_user_main_role,
     remove_user_all_roles,
 )
 from paasng.plat_mgt.applications import serializers as slzs
@@ -66,14 +69,17 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         """添加成员"""
 
         application = get_object_or_404(Application, code=app_code)
-        slz = slzs.ApplicationMembershipCreateInputSLZ(data=request.data)
+        slz = slzs.ApplicationMembershipCreateInputSLZ(data=request.data, many=True)
         slz.is_valid(raise_exception=True)
 
-        users = slz.validated_data["users"]
-        role = slz.validated_data["role"]
+        role_members_map = defaultdict(list)
+        for info in slz.data:
+            for role in info["roles"]:
+                role_members_map[role["id"]].append(info["user"]["username"])
 
         try:
-            add_role_members(application.code, role, users)
+            for role, members in role_members_map.items():
+                add_role_members(application.code, role, members)
         except BKIAMGatewayServiceError as e:
             raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
 
@@ -84,7 +90,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications.members"],
         request_body=slzs.ApplicationMembershipUpdateInputSLZ(),
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def update(self, request, app_code, user_id):
         """更新成员"""
@@ -92,23 +98,30 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         slz = slzs.ApplicationMembershipUpdateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
-        role = slz.validated_data["role"]
+        target_role = ApplicationRole(slz.data["role"]["id"])
         username = get_username_by_bkpaas_user_id(user_id)
-        self.check_admin_count(application.code, username)
 
-        try:
-            remove_user_all_roles(application.code, username)
-            add_role_members(application.code, role, username)
-        except BKIAMGatewayServiceError as e:
-            raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
+        # 获取用户当前角色
+        current_role = fetch_user_main_role(application.code, username)
 
-        sync_developers_to_sentry.delay(application.id)
-        application_member_updated.send(sender=application, application=application)
+        # 只有当角色发生变化的时候才进行检查和更新
+        if current_role != target_role:
+            self.check_admin_count(application.code, username)
+
+            try:
+                remove_user_all_roles(application.code, username)
+                add_role_members(application.code, target_role, username)
+            except BKIAMGatewayServiceError as e:
+                raise error_codes.UPDATE_APP_MEMBERS_ERROR.f(e.message)
+
+            sync_developers_to_sentry.delay(application.id)
+            application_member_updated.send(sender=application, application=application)
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
         tags=["plat_mgt.applications.members"],
-        responses={status.HTTP_204_NO_CONTENT: None},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, app_code, user_id):
         """删除成员"""

@@ -1,7 +1,7 @@
 <template>
   <div class="basic-config-container">
     <cloud-app-top-bar
-      :title="$t('应用配置')"
+      :title="$t('应用设置')"
       :active="active"
       :nav-list="panels"
       :module-id="curModuleId"
@@ -39,11 +39,11 @@ export default {
     },
     panels() {
       let panels = [
+        { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
+        { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
         { name: 'market', label: this.$t('应用市场'), routeName: 'appMarket' },
         { name: 'storage', label: this.$t('持久存储'), routeName: 'appPersistentStorage' },
         { name: 'appMobileMarket', label: this.$t('应用市场 (移动端)'), routeName: 'appMobileMarket' },
-        { name: 'member', label: this.$t('成员管理'), routeName: 'appMembers' },
-        { name: 'info', label: this.$t('基本信息'), routeName: 'appBasicInfo' },
         { name: 'doc', label: this.$t('文档管理'), routeName: 'docuManagement' },
       ];
       // tencent、云原生、为开启引擎应用不展示应用市场 (移动端)

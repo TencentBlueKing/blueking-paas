@@ -17,7 +17,7 @@
 
 from django.urls import path
 
-from paas_wl.apis.admin.views import certs, clusters, domain, logs, processes
+from paas_wl.apis.admin.views import certs, domain, logs, processes
 
 urlpatterns = [
     # 平台管理-应用资源方案-API
@@ -77,26 +77,5 @@ urlpatterns = [
         "wl_api/applications/<str:code>/log_config/",
         logs.AppLogConfigViewSet.as_view({"get": "list", "post": "toggle"}),
         name="wl_api.application.log_config",
-    ),
-    # 平台管理-集群管理API
-    path(
-        "wl_api/platform/clusters/",
-        clusters.ClusterViewSet.as_view({"get": "list"}),
-        name="wl_api.clusters",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:cluster_name>/operator_info/",
-        clusters.ClusterComponentViewSet.as_view({"get": "get_operator_info"}),
-        name="wl_api.cluster.operator_info",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:cluster_name>/components/",
-        clusters.ClusterComponentViewSet.as_view({"get": "list_components"}),
-        name="wl_api.cluster.components",
-    ),
-    path(
-        "wl_api/platform/clusters/<str:cluster_name>/components/<str:component_name>/",
-        clusters.ClusterComponentViewSet.as_view({"get": "get_component_status"}),
-        name="wl_api.cluster.component_by_name",
     ),
 ]

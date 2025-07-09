@@ -19,11 +19,13 @@ import logging
 from contextlib import suppress
 from urllib.parse import quote
 
+import requests
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
+from moby_distribution.registry.exceptions import AuthFailed, PermissionDeny, ResourceNotFound
 from moby_distribution.registry.utils import parse_image
 from rest_framework import status
 from rest_framework.pagination import LimitOffsetPagination
@@ -58,7 +60,7 @@ from paas_wl.utils.error_codes import error_codes
 from paas_wl.workloads.images.models import AppUserCredential
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.models import BuildConfig
@@ -116,7 +118,7 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
             # bkrepo 的 docker 仓库，镜像凭证没有填写正确时，.touch() 时会抛出异常
             if registry_service.touch():
                 return
-            raise error_codes.INVALID_CREDENTIALS.f(_("权限不足或仓库不可达"))
+            raise error_codes.LIST_TAGS_FAILED.f(_("权限不足或仓库不可达"))
 
     @swagger_auto_schema(response_serializer=AlternativeVersionSLZ(many=True))
     def list_tags(self, request, code, module_name):
@@ -148,6 +150,14 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
 
         try:
             alternative_versions = AlternativeVersionSLZ(registry_service.list_alternative_versions(), many=True).data
+        except ResourceNotFound:
+            raise error_codes.LIST_TAGS_FAILED.f(_("镜像仓库不存在，请检查仓库地址是否正确"), replace=True)
+        except PermissionDeny:
+            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库权限不足, 请检查是否配置镜像凭证"), replace=True)
+        except AuthFailed:
+            raise error_codes.INVALID_CREDENTIALS.f(_("镜像仓库凭证错误, 请检查镜像凭证配置是否正确"), replace=True)
+        except requests.exceptions.Timeout:
+            raise error_codes.LIST_TAGS_FAILED.f(_("镜像仓库请求超时, 请检查网络连接"), replace=True)
         except Exception:
             if endpoint == "mirrors.tencent.com":
                 # 镜像源迁移期间不能保证 registry 所有接口可用, 迁移期间增量镜像仓库无法查询 tag
@@ -163,7 +173,7 @@ class ImageRepositoryView(GenericViewSet, ApplicationCodeInPathMixin):
                     }
                 )
             logger.exception("unable to fetch repo info, may be the credential error or a network exception.")
-            raise error_codes.LIST_TAGS_FAILED.f(_("%s的仓库信息查询异常") % code)
+            raise error_codes.LIST_TAGS_FAILED.f(_("拉取镜像 Tag 失败"), replace=True)
         return Response(data=alternative_versions)
 
 
@@ -252,7 +262,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.VOLUME_MOUNT,
             attribute=mount_instance.name,
             module_name=module_name,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
+            data_after=DataDetail(data=data_after),
         )
         return Response(data=slz.data, status=status.HTTP_201_CREATED)
 
@@ -307,8 +317,8 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.VOLUME_MOUNT,
             attribute=mount_instance.name,
             module_name=module_name,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data_after),
+            data_before=DataDetail(data=data_before),
+            data_after=DataDetail(data=data_after),
         )
         return Response(data=slz.data, status=status.HTTP_200_OK)
 
@@ -337,7 +347,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.VOLUME_MOUNT,
             attribute=mount_instance.name,
             module_name=module_name,
-            data_before=DataDetail(type=DataType.RAW_DATA, data=data_before),
+            data_before=DataDetail(data=data_before),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

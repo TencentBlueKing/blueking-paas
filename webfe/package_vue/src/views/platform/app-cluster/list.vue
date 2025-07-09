@@ -38,7 +38,6 @@
     </div>
     <ClusterDetails
       v-else
-      :active="curClusterDetailName"
       @toggle="handleToggleDetails"
       @get-status="getClusterListStatus"
     />
@@ -63,7 +62,6 @@ export default {
       ],
       buttonActive: 'cluster',
       searchValue: '',
-      curClusterDetailName: '',
     };
   },
   computed: {
@@ -85,8 +83,8 @@ export default {
       if (typeof data === 'boolean') {
         newQuery = { active: query.active };
       } else {
-        this.curClusterDetailName = data.name;
         newQuery.type = 'detail';
+        this.$store.commit('tenant/updateDetailActiveName', data.name);
       }
       this.$router.push({ path, query: newQuery });
     },
@@ -110,8 +108,17 @@ export default {
       if (Object.keys(this.clustersStatus)?.length > 0) {
         return;
       }
-      const statusPromises = clusters.map((cluster) => this.getClustersStatus(cluster.name));
-      Promise.all(statusPromises);
+      try {
+        await Promise.allSettled(
+          clusters.map((cluster) =>
+            this.getClustersStatus(cluster.name).catch(() => {
+              return null;
+            })
+          )
+        );
+      } catch (e) {
+        console.error(e);
+      }
     },
     // 获取集群状态
     async getClustersStatus(clusterName) {
@@ -139,6 +146,7 @@ export default {
             hasIcon: true,
           },
         });
+        throw e;
       }
     },
   },

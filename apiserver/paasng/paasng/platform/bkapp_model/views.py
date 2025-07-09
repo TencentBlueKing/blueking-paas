@@ -30,7 +30,7 @@ from paas_wl.bk_app.cnative.specs.models import update_app_resource
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget
+from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -154,7 +154,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     for environment_name in AppEnvName
                 },
                 "probes": spec.probes or {},
-                "services": spec.services,
+                "services": ([svc.render_port() for svc in spec.services] if spec.services else None),
             }
 
             if metric := proc_metric_map.get(spec.name):
@@ -162,7 +162,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
             proc_specs.append(data)
 
-        resp_data = {"metadata": {"allow_multiple_image": False}, "proc_specs": proc_specs}
+        resp_data = {"proc_specs": proc_specs}
         return Response(ModuleProcessSpecsOutputSLZ(resp_data).data)
 
     @swagger_auto_schema(request_body=ModuleProcessSpecsInputSLZ)
@@ -274,7 +274,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         svc_disc = SvcDiscConfig.objects.filter(application_id=application.id).first()
         data_before = None
         if svc_disc:
-            data_before = DataDetail(type=DataType.RAW_DATA, data=SvcDiscConfigSLZ(svc_disc).data)
+            data_before = DataDetail(data=SvcDiscConfigSLZ(svc_disc).data)
 
         slz = SvcDiscConfigSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -299,7 +299,7 @@ class SvcDiscConfigViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,
             target=OperationTarget.SERVICE_DISCOVERY,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+            data_after=DataDetail(data=data),
         )
         return Response(data, status=status.HTTP_200_OK)
 
@@ -334,7 +334,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
         domain_resolution = DomainResolution.objects.filter(application_id=application.id).first()
         data_before = None
         if domain_resolution:
-            data_before = DataDetail(type=DataType.RAW_DATA, data=DomainResolutionSLZ(domain_resolution).data)
+            data_before = DataDetail(data=DomainResolutionSLZ(domain_resolution).data)
 
         slz = DomainResolutionSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -364,7 +364,7 @@ class DomainResolutionViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixi
             operation=OperationEnum.CREATE if created else OperationEnum.MODIFY,
             target=OperationTarget.DOMAIN_RESOLUTION,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=data),
+            data_after=DataDetail(data=data),
         )
         return Response(data, status=status.HTTP_200_OK)
 

@@ -22,7 +22,7 @@
           <!-- 增强服务实例详情隐藏tab -->
           <bk-tab
             v-show="isTab"
-            ext-cls="deploy-tab-cls"
+            ext-cls="paas-custom-tab-card-grid"
             :active.sync="active"
             @tab-change="handleGoPage"
           >
@@ -36,7 +36,6 @@
                 {{ $t('去部署') }}
               </bk-button>
               <bk-popover
-                class="mr20"
                 theme="light"
                 ext-cls="more-operations"
                 placement="bottom"
@@ -55,10 +54,19 @@
               </bk-popover>
             </template>
             <bk-tab-panel
-              v-for="(panel, index) in panels"
+              v-for="panel in panels"
               v-bind="panel"
-              :key="index"
-            ></bk-tab-panel>
+              :key="`${panel.name}-${isGcsMysqlAlertIcon}`"
+            >
+              <div slot="label">
+                <i
+                  v-if="panel.name === 'appServices' && isGcsMysqlAlertIcon"
+                  class="mr5 paasng-icon paasng-remind"
+                  :key="curModuleId"
+                ></i>
+                <span>{{ panel.label }}</span>
+              </div>
+            </bk-tab-panel>
           </bk-tab>
 
           <div :class="['deploy-content', { 'details-router-cls': !isTab }]">
@@ -88,9 +96,11 @@
       :position="{ top: deployDialogConfig.top }"
       :show-footer="false"
     >
-      <deployYaml
+      <DeployYaml
+        :key="isYamlLoading"
         :height="deployDialogConfig.height"
         :cloud-app-data="dialogCloudAppData"
+        :loading="isYamlLoading"
       />
     </bk-dialog>
   </div>
@@ -99,14 +109,14 @@
 <script>
 import moduleTopBar from '@/components/paas-module-bar';
 import appBaseMixin from '@/mixins/app-base-mixin.js';
-import deployYaml from './deploy-yaml';
+import DeployYaml from './deploy-yaml';
 import { throttle } from 'lodash';
 import { traceIds } from '@/common/trace-ids';
 
 export default {
   components: {
     moduleTopBar,
-    deployYaml,
+    DeployYaml,
   },
   mixins: [appBaseMixin],
   data() {
@@ -134,17 +144,17 @@ export default {
       isTab: true,
       dialogCloudAppData: [],
       topBarIndex: 0,
+      isYamlLoading: false,
+      isGcsMysqlService: false,
     };
   },
   computed: {
     routeName() {
       return this.$route.name;
     },
-
     userFeature() {
       return this.$store.state.userFeature;
     },
-
     loaderPlaceholder() {
       if (this.routeName === 'appDeployForStag' || this.routeName === 'appDeployForProd') {
         return 'deploy-loading';
@@ -154,47 +164,52 @@ export default {
       }
       return 'deploy-top-loading';
     },
-
     routerRefs() {
       const curPenel = this.panels.find((e) => e.name === this.active);
       return curPenel ? curPenel.ref : 'process';
     },
-
     curAppModuleList() {
       // 根据name的英文字母排序
       return (this.$store.state.curAppModuleList || []).sort((a, b) => a.name.localeCompare(b.name));
     },
-
     isPageEdit() {
       return this.$store.state.cloudApi.isPageEdit;
     },
-
     firstTabActiveName() {
       return this.panels[0].name;
     },
-
     // 是否需要保存操作按钮
     isFooterActionBtn() {
       // 无需展示外部操作按钮组
       const hideTabItems = ['cloudAppDeployForProcess', 'cloudAppDeployForHook', 'cloudAppDeployForEnv'];
       return !hideTabItems.includes(this.active);
     },
-
     categoryText() {
       return this.isCloudNativeApp ? '云原生应用' : '普通应用';
+    },
+    // 是否显示高级别提示icon
+    isGcsMysqlAlertIcon() {
+      return (
+        this.isGcsMysqlService &&
+        this.userFeature.APP_AVAILABILITY_LEVEL &&
+        this.curAppInfo.application?.extra_info?.availability_level === 'premium'
+      );
     },
   },
   watch: {
     $route(newRoute) {
-      if (this.active !== newRoute.name) {
+      if (this.active !== newRoute.name || newRoute.name === 'appServices') {
         this.handleGoPage(newRoute.name);
+        this.isTab = newRoute.name === 'appServices'; // 显示tab
       }
-      // eslint-disable-next-line no-plusplus
-      this.renderIndex++;
+      this.renderIndex += 1;
       this.$store.commit('cloudApi/updatePageEdit', false);
     },
     appCode() {
       this.topBarIndex += 1;
+    },
+    curModuleId() {
+      this.getServicesList();
     },
   },
   created() {
@@ -208,6 +223,7 @@ export default {
     }
   },
   mounted() {
+    this.getServicesList();
     this.handleWindowResize();
     this.handleResizeFun();
   },
@@ -232,6 +248,7 @@ export default {
 
     // 查看yaml
     async handleYamlView() {
+      this.isYamlLoading = true;
       try {
         const res = await this.$store.dispatch('deploy/getAppYamlManiFests', {
           appCode: this.appCode,
@@ -245,7 +262,7 @@ export default {
           message: e.detail || e.message,
         });
       } finally {
-        this.isLoading = false;
+        this.isYamlLoading = false;
       }
     },
 
@@ -288,6 +305,29 @@ export default {
           filterModule: this.curModuleId,
         },
       });
+    },
+
+    // 获取当前模块服务列表
+    async getServicesList() {
+      try {
+        const response = await this.$store.dispatch('service/getServicesList', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+        });
+
+        const RISK_SERVER = 'gcs_mysql';
+        const { bound = [], shared = [], unbound = [] } = response;
+
+        // 检查是否存在 RISK_SERVER
+        const containsRiskServer = (list, key = 'service') =>
+          list.some((item) => (key === 'service' ? item?.service?.name : item.name) === RISK_SERVER);
+
+        // 包含 gcs_mysql 服务，添加风险icon提示
+        this.isGcsMysqlService =
+          containsRiskServer(bound) || containsRiskServer(shared) || containsRiskServer(unbound, 'unbound');
+      } catch (error) {
+        this.isGcsMysqlService = false;
+      }
     },
   },
 };
@@ -347,16 +387,33 @@ export default {
   }
 }
 
-.deploy-tab-cls {
-  /deep/ .bk-tab-section {
-    padding: 10px !important;
+.deploy-content {
+  flex: 1;
+  min-height: 0;
+  margin-top: 16px;
+  box-shadow: 0 2px 4px 0 #1919290d;
+}
+
+.paas-custom-tab-card-grid {
+  /deep/ .bk-tab-header {
+    background-color: #f5f7fa;
     border: none;
+    .bk-tab-header-setting {
+      height: 42px !important;
+      line-height: 42px !important;
+    }
+  }
+  /deep/ .bk-tab-section {
+    display: none;
+  }
+  i.paasng-remind {
+    color: #ea3636;
   }
 }
 
 .deploy-panel.deploy-main {
-  box-shadow: 0 2px 4px 0 #1919290d;
-
+  display: flex;
+  flex-direction: column;
   &.instance-details-cls {
     // 高度问题·
     height: 100%;
@@ -364,6 +421,7 @@ export default {
     background: #f5f7fa;
 
     .details-router-cls {
+      margin-top: 0;
       height: 100%;
     }
   }

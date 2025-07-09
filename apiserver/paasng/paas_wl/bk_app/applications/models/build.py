@@ -37,7 +37,7 @@ from paas_wl.bk_app.applications.models.misc import OutputStream
 from paas_wl.infras.cluster.utils import get_image_registry_by_app
 from paas_wl.utils.blobstore import make_blob_store
 from paas_wl.utils.constants import BuildStatus
-from paas_wl.utils.models import UuidAuditedModel, make_json_field, validate_procfile
+from paas_wl.utils.models import UuidAuditedModel, make_json_field
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.sourcectl.models import VersionInfo
@@ -74,9 +74,6 @@ class Build(UuidAuditedModel):
     branch = models.CharField(max_length=128, null=True, help_text="readable version, such as trunk/master")
     revision = models.CharField(max_length=128, null=True, help_text="unique version, such as sha256")
 
-    # Metadata
-    # deprecated: `procfile` will be remove in next version, just use Release.procfile
-    procfile = JSONField(default={}, blank=True, validators=[validate_procfile])
     env_variables = JSONField(default=dict, blank=True)
     bkapp_revision_id = models.IntegerField(help_text="与本次构建关联的 BkApp Revision id", null=True)
 

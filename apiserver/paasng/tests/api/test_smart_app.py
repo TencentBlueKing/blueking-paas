@@ -26,6 +26,7 @@ from unittest import mock
 import pytest
 import yaml
 from django.conf import settings
+from django.urls import reverse
 
 from paasng.accessories.publish.market.models import MarketConfig, Tag
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
@@ -168,6 +169,22 @@ class TestUpdateSMartApp:
             )
 
             assert response.status_code == 201
+
+
+class TestSmartBuilder:
+    def test_upload_package(self, api_client, tmp_path, random_name):
+        app_code = f"demo-{random_name}"
+
+        def _desc_updater(desc):
+            desc["app"]["bkAppCode"] = app_code
+            desc["app"]["bkAppName"] = app_code
+            return desc
+
+        tarball_path = make_smart_tarball(tmp_path, _desc_updater, version="v3")
+        with open(tarball_path, "rb") as file:
+            response = api_client.post(reverse("api.tools.s-mart.upload"), format="multipart", data={"package": file})
+
+        assert response.status_code == 200
 
 
 def make_smart_tarball(tmp_path: Path, desc_updater: Callable, version: str = "") -> Path:

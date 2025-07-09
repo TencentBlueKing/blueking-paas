@@ -38,6 +38,8 @@ class PortMap:
 
     http: int = 80
     https: int = 443
+    grpc: int = settings.GRPC_PORT
+    grpcs: int = settings.GRPC_PORT
 
     def get_port_num(self, protocol: str) -> int:
         """Return port number by protocol"""
@@ -91,25 +93,13 @@ class IngressConfig:
                 return d
         return None
 
-    def find_subdomain_domain(self, host: str) -> Optional[Domain]:
-        """Find domain object in configured sub-domains by given host.
+    def get_domain_names(self) -> List[str]:
+        """Get all domain names configured in this IngressConfig, including both "sub-domain"
+        and "sub-path" domains.
 
-        :param host: Any valid host name
+        :return: A list of domain names
         """
-        for d in self.app_root_domains:
-            if d.name == host:
-                return d
-        return None
-
-    def find_subpath_domain(self, host: str) -> Optional[Domain]:
-        """Find domain object in configured sub-path domains by given host.
-
-        :param host: Any valid host name
-        """
-        for d in self.sub_path_domains:
-            if d.name == host:
-                return d
-        return None
+        return [d.name for d in self.app_root_domains] + [d.name for d in self.sub_path_domains]
 
     @property
     def default_root_domain(self) -> Domain:

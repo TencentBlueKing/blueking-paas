@@ -42,10 +42,11 @@ from paasng.infras.accounts.permissions.application import (
 )
 from paasng.infras.accounts.permissions.user import user_can_operate_in_region
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
+from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
+from paasng.platform.applications.serializers.creation import SourceInitResultSLZ
 from paasng.platform.applications.signals import application_default_module_switch
 from paasng.platform.applications.specs import AppSpecs
 from paasng.platform.bk_lesscode.client import make_bk_lesscode_client
@@ -64,7 +65,7 @@ from paasng.platform.modules.helpers import (
     get_image_labels_by_module,
     update_build_config_with_method,
 )
-from paasng.platform.modules.manager import ModuleCleaner, init_module_in_view
+from paasng.platform.modules.manager import ModuleCleaner, create_new_repo, delete_repo_on_error, init_module_in_view
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
@@ -84,6 +85,7 @@ from paasng.platform.modules.serializers import (
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
+from paasng.platform.templates.serializers import TemplateRenderOutputSLZ
 from paasng.utils.api_docs import openapi_empty_response
 from paasng.utils.error_codes import error_codes
 
@@ -152,7 +154,10 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
 
         return Response(
-            data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},
+            data={
+                "module": ModuleSLZ(module).data,
+                "source_init_result": SourceInitResultSLZ(ret.source_init_result).data,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -305,19 +310,32 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             tenant_id=application.tenant_id,
         )
 
-        ret = init_module_in_view(
-            module,
-            repo_type=source_config.get("source_control_type"),
-            repo_url=source_config.get("source_repo_url"),
-            repo_auth_info=source_config.get("source_repo_auth_info"),
-            source_dir=source_config.get("source_dir", ""),
-            # 新模块集群配置复用默认模块的
-            env_cluster_names=get_app_cluster_names(application),
-            bkapp_spec=data["bkapp_spec"],
-        )
+        repo_type = source_config.get("source_control_type")
+        repo_url = source_config.get("source_repo_url")
+        # 由平台创建代码仓库
+        auto_repo_url = None
+        if source_config.get("auto_create_repo"):
+            auto_repo_url = create_new_repo(module, repo_type, username=request.user.username)
+            repo_url = auto_repo_url
+
+        with delete_repo_on_error(repo_type, auto_repo_url):
+            ret = init_module_in_view(
+                module,
+                repo_type=repo_type,
+                repo_url=repo_url,
+                repo_auth_info=source_config.get("source_repo_auth_info"),
+                source_dir=source_config.get("source_dir", ""),
+                # 新模块集群配置复用默认模块的
+                env_cluster_names=get_app_cluster_names(application),
+                bkapp_spec=data["bkapp_spec"],
+                write_template_to_repo=source_config.get("write_template_to_repo"),
+            )
 
         return Response(
-            data={"module": ModuleSLZ(module).data, "source_init_result": ret.source_init_result},
+            data={
+                "module": ModuleSLZ(module).data,
+                "source_init_result": SourceInitResultSLZ(ret.source_init_result).data,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -499,7 +517,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         module = self.get_module_via_path()
         build_config = BuildConfig.objects.get_or_create_by_module(module)
-        data_before = DataDetail(type=DataType.RAW_DATA, data=self._gen_build_config_data(module, build_config))
+        data_before = DataDetail(data=self._gen_build_config_data(module, build_config))
 
         build_method = data["build_method"]
 
@@ -527,7 +545,7 @@ class ModuleBuildConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.BUILD_CONFIG,
             module_name=module_name,
             data_before=data_before,
-            data_after=DataDetail(type=DataType.RAW_DATA, data=slz.data),
+            data_after=DataDetail(data=slz.data),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -640,3 +658,17 @@ class ModuleDeployConfigViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 }
             ).data
         )
+
+
+class ModuleTemplateViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.VIEW_BASIC_INFO)]
+
+    @swagger_auto_schema(response_serializer=TemplateRenderOutputSLZ)
+    def retrieve(self, request, code, module_name):
+        """获取当前模块的初始化模板信息"""
+        module = self.get_module_via_path()
+
+        # 可能存在远古模版，并不在当前模版配置中
+        template = get_object_or_404(Template, name=module.source_init_template)
+
+        return Response(TemplateRenderOutputSLZ(template).data)

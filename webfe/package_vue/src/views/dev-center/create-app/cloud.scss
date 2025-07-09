@@ -71,7 +71,6 @@
   .languages-card {
     background: #fafbfd;
     border-radius: 2px;
-    width: 940px;
     padding: 20px 20px 0 20px;
     margin: 20px 0 0 100px;
     .languages-name {
@@ -170,6 +169,9 @@
   transform: translateX(-19px);
   /deep/ .bk-label {
     width: 119px !important;
+  }
+  /deep/ .form-error-tip {
+    transform: translateX(19px);
   }
 }
 

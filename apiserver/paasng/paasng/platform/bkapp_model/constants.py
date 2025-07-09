@@ -27,6 +27,7 @@ class ExposedTypeName(StrStructuredEnum):
     """
 
     BK_HTTP = "bk/http"
+    BK_GRPC = "bk/grpc"
 
 
 class NetworkProtocol(StrStructuredEnum):

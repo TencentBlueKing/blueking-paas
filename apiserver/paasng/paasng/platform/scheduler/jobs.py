@@ -23,7 +23,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.timezone import now
 
-from paasng.accessories.servicehub.binding_policy.manager import ServiceBindingPolicyManager
+from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
 from paasng.accessories.servicehub.manager import get_db_properties, mixed_service_mgr
 from paasng.accessories.servicehub.models import (
     DefaultPolicyCreationRecord,
@@ -120,7 +120,7 @@ def _handel_single_service_default_policy(service, default_tenant_id):
                 logger.warning("No plans available for service(%s) under tenant(%s)", service.name, default_tenant_id)
                 return
 
-            ServiceBindingPolicyManager(service, default_tenant_id).set_static(plans)
+            SvcBindingPolicyManager(service, default_tenant_id).set_uniform(plans=[p.uuid for p in plans])
             # 添加初始化记录，避免重复初始化
             DefaultPolicyCreationRecord.objects.get_or_create(
                 service_id=service.uuid,

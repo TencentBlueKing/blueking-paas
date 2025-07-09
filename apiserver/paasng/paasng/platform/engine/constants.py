@@ -27,13 +27,6 @@ DOCKER_BUILD_STEPSET_NAME = "docker-build"
 IMAGE_RELEASE_STEPSET_NAME = "image-release"
 
 
-class ClusterType(StrStructuredEnum):
-    """集群类别"""
-
-    NORMAL = EnumField("normal", label=_("普通集群"))
-    VIRTUAL = EnumField("virtual", label=_("虚拟集群"))
-
-
 class AppEnvName(StrStructuredEnum):
     """The default environment names"""
 
@@ -87,8 +80,8 @@ class OperationTypes(ChoicesEnum):
     ONLINE = "online"
 
     _choices_labels = (
-        (OFFLINE, "OFFLINE"),
-        (ONLINE, "ONLINE"),
+        (OFFLINE, "下架"),
+        (ONLINE, "部署"),
     )
 
 
@@ -128,9 +121,10 @@ class DeployConditions(ChoicesEnum):
     NEED_TO_COMPLETE_PROCFILE = "NEED_TO_COMPLETE_PROCFILE"
     CHECK_CI_GIT_TOKEN = "CHECK_CI_GIT_TOKEN"
     FILL_PLUGIN_TAG_INFO = "FILL_PLUGIN_TAG_INFO"
+    FILL_EXTRA_INFO = "FILL_EXTRA_INFO"
 
     _choices_labels = (
-        (FILL_PRODUCT_INFO, _("未完善应用基本信息")),
+        (FILL_PRODUCT_INFO, _("未完善应用市场信息")),
         (CHECK_ENV_PROTECTION, _("当前用户无部署该环境的权限")),
         (NEED_TO_BIND_OAUTH_INFO, _("当前用户尚未绑定 OAUTH 授权信息")),
         (DONT_HAVE_ENOUGH_PERMISSIONS, _("当前用户没有访问源码仓库的权限")),
@@ -138,6 +132,7 @@ class DeployConditions(ChoicesEnum):
         (NEED_TO_COMPLETE_PROCFILE, _("未完善进程启动命令")),
         (CHECK_CI_GIT_TOKEN, _("当前用户未授权 CI 组件访问仓库的权限")),
         (FILL_PLUGIN_TAG_INFO, _("未设置插件分类")),
+        (FILL_EXTRA_INFO, _("未完善应用基本信息")),
     )
 
 

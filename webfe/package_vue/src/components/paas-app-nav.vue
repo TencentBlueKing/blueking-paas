@@ -115,6 +115,7 @@ export default {
         ],
 
         operator: [
+          'appSummary', // 概览
           'appEngineOperator', // 运营者应用引擎
           'appPermissions', // 权限管理
           'appMarketing', // 市场推广
@@ -190,13 +191,13 @@ export default {
         // 添加代码检查
         this.simpleAddNavItem(navTree, 'appEngine', 'codeReview', this.$t('代码检查'));
 
-        // 如果不开启引擎，仅仅显示应用推广和基本信息以及数据统计
+        // 如果不开启引擎，仅仅显示部分功能
         if (!this.curAppInfo.web_config.engine_enabled) {
           navTree = navTree.filter((nav) => {
             if (nav.name === 'appMarketing') {
               nav.children = [...nav.children.filter((sub) => sub.destRoute.name !== 'appMobileMarket')];
             }
-            return ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI'].includes(nav.name);
+            return ['appSummary', 'appConfigs', 'appAnalysis', 'appCloudAPI', 'operationRecord'].includes(nav.name);
           });
         }
 
@@ -446,14 +447,16 @@ export default {
 
     simpleAddNavItem(navTree, categoryName, destRouter, name) {
       const category = navTree.find((item) => item.name === categoryName);
-      category.children.push({
-        categoryName,
-        name,
-        matchRouters: [destRouter],
-        destRoute: {
-          name: destRouter,
-        },
-      });
+      if (category) {
+        category.children.push({
+          categoryName,
+          name,
+          matchRouters: [destRouter],
+          destRoute: {
+            name: destRouter,
+          },
+        });
+      }
 
       return navTree;
     },

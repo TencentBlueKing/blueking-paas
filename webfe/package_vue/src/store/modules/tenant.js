@@ -27,6 +27,8 @@ export default {
     availableClusters: {},
     curTenantData: {},
     clustersStatus: {},
+    detailActiveName: '',
+    detailTabActive: '',
   },
   mutations: {
     updateAvailableClusters(state, data) {
@@ -41,8 +43,27 @@ export default {
         [clusterName]: status,
       };
     },
+    updateDetailActiveName(state, data) {
+      state.detailActiveName = data;
+    },
+    updatedDtailTabActive(state, data) {
+      state.detailTabActive = data;
+    }
   },
   actions: {
+    /**
+     * 多租户语言环境切换
+     */
+    tenantLocaleSwitch({}, { tenantId, data }) {
+      const config = {
+        headers: {
+          'X-Bk-Tenant-Id': tenantId,
+        }
+      };
+      const apiUrl = window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web');
+      const url = `${apiUrl}/prod/api/v3/open-web/tenant/current-user/language/`;
+      return http.put(url, data, config);
+    },
     /**
      * 获取租户下的人员信息
      */
@@ -122,9 +143,13 @@ export default {
     /**
      * 获取集群状态
      */
-    getClustersStatus({}, { clusterName }) {
+    getClustersStatus({ state }, { clusterName }) {
+      // 检查缓存
+      if (state.clustersStatusCache?.[clusterName]) {
+        return Promise.resolve(state.clustersStatusCache[clusterName]);
+      }
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/status/`;
-      return http.get(url);
+      return http.get(url, {}, { cancelWhenRouteChange: true, fromCache: true });
     },
     /**
      * 同步节点
@@ -132,6 +157,20 @@ export default {
     syncNodes({}, { clusterName }) {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/operations/sync_nodes/`;
       return http.post(url);
+    },
+    /**
+     * 获取节点信息
+     */
+    getNodesState({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/nodes_state/`;
+      return http.get(url);
+    },
+    /**
+     * 获取节点同步记录
+     */
+    getNodesSyncRecords({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/nodes_sync_records/`;
+      return http.get(url);
     },
     /**
      * 删除集群
@@ -215,6 +254,13 @@ export default {
      */
     getClusterFeatureFlags({}) {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_feature_flags/`;
+      return http.get(url);
+    },
+    /**
+     * 获取集群默认配置
+     */
+    getClusterDefaultConfigs({}) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/cluster_default_configs/`;
       return http.get(url);
     },
     /**

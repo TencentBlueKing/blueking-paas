@@ -619,3 +619,19 @@ export function buildPath(data) {
   // 返回由斜杠分隔的路径
   return path.join('/');
 }
+
+/**
+ * 组织架构选择器，数据结构特殊处理
+ * @param {Array} data - 原始数据
+ * @param {Object} [options={}] - 配置项
+ * @param {string} [options.nonUserType='department'] - 非用户类型的标识
+ * @returns {Array} 标准化后的数据
+ */
+export function normalizeOrgSelectionData(data, options = {}) {
+  const { nonUserType = 'department' } = options;
+  return data.map(item => ({
+    id: item.id,
+    type: item.type === 'user' ? 'user' : nonUserType,
+    name: item.name,
+  }));
+}

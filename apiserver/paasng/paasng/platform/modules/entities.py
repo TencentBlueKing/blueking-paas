@@ -15,9 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from attrs import define
+from attrs import define, field
 
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
@@ -35,12 +35,38 @@ class BuildConfig:
     build_method: RuntimeType
     tag_options: ImageTagOptions
 
-    image_repository: Optional[str] = None
-    image_credential: Optional[Dict] = None
+    image_repository: str | None = None
+    image_credential: Dict | None = None
 
-    dockerfile_path: Optional[str] = None
-    docker_build_args: Optional[Dict] = None
+    dockerfile_path: str | None = None
+    docker_build_args: Dict | None = None
 
-    buildpacks: Optional[List[AppBuildPack]] = None
-    buildpack_builder: Optional[AppSlugBuilder] = None
-    buildpack_runner: Optional[AppSlugRunner] = None
+    buildpacks: List[AppBuildPack] | None = None
+    buildpack_builder: AppSlugBuilder | None = None
+    buildpack_runner: AppSlugRunner | None = None
+
+
+@define(frozen=True)
+class VcsInitResult:
+    """代码初始化结果
+
+    :param code: 状态码，"OK" 表示成功，其他表示错误码
+    :param extra_info: 额外信息，包含下载地址等
+    :param dest_type: 目标存储类型（如: s3/bkrepo)
+    :param error: 错误信息，成功时为空字符串
+    """
+
+    code: str
+    extra_info: dict = field(factory=dict)
+    dest_type: str = "null"
+    error: str = ""
+
+    def is_success(self) -> bool:
+        return self.code == "OK"
+
+
+@define
+class ModuleInitResult:
+    """模块初始化结果数据类"""
+
+    source_init_result: VcsInitResult = field(factory=lambda: VcsInitResult(code="OK"))

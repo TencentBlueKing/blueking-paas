@@ -12,7 +12,17 @@
         :title="title"
         :tab-panels="panels"
         @tab-change="handleTabChange"
-      ></TopBar>
+      >
+        <template
+          v-if="isSubTitle"
+          slot="extra"
+        >
+          <span class="sub-title">
+            <span class="line"></span>
+            <span>{{ $route.meta.subTitle }}：{{ $route.query?.id }}</span>
+          </span>
+        </template>
+      </TopBar>
       <div class="content-area">
         <router-view
           :tab-active="active"
@@ -40,18 +50,30 @@ export default {
       minHeight: 700,
       navCategories: [],
       navItems: [],
-      groups: [{ platform: this.$t('服务接入') }, { user: this.$t('用户管理') }],
+      groups: [
+        { platform: this.$t('服务接入') },
+        { operations: this.$t('运营管理') },
+        { config: this.$t('配置管理') },
+        { user: this.$t('用户管理') },
+      ],
       active: '',
       routeIndex: 0,
     };
   },
   computed: {
     title() {
-      const { name, path } = this.$route;
+      const { name, path, params } = this.$route;
       if (name === 'clusterCreateEdit') {
         return path.endsWith('/add') ? this.$t('添加集群') : this.$t('编辑集群');
       }
+      if (name === 'platformAppDetails') {
+        return `${this.$t('应用详情')}: ${params.code}`;
+      }
       return this.$route.meta.title;
+    },
+    isSubTitle() {
+      const { name, path, meta } = this.$route;
+      return meta?.subTitle && name === 'clusterCreateEdit' && path.endsWith('/edit');
     },
     panels() {
       return this.$route.meta?.panels || [];
@@ -66,6 +88,11 @@ export default {
   watch: {
     $route() {
       this.routeIndex += 1;
+    },
+    panels(newValue) {
+      if (newValue?.length) {
+        this.setDefaultTabActive();
+      }
     },
   },
   created() {
@@ -108,7 +135,7 @@ export default {
       } else {
         newQuery = {
           ...(active === 'list' && query),
-          active,
+          ...(active && { active }),
         };
       }
       this.$router.push({
@@ -135,7 +162,6 @@ export default {
     z-index: 999;
   }
   .right-content {
-    overflow: auto;
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -145,6 +171,20 @@ export default {
     .content-area {
       flex: 1;
       min-height: 0;
+      overflow: auto;
+    }
+    .sub-title {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      color: #979ba5;
+      .line {
+        display: inline-block;
+        width: 1px;
+        height: 14px;
+        background-color: #dcdee5;
+        margin: 0 8px;
+      }
     }
   }
 }
@@ -183,6 +223,17 @@ export default {
   .border-tag {
     background: #fafbfd;
     border: 1px solid #dcdee5;
+  }
+}
+.paas-vue-json-pretty-cls {
+  .vjs-key {
+    color: #9d694c;
+  }
+  .vjs-value-number {
+    color: #098658;
+  }
+  .vjs-value-string {
+    color: #1f6d89;
   }
 }
 </style>

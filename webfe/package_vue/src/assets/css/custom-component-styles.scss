@@ -18,6 +18,9 @@
         &.active {
           background: #fff;
         }
+        &.is-first {
+          border-left: none !important;
+        }
       }
     }
   }

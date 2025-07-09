@@ -22,6 +22,7 @@ from rest_framework.views import APIView
 
 from paasng.accessories.publish.sync_market.managers import AppUseRecordManger
 from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.models import Application
@@ -46,7 +47,11 @@ class StatisticsPVAPIView(APIView):
         if not has_console_db:
             return Response({"data": []})
 
-        application_codes = list(Application.objects.filter_by_user(request.user).values_list("code", flat=True))
+        application_codes = list(
+            Application.objects.filter_by_user(request.user, get_tenant(request.user).id).values_list(
+                "code", flat=True
+            )
+        )
         session = console_db.get_scoped_session()
         data = AppUseRecordManger(session).get_app_records(application_codes, form["days_before"], form["limit"])
         return Response({"data": data})

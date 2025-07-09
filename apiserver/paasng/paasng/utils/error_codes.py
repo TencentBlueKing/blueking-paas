@@ -40,6 +40,7 @@ class ErrorCodes:
     NOTIFICATION_DISABLED = ErrorCode(_("暂不支持发送通知"))
     # 人员管理
     MEMBERSHIP_DELETE_FAILED = ErrorCode(_("应用应该至少拥有一个管理员"))
+    MEMBERSHIP_CREATE_FAILED = ErrorCode(_("成员创建失败"))
     MEMBERSHIP_OWNER_FAILED = ErrorCode(_("应用所有者不能执行该操作"))
     # 云 API 管理
     QUERY_API_LIST_FAILED = ErrorCode(_("查询API列表失败"))
@@ -49,6 +50,7 @@ class ErrorCodes:
     CANNOT_INIT_APP_TEMPLATE = ErrorCode(_("初始化应用源码模板失败"))
     CANNOT_DELETE_APP = ErrorCode(_("应用删除失败"))
     APP_RES_PROTECTED = ErrorCode(_("访问受保护资源失败"))
+    CANNOT_HARD_DELETE_APP = ErrorCode(_("无法彻底删除应用"))
     # 模块
     CANNOT_CREATE_MODULE = ErrorCode(_("模块创建失败"))
     CANNOT_SET_DEFAULT = ErrorCode(_("设置默认访问模块失败"))
@@ -93,6 +95,7 @@ class ErrorCodes:
     MISSING_VERSION_INFO = ErrorCode(_("缺失版本信息"), code_num=4312010)
     OBJECT_STORE_EXCEPTION = ErrorCode(_("对象存储服务异常"), code_num=4312011)
     CANNOT_COMMIT_TO_REPOSITORY = ErrorCode(_("代码提交失败"), code_num=4312012)
+    CANNOT_CREATE_CODEBASE_CONFIG = ErrorCode(_("创建代码库配置失败"))
     # 部署配置
     BIND_RUNTIME_FAILED = ErrorCode(_("绑定运行时失败"), code_num=4313001)
     # 日志
@@ -163,6 +166,7 @@ class ErrorCodes:
     # 应用模板相关
     NORMAL_TMPL_NOT_FOUND = ErrorCode(_("指定的应用模板不存在或不可用"))
     UNKNOWN_TEMPLATE = ErrorCode(_("无效的应用模板"))
+    CANNOT_CREATE_TMPL = ErrorCode(_("创建应用模板失败"))
 
     # lesscode app 相关
     CREATE_LESSCODE_APP_ERROR = ErrorCode(_("创建蓝鲸运维开发平台应用错误"))

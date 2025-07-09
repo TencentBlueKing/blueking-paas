@@ -36,6 +36,7 @@ from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.servicehub.exceptions import BindServicePlanError
 from paasng.accessories.servicehub.manager import ServiceObj, mixed_service_mgr
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
@@ -178,7 +179,7 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 # 由于创建应用需要操作 v2 的数据库, 因此将事务的粒度控制在 handle_app 的维度, 避免其他地方失败导致创建应用的操作回滚, 但是 v2 中 app code 已被占用的问题.
                 try:
                     application = handler.handle_app(request.user)
-                except (ControllerError, DescriptionValidationError) as e:
+                except (ControllerError, DescriptionValidationError, BindServicePlanError) as e:
                     logger.exception("Create app error !")
                     raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)
                 else:

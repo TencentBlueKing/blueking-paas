@@ -16,7 +16,11 @@
 # to the current version of the project delivered to anyone in the future.
 
 from paasng.plat_mgt.applications import views
-from paasng.utils.basic import re_path
+from paasng.plat_mgt.bk_plugins.views import BKPluginMembersManageViewSet
+from paasng.utils.basic import make_app_pattern, re_path
+
+SERVICE_UUID = "(?P<service_id>[0-9a-f-]{32,36})"
+INSTANCE_UUID = "(?P<instance_id>[0-9a-f-]{32,36})"
 
 urlpatterns = [
     # 平台管理 - 应用列表
@@ -47,14 +51,15 @@ urlpatterns = [
         name="plat_mgt.applications.retrieve_app_name",
     ),
     re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/envs/(?P<env_name>[^/]+)/cluster/$",
-        views.ApplicationDetailViewSet.as_view({"post": "update_cluster"}),
-        name="plat_mgt.applications.update_cluster",
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/app_category/$",
+        views.ApplicationDetailViewSet.as_view({"post": "update_app_category"}),
+        name="plat_mgt.applications.update_app_category",
     ),
     re_path(
-        r"^api/plat_mgt/clusters/$",
-        views.ApplicationDetailViewSet.as_view({"get": "list_clusters"}),
-        name="plat_mgt.applications.list_clusters",
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/"
+        r"envs/(?P<env_name>[^/]+)/cluster/$",
+        views.ApplicationDetailViewSet.as_view({"put": "update_cluster"}),
+        name="plat_mgt.applications.update_cluster",
     ),
     # 平台管理 - 应用特性
     re_path(
@@ -74,8 +79,71 @@ urlpatterns = [
         name="plat_mgt.applications.members.detail",
     ),
     re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/plugin/members/$",
+        BKPluginMembersManageViewSet.as_view({"post": "become_admin", "delete": "remove_admin"}),
+        name="plat_mgt.applications.plugin.members.admin",
+    ),
+    re_path(
         r"^api/plat_mgt/applications/members/roles/$",
         views.ApplicationMemberViewSet.as_view({"get": "get_roles"}),
         name="plat_mgt.applications.members.get_roles",
+    ),
+    # 平台管理 - 增强服务
+    re_path(
+        r"^api/plat_mgt/applications/(?P<code>[^/]+)/services/bound_attachments/$",
+        views.ApplicationServicesViewSet.as_view({"get": "list_bound_attachments"}),
+        name="plat_mgt.applications.services.list_bound_attachments",
+    ),
+    re_path(
+        r"^api/plat_mgt/applications/(?P<code>[^/]+)/services/unbound_attachments/$",
+        views.ApplicationServicesViewSet.as_view({"get": "list_unbound_attachments"}),
+        name="plat_mgt.applications.services.list_unbound_attachments",
+    ),
+    re_path(
+        make_app_pattern(
+            f"/services/{SERVICE_UUID}/instance/{INSTANCE_UUID}/credentials/$",
+            include_envs=True,
+            prefix="api/plat_mgt/applications/",
+        ),
+        views.ApplicationServicesViewSet.as_view({"get": "view_credentials"}),
+        name="plat_mgt.applications.services.credentials",
+    ),
+    re_path(
+        make_app_pattern(
+            f"/services/{SERVICE_UUID}/instance/{INSTANCE_UUID}/$",
+            include_envs=True,
+            prefix="api/plat_mgt/applications/",
+        ),
+        views.ApplicationServicesViewSet.as_view({"delete": "unbound_instance"}),
+        name="plat_mgt.applications.services.unbound_instance",
+    ),
+    re_path(
+        make_app_pattern(
+            f"/services/{SERVICE_UUID}/instance/$",
+            include_envs=True,
+            prefix="api/plat_mgt/applications/",
+        ),
+        views.ApplicationServicesViewSet.as_view({"post": "provision_instance"}),
+        name="plat_mgt.applications.services.provision_instance",
+    ),
+    re_path(
+        make_app_pattern(
+            f"/services/{SERVICE_UUID}/instance/{INSTANCE_UUID}/$",
+            include_envs=False,
+            prefix="api/plat_mgt/applications/",
+        ),
+        views.ApplicationServicesViewSet.as_view({"delete": "recycle_unbound_instance"}),
+        name="plat_mgt.applications.services.recycle_unbound_instance",
+    ),
+    # 平台管理 - 删除应用
+    re_path(
+        r"^api/plat_mgt/deleted_applications/$",
+        views.DeletedApplicationViewSet.as_view({"get": "list"}),
+        name="plat_mgt.applications.list_deleted",
+    ),
+    re_path(
+        r"^api/plat_mgt/deleted_applications/(?P<app_code>[^/]+)/$",
+        views.DeletedApplicationViewSet.as_view({"delete": "destroy"}),
+        name="plat_mgt.applications.force_delete",
     ),
 ]

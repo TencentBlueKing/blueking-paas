@@ -17,11 +17,12 @@
 
 import logging
 from abc import ABC
-from typing import Dict, List, Type, Union
+from typing import Dict, List, Type
 
 from attrs import asdict, define, field, validators
 from django.conf import settings
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.iam.constants import ResourceType
 
 from .client import IAMClient
@@ -62,6 +63,7 @@ class PermCtx:
     username = field(validator=[validators.instance_of(str), validate_empty])
     # 如果为 True, 表示不做权限校验，直接以无权限方式抛出异常
     force_raise = field(validator=[validators.instance_of(bool)], default=False)
+    tenant_id = field(validator=[validators.instance_of(str)], default=DEFAULT_TENANT_ID)
 
     def validate_resource_id(self):
         """校验资源实例 ID. 如果校验不过，抛出 AttrValidationError 异常"""
@@ -116,27 +118,13 @@ class Permission(ABC, IAMClient):
         else:
             res_request = self.make_res_request(perm_ctx)
             perms = self.resource_inst_multi_actions_allowed(
-                perm_ctx.username, action_ids, resources=res_request.make_resources(perm_ctx.resource_id)
+                perm_ctx.username,
+                perm_ctx.tenant_id,
+                action_ids,
+                resources=res_request.make_resources(perm_ctx.resource_id),
             )
 
         return self._can_multi_actions(perm_ctx, perms, raise_exception)
-
-    def resources_actions_allowed(
-        self, username: str, action_ids: List[str], res_ids: Union[List[str], str], res_request: ResourceRequest
-    ):
-        """
-        判断用户对某些资源是否具有多个指定操作的权限. 当前 sdk 仅支持同类型的资源
-        :returns: 示例 {'app_code_test': {'view_basic_info': True, 'edit_basic_info': False}}
-        """
-
-        return self.batch_resource_multi_actions_allowed(username, action_ids, res_request.make_resources(res_ids))
-
-    def grant_resource_creator_actions(self, creator_action: ResCreatorAction):
-        """
-        用于创建资源时，注册用户对该资源的关联操作权限.
-        note: 具体的关联操作见权限模型的 resource_creator_actions 字段
-        """
-        return self.iam._client.grant_resource_creator_actions(None, creator_action.creator, creator_action.to_data())
 
     def make_res_request(self, perm_ctx: PermCtx) -> ResourceRequest:
         return self.resource_request_cls.from_dict(asdict(perm_ctx))
@@ -146,12 +134,12 @@ class Permission(ABC, IAMClient):
 
         if not res_id:
             # 与资源实例无关
-            return self.resource_type_allowed(perm_ctx.username, action_id, use_cache)
+            return self.resource_type_allowed(perm_ctx.username, perm_ctx.tenant_id, action_id, use_cache)
 
         # 与当前资源实例相关
         res_request = self.make_res_request(perm_ctx)
         resources = res_request.make_resources(res_id)
-        return self.resource_inst_allowed(perm_ctx.username, action_id, resources, use_cache)
+        return self.resource_inst_allowed(perm_ctx.username, perm_ctx.tenant_id, action_id, resources, use_cache)
 
     def _can_multi_actions(self, perm_ctx: PermCtx, perms: Dict[str, bool], raise_exception: bool) -> bool:
         messages = []
@@ -174,7 +162,7 @@ class Permission(ABC, IAMClient):
             return False
 
         raise PermissionDeniedError(
-            message=";".join(messages), username=perm_ctx.username, action_request_list=action_request_list
+            message=";".join(messages), tenant_id=perm_ctx.tenant_id, action_request_list=action_request_list
         )
 
     def _raise_permission_denied_error(self, perm_ctx: PermCtx, action_id: str):
@@ -183,6 +171,6 @@ class Permission(ABC, IAMClient):
 
         raise PermissionDeniedError(
             f"no {action_id} permission",
-            username=perm_ctx.username,
+            tenant_id=perm_ctx.tenant_id,
             action_request_list=[ActionResourcesRequest(action_id, self.resource_type, resources)],
         )

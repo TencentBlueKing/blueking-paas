@@ -25,7 +25,7 @@ from paas_wl.workloads.networking.entrance.addrs import URL, Address
 from paas_wl.workloads.networking.entrance.allocator.domains import ModuleEnvDomains
 from paas_wl.workloads.networking.entrance.allocator.subpaths import ModuleEnvSubpaths
 from paas_wl.workloads.networking.entrance.constants import AddressType
-from paas_wl.workloads.networking.ingress.constants import AppDomainSource
+from paas_wl.workloads.networking.ingress.constants import AppDomainProtocol, AppDomainSource
 from paas_wl.workloads.networking.ingress.models import AppDomain, AppSubpath, Domain
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
@@ -107,7 +107,13 @@ class LiveEnvAddresses(BaseEnvAddresses):
         for d in subdomains:
             root_domain = self.ingress_cfg.find_app_root_domain(d.host)
             is_sys_reserved = root_domain.reserved if root_domain else False
-            addrs.append(Address(AddressType.SUBDOMAIN, self._make_url(d.https_enabled, d.host), is_sys_reserved))
+            addrs.append(
+                Address(
+                    AddressType.SUBDOMAIN,
+                    self._make_url_by_protocol(d.protocol, d.https_enabled, d.host),
+                    is_sys_reserved,
+                )
+            )
         return self._sort(addrs)
 
     def list_subpath(self) -> List[Address]:
@@ -119,6 +125,16 @@ class LiveEnvAddresses(BaseEnvAddresses):
                 url = self._make_url(domain.https_enabled, domain.name, obj.subpath)
                 addrs.append(Address(AddressType.SUBPATH, url, domain.reserved))
         return self._sort(addrs)
+
+    def _make_url_by_protocol(self, protocol: str, https_enabled: bool, host: str) -> str:
+        if protocol == AppDomainProtocol.GRPC:
+            port = self.ingress_cfg.port_map.get_port_num(protocol)
+            if https_enabled:
+                protocol = "grpcs"
+
+            return URL(protocol, hostname=host, port=port, path="/").as_address()
+
+        return self._make_url(https_enabled, host)
 
 
 class PreAllocatedEnvAddresses(BaseEnvAddresses):

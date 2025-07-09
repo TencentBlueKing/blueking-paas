@@ -55,6 +55,50 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'operations',
+    name: 'platformAppList',
+    label: i18n.t('应用列表'),
+    iconfontName: 'Application-list',
+    matchRouters: ['platformAppList', 'platformAppDetails'],
+    destRoute: {
+      name: 'platformAppList',
+    },
+    sublist: [],
+  },
+  {
+    groupId: 'config',
+    name: 'repositoryConfig',
+    label: i18n.t('代码库配置'),
+    iconfontName: 'daimakupeizhi',
+    matchRouters: ['repositoryConfig'],
+    destRoute: {
+      name: 'repositoryConfig',
+    },
+    sublist: [],
+  },
+  {
+    groupId: 'config',
+    name: 'templateConfig',
+    label: i18n.t('模版配置'),
+    iconfontName: 'mobanpeizhi',
+    matchRouters: ['templateConfig'],
+    destRoute: {
+      name: 'templateConfig',
+    },
+    sublist: [],
+  },
+  {
+    groupId: 'config',
+    name: 'builtInEnvVariable',
+    label: i18n.t('内置环境变量'),
+    iconfontName: 'variable',
+    matchRouters: ['builtInEnvVariable'],
+    destRoute: {
+      name: 'builtInEnvVariable',
+    },
+    sublist: [],
+  },
+  {
     groupId: 'user',
     name: 'platformUserManagement',
     label: i18n.t('用户管理'),
@@ -62,6 +106,17 @@ export default [
     matchRouters: ['platformUserManagement'],
     destRoute: {
       name: 'platformUserManagement',
+    },
+    sublist: [],
+  },
+  {
+    groupId: 'user',
+    name: 'platformOperationAudit',
+    label: i18n.t('操作审计'),
+    iconfontName: 'caozuoshenji',
+    matchRouters: ['platformOperationAudit'],
+    destRoute: {
+      name: 'platformOperationAudit',
     },
     sublist: [],
   },

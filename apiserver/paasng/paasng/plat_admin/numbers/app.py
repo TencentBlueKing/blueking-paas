@@ -30,6 +30,7 @@ from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.models import user_id_encoder
 from blue_krill.data_types.enum import IntStructuredEnum
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 from rest_framework.fields import get_attribute
 from sqlalchemy import func
@@ -38,6 +39,7 @@ from sqlalchemy.orm import Query, Session
 from paasng.accessories.publish.market.models import MarketConfig, Tag
 from paasng.core.core.storages.sqlalchemy import legacy_db
 from paasng.core.region.models import get_region
+from paasng.core.tenant.user import get_init_tenant_id
 from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
 from paasng.infras.iam.permissions.resources.application import ApplicationPermission
 from paasng.plat_admin.system.constants import SimpleAppSource
@@ -196,10 +198,15 @@ class DefaultAppDataBuilder(AppDataBuilder):
 
     @staticmethod
     def get_tag_display_name(app: Application):
-        product = app.get_product()
-        if not (product and product.tag):
+        try:
+            extra_info = app.extra_info
+        except ObjectDoesNotExist:
             return "--"
-        return product.tag.get_name_display()
+
+        if not extra_info.tag:
+            return "--"
+
+        return extra_info.tag.get_name_display()
 
     @staticmethod
     def get_market_address(application: Application) -> Optional[str]:
@@ -219,7 +226,8 @@ class DefaultAppDataBuilder(AppDataBuilder):
         """Set filter by developers"""
         app_filters, app_ids = [], []
         for username in filter_developers:
-            if f := ApplicationPermission().gen_develop_app_filters(username):
+            # FIXME: 多租户的情况下可能无法正常工作, 考虑持久化租户信息?
+            if f := ApplicationPermission().gen_develop_app_filters(username, get_init_tenant_id()):
                 app_filters.append(f)
 
         if app_filters:

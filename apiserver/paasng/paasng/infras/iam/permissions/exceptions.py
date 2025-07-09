@@ -28,26 +28,26 @@ class PermissionDeniedError(Exception):
     def __init__(
         self,
         message: str,
-        username: str,
+        tenant_id: str,
         action_request_list: List[ActionResourcesRequest],
     ):
         """
         :param message: 异常信息
-        :param username: 无权限的用户名, 用于生成 apply_url
+        :param tenant_id: 用户所属租户, 用于生成 apply_url
         :param action_request_list: 用于生成 apply_url
         """
 
         if message:
             self.message = message
 
-        self.username = username
+        self.tenant_id = tenant_id
         self.action_request_list = action_request_list
 
     @property
     def data(self) -> Dict:
         return {
             "perms": {
-                "apply_url": ApplyURLGenerator.generate_apply_url(self.username, self.action_request_list),
+                "apply_url": ApplyURLGenerator.generate_apply_url(self.tenant_id, self.action_request_list),
                 "action_list": [
                     {"resource_type": action_request.resource_type, "action_id": action_request.action_id}
                     for action_request in self.action_request_list

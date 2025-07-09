@@ -23,12 +23,16 @@ import pytest
 from blue_krill.contextlib import nullcontext as does_not_raise
 from django.test.utils import override_settings
 
+from paasng.platform.sourcectl.exceptions import (
+    PackageInvalidFileFormatError,
+    ReadFileNotFoundError,
+    ReadLinkFileOutsideDirectoryError,
+)
 from paasng.platform.sourcectl.package.client import (
     BasePackageClient,
     BinaryTarClient,
     GenericLocalClient,
     GenericRemoteClient,
-    InvalidPackageFileFormatError,
     TarClient,
     ZipClient,
 )
@@ -75,13 +79,13 @@ class TestBinaryTarClient:
     def test_read_invalid_file(self, tmp_path):
         p = Path(tmp_path / "foo.tgz")
         p.write_text("Definitely not a tarball")
-        with pytest.raises(InvalidPackageFileFormatError):
+        with pytest.raises(PackageInvalidFileFormatError):
             BinaryTarClient(p).read_file("foo.txt")
 
     def test_list_invalid_file(self, tmp_path):
         p = Path(tmp_path / "foo.tgz")
         p.write_text("Definitely not a tarball")
-        with pytest.raises(InvalidPackageFileFormatError):
+        with pytest.raises(PackageInvalidFileFormatError):
             BinaryTarClient(p).list()
 
 
@@ -100,7 +104,7 @@ class TestLocalClient:
         [
             (dict(Procfile="web: npm run dev\n"), "Procfile", does_not_raise(), b"web: npm run dev\n"),
             (dict(Procfile="web: npm run dev\n"), "./Procfile", does_not_raise(), b"web: npm run dev\n"),
-            (dict(Procfile="web: npm run dev\n"), "procfile", pytest.raises(KeyError), None),
+            (dict(Procfile="web: npm run dev\n"), "procfile", pytest.raises(ReadFileNotFoundError), None),
         ],
     )
     def test_read_file(self, client_cls, archive_maker, contents, filename, ctx, expected):
@@ -119,16 +123,16 @@ class TestLocalClient:
             ({"foo/foo": "1"}, "./", "./foo/foo", does_not_raise(), b"1"),
             ({"foo/foo": "1"}, "./foo", "foo", does_not_raise(), b"1"),
             ({"foo/foo": "1"}, "./foo", "./foo", does_not_raise(), b"1"),
-            ({"foo/foo": "1"}, "./foo", "./foo/foo", pytest.raises(KeyError), b"1"),
-            ({"foo/foo": "1"}, "./foo", "foo/foo", pytest.raises(KeyError), b"1"),
+            ({"foo/foo": "1"}, "./foo", "./foo/foo", pytest.raises(ReadFileNotFoundError), b"1"),
+            ({"foo/foo": "1"}, "./foo", "foo/foo", pytest.raises(ReadFileNotFoundError), b"1"),
             ({"foo/foo/foo": "3"}, "./", "foo/foo/foo", does_not_raise(), b"3"),
             ({"foo/foo/foo": "3"}, "./", "./foo/foo/foo", does_not_raise(), b"3"),
             ({"foo/foo/foo": "3"}, "./foo/", "foo/foo", does_not_raise(), b"3"),
             ({"foo/foo/foo": "3"}, "./foo/", "./foo/foo", does_not_raise(), b"3"),
             ({"foo/foo/foo": "3"}, "./foo/foo", "foo", does_not_raise(), b"3"),
             ({"foo/foo/foo": "3"}, "./foo/foo", "./foo", does_not_raise(), b"3"),
-            ({"foo/foo/foo": "3"}, "./foo/foo", "foo/foo/foo", pytest.raises(KeyError), b"3"),
-            ({"foo/foo/foo": "3"}, "./foo/foo", "./foo/foo/foo", pytest.raises(KeyError), b"3"),
+            ({"foo/foo/foo": "3"}, "./foo/foo", "foo/foo/foo", pytest.raises(ReadFileNotFoundError), b"3"),
+            ({"foo/foo/foo": "3"}, "./foo/foo", "./foo/foo/foo", pytest.raises(ReadFileNotFoundError), b"3"),
         ],
     )
     def test_read_file_with_relative_path(
@@ -174,7 +178,7 @@ class TestTarClientsShouldNotReadOutside:
         with generate_temp_file() as file_path:
             archive_maker(file_path, symbolic_links=symbolic_links)
             cli: BasePackageClient = client_cls(file_path=file_path)
-            with pytest.raises(KeyError, match="linkname .* not found"):
+            with pytest.raises(ReadFileNotFoundError, match="file .* not found"):
                 cli.read_file(filename)
 
     @pytest.mark.parametrize(
@@ -188,10 +192,48 @@ class TestTarClientsShouldNotReadOutside:
         with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
             archive_maker(file_path, symbolic_links=symbolic_links)
             cli = client_cls(file_path)
-            with pytest.raises(tarfile.FilterError):  # type: ignore[attr-defined]
+            with pytest.raises(ReadLinkFileOutsideDirectoryError):
                 cli.export(working_dir)
 
     # TODO: Add malformed tar file which uses bad names
+
+
+class TestZipClientsReadSymlinks:
+    @pytest.mark.parametrize(
+        ("symbolic_links", "filename"),
+        [
+            ({"passwd": "/etc/passwd"}, "./passwd"),
+            ({"passwd": "../../../../../../../../../etc/passwd"}, "./passwd"),
+        ],
+    )
+    def test_read_file_should_read_target_only(self, symbolic_links, filename):
+        with generate_temp_file() as file_path:
+            gen_zip(file_path, symbolic_links=symbolic_links)
+            cli = ZipClient(file_path=str(file_path))
+
+            content = cli.read_file(filename)
+            assert content == symbolic_links[filename[2:]].encode(), "The content should be link target"
+
+    @pytest.mark.parametrize(
+        "symbolic_links",
+        [
+            ({"passwd": "/etc/passwd"}),
+            ({"passwd": "../../../../../../../../../etc/passwd"}),
+        ],
+    )
+    def test_export_should_produce_no_links(self, symbolic_links):
+        with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
+            gen_zip(file_path, symbolic_links=symbolic_links)
+            cli = ZipClient(str(file_path))
+
+            cli.export(str(working_dir))
+
+            # The zipfile module currently extract symlinks as files, check only the file type
+            # and content.
+            for name, target in symbolic_links.items():
+                f = working_dir / name
+                assert not f.is_symlink()
+                assert f.read_text() == target, "The content should be link target"
 
 
 class TestBinaryTarClientsShouldNotReadOutside:
@@ -206,13 +248,13 @@ class TestBinaryTarClientsShouldNotReadOutside:
         with generate_temp_file() as file_path:
             gen_tar(file_path, symbolic_links=symbolic_links)
             cli = BinaryTarClient(file_path=file_path)
-            with pytest.raises(RuntimeError, match=".*outside the target directory."):
+            with pytest.raises(ReadLinkFileOutsideDirectoryError, match=".*is invalid"):
                 cli.read_file(filename)
 
     @pytest.mark.parametrize(
         "symbolic_links",
         [
-            ({"passwd": "/etc"}),
+            ({"passwd": "/etc/passwd"}),
             ({"passwd": "../../../../../../../../../etc/passwd"}),
         ],
     )
@@ -220,7 +262,7 @@ class TestBinaryTarClientsShouldNotReadOutside:
         with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
             gen_tar(file_path, symbolic_links=symbolic_links)
             cli = BinaryTarClient(file_path)
-            with pytest.raises(RuntimeError):
+            with pytest.raises(ReadLinkFileOutsideDirectoryError):
                 cli.export(str(working_dir))
 
 
@@ -231,7 +273,7 @@ class TestGenericRemoteClient:
         [
             ("http://foo/{random}", dict(File="A: B\n"), "File", does_not_raise(), b"A: B\n"),
             ("http://foo/{random}", dict(File="A: B\n"), "./File", does_not_raise(), b"A: B\n"),
-            ("http://foo/{random}", dict(File="A: B\n"), "file", pytest.raises(KeyError), None),
+            ("http://foo/{random}", dict(File="A: B\n"), "file", pytest.raises(ReadFileNotFoundError), None),
         ],
     )
     def test_http_protocol(self, mock_adapter, archive_maker, url_tmpl, contents, filename, ctx, expected):
@@ -248,7 +290,7 @@ class TestGenericRemoteClient:
         [
             (dict(File="A: B\n"), "File", does_not_raise(), b"A: B\n"),
             (dict(File="A: B\n"), "./File", does_not_raise(), b"A: B\n"),
-            (dict(File="A: B\n"), "file", pytest.raises(KeyError), None),
+            (dict(File="A: B\n"), "file", pytest.raises(ReadFileNotFoundError), None),
         ],
     )
     def test_blobstore_protocol(self, archive_maker, contents, filename, ctx, expected):

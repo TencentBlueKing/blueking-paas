@@ -17,6 +17,7 @@
 
 import logging
 import operator
+from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Iterator, List, Optional, Tuple
 from urllib.parse import quote, urlparse
 

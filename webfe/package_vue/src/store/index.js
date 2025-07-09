@@ -77,7 +77,7 @@ const state = {
   curAppModule: {},
   curAppDefaultModule: {},
   curAppModuleList: [],
-  appInfo: {},
+  appInfo: Object.create(null),
   pluginInfo: {},
 
   isAppLoading: true,
@@ -116,7 +116,8 @@ const mutations = {
     }
 
     const appCode = state.curAppCode;
-    if (appCode && state.appInfo[appCode]) {
+    // 防止远程属性注入，验证 appCode
+    if (appCode && typeof appCode === 'string' && !appCode.includes('__proto__') && !appCode.includes('prototype') && !appCode.includes('constructor') && state.appInfo[appCode]) {
       // 合并用户功能开关和应用功能开关
       const appFeature = state.appInfo[appCode].feature || {};
       state.appInfo[appCode].feature = {
@@ -134,7 +135,8 @@ const mutations = {
     }
 
     const appCode = state.curAppCode;
-    if (appCode && state.appInfo[appCode]) {
+    // 防止远程属性注入，验证 appCode
+    if (appCode && typeof appCode === 'string' && !appCode.includes('__proto__') && !appCode.includes('prototype') && !appCode.includes('constructor') && state.appInfo[appCode]) {
       // 合并用户功能开关和应用功能开关
       const appFeature = state.appInfo[appCode].feature || {};
       state.appInfo[appCode].feature = {
@@ -160,18 +162,12 @@ const mutations = {
       //   ...data,
       // };
 
-      const mergedFeature = {
+      // 直接设置 feature 属性，appInfo 已是无原型对象，安全可靠
+      state.appInfo[appCode].feature = {
         ...state.userFeature,
         ...state.platformFeature,
         ...data,
       };
-      // 使用安全的属性设置方式
-      Object.defineProperty(state.appInfo[appCode], 'feature', {
-        value: mergedFeature,
-        writable: true,
-        enumerable: true,
-        configurable: true,
-      });
     }
   },
   // curAppInfo && curAppModule 的信息都在这里获取
@@ -192,14 +188,14 @@ const mutations = {
     state.curAppInfo = data;
     state.curAppCode = appCode;
 
-    // state.appInfo[appCode] = data;
-    // 使用安全的属性设置方式
-    Object.defineProperty(state.appInfo, appCode, {
-      value: data,
-      writable: true,
-      enumerable: true,
-      configurable: true,
-    });
+    // 确保 appInfo 是无原型对象，防止原型污染
+    if (Object.getPrototypeOf(state.appInfo) !== null) {
+      const oldAppInfo = state.appInfo || {};
+      state.appInfo = Object.assign(Object.create(null), oldAppInfo);
+    }
+
+    // 直接设置属性，由于使用了无原型对象，不会造成原型污染
+    state.appInfo[appCode] = data;
     state.curAppModuleList = data.application.modules;
 
     state.curAppDefaultModule = data.application.modules.find(module => module.is_default);

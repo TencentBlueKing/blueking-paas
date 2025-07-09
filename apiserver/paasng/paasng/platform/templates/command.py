@@ -23,10 +23,10 @@ import stat
 from pathlib import Path
 from typing import Any, Dict, List
 
-from jinja2 import Template
 from jinja2.defaults import VARIABLE_END_STRING, VARIABLE_START_STRING
 
 from paasng.platform.templates.constants import RenderMethod
+from paasng.utils import safe_jinja2
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ class EnhancedTemplateCommand:
         if self.render_method == RenderMethod.JINJA2_DOUBLE_SQUARE_BRACKET:
             var_start_str, var_end_str = "[[", "]]"
 
-        return Template(
+        return safe_jinja2.Template(
             source,
             # 设置变量匹配的前后字符串
             variable_start_string=var_start_str,

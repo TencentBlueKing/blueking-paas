@@ -15,10 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import jinja2
-
 from paasng.bk_plugins.pluginscenter.definitions import ElasticSearchParams
 from paasng.bk_plugins.pluginscenter.models import PluginInstance
+from paasng.utils import safe_jinja2
 from paasng.utils.es_log.search import SmartSearch
 
 
@@ -32,7 +31,7 @@ class ElasticSearchFilter:
         context = {"plugin_id": self.plugin.id}
         term_fields = self.search_params.termTemplate.copy()
         for k, v in term_fields.items():
-            term_fields[k] = jinja2.Template(v).render(**context)
+            term_fields[k] = safe_jinja2.Template(v).render(**context)
         if term_fields:
             # [term] query doesn't support multiple fields
             for k, v in term_fields.items():

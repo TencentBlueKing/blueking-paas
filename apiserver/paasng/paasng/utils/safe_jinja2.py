@@ -15,33 +15,32 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from pathlib import Path
+# 以 sandbox 模式运行模板, 增强 jinja2 的安全性, 防注入漏洞
 
-from django.apps import AppConfig
-from django.conf import settings
+import os
+import typing as t
 
-from paasng.utils import safe_jinja2
-
-IAM_CONTEXT = {
-    "IAM_PAAS_V3_SYSTEM_ID": settings.IAM_PAAS_V3_SYSTEM_ID,
-    "APP_CODE": settings.BK_APP_CODE,
-}
+import jinja2
+from jinja2.sandbox import SandboxedEnvironment
 
 
-def render_migrate_json():
-    """根据模板生成最终的 migrate json 文件"""
-    iam_tpl_path = Path(settings.BASE_DIR) / "support-files" / "iam_tpl"
-    iam_tpl = Path(settings.BASE_DIR) / "support-files" / "iam"
-    iam_tpl.mkdir(exist_ok=True)
-
-    j2_env = safe_jinja2.FileEnvironment(str(iam_tpl_path), trim_blocks=True)
-    for dir in iam_tpl_path.iterdir():
-        j2_env.get_template(dir.name).stream(**IAM_CONTEXT).dump(str(iam_tpl / dir.name[:-3]))
+def _get_file_environment(
+    searchpath: t.Union[str, "os.PathLike[str]", t.Sequence[t.Union[str, "os.PathLike[str]"]]],
+    trim_blocks: bool = False,
+):
+    return SandboxedEnvironment(loader=jinja2.FileSystemLoader(searchpath), trim_blocks=trim_blocks)
 
 
-class BKPaaSIAMMigrationConfig(AppConfig):
-    name = "paasng.infras.iam.bkpaas_iam_migration"
-    label = "bkpaas_iam_migration"
+FileEnvironment = _get_file_environment
 
-    def ready(self):
-        render_migrate_json()
+
+_default_env = SandboxedEnvironment()
+
+
+def _safe_template(source, *args, **kwargs):
+    if not args and not kwargs:
+        return _default_env.from_string(source)
+    return SandboxedEnvironment(*args, **kwargs).from_string(source)
+
+
+Template = _safe_template

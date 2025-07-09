@@ -103,8 +103,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             // 判断是否在 /admin42/ 首页
             if (
-                window.location.pathname === '/admin42/' ||
-                window.location.pathname === '/admin42'
+                window.location.pathname.endsWith('/admin42/') ||
+                window.location.pathname.endsWith('/admin42')
             ) {
                 // 找到第一个菜单项的 url
                 if (navList && navList.length > 0 && navList[0].children && navList[0].children.length > 0) {

@@ -27,9 +27,7 @@
           </p>
         </div>
         <div class="content">
-          <div
-            class="input-wrapper"
-          >
+          <div class="input-wrapper">
             <div class="input-item">
               <input
                 v-model="trunkURL"
@@ -99,7 +97,6 @@ export default {
   },
   created() {
     const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/`;
-    const linkUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/accessories/advised_documentary_links/?plat_panel=app_created&limit=3`;
     this.$http.get(url).then((response) => {
       const body = response;
       this.application = body.application;
@@ -112,11 +109,24 @@ export default {
         this.hideNotChildElement(el);
       });
     });
-    this.$http.get(linkUrl).then((response) => {
-      this.advisedDocLinks = response.links;
-    });
+    this.getDocLinks();
   },
   methods: {
+    // 获取文档链接信息
+    async getDocLinks() {
+      try {
+        const res = await this.$store.dispatch('deploy/getAppDocLinks', {
+          appCode: this.appCode,
+          params: {
+            plat_panel: 'app_created',
+            limit: 3,
+          },
+        });
+        this.advisedDocLinks = res.links;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
+    },
     handlePageJump(name) {
       this.$router.push({
         name,

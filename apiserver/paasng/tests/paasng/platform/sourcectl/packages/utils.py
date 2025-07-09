@@ -116,8 +116,8 @@ def gen_zip(
                     info.create_system = 3  # Unix
                     info.external_attr = 0o120755 << 16  # symlink file type + permissions
                     zip_file.writestr(info, str(file_path.readlink()))
-                # Add files
-                elif not file_path.is_dir():
+                # Add files and directories
+                else:
                     zip_file.write(file_path, arcname)
 
 

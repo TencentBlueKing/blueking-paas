@@ -132,6 +132,7 @@
   </div>
 </template>
 <script>
+/* eslint-disable max-len */
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import { mapGetters } from 'vuex';
 export default {
@@ -180,9 +181,17 @@ export default {
           {
             validator(val) {
               if (val === '') return true;
-              const reg =
-                /^(https?|ftp|rtsp|mms):\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(\/[A-Za-z0-9.+&@#/%=~_|-]*)*$/;
-              return reg.test(val);
+              // const reg =
+              //   /^(https?|ftp|rtsp|mms):\/\/[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+(\/[A-Za-z0-9.+&@#/%=~_|-]*)*$/;
+              // return reg.test(val);
+
+              // 使用更安全的 URL 验证，避免 ReDOS 风险
+              try {
+                const url = new URL(val);
+                return ['http:', 'https:', 'ftp:', 'rtsp:', 'mms:'].includes(url.protocol);
+              } catch {
+                return false;
+              }
             },
             message: this.$t('地址格式不正确'),
             trigger: 'blur',
@@ -225,7 +234,7 @@ export default {
         },
         (validator) => {
           console.error(validator);
-        }
+        },
       );
     },
     // 提交表单

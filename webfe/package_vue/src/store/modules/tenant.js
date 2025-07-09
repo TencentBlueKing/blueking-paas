@@ -46,7 +46,17 @@ export default {
       if (typeof clusterName !== 'string' || !clusterName || clusterName.includes('__proto__') || clusterName.includes('prototype') || clusterName.includes('constructor')) {
         return;
       }
-      state.clustersStatus = Object.assign({}, state.clustersStatus, { [clusterName]: status });
+
+      // state.clustersStatus = Object.assign({}, state.clustersStatus, { [clusterName]: status });
+      // 使用安全的属性设置方式，避免计算属性名的潜在风险
+      const newClusterStatus = Object.assign({}, state.clustersStatus);
+      Object.defineProperty(newClusterStatus, clusterName, {
+        value: status,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+      state.clustersStatus = newClusterStatus;
     },
     updateDetailActiveName(state, data) {
       state.detailActiveName = data;

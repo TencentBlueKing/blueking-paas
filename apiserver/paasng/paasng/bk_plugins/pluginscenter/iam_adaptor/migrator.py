@@ -20,11 +20,12 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Dict
 
-import jinja2
 from django.conf import settings
 from django.db.migrations import RunPython
 from iam.contrib.iam_migration import exceptions
 from iam.contrib.iam_migration.utils import do_migrate
+
+from paasng.utils import safe_jinja2
 
 
 class IAMPermissionTemplateRender:
@@ -34,7 +35,7 @@ class IAMPermissionTemplateRender:
         self.template_str = template_str
 
     def render(self) -> Dict:
-        data_str = jinja2.Template(self.template_str).render(self.context)
+        data_str = safe_jinja2.Template(self.template_str).render(self.context)
         try:
             data = json.loads(data_str)
         except Exception as e:

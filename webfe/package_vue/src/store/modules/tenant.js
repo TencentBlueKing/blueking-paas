@@ -20,6 +20,7 @@
 * 多租户
 */
 import http from '@/api';
+import { validateClusterName, createSafeObject, safeSet, safeHas, safeGet } from '@/utils/safe-object';
 
 export default {
   namespaced: true,
@@ -39,10 +40,22 @@ export default {
       state.curTenantData = data;
     },
     updateClustersStatus(state, { clusterName, status }) {
-      state.clustersStatus = {
-        ...state.clustersStatus,
-        [clusterName]: status,
-      };
+      // 使用严格的 clusterName 验证
+      if (!validateClusterName(clusterName)) {
+        console.warn(`[Security] Invalid clusterName blocked in updateClustersStatus: ${clusterName}`);
+        return;
+      }
+
+      // 确保 clustersStatus 是安全的无原型对象
+      if (Object.getPrototypeOf(state.clustersStatus) !== null) {
+        state.clustersStatus = createSafeObject(state.clustersStatus);
+      }
+
+      // 使用安全的属性设置
+      if (!safeSet(state.clustersStatus, clusterName, status)) {
+        console.error(`[Security] Failed to set cluster status for: ${clusterName}`);
+        return;
+      }
     },
     updateDetailActiveName(state, data) {
       state.detailActiveName = data;
@@ -145,10 +158,17 @@ export default {
      * 获取集群状态
      */
     getClustersStatus({ state }, { clusterName }) {
-      // 检查缓存
-      if (state.clustersStatusCache?.[clusterName]) {
-        return Promise.resolve(state.clustersStatusCache[clusterName]);
+      // 验证 clusterName 安全性
+      if (!validateClusterName(clusterName)) {
+        console.warn(`[Security] Invalid clusterName blocked in getClustersStatus: ${clusterName}`);
+        return Promise.reject(new Error('Invalid cluster name'));
       }
+
+      // 安全地检查缓存
+      if (safeHas(state.clustersStatusCache, clusterName)) {
+        return Promise.resolve(safeGet(state.clustersStatusCache, clusterName));
+      }
+
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/status/`;
       return http.get(url, {}, { cancelWhenRouteChange: true, fromCache: true });
     },

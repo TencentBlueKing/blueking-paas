@@ -203,6 +203,39 @@ export function validateAppCode(appCode) {
   return true;
 }
 
+/**
+ * 验证 clusterName 的安全性（专门为集群名称验证）
+ * @param {string} clusterName - 集群名称
+ * @returns {boolean} 是否安全
+ */
+export function validateClusterName(clusterName) {
+  if (typeof clusterName !== 'string' || !clusterName) {
+    return false;
+  }
+
+  // 长度限制（K8s 集群名称通常更长）
+  // if (clusterName.length > 128) {
+  //   return false;
+  // }
+
+  // // 只允许字母、数字、下划线、短横线、点号（符合 K8s 命名规范）
+  // if (!/^[a-zA-Z0-9._-]+$/.test(clusterName)) {
+  //   return false;
+  // }
+
+  // 不能是危险关键字
+  if (DANGEROUS_KEYS.includes(clusterName.toLowerCase())) {
+    return false;
+  }
+
+  // 不能以点号或短横线开头或结尾
+  // if (/^[.-]|[.-]$/.test(clusterName)) {
+  //   return false;
+  // }
+
+  return true;
+}
+
 export default {
   isSafeKey,
   createSafeObject,
@@ -212,4 +245,5 @@ export default {
   safeDelete,
   toSafeObject,
   validateAppCode,
+  validateClusterName,
 };

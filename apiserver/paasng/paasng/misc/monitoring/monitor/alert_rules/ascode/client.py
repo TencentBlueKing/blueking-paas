@@ -52,8 +52,7 @@ class AsCodeClient:
     def apply_notice_group(self, receivers: List[str]):
         """下发通知组"""
         tpl_dir = Path(os.path.dirname(__file__))
-        loader = safe_jinja2.FileSystemLoader([tpl_dir / "notice_tpl"])
-        j2_env = safe_jinja2.Environment(loader=loader, trim_blocks=True)
+        j2_env = safe_jinja2.FileEnvironment([tpl_dir / "notice_tpl"], trim_blocks=True)
         configs = {
             "notice/default_notice.yaml": j2_env.get_template("notice.yaml.j2").render(
                 notice_group_name=self.default_notice_group_name, receivers=receivers
@@ -102,8 +101,7 @@ class AsCodeClient:
           └── high_mem_usage.yaml
         """
         tpl_dir = Path(os.path.dirname(__file__))
-        loader = safe_jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl"])
-        j2_env = safe_jinja2.Environment(loader=loader, trim_blocks=True)
+        j2_env = safe_jinja2.FileEnvironment([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl"], trim_blocks=True)
 
         configs = {}
         # 告警通知内容模版

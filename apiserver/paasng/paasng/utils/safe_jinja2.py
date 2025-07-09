@@ -17,12 +17,22 @@
 
 # 以 sandbox 模式运行模板, 增强 jinja2 的安全性, 防注入漏洞
 
+import os
+import typing as t
+
 import jinja2
 from jinja2.sandbox import SandboxedEnvironment
 
-FileSystemLoader = jinja2.FileSystemLoader
 
-Environment = SandboxedEnvironment
+def _get_file_environment(
+    searchpath: t.Union[str, "os.PathLike[str]", t.Sequence[t.Union[str, "os.PathLike[str]"]]],
+    trim_blocks: bool = False,
+):
+    return SandboxedEnvironment(loader=jinja2.FileSystemLoader(searchpath), trim_blocks=trim_blocks)
+
+
+FileEnvironment = _get_file_environment
+
 
 _default_env = SandboxedEnvironment()
 

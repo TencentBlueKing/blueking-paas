@@ -117,14 +117,22 @@ const mutations = {
 
     const appCode = state.curAppCode;
     // 防止远程属性注入，验证 appCode
-    if (appCode && typeof appCode === 'string' && !appCode.includes('__proto__') && !appCode.includes('prototype') && !appCode.includes('constructor') && state.appInfo[appCode]) {
-      // 合并用户功能开关和应用功能开关
-      const appFeature = state.appInfo[appCode].feature || {};
-      state.appInfo[appCode].feature = {
-        ...state.userFeature,
-        ...state.platformFeature,
-        ...appFeature,
-      };
+    if (appCode && typeof appCode === 'string' && !appCode.includes('__proto__') && !appCode.includes('prototype') && !appCode.includes('constructor')) {
+      // 确保 appInfo 是无原型对象，防止原型污染
+      if (Object.getPrototypeOf(state.appInfo) !== null) {
+        const oldAppInfo = state.appInfo || {};
+        state.appInfo = Object.assign(Object.create(null), oldAppInfo);
+      }
+
+      if (state.appInfo[appCode]) {
+        // 合并用户功能开关和应用功能开关
+        const appFeature = state.appInfo[appCode].feature || {};
+        state.appInfo[appCode].feature = {
+          ...state.userFeature,
+          ...state.platformFeature,
+          ...appFeature,
+        };
+      }
     }
   },
   updatePlatformFeature(state, data) {
@@ -136,14 +144,22 @@ const mutations = {
 
     const appCode = state.curAppCode;
     // 防止远程属性注入，验证 appCode
-    if (appCode && typeof appCode === 'string' && !appCode.includes('__proto__') && !appCode.includes('prototype') && !appCode.includes('constructor') && state.appInfo[appCode]) {
-      // 合并用户功能开关和应用功能开关
-      const appFeature = state.appInfo[appCode].feature || {};
-      state.appInfo[appCode].feature = {
-        ...state.userFeature,
-        ...state.platformFeature,
-        ...appFeature,
-      };
+    if (appCode && typeof appCode === 'string' && !appCode.includes('__proto__') && !appCode.includes('prototype') && !appCode.includes('constructor')) {
+      // 确保 appInfo 是无原型对象，防止原型污染
+      if (Object.getPrototypeOf(state.appInfo) !== null) {
+        const oldAppInfo = state.appInfo || {};
+        state.appInfo = Object.assign(Object.create(null), oldAppInfo);
+      }
+
+      if (state.appInfo[appCode]) {
+        // 合并用户功能开关和应用功能开关
+        const appFeature = state.appInfo[appCode].feature || {};
+        state.appInfo[appCode].feature = {
+          ...state.userFeature,
+          ...state.platformFeature,
+          ...appFeature,
+        };
+      }
     }
   },
   updateAppLoading(state, data) {
@@ -154,14 +170,14 @@ const mutations = {
     if (typeof appCode !== 'string' || !appCode || appCode.includes('__proto__') || appCode.includes('prototype') || appCode.includes('constructor')) {
       return;
     }
-    if (state.appInfo[appCode]) {
-      // 合并用户功能开关和应用功能开关
-      // state.appInfo[appCode].feature = {
-      //   ...state.userFeature,
-      //   ...state.platformFeature,
-      //   ...data,
-      // };
 
+    // 确保 appInfo 是无原型对象，防止原型污染
+    if (Object.getPrototypeOf(state.appInfo) !== null) {
+      const oldAppInfo = state.appInfo || {};
+      state.appInfo = Object.assign(Object.create(null), oldAppInfo);
+    }
+
+    if (state.appInfo[appCode]) {
       // 直接设置 feature 属性，appInfo 已是无原型对象，安全可靠
       state.appInfo[appCode].feature = {
         ...state.userFeature,
@@ -246,6 +262,12 @@ const mutations = {
     // 防止远程属性注入，验证 appCode
     if (typeof appCode !== 'string' || !appCode || appCode.includes('__proto__') || appCode.includes('prototype') || appCode.includes('constructor')) {
       return;
+    }
+
+    // 确保 appInfo 是无原型对象，防止原型污染
+    if (Object.getPrototypeOf(state.appInfo) !== null) {
+      const oldAppInfo = state.appInfo || {};
+      state.appInfo = Object.assign(Object.create(null), oldAppInfo);
     }
 
     if (state.appInfo[appCode]) {

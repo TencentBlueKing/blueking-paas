@@ -137,7 +137,7 @@ class AppManger(AppAdaptor):
         self.cascade_delete_by_id(app.id)
 
     def cascade_delete_by_code(self, code: str):
-        """根据 id 从 db 中级联删除应用"""
+        """根据 code 从 db 中级联删除应用"""
         app = self.session.query(self.model).filter_by(code=code).scalar()
         self.cascade_delete_by_id(app.id)
 

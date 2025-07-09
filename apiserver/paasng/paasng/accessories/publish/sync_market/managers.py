@@ -17,6 +17,7 @@
 
 import datetime
 import logging
+from collections import defaultdict
 from dataclasses import asdict
 from typing import Optional
 
@@ -130,6 +131,99 @@ class AppManger(AppAdaptor):
         self.session.query(self.model).filter_by(name=name).delete()
         self.session.commit()
 
+    def cascade_delete_by_code(self, code: str):
+        """根据 id 从 db 中级联删除应用"""
+        app = self.session.query(self.model).filter_by(code=code).scalar()
+        self.cascade_delete_by_id(app.id)
+
+    def cascade_delete_by_id(self, app_id: int):
+        """根据 id 从 db 中级联删除应用"""
+        try:
+            # 构建完整的依赖关系图
+            dependency_graph = self._build_dependency_graph("app_app")
+
+            # 递归删除
+            self._delete_records_recursively(dependency_graph, self.model.__name__, app_id)
+            self.session.commit()
+
+        except Exception:
+            self.session.rollback()
+            raise
+
+    def _get_foreign_key_references(self, target_table: str):
+        """获取所有引用目标表的外键关系"""
+        sql = """
+        SELECT
+            TABLE_NAME,
+            COLUMN_NAME,
+            REFERENCED_TABLE_NAME,
+            REFERENCED_COLUMN_NAME
+        FROM
+            INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+        WHERE
+            REFERENCED_TABLE_NAME = :target_table
+        AND TABLE_SCHEMA = DATABASE()
+        """
+        result = self.session.execute(sql, {"target_table": target_table})
+        return [dict(row) for row in result]
+
+    def _build_dependency_graph(self, start_table: str):
+        """构建完整的依赖关系图"""
+        graph = defaultdict(list)
+        visited = set()
+
+        def dfs(current_table):
+            if current_table in visited:
+                return
+            visited.add(current_table)
+            references = self._get_foreign_key_references(current_table)
+            for ref in references:
+                graph[current_table].append(
+                    {
+                        "referencing_table": ref["TABLE_NAME"],
+                        "foreign_key_column": ref["COLUMN_NAME"],
+                        "referenced_column": ref["REFERENCED_COLUMN_NAME"],
+                    }
+                )
+                dfs(ref["TABLE_NAME"])
+
+        dfs(start_table)
+        return graph
+
+    def _find_records_referencing(self, table: str, column: str, referenced_id: int):
+        """查找引用特定ID的记录"""
+        sql = f"SELECT id FROM {table} WHERE {column} = :ref_id"
+        result = self.session.execute(sql, {"ref_id": referenced_id})
+        return [row[0] for row in result]
+
+    def _delete_records_recursively(self, graph: dict, table: str, record_id: int):
+        """递归删除记录"""
+        # 存在循环依赖的情况，因此当没有记录时打断递归
+        referenced_ids = self._find_records_referencing(table, "id", record_id)
+        if not referenced_ids:
+            return
+
+        # 该表没有被其他表引用，直接删除记录
+        if table not in graph:
+            sql = f"DELETE FROM {table} WHERE id = :record_id"
+            self.session.execute(sql, {"record_id": record_id})
+            return
+
+        # 先处理所有引用这个表的记录
+        for ref in graph[table]:
+            referencing_table = ref["referencing_table"]
+            foreign_key_column = ref["foreign_key_column"]
+
+            # 查找所有引用当前记录的记录
+            referenced_ids = self._find_records_referencing(referencing_table, foreign_key_column, record_id)
+
+            for ref_id in referenced_ids:
+                self._delete_records_recursively(graph, referencing_table, ref_id)
+
+        # 所有引用记录都删除后，删除当前记录
+        sql = f"DELETE FROM {table} WHERE id = :record_id"
+        self.session.execute(sql, {"record_id": record_id})
+
 
 class AppUseRecordManger(AppUseRecordAdaptor):
     """应用访问记录"""
@@ -160,102 +254,3 @@ class AppSecureInfoManger(AppSecureInfoAdaptor):
 
 class EngineAppManger(EngineAppAdaptor):
     """App engine 中保存的应用信息"""
-
-
-from collections import defaultdict
-
-
-class AppDeleter:
-    def __init__(self, scoped_session):
-        self.session = scoped_session
-        self.table = AppAdaptor.__name__
-
-    def get_foreign_key_references(self, target_table: str):
-        """获取所有引用目标表的外键关系"""
-        sql = """
-        SELECT
-            TABLE_NAME,
-            COLUMN_NAME,
-            REFERENCED_TABLE_NAME,
-            REFERENCED_COLUMN_NAME
-        FROM
-            INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-        WHERE
-            REFERENCED_TABLE_NAME = :target_table
-        AND TABLE_SCHEMA = DATABASE()
-        """
-        result = self.session.execute(sql, {"target_table": target_table})
-        return [dict(row) for row in result]
-
-    def build_dependency_graph(self, start_table: str):
-        """构建完整的依赖关系图"""
-        graph = defaultdict(list)
-        visited = set()
-
-        def dfs(current_table):
-            if current_table in visited:
-                return
-            visited.add(current_table)
-            references = self.get_foreign_key_references(current_table)
-            for ref in references:
-                graph[current_table].append(
-                    {
-                        "referencing_table": ref["TABLE_NAME"],
-                        "foreign_key_column": ref["COLUMN_NAME"],
-                        "referenced_column": ref["REFERENCED_COLUMN_NAME"],
-                    }
-                )
-                dfs(ref["TABLE_NAME"])
-
-        dfs(start_table)
-        return graph
-
-    def find_records_referencing(self, table: str, column: str, referenced_id: int):
-        """查找引用特定ID的记录"""
-        sql = f"SELECT id FROM {table} WHERE {column} = :ref_id"
-        result = self.session.execute(sql, {"ref_id": referenced_id})
-        return [row[0] for row in result]
-
-    def delete_records_recursively(self, graph: dict, table: str, record_id: int):
-        """递归删除记录"""
-        # 存在循环依赖的情况，因此当没有记录时打断递归
-        referenced_ids = self.find_records_referencing(table, "id", record_id)
-        if not referenced_ids:
-            return
-
-        if table not in graph:
-            # 没有表引用这个表，可以直接删除
-            sql = f"DELETE FROM {table} WHERE id = :record_id"
-            self.session.execute(sql, {"record_id": record_id})
-            return
-
-        # 先处理所有引用这个表的记录
-        for ref in graph[table]:
-            referencing_table = ref["referencing_table"]
-            foreign_key_column = ref["foreign_key_column"]
-
-            # 查找所有引用当前记录的记录
-            referenced_ids = self.find_records_referencing(referencing_table, foreign_key_column, record_id)
-
-            for ref_id in referenced_ids:
-                self.delete_records_recursively(graph, referencing_table, ref_id)
-
-        # 所有引用记录都删除后，删除当前记录
-        sql = f"DELETE FROM {table} WHERE id = :record_id"
-        self.session.execute(sql, {"record_id": record_id})
-
-    def delete_app_app_record(self, target_id: int):
-        """删除app_app表中的记录及其所有引用记录"""
-        try:
-            # 构建完整的依赖关系图
-            dependency_graph = self.build_dependency_graph("app_app")
-
-            # 递归删除记录
-            self.delete_records_recursively(dependency_graph, "app_app", target_id)
-            self.session.commit()
-
-        except Exception:
-            self.session.rollback()
-            raise
-        finally:
-            self.session.remove()

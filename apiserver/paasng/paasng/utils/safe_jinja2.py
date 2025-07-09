@@ -1,0 +1,36 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+# 以 sandbox 模式运行模板, 增强 jinja2 的安全性, 防注入漏洞
+
+import jinja2
+from jinja2.sandbox import SandboxedEnvironment
+
+FileSystemLoader = jinja2.FileSystemLoader
+
+Environment = SandboxedEnvironment
+
+_default_env = SandboxedEnvironment()
+
+
+def _safe_template(source, *args, **kwargs):
+    if not args and not kwargs:
+        return _default_env.from_string(source)
+    return SandboxedEnvironment(*args, **kwargs).from_string(source)
+
+
+Template = _safe_template

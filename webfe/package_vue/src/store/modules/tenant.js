@@ -39,29 +39,10 @@ export default {
       state.curTenantData = data;
     },
     updateClustersStatus(state, { clusterName, status }) {
-      // state.clustersStatus = {
-      //   ...state.clustersStatus,
-      //   [clusterName]: status,
-      // };
-
-      // 防止远程属性注入
-      if (typeof clusterName !== 'string' || !clusterName) {
-        return;
-      }
-
-      // 检查危险的属性名，防止原型污染
-      if (['__proto__', 'constructor', 'prototype'].includes(clusterName)) {
-        return;
-      }
-
-      // 确保 clustersStatus 是无原型对象，防止原型污染
-      if (!state.clustersStatus || Object.getPrototypeOf(state.clustersStatus) !== null) {
-        const oldStatus = state.clustersStatus || {};
-        state.clustersStatus = Object.assign(Object.create(null), oldStatus);
-      }
-
-      // 安全设置属性，由于已经确保是无原型对象且验证了属性名，现在是安全的
-      state.clustersStatus[clusterName] = status;
+      state.clustersStatus = {
+        ...state.clustersStatus,
+        [clusterName]: status,
+      };
     },
     updateDetailActiveName(state, data) {
       state.detailActiveName = data;

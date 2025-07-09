@@ -59,6 +59,7 @@ import tenantOperations from './modules/tenant-operations';
 import tenantConfig from './modules/tenant-config';
 import http from '@/api';
 import cookie from 'cookie';
+import { validateAppCode, createSafeObject, safeSet, safeHas } from '@/utils/safe-object';
 
 Vue.use(Vuex);
 
@@ -116,15 +117,14 @@ const mutations = {
     }
 
     const appCode = state.curAppCode;
-    // 防止远程属性注入，验证 appCode
-    if (appCode && typeof appCode === 'string' && !appCode.includes('__proto__') && !appCode.includes('prototype') && !appCode.includes('constructor')) {
-      // 确保 appInfo 是无原型对象，防止原型污染
+    // 使用严格的 appCode 验证
+    if (appCode && validateAppCode(appCode)) {
+      // 确保 appInfo 是安全的无原型对象
       if (Object.getPrototypeOf(state.appInfo) !== null) {
-        const oldAppInfo = state.appInfo || {};
-        state.appInfo = Object.assign(Object.create(null), oldAppInfo);
+        state.appInfo = createSafeObject(state.appInfo);
       }
 
-      if (state.appInfo[appCode]) {
+      if (safeHas(state.appInfo, appCode)) {
         // 合并用户功能开关和应用功能开关
         const appFeature = state.appInfo[appCode].feature || {};
         state.appInfo[appCode].feature = {
@@ -143,15 +143,14 @@ const mutations = {
     }
 
     const appCode = state.curAppCode;
-    // 防止远程属性注入，验证 appCode
-    if (appCode && typeof appCode === 'string' && !appCode.includes('__proto__') && !appCode.includes('prototype') && !appCode.includes('constructor')) {
-      // 确保 appInfo 是无原型对象，防止原型污染
+    // 使用严格的 appCode 验证
+    if (appCode && validateAppCode(appCode)) {
+      // 确保 appInfo 是安全的无原型对象
       if (Object.getPrototypeOf(state.appInfo) !== null) {
-        const oldAppInfo = state.appInfo || {};
-        state.appInfo = Object.assign(Object.create(null), oldAppInfo);
+        state.appInfo = createSafeObject(state.appInfo);
       }
 
-      if (state.appInfo[appCode]) {
+      if (safeHas(state.appInfo, appCode)) {
         // 合并用户功能开关和应用功能开关
         const appFeature = state.appInfo[appCode].feature || {};
         state.appInfo[appCode].feature = {
@@ -166,19 +165,19 @@ const mutations = {
     state.isAppLoading = data;
   },
   updateAppFeature(state, { appCode, data }) {
-    // 防止远程属性注入，验证 appCode
-    if (typeof appCode !== 'string' || !appCode || appCode.includes('__proto__') || appCode.includes('prototype') || appCode.includes('constructor')) {
+    // 使用严格的 appCode 验证
+    if (!validateAppCode(appCode)) {
+      console.warn(`[Security] Invalid appCode blocked in updateAppFeature: ${appCode}`);
       return;
     }
 
-    // 确保 appInfo 是无原型对象，防止原型污染
+    // 确保 appInfo 是安全的无原型对象
     if (Object.getPrototypeOf(state.appInfo) !== null) {
-      const oldAppInfo = state.appInfo || {};
-      state.appInfo = Object.assign(Object.create(null), oldAppInfo);
+      state.appInfo = createSafeObject(state.appInfo);
     }
 
-    if (state.appInfo[appCode]) {
-      // 直接设置 feature 属性，appInfo 已是无原型对象，安全可靠
+    if (safeHas(state.appInfo, appCode)) {
+      // 安全地设置 feature 属性
       state.appInfo[appCode].feature = {
         ...state.userFeature,
         ...state.platformFeature,
@@ -188,8 +187,9 @@ const mutations = {
   },
   // curAppInfo && curAppModule 的信息都在这里获取
   updateAppInfo(state, { appCode, moduleId, data }) {
-    // 防止远程属性注入，验证 appCode
-    if (typeof appCode !== 'string' || !appCode || appCode.includes('__proto__') || appCode.includes('prototype') || appCode.includes('constructor')) {
+    // 使用严格的 appCode 验证
+    if (!validateAppCode(appCode)) {
+      console.warn(`[Security] Invalid appCode blocked: ${appCode}`);
       return;
     }
 
@@ -204,16 +204,18 @@ const mutations = {
     state.curAppInfo = data;
     state.curAppCode = appCode;
 
-    // 确保 appInfo 是无原型对象，防止原型污染
+    // 确保 appInfo 是安全的无原型对象
     if (Object.getPrototypeOf(state.appInfo) !== null) {
-      const oldAppInfo = state.appInfo || {};
-      state.appInfo = Object.assign(Object.create(null), oldAppInfo);
+      state.appInfo = createSafeObject(state.appInfo);
     }
 
-    // 直接设置属性，由于使用了无原型对象，不会造成原型污染
-    state.appInfo[appCode] = data;
-    state.curAppModuleList = data.application.modules;
+    // 使用安全的属性设置
+    if (!safeSet(state.appInfo, appCode, data)) {
+      console.error(`[Security] Failed to set app data for: ${appCode}`);
+      return;
+    }
 
+    state.curAppModuleList = data.application.modules;
     state.curAppDefaultModule = data.application.modules.find(module => module.is_default);
 
     if (moduleId) {
@@ -259,18 +261,18 @@ const mutations = {
     });
   },
   updateCurAppByCode(state, { appCode, moduleId }) {
-    // 防止远程属性注入，验证 appCode
-    if (typeof appCode !== 'string' || !appCode || appCode.includes('__proto__') || appCode.includes('prototype') || appCode.includes('constructor')) {
+    // 使用严格的 appCode 验证
+    if (!validateAppCode(appCode)) {
+      console.warn(`[Security] Invalid appCode blocked in updateCurAppByCode: ${appCode}`);
       return;
     }
 
-    // 确保 appInfo 是无原型对象，防止原型污染
+    // 确保 appInfo 是安全的无原型对象
     if (Object.getPrototypeOf(state.appInfo) !== null) {
-      const oldAppInfo = state.appInfo || {};
-      state.appInfo = Object.assign(Object.create(null), oldAppInfo);
+      state.appInfo = createSafeObject(state.appInfo);
     }
 
-    if (state.appInfo[appCode]) {
+    if (safeHas(state.appInfo, appCode)) {
       const data = state.appInfo[appCode];
       state.curAppInfo = data;
       state.curAppModuleList = data.application.modules;

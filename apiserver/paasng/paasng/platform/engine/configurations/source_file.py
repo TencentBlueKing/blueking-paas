@@ -18,7 +18,7 @@
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Tuple
 
 import yaml
 from typing_extensions import Protocol
@@ -81,23 +81,13 @@ class MetaDataFileReader:
         if self.source_dir != Path("."):
             possible_keys = [str(self.source_dir / "Procfile"), "Procfile"]
 
-        content, error_msg = None, ""
-        for possible_key in possible_keys:
-            try:
-                content = self.read_file(possible_key, version_info)
-                break
-            except exceptions.RequestTimeOutError as e:
-                error_msg = str(e)
-                break
-            except Exception:
-                continue
+        content, error_msg = self.safe_read_files(possible_keys, version_info)
 
         if content is None:
             error_msg_prefix = "Can not read Procfile file from repository"
-            error_msg = f"{error_msg_prefix}, {error_msg}" if error_msg else error_msg_prefix
-            if self.error_tips:
-                error_msg += f", {self.error_tips}"
-            raise exceptions.GetProcfileError(error_msg)
+            # Only append error tips when no other error message is available
+            msg = error_msg if error_msg else self.error_tips
+            raise exceptions.GetProcfileError(f"{error_msg_prefix}, {msg}")
 
         try:
             procfile = yaml.full_load(content)
@@ -122,23 +112,13 @@ class MetaDataFileReader:
                 str(self.source_dir / "app_desc.yml"),
             ]
 
-        content, error_msg = None, ""
-        for possible_key in possible_keys:
-            try:
-                content = self.read_file(possible_key, version_info)
-                break
-            except exceptions.RequestTimeOutError as e:
-                error_msg = str(e)
-                break
-            except Exception:
-                continue
+        content, error_msg = self.safe_read_files(possible_keys, version_info)
 
         if content is None:
             error_msg_prefix = "Can not read app description file from repository"
-            error_msg = f"{error_msg_prefix}, {error_msg}" if error_msg else error_msg_prefix
-            if self.error_tips:
-                error_msg += f", {self.error_tips}"
-            raise exceptions.GetAppYamlError(error_msg)
+            # Only append error tips when no other error message is available
+            msg = error_msg if error_msg else self.error_tips
+            raise exceptions.GetAppYamlError(f"{error_msg_prefix}, {msg}")
 
         try:
             app_description = yaml.full_load(content)
@@ -170,6 +150,32 @@ class MetaDataFileReader:
                 error_msg += f", {self.error_tips}"
             raise exceptions.GetDockerIgnoreError(error_msg)
         return content.decode()
+
+    def safe_read_files(self, file_paths: Sequence[str], version_info: VersionInfo) -> Tuple[bytes | None, str]:
+        """Read a a file from a list of possible paths, return the content and error
+        message if any.
+
+        :param file_paths: A sequence of possible file paths to read
+        :return: (file content | None, error message)
+        """
+        content, error_msg = None, ""
+        for possible_key in file_paths:
+            try:
+                content = self.read_file(possible_key, version_info)
+                break
+            except exceptions.RequestTimeOutError as e:
+                error_msg = str(e)
+                break
+            except exceptions.ReadLinkFileOutsideDirectoryError:
+                error_msg = f'file "{possible_key}" is an invalid link which points to outside the repository'
+                break
+            except exceptions.ReadFileNotFoundError:
+                # Continue when the file does not exist
+                continue
+            except Exception as e:
+                logger.info("Failed to read file, location: %s, unexpected error: %s.", possible_key, str(e))
+                continue
+        return content, error_msg
 
 
 class VCSMetaDataReader(MetaDataFileReader):
@@ -208,8 +214,6 @@ class PackageMetaDataReader(MetaDataFileReader):
         cli = self.get_client(package=package_storage)
         try:
             return cli.read_file(str(self.source_dir / file_path))
-        except KeyError as e:
-            raise exceptions.DoesNotExistsOnServer from e
         finally:
             cli.close()
 

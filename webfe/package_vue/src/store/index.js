@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign, no-restricted-syntax */
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -153,11 +154,24 @@ const mutations = {
     }
     if (state.appInfo[appCode]) {
       // 合并用户功能开关和应用功能开关
-      state.appInfo[appCode].feature = {
+      // state.appInfo[appCode].feature = {
+      //   ...state.userFeature,
+      //   ...state.platformFeature,
+      //   ...data,
+      // };
+
+      const mergedFeature = {
         ...state.userFeature,
         ...state.platformFeature,
         ...data,
       };
+      // 使用安全的属性设置方式
+      Object.defineProperty(state.appInfo[appCode], 'feature', {
+        value: mergedFeature,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     }
   },
   // curAppInfo && curAppModule 的信息都在这里获取
@@ -177,7 +191,15 @@ const mutations = {
 
     state.curAppInfo = data;
     state.curAppCode = appCode;
-    state.appInfo[appCode] = data;
+
+    // state.appInfo[appCode] = data;
+    // 使用安全的属性设置方式
+    Object.defineProperty(state.appInfo, appCode, {
+      value: data,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
     state.curAppModuleList = data.application.modules;
 
     state.curAppDefaultModule = data.application.modules.find(module => module.is_default);

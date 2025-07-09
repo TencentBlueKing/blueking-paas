@@ -36,8 +36,10 @@ from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.publish.sync_market.managers import AppManger
 from paasng.accessories.servicehub.exceptions import BindServicePlanError
 from paasng.accessories.servicehub.manager import ServiceObj, mixed_service_mgr
+from paasng.core.core.storages.sqlalchemy import console_db
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
 from paasng.infras.accounts.permissions.application import application_perm_class
@@ -180,6 +182,9 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 try:
                     application = handler.handle_app(request.user)
                 except (ControllerError, DescriptionValidationError, BindServicePlanError) as e:
+                    # 清理 v2 中创建的应用
+                    with console_db.session_scope() as session:
+                        AppManger(session).cascade_delete_by_code(code=application.code)
                     logger.exception("Create app error !")
                     raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)
                 else:

@@ -1776,7 +1776,6 @@ paths:
         isPublic: true
         allowApplyPermission: true
         matchSubpath: false
-        enableWebsocket: false
         backend:
           type: HTTP
           method: post
@@ -1800,7 +1799,6 @@ paths:
         isPublic: true
         allowApplyPermission: true
         matchSubpath: false
-        enableWebsocket: false
         backend:
           type: HTTP
           method: get
@@ -1824,7 +1822,6 @@ paths:
         isPublic: true
         allowApplyPermission: true
         matchSubpath: false
-        enableWebsocket: false
         backend:
           type: HTTP
           method: get

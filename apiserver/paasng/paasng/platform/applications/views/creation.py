@@ -304,19 +304,18 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         allow_advanced = AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS)
 
         adv_region_clusters = []
-        if allow_advanced:
-            for region_name in get_all_regions():
-                env_cluster_names = {}
-                for env in [AppEnvironment.STAGING, AppEnvironment.PRODUCTION]:
-                    ctx = AllocationContext(
-                        tenant_id=get_tenant(request.user).id,
-                        region=region_name,
-                        environment=env,
-                        username=request.user.username,
-                    )
-                    env_cluster_names[env] = [cluster.name for cluster in ClusterAllocator(ctx).list()]
+        for region_name in get_all_regions():
+            env_cluster_names = {}
+            for env in [AppEnvironment.STAGING, AppEnvironment.PRODUCTION]:
+                ctx = AllocationContext(
+                    tenant_id=get_tenant(request.user).id,
+                    region=region_name,
+                    environment=env,
+                    username=request.user.username,
+                )
+                env_cluster_names[env] = [cluster.name for cluster in ClusterAllocator(ctx).list()]
 
-                adv_region_clusters.append({"region": region_name, "env_cluster_names": env_cluster_names})
+            adv_region_clusters.append({"region": region_name, "env_cluster_names": env_cluster_names})
 
         resp_data = {"allow_adv_options": allow_advanced, "adv_region_clusters": adv_region_clusters}
         return Response(CreationOptionsOutputSLZ(resp_data).data)

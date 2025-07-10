@@ -82,6 +82,7 @@ class ConfigVar(TimestampedModel):
     value = models.TextField(null=False)
     description = models.CharField(max_length=200, null=True)
     is_builtin = models.BooleanField(default=False)
+    is_encrypted = models.BooleanField(default=False)
 
     tenant_id = tenant_id_field_factory()
 

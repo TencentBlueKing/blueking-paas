@@ -142,7 +142,7 @@ def validate_repo_url(repo_url: str):
     """Validate repo url format, protocol, and port security.
 
     :param repo_url: repo url
-    raise: django.core.exceptions.ValidationError if repo url is invalid
+    :raise: django.core.exceptions.ValidationError if repo url is invalid
     """
     try:
         parsed_url = urlparse(repo_url)

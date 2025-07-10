@@ -380,7 +380,7 @@ class ConfigVarSLZ(serializers.ModelSerializer):
     description = serializers.CharField(
         allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
     )
-    is_encrypted = serializers.BooleanField(default=False, help_text="是否加密存储")
+    is_encrypted = serializers.BooleanField(help_text="是否加密存储")
     is_global = serializers.BooleanField(required=False, help_text="是否全局有效, 该字段由 slz 补充.")
     # 只读字段, 仅序列化时 ConfigVar 对象时生效
     id = serializers.IntegerField(read_only=True)
@@ -403,6 +403,9 @@ class ConfigVarSLZ(serializers.ModelSerializer):
         # 创建时 value 必传，更新时可选
         if not self.instance and "value" not in attrs:
             raise ValidationError({"value": _("环境变量值为必填项")})
+        # 修改时不允许修改 is_encrypted
+        if self.instance and "is_encrypted" in attrs and attrs["is_encrypted"] != self.instance.is_encrypted:
+            raise ValidationError({"is_encrypted": _("不允许修改加密状态")})
         return attrs
 
     def to_internal_value(self, data):
@@ -413,7 +416,7 @@ class ConfigVarSLZ(serializers.ModelSerializer):
         """
         module = self.context.get("module")
         env_name = data["environment_name"]
-        is_encrypted = data["is_encrypted"]
+        is_encrypted = data.get("is_encrypted", False)
         value = data.get("value", None)
         # 加密处理
         if value is not None:

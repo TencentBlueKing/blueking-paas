@@ -192,7 +192,7 @@ export const platformRouters = [
         meta: {
           title: i18n.t('应用列表'),
           showRightSlot: {
-            title: i18n.t('软删除应用列表'),
+            title: i18n.t('管理已删除应用'),
             routeName: 'platformSoftDeleteApps'
           },
         },
@@ -202,7 +202,7 @@ export const platformRouters = [
         name: 'platformSoftDeleteApps',
         component: platformSoftDeleteApps,
         meta: {
-          title: i18n.t('软删除应用列表'),
+          title: i18n.t('管理已删除应用'),
           supportBack: true,
           backRoute: {
             name: 'platformAppList',

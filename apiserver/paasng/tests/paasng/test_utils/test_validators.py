@@ -18,7 +18,7 @@
 import pytest
 from django.core.exceptions import ValidationError
 
-from paasng.utils.validators import DnsSafeNameValidator, ReservedWordValidator, validate_repo_url
+from paasng.utils.validators import DnsSafeNameValidator, ReservedWordValidator, validate_image_repo, validate_repo_url
 
 
 class TestReservedWordValidator:
@@ -60,7 +60,7 @@ class Test__validate_repo_url:
 
     @pytest.mark.parametrize(
         "repo_url",
-        ["http://127.0.0.1:22/bkapps.git", "https://127.0.0.1:23/bkapps.git", "mirror.tencent.com:22/bkapps"],
+        ["http://127.0.0.1:22/bkapps.git", "https://127.0.0.1:23/bkapps.git"],
     )
     def test_invalid_port(self, repo_url, settings):
         settings.FORBIDDEN_REPO_PORTS = [22, 23]
@@ -69,7 +69,7 @@ class Test__validate_repo_url:
 
     @pytest.mark.parametrize(
         "repo_url",
-        ["/mirror.tencent.com", "//127.0.0.1"],
+        ["/www.example.com", "//127.0.0.1"],
     )
     def test_invalid_url(self, repo_url):
         with pytest.raises(ValueError, match="Invalid url"):
@@ -82,10 +82,29 @@ class Test__validate_repo_url:
             "https://127.0.0.1/bkapps.git",
             "git://127.0.0.1",
             "svn://127.0.0.1",
-            "mirror.tencent.com/bkapps",
-            "mirror.tencent.com:443/bkapps",
-            "bkapps",
         ],
     )
     def test_valid_url(self, repo_url):
         validate_repo_url(repo_url)
+
+
+class Test__validate_image_repo:
+    @pytest.mark.parametrize(
+        "image_repo",
+        ["mirror.tencent.com:22/bkpaas", "mirror.tencent.com:23/bkapps"],
+    )
+    def test_invalid_port(self, image_repo, settings):
+        settings.FORBIDDEN_REPO_PORTS = [22, 23]
+        with pytest.raises(ValueError, match=r"Invalid url: has forbidden port*"):
+            validate_image_repo(image_repo)
+
+    @pytest.mark.parametrize(
+        "image_repo",
+        [
+            "mirror.tencent.com/bkapps",
+            "mirror.tencent.com:443/bkapps",
+            "nginx",
+        ],
+    )
+    def test_valid_repo(self, image_repo):
+        validate_image_repo(image_repo)

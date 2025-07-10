@@ -379,7 +379,7 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def _modify_image(self, request, code, module_name):
         module = self.get_module_via_path()
-        slz = slzs.RepoBackendModifySLZ(data=request.data)
+        slz = slzs.RepoBackendModifySLZ(data=request.data, context={"is_image_repo": True})
         slz.is_valid(raise_exception=True)
         data = slz.data
         repo_url = data["source_repo_url"]

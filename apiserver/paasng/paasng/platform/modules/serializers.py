@@ -48,6 +48,7 @@ from paasng.utils.validators import (
     RE_APP_CODE,
     DnsSafeNameValidator,
     ReservedWordValidator,
+    validate_image_repo,
     validate_procfile,
     validate_repo_url,
 )
@@ -298,14 +299,21 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
                 raise ValidationError(_("新建代码仓库时，源码仓库地址无效"))
 
         if source_repo_url:
-            try:
-                validate_repo_url(source_repo_url)
-            except ValueError as e:
-                raise ValidationError({"source_repo_url": str(e)})
+            self._validate_source_repo_url(source_repo_url, attrs["source_origin"])
 
         if attrs["write_template_to_repo"] and (not attrs.get("source_init_template")):
             raise ValidationError(_("将模板代码初始化到代码仓库中时，必须选择应用模板"))
         return attrs
+
+    @staticmethod
+    def _validate_source_repo_url(source_repo_url, source_origin):
+        try:
+            if source_origin == SourceOrigin.CNATIVE_IMAGE:
+                validate_image_repo(source_repo_url)
+            else:
+                validate_repo_url(source_repo_url)
+        except ValueError as e:
+            raise ValidationError({"source_repo_url": str(e)})
 
 
 class ModuleBuildConfigSLZ(serializers.Serializer):
@@ -350,7 +358,7 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
 
         if image_repository := attrs.get("image_repository"):
             try:
-                validate_repo_url(image_repository)
+                validate_image_repo(image_repository)
             except ValueError as e:
                 raise ValidationError({"image_repository": str(e)})
 

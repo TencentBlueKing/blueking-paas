@@ -26,7 +26,7 @@ from paasng.platform.sourcectl.models import RepositoryInstance, SvnAccount, Svn
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
 from paasng.utils.serializers import SourceControlField, UserNameField, VerificationCodeField
-from paasng.utils.validators import validate_repo_url
+from paasng.utils.validators import validate_image_repo, validate_repo_url
 
 logger = logging.getLogger(__name__)
 
@@ -158,8 +158,13 @@ class RepoBackendModifySLZ(serializers.Serializer):
         if not value:
             return value
 
+        is_image_repo = self.context.get("is_image_repo", False)
+
         try:
-            validate_repo_url(value)
+            if is_image_repo:
+                validate_image_repo(value)
+            else:
+                validate_repo_url(value)
         except ValueError as e:
             raise ValidationError(str(e))
         else:

@@ -25,6 +25,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_str
+from moby_distribution.registry.utils import parse_image
 
 # k8s 广泛使用的命名规范, 仅允许小写字母、数字和连字符, 最大长度 63
 # 参考 https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
@@ -138,11 +139,22 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
     return {k.lower(): v for k, v in procfile.items()}
 
 
+def validate_image_repo(image_repo: str):
+    """Validate image repo format, protocol, and port security.
+
+    :param image_repo: image repo
+    :raise: ValueError if image repo is invalid
+    """
+    parsed_image = parse_image(image_repo, default_registry="docker.io")
+    repo_url = parsed_image.domain
+    return validate_repo_url(repo_url)
+
+
 def validate_repo_url(repo_url: str):
     """Validate repo url format, protocol, and port security.
 
     :param repo_url: repo url
-    :raise: django.core.exceptions.ValidationError if repo url is invalid
+    :raise: ValueError if repo url is invalid
     """
     try:
         parsed_url = urlparse(repo_url)

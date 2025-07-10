@@ -19,6 +19,7 @@ import re
 from datetime import datetime
 
 import yaml
+from blue_krill.encrypt.handler import EncryptHandler
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -375,10 +376,11 @@ class ConfigVarSLZ(serializers.ModelSerializer):
         source="environment",
     )
     key = field_env_var_key()
-    value = serializers.CharField(required=True)
+    value = serializers.CharField(required=False)
     description = serializers.CharField(
         allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
     )
+    is_encrypted = serializers.BooleanField(help_text="是否加密存储")
     is_global = serializers.BooleanField(required=False, help_text="是否全局有效, 该字段由 slz 补充.")
     # 只读字段, 仅序列化时 ConfigVar 对象时生效
     id = serializers.IntegerField(read_only=True)
@@ -397,6 +399,15 @@ class ConfigVarSLZ(serializers.ModelSerializer):
         ]
         exclude = ("region", "environment")
 
+    def validate(self, attrs):
+        # 创建时 value 必传，更新时可选
+        if not self.instance and "value" not in attrs:
+            raise ValidationError({"value": _("环境变量值为必填项")})
+        # 修改时不允许修改 is_encrypted
+        if self.instance and "is_encrypted" in attrs and attrs["is_encrypted"] != self.instance.is_encrypted:
+            raise ValidationError({"is_encrypted": _("不允许修改加密状态")})
+        return attrs
+
     def to_internal_value(self, data):
         """Do following things:
 
@@ -405,6 +416,15 @@ class ConfigVarSLZ(serializers.ModelSerializer):
         """
         module = self.context.get("module")
         env_name = data["environment_name"]
+        is_encrypted = data.get("is_encrypted", False)
+        value = data.get("value", None)
+        # 加密处理
+        if value is not None:
+            if is_encrypted:
+                data["value"] = EncryptHandler().encrypt(value)
+            else:
+                data["value"] = value
+
         if env_name == ENVIRONMENT_NAME_FOR_GLOBAL:
             data["is_global"] = True
             data["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
@@ -413,7 +433,14 @@ class ConfigVarSLZ(serializers.ModelSerializer):
             data["environment_id"] = module.get_envs(env_name).pk
         data["module"] = module.pk
         data["tenant_id"] = module.tenant_id
+        data["is_encrypted"] = is_encrypted
         return super().to_internal_value(data)
+
+    def to_representation(self, instance) -> dict:
+        ret = super().to_representation(instance)
+        if getattr(instance, "is_encrypted", False):
+            ret["value"] = "******"
+        return ret
 
 
 class ListConfigVarsSLZ(serializers.Serializer):

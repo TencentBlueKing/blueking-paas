@@ -17,6 +17,7 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
+from blue_krill.encrypt.handler import EncryptHandler
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
@@ -47,7 +48,13 @@ def get_config_vars(module: "Module", env_name: str) -> Dict[str, str]:
     config_vars = ConfigVar.objects.filter(
         module=module, environment_id__in=(ENVIRONMENT_ID_FOR_GLOBAL, env_id)
     ).order_by("environment_id")
-    return {obj.key: obj.value for obj in config_vars}
+    result = {}
+    for config_var in config_vars:
+        if config_var.is_encrypted:
+            result[config_var.key] = EncryptHandler().decrypt(config_var.value)
+        else:
+            result[config_var.key] = config_var.value
+    return result
 
 
 def get_custom_builtin_config_vars(config_vars_prefix: str) -> Dict[str, str]:
@@ -82,6 +89,7 @@ class ConfigVar(TimestampedModel):
     value = models.TextField(null=False)
     description = models.CharField(max_length=200, null=True)
     is_builtin = models.BooleanField(default=False)
+    is_encrypted = models.BooleanField(default=False)
 
     tenant_id = tenant_id_field_factory()
 

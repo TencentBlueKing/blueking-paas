@@ -54,14 +54,18 @@ def get_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
     :param env: The environment object.
     :return: A dict of env variables.
     """
-    return UnifiedEnvVarsReader(env).get_all()
+    return UnifiedEnvVarsReader(env).get_kv_map()
 
 
 class EnvVarSource(StrEnum):
     """Enum for environment variable sources."""
 
-    # Configured by user
+    # Sources configured by user:
+    #
+    # USER_PRESET source means the var was configured by the app description file.
     USER_PRESET = "user_preset"
+    # USER_CONFIGURED source means the var was configured from the config var management webpage
+    # or API by the user.
     USER_CONFIGURED = "user_configured"
 
     # Provided by the platform
@@ -79,12 +83,14 @@ class UnifiedEnvVarsReader:
         self.env = env
 
         # Register the functions in the lister module
-        self._source_map = {source: getattr(vars_listers, f"list_vars_{source}") for source in EnvVarSource}
+        self._source_lister_func_map = {
+            source: getattr(vars_listers, f"list_vars_{source}") for source in EnvVarSource
+        }
 
         # The default order for merging env variables. In this order, the preset vars has lowest
         # priority and the user configured vars has higher priority and can override
         # some built-in env vars except builtin-addons and builtin-default-entrance.
-        self.default_order = [
+        self._default_order = [
             EnvVarSource.USER_PRESET,
             EnvVarSource.BUILTIN_SVC_DISC,
             EnvVarSource.BUILTIN_MISC,
@@ -95,17 +101,17 @@ class UnifiedEnvVarsReader:
             EnvVarSource.BUILTIN_DEFAULT_ENTRANCE,
         ]
 
-    def get_all(self, exclude_sources: list[EnvVarSource] | None = None) -> Dict[str, str]:
-        """Get all env variables.
+    def get_kv_map(self, exclude_sources: list[EnvVarSource] | None = None) -> Dict[str, str]:
+        """Get env variables in the format of {key: value} dictionary.
 
         :param exclude_sources: A list of sources to exclude from the result.
         :return: A dict of env variables.
         """
         env_list = EnvVariableList()
-        for source in self.default_order:
+        for source in self._default_order:
             if exclude_sources and source in exclude_sources:
                 continue
-            env_list.extend(self._source_map[source](self.env))
+            env_list.extend(self._source_lister_func_map[source](self.env))
         return env_list.kv_map
 
     def get_user_conflicted_keys(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedKey]":
@@ -118,11 +124,11 @@ class UnifiedEnvVarsReader:
         # Whether the current source being checked is after the USER_CONFIGURED source
         after_source = False
         # Get all keys defined by the user in the USER_CONFIGURED source
-        user_keys = {item.key for item in self._source_map[EnvVarSource.USER_CONFIGURED](self.env)}
+        user_keys = {item.key for item in self._source_lister_func_map[EnvVarSource.USER_CONFIGURED](self.env)}
 
         # Use a dict to store the result in case a key conflicts with multiple sources
         conflicted_keys = {}
-        for current_source in self.default_order:
+        for current_source in self._default_order:
             # Skip all user preset source, because they will be overridden anyway so conflict checking
             # is not needed.
             if current_source == EnvVarSource.USER_PRESET:
@@ -134,14 +140,14 @@ class UnifiedEnvVarsReader:
             if exclude_sources and current_source in exclude_sources:
                 continue
 
-            data = self._source_map[current_source](self.env).map
+            data = self._source_lister_func_map[current_source](self.env).map
             for key in user_keys:
                 if key in data:
                     conflicted_keys[key] = ConflictedKey(
                         key=key,
                         conflicted_source=current_source,
                         conflicted_detail=data[key].description,
-                        takes_effect=not after_source,
+                        override_conflicted=not after_source,
                     )
 
         # Sort and return the result
@@ -171,7 +177,7 @@ def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
             )
             # Any conflicted keys should not take effect because the special mechanism used for cloud-native apps
             for item in keys:
-                item.takes_effect = False
+                item.override_conflicted = False
 
             results.update({item.key: item for item in keys})
         else:
@@ -187,12 +193,12 @@ class ConflictedKey:
     :param key: The key of the config var.
     :param conflicted_source: The source of the conflict, such as "builtin_addons", "builtin_blobstore".
     :param conflicted_detail: Additional details about the conflict, if any.
-    :param takes_effect: Whether the config var takes effect.
+    :param override_conflicted: Whether the config var key has overridden the conflicting one.
     """
 
     key: str
     conflicted_source: str
-    takes_effect: bool
+    override_conflicted: bool
     conflicted_detail: str | None = None
 
 

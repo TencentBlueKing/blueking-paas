@@ -723,4 +723,4 @@ class ConflictedKeyOutputSLZ(serializers.Serializer):
     conflicted_detail = serializers.CharField(
         help_text="冲突详情，通常为该环境变量的详细描述，比如 builtin_addons 来源的该字段为增强服务名称"
     )
-    takes_effect = serializers.BooleanField(help_text="冲突发生后，用户定义的 Key 是否生效")
+    override_conflicted = serializers.BooleanField(help_text="冲突发生后，用户定义的 Key 是否生效")

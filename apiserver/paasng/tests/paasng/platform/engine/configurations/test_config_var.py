@@ -230,23 +230,23 @@ class Test__get_user_conflicted_keys:
         assert get_user_conflicted_keys(bk_module) == []
 
     def test_normal_found_conflicts(self, bk_module, bk_stag_env):
-        expected_take_effect_map = {
+        expected_override_conflicted_map = {
             "BK_API_URL_TMPL": True,
             "BK_COMPONENT_API_URL": True,
             "MYSQL_HOST": False,
         }
-        self._setup_and_test_conflicts(bk_module, bk_stag_env, expected_take_effect_map)
+        self._setup_and_test_conflicts(bk_module, bk_stag_env, expected_override_conflicted_map)
 
     def test_cnative_found_conflicts(self, bk_cnative_app, bk_module, bk_stag_env):
-        # For cnative apps, the take_effect value should always be False
-        expected_take_effect_map = {
+        # For cnative apps, the override_conflicted value should always be False
+        expected_override_conflicted_map = {
             "BK_API_URL_TMPL": False,
             "BK_COMPONENT_API_URL": False,
             "MYSQL_HOST": False,
         }
-        self._setup_and_test_conflicts(bk_module, bk_stag_env, expected_take_effect_map)
+        self._setup_and_test_conflicts(bk_module, bk_stag_env, expected_override_conflicted_map)
 
-    def _setup_and_test_conflicts(self, bk_module, bk_stag_env, expected_take_effect_map):
+    def _setup_and_test_conflicts(self, bk_module, bk_stag_env, expected_override_conflicted_map):
         """Helper method to setup and test the results."""
         # Setup service and credentials
         local_mysql_service = create_local_mysql_service()
@@ -270,19 +270,19 @@ class Test__get_user_conflicted_keys:
             key="BK_API_URL_TMPL",
             conflicted_source="builtin_misc",
             conflicted_detail="misc built-in",
-            takes_effect=expected_take_effect_map["BK_API_URL_TMPL"],
+            override_conflicted=expected_override_conflicted_map["BK_API_URL_TMPL"],
         )
         assert conflicted_keys[1] == ConflictedKey(
             key="BK_COMPONENT_API_URL",
             conflicted_source="builtin_misc",
             conflicted_detail="misc built-in",
-            takes_effect=expected_take_effect_map["BK_COMPONENT_API_URL"],
+            override_conflicted=expected_override_conflicted_map["BK_COMPONENT_API_URL"],
         )
         assert conflicted_keys[2] == ConflictedKey(
             key="MYSQL_HOST",
             conflicted_source="builtin_addons",
             conflicted_detail="MySQL",
-            takes_effect=expected_take_effect_map["MYSQL_HOST"],
+            override_conflicted=expected_override_conflicted_map["MYSQL_HOST"],
         )
 
 
@@ -291,10 +291,10 @@ class TestUnifiedEnvVarsReader:
     def test_exclude_sources(self, bk_module, bk_stag_env):
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="FOO", value="bar")
 
-        env_vars = UnifiedEnvVarsReader(bk_stag_env).get_all()
+        env_vars = UnifiedEnvVarsReader(bk_stag_env).get_kv_map()
         assert env_vars["FOO"] == "bar"
 
-        env_vars = UnifiedEnvVarsReader(bk_stag_env).get_all(exclude_sources=[EnvVarSource.USER_CONFIGURED])
+        env_vars = UnifiedEnvVarsReader(bk_stag_env).get_kv_map(exclude_sources=[EnvVarSource.USER_CONFIGURED])
         assert "FOO" not in env_vars
 
     def test_get_user_conflicted_keys_normal(self, bk_module, bk_stag_env):
@@ -308,11 +308,11 @@ class TestUnifiedEnvVarsReader:
         assert len(conflicts) == 2
         assert conflicts[0].key == "BKPAAS_DEFAULT_SUBPATH_ADDRESS"
         assert conflicts[0].conflicted_source == "builtin_default_entrance"
-        assert conflicts[0].takes_effect is False
+        assert conflicts[0].override_conflicted is False
 
         assert conflicts[1].key == "BK_API_URL_TMPL"
         assert conflicts[1].conflicted_source == "builtin_misc"
-        assert conflicts[1].takes_effect is True
+        assert conflicts[1].override_conflicted is True
 
     def test_get_user_conflicted_keys_exclude_sources(self, bk_module, bk_stag_env):
         vars_reader = UnifiedEnvVarsReader(bk_stag_env)

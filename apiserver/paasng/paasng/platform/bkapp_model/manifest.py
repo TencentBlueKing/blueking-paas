@@ -592,7 +592,7 @@ def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment)
 
     # 此处，云原生应用忽略这些类型的环境变量：用户手动定义、描述文件定义、服务发现，
     # 忽略用户手动定义（include_config_vars）是因为 EnvVarsManifestConstructor 已处理过。
-    system_vars = UnifiedEnvVarsReader(env).get_all(
+    system_vars = UnifiedEnvVarsReader(env).get_kv_map(
         exclude_sources=[
             # 用户在产品或描述文件手动定义，已经由 EnvVarsManifestConstructor 处理
             EnvVarSource.USER_CONFIGURED,

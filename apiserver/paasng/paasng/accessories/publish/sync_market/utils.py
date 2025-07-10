@@ -153,4 +153,6 @@ def cascade_delete_legacy_app(field: str, value: str, dry_run: bool = True) -> d
     with console_db.session_scope() as session:
         mgr = AppManger(session)
         app = mgr.session.query(mgr.model).filter_by(**{field: value}).scalar()
+        if not app:
+            return {}
         return LegacyDBCascadeDeleter(session, mgr.model.__name__).cascade_delete_by_id(app.id, dry_run)

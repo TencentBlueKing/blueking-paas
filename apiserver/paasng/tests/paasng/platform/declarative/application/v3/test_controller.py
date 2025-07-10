@@ -42,7 +42,7 @@ from tests.paasng.platform.declarative.utils import AppDescV3Builder as builder 
 from tests.paasng.platform.declarative.utils import AppDescV3Decorator as decorator  # noqa: N813
 from tests.utils.auth import create_user
 from tests.utils.basic import generate_random_string
-from tests.utils.helpers import configure_regions, create_app
+from tests.utils.helpers import create_app
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -117,30 +117,6 @@ class TestAppDeclarativeControllerCreation:
         app_json = builder.make_app_desc(random_name, decorator.with_module(module_name=module_name, is_default=True))
         with pytest.raises(DescriptionValidationError):
             get_app_description(app_json)
-
-    @pytest.mark.parametrize(
-        ("region", "has_error"),
-        [
-            (None, False),
-            ("r1", False),
-            # nondefault region is not supported and should raise an error
-            ("r2", True),
-        ],
-    )
-    @pytest.mark.usefixtures("mock_wl_services_in_creation")
-    def test_region_perm_check(self, bk_user, random_name, region, has_error, declarative_controller):
-        with configure_regions(["r1", "r2"]):
-            app_json = builder.make_app_desc(
-                random_name,
-                decorator.with_module("default", True),
-                *([decorator.with_region(region)] if region is not None else []),
-            )
-            if has_error:
-                with pytest.raises(DescriptionValidationError) as exc_info:
-                    declarative_controller.perform_action(get_app_description(app_json))
-                assert "region" in exc_info.value.detail
-            else:
-                declarative_controller.perform_action(get_app_description(app_json))
 
     def test_normal(self, random_name, declarative_controller, app_tenant):
         app_json = builder.make_app_desc(random_name, decorator.with_module("default", True))

@@ -438,7 +438,7 @@ class ConfigVarSLZ(serializers.ModelSerializer):
 
     def to_representation(self, instance) -> dict:
         ret = super().to_representation(instance)
-        if instance.is_encrypted:
+        if instance["is_encrypted"]:
             ret["value"] = "******"
         return ret
 

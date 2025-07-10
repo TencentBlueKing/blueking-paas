@@ -29,7 +29,7 @@ from paasng.platform.engine.models.config_var import ConfigVar
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "environment_name, bk_env",
+    ("environment_name", "bk_env"),
     [("stag", "bk_stag_env"), ("prod", "bk_prod_env"), ("_global_", None)],
     indirect=["bk_env"],
 )
@@ -54,12 +54,13 @@ class TestConfigVar:
             tenant_id=bk_module.tenant_id,
             environment_id=getattr(bk_env, "pk", -1),
             is_global=bk_env is None,
+            is_encrypted=False,
             **data,
         )
 
     @pytest.mark.parametrize(
         "data",
-        [dict(key="FOO", value="bar", description="baz")],
+        [dict(key="FOO", is_encrypted=False, value="bar", description="baz")],
     )
     def test_output(self, bk_module, environment_name, bk_env, data):
         slz = slzs.ConfigVarSLZ(dict(module=bk_module, environment=bk_env, **data))

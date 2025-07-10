@@ -153,7 +153,7 @@ class BraceOnlyTemplate(string.Template):
         """  # type: ignore
 
 
-def safe_str_format(template: str, context: dict[str, str]) -> str:
+def basic_str_format(template: str, context: dict[str, str]) -> str:
     """This function is similar to `str.format`, but only support basic string substitution,
     features such as attribute access and slicing are not supported.
 

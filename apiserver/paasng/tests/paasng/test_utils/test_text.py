@@ -19,10 +19,10 @@ import pytest
 
 from paasng.utils.text import (
     BraceOnlyTemplate,
+    basic_str_format,
     calculate_percentage,
     camel_to_snake,
     remove_suffix,
-    safe_str_format,
     strip_html_tags,
 )
 
@@ -141,10 +141,10 @@ class TestBraceOnlyTemplate:
             template.substitute()
 
 
-class TestSafeStrFormat:
+class Test__basic_str_format:
     def test_basic(self):
-        assert safe_str_format("Hello {name}!", {"name": "foo"}) == "Hello foo!"
+        assert basic_str_format("Hello {name}!", {"name": "foo"}) == "Hello foo!"
 
-    def test_attribute_access_should_fail(self):
+    def test_index_access_should_fail(self):
         with pytest.raises(ValueError, match="Invalid placeholder .*"):
-            safe_str_format("Hello {names[0]}!", {"names": "foobar"})
+            basic_str_format("Hello {names[0]}!", {"names": "foobar"})

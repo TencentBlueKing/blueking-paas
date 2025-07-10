@@ -572,7 +572,9 @@ export default {
               if (this.addIPDialog.isEdit && value === '*') {
                 return true;
               }
-              return /(^\/(.+\/)+)$/.test(value);
+              // return /(^\/(.+\/)+)$/.test(value);
+              // 避免 ReDOS 风险
+              return value.startsWith('/') && value.endsWith('/') && value.length > 2;
             },
             message: this.$t('可访问路径前缀格式错误，以反斜杠(/)开始、结束，如：/api/user/'),
             trigger: 'blur',
@@ -871,7 +873,7 @@ export default {
       this.customTime = 1;
     },
 
-    timeFilterHandler(key, index) {
+    timeFilterHandler(key) {
       const currentTimestamp = new Date().getTime();
       if (key === 'custom') {
         this.$delete(this.timeFilters, 'custom');
@@ -1010,7 +1012,7 @@ export default {
     batchDelete() {
       if (this.currentSelectList.length === 1) {
         const { id } = this.currentSelectList[0];
-        this.curIPParams = this.currentSelectList[0];
+        [this.curIPParams] = this.currentSelectList;
         this.removeIPDialog.id = id;
         this.removeIPDialog.visiable = true;
         return;
@@ -1054,11 +1056,11 @@ export default {
       this.currentSelectList = [...selection];
     },
 
-    handlerChange(selection, row) {
+    handlerChange(selection) {
       this.currentSelectList = [...selection];
     },
 
-    renderHeader(h, { column }) {
+    renderHeader(h) {
       return h(
         'div',
         {
@@ -1114,12 +1116,12 @@ export default {
     },
 
     /**
-               * 分页limit chang 回调
-               *
-               * @param {Number} currentLimit 新limit
-               * @param {Number} prevLimit 旧limit
-               */
-    limitChange(currentLimit, prevLimit) {
+     * 分页limit chang 回调
+     *
+     * @param {Number} currentLimit 新limit
+     * @param {Number} prevLimit 旧limit
+     */
+    limitChange(currentLimit) {
       this.pagination.limit = currentLimit;
       this.pagination.current = 1;
       this.fetchIpList(true);
@@ -1129,7 +1131,7 @@ export default {
       this.keyword = '';
     },
 
-    togglePermission(val, oldVal) {
+    togglePermission() {
       this.IPPermissionDialog.visiable = true;
     },
 
@@ -1320,14 +1322,14 @@ export default {
       this.addIPDialog.isLoading = true;
       setTimeout(() => {
         this.$refs.addIPForm.validate().then(
-          (res) => {
+          () => {
             if (this.checkUserParams(params)) {
               this.submitIPParams(params);
             } else {
               this.addIPDialog.isLoading = false;
             }
           },
-          (res) => {
+          () => {
             this.addIPDialog.isLoading = false;
           },
         );
@@ -1697,4 +1699,3 @@ export default {
           }
       }
   </style>
-

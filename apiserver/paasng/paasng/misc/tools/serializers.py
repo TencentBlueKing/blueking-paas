@@ -15,9 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.fields import empty
+
+from paasng.platform.applications.serializers.fields import SourceDirField
 
 
 class DisplayOptionsSerializer(serializers.Serializer):
@@ -142,7 +143,7 @@ class BkMonitorPortSerializer(serializers.Serializer):
 
 class ModuleSerializer(serializers.Serializer):
     is_default = serializers.BooleanField(required=False)
-    source_dir = serializers.CharField(required=False)
+    source_dir = SourceDirField(required=False, default=empty)
     language = serializers.CharField()
     services = ServiceSerializer(many=True, required=False)
     env_variables = EnvVariableSerializer(many=True, required=False)
@@ -151,12 +152,6 @@ class ModuleSerializer(serializers.Serializer):
     svc_discovery = SvcDiscoverySerializer(required=False)
     package_plans = serializers.DictField(required=False)
     bkmonitor = BkMonitorPortSerializer(required=False)
-
-    def validate_source_dir(self, value: str):
-        if value.startswith("/") or ".." in value:
-            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
-
-        return value
 
 
 class AppDescSpec2Serializer(serializers.Serializer):

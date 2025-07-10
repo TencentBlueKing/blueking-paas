@@ -330,11 +330,24 @@ const actions = {
 
   /**
      * 获取应用文档列表
-     * @param {Object} params 请求参数：appCode, moduleId, env, deployId
+     * @param {Object} params 请求参数：appCode, params
      */
-  getAppDocLinks({}, { appCode, params }, config = {}) {
+  async getAppDocLinks({ rootState }, { appCode, params }, config = {}) {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/accessories/advised_documentary_links/?${json2Query(params)}`;
-    return http.get(url, config);
+    try {
+      const response = await http.get(url, config);
+      const languagePrefix = rootState.localLanguage === 'en' ? 'EN' : 'ZH';
+
+      // 变更文档链接的语言环境
+      const updatedLinks = (response.links || []).map(item => ({
+        ...item,
+        location: item.location.replace(/ZH/, languagePrefix),
+        link: item.link.replace(/ZH/, languagePrefix),
+      }));
+      return { links: updatedLinks };
+    } catch (error) {
+      throw error;
+    }
   },
 
   /**

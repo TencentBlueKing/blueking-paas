@@ -19,7 +19,6 @@ import logging
 from typing import Dict, List, Optional, Type, Union
 
 import cattrs
-import jinja2
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
@@ -41,6 +40,7 @@ from paasng.bk_plugins.pluginscenter.thirdparty.api_serializers import PluginBui
 from paasng.bk_plugins.pluginscenter.thirdparty.deploy import check_deploy_result, deploy_version, get_deploy_logs
 from paasng.bk_plugins.pluginscenter.thirdparty.market import read_market_info
 from paasng.bk_plugins.pluginscenter.thirdparty.subpage import can_enter_next_stage
+from paasng.utils import safe_jinja2
 
 logger = logging.getLogger(__name__)
 
@@ -304,7 +304,7 @@ class PipelineStage(BaseStageController):
             "source_hash": self.release.source_hash,
         }
         pipeline_params = {
-            key: jinja2.Template(value).render(context) for key, value in stage_definition.pipelineParams.items()
+            key: safe_jinja2.Template(value).render(context) for key, value in stage_definition.pipelineParams.items()
         }
         return pipeline_params
 

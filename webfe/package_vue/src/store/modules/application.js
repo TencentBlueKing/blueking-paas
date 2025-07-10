@@ -54,7 +54,7 @@ const actions = {
         },
         () => {
           resolve(undefined);
-        }
+        },
       );
     });
   },

@@ -22,7 +22,6 @@ from functools import reduce
 from operator import add
 from typing import Counter, Dict, List, Optional
 
-import jinja2
 from elasticsearch_dsl.aggs import Terms
 from rest_framework.fields import get_attribute
 
@@ -30,6 +29,7 @@ from paasng.accessories.log.models import ElasticSearchParams
 from paasng.accessories.log.utils import get_es_term
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.modules.models import Module
+from paasng.utils import safe_jinja2
 from paasng.utils.es_log.models import FieldFilter
 from paasng.utils.es_log.search import SmartSearch
 from paasng.utils.text import calculate_percentage
@@ -176,7 +176,10 @@ class ESFilter:
         return search
 
 
-tmpl_converters = {"@json": lambda v: json.loads(v), "@jinja": lambda v, context: jinja2.Template(v).render(**context)}
+tmpl_converters = {
+    "@json": lambda v: json.loads(v),
+    "@jinja": lambda v, context: safe_jinja2.Template(v).render(**context),
+}
 
 
 class EnvFilter(ESFilter):
@@ -202,7 +205,7 @@ class EnvFilter(ESFilter):
         }
         term_fields = self.search_params.termTemplate.copy()
         for k, v in term_fields.items():
-            term_fields[k] = jinja2.Template(v).render(**context)
+            term_fields[k] = safe_jinja2.Template(v).render(**context)
 
         # 目前只有查询 Ingress 日志时需要用 terms 过滤多字段
         # 接入日志平台后查询日志的交互需要调整, 不能再在模块维度查询日志
@@ -241,7 +244,7 @@ class ModuleFilter(ESFilter):
         }
         term_fields = self.search_params.termTemplate.copy()
         for k, v in term_fields.items():
-            term_fields[k] = jinja2.Template(v).render(**context)
+            term_fields[k] = safe_jinja2.Template(v).render(**context)
 
         # 目前只有查询 Ingress 日志时需要用 terms 过滤多字段
         # 接入日志平台后查询日志的交互需要调整, 不能再在模块维度查询日志

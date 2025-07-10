@@ -374,11 +374,19 @@ export default {
       }
     },
     // 获取文档链接信息
-    getDocLinks() {
-      const linkUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/accessories/advised_documentary_links/?plat_panel=app_created&limit=3`;
-      this.$http.get(linkUrl).then((response) => {
-        this.advisedDocLinks = response.links;
-      });
+    async getDocLinks() {
+      try {
+        const res = await this.$store.dispatch('deploy/getAppDocLinks', {
+          appCode: this.appCode,
+          params: {
+            plat_panel: 'app_created',
+            limit: 3,
+          },
+        });
+        this.advisedDocLinks = res.links;
+      } catch (e) {
+        this.catchErrorHandler(e);
+      }
     },
     // 获取应用模板信息
     async getAppTemplateInfo() {

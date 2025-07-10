@@ -15,18 +15,32 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+# 以 sandbox 模式运行模板, 增强 jinja2 的安全性, 防注入漏洞
 
-class AlreadyInitializedSvnRepo(Exception):
-    pass
+import os
+import typing as t
 
-
-class CannotInitNonEmptyTrunk(Exception):
-    pass
-
-
-class RelatedServiceError(Exception):
-    pass
+import jinja2
+from jinja2.sandbox import SandboxedEnvironment
 
 
-class SVNServiceError(RelatedServiceError):
-    pass
+def _get_file_environment(
+    searchpath: t.Union[str, "os.PathLike[str]", t.Sequence[t.Union[str, "os.PathLike[str]"]]],
+    trim_blocks: bool = False,
+):
+    return SandboxedEnvironment(loader=jinja2.FileSystemLoader(searchpath), trim_blocks=trim_blocks)
+
+
+FileEnvironment = _get_file_environment
+
+
+_default_env = SandboxedEnvironment()
+
+
+def _safe_template(source, *args, **kwargs):
+    if not args and not kwargs:
+        return _default_env.from_string(source)
+    return SandboxedEnvironment(*args, **kwargs).from_string(source)
+
+
+Template = _safe_template

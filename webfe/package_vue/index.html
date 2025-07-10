@@ -7,6 +7,15 @@
   <body>
     <div id="app"></div>
     <script>
+      function getLanguage() {
+        try {
+          return typeof document !== 'undefined' && /(^|;\s*)blueking_language=(en[^;]*)/i.test(document.cookie) ? 'EN' : 'ZH';
+        } catch (e) {
+          return 'ZH';
+        }
+      }
+      var language = getLanguage();
+
       // 以下变量由 webpack 构建工具填充
       // var RELEASE_VERSION = '<%= JSON.stringify(htmlWebpackPlugin.options) %>'
 
@@ -24,9 +33,9 @@
       var BK_COMPONENT_API_URL = '<%= process.env.BK_COMPONENT_API_URL %>' || ''
       var BK_ANALYSIS_JS = '<%= process.env.BK_ANALYSIS_JS %>' || ''
   
-      var PAAS_DOCS_URL_PREFIX = `<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/ZH/PaaS/<%= process.env.BK_PAAS_DOCS_VER %>`
-      var DOCS_URL_PREFIX = `<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/ZH/PaaS/<%= process.env.BK_PAAS_DOCS_VER %>/BaseGuide`
-      var APIGW_DOCS_PREFIX = `<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/ZH/APIGateway/<%= process.env.BK_APIGW_DOCS_VER %>`
+      var PAAS_DOCS_URL_PREFIX = '<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/' + language +'/PaaS/<%= process.env.BK_PAAS_DOCS_VER %>'
+      var DOCS_URL_PREFIX = '<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/' + language +'/PaaS/<%= process.env.BK_PAAS_DOCS_VER %>/BaseGuide'
+      var APIGW_DOCS_PREFIX = '<%= process.env.BK_DOCS_URL_PREFIX %>/markdown/' + language +'/APIGateway/<%= process.env.BK_APIGW_DOCS_VER %>'
       var BK_STATIC_URL = '<%= process.env.BK_STATIC_URL %>' || ''
       var BK_PAAS_VERSION = '<%= process.env.BK_PAAS_VERSION %>' || ''
       var BK_SHARED_RES_URL = '<%= process.env.BK_SHARED_RES_URL %>' || ''

@@ -242,7 +242,9 @@ export default {
             trigger: 'blur',
           },
           {
-            validator: value => /(^\/(.+\/)+)$/.test(value),
+            // validator: value => /(^\/(.+\/)+)$/.test(value),
+            // 避免 ReDOS 风险
+            validator: value => value.startsWith('/') && value.endsWith('/') && value.length > 2,
             message: this.$t('路径前缀格式错误，以反斜杠(/)开始、结束，如：/api/user/'),
             trigger: 'blur',
           },
@@ -722,4 +724,3 @@ export default {
           text-overflow: ellipsis;
       }
   </style>
-

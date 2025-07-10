@@ -66,7 +66,7 @@ export default {
   },
   computed: {
     ...mapState('tenant', {
-      clustersStatus: (state) => state.clustersStatus,
+      clustersStatus: state => state.clustersStatus,
     }),
     isExpandDetails() {
       return this.$route.query?.type === 'detail';
@@ -109,13 +109,7 @@ export default {
         return;
       }
       try {
-        await Promise.allSettled(
-          clusters.map((cluster) =>
-            this.getClustersStatus(cluster.name).catch(() => {
-              return null;
-            })
-          )
-        );
+        await Promise.allSettled(clusters.map(cluster => this.getClustersStatus(cluster.name).catch(() => null)));
       } catch (e) {
         console.error(e);
       }

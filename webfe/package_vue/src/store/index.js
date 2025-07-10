@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign, no-restricted-syntax */
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
@@ -58,6 +59,7 @@ import tenantOperations from './modules/tenant-operations';
 import tenantConfig from './modules/tenant-config';
 import http from '@/api';
 import cookie from 'cookie';
+import { validateAppCode, createSafeObject, safeSet, safeHas } from '@/utils/safe-object';
 
 Vue.use(Vuex);
 
@@ -76,7 +78,7 @@ const state = {
   curAppModule: {},
   curAppDefaultModule: {},
   curAppModuleList: [],
-  appInfo: {},
+  appInfo: Object.create(null),
   pluginInfo: {},
 
   isAppLoading: true,
@@ -115,14 +117,22 @@ const mutations = {
     }
 
     const appCode = state.curAppCode;
-    if (appCode && state.appInfo[appCode]) {
-      // 合并用户功能开关和应用功能开关
-      const appFeature = state.appInfo[appCode].feature || {};
-      state.appInfo[appCode].feature = {
-        ...state.userFeature,
-        ...state.platformFeature,
-        ...appFeature,
-      };
+    // 使用严格的 appCode 验证
+    if (appCode && validateAppCode(appCode)) {
+      // 确保 appInfo 是安全的无原型对象
+      if (Object.getPrototypeOf(state.appInfo) !== null) {
+        state.appInfo = createSafeObject(state.appInfo);
+      }
+
+      if (safeHas(state.appInfo, appCode)) {
+        // 合并用户功能开关和应用功能开关
+        const appFeature = state.appInfo[appCode].feature || {};
+        state.appInfo[appCode].feature = {
+          ...state.userFeature,
+          ...state.platformFeature,
+          ...appFeature,
+        };
+      }
     }
   },
   updatePlatformFeature(state, data) {
@@ -133,22 +143,41 @@ const mutations = {
     }
 
     const appCode = state.curAppCode;
-    if (appCode && state.appInfo[appCode]) {
-      // 合并用户功能开关和应用功能开关
-      const appFeature = state.appInfo[appCode].feature || {};
-      state.appInfo[appCode].feature = {
-        ...state.userFeature,
-        ...state.platformFeature,
-        ...appFeature,
-      };
+    // 使用严格的 appCode 验证
+    if (appCode && validateAppCode(appCode)) {
+      // 确保 appInfo 是安全的无原型对象
+      if (Object.getPrototypeOf(state.appInfo) !== null) {
+        state.appInfo = createSafeObject(state.appInfo);
+      }
+
+      if (safeHas(state.appInfo, appCode)) {
+        // 合并用户功能开关和应用功能开关
+        const appFeature = state.appInfo[appCode].feature || {};
+        state.appInfo[appCode].feature = {
+          ...state.userFeature,
+          ...state.platformFeature,
+          ...appFeature,
+        };
+      }
     }
   },
   updateAppLoading(state, data) {
     state.isAppLoading = data;
   },
   updateAppFeature(state, { appCode, data }) {
-    if (state.appInfo[appCode]) {
-      // 合并用户功能开关和应用功能开关
+    // 使用严格的 appCode 验证
+    if (!validateAppCode(appCode)) {
+      console.warn(`[Security] Invalid appCode blocked in updateAppFeature: ${appCode}`);
+      return;
+    }
+
+    // 确保 appInfo 是安全的无原型对象
+    if (Object.getPrototypeOf(state.appInfo) !== null) {
+      state.appInfo = createSafeObject(state.appInfo);
+    }
+
+    if (safeHas(state.appInfo, appCode)) {
+      // 安全地设置 feature 属性
       state.appInfo[appCode].feature = {
         ...state.userFeature,
         ...state.platformFeature,
@@ -158,6 +187,12 @@ const mutations = {
   },
   // curAppInfo && curAppModule 的信息都在这里获取
   updateAppInfo(state, { appCode, moduleId, data }) {
+    // 使用严格的 appCode 验证
+    if (!validateAppCode(appCode)) {
+      console.warn(`[Security] Invalid appCode blocked: ${appCode}`);
+      return;
+    }
+
     if (!data.feature) {
       data.feature = {};
     }
@@ -168,9 +203,19 @@ const mutations = {
 
     state.curAppInfo = data;
     state.curAppCode = appCode;
-    state.appInfo[appCode] = data;
-    state.curAppModuleList = data.application.modules;
 
+    // 确保 appInfo 是安全的无原型对象
+    if (Object.getPrototypeOf(state.appInfo) !== null) {
+      state.appInfo = createSafeObject(state.appInfo);
+    }
+
+    // 使用安全的属性设置
+    if (!safeSet(state.appInfo, appCode, data)) {
+      console.error(`[Security] Failed to set app data for: ${appCode}`);
+      return;
+    }
+
+    state.curAppModuleList = data.application.modules;
     state.curAppDefaultModule = data.application.modules.find(module => module.is_default);
 
     if (moduleId) {
@@ -216,7 +261,18 @@ const mutations = {
     });
   },
   updateCurAppByCode(state, { appCode, moduleId }) {
-    if (state.appInfo[appCode]) {
+    // 使用严格的 appCode 验证
+    if (!validateAppCode(appCode)) {
+      console.warn(`[Security] Invalid appCode blocked in updateCurAppByCode: ${appCode}`);
+      return;
+    }
+
+    // 确保 appInfo 是安全的无原型对象
+    if (Object.getPrototypeOf(state.appInfo) !== null) {
+      state.appInfo = createSafeObject(state.appInfo);
+    }
+
+    if (safeHas(state.appInfo, appCode)) {
       const data = state.appInfo[appCode];
       state.curAppInfo = data;
       state.curAppModuleList = data.application.modules;

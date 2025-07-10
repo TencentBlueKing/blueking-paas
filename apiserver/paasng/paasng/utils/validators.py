@@ -18,7 +18,9 @@
 import base64
 import re
 from typing import Dict
+from urllib.parse import urlparse
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
@@ -134,3 +136,26 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
 
     # Formalize procfile data and return
     return {k.lower(): v for k, v in procfile.items()}
+
+
+def validate_repo_url(repo_url: str):
+    """Validate repo url format, protocol, and port security.
+
+    :param repo_url: repo url
+    raise: django.core.exceptions.ValidationError if repo url is invalid
+    """
+    try:
+        parsed_url = urlparse(repo_url)
+    except Exception:
+        raise ValueError("Invalid url")
+
+    if not parsed_url.netloc:
+        parsed_url = urlparse(f"https://{repo_url}")
+        if not parsed_url.netloc:
+            raise ValueError("Invalid url")
+
+    if parsed_url.scheme not in ["http", "https", "git", "svn"]:
+        raise ValueError("Invalid url: only support http/https/git/svn scheme")
+
+    if parsed_url.port and parsed_url.port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
+        raise ValueError(f"Invalid url: has forbidden port {parsed_url.port}")

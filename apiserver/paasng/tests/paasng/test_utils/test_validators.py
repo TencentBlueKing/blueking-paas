@@ -18,7 +18,7 @@
 import pytest
 from django.core.exceptions import ValidationError
 
-from paasng.utils.validators import DnsSafeNameValidator, ReservedWordValidator
+from paasng.utils.validators import DnsSafeNameValidator, ReservedWordValidator, validate_repo_url
 
 
 class TestReservedWordValidator:
@@ -47,3 +47,45 @@ class TestDnsSafeNameValidator:
         with pytest.raises(ValidationError) as exec_info:
             validator(input_str)
         assert exec_info.value.message == validator.message
+
+
+class Test__validate_repo_url:
+    @pytest.mark.parametrize(
+        "repo_url",
+        ["mysql://127.0.0.1", "postgres://127.0.0.1"],
+    )
+    def test_invalid_protocol(self, repo_url):
+        with pytest.raises(ValueError, match="Invalid url: only support http/https/git/svn scheme"):
+            validate_repo_url(repo_url)
+
+    @pytest.mark.parametrize(
+        "repo_url",
+        ["http://127.0.0.1:22/bkapps.git", "https://127.0.0.1:23/bkapps.git", "mirror.tencent.com:22/bkapps"],
+    )
+    def test_invalid_port(self, repo_url, settings):
+        settings.FORBIDDEN_REPO_PORTS = [22, 23]
+        with pytest.raises(ValueError, match=r"Invalid url: has forbidden port*"):
+            validate_repo_url(repo_url)
+
+    @pytest.mark.parametrize(
+        "repo_url",
+        ["/mirror.tencent.com", "//127.0.0.1"],
+    )
+    def test_invalid_url(self, repo_url):
+        with pytest.raises(ValueError, match="Invalid url"):
+            validate_repo_url(repo_url)
+
+    @pytest.mark.parametrize(
+        "repo_url",
+        [
+            "http://127.0.0.1:80/bkapps.git",
+            "https://127.0.0.1/bkapps.git",
+            "git://127.0.0.1",
+            "svn://127.0.0.1",
+            "mirror.tencent.com/bkapps",
+            "mirror.tencent.com:443/bkapps",
+            "bkapps",
+        ],
+    )
+    def test_valid_url(self, repo_url):
+        validate_repo_url(repo_url)

@@ -17,7 +17,6 @@
 
 import datetime
 import logging
-from collections import defaultdict
 from dataclasses import asdict
 from typing import Optional
 
@@ -130,108 +129,6 @@ class AppManger(AppAdaptor):
         """根据 name 从 DB 中删除应用"""
         self.session.query(self.model).filter_by(name=name).delete()
         self.session.commit()
-
-    def cascade_delete_by_name(self, name: str):
-        """根据 name 从 db 中级联删除应用"""
-        app = self.session.query(self.model).filter_by(name=name).scalar()
-        self.cascade_delete_by_id(app.id)
-
-    def cascade_delete_by_code(self, code: str):
-        """根据 code 从 db 中级联删除应用"""
-        app = self.session.query(self.model).filter_by(code=code).scalar()
-        self.cascade_delete_by_id(app.id)
-
-    def cascade_delete_by_id(self, app_id: int):
-        """根据 id 从 db 中级联删除应用"""
-        try:
-            app_table_name = self.model.__name__
-            # 构建完整的依赖关系图
-            dependency_graph = self._build_dependency_graph(app_table_name)
-
-            # 递归删除
-            self._delete_records_recursively(dependency_graph, app_table_name, app_id)
-            self.session.commit()
-
-        except Exception:
-            self.session.rollback()
-            raise
-
-    def _get_foreign_key_references(self, target_table: str):
-        """获取所有引用目标表的外键关系"""
-        sql = """
-        SELECT
-            TABLE_NAME,
-            COLUMN_NAME,
-            REFERENCED_TABLE_NAME,
-            REFERENCED_COLUMN_NAME
-        FROM
-            INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-        WHERE
-            REFERENCED_TABLE_NAME = :target_table
-        AND TABLE_SCHEMA = DATABASE()
-        """
-        result = self.session.execute(sql, {"target_table": target_table})
-        return [dict(row) for row in result]
-
-    def _build_dependency_graph(self, start_table: str) -> dict:
-        """构建完整的依赖关系图"""
-        graph = defaultdict(list)
-        visited = set()
-
-        def dfs(current_table):
-            if current_table in visited:
-                return
-            visited.add(current_table)
-            references = self._get_foreign_key_references(current_table)
-            for ref in references:
-                graph[current_table].append(
-                    {
-                        "referencing_table": ref["TABLE_NAME"],
-                        "foreign_key_column": ref["COLUMN_NAME"],
-                        "referenced_column": ref["REFERENCED_COLUMN_NAME"],
-                    }
-                )
-                dfs(ref["TABLE_NAME"])
-
-        dfs(start_table)
-        return graph
-
-    def _find_records_referencing(self, table: str, column: str, referenced_id: int):
-        """查找引用特定 ID 的记录"""
-        sql = f"SELECT id FROM {table} WHERE {column} = :ref_id"
-        result = self.session.execute(sql, {"ref_id": referenced_id})
-        return [row[0] for row in result]
-
-    def _delete_records(self, table: str, column: str, referenced_id: int):
-        """删除引用特定 ID 的记录"""
-        sql = f"DELETE FROM {table} WHERE {column} = :ref_id"
-        self.session.execute(sql, {"ref_id": referenced_id})
-
-    def _delete_records_recursively(self, graph: dict, table: str, record_id: int):
-        """递归删除记录"""
-        # 存在循环依赖的情况(如 User.parent = User)，因此当没有记录时打断递归
-        referenced_ids = self._find_records_referencing(table, "id", record_id)
-        if not referenced_ids:
-            return
-
-        # 该表没有被其他表引用，直接删除记录
-        if table not in graph:
-            self._delete_records(table, "id", record_id)
-            return
-
-        # 先处理所有引用该表的记录
-        for ref in graph[table]:
-            referencing_table = ref["referencing_table"]
-            foreign_key_column = ref["foreign_key_column"]
-
-            # 查找所有引用当前记录的记录
-            referenced_ids = self._find_records_referencing(referencing_table, foreign_key_column, record_id)
-
-            for ref_id in referenced_ids:
-                self._delete_records_recursively(graph, referencing_table, ref_id)
-
-        # 所有引用记录都删除后，删除当前记录
-        self._delete_records(table, "id", record_id)
 
 
 class AppUseRecordManger(AppUseRecordAdaptor):

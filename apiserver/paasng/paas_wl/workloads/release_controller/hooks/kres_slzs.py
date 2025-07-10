@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, Dict, Optional
 
 import arrow
 import cattr
-from django.conf import settings
 from kubernetes.dynamic import ResourceField, ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
@@ -79,6 +78,7 @@ class CommandDeserializer(AppEntityDeserializer["Command"]):
                 envs=decode_envs(main_container.env),
                 image_pull_policy=main_container.imagePullPolicy,
                 image_pull_secrets=getattr(kube_data.spec, "imagePullSecrets", None) or [],
+                resources=main_container.resources,
             ),
             schedule=Schedule(
                 cluster_name=annotations["cluster_name"],
@@ -90,7 +90,7 @@ class CommandDeserializer(AppEntityDeserializer["Command"]):
             type_=annotations["type"],
             version=int(annotations["version"]),
             # 运行时信息
-            start_time=start_time,
+            start_time=start_time.datetime if start_time else None,
             phase=pod_status.phase,
             phase_message=health_status.message,
             main_container_exit_code=main_container_exit_code,
@@ -131,7 +131,7 @@ class CommandSerializer(AppEntitySerializer["Command"]):
                 "image": obj.runtime.image,
                 "name": obj.name,
                 "imagePullPolicy": obj.runtime.image_pull_policy,
-                "resources": self._get_pod_resources(obj),
+                "resources": obj.runtime.resources,
                 "volumeMounts": cattr.unstructure(
                     get_app_logging_volume_mounts(obj.app) + addon_mgr.get_volume_mounts()
                 ),
@@ -158,16 +158,15 @@ class CommandSerializer(AppEntitySerializer["Command"]):
         }
         return pod_template
 
-    def _get_kube_labels(self, obj: "Command") -> Dict:
+    @staticmethod
+    def _get_kube_labels(obj: "Command") -> Dict:
         return {"pod_selector": obj.name, "category": "command"}
 
-    def _get_kube_annotations(self, obj: "Command") -> Dict:
+    @staticmethod
+    def _get_kube_annotations(obj: "Command") -> Dict:
         return {
             "type": obj.type_,
             "version": str(obj.version),
             "pk": obj.pk,
             "cluster_name": obj.schedule.cluster_name,
         }
-
-    def _get_pod_resources(self, obj: "Command"):
-        return settings.SLUGBUILDER_RESOURCES_SPEC

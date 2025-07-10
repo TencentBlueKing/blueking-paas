@@ -32,7 +32,8 @@ from paasng.platform.environments.models import EnvRoleProtection
 from paasng.platform.sourcectl.constants import VersionType
 
 logger = logging.getLogger(__name__)
-pytestmark = pytest.mark.django_db
+
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestConfigVarAPIs:

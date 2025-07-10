@@ -73,6 +73,9 @@ class ClusterAnnotationKey(StrStructuredEnum):
     )
     # NOTE: 该配置仅对普通应用生效，云原生应用需要在 Operator 的 Helm Chart Values 中配置
     INGRESS_CLASS_NAME = EnumField("ingress_class_name", label=_("Ingress 类名"))
+    # 集群 slugbuilder 资源配额，其值格式如下（非字符串）：
+    # {"requests": {"cpu": "1", "memory": "1Gi"}, "limits": {"cpu": "4", "memory": "4Gi"}}
+    SLUGBUILDER_RESOURCE_QUOTA = EnumField("slugbuilder_resource_quota", label=_("Slugbuilder 资源配额"))
 
 
 class ClusterAllocationPolicyType(StrStructuredEnum):

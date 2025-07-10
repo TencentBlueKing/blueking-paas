@@ -19,6 +19,7 @@
 
 import os
 import typing as t
+from functools import partial
 
 import jinja2
 from jinja2.sandbox import SandboxedEnvironment
@@ -44,3 +45,7 @@ def _safe_template(source, *args, **kwargs):
 
 
 Template = _safe_template
+
+# StrFormatCompatTemplate is a Template that uses a single brace `{}` as delimiters, which is
+# compatible with str.format() and can be used as a replacement when the template is untrusted.
+StrFormatCompatTemplate = partial(Template, variable_start_string="{", variable_end_string="}")

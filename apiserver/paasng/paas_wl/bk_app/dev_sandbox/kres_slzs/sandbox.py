@@ -101,6 +101,18 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
         return {
             "name": CODE_EDITOR_CONTAINER_NAME,
             "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
+            "securityContext": {"runAsUser": 1000},
+            "command": ["sh", "-c"],
+            "args": [
+                # 主题配置
+                "mkdir -p /home/coder/.local/share/code-server/User && "
+                'echo \'{"workbench.colorTheme":"Visual Studio Dark","window.autoDetectColorScheme":false}\' '
+                "> /home/coder/.local/share/code-server/User/settings.json && "
+                "exec /usr/bin/code-server "
+                "--bind-addr 0.0.0.0:8080 "
+                "--disable-telemetry "
+                "--disable-update-check"
+            ],
             # 代码编辑器仅需要少量的环境变量
             "env": [
                 {

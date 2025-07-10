@@ -146,8 +146,7 @@ def validate_image_repo(image_repo: str):
     :raise: ValueError if image repo is invalid
     """
     parsed_image = parse_image(image_repo, default_registry="docker.io")
-    repo_url = parsed_image.domain
-    return validate_repo_url(repo_url)
+    validate_repo_url(parsed_image.domain)
 
 
 def validate_repo_url(repo_url: str):

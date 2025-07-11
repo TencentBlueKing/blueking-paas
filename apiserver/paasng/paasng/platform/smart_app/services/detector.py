@@ -126,7 +126,7 @@ class SourcePackageStatReader:
                 return relative_path, {}
 
             # Check if the relative path is valid, an invalid relative path may cause
-            # security issue if the archive.read_file has been implemented
+            # security issue if the archive.read_file has been implemented incorrectly.
             if path_may_escape(relative_path):
                 logger.warning("Invalid relative path detected: %s", relative_path)
                 raise ValidationError(_("应用描述文件的所在目录不合法"))

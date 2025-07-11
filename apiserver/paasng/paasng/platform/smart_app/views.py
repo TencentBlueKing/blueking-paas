@@ -36,6 +36,7 @@ from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paasng.accessories.publish.sync_market.utils import cascade_delete_legacy_app
 from paasng.accessories.servicehub.exceptions import BindServicePlanError
 from paasng.accessories.servicehub.manager import ServiceObj, mixed_service_mgr
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
@@ -180,6 +181,8 @@ class SMartPackageCreatorViewSet(viewsets.ViewSet):
                 try:
                     application = handler.handle_app(request.user)
                 except (ControllerError, DescriptionValidationError, BindServicePlanError) as e:
+                    # 清理 v2 中创建的应用
+                    cascade_delete_legacy_app("code", application.code, False)
                     logger.exception("Create app error !")
                     raise error_codes.FAILED_TO_HANDLE_APP_DESC.f(e.message)
                 else:

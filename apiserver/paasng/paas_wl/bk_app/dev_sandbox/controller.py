@@ -91,6 +91,8 @@ class DevSandboxController:
         """部署开发沙箱
 
         :param envs: 启动开发沙箱所需要的环境变量
+        :param source_code_cfg: 源码配置
+        :param code_editor_cfg: 代码编辑器配置
         """
         sandbox_name = get_dev_sandbox_name(self.wl_app)
         try:
@@ -158,11 +160,7 @@ class DevSandboxController:
 
 
 class DevWlAppConstructor:
-    """开发沙箱用 WlApp 实例构造器
-
-    :param module: 应用模块
-    :param dev_sandbox_code: 沙箱标识，在模块下沙箱不唯一时传入
-    """
+    """开发沙箱用 WlApp 实例构造器"""
 
     def __init__(self, dev_sandbox: "DevSandboxModel"):
         self.dev_sandbox = dev_sandbox

@@ -74,7 +74,7 @@ from paasng.platform.bkapp_model.utils import (
     merge_env_vars_overlay,
     override_env_vars_overlay,
 )
-from paasng.platform.engine.configurations.config_var import get_env_variables
+from paasng.platform.engine.configurations.config_var import EnvVarSource, UnifiedEnvVarsReader
 from paasng.platform.engine.constants import AppEnvName, ConfigVarEnvName, RuntimeType
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ConfigVar
@@ -592,9 +592,18 @@ def apply_builtin_env_vars(model_res: crd.BkAppResource, env: ModuleEnvironment)
 
     # 此处，云原生应用忽略这些类型的环境变量：用户手动定义、描述文件定义、服务发现，
     # 忽略用户手动定义（include_config_vars）是因为 EnvVarsManifestConstructor 已处理过。
-    for name, value in get_env_variables(
-        env, include_config_vars=False, include_preset_env_vars=False, include_svc_disc=False
-    ).items():
+    system_vars = UnifiedEnvVarsReader(env).get_kv_map(
+        exclude_sources=[
+            # 用户在产品或描述文件手动定义，已经由 EnvVarsManifestConstructor 处理
+            EnvVarSource.USER_CONFIGURED,
+            EnvVarSource.USER_PRESET,
+            # 服务发现环境变量，已经由 SvcDiscoveryManifestConstructor 处理，无需在模型主动添加环境变量
+            EnvVarSource.BUILTIN_SVC_DISC,
+            # 云原生应用不需要在构建镜像中推送制品到 blobstore，因此忽略
+            EnvVarSource.BUILTIN_BLOBSTORE,
+        ]
+    )
+    for name, value in system_vars.items():
         env_vars.append(crd.EnvVar(name=name, value=value))
         builtin_env_vars_overlay.append(crd.EnvVarOverlay(envName=environment, name=name, value=value))
 

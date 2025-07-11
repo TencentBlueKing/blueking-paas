@@ -107,6 +107,10 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
             "securityContext": {"runAsUser": 1000},
             "command": ["/usr/bin/code-server"],
+            # --disable-telemetry 禁止遥测数据收集功能；--disable-update-check 关闭 code-server 自动更新
+            # 参考文档：
+            # https://github.com/coder/code-server/blob/main/docs/FAQ.md#how-does-the-config-file-work
+            # https://github.com/coder/code-server/blob/main/docs/FAQ.md#where-is-vs-code-configuration-stored
             "args": ["--bind-addr", "0.0.0.0:8080", "--disable-telemetry", "--disable-update-check"],
             # 代码编辑器仅需要少量的环境变量
             "env": [

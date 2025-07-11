@@ -27,7 +27,7 @@
             if (this.GLOBAL.CONFIG.GO_FRAME) {
                 appList.push({
                     'title': `Go ${this.$t('开发框架')}`,
-                    'explain': `Go  ${this.$t('开发框架在 Beego 基础上，集成用户登录、蓝鲸组件调用和其他增强服务。')}`,
+                    'explain': `Go  ${this.$t('开发框架在 Gin 基础上，集成用户登录、蓝鲸组件调用和其他增强服务。')}`,
                     'action_links': [
                         {
                             'text': this.$t('快速开始'),
@@ -39,7 +39,7 @@
             appList.push(
                 {
                     'title': `NodeJS ${this.$t('开发框架')}`,
-                    'explain': `NodeJS ${this.$t('开发框架，集成蓝鲸Vue组件库、统一登录和其他开发示例。')}`,
+                    'explain': `NodeJS ${this.$t('开发框架，集成蓝鲸 Vue 组件库、统一登录和其他开发示例。')}`,
                     'action_links': [
                         {
                             'text': this.$t('快速开始'),

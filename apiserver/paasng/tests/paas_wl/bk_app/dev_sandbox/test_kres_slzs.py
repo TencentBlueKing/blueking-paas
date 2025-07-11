@@ -35,6 +35,7 @@ from paas_wl.infras.resources.kube_res.base import GVKConfig
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
+@pytest.mark.django_db
 class TestDevSandboxSLZ:
     @pytest.fixture()
     def gvk_config(self):
@@ -53,7 +54,7 @@ class TestDevSandboxSLZ:
 
         # 验证 ConfigMap
         configmap_manifest = manifests[0]
-        assert configmap_manifest["appVersion"] == "v1"
+        assert configmap_manifest["apiVersion"] == "v1"
         assert configmap_manifest["kind"] == "ConfigMap"
         assert configmap_manifest["metadata"]["name"] == f"{dev_sandbox.name}-code-editor-config"
         assert configmap_manifest["metadata"]["labels"] == get_dev_sandbox_labels(dev_sandbox.app)

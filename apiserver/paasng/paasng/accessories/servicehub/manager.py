@@ -15,11 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import datetime
 import logging
 import operator
 import uuid
 from typing import Callable, Dict, Generator, Iterable, Iterator, List, NamedTuple, Optional, TypeVar, cast
 
+from attrs import define
 from django.http import Http404
 
 from paasng.accessories.servicehub.constants import ServiceBindingType, ServiceType
@@ -237,37 +239,36 @@ class MixedServiceMgr:
         :param filter_enabled: Whether to filter enabled service instances
         :returns: Dict of env variables.
         """
-        rels = list(self.list_provisioned_rels(engine_app, service=service))
-        if filter_enabled:
-            instances = [rel.get_instance() for rel in rels if rel.db_obj.credentials_enabled]
-        else:
-            instances = [rel.get_instance() for rel in rels]
-        # 新的覆盖旧的
-        instances.sort(key=operator.attrgetter("create_time"))
+        groups = self.get_env_var_groups(engine_app, service=service, filter_enabled=filter_enabled)
+        # 如果存在同名环境变量，以较新的为准
+        groups.sort(key=operator.attrgetter("created_at"))
 
         result = {}
-        for i in instances:
-            result.update(i.credentials)
+        for g in groups:
+            result.update(g.data)
         return result
 
-    def get_enabled_env_keys(self, engine_app: EngineApp) -> Dict[str, List[str]]:
-        """
-        Get all provisioned services environment keys
+    def get_env_var_groups(
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None, filter_enabled: bool = False
+    ) -> "List[EnvVariableGroup]":
+        """Get all provisioned services env variable groups. A group is a collection of environment variables
+        that belong to a specific service instance.
 
         :param engine_app: EngineApp object
-        :return: Dictionary of service display names to list of their environment keys
+        :param service: Optional service object. if given, will only return credentials of the specified service,
+            otherwise return the credentials of all services.
+        :param filter_enabled: Whether to filter enabled service instances
+        :returns: List of env variable groups.
         """
-        provisioned_rels = self.list_provisioned_rels(engine_app)
-        # 凭证的信息写入环境变量的增强服务才展示
-        enabled_rels = [rel for rel in provisioned_rels if rel.db_obj.credentials_enabled]
+        results = []
+        for rel in self.list_provisioned_rels(engine_app, service=service):
+            if filter_enabled and not rel.db_obj.credentials_enabled:
+                continue
 
-        results = {}
-        for rel in enabled_rels:
-            # display_name 会被国际化处理为殊字符串类型（__proxy__类型），必须首先将它们转化为标准的字符串
-            service_name = str(rel.get_service().display_name)
-            instance_credentials_keys = list(rel.get_instance().credentials.keys())
-            results[service_name] = instance_credentials_keys
-
+            inst = rel.get_instance()
+            results.append(
+                EnvVariableGroup(service=rel.get_service(), data=inst.credentials, created_at=inst.create_time)
+            )
         return results
 
     def get_attachment_by_engine_app(self, service: ServiceObj, engine_app: EngineApp):
@@ -340,3 +341,17 @@ class DuplicatedBindingValidator:
                 raise DuplicatedServiceBoundError(
                     f"Module: {self.module.name} already shared an attachment in service: {service.name}"
                 )
+
+
+@define
+class EnvVariableGroup:
+    """An env variable group.
+
+    :param service: The owner service object.
+    :param data: The environment variables.
+    :param created_at: The time when the var group was created.
+    """
+
+    service: ServiceObj
+    data: Dict[str, str]
+    created_at: datetime.datetime | None

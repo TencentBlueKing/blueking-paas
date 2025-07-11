@@ -44,7 +44,14 @@ from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import SourceControlField, UserNameField
-from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedWordValidator, validate_procfile
+from paasng.utils.validators import (
+    RE_APP_CODE,
+    DnsSafeNameValidator,
+    ReservedWordValidator,
+    validate_image_repo,
+    validate_procfile,
+    validate_repo_url,
+)
 
 
 def validate_build_method(build_method: RuntimeType, source_origin: SourceOrigin):
@@ -271,6 +278,22 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
         if not Template.objects.filter(name=tmpl_name).exists():
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
         return tmpl_name
+
+    def validate(self, attrs):
+        source_repo_url = attrs.get("source_repo_url")
+        if source_repo_url:
+            self._validate_source_repo_url(source_repo_url, attrs["source_origin"])
+        return attrs
+
+    @staticmethod
+    def _validate_source_repo_url(source_repo_url, source_origin):
+        try:
+            if source_origin == SourceOrigin.CNATIVE_IMAGE:
+                validate_image_repo(source_repo_url)
+            else:
+                validate_repo_url(source_repo_url)
+        except ValueError as e:
+            raise ValidationError({"source_repo_url": str(e)})
 
 
 class ModuleBuildConfigSLZ(serializers.Serializer):

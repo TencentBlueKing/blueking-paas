@@ -64,7 +64,7 @@ class Test__validate_repo_url:
     )
     def test_invalid_port(self, repo_url, settings):
         settings.FORBIDDEN_REPO_PORTS = [22, 23]
-        with pytest.raises(ValueError, match=r"Invalid url: has forbidden port*"):
+        with pytest.raises(ValueError, match=r"Invalid url: the port number \d+ is forbidden"):
             validate_repo_url(repo_url)
 
     @pytest.mark.parametrize(
@@ -95,7 +95,7 @@ class Test__validate_image_repo:
     )
     def test_invalid_port(self, image_repo, settings):
         settings.FORBIDDEN_REPO_PORTS = [22, 23]
-        with pytest.raises(ValueError, match=r"Invalid url: has forbidden port*"):
+        with pytest.raises(ValueError, match=r"Invalid image repo: the port number \d+ is forbidden"):
             validate_image_repo(image_repo)
 
     @pytest.mark.parametrize(

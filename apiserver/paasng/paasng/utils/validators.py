@@ -140,13 +140,25 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
 
 
 def validate_image_repo(image_repo: str):
-    """Validate image repo format, protocol, and port security.
+    """Validate image repo port security.
 
     :param image_repo: image repo
     :raise: ValueError if image repo is invalid
     """
-    parsed_image = parse_image(image_repo, default_registry="docker.io")
-    validate_repo_url(parsed_image.domain)
+    repo_domain = parse_image(image_repo, default_registry="docker.io").domain
+
+    if ":" not in repo_domain:
+        return
+
+    repo_port = repo_domain.rsplit(":")[-1]
+
+    try:
+        port = int(repo_port)
+    except ValueError:
+        raise ValueError(f"Invalid image repo: the port {repo_port} is not an integer")
+
+    if port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
+        raise ValueError(f"Invalid image repo: the port number {port} is forbidden")
 
 
 def validate_repo_url(repo_url: str):
@@ -169,4 +181,4 @@ def validate_repo_url(repo_url: str):
         raise ValueError("Invalid url: only support http/https/git/svn scheme")
 
     if parsed_url.port and parsed_url.port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
-        raise ValueError(f"Invalid url: has forbidden port {parsed_url.port}")
+        raise ValueError(f"Invalid url: the port number {parsed_url.port} is forbidden")

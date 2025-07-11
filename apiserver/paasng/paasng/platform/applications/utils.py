@@ -20,6 +20,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Optional
 
+from django.conf import settings
 from django.db import transaction
 
 from paas_wl.bk_app.cnative.specs.models import AppModelDeploy
@@ -72,7 +73,6 @@ def create_default_module(
 
 
 def create_application(
-    region: str,
     code: str,
     name: str,
     name_en: str,
@@ -85,11 +85,13 @@ def create_application(
     tenant_id: str = DEFAULT_TENANT_ID,
 ):
     """创建 Application 模型"""
+    # TODO: region 参数已废弃, 未来版本将删除, 现在的应用创建流程中, 只会使用默认的 region
+    default_region = settings.DEFAULT_REGION_NAME
     application = Application.objects.create(
         type=app_type,
         owner=operator,
         creator=operator,
-        region=region,
+        region=default_region,
         code=code,
         name=name,
         name_en=name_en,
@@ -129,7 +131,6 @@ def create_market_config(
 
 @transaction.atomic
 def create_third_app(
-    region: str,
     code: str,
     name: str,
     name_en: str,
@@ -144,7 +145,6 @@ def create_third_app(
         market_params = {}
 
     application = create_application(
-        region=region,
         code=code,
         name=name,
         name_en=name_en,

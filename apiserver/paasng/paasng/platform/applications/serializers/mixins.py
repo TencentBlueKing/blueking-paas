@@ -24,7 +24,6 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
-from paasng.core.region.states import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
 from paasng.core.tenant.utils import stub_app_tenant_info, validate_app_tenant_info
@@ -37,7 +36,6 @@ from paasng.utils.i18n.serializers import I18NExtend, i18n
 
 @i18n
 class AppBasicInfoMixin(serializers.Serializer):
-    region = serializers.ChoiceField(choices=get_region().get_choices())
     code = AppIDField()
     name = I18NExtend(AppNameField())
     app_tenant_mode = serializers.ChoiceField(

@@ -144,8 +144,7 @@ class BinaryTarClient(BasePackageClient):
         """
         with generate_temp_dir() as temp_dir:
             p = subprocess.Popen(
-                f'tar -xf "{self.filepath.absolute()}" -C "{temp_dir.absolute()}" "{filename}"',
-                shell=True,
+                ["tar", "-xf", str(self.filepath.absolute()), "-C", str(temp_dir.absolute()), filename],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 encoding="utf-8",
@@ -204,8 +203,7 @@ class BinaryTarClient(BasePackageClient):
             might be corrupt.
         """
         p = subprocess.Popen(
-            f'tar -tf "{self.filepath.absolute()}"',
-            shell=True,
+            ["tar", "-tf", str(self.filepath.absolute())],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding="utf-8",

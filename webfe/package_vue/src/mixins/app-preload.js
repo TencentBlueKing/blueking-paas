@@ -23,55 +23,53 @@
 import store from '@/store';
 
 export default {
-  data () {
+  data() {
     return {
-      winHeight: 300
+      winHeight: 300,
     };
   },
   computed: {
-    appCode () {
+    appCode() {
       return this.$route.params.id;
     },
-    curAppCode () {
+    curAppCode() {
       return this.$store.state.curAppCode;
     },
-    curAppInfo () {
+    curAppInfo() {
       return this.$store.state.curAppInfo;
     },
-    curAppModuleList () {
+    curAppModuleList() {
       return this.$store.state.curAppModuleList;
     },
-    curAppModule () {
+    curAppModule() {
       return this.$store.state.curAppModule;
     },
-    isSmartApp () {
+    isSmartApp() {
       return this.curAppModule.source_origin === this.GLOBAL.APP_TYPES.SMART_APP;
     },
-    curModuleId () {
+    curModuleId() {
       return this.curAppModule.name;
     },
-    confirmRequiredWhenPublish () {
+    confirmRequiredWhenPublish() {
       if (this.curAppInfo) {
         return this.curAppInfo.web_config.confirm_required_when_publish;
-      } else {
-        return false;
       }
+      return false;
     },
-    productInfoProvided () {
+    productInfoProvided() {
       if (this.curAppInfo) {
         // return !this.canPublishToMarket || Boolean(this.curAppInfo.product)
         return this.confirmRequiredWhenPublish || Boolean(this.curAppInfo.product);
-      } else {
-        return false;
       }
-    }
+      return false;
+    },
   },
   /**
      * 进入当前组件时请求应用信息
      */
-  async beforeRouteEnter (to, from, next) {
+  async beforeRouteEnter(to, from, next) {
     const appCode = to.params.id;
-    const moduleId = to.params.moduleId;
+    const { moduleId } = to.params;
 
     if (!store.state.appInfo[appCode]) {
       await store.dispatch('getAppInfo', { appCode, moduleId });
@@ -83,9 +81,9 @@ export default {
   /**
      * 当前组件路由切换时请求应用信息
      */
-  async beforeRouteUpdate (to, from, next) {
+  async beforeRouteUpdate(to, from, next) {
     const appCode = to.params.id;
-    const moduleId = to.params.moduleId;
+    const { moduleId } = to.params;
 
     if (!store.state.appInfo[appCode]) {
       await store.dispatch('getAppInfo', { appCode, moduleId });
@@ -95,7 +93,7 @@ export default {
     next(true);
   },
 
-  mounted () {
+  mounted() {
     this.winHeight = window.innerHeight;
-  }
+  },
 };

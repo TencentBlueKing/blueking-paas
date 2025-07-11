@@ -165,7 +165,7 @@ class BaseGitApiClient(abc.ABC):
         """
         if raw_resp.status_code == 404:
             logger.warning(f"get url `{raw_resp.url}` but 404")
-            raise exceptions.DoesNotExistsOnGitServer(f"{raw_resp.url} dose not exist on server")
+            raise exceptions.RemoteResourceNotFoundError(f"{raw_resp.url} dose not exist on server")
         elif raw_resp.status_code == 401:
             logger.warning(f"get url `{raw_resp.url}` but 401")
             raise exceptions.AccessTokenError("the access_token can not fetch resource")

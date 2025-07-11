@@ -22,6 +22,7 @@ from unittest import mock
 import pytest
 
 from paasng.platform.sourcectl.controllers.bare_git import BareGitRepoController
+from paasng.platform.sourcectl.exceptions import ReadLinkFileOutsideDirectoryError
 from paasng.platform.sourcectl.git.client import GitCommandExecutionError
 from paasng.platform.sourcectl.models import GitRepository, RepoBasicAuthHolder, VersionInfo
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
@@ -30,8 +31,8 @@ from paasng.platform.sourcectl.utils import generate_temp_dir
 pytestmark = pytest.mark.django_db
 
 
-class TestGeneralGitController:
-    """测试通用 General Git Controller"""
+class TestBareGitRepoController:
+    """Test BareGitRepoController"""
 
     @staticmethod
     def get_fake_repo(bk_module, repo_url):
@@ -97,3 +98,42 @@ class TestGeneralGitController:
             assert f"http://localhost:{httpd.server_port}/foo.git" in message
             assert "admin:********" in message
             assert "nopassword" not in message
+
+    @pytest.fixture
+    def safe_files_setup(self, tmp_path):
+        """Fixture to set up safe files for testing"""
+        # Create a normal file
+        normal_file = tmp_path / "normal.txt"
+        normal_file.write_text("normal content")
+
+        # Create a symbolic link pointing outside the temp directory
+        outside_file = tmp_path.parent / "outside.txt"
+        outside_file.write_text("sensitive content")
+
+        link_file = tmp_path / "test_link.txt"
+        link_file.symlink_to(outside_file)
+
+    @pytest.fixture
+    def fake_controller(self, bk_module):
+        """Common helper to setup controller with mocked clone operation"""
+        fake_repo = self.get_fake_repo(bk_module, "http://localhost/test.git")
+        self.get_fake_auth_holder(bk_module, fake_repo, "admin", "password")
+        return BareGitRepoController.init_by_module(bk_module, "admin")
+
+    def test_read_files(self, bk_module, fake_controller, safe_files_setup, tmp_path):
+        """Test reading a normal file successfully"""
+        with (
+            mock.patch("paasng.platform.sourcectl.controllers.bare_git.generate_temp_dir") as generate_temp_dir,
+            mock.patch.object(fake_controller.client, "clone"),
+        ):
+            # Patch the generate_temp_dir to return the tmp_path which already been setup
+            generate_temp_dir.return_value.__enter__.return_value = tmp_path
+            version_info = VersionInfo(revision="test", version_type="branch", version_name="master")
+
+            # Read normal file should succeed
+            result = fake_controller.read_file("normal.txt", version_info)
+            assert result == b"normal content"
+
+            # Read malicious link file should fail
+            with pytest.raises(ReadLinkFileOutsideDirectoryError):
+                fake_controller.read_file("test_link.txt", version_info)

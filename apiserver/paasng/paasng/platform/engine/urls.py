@@ -110,6 +110,11 @@ urlpatterns = [
         ),
         name="api.config_vars_by_key",
     ),
+    re_path(
+        make_app_pattern(r"/config_vars/conflicted_keys/$", include_envs=False),
+        views.ConflictedConfigVarsViewSet.as_view({"get": "get_user_conflicted_keys"}),
+        name="api.config_vars.conflicted_keys",
+    ),
     # deploy
     re_path(
         make_app_pattern(r"/deployments/%s/result/$" % PVAR_UUID, include_envs=False),

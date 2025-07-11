@@ -18,11 +18,10 @@
 """Tagging tools"""
 
 import logging
-import os
 import re
+from os import PathLike
+from pathlib import Path
 from typing import List
-
-from unipath import Path
 
 from paasng.platform.engine.logs import get_all_logs
 from paasng.platform.engine.models.deployment import Deployment
@@ -34,7 +33,7 @@ from .tags import Tag, force_tag, get_dynamic_tag
 logger = logging.getLogger(__name__)
 
 
-def dig_tags_local_repo(local_path: str):
+def dig_tags_local_repo(local_path: str | PathLike):
     """Dig a local repo to find proper tags for this module"""
     p = Path(local_path)
     if not p.exists():
@@ -42,26 +41,29 @@ def dig_tags_local_repo(local_path: str):
 
     tags = []
     # Python detection
-    if p.child("requirements.txt").exists():
+    req_file = p / "requirements.txt"
+
+    # Because we will read the requirements.txt file later, we should ensure it exists
+    # and is not a symlink because the file was created by the user.
+    if req_file.exists() and not req_file.is_symlink():
         tags.append(force_tag("app-pl:python"))
         # Set `errors="ignore"` to ignore non-ascii characters when the file is using a
         # different encoding other than utf-8.
-        with open(p.child("requirements.txt"), encoding="utf-8", errors="ignore") as fp:
-            requirements_txt = fp.read()
-            for pkg_name in ("celery", "django", "gunicorn", "blueapps"):
-                if py_module_in_requirements(pkg_name, requirements_txt):
-                    tags.append(force_tag("app-sdk:{}".format(pkg_name)))
+        requirements_txt = req_file.read_text(encoding="utf-8", errors="ignore")
+        for pkg_name in ("celery", "django", "gunicorn", "blueapps"):
+            if py_module_in_requirements(pkg_name, requirements_txt):
+                tags.append(force_tag("app-sdk:{}".format(pkg_name)))
 
     # golang and other language detection is still naive, need improve
-    for fname in os.listdir(p):
-        if fname.endswith(".go"):
+    for fname in p.iterdir():
+        if fname.name.endswith(".go"):
             tags.append(force_tag("app-pl:go"))
             break
-        if fname.endswith(".php"):
+        if fname.name.endswith(".php"):
             tags.append(force_tag("app-pl:php"))
             break
 
-    if p.child("package.json").exists() and p.child("index.js").exists():
+    if (p / "package.json").exists() and (p / "index.js").exists():
         tags.append(force_tag("app-pl:nodejs"))
     return tags
 

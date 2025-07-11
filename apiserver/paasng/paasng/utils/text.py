@@ -17,6 +17,7 @@
 
 import random
 import re
+import string
 import uuid
 from typing import Collection
 
@@ -124,3 +125,42 @@ def calculate_percentage(x: float, y: float, decimal_places: int = 2) -> str:
     # 否则，将结果转换为百分制，并保留指定位数的小数
     else:
         return "{:.{decimal_places}%}".format(result, decimal_places=decimal_places)
+
+
+class BraceOnlyTemplate(string.Template):
+    """A template class similar to `string.Template`, but use `{` as the delimiter and
+    only supports single-braces formatted variables: `{<name>}`.
+
+    - Use '{{' to escape a single brace
+    - Only '{' need to be escaped, '}' is treated as a normal character
+    """
+
+    # Override the delimiter property because `string.Template` uses it
+    delimiter = "{"
+
+    delim = delimiter
+    # The identifier is copied from `string.Template`
+    id = r"(?a:[_a-z][_a-z0-9]*)"
+
+    # "named" and "braced" patterns are modified
+    pattern = rf"""
+        {delim}(?:
+            (?P<escaped>{delim})  |   # Escape sequence of two delimiters
+            (?P<named>{id})}}     |   # delimiter and a Python identifier, **modified to ends with a bracket**
+            (?P<braced>\b\B)      |   # delimiter and a braced identifier, **modified to never match anything**
+            (?P<invalid>)             # Other ill-formed delimiter exprs
+        )
+        """  # type: ignore
+
+
+def basic_str_format(template: str, context: dict[str, str]) -> str:
+    """This function is similar to `str.format`, but only support basic string substitution,
+    features such as attribute access and slicing are not supported.
+
+    It's recommended to use this function when the template is untrusted.
+
+    :param template: The template string.
+    :param context: The context dictionary.
+    :return: The formatted string.
+    """
+    return BraceOnlyTemplate(template).substitute(**context)

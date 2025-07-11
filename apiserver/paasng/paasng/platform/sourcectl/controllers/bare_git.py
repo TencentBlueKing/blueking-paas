@@ -24,7 +24,11 @@ from urllib.parse import quote, urlparse
 from blue_krill.data_types.url import MutableURL
 from django.core.exceptions import ObjectDoesNotExist
 
-from paasng.platform.sourcectl.exceptions import BasicAuthError, DoesNotExistsOnServer
+from paasng.platform.sourcectl.exceptions import (
+    BasicAuthError,
+    ReadFileNotFoundError,
+    ReadLinkFileOutsideDirectoryError,
+)
 from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
 from paasng.platform.sourcectl.utils import generate_temp_dir
 
@@ -194,11 +198,14 @@ class BareGitRepoController:
 
     def read_file(self, file_path, version_info: VersionInfo) -> bytes:
         """读取目标文件"""
-
         with generate_temp_dir() as temp_dir:
             self.client.clone(self.repo_url, temp_dir, depth=1, branch=version_info.version_name)
 
-            if not (temp_dir / file_path).exists():
-                raise DoesNotExistsOnServer(f"{file_path} not exists.")
-
-            return (temp_dir / file_path).read_bytes()
+            fp: Path = temp_dir / file_path
+            if not fp.exists():
+                raise ReadFileNotFoundError(f"{file_path} not exists.")
+            try:
+                fp.resolve().relative_to(temp_dir)
+            except ValueError:
+                raise ReadLinkFileOutsideDirectoryError()
+            return fp.read_bytes()

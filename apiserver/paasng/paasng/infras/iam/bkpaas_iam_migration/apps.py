@@ -17,9 +17,10 @@
 
 from pathlib import Path
 
-import jinja2
 from django.apps import AppConfig
 from django.conf import settings
+
+from paasng.utils import safe_jinja2
 
 IAM_CONTEXT = {
     "IAM_PAAS_V3_SYSTEM_ID": settings.IAM_PAAS_V3_SYSTEM_ID,
@@ -33,7 +34,7 @@ def render_migrate_json():
     iam_tpl = Path(settings.BASE_DIR) / "support-files" / "iam"
     iam_tpl.mkdir(exist_ok=True)
 
-    j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(iam_tpl_path)), trim_blocks=True)
+    j2_env = safe_jinja2.FileEnvironment(str(iam_tpl_path), trim_blocks=True)
     for dir in iam_tpl_path.iterdir():
         j2_env.get_template(dir.name).stream(**IAM_CONTEXT).dump(str(iam_tpl / dir.name[:-3]))
 

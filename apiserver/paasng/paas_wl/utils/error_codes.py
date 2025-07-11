@@ -64,5 +64,8 @@ class ErrorCodes:
     SWITCH_DEFAULT_CLUSTER_FAILED = ErrorCode(_("Failed to switch default cluster"))
     CLUSTER_COMPONENT_NOT_EXIST = ErrorCode(_("Cluster component not exist"))
 
+    # AI Agent 相关
+    AI_AGENT_SERVICE_ERROR = ErrorCode(_("AI Agent service error"))
+
 
 error_codes = ErrorCodes()

@@ -140,6 +140,7 @@ class TestSafePathField:
             "/etc/passwd",
             "../foo/bar/baz",
             "foo/../bar/baz",
+            "foo/../../bar/baz",
             "foo/%2e%2e/bar/baz",
             "foo/%2e%2e%2fbar/baz",
             "/safe////../etc/passwd",

@@ -158,7 +158,7 @@ class RepoBackendModifySLZ(serializers.Serializer):
         if not value:
             return value
 
-        is_image_repo = self.context.get("is_image_repo", False)
+        is_image_repo = self.context["is_image_repo"]
 
         try:
             if is_image_repo:

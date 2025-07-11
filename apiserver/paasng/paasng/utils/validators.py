@@ -18,12 +18,15 @@
 import base64
 import re
 from typing import Dict
+from urllib.parse import urlparse
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_str
 from past.builtins import basestring
+from moby_distribution.registry.utils import parse_image
 
 from paasng.core.region.models import Region, RegionList, filter_region_by_name
 
@@ -158,3 +161,48 @@ def validate_procfile(procfile: Dict[str, str]) -> Dict[str, str]:
 
     # Formalize procfile data and return
     return {k.lower(): v for k, v in procfile.items()}
+
+
+def validate_image_repo(image_repo: str):
+    """Validate image repo port security.
+
+    :param image_repo: image repo
+    :raise: ValueError if image repo is invalid
+    """
+    repo_domain = parse_image(image_repo, default_registry="docker.io").domain
+
+    if ":" not in repo_domain:
+        return
+
+    repo_port = repo_domain.rsplit(":")[-1]
+
+    try:
+        port = int(repo_port)
+    except ValueError:
+        raise ValueError(f"Invalid image repo: the port {repo_port} is not an integer")
+
+    if port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
+        raise ValueError(f"Invalid image repo: the port number {port} is forbidden")
+
+
+def validate_repo_url(repo_url: str):
+    """Validate repo url format, protocol, and port security.
+
+    :param repo_url: repo url
+    :raise: ValueError if repo url is invalid
+    """
+    try:
+        parsed_url = urlparse(repo_url)
+    except Exception:
+        raise ValueError("Invalid url")
+
+    if not parsed_url.netloc:
+        parsed_url = urlparse(f"https://{repo_url}")
+        if not parsed_url.netloc:
+            raise ValueError("Invalid url")
+
+    if parsed_url.scheme not in ["http", "https", "git", "svn"]:
+        raise ValueError("Invalid url: only support http/https/git/svn scheme")
+
+    if parsed_url.port and parsed_url.port in [int(p) for p in settings.FORBIDDEN_REPO_PORTS]:
+        raise ValueError(f"Invalid url: the port number {parsed_url.port} is forbidden")

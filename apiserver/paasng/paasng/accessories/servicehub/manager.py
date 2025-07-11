@@ -233,7 +233,6 @@ class MixedServiceMgr:
         engine_app: EngineApp,
         service: Optional[ServiceObj] = None,
         filter_enabled: bool = False,
-        enabled_addons_services: List[str] | None = None,
     ) -> Dict[str, str]:
         """Get all provisioned services env variables
 
@@ -241,7 +240,6 @@ class MixedServiceMgr:
         :param service: Optional service object. if given, will only return credentials of the specified service,
             otherwise return the credentials of all services.
         :param filter_enabled: Whether to filter enabled service instances
-        :param enabled_addons_services: Optional list of addons services to filter services
         :returns: Dict of env variables.
         """
 

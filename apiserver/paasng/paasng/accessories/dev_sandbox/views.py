@@ -123,13 +123,10 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         )
 
         envs = generate_envs(module)
+        enabled_addons = data.get("enabled_addons_services")
         if data["inject_staging_env_vars"]:
             stag_env = module.get_envs(AppEnvironment.STAGING)
-            # 获取用户选择的增强服务列表并作为环境变量注入
-            enabled_addons_services = get_env_variables(
-                stag_env, enabled_addons_services=data.get("enabled_addons_services")
-            )
-            envs.update(enabled_addons_services)
+            envs.update(get_env_variables(stag_env, enabled_addons))
 
         # 下发沙箱 k8s 资源
         try:

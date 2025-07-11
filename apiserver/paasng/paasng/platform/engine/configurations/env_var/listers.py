@@ -15,7 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 """Listers contains all the lister functions for list env variables."""
 
-from typing import Iterator
+from typing import Iterator, List
 
 from django.conf import settings
 
@@ -78,7 +78,7 @@ def list_vars_builtin_svc_disc(env: ModuleEnvironment) -> EnvVariableList:
     )
 
 
-def list_vars_builtin_addons(env: ModuleEnvironment) -> EnvVariableList:
+def list_vars_builtin_addons(env: ModuleEnvironment, enabled_addons: List[str] | None = None) -> EnvVariableList:
     """List the env variables provided by addons."""
     # Load both bound and shared services
     var_groups = ServiceSharingManager(env.module).get_env_variable_groups(
@@ -87,6 +87,11 @@ def list_vars_builtin_addons(env: ModuleEnvironment) -> EnvVariableList:
 
     var_map = {}
     for group in var_groups:
+        service_name = group.service.name
+        # 如果增强服务不在当前服务列表中，直接跳过
+        if enabled_addons is not None and service_name not in enabled_addons:
+            continue
+
         for key, value in group.data.items():
             var_map[key] = EnvVariableObj(
                 key=key,

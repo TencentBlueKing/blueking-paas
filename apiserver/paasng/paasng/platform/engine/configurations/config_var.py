@@ -48,14 +48,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-
-def get_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
+def get_env_variables(env: ModuleEnvironment, enabled_addons: List[str] | None = None) -> Dict[str, str]:
     """Get env vars for current environment, the result includes user defined and builtin env vars.
 
     :param env: The environment object.
+    :param enabled_addons: List of addons to enable.
     :return: A dict of env variables.
     """
-    return UnifiedEnvVarsReader(env).get_kv_map()
+    return UnifiedEnvVarsReader(env, enabled_addons).get_kv_map()
 
 
 class EnvVarSource(StrEnum):
@@ -80,13 +80,19 @@ class EnvVarSource(StrEnum):
 class UnifiedEnvVarsReader:
     """A class to merge env variables from different sources."""
 
-    def __init__(self, env: ModuleEnvironment):
+    def __init__(self, env: ModuleEnvironment, enabled_addons: List[str] | None = None):
         self.env = env
+        self.enabled_addons = enabled_addons
 
         # Register the functions in the lister module
         self._source_lister_func_map = {
             source: getattr(vars_listers, f"list_vars_{source}") for source in EnvVarSource
         }
+
+        if EnvVarSource.BUILTIN_ADDONS in self._source_lister_func_map:
+            original_func = self._source_lister_func_map[EnvVarSource.BUILTIN_ADDONS]
+            # 使用闭包捕获 enabled_addons
+            self._source_lister_func_map[EnvVarSource.BUILTIN_ADDONS] = lambda e: original_func(e, self.enabled_addons)
 
         # The default order for merging env variables. In this order, the preset vars has lowest
         # priority and the user configured vars has higher priority and can override

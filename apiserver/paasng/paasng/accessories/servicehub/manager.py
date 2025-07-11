@@ -229,7 +229,10 @@ class MixedServiceMgr:
     # Proxied generator methods end
 
     def get_env_vars(
-        self, engine_app: EngineApp, service: Optional[ServiceObj] = None, filter_enabled: bool = False
+        self,
+        engine_app: EngineApp,
+        service: Optional[ServiceObj] = None,
+        filter_enabled: bool = False,
     ) -> Dict[str, str]:
         """Get all provisioned services env variables
 
@@ -239,6 +242,7 @@ class MixedServiceMgr:
         :param filter_enabled: Whether to filter enabled service instances
         :returns: Dict of env variables.
         """
+
         groups = self.get_env_var_groups(engine_app, service=service, filter_enabled=filter_enabled)
         # 如果存在同名环境变量，以较新的为准
         groups.sort(key=operator.attrgetter("created_at"))

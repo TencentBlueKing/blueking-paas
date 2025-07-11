@@ -15,12 +15,15 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import List
+from typing import Dict, List
 
 from django.utils.translation import gettext_lazy as _
+from jsonschema import validate as jsonschema_validate
+from jsonschema.exceptions import ValidationError as SchemaValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.utils.camel_converter import camel_to_snake_case
 from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
     ImagePullPolicy,
@@ -29,6 +32,7 @@ from paasng.platform.bkapp_model.constants import (
     ScalingPolicy,
 )
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
+from paasng.platform.bkapp_model.models import ProcessComponent
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.structure import NOTSET
@@ -226,6 +230,37 @@ class ProcServiceInputSLZ(serializers.Serializer):
         return value
 
 
+class ComponentInputSLZ(serializers.Serializer):
+    type = serializers.CharField(help_text="组件类型", max_length=32)
+    version = serializers.CharField(help_text="组件版本", max_length=32)
+    properties = serializers.DictField(help_text="组件参数", required=False)
+
+    def to_internal_value(self, data: Dict) -> Dict:
+        internal_value = super().to_internal_value(data)
+        # 检查是否存在properties字段
+        if "properties" in data:
+            # 转换 properties 中的键名
+            internal_value["properties"] = camel_to_snake_case(data["properties"])
+
+        return internal_value
+
+    def validate(self, attrs: Dict) -> Dict:
+        # 1. 校验 type 和 version 对应的 ProcessComponent 是否存在
+        try:
+            component = ProcessComponent.objects.get(type=attrs["type"], version=attrs["version"])
+        except ProcessComponent.DoesNotExist:
+            raise ValidationError(_("组件 {}-{} 不存在").format(attrs["type"], attrs["version"]))
+
+        # 2. 如果 properties 不为空，校验是否符合 JSON Schema
+        if attrs.get("properties") is not None and (schema := component.properties_json_schema):
+            try:
+                jsonschema_validate(instance=attrs["properties"], schema=schema)
+            except SchemaValidationError as e:
+                raise ValidationError(_("参数校验失败")) from e
+
+        return attrs
+
+
 class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
@@ -248,6 +283,7 @@ class ProcessInputSLZ(serializers.Serializer):
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=NOTSET)
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
     services = serializers.ListField(child=ProcServiceInputSLZ(), allow_null=True, default=None)
+    components = serializers.ListField(child=ComponentInputSLZ(), allow_null=True, default=None)
 
 
 class HooksInputSLZ(serializers.Serializer):

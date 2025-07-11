@@ -20,7 +20,13 @@ from django.conf import settings
 from django_dynamic_fixture import G
 
 from paasng.platform.bkapp_model.entities import AutoscalingConfig, Metric, ProcService
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ObservabilityConfig, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.entities.components import Component
+from paasng.platform.bkapp_model.models import (
+    ModuleProcessSpec,
+    ObservabilityConfig,
+    ProcessComponent,
+    ProcessSpecEnvOverlay,
+)
 from paasng.platform.engine.constants import RuntimeType
 from paasng.platform.modules.models import BuildConfig
 
@@ -46,6 +52,10 @@ class TestModuleProcessSpecViewSet:
             command=["python"],
             args=["-m", "http.server"],
             port=8000,
+            components=[
+                Component(type="cl5", version="v1"),
+                Component(type="env_overlay", version="v2"),
+            ],
         )
 
     @pytest.fixture()
@@ -70,6 +80,10 @@ class TestModuleProcessSpecViewSet:
             "policy": "default",
         }
         assert proc_specs[0]["services"] is None
+        assert proc_specs[0]["components"] == [
+            {"type": "cl5", "version": "v1", "properties": {}},
+            {"type": "env_overlay", "version": "v2", "properties": {}},
+        ]
 
         assert proc_specs[1]["name"] == "worker"
         assert proc_specs[1]["proc_command"] is None
@@ -534,3 +548,130 @@ class TestModuleProcessSpecWithMonitoringViewSet:
         data = resp.json()
         web_spec = data["proc_specs"][0]
         assert web_spec["monitoring"] == {"metric": {"service_name": "foo", "path": "/bar", "params": None}}
+
+
+class TestModuleProcessSpecWithProcComponentsViewSet:
+    @pytest.fixture()
+    def web(self, bk_module):
+        return G(
+            ModuleProcessSpec,
+            module=bk_module,
+            name="web",
+            command=["python"],
+            args=["-m", "http.server"],
+            port=8000,
+            components=[
+                Component(type="cl5", version="v1"),
+                Component(type="env_overlay", version="v2"),
+            ],
+        )
+
+    @pytest.fixture()
+    def proc_component(self):
+        ProcessComponent.objects.create(
+            type="env_cover",
+            version="v1",
+            properties_json_schema={
+                "type": "object",
+                "properties": {
+                    "envs": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "proc_name": {"type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$"},
+                                "value": {"type": "string", "minLength": 1},
+                            },
+                            "required": ["proc_name", "value"],
+                            "additionalProperties": False,
+                        },
+                        "minItems": 1,
+                    }
+                },
+                "required": ["envs"],
+                "additionalProperties": False,
+            },
+        )
+
+    @pytest.mark.parametrize(
+        ("component_configs", "expected_status_code", "expected_detail_str"),
+        [
+            (None, 200, ""),
+            (
+                [{"type": "env_cover", "version": "v1", "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]}}],
+                200,
+                "",
+            ),
+            # invalid type or version
+            (
+                [{"type": "env_cover", "version": "v2", "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]}}],
+                400,
+                "proc_specs.0.components: 组件 env_cover-v2 不存在",
+            ),
+            (
+                [
+                    {
+                        "type": "env_cover1",
+                        "version": "v1",
+                        "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]},
+                    }
+                ],
+                400,
+                "proc_specs.0.components: 组件 env_cover1-v1 不存在",
+            ),
+            # invalid properties
+            (
+                [{"type": "env_cover", "version": "v1", "properties": {"envs": [{"proc_xxx": "FOO", "value": "1"}]}}],
+                400,
+                "proc_specs.0.components: 参数校验失败",
+            ),
+        ],
+    )
+    def test_validate(
+        self,
+        api_client,
+        bk_cnative_app,
+        bk_module,
+        component_configs,
+        expected_status_code,
+        expected_detail_str,
+        proc_component,
+    ):
+        request_data = [
+            {
+                "name": "web",
+                "image": "python:latest",
+                "command": ["python", "-m"],
+                "args": ["http.server"],
+                "components": component_configs,
+            }
+        ]
+
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.post(url, data={"proc_specs": request_data})
+        assert resp.status_code == expected_status_code
+        assert expected_detail_str in resp.data.get("detail", "")
+
+    def test_save(self, api_client, bk_cnative_app, bk_module, proc_component):
+        request_data = [
+            {
+                "name": "web",
+                "image": "python:latest",
+                "command": ["python", "-m"],
+                "args": ["http.server"],
+                "components": [
+                    {
+                        "type": "env_cover",
+                        "version": "v1",
+                        "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]},
+                    }
+                ],
+            }
+        ]
+
+        url = f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/bkapp_model/process_specs/"
+        resp = api_client.post(url, data={"proc_specs": request_data})
+        assert resp.status_code == 200
+        assert resp.data["proc_specs"][0]["components"] == [
+            {"type": "env_cover", "version": "v1", "properties": {"envs": [{"value": "1", "proc_name": "FOO"}]}}
+        ]

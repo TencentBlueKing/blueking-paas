@@ -15,16 +15,28 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from typing import Any, Dict
 
-urlpatterns = [
-    path("", include("paasng.plat_mgt.applications.urls")),
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-    path("", include("paasng.plat_mgt.users.urls")),
-    path("", include("paasng.plat_mgt.config_vars.urls")),
-    path("", include("paasng.plat_mgt.audit.urls")),
-    path("", include("paasng.plat_mgt.templates.urls")),
-    path("", include("paasng.plat_mgt.sourcectl.urls")),
-    path("", include("paasng.plat_mgt.proc_components.urls")),
-]
+from pydantic import BaseModel
+
+from paasng.utils.structure import prepare_json_field
+
+
+@prepare_json_field
+class Component(BaseModel):
+    """
+    进程组件
+
+    :param type: 组件类型
+    :param version: 组件版本
+    :param properties: 组件参数
+    """
+
+    type: str
+    version: str
+    properties: Dict[str, Any] = {}
+
+    def render_extra_properties(self, properties: Dict[str, Any]):
+        """渲染组件额外参数"""
+        self.properties.update(properties)
+        return self

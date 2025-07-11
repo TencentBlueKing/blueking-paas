@@ -24,6 +24,7 @@ from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import NOTSET, AllowNotsetModel, NotSetType
 
+from .components import Component
 from .probes import ProbeSet
 from .proc_service import ProcService
 from .scaling_config import AutoscalingConfig
@@ -43,6 +44,7 @@ class Process(AllowNotsetModel):
     :param res_quota_plan: 资源配额套餐名
     :param autoscaling: 自动扩缩容配置
     :param probes: 健康检查配置
+    :param components: 进程组件
     """
 
     name: str
@@ -59,6 +61,7 @@ class Process(AllowNotsetModel):
     autoscaling: AutoscalingConfig | NotSetType | None = NOTSET
 
     probes: Optional[ProbeSet] = None
+    components: List[Component] | None = None
 
     def __init__(self, **data):
         data["name"] = data["name"].lower()

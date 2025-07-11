@@ -15,16 +15,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from django.urls import re_path
+
+from .views import ProcessComponentViewSet
 
 urlpatterns = [
-    path("", include("paasng.plat_mgt.applications.urls")),
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-    path("", include("paasng.plat_mgt.users.urls")),
-    path("", include("paasng.plat_mgt.config_vars.urls")),
-    path("", include("paasng.plat_mgt.audit.urls")),
-    path("", include("paasng.plat_mgt.templates.urls")),
-    path("", include("paasng.plat_mgt.sourcectl.urls")),
-    path("", include("paasng.plat_mgt.proc_components.urls")),
+    # 进程组件管理
+    re_path(
+        r"api/plat_mgt/proc_components/$",
+        ProcessComponentViewSet.as_view({"get": "list", "post": "create"}),
+        name="plat_mgt.proc_components.bulk",
+    ),
+    re_path(
+        r"api/plat_mgt/proc_components/(?P<uuid>[^/]+)/",
+        ProcessComponentViewSet.as_view({"delete": "destroy", "put": "update"}),
+        name="plat_mgt.proc_components.detail",
+    ),
 ]

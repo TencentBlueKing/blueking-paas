@@ -575,8 +575,22 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
         self.guide_res_argument(res)
         serializer = self._make_serializer(res.app)
         body = serializer.serialize(res, **kwargs)
-        with self.kres(res.app, api_version=serializer.get_apiversion()) as kres_client:
-            kube_data = kres_client.create(res.name, body, namespace=self._get_namespace(res.app))
+
+        # 创建多个资源
+        if isinstance(body, list):
+            for resource in body:
+                self._create_single_resource(res.app, resource)
+
+            main_resource = body[-1]
+            with self.kres(res.app, api_version=serializer.get_apiversion()) as kres_client:
+                kube_data = kres_client.get(
+                    name=main_resource["metadata"]["name"], namespace=self._get_namespace(res.app)
+                )
+        # 创建单个资源
+        else:
+            with self.kres(res.app, api_version=serializer.get_apiversion()) as kres_client:
+                kube_data = kres_client.create(res.name, body, namespace=self._get_namespace(res.app))
+
         # Set _kube_data
         res._kube_data = kube_data
         return res
@@ -656,6 +670,34 @@ class AppEntityManager(AppEntityReader, Generic[AET]):
             raise TypeError(f"Only {self.entity_type.__name__} is supported")
         if allow_concrete_only and not res.is_concrete():
             raise TypeError(f"resource {res.name} is not concrete")
+
+    def _create_single_resource(self, app: WlApp, resource: Dict):
+        """创建单个资源"""
+        kind = resource["kind"]
+        name = resource["metadata"]["name"]
+        namespace = self._get_namespace(app)
+
+        client_class = self._get_client_class_for_kind(kind)
+
+        # 获取 k8s 客户端
+        with get_client_by_app(app) as k8s_client:
+            client = client_class(k8s_client)
+            client.create_or_update(name=name, body=resource, namespace=namespace)
+
+    @staticmethod
+    def _get_client_class_for_kind(kind: str) -> Type[kres.BaseKresource]:
+        """根据资源类型获取客户端类"""
+        client_map = {
+            "ConfigMap": kres.KConfigMap,
+            "Pod": kres.KPod,
+            "Service": kres.KService,
+            "Ingress": kres.KIngress,
+        }
+
+        if client_class := client_map.get(kind):
+            return client_class
+
+        raise ValueError(f"Unsupported resource kind: {kind}")
 
 
 class WaitDelete(Generic[AET]):

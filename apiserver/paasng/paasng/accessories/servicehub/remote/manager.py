@@ -70,6 +70,7 @@ from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import Application, ApplicationEnvironment, ModuleEnvironment
 from paasng.platform.engine.models import EngineApp
 from paasng.platform.modules.models import Module
+from paasng.utils import safe_jinja2
 
 if TYPE_CHECKING:
     import datetime
@@ -330,14 +331,12 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
         )
 
     def render_params(self, params_tmpl: Dict) -> Dict:
-        """ "Render params dict by current rel's context, Available keys:
+        """Render params dict by current rel's context, Available keys:
 
-        Database objects:
-
-        - `engine_app`: current EngineApp object
-        - `application`: current Application object
-        - `module`: current Module object
-        - `env`: current ModuleEnvironment object
+        - `application/module/env/engine_app`: current object(s) to provision.
+        - `cluster_info`: The cluster information of the current env.
+        - `app_developers`: The application's developers.
+        - `bk_monitor_space_id`: The space id of the bkmonitor space, if exists.
         """
         result = {}
         cluster_info = EnvClusterInfo(self.db_env)
@@ -352,7 +351,8 @@ class RemoteEngineAppInstanceRel(EngineAppInstanceRel):
             bk_monitor_space_id = space.space_uid
 
         for key, tmpl_str in params_tmpl.items():
-            result[key] = tmpl_str.format(
+            # `str.format()` was previously used. It has been changed to use jinja2 for better security.
+            result[key] = safe_jinja2.StrFormatCompatTemplate(tmpl_str).render(
                 engine_app=self.db_engine_app,
                 application=self.db_application,
                 module=self.db_module,

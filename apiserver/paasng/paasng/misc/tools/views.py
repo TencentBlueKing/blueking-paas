@@ -38,7 +38,7 @@ from paasng.utils.views import get_filepath
 from paasng.utils.yaml import IndentDumper
 
 from .app_desc import transform_app_desc_spec2_to_spec3
-from .serializers import AppDescSpec2Serializer, PackageStashRequestSLZ, PackageStashResponseSLZ
+from .serializers import AppDescSpec2Serializer, ToolPackageStashInputSLZ, ToolPackageStashOutputSLZ
 
 
 class AppDescTransformAPIView(APIView):
@@ -87,13 +87,13 @@ class SMartBuilderViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        request_body=PackageStashRequestSLZ,
-        response_serializer=PackageStashResponseSLZ,
+        request_body=ToolPackageStashInputSLZ,
+        response_serializer=ToolPackageStashOutputSLZ,
         tags=["S-Mart 包构建"],
     )
     def upload(self, request):
         """上传一个待构建的源码包，校验通过后将其暂存起来"""
-        slz = PackageStashRequestSLZ(data=request.data)
+        slz = ToolPackageStashInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
         with generate_temp_dir() as tmp_dir:
@@ -118,7 +118,7 @@ class SMartBuilderViewSet(viewsets.ViewSet):
             # Store as prepared package for later build
             PreparedSourcePackage(request, namespace=self._get_store_namespace(app_desc.code)).store(filepath)
 
-        return Response(PackageStashResponseSLZ({"signature": stat.sha256_signature}).data)
+        return Response(ToolPackageStashOutputSLZ({"signature": stat.sha256_signature}).data)
 
     @staticmethod
     def _validate_app_desc(app_desc: ApplicationDesc):

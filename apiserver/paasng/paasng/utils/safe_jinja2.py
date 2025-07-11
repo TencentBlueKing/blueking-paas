@@ -19,9 +19,17 @@
 
 import os
 import typing as t
+from functools import partial
 
 import jinja2
 from jinja2.sandbox import SandboxedEnvironment
+
+
+class NoCallableSandboxedEnvironment(SandboxedEnvironment):
+    """A SandboxedEnvironment that does not allow any function calls."""
+
+    def is_safe_callable(self, obj: t.Any) -> bool:
+        return False
 
 
 def _get_file_environment(
@@ -34,13 +42,24 @@ def _get_file_environment(
 FileEnvironment = _get_file_environment
 
 
-_default_env = SandboxedEnvironment()
+_default_env = NoCallableSandboxedEnvironment()
 
 
-def _safe_template(source, *args, **kwargs):
+def _safe_template(source, env_cls=NoCallableSandboxedEnvironment, *args, **kwargs):
     if not args and not kwargs:
         return _default_env.from_string(source)
-    return SandboxedEnvironment(*args, **kwargs).from_string(source)
+    return env_cls(*args, **kwargs).from_string(source)
 
 
 Template = _safe_template
+
+
+# StrFormatCompatTemplate is a Template that uses a single brace `{}` as delimiters, which is
+# compatible with str.format() and can be used as a replacement when the template is untrusted.
+StrFormatCompatTemplate = partial(
+    _safe_template,
+    # Disable any function/method calls because supporting `obj.delete()` can be dangerous.
+    env_cls=NoCallableSandboxedEnvironment,
+    variable_start_string="{",
+    variable_end_string="}",
+)

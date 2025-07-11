@@ -67,8 +67,7 @@ def sha256_checksum(file_path):
     possible_names = ["sha256sum", "gsha256sum"]
     for sha256_bin in possible_names:
         p = subprocess.Popen(
-            "%s %s" % (sha256_bin, file_path),
-            shell=True,
+            [sha256_bin, str(file_path)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding="utf-8",

@@ -164,3 +164,12 @@ def basic_str_format(template: str, context: dict[str, str]) -> str:
     :return: The formatted string.
     """
     return BraceOnlyTemplate(template).substitute(**context)
+
+
+_RANDOM_CHARACTER_SET = "abcdefghijklmnopqrstuvwxyz" + "0123456789"
+
+
+def generate_random_string(length=30, chars=_RANDOM_CHARACTER_SET):
+    """Generates a non-guessable random string."""
+    rand = random.SystemRandom()
+    return "".join(rand.choice(chars) for x in range(length))

@@ -35,6 +35,7 @@ from paasng.platform.engine.configurations.config_var import (
     generate_env_vars_by_region_and_env,
     generate_env_vars_for_bk_platform,
     generate_wl_builtin_env_vars,
+    get_user_conflicted_keys,
 )
 from paasng.platform.engine.constants import (
     AppInfoBuiltinEnv,
@@ -55,6 +56,7 @@ from paasng.platform.engine.serializers import (
     ConfigVarImportSLZ,
     ConfigVarSLZ,
     ConfigVarWithoutKeyFormatSLZ,
+    ConflictedKeyOutputSLZ,
     ListConfigVarsSLZ,
 )
 
@@ -387,3 +389,24 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
             ]
         )
         return self.make_exported_vars_response(config_vars, "bk_paas3_config_vars_template.yaml")
+
+
+class ConflictedConfigVarsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """与内置变量冲突的用户环境变量相关 ViewSet"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def get_user_conflicted_keys(self, request, code, module_name):
+        """获取当前模块中有冲突的环境变量 Key 列表，“冲突”指用户自定义变量与平台内置变量同名。
+        不同类型的应用，平台处理冲突变量的行为有所不同，本接口返回的 key 列表主要作引导和提示用。
+
+        客户端展示建议：
+
+        - 对于 conflicted_source 为 builtin_addons 的增强服务环境变量冲突，建议前端读取 conflicted_detail
+          直接详细展示与哪一个环境变量冲突。
+        - 其他 conflicted_source 建议统一展示为“与平台内置变量冲突”，然后补充 conflicted_detail 里的信息。
+        - 按照 override_conflicted 字段的值，展示字段已经覆盖冲突项，是否生效。
+        """
+        module = self.get_module_via_path()
+        keys = get_user_conflicted_keys(module)
+        return Response(ConflictedKeyOutputSLZ(keys, many=True).data)

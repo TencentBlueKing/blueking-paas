@@ -22,16 +22,14 @@ from typing import List
 import pytest
 from django.forms.models import model_to_dict
 from django.utils.crypto import get_random_string
-from django_dynamic_fixture import G
 from rest_framework.exceptions import ValidationError
 
+from paasng.platform.engine.configurations.env_var.listers import list_vars_user_configured
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import (
     CONFIG_VAR_INPUT_FIELDS,
-    ENVIRONMENT_ID_FOR_GLOBAL,
     ENVIRONMENT_NAME_FOR_GLOBAL,
     ConfigVar,
-    get_config_vars,
 )
 from paasng.platform.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
 from paasng.platform.engine.serializers import ConfigVarFormatSLZ, ConfigVarFormatWithIdSLZ, ConfigVarSLZ
@@ -39,59 +37,6 @@ from paasng.platform.modules.models import Module
 from tests.utils.helpers import initialize_module
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture()
-def config_var_maker():
-    def maker(environment_name, module, **kwargs):
-        kwargs["module"] = module
-        if environment_name == ENVIRONMENT_NAME_FOR_GLOBAL:
-            kwargs["environment"] = None
-            kwargs["is_global"] = True
-            kwargs["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
-        else:
-            kwargs["environment"] = module.get_envs(environment_name)
-            kwargs["is_global"] = False
-
-        var = G(ConfigVar, **kwargs)
-        # G 不支持设置 environment_id
-        if environment_name == ENVIRONMENT_NAME_FOR_GLOBAL:
-            var.environment_id = ENVIRONMENT_ID_FOR_GLOBAL
-            var.save()
-        return var
-
-    return maker
-
-
-class TestGetConfigVars:
-    def test_get_config_vars_normal(self, bk_module, config_var_maker):
-        config_var_maker(
-            environment_name="prod", module=bk_module, key="DJANGO_SETTINGS_MODULE", value="proj.settings"
-        )
-        config_var_maker(environment_name="_global_", module=bk_module, key="NAME", value="global")
-        result = get_config_vars(bk_module, "prod")
-        assert result == {"DJANGO_SETTINGS_MODULE": "proj.settings", "NAME": "global"}
-
-    def test_get_config_vars_conflict_name(self, bk_module, config_var_maker):
-        config_var_maker(
-            environment_name="prod", module=bk_module, key="DJANGO_SETTINGS_MODULE", value="proj.settings"
-        )
-        config_var_maker(
-            environment_name="_global_", module=bk_module, key="DJANGO_SETTINGS_MODULE", value="global.settings"
-        )
-
-        result = get_config_vars(bk_module, "prod")
-        assert result == {"DJANGO_SETTINGS_MODULE": "proj.settings"}
-
-        result = get_config_vars(bk_module, "stag")
-        assert result == {"DJANGO_SETTINGS_MODULE": "global.settings"}
-
-    def test_invalid_env_name(self, bk_module):
-        with pytest.raises(ValueError, match=r"^Invalid env_name given.*"):
-            get_config_vars(bk_module, "__invalid_env_name")
-
-    def test_empty(self, bk_module):
-        assert get_config_vars(bk_module, "prod") == {}
 
 
 class TestFilterByEnvironmentName:
@@ -200,7 +145,7 @@ class TestConfigVarManager:
             config_var_maker(environment_name="prod", module=dest_module, **var)
         ret = ConfigVarManager().clone_vars(bk_module, dest_module)
         assert (ret.create_num, ret.overwrited_num, ret.ignore_num) == expected_result
-        assert get_config_vars(dest_module, "prod") == expected_vars
+        assert list_vars_user_configured(dest_module.get_envs("prod")).kv_map == expected_vars
 
     @pytest.mark.parametrize("maker_params", [{}, {"description": None}])
     def test_apply_vars_to_module(self, bk_module, random_config_var_maker, maker_params):

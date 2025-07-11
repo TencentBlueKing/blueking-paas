@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
+
 import pytest
 from django.conf import settings
 
@@ -45,10 +47,25 @@ class TestDevSandboxSLZ:
 
     def test_serialize(self, gvk_config, dev_sandbox):
         slz = DevSandboxSerializer(DevSandbox, gvk_config)
-        manifest = slz.serialize(dev_sandbox)
+        manifests = slz.serialize(dev_sandbox)
 
+        assert len(manifests) == 2
+
+        # 验证 ConfigMap
+        configmap_manifest = manifests[0]
+        assert configmap_manifest["appVersion"] == "v1"
+        assert configmap_manifest["kind"] == "ConfigMap"
+        assert configmap_manifest["metadata"]["name"] == f"{dev_sandbox.name}-code-editor-config"
+        assert configmap_manifest["metadata"]["labels"] == get_dev_sandbox_labels(dev_sandbox.app)
+        assert json.loads(configmap_manifest["data"]["settings.json"]) == {
+            "workbench.colorTheme": "Visual Studio Dark",
+            "window.autoDetectColorScheme": False,
+        }
+
+        # 验证 Pod
+        pod_manifest = manifests[1]
         labels = get_dev_sandbox_labels(dev_sandbox.app)
-        assert manifest == {
+        assert pod_manifest == {
             "apiVersion": "v1",
             "kind": "Pod",
             "metadata": {
@@ -86,6 +103,8 @@ class TestDevSandboxSLZ:
                         "name": "code-editor",
                         "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
                         "imagePullPolicy": "IfNotPresent",
+                        "command": ["/usr/bin/code-server"],
+                        "args": ["--bind-addr", "0.0.0.0:8080", "--disable-telemetry", "--disable-update-check"],
                         "env": [
                             {"name": "PASSWORD", "value": dev_sandbox.code_editor_cfg.password},
                             {"name": "DISABLE_TELEMETRY", "value": "true"},
@@ -100,14 +119,28 @@ class TestDevSandboxSLZ:
                             "requests": {"cpu": "500m", "memory": "1Gi"},
                             "limits": {"cpu": "4", "memory": "2Gi"},
                         },
-                        "volumeMounts": [{"name": "workspace", "mountPath": DEV_SANDBOX_WORKSPACE}],
+                        "volumeMounts": [
+                            {"name": "workspace", "mountPath": DEV_SANDBOX_WORKSPACE},
+                            {
+                                "name": "code-editor-config",
+                                "mountPath": "/home/coder/.local/share/code-server/User/settings.json",
+                                "subPath": "settings.json",
+                            },
+                        ],
                     },
                 ],
                 "volumes": [
                     {
                         "name": "workspace",
                         "emptyDir": {"sizeLimit": "1Gi"},
-                    }
+                    },
+                    {
+                        "name": "code-editor-config",
+                        "configMap": {
+                            "name": f"{dev_sandbox.name}-code-editor-config",
+                            "items": [{"key": "settings.json", "path": "settings.json"}],
+                        },
+                    },
                 ],
             },
         }

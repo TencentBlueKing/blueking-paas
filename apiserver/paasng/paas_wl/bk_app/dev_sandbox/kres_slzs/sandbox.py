@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
 from typing import TYPE_CHECKING, Dict, Optional
 
 from django.conf import settings
@@ -46,16 +47,19 @@ DEV_SANDBOX_CODE_ANNOTATION_KEY = "bkapp.paas.bk.tencent.com/dev-sandbox-code"
 
 class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
     def serialize(self, obj: "DevSandbox", original_obj: Optional[ResourceInstance] = None, **kwargs):
-        return {
-            "apiVersion": self.get_apiversion(),
-            "kind": "Pod",
-            "metadata": {
-                "name": obj.name,
-                "labels": get_dev_sandbox_labels(obj.app),
-                "annotations": {DEV_SANDBOX_CODE_ANNOTATION_KEY: obj.code},
+        return [
+            self._construct_code_editor_configmap(obj),
+            {
+                "apiVersion": self.get_apiversion(),
+                "kind": "Pod",
+                "metadata": {
+                    "name": obj.name,
+                    "labels": get_dev_sandbox_labels(obj.app),
+                    "annotations": {DEV_SANDBOX_CODE_ANNOTATION_KEY: obj.code},
+                },
+                "spec": self._construct_pod_spec(obj),
             },
-            "spec": self._construct_pod_spec(obj),
-        }
+        ]
 
     def _construct_pod_spec(self, obj: "DevSandbox") -> Dict:
         containers = [self._construct_dev_sandbox_container(obj)]
@@ -64,7 +68,7 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             containers.append(self._construct_code_editor_container(obj))
 
         spec = {"containers": containers}
-        self._set_volume_mounts(spec)
+        self._set_volume_mounts(spec, obj)
 
         return spec
 
@@ -102,17 +106,8 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             "name": CODE_EDITOR_CONTAINER_NAME,
             "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
             "securityContext": {"runAsUser": 1000},
-            "command": ["sh", "-c"],
-            "args": [
-                # 主题配置
-                "mkdir -p /home/coder/.local/share/code-server/User && "
-                'echo \'{"workbench.colorTheme":"Visual Studio Dark","window.autoDetectColorScheme":false}\' '
-                "> /home/coder/.local/share/code-server/User/settings.json && "
-                "exec /usr/bin/code-server "
-                "--bind-addr 0.0.0.0:8080 "
-                "--disable-telemetry "
-                "--disable-update-check"
-            ],
+            "command": ["/usr/bin/code-server"],
+            "args": ["--bind-addr", "0.0.0.0:8080", "--disable-telemetry", "--disable-update-check"],
             # 代码编辑器仅需要少量的环境变量
             "env": [
                 {
@@ -141,7 +136,7 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
         }
 
     @staticmethod
-    def _set_volume_mounts(spec: Dict):
+    def _set_volume_mounts(spec: Dict, obj: "DevSandbox"):
         """为开发沙箱设置挂载卷"""
         spec["volumes"] = [
             {
@@ -150,6 +145,17 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             }
         ]
 
+        if obj.code_editor_cfg:
+            spec["volumes"].append(
+                {
+                    "name": "code-editor-config",
+                    "configMap": {
+                        "name": f"{obj.name}-code-editor-config",
+                        "items": [{"key": "settings.json", "path": "settings.json"}],
+                    },
+                }
+            )
+
         for container in spec["containers"]:
             container["volumeMounts"] = [
                 {
@@ -157,6 +163,33 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
                     "mountPath": DEV_SANDBOX_WORKSPACE,
                 }
             ]
+
+            if container["name"] == CODE_EDITOR_CONTAINER_NAME and obj.code_editor_cfg:
+                container["volumeMounts"].append(
+                    {
+                        "name": "code-editor-config",
+                        "mountPath": "/home/coder/.local/share/code-server/User/settings.json",
+                        "subPath": "settings.json",
+                    }
+                )
+
+    @staticmethod
+    def _construct_code_editor_configmap(obj: "DevSandbox") -> Dict:
+        """创建包含 code-server 配置的 ConfigMap"""
+        return {
+            "apiVersion": "v1",
+            "kind": "ConfigMap",
+            "metadata": {
+                "name": f"{obj.name}-code-editor-config",
+                "labels": get_dev_sandbox_labels(obj.app),
+            },
+            "data": {
+                # 挂载 code-server 主题配置文件
+                "settings.json": json.dumps(
+                    {"workbench.colorTheme": "Visual Studio Dark", "window.autoDetectColorScheme": False}
+                )
+            },
+        }
 
 
 class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):

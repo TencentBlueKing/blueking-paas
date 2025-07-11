@@ -396,9 +396,14 @@ class ConflictedConfigVarsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
+    @swagger_auto_schema(
+        responses={200: ConflictedKeyOutputSLZ(many=True)},
+    )
     def get_user_conflicted_keys(self, request, code, module_name):
-        """获取当前模块中有冲突的环境变量 Key 列表，“冲突”指用户自定义变量与平台内置变量同名。
-        不同类型的应用，平台处理冲突变量的行为有所不同，本接口返回的 key 列表主要作引导和提示用。
+        """获取当前模块中有冲突的环境变量 Key 列表
+
+        “冲突”指用户自定义变量与平台内置变量同名。 不同类型的应用，平台处理冲突变量的行为有所不同，
+        本接口返回的 key 列表主要作引导和提示用。
 
         客户端展示建议：
 

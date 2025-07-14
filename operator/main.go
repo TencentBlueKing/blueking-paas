@@ -97,7 +97,7 @@ func main() {
 
 	// Print version information and exit if requested
 	if version {
-		fmt.Fprintf(os.Stdout,
+		fmt.Printf(
 			"GitVersion: %s\nGitCommit: %s\nGitTreeState: %s\nGoVersion: %s\nBuildTime: %s\n",
 			gitVersion, gitCommit, gitTreeState, goVersion, buildTime)
 		os.Exit(0)

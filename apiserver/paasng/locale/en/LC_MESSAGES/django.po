@@ -2736,10 +2736,6 @@ msgstr ""
 msgid "删除应用前, 请先从到「应用市场」下架该应用"
 msgstr "Before deleting an APP, please archive it from the App Market."
 
-#: paasng/platform/applications/views/creation.py:326
-msgid "无法在所指定的 region 中创建应用"
-msgstr "Cannot create an application in the specified region"
-
 #: paasng/platform/applications/views/creation.py:348
 msgid "集群未配置默认的根域名, 请检查集群配置是否合理."
 msgstr ""

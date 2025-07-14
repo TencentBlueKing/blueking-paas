@@ -30,7 +30,6 @@ from paasng.utils.i18n.serializers import I18NExtend, TranslatedCharField, i18n
 class AppDescriptionSLZ(serializers.Serializer):
     """Represent application description object only"""
 
-    region = serializers.CharField()
     code = serializers.CharField()
     name = TranslatedCharField()
     # NOTE: 必须使用 market.dict, 以去除 OmittedType

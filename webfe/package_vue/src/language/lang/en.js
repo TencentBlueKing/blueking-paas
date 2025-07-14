@@ -2593,7 +2593,6 @@ export default {
   '增强服务实例已分配，不能再修改配置信息': 'The enhanced service instance has been allocated and configuration information cannot be modified anymore.',
   新建测试版本: 'Create Test Version',
   提交并开始测试: 'Submit and Start Testing',
-  '环境变量不生效，KEY 与{s}增强服务的内置环境变量冲突': 'Environmental variables do not take effect, KEY conflicts with the built-in environmental variables of the {s} enhanced service',
   重启次数: 'Restart Count',
   测试报告: 'Test report',
   终止测试: 'Terminate Test',
@@ -3049,4 +3048,8 @@ export default {
   最早: 'Earliest',
   构建详情: 'Build Details',
   下载日志: 'Download Logs',
+  当前配置不生效: 'Current configuration is not effective',
+  当前配置将覆盖内置变量: 'Current configuration will override built-in variables',
+  和平台的内置环境变量冲突: 'Conflicts with the platforms built-in environment variables',
+  '和 {k} 增强服务的环境变量冲突': 'Conflicts with the environment variables of the {k} enhanced service',
 };

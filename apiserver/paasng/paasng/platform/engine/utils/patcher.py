@@ -35,16 +35,13 @@ class SourceCodePatcherWithDBDriver:
     会尝试从 Procfile 文件读取进程信息，变成了一种“托底”逻辑。详情见 ApplicationBuilder
     中调用 get_processes 的部分。
 
+    :param module: 模块。
     :param root_dir: 项目源码根目录。
     :param source_dir: 模块所使用的源码（构建）目录，可能和 root_dir 不同。
+    :param deployment: Deployment 对象。
     """
 
     def __init__(self, module: "Module", root_dir: Path, source_dir: Path, deployment: Deployment):
-        """
-        :param module: 模块
-        :param source_dir: 源码根路径
-        :param deployment :Deployment obj
-        """
         self.module = module
         self.root_dir = root_dir
         self.source_dir = source_dir

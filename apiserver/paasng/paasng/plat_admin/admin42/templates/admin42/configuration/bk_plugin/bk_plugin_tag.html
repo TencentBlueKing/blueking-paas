@@ -1,7 +1,8 @@
-{% extends "admin42/configuration/base.html" %}
+{% extends "./base.html" %}
 {% load admin_utils %}
-{% block main_content %}
-<div id="platform-shared-tag-list" style="width: 100%;" class="p20">
+
+{% block bk_plugin_content %}
+<div id="configuration-shared-tag-list" style="width: 100%;" class="p20">
     <bk-button :theme="'primary'" :title="'创建插件分类'" class="mr10" @click="handleCreate">
         创建插件分类
     </bk-button>
@@ -48,7 +49,7 @@
 {% endblock %}
 
 
-{% block main_script %}
+{% block bk_plugin_script %}
 <script>
 
 const URLRouter = {
@@ -59,7 +60,7 @@ const URLRouter = {
 
 document.addEventListener('DOMContentLoaded', () => {
     new Vue({
-        el: "#platform-shared-tag-list",
+        el: "#configuration-shared-tag-list",
         delimiters: ['$[', ']'],
         mixins: [SubmitMixin],
         data: function () {

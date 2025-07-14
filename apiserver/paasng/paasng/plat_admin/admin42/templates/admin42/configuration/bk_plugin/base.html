@@ -1,0 +1,71 @@
+{% extends "../base.html" %}
+{% load admin_utils %}
+
+{% block content_header %}
+<ul class="paas-breadcrumb">
+    <li class="active">{{ view.name }}</li>
+</ul>
+{% endblock %}
+
+{% block content_label %}
+<div id="bk_plugin-tab-root">
+    <bk-tab
+        :active.sync="activeTab"
+        type="unborder-card"
+        @tab-change="handleTabChange"
+    >
+        <bk-tab-panel name="tags" label="插件分类配置"></bk-tab-panel>
+        <bk-tab-panel name="distributors" label="插件使用方配置"></bk-tab-panel>
+    </bk-tab>
+</div>
+
+{% endblock %}
+
+{% block main_content %}
+
+{% block bk_plugin_content %}
+{% endblock %}
+
+{% endblock %}
+
+{% block main_script %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: '#bk_plugin-tab-root',
+            delimiters: ['$[', ']'],
+            data: function () {
+                return {
+                    activeTab: window.location.pathname.includes(
+                        'tags'
+                    )
+                        ? 'tags'
+                        : 'distributors',
+                };
+            },
+            methods: {
+                handleTabChange(name) {
+                    if (name === 'tags') {
+                        this.gotoTab(
+                            '{% url "admin.configuration.bk_plugins.tags.manage" %}'
+                        );
+                    } else if (name === 'distributors') {
+                        this.gotoTab(
+                            '{% url "admin.configuration.bk_plugins.distributors.manage" %}'
+                        );
+                    }
+                },
+                gotoTab(url) {
+                    if (window.location.pathname !== url) {
+                        window.location.href = url;
+                    }
+                },
+            },
+        });
+    });
+</script>
+
+{% block bk_plugin_script %}
+{% endblock %}
+
+{% endblock %}

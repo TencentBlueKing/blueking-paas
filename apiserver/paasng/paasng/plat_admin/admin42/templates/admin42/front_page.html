@@ -1,125 +1,117 @@
-{% extends "admin42/base.html" %}
+{% extends "./base_with_nav.html" %}
 
 {% load admin_utils %}
 
-{% block container %}
-<div class="flex-panel-container" id="flex-panel-container">
-    <div v-for="(panel, idx) in panelList "class="flex-item">
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <a v-if="panel.url" class="panel-title" :href="panel.url" style="font-family: inherit;font-weight: 500;line-height: 1.1;">$[ panel.name ]</a>
-                <h3 v-else class="panel-title">$[ panel.name ]</h3>
-            </div>
-            <div class="panel-body common-links">
-                <a :href="item.url" v-for="item in panel.children">$[ item.name ]</a>
-            </div>
-        </div>
-    </div>
-</div>
+{% block content_header %}
+<ul class="paas-breadcrumb">
+    <li class="active">{{ view.name }}</li>
+</ul>
+{% endblock %} 
 
+{% block nav_list %}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    new Vue({
-        el: "#flex-panel-container",
-        delimiters: ['$[', ']'],
-        data: function () {
-            return {
-                panelList: [
-                    {% get_user_site_perms as perm %}
-                    {% if perm.manage_platform %}
-                    {
-                        name: "平台管理",
-                        url: "{% url 'admin.platform.index' %}",
-                        children: [
-                            {
-                                name: "应用列表",
-                                url: "{% url 'admin.applications.list' %}"
-                            },
-                            {
-                                name: "应用运营评估",
-                                url: "{% url 'admin.applications.operation_evaluation.list' %}"
-                            },
-                            {
-                                name: "部署概览",
-                                url: "{% url 'admin.deployments.list' %}"
-                            },
-                            {
-                                name: "运行时管理",
-                                url: "{% url 'admin.runtimes.buildpack.manage' %}",
-                            },
-                            {
-                                name: "智能顾问",
-                                url: "{% url 'admin.smart_advisor.documents.manage' %}",
-                            },
-                            {
-                                name: "应用资源方案",
-                                url: "{% url 'admin.process_spec_plan.manage' %}",
-                            },
-                            {
-                                name: "共享证书管理",
-                                url: "{% url 'admin.shared.certs.manage' %}",
-                            },
-                        ]
-                    },
-                    {% endif %}
-                    {% if perm.manage_app_templates %}
-                    {
-                        name: "应用配置管理",
-                        url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}",
-                        children: [
-                            {
-                                name: "插件分类配置",
-                                url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}"
-                            },
-                            {
-                                name: "插件使用方配置",
-                                url: "{% url 'admin.configuration.bk_plugins.distributors.manage' %}"
-                            },
-                            {
-                                name: "仪表盘模板配置",
-                                url: "{% url 'admin.configuration.dashboard_tmpl.manage' %}"
-                            }
-                        ]
-                    },
-                    {% endif %}
-                    {% if perm.operate_platform %}
-                        {% url 'admin.operation.index' as operation_index_view %}
-                        {% if operation_index_view %}
+    var navList = [
+        {% get_user_site_perms as perm %}
+
+        {% if perm.manage_platform %}
+        {
+            name: '配置管理',
+            children: [
+                {
+                    name: '运行时管理',
+                    icon: 'icon-block-shape',
+                    url: '{% url "admin.runtimes.buildpack.manage" %}',
+                    children: [
                         {
-                            name: "运营数据",
-                            url: "{% url 'admin.operation.index' %}",
-                            children: [
-                                {
-                                    name: "应用部署统计",
-                                    url: "{% url 'admin.operation.statistics.deploy.apps' %}"
-                                },
-                                {
-                                    name: "开发者部署统计",
-                                    url: "{% url 'admin.operation.statistics.deploy.developers' %}"
-                                },
-                            ]
+                            name: 'BuildPack 管理',
+                            url: '{% url "admin.runtimes.buildpack.manage" %}',
                         },
-                        {% endif %}
-                    {% endif %}
-                    {% if perm.manage_platform %}
-                    {% if not AUTO_CREATE_REGULAR_USER %}
-                    // 如果平台不在用户登录的时候自动创建用户，则需要在用户列表中将用户添加为普通用户后，用户才能访问开发者中心
+                        {
+                            name: 'SlugBuilder 管理',
+                            url: '{% url "admin.runtimes.slugbuilder.manage" %}',
+                        },
+                        {
+                            name: 'SlugRunner 管理',
+                            url: '{% url "admin.runtimes.slugrunner.manage" %}',
+                        },
+                    ],
+                },
+                {
+                    name: '应用资源方案',
+                    icon: 'icon-block-shape',
+                    url: '{% url "admin.process_spec_plan.manage" %}',
+                },
+                {
+                    name: '智能顾问',
+                    icon: 'icon-block-shape',
+                    url: "{% url 'admin.smart_advisor.documents.manage' %}",
+                },
+                {
+                    name: '共享证书管理',
+                    icon: 'icon-block-shape',
+                    url: "{% url 'admin.shared.certs.manage' %}",
+                },
+                {% if perm.manage_app_templates %}
                     {
-                        name: "用户管理",
-                        url: "{% url 'admin.accountmgr.index' %}",
-                        children: [
-                            {
-                                name: "用户列表",
-                                url: "{% url 'admin.accountmgr.userprofiles.index' %}"
-                            },
-                        ]
+                        name: '仪表盘模板配置',
+                        icon: 'icon-block-shape',
+                        url: "{% url 'admin.configuration.dashboard_tmpl.manage' %}",
+                    },
+                    {
+                        name: '插件配置',
+                        icon: 'icon-block-shape',
+                        url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}",
+                    },
+                {% endif %}
+            ],
+        },
+        {
+            name: '运营管理',
+            children: [
+                {
+                    name: '应用运营评估',
+                    icon: 'icon-block-shape',
+                    url: "{% url 'admin.applications.operation_evaluation.list' %}",
+                },
+                {
+                    name: '部署概览',
+                    icon: 'icon-block-shape',
+                    url: "{% url 'admin.deployments.list' %}",
+                },
+                {% if perm.operate_platform %}
+                    {% url 'admin.operation.index' as operation_index_view %}
+                    {% if operation_index_view %}
+                    {
+                        name: '应用统计',
+                        icon: 'icon-block-shape',
+                        url: "{% url 'admin.operation.statistics.deploy.apps' %}",
                     },
                     {% endif %}
-                    {% endif %}
-                ]
-            }
+                {% endif %}
+                {
+                    name: '应用列表',
+                    icon: 'icon-block-shape',
+                    url: "{% url 'admin.applications.list' %}",
+                },
+            ],
         },
-    })
-})
+        {% endif %}
+
+        {% if perm.manage_platform %}
+            {% if not AUTO_CREATE_REGULAR_USER %}
+            // 如果平台不在用户登录的时候自动创建用户，则需要在用户列表中将用户添加为普通用户后，用户才能访问开发者中心
+                {
+                    name: '用户管理',
+                    children: [
+                        {
+                            name: '用户列表',
+                            icon: 'icon-block-shape',
+                            url: "{% url 'admin.accountmgr.userprofiles.index' %}",
+                        },
+                    ],
+                },
+            {% endif %}
+        {% endif %}
+    ];
 </script>
 {% endblock %}

@@ -17,15 +17,18 @@
 
 import json
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from paas_wl.bk_app.dev_sandbox.entities import ConfigMapData
-from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
 from paas_wl.bk_app.dev_sandbox.kres_slzs.configmap import (
     DevSandboxConfigMapDeserializer,
     DevSandboxConfigMapSerializer,
 )
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
 
 
 @dataclass

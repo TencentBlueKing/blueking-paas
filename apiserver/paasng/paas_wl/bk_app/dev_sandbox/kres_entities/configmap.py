@@ -38,7 +38,7 @@ class DevSandboxConfigMap(AppEntity):
         deserializer = DevSandboxConfigMapDeserializer
 
     @classmethod
-    def create(cls, dev_sandbox: DevSandbox) -> "DevSandboxConfigMap":
+    def create(cls, dev_sandbox: "DevSandbox") -> "DevSandboxConfigMap":
         cfg_mp_name = f"{dev_sandbox.name}-code-editor-config"
 
         data = ConfigMapData(

@@ -47,7 +47,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.engine.configurations.config_var import get_env_variables
+from paasng.platform.engine.configurations.config_var import get_env_vars_selected_addons
 from paasng.platform.engine.utils.source import get_source_dir, upload_source_code
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
@@ -123,10 +123,10 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         )
 
         envs = generate_envs(module)
-        enabled_addons = data.get("enabled_addons_services")
+        selected_addons = data.get("enabled_addons_services")
         if data["inject_staging_env_vars"]:
             stag_env = module.get_envs(AppEnvironment.STAGING)
-            envs.update(get_env_variables(stag_env, enabled_addons))
+            envs.update(get_env_vars_selected_addons(stag_env, selected_addons))
 
         # 下发沙箱 k8s 资源
         try:

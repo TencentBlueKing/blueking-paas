@@ -30,6 +30,7 @@ from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.handlers import DeployDescHandler, get_deploy_desc_handler, get_source_dir_from_desc
+from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.building import get_dockerfile_path
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
 from paasng.platform.engine.exceptions import InitDeployDescHandlerError, SkipPatchCode
@@ -235,7 +236,8 @@ def get_source_package_path(deployment: Deployment) -> str:
 def download_source_to_dir(module: Module, operator: str, deployment: Deployment, working_path: Path):
     """Download and extract the module's source files to local path, will generate Procfile if necessary
 
-    :param operator: current operator's user_id
+    :return: The source directory path
+    :raise ValueError: If the configured source directory is invalid
     """
     spec = ModuleSpecs(module)
     if spec.source_origin_specs.source_origin == SourceOrigin.AUTHORIZED_VCS:
@@ -256,11 +258,16 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
     # A: The repository might be extremely large and contain a vast number of files;
     #    scanning the entire directory would be too slow.
 
+    # TODO: 此处的 source_dir 既有可能来自 DeployDesc 文件（通过包部署），也有可能来自于模块的源码配置，
+    # 甚至这和 ApplicationBuilder.start() 中的逻辑也不一致，后者是通过 deployment 对象获取 source_dir。
+    # 这些逻辑需要统一和整理。
+    source_dir = validate_source_dir(working_path, module, deployment)
     try:
-        SourceCodePatcherWithDBDriver(module, working_path, deployment).add_procfile()
+        SourceCodePatcherWithDBDriver(
+            module, root_dir=working_path, source_dir=source_dir, deployment=deployment
+        ).add_procfile()
     except SkipPatchCode as e:
         logger.warning("skip the injection process: %s", e.reason)
-        return
 
 
 def check_source_package(engine_app: EngineApp, package_path: Path, stream: DeployStream):
@@ -340,3 +347,44 @@ def _get_source_package_path(version_info: VersionInfo, app_code: str, module_na
 
     slug_name = f"{app_code}:{module_name}:{branch}:{revision}:dev"
     return f"{region}/home/{slug_name}/tar"
+
+
+def validate_source_dir(root: Path, module: Module, deployment: Deployment | None = None) -> Path:
+    """Validate and return the source directory of the module.
+
+    :param root: The repository's root directory.
+    :param module: The module to get source_dir for.
+    :param deployment: The deployment object, required if the module is configured to deploy via package.
+    :raise ValueError: If the source directory is invalid.
+    :return: The source directory.
+    """
+    # Get the "source_dir" defined by the user
+    if ModuleSpecs(module).deploy_via_package:
+        # If the module is configured to deploy via package, we need to get the source directory
+        # from the deployment description object.
+        assert deployment
+        desc_obj = DeploymentDescription.objects.get(deployment=deployment)
+        source_dir_str = desc_obj.source_dir
+    else:
+        source_dir_str = module.get_source_obj().get_source_dir()
+    return validate_source_dir_str(root, source_dir_str)
+
+
+def validate_source_dir_str(root: Path, source_dir_str: str) -> Path:
+    """Validate the source_dir string and return the source directory of the module.
+
+    :param root: The repository's root directory.
+    :param source_dir_str: The source directory string defined by the user.
+    :raise ValueError: If the source directory is invalid.
+    :return: The source directory.
+    """
+    source_dir = Path(source_dir_str)
+    # If the user configured "/src", change it into "src"
+    if source_dir.is_absolute():
+        source_dir = Path(source_dir).relative_to("/")
+
+    # Check if the source_dir is valid, resolve the symlink and ensure it is within the root directory
+    source_dir = root / source_dir
+    if not source_dir.resolve().is_relative_to(root):
+        raise ValueError(f"Invalid source directory: {source_dir_str}")
+    return source_dir

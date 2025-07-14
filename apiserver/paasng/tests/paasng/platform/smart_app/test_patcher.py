@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import tarfile
-from unittest import mock
 
 import pytest
 import yaml
@@ -26,7 +25,6 @@ from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.patcher import SourceCodePatcher
-from paasng.platform.smart_app.services.path import LocalFSPath
 from paasng.platform.sourcectl.utils import generate_temp_dir
 from tests.paasng.platform.sourcectl.packages.utils import V1_APP_DESC_EXAMPLE
 
@@ -49,28 +47,6 @@ class TestSourcePackagePatcher:
                 stat=stat,
             )
             yield dest
-
-    @pytest.mark.parametrize(
-        "user_source_dir",
-        [
-            # Different kinds of value including empty, relative and absolute  path
-            (""),
-            ("foo"),
-            ("/foo/bar"),
-        ],
-    )
-    def test_module_dir(self, user_source_dir, tmp_path, tar_path, bk_module_full):
-        bk_module_full.name = "bar"
-        bk_module_full.source_origin = SourceOrigin.BK_LESS_CODE.value
-        stat = SourcePackageStatReader(tar_path).read()
-        patcher = SourceCodePatcher(
-            module=bk_module_full,
-            source_dir=LocalFSPath(tmp_path),
-            desc_data=stat.meta_info,
-            relative_path=stat.relative_path,
-        )
-        with mock.patch.object(patcher, "get_user_source_dir", return_value=user_source_dir):
-            assert str(patcher.module_dir.path).startswith(str(tmp_path))
 
     @pytest.mark.parametrize(
         "contents",

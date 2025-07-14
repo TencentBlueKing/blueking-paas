@@ -124,8 +124,18 @@ class BaseBuilder(DeployStep):
         """
         module = self.deployment.app_environment.module
         with generate_temp_dir() as working_dir:
+            try:
+                download_source_to_dir(module, self.deployment.operator, self.deployment, working_dir)
+            except ValueError as e:
+                self.stream.write_message(Style.Error(str(e)))
+                raise
+
+            # Check again to make sure the source directory is valid
+            # TODO: Remove this checking, let download_source_to_dir accept the source_dir as an argument
             source_dir = working_dir.absolute() / relative_source_dir
-            download_source_to_dir(module, self.deployment.operator, self.deployment, working_dir)
+            if not source_dir.resolve().is_relative_to(working_dir):
+                self.stream.write_message(Style.Error(_("source_dir is invalid")))
+                raise ValueError("source_dir is invalid")
 
             if not source_dir.exists():
                 message = (

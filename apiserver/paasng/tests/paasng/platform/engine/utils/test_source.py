@@ -118,10 +118,12 @@ class TestDownloadSourceToDir:
             runtime={"source_dir": source_dir},
         )
 
-    def test_no_patch(self, bk_module, bk_deployment):
+    def test_no_patch_performed_if_process_empty(self, bk_module_full, bk_deployment):
+        bk_module_full.source_origin = SourceOrigin.AUTHORIZED_VCS.value
+        # Make a description file without processes
+        self.make_deploy_desc(bk_deployment)
         with generate_temp_dir() as working_dir:
-            self.make_deploy_desc(bk_deployment)
-            download_source_to_dir(bk_module, "user_id:100", bk_deployment, working_dir)
+            download_source_to_dir(bk_module_full, "user_id:100", bk_deployment, working_dir)
             assert list(working_dir.iterdir()) == []
 
     @pytest.mark.parametrize(

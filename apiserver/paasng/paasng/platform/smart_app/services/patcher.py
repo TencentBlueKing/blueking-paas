@@ -23,6 +23,7 @@ import yaml
 from django.utils.functional import cached_property
 
 from paasng.platform.declarative.handlers import get_deploy_desc_by_module, get_desc_handler
+from paasng.platform.engine.utils.source import validate_source_dir_str
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.smart_app.services.detector import ManifestDetector
@@ -47,14 +48,14 @@ class SourceCodePatcher:
         dest = Path(working_dir) / stat.name
         with generate_temp_dir() as temp_dir:
             BinaryTarClient(tarball_path).export(str(temp_dir.absolute()))
-            return cls.patch_source_dir(module=module, source_dir=temp_dir, dest=dest, stat=stat)
+            return cls.patch_source_dir(module=module, root_dir=temp_dir, dest=dest, stat=stat)
 
     @classmethod
-    def patch_source_dir(cls, module: "Module", source_dir: Path, dest: Path, stat: SPStat) -> Path:
+    def patch_source_dir(cls, module: "Module", root_dir: Path, dest: Path, stat: SPStat) -> Path:
         """Patch S-Mart SourcePackage, then return a newly S-Mart SourcePackage"""
         patcher = cls(
             module=module,
-            source_dir=LocalFSPath(source_dir),
+            root_dir=LocalFSPath(root_dir),
             desc_data=stat.meta_info,
             relative_path=stat.relative_path,
         )
@@ -63,21 +64,24 @@ class SourceCodePatcher:
         # 尝试添加 manifest.yaml
         patcher.add_manifest()
         # 重新压缩源码包
-        compress_directory(source_dir, dest)
+        compress_directory(root_dir, dest)
         return dest
 
-    def __init__(self, module: "Module", source_dir: PathProtocol, desc_data: Dict, relative_path: str = "./"):
+    def __init__(self, module: "Module", root_dir: LocalFSPath, desc_data: Dict, relative_path: str = "./"):
         """
         :param module: 模块
-        :param source_dir: 源码根路径
+        :param root_dir: 源码所在的根目录
         :param desc_data: 应用描述文件中的数据
         :param relative_path: app_description file 的相对源代码的路径(只有在上传 S-Mart 包前的 patch, 才需要传递这个参数.)
         """
         self.module = module
-        self.source_dir = source_dir
+        self.root_dir = root_dir
         self.relative_path = relative_path
         self.desc_data = desc_data
         self.desc_handler = get_desc_handler(desc_data)
+
+        # 当前工作目录
+        self._working_dir = self.root_dir / self.relative_path
 
     @cached_property
     def app_description(self):
@@ -89,14 +93,12 @@ class SourceCodePatcher:
         return get_deploy_desc_by_module(self.desc_data, self.module.name)
 
     @cached_property
-    def module_dir(self) -> PathProtocol:
-        """当前模块代码的路径"""
-        user_dir = Path(self.get_user_source_dir())
-        if user_dir.is_absolute():
-            user_dir = Path(user_dir).relative_to("/")
-        return self.source_dir / self.relative_path / str(user_dir)
+    def source_dir(self) -> LocalFSPath:
+        """包含前模块代码的路径。"""
+        return LocalFSPath(validate_source_dir_str(self._working_dir.path, self.source_dir_str))
 
-    def get_user_source_dir(self) -> str:
+    @cached_property
+    def source_dir_str(self) -> str:
         """Return the directory of the source code which is defined by user."""
         # TODO: 让 RepositoryInstance.get_source_dir 屏蔽 source_origin 这个差异
         # 由于 Package 的 source_dir 是由与 VersionInfo 绑定的. 需要调整 API.
@@ -107,9 +109,9 @@ class SourceCodePatcher:
 
     def _make_key(self, key: str) -> PathProtocol:
         # 如果源码目录已加密, 则生成至应用描述文件的目录下.
-        if self.module_dir.is_file():
-            return self.source_dir / self.relative_path / key
-        return self.module_dir / key
+        if self.source_dir.is_file():
+            return self._working_dir / key
+        return self.source_dir / key
 
     def add_procfile(self):
         """尝试往应用源码目录创建 Procfile 文件, 如果源码已加密, 则注入至应用描述文件目录下"""
@@ -130,15 +132,15 @@ class SourceCodePatcher:
             return
 
         logger.debug("[S-Mart] Try to add manifest to S-Mart tarball.")
-        key = self.source_dir / self.relative_path / "manifest.yaml"
+        key = self._working_dir / "manifest.yaml"
         if key.exists():
             logger.warning("manifest.yaml already exists, skip.")
             return
 
         manifest = ManifestDetector(
-            package_root=self.source_dir,
+            package_root=self.root_dir,
             app_description=self.app_description,
             relative_path=self.relative_path,
-            source_dir=str(self.module_dir.relative_to(self.source_dir / self.relative_path)),
+            source_dir=str(self.source_dir.relative_to(self._working_dir)),
         ).detect()
         key.write_text(yaml.safe_dump(manifest))

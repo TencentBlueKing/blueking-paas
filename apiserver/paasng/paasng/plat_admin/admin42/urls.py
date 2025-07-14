@@ -222,7 +222,6 @@ urlpatterns = [
     ),
     # 运营管理
     ## 应用运营评估
-    # TODO: 修改
     re_path(
         r"^applications/evaluations/$",
         applications.ApplicationOperationEvaluationView.as_view(),
@@ -241,6 +240,11 @@ urlpatterns = [
     ),
     ## 应用统计
     ### 应用部署统计
+    re_path(
+        r"^deployments/$",
+        deployments.DeploymentListView.as_view(),
+        name="admin.deployments.list",
+    ),
     re_path(
         r"^operation/statistics/deploy/apps/$",
         deploy.AppDeployStatisticsView.as_view({"get": "get", "post": "export"}),
@@ -266,6 +270,11 @@ urlpatterns = [
     re_path(r"^applications/$", applications.ApplicationListView.as_view(), name="admin.applications.list"),
     # 用户管理
     ## 用户列表
+    re_path(
+        r"^accountmgr/userprofiles/$",
+        accountmgr.UserProfilesManageView.as_view(),
+        name="admin.accountmgr.userprofiles.index",
+    ),
     re_path(
         r"^api/accountmgr/userprofiles/$",
         accountmgr.UserProfilesManageViewSet.as_view({"post": "bulk_create", "put": "update", "delete": "destroy"}),

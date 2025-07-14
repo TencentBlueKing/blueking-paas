@@ -101,7 +101,7 @@ class AppDeployStatisticsView(DeployStatisticsView):
     # 应用部署统计, 使用 "应用统计" 为了前端导航高亮
     name = "应用统计"
     export_suffix = "statistics_deploy_apps"
-    template_name = "admin42/operation/statistics_deploy_apps.html"
+    template_name = "admin42/operation/statistics/statistics_deploy_apps.html"
     queryset = Deployment.objects.all()
     serializer_class = AppDeploymentSlz
 
@@ -175,7 +175,7 @@ class DevelopersDeployStatisticsView(DeployStatisticsView):
     # 开发者部署统计, 使用 "应用统计" 为了前端导航高亮
     name = "应用统计"
     export_suffix = "statistics_deploy_developers"
-    template_name = "admin42/operation/statistics_deploy_developers.html"
+    template_name = "admin42/operation/statistics/statistics_deploy_developers.html"
     queryset = Deployment.objects.all()
     serializer_class = DeveloperDeploymentSlz
 

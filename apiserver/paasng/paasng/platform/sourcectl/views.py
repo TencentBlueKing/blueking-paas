@@ -330,7 +330,7 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if module.get_source_origin() == SourceOrigin.IMAGE_REGISTRY:
             return self._modify_image(request, code, module_name)
 
-        slz = slzs.RepoBackendModifySLZ(data=self.request.data)
+        slz = slzs.RepoBackendModifySLZ(data=self.request.data, context={"is_image_repo": False})
         slz.is_valid(raise_exception=True)
         data = slz.data
         repo_type = data["source_control_type"]
@@ -379,7 +379,7 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def _modify_image(self, request, code, module_name):
         module = self.get_module_via_path()
-        slz = slzs.RepoBackendModifySLZ(data=request.data)
+        slz = slzs.RepoBackendModifySLZ(data=request.data, context={"is_image_repo": True})
         slz.is_valid(raise_exception=True)
         data = slz.data
         repo_url = data["source_repo_url"]

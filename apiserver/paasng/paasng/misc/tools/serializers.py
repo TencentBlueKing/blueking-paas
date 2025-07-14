@@ -169,11 +169,11 @@ class AppDescSpec2Serializer(serializers.Serializer):
         return value
 
 
-class PackageStashRequestSLZ(serializers.Serializer):
+class ToolPackageStashInputSLZ(serializers.Serializer):
     """Handle package for S-mart build"""
 
     package = serializers.FileField(help_text="待构建的应用源码包")
 
 
-class PackageStashResponseSLZ(serializers.Serializer):
+class ToolPackageStashOutputSLZ(serializers.Serializer):
     signature = serializers.CharField(help_text="数字签名")

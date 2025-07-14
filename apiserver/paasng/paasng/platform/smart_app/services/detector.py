@@ -42,6 +42,7 @@ from paasng.platform.sourcectl.exceptions import (
 )
 from paasng.platform.sourcectl.models import SPStat
 from paasng.platform.sourcectl.package.client import BinaryTarClient, ZipClient
+from paasng.utils.file import path_may_escape
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,12 @@ class SourcePackageStatReader:
             else:
                 # If not description file can be found, return empty info
                 return relative_path, {}
+
+            # Check if the relative path is valid, an invalid relative path may cause
+            # security issue if the archive.read_file has been implemented incorrectly.
+            if path_may_escape(relative_path):
+                logger.warning("Invalid relative path detected: %s", relative_path)
+                raise ValidationError(_("应用描述文件的所在目录不合法"))
 
             meta_file = archive.read_file(app_filename)
             if not meta_file:

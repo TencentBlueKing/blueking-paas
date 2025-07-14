@@ -25,6 +25,7 @@ from paasng.accessories.serializers import DocumentaryLinkSLZ
 from paasng.accessories.smart_advisor.advisor import DocumentaryLinkAdvisor
 from paasng.accessories.smart_advisor.tagging import get_deployment_tags
 from paasng.platform.engine.models.deployment import Deployment
+from paasng.utils.text import basic_str_format
 
 
 @dataclass
@@ -39,7 +40,7 @@ class DeploymentFailureHint:
         """Render helper's "link" field with given params"""
         for helper in self.helpers:
             if "link" in helper:
-                helper["link"] = helper["link"].format(**params)
+                helper["link"] = basic_str_format(helper["link"], params)
 
 
 def get_default_failure_hint() -> DeploymentFailureHint:

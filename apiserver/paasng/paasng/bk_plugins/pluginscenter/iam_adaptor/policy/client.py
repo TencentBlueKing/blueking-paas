@@ -130,5 +130,8 @@ class BKIAMClient:
             None,
         )
         filters = self._iam.make_filter(request, converter_class=PluginPolicyConverter)
+        if not filters:
+            return filters
+
         # 过滤掉非当前租户的插件
         return filters & Q(tenant_id=self.tenant_id)

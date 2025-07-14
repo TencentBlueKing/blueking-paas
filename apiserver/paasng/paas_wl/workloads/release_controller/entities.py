@@ -34,3 +34,6 @@ class ContainerRuntimeSpec:
     envs: Dict[str, str] = field(default_factory=dict)
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.IF_NOT_PRESENT)
     image_pull_secrets: List[Dict[str, str]] = field(default_factory=list)
+    # The resources required by the container
+    # e.g. {"limits": {"cpu": "1", "memory": "1Gi"}, "requests": {"cpu": "1", "memory": "1Gi"}}
+    resources: Dict[str, Dict[str, str]] = field(default_factory=dict)

@@ -25,10 +25,9 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 
 from paas_wl.bk_app.applications.entities import BuildMetadata
-
-# NOTE: Import kube resource related modules from paas_wl
 from paas_wl.bk_app.applications.models.build import BuildProcess
 from paas_wl.bk_app.deploy.app_res.utils import get_schedule_config
+from paas_wl.infras.resources.utils.basic import get_slugbuilder_resources
 from paas_wl.utils.env_vars import VarsRenderContext, render_vars_dict
 from paas_wl.utils.text import b64encode
 from paas_wl.workloads.images.kres_entities import ImageCredentials
@@ -181,7 +180,10 @@ def prepare_slugbuilder_template(
         name=generate_builder_name(app),
         namespace=app.namespace,
         runtime=ContainerRuntimeSpec(
-            image=image, envs=env_vars or {}, image_pull_secrets=[{"name": make_image_pull_secret_name(wl_app=app)}]
+            image=image,
+            envs=env_vars or {},
+            image_pull_secrets=[{"name": make_image_pull_secret_name(wl_app=app)}],
+            resources=get_slugbuilder_resources(app),
         ),
         schedule=get_schedule_config(app),
     )

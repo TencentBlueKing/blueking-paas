@@ -22,7 +22,10 @@ from collections import OrderedDict
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+from django.conf import settings
+
 from paas_wl.bk_app.applications.models import WlApp
+from paas_wl.infras.cluster.constants import ClusterAnnotationKey
 from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paas_wl.infras.resources.base.base import EnhancedApiClient, get_client_by_cluster_name
 from paas_wl.utils.basic import make_subdict
@@ -108,6 +111,18 @@ def get_full_tolerations(app: WlApp, config: Optional["Config"] = None) -> List:
     cluster = get_cluster_by_app(app)
     results.extend(cluster.default_tolerations or [])
     return standardize_tolerations(results)
+
+
+def get_slugbuilder_resources(app: WlApp) -> Dict[str, Dict[str, str]]:
+    """获取 slugbuilder 资源配额（允许根据集群自定义）
+
+    :return: {"requests": {"cpu": "1", "memory": "1Gi"}, "limits": {"cpu": "1", "memory": "1Gi"}}
+    """
+    annos = get_cluster_by_app(app).annotations
+    if res := annos.get(ClusterAnnotationKey.SLUGBUILDER_RESOURCE_QUOTA):
+        return res
+
+    return settings.SLUGBUILDER_RESOURCES_SPEC
 
 
 def get_client_by_app(app: WlApp) -> EnhancedApiClient:

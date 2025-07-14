@@ -376,7 +376,7 @@ class BuildHandler(PodScheduleHandler):
                         "image": template.runtime.image,
                         "name": pod_name,
                         "imagePullPolicy": template.runtime.image_pull_policy,
-                        "resources": settings.SLUGBUILDER_RESOURCES_SPEC,
+                        "resources": template.runtime.resources,
                     },
                 ],
                 "restartPolicy": "Never",

@@ -44,7 +44,14 @@ from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import SourceControlField, UserNameField
-from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedWordValidator, validate_procfile
+from paasng.utils.validators import (
+    RE_APP_CODE,
+    DnsSafeNameValidator,
+    ReservedWordValidator,
+    validate_image_repo,
+    validate_procfile,
+    validate_repo_url,
+)
 
 
 def validate_build_method(build_method: RuntimeType, source_origin: SourceOrigin):
@@ -281,17 +288,32 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
         return tmpl_name
 
     def validate(self, attrs):
+        source_repo_url = attrs.get("source_repo_url")
+
         # 由平台新建代码仓库，则源码仓库类型必填，且需要检查是否支持创建仓库
         if attrs["auto_create_repo"]:
             if not attrs.get("source_control_type"):
                 raise ValidationError(_("新建代码仓库时，源码仓库类型不能为空"))
             # 由平台新建代码仓库，则用户填写的源码仓库地址无效
-            if attrs.get("source_repo_url"):
+            if source_repo_url:
                 raise ValidationError(_("新建代码仓库时，源码仓库地址无效"))
+
+        if source_repo_url:
+            self._validate_source_repo_url(source_repo_url, attrs["source_origin"])
 
         if attrs["write_template_to_repo"] and (not attrs.get("source_init_template")):
             raise ValidationError(_("将模板代码初始化到代码仓库中时，必须选择应用模板"))
         return attrs
+
+    @staticmethod
+    def _validate_source_repo_url(source_repo_url, source_origin):
+        try:
+            if source_origin == SourceOrigin.CNATIVE_IMAGE:
+                validate_image_repo(source_repo_url)
+            else:
+                validate_repo_url(source_repo_url)
+        except ValueError as e:
+            raise ValidationError({"source_repo_url": str(e)})
 
 
 class ModuleBuildConfigSLZ(serializers.Serializer):
@@ -333,6 +355,13 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
             raise ValidationError(
                 detail={param: _("This field is required.") for param in missed_params}, code="required"
             )
+
+        if image_repository := attrs.get("image_repository"):
+            try:
+                validate_image_repo(image_repository)
+            except ValueError as e:
+                raise ValidationError({"image_repository": str(e)})
+
         return attrs
 
     def validate_use_bk_ci_pipeline(self, use_bk_ci_pipeline: bool) -> bool:

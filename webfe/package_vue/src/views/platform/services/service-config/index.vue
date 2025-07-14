@@ -301,9 +301,10 @@ export default {
       this.isInit = true;
       try {
         const res = await this.$store.dispatch('tenant/getPlans');
-        for (let index = 0; index < res.length; index++) {
-          this.$set(this.plansMap, res[index].uuid, res[index].name);
-        }
+        this.plansMap = res.reduce((map, { uuid, service_id, name }) => {
+          map[`${uuid}_${service_id}`] = name;
+          return map;
+        }, {});
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -361,8 +362,9 @@ export default {
       if (ids === null || !Array.isArray(ids)) {
         return [];
       }
+      // uuid 存在同名的情况，需要同时判断 服务id & uuid
       return ids.map((id) => {
-        return this.plansMap[id];
+        return this.plansMap[`${id}_${this.activeServiceId}`];
       });
     },
     // 生成分配配置（统一/规则）

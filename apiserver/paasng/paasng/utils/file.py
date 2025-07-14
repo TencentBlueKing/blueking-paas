@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,32 +13,19 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+"""file and path related utilities."""
 
-from .build import BuildProcessViewSet, ImageArtifactViewSet
-from .configvar import (
-    ConfigVarBuiltinViewSet,
-    ConfigVarImportExportViewSet,
-    ConfigVarViewSet,
-    ConflictedConfigVarsViewSet,
-)
-from .configvar_preset import PresetConfigVarViewSet
-from .deploy import DeploymentViewSet, DeployPhaseViewSet
-from .misc import OfflineViewset, OperationsViewset, ProcessResourceMetricsViewset
-from .release import ReleasedInfoViewSet, ReleasesViewset
+import os
 
-__all__ = [
-    "BuildProcessViewSet",
-    "ConfigVarBuiltinViewSet",
-    "ConfigVarImportExportViewSet",
-    "ConfigVarViewSet",
-    "DeploymentViewSet",
-    "DeployPhaseViewSet",
-    "ImageArtifactViewSet",
-    "OfflineViewset",
-    "OperationsViewset",
-    "ProcessResourceMetricsViewset",
-    "ReleasedInfoViewSet",
-    "ReleasesViewset",
-    "PresetConfigVarViewSet",
-    "ConflictedConfigVarsViewSet",
-]
+from paasng.utils.text import generate_random_string
+
+
+def path_may_escape(input_path: str) -> bool:
+    """Check if the input path may escape from a given root directory, an invalid value is like
+    "../../../../app_desc.yaml" which can go outside the root directory.
+    """
+    # Absolute paths are always considered as escaping
+    if os.path.isabs(input_path):
+        return True
+    sim_root = f"/var/folders/{generate_random_string(12)}/T"
+    return os.path.commonpath([os.path.abspath(os.path.join(sim_root, input_path)), sim_root]) != sim_root

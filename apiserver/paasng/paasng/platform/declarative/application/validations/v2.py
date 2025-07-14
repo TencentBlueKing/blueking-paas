@@ -21,7 +21,6 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from paasng.accessories.publish.market.serializers import ProductTagByNameField
-from paasng.core.region.states import get_region
 from paasng.platform.applications.serializers import AppIDSMartField, AppNameField
 from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.declarative.application.resources import (
@@ -113,8 +112,7 @@ class ModuleDescriptionSLZ(serializers.Serializer):
 
 
 class AppDescriptionSLZ(serializers.Serializer):
-    # S-mart 专用字段(region, bk_app_code, bk_app_name)
-    region = serializers.ChoiceField(required=False, allow_null=True, choices=get_region().get_choices())
+    # S-mart 专用字段(bk_app_code, bk_app_name)
     bk_app_code = AppIDSMartField(source="code")
     bk_app_name = AppNameField(source="name_zh_cn")
     bk_app_name_en = AppNameField(source="name_en", required=False)

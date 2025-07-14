@@ -147,7 +147,10 @@ class DevSandboxController:
         ns_handler = NamespacesHandler.new_by_app(self.wl_app)
         ns_handler.ensure_namespace(namespace=self.wl_app.namespace)
 
-        # step 2. create dev sandbox
+        # step 2. create configmap
+        cfg_map = DevSandboxConfigMap.create(self.wl_app)
+
+        # step 3. create dev sandbox
         sandbox = DevSandbox.create(
             self.wl_app,
             code=self.dev_sandbox.code,
@@ -158,14 +161,15 @@ class DevSandboxController:
         )
         self.sandbox_mgr.create(sandbox)
 
-        # step 3. upsert service
+        # step 4. upsert service
         self.service_mgr.upsert(DevSandboxService.create(sandbox))
 
-        # step 4. upsert ingress
+        # step 5. upsert ingress
         self.ingress_mgr.upsert(DevSandboxIngress.create(sandbox))
 
-        # step 5. upsert configmap
-        self.configmap_mgr.upsert(DevSandboxConfigMap.create(sandbox))
+        # step 6. deliver code-editor config via ConfigMap
+        cfg_map.update(sandbox)
+        self.configmap_mgr.upsert(cfg_map)
 
 
 class DevWlAppConstructor:

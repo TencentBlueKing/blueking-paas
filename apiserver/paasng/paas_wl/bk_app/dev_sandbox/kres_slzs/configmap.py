@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.bk_app.dev_sandbox.entities import ConfigMapData
 from paas_wl.bk_app.dev_sandbox.labels import get_dev_sandbox_labels
 from paas_wl.infras.resources.kube_res.base import AppEntityDeserializer, AppEntitySerializer
 
@@ -39,7 +38,7 @@ class DevSandboxConfigMapSerializer(AppEntitySerializer["DevSandboxConfigMap"]):
                 "name": obj.name,
                 "labels": get_dev_sandbox_labels(obj.app),
             },
-            "data": obj.config_data.data,
+            "data": obj.data,
         }
 
         if original_obj:
@@ -54,4 +53,4 @@ class DevSandboxConfigMapDeserializer(AppEntityDeserializer["DevSandboxConfigMap
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandboxConfigMap":
         data = kube_data.data if hasattr(kube_data, "data") else {}
 
-        return self.entity_type(app=app, name=kube_data.metadata.name, config_data=ConfigMapData(data))
+        return self.entity_type(app=app, name=kube_data.metadata.name, data=data)

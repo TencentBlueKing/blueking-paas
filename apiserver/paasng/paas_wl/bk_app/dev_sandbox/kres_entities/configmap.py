@@ -17,9 +17,8 @@
 
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 
-from paas_wl.bk_app.dev_sandbox.entities import ConfigMapData
 from paas_wl.bk_app.dev_sandbox.kres_slzs.configmap import (
     DevSandboxConfigMapDeserializer,
     DevSandboxConfigMapSerializer,
@@ -28,12 +27,13 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 
 if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models import WlApp
     from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
 
 
 @dataclass
 class DevSandboxConfigMap(AppEntity):
-    config_data: ConfigMapData
+    data: Dict[str, str]
 
     class Meta:
         kres_class = kres.KConfigMap
@@ -41,19 +41,23 @@ class DevSandboxConfigMap(AppEntity):
         deserializer = DevSandboxConfigMapDeserializer
 
     @classmethod
-    def create(cls, dev_sandbox: "DevSandbox") -> "DevSandboxConfigMap":
-        cfg_mp_name = f"{dev_sandbox.name}-code-editor-config"
+    def create(cls, app: "WlApp") -> "DevSandboxConfigMap":
+        cfg_mp_name = f"{app.name}-dev-sandbox-temp-config"
 
-        data = ConfigMapData(
-            {
-                "settings.json": json.dumps(
-                    {"workbench.colorTheme": "Visual Studio Dark", "window.autoDetectColorScheme": False}
-                )
-            }
-        )
+        data = {"settings.json": json.dumps({"workbench.colorTheme": "Default", "window.autoDetectColorScheme": True})}
 
-        return cls(
-            app=dev_sandbox.app,
-            name=cfg_mp_name,
-            config_data=data,
-        )
+        return cls(app=app, name=cfg_mp_name, data=data)
+
+    def update(self, dev_sandbox: "DevSandbox") -> None:
+        """更新 ConfigMap 为 sandbox 的配置"""
+        self.name = f"{dev_sandbox.name}-code-editor-config"
+
+        self.data = {
+            "settings.json": json.dumps(
+                # workbench.colorTheme 用于设置编辑器的默认配色；window.autoDetectColorScheme 用于配置编辑器颜色不随系统主题颜色变化
+                # 参考文档：
+                # https://code.visualstudio.com/docs/configure/themes#_color-themes
+                # https://code.visualstudio.com/docs/configure/themes#_automatically-switch-based-on-os-color-scheme
+                {"workbench.colorTheme": "Visual Studio Dark", "window.autoDetectColorScheme": False}
+            )
+        }

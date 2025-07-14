@@ -43,7 +43,6 @@ class TestDevSandboxSLZ:
             available_apiversions=["v1"],
         )
 
-    @pytest.mark.django_db
     def test_serialize(self, gvk_config, dev_sandbox):
         slz = DevSandboxSerializer(DevSandbox, gvk_config)
         manifest = slz.serialize(dev_sandbox)

@@ -109,11 +109,3 @@ class CodeEditorConfig:
 
     # 登录密码
     password: str
-
-
-@define
-class ConfigMapData:
-    """ConfigMap 挂载的配置信息"""
-
-    # 配置数据
-    data: Dict[str, str]

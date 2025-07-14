@@ -42,6 +42,7 @@
           :multiple="true"
           :placeholder="$t('请输入用户名')"
           :empty-text="$t('无匹配人员')"
+          :exact-search-key="'login_name'"
           @change="handleSearch"
         />
       </div>

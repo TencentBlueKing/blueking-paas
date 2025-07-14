@@ -36,6 +36,7 @@
                 :placeholder="$t('请输入用户名')"
                 :empty-text="$t('无匹配人员')"
                 :disabled="isEidt"
+                :exact-search-key="'login_name'"
               />
             </bk-form-item>
             <bk-form-item

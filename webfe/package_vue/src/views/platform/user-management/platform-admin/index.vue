@@ -95,6 +95,7 @@
             :placeholder="$t('请输入')"
             :multiple="true"
             :empty-text="$t('无匹配人员')"
+            :exact-search-key="'login_name'"
             @change="handleUserChange"
           />
         </bk-form-item>

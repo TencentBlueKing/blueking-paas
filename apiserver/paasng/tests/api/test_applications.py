@@ -21,7 +21,6 @@ from unittest import mock
 
 import pytest
 from django.conf import settings
-from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django_dynamic_fixture import G
@@ -37,8 +36,6 @@ from paasng.accessories.publish.sync_market.handlers import (
 )
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
-from paasng.infras.accounts.constants import SiteRole
-from paasng.infras.accounts.models import UserProfile
 from paasng.misc.audit.constants import OperationEnum, OperationTarget, ResultCode
 from paasng.misc.audit.models import AppOperationRecord
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationRole, ApplicationType, AvailabilityLevel
@@ -55,7 +52,7 @@ from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 from tests.utils.auth import create_user
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
-from tests.utils.helpers import configure_regions, create_app, generate_random_string
+from tests.utils.helpers import create_app, generate_random_string
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -243,7 +240,6 @@ class TestApplicationCreateWithEngine:
         response = api_client.post(
             "/api/bkapps/applications/v2/",
             data={
-                "region": settings.DEFAULT_REGION_NAME,
                 "type": type,
                 "code": f"uta-{random_suffix}",
                 "name": f"uta-{random_suffix}",
@@ -261,48 +257,6 @@ class TestApplicationCreateWithEngine:
             assert response.status_code == 400
             assert response.json()["detail"] == '已开启引擎，类型不能为 "engineless_app"'
 
-    @pytest.mark.usefixtures("_init_tmpls")
-    @pytest.mark.parametrize(
-        ("source_origin", "source_repo_url", "source_control_type", "is_success"),
-        [
-            (
-                SourceOrigin.BK_LESS_CODE,
-                "http://dummy.git",
-                "",
-                True,
-            ),
-            (SourceOrigin.IMAGE_REGISTRY, "127.0.0.1:5000/library/python", "dft_docker", True),
-        ],
-    )
-    def test_create_non_default_origin(
-        self,
-        api_client,
-        bk_user,
-        mock_wl_services_in_creation,
-        source_origin,
-        source_repo_url,
-        source_control_type,
-        is_success,
-    ):
-        with override_settings(ENABLE_BK_LESSCODE=False):
-            random_suffix = generate_random_string(length=6)
-            response = api_client.post(
-                "/api/bkapps/applications/v2/",
-                data={
-                    "region": settings.DEFAULT_REGION_NAME,
-                    "code": f"uta-{random_suffix}",
-                    "name": f"uta-{random_suffix}",
-                    "engine_params": {
-                        "source_origin": source_origin,
-                        "source_repo_url": source_repo_url,
-                        "source_init_template": settings.DUMMY_TEMPLATE_NAME,
-                        "source_control_type": source_control_type,
-                    },
-                },
-            )
-            desired_status_code = 201 if is_success else 400
-            assert response.status_code == desired_status_code
-
 
 class TestApplicationCreateWithoutEngine:
     """Test application creation APIs with engine disabled"""
@@ -313,7 +267,6 @@ class TestApplicationCreateWithoutEngine:
         response = api_client.post(
             url,
             data={
-                "region": settings.DEFAULT_REGION_NAME,
                 "code": f"uta-{random_suffix}",
                 "name": f"uta-{random_suffix}",
                 "engine_enabled": False,
@@ -322,39 +275,6 @@ class TestApplicationCreateWithoutEngine:
         )
         assert response.status_code == 201
         assert response.json()["application"]["type"] == "engineless_app"
-
-    @pytest.mark.parametrize("url", ["/api/bkapps/applications/v2/", "/api/bkapps/third-party/"])
-    @pytest.mark.parametrize(
-        ("region", "user_is_admin", "creation_success"),
-        [
-            ("r1", False, True),
-            ("r1", True, True),
-            ("r2", False, False),
-            ("r2", True, True),
-        ],
-    )
-    def test_region_permission_control(self, bk_user, api_client, url, region, user_is_admin, creation_success):
-        """When user has or doesn't have permission, test application creation."""
-        # "r1" is the default region
-        with configure_regions(["r1", "r2"]):
-            role = SiteRole.ADMIN if user_is_admin else SiteRole.USER
-            user_profile = UserProfile.objects.get_profile(bk_user)
-            user_profile.role = role.value
-            user_profile.save(update_fields=["role"])
-
-            random_suffix = generate_random_string(length=6)
-            response = api_client.post(
-                url,
-                data={
-                    "region": region,
-                    "code": f"uta-{random_suffix}",
-                    "name": f"uta-{random_suffix}",
-                    "engine_enabled": False,
-                    "market_params": {},
-                },
-            )
-            desired_status_code = 201 if creation_success else 400
-            assert response.status_code == desired_status_code
 
 
 class TestApplicationUpdate:
@@ -536,7 +456,6 @@ class TestCreateBkPlugin:
         return api_client.post(
             "/api/bkapps/cloud-native/",
             data={
-                "region": settings.DEFAULT_REGION_NAME,
                 "type": ApplicationType.CLOUD_NATIVE,
                 "is_plugin_app": True,
                 "code": f"uta-{random_suffix}",
@@ -568,7 +487,6 @@ class TestCreateCloudNativeApp:
         response = api_client.post(
             "/api/bkapps/cloud-native/",
             data={
-                "region": settings.DEFAULT_REGION_NAME,
                 "code": f"uta-{random_suffix}",
                 "name": f"uta-{random_suffix}",
                 "bkapp_spec": {
@@ -645,14 +563,16 @@ class TestCreateCloudNativeApp:
 
         source_repo_url = "" if auto_create_repo else "https://git.example.com/helloWorld.git"
         if init_error:
-            with pytest.raises(RuntimeError, match="forced error"), mock.patch(
-                "paasng.platform.applications.views.creation.init_module_in_view",
-                side_effect=RuntimeError("forced error"),
+            with (
+                pytest.raises(RuntimeError, match="forced error"),
+                mock.patch(
+                    "paasng.platform.applications.views.creation.init_module_in_view",
+                    side_effect=RuntimeError("forced error"),
+                ),
             ):
                 api_client.post(
                     "/api/bkapps/cloud-native/",
                     data={
-                        "region": settings.DEFAULT_REGION_NAME,
                         "code": f"uta-{random_suffix}",
                         "name": f"uta-{random_suffix}",
                         "": True,
@@ -671,7 +591,6 @@ class TestCreateCloudNativeApp:
             response = api_client.post(
                 "/api/bkapps/cloud-native/",
                 data={
-                    "region": settings.DEFAULT_REGION_NAME,
                     "code": f"uta-{random_suffix}",
                     "name": f"uta-{random_suffix}",
                     "bkapp_spec": {"build_config": {"build_method": "buildpack"}},
@@ -709,7 +628,6 @@ class TestCreateCloudNativeApp:
         response = api_client.post(
             "/api/bkapps/cloud-native/",
             data={
-                "region": settings.DEFAULT_REGION_NAME,
                 "code": f"uta-{random_suffix}",
                 "name": f"uta-{random_suffix}",
                 "bkapp_spec": {"build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"}},
@@ -738,7 +656,6 @@ class TestCreateCloudNativeApp:
         response = api_client.post(
             "/api/bkapps/cloud-native/",
             data={
-                "region": settings.DEFAULT_REGION_NAME,
                 "code": f"uta-{random_suffix}",
                 "name": f"uta-{random_suffix}",
                 "bkapp_spec": {"build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"}},
@@ -848,7 +765,6 @@ class TestCreateApplicationWithTenantParams:
         """The default parameters for creating an application."""
         random_suffix = generate_random_string(length=6)
         return {
-            "region": settings.DEFAULT_REGION_NAME,
             "code": f"uta-{random_suffix}",
             "name": f"uta-{random_suffix}",
             "bkapp_spec": {"build_config": {"build_method": "dockerfile", "dockerfile_path": "Dockerfile"}},

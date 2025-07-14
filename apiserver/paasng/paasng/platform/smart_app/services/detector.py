@@ -136,7 +136,7 @@ class SourcePackageStatReader:
                 raise RuntimeError("file: {} can not be extracted".format(app_filename))
 
             try:
-                meta_info = yaml.full_load(meta_file)
+                meta_info = yaml.safe_load(meta_file)
             except YAMLError:
                 logger.exception(_("应用描述文件内容不是有效 YAML 格式"))
                 raise ValidationError(_("应用描述文件内容不是有效 YAML 格式"))

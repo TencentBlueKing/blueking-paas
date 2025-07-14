@@ -20,46 +20,43 @@ package components
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"text/template"
 
 	"github.com/pkg/errors"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-)
-
-const (
-	// TEMPLATE_NAMESPACE 进程组件模板所在命名空间
-	TEMPLATE_NAMESPACE = "bkapp-proc-component-tpl"
+	components "bk.tencent.com/paas-app-operator/pkg/components/manager"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 // ComponentMutator inject component to deployment
 type ComponentMutator struct {
-	component paasv1alpha2.Component
-	client    client.Client
+	component     paasv1alpha2.Component
+	componentDir  string
+	defaultParams map[string]any
 }
 
 // PatchToDeployment inject component to deployment
-func (c *ComponentMutator) PatchToDeployment(ctx context.Context, deployment *appsv1.Deployment) error {
-	patchBytes, err := c.getTemplate(ctx)
+func (c *ComponentMutator) patchToDeployment(deployment *appsv1.Deployment) error {
+	patchBytes, err := c.getTemplate()
 	if err != nil {
 		return errors.Wrapf(err, "get template %s:%s", c.component.Type, c.component.Version)
 	}
-
 	originalBytes, err := json.Marshal(deployment)
 	if err != nil {
 		return errors.Wrap(err, "json marshal deployment")
 	}
-	patchedBytes, err := strategicpatch.StrategicMergePatch(originalBytes, patchBytes, appsv1.Deployment{})
+	patchJSONBytes, err := yaml.YAMLToJSON(patchBytes)
+	if err != nil {
+		return errors.Wrap(err, "component tpl yaml to json")
+	}
+	patchedBytes, err := strategicpatch.StrategicMergePatch(originalBytes, patchJSONBytes, appsv1.Deployment{})
 	if err != nil {
 		return errors.Wrap(err, "strategic merge patch")
 	}
-
 	if err = json.Unmarshal(patchedBytes, deployment); err != nil {
 		return errors.Wrap(err, "json unmarshal deployment")
 	}
@@ -68,23 +65,17 @@ func (c *ComponentMutator) PatchToDeployment(ctx context.Context, deployment *ap
 }
 
 // getTemplate get component template from configmap
-func (c *ComponentMutator) getTemplate(ctx context.Context) ([]byte, error) {
-	configMap := &corev1.ConfigMap{}
-	if err := c.client.Get(ctx, client.ObjectKey{
-		Namespace: TEMPLATE_NAMESPACE,
-		Name:      c.component.Type,
-	}, configMap); err != nil {
+func (c *ComponentMutator) getTemplate() ([]byte, error) {
+	manager, err := components.NewComponentManager(c.componentDir)
+	if err != nil {
 		return nil, err
 	}
-
-	// 从 ConfigMap 中获取对应版本的模板
-	tpl, exists := configMap.Data[c.component.Version]
-	if !exists {
-		return nil, errors.Errorf("version %s not found in ConfigMap %s", c.component.Version, c.component.Type)
+	tpl, err := manager.GetTemplate(c.component.Type, c.component.Version)
+	if err != nil {
+		return nil, err
 	}
-
 	// 渲染模板
-	tplBytes, err := c.renderTemplate(tpl)
+	tplBytes, err := c.renderTemplate(string(tpl))
 	if err != nil {
 		return nil, errors.Wrap(err, "render component template")
 	}
@@ -106,6 +97,9 @@ func (c *ComponentMutator) renderTemplate(templateContent string) ([]byte, error
 	} else {
 		paramValues = make(map[string]any)
 	}
+	for k, v := range c.defaultParams {
+		paramValues[k] = v
+	}
 
 	var buf bytes.Buffer
 	if err = tmpl.Execute(&buf, paramValues); err != nil {
@@ -117,18 +111,18 @@ func (c *ComponentMutator) renderTemplate(templateContent string) ([]byte, error
 
 // PatchAllComponentToDeployment patch all components to deployment
 func PatchAllComponentToDeployment(
-	ctx context.Context,
-	client client.Client,
 	proc *paasv1alpha2.Process,
 	deployment *appsv1.Deployment,
 ) error {
-	components := proc.Components
-	for _, component := range components {
+	for _, component := range proc.Components {
 		mutator := &ComponentMutator{
-			component: component,
-			client:    client,
+			component:    component,
+			componentDir: components.DefaultComponentDir,
+			defaultParams: map[string]any{
+				"procName": proc.Name,
+			},
 		}
-		err := mutator.PatchToDeployment(ctx, deployment)
+		err := mutator.patchToDeployment(deployment)
 		if err != nil {
 			return err
 		}

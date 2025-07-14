@@ -283,7 +283,11 @@ func (r *BkApp) validateAppSpec() *field.Error {
 		}
 	}
 
-	return r.validateMounts()
+	if err := r.validateMounts(); err != nil {
+		return err
+	}
+
+	return r.validateComponents()
 }
 
 // Get all process names
@@ -789,5 +793,18 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		mountPointsWithEnv.Insert(mountPointWithEnv)
 	}
 
+	return nil
+}
+
+func (r *BkApp) validateComponents() *field.Error {
+	for pIdx, proc := range r.Spec.Processes {
+		for cIdx, component := range proc.Components {
+			err := component.validate()
+			if err != nil {
+				cField := field.NewPath("spec").Child("processes").Index(pIdx).Child("components").Index(cIdx)
+				return field.Invalid(cField, component, err.Error())
+			}
+		}
+	}
 	return nil
 }

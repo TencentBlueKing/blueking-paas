@@ -19,7 +19,7 @@
 package components_test
 
 import (
-	"context"
+	"encoding/json"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,22 +27,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	componentsMgr "bk.tencent.com/paas-app-operator/pkg/components/manager"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/components"
 )
 
 var _ = Describe("ComponentMutator", func() {
-	var (
-		ctx        context.Context
-		fakeClient client.Client
-		scheme     *runtime.Scheme
-	)
+	var scheme *runtime.Scheme
 
 	BeforeEach(func() {
-		ctx = context.Background()
 		scheme = runtime.NewScheme()
 		_ = corev1.AddToScheme(scheme)
 		_ = appsv1.AddToScheme(scheme)
@@ -50,86 +44,10 @@ var _ = Describe("ComponentMutator", func() {
 	})
 
 	Describe("PatchAllComponentToDeployment", func() {
-		var (
-			proc   *paasv1alpha2.Process
-			deploy *appsv1.Deployment
-		)
+		var deploy *appsv1.Deployment
 
 		BeforeEach(func() {
-			labelComponent := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "label-component",
-					Namespace: components.TEMPLATE_NAMESPACE,
-				},
-				Data: map[string]string{
-					"v1": `{
-						"spec": {
-							"template": {
-								"metadata": {
-									"labels": {
-										"component": "{{ .componentName }}"
-									}
-								}
-							}
-						}
-					}`,
-				},
-			}
-
-			sidecarComponent := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "sidecar-component",
-					Namespace: components.TEMPLATE_NAMESPACE,
-				},
-				Data: map[string]string{
-					"v1": `{
-						"spec": {
-							"template": {
-								"spec": {
-									"containers": [
-										{
-											"name": "{{ .sidecarName }}",
-											"image": "{{ .image }}",
-											"ports": [
-												{
-													"containerPort": {{ .port }}
-												}
-											]
-										}
-									]
-								}
-							}
-						}
-					}`,
-				},
-			}
-			fakeClient = fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(labelComponent, sidecarComponent).
-				Build()
-
-			proc = &paasv1alpha2.Process{
-				Components: []paasv1alpha2.Component{
-					{
-						Type:    "label-component",
-						Version: "v1",
-						Properties: runtime.RawExtension{
-							Raw: []byte(`{"componentName":"web"}`),
-						},
-					},
-					{
-						Type:    "sidecar-component",
-						Version: "v1",
-						Properties: runtime.RawExtension{
-							Raw: []byte(`{
-            				    "sidecarName": "log-collector",
-            				    "image": "docker.io/fluentd:latest",
-            				    "port": 24224
-            				}`),
-						},
-					},
-				},
-			}
+			componentsMgr.DefaultComponentDir = "../../../../components/components"
 
 			deploy = &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
@@ -163,40 +81,133 @@ var _ = Describe("ComponentMutator", func() {
 			}
 		})
 
-		It("should apply all components to deployment", func() {
-			err := components.PatchAllComponentToDeployment(ctx, fakeClient, proc, deploy)
+		It("apply env_overlay component to deployment", func() {
+			proc := &paasv1alpha2.Process{
+				Name: "web",
+				Components: []paasv1alpha2.Component{
+					{
+						Type:    "env_overlay",
+						Version: "v1",
+						Properties: runtime.RawExtension{
+							Raw: []byte(
+								`{"env": [{"name":"testKey","value":"testValue"}, {"name":"testKey2","value":"testValue2"}]}`,
+							),
+						},
+					},
+				},
+			}
+			err := components.PatchAllComponentToDeployment(proc, deploy)
 			Expect(err).NotTo(HaveOccurred())
-
-			Expect(deploy.Spec.Template.Labels).To(HaveKeyWithValue("component", "web"))
-			Expect(len(deploy.Spec.Template.Spec.Containers)).To(Equal(2))
-			Expect(deploy.Spec.Template.Spec.Containers).To(
+			Expect(len(deploy.Spec.Template.Spec.Containers)).To(Equal(1))
+			Expect(deploy.Spec.Template.Spec.Containers[0].Env).To(
 				ContainElement(
-					WithTransform(func(c corev1.Container) string {
-						return c.Name
-					}, Equal("web")),
+					WithTransform(func(e corev1.EnvVar) string {
+						return e.Name
+					}, Equal("testKey")),
 				),
 			)
-			Expect(deploy.Spec.Template.Spec.Containers).To(
+			Expect(deploy.Spec.Template.Spec.Containers[0].Env).To(
 				ContainElement(
-					WithTransform(func(c corev1.Container) string {
-						return c.Name
-					}, Equal("log-collector")),
+					WithTransform(func(e corev1.EnvVar) string {
+						return e.Value
+					}, Equal("testValue")),
 				),
 			)
 		})
 
-		Context("when component patch fails", func() {
-			BeforeEach(func() {
-				proc.Components[0].Type = "non-existent"
-				proc.Components[1].Type = "non-existent1"
-			})
+		It("apply cl5 component to deployment", func() {
+			proc := &paasv1alpha2.Process{
+				Name: "web",
+				Components: []paasv1alpha2.Component{
+					{
+						Type:    "cl5",
+						Version: "v1",
+					},
+				},
+			}
+			err := components.PatchAllComponentToDeployment(proc, deploy)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(deploy.Spec.Template.Spec.Containers)).To(Equal(2))
+			jsonBytes, err := json.MarshalIndent(deploy.Spec.Template.Spec.Containers[0], "", "  ")
+			Expect(err).NotTo(HaveOccurred())
+			cl5Container := `{
+  "name": "cl5",
+  "image": "mirrors.tencent.com/bkpaas/cl5-agent:4.3.0.3",
+  "ports": [
+    {
+      "name": "l5-config",
+      "containerPort": 7778,
+      "protocol": "UDP"
+    },
+    {
+      "name": "l5-agent-1",
+      "containerPort": 8888,
+      "protocol": "UDP"
+    },
+    {
+      "name": "l5-agent-2",
+      "containerPort": 8889,
+      "protocol": "UDP"
+    },
+    {
+      "name": "l5-agent-3",
+      "containerPort": 8890,
+      "protocol": "UDP"
+    }
+  ],
+  "env": [
+    {
+      "name": "ENVIRONMENT",
+      "value": "test"
+    }
+  ],
+  "resources": {},
+  "livenessProbe": {
+    "exec": {
+      "command": [
+        "/usr/local/services/liveness_check.sh"
+      ]
+    },
+    "timeoutSeconds": 1,
+    "periodSeconds": 10,
+    "successThreshold": 1,
+    "failureThreshold": 3
+  },
+  "readinessProbe": {
+    "exec": {
+      "command": [
+        "/usr/local/services/readiness_check.sh"
+      ]
+    },
+    "timeoutSeconds": 1,
+    "periodSeconds": 10,
+    "successThreshold": 1,
+    "failureThreshold": 3
+  },
+  "terminationMessagePath": "/dev/termination-log",
+  "terminationMessagePolicy": "File",
+  "imagePullPolicy": "Always"
+}`
+			Expect(string(jsonBytes)).To(Equal(cl5Container))
+		})
 
-			It("should return error and stop processing", func() {
-				err := components.PatchAllComponentToDeployment(ctx, fakeClient, proc, deploy)
-				Expect(err).To(HaveOccurred())
-
-				Expect(deploy.Spec.Template.Labels).To(BeEmpty())
-			})
+		It("should return error and stop processing", func() {
+			proc := &paasv1alpha2.Process{
+				Name: "web",
+				Components: []paasv1alpha2.Component{
+					{
+						Type:    "non-existent",
+						Version: "v1",
+						Properties: runtime.RawExtension{
+							Raw: []byte(
+								`{"env": [{"name":"testKey","value":"testValue"}, {"name":"testKey2","value":"testValue2"}]}`,
+							),
+						},
+					},
+				},
+			}
+			err := components.PatchAllComponentToDeployment(proc, deploy)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

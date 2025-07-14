@@ -1578,6 +1578,7 @@ spec:
                     components:
                       description: Components is a list of component
                       items:
+                        description: Component is used to specify process component
                         properties:
                           properties:
                             description: Properties of component

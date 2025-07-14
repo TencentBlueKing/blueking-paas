@@ -111,7 +111,7 @@
                 delimiters: ['$[', ']'],
                 data: function () {
                     return {
-                        active: '{{ view.name }}',
+                        active: "{% if view.name %}{{ view.name }}{% elif view_name %}{{ view_name }}{% endif %}",
                         navList: navList,
                         defaultOpenKeys: [],
                     };
@@ -126,7 +126,7 @@
                 },
                 methods: {
                     handleSelect: function (name, obj) {
-                        if (obj.url !== undefined && "{{ view.name }}" !== name) {
+                        if (obj.url !== undefined && this.active !== name) {
                             this.$bkLoading({title: '加载中'})
                             window.location.href = obj.url
                         }

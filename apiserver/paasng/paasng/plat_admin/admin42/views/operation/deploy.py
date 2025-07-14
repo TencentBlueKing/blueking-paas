@@ -42,6 +42,9 @@ class DeployStatisticsView(TemplateView, viewsets.GenericViewSet):
         if "view" not in kwargs:
             kwargs["view"] = self
         kwargs["months"] = self.get_months()
+        # DRF 中 GenericViewSet 再 as_view 时会将 name 属性重置为 None
+        # 这里将直接传递上下文变量 name
+        kwargs["view_name"] = "应用统计"
 
         kwargs["data_list"] = self.serializer_class(self.get_data(), many=True).data
         return kwargs

@@ -129,7 +129,6 @@ class TestBkUserField:
 
     def test_integrated(self):
         application = create_application(
-            region="default",
             code=generate_random_string(6),
             name=generate_random_string(6),
             name_en=generate_random_string(6),

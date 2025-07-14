@@ -10,7 +10,6 @@ None.
 
 | Field | Type | Required | Description |
 | ------ | ------ | ------ | ------ |
-| region | string | Yes | Region, default is "default" |
 | code | string | Yes | Application code |
 | name | string | Yes | Application name |
 | type | string | Yes | Application type, default is "default" |
@@ -26,7 +25,7 @@ None.
 
 ### Request Example
 ```
-curl -X POST -H 'content-type: application/json' -H 'x-bkapi-authorization: {"access_token": "your_access_token", "bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' -d '{"region": "default", "code": "testappcode", "name": "testappcode", "type": "default", "engine_enabled": true, "engine_params": {"source_origin": 2, "source_init_template": "nodejs_bk_magic_vue_spa"}}' --insecure https://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/lesscode/
+curl -X POST -H 'content-type: application/json' -H 'x-bkapi-authorization: {"access_token": "your_access_token", "bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' -d '{"code": "testappcode", "name": "testappcode", "type": "default", "engine_enabled": true, "engine_params": {"source_origin": 2, "source_init_template": "nodejs_bk_magic_vue_spa"}}' --insecure https://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/lesscode/
 ```
 
 ### Response Example

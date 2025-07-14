@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import base64
-import os
 import re
 from typing import List, Optional, Union
 
@@ -37,9 +36,9 @@ from rest_framework.fields import empty, flatten_choices_dict, to_choices_dict
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.datetime import convert_timestamp_to_str
+from paasng.utils.file import path_may_escape
 from paasng.utils.sanitizer import clean_html
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
-from tests.utils.basic import generate_random_string
 
 
 class VerificationCodeField(serializers.RegexField):
@@ -348,14 +347,6 @@ class SafePathField(serializers.RegexField):
         # 检查是否使用 .. 来访问上层目录或者使用绝对路径
         if ".." in data or data.startswith("/"):
             self.fail("escape_risk", path=data)
-
-        # 模拟实际使用情况，对用户输入进行拼接
-        root = f"/var/folders/{generate_random_string(12)}/T"
-        full_path = os.path.abspath(os.path.join(root, data))
-        resolved_root = os.path.abspath(root) + os.sep
-
-        # 通过前缀路径检查是否逃逸（与当前路径相同是允许的）
-        if full_path != root and not full_path.startswith(resolved_root):
+        if path_may_escape(data):
             self.fail("escape_risk", path=data)
-
         return data

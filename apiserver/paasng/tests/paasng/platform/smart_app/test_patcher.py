@@ -131,35 +131,10 @@ class TestSourcePackagePatcher:
                             },
                         }
                     ),
+                    "foo/src/bar": [],
+                    "foo/src/foo": [],
                 },
                 "./foo/src/bar/Procfile",
-                {"hello": "echo 'Hello Foo, i am Bar!'"},
-            ),
-            # 测试多模块(已加密)
-            (
-                {
-                    "foo/app_desc.yaml": yaml.dump(
-                        {
-                            "spec_version": 2,
-                            "app": {"bk_app_code": "foo", "bk_app_name": "foo"},
-                            "modules": {
-                                "bar": {
-                                    "processes": {"hello": {"command": "echo 'Hello Foo, i am Bar!'"}},
-                                    "source_dir": "./src/bar",
-                                    "language": "python",
-                                },
-                                "foo": {
-                                    "is_default": True,
-                                    "processes": {"hello": {"command": "echo 'Hello Bar, i am Foo!'"}},
-                                    "source_dir": "./src/foo",
-                                    "language": "python",
-                                },
-                            },
-                        }
-                    ),
-                    "foo/src/bar": "",
-                },
-                "./foo/Procfile",
                 {"hello": "echo 'Hello Foo, i am Bar!'"},
             ),
         ],

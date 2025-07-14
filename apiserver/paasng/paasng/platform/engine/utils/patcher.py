@@ -36,22 +36,16 @@ class SourceCodePatcherWithDBDriver:
     中调用 get_processes 的部分。
 
     :param module: 模块。
-    :param root_dir: 项目源码根目录。
     :param source_dir: 模块所使用的源码（构建）目录，可能和 root_dir 不同。
     :param deployment: Deployment 对象。
     """
 
-    def __init__(self, module: "Module", root_dir: Path, source_dir: Path, deployment: Deployment):
+    def __init__(self, module: "Module", source_dir: Path, deployment: Deployment):
         self.module = module
-        self.root_dir = root_dir
         self.source_dir = source_dir
         self.deployment = deployment
 
-        # 如果源码目录已加密（类型为文件而非目录）, 则生成至应用描述文件的目录下
-        if self.source_dir.is_file():
-            self.procfile_fpath = root_dir / "Procfile"
-        else:
-            self.procfile_fpath = source_dir / "Procfile"
+        self.procfile_fpath = source_dir / "Procfile"
 
     def add_procfile(self):
         """尝试往应用源码目录创建 Procfile 文件, 如果源码已加密, 则注入至应用描述文件目录下"""

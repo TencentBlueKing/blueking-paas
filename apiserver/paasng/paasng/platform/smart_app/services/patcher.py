@@ -24,10 +24,8 @@ from django.utils.functional import cached_property
 
 from paasng.platform.declarative.handlers import get_deploy_desc_by_module, get_desc_handler
 from paasng.platform.engine.utils.source import validate_source_dir_str
-from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.platform.smart_app.services.detector import ManifestDetector
-from paasng.platform.smart_app.services.path import LocalFSPath, PathProtocol
+from paasng.platform.smart_app.services.path import LocalFSPath
 from paasng.platform.sourcectl.models import SPStat
 from paasng.platform.sourcectl.package.client import BinaryTarClient
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir
@@ -61,8 +59,6 @@ class SourceCodePatcher:
         )
         # 尝试添加 Procfile
         patcher.add_procfile()
-        # 尝试添加 manifest.yaml
-        patcher.add_manifest()
         # 重新压缩源码包
         compress_directory(root_dir, dest)
         return dest
@@ -93,9 +89,9 @@ class SourceCodePatcher:
         return get_deploy_desc_by_module(self.desc_data, self.module.name)
 
     @cached_property
-    def source_dir(self) -> LocalFSPath:
+    def source_dir(self) -> Path:
         """包含当前模块代码的路径。"""
-        return LocalFSPath(validate_source_dir_str(self._working_dir.path, self.source_dir_str))
+        return validate_source_dir_str(self._working_dir.path, self.source_dir_str)
 
     @cached_property
     def source_dir_str(self) -> str:
@@ -107,40 +103,16 @@ class SourceCodePatcher:
         else:
             return self.module.get_source_obj().get_source_dir()
 
-    def _make_key(self, key: str) -> PathProtocol:
-        # 如果源码目录已加密, 则生成至应用描述文件的目录下.
-        if self.source_dir.is_file():
-            return self._working_dir / key
-        return self.source_dir / key
-
     def add_procfile(self):
         """尝试往应用源码目录创建 Procfile 文件, 如果源码已加密, 则注入至应用描述文件目录下"""
-        key = self._make_key("Procfile")
+        key = self.source_dir / "Procfile"
         if key.exists():
             logger.warning("Procfile already exists, skip the injection process")
             return
+
         procfile = self.deploy_description.get_procfile()
         if not procfile:
             logger.warning("Procfile not defined, skip injection process")
             return
 
         key.write_text(yaml.safe_dump(procfile))
-
-    def add_manifest(self):
-        """尝试往源码根目录添加 manifest"""
-        if self.module.get_source_origin() != SourceOrigin.S_MART:
-            return
-
-        logger.debug("[S-Mart] Try to add manifest to S-Mart tarball.")
-        key = self._working_dir / "manifest.yaml"
-        if key.exists():
-            logger.warning("manifest.yaml already exists, skip.")
-            return
-
-        manifest = ManifestDetector(
-            package_root=self.root_dir,
-            app_description=self.app_description,
-            relative_path=self.relative_path,
-            source_dir=str(self.source_dir.relative_to(self._working_dir)),
-        ).detect()
-        key.write_text(yaml.safe_dump(manifest))

@@ -151,10 +151,10 @@ def compress_directory(source_path, target_path):
     # Add "GZIP=-n" to disable gzip timestamp
     # see: https://serverfault.com/questions/110208/different-md5sums-for-same-tar-contents
     p = subprocess.Popen(
-        f"GZIP=-n tar --exclude=.svn -czf {target_path} -C {source_path} .",
-        shell=True,
+        ["tar", "--exclude=.svn", "-czf", str(target_path), "-C", str(source_path), "."],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env={"GZIP": "-n"},
         encoding="utf-8",
     )
     _, stderr = p.communicate()
@@ -168,8 +168,7 @@ def uncompress_directory(source_path, target_path):
     target_path = os.path.abspath(target_path)
     # -m, --touch                don't extract file modified time
     p = subprocess.Popen(
-        f'tar -m -xf "{source_path}" -C "{target_path}"',
-        shell=True,
+        ["tar", "-m", "-xf", str(source_path), "-C", str(target_path)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         encoding="utf-8",

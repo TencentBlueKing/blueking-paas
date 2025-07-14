@@ -81,7 +81,7 @@ class TestCreateDevSandbox:
                 return_value="https://bkrepo.example.com/helloworld.zip",
             ),
             mock.patch(
-                "paasng.accessories.dev_sandbox.views.get_env_variables",
+                "paasng.accessories.dev_sandbox.views.get_env_vars_selected_addons",
                 return_value={"FOO": "BAR"},
             ),
             mock.patch(

@@ -19,8 +19,15 @@ from typing import Dict, List
 
 from django.conf import settings
 
+from paasng.accessories.servicehub.manager import mixed_service_mgr
+from paasng.accessories.servicehub.sharing import ServiceSharingManager
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.building import SlugbuilderInfo
-from paasng.platform.engine.configurations.config_var import generate_env_vars_for_app
+from paasng.platform.engine.configurations.config_var import (
+    EnvVarSource,
+    UnifiedEnvVarsReader,
+    generate_env_vars_for_app,
+)
 from paasng.platform.engine.deploy.bg_build.utils import get_envs_from_pypi_url
 from paasng.platform.modules.models import Module
 
@@ -68,3 +75,33 @@ def _buildpacks_as_build_env(buildpacks: List[Dict]) -> str:
         required_buildpacks.append(" ".join(buildpack))
 
     return ";".join(required_buildpacks)
+
+
+def get_env_vars_selected_addons(env: ModuleEnvironment, selected_services: List[str]) -> Dict[str, str]:
+    # 1. 获取不包含增强服务的环境变量
+    base_vars = UnifiedEnvVarsReader(env).get_kv_map(exclude_sources=[EnvVarSource.BUILTIN_ADDONS])
+
+    # 2. 获取指定增强服务的环境变量
+    addon_vars = list_vars_builtin_addons_custom(env, selected_services)
+
+    # 3. 返回合并结果
+    return {**base_vars, **addon_vars}
+
+
+def list_vars_builtin_addons_custom(env: ModuleEnvironment, selected_addons: List[str]) -> Dict[str, str]:
+    """获取指定增强服务的环境变量列表"""
+    # 获取所有增强服务的变量组
+    all_var_groups = ServiceSharingManager(env.module).get_env_variable_groups(
+        env, filter_enabled=True
+    ) + mixed_service_mgr.get_env_var_groups(env.get_engine_app(), filter_enabled=True)
+
+    addon_vars: Dict[str, str] = {}
+    for group in all_var_groups:
+        svc_name = group.service.name
+        # 跳过未选中的服务
+        if svc_name not in selected_addons:
+            continue
+
+        addon_vars = {**addon_vars, **group.data}
+
+    return addon_vars

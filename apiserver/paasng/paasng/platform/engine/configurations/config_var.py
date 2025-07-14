@@ -25,8 +25,6 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from paasng.accessories.publish.entrance.preallocated import get_bk_doc_url_prefix
-from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.core.region.app import BuiltInEnvsRegionHelper, BuiltInEnvVarDetail
 from paasng.core.region.models import get_region
 from paasng.infras.oauth2.exceptions import BkOauthClientDoesNotExist
@@ -34,7 +32,6 @@ from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.env_var import listers as vars_listers
-from paasng.platform.engine.configurations.env_var.entities import EnvVariableObj
 from paasng.platform.engine.configurations.env_var.listers import EnvVariableList
 from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
 from paasng.platform.engine.models.config_var import (
@@ -187,48 +184,6 @@ def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
             keys = UnifiedEnvVarsReader(env).get_user_conflicted_keys()
             results.update({item.key: item for item in keys})
     return list(results.values())
-
-
-def get_env_vars_selected_addons(env: ModuleEnvironment, selected_services: List[str]) -> Dict[str, str]:
-    # 1. 获取不包含增强服务的环境变量
-    base_vars = UnifiedEnvVarsReader(env).get_kv_map(exclude_sources=[EnvVarSource.BUILTIN_ADDONS])
-
-    # 2. 获取指定增强服务的环境变量
-    addon_vars = list_vars_builtin_addons_custom(env, selected_services).kv_map
-
-    # 3. 返回合并结果
-    return {**base_vars, **addon_vars}
-
-
-def list_vars_builtin_addons_custom(env: ModuleEnvironment, selected_addons: List[str]) -> EnvVariableList:
-    """获取指定增强服务的环境变量列表"""
-    # 获取所有增强服务的变量组
-    all_var_groups = ServiceSharingManager(env.module).get_env_variable_groups(
-        env, filter_enabled=True
-    ) + mixed_service_mgr.get_env_var_groups(env.get_engine_app(), filter_enabled=True)
-
-    # 创建服务名称到变量组的映射
-    service_group_map = {}
-    for group in all_var_groups:
-        service_name = group.service.name
-        if service_name not in service_group_map:
-            service_group_map[service_name] = group
-
-    # 过滤出选中的增强服务
-    var_map = {}
-    for service_name in selected_addons:
-        # 判断服务是否在映射中
-        if service_name in service_group_map:
-            # 获取变量组
-            group = service_group_map[service_name]
-            for key, value in group.data.items():
-                var_map[key] = EnvVariableObj(
-                    key=key,
-                    value=value,
-                    description=str(group.service.display_name),
-                )
-
-    return EnvVariableList(var_map.values())
 
 
 @define

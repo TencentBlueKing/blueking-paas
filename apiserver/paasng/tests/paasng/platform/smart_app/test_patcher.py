@@ -193,5 +193,5 @@ class TestSourcePackagePatcher:
         with tarfile.open(patched_tar) as tar:
             fp = tar.extractfile(target)
             assert fp
-            data = yaml.full_load(fp.read())
+            data = yaml.safe_load(fp.read())
             assert data == expected

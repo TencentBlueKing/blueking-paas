@@ -15,8 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import json
-
 import pytest
 from django.conf import settings
 
@@ -35,7 +33,6 @@ from paas_wl.infras.resources.kube_res.base import GVKConfig
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-@pytest.mark.django_db
 class TestDevSandboxSLZ:
     @pytest.fixture()
     def gvk_config(self):
@@ -48,25 +45,10 @@ class TestDevSandboxSLZ:
 
     def test_serialize(self, gvk_config, dev_sandbox):
         slz = DevSandboxSerializer(DevSandbox, gvk_config)
-        manifests = slz.serialize(dev_sandbox)
+        manifest = slz.serialize(dev_sandbox)
 
-        assert len(manifests) == 2
-
-        # 验证 ConfigMap
-        configmap_manifest = manifests[0]
-        assert configmap_manifest["apiVersion"] == "v1"
-        assert configmap_manifest["kind"] == "ConfigMap"
-        assert configmap_manifest["metadata"]["name"] == f"{dev_sandbox.name}-code-editor-config"
-        assert configmap_manifest["metadata"]["labels"] == get_dev_sandbox_labels(dev_sandbox.app)
-        assert json.loads(configmap_manifest["data"]["settings.json"]) == {
-            "workbench.colorTheme": "Visual Studio Dark",
-            "window.autoDetectColorScheme": False,
-        }
-
-        # 验证 Pod
-        pod_manifest = manifests[1]
         labels = get_dev_sandbox_labels(dev_sandbox.app)
-        assert pod_manifest == {
+        assert manifest == {
             "apiVersion": "v1",
             "kind": "Pod",
             "metadata": {

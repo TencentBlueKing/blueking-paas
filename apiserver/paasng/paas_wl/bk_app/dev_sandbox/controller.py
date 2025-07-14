@@ -30,7 +30,12 @@ from paas_wl.bk_app.dev_sandbox.conf import (
 )
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Runtime, SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
-from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService
+from paas_wl.bk_app.dev_sandbox.kres_entities import (
+    DevSandbox,
+    DevSandboxConfigMap,
+    DevSandboxIngress,
+    DevSandboxService,
+)
 from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_ingress_name, get_dev_sandbox_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
@@ -77,6 +82,7 @@ class DevSandboxController:
     sandbox_mgr = AppEntityManager(DevSandbox)
     service_mgr = AppEntityManager(DevSandboxService)
     ingress_mgr = AppEntityManager(DevSandboxIngress)
+    configmap_mgr = AppEntityManager(DevSandboxConfigMap)
 
     def __init__(self, dev_sandbox: "DevSandboxModel"):
         self.dev_sandbox = dev_sandbox
@@ -155,6 +161,9 @@ class DevSandboxController:
 
         # step 4. upsert ingress
         self.ingress_mgr.upsert(DevSandboxIngress.create(sandbox))
+
+        # step 5. upsert configmap
+        self.configmap_mgr.upsert(DevSandboxConfigMap.create(sandbox))
 
 
 class DevWlAppConstructor:

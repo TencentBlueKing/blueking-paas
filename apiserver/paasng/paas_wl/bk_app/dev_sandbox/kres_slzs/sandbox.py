@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import json
 from typing import TYPE_CHECKING, Dict, Optional
 
 from django.conf import settings
@@ -47,19 +46,16 @@ DEV_SANDBOX_CODE_ANNOTATION_KEY = "bkapp.paas.bk.tencent.com/dev-sandbox-code"
 
 class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
     def serialize(self, obj: "DevSandbox", original_obj: Optional[ResourceInstance] = None, **kwargs):
-        return [
-            self._construct_code_editor_configmap(obj),
-            {
-                "apiVersion": self.get_apiversion(),
-                "kind": "Pod",
-                "metadata": {
-                    "name": obj.name,
-                    "labels": get_dev_sandbox_labels(obj.app),
-                    "annotations": {DEV_SANDBOX_CODE_ANNOTATION_KEY: obj.code},
-                },
-                "spec": self._construct_pod_spec(obj),
+        return {
+            "apiVersion": self.get_apiversion(),
+            "kind": "Pod",
+            "metadata": {
+                "name": obj.name,
+                "labels": get_dev_sandbox_labels(obj.app),
+                "annotations": {DEV_SANDBOX_CODE_ANNOTATION_KEY: obj.code},
             },
-        ]
+            "spec": self._construct_pod_spec(obj),
+        }
 
     def _construct_pod_spec(self, obj: "DevSandbox") -> Dict:
         containers = [self._construct_dev_sandbox_container(obj)]
@@ -176,24 +172,6 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
                         "subPath": "settings.json",
                     }
                 )
-
-    @staticmethod
-    def _construct_code_editor_configmap(obj: "DevSandbox") -> Dict:
-        """创建包含 code-server 配置的 ConfigMap"""
-        return {
-            "apiVersion": "v1",
-            "kind": "ConfigMap",
-            "metadata": {
-                "name": f"{obj.name}-code-editor-config",
-                "labels": get_dev_sandbox_labels(obj.app),
-            },
-            "data": {
-                # 挂载 code-server 主题配置文件
-                "settings.json": json.dumps(
-                    {"workbench.colorTheme": "Visual Studio Dark", "window.autoDetectColorScheme": False}
-                )
-            },
-        }
 
 
 class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):

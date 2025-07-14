@@ -229,7 +229,7 @@ class MixedServiceMgr:
     # Proxied generator methods end
 
     def get_env_vars(
-        self, engine_app: EngineApp, service: Optional[ServiceObj] = None, filter_enabled: bool = False,
+        self, engine_app: EngineApp, service: Optional[ServiceObj] = None, filter_enabled: bool = False
     ) -> Dict[str, str]:
         """Get all provisioned services env variables
 

@@ -94,7 +94,7 @@ class SourceCodePatcher:
 
     @cached_property
     def source_dir(self) -> LocalFSPath:
-        """包含前模块代码的路径。"""
+        """包含当前模块代码的路径。"""
         return LocalFSPath(validate_source_dir_str(self._working_dir.path, self.source_dir_str))
 
     @cached_property

@@ -190,11 +190,13 @@
                       :rules="rules.key"
                     >
                       <bk-input
+                        ref="keyInput"
                         v-model="row.key"
                         placeholder="ENV_KEY"
                         class="env-input-cls"
                         @enter="handleInputEvent(row, $index)"
                         @blur="handleInputEvent(row, $index)"
+                        @keydown="(value, event) => handleKeyDown('valueInput', event)"
                       ></bk-input>
                     </bk-form-item>
                   </bk-form>
@@ -235,11 +237,13 @@
                     :rules="rules.value"
                   >
                     <bk-input
+                      ref="valueInput"
                       v-model="row.value"
                       placeholder="env_value"
+                      class="env-input-cls"
                       @enter="handleInputEvent(row, $index)"
                       @blur="handleInputEvent(row, $index)"
-                      class="env-input-cls"
+                      @keydown="(value, event) => handleKeyDown('descriptionInput', event)"
                     ></bk-input>
                   </bk-form-item>
                 </bk-form>
@@ -298,9 +302,11 @@
                     :rules="rules.description"
                   >
                     <bk-input
+                      ref="descriptionInput"
                       v-model="row.description"
                       :placeholder="$t('输入描述文字，可选')"
                       class="env-input-cls"
+                      @keydown="(value, event) => handleKeyDown('keyInput', event)"
                     ></bk-input>
                   </bk-form-item>
                 </bk-form>
@@ -1363,6 +1369,7 @@ export default {
     handleSingleEdit(row) {
       const index = this.envVarList.findIndex((v) => v.key === row.key && v.environment_name === row.environment_name);
       this.envVarList[index].isEdit = true;
+      this.focusInput('keyInput');
     },
 
     // 删除单个环境变量
@@ -1410,6 +1417,7 @@ export default {
           isAdd: true,
         });
       }
+      this.focusInput('keyInput');
     },
 
     // 单个环境编辑取消
@@ -1463,6 +1471,25 @@ export default {
           isShowDeploy: true,
           deployModuleId: this.curModuleId,
         },
+      });
+    },
+
+    // tab 聚焦对应Input
+    handleKeyDown(nextRef, event, prevRef = null) {
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        if (event.shiftKey && prevRef) {
+          this.$refs[prevRef].focus();
+        } else if (!event.shiftKey && nextRef) {
+          this.$refs[nextRef].focus();
+        }
+      }
+    },
+
+    // 聚焦 ENV_KEY input
+    focusInput(refName) {
+      this.$nextTick(() => {
+        this.$refs[refName].focus();
       });
     },
   },

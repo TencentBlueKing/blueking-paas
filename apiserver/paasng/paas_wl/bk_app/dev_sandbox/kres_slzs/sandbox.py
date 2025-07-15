@@ -101,7 +101,6 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
         return {
             "name": CODE_EDITOR_CONTAINER_NAME,
             "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
-            "securityContext": {"runAsUser": 1000},
             "command": ["/usr/bin/code-server"],
             # --disable-telemetry 禁止遥测数据收集功能；--disable-update-check 关闭 code-server 自动更新
             # 参考文档：

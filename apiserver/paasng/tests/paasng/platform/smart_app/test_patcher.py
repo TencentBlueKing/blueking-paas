@@ -134,7 +134,6 @@ class Test__patch_smart_tarball:
     def test_add_procfile(self, tar_path, patched_tar, target, expected):
         assert tar_path.name == patched_tar.name
         with tarfile.open(patched_tar) as tar:
-            print(tar.getmembers())
             fp = tar.extractfile(target)
             assert fp
             data = yaml.safe_load(fp.read())

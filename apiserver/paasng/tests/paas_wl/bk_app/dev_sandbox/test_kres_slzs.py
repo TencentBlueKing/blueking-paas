@@ -121,7 +121,6 @@ class TestDevSandboxSLZ:
                         "name": "code-editor-config",
                         "configMap": {
                             "name": f"{dev_sandbox.name}-code-editor-config",
-                            "items": [{"key": "settings.json", "path": "settings.json"}],
                         },
                     },
                 ],

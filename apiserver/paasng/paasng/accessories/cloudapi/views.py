@@ -276,13 +276,128 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(result)
 
     @staticmethod
-    def _trans_request_path_to_apigw_url(path: str, app_code: str) -> str:
+    def _trans_request_path_to_apigw_url(
+        path: str,
+        app_code: str,
+    ) -> str:
         """将请求路径转换为 bk-apigateway-inner 接口地址"""
         # 请求 bk-apigateway-inner 接口时，约定 `/api/cloudapi/apps/{app_code}/{apigw_url_part}` 为 bk-paas-ng 的 url 前缀，
         # `/api/v1/{apigw_url_part}` 即为 bk-apigateway-inner 接口地址
         force_script_name = getattr(settings, "FORCE_SCRIPT_NAME", "") or ""
         prefix = f"{force_script_name}/api/cloudapi/apps/{app_code}/"
         if path.startswith(prefix):
-            return f"/api/v1/{path[len(prefix) :]}"
+            return f"/api/v1/{path[len(prefix):]}"
+
+        raise error_codes.CLOUDAPI_PATH_ERROR
+
+
+class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_CLOUD_API)]
+
+    def list_mcp_servers(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
+
+    def list_mcp_server_permissions(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
+
+    def list_app_mcp_server_permissions(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
+
+    def list_mcp_server_permissions_apply_records(self, request, *args, **kwargs):
+        app = self.get_application()
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._get(request, apigw_url, app)
+
+    def apply_mcp_server_permissions(self, request, *args, **kwargs):
+        # 参数校验
+        app = self.get_application()
+        operation_type = OperationEnum.APPLY
+        apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
+        return self._post(request, apigw_url, operation_type, app)
+
+    def _get(self, request, apigw_url: str, app: Application):
+        logger.debug("[cloudapi] getting %s", apigw_url)
+        params = copy.copy(request.query_params)
+        params.update(
+            {
+                "target_app_code": app.code,
+                "user_auth_type": get_user_auth_type(app.region),
+            }
+        )
+        tenant_id = get_tenant_id_for_app(app.code)
+        result = bk_apigateway_inner_component.get(
+            apigw_url, params=params, tenant_id=tenant_id, bk_username=request.user.username
+        )
+        return Response(result)
+
+    def _post(
+        self,
+        request,
+        apigw_url: str,
+        operation_type: str,
+        app: Application,
+        data_type: DataType = DataType.CLOUD_API_RECORD,
+    ):
+        """
+        申请/续期网关/组件 API 权限
+
+        @param: apigw_url: 请求 API 路径
+        @param: operation_type: 操作的类型，如申请、续期
+        @param: app: 应用
+        @param: data_type: 操作前后数据中记录数据的类型，如网关、组件。通过 record_id 获取申请详情时，需要结合 data_type 来调用不同的 API，以获取单据详情
+        """
+        logger.debug("[cloudapi] posting %s", apigw_url)
+        data = copy.copy(request.data)
+        data.update(
+            {
+                "target_app_code": app.code,
+                "user_auth_type": get_user_auth_type(app.region),
+            }
+        )
+        tenant_id = get_tenant_id_for_app(app.code)
+        result = bk_apigateway_inner_component.post(
+            apigw_url, json=data, tenant_id=tenant_id, bk_username=request.user.username
+        )
+
+        try:
+            # 云 API 申请记录 ID，用于操作详情的展示
+            record_id = get_items(result, ["data", "record_id"], "")
+            # 仅申请的时候才有 record_id，续期的时候没有
+            data_after = DataDetail(type=data_type, data=record_id) if record_id else None
+
+            gateway_name = data.get("gateway_name", "")
+            add_app_audit_record(
+                app_code=app.code,
+                tenant_id=tenant_id,
+                user=request.user.pk,
+                action_id=AppAction.MANAGE_CLOUD_API,
+                operation=operation_type,
+                target=OperationTarget.CLOUD_API,
+                attribute=gateway_name,
+                result_code=ResultCode.SUCCESS,
+                data_after=data_after,
+            )
+        except Exception:
+            logger.exception("An exception occurred in the operation record of adding cloud API permissions")
+        return Response(result)
+
+    @staticmethod
+    def _trans_request_path_to_apigw_url(
+        path: str,
+        app_code: str,
+    ) -> str:
+        """将请求路径转换为 bk-apigateway-inner 接口地址"""
+        # 请求 bk-apigateway-inner 接口时，约定 `/api/cloudapi/apps/{app_code}/{apigw_url_part}` 为 bk-paas-ng 的 url 前缀，
+        # `/api/v1/{apigw_url_part}` 即为 bk-apigateway-inner 接口地址
+        force_script_name = getattr(settings, "FORCE_SCRIPT_NAME", "") or ""
+        prefix = f"{force_script_name}/api/cloudapi/apps/{app_code}/"
+        if path.startswith(prefix):
+            return f"/api/v2/{path[len(prefix):]}"
 
         raise error_codes.CLOUDAPI_PATH_ERROR

@@ -47,7 +47,6 @@ from .mixins import AppTenantMixin
 class SysThirdPartyApplicationSLZ(AppTenantMixin):
     """创建系统外链应用"""
 
-    region = serializers.ChoiceField(choices=get_region().get_choices())
     code = AppIDField()
     name = I18NExtend(AppNameField())
     operator = serializers.CharField(required=True)

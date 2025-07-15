@@ -38,7 +38,6 @@ from paasng.core.region.models import get_all_regions
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import AccountFeatureFlag as AFF
 from paasng.infras.accounts.models import AccountFeatureFlag
-from paasng.infras.accounts.permissions.user import user_can_operate_in_region
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers import (
@@ -82,7 +81,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         slz = ApplicationCreateInputV2SLZ(data=request.data, context={"user": request.user})
         slz.is_valid(raise_exception=True)
         params = slz.validated_data
-        self._validate_create_region_application_perm(params["region"])
 
         # 特殊处理，如果不启用应用引擎，则视为创建第三方应用
         if not params["engine_enabled"]:
@@ -113,7 +111,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         slz = CloudNativeAppCreateInputSLZ(data=request.data, context={"user": request.user})
         slz.is_valid(raise_exception=True)
         params = slz.validated_data
-        self._validate_create_region_application_perm(params["region"])
 
         src_cfg = params["source_config"]
         source_origin = SourceOrigin(src_cfg["source_origin"])
@@ -135,7 +132,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
 
         application = create_application(
-            region=params["region"],
             code=params["code"],
             name=params["name_zh_cn"],
             name_en=params["name_en"],
@@ -211,14 +207,12 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         slz = ThirdPartyAppCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
-        self._validate_create_region_application_perm(data["region"])
 
         app_tenant_mode, app_tenant_id, tenant = validate_app_tenant_params(
             request.user,
             data["app_tenant_mode"],
         )
         application = create_third_app(
-            data["region"],
             data["code"],
             data["name_zh_cn"],
             data["name_en"],
@@ -244,7 +238,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
     def create_lesscode_app(self, request):
         """注册在 APIGW 上给 bk_lesscode 平台调用，调用参数如下:
         {
-            "region": "default",
             "code": "lesscode2",
             "name": "lesscode2",
 
@@ -260,7 +253,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         slz = ApplicationCreateInputV2SLZ(data=request.data, context={"user": request.user})
         slz.is_valid(raise_exception=True)
         params = slz.validated_data
-        self._validate_create_region_application_perm(params["region"])
 
         engine_params = params.get("engine_params", {})
         source_origin = SourceOrigin(engine_params["source_origin"])
@@ -280,7 +272,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         serializer = AIAgentAppCreateInputSLZ(data=request.data)
         serializer.is_valid(raise_exception=True)
         params = serializer.validated_data
-        self._validate_create_region_application_perm(params["region"])
 
         source_origin = SourceOrigin.AI_AGENT
         engine_params = {
@@ -304,26 +295,21 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         allow_advanced = AccountFeatureFlag.objects.has_feature(request.user, AFF.ALLOW_ADVANCED_CREATION_OPTIONS)
 
         adv_region_clusters = []
-        if allow_advanced:
-            for region_name in get_all_regions():
-                env_cluster_names = {}
-                for env in [AppEnvironment.STAGING, AppEnvironment.PRODUCTION]:
-                    ctx = AllocationContext(
-                        tenant_id=get_tenant(request.user).id,
-                        region=region_name,
-                        environment=env,
-                        username=request.user.username,
-                    )
-                    env_cluster_names[env] = [cluster.name for cluster in ClusterAllocator(ctx).list()]
+        for region_name in get_all_regions():
+            env_cluster_names = {}
+            for env in [AppEnvironment.STAGING, AppEnvironment.PRODUCTION]:
+                ctx = AllocationContext(
+                    tenant_id=get_tenant(request.user).id,
+                    region=region_name,
+                    environment=env,
+                    username=request.user.username,
+                )
+                env_cluster_names[env] = [cluster.name for cluster in ClusterAllocator(ctx).list()]
 
-                adv_region_clusters.append({"region": region_name, "env_cluster_names": env_cluster_names})
+            adv_region_clusters.append({"region": region_name, "env_cluster_names": env_cluster_names})
 
         resp_data = {"allow_adv_options": allow_advanced, "adv_region_clusters": adv_region_clusters}
         return Response(CreationOptionsOutputSLZ(resp_data).data)
-
-    def _validate_create_region_application_perm(self, region: str):
-        if not user_can_operate_in_region(self.request.user, region):
-            raise error_codes.CANNOT_CREATE_APP.f(_("无法在所指定的 region 中创建应用"))
 
     def _get_cluster_entrance_https_enabled(
         self, app: Application, cluster_name: str | None, exposed_url_type: ExposedURLType
@@ -372,7 +358,6 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         )
 
         application = create_application(
-            region=params["region"],
             code=params["code"],
             name=params["name_zh_cn"],
             name_en=params["name_en"],

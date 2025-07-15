@@ -391,4 +391,5 @@ export default {
   '请输入代码所在目录，不填则为根目录': 'Please enter the directory where the code is located, leave blank for the root directory',
   克隆: 'Clone',
   克隆成功: 'Clone Successful',
+  '当前用户无可用的应用集群，无法创建应用；请联系平台管理员添加集群或调整集群分配策略。': 'The current user has no available application clusters and cannot create an app; please contact the platform administrator to add clusters or adjust the cluster allocation policy.',
 };

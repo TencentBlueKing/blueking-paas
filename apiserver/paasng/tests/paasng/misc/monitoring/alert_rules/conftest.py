@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import Dict
 from unittest import mock
 
-import jinja2
 import pytest
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -30,6 +29,7 @@ from paasng.misc.monitoring.monitor.alert_rules.ascode.client import AsCodeClien
 from paasng.misc.monitoring.monitor.alert_rules.config.constants import DEFAULT_RULE_CONFIGS
 from paasng.misc.monitoring.monitor.alert_rules.config.entities import AlertCode
 from paasng.misc.monitoring.monitor.models import AppAlertRule
+from paasng.utils import safe_jinja2
 from tests.utils.basic import generate_random_string
 
 random_vhost = generate_random_string()
@@ -67,8 +67,9 @@ def create_module_for_alert(bk_module_2, _with_wl_apps):
 @pytest.fixture()
 def bk_app_init_rule_configs(bk_app, wl_namespaces):
     tpl_dir = Path(settings.BASE_DIR) / "paasng" / "misc" / "monitoring" / "monitor" / "alert_rules" / "ascode"
-    loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl", tpl_dir / "notice_tpl"])
-    j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
+    j2_env = safe_jinja2.FileEnvironment(
+        [tpl_dir / "rules_tpl", tpl_dir / "notice_tpl", tpl_dir / "notice_tpl"], trim_blocks=True
+    )
 
     app_code = bk_app.code
     rule_configs = DEFAULT_RULE_CONFIGS

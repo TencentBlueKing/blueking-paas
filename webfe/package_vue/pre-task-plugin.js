@@ -34,18 +34,31 @@ class PreTaskPlugin {
     const bklogoutPath = path.resolve(JS_DIR_PATH, './bklogout.js');
     // const runtimePath = path.resolve(RUNTIME_DIR_PATH, './runtime.js');
 
-    if (fs.existsSync(paasStaticPath)) {
+    // 安全删除文件，避免 TOCTTOU 竞争条件
+    try {
       fs.unlinkSync(paasStaticPath);
+    } catch (err) {
+      // 忽略文件不存在的错误
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
     }
 
-    if (fs.existsSync(bklogoutPath)) {
+    try {
       fs.unlinkSync(bklogoutPath);
+    } catch (err) {
+      // 忽略文件不存在的错误
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
     }
 
-    // 复制paas_static
+    // 复制 paas_static - 使用原子写入
     const PAASSTATIC = APP_VERSION === 'te' ? `../../webfe-settings/paas_static.${APP_VERSION}.js` : `../../static/json/paas_static.${APP_VERSION}.js`;
     const staticData = fs.readFileSync(path.resolve(JSON_DIR_PATH, PAASSTATIC));
-    fs.writeFileSync(paasStaticPath, staticData);
+    const tempStaticPath = `${paasStaticPath}.tmp`;
+    fs.writeFileSync(tempStaticPath, staticData);
+    fs.renameSync(tempStaticPath, paasStaticPath);
 
     // 复制runtime
     // const PAASRUNTIME = APP_VERSION === 'te' ?
@@ -71,10 +84,12 @@ class PreTaskPlugin {
     // fileContent = fileContent.replace(/<%=[\w]+%>/g, '\'\'');
     // fs.writeFileSync(runtimePath, fileContent);
 
-    // 复制bklogout
+    // 复制 bklogout - 使用原子写入
     const PAASLOGOUT = APP_VERSION === 'te' ? `../../webfe-settings/bklogout.${APP_VERSION}.js` : `../../static/js/bklogout.${APP_VERSION}.js`;
     const logoutData = fs.readFileSync(path.resolve(JS_DIR_PATH, PAASLOGOUT));
-    fs.writeFileSync(bklogoutPath, logoutData);
+    const tempLogoutPath = `${bklogoutPath}.tmp`;
+    fs.writeFileSync(tempLogoutPath, logoutData);
+    fs.renameSync(tempLogoutPath, bklogoutPath);
     console.timeEnd('Pre task');
   }
 

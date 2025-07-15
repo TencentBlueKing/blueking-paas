@@ -52,6 +52,7 @@ from paasng.platform.sourcectl.models import GitProject
 from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.source_types import get_sourcectl_names, get_sourcectl_type
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
+from paasng.utils.text import basic_str_format
 
 try:
     from paasng.infras.legacydb_te.models import LApplication, LApplicationUseRecord
@@ -212,7 +213,9 @@ class DefaultAppDataBuilder(AppDataBuilder):
     def get_market_address(application: Application) -> Optional[str]:
         """获取市场访问地址，兼容精简版应用。普通应用如未打开市场开关，返回 None"""
         region = get_region(application.region)
-        addr = region.basic_info.link_production_app.format(code=application.code, region=application.region)
+        addr = basic_str_format(
+            region.basic_info.link_production_app, {"code": application.code, "region": application.region}
+        )
         if not application.engine_enabled:
             return addr
 

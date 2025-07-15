@@ -47,7 +47,6 @@ class ProcessSpecPlanManageViewSet(PaginationMixin, ListModelMixin, GenericViewS
     serializer_class = ProcessSpecPlanSLZ
     permission_classes = [site_perm_class(SiteAction.MANAGE_PLATFORM)]
     filter_backends = [SearchFilter]
-    search_fields = ["environment"]
     queryset = ProcessSpecPlan.objects.all()
 
     def _list_data(self):

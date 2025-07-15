@@ -34,6 +34,7 @@ WORKDIR /
 
 COPY config/samples/paas_v1alpha1_projectconfig.yaml config.yaml
 COPY --from=builder /workspace/manager .
+COPY pkg/components/components /components
 
 USER 65532:65532
 

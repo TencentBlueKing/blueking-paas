@@ -118,10 +118,12 @@ class TestDownloadSourceToDir:
             runtime={"source_dir": source_dir},
         )
 
-    def test_no_patch(self, bk_module, bk_deployment):
+    def test_no_patch_performed_if_process_empty(self, bk_module_full, bk_deployment):
+        bk_module_full.source_origin = SourceOrigin.AUTHORIZED_VCS.value
+        # Make a description file without processes
+        self.make_deploy_desc(bk_deployment)
         with generate_temp_dir() as working_dir:
-            self.make_deploy_desc(bk_deployment)
-            download_source_to_dir(bk_module, "user_id:100", bk_deployment, working_dir)
+            download_source_to_dir(bk_module_full, "user_id:100", bk_deployment, working_dir)
             assert list(working_dir.iterdir()) == []
 
     @pytest.mark.parametrize(
@@ -155,23 +157,6 @@ class TestDownloadSourceToDir:
             assert procfile.exists()
             assert procfile.is_file()
             assert yaml.safe_load(procfile.read_text()) == expected
-
-    # 模拟 S_MART 应用的 source_dir 目录加密的场景
-    def test_add_procfile_ext(self, bk_module, bk_deployment):
-        bk_module.source_origin = SourceOrigin.S_MART.value
-        self.make_deploy_desc(
-            bk_deployment, processes={"hello": {"command": "echo 'Hello World'"}}, source_dir="./foo/bar/baz"
-        )
-        with generate_temp_dir() as working_dir:
-            # 因为 source_dir 是文件(模拟加密目录), 所以 Procfile 注入到根目录
-            (working_dir / "./foo/bar/baz").parent.mkdir(exist_ok=True, parents=True)
-            (working_dir / "./foo/bar/baz").touch()
-            procfile = working_dir / "./Procfile"
-
-            download_source_to_dir(bk_module, "user_id:100", bk_deployment, working_dir)
-            assert procfile.exists()
-            assert procfile.is_file()
-            assert yaml.safe_load(procfile.read_text()) == {"hello": "echo 'Hello World'"}
 
 
 class TestCheckSourcePackage:

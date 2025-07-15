@@ -19,14 +19,13 @@ from pathlib import Path
 
 import yaml
 
-from paasng.platform.engine.exceptions import SkipSourcePatching
 
-
-def patch_source_dir_procfile(source_dir: Path, procfile: dict[str, str]):
+def patch_source_dir_procfile(source_dir: Path, procfile: dict[str, str]) -> None | str:
     """为应用源码目录添加 Procfile 文件，适用场景：
 
     - 「云原生应用」buildpack 构建方式的应用注入 Procfile 文件
-        - 目的：基于 CNB 的应用后续启动进程时，必须使用 Procfile 文件，因此自动生成一份
+        - 目的：基于 CNB 的应用在构建时，需要使用 Procfile 生成 metadata.yaml，后续启动进程时，
+          也需要使用 Procfile 文件，因此自动生成一份
     - 「普通应用」尝试往应用源码目录创建 Procfile 文件
 
     其他：
@@ -38,12 +37,14 @@ def patch_source_dir_procfile(source_dir: Path, procfile: dict[str, str]):
 
     :param source_dir: 模块所使用的源码（构建）目录，可能和 root_dir 不同。
     :param procfile: 进程配置信息。
+    :return: patch 过程被跳过的原因，如果没有跳过则返回 None
     """
     procfile_fpath = source_dir / "Procfile"
     if not procfile:
-        raise SkipSourcePatching("Procfile is undefined")
+        return "Procfile is undefined"
     if procfile_fpath.exists():
-        raise SkipSourcePatching("Procfile already exists")
+        return "Procfile already exists"
 
     procfile_fpath.parent.mkdir(parents=True, exist_ok=True)
     procfile_fpath.write_text(yaml.safe_dump(procfile))
+    return None

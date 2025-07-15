@@ -34,7 +34,7 @@ from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.building import get_dockerfile_path
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
 from paasng.platform.engine.constants import RuntimeType
-from paasng.platform.engine.exceptions import InitDeployDescHandlerError, SkipSourcePatching
+from paasng.platform.engine.exceptions import InitDeployDescHandlerError
 from paasng.platform.engine.models import Deployment, EngineApp
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.utils.output import DeployStream, Style
@@ -302,10 +302,8 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
         logger.info("Skip Procfile patching for Dockerfile cnative application.")
         return source_dir_str, source_dir
 
-    try:
-        patch_source_dir_procfile(source_dir=source_dir, procfile=deployment.get_procfile())
-    except SkipSourcePatching as e:
-        logger.warning("skip the source patching process: %s", e.reason)
+    if reason := patch_source_dir_procfile(source_dir=source_dir, procfile=deployment.get_procfile()):
+        logger.warning("skip the source patching process: %s", reason)
     return source_dir_str, source_dir
 
 
@@ -388,10 +386,10 @@ def _get_source_package_path(version_info: VersionInfo, app_code: str, module_na
     return f"{region}/home/{slug_name}/tar"
 
 
-def validate_source_dir_str(root: Path, source_dir_str: str) -> Path:
+def validate_source_dir_str(root_path: Path, source_dir_str: str) -> Path:
     """Validate the source_dir string and return the source directory of the module.
 
-    :param root: The repository's root directory.
+    :param root_path: The repository's root directory.
     :param source_dir_str: The source directory string defined by the user.
     :raise ValueError: If the source directory is invalid.
     :return: The source directory.
@@ -402,8 +400,8 @@ def validate_source_dir_str(root: Path, source_dir_str: str) -> Path:
         source_dir = Path(source_dir).relative_to("/")
 
     # Check if the source_dir is valid, resolve the symlink and ensure it is within the root directory
-    source_dir = root / source_dir
-    if not source_dir.resolve().is_relative_to(root):
+    source_dir = root_path / source_dir
+    if not source_dir.resolve().is_relative_to(root_path):
         raise ValueError(f"Invalid source directory: {source_dir_str}")
 
     if not source_dir.exists():

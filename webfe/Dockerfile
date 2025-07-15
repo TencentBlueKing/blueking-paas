@@ -17,7 +17,7 @@ RUN npm run build
 
 ######### Nginx part #########
 # inspired by https://github.com/smebberson/docker-alpine/tree/alpine-nginx-v3.0.0
-FROM alpine:3.22 PageServing
+FROM alpine:3.22 AS PageServing
 
 # Add s6-overlay
 ENV S6_OVERLAY_VERSION=v1.22.1.0 \

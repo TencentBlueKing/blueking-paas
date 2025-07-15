@@ -86,6 +86,7 @@ class TestDevSandboxSLZ:
                         "name": "code-editor",
                         "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
                         "imagePullPolicy": "IfNotPresent",
+                        "securityContext": {"runAsUser": 1000},
                         "command": ["/usr/bin/code-server"],
                         "args": ["--bind-addr", "0.0.0.0:8080", "--disable-telemetry", "--disable-update-check"],
                         "env": [

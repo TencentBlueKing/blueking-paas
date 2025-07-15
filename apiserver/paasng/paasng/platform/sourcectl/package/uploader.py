@@ -23,7 +23,7 @@ from blue_krill.storages.blobstore.exceptions import ObjectAlreadyExists
 from django.conf import settings
 
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
-from paasng.platform.smart_app.services.patcher import SourceCodePatcher
+from paasng.platform.smart_app.services.patcher import patch_smart_tarball
 from paasng.platform.sourcectl.exceptions import PackageAlreadyExists
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.downloader import download_file_via_url
@@ -81,9 +81,7 @@ def upload_package_via_url(
         stat = SourcePackageStatReader(path).read()
         # Patch 源码包，如添加 Procfile 文件等
         if need_patch:
-            new_path = SourceCodePatcher.patch_tarball(
-                module=module, tarball_path=path, working_dir=patching_dir, stat=stat
-            )
+            new_path = patch_smart_tarball(tarball_path=path, dest_dir=patching_dir, module=module, stat=stat)
             # 更新 stat
             stat = SourcePackageStatReader(new_path).read()
         else:

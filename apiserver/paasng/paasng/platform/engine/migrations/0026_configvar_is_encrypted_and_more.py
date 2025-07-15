@@ -15,9 +15,4 @@ class Migration(migrations.Migration):
             name='is_encrypted',
             field=models.BooleanField(default=False),
         ),
-        migrations.AlterField(
-            model_name='moduleenvironmentoperations',
-            name='operation_type',
-            field=models.CharField(choices=[('offline', '下架'), ('online', '部署')], max_length=32),
-        ),
     ]

@@ -90,7 +90,7 @@ class MetaDataFileReader:
             raise exceptions.GetProcfileError(f"{error_msg_prefix}, {msg}")
 
         try:
-            procfile = yaml.full_load(content)
+            procfile = yaml.safe_load(content)
         except Exception as e:
             raise exceptions.GetProcfileFormatError('file "Procfile"\'s format is not YAML') from e
         if not isinstance(procfile, dict):
@@ -121,7 +121,7 @@ class MetaDataFileReader:
             raise exceptions.GetAppYamlError(f"{error_msg_prefix}, {msg}")
 
         try:
-            app_description = yaml.full_load(content)
+            app_description = yaml.safe_load(content)
         except Exception as e:
             raise exceptions.GetAppYamlFormatError('file "app_desc.yaml"\'s format is not YAML') from e
         if not isinstance(app_description, dict):

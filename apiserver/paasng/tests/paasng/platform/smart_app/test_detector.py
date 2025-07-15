@@ -19,12 +19,7 @@ import pytest
 import yaml
 from rest_framework.exceptions import ValidationError
 
-from paasng.platform.smart_app.services.app_desc import get_app_description
-from paasng.platform.smart_app.services.detector import (
-    ManifestDetector,
-    SourcePackageStatReader,
-    relative_path_of_app_desc,
-)
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader, relative_path_of_app_desc
 from tests.paasng.platform.sourcectl.packages.utils import V2_APP_DESC_EXAMPLE
 
 pytestmark = pytest.mark.django_db
@@ -52,96 +47,6 @@ class Test__relative_path_of_app_desc:
     )
     def test_detect(self, filepath, expected):
         assert relative_path_of_app_desc(filepath) == expected
-
-
-@pytest.mark.parametrize("package_root", ["untar_path", "zip_path"], indirect=["package_root"])
-class TestManifestDetector:
-    @pytest.fixture
-    def detector(self, package_root, package_stat) -> ManifestDetector:
-        """The detector instance for testing."""
-        return ManifestDetector(
-            package_root=package_root,
-            app_description=get_app_description(package_stat),
-            relative_path=package_stat.relative_path,
-        )
-
-    @pytest.mark.parametrize(
-        ("contents", "error"),
-        [
-            ({"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, "Procfile not found."),
-            ({"foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, "Procfile not found."),
-        ],
-    )
-    def test_only_app_desc_file(self, detector, contents, error):
-        with pytest.raises(KeyError, match=error):
-            detector.detect()
-
-    @pytest.mark.parametrize(
-        ("contents", "expected"),
-        [
-            ({"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, "./app_desc.yaml"),
-            ({"foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, "./app_desc.yaml"),
-        ],
-    )
-    def test_detect_app_desc(self, detector, contents, expected):
-        assert detector.detect_app_desc() == expected
-
-    @pytest.mark.parametrize(
-        ("contents", "expected"),
-        [
-            ({"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, None),
-            (
-                {"foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE), "foo/src/requirements.txt": ""},
-                "./src/requirements.txt",
-            ),
-            # Not in the same directories
-            ({"foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE), "src/requirements.txt": ""}, None),
-        ],
-    )
-    def test_detect_dependency(self, detector, contents, expected):
-        assert detector.detect_dependency() == expected
-
-    @pytest.mark.parametrize(
-        ("contents", "expected"),
-        [
-            ({"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, {}),
-            (
-                {"foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE), "foo/cert/bk_root_ca.cert": ""},
-                {"root": "./cert/bk_root_ca.cert"},
-            ),
-            (
-                {
-                    "foo/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE),
-                    "foo/cert/bk_root_ca.cert": "",
-                    "foo/cert/bk_saas_sign.cert": "",
-                },
-                {"root": "./cert/bk_root_ca.cert", "intermediate": "./cert/bk_saas_sign.cert"},
-            ),
-        ],
-    )
-    def test_detect_certs(self, detector, contents, expected):
-        assert detector.detect_certs() == expected
-
-    @pytest.mark.parametrize(
-        ("contents", "expected"),
-        [
-            ({"app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE)}, {}),
-            (
-                {"bar/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE), "bar/conf/SHA256": ""},
-                {"sha256": "./conf/SHA256"},
-            ),
-            (
-                {
-                    "bar/app_desc.yaml": yaml.dump(V2_APP_DESC_EXAMPLE),
-                    "bar/conf/SHA256": "",
-                    "./bar/conf/package.conf": "",
-                },
-                {"sha256": "./conf/SHA256", "package": "./conf/package.conf"},
-            ),
-        ],
-    )
-    def test_detect_encryption(self, detector, contents, expected):
-        assert detector.detect_encryption() == expected
 
 
 class TestSourcePackageStatReader:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,30 +13,22 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+"""file and path related utilities."""
 
-from pathlib import Path
-from typing import Dict
+import os
 
-import pytest
-import yaml
-
-from paasng.platform.sourcectl.utils import generate_temp_file
-from tests.paasng.platform.sourcectl.packages.utils import V2_APP_DESC_EXAMPLE, gen_tar
+from paasng.utils.text import generate_random_string
 
 
-@pytest.fixture()
-def contents() -> Dict:
-    """The default contents for making tar file."""
-    return {"app_desc.yaml": yaml.safe_dump(V2_APP_DESC_EXAMPLE)}
+def path_may_escape(input_path: str) -> bool:
+    """Check if the input path may escape from a given root directory, an invalid value is like
+    "../../../../app_desc.yaml" which can go outside the root directory. This function only perform
+    a string-based check and does not resolve symlinks.
 
-
-@pytest.fixture()
-def tar_path(contents):
-    with generate_temp_file() as file_path:
-        gen_tar(file_path, contents)
-        yield file_path
-
-
-@pytest.fixture()
-def assets_rootpath():
-    return Path(__file__).parent / "assets"
+    :param input_path: The path to check.
+    """
+    # Absolute paths are always considered as escaping
+    if os.path.isabs(input_path):
+        return True
+    sim_root = f"/var/folders/{generate_random_string(12)}/T"
+    return os.path.commonpath([os.path.abspath(os.path.join(sim_root, input_path)), sim_root]) != sim_root

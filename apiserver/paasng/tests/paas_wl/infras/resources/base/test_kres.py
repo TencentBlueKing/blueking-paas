@@ -310,7 +310,7 @@ class TestKDeployment:
 
 
 def construct_foo_deployment(name: str, api_version: str = "extensions/v1beta1") -> Dict:
-    manifest = yaml.full_load(
+    manifest = yaml.safe_load(
         dedent(
             """\
         apiVersion: {api_version}

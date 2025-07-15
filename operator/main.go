@@ -21,6 +21,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"time"
 
@@ -49,15 +50,25 @@ import (
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	dgmingress "bk.tencent.com/paas-app-operator/pkg/controllers/dgroupmapping/ingress"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
+
 	//+kubebuilder:scaffold:imports
 
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
 var (
+	buildTime    = "unknown"
+	gitVersion   = "unknown"
+	gitCommit    = "unknown"
+	gitTreeState = "unknown"
+	goVersion    = "unknown"
+)
+
+var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 	cfgFile  string
+	version  bool
 )
 
 func init() {
@@ -72,6 +83,7 @@ func main() {
 		"The controller will load its initial configuration from this file. "+
 			"Omit this flag to use the default configuration values. "+
 			"Command-line flags override configuration from this file.")
+	flag.BoolVar(&version, "version", false, "Print the version information.")
 
 	opts := zap.Options{
 		// false: zap.InfoLevel, enable sampling logging. V(0) corresponds to InfoLevel, bigger than 0 will be silent
@@ -82,6 +94,14 @@ func main() {
 	// can use zap-devel and zap-log-level args to reset Development and the log level
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
+
+	// Print version information and exit if requested
+	if version {
+		fmt.Printf(
+			"GitVersion: %s\nGitCommit: %s\nGitTreeState: %s\nGoVersion: %s\nBuildTime: %s\n",
+			gitVersion, gitCommit, gitTreeState, goVersion, buildTime)
+		os.Exit(0)
+	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 

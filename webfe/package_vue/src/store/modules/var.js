@@ -86,6 +86,22 @@ export default {
     },
 
     /**
+     * 获取环境变量
+     */
+    getEnvVariables({}, { appCode, moduleId, orderBy }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/?order_by=${orderBy}`;
+      return http.get(url);
+    },
+
+    /**
+     * 获取有冲突的环境变量列表
+     */
+    getConflictedEnvVariables({}, { appCode, moduleId }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/conflicted_keys/`;
+      return http.get(url);
+    },
+
+    /**
      * 保存环境变量数据
      */
     saveEnvItem({}, { appCode, moduleId, data }) {
@@ -115,14 +131,6 @@ export default {
     deleteEnvVariable({}, { appCode, moduleId, varId }) {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/${varId}/`;
       return http.delete(url, {});
-    },
-
-    /**
-     * 获取增强服务内置环境变量
-     */
-    getConfigVarKeys({}, { appCode, moduleId }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/services/config_var_keys/`;
-      return http.get(url, {});
     },
 
     /**

@@ -238,7 +238,6 @@
                 {% if not AUTO_CREATE_REGULAR_USER %}
                 <li><a href="{% url 'admin.accountmgr.index' %}">用户管理</a></li>
                 {% endif %}
-                <li><a href="{% url 'admin.audit.index' %}">操作审计</a></li>
                 {% endif %}
             </ul>
             <p class="navbar-text">{{ request.user.username }}</p>

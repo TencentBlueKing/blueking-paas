@@ -86,14 +86,12 @@ class PluginInstanceViewSet(viewsets.ViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        region = settings.DEFAULT_REGION_NAME
         source_origin = SourceOrigin.AUTHORIZED_VCS
         encoded_operator = user_id_encoder.encode(
             getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
         )
 
         application = create_application(
-            region=region,
             code=data["id"],
             name=data["name_zh_cn"],
             name_en=data["name_en"],

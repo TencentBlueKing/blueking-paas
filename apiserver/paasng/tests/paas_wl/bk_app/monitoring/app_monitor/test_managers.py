@@ -93,9 +93,9 @@ class TestAppMonitorController:
         name = "servicemonitors.monitoring.coreos.com"
 
         if (int(k8s_version.major), int(k8s_version.minor)) <= (1, 16):
-            body = yaml.full_load((Path(__file__).parent / "crd/v1beta1.yaml").read_text())
+            body = yaml.safe_load((Path(__file__).parent / "crd/v1beta1.yaml").read_text())
         else:
-            body = yaml.full_load((Path(__file__).parent / "crd/v1.yaml").read_text())
+            body = yaml.safe_load((Path(__file__).parent / "crd/v1.yaml").read_text())
 
         try:
             KCustomResourceDefinition(k8s_client).create_or_update(name, body=body)

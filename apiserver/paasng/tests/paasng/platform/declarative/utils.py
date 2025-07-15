@@ -62,13 +62,6 @@ class AppDescV2Builder:
 
 class AppDescV2Decorator:
     @staticmethod
-    def with_region(region: str):
-        def apply(app_desc: Dict):
-            app_desc["region"] = region
-
-        return apply
-
-    @staticmethod
     def with_module(
         module_name: str,
         is_default: bool,
@@ -158,13 +151,6 @@ class AppDescV3Decorator:
                 if module_desc["name"] == module_name:
                     raise ValueError(f"module already exists: name={module_name}")
             app_desc["modules"].append(AppDescV3Builder.make_module(module_name, is_default, language, module_spec))
-
-        return apply
-
-    @staticmethod
-    def with_region(region: str):
-        def apply(app_desc: Dict):
-            app_desc["region"] = region
 
         return apply
 

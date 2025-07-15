@@ -90,10 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             url: "{% url 'admin.operation.index' %}",
                             children: [
                                 {
-                                    name: "应用迁移进展",
-                                    url: "{% url 'admin.operation.mgrlegacy.progress' %}"
-                                },
-                                {
                                     name: "应用部署统计",
                                     url: "{% url 'admin.operation.statistics.deploy.apps' %}"
                                 },
@@ -119,20 +115,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         ]
                     },
                     {% endif %}
-                    {
-                        name: "操作审计",
-                        url: "{% url 'admin.audit.index' %}",
-                        children: [
-                            {
-                                name: "后台管理审计",
-                                url: "{% url 'admin.audit.index' %}"
-                            },
-                            {
-                                name: "应用操作审计",
-                                url: "{% url 'admin.audit.app' %}",
-                            },
-                        ]
-                    }
                     {% endif %}
                 ]
             }

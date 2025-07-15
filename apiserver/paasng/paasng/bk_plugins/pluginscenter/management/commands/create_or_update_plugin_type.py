@@ -49,7 +49,7 @@ class Command(BaseCommand):
     def handle(self, identifier, env, dry_run, *args, **options):
         file_path = Path(settings.BASE_DIR) / "support-files" / "plugin" / f"{identifier}-{env}.yaml"
         with open(file_path, "r", encoding="utf-8") as f:
-            data = yaml.full_load(f)
+            data = yaml.safe_load(f)
 
         if models.PluginDefinition.objects.filter(identifier=identifier).exists():
             self.stdout.write(self.style.WARNING(f"ID 为 {identifier} 的插件类型已经存在，将进行更新"))

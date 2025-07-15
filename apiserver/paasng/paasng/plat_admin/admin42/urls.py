@@ -23,7 +23,6 @@ from . import views
 from .views import (
     accountmgr,
     applications,
-    audit,
     bk_plugins,
     dashboard_templates,
     runtimes,
@@ -436,32 +435,5 @@ urlpatterns += [
         r"^configuration/dashboard_template/(?P<pk>[^/]+)/",
         dashboard_templates.DashboardTemplateViewSet.as_view(dict(delete="destroy", put="update")),
         name="admin.configuration.dashboard_tmpl.detail",
-    ),
-]
-
-
-# 操作审计
-urlpatterns += [
-    # 操作审计
-    re_path(
-        r"^audit/$",
-        audit.AdminOperationAuditManageView.as_view(),
-        name="admin.audit.index",
-    ),
-    re_path(
-        r"^audit/application$",
-        audit.AdminAppOperationAuditManageView.as_view(),
-        name="admin.audit.app",
-    ),
-    # 操作审计相关 API
-    re_path(
-        r"^api/audit/operations/(?P<pk>[^/]+)/",
-        audit.AdminOperationAuditViewSet.as_view(),
-        name="admin.audit.detail",
-    ),
-    re_path(
-        r"^api/audit/application/operations/(?P<pk>[^/]+)/",
-        audit.AdminAppOperationAuditViewSet.as_view(),
-        name="admin.audit.app.detail",
     ),
 ]

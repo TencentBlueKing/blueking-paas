@@ -51,10 +51,12 @@ from paasng.platform.engine.models.config_var import (
 from paasng.platform.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
 from paasng.platform.engine.serializers import (
     ConfigVarApplyResultSLZ,
+    ConfigVarCreateSLZ,
     ConfigVarFormatSLZ,
     ConfigVarFormatWithIdSLZ,
     ConfigVarImportSLZ,
     ConfigVarSLZ,
+    ConfigVarUpdateSLZ,
     ConfigVarWithoutKeyFormatSLZ,
     ConflictedKeyOutputSLZ,
     ListConfigVarsSLZ,
@@ -65,7 +67,6 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     """ViewSet for config vars"""
 
     pagination_class = None
-    serializer_class = ConfigVarSLZ
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def get_object(self):
@@ -75,17 +76,12 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     def get_queryset(self):
         return ConfigVar.objects.filter(module=self.get_module_via_path(), is_builtin=False)
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context["module"] = self.get_module_via_path()
-        return context
-
-    @swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"], responses={201: ""})
+    @swagger_auto_schema(request_body=ConfigVarCreateSLZ, tags=["环境配置"], responses={201: ""})
     def create(self, request, *args, **kwargs):
         """创建环境变量"""
         data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
-        slz = self.get_serializer(data=request.data)
+        slz = ConfigVarCreateSLZ(data=request.data, context={"module": self.get_module_via_path()})
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -104,13 +100,13 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"], responses={200: ConfigVarSLZ()})
+    @swagger_auto_schema(request_body=ConfigVarUpdateSLZ, tags=["环境配置"], responses={200: ConfigVarUpdateSLZ()})
     def update(self, request, *args, **kwargs):
         """更新环境变量"""
         config_var = self.get_object()
         data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
-        slz = self.get_serializer(config_var, data=request.data)
+        slz = ConfigVarUpdateSLZ(config_var, data=request.data, context={"module": self.get_module_via_path()})
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -278,7 +274,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         # Change result ordering
         config_vars = config_vars.order_by(input_slz.data["order_by"], "is_global")
 
-        serializer = self.serializer_class(config_vars, many=True)
+        serializer = ConfigVarSLZ(config_vars, many=True)
         return Response(serializer.data)
 
 

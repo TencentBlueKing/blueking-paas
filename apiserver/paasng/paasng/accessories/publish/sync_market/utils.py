@@ -69,7 +69,8 @@ class LegacyDBCascadeDeleter:
         except Exception:
             self.session.rollback()
             raise
-
+        if not dry_run:
+            logger.info("成功删除 legacy db 记录: %s", deleted_records)
         return deleted_records
 
     def _get_foreign_key_references(self, target_table: str):

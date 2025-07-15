@@ -1,0 +1,38 @@
+spec:
+  template:
+    spec:
+      containers:
+        - image: 'mirrors.tencent.com/bkpaas/cl5-agent:4.3.0.3'
+          name: cl5
+          imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+                - /usr/local/services/liveness_check.sh
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          ports:
+            - containerPort: 7778
+              name: l5-config
+              protocol: UDP
+            - containerPort: 8888
+              name: l5-agent-1
+              protocol: UDP
+            - containerPort: 8889
+              name: l5-agent-2
+              protocol: UDP
+            - containerPort: 8890
+              name: l5-agent-3
+              protocol: UDP
+          readinessProbe:
+            exec:
+              command:
+                - /usr/local/services/readiness_check.sh
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File

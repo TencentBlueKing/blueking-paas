@@ -15,23 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict
 
-from pydantic import BaseModel
-
-from paasng.utils.structure import prepare_json_field
+class ComponentPropertiesInvalid(Exception):
+    """raised when component properties are invalid"""
 
 
-@prepare_json_field
-class Component(BaseModel):
-    """
-    进程组件
-
-    :param type: 组件类型
-    :param version: 组件版本
-    :param properties: 组件参数
-    """
-
-    type: str
-    version: str
-    properties: Dict[str, Any] = {}
+class ComponentNotFound(Exception):
+    """raised when Component is not found"""

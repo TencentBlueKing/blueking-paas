@@ -22,7 +22,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.utils.models import AuditedModel, TimestampedModel, UuidAuditedModel
+from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.entities import (
@@ -410,18 +410,3 @@ class BkAppManagedFields(TimestampedModel):
 
     class Meta:
         unique_together = ("module", "manager")
-
-
-class ProcessComponent(UuidAuditedModel):
-    type = models.CharField("类型", max_length=32)
-    version = models.CharField("版本", max_length=32)
-    enabled = models.BooleanField("是否可用", default=True, help_text="是否可用")
-    description = models.TextField("描述", null=True)
-    docs_url = models.CharField("文档地址", max_length=255, null=True)
-    # 组件参数配置描述
-    properties_json_schema = models.JSONField("组件配置规范", default=None, null=True)
-
-    tenant_id = tenant_id_field_factory()
-
-    class Meta:
-        unique_together = ("type", "version")

@@ -18,8 +18,6 @@
 from typing import Any, Dict, List, Optional
 
 from django.utils.translation import gettext_lazy as _
-from jsonschema import validate as jsonschema_validate
-from jsonschema.exceptions import ValidationError as SchemaValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from typing_extensions import TypeAlias
@@ -27,8 +25,10 @@ from typing_extensions import TypeAlias
 from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
+from paasng.accessories.proc_components.constants import DEFAULT_COMPONENT_DIR
+from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
+from paasng.accessories.proc_components.manager import ComponentManager
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
-from paasng.platform.bkapp_model.models import ProcessComponent
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
@@ -179,18 +179,13 @@ class ProcComponentSLZ(serializers.Serializer):
     properties = serializers.DictField(help_text="组件属性", required=False, allow_null=True)
 
     def validate(self, attrs: Dict) -> Dict:
-        # 1. 校验 type 和 version 对应的 ProcessComponent 是否存在
+        mgr = ComponentManager(DEFAULT_COMPONENT_DIR)
         try:
-            component = ProcessComponent.objects.get(type=attrs["type"], version=attrs["version"])
-        except ProcessComponent.DoesNotExist:
+            mgr.validate_properties(attrs["type"], attrs["version"], attrs.get("properties"))
+        except ComponentNotFound:
             raise ValidationError(_("组件 {}-{} 不存在").format(attrs["type"], attrs["version"]))
-
-        # 2. 如果 properties 不为空，校验是否符合 JSON Schema
-        if attrs.get("properties") is not None and (schema := component.properties_json_schema):
-            try:
-                jsonschema_validate(instance=attrs["properties"], schema=schema)
-            except SchemaValidationError as e:
-                raise ValidationError(_("参数校验失败")) from e
+        except ComponentPropertiesInvalid as e:
+            raise ValidationError(_("参数校验失败")) from e
 
         return attrs
 

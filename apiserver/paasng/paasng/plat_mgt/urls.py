@@ -25,5 +25,4 @@ urlpatterns = [
     path("", include("paasng.plat_mgt.config_vars.urls")),
     path("", include("paasng.plat_mgt.audit.urls")),
     path("", include("paasng.plat_mgt.sourcectl.urls")),
-    path("", include("paasng.plat_mgt.proc_components.urls")),
 ]

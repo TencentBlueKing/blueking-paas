@@ -14,24 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import os
+from pathlib import Path
 
-from typing import Any, Dict
-
-from pydantic import BaseModel
-
-from paasng.utils.structure import prepare_json_field
-
-
-@prepare_json_field
-class Component(BaseModel):
-    """
-    进程组件
-
-    :param type: 组件类型
-    :param version: 组件版本
-    :param properties: 组件参数
-    """
-
-    type: str
-    version: str
-    properties: Dict[str, Any] = {}
+DEFAULT_COMPONENT_DIR = Path(os.path.dirname(__file__)) / "components"

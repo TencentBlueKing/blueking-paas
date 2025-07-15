@@ -15,20 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import re_path
+from django.apps import AppConfig
 
-from .views import ProcessComponentViewSet
 
-urlpatterns = [
-    # 进程组件管理
-    re_path(
-        r"api/plat_mgt/proc_components/$",
-        ProcessComponentViewSet.as_view({"get": "list", "post": "create"}),
-        name="plat_mgt.proc_components.bulk",
-    ),
-    re_path(
-        r"api/plat_mgt/proc_components/(?P<uuid>[^/]+)/",
-        ProcessComponentViewSet.as_view({"delete": "destroy", "put": "update"}),
-        name="plat_mgt.proc_components.detail",
-    ),
-]
+class ProcComponentsConfig(AppConfig):
+    name = "paasng.accessories.proc_components"

@@ -24,7 +24,6 @@ from paasng.platform.bkapp_model.entities.components import Component
 from paasng.platform.bkapp_model.models import (
     ModuleProcessSpec,
     ObservabilityConfig,
-    ProcessComponent,
     ProcessSpecEnvOverlay,
 )
 from paasng.platform.engine.constants import RuntimeType
@@ -566,62 +565,58 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
             ],
         )
 
-    @pytest.fixture()
-    def proc_component(self):
-        ProcessComponent.objects.create(
-            type="env_cover",
-            version="v1",
-            properties_json_schema={
-                "type": "object",
-                "properties": {
-                    "envs": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "proc_name": {"type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$"},
-                                "value": {"type": "string", "minLength": 1},
-                            },
-                            "required": ["proc_name", "value"],
-                            "additionalProperties": False,
-                        },
-                        "minItems": 1,
-                    }
-                },
-                "required": ["envs"],
-                "additionalProperties": False,
-            },
-        )
-
     @pytest.mark.parametrize(
         ("component_configs", "expected_status_code", "expected_detail_str"),
         [
             (None, 200, ""),
             (
-                [{"type": "env_cover", "version": "v1", "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]}}],
+                [
+                    {
+                        "type": "env_overlay",
+                        "version": "v1",
+                        "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
+                    }
+                ],
+                200,
+                "",
+            ),
+            (
+                [{"type": "cl5", "version": "v1"}],
                 200,
                 "",
             ),
             # invalid type or version
             (
-                [{"type": "env_cover", "version": "v2", "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]}}],
+                [
+                    {
+                        "type": "env_overlay",
+                        "version": "v2",
+                        "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
+                    }
+                ],
                 400,
-                "proc_specs.0.components: 组件 env_cover-v2 不存在",
+                "proc_specs.0.components: 组件 env_overlay-v2 不存在",
             ),
             (
                 [
                     {
-                        "type": "env_cover1",
+                        "type": "not_exist",
                         "version": "v1",
-                        "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]},
+                        "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
                     }
                 ],
                 400,
-                "proc_specs.0.components: 组件 env_cover1-v1 不存在",
+                "proc_specs.0.components: 组件 not_exist-v1 不存在",
             ),
             # invalid properties
             (
-                [{"type": "env_cover", "version": "v1", "properties": {"envs": [{"proc_xxx": "FOO", "value": "1"}]}}],
+                [
+                    {
+                        "type": "env_overlay",
+                        "version": "v1",
+                        "properties": {"invalid": [{"proc_xxx": "FOO", "value": "1"}]},
+                    }
+                ],
                 400,
                 "proc_specs.0.components: 参数校验失败",
             ),
@@ -635,7 +630,6 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
         component_configs,
         expected_status_code,
         expected_detail_str,
-        proc_component,
     ):
         request_data = [
             {
@@ -652,7 +646,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
         assert resp.status_code == expected_status_code
         assert expected_detail_str in resp.data.get("detail", "")
 
-    def test_save(self, api_client, bk_cnative_app, bk_module, proc_component):
+    def test_save(self, api_client, bk_cnative_app, bk_module):
         request_data = [
             {
                 "name": "web",

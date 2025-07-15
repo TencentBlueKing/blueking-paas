@@ -15,23 +15,25 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from pydantic import BaseModel
+from paasng.accessories.proc_components.constants import DEFAULT_COMPONENT_DIR
+from paasng.accessories.proc_components.manager import ComponentManager
 
-from paasng.utils.structure import prepare_json_field
+from .exceptions import ComponentNotFound
 
 
-@prepare_json_field
-class Component(BaseModel):
-    """
-    进程组件
+class ProcessComponentViewSet(viewsets.GenericViewSet):
+    permission_classes = [IsAuthenticated]
 
-    :param type: 组件类型
-    :param version: 组件版本
-    :param properties: 组件参数
-    """
-
-    type: str
-    version: str
-    properties: Dict[str, Any] = {}
+    @swagger_auto_schema(operation_summary="获取进程组件列表")
+    def list(self, request):
+        mgr = ComponentManager(DEFAULT_COMPONENT_DIR)
+        try:
+            data = mgr.get_all_components()
+        except ComponentNotFound:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response(data)

@@ -190,22 +190,25 @@
                       :rules="rules.key"
                     >
                       <bk-input
+                        ref="keyInput"
                         v-model="row.key"
                         placeholder="ENV_KEY"
                         class="env-input-cls"
                         @enter="handleInputEvent(row, $index)"
                         @blur="handleInputEvent(row, $index)"
+                        @keydown="(value, event) => handleKeyDown('valueInput', event)"
                       ></bk-input>
                     </bk-form-item>
                   </bk-form>
                 </div>
                 <template v-else>
                   <div class="var-key">{{ row.key }}</div>
+                  <!-- 环境变量冲突提示 -->
                   <i
-                    v-if="row.isPresent"
-                    class="paasng-icon paasng-remind"
+                    v-if="!!row.conflict?.message"
+                    :class="['paasng-icon paasng-remind', { warning: row.conflict?.overrideConflicted }]"
                     v-bk-tooltips="{
-                      content: $t('环境变量不生效，KEY 与{s}增强服务的内置环境变量冲突', { s: row.conflictingService }),
+                      content: row.conflict?.message,
                       width: 200,
                     }"
                   ></i>
@@ -234,11 +237,13 @@
                     :rules="rules.value"
                   >
                     <bk-input
+                      ref="valueInput"
                       v-model="row.value"
                       placeholder="env_value"
+                      class="env-input-cls"
                       @enter="handleInputEvent(row, $index)"
                       @blur="handleInputEvent(row, $index)"
-                      class="env-input-cls"
+                      @keydown="(value, event) => handleKeyDown('descriptionInput', event)"
                     ></bk-input>
                   </bk-form-item>
                 </bk-form>
@@ -297,9 +302,11 @@
                     :rules="rules.description"
                   >
                     <bk-input
+                      ref="descriptionInput"
                       v-model="row.description"
                       :placeholder="$t('输入描述文字，可选')"
                       class="env-input-cls"
+                      @keydown="(value, event) => handleKeyDown('keyInput', event)"
                     ></bk-input>
                   </bk-form-item>
                 </bk-form>
@@ -587,7 +594,6 @@ export default {
     return {
       curItem: {},
       envVarList: [],
-      runtimeImageList: [],
       rules: {
         key: [
           {
@@ -649,7 +655,6 @@ export default {
       },
       isLoading: true,
       isTableLoading: true,
-
       envSidesliderConf: {
         visiable: false,
       },
@@ -688,7 +693,6 @@ export default {
       envEnums: ENV_ENUM,
       isBatchEdit: false,
       activeEnvValue: 'all',
-      builtInEnvVars: {},
       showChild: false,
       varPresetlLength: 0,
       isDeployEnvVarChange: false,
@@ -718,67 +722,82 @@ export default {
   methods: {
     async init() {
       this.isLoading = true;
-      await this.getConfigVarKeys();
       this.getEnvVarList();
     },
-    // 是否已存在该环境变量
-    isEnvVarAlreadyExists(varKey) {
-      let flag = false;
-      let services = '';
-      // 检查是否已存在该环境变量
-      for (const key in this.builtInEnvVars) {
-        if (this.builtInEnvVars[key].includes(varKey)) {
-          flag = true;
-          services = key;
-          break;
-        }
-      }
+
+    showErrorMessage(e) {
+      this.$paasMessage({
+        theme: 'error',
+        message: `${this.$t('获取环境变量失败')}，${e.message || e.detail}`,
+      });
+    },
+
+    // 获取环境变量冲突提示
+    getConflictMessage(conflictedKeys, key) {
+      const conflictItem = conflictedKeys.find((item) => item.key === key);
+
+      if (!conflictItem) return {};
+
+      const { conflicted_detail, override_conflicted, conflicted_source } = conflictItem;
+      const basicText = override_conflicted ? this.$t('当前配置将覆盖内置变量') : this.$t('当前配置不生效');
+      const conflictSourceMessage =
+        conflicted_source === 'builtin_addons'
+          ? this.$t('和 {k} 增强服务的环境变量冲突', { k: conflicted_detail })
+          : this.$t('和平台的内置环境变量冲突');
+
       return {
-        flag,
-        services,
+        message: `${basicText}，${conflictSourceMessage}`,
+        overrideConflicted: override_conflicted,
       };
     },
-    getEnvVarList(isUpdate = true) {
-      this.isTableLoading = true;
-      this.$http
-        .get(
-          `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/?order_by=${this.curSortKey}`
-        )
-        .then(
-          (response) => {
-            if (isUpdate) this.envVarList = [...response];
-            // 添加自定义属性
-            this.envVarList.forEach((v) => {
-              this.$set(v, 'isEdit', false);
-              const { flag, services } = this.isEnvVarAlreadyExists(v.key);
-              this.$set(v, 'isPresent', flag);
-              this.$set(v, 'conflictingService', services);
-              if (!v.id) {
-                const id = response.find((item) => item.key === v.key)?.id;
-                this.$set(v, 'id', id);
-              }
-            });
-            this.envLocalVarList = cloneDeep(this.envVarList);
-            if (isUpdate) {
-              this.handleFilterEnv(this.activeEnvValue);
-            } else {
-              this.$store.commit('cloudApi/updatePageEdit', false);
-            }
-          },
-          (errRes) => {
-            const errorMsg = errRes.message;
-            this.$paasMessage({
-              theme: 'error',
-              message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
-            });
-          }
-        )
-        .finally(() => {
-          this.showChild = true;
-          this.isTableLoading = false;
-          this.isLoading = false;
+
+    // 获取冲突的环境变量
+    async getConflictedEnvVariables() {
+      try {
+        const res = await this.$store.dispatch('envVar/getConflictedEnvVariables', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
         });
+        return res || [];
+      } catch (e) {
+        return [];
+      }
     },
+
+    // 获取环境列表
+    async getEnvVarList(isUpdate = true) {
+      this.isTableLoading = true;
+      try {
+        const conflictedKeys = await this.getConflictedEnvVariables();
+        const res = await this.$store.dispatch('envVar/getEnvVariables', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          orderBy: this.curSortKey,
+        });
+        if (isUpdate) {
+          this.envVarList = [...res];
+        }
+        this.envVarList = res.map((item) => ({
+          ...item,
+          isEdit: false, // 取消编辑态
+          conflict: conflictedKeys.length > 0 ? this.getConflictMessage(conflictedKeys, item.key) : {},
+          id: item.id || res.find((i) => i.key === item.key)?.id,
+        }));
+        this.envLocalVarList = cloneDeep(this.envVarList);
+        if (isUpdate) {
+          this.handleFilterEnv(this.activeEnvValue);
+        } else {
+          this.$store.commit('cloudApi/updatePageEdit', false);
+        }
+      } catch (e) {
+        this.showErrorMessage(e);
+      } finally {
+        this.showChild = true;
+        this.isTableLoading = false;
+        this.isLoading = false;
+      }
+    },
+
     // 处理input事件
     handleInputEvent(rowItem) {
       this.curItem = rowItem;
@@ -1068,30 +1087,25 @@ export default {
       this.handleModuleSelected('', { name: this.curSelectModuleName });
     },
 
-    handleModuleSelected(value, { name }) {
+    // 获取其他模块的环境变量
+    async handleModuleSelected(value, { name }) {
       this.curSelectModuleName = name;
       this.exportDialog.isLoading = true;
-      this.$http
-        .get(
-          `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curSelectModuleName}/config_vars/?order_by=-created`
-        )
-        .then(
-          (response) => {
-            this.exportDialog.count = (response || []).length;
-          },
-          (errRes) => {
-            const errorMsg = errRes.detail;
-            this.$paasMessage({
-              theme: 'error',
-              message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
-            });
-          }
-        )
-        .finally(() => {
-          this.exportDialog.isLoading = false;
+      try {
+        const response = await this.$store.dispatch('envVar/getEnvVariables', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          orderBy: '-created',
         });
+        this.exportDialog.count = (response || []).length;
+      } catch (e) {
+        this.showErrorMessage(e);
+      } finally {
+        this.exportDialog.isLoading = false;
+      }
     },
 
+    // 导入其他模块的环境变量
     async handleExportConfirm() {
       this.exportDialog.loading = true;
       try {
@@ -1189,11 +1203,7 @@ export default {
             this.invokeBrowserDownload(response, `bk_paas3_${this.appCode}_${this.curModuleId}_env_vars.yaml`);
           },
           (errRes) => {
-            const errorMsg = errRes.detail;
-            this.$paasMessage({
-              theme: 'error',
-              message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
-            });
+            this.showErrorMessage(errRes);
           }
         )
         .finally(() => {
@@ -1359,6 +1369,7 @@ export default {
     handleSingleEdit(row) {
       const index = this.envVarList.findIndex((v) => v.key === row.key && v.environment_name === row.environment_name);
       this.envVarList[index].isEdit = true;
+      this.focusInput('keyInput');
     },
 
     // 删除单个环境变量
@@ -1406,6 +1417,7 @@ export default {
           isAdd: true,
         });
       }
+      this.focusInput('keyInput');
     },
 
     // 单个环境编辑取消
@@ -1444,22 +1456,6 @@ export default {
       this.getEnvVarList();
     },
 
-    // 获取增强服务内置环境变量
-    async getConfigVarKeys() {
-      try {
-        const varKeys = await this.$store.dispatch('envVar/getConfigVarKeys', {
-          appCode: this.appCode,
-          moduleId: this.curModuleId,
-        });
-        this.builtInEnvVars = varKeys;
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      }
-    },
-
     // 环境变量变更
     handleEnvVarChange(text, value = true) {
       this.envVarChangeText = text;
@@ -1475,6 +1471,25 @@ export default {
           isShowDeploy: true,
           deployModuleId: this.curModuleId,
         },
+      });
+    },
+
+    // tab 聚焦对应Input
+    handleKeyDown(nextRef, event, prevRef = null) {
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        if (event.shiftKey && prevRef) {
+          this.$refs[prevRef].focus();
+        } else if (!event.shiftKey && nextRef) {
+          this.$refs[nextRef].focus();
+        }
+      }
+    },
+
+    // 聚焦 ENV_KEY input
+    focusInput(refName) {
+      this.$nextTick(() => {
+        this.$refs[refName].focus();
       });
     },
   },
@@ -1935,15 +1950,7 @@ a.is-disabled {
     width: 100%;
     .bk-form-content {
       width: 100%;
-      .tooltips-icon {
-        right: 2px !important;
-      }
     }
-  }
-}
-.env-input-cls {
-  /deep/ .bk-form-input {
-    width: 90%;
   }
 }
 
@@ -1983,6 +1990,9 @@ a.is-disabled {
       font-size: 14px;
       color: #ea3636;
       transform: translateY(0);
+      &.warning {
+        color: #ff9c01;
+      }
     }
     .var-key {
       text-overflow: ellipsis;

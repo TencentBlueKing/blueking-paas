@@ -30,8 +30,7 @@ from rest_framework.response import Response
 from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.market.models import ApplicationExtraInfo, Product, Tag
-from paasng.accessories.publish.sync_market.managers import AppManger
-from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.accessories.publish.sync_market.utils import cascade_delete_legacy_app
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
@@ -330,12 +329,11 @@ class DeletedApplicationViewSet(viewsets.GenericViewSet):
             raise error_codes.APP_NOT_FOUND.f(_("应用不存在或未被软删除"))
 
         # 从 PaaS 2.0 中删除相关信息
-        with console_db.session_scope() as session:
-            try:
-                AppManger(session).delete_by_code(code=app_code)
-            except Exception:
-                logger.exception("Failed to delete application %s from PaaS2.0", app_code)
-                raise error_codes.CANNOT_HARD_DELETE_APP.f(_("PaaS 2.0 中信息删除失败"))
+        try:
+            cascade_delete_legacy_app("code", app_code, False)
+        except Exception:
+            logger.exception("Failed to delete application %s from PaaS2.0", app_code)
+            raise error_codes.CANNOT_HARD_DELETE_APP.f(_("PaaS 2.0 中信息删除失败"))
 
         # 删除权限中心相关数据
         delete_builtin_user_groups(app_code)

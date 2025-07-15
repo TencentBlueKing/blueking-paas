@@ -122,10 +122,9 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         )
 
         envs = generate_envs(module)
-        selected_addons = data.get("enabled_addons_services")
         if data["inject_staging_env_vars"]:
             stag_env = module.get_envs(AppEnvironment.STAGING)
-            envs.update(get_env_vars_selected_addons(stag_env, selected_addons))
+            envs.update(get_env_vars_selected_addons(stag_env, data.get("enabled_addons_services")))
 
         # 下发沙箱 k8s 资源
         try:

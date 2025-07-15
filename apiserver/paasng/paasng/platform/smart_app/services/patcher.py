@@ -20,8 +20,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from paasng.platform.declarative.handlers import get_deploy_desc_by_module
-from paasng.platform.engine.exceptions import SkipPatchCode
-from paasng.platform.engine.utils.patcher import ProcfilePatcher
+from paasng.platform.engine.exceptions import SkipSourcePatching
+from paasng.platform.engine.utils.patcher import patch_source_dir_procfile
 from paasng.platform.engine.utils.source import validate_source_dir_str
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.models import SPStat
@@ -63,8 +63,8 @@ def patch_smart_tarball(tarball_path: Path, dest_dir: Path, module: "Module", st
         source_dir = validate_source_dir_str(root_rel_dir, source_dir_str)
 
         try:
-            ProcfilePatcher(source_dir=source_dir, procfile=deploy_desc.get_procfile(), module=module).apply()
-        except SkipPatchCode as e:
+            patch_source_dir_procfile(source_dir=source_dir, procfile=deploy_desc.get_procfile())
+        except SkipSourcePatching as e:
             logger.warning(f"Skip patching for adding Procfile: {e}")
 
         # Recompress the directory to a new tarball

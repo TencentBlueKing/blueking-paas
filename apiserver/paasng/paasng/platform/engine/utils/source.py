@@ -33,11 +33,12 @@ from paasng.platform.declarative.handlers import DeployDescHandler, get_deploy_d
 from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.building import get_dockerfile_path
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
-from paasng.platform.engine.exceptions import InitDeployDescHandlerError, SkipPatchCode
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.exceptions import InitDeployDescHandlerError, SkipSourcePatching
 from paasng.platform.engine.models import Deployment, EngineApp
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.utils.output import DeployStream, Style
-from paasng.platform.engine.utils.patcher import ProcfilePatcher
+from paasng.platform.engine.utils.patcher import patch_source_dir_procfile
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
@@ -293,10 +294,18 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
         source_dir_str = source_dir_str_desc
 
     source_dir = validate_source_dir_str(root_path, source_dir_str)
+
+    if (
+        module.application.type == ApplicationType.CLOUD_NATIVE
+        and module.build_config.build_method == RuntimeType.DOCKERFILE
+    ):
+        logger.info("Skip Procfile patching for Dockerfile cnative application.")
+        return source_dir_str, source_dir
+
     try:
-        ProcfilePatcher(source_dir=source_dir, procfile=deployment.get_procfile(), module=module).apply()
-    except SkipPatchCode as e:
-        logger.warning("skip the injection process: %s", e.reason)
+        patch_source_dir_procfile(source_dir=source_dir, procfile=deployment.get_procfile())
+    except SkipSourcePatching as e:
+        logger.warning("skip the source patching process: %s", e.reason)
     return source_dir_str, source_dir
 
 

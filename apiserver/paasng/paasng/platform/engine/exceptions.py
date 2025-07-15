@@ -71,7 +71,7 @@ class DeployShouldAbortError(Exception):
         return self.reason
 
 
-class SkipPatchCode(Exception):
+class SkipSourcePatching(Exception):
     """Raise this exception when should skip patch source code"""
 
     def __init__(self, reason: str):

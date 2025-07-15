@@ -39,6 +39,9 @@ type Component struct {
 
 func (c *Component) validate() error {
 	manager, err := components.NewComponentManager(components.DefaultComponentDir)
+	if err != nil {
+		return errors.Wrap(err, "new component mgr")
+	}
 	componentInfo, err := manager.GetComponentInfo(c.Type, c.Version)
 	if err != nil || componentInfo == nil {
 		return errors.Wrap(err, "can not find component")

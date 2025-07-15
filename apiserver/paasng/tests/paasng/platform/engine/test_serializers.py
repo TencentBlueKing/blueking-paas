@@ -37,9 +37,9 @@ class TestConfigVar:
     @pytest.mark.parametrize(
         ("data", "expected"),
         [
-            (dict(key="FOO", value="bar", description="baz"), {}),
+            (dict(key="FOO", value="bar", is_encrypted=False, description="baz"), {}),
             pytest.param(
-                dict(key="BKPAAS_FOO", value="bar", description="baz"),
+                dict(key="BKPAAS_FOO", value="bar", is_encrypted=False, description="baz"),
                 {},
                 marks=pytest.mark.xfail(raises=ValidationError),
             ),
@@ -54,7 +54,6 @@ class TestConfigVar:
             tenant_id=bk_module.tenant_id,
             environment_id=getattr(bk_env, "pk", -1),
             is_global=bk_env is None,
-            is_encrypted=False,
             **data,
         )
 

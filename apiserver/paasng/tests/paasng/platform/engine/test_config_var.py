@@ -388,6 +388,7 @@ class TestConfigVarTenantId:
             "key": "TEST_KEY",
             "value": "test_value",
             "environment_name": "prod",
+            "is_encrypted": False,
             "description": "test description",
         }
 

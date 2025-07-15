@@ -17,16 +17,12 @@
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
-import yaml
-from django.utils.functional import cached_property
-
-from paasng.platform.declarative.handlers import get_deploy_desc_by_module, get_desc_handler
-from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.declarative.handlers import get_deploy_desc_by_module
+from paasng.platform.engine.utils.patcher import patch_source_dir_procfile
+from paasng.platform.engine.utils.source import validate_source_dir_str
 from paasng.platform.modules.specs import ModuleSpecs
-from paasng.platform.smart_app.services.detector import ManifestDetector
-from paasng.platform.smart_app.services.path import LocalFSPath, PathProtocol
 from paasng.platform.sourcectl.models import SPStat
 from paasng.platform.sourcectl.package.client import BinaryTarClient
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir
@@ -38,107 +34,36 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class SourceCodePatcher:
-    """A helper to patch App SourceCode, base on application description file."""
+def patch_smart_tarball(tarball_path: Path, dest_dir: Path, module: "Module", stat: SPStat) -> Path:
+    """Patch a s-mart source package to add Procfile, return a new package path.
 
-    @classmethod
-    def patch_tarball(cls, module: "Module", tarball_path: Path, working_dir: Path, stat: SPStat) -> Path:
-        """Patch S-Mart SourcePackage, then return a newly S-Mart SourcePackage"""
-        dest = Path(working_dir) / stat.name
-        with generate_temp_dir() as temp_dir:
-            BinaryTarClient(tarball_path).export(str(temp_dir.absolute()))
-            return cls.patch_source_dir(module=module, source_dir=temp_dir, dest=dest, stat=stat)
+    :param tarball_path: Path to the origin source package tarball.
+    :param dest_dir: Directory to save the patched tarball.
+    :param module: The module object.
+    :param stat: The source package stat object.
+    :return: Path to the patched tarball.
+    """
+    dest = Path(dest_dir) / stat.name
 
-    @classmethod
-    def patch_source_dir(cls, module: "Module", source_dir: Path, dest: Path, stat: SPStat) -> Path:
-        """Patch S-Mart SourcePackage, then return a newly S-Mart SourcePackage"""
-        patcher = cls(
-            module=module,
-            source_dir=LocalFSPath(source_dir),
-            desc_data=stat.meta_info,
-            relative_path=stat.relative_path,
-        )
-        # 尝试添加 Procfile
-        patcher.add_procfile()
-        # 尝试添加 manifest.yaml
-        patcher.add_manifest()
-        # 重新压缩源码包
-        compress_directory(source_dir, dest)
-        return dest
+    with generate_temp_dir() as temp_dir:
+        BinaryTarClient(tarball_path).export(str(temp_dir.absolute()))
 
-    def __init__(self, module: "Module", source_dir: PathProtocol, desc_data: Dict, relative_path: str = "./"):
-        """
-        :param module: 模块
-        :param source_dir: 源码根路径
-        :param desc_data: 应用描述文件中的数据
-        :param relative_path: app_description file 的相对源代码的路径(只有在上传 S-Mart 包前的 patch, 才需要传递这个参数.)
-        """
-        self.module = module
-        self.source_dir = source_dir
-        self.relative_path = relative_path
-        self.desc_data = desc_data
-        self.desc_handler = get_desc_handler(desc_data)
+        root_dir = temp_dir
+        root_rel_dir = root_dir / stat.relative_path
+        deploy_desc = get_deploy_desc_by_module(stat.meta_info, module.name)
 
-    @cached_property
-    def app_description(self):
-        return self.desc_handler.app_desc
-
-    @cached_property
-    def deploy_description(self):
-        # TODO: 需要保证 module 这个 key 存在
-        return get_deploy_desc_by_module(self.desc_data, self.module.name)
-
-    @cached_property
-    def module_dir(self) -> PathProtocol:
-        """当前模块代码的路径"""
-        user_dir = Path(self.get_user_source_dir())
-        if user_dir.is_absolute():
-            user_dir = Path(user_dir).relative_to("/")
-        return self.source_dir / self.relative_path / str(user_dir)
-
-    def get_user_source_dir(self) -> str:
-        """Return the directory of the source code which is defined by user."""
+        # Get source directory
         # TODO: 让 RepositoryInstance.get_source_dir 屏蔽 source_origin 这个差异
         # 由于 Package 的 source_dir 是由与 VersionInfo 绑定的. 需要调整 API.
-        if ModuleSpecs(self.module).deploy_via_package:
-            return self.deploy_description.source_dir
+        if ModuleSpecs(module).deploy_via_package:
+            source_dir_str = deploy_desc.source_dir
         else:
-            return self.module.get_source_obj().get_source_dir()
+            source_dir_str = module.get_source_obj().get_source_dir()
+        source_dir = validate_source_dir_str(root_rel_dir, source_dir_str)
 
-    def _make_key(self, key: str) -> PathProtocol:
-        # 如果源码目录已加密, 则生成至应用描述文件的目录下.
-        if self.module_dir.is_file():
-            return self.source_dir / self.relative_path / key
-        return self.module_dir / key
+        if reason := patch_source_dir_procfile(source_dir=source_dir, procfile=deploy_desc.get_procfile()):
+            logger.warning("skip patching for adding Procfile: %s", reason)
 
-    def add_procfile(self):
-        """尝试往应用源码目录创建 Procfile 文件, 如果源码已加密, 则注入至应用描述文件目录下"""
-        key = self._make_key("Procfile")
-        if key.exists():
-            logger.warning("Procfile already exists, skip the injection process")
-            return
-        procfile = self.deploy_description.get_procfile()
-        if not procfile:
-            logger.warning("Procfile not defined, skip injection process")
-            return
-
-        key.write_text(yaml.safe_dump(procfile))
-
-    def add_manifest(self):
-        """尝试往源码根目录添加 manifest"""
-        if self.module.get_source_origin() != SourceOrigin.S_MART:
-            return
-
-        logger.debug("[S-Mart] Try to add manifest to S-Mart tarball.")
-        key = self.source_dir / self.relative_path / "manifest.yaml"
-        if key.exists():
-            logger.warning("manifest.yaml already exists, skip.")
-            return
-
-        manifest = ManifestDetector(
-            package_root=self.source_dir,
-            app_description=self.app_description,
-            relative_path=self.relative_path,
-            source_dir=str(self.module_dir.relative_to(self.source_dir / self.relative_path)),
-        ).detect()
-        key.write_text(yaml.safe_dump(manifest))
+        # Recompress the directory to a new tarball
+        compress_directory(root_dir, dest)
+        return dest

@@ -58,12 +58,18 @@ def test_configvar_by_key(
                 environment_id=env_obj,
                 value=init_value,
                 description="desc",
+                is_encrypted=False,
                 is_global=True,
             )
         else:
             env_obj = ApplicationEnvironment.objects.get(module=module, environment=init_env)
             ConfigVar.objects.create(
-                module=module, key=env_key, environment=env_obj, value=init_value, description="desc"
+                module=module,
+                key=env_key,
+                environment=env_obj,
+                value=init_value,
+                is_encrypted=False,
+                description="desc",
             )
 
     path = f"/api/bkapps/applications/{bk_module.application.code}/modules/{bk_module.name}/config_vars/{env_key}/"

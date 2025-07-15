@@ -159,7 +159,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     def retrieve_by_key(self, request, code, module_name, config_vars_key):
         """通过环境变量的 key 获取环境变量"""
         config_vars = self.get_queryset().filter(key=config_vars_key)
-        serializer = self.serializer_class(config_vars, many=True)
+        serializer = ConfigVarSLZ(config_vars, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(

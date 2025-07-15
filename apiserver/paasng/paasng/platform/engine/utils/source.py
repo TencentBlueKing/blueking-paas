@@ -37,7 +37,7 @@ from paasng.platform.engine.exceptions import InitDeployDescHandlerError, SkipPa
 from paasng.platform.engine.models import Deployment, EngineApp
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.utils.output import DeployStream, Style
-from paasng.platform.engine.utils.patcher import SourceCodePatcherWithDBDriver
+from paasng.platform.engine.utils.patcher import ProcfilePatcher
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
@@ -294,7 +294,7 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
 
     source_dir = validate_source_dir_str(root_path, source_dir_str)
     try:
-        SourceCodePatcherWithDBDriver(module, source_dir=source_dir, deployment=deployment).add_procfile()
+        ProcfilePatcher(source_dir=source_dir, procfile=deployment.get_procfile(), module=module).apply()
     except SkipPatchCode as e:
         logger.warning("skip the injection process: %s", e.reason)
     return source_dir_str, source_dir

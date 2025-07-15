@@ -17,56 +17,8 @@
 
 import zipfile
 from os import PathLike
-from pathlib import Path, PurePath
+from pathlib import PurePath
 from typing import Union
-
-from typing_extensions import Protocol
-
-
-class PathProtocol(Protocol):
-    """PathProtocol 是 pathlib.Path 的子集, 声明了 detector 和 patcher 在操作文件时依赖的协议"""
-
-    def __truediv__(self, other: str) -> "PathProtocol": ...
-
-    def write_text(self, text: str): ...
-
-    def exists(self) -> bool: ...
-
-    def is_file(self) -> bool: ...
-
-    def is_dir(self) -> bool: ...
-
-    def relative_to(self, other: "PathProtocol") -> PurePath: ...
-
-
-class LocalFSPath(PathLike):
-    """A PathLike obj, which will auto mkdir parent dir when calling write_text."""
-
-    def __init__(self, path: Union[str, Path]):
-        self.path = Path(path)
-
-    def __truediv__(self, other: str):
-        return LocalFSPath(self.path / other)
-
-    def write_text(self, text: str):
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        return self.path.write_text(text)
-
-    def exists(self) -> bool:
-        return self.path.exists()
-
-    def is_file(self) -> bool:
-        return self.path.is_file()
-
-    def is_dir(self) -> bool:
-        return self.path.is_dir()
-
-    def relative_to(self, other) -> PurePath:
-        assert isinstance(other, LocalFSPath)
-        return self.path.relative_to(other.path)
-
-    def __fspath__(self):
-        return self.path.__fspath__()
 
 
 class ZipPath(PathLike):

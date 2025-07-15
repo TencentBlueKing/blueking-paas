@@ -24,7 +24,7 @@ from paasng.platform.declarative import constants
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
-from paasng.platform.smart_app.services.patcher import SourceCodePatcher
+from paasng.platform.smart_app.services.patcher import patch_smart_tarball
 from paasng.platform.sourcectl.utils import generate_temp_dir
 from tests.paasng.platform.sourcectl.packages.utils import V1_APP_DESC_EXAMPLE
 
@@ -32,20 +32,14 @@ pytestmark = pytest.mark.django_db
 EXPECTED_WEB_PROCESS = constants.WEB_PROCESS
 
 
-class TestSourcePackagePatcher:
+class Test__patch_smart_tarball:
     @pytest.fixture()
     def patched_tar(self, tar_path, bk_module_full):
         bk_module_full.name = "bar"
         bk_module_full.source_origin = SourceOrigin.BK_LESS_CODE.value
         stat = SourcePackageStatReader(tar_path).read()
-        with generate_temp_dir() as working_dir:
-            dest = SourceCodePatcher.patch_tarball(
-                # 注: 模块名与下方测试用例对应
-                module=bk_module_full,
-                tarball_path=tar_path,
-                working_dir=working_dir,
-                stat=stat,
-            )
+        with generate_temp_dir() as dest_dir:
+            dest = patch_smart_tarball(tarball_path=tar_path, dest_dir=dest_dir, module=bk_module_full, stat=stat)
             yield dest
 
     @pytest.mark.parametrize(
@@ -61,9 +55,7 @@ class TestSourcePackagePatcher:
         stat = SourcePackageStatReader(tar_path).read()
 
         with pytest.raises(DescriptionValidationError):
-            SourceCodePatcher.patch_tarball(
-                module=bk_module_full, tarball_path=tar_path, working_dir=tmp_path, stat=stat
-            )
+            patch_smart_tarball(tarball_path=tar_path, dest_dir=tmp_path, module=bk_module_full, stat=stat)
 
     @pytest.mark.parametrize(
         ("contents", "target", "expected"),
@@ -142,6 +134,7 @@ class TestSourcePackagePatcher:
     def test_add_procfile(self, tar_path, patched_tar, target, expected):
         assert tar_path.name == patched_tar.name
         with tarfile.open(patched_tar) as tar:
+            print(tar.getmembers())
             fp = tar.extractfile(target)
             assert fp
             data = yaml.safe_load(fp.read())

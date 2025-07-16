@@ -43,7 +43,7 @@ var _ = Describe("ComponentMutator", func() {
 		_ = paasv1alpha2.AddToScheme(scheme)
 	})
 
-	Describe("PatchAllComponentToDeployment", func() {
+	Describe("PatchToDeployment", func() {
 		var deploy *appsv1.Deployment
 
 		BeforeEach(func() {
@@ -96,7 +96,7 @@ var _ = Describe("ComponentMutator", func() {
 					},
 				},
 			}
-			err := components.PatchAllComponentToDeployment(proc, deploy)
+			err := components.PatchToDeployment(proc, deploy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(deploy.Spec.Template.Spec.Containers)).To(Equal(1))
 			Expect(deploy.Spec.Template.Spec.Containers[0].Env).To(
@@ -125,7 +125,7 @@ var _ = Describe("ComponentMutator", func() {
 					},
 				},
 			}
-			err := components.PatchAllComponentToDeployment(proc, deploy)
+			err := components.PatchToDeployment(proc, deploy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(deploy.Spec.Template.Spec.Containers)).To(Equal(2))
 			jsonBytes, err := json.MarshalIndent(deploy.Spec.Template.Spec.Containers[0], "", "  ")
@@ -206,7 +206,7 @@ var _ = Describe("ComponentMutator", func() {
 					},
 				},
 			}
-			err := components.PatchAllComponentToDeployment(proc, deploy)
+			err := components.PatchToDeployment(proc, deploy)
 			Expect(err).To(HaveOccurred())
 		})
 	})

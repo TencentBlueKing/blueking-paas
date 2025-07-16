@@ -109,8 +109,8 @@ func (c *ComponentMutator) renderTemplate(templateContent string) ([]byte, error
 	return buf.Bytes(), nil
 }
 
-// PatchAllComponentToDeployment patch all components to deployment
-func PatchAllComponentToDeployment(
+// PatchToDeployment patch all components to deployment
+func PatchToDeployment(
 	proc *paasv1alpha2.Process,
 	deployment *appsv1.Deployment,
 ) error {

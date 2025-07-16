@@ -139,7 +139,7 @@ func (r *DeploymentReconciler) getNewDeployments(
 		}
 
 		// patch components to deployment
-		if err = components.PatchAllComponentToDeployment(&proc, deployment); err != nil {
+		if err = components.PatchToDeployment(&proc, deployment); err != nil {
 			return nil, errors.Wrap(err, "get new deployment error")
 		}
 		if err = kubeutil.UpsertObject(ctx, r.Client, deployment, r.updateHandler); err != nil {

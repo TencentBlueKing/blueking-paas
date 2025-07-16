@@ -23,7 +23,6 @@ from django.conf import settings
 from paasng.platform.engine.utils.source import validate_source_dir_str
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
-from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.platform.sourcectl.utils import compress_directory_ext, generate_temp_dir, generate_temp_file
@@ -39,14 +38,13 @@ def upload_source_code(module: Module, version_info: VersionInfo, source_dir: st
 
     :return: 获取源码包的链接（带签名的对象存储链接）
     """
-    spec = ModuleSpecs(module)
-    with generate_temp_dir() as working_dir:
-        full_source_dir = validate_source_dir_str(working_dir, source_dir)
-        # 仅支持 OAuth 授权的代码库
-        if spec.source_origin_specs.source_origin != SourceOrigin.AUTHORIZED_VCS:
-            raise NotImplementedError
+    # 仅支持 OAuth 授权的代码库
+    if module.get_source_origin() != SourceOrigin.AUTHORIZED_VCS:
+        raise NotImplementedError
 
+    with generate_temp_dir() as working_dir:
         # 下载源码到临时目录
+        full_source_dir = validate_source_dir_str(working_dir, source_dir)
         get_repo_controller(module, operator=operator).export(working_dir, version_info)
 
         # 上传源码包到对象存储

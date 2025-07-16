@@ -77,7 +77,9 @@ def _buildpacks_as_build_env(buildpacks: List[Dict]) -> str:
     return ";".join(required_buildpacks)
 
 
-def get_env_vars_selected_addons(env: ModuleEnvironment, selected_addons_service_names: List[str]) -> Dict[str, str]:
+def get_env_vars_selected_addons(
+    env: ModuleEnvironment, selected_addons_service_names: List[str] | None
+) -> Dict[str, str]:
     """Get environment variables including selected addon services.
 
     :param env: The module environment to read from.

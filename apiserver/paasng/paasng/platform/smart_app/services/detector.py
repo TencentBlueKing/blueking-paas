@@ -30,11 +30,9 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from yaml import YAMLError
 
-from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.constants import AppDescPluginType, AppSpecVersion
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import detect_spec_version, get_desc_handler
-from paasng.platform.smart_app.services.path import PathProtocol
 from paasng.platform.sourcectl.exceptions import (
     PackageInvalidFileFormatError,
     ReadFileNotFoundError,
@@ -206,111 +204,3 @@ class SourcePackageStatReader:
         except RuntimeError:
             logger.exception("Can't read logo.png.")
         return logo_b64data
-
-
-class ManifestDetector:
-    """协助生成 S-Mart 包文件清单的工具类"""
-
-    def __init__(
-        self,
-        package_root: PathProtocol,
-        app_description: ApplicationDesc,
-        relative_path: str = "./",
-        source_dir: str = "./src",
-    ):
-        """
-        :param package_root: 源码包根路径
-        :param ApplicationDesc app_description: 应用描述对象
-        :param relative_path: app_description file 相对于 源码包根路径 的路径(只对 S-Mart应用 有意义, 普通应用是 ./)
-        :param source_dir: 模块源代码相对于 app_description file 的路径
-        """
-        self.package_root = package_root
-        self.app_description = app_description
-        self.relative_path = relative_path
-        self.source_dir = source_dir
-
-    def detect(self):
-        """探测源码的目录结构, 清单记录的所有路径均是对 源码根目录 的相对路径"""
-        manifest = dict(
-            app_desc=self.detect_app_desc(),
-            procfile=self.detect_procfile(),
-            source_dir=self.make_relative_key(self.package_root / self.relative_path / self.source_dir),
-            cert=self.detect_certs() or None,
-            encryption=self.detect_encryption() or None,
-        )
-        dependency = self.detect_dependency()
-        if dependency:
-            manifest["dependency"] = dependency
-        return manifest
-
-    def detect_procfile(self) -> str:
-        """探测源码包中的 Procfile 的路径"""
-        # 优先探测用户在源码中定义的 Procfile, 如果文件被加密, 则使用由 PaaS 注入的 Procfile
-        possible_keys = [
-            self.package_root / self.relative_path / self.source_dir / "Procfile",
-            self.package_root / self.relative_path / "Procfile",
-        ]
-        for key in possible_keys:
-            if key.exists():
-                return self.make_relative_key(key)
-        raise KeyError("Procfile not found.")
-
-    def detect_app_desc(self) -> str:
-        """探测源码包中的 app_desc.yaml 的路径"""
-        possible_keys = [
-            self.package_root / self.relative_path / "app_desc.yaml",
-            self.package_root / self.relative_path / "app_desc.yml",
-        ]
-        for key in possible_keys:
-            if key.exists():
-                return self.make_relative_key(key)
-        raise KeyError("app_desc not found.")
-
-    def detect_dependency(self) -> Optional[str]:
-        """探测源码包中的 requirements.txt(python)、package.json(node)、go.mod(golang)"""
-        possible_keys = [
-            self.package_root / self.relative_path / self.source_dir / "requirements.txt",
-            self.package_root / self.relative_path / "requirements.txt",
-        ]
-        for key in possible_keys:
-            if key.exists():
-                return self.make_relative_key(key)
-        return None
-
-    def detect_certs(self) -> Dict[str, str]:
-        """探测源码包中的证书文件"""
-        prefix = self.package_root / self.relative_path / "cert"
-        if not prefix.exists() or not prefix.is_dir():
-            return {}
-        detector: Dict[str, PathProtocol] = {
-            "root": prefix / "bk_root_ca.cert",
-            "intermediate": prefix / "bk_saas_sign.cert",
-            "saas": prefix / "saas.cert",
-            "key": prefix / "saas.key",
-        }
-        results: Dict[str, str] = {}
-        for k, v in detector.items():
-            if v.exists() and v.is_file():
-                results[k] = self.make_relative_key(v)
-        return results
-
-    def detect_encryption(self) -> Dict[str, str]:
-        """探测源码包中的加密配置"""
-        prefix = self.package_root / self.relative_path / "conf"
-        if not prefix.exists() or not prefix.is_dir():
-            return {}
-        detector: Dict[str, PathProtocol] = {
-            "sha256": prefix / "SHA256",
-            "package": prefix / "package.conf",
-            "saas_priv": prefix / "saas_priv.txt",
-            "signature": prefix / "signature",
-        }
-        results: Dict[str, str] = {}
-        for k, v in detector.items():
-            if v.exists() and v.is_file():
-                results[k] = self.make_relative_key(v)
-        return results
-
-    def make_relative_key(self, key: PathProtocol) -> str:
-        # 增加 "./" 以明确表示 key 是相对源码根目录的相对路径.
-        return "./" + str(key.relative_to(self.package_root / self.relative_path))

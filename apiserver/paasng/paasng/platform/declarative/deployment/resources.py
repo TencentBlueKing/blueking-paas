@@ -75,7 +75,7 @@ class DeploymentDesc:
 
     def get_procfile(self) -> Dict[str, str]:
         """Get the processes in Procfile format. This function is used by patchers
-        such as `SourceCodePatcher` for generating "Procfile" file.
+        such as `patch_source_dir_procfile` for generating "Procfile" file.
         """
         return {proc_type: process.get_proc_command() for proc_type, process in self.get_processes().items()}
 

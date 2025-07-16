@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import tarfile
-from unittest import mock
 
 import pytest
 import yaml
@@ -25,8 +24,7 @@ from paasng.platform.declarative import constants
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
-from paasng.platform.smart_app.services.patcher import SourceCodePatcher
-from paasng.platform.smart_app.services.path import LocalFSPath
+from paasng.platform.smart_app.services.patcher import patch_smart_tarball
 from paasng.platform.sourcectl.utils import generate_temp_dir
 from tests.paasng.platform.sourcectl.packages.utils import V1_APP_DESC_EXAMPLE
 
@@ -34,43 +32,15 @@ pytestmark = pytest.mark.django_db
 EXPECTED_WEB_PROCESS = constants.WEB_PROCESS
 
 
-class TestSourcePackagePatcher:
+class Test__patch_smart_tarball:
     @pytest.fixture()
     def patched_tar(self, tar_path, bk_module_full):
         bk_module_full.name = "bar"
         bk_module_full.source_origin = SourceOrigin.BK_LESS_CODE.value
         stat = SourcePackageStatReader(tar_path).read()
-        with generate_temp_dir() as working_dir:
-            dest = SourceCodePatcher.patch_tarball(
-                # 注: 模块名与下方测试用例对应
-                module=bk_module_full,
-                tarball_path=tar_path,
-                working_dir=working_dir,
-                stat=stat,
-            )
+        with generate_temp_dir() as dest_dir:
+            dest = patch_smart_tarball(tarball_path=tar_path, dest_dir=dest_dir, module=bk_module_full, stat=stat)
             yield dest
-
-    @pytest.mark.parametrize(
-        "user_source_dir",
-        [
-            # Different kinds of value including empty, relative and absolute  path
-            (""),
-            ("foo"),
-            ("/foo/bar"),
-        ],
-    )
-    def test_module_dir(self, user_source_dir, tmp_path, tar_path, bk_module_full):
-        bk_module_full.name = "bar"
-        bk_module_full.source_origin = SourceOrigin.BK_LESS_CODE.value
-        stat = SourcePackageStatReader(tar_path).read()
-        patcher = SourceCodePatcher(
-            module=bk_module_full,
-            source_dir=LocalFSPath(tmp_path),
-            desc_data=stat.meta_info,
-            relative_path=stat.relative_path,
-        )
-        with mock.patch.object(patcher, "get_user_source_dir", return_value=user_source_dir):
-            assert str(patcher.module_dir.path).startswith(str(tmp_path))
 
     @pytest.mark.parametrize(
         "contents",
@@ -85,9 +55,7 @@ class TestSourcePackagePatcher:
         stat = SourcePackageStatReader(tar_path).read()
 
         with pytest.raises(DescriptionValidationError):
-            SourceCodePatcher.patch_tarball(
-                module=bk_module_full, tarball_path=tar_path, working_dir=tmp_path, stat=stat
-            )
+            patch_smart_tarball(tarball_path=tar_path, dest_dir=tmp_path, module=bk_module_full, stat=stat)
 
     @pytest.mark.parametrize(
         ("contents", "target", "expected"),
@@ -155,35 +123,10 @@ class TestSourcePackagePatcher:
                             },
                         }
                     ),
+                    "foo/src/bar": [],
+                    "foo/src/foo": [],
                 },
                 "./foo/src/bar/Procfile",
-                {"hello": "echo 'Hello Foo, i am Bar!'"},
-            ),
-            # 测试多模块(已加密)
-            (
-                {
-                    "foo/app_desc.yaml": yaml.dump(
-                        {
-                            "spec_version": 2,
-                            "app": {"bk_app_code": "foo", "bk_app_name": "foo"},
-                            "modules": {
-                                "bar": {
-                                    "processes": {"hello": {"command": "echo 'Hello Foo, i am Bar!'"}},
-                                    "source_dir": "./src/bar",
-                                    "language": "python",
-                                },
-                                "foo": {
-                                    "is_default": True,
-                                    "processes": {"hello": {"command": "echo 'Hello Bar, i am Foo!'"}},
-                                    "source_dir": "./src/foo",
-                                    "language": "python",
-                                },
-                            },
-                        }
-                    ),
-                    "foo/src/bar": "",
-                },
-                "./foo/Procfile",
                 {"hello": "echo 'Hello Foo, i am Bar!'"},
             ),
         ],

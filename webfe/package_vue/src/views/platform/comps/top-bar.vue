@@ -1,12 +1,17 @@
 <template>
   <div :class="['platform-top-bar', { 'has-tab': tabPanels.length }]">
     <div class="title">
-      <i
-        v-if="showBackIcon"
-        class="paasng-icon paasng-arrows-left icon-cls-back"
-        @click="goBack"
-      />
-      {{ title }}
+      <div class="title-area">
+        <div>
+          <i
+            v-if="showBackIcon"
+            class="paasng-icon paasng-arrows-left icon-cls-back"
+            @click="goBack"
+          />
+          {{ title }}
+        </div>
+        <div class="right"><slot name="right"></slot></div>
+      </div>
       <slot name="extra"></slot>
     </div>
     <div
@@ -102,11 +107,14 @@ export default {
     }
   }
   .title {
-    display: flex;
-    align-items: center;
-    padding-left: 24px;
+    padding: 0 24px;
     font-size: 16px;
     color: #313238;
+    .title-area {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
   }
   .icon-cls-back {
     margin-right: 5px;

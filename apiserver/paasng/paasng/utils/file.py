@@ -22,7 +22,10 @@ from paasng.utils.text import generate_random_string
 
 def path_may_escape(input_path: str) -> bool:
     """Check if the input path may escape from a given root directory, an invalid value is like
-    "../../../../app_desc.yaml" which can go outside the root directory.
+    "../../../../app_desc.yaml" which can go outside the root directory. This function only perform
+    a string-based check and does not resolve symlinks.
+
+    :param input_path: The path to check.
     """
     # Absolute paths are always considered as escaping
     if os.path.isabs(input_path):

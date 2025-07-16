@@ -15,8 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from .configmap import DevSandboxConfigMap
 from .ingress import DevSandboxIngress
 from .sandbox import DevSandbox
 from .service import DevSandboxService
 
-__all__ = ["DevSandbox", "DevSandboxIngress", "DevSandboxService"]
+__all__ = ["DevSandbox", "DevSandboxIngress", "DevSandboxService", "DevSandboxConfigMap"]

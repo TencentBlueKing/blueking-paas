@@ -30,13 +30,15 @@ from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.handlers import DeployDescHandler, get_deploy_desc_handler, get_source_dir_from_desc
+from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.building import get_dockerfile_path
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
-from paasng.platform.engine.exceptions import InitDeployDescHandlerError, SkipPatchCode
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.exceptions import InitDeployDescHandlerError
 from paasng.platform.engine.models import Deployment, EngineApp
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.utils.output import DeployStream, Style
-from paasng.platform.engine.utils.patcher import SourceCodePatcherWithDBDriver
+from paasng.platform.engine.utils.patcher import patch_source_dir_procfile
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
@@ -232,16 +234,19 @@ def get_source_package_path(deployment: Deployment) -> str:
     return f"{engine_app.region}/home/{slug_name}/tar"
 
 
-def download_source_to_dir(module: Module, operator: str, deployment: Deployment, working_path: Path):
+def download_source_to_dir(module: Module, operator: str, deployment: Deployment, root_path: Path) -> tuple[str, Path]:
     """Download and extract the module's source files to local path, will generate Procfile if necessary
 
-    :param operator: current operator's user_id
+    :param root_path: The local path to download the source files
+    :return: (the configured source directory string, the source directory path), the path can be different
+        with the `root_path` if source_dir is configured.
+    :raise ValueError: If the configured source directory is invalid
     """
     spec = ModuleSpecs(module)
     if spec.source_origin_specs.source_origin == SourceOrigin.AUTHORIZED_VCS:
-        get_repo_controller(module, operator=operator).export(working_path, deployment.version_info)
+        get_repo_controller(module, operator=operator).export(root_path, deployment.version_info)
     elif spec.deploy_via_package:
-        PackageController.init_by_module(module, operator).export(working_path, deployment.version_info)
+        PackageController.init_by_module(module, operator).export(root_path, deployment.version_info)
     else:
         raise NotImplementedError
 
@@ -256,11 +261,50 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
     # A: The repository might be extremely large and contain a vast number of files;
     #    scanning the entire directory would be too slow.
 
-    try:
-        SourceCodePatcherWithDBDriver(module, working_path, deployment).add_procfile()
-    except SkipPatchCode as e:
-        logger.warning("skip the injection process: %s", e.reason)
-        return
+    # Get the "source_dir" from 2 sources: `Deployment` object and `DeploymentDescription` object.
+    #
+    # 1. `deployment.get_source_dir()`: written when the deployment is initialized `initialize_deployment()`,
+    #    the value was from returned by `get_source_dir()` function.
+    # 2. `DeploymentDescription.source_dir`: written when the package was parsed and handled by the
+    #    server, the value was written by the `DeploymentDeclarativeController`.
+    #
+    # Using the value from source 1 (deployment) should be fine in most cases, but the legacy logic used to
+    # query the `DeploymentDescription` model also. For backward compatibility and to avoid surprises,
+    # we will check the `source_dir` in both sources and use the one from `DeploymentDescription` in case of conflict.
+    #
+    source_dir_str_deployment = str(deployment.get_source_dir())
+    source_dir_str_desc = ""
+    if ModuleSpecs(module).deploy_via_package:
+        # TODO: Remove this we are sure that the value in the description is always equal to the one in deployment
+        try:
+            desc_obj = DeploymentDescription.objects.get(deployment=deployment)
+        except DeploymentDescription.DoesNotExist:
+            pass
+        else:
+            source_dir_str_desc = desc_obj.source_dir
+
+    source_dir_str = source_dir_str_deployment
+    if source_dir_str_desc and source_dir_str_desc != source_dir_str_deployment:
+        logger.warning(
+            "The source_dir in deployment description is different from the one in deployment object: %s != %s",
+            source_dir_str_desc,
+            source_dir_str_deployment,
+        )
+        # Use the one in description object for backward compatibility
+        source_dir_str = source_dir_str_desc
+
+    source_dir = validate_source_dir_str(root_path, source_dir_str)
+
+    if (
+        module.application.type == ApplicationType.CLOUD_NATIVE
+        and module.build_config.build_method == RuntimeType.DOCKERFILE
+    ):
+        logger.info("Skip Procfile patching for Dockerfile cnative application.")
+        return source_dir_str, source_dir
+
+    if reason := patch_source_dir_procfile(source_dir=source_dir, procfile=deployment.get_procfile()):
+        logger.warning("skip the source patching process: %s", reason)
+    return source_dir_str, source_dir
 
 
 def check_source_package(engine_app: EngineApp, package_path: Path, stream: DeployStream):
@@ -340,3 +384,28 @@ def _get_source_package_path(version_info: VersionInfo, app_code: str, module_na
 
     slug_name = f"{app_code}:{module_name}:{branch}:{revision}:dev"
     return f"{region}/home/{slug_name}/tar"
+
+
+def validate_source_dir_str(root_path: Path, source_dir_str: str) -> Path:
+    """Validate the source_dir string and return the source directory of the module.
+
+    :param root_path: The repository's root directory.
+    :param source_dir_str: The source directory string defined by the user.
+    :raise ValueError: If the source directory is invalid.
+    :return: The source directory.
+    """
+    source_dir = Path(source_dir_str)
+    # If the user configured "/src", change it into "src"
+    if source_dir.is_absolute():
+        source_dir = Path(source_dir).relative_to("/")
+
+    # Check if the source_dir is valid, resolve the symlink and ensure it is within the root directory
+    source_dir = root_path / source_dir
+    if not source_dir.resolve().is_relative_to(root_path):
+        raise ValueError(f"Invalid source directory: {source_dir_str}")
+
+    if not source_dir.exists():
+        raise ValueError(f"The source directory '{source_dir_str}' does not exist")
+    if source_dir.is_file():
+        raise ValueError(f"The source directory '{source_dir_str}' is not a directory")
+    return source_dir

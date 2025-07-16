@@ -17,7 +17,6 @@
 
 import logging
 import time
-from pathlib import Path
 from typing import Optional
 
 import cattr
@@ -114,31 +113,18 @@ def start_build_error_callback(*args, **kwargs):
 class BaseBuilder(DeployStep):
     phase_type = DeployPhaseTypes.BUILD
 
-    def compress_and_upload(
-        self, relative_source_dir: Path, source_destination_path: str, should_ignore: Optional[ExcludeChecker] = None
-    ):
+    def compress_and_upload(self, source_destination_path: str, should_ignore: Optional[ExcludeChecker] = None):
         """Download, compress and upload module source files
 
-        :param Path relative_source_dir: 源码目录(相对路径), 当源码目录不为 Path(".") 时, 表示仅打包上传 relative_source_dir 下的源码文件.
         :param str source_destination_path: 表示将源码归档包上传至对象存储中的位置.
         """
         module = self.deployment.app_environment.module
         with generate_temp_dir() as working_dir:
-            source_dir = working_dir.absolute() / relative_source_dir
-            download_source_to_dir(module, self.deployment.operator, self.deployment, working_dir)
-
-            if not source_dir.exists():
-                message = (
-                    "The source directory '{source_dir}' does not exist,please check the repository to confirm."
-                ).format(source_dir=str(relative_source_dir))
-                self.stream.write_message(Style.Error(message))
-                raise FileNotFoundError(message)
-            if source_dir.is_file():
-                message = _(
-                    "The source directory '{source_dir}' is not a legal directory,please check repository to confirm."
-                ).format(source_dir=str(relative_source_dir))
-                self.stream.write_message(Style.Error(message))
-                raise NotADirectoryError(message)
+            try:
+                _, source_dir = download_source_to_dir(module, self.deployment.operator, self.deployment, working_dir)
+            except ValueError as e:
+                self.stream.write_message(Style.Error(str(e)))
+                raise
 
             tag_module_from_source_files(module, source_dir)
             with generate_temp_file(suffix=".tar.gz") as package_path:
@@ -246,7 +232,6 @@ class ApplicationBuilder(BaseBuilder):
         # TODO: 改造提示信息&错误信息都需要入库
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
-        relative_source_dir = self.deployment.get_source_dir()
         module = self.deployment.app_environment.module
 
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
@@ -262,7 +247,7 @@ class ApplicationBuilder(BaseBuilder):
 
         with self.procedure_force_phase("上传仓库代码", phase=preparation_phase):
             source_destination_path = get_source_package_path(self.deployment)
-            self.compress_and_upload(relative_source_dir, source_destination_path)
+            self.compress_and_upload(source_destination_path)
 
         with self.procedure_force_phase("配置资源实例", phase=preparation_phase) as p:
             self.provision_services(p, module)
@@ -338,7 +323,6 @@ class DockerBuilder(BaseBuilder):
 
         pre_phase_start.send(self, phase=DeployPhaseTypes.PREPARATION)
         preparation_phase = self.deployment.deployphase_set.get(type=DeployPhaseTypes.PREPARATION)
-        relative_source_dir = self.deployment.get_source_dir()
         module: Module = self.deployment.app_environment.module
 
         is_cnative_app = self.module_environment.application.type == ApplicationType.CLOUD_NATIVE
@@ -358,9 +342,7 @@ class DockerBuilder(BaseBuilder):
         with self.procedure_force_phase("上传仓库代码", phase=preparation_phase):
             source_destination_path = get_source_package_path(self.deployment)
             self.compress_and_upload(
-                relative_source_dir,
-                source_destination_path,
-                should_ignore=dockerignore.should_ignore if dockerignore else None,
+                source_destination_path, should_ignore=dockerignore.should_ignore if dockerignore else None
             )
 
         with self.procedure_force_phase("配置资源实例", phase=preparation_phase) as p:

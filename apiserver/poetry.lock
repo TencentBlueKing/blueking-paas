@@ -303,8 +303,8 @@ optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main"]
 files = [
-    {file = "bkpaas_auth-3.1.2.tar.gz", hash = "sha256:20595bcfbce7ea6f7fd0cd21cd7136cdb1452752cf5ebbc3c610dd5658f6950e"},
     {file = "bkpaas_auth-3.1.2-py3-none-any.whl", hash = "sha256:4bb5614d38679144f7c1ec82d54529f956e5fa2e778b6d14e420d40f14164d13"},
+    {file = "bkpaas_auth-3.1.2.tar.gz", hash = "sha256:20595bcfbce7ea6f7fd0cd21cd7136cdb1452752cf5ebbc3c610dd5658f6950e"},
 ]
 
 [package.dependencies]
@@ -1034,14 +1034,14 @@ static3 = "*"
 
 [[package]]
 name = "django"
-version = "4.2.17"
+version = "4.2.23"
 description = "A high-level Python web framework that encourages rapid development and clean, pragmatic design."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "Django-4.2.17-py3-none-any.whl", hash = "sha256:3a93350214ba25f178d4045c0786c61573e7dbfa3c509b3551374f1e11ba8de0"},
-    {file = "Django-4.2.17.tar.gz", hash = "sha256:6b56d834cc94c8b21a8f4e775064896be3b4a4ca387f2612d4406a5927cd2fdc"},
+    {file = "django-4.2.23-py3-none-any.whl", hash = "sha256:dafbfaf52c2f289bd65f4ab935791cb4fb9a198f2a5ba9faf35d7338a77e9803"},
+    {file = "django-4.2.23.tar.gz", hash = "sha256:42fdeaba6e6449d88d4f66de47871015097dc6f1b87910db00a91946295cfae4"},
 ]
 
 [package.dependencies]
@@ -1803,14 +1803,14 @@ protobuf = ["grpcio-tools (>=1.68.0)"]
 
 [[package]]
 name = "gunicorn"
-version = "22.0.0"
+version = "23.0.0"
 description = "WSGI HTTP Server for UNIX"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "gunicorn-22.0.0-py3-none-any.whl", hash = "sha256:350679f91b24062c86e386e198a15438d53a7a8207235a78ba1b53df4c4378d9"},
-    {file = "gunicorn-22.0.0.tar.gz", hash = "sha256:4a0b436239ff76fb33f11c07a16482c521a7e09c1ce3cc293c2330afe01bec63"},
+    {file = "gunicorn-23.0.0-py3-none-any.whl", hash = "sha256:ec400d38950de4dfd418cff8328b2c8faed0edb0d517d3394e457c317908ca4d"},
+    {file = "gunicorn-23.0.0.tar.gz", hash = "sha256:f014447a0101dc57e294f6c18ca6b40227a4c90e9bdb586042628030cba004ec"},
 ]
 
 [package.dependencies]
@@ -4365,4 +4365,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "a68668803396eb89b7df5c565579f68d9eacb1288a040de647bcf4c4e27f7896"
+content-hash = "11e04ecb7cf81b9a8c20932f4992d31822fc92eff13af89530b16da7e671d136"

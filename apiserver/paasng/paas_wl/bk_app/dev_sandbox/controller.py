@@ -30,7 +30,12 @@ from paas_wl.bk_app.dev_sandbox.conf import (
 )
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Runtime, SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
-from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService
+from paas_wl.bk_app.dev_sandbox.kres_entities import (
+    DevSandbox,
+    DevSandboxConfigMap,
+    DevSandboxIngress,
+    DevSandboxService,
+)
 from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_ingress_name, get_dev_sandbox_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
@@ -77,6 +82,7 @@ class DevSandboxController:
     sandbox_mgr = AppEntityManager(DevSandbox)
     service_mgr = AppEntityManager(DevSandboxService)
     ingress_mgr = AppEntityManager(DevSandboxIngress)
+    configmap_mgr = AppEntityManager(DevSandboxConfigMap)
 
     def __init__(self, dev_sandbox: "DevSandboxModel"):
         self.dev_sandbox = dev_sandbox
@@ -150,12 +156,19 @@ class DevSandboxController:
             source_code_cfg=source_code_cfg,
             code_editor_cfg=code_editor_cfg,
         )
+
+        # step 3. create configmap
+        cfg_map = DevSandboxConfigMap.create(sandbox)
+        # deliver code-editor config via ConfigMap
+        self.configmap_mgr.upsert(cfg_map)
+
+        # 创建沙箱 pod
         self.sandbox_mgr.create(sandbox)
 
-        # step 3. upsert service
+        # step 4. upsert service
         self.service_mgr.upsert(DevSandboxService.create(sandbox))
 
-        # step 4. upsert ingress
+        # step 5. upsert ingress
         self.ingress_mgr.upsert(DevSandboxIngress.create(sandbox))
 
 

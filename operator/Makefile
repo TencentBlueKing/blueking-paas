@@ -126,7 +126,7 @@ run: manifests generate fmt vet ## 本地运行 Controller（现阶段需要添�
 
 .PHONY: docker-build
 docker-build: ## 构建 Manager 镜像，需指定 IMG 参数
-	docker build -t ${IMG} --no-cache .
+	docker build --build-arg LDFLAGS=$(ldflags) -t ${IMG} --no-cache .
 
 .PHONY: docker-push
 docker-push: ## 推送 Manager 镜像，需指定 IMG 参数

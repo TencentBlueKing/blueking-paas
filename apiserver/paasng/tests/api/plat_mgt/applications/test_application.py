@@ -435,16 +435,11 @@ class TestDeletedApplicationView:
 
         with (
             mock.patch(
-                "paasng.accessories.publish.sync_market.managers.AppManger.delete_by_code"
-            ) as mock_delete_by_code,
+                "paasng.plat_mgt.applications.views.application.cascade_delete_legacy_app"
+            ) as mock_cascade_delete_legacy_app,
             mock.patch("paasng.plat_mgt.applications.views.application.delete_builtin_user_groups") as mock_del_groups,
             mock.patch("paasng.plat_mgt.applications.views.application.delete_grade_manager") as mock_del_manager,
-            mock.patch("paasng.core.core.storages.sqlalchemy.console_db.session_scope") as mock_session_scope,
         ):
-            mock_session = mock.MagicMock()
-            mock_session_scope.return_value = mock.MagicMock()
-            mock_session_scope.return_value.__enter__.return_value = mock_session
-
             rsp = plat_mgt_api_client.delete(url)
 
             assert rsp.status_code == 204
@@ -459,9 +454,6 @@ class TestDeletedApplicationView:
             assert not SMartAppExtraInfo.objects.filter(id=smart_info.id).exists()
             assert not Module.objects.filter(id=module.id).exists()
 
-            mock_session_scope.assert_called_once()
-            # 验证 PaaS 2.0 中删除操作调用
-            mock_delete_by_code.assert_called_once()
-
             mock_del_groups.assert_called_once_with(app.code)
             mock_del_manager.assert_called_once_with(app.code)
+            mock_cascade_delete_legacy_app.assert_called_once_with("code", app.code, False)

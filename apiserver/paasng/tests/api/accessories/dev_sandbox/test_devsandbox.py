@@ -81,7 +81,7 @@ class TestCreateDevSandbox:
                 return_value="https://bkrepo.example.com/helloworld.zip",
             ),
             mock.patch(
-                "paasng.accessories.dev_sandbox.views.get_env_variables",
+                "paasng.accessories.dev_sandbox.views.get_env_vars_selected_addons",
                 return_value={"FOO": "BAR"},
             ),
             mock.patch(
@@ -99,6 +99,7 @@ class TestCreateDevSandbox:
                 "enable_code_editor": True,
                 "inject_staging_env_vars": True,
                 "source_code_version_info": {"version_type": "branch", "version_name": "master", "revision": "..."},
+                "enabled_addons_services": ["mysql", "redis", "sentry"],
             },
         )
         assert resp.status_code == status.HTTP_201_CREATED

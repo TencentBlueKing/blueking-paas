@@ -70,6 +70,11 @@ def dump_contents_to_fs(
     with generate_temp_dir() as source_dir:
         if contents:
             for file_name, content in contents.items():
+                # "[]" means to create an empty directory
+                if content == []:
+                    (source_dir / file_name).mkdir(parents=True, exist_ok=True)
+                    continue
+
                 target = source_dir / file_name
                 ensure_parent_exists(target)
 

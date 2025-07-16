@@ -21,7 +21,8 @@ COPY controllers/ controllers/
 COPY pkg/ pkg/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager ./main.go
+ARG LDFLAGS
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags "$LDFLAGS" -o manager ./main.go
 
 # -------------- runner container --------------
 FROM alpine:3.20 AS runner

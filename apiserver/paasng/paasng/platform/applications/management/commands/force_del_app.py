@@ -20,8 +20,7 @@ import logging
 from blue_krill.data_types.enum import StrStructuredEnum
 from django.core.management.base import BaseCommand
 
-from paasng.accessories.publish.sync_market.managers import AppManger
-from paasng.core.core.storages.sqlalchemy import console_db
+from paasng.accessories.publish.sync_market.utils import cascade_delete_legacy_app
 from paasng.infras.iam.helpers import delete_builtin_user_groups, delete_grade_manager
 from paasng.platform.applications.models import Application
 
@@ -75,16 +74,12 @@ class Command(BaseCommand):
             return
 
         # 从 PaaS 2.0 中删除相关信息
-        with console_db.session_scope() as session:
-            try:
-                if filter_key == DelKeyType.NAME.value:
-                    AppManger(session).delete_by_name(name=filter_value)
-                else:
-                    AppManger(session).delete_by_code(code=filter_value)
-            except Exception as e:
-                logger.exception(f"{filter_key} 为 {filter_value} 从 PaaS2.0 中删除失败.")
-                self.stdout.write(self.style.ERROR(f"{filter_key} 为 {filter_value} 从 PaaS2.0 中删除失败: {e}"))
-                return
+        try:
+            cascade_delete_legacy_app(filter_key, filter_value, False)
+        except Exception as e:
+            logger.exception(f"{filter_key} 为 {filter_value} 从 PaaS2.0 中删除失败.")
+            self.stdout.write(self.style.ERROR(f"{filter_key} 为 {filter_value} 从 PaaS2.0 中删除失败: {e}"))
+            return
 
         # 删除权限中心相关数据
         for app in to_del_apps:

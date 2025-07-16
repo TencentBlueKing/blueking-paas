@@ -64,7 +64,7 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             containers.append(self._construct_code_editor_container(obj))
 
         spec = {"containers": containers}
-        self._set_volume_mounts(spec)
+        self._set_volume_mounts(spec, obj)
 
         return spec
 
@@ -101,6 +101,13 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
         return {
             "name": CODE_EDITOR_CONTAINER_NAME,
             "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
+            "command": ["/usr/bin/code-server"],
+            # --disable-telemetry 禁止遥测数据收集功能；--disable-update-check 关闭 code-server 自动更新
+            # 参考文档：
+            # https://code.visualstudio.com/docs/configure/telemetry
+            # https://code.visualstudio.com/docs/supporting/FAQ#_telemetry-and-crash-reporting
+            # https://code.visualstudio.com/docs/supporting/FAQ#_how-do-i-opt-out-of-vs-code-autoupdates
+            "args": ["--bind-addr", "0.0.0.0:8080", "--disable-telemetry", "--disable-update-check"],
             # 代码编辑器仅需要少量的环境变量
             "env": [
                 {
@@ -129,7 +136,7 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
         }
 
     @staticmethod
-    def _set_volume_mounts(spec: Dict):
+    def _set_volume_mounts(spec: Dict, obj: "DevSandbox"):
         """为开发沙箱设置挂载卷"""
         spec["volumes"] = [
             {
@@ -138,6 +145,16 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
             }
         ]
 
+        if obj.code_editor_cfg:
+            spec["volumes"].append(
+                {
+                    "name": "code-editor-config",
+                    "configMap": {
+                        "name": f"{obj.name}-code-editor-config",
+                    },
+                }
+            )
+
         for container in spec["containers"]:
             container["volumeMounts"] = [
                 {
@@ -145,6 +162,18 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
                     "mountPath": DEV_SANDBOX_WORKSPACE,
                 }
             ]
+
+            if container["name"] == CODE_EDITOR_CONTAINER_NAME and obj.code_editor_cfg:
+                container["volumeMounts"].append(
+                    {
+                        "name": "code-editor-config",
+                        # 参考文档：
+                        # https://github.com/coder/code-server/blob/main/docs/FAQ.md#how-does-the-config-file-work
+                        # https://github.com/coder/code-server/blob/main/docs/FAQ.md#where-is-vs-code-configuration-stored
+                        "mountPath": "/home/coder/.local/share/code-server/User/settings.json",
+                        "subPath": "settings.json",
+                    }
+                )
 
 
 class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):

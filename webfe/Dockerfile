@@ -15,8 +15,8 @@ RUN npm install --unsafe-perm --registry=https://mirrors.tencent.com/npm/
 COPY ./package_vue/ /package_vue/
 RUN npm run build
 
-######### Nginx part #########
-# inspired by https://github.com/smebberson/docker-alpine/tree/alpine-nginx-v3.0.0
+######### Nginx + webfe part #########
+## inspired by https://github.com/smebberson/docker-alpine/tree/alpine-nginx-v3.0.0
 FROM alpine:3.22.1 AS PageServing
 
 # Add s6-overlay
@@ -39,6 +39,7 @@ COPY /rootfs/base/root /
 
 ENTRYPOINT ["/init"]
 CMD []
+
 
 # Install nginx
 RUN echo "http://mirrors.tencent.com/alpine/v3.22/main" >> /etc/apk/repositories && \

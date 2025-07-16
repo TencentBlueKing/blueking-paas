@@ -37,6 +37,7 @@ import (
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 	"bk.tencent.com/paas-app-operator/controllers/base"
+	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/components"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/processes/resources"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/svcdisc"
 	"bk.tencent.com/paas-app-operator/pkg/health"
@@ -137,6 +138,10 @@ func (r *DeploymentReconciler) getNewDeployments(
 				Info("Applied svc-discovery related changes to deployments", "bkapp", bkapp.Name, "proc", proc.Name)
 		}
 
+		// patch components to deployment
+		if err = components.PatchToDeployment(&proc, deployment); err != nil {
+			return nil, errors.Wrap(err, "get new deployment error")
+		}
 		if err = kubeutil.UpsertObject(ctx, r.Client, deployment, r.updateHandler); err != nil {
 			return nil, errors.Wrap(err, "get new deployment error")
 		}

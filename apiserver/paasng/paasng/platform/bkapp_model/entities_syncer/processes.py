@@ -62,6 +62,7 @@ def sync_processes(
             "probes": process.probes,
             "services": process.services,
             "tenant_id": module.tenant_id,
+            "components": process.components,
         }
         if not use_proc_command:
             defaults.update({"command": process.command, "args": process.args})

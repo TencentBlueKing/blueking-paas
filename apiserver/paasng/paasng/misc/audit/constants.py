@@ -74,6 +74,7 @@ class OperationTarget(StrStructuredEnum):
     EXIT_IP = EnumField("exit_ip", label=_("出口 IP"))
     ACCESS_CONTROL = EnumField("access_control", label=_("用户限制"))
     ACCESS_TOKEN = EnumField("access_token", label=_("访问令牌"))
+    PROC_COMPONENT = EnumField("proc_component", label=_("进程组件"))
 
     # 以下是仅用于 Admin42 的操作对象
     CLUSTER = EnumField("cluster", label=_("集群"))

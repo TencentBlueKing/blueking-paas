@@ -15,12 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import List
+from typing import Dict, List
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.utils.camel_converter import camel_to_snake_case
+from paasng.accessories.proc_components.constants import DEFAULT_COMPONENT_DIR
+from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
+from paasng.accessories.proc_components.manager import ComponentManager
 from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
     ImagePullPolicy,
@@ -226,6 +230,32 @@ class ProcServiceInputSLZ(serializers.Serializer):
         return value
 
 
+class ComponentInputSLZ(serializers.Serializer):
+    type = serializers.CharField(help_text="组件类型", max_length=32)
+    version = serializers.CharField(help_text="组件版本", max_length=32)
+    properties = serializers.DictField(help_text="组件参数", required=False)
+
+    def to_internal_value(self, data: Dict) -> Dict:
+        internal_value = super().to_internal_value(data)
+        # 检查是否存在properties字段
+        if "properties" in data:
+            # 转换 properties 中的键名
+            internal_value["properties"] = camel_to_snake_case(data["properties"])
+
+        return internal_value
+
+    def validate(self, attrs: Dict) -> Dict:
+        mgr = ComponentManager(DEFAULT_COMPONENT_DIR)
+        try:
+            mgr.validate_properties(attrs["type"], attrs["version"], attrs.get("properties"))
+        except ComponentNotFound:
+            raise ValidationError(_("组件 {}-{} 不存在").format(attrs["type"], attrs["version"]))
+        except ComponentPropertiesInvalid as e:
+            raise ValidationError(_("参数校验失败")) from e
+
+        return attrs
+
+
 class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
@@ -248,6 +278,7 @@ class ProcessInputSLZ(serializers.Serializer):
     autoscaling = AutoscalingSpecInputSLZ(allow_null=True, default=NOTSET)
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
     services = serializers.ListField(child=ProcServiceInputSLZ(), allow_null=True, default=None)
+    components = serializers.ListField(child=ComponentInputSLZ(), allow_null=True, default=None)
 
 
 class HooksInputSLZ(serializers.Serializer):

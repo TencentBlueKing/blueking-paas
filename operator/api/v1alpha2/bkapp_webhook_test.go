@@ -27,11 +27,13 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/components/manager"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
@@ -1430,5 +1432,118 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 		})
 
 		Expect(k8sClient.Create(ctx, bkapp).Error()).To(ContainSubstring("Duplicate value"))
+	})
+
+	_ = Describe("test webhook.Validator validate process components", func() {
+		var bkapp *paasv1alpha2.BkApp
+
+		BeforeEach(func() {
+			components.DefaultComponentDir = "../../pkg/components/components"
+			bkapp = &paasv1alpha2.BkApp{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       paasv1alpha2.KindBkApp,
+					APIVersion: paasv1alpha2.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bkapp-sample",
+					Namespace: "default",
+					Annotations: map[string]string{
+						paasv1alpha2.BkAppCodeKey:  "bkapp-sample",
+						paasv1alpha2.ModuleNameKey: paasv1alpha2.DefaultModuleName,
+					},
+				},
+				Spec: paasv1alpha2.AppSpec{Build: paasv1alpha2.BuildConfig{
+					Image:           "nginx:latest",
+					ImagePullPolicy: corev1.PullIfNotPresent,
+				}, Processes: []paasv1alpha2.Process{
+					{
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   80,
+					},
+				}},
+			}
+		})
+
+		It("env_overlay component", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				{
+					Type:    "env_overlay",
+					Version: "v1",
+					Properties: runtime.RawExtension{
+						Raw: []byte(
+							`{"env": [{"name":"testKey","value":"testValue"}, {"name":"testKey2","value":"testValue2"}]}`,
+						),
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("env_overlay component with invalid properties", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				{
+					Type:    "env_overlay",
+					Version: "v1",
+					Properties: runtime.RawExtension{
+						Raw: []byte(
+							`{"invalidEnv": [{"name":"testKey","value":"testValue"}, {"name":"testKey2","value":"testValue2"}]}`,
+						),
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("cl5 component", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				{
+					Type:    "cl5",
+					Version: "v1",
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("invalid component type", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				{
+					Type:    "invalid_type",
+					Version: "v1",
+					Properties: runtime.RawExtension{
+						Raw: []byte(
+							`{"invalidEnv": [{"name":"testKey","value":"testValue"}, {"name":"testKey2","value":"testValue2"}]}`,
+						),
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("invalid component version", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				{
+					Type:    "env_overlay",
+					Version: "v2",
+					Properties: runtime.RawExtension{
+						Raw: []byte(
+							`{"invalidEnv": [{"name":"testKey","value":"testValue"}, {"name":"testKey2","value":"testValue2"}]}`,
+						),
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+		})
 	})
 })

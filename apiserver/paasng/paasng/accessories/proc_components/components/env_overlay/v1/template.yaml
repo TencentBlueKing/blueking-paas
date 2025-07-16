@@ -1,0 +1,10 @@
+spec:
+  template:
+    spec:
+      containers:
+        - name: {{.procName}}
+          env:
+            {{- range .env }}
+            - name: {{.name}}
+              value: {{.value}}
+            {{- end }}

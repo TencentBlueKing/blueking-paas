@@ -165,6 +165,8 @@ INSTALLED_APPS = [
     "paasng.accessories.services",
     # dev_sandbox
     "paasng.accessories.dev_sandbox",
+    # proc_component
+    "paasng.accessories.proc_components",
     "paasng.platform.templates",
     "paasng.plat_admin.api_doc",
     "paasng.plat_admin.admin42",

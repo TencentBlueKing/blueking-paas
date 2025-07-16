@@ -392,4 +392,9 @@ export default {
   克隆: 'Clone',
   克隆成功: 'Clone Successful',
   '当前用户无可用的应用集群，无法创建应用；请联系平台管理员添加集群或调整集群分配策略。': 'The current user has no available application clusters and cannot create an app; please contact the platform administrator to add clusters or adjust the cluster allocation policy.',
+  删除时间: 'Deletion Time',
+  彻底删除: 'Permanently Delete',
+  管理已删除应用: 'Manage Deleted Apps',
+  确认彻底删除应用: 'Confirm Permanent Deletion of App',
+  '删除应用时，应用只是被标记为已删除，同名应用无法被重新创建。如需彻底删除应用数据，请使用 “彻底删除” 功能。': 'When an app is deleted, it is merely marked as deleted, and an app with the same name cannot be recreated. To permanently delete app data, please use the "Permanently Delete" feature.',
 };

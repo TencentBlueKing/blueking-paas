@@ -51,15 +51,15 @@ from paasng.platform.engine.models.config_var import (
 from paasng.platform.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
 from paasng.platform.engine.serializers import (
     ConfigVarApplyResultSLZ,
-    ConfigVarCreateSLZ,
     ConfigVarFormatSLZ,
     ConfigVarFormatWithIdSLZ,
     ConfigVarImportSLZ,
     ConfigVarSLZ,
-    ConfigVarUpdateSLZ,
     ConfigVarWithoutKeyFormatSLZ,
     ConflictedKeyOutputSLZ,
+    CreateConfigVarSLZ,
     ListConfigVarsSLZ,
+    UpdateConfigVarSLZ,
 )
 
 
@@ -76,12 +76,12 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     def get_queryset(self):
         return ConfigVar.objects.filter(module=self.get_module_via_path(), is_builtin=False)
 
-    @swagger_auto_schema(request_body=ConfigVarCreateSLZ, tags=["环境配置"], responses={201: ""})
+    @swagger_auto_schema(request_body=CreateConfigVarSLZ, tags=["环境配置"], responses={201: ""})
     def create(self, request, *args, **kwargs):
         """创建环境变量"""
         data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
-        slz = ConfigVarCreateSLZ(data=request.data, context={"module": self.get_module_via_path()})
+        slz = CreateConfigVarSLZ(data=request.data, context={"module": self.get_module_via_path()})
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -100,13 +100,13 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(request_body=ConfigVarUpdateSLZ, tags=["环境配置"], responses={200: ConfigVarUpdateSLZ()})
+    @swagger_auto_schema(request_body=UpdateConfigVarSLZ, tags=["环境配置"], responses={200: UpdateConfigVarSLZ()})
     def update(self, request, *args, **kwargs):
         """更新环境变量"""
         config_var = self.get_object()
         data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
-        slz = ConfigVarUpdateSLZ(config_var, data=request.data, context={"module": self.get_module_via_path()})
+        slz = UpdateConfigVarSLZ(config_var, data=request.data, context={"module": self.get_module_via_path()})
         slz.is_valid(raise_exception=True)
         slz.save()
 

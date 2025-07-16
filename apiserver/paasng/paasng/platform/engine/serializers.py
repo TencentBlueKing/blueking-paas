@@ -20,6 +20,7 @@ from datetime import datetime
 
 import yaml
 from blue_krill.encrypt.handler import EncryptHandler
+from blue_krill.encrypt.utils import get_default_secret_key
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -45,6 +46,7 @@ from paasng.platform.sourcectl.constants import VersionType
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.error_codes import error_codes
+from paasng.utils.masked_curlify import MASKED_CONTENT
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import UserField, field_env_var_key
 
@@ -380,7 +382,7 @@ class ConfigVarSLZ(serializers.ModelSerializer):
     description = serializers.CharField(
         allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
     )
-    is_encrypted = serializers.BooleanField(help_text="是否加密存储")
+    is_encrypted = serializers.BooleanField(required=False, default=False, help_text="是否加密存储")
     is_global = serializers.BooleanField(required=False, help_text="是否全局有效, 该字段由 slz 补充.")
     # 只读字段, 仅序列化时 ConfigVar 对象时生效
     id = serializers.IntegerField(read_only=True)
@@ -420,43 +422,38 @@ class ConfigVarSLZ(serializers.ModelSerializer):
     def to_representation(self, instance) -> dict:
         ret = super().to_representation(instance)
         if getattr(instance, "is_encrypted", False):
-            ret["value"] = "******"
+            ret["value"] = MASKED_CONTENT
         return ret
 
 
-class ConfigVarCreateSLZ(ConfigVarSLZ):
+class CreateConfigVarSLZ(ConfigVarSLZ):
     """Serializer for creating ConfigVar"""
 
-    value = serializers.CharField(required=True)
-
-    def to_internal_value(self, data):
-        is_encrypted = data["is_encrypted"]
-        value = data["value"]
-        # 加密处理
-        if is_encrypted:
-            data["value"] = EncryptHandler().encrypt(value)
-        else:
-            data["value"] = value
-        data["is_encrypted"] = is_encrypted
-        return super().to_internal_value(data)
+    def create(self, validated_data):
+        if validated_data["is_encrypted"]:
+            validated_data["value"] = EncryptHandler(secret_key=get_default_secret_key()).encrypt(
+                validated_data["value"]
+            )
+        return super().create(validated_data)
 
 
-class ConfigVarUpdateSLZ(ConfigVarSLZ):
+class UpdateConfigVarSLZ(ConfigVarSLZ):
     """Serializer for updating ConfigVar"""
 
     value = serializers.CharField(required=False)
 
-    def to_internal_value(self, data):
-        value = data.get("value", None)
-        # is_encrypted 字段使用数据库中查询到的值
-        is_encrypted = self.instance.is_encrypted
-        if value is not None:
-            if is_encrypted:
-                data["value"] = EncryptHandler().encrypt(value)
-            else:
-                data["value"] = value
-        data["is_encrypted"] = is_encrypted
-        return super().to_internal_value(data)
+    def validate(self, attrs):
+        if "is_encrypted" in attrs and self.instance.is_encrypted != attrs["is_encrypted"]:
+            # 更新时不能修改 is_encrypted 字段的值
+            raise ValidationError({"is_encrypted": _("不允许修改加密状态")})
+        return super().validate(attrs)
+
+    def update(self, instance, validated_data):
+        # 仅在 instance.is_encrypted 字段为 True 时, 才对 value 进行加密
+        value = validated_data.get("value")
+        if value is not None and instance.is_encrypted:
+            validated_data["value"] = EncryptHandler(secret_key=get_default_secret_key()).encrypt(value)
+        return super().update(instance, validated_data)
 
 
 class ListConfigVarsSLZ(serializers.Serializer):

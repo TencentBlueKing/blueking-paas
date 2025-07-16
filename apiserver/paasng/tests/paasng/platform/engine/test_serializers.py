@@ -39,7 +39,7 @@ class TestConfigVar:
         [
             (dict(key="FOO", value="bar", is_encrypted=False, description="baz"), {}),
             pytest.param(
-                dict(key="BKPAAS_FOO", value="bar", is_encrypted=False, description="baz"),
+                dict(key="BKPAAS_FOO", value="bar", description="baz"),
                 {},
                 marks=pytest.mark.xfail(raises=ValidationError),
             ),
@@ -59,7 +59,7 @@ class TestConfigVar:
 
     @pytest.mark.parametrize(
         "data",
-        [dict(key="FOO", is_encrypted=False, value="bar", description="baz")],
+        [dict(key="FOO", value="bar", is_encrypted=False, description="baz")],
     )
     def test_output(self, bk_module, environment_name, bk_env, data):
         slz = slzs.ConfigVarSLZ(dict(module=bk_module, environment=bk_env, **data))

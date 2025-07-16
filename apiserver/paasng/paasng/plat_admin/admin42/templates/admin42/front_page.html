@@ -9,9 +9,8 @@
 {% endblock %}
 
 {% block main_content %}
-<div class="function-intro-list" style="margin: 32px 0;">
-    <h2>平台功能介绍</h2>
-    <ul id="function-intro-list"></ul>
+<div class="function-intro-list">
+    <ul id="function-intro-list" class="intro-list"></ul>
 </div>
 {% endblock %}
 
@@ -136,19 +135,107 @@
 
 
 {% block main_script %}
+<style>
+    .function-intro-list {
+        margin: 32px 0;
+        padding: 24px 32px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px 0 #e6e9f0;
+        min-width: 600px;
+    }
+    .intro-main-title {
+        font-size: 26px;
+        font-weight: 700;
+        color: #222;
+        margin-bottom: 32px;
+        letter-spacing: 1px;
+    }
+    .intro-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-size: 16px;
+    }
+    .intro-group {
+        margin-bottom: 32px;
+        background: #f7faff;
+        border-radius: 6px;
+        padding: 18px 24px 12px 24px;
+        box-shadow: 0 1px 4px 0 #f0f1f5;
+        transition: box-shadow 0.2s;
+    }
+    .intro-group:hover {
+        box-shadow: 0 4px 16px 0 #e6e9f0;
+    }
+    .intro-title {
+        font-weight: bold;
+        font-size: 19px;
+        margin-bottom: 12px;
+        color: #3a84ff;
+        display: flex;
+        align-items: center;
+        border-left: 4px solid #3a84ff;
+        padding-left: 12px;
+        letter-spacing: 1px;
+    }
+    .intro-title i {
+        color: #3a84ff;
+        margin-right: 8px;
+        font-size: 20px;
+    }
+    .intro-item {
+        margin-left: 12px;
+        margin-bottom: 8px;
+        line-height: 1.8;
+        color: #444;
+        position: relative;
+        padding-left: 22px;
+        font-size: 15px;
+        border-left: 2px solid #e1ecff;
+        transition: background 0.2s;
+    }
+    .intro-item:before {
+        content: "●";
+        color: #3a84ff;
+        position: absolute;
+        left: 0;
+        font-size: 13px;
+        top: 4px;
+    }
+    .intro-item b {
+        color: #222;
+        font-weight: 600;
+        margin-right: 4px;
+    }
+</style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var ul = document.getElementById('function-intro-list');
         navList.forEach(function(group) {
             if (group.children && group.children.length) {
+                var groupLi = document.createElement('li');
+                groupLi.className = 'intro-group';
+                var title = document.createElement('div');
+                title.className = 'intro-title';
+                title.innerHTML = '<i class="paasng-icon paasng-apps"></i>' + group.name;
+                groupLi.appendChild(title);
+
+                var subUl = document.createElement('ul');
+                subUl.style.listStyle = 'none';
+                subUl.style.padding = '0';
                 group.children.forEach(function(item) {
-                    var li = document.createElement('li');
-                    li.innerHTML = '<b>' + item.name + '</b>：' + (item.desc || '');
-                    ul.appendChild(li);
+                    var subLi = document.createElement('li');
+                    subLi.className = 'intro-item';
+                    subLi.innerHTML = '<b>' + item.name + '</b>' + (item.desc ? '：' + item.desc : '');
+                    subUl.appendChild(subLi);
                 });
+                groupLi.appendChild(subUl);
+                ul.appendChild(groupLi);
             } else {
                 var li = document.createElement('li');
-                li.innerHTML = '<b>' + group.name + '</b>：' + (group.desc || '');
+                li.className = 'intro-item';
+                li.innerHTML = '<b>' + group.name + '</b>' + (group.desc ? '：' + group.desc : '');
                 ul.appendChild(li);
             }
         });

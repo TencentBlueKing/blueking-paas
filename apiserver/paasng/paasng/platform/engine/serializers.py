@@ -19,8 +19,6 @@ import re
 from datetime import datetime
 
 import yaml
-from blue_krill.encrypt.handler import EncryptHandler
-from blue_krill.encrypt.utils import get_default_secret_key
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -421,39 +419,39 @@ class ConfigVarSLZ(serializers.ModelSerializer):
 
     def to_representation(self, instance) -> dict:
         ret = super().to_representation(instance)
-        if getattr(instance, "is_encrypted", False):
+        if ret.get("is_encrypted"):
             ret["value"] = MASKED_CONTENT
         return ret
 
 
-class CreateConfigVarSLZ(ConfigVarSLZ):
+class CreateConfigVarInputSLZ(ConfigVarSLZ):
     """Serializer for creating ConfigVar"""
 
     def create(self, validated_data):
-        if validated_data["is_encrypted"]:
-            validated_data["value"] = EncryptHandler(secret_key=get_default_secret_key()).encrypt(
-                validated_data["value"]
-            )
-        return super().create(validated_data)
+        instance = ConfigVar(**validated_data)
+        if instance.is_encrypted:
+            instance.encrypt_value()
+        instance.save()
+        return instance
 
 
-class UpdateConfigVarSLZ(ConfigVarSLZ):
+class UpdateConfigVarInputSLZ(ConfigVarSLZ):
     """Serializer for updating ConfigVar"""
 
     value = serializers.CharField(required=False)
 
     def validate(self, attrs):
-        if "is_encrypted" in attrs and self.instance.is_encrypted != attrs["is_encrypted"]:
+        if self.instance.is_encrypted != attrs["is_encrypted"]:
             # 更新时不能修改 is_encrypted 字段的值
             raise ValidationError({"is_encrypted": _("不允许修改加密状态")})
         return super().validate(attrs)
 
-    def update(self, instance, validated_data):
-        # 仅在 instance.is_encrypted 字段为 True 时, 才对 value 进行加密
-        value = validated_data.get("value")
-        if value is not None and instance.is_encrypted:
-            validated_data["value"] = EncryptHandler(secret_key=get_default_secret_key()).encrypt(value)
-        return super().update(instance, validated_data)
+    def update(self, instance: ConfigVar, validated_data):
+        instance = super().update(instance, validated_data)
+        if "value" in validated_data and instance.is_encrypted:
+            instance.encrypt_value()
+            instance.save()
+        return instance
 
 
 class ListConfigVarsSLZ(serializers.Serializer):

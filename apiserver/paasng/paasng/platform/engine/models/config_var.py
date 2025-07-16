@@ -17,6 +17,8 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
+from blue_krill.encrypt.handler import EncryptHandler
+from blue_krill.encrypt.utils import get_default_secret_key
 from django.db import models
 
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -118,6 +120,20 @@ class ConfigVar(TimestampedModel):
             module=module,
             tenant_id=self.tenant_id,
         )
+
+    def encrypt_value(self):
+        if self.is_encrypted:
+            self.value = EncryptHandler(secret_key=get_default_secret_key()).encrypt(self.value)
+
+    def decrypt_value(self):
+        if self.is_encrypted:
+            self.value = EncryptHandler(secret_key=get_default_secret_key()).decrypt(self.value)
+
+    def get_value(self) -> str:
+        """Get the config var value, decrypted if encrypted."""
+        if self.is_encrypted:
+            return EncryptHandler(secret_key=get_default_secret_key()).decrypt(self.value)
+        return self.value
 
 
 def add_prefix_to_key(items: dict, prefix: str) -> Dict[str, Any]:

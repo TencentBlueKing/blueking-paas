@@ -21,8 +21,6 @@ from abc import ABC, abstractmethod
 from operator import itemgetter
 from typing import Dict, List, Optional, Tuple
 
-from blue_krill.encrypt.handler import EncryptHandler
-from blue_krill.encrypt.utils import get_default_secret_key
 from django.conf import settings
 from kubernetes.utils.quantity import parse_quantity
 
@@ -344,9 +342,7 @@ class EnvVarsManifestConstructor(ManifestConstructor):
             crd.EnvVarOverlay(
                 envName=var.environment.environment,
                 name=var.key,
-                value=EncryptHandler(secret_key=get_default_secret_key()).decrypt(var.value)
-                if var.is_encrypted
-                else var.value,
+                value=var.get_value(),
             )
             for var in ConfigVar.objects.filter(module=module)
             .exclude(is_global=True)

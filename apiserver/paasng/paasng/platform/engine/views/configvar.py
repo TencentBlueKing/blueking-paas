@@ -57,9 +57,9 @@ from paasng.platform.engine.serializers import (
     ConfigVarSLZ,
     ConfigVarWithoutKeyFormatSLZ,
     ConflictedKeyOutputSLZ,
-    CreateConfigVarSLZ,
+    CreateConfigVarInputSLZ,
     ListConfigVarsSLZ,
-    UpdateConfigVarSLZ,
+    UpdateConfigVarInputSLZ,
 )
 
 
@@ -76,12 +76,12 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     def get_queryset(self):
         return ConfigVar.objects.filter(module=self.get_module_via_path(), is_builtin=False)
 
-    @swagger_auto_schema(request_body=CreateConfigVarSLZ, tags=["环境配置"], responses={201: ""})
+    @swagger_auto_schema(request_body=CreateConfigVarInputSLZ, tags=["环境配置"], responses={201: ""})
     def create(self, request, *args, **kwargs):
         """创建环境变量"""
         data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
-        slz = CreateConfigVarSLZ(data=request.data, context={"module": self.get_module_via_path()})
+        slz = CreateConfigVarInputSLZ(data=request.data, context={"module": self.get_module_via_path()})
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -100,13 +100,15 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(request_body=UpdateConfigVarSLZ, tags=["环境配置"], responses={200: UpdateConfigVarSLZ()})
+    @swagger_auto_schema(
+        request_body=UpdateConfigVarInputSLZ, tags=["环境配置"], responses={200: UpdateConfigVarInputSLZ()}
+    )
     def update(self, request, *args, **kwargs):
         """更新环境变量"""
         config_var = self.get_object()
         data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
-        slz = UpdateConfigVarSLZ(config_var, data=request.data, context={"module": self.get_module_via_path()})
+        slz = UpdateConfigVarInputSLZ(config_var, data=request.data, context={"module": self.get_module_via_path()})
         slz.is_valid(raise_exception=True)
         slz.save()
 

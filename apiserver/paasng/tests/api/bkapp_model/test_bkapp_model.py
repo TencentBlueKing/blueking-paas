@@ -655,9 +655,9 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
                 "args": ["http.server"],
                 "components": [
                     {
-                        "type": "env_cover",
+                        "type": "env_overlay",
                         "version": "v1",
-                        "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]},
+                        "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
                     }
                 ],
             }
@@ -667,5 +667,9 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
         resp = api_client.post(url, data={"proc_specs": request_data})
         assert resp.status_code == 200
         assert resp.data["proc_specs"][0]["components"] == [
-            {"type": "env_cover", "version": "v1", "properties": {"envs": [{"value": "1", "proc_name": "FOO"}]}}
+            {
+                "type": "env_overlay",
+                "version": "v1",
+                "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
+            }
         ]

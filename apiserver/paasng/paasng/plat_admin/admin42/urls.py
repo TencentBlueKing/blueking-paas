@@ -49,174 +49,169 @@ PART_MODULE_WITH_ENV = "modules/(?P<module_name>[^/]+)/envs/(?P<environment>[^/]
 urlpatterns = [
     re_path(r"^$", views.FrontPageView.as_view(), name="admin.front_page"),
     # 配置管理
-    re_path(
-        r"^configuration/$",
-        runtimes.BuildPackManageView.as_view(),
-        name="admin.runtimes.buildpack.manage",
-    ),
     ## 运行时管理
     ### BuildPack 管理
     re_path(
-        r"^configuration/runtimes/buildpack/manage/$",
+        r"^settings/runtimes/buildpack/manage/$",
         runtimes.BuildPackManageView.as_view(),
         name="admin.runtimes.buildpack.manage",
     ),
     ### BuildPack 管理 API
     re_path(
-        "^configuration/runtimes/buildpack/$",
+        r"^settings/runtimes/buildpack/$",
         runtimes.BuildPackAPIViewSet.as_view(dict(post="create", get="list")),
         name="admin.runtimes.buildpack",
     ),
     re_path(
-        r"^configuration/runtimes/buildpack/(?P<pk>[^/]+)/$",
+        r"^settings/runtimes/buildpack/(?P<pk>[^/]+)/$",
         runtimes.BuildPackAPIViewSet.as_view(dict(put="update", delete="destroy")),
         name="admin.runtimes.buildpack.detail",
     ),
     re_path(
-        r"^configuration/runtimes/buildpack/(?P<pk>[^/]+)/bind/$",
+        r"^settings/runtimes/buildpack/(?P<pk>[^/]+)/bind/$",
         runtimes.BuildPackAPIViewSet.as_view(dict(post="set_bound_builders", get="get_bound_builders")),
         name="admin.runtimes.buildpack.detail.bind",
     ),
     ### SlugBuilder 管理
     re_path(
-        r"^configuration/runtimes/slugbuilder/manage/$",
+        r"^settings/runtimes/slugbuilder/manage/$",
         runtimes.SlugBuilderManageView.as_view(),
         name="admin.runtimes.slugbuilder.manage",
     ),
     ### SlugBuilder 管理 API
     re_path(
-        r"^configuration/runtimes/slugbuilder/$",
+        r"^settings/runtimes/slugbuilder/$",
         runtimes.SlugBuilderAPIViewSet.as_view(dict(post="create", get="list")),
         name="admin.runtimes.slugbuilder",
     ),
     re_path(
-        r"^configuration/runtimes/slugbuilder/(?P<pk>[^/]+)/$",
+        r"^settings/runtimes/slugbuilder/(?P<pk>[^/]+)/$",
         runtimes.SlugBuilderAPIViewSet.as_view(dict(put="update", delete="destroy")),
         name="admin.runtimes.slugbuilder.detail",
     ),
     re_path(
-        r"^configuration/runtime/slugbuilder/(?P<pk>[^/]+)/bind/$",
+        r"^settings/runtime/slugbuilder/(?P<pk>[^/]+)/bind/$",
         runtimes.SlugBuilderAPIViewSet.as_view(dict(post="set_bound_buildpacks", get="get_bound_buildpacks")),
         name="admin.runtimes.slugbuilder.detail.bind",
     ),
     ### SlugRunner 管理
     re_path(
-        r"^configuration/runtimes/slugrunner/manage$",
+        r"^settings/runtimes/slugrunner/manage$",
         runtimes.AppSlugRunnerManageView.as_view(),
         name="admin.runtimes.slugrunner.manage",
     ),
     ### SlugRunner 管理 API
     re_path(
-        r"^configuration/runtimes/slugrunner/$",
+        r"^settings/runtimes/slugrunner/$",
         runtimes.SlugRunnerAPIViewSet.as_view(dict(post="create", get="list")),
         name="admin.runtimes.slugrunner",
     ),
     re_path(
-        r"^configuration/runtimes/slugrunner/(?P<pk>[^/]+)/$",
+        r"^settings/runtimes/slugrunner/(?P<pk>[^/]+)/$",
         runtimes.SlugRunnerAPIViewSet.as_view(dict(put="update", delete="destroy")),
         name="admin.runtimes.slugrunner.detail",
     ),
     ## 应用资源方案
     re_path(
-        r"^configuration/process_spec_plan/manage/$",
+        r"^settings/process_spec_plan/manage/$",
         proc_spec.ProcessSpecPlanManageView.as_view(),
         name="admin.process_spec_plan.manage",
     ),
     re_path(
-        r"^configuration/process_spec_plan/applications/$",
+        r"^settings/process_spec_plan/applications/$",
         proc_spec.ApplicationProcessSpecManageView.as_view(),
         name="admin.process_spec_plan.applications.manage",
     ),
     re_path(
-        r"^configuration/process_spec_plan/applications/(?P<app_code>[^/]+)/processes/$",
+        r"^settings/process_spec_plan/applications/(?P<app_code>[^/]+)/processes/$",
         proc_spec.ApplicationProcessSpecViewSet.as_view({"get": "list_processes"}),
         name="admin.process_spec_plan.applications.processes",
     ),
     ## 智能顾问
     ### 文档管理
     re_path(
-        r"^configuration/smart-advisor/documents/manage$",
+        r"^settings/smart-advisor/documents/manage$",
         smart_advisor.DocumentaryLinkView.as_view(),
         name="admin.smart_advisor.documents.manage",
     ),
     re_path(
-        r"^configuration/smart-advisor/documents/$",
+        r"^settings/smart-advisor/documents/$",
         smart_advisor.DocumentaryLinkManageViewSet.as_view(dict(post="create", get="list")),
         name="admin.smart_advisor.documents",
     ),
     re_path(
-        r"^configuration/smart-advisor/documents/(?P<pk>[^/]+)/$",
+        r"^settings/smart-advisor/documents/(?P<pk>[^/]+)/$",
         smart_advisor.DocumentaryLinkManageViewSet.as_view(dict(delete="destroy", put="update")),
         name="admin.smart_advisor.documents.detail",
     ),
     ### 失败提示管理
     re_path(
-        r"^configuration/smart-advisor/deploy_failure_tips/manage$",
+        r"^settings/smart-advisor/deploy_failure_tips/manage$",
         smart_advisor.DeployFailurePatternView.as_view(),
         name="admin.smart_advisor.deploy_failure_tips.manage",
     ),
     re_path(
-        r"^configuration/smart-advisor/deploy_failure_tips/$",
+        r"^settings/smart-advisor/deploy_failure_tips/$",
         smart_advisor.DeployFailurePatternManageViewSet.as_view(dict(post="create", get="list")),
         name="admin.smart_advisor.deploy_failure_tips",
     ),
     re_path(
-        r"^configuration/smart-advisor/deploy_failure_tips/(?P<pk>[^/]+)/",
+        r"^settings/smart-advisor/deploy_failure_tips/(?P<pk>[^/]+)/",
         smart_advisor.DeployFailurePatternManageViewSet.as_view(dict(delete="destroy", put="update")),
         name="admin.smart_advisor.deploy_failure_tips.detail",
     ),
     ## 共享证书管理
     re_path(
-        r"^configuration/certs/shared/manage/$",
+        r"^settings/certs/shared/manage/$",
         certs.SharedCertsManageView.as_view(),
         name="admin.shared.certs.manage",
     ),
     ## 仪表盘模板配置
     re_path(
-        r"^configuration/dashboard_template/manage/$",
+        r"^settings/dashboard_template/manage/$",
         dashboard_templates.DashboardTemplateManageView.as_view(),
         name="admin.configuration.dashboard_tmpl.manage",
     ),
     re_path(
-        r"^configuration/dashboard_template/$",
+        r"^settings/dashboard_template/$",
         dashboard_templates.DashboardTemplateViewSet.as_view(dict(post="create", get="list")),
         name="admin.configuration.dashboard_tmpl",
     ),
     re_path(
-        r"^configuration/dashboard_template/(?P<pk>[^/]+)/",
+        r"^settings/dashboard_template/(?P<pk>[^/]+)/",
         dashboard_templates.DashboardTemplateViewSet.as_view(dict(delete="destroy", put="update")),
         name="admin.configuration.dashboard_tmpl.detail",
     ),
     ## 插件管理
     ### 插件分类配置
     re_path(
-        r"^configuration/bk_plugins/tags/manage/$",
+        r"^settings/bk_plugins/tags/manage/$",
         bk_plugins.BKPluginTagManageView.as_view(),
         name="admin.configuration.bk_plugins.tags.manage",
     ),
     re_path(
-        r"^configuration/bk_plugins/tags/$",
+        r"^settings/bk_plugins/tags/$",
         bk_plugins.BKPluginTagView.as_view(dict(post="create", get="list")),
         name="admin.configuration.bk_plugins.tags",
     ),
     re_path(
-        r"^configuration/bk_plugins/tags/(?P<pk>[^/]+)/",
+        r"^settings/bk_plugins/tags/(?P<pk>[^/]+)/",
         bk_plugins.BKPluginTagView.as_view(dict(delete="destroy", put="update")),
         name="admin.configuration.bk_plugins.tags.detail",
     ),
     ### 插件使用方配置
     re_path(
-        r"^configuration/bk_plugins/distributors/manage/$",
+        r"^settings/bk_plugins/distributors/manage/$",
         bk_plugins.BKPluginDistributorsManageView.as_view(),
         name="admin.configuration.bk_plugins.distributors.manage",
     ),
     re_path(
-        r"^configuration/bk_plugins/distributors/$",
+        r"^settings/bk_plugins/distributors/$",
         bk_plugins.BKPluginDistributorsView.as_view(dict(post="create", get="list")),
         name="admin.configuration.bk_plugins.distributors",
     ),
     re_path(
-        r"^configuration/bk_plugins/distributors/(?P<pk>[^/]+)/",
+        r"^settings/bk_plugins/distributors/(?P<pk>[^/]+)/",
         bk_plugins.BKPluginDistributorsView.as_view(dict(delete="destroy", put="update")),
         name="admin.configuration.bk_plugins.distributors.detail",
     ),

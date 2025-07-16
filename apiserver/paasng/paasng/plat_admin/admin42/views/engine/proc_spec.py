@@ -56,7 +56,7 @@ class ProcessSpecPlanManageView(GenericTemplateView):
     serializer_class = ProcessSpecPlanSLZ
     queryset = ProcessSpecPlan.objects.all()
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-    template_name = "admin42/configuration/process_spec/process_spec_plans.html"
+    template_name = "admin42/settings/process_spec/process_spec_plans.html"
 
     def get_context_data(self, **kwargs):
         self.paginator.default_limit = 2
@@ -135,7 +135,7 @@ class ApplicationProcessSpecManageView(GenericTemplateView):
     # 方案配置, 使用 "应用资源方案" 为了前端导航高亮
     name = "应用资源方案"
     queryset = Application.objects.filter(type=ApplicationType.DEFAULT)
-    template_name = "admin42/configuration/process_spec/process_spec_manage.html"
+    template_name = "admin42/settings/process_spec/process_spec_manage.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     filter_backends = [ApplicationFilterBackend]
 

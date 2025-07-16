@@ -42,7 +42,7 @@ class BKPluginTagManageView(GenericTemplateView):
     """平台服务管理-插件分类配置"""
 
     # 插件分类配置, 使用 "插件配置" 为了前端导航高亮
-    template_name = "admin42/configuration/bk_plugin/bk_plugin_tag.html"
+    template_name = "admin42/settings/bk_plugin/bk_plugin_tag.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
     name = "插件配置"
 
@@ -105,7 +105,7 @@ class BKPluginDistributorsManageView(GenericTemplateView):
     """平台服务管理-插件使用方配置"""
 
     # 插件使用方配置, 使用 "插件配置" 为了前端导航高亮
-    template_name = "admin42/configuration/bk_plugin/bk_plugin_distributor.html"
+    template_name = "admin42/settings/bk_plugin/bk_plugin_distributor.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
     name = "插件配置"
 

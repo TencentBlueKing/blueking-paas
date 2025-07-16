@@ -34,7 +34,7 @@ class DocumentaryLinkView(GenericTemplateView):
     """文档链接管理页"""
 
     # 文档管理, 使用 "智能顾问" 为了前端导航高亮
-    template_name = "admin42/configuration/smart-advisor/documentary_link.html"
+    template_name = "admin42/settings/smart-advisor/documentary_link.html"
     queryset = DocumentaryLink.objects.all()
     serializer_class = DocumentaryLinkSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
@@ -108,7 +108,7 @@ class DeployFailurePatternView(GenericTemplateView):
     """失败提示管理"""
 
     # 失败提示管理, 使用 "智能顾问" 为了前端导航高亮
-    template_name = "admin42/configuration/smart-advisor/deploy_failure_tips.html"
+    template_name = "admin42/settings/smart-advisor/deploy_failure_tips.html"
     queryset = DeployFailurePattern.objects.all()
     serializer_class = DeployFailurePatternSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]

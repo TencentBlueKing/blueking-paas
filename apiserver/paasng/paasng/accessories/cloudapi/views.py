@@ -300,6 +300,9 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         tags=["CloudAPIV2"],
     )
     def list_mcp_servers(self, request, *args, **kwargs):
+        slz = serializers.MCPServerQueryParamsSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+
         app = self.get_application()
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._get(request, apigw_url, app)
@@ -309,6 +312,9 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         tags=["CloudAPIV2"],
     )
     def list_mcp_server_permissions(self, request, *args, **kwargs):
+        slz = serializers.AppMCPServerPermissionQueryParamsSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+
         app = self.get_application()
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._get(request, apigw_url, app)
@@ -318,6 +324,9 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         tags=["CloudAPI"],
     )
     def list_app_mcp_server_permissions(self, request, *args, **kwargs):
+        slz = serializers.AppMCPServerPermissionQueryParamsSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+
         app = self.get_application()
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._get(request, apigw_url, app)
@@ -327,6 +336,9 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         tags=["CloudAPI"],
     )
     def list_mcp_server_permissions_apply_records(self, request, *args, **kwargs):
+        slz = serializers.AppMCPServerPermissionApplyRecordQueryParamsSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+
         app = self.get_application()
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._get(request, apigw_url, app)
@@ -336,7 +348,9 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         tags=["CloudAPI"],
     )
     def apply_mcp_server_permissions(self, request, *args, **kwargs):
-        # 参数校验
+        slz = serializers.ApplyMCPResourcePermissionSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
         app = self.get_application()
         operation_type = OperationEnum.APPLY
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)

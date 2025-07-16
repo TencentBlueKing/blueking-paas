@@ -124,7 +124,7 @@ urlpatterns = [
     # 批量申请权限
     path(
         "api/cloudapi-v2/apps/<slug:app_code>/open/mcp-servers/permissions/apply/",
-        views.CloudAPIV2ViewSet.as_view({"get": "apply_mcp_server_permissions"}),
+        views.CloudAPIV2ViewSet.as_view({"post": "apply_mcp_server_permissions"}),
         name="api.cloudapi.v2.mcp_server_permissions_apply",
     ),
     # 权限申请记录

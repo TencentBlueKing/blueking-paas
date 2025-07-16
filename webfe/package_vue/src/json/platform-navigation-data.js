@@ -59,7 +59,7 @@ export default [
     name: 'platformAppList',
     label: i18n.t('应用列表'),
     iconfontName: 'Application-list',
-    matchRouters: ['platformAppList', 'platformAppDetails'],
+    matchRouters: ['platformAppList', 'platformAppDetails', 'platformSoftDeleteApps'],
     destRoute: {
       name: 'platformAppList',
     },

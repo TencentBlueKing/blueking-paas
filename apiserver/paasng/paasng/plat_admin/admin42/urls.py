@@ -170,50 +170,50 @@ urlpatterns = [
     re_path(
         r"^settings/dashboard_template/manage/$",
         dashboard_templates.DashboardTemplateManageView.as_view(),
-        name="admin.configuration.dashboard_tmpl.manage",
+        name="admin.settings.dashboard_tmpl.manage",
     ),
     re_path(
         r"^settings/dashboard_template/$",
         dashboard_templates.DashboardTemplateViewSet.as_view(dict(post="create", get="list")),
-        name="admin.configuration.dashboard_tmpl",
+        name="admin.settings.dashboard_tmpl",
     ),
     re_path(
         r"^settings/dashboard_template/(?P<pk>[^/]+)/",
         dashboard_templates.DashboardTemplateViewSet.as_view(dict(delete="destroy", put="update")),
-        name="admin.configuration.dashboard_tmpl.detail",
+        name="admin.settings.dashboard_tmpl.detail",
     ),
     ## 插件管理
     ### 插件分类配置
     re_path(
         r"^settings/bk_plugins/tags/manage/$",
         bk_plugins.BKPluginTagManageView.as_view(),
-        name="admin.configuration.bk_plugins.tags.manage",
+        name="admin.settings.bk_plugins.tags.manage",
     ),
     re_path(
         r"^settings/bk_plugins/tags/$",
         bk_plugins.BKPluginTagView.as_view(dict(post="create", get="list")),
-        name="admin.configuration.bk_plugins.tags",
+        name="admin.settings.bk_plugins.tags",
     ),
     re_path(
         r"^settings/bk_plugins/tags/(?P<pk>[^/]+)/",
         bk_plugins.BKPluginTagView.as_view(dict(delete="destroy", put="update")),
-        name="admin.configuration.bk_plugins.tags.detail",
+        name="admin.settings.bk_plugins.tags.detail",
     ),
     ### 插件使用方配置
     re_path(
         r"^settings/bk_plugins/distributors/manage/$",
         bk_plugins.BKPluginDistributorsManageView.as_view(),
-        name="admin.configuration.bk_plugins.distributors.manage",
+        name="admin.settings.bk_plugins.distributors.manage",
     ),
     re_path(
         r"^settings/bk_plugins/distributors/$",
         bk_plugins.BKPluginDistributorsView.as_view(dict(post="create", get="list")),
-        name="admin.configuration.bk_plugins.distributors",
+        name="admin.settings.bk_plugins.distributors",
     ),
     re_path(
         r"^settings/bk_plugins/distributors/(?P<pk>[^/]+)/",
         bk_plugins.BKPluginDistributorsView.as_view(dict(delete="destroy", put="update")),
-        name="admin.configuration.bk_plugins.distributors.detail",
+        name="admin.settings.bk_plugins.distributors.detail",
     ),
     # 运营管理
     ## 应用运营评估

@@ -35,29 +35,16 @@
             delimiters: ['$[', ']'],
             data: function () {
                 return {
-                    activeTab: window.location.pathname.includes(
-                        'deploy_failure_tips'
-                    )
-                        ? 'failure'
-                        : 'document',
+                    activeTab: window.location.pathname.includes('deploy_failure_tips') ? 'failure' : 'document',
+                    tabPaths: {
+                        failure: '{% url "admin.smart_advisor.deploy_failure_tips.manage" %}',
+                        document: '{% url "admin.smart_advisor.documents.manage" %}',
+                    },
                 };
             },
             methods: {
                 handleTabChange(name) {
-                    if (name === 'document') {
-                        this.gotoTab(
-                            '{% url "admin.smart_advisor.documents.manage" %}'
-                        );
-                    } else if (name === 'failure') {
-                        this.gotoTab(
-                            '{% url "admin.smart_advisor.deploy_failure_tips.manage" %}'
-                        );
-                    }
-                },
-                gotoTab(url) {
-                    if (window.location.pathname !== url) {
-                        window.location.href = url;
-                    }
+                    window.location.href = this.tabPaths[name];
                 },
             },
         });

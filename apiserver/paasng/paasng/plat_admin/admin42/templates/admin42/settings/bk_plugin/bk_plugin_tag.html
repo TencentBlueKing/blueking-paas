@@ -53,9 +53,9 @@
 <script>
 
 const URLRouter = {
-    create: decodeURI("{% url 'admin.configuration.bk_plugins.tags' %}"),
-    list: decodeURI("{% url 'admin.configuration.bk_plugins.tags' %}"),
-    detail: decodeURI("{% url 'admin.configuration.bk_plugins.tags.detail' '${tag_id}' %}"),
+    create: decodeURI("{% url 'admin.settings.bk_plugins.tags' %}"),
+    list: decodeURI("{% url 'admin.settings.bk_plugins.tags' %}"),
+    detail: decodeURI("{% url 'admin.settings.bk_plugins.tags.detail' '${tag_id}' %}"),
 }
 
 document.addEventListener('DOMContentLoaded', () => {

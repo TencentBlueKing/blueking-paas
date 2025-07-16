@@ -36,29 +36,16 @@
             delimiters: ['$[', ']'],
             data: function () {
                 return {
-                    activeTab: window.location.pathname.includes(
-                        'tags'
-                    )
-                        ? 'tags'
-                        : 'distributors',
+                    activeTab: window.location.pathname.includes('tags') ? 'tags' : 'distributors',
+                    tabPaths: {
+                        tags: '{% url "admin.settings.bk_plugins.tags.manage" %}',
+                        distributors: '{% url "admin.settings.bk_plugins.distributors.manage" %}',
+                    },
                 };
             },
             methods: {
                 handleTabChange(name) {
-                    if (name === 'tags') {
-                        this.gotoTab(
-                            '{% url "admin.configuration.bk_plugins.tags.manage" %}'
-                        );
-                    } else if (name === 'distributors') {
-                        this.gotoTab(
-                            '{% url "admin.configuration.bk_plugins.distributors.manage" %}'
-                        );
-                    }
-                },
-                gotoTab(url) {
-                    if (window.location.pathname !== url) {
-                        window.location.href = url;
-                    }
+                    window.location.href = this.tabPaths[name];
                 },
             },
         });

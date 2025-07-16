@@ -76,9 +76,9 @@
 const langChoices = {{ language_choices | to_json }}
 
 const URLRouter = {
-    create: decodeURI("{% url 'admin.configuration.dashboard_tmpl' %}"),
-    list: decodeURI("{% url 'admin.configuration.dashboard_tmpl' %}"),
-    detail: decodeURI("{% url 'admin.configuration.dashboard_tmpl.detail' '${id}' %}"),
+    create: decodeURI("{% url 'admin.settings.dashboard_tmpl' %}"),
+    list: decodeURI("{% url 'admin.settings.dashboard_tmpl' %}"),
+    detail: decodeURI("{% url 'admin.settings.dashboard_tmpl.detail' '${id}' %}"),
 }
 
 document.addEventListener('DOMContentLoaded', () => {

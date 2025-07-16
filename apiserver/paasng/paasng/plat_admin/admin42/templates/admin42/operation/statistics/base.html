@@ -36,29 +36,16 @@
             delimiters: ['$[', ']'],
             data: function () {
                 return {
-                    activeTab: window.location.pathname.includes(
-                        'apps'
-                    )
-                        ? 'apps'
-                        : 'developers',
+                    activeTab: window.location.pathname.includes('apps') ? 'apps' : 'developers',
+                    tabPaths: {
+                        apps: '{% url "admin.operation.statistics.deploy.apps" %}',
+                        developers: '{% url "admin.operation.statistics.deploy.developers" %}',
+                    }
                 };
             },
             methods: {
                 handleTabChange(name) {
-                    if (name === 'apps') {
-                        this.gotoTab(
-                            '{% url "admin.operation.statistics.deploy.apps" %}'
-                        );
-                    } else if (name === 'developers') {
-                        this.gotoTab(
-                            '{% url "admin.operation.statistics.deploy.developers" %}'
-                        );
-                    }
-                },
-                gotoTab(url) {
-                    if (window.location.pathname !== url) {
-                        window.location.href = url;
-                    }
+                    window.location.href = this.tabPaths[name];
                 },
             },
         });

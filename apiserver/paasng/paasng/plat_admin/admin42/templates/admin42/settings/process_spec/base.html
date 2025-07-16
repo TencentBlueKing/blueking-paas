@@ -35,29 +35,16 @@
             delimiters: ['$[', ']'],
             data: function () {
                 return {
-                    activeTab: window.location.pathname.includes(
-                        'applications'
-                    )
-                        ? 'plan_manage'
-                        : 'plan_list',
+                    activeTab: window.location.pathname.includes('applications') ? 'plan_manage' : 'plan_list',
+                    tabPaths: {
+                        plan_manage: '{% url "admin.process_spec_plan.applications.manage" %}',
+                        plan_list: '{% url "admin.process_spec_plan.manage" %}',
+                    },
                 };
             },
             methods: {
                 handleTabChange(name) {
-                    if (name === 'plan_list') {
-                        this.gotoTab(
-                            '{% url "admin.process_spec_plan.manage" %}'
-                        );
-                    } else if (name === 'plan_manage') {
-                        this.gotoTab(
-                            '{% url "admin.process_spec_plan.applications.manage" %}'
-                        );
-                    }
-                },
-                gotoTab(url) {
-                    if (window.location.pathname !== url) {
-                        window.location.href = url;
-                    }
+                    window.location.href = this.tabPaths[name];
                 },
             },
         });

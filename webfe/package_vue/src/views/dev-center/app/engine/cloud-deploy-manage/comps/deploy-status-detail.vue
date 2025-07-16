@@ -28,9 +28,7 @@
                 <span v-if="deploymentInfo.version_info.version_type === 'branch'">
                   <span class="version-text pl10">
                     {{ $t('版本：') }}
-                    {{
-                      deploymentInfo.version_info.revision ? deploymentInfo.version_info.revision.substring(0, 8) : '--'
-                    }}
+                    {{ deploymentInfo.version_info.revision ? deploymentInfo.version_info.revision.substring(0, 8) : '--' }}
                   </span>
                   <span class="branch-text pl30">
                     {{ $t('分支：') }}
@@ -41,22 +39,14 @@
                 <span v-else>
                   <span class="branch-text">
                     {{ $t('镜像Tag：') }}
-                    {{
-                      deploymentInfo.version_info.version_name
-                        ? deploymentInfo.version_info.version_name.substring(0, 16)
-                        : '--'
-                    }}
+                    {{ deploymentInfo.version_info.version_name || '--' }}
                   </span>
                 </span>
               </span>
               <span v-if="deploymentInfo.build_method === 'custom_image' && deploymentInfo.version_info">
                 <span class="branch-text">
                   {{ $t('镜像Tag：') }}
-                  {{
-                    deploymentInfo.version_info.version_name
-                      ? deploymentInfo.version_info.version_name.substring(0, 16)
-                      : '--'
-                  }}
+                  {{ deploymentInfo.version_info.version_name || '--' }}
                 </span>
               </span>
               <span

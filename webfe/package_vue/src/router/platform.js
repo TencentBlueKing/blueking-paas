@@ -49,6 +49,13 @@ const platformAppList = () =>
       window.showDeployTip(error);
     });
 
+const platformSoftDeleteApps = () =>
+  import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/operations')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 const platformAppDetails = () =>
   import(/* webpackChunkName: 'platform-operations' */ '@/views/platform/operations/details')
     .then((module) => module)
@@ -184,6 +191,22 @@ export const platformRouters = [
         name: 'platformAppList',
         meta: {
           title: i18n.t('应用列表'),
+          showRightSlot: {
+            title: i18n.t('管理已删除应用'),
+            routeName: 'platformSoftDeleteApps'
+          },
+        },
+      },
+      {
+        path: 'softdel-apps',
+        name: 'platformSoftDeleteApps',
+        component: platformSoftDeleteApps,
+        meta: {
+          title: i18n.t('管理已删除应用'),
+          supportBack: true,
+          backRoute: {
+            name: 'platformAppList',
+          }
         },
       },
       {

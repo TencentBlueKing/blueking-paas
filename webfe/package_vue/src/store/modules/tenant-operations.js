@@ -34,6 +34,20 @@ export default {
       return http.get(url);
     },
     /**
+     * 应用列表-获取软删除应用列表
+     */
+    getDeletedApplications({}, { queryParams }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/deleted_applications/?${json2Query(queryParams)}`;
+      return http.get(url);
+    },
+    /**
+     * 软删除：彻底删除应用
+     */
+    deletedApplications({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/deleted_applications/${appCode}/`;
+      return http.delete(url);
+    },
+    /**
      * 应用列表-获取各租户应用数量信息
      */
     getTenantAppStatistics() {

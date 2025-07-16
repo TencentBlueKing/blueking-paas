@@ -22,6 +22,17 @@
             <span>{{ $route.meta.subTitle }}：{{ $route.query?.id }}</span>
           </span>
         </template>
+        <template
+          slot="right"
+          v-if="$route.meta.showRightSlot"
+        >
+          <router-link
+            :to="{ name: $route.meta.showRightSlot?.routeName }"
+            class="f14"
+          >
+            {{ $route.meta.showRightSlot?.title }}
+          </router-link>
+        </template>
       </TopBar>
       <div class="content-area">
         <router-view

@@ -321,7 +321,7 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         query_serializer=serializers.AppMCPServerPermissionQueryParamsSLZ,
-        tags=["CloudAPI"],
+        tags=["CloudAPIV2"],
     )
     def list_app_mcp_server_permissions(self, request, *args, **kwargs):
         slz = serializers.AppMCPServerPermissionQueryParamsSLZ(data=request.query_params)
@@ -333,7 +333,7 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         query_serializer=serializers.AppMCPServerPermissionApplyRecordQueryParamsSLZ,
-        tags=["CloudAPI"],
+        tags=["CloudAPIV2"],
     )
     def list_mcp_server_permissions_apply_records(self, request, *args, **kwargs):
         slz = serializers.AppMCPServerPermissionApplyRecordQueryParamsSLZ(data=request.query_params)
@@ -345,7 +345,7 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         request_body=serializers.ApplyMCPResourcePermissionSLZ,
-        tags=["CloudAPI"],
+        tags=["CloudAPIV2"],
     )
     def apply_mcp_server_permissions(self, request, *args, **kwargs):
         slz = serializers.ApplyMCPResourcePermissionSLZ(data=request.data)

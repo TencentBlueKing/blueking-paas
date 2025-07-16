@@ -77,31 +77,30 @@ def _buildpacks_as_build_env(buildpacks: List[Dict]) -> str:
     return ";".join(required_buildpacks)
 
 
-def get_env_vars_selected_addons(env: ModuleEnvironment, selected_services: List[str]) -> Dict[str, str]:
-    # 1. 获取不包含增强服务的环境变量
+def get_env_vars_selected_addons(env: ModuleEnvironment, selected_addons_service_names: List[str]) -> Dict[str, str]:
+    """Get environment variables including selected addon services.
+
+    :param env: The module environment to read from.
+    :param selected_addons_service_names: list of selected addons service.
+    """
     base_vars = UnifiedEnvVarsReader(env).get_kv_map(exclude_sources=[EnvVarSource.BUILTIN_ADDONS])
-
-    # 2. 获取指定增强服务的环境变量
-    addon_vars = list_vars_builtin_addons_custom(env, selected_services)
-
-    # 3. 返回合并结果
+    addon_vars = list_vars_builtin_addons_custom(env, selected_addons_service_names)
     return {**base_vars, **addon_vars}
 
 
-def list_vars_builtin_addons_custom(env: ModuleEnvironment, selected_addons: List[str]) -> Dict[str, str]:
-    """获取指定增强服务的环境变量列表"""
-    # 获取所有增强服务的变量组
-    all_var_groups = ServiceSharingManager(env.module).get_env_variable_groups(
+def list_vars_builtin_addons_custom(
+    env: ModuleEnvironment, selected_addons_service_names: List[str] | None
+) -> Dict[str, str]:
+    """Retrieve environment variables for specified addon services.
+
+    :param env: The module environment to read from.
+    :param selected_addons_service_names: list of selected addons service.
+    """
+    var_groups = ServiceSharingManager(env.module).get_env_variable_groups(
         env, filter_enabled=True
     ) + mixed_service_mgr.get_env_var_groups(env.get_engine_app(), filter_enabled=True)
 
-    addon_vars: Dict[str, str] = {}
-    for group in all_var_groups:
-        svc_name = group.service.name
-        # 跳过未选中的服务
-        if svc_name not in selected_addons:
-            continue
+    if selected_addons_service_names is not None:
+        var_groups = [group for group in var_groups if group.service.name in selected_addons_service_names]
 
-        addon_vars = {**addon_vars, **group.data}
-
-    return addon_vars
+    return {k: v for group in var_groups for k, v in group.data.items()}

@@ -395,9 +395,9 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     ) -> str:
         """将请求路径转换为 bk-apigateway 接口地址"""
         # 请求 bk-apigateway 接口时，约定 `/api/cloudapi/apps/{app_code}/{apigw_url_part}` 为 bk-paas-ng 的 url 前缀，
-        # `/api/v1/{apigw_url_part}` 即为 bk-apigateway-inner 接口地址
+        # `/api/v1/{apigw_url_part}` 即为 bk-apigateway 接口地址
         force_script_name = getattr(settings, "FORCE_SCRIPT_NAME", "") or ""
-        prefix = f"{force_script_name}/api/cloudapi/apps/{app_code}/"
+        prefix = f"{force_script_name}/api/cloudapi-v2/apps/{app_code}/"
         if path.startswith(prefix):
             return f"/api/v2/{path[len(prefix):]}"
 

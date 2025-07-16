@@ -28,7 +28,7 @@ from .http import http_get, http_post
 # bk-apigateway 接口地址
 BK_APIGATEWAY_V2_GATEWAY_STAGE = settings.BK_API_V2_DEFAULT_STAGE_MAPPINGS.get("bk-apigateway", "prod")
 BK_APIGATEWAY_V2_API_URL = (
-    f"{settings.BK_API_URL_TMPL.format(api_name='bk-apigateway').rstrip('/')}/{BK_APIGATEWAY_V2_GATEWAY_STAGE}"
+    f"{settings.BK_API_V2_URL_TMPL.format(api_name='bk-apigateway').rstrip('/')}/{BK_APIGATEWAY_V2_GATEWAY_STAGE}"
 )
 
 

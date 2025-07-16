@@ -69,6 +69,13 @@ urlpatterns = [
         name="api.instances.logs_download",
     ),
     re_path(
+        make_app_pattern(
+            r"/processes/(?P<process_type>[\w-]+)/instances/(?P<process_instance_name>[.\w-]+)/logs/stream/$"
+        ),
+        views.InstanceManageViewSet.as_view({"get": "logs_stream"}),
+        name="api.instances.logs_stream",
+    ),
+    re_path(
         make_app_pattern(r"/instances/(?P<process_instance_name>[.\w-]+)/restart/$"),
         views.InstanceManageViewSet.as_view({"put": "restart"}),
         name="api.instances.restart",

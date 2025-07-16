@@ -17,12 +17,6 @@
 
 from rest_framework import serializers
 
-from paasng.platform.modules.serializers import (
-    AppBuildPackMinimalSLZ,
-    AppSlugBuilderMinimalSLZ,
-    ImageTagOptionsSLZ,
-    RuntimeType,
-)
 from paasng.utils.i18n.serializers import TranslatedCharField
 
 
@@ -46,31 +40,6 @@ class TemplateSLZ(serializers.Serializer):
     tags = serializers.JSONField()
     repo_url = serializers.CharField()
     language = serializers.CharField()
-
-
-class BuildConfigPreviewSLZ(serializers.Serializer):
-    """构建配置预览"""
-
-    image_repository_template = serializers.CharField(help_text="镜像仓库模板", read_only=True)
-    build_method = serializers.ChoiceField(help_text="构建方式", choices=RuntimeType.get_choices(), required=True)
-    tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
-
-    # buildpack build 相关字段
-    bp_stack_name = serializers.CharField(help_text="buildpack 构建方案的基础镜像名", allow_null=True, required=False)
-    buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), allow_null=True, required=False)
-
-    # docker build 相关字段
-    dockerfile_path = serializers.CharField(help_text="Dockerfile 路径", allow_null=True, required=False)
-    docker_build_args = serializers.DictField(
-        child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
-    )
-
-
-class TemplateDetailSLZ(serializers.Serializer):
-    """模板详情"""
-
-    slugbuilder = AppSlugBuilderMinimalSLZ(help_text="基础镜像详细信息")
-    build_config = BuildConfigPreviewSLZ()
 
 
 class TemplateRenderOutputSLZ(serializers.Serializer):

@@ -31,11 +31,12 @@ from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from past.builtins import basestring
 from rest_framework import fields, serializers
-from rest_framework.fields import flatten_choices_dict, to_choices_dict
+from rest_framework.fields import empty, flatten_choices_dict, to_choices_dict
 
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.datetime import convert_timestamp_to_str
+from paasng.utils.file import path_may_escape
 from paasng.utils.sanitizer import clean_html
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
@@ -287,3 +288,65 @@ class IntegerOrCharField(serializers.CharField):
             return int(val)
         except ValueError:
             return val
+
+
+class StringArrayField(fields.CharField):
+    """String representation of an array field"""
+
+    default_error_messages = {
+        "max_items": _("至多包含 {max_items} 个对象."),
+        "min_items": _("至少包含 {min_items} 个对象."),
+    }
+
+    def __init__(self, min_items: int | None = None, max_items: int | None = None, delimiter: str = ",", **kwargs):
+        self.min_items = min_items
+        self.max_items = max_items
+        self.delimiter = delimiter
+
+        super().__init__(**kwargs)
+
+    def run_validation(self, data=empty):
+        data = super().run_validation(data)
+
+        item_cnt = len(data)
+        if self.min_items is not None and item_cnt < self.min_items:
+            self.fail("min_items", min_items=self.min_items)
+
+        if self.max_items is not None and item_cnt > self.max_items:
+            self.fail("max_items", max_items=self.max_items)
+
+        return data
+
+    def to_internal_value(self, data) -> List[str]:
+        # convert string to list
+        data = super().to_internal_value(data)
+        return [x.strip() for x in data.split(self.delimiter) if x]
+
+
+class SafePathField(serializers.RegexField):
+    """安全路径字段，只允许包含字母、数字、下划线、横线、点、斜杠，不允许绝对路径 & 路径逃逸（../）"""
+
+    regex = re.compile(r"^[a-zA-Z0-9_\-./]+$")
+    default_error_messages = {
+        "invalid": _("路径 {path} 不合法"),
+        "escape_risk": _("路径 {path} 存在逃逸风险"),
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(regex=self.regex, **kwargs)
+
+    def run_validation(self, data=empty):
+        data = super().run_validation(data)
+
+        # 允许空字符串 / None
+        if self.allow_blank and data == "":
+            return data
+        if self.allow_null and data is None:
+            return data
+
+        # 检查是否使用 .. 来访问上层目录或者使用绝对路径
+        if ".." in data or data.startswith("/"):
+            self.fail("escape_risk", path=data)
+        if path_may_escape(data):
+            self.fail("escape_risk", path=data)
+        return data

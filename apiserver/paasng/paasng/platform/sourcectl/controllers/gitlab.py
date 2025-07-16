@@ -50,7 +50,7 @@ def error_converter(func):
             return func(self, *args, **kwargs)
         except GitlabGetError as e:
             if e.response_code == 404:
-                raise exceptions.DoesNotExistsOnGitServer(e.error_message)
+                raise exceptions.RemoteResourceNotFoundError(e.error_message)
             raise exceptions.GitLabCommonError(e.error_message)
         except GitlabAuthenticationError as e:
             raise exceptions.AccessTokenForbidden from e
@@ -100,7 +100,7 @@ class GitlabRepoController(BaseGitRepoController):
     def touch(self) -> bool:
         try:
             error_converter(self.api_client.get_project_info)(self.project)
-        except (exceptions.DoesNotExistsOnGitServer, exceptions.AccessTokenForbidden) as e:
+        except (exceptions.RemoteResourceNotFoundError, exceptions.AccessTokenForbidden) as e:
             raise exceptions.AccessTokenForbidden(project=self.project) from e
         else:
             return True

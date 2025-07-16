@@ -15,7 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import shutil
+import os
+import zipfile
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, Union
@@ -57,33 +58,72 @@ def ensure_parent_exists(path: Path):
 
 
 @contextmanager
-def dump_contents_to_fs(contents: Dict[str, Union[str, bytes]]):
+def dump_contents_to_fs(
+    contents: Dict[str, Union[str, bytes]] | None = None,
+    symbolic_links: Dict[str, str] | None = None,
+):
     """a helper to dumps contents fo file-system
 
     :param contents Dict[str, str]: a dict, the key is filename, and value is the content.
+    :param symbolic_links: a dict, format: {link_name: target_file}.
     """
     with generate_temp_dir() as source_dir:
-        for file_name, content in contents.items():
-            target = source_dir / file_name
-            ensure_parent_exists(target)
+        if contents:
+            for file_name, content in contents.items():
+                # "[]" means to create an empty directory
+                if content == []:
+                    (source_dir / file_name).mkdir(parents=True, exist_ok=True)
+                    continue
 
-            if isinstance(content, bytes):
-                target.write_bytes(content)
-            else:
-                target.write_text(content)
+                target = source_dir / file_name
+                ensure_parent_exists(target)
+
+                if isinstance(content, bytes):
+                    target.write_bytes(content)
+                else:
+                    target.write_text(content)
+
+        if symbolic_links:
+            for link_name, target_file in symbolic_links.items():
+                target = source_dir / link_name
+                ensure_parent_exists(target)
+                target.symlink_to(target_file, target_is_directory=Path(target_file).is_dir())
         yield source_dir
 
 
-def gen_tar(target_path, contents: Dict[str, Union[str, bytes]]):
-    with dump_contents_to_fs(contents) as source_dir:
+def gen_tar(
+    target_path,
+    contents: Dict[str, Union[str, bytes]] | None = None,
+    symbolic_links: Dict[str, str] | None = None,
+):
+    with dump_contents_to_fs(contents=contents, symbolic_links=symbolic_links) as source_dir:
         compress_directory(source_dir, target_path)
 
 
-def gen_zip(target_path, contents: Dict[str, Union[str, bytes]]):
-    with dump_contents_to_fs(contents) as source_dir:
-        filename = shutil.make_archive(target_path, format="zip", root_dir=source_dir)
-        if filename != target_path:
-            shutil.move(filename, target_path)
+def gen_zip(
+    target_path,
+    contents: Dict[str, Union[str, bytes]] | None = None,
+    symbolic_links: Dict[str, str] | None = None,
+):
+    with (
+        dump_contents_to_fs(contents=contents, symbolic_links=symbolic_links) as source_dir,
+        zipfile.ZipFile(target_path, "w", zipfile.ZIP_DEFLATED) as zip_file,
+    ):
+        # NOTE: Below code is written by Claude, use with caution
+        for root, dirnames, files in os.walk(source_dir):
+            for name in dirnames + files:
+                file_path = Path(root) / name
+                arcname = file_path.relative_to(source_dir)
+                # Add symlinks
+                if file_path.is_symlink():
+                    # Create a symbolic link entry in the zip
+                    info = zipfile.ZipInfo(str(arcname))
+                    info.create_system = 3  # Unix
+                    info.external_attr = 0o120755 << 16  # symlink file type + permissions
+                    zip_file.writestr(info, str(file_path.readlink()))
+                # Add files and directories
+                else:
+                    zip_file.write(file_path, arcname)
 
 
 # This version of app description has been deprecated and is not supported anymore

@@ -25,16 +25,24 @@ if TYPE_CHECKING:
     from .models import GitProject  # noqa: F401
 
 
-class DoesNotExistsOnServer(Exception):
-    pass
+class RemoteResourceNotFoundError(Exception):
+    """A base common exception for remote resource not found errors."""
 
 
-class DoesNotExistsOnSvnServer(DoesNotExistsOnServer):
-    pass
+class ReadFileNotFoundError(Exception):
+    """File not found when reading file from remote repository"""
 
 
-class DoesNotExistsOnGitServer(DoesNotExistsOnServer):
-    pass
+class ReadLinkFileOutsideDirectoryError(Exception):
+    """When trying to read a link file that link to outside the directory of the repository."""
+
+
+class BasePackageError(Exception):
+    """The base error class for package clients."""
+
+
+class PackageInvalidFileFormatError(BasePackageError):
+    """The package file is not in a valid format, it might be corrupt."""
 
 
 class GitLabCommonError(Exception):

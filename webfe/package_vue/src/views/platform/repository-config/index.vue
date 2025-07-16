@@ -74,17 +74,29 @@
     <!-- 代码库配置 -->
     <RepositorySideslider
       :show.sync="repositorySideConfig.isShow"
-      :data="repositorySideConfig.row"
+      :data="curRepositoryDetail"
       :type="repositorySideConfig.type"
       :id="repositorySideConfig.id"
       @refresh="getSourceTypeSpec"
     />
 
     <!-- 详情 -->
-    <DetailSideslider
+    <DetailSide
       :show.sync="detailSideConfig.isShow"
-      :id="detailSideConfig.id"
-    />
+      :title="$t('代码库配置')"
+      :panels="panels"
+      :width="640"
+    >
+      <div
+        v-bkloading="{ isLoading: detailSideConfig.loading, zIndex: 10 }"
+        slot-scope="{ active }"
+      >
+        <RepositoryDetail
+          :data="curRepositoryDetail"
+          :tab-active="active"
+        />
+      </div>
+    </DetailSide>
 
     <!-- 删除代码仓库配置 -->
     <DeleteDialog
@@ -114,15 +126,17 @@
 
 <script>
 import RepositorySideslider from './repository-sideslider.vue';
-import DetailSideslider from './detail-sideslider.vue';
 import DeleteDialog from '@/components/delete-dialog';
+import DetailSide from '../components/detail-side';
+import RepositoryDetail from './components/repository-detail.vue';
 
 export default {
   name: 'RepositoryConfig',
   components: {
     RepositorySideslider,
-    DetailSideslider,
     DeleteDialog,
+    DetailSide,
+    RepositoryDetail,
   },
   data() {
     return {
@@ -150,18 +164,23 @@ export default {
       repositorySideConfig: {
         isShow: false,
         type: 'add',
-        row: {},
         id: -1,
       },
       detailSideConfig: {
         isShow: false,
-        id: -1,
+        loading: false,
       },
       deleteDialogConfig: {
         visible: false,
         loading: false,
         row: {},
       },
+      panels: [
+        { name: 'baseInfo', label: this.$t('基本信息') },
+        { name: 'oauth', label: this.$t('OAuth 授权信息') },
+        { name: 'display', label: this.$t('展示信息') },
+      ],
+      curRepositoryDetail: {},
     };
   },
   created() {
@@ -202,13 +221,16 @@ export default {
     // 获取代码库详情
     async getRepositoryDetail(id) {
       try {
+        this.detailSideConfig.loading = true;
         this.repositorySideConfig.id = id;
         const ret = await this.$store.dispatch('tenantConfig/getRepositoryDetail', {
           id,
         });
-        this.repositorySideConfig.row = ret;
+        this.curRepositoryDetail = ret;
       } catch (e) {
         this.catchErrorHandler(e);
+      } finally {
+        this.detailSideConfig.loading = false;
       }
     },
     // 删除代码库配置
@@ -250,7 +272,7 @@ export default {
     // 查看详情
     handleShowDetail(row) {
       this.detailSideConfig.isShow = true;
-      this.detailSideConfig.id = row.id;
+      this.getRepositoryDetail(row.id);
     },
   },
 };

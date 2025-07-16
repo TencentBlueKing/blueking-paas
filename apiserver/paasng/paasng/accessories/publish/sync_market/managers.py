@@ -118,9 +118,7 @@ class AppManger(AppAdaptor):
         if code:
             qs = qs.filter(self.model.code != code)
         app = qs.filter_by(name=name).scalar()
-        if app:
-            return False
-        return True
+        return not app
 
     def delete_by_code(self, code: str):
         """根据 code 从 DB 中删除应用"""

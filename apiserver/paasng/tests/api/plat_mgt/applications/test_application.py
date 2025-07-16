@@ -27,7 +27,7 @@ from paas_wl.bk_app.applications.models.app import WlApp
 from paas_wl.infras.cluster.constants import ClusterType
 from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
 from paasng.accessories.publish.market.constant import AppType
-from paasng.accessories.publish.market.models import Product
+from paasng.accessories.publish.market.models import ApplicationExtraInfo, Product, Tag
 from paasng.accessories.publish.sync_market.handlers import register_app_core_data
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
@@ -293,6 +293,23 @@ class TestApplicationDetailView:
             product = Product.objects.get(code=app_with_market_product.code)
             assert product.name_en == app_with_market_product.name_en
 
+    def test_update_app_category(self, bk_app, plat_mgt_api_client):
+        """测试更新应用分类"""
+
+        # 创建一个分类用于测试
+        category_name = "test_category"
+        tag = Tag.objects.create(name=category_name)
+        category_id = tag.pk
+
+        url = reverse("plat_mgt.applications.update_app_category", kwargs={"app_code": bk_app.code})
+        data = {"category": category_id}
+        rsp = plat_mgt_api_client.post(url, data=json.dumps(data), content_type="application/json")
+        assert rsp.status_code == 204
+
+        # 验证应用分类是否更新成功
+        extra_info = ApplicationExtraInfo.objects.get(application=bk_app)
+        assert extra_info.tag.name == category_name
+
     def test_update_cluster(self, bk_app, plat_mgt_api_client, clusters):
         """测试更新应用集群"""
 
@@ -418,16 +435,11 @@ class TestDeletedApplicationView:
 
         with (
             mock.patch(
-                "paasng.accessories.publish.sync_market.managers.AppManger.delete_by_code"
-            ) as mock_delete_by_code,
+                "paasng.plat_mgt.applications.views.application.cascade_delete_legacy_app"
+            ) as mock_cascade_delete_legacy_app,
             mock.patch("paasng.plat_mgt.applications.views.application.delete_builtin_user_groups") as mock_del_groups,
             mock.patch("paasng.plat_mgt.applications.views.application.delete_grade_manager") as mock_del_manager,
-            mock.patch("paasng.core.core.storages.sqlalchemy.console_db.session_scope") as mock_session_scope,
         ):
-            mock_session = mock.MagicMock()
-            mock_session_scope.return_value = mock.MagicMock()
-            mock_session_scope.return_value.__enter__.return_value = mock_session
-
             rsp = plat_mgt_api_client.delete(url)
 
             assert rsp.status_code == 204
@@ -442,9 +454,6 @@ class TestDeletedApplicationView:
             assert not SMartAppExtraInfo.objects.filter(id=smart_info.id).exists()
             assert not Module.objects.filter(id=module.id).exists()
 
-            mock_session_scope.assert_called_once()
-            # 验证 PaaS 2.0 中删除操作调用
-            mock_delete_by_code.assert_called_once()
-
             mock_del_groups.assert_called_once_with(app.code)
             mock_del_manager.assert_called_once_with(app.code)
+            mock_cascade_delete_legacy_app.assert_called_once_with("code", app.code, False)

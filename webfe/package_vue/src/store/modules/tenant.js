@@ -20,14 +20,17 @@
 * 多租户
 */
 import http from '@/api';
+import { validateClusterName, createSafeObject, safeSet, safeHas, safeGet } from '@/utils/safe-object';
 
 export default {
   namespaced: true,
   state: {
     availableClusters: {},
     curTenantData: {},
-    clustersStatus: {},
+    clustersStatus: Object.create(null),
+    clustersStatusCache: Object.create(null),
     detailActiveName: '',
+    detailTabActive: '',
   },
   mutations: {
     updateAvailableClusters(state, data) {
@@ -37,16 +40,44 @@ export default {
       state.curTenantData = data;
     },
     updateClustersStatus(state, { clusterName, status }) {
-      state.clustersStatus = {
-        ...state.clustersStatus,
-        [clusterName]: status,
-      };
+      // 使用严格的 clusterName 验证
+      if (!validateClusterName(clusterName)) {
+        console.warn(`[Security] Invalid clusterName blocked in updateClustersStatus: ${clusterName}`);
+        return;
+      }
+
+      // 确保 clustersStatus 是安全的无原型对象
+      if (Object.getPrototypeOf(state.clustersStatus) !== null) {
+        state.clustersStatus = createSafeObject(state.clustersStatus);
+      }
+
+      // 使用安全的属性设置
+      if (!safeSet(state.clustersStatus, clusterName, status)) {
+        console.error(`[Security] Failed to set cluster status for: ${clusterName}`);
+        return;
+      }
     },
     updateDetailActiveName(state, data) {
       state.detailActiveName = data;
     },
+    updatedDtailTabActive(state, data) {
+      state.detailTabActive = data;
+    },
   },
   actions: {
+    /**
+     * 多租户语言环境切换
+     */
+    tenantLocaleSwitch({}, { tenantId, data }) {
+      const config = {
+        headers: {
+          'X-Bk-Tenant-Id': tenantId,
+        },
+      };
+      const apiUrl = window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web');
+      const url = `${apiUrl}/prod/api/v3/open-web/tenant/current-user/language/`;
+      return http.put(url, data, config);
+    },
     /**
      * 获取租户下的人员信息
      */
@@ -54,7 +85,7 @@ export default {
       const config = {
         headers: {
           'X-Bk-Tenant-Id': tenantId,
-        }
+        },
       };
       const apiUrl = window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod');
       const url = `${apiUrl}/api/v3/open-web/tenant/users/-/search/?keyword=${keyword}`;
@@ -126,9 +157,20 @@ export default {
     /**
      * 获取集群状态
      */
-    getClustersStatus({}, { clusterName }) {
+    getClustersStatus({ state }, { clusterName }) {
+      // 验证 clusterName 安全性
+      if (!validateClusterName(clusterName)) {
+        console.warn(`[Security] Invalid clusterName blocked in getClustersStatus: ${clusterName}`);
+        return Promise.reject(new Error('Invalid cluster name'));
+      }
+
+      // 安全地检查缓存
+      if (safeHas(state.clustersStatusCache, clusterName)) {
+        return Promise.resolve(safeGet(state.clustersStatusCache, clusterName));
+      }
+
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/status/`;
-      return http.get(url);
+      return http.get(url, {}, { cancelWhenRouteChange: true, fromCache: true });
     },
     /**
      * 同步节点
@@ -136,6 +178,20 @@ export default {
     syncNodes({}, { clusterName }) {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/operations/sync_nodes/`;
       return http.post(url);
+    },
+    /**
+     * 获取节点信息
+     */
+    getNodesState({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/nodes_state/`;
+      return http.get(url);
+    },
+    /**
+     * 获取节点同步记录
+     */
+    getNodesSyncRecords({}, { clusterName }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/nodes_sync_records/`;
+      return http.get(url);
     },
     /**
      * 删除集群
@@ -161,7 +217,7 @@ export default {
     /**
      * 获取集群组件详情
      */
-     getComponentDetail({}, { clusterName, componentName }) {
+    getComponentDetail({}, { clusterName, componentName }) {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/clusters/${clusterName}/components/${componentName}/`;
       return http.get(url);
     },
@@ -298,7 +354,7 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/infras/services/${serviceId}/tenants/${tenantId}/plans/${planId}/`;
       return http.delete(url);
     },
-     /**
+    /**
      * 获取租户下的服务-方案
      */
     getServicePlansUnderTenant({}, { tenantId, serviceId }) {

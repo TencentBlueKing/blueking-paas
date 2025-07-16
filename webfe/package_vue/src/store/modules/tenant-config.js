@@ -101,5 +101,47 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/sourcectl/source_type_spec/${id}/`;
       return http.delete(url);
     },
+    /**
+     * 模板配置-获取模板配置列表
+     */
+    getTemplates() {
+      const url = `${BACKEND_URL}/api/plat_mgt/templates/`;
+      return http.get(url);
+    },
+    /**
+     * 模板配置-获取模板配置元数据
+     */
+    getTemplateMetadata() {
+      const url = `${BACKEND_URL}/api/plat_mgt/templates/metadata/`;
+      return http.get(url);
+    },
+    /**
+     * 模板配置-获取模板详情
+     */
+    getTemplateDetail({}, { templateId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/templates/${templateId}/`;
+      return http.get(url);
+    },
+    /**
+     * 模板配置-创建模板配置
+     */
+    createTemplate({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/templates/`;
+      return http.post(url, data);
+    },
+    /**
+     * 模板配置-更新模板配置
+     */
+    updateTemplate({}, { templateId, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/templates/${templateId}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 代码库配置-删除模板配置
+     */
+    deleteTemplateConfig({}, { templateId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/templates/${templateId}/`;
+      return http.delete(url);
+    },
   },
 };

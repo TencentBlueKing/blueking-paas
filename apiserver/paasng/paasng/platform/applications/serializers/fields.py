@@ -22,7 +22,7 @@ from rest_framework import serializers
 
 from paasng.core.tenant.user import get_tenant
 from paasng.platform.applications.models import Application
-from paasng.utils.serializers import NickNameField
+from paasng.utils.serializers import NickNameField, SafePathField
 from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedWordValidator
 
 from .validators import AppIDUniqueValidator, AppNameUniqueValidator
@@ -90,3 +90,31 @@ class AppNameField(NickNameField):
         preset_kwargs = dict(max_length=20, help_text="应用名称", validators=[AppNameUniqueValidator()])
         preset_kwargs.update(kwargs)
         super().__init__(*args, **preset_kwargs)
+
+
+class SourceDirField(SafePathField):
+    """Field for validating source directory"""
+
+    default_error_messages = {
+        "invalid": _("构建目录 {path} 不合法"),
+        "escape_risk": _("构建目录 {path} 存在逃逸风险"),
+    }
+
+    def __init__(self, **kwargs):
+        preset_kwargs = dict(max_length=255, default="", allow_blank=True)
+        preset_kwargs.update(kwargs)
+        super().__init__(**preset_kwargs)
+
+
+class DockerfilePathField(SafePathField):
+    """Field for validating Dockerfile path"""
+
+    default_error_messages = {
+        "invalid": _("Dockerfile 目录 {path} 不合法"),
+        "escape_risk": _("Dockerfile 目录 {path} 存在逃逸风险"),
+    }
+
+    def __init__(self, **kwargs):
+        preset_kwargs = dict(max_length=255, allow_blank=True, allow_null=True)
+        preset_kwargs.update(kwargs)
+        super().__init__(**preset_kwargs)

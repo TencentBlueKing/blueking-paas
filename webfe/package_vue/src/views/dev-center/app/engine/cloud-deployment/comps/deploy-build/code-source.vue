@@ -440,9 +440,6 @@ export default {
           this.changeSourceControl(key);
         }
       }
-      this.$nextTick(() => {
-        this.$emit('close-content-loader');
-      });
     },
 
     // 获取代码源列表

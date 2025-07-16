@@ -17,7 +17,6 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -31,23 +30,6 @@ ENVIRONMENT_ID_FOR_GLOBAL = -1
 ENVIRONMENT_NAME_FOR_GLOBAL = ConfigVarEnvName.GLOBAL.value
 # 需要设置 environment(外键) 而非 environment_id, model_to_dict 只认 environment
 CONFIG_VAR_INPUT_FIELDS = ["is_global", "environment", "key", "value", "description"]
-
-
-def get_config_vars(module: "Module", env_name: str) -> Dict[str, str]:
-    """Get ConfigVars of module as dict, config vars priority: builtin/not global/global
-
-    :param str env_name: environment name, such as 'prod'
-    :returns: Dict of config vars
-    """
-    try:
-        env_id = module.envs.get(environment=env_name).pk
-    except ObjectDoesNotExist:
-        raise ValueError("Invalid env_name given: %s" % env_name)
-
-    config_vars = ConfigVar.objects.filter(
-        module=module, environment_id__in=(ENVIRONMENT_ID_FOR_GLOBAL, env_id)
-    ).order_by("environment_id")
-    return {obj.key: obj.value for obj in config_vars}
 
 
 def get_custom_builtin_config_vars(config_vars_prefix: str) -> Dict[str, str]:
@@ -81,6 +63,7 @@ class ConfigVar(TimestampedModel):
     key = models.CharField(max_length=128, null=False)
     value = models.TextField(null=False)
     description = models.CharField(max_length=200, null=True)
+    # is_builtin 表示该环境变量是否为“系统内置”，目前仅当旧应用从 v2 迁移时，写入一些内置环境变量数据会将该字段设为 True
     is_builtin = models.BooleanField(default=False)
 
     tenant_id = tenant_id_field_factory()
@@ -142,6 +125,8 @@ def add_prefix_to_key(items: dict, prefix: str) -> Dict[str, Any]:
 
 @dataclass
 class BuiltInEnvVarDetail:
+    """A detailed builtin env variable object."""
+
     key: str
     value: str
     description: Optional[str]

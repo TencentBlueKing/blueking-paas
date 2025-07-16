@@ -23,13 +23,11 @@ from . import views
 from .views import (
     accountmgr,
     applications,
-    audit,
     bk_plugins,
     dashboard_templates,
     runtimes,
     services,
     smart_advisor,
-    templates,
 )
 from .views.engine import (
     certs,
@@ -390,22 +388,6 @@ urlpatterns = [
 
 # 应用配置管理，可以提供给管理应用、插件模板的同学使用
 urlpatterns += [
-    # 应用配置管理-模板配置
-    re_path(
-        r"^configuration/tmpls/manage/$",
-        templates.TemplateManageView.as_view(),
-        name="admin.configuration.tmpl.manage",
-    ),
-    re_path(
-        r"^configuration/tmpls/$",
-        templates.TemplateViewSet.as_view(dict(post="create", get="list")),
-        name="admin.configuration.tmpl",
-    ),
-    re_path(
-        r"^configuration/tmpls/(?P<pk>[^/]+)/",
-        templates.TemplateViewSet.as_view(dict(delete="destroy", put="update")),
-        name="admin.configuration.tmpl.detail",
-    ),
     # 应用配置管理-插件分类配置
     re_path(
         r"^configuration/bk_plugins/tags/manage/$",
@@ -453,32 +435,5 @@ urlpatterns += [
         r"^configuration/dashboard_template/(?P<pk>[^/]+)/",
         dashboard_templates.DashboardTemplateViewSet.as_view(dict(delete="destroy", put="update")),
         name="admin.configuration.dashboard_tmpl.detail",
-    ),
-]
-
-
-# 操作审计
-urlpatterns += [
-    # 操作审计
-    re_path(
-        r"^audit/$",
-        audit.AdminOperationAuditManageView.as_view(),
-        name="admin.audit.index",
-    ),
-    re_path(
-        r"^audit/application$",
-        audit.AdminAppOperationAuditManageView.as_view(),
-        name="admin.audit.app",
-    ),
-    # 操作审计相关 API
-    re_path(
-        r"^api/audit/operations/(?P<pk>[^/]+)/",
-        audit.AdminOperationAuditViewSet.as_view(),
-        name="admin.audit.detail",
-    ),
-    re_path(
-        r"^api/audit/application/operations/(?P<pk>[^/]+)/",
-        audit.AdminAppOperationAuditViewSet.as_view(),
-        name="admin.audit.app.detail",
     ),
 ]

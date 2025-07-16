@@ -151,7 +151,7 @@ class RepoController(Protocol):
     def read_file(self, file_path: str, version_info: VersionInfo) -> bytes:
         """从当前仓库指定版本(version_info)的代码中读取指定文件(file_path) 的内容
 
-        :raises: exceptions.DoesNotExistsOnServer
+        :raises ReadFileNotFoundError: when file_path does not exist in the repository
         """
 
 

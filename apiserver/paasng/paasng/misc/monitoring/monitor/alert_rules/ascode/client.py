@@ -20,7 +20,6 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import jinja2
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
@@ -31,6 +30,7 @@ from paasng.infras.bkmonitorv3.shim import get_or_create_bk_monitor_space
 from paasng.misc.monitoring.monitor.alert_rules.config import RuleConfig
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.tenant import get_tenant_id_for_app
+from paasng.utils import safe_jinja2
 
 from .exceptions import AsCodeAPIError
 
@@ -52,8 +52,7 @@ class AsCodeClient:
     def apply_notice_group(self, receivers: List[str]):
         """下发通知组"""
         tpl_dir = Path(os.path.dirname(__file__))
-        loader = jinja2.FileSystemLoader([tpl_dir / "notice_tpl"])
-        j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
+        j2_env = safe_jinja2.FileEnvironment([tpl_dir / "notice_tpl"], trim_blocks=True)
         configs = {
             "notice/default_notice.yaml": j2_env.get_template("notice.yaml.j2").render(
                 notice_group_name=self.default_notice_group_name, receivers=receivers
@@ -102,8 +101,7 @@ class AsCodeClient:
           └── high_mem_usage.yaml
         """
         tpl_dir = Path(os.path.dirname(__file__))
-        loader = jinja2.FileSystemLoader([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl"])
-        j2_env = jinja2.Environment(loader=loader, trim_blocks=True)
+        j2_env = safe_jinja2.FileEnvironment([tpl_dir / "rules_tpl", tpl_dir / "notice_tpl"], trim_blocks=True)
 
         configs = {}
         # 告警通知内容模版

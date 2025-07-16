@@ -66,7 +66,7 @@ export default {
   },
   computed: {
     ...mapState('tenant', {
-      clustersStatus: (state) => state.clustersStatus,
+      clustersStatus: state => state.clustersStatus,
     }),
     isExpandDetails() {
       return this.$route.query?.type === 'detail';
@@ -108,8 +108,11 @@ export default {
       if (Object.keys(this.clustersStatus)?.length > 0) {
         return;
       }
-      const statusPromises = clusters.map((cluster) => this.getClustersStatus(cluster.name));
-      Promise.all(statusPromises);
+      try {
+        await Promise.allSettled(clusters.map(cluster => this.getClustersStatus(cluster.name).catch(() => null)));
+      } catch (e) {
+        console.error(e);
+      }
     },
     // 获取集群状态
     async getClustersStatus(clusterName) {
@@ -137,6 +140,7 @@ export default {
             hasIcon: true,
           },
         });
+        throw e;
       }
     },
   },

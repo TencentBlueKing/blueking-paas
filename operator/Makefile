@@ -104,9 +104,21 @@ update-helm-chart: manifests ## 根据 kustomize 渲染出的 manifest，更新 
 
 ##@ 构建命令
 
+gitVersion ?= $(shell git describe --tags --always --dirty)
+gitCommit ?= $(shell git rev-parse HEAD)
+gitTreeState ?= $(if $(shell git status --porcelain),"dirty","clean")
+goVersion ?= $(shell go version | awk '{print $$3}')
+buildTime ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+ldflags="-X main.gitVersion=$(gitVersion) \
+	-X main.gitCommit=$(gitCommit) \
+	-X main.gitTreeState=$(gitTreeState) \
+	-X main.goVersion=$(goVersion) \
+	-X main.buildTime=$(buildTime)"
+
 .PHONY: build
 build: generate fmt vet ## 构建 Manager 二进制
-	go build -o bin/manager main.go
+	go build -ldflags $(ldflags) -o bin/manager main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## 本地运行 Controller（现阶段需要添加环境变量 ENABLE_WEBHOOKS=false）
@@ -114,7 +126,7 @@ run: manifests generate fmt vet ## 本地运行 Controller（现阶段需要添�
 
 .PHONY: docker-build
 docker-build: ## 构建 Manager 镜像，需指定 IMG 参数
-	docker build -t ${IMG} --no-cache .
+	docker build --build-arg LDFLAGS=$(ldflags) -t ${IMG} --no-cache .
 
 .PHONY: docker-push
 docker-push: ## 推送 Manager 镜像，需指定 IMG 参数

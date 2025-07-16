@@ -17,15 +17,16 @@
 
 import logging
 
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paasng.platform.applications.serializers.fields import SourceDirField
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import RepositoryInstance, SvnAccount, SvnRepository
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.sourcectl.type_specs import BkSvnSourceTypeSpec
 from paasng.utils.serializers import SourceControlField, UserNameField, VerificationCodeField
+from paasng.utils.validators import validate_image_repo, validate_repo_url
 
 logger = logging.getLogger(__name__)
 
@@ -151,15 +152,23 @@ class RepoBackendModifySLZ(serializers.Serializer):
 
     source_repo_url = serializers.CharField()
     source_repo_auth_info = serializers.JSONField(required=False, default={})
-    source_dir = serializers.CharField(
-        help_text="Procfile 所在目录, 如果是根目录可不填.", default="", allow_blank=True
-    )
+    source_dir = SourceDirField(help_text="Procfile 所在目录, 如果是根目录可不填.")
 
-    def validate_source_dir(self, value: str):
-        if value.startswith("/") or ".." in value:
-            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
+    def validate_source_repo_url(self, value: str) -> str:
+        if not value:
+            return value
 
-        return value
+        is_image_repo = self.context["is_image_repo"]
+
+        try:
+            if is_image_repo:
+                validate_image_repo(value)
+            else:
+                validate_repo_url(value)
+        except ValueError as e:
+            raise ValidationError(str(e))
+        else:
+            return value
 
 
 ##########################

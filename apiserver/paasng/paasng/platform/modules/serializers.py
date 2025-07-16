@@ -27,6 +27,7 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.infras.cluster.serializers import ClusterSLZ
 from paas_wl.infras.cluster.shim import EnvClusterService
+from paasng.platform.applications.serializers.fields import DockerfilePathField, SourceDirField
 from paasng.platform.bkapp_model.serializers import ModuleDeployHookSLZ as CNativeModuleDeployHookSLZ
 from paasng.platform.bkapp_model.serializers import ModuleProcessSpecSLZ
 from paasng.platform.engine.constants import RuntimeType
@@ -43,7 +44,14 @@ from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.serializers import SourceControlField, UserNameField
-from paasng.utils.validators import RE_APP_CODE, DnsSafeNameValidator, ReservedWordValidator, validate_procfile
+from paasng.utils.validators import (
+    RE_APP_CODE,
+    DnsSafeNameValidator,
+    ReservedWordValidator,
+    validate_image_repo,
+    validate_procfile,
+    validate_repo_url,
+)
 
 
 def validate_build_method(build_method: RuntimeType, source_origin: SourceOrigin):
@@ -159,7 +167,7 @@ class CreateModuleSLZ(serializers.Serializer):
     source_control_type = SourceControlField(allow_blank=True, required=False, default=None)
     source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
-    source_dir = serializers.CharField(required=False, default="", allow_blank=True)
+    source_dir = SourceDirField(help_text=_("构建目录"))
 
     def validate_name(self, name):
         if Module.objects.filter(application=self.context["application"], name=name).exists():
@@ -171,12 +179,6 @@ class CreateModuleSLZ(serializers.Serializer):
         if not Template.objects.filter(name=tmpl_name, type=TemplateType.NORMAL).exists():
             raise ValidationError(_("模板 {} 不可用").format(tmpl_name))
         return tmpl_name
-
-    def validate_source_dir(self, value: str):
-        if value.startswith("/") or ".." in value:
-            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
-
-        return value
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
@@ -265,7 +267,7 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     source_control_type = SourceControlField(allow_blank=True, required=False, default=None)
     source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
     source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
-    source_dir = serializers.CharField(required=False, default="", allow_blank=True)
+    source_dir = SourceDirField(help_text="源码目录")
     auto_create_repo = serializers.BooleanField(required=False, default=False, help_text="是否由平台新建代码仓库")
     write_template_to_repo = serializers.BooleanField(
         required=False, default=False, help_text="是否将模板代码初始化到代码仓库中"
@@ -286,23 +288,32 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
         return tmpl_name
 
     def validate(self, attrs):
+        source_repo_url = attrs.get("source_repo_url")
+
         # 由平台新建代码仓库，则源码仓库类型必填，且需要检查是否支持创建仓库
         if attrs["auto_create_repo"]:
             if not attrs.get("source_control_type"):
                 raise ValidationError(_("新建代码仓库时，源码仓库类型不能为空"))
             # 由平台新建代码仓库，则用户填写的源码仓库地址无效
-            if attrs.get("source_repo_url"):
+            if source_repo_url:
                 raise ValidationError(_("新建代码仓库时，源码仓库地址无效"))
+
+        if source_repo_url:
+            self._validate_source_repo_url(source_repo_url, attrs["source_origin"])
 
         if attrs["write_template_to_repo"] and (not attrs.get("source_init_template")):
             raise ValidationError(_("将模板代码初始化到代码仓库中时，必须选择应用模板"))
         return attrs
 
-    def validate_source_dir(self, value: str):
-        if value.startswith("/") or ".." in value:
-            raise ValidationError(_("构建目录不合法，不能以 '/' 开头，不能包含 '..'"))
-
-        return value
+    @staticmethod
+    def _validate_source_repo_url(source_repo_url, source_origin):
+        try:
+            if source_origin == SourceOrigin.CNATIVE_IMAGE:
+                validate_image_repo(source_repo_url)
+            else:
+                validate_repo_url(source_repo_url)
+        except ValueError as e:
+            raise ValidationError({"source_repo_url": str(e)})
 
 
 class ModuleBuildConfigSLZ(serializers.Serializer):
@@ -316,9 +327,7 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
     buildpacks = serializers.ListField(child=AppBuildPackMinimalSLZ(), required=False, allow_null=True)
 
     # docker build 相关字段
-    dockerfile_path = serializers.CharField(
-        help_text="Dockerfile 路径", required=False, allow_blank=True, allow_null=True
-    )
+    dockerfile_path = DockerfilePathField(help_text="Dockerfile 路径", required=False)
     docker_build_args = serializers.DictField(
         child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
     )
@@ -346,6 +355,13 @@ class ModuleBuildConfigSLZ(serializers.Serializer):
             raise ValidationError(
                 detail={param: _("This field is required.") for param in missed_params}, code="required"
             )
+
+        if image_repository := attrs.get("image_repository"):
+            try:
+                validate_image_repo(image_repository)
+            except ValueError as e:
+                raise ValidationError({"image_repository": str(e)})
+
         return attrs
 
     def validate_use_bk_ci_pipeline(self, use_bk_ci_pipeline: bool) -> bool:
@@ -370,9 +386,7 @@ class CreateModuleBuildConfigSLZ(serializers.Serializer):
     tag_options = ImageTagOptionsSLZ(help_text="镜像 Tag 规则", required=False)
 
     # docker build 相关字段
-    dockerfile_path = serializers.CharField(
-        help_text="Dockerfile 路径", required=False, allow_blank=True, allow_null=True
-    )
+    dockerfile_path = DockerfilePathField(help_text="Dockerfile 路径", required=False)
     docker_build_args = serializers.DictField(
         child=serializers.CharField(allow_blank=False), allow_empty=True, allow_null=True, required=False
     )

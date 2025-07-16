@@ -18,6 +18,7 @@
 import abc
 import logging
 import os
+import os.path
 import re
 import subprocess
 import tarfile
@@ -26,28 +27,17 @@ import zipfile
 from pathlib import Path
 from typing import IO, List, Literal, Optional, Union
 
+from paasng.platform.sourcectl.exceptions import (
+    PackageInvalidFileFormatError,
+    ReadFileNotFoundError,
+    ReadLinkFileOutsideDirectoryError,
+)
 from paasng.platform.sourcectl.models import SourcePackage
 from paasng.platform.sourcectl.package.downloader import download_file_via_url
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
 from paasng.utils.text import remove_prefix
 
 logger = logging.getLogger(__name__)
-
-
-class BasePackageClientError(Exception):
-    """The base error class for package clients."""
-
-
-class InvalidPackageFileFormatError(Exception):
-    """The package file is not in a valid format, it might be corrupt."""
-
-
-class FileDoesNotExistError(KeyError, RuntimeError):
-    """The file does not exist.
-
-    This exception is used to maintain compatibility with existing code that handles missing files.
-    TODO: Consider unifying exception handling for read_file.
-    """
 
 
 class BasePackageClient(metaclass=abc.ABCMeta):
@@ -97,7 +87,7 @@ class TarClient(BasePackageClient):
             raise ValueError("nothing to open")
         if file_path and file_obj:
             raise ValueError("file_path and file_obj cannot be provided at the same time")
-        self.tar = tarfile.open(name=file_path, fileobj=file_obj, mode=mode)
+        self.tar = tarfile.open(name=file_path, fileobj=file_obj, mode=mode)  # noqa: SIM115
         self.relative_path = relative_path
 
     def read_file(self, file_path: str) -> bytes:
@@ -105,14 +95,26 @@ class TarClient(BasePackageClient):
         # 去除多余的相对路径, 计算最简化的相对路径
         key = os.path.relpath(file_path)
         key = os.path.join(self.relative_path, key)
-        file = self.tar.extractfile(key)
+        try:
+            file = self.tar.extractfile(key)
+        except KeyError:
+            raise ReadFileNotFoundError(f"file {file_path} not found")
         if not file:
-            raise FileDoesNotExistError(f"filename: {file_path} Don't exists.")
+            raise ReadFileNotFoundError(f"file {file_path} not found")
         return file.read()
 
     def export(self, local_path: str):
         """导出指定当前 Tar 包到local_path"""
-        self.tar.extractall(local_path)
+        try:
+            # set filter="data" explicitly to fix CVE-2007-4559
+            # see https://docs.python.org/3.11/library/tarfile.html#tarfile-extraction-filter
+            self.tar.extractall(local_path, filter="data")  # type: ignore
+        except (
+            tarfile.AbsoluteLinkError,  # type: ignore
+            tarfile.OutsideDestinationError,  # type: ignore
+            tarfile.LinkOutsideDestinationError,  # type: ignore
+        ) as e:
+            raise ReadLinkFileOutsideDirectoryError(str(e))
 
     def close(self):
         """关闭文件句柄"""
@@ -128,21 +130,21 @@ class BinaryTarClient(BasePackageClient):
     When handling big tarball(>=100mb), will faster than tarfile 10 seconds in the special testcase.
     """
 
-    def __init__(self, filepath: Union[str, Path]):
-        self.filepath = Path(filepath)
+    def __init__(self, file_path: Union[str, Path]):
+        self.filepath = Path(file_path)
 
     def read_file(self, filename) -> bytes:
         """Extract a filename from the archive as bytes.
 
         :param filename: the filename need to be extracted.
         :return: bytes contents of the file.
-        :raises InvalidPackageFileFormatError: The file is not a valid tar file, it's content
+        :raises PackageInvalidFileFormatError: The file is not a valid tar file, it's content
             might be corrupt.
+        :raises RuntimeError: Raised if unexpected errors occur.
         """
         with generate_temp_dir() as temp_dir:
             p = subprocess.Popen(
-                f'tar -xf "{self.filepath.absolute()}" -C "{temp_dir.absolute()}" "{filename}"',
-                shell=True,
+                ["tar", "-xf", str(self.filepath.absolute()), "-C", str(temp_dir.absolute()), filename],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 encoding="utf-8",
@@ -150,18 +152,44 @@ class BinaryTarClient(BasePackageClient):
             _, stderr = p.communicate()
             if p.returncode != 0:
                 if self._is_invalid_file_format_error(stderr):
-                    raise InvalidPackageFileFormatError()
+                    raise PackageInvalidFileFormatError()
                 if self._is_not_found_error(stderr):
-                    raise FileDoesNotExistError(f"Failed to extractfile from the tarball, error: {stderr!r}")
+                    raise ReadFileNotFoundError(f"Failed to extractfile from the tarball, error: {stderr!r}")
                 else:
                     raise RuntimeError(f"Failed to extractfile from the tarball, error: {stderr!r}")
-            return (temp_dir / filename).read_bytes()
+
+            filepath = temp_dir / filename
+
+            # Check if the file is a symbolic link and it's inside the directory
+            real_path = filepath.resolve()
+            try:
+                real_path.relative_to(temp_dir)
+            except ValueError:
+                raise ReadLinkFileOutsideDirectoryError(f"{filepath} is invalid")
+            return filepath.read_bytes()
 
     def export(self, local_path: str):
         """Extract all members from the archive to the current working directory
+
         :param working_dir: working directory
+        :raise ReadLinkFileOutsideDirectoryError: Raised if unexpected errors occur.
         """
         uncompress_directory(source_path=self.filepath, target_path=local_path)
+
+        # Use the "data_filter" from tarfile to check the security of symbolic links.
+        # We use this approach because it appears to be the easiest method. Other methods,
+        # such as calling the "tar -tvf" command to list the members and check them individually,
+        # would be more difficult to implement, though potentially faster.
+        with tarfile.open(self.filepath, mode="r:*") as fp:
+            for member in fp.getmembers():
+                try:
+                    tarfile.data_filter(member, local_path)  # type: ignore
+                except (
+                    tarfile.AbsoluteLinkError,  # type: ignore
+                    tarfile.OutsideDestinationError,  # type: ignore
+                    tarfile.LinkOutsideDestinationError,  # type: ignore
+                ) as e:
+                    raise ReadLinkFileOutsideDirectoryError(str(e))
 
     def close(self):
         """Nothing need to close."""
@@ -171,12 +199,11 @@ class BinaryTarClient(BasePackageClient):
 
         :param tarfile_like: tar 命令与 tarfile 的差异点在于, tar 命令返回目录时会在末尾带上 "/",
             如果设置 tarfile_like = True, 则自动去除末尾的 "/"
-        :raises InvalidPackageFileFormatError: The file is not a valid tar file, it's content
+        :raises PackageInvalidFileFormatError: The file is not a valid tar file, it's content
             might be corrupt.
         """
         p = subprocess.Popen(
-            f'tar -tf "{self.filepath.absolute()}"',
-            shell=True,
+            ["tar", "-tf", str(self.filepath.absolute())],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding="utf-8",
@@ -184,7 +211,7 @@ class BinaryTarClient(BasePackageClient):
         stdout, stderr = p.communicate()
         if p.returncode != 0:
             if self._is_invalid_file_format_error(stderr):
-                raise InvalidPackageFileFormatError()
+                raise PackageInvalidFileFormatError()
             raise RuntimeError(f"Failed to read from the tarball, error: {stderr!r}")
         items = stdout.strip().split("\n")
         return items if not tarfile_like else [item.rstrip(os.path.sep) for item in items]
@@ -192,16 +219,12 @@ class BinaryTarClient(BasePackageClient):
     @staticmethod
     def _is_invalid_file_format_error(message: str) -> bool:
         """Check if the stderr message indicates an invalid file format."""
-        if re.search(r"tar:.* not look like a tar archive", message):
-            return True
-        return False
+        return bool(re.search(r"tar:.* not look like a tar archive", message))
 
     @staticmethod
     def _is_not_found_error(message: str) -> bool:
         """Check if the stderr message indicates a file not found."""
-        if re.search(r"tar:.*: Not found in archive", message):
-            return True
-        return False
+        return bool(re.search(r"tar:.*: Not found in archive", message))
 
 
 class ZipClient(BasePackageClient):
@@ -235,15 +258,22 @@ class ZipClient(BasePackageClient):
         # 去除多余的相对路径, 计算最简化的相对路径
         key = os.path.relpath(file_path)
         key = os.path.join(self.relative_path, key)
+
         try:
             info = self.zip_.getinfo(key)
-        except KeyError as e:
-            raise FileDoesNotExistError(f"filename: {file_path} Don't exists.") from e
+        except KeyError:
+            raise ReadFileNotFoundError(f"file {file_path} not found")
 
+        # The zipfile module does not support symbolic links at this moment, so even it
+        # the key is a symlink, we can still safely read it, the result would be it's target path.
         return self.zip_.read(info)
 
     def export(self, local_path: str):
         self.zip_.extractall(local_path)
+
+        # About symbolic links security check, the zip file module does not support symbolic links
+        # at this moment so we no extra checking is needed.
+        # See https://bugs.python.org/issue37921 for more details
 
     def close(self):
         self.zip_.close()

@@ -16,11 +16,13 @@
 # to the current version of the project delivered to anyone in the future.
 
 import json
+from typing import Any
 
 from django.conf import settings
 from django.utils.translation import get_language
 
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
+from paasng.utils.error_codes import error_codes
 
 from .component import BaseComponent
 from .http import http_get, http_post
@@ -41,6 +43,16 @@ class BkApigatewayV2Component(BaseComponent):
 
     def post(self, path: str, tenant_id: str, bk_username: str = "", **kwargs):
         return self._call_api(http_post, path, headers=self._prepare_headers(bk_username, tenant_id), **kwargs)
+
+    def _call_api(self, http_func, path: str, **kwargs) -> Any:
+        """覆写，apigw v2 不再返回 code，删除 code 的校验"""
+        url = self._urljoin(self.host, path)
+        http_ok, resp_data = http_func(url, **kwargs)
+
+        if not (http_ok and resp_data):
+            raise error_codes.REMOTE_REQUEST_ERROR.format(f"request {self.system_name} api error")
+
+        return resp_data
 
     def _prepare_headers(self, bk_username: str, tenant_id: str):
         headers = {

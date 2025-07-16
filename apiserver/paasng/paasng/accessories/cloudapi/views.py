@@ -295,26 +295,46 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_CLOUD_API)]
 
+    @swagger_auto_schema(
+        query_serializer=serializers.MCPServerQueryParamsSLZ,
+        tags=["CloudAPIV2"],
+    )
     def list_mcp_servers(self, request, *args, **kwargs):
         app = self.get_application()
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._get(request, apigw_url, app)
 
+    @swagger_auto_schema(
+        query_serializer=serializers.AppMCPServerPermissionQueryParamsSLZ,
+        tags=["CloudAPIV2"],
+    )
     def list_mcp_server_permissions(self, request, *args, **kwargs):
         app = self.get_application()
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._get(request, apigw_url, app)
 
+    @swagger_auto_schema(
+        query_serializer=serializers.AppMCPServerPermissionQueryParamsSLZ,
+        tags=["CloudAPI"],
+    )
     def list_app_mcp_server_permissions(self, request, *args, **kwargs):
         app = self.get_application()
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._get(request, apigw_url, app)
 
+    @swagger_auto_schema(
+        query_serializer=serializers.AppMCPServerPermissionApplyRecordQueryParamsSLZ,
+        tags=["CloudAPI"],
+    )
     def list_mcp_server_permissions_apply_records(self, request, *args, **kwargs):
         app = self.get_application()
         apigw_url = self._trans_request_path_to_apigw_url(request.path, app.code)
         return self._get(request, apigw_url, app)
 
+    @swagger_auto_schema(
+        request_body=serializers.ApplyMCPResourcePermissionSLZ,
+        tags=["CloudAPI"],
+    )
     def apply_mcp_server_permissions(self, request, *args, **kwargs):
         # 参数校验
         app = self.get_application()
@@ -323,7 +343,7 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return self._post(request, apigw_url, operation_type, app)
 
     def _get(self, request, apigw_url: str, app: Application):
-        logger.debug("[cloudapi] getting %s", apigw_url)
+        logger.debug("[cloudapi v2] getting %s", apigw_url)
         params = copy.copy(request.query_params)
         params.update(
             {
@@ -353,7 +373,7 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         @param: app: 应用
         @param: data_type: 操作前后数据中记录数据的类型，如网关、组件。通过 record_id 获取申请详情时，需要结合 data_type 来调用不同的 API，以获取单据详情
         """
-        logger.debug("[cloudapi] posting %s", apigw_url)
+        logger.debug("[cloudapi v2] posting %s", apigw_url)
         data = copy.copy(request.data)
         data.update(
             {
@@ -363,7 +383,7 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         )
         tenant_id = get_tenant_id_for_app(app.code)
         result = bk_apigateway_inner_component.post(
-            apigw_url, json=data, tenant_id=tenant_id, bk_username=request.user.username
+            apigw_url, json=request.data, tenant_id=tenant_id, bk_username=request.user.username
         )
 
         try:
@@ -395,7 +415,7 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     ) -> str:
         """将请求路径转换为 bk-apigateway 接口地址"""
         # 请求 bk-apigateway 接口时，约定 `/api/cloudapi/apps/{app_code}/{apigw_url_part}` 为 bk-paas-ng 的 url 前缀，
-        # `/api/v1/{apigw_url_part}` 即为 bk-apigateway 接口地址
+        # `/api/v2/{apigw_url_part}` 即为 bk-apigateway 接口地址
         force_script_name = getattr(settings, "FORCE_SCRIPT_NAME", "") or ""
         prefix = f"{force_script_name}/api/cloudapi-v2/apps/{app_code}/"
         if path.startswith(prefix):

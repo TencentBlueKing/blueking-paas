@@ -26,6 +26,7 @@ from rest_framework.response import Response
 
 from paasng.accessories.cloudapi import serializers
 from paasng.accessories.cloudapi.components.bk_apigateway_inner import bk_apigateway_inner_component
+from paasng.accessories.cloudapi.components.bk_apigateway_v2 import bk_apigateway_v2_component
 from paasng.accessories.cloudapi.utils import get_user_auth_type
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -331,7 +332,7 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             }
         )
         tenant_id = get_tenant_id_for_app(app.code)
-        result = bk_apigateway_inner_component.get(
+        result = bk_apigateway_v2_component.get(
             apigw_url, params=params, tenant_id=tenant_id, bk_username=request.user.username
         )
         return Response(result)
@@ -392,8 +393,8 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         path: str,
         app_code: str,
     ) -> str:
-        """将请求路径转换为 bk-apigateway-inner 接口地址"""
-        # 请求 bk-apigateway-inner 接口时，约定 `/api/cloudapi/apps/{app_code}/{apigw_url_part}` 为 bk-paas-ng 的 url 前缀，
+        """将请求路径转换为 bk-apigateway 接口地址"""
+        # 请求 bk-apigateway 接口时，约定 `/api/cloudapi/apps/{app_code}/{apigw_url_part}` 为 bk-paas-ng 的 url 前缀，
         # `/api/v1/{apigw_url_part}` 即为 bk-apigateway-inner 接口地址
         force_script_name = getattr(settings, "FORCE_SCRIPT_NAME", "") or ""
         prefix = f"{force_script_name}/api/cloudapi/apps/{app_code}/"

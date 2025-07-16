@@ -42,7 +42,7 @@ class TestConfigVarAPIs:
     def test_normal_create(self, api_client, bk_app, bk_module):
         api_client.post(
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
-            {"key": "A1", "value": "foo", "is_encrypted": False, "environment_name": "_global_", "description": "bar"},
+            {"key": "A1", "value": "foo", "environment_name": "_global_", "description": "bar"},
         )
 
         resp = api_client.get(
@@ -74,12 +74,12 @@ class TestConfigVarAPIs:
     def test_normal_edit(self, api_client, bk_app, bk_module):
         var_id = api_client.post(
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
-            {"key": "A1", "value": "foo", "is_encrypted": False, "environment_name": "_global_", "description": "foo"},
+            {"key": "A1", "value": "foo", "environment_name": "_global_", "description": "foo"},
         ).data["id"]
 
         api_client.put(
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/{var_id}/",
-            {"key": "A1", "value": "bar", "is_encrypted": False, "environment_name": "stag", "description": "bar"},
+            {"key": "A1", "value": "bar", "environment_name": "stag", "description": "bar"},
         )
 
         resp = api_client.get(
@@ -112,7 +112,7 @@ class TestConfigVarAPIs:
     def test_normal_delete(self, api_client, bk_app, bk_module):
         var_id = api_client.post(
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
-            {"key": "A1", "value": "foo", "is_encrypted": False, "environment_name": "_global_"},
+            {"key": "A1", "value": "foo", "environment_name": "_global_"},
         ).data["id"]
 
         resp = api_client.get(
@@ -137,7 +137,7 @@ class TestConfigVarAPIs:
         assert resp.data["overwrited_num"] == 0
         api_client.post(
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
-            {"key": "A1", "value": "foo", "is_encrypted": False, "environment_name": "_global_"},
+            {"key": "A1", "value": "foo", "environment_name": "_global_"},
         )
         resp = api_client.post(
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/clone_from/{bk_module.name}"
@@ -155,10 +155,10 @@ class TestConfigVarAPIs:
             ).data["id"]
             return var_id
 
-        create_var({"key": "S1", "value": "foo", "is_encrypted": False, "environment_name": "stag"})
-        create_var({"key": "P1", "value": "foo", "is_encrypted": False, "environment_name": "prod"})
-        create_var({"key": "S2", "value": "foo", "is_encrypted": False, "environment_name": "stag"})
-        create_var({"key": "G1", "value": "foo", "is_encrypted": False, "environment_name": "_global_"})
+        create_var({"key": "S1", "value": "foo", "environment_name": "stag"})
+        create_var({"key": "P1", "value": "foo", "environment_name": "prod"})
+        create_var({"key": "S2", "value": "foo", "environment_name": "stag"})
+        create_var({"key": "G1", "value": "foo", "environment_name": "_global_"})
 
     @pytest.mark.parametrize(
         ("order_by", "expected_keys"),

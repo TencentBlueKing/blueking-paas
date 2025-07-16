@@ -337,13 +337,8 @@ class EnvVarsManifestConstructor(ManifestConstructor):
             .exclude(environment_name=ConfigVarEnvName.GLOBAL)
             .order_by("key")
         ]
-        # ConfigVar 中 value 可能是加密的，因此可能需要解密
         scoped_user_vars = [
-            crd.EnvVarOverlay(
-                envName=var.environment.environment,
-                name=var.key,
-                value=var.get_value(),
-            )
+            crd.EnvVarOverlay(envName=var.environment.environment, name=var.key, value=var.get_value())
             for var in ConfigVar.objects.filter(module=module)
             .exclude(is_global=True)
             .order_by("environment__environment", "key")

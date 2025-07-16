@@ -76,7 +76,7 @@ class TestPluginConfigurationViewSet:
         module = bk_plugin_app.get_default_module()
         assert ConfigVar.objects.filter(module=module).count() == 0
         response = sys_api_client.post(
-            f"/sys/api/plugins_center/bk_plugins/{bk_plugin_app.code}/settings/",
+            f"/sys/api/plugins_center/bk_plugins/{bk_plugin_app.code}/configuration/",
             data=[{"key": "FOO", "value": "foo"}, {"key": "BAR", "value": "bar"}, {"key": "BAZ", "value": "baz"}],
         )
         assert response.status_code == 200
@@ -85,7 +85,7 @@ class TestPluginConfigurationViewSet:
         assert ConfigVar.objects.get(module=module, key="BAR").value == "bar"
         assert ConfigVar.objects.get(module=module, key="BAZ").value == "baz"
         response = sys_api_client.post(
-            f"/sys/api/plugins_center/bk_plugins/{bk_plugin_app.code}/settings/",
+            f"/sys/api/plugins_center/bk_plugins/{bk_plugin_app.code}/configuration/",
             data=[
                 {"key": "FOO", "value": "foo"},
                 {"key": "BAR", "value": "BAR"},

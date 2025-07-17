@@ -223,8 +223,8 @@ class ModuleInitializer:
         # 将模板代码初始化到应用的代码仓库中
         if write_template_to_repo and repo_url:
             source_type = get_sourcectl_type(self.module.source_type)
-            repo_controller = source_type.repo_controller_class.init_by_server_config(
-                self.module.source_type, repo_url
+            repo_controller = source_type.repo_controller_class.init_by_user(
+                self.module.source_type, repo_url, self.module.owner
             )
             repo_controller.commit_and_push(initial_code_path, commit_message="init repo")
 
@@ -370,7 +370,9 @@ def _humanize_exception(step_name: str, message: str):
         raise ModuleInitializationError(message) from e
 
 
-def create_new_repo(module: Module, repo_type: str, username: str) -> str:
+def create_new_repo(
+    module: Module, repo_type: str, username: str, repository_group: str | None = None, repo_name: str | None = None
+) -> str:
     """创建一个新的代码仓库，并将指定用户添加为成员
 
     仓库命名规则：
@@ -382,19 +384,25 @@ def create_new_repo(module: Module, repo_type: str, username: str) -> str:
     :param username: 需要添加为仓库成员的初始用户名
     :return: 新创建的代码仓库地址
     """
-    repo_name = f"{module.application.code}_{module.name}"
-    description = f"{module.application.name}({module.name} 模块)"
-
     source_type = get_sourcectl_type(repo_type)
-    repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url="")
+    # 插件应用使用平台的系统账号创建仓库
+    if module.application.is_plugin_app:
+        repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url="")
+        source_type_config = source_type.config_as_arguments()
+        if "repository_group" not in source_type_config:
+            logger.error("repository_group is not found in source type config")
+            raise error_codes.CANNOT_CREATE_APP.f("repository_group is not found in source type config")
 
-    source_type_config = source_type.config_as_arguments()
-    if "repository_group" not in source_type_config:
-        logger.error("repository_group is not found in source type config")
-        raise error_codes.CANNOT_CREATE_APP.f("repository_group is not found in source type config")
+        repository_group = source_type_config["repository_group"]
+        repo_name = f"{module.application.code}_{module.name}"
+    else:
+        # 普通应用使用用户自己的凭证信息创建代码仓库
+        _url = f"{repository_group}/{repo_name}"
+        repo_controller = source_type.repo_controller_class.init_by_user(repo_type, _url, module.owner)
 
+    description = f"{module.application.name}({module.name} 模块)"
     repo_url = repo_controller.create_with_member(
-        repository_group=source_type_config["repository_group"],
+        repository_group=repository_group,
         repo_name=repo_name,
         description=description,
         username=username,
@@ -402,17 +410,18 @@ def create_new_repo(module: Module, repo_type: str, username: str) -> str:
     return repo_url
 
 
-def delete_repo(repo_type: str, repo_url: str):
+def delete_repo(user_id: str, repo_type: str, repo_url: str):
     """Delete the code repository created by the platform"""
     source_type = get_sourcectl_type(repo_type)
-    repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url)
+    repo_controller = source_type.repo_controller_class.init_by_user(repo_type, repo_url, user_id)
     repo_controller.delete_project(repo_url)
 
 
 @contextmanager
-def delete_repo_on_error(repo_type: str, repo_url: str | None = None):
+def delete_repo_on_error(user_id: str, repo_type: str, repo_url: str | None = None):
     """仓库清理上下文管理器，在异常时自动删除新建的仓库
 
+    :param user_id: 用户 ID
     :param repo_type: 仓库类型
     :param repo_url: 仓库地址
     """
@@ -421,7 +430,7 @@ def delete_repo_on_error(repo_type: str, repo_url: str | None = None):
     except Exception:
         if repo_url:
             try:
-                delete_repo(repo_type, repo_url)
+                delete_repo(user_id, repo_type, repo_url)
                 logger.info(f"Repository({repo_url}) deleted successfully  during rollback")
             except Exception:
                 logger.exception(f"Failed to delete repository({repo_url}) during rollback")

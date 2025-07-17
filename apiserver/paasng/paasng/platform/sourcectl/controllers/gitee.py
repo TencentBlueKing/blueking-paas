@@ -32,6 +32,7 @@ from paasng.platform.sourcectl.models import (
     AlternativeVersion,
     CommitInfo,
     CommitLog,
+    GitGroup,
     GitProject,
     Repository,
     VersionInfo,
@@ -78,6 +79,25 @@ class GiteeRepoController(BaseGitRepoController):
                 last_activity_at=arrow.get(repo["updated_at"]).datetime,
             )
             for repo in api_client.list_repo()
+        ]
+
+    @classmethod
+    def list_owned_groups(cls, api_url: str, user_credentials: dict) -> List[GitGroup]:
+        """获取用户有管理权限的项目组
+
+        :param api_url: 源码控制类型的 API 地址
+        :param user_credentials: 用户凭证
+        """
+        api_client = GiteeApiClient(api_url=api_url, **user_credentials)
+        return [
+            GitGroup(
+                name=group["name"],
+                path=group["path"],
+                description=group["description"],
+                avatar_url="",
+                web_url=group["html_url"],
+            )
+            for group in api_client.list_group(admin=True)
         ]
 
     def touch(self) -> bool:

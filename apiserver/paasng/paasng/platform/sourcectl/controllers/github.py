@@ -78,6 +78,11 @@ class GitHubRepoController(BaseGitRepoController):
             for repo in api_client.list_repo()
         ]
 
+    @classmethod
+    def list_owned_groups(cls, api_url: str, user_credentials: dict):
+        """获取用户有管理权限的项目组"""
+        raise NotImplementedError
+
     def touch(self) -> bool:
         try:
             self.list_alternative_versions()

@@ -312,13 +312,17 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         repo_type = source_config.get("source_control_type")
         repo_url = source_config.get("source_repo_url")
+        repository_group = source_config.get("repository_group")
+        repo_name = source_config.get("repo_name")
+        username = request.user.username
         # 由平台创建代码仓库
         auto_repo_url = None
         if source_config.get("auto_create_repo"):
-            auto_repo_url = create_new_repo(module, repo_type, username=request.user.username)
+            auto_repo_url = create_new_repo(module, repo_type, username, repository_group, repo_name)
             repo_url = auto_repo_url
 
-        with delete_repo_on_error(repo_type, auto_repo_url):
+        user_id = request.user.pk
+        with delete_repo_on_error(user_id, repo_type, auto_repo_url):
             ret = init_module_in_view(
                 module,
                 repo_type=repo_type,

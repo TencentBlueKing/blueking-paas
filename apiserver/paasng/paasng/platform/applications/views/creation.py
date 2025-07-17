@@ -159,13 +159,16 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
 
         repo_type = src_cfg.get("source_control_type")
         repo_url = src_cfg.get("source_repo_url")
+        repository_group = src_cfg.get("repository_group")
+        repo_name = src_cfg.get("repo_name")
+        username = request.user.username
         # 由平台创建代码仓库
         auto_repo_url = None
         if src_cfg.get("auto_create_repo"):
-            auto_repo_url = create_new_repo(module, repo_type, username=request.user.username)
-            repo_url = auto_repo_url
+            auto_repo_url = create_new_repo(module, repo_type, username, repository_group, repo_name)
 
-        with delete_repo_on_error(repo_type, auto_repo_url):
+        user_id = request.user.pk
+        with delete_repo_on_error(user_id, repo_type, auto_repo_url):
             source_init_result = init_module_in_view(
                 module,
                 repo_type=repo_type,

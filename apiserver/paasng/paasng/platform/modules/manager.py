@@ -382,6 +382,8 @@ def create_new_repo(
     :param module: 需要创建仓库的模块对象
     :param repo_type: 代码仓库类型
     :param username: 需要添加为仓库成员的初始用户名
+    :param repository_group: 代码仓库组
+    :param repo_name: 代码仓库名称
     :return: 新创建的代码仓库地址
     """
     source_type = get_sourcectl_type(repo_type)
@@ -411,7 +413,12 @@ def create_new_repo(
 
 
 def delete_repo(user_id: str, repo_type: str, repo_url: str):
-    """Delete the code repository created by the platform"""
+    """Delete the code repository created by the platform
+
+    :param user_id: 用户 ID
+    :param repo_type: 仓库类型
+    :param repo_url: 仓库地址
+    """
     source_type = get_sourcectl_type(repo_type)
     repo_controller = source_type.repo_controller_class.init_by_user(repo_type, repo_url, user_id)
     repo_controller.delete_project(repo_url)

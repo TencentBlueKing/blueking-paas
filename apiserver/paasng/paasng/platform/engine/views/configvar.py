@@ -295,22 +295,14 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(add_prefix_to_key(env_dict, settings.CONFIGVAR_SYSTEM_PREFIX))
 
     def get_builtin_envs_bk_platform(self, request, code):
-        bk_address_envs = generate_env_vars_for_bk_platform(settings.CONFIGVAR_SYSTEM_PREFIX)
-        bk_address_envs_list = [env.to_dict() for env in bk_address_envs]
+        bk_address_envs = generate_env_vars_for_bk_platform()
 
         application = self.get_application()
-        region = application.region
         # 默认展示正式环境的环境变量
-        environment = AppEnvironment.PRODUCTION.value
-        envs_by_region_and_env = generate_env_vars_by_region_and_env(
-            region, environment, settings.CONFIGVAR_SYSTEM_PREFIX
-        )
-        envs_by_region_and_env_list = [env.to_dict() for env in envs_by_region_and_env]
+        region_and_env_envs = generate_env_vars_by_region_and_env(application.region, AppEnvironment.PRODUCTION.value)
 
-        builtin_envs_bk_platform = {}
-        for env_dict in bk_address_envs_list + envs_by_region_and_env_list:
-            builtin_envs_bk_platform.update(env_dict)
-        return Response(builtin_envs_bk_platform)
+        combined = {**bk_address_envs.get_data_map(), **region_and_env_envs.get_data_map()}
+        return Response(combined)
 
     def get_runtime_envs(self, request, code):
         env_dict = self._get_enum_choices_dict(AppRunTimeBuiltinEnv)
@@ -321,7 +313,7 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             # Transform the dict structure to remove the value field in order to
             # keep consistent and be compatible with the frontend.
             # TODO: Show the value in the future.
-            envs.update({k: v["description"] for k, v in env.to_dict().items()})
+            envs[env.key] = env.description
         return Response({**envs})
 
 

@@ -17,8 +17,6 @@
 
 from typing import Iterator
 
-from django.conf import settings
-
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
@@ -122,14 +120,8 @@ def list_vars_builtin_misc(env: ModuleEnvironment) -> EnvVariableList:
     )
     # TODO: Refactor get_builtin_env_variables to return EnvVariableObj instances directly
     # to preserve the description field.
-    result.extend(
-        EnvVariableObj(key=key, value=value, description="misc built-in")
-        for key, value in get_builtin_env_variables(env.get_engine_app(), settings.CONFIGVAR_SYSTEM_PREFIX).items()
-    )
+    result.extend(get_builtin_env_variables(env.get_engine_app()))
 
     # Port: workloads related env vars
-    result.extend(
-        EnvVariableObj(key=item.key, value=item.value, description=item.description)
-        for item in generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX, env)
-    )
+    result.extend(generate_wl_builtin_env_vars(env))
     return result

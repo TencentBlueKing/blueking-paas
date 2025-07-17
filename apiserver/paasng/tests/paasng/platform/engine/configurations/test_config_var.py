@@ -30,7 +30,6 @@ from paasng.platform.engine.configurations.config_var import (
     ConflictedKey,
     EnvVarSource,
     UnifiedEnvVarsReader,
-    _flatten_envs,
     generate_wl_builtin_env_vars,
     get_builtin_env_variables,
     get_env_variables,
@@ -172,7 +171,7 @@ class TestBuiltInEnvVars:
         with override_region_configs(bk_app.region, update_region_hook):
             bk_module = bk_app.get_default_module()
             bk_stag_env = bk_module.envs.get(environment="stag")
-            config_vars = get_builtin_env_variables(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
+            config_vars = get_builtin_env_variables(bk_stag_env.engine_app).kv_map
 
             # 这些环境变量在所有版本都有
             assert ("BK_COMPONENT_API_URL" in config_vars) == contain_bk_envs
@@ -186,7 +185,7 @@ class TestBuiltInEnvVars:
                 assert set(settings.BK_PAAS2_PLATFORM_ENVS.keys()).issubset(set(config_vars.keys())) == contain_bk_envs
 
     def test_builtin_env_keys(self, bk_stag_env):
-        config_vars = get_builtin_env_variables(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
+        config_vars = get_builtin_env_variables(bk_stag_env.engine_app).kv_map
 
         assert {
             "BKPAAS_LOGIN_URL",
@@ -215,7 +214,7 @@ class TestBuiltInEnvVars:
 
 @pytest.mark.usefixtures("_with_wl_apps")
 def test_generate_wl_builtin_env_vars(bk_stag_env):
-    env_vars = _flatten_envs(generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX, bk_stag_env))
+    env_vars = generate_wl_builtin_env_vars(bk_stag_env).kv_map
 
     assert "PORT" in env_vars
     assert "BKPAAS_APP_LOG_PATH" in env_vars
@@ -269,13 +268,13 @@ class Test__get_user_conflicted_keys:
         assert conflicted_keys[0] == ConflictedKey(
             key="BK_API_URL_TMPL",
             conflicted_source="builtin_misc",
-            conflicted_detail="misc built-in",
+            conflicted_detail="网关 API 访问地址模板",
             override_conflicted=expected_override_conflicted_map["BK_API_URL_TMPL"],
         )
         assert conflicted_keys[1] == ConflictedKey(
             key="BK_COMPONENT_API_URL",
             conflicted_source="builtin_misc",
-            conflicted_detail="misc built-in",
+            conflicted_detail="组件 API 访问地址",
             override_conflicted=expected_override_conflicted_map["BK_COMPONENT_API_URL"],
         )
         assert conflicted_keys[2] == ConflictedKey(

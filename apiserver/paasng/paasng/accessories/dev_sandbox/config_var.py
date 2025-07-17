@@ -33,7 +33,7 @@ from paasng.platform.modules.models import Module
 
 
 def generate_envs(module: Module) -> Dict[str, str]:
-    envs = generate_env_vars_for_app(module.application, settings.CONFIGVAR_SYSTEM_PREFIX)
+    envs = generate_env_vars_for_app(module.application).kv_map
     envs.update(
         {
             f"{settings.CONFIGVAR_SYSTEM_PREFIX}ENVIRONMENT": "dev",

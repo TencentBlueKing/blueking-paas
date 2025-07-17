@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import os
 from typing import List
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
@@ -25,6 +26,7 @@ from paasng.utils.basic import ChoicesEnum
 PROC_DEFAULT_REPLICAS = 1
 DOCKER_BUILD_STEPSET_NAME = "docker-build"
 IMAGE_RELEASE_STEPSET_NAME = "image-release"
+BKPAAS_APISERVER_VERSION = os.getenv("BKPAAS_APISERVER_VERSION", "unknown")
 
 
 class AppEnvName(StrStructuredEnum):
@@ -122,6 +124,7 @@ class DeployConditions(ChoicesEnum):
     CHECK_CI_GIT_TOKEN = "CHECK_CI_GIT_TOKEN"
     FILL_PLUGIN_TAG_INFO = "FILL_PLUGIN_TAG_INFO"
     FILL_EXTRA_INFO = "FILL_EXTRA_INFO"
+    CHECK_OPERATOR_VERSION = "CHECK_OPERATOR_VERSION"
 
     _choices_labels = (
         (FILL_PRODUCT_INFO, _("未完善应用市场信息")),
@@ -133,6 +136,7 @@ class DeployConditions(ChoicesEnum):
         (CHECK_CI_GIT_TOKEN, _("当前用户未授权 CI 组件访问仓库的权限")),
         (FILL_PLUGIN_TAG_INFO, _("未设置插件分类")),
         (FILL_EXTRA_INFO, _("未完善应用基本信息")),
+        (CHECK_OPERATOR_VERSION, _("Operator 版本不匹配")),
     )
 
 

@@ -375,38 +375,44 @@ def create_new_repo(
 ) -> str:
     """创建一个新的代码仓库，并将指定用户添加为成员
 
-    仓库命名规则：
-    - 格式: {应用ID}_{模块名}
-    - 仓库可见级别为: public
+    参数规则：
+    - 插件应用: 忽略 repo_group/repo_name 参数，使用平台配置
+    - 非插件应用: 必须提供 repo_group 和 repo_name 参数
 
     :param module: 需要创建仓库的模块对象
     :param repo_type: 代码仓库类型
     :param username: 需要添加为仓库成员的初始用户名
-    :param repo_group: 代码仓库组
-    :param repo_name: 代码仓库名称
+    :param repo_group: 代码仓库组（非插件应用必填）
+    :param repo_name: 代码仓库名称（非插件应用必填）
     :return: 新创建的代码仓库地址
     """
     source_type = get_sourcectl_type(repo_type)
+
     # 插件应用使用平台的系统账号创建仓库
     if module.application.is_plugin_app:
-        repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url="")
+        # 获取平台配置的仓库租
         source_type_config = source_type.config_as_arguments()
         if "repo_group" not in source_type_config:
             logger.error("repo_group is not found in source type config")
-            raise error_codes.CANNOT_CREATE_APP.f("repo_group is not found in source type config")
+            raise error_codes.CANNOT_CREATE_APP.f(_("平台代码仓库组配置缺失"))
 
-        repo_group = source_type_config["repo_group"]
+        repo_group = source_type_config["repository_group"]
         repo_name = f"{module.application.code}_{module.name}"
+        # 初始化仓库控制器（平台账号）
+        repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url="")
     else:
-        # 普通应用使用用户自己的凭证信息创建代码仓库
-        _url = f"{repo_group}/{repo_name}"
-        repo_controller = source_type.repo_controller_class.init_by_user(repo_type, _url, module.owner)
+        if not (repo_group and repo_name):
+            raise error_codes.CANNOT_CREATE_APP.f("需要提供代码仓库组和仓库名称")
 
-    description = f"{module.application.name}({module.name} 模块)"
+        # 初始化仓库控制器（用户账号）
+        repo_controller = source_type.repo_controller_class.init_by_user(
+            repo_type, repo_url=f"{repo_group}/{repo_name}", user_id=module.owner
+        )
+
     repo_url = repo_controller.create_with_member(
         repo_group=repo_group,
         repo_name=repo_name,
-        description=description,
+        description=f"{module.application.name}({module.name} 模块)",
         username=username,
     )
     return repo_url

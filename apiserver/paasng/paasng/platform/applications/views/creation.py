@@ -166,6 +166,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         auto_repo_url = None
         if src_cfg.get("auto_create_repo"):
             auto_repo_url = create_new_repo(module, repo_type, username, repository_group, repo_name)
+            repo_url = auto_repo_url
 
         user_id = request.user.pk
         with delete_repo_on_error(user_id, repo_type, auto_repo_url):

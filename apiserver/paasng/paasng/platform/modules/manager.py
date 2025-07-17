@@ -371,7 +371,7 @@ def _humanize_exception(step_name: str, message: str):
 
 
 def create_new_repo(
-    module: Module, repo_type: str, username: str, repository_group: str | None = None, repo_name: str | None = None
+    module: Module, repo_type: str, username: str, repo_group: str | None = None, repo_name: str | None = None
 ) -> str:
     """创建一个新的代码仓库，并将指定用户添加为成员
 
@@ -382,7 +382,7 @@ def create_new_repo(
     :param module: 需要创建仓库的模块对象
     :param repo_type: 代码仓库类型
     :param username: 需要添加为仓库成员的初始用户名
-    :param repository_group: 代码仓库组
+    :param repo_group: 代码仓库组
     :param repo_name: 代码仓库名称
     :return: 新创建的代码仓库地址
     """
@@ -391,20 +391,20 @@ def create_new_repo(
     if module.application.is_plugin_app:
         repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url="")
         source_type_config = source_type.config_as_arguments()
-        if "repository_group" not in source_type_config:
-            logger.error("repository_group is not found in source type config")
-            raise error_codes.CANNOT_CREATE_APP.f("repository_group is not found in source type config")
+        if "repo_group" not in source_type_config:
+            logger.error("repo_group is not found in source type config")
+            raise error_codes.CANNOT_CREATE_APP.f("repo_group is not found in source type config")
 
-        repository_group = source_type_config["repository_group"]
+        repo_group = source_type_config["repo_group"]
         repo_name = f"{module.application.code}_{module.name}"
     else:
         # 普通应用使用用户自己的凭证信息创建代码仓库
-        _url = f"{repository_group}/{repo_name}"
+        _url = f"{repo_group}/{repo_name}"
         repo_controller = source_type.repo_controller_class.init_by_user(repo_type, _url, module.owner)
 
     description = f"{module.application.name}({module.name} 模块)"
     repo_url = repo_controller.create_with_member(
-        repository_group=repository_group,
+        repo_group=repo_group,
         repo_name=repo_name,
         description=description,
         username=username,

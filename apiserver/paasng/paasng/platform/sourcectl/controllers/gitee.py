@@ -92,10 +92,10 @@ class GiteeRepoController(BaseGitRepoController):
         return [
             GitGroup(
                 name=group["name"],
-                path=group["path"],
+                path=group["login"],
                 description=group["description"],
-                avatar_url="",
-                web_url=group["html_url"],
+                avatar_url=group["avatar_url"],
+                web_url="",
             )
             for group in api_client.list_group(admin=True)
         ]

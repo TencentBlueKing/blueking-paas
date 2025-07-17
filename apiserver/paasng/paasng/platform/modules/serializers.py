@@ -263,7 +263,7 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     """模块源码仓库/模板等信息，支持三种情况：
 
     1. auto_create_repo=False + source_repo_url：使用用户提供的代码仓库地址
-    2. auto_create_repo=True + repository_group + repo_name：在用户指定的项目组下创建代码仓库
+    2. auto_create_repo=True + repo_group + repo_name：在用户指定的项目组下创建代码仓库
     3. auto_create_repo=True：平台自动分配仓库地址（由虚拟账号创建仓库，无需用户进行授权，用于插件应用）
     """
 
@@ -278,7 +278,7 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
         required=False, default=False, help_text="是否将模板代码初始化到代码仓库中"
     )
     # 当 auto_create_repo=True 时，非插件应用需要指定新建仓库的项目组和仓库名称
-    repository_group = serializers.CharField(
+    repo_group = serializers.CharField(
         help_text="新建代码仓库的项目组", required=False, allow_blank=True, default=None
     )
     repo_name = serializers.CharField(help_text="新建代码仓库的名称", required=False, allow_blank=True, default=None)
@@ -310,10 +310,10 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
 
             # 非插件应用则则需要提供仓库命项目组和仓库名称
             if not self.parent.initial_data.get("is_plugin_app"):
-                repository_group = attrs.get("repository_group")
+                repo_group = attrs.get("repo_group")
                 repo_name = attrs.get("repo_name")
-                if not repository_group or not repo_name:
-                    raise ValidationError(_("新建代码仓库时，必须同时提供仓库命项目组和仓库名称"))
+                if not (repo_group and repo_name):
+                    raise ValidationError(_("新建代码仓库时，必须同时提供仓库项目组和仓库名称"))
 
         if source_repo_url:
             self._validate_source_repo_url(source_repo_url, attrs["source_origin"])

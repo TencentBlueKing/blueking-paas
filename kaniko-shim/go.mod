@@ -1,6 +1,6 @@
 module github.com/TencentBlueking/bkpaas/kaniko-shim
 
-go 1.22.8
+go 1.23.8
 
 require (
 	github.com/go-logr/logr v1.2.4

@@ -15,7 +15,7 @@ COPY ./Makefile ./Makefile
 RUN make build
 
 # ------------------------------- runner container -------------------------------
-FROM gcr.io/kaniko-project/executor:latest
+FROM gcr.io/kaniko-project/executor:v1.24.0
 
 RUN --mount=from=busybox:musl,dst=/busybox/ ["/busybox/bin/sh", "-c", "/busybox/bin/mkdir -p /tmp && /busybox/bin/chmod 777 /tmp"]
 

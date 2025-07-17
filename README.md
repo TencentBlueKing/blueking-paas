@@ -9,14 +9,14 @@
 
 **云原生 builder 镜像** 是基于 [pack](https://github.com/buildpacks/pack) 命令打包而成的构建镜像，其通过内嵌 buildpacks 来满足多种编程语言的构建需求。项目当前共实现了两种 “builder 镜像”：
 
-- **heroku**：基于 [heroku-18](https://github.com/heroku/base-images/tree/v149/heroku-24) 镜像, 底层镜像是 ubuntu:noble
+- **heroku**：基于 [heroku-24](https://github.com/heroku/base-images/tree/v149/heroku-24) 镜像，底层镜像是 ubuntu:noble
     - 目录：`cloudnative-buildpacks/builders/heroku-builder`
 
 其中，heroku builder 镜像所使用的 buildpack 在原有代码上做了一些改动，维护在 `heroku-buildpacks` 目录中：
 
-- `bk-buildpack-python`：Python 语言, 基于 heroku-buildpack-python
-- `bk-buildpack-nodejs`：Node.js 语言, 基于 heroku-buildpack-nodejs
-- `bk-buildpack-go`：Go 语言, 基于 heroku-buildpack-go
+- `bk-buildpack-python`：Python 语言，基于 heroku-buildpack-python
+- `bk-buildpack-nodejs`：Node.js 语言，基于 heroku-buildpack-nodejs
+- `bk-buildpack-go`：Go 语言，基于 heroku-buildpack-go
 
 ## 开发说明
 

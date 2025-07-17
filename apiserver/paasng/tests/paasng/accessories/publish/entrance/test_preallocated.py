@@ -63,14 +63,14 @@ class TestGetExposedUrlType:
 
 def test_default_preallocated_urls_empty(bk_stag_env):
     with cluster_ingress_config(replaced_config={}):
-        urls = _default_preallocated_urls(bk_stag_env)["BKPAAS_DEFAULT_PREALLOCATED_URLS"]
+        urls = _default_preallocated_urls(bk_stag_env).kv_map["BKPAAS_DEFAULT_PREALLOCATED_URLS"]
         assert urls == ""
 
 
 def test_default_preallocated_urls_normal(bk_stag_env):
     ingress_config = {"app_root_domains": [{"name": "example.com"}]}
     with cluster_ingress_config(replaced_config=ingress_config):
-        urls = _default_preallocated_urls(bk_stag_env)["BKPAAS_DEFAULT_PREALLOCATED_URLS"]
+        urls = _default_preallocated_urls(bk_stag_env).kv_map["BKPAAS_DEFAULT_PREALLOCATED_URLS"]
         assert isinstance(urls, str)
         assert set(json.loads(urls).keys()) == {"stag", "prod"}
 

@@ -33,7 +33,7 @@ from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.configurations.env_var import listers as vars_listers
 from paasng.platform.engine.configurations.env_var.entities import EnvVariableList, EnvVariableObj
-from paasng.platform.engine.constants import AppInfoBuiltinEnv, AppRunTimeBuiltinEnv, ConfigVarEnvName
+from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.models import Module
@@ -199,8 +199,18 @@ class ConflictedKey:
     conflicted_detail: str | None = None
 
 
-def generate_env_vars_for_app(app: "Application") -> EnvVariableList:
-    """Generate built-in envs for app basic information"""
+def sys_var(key: str, value: str, description: str | None) -> EnvVariableObj:
+    """A shortcut function to create a system environment variable object, it helps to make the
+    code more succinct."""
+    return EnvVariableObj.with_sys_prefix(key=key, value=value, description=description)
+
+
+def list_vars_builtin_app_basic(app: "Application", include_deprecated: bool = True) -> EnvVariableList:
+    """List app basic information related built-in envs.
+
+    :param include_deprecated: Whether to include the "deprecated" ones, when displaying to
+        the users, set this to False.
+    """
     # Query oauth2 client to get app secret, if the client does not exist yet, use an empty
     # string instead.
     try:
@@ -208,69 +218,27 @@ def generate_env_vars_for_app(app: "Application") -> EnvVariableList:
     except BkOauthClientDoesNotExist:
         app_secret = ""
 
-    return EnvVariableList(
+    results = EnvVariableList(
         [
-            EnvVariableObj.with_sys_prefix(
-                key=AppInfoBuiltinEnv.APP_ID.value,
-                value=app.code,
-                description=_("蓝鲸应用ID"),
-            ),
-            EnvVariableObj.with_sys_prefix(
-                key=AppInfoBuiltinEnv.APP_SECRET.value,
-                value=app_secret,
-                description=_("蓝鲸应用密钥"),
-            ),
-            EnvVariableObj.with_sys_prefix(
-                key=AppInfoBuiltinEnv.APP_TENANT_ID.value,
-                value=app.app_tenant_id,
-                description=_("蓝鲸应用租户 ID"),
-            ),
+            sys_var("APP_ID", app.code, _("蓝鲸应用ID")),
+            sys_var("APP_SECRET", app_secret, _("蓝鲸应用密钥")),
+            sys_var("APP_TENANT_ID", app.app_tenant_id, _("蓝鲸应用租户 ID")),
+        ]
+    )
+    if include_deprecated:
+        results.append(
             # 兼容之前的数据，不确定是否有应用使用到了 BKPAAS_APP_CODE 这个环境变量，故先保留
-            EnvVariableObj.with_sys_prefix(
-                key="APP_CODE",
-                value=app.code,
-                description=_("【不推荐】历史变量因兼容性保留，建议使用 APP_ID"),
-            ),
-        ]
-    )
+            sys_var("APP_CODE", app.code, _("[不推荐使用] 应用 Code，历史变量因兼容性保留")),
+        )
+    return results
 
 
-def generate_runtime_env_vars_for_app(engine_app: "EngineApp") -> EnvVariableList:
-    """Generate built-in runtime envs for app"""
-    return EnvVariableList(
-        [
-            EnvVariableObj.with_sys_prefix(
-                key=AppRunTimeBuiltinEnv.APP_MODULE_NAME.value,
-                value=engine_app.env.module.name,
-                description=_("应用当前模块名"),
-            ),
-            EnvVariableObj.with_sys_prefix(
-                key=AppRunTimeBuiltinEnv.ENVIRONMENT.value,
-                value=engine_app.env.environment,
-                description=_("应用当前环境，预发布环境为 stag、生产环境为 prod"),
-            ),
-            EnvVariableObj.with_sys_prefix(
-                key=AppRunTimeBuiltinEnv.MAJOR_VERSION.value,
-                value=str(3),
-                description=_("应用当前运行的开发者中心版本，值为 3"),
-            ),
-            EnvVariableObj.with_sys_prefix(
-                key=AppRunTimeBuiltinEnv.ENGINE_REGION.value,
-                value=engine_app.region,
-                description=_("应用版本，默认版本为 default"),
-            ),
-            # 这几个变量用户很少使用，暂不展示描述信息到页面上
-            EnvVariableObj.with_sys_prefix(
-                key="ENGINE_APP_NAME",
-                value=engine_app.name,
-                description=_("【不推荐】内部变量，不推荐使用"),
-            ),
-        ]
-    )
+def list_vars_builtin_region(region: str, environment: str) -> EnvVariableList:
+    """List region related builtin env vars.
 
-
-def generate_env_vars_by_region_and_env(region: str, environment: str) -> EnvVariableList:
-    """Generate the platform address in the bk system by region and env"""
+    :param region: The region name.
+    :param environment: The environment name, such as "stag" or "prod".
+    """
     # 需要按 region、env 写入不同值的变量
     region_related_envs = {
         "REMOTE_STATIC_URL": {"description": _("平台提供的静态资源地址前缀，不推荐使用")},
@@ -288,15 +256,9 @@ def generate_env_vars_by_region_and_env(region: str, environment: str) -> EnvVar
     weixin_url = settings.BKPAAS_WEIXIN_URL_MAP.get(environment)
     region_envs_with_prefix.extend(
         [
-            EnvVariableObj.with_sys_prefix(
-                key="WEIXIN_URL",
-                value=weixin_url,
-                description=_("应用移动端访问地址，不推荐使用"),
-            ),
-            EnvVariableObj.with_sys_prefix(
-                key="WEIXIN_REMOTE_STATIC_URL",
-                value=f"{weixin_url}/static_api/",
-                description=_("应用移动端静态资源地址前缀，不推荐使用"),
+            sys_var("WEIXIN_URL", weixin_url, _("应用移动端访问地址，不推荐使用")),
+            sys_var(
+                "WEIXIN_REMOTE_STATIC_URL", f"{weixin_url}/static_api/", _("应用移动端静态资源地址前缀，不推荐使用")
             ),
         ]
     )
@@ -323,108 +285,36 @@ def generate_env_vars_by_region_and_env(region: str, environment: str) -> EnvVar
     return EnvVariableList(region_envs_with_prefix)
 
 
-def generate_env_vars_for_bk_platform() -> EnvVariableList:
-    """Generate the platform address in the bk system"""
+def list_vars_builtin_plat_addrs() -> EnvVariableList:
+    """List the platform address builtin env vars."""
     system_envs_with_prefix = [
-        EnvVariableObj.with_sys_prefix(
-            key="BK_DOMAIN",
-            value=settings.BK_DOMAIN,
-            description=_("蓝鲸根域，用于获取登录票据、国际化语言等 cookie 信息"),
+        sys_var("BK_DOMAIN", settings.BK_DOMAIN, _("蓝鲸根域，用于获取登录票据、国际化语言等 cookie 信息")),
+        sys_var("URL", settings.BKPAAS_URL, _("蓝鲸PaaS平台访问URL")),
+        sys_var("CONSOLE_URL", settings.BK_CONSOLE_URL, _("蓝鲸桌面访问地址")),
+        sys_var("CC_URL", settings.BK_CC_URL, _("蓝鲸配置平台访问地址")),
+        sys_var("JOB_URL", settings.BK_JOB_URL, _("蓝鲸作业平台访问地址")),
+        sys_var("IAM_URL", settings.BK_IAM_URL, _("蓝鲸权限中心访问地址")),
+        sys_var("USER_URL", settings.BK_USER_URL, _("蓝鲸用户管理访问地址")),
+        sys_var("MONITORV3_URL", settings.BK_MONITORV3_URL, _("蓝鲸监控平台访问地址")),
+        sys_var("LOG_URL", settings.BK_LOG_URL, _("蓝鲸日志平台访问地址")),
+        sys_var("REPO_URL", settings.BK_REPO_URL, _("蓝鲸制品库访问地址")),
+        sys_var("CI_URL", settings.BK_CI_URL, _("蓝鲸持续集成平台（蓝盾）访问地址")),
+        sys_var("CODECC_URL", settings.BK_CODECC_URL, _("蓝鲸代码检查平台访问地址")),
+        sys_var("TURBO_URL", settings.BK_TURBO_URL, _("蓝鲸编译加速平台访问地址")),
+        sys_var("PIPELINE_URL", settings.BK_PIPELINE_URL, _("蓝鲸流水线访问地址")),
+        sys_var("NODEMAN_URL", settings.BK_NODEMAN_URL, _("蓝鲸节点管理平台地址")),
+        sys_var("BCS_URL", settings.BK_BCS_URL, _("蓝鲸容器管理平台地址")),
+        sys_var("BSCP_URL", settings.BK_BSCP_URL, _("蓝鲸服务配置中心地址")),
+        sys_var("AUDIT_URL", settings.BK_AUDIT_URL, _("蓝鲸审计中心地址")),
+        sys_var(
+            "SHARED_RES_URL", settings.BK_SHARED_RES_URL, _("蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径")
         ),
-        EnvVariableObj.with_sys_prefix(
-            key="URL",
-            value=settings.BKPAAS_URL,
-            description=_("蓝鲸PaaS平台访问URL"),
+        sys_var(
+            "BK_CRYPTO_TYPE",
+            settings.BK_CRYPTO_TYPE,
+            _("加密数据库内容的推荐算法有：SHANGMI（对应 SM4CTR 算法）和 CLASSIC（对应 Fernet 算法）"),
         ),
-        EnvVariableObj.with_sys_prefix(
-            key="CONSOLE_URL",
-            value=settings.BK_CONSOLE_URL,
-            description=_("蓝鲸桌面访问地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(key="CC_URL", value=settings.BK_CC_URL, description=_("蓝鲸配置平台访问地址")),
-        EnvVariableObj.with_sys_prefix(
-            key="JOB_URL", value=settings.BK_JOB_URL, description=_("蓝鲸作业平台访问地址")
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="IAM_URL",
-            value=settings.BK_IAM_URL,
-            description=_("蓝鲸权限中心访问地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="USER_URL",
-            value=settings.BK_USER_URL,
-            description=_("蓝鲸用户管理访问地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="MONITORV3_URL",
-            value=settings.BK_MONITORV3_URL,
-            description=_("蓝鲸监控平台访问地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="LOG_URL",
-            value=settings.BK_LOG_URL,
-            description=_("蓝鲸日志平台访问地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="REPO_URL",
-            value=settings.BK_REPO_URL,
-            description=_("蓝鲸制品库访问地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="CI_URL",
-            value=settings.BK_CI_URL,
-            description=_("蓝鲸持续集成平台（蓝盾）访问地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="CODECC_URL",
-            value=settings.BK_CODECC_URL,
-            description=_("蓝鲸代码检查平台访问地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="TURBO_URL",
-            value=settings.BK_TURBO_URL,
-            description=_("蓝鲸编译加速平台访问地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="PIPELINE_URL",
-            value=settings.BK_PIPELINE_URL,
-            description=_("蓝鲸流水线访问地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="NODEMAN_URL",
-            value=settings.BK_NODEMAN_URL,
-            description=_("蓝鲸节点管理平台地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="BCS_URL",
-            value=settings.BK_BCS_URL,
-            description=_("蓝鲸容器管理平台地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="BSCP_URL",
-            value=settings.BK_BSCP_URL,
-            description=_("蓝鲸服务配置中心地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="AUDIT_URL",
-            value=settings.BK_AUDIT_URL,
-            description=_("蓝鲸审计中心地址"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="SHARED_RES_URL",
-            value=settings.BK_SHARED_RES_URL,
-            description=_("蓝鲸产品 title/footer/name/logo 等资源自定义配置的路径"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="BK_CRYPTO_TYPE",
-            value=settings.BK_CRYPTO_TYPE,
-            description=_("加密数据库内容的推荐算法有：SHANGMI（对应 SM4CTR 算法）和 CLASSIC（对应 Fernet 算法）"),
-        ),
-        EnvVariableObj.with_sys_prefix(
-            key="MULTI_TENANT_MODE",
-            value=settings.ENABLE_MULTI_TENANT_MODE,
-            description=_("是否开启多租户模式"),
-        ),
+        sys_var("MULTI_TENANT_MODE", settings.ENABLE_MULTI_TENANT_MODE, _("是否开启多租户模式")),
     ]
     # 兼容私有化版本保留的 BK_ 前缀的环境变量
     system_envs_with_prefix.extend(
@@ -444,20 +334,17 @@ def generate_env_vars_for_bk_platform() -> EnvVariableList:
 def get_builtin_env_variables(engine_app: "EngineApp") -> EnvVariableList:
     """Get all platform built-in env vars"""
     app = engine_app.env.application
+    env = engine_app.env
+
     result = EnvVariableList()
     # 应用基本信息环境变量
-    result.extend(generate_env_vars_for_app(app))
-
-    # 应用运行时环境变量
-    result.extend(generate_runtime_env_vars_for_app(engine_app))
+    result.extend(list_vars_builtin_app_basic(app))
 
     # 蓝鲸体系内平台的访问地址
-    result.extend(generate_env_vars_for_bk_platform())
+    result.extend(list_vars_builtin_plat_addrs())
 
-    environment = engine_app.env.environment
-    region = engine_app.region
     # 需要根据 region、env 写入不同值的系统环境变量
-    result.extend(generate_env_vars_by_region_and_env(region, environment))
+    result.extend(list_vars_builtin_region(app.region, env.environment))
 
     # 蓝鲸文档地址前缀
     result.append(EnvVariableObj(key="BK_DOCS_URL_PREFIX", value=get_bk_doc_url_prefix(), description=""))
@@ -472,6 +359,9 @@ def get_builtin_env_variables(engine_app: "EngineApp") -> EnvVariableList:
             f"will be overwritten by {key}={custom_sys_kv[key]} defined in custom builtin envs"
         )
     result.extend(custom_sys_envs)
+
+    # 应用运行时相关环境变量
+    result.extend(list_vars_builtin_runtime(env))
     return result
 
 
@@ -480,41 +370,41 @@ def get_builtin_env_variables(engine_app: "EngineApp") -> EnvVariableList:
 _bk_var_tmpl_process_type = "{{bk_var_process_type}}"
 
 
-def generate_wl_builtin_env_vars(env: None | ModuleEnvironment = None) -> EnvVariableList:
+def list_vars_builtin_runtime(env: ModuleEnvironment, include_deprecated: bool = True) -> EnvVariableList:
     """Generate env vars related with workloads.
 
-    :param env: Optional, the env object, if given, will include the env vars related
-        to the environment, such as subpath, process type, etc.
+    :param env: the env object.
+    :param include_deprecated: Whether to include deprecated variables.
     """
+    app = env.module.application
+    engine_app = env.get_engine_app()
+    wl_app = env.wl_app
     items = [
-        EnvVariableObj.with_sys_prefix(
-            key="APP_LOG_PATH",
-            value=settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
-            description=_("应用日志文件存放路径"),
-        ),
+        sys_var("APP_MODULE_NAME", env.module.name, _("应用当前模块名")),
+        sys_var("ENVIRONMENT", env.environment, _("应用当前环境，预发布环境为 stag、生产环境为 prod")),
+        sys_var("MAJOR_VERSION", str(3), _("应用当前运行的开发者中心版本，值为 3")),
+        sys_var("ENGINE_REGION", env.region, _("应用版本，默认版本为 default")),
+        sys_var("APP_LOG_PATH", settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR, _("应用日志文件存放路径")),
         EnvVariableObj(key="PORT", value=str(settings.CONTAINER_PORT), description=_("目标端口号，值为 5000")),
     ]
-    # Extend the env vars related to the env when given
-    if env:
-        wl_app = env.wl_app
-        app = env.module.application
-        items += [
-            EnvVariableObj.with_sys_prefix(
-                key="LOG_NAME_PREFIX",
-                value=f"{app.region}-bkapp-{app.code}-{env.environment}-{_bk_var_tmpl_process_type}",
-                description=_("日志文件推荐使用的前缀"),
-            ),
-            EnvVariableObj.with_sys_prefix(
-                key="PROCESS_TYPE",
-                value=_bk_var_tmpl_process_type,
-                description=_("[不推荐使用] 当前进程类型"),
-            ),
-            EnvVariableObj.with_sys_prefix(
-                key="SUB_PATH",
-                value=f"/{wl_app.region}-{wl_app.name}/",
-                description=_("[不推荐使用] 基于规则拼接的应用访问子路径，仅适合向前兼容时使用"),
-            ),
-        ]
+    if include_deprecated:
+        # 这几个变量用户很少使用，暂不展示描述信息到页面上
+        items.extend(
+            [
+                sys_var("ENGINE_APP_NAME", engine_app.name, _("[不推荐使用] 内部变量，不推荐使用")),
+                sys_var(
+                    "LOG_NAME_PREFIX",
+                    f"{app.region}-bkapp-{app.code}-{env.environment}-{_bk_var_tmpl_process_type}",
+                    _("日志文件推荐使用的前缀"),
+                ),
+                sys_var("PROCESS_TYPE", _bk_var_tmpl_process_type, _("[不推荐使用] 当前进程类型")),
+                sys_var(
+                    "SUB_PATH",
+                    f"/{wl_app.region}-{wl_app.name}/",
+                    _("[不推荐使用] 基于规则拼接的应用访问子路径，仅适合向前兼容时使用"),
+                ),
+            ]
+        )
     return EnvVariableList(items)
 
 
@@ -527,7 +417,4 @@ def get_preset_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
 def get_custom_builtin_config_vars() -> EnvVariableList:
     """Get the custom builtin config vars."""
     items = BuiltinConfigVar.objects.values_list("key", "value", "description")
-    return EnvVariableList(
-        EnvVariableObj.with_sys_prefix(key=key, value=value, description=description)
-        for key, value, description in items
-    )
+    return EnvVariableList(sys_var(key, value, description) for key, value, description in items)

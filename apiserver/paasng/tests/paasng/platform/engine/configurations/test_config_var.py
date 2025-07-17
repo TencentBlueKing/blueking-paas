@@ -30,12 +30,11 @@ from paasng.platform.engine.configurations.config_var import (
     ConflictedKey,
     EnvVarSource,
     UnifiedEnvVarsReader,
-    generate_wl_builtin_env_vars,
     get_builtin_env_variables,
     get_env_variables,
     get_user_conflicted_keys,
+    list_vars_builtin_runtime,
 )
-from paasng.platform.engine.constants import AppRunTimeBuiltinEnv
 from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
 from paasng.platform.modules.models.module import Module
 from tests.utils.helpers import override_region_configs
@@ -193,15 +192,12 @@ class TestBuiltInEnvVars:
             "BKPAAS_APP_ID",
             "BKPAAS_APP_SECRET",
             "BKPAAS_APP_TENANT_ID",
+            # 运行时相关变量
+            "BKPAAS_APP_MODULE_NAME",
+            "BKPAAS_ENVIRONMENT",
+            "BKPAAS_MAJOR_VERSION",
+            "BKPAAS_ENGINE_REGION",
         }.issubset(config_vars.keys())
-
-        # 运行时相关的环境变量，其中 DEFAULT_PREALLOCATED_URLS 是在 _default_preallocated_urls() 中单独处理的环境变量
-        runtime_env_keys = [
-            f"{settings.CONFIGVAR_SYSTEM_PREFIX}{key}"
-            for key in AppRunTimeBuiltinEnv.get_values()
-            if key != AppRunTimeBuiltinEnv.DEFAULT_PREALLOCATED_URLS.value
-        ]
-        assert set(runtime_env_keys).issubset(config_vars.keys())
 
     def test_param_include_custom_builtin_config_vars(self, bk_stag_env):
         BuiltinConfigVar.objects.create(key="FOO", value="bar")
@@ -213,8 +209,8 @@ class TestBuiltInEnvVars:
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
-def test_generate_wl_builtin_env_vars(bk_stag_env):
-    env_vars = generate_wl_builtin_env_vars(bk_stag_env).kv_map
+def test_list_vars_builtin_runtime(bk_stag_env):
+    env_vars = list_vars_builtin_runtime(bk_stag_env).kv_map
 
     assert "PORT" in env_vars
     assert "BKPAAS_APP_LOG_PATH" in env_vars

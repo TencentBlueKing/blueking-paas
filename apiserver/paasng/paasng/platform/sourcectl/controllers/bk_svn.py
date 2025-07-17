@@ -17,6 +17,7 @@
 
 import logging
 import os
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
@@ -24,6 +25,8 @@ from paasng.platform.sourcectl.exceptions import BasicAuthError
 from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
 from paasng.platform.sourcectl.svn.client import SvnRepositoryClient, svn_version_types
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
+from paasng.platform.sourcectl.utils import generate_temp_dir
+from paasng.utils.file import validate_source_dir_str
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +67,34 @@ class SvnRepoController:
         else:
             return True
 
-    def export(self, local_path, version_info: VersionInfo):
-        target_branch, revision = self.extract_version_info(version_info)
+    def export(self, local_path, version_info: VersionInfo | None = None, source_dir: str | None = None):
+        """导出指定版本的整个项目内容或指定目录到本地路径
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        :param source_dir: 可选，指定要导出的子目录
+        """
+        if version_info:
+            target_branch, revision = self.extract_version_info(version_info)
+        else:
+            target_branch, revision = "trunk", None
         self.svn_client.export(target_branch, local_path=local_path, revision=revision)
+
+        if not source_dir:
+            return
+
+        # 如果指定了 source_dir，则只保留该目录内容
+        full_source_path = validate_source_dir_str(local_path, source_dir)
+        with generate_temp_dir() as temp_dir:
+            # 将指定目录内容移动到临时目录
+            for item in full_source_path.iterdir():
+                shutil.move(str(item), str(temp_dir / item.name))
+
+            # 清空目标目录并将内容移回
+            shutil.rmtree(local_path)
+            local_path.mkdir(parents=True, exist_ok=True)
+            for item in temp_dir.iterdir():
+                shutil.move(str(item), str(local_path / item.name))
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         try:
@@ -119,14 +147,6 @@ class SvnRepoController:
 
     def delete_project(self, *args, **kwargs):
         """删除在 VCS 上的源码项目"""
-        raise NotImplementedError
-
-    def download_directory(self, source_dir: str, local_path: Path) -> Path:
-        """下载指定目录到本地
-
-        :param source_dir: 代码仓库的指定目录
-        :param local_path: 本地路径
-        """
         raise NotImplementedError
 
     def commit_and_push(

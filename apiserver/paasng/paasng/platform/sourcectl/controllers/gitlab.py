@@ -18,6 +18,7 @@
 import datetime
 import shutil
 from functools import wraps
+from os import PathLike
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -106,8 +107,18 @@ class GitlabRepoController(BaseGitRepoController):
             return True
 
     @error_converter
-    def export(self, local_path: str, version_info: VersionInfo):
-        tag_or_branch, revision = self.extract_version_info(version_info)
+    def export(self, local_path: PathLike, version_info: VersionInfo | None = None, source_dir: str | None = None):
+        """导出指定版本的整个项目内容或指定目录到本地路径
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        :param source_dir: 可选，指定要导出的子目录
+        """
+        if version_info:
+            tag_or_branch, revision = self.extract_version_info(version_info)
+        else:
+            tag_or_branch, revision = None, None
+
         with generate_temp_file(suffix=".tar.gz") as tar_file:
             self.api_client.repo_archive(self.project, tar_file, ref=revision or tag_or_branch)
             uncompress_directory(tar_file, local_path)
@@ -120,6 +131,9 @@ class GitlabRepoController(BaseGitRepoController):
             # Move all contents into it's parent
             shutil.move(str(child), str(local_path_obj))
         shutil.rmtree(str(wrapper_dir))
+
+        if source_dir:
+            self.extract_source_dir_only(local_path, source_dir)
 
     @error_converter
     def list_alternative_versions(self) -> List[AlternativeVersion]:
@@ -195,14 +209,6 @@ class GitlabRepoController(BaseGitRepoController):
 
     def delete_project(self, *args, **kwargs):
         """删除在 VCS 上的源码项目"""
-        raise NotImplementedError
-
-    def download_directory(self, source_dir: str, local_path: Path) -> Path:
-        """下载指定目录到本地
-
-        :param source_dir: 代码仓库的指定目录
-        :param local_path: 本地路径
-        """
         raise NotImplementedError
 
     def commit_and_push(

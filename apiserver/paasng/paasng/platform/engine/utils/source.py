@@ -59,6 +59,7 @@ from paasng.platform.sourcectl.utils import (
     generate_temp_file,
 )
 from paasng.utils.blobstore import make_blob_store
+from paasng.utils.file import validate_source_dir_str
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 logger = logging.getLogger(__name__)
@@ -384,28 +385,3 @@ def _get_source_package_path(version_info: VersionInfo, app_code: str, module_na
 
     slug_name = f"{app_code}:{module_name}:{branch}:{revision}:dev"
     return f"{region}/home/{slug_name}/tar"
-
-
-def validate_source_dir_str(root_path: Path, source_dir_str: str) -> Path:
-    """Validate the source_dir string and return the source directory of the module.
-
-    :param root_path: The repository's root directory.
-    :param source_dir_str: The source directory string defined by the user.
-    :raise ValueError: If the source directory is invalid.
-    :return: The source directory.
-    """
-    source_dir = Path(source_dir_str)
-    # If the user configured "/src", change it into "src"
-    if source_dir.is_absolute():
-        source_dir = Path(source_dir).relative_to("/")
-
-    # Check if the source_dir is valid, resolve the symlink and ensure it is within the root directory
-    source_dir = root_path / source_dir
-    if not source_dir.resolve().is_relative_to(root_path):
-        raise ValueError(f"Invalid source directory: {source_dir_str}")
-
-    if not source_dir.exists():
-        raise ValueError(f"The source directory '{source_dir_str}' does not exist")
-    if source_dir.is_file():
-        raise ValueError(f"The source directory '{source_dir_str}' is not a directory")
-    return source_dir

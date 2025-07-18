@@ -115,3 +115,11 @@ class DevSandboxCommitOutputSLZ(serializers.Serializer):
 
 class DevSandboxPreDeployCheckOutputSLZ(serializers.Serializer):
     result = serializers.BooleanField(help_text="预部署检查结果")
+
+
+class DevSandboxEditEnvVarsInputSLZ(serializers.Serializer):
+    env_vars = serializers.DictField(child=serializers.CharField(), help_text="需要修改（新增）的沙箱环境变量")
+
+
+class DevSandboxDeleteEnvVarsInputSLZ(serializers.Serializer):
+    key = serializers.CharField(help_text="要删除的环境变量键名")

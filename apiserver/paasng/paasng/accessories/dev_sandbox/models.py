@@ -14,7 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
+import json
 import string
 from datetime import timedelta
 
@@ -54,6 +54,7 @@ class DevSandboxQuerySet(models.QuerySet):
         owner: str,
         version_info: VersionInfo | None,
         enable_code_editor: bool = False,
+        env_vars: list | None = None,
     ) -> "DevSandbox":
         charsets = string.ascii_lowercase + string.digits
 
@@ -74,6 +75,11 @@ class DevSandboxQuerySet(models.QuerySet):
         if enable_code_editor:
             code_editor_cfg = CodeEditorConfig(password=generate_password())
 
+        if env_vars is None:
+            env_vars_json = None
+        else:
+            env_vars_json = json.dumps(env_vars)
+
         return super().create(
             code=code,
             module=module,
@@ -83,6 +89,7 @@ class DevSandboxQuerySet(models.QuerySet):
             token=generate_password(),
             code_editor_config=code_editor_cfg,
             tenant_id=module.tenant_id,
+            env_vars=env_vars_json,
         )
 
 
@@ -99,6 +106,7 @@ class DevSandbox(OwnerTimestampedModel):
     token = EncryptField(help_text="访问令牌", null=True)
     code_editor_config = CodeEditorConfigField(help_text="代码编辑器配置", default=None, null=True)
     tenant_id = tenant_id_field_factory()
+    env_vars = EncryptField(help_text="沙箱环境变量", default=list, null=True, blank=True)
 
     objects = DevSandboxManager()
 
@@ -106,6 +114,46 @@ class DevSandbox(OwnerTimestampedModel):
         """由周期任务定时调用，刷新过期时间"""
         self.expired_at = timezone.now() + DEV_SANDBOX_DEFAULT_EXPIRED_DURATION
         self.save(update_fields=["expired_at", "updated"])
+
+    def retrieve_env_vars(self) -> list:
+        """获取沙箱环境变量"""
+        if not self.env_vars:
+            return []
+
+        return json.loads(self.env_vars)
+
+    def set_env_vars(self, new_env_vars: list | None):
+        """设置沙箱环境变量"""
+        if new_env_vars is None:
+            setattr(self, "env_vars", None)
+        else:
+            validated_vars = []
+            for item in new_env_vars:
+                if "source" not in item:
+                    item["source"] = "custom"
+                validated_vars.append(item)
+
+            setattr(self, "env_vars", json.dumps(validated_vars))
+
+    def update_env_vars(self, new_vars: list | None):
+        """更新环境变量"""
+        if new_vars is None:
+            return
+
+        current_envs = self.retrieve_env_vars()
+        current_dict = {item["key"]: item for item in current_envs}
+
+        # 更新或添加新变量
+        for new_item in new_vars:
+            key = new_item["key"]
+
+            if "source" not in new_item:
+                new_item["source"] = "custom"
+
+            current_dict[key] = new_item
+
+        updated_list = list(current_dict.values())
+        self.set_env_vars(updated_list)
 
     class Meta:
         unique_together = ("module", "owner")

@@ -153,38 +153,43 @@ class ReleaseResultHandler(CallbackHandler):
 
 
 def release_by_engine(env: ModuleEnvironment, build_id: str, deployment: Optional[Deployment] = None) -> str:
-    """Create a new release for the given environment. If the optional deployment
-    object is given, will start an async waiting procedure which waits for the release
-    to be finished.
+    """Create a new release for the given environment.
+
+    If the optional deployment object is given, will start an async waiting procedure
+    which waits for the release to be finished.
 
     :param env: The environment to create the release for.
     :param build_id: The ID of the finished build object.
-    :param deployment: if not given, will try using the latest succeed deployment for getting desc env vars
+    :param deployment: if not given, will try using the latest succeed deployment.
     :return: The ID of the created release object.
+    :raises ValueError: if no deployment object can be found
     """
+    # Only start the async waiting if the deployment parameter is given
+    start_async_waiting = deployment is not None
+
+    # Try to get the deployment object if it's not given
+    # 1. Get the deployment object by the `build_id`
+    if not deployment:
+        try:
+            deployment = Deployment.objects.filter(build_id=build_id).latest_succeeded()
+        except Deployment.DoesNotExist:
+            logger.warning("Cannot find any succeeded deployment for build %s", build_id)
+    # 2. Get the latest succeeded deployment if still not found
     if not deployment:
         deployment = DeploymentGetter(env).get_latest_succeeded()
 
-    deployment_id: Optional[str]
-    if deployment:
-        procfile = deployment.get_procfile()
-        deployment_id = str(deployment.id)
-    else:
-        # NOTE: 更新环境变量时的 Pod 滚动时没有 deployment, 需要从 engine 中查询 procfile
-        previous_deployment: Deployment = Deployment.objects.filter(build_id=build_id).latest_succeeded()
-        procfile = previous_deployment.get_procfile()
-        deployment_id = None
-
-    extra_envs = get_env_variables(env)
+    if not deployment:
+        raise ValueError("No deployment object can be found")
 
     # Create the release and start the background task to wait for the release if needed
-    release = release_to_k8s(env, build_id, extra_envs, procfile)
-    if deployment_id:
+    extra_envs = get_env_variables(env)
+    release = release_to_k8s(env, build_id, extra_envs, deployment.get_procfile())
+    if start_async_waiting:
         wait_for_release(
             env=env,
             release_version=release.version,
             result_handler=ReleaseResultHandler,
-            extra_params={"deployment_id": deployment_id},
+            extra_params={"deployment_id": str(deployment.id)},
         )
     return str(release.uuid)
 

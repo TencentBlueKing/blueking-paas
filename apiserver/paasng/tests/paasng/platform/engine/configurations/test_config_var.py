@@ -30,13 +30,11 @@ from paasng.platform.engine.configurations.config_var import (
     ConflictedKey,
     EnvVarSource,
     UnifiedEnvVarsReader,
-    _flatten_envs,
-    generate_wl_builtin_env_vars,
     get_builtin_env_variables,
     get_env_variables,
     get_user_conflicted_keys,
+    list_vars_builtin_runtime,
 )
-from paasng.platform.engine.constants import AppRunTimeBuiltinEnv
 from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
 from paasng.platform.modules.models.module import Module
 from tests.utils.helpers import override_region_configs
@@ -172,7 +170,7 @@ class TestBuiltInEnvVars:
         with override_region_configs(bk_app.region, update_region_hook):
             bk_module = bk_app.get_default_module()
             bk_stag_env = bk_module.envs.get(environment="stag")
-            config_vars = get_builtin_env_variables(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
+            config_vars = get_builtin_env_variables(bk_stag_env.engine_app).kv_map
 
             # 这些环境变量在所有版本都有
             assert ("BK_COMPONENT_API_URL" in config_vars) == contain_bk_envs
@@ -186,7 +184,7 @@ class TestBuiltInEnvVars:
                 assert set(settings.BK_PAAS2_PLATFORM_ENVS.keys()).issubset(set(config_vars.keys())) == contain_bk_envs
 
     def test_builtin_env_keys(self, bk_stag_env):
-        config_vars = get_builtin_env_variables(bk_stag_env.engine_app, settings.CONFIGVAR_SYSTEM_PREFIX)
+        config_vars = get_builtin_env_variables(bk_stag_env.engine_app).kv_map
 
         assert {
             "BKPAAS_LOGIN_URL",
@@ -194,15 +192,12 @@ class TestBuiltInEnvVars:
             "BKPAAS_APP_ID",
             "BKPAAS_APP_SECRET",
             "BKPAAS_APP_TENANT_ID",
+            # 运行时相关变量
+            "BKPAAS_APP_MODULE_NAME",
+            "BKPAAS_ENVIRONMENT",
+            "BKPAAS_MAJOR_VERSION",
+            "BKPAAS_ENGINE_REGION",
         }.issubset(config_vars.keys())
-
-        # 运行时相关的环境变量，其中 DEFAULT_PREALLOCATED_URLS 是在 _default_preallocated_urls() 中单独处理的环境变量
-        runtime_env_keys = [
-            f"{settings.CONFIGVAR_SYSTEM_PREFIX}{key}"
-            for key in AppRunTimeBuiltinEnv.get_values()
-            if key != AppRunTimeBuiltinEnv.DEFAULT_PREALLOCATED_URLS.value
-        ]
-        assert set(runtime_env_keys).issubset(config_vars.keys())
 
     def test_param_include_custom_builtin_config_vars(self, bk_stag_env):
         BuiltinConfigVar.objects.create(key="FOO", value="bar")
@@ -214,8 +209,8 @@ class TestBuiltInEnvVars:
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
-def test_generate_wl_builtin_env_vars(bk_stag_env):
-    env_vars = _flatten_envs(generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX, bk_stag_env))
+def test_list_vars_builtin_runtime(bk_stag_env):
+    env_vars = list_vars_builtin_runtime(bk_stag_env).kv_map
 
     assert "PORT" in env_vars
     assert "BKPAAS_APP_LOG_PATH" in env_vars
@@ -269,13 +264,13 @@ class Test__get_user_conflicted_keys:
         assert conflicted_keys[0] == ConflictedKey(
             key="BK_API_URL_TMPL",
             conflicted_source="builtin_misc",
-            conflicted_detail="misc built-in",
+            conflicted_detail="网关 API 访问地址模板",
             override_conflicted=expected_override_conflicted_map["BK_API_URL_TMPL"],
         )
         assert conflicted_keys[1] == ConflictedKey(
             key="BK_COMPONENT_API_URL",
             conflicted_source="builtin_misc",
-            conflicted_detail="misc built-in",
+            conflicted_detail="组件 API 访问地址",
             override_conflicted=expected_override_conflicted_map["BK_COMPONENT_API_URL"],
         )
         assert conflicted_keys[2] == ConflictedKey(

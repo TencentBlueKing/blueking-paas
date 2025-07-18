@@ -20,6 +20,7 @@ from typing import Dict, List, NamedTuple, Optional
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils.translation import gettext_lazy as _
 
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
@@ -27,8 +28,9 @@ from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
 from paasng.accessories.publish.entrance.domains import get_preallocated_domain, get_preallocated_domains_by_env
 from paasng.accessories.publish.entrance.subpaths import get_preallocated_path, get_preallocated_paths_by_env
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.engine.configurations.env_var.entities import EnvVariableList, EnvVariableObj
 from paasng.platform.engine.configurations.provider import env_vars_providers
-from paasng.platform.engine.constants import AppEnvName, AppRunTimeBuiltinEnv
+from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.helpers import get_module_clusters
 
@@ -82,7 +84,7 @@ def get_preallocated_urls(module_env: ModuleEnvironment) -> List[EnvExposedURL]:
 
 
 @env_vars_providers.register_env
-def _default_preallocated_urls(env: ModuleEnvironment) -> Dict[str, str]:
+def _default_preallocated_urls(env: ModuleEnvironment) -> EnvVariableList:
     """Append the default preallocated URLs, the value include both "stag" and "prod" environments
     for given module.
     """
@@ -101,7 +103,15 @@ def _default_preallocated_urls(env: ModuleEnvironment) -> Dict[str, str]:
         addrs_value = json.dumps(addrs._asdict())
     except ValueError:
         logger.warning("Fail to get preallocated address for application: %s, module: %s", application, env.module)
-    return {settings.CONFIGVAR_SYSTEM_PREFIX + AppRunTimeBuiltinEnv.DEFAULT_PREALLOCATED_URLS.value: addrs_value}
+    return EnvVariableList(
+        [
+            EnvVariableObj.with_sys_prefix(
+                key="DEFAULT_PREALLOCATED_URLS",
+                value=addrs_value,
+                description=_('应用模块各环境的访问地址，如 {"stag": "http://stag.com", "prod": "http://prod.com"}'),
+            )
+        ]
+    )
 
 
 class PreAddresses(NamedTuple):

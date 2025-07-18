@@ -90,7 +90,7 @@ def test_get_plugin_env_variables(bk_plugin):
     profile = bk_plugin.get_profile()
     profile.api_gw_name = "foo"
     profile.save(update_fields=["api_gw_name"])
-    assert get_plugin_env_variables(env) == {"BKPAAS_BK_PLUGIN_APIGW_NAME": "foo"}
+    assert get_plugin_env_variables(env).kv_map == {"BKPAAS_BK_PLUGIN_APIGW_NAME": "foo"}
 
 
 class TestBkPluginAppQuerySet:

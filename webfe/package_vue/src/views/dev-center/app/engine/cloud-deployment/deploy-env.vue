@@ -393,13 +393,13 @@
         >
           <bk-button
             :theme="'primary'"
-            @click="saveEnvData"
+            @click="batchEditSaveValidation"
           >
             {{ $t('保存') }}
           </bk-button>
           <bk-button
             class="ml8"
-            @click="$emit('cancel')"
+            @click="handleCancel"
           >
             {{ $t('取消') }}
           </bk-button>
@@ -616,12 +616,6 @@ export default {
               const flag = this.envVarList.filter(
                 (item) => item.key === this.curItem.key && item.environment_name === this.curItem.environment_name
               );
-              if (flag.length <= 1) {
-                // 如果符合要求需要清除错误
-                this.envVarList.forEach((e, i) => {
-                  this.$refs[`envRefKey${i}`] && this.$refs[`envRefKey${i}`].clearError();
-                });
-              }
               return flag.length <= 1;
             },
             message: () => this.$t(`该环境下名称为 ${this.curItem.key} 的变量已经存在，不能重复添加。`),
@@ -799,67 +793,66 @@ export default {
     },
 
     // 处理input事件
-    handleInputEvent(rowItem) {
+    handleInputEvent(rowItem, index) {
       this.curItem = rowItem;
+      // 批量编辑模式下为全量数据可以使用index
+      if (this.isPageEdit) {
+        this.markAsTouched(index);
+      }
     },
 
-    async saveEnvData() {
-      let validate = true;
-      // 提交时需要检验,拿到需要检验的数据下标
-      const flag = this.envVarList.reduce((p, v, i) => {
-        if (v.key === this.curItem.key && v.environment_name === this.curItem.environment_name) {
-          p.push({ ...v, i });
+    // 批量编辑模式下，给操作表单的item项添加标记，用来标记是否被操作过
+    markAsTouched(index) {
+      this.$set(this.envVarList[index], 'isTouched', true);
+    },
+
+    // 清除所有被操作过的标记
+    clearTouchedFlags() {
+      this.envVarList.forEach((item) => {
+        this.$delete(item, 'isTouched');
+      });
+    },
+
+    getOperatedValidationPromises() {
+      return this.envVarList.reduce((promises, item, index) => {
+        if (item.isTouched || item.key === '' || item.environment_name === '') {
+          promises.push(
+            this.$refs[`envRefKey${index}`]?.validate(),
+            this.$refs[`envRefValue${index}`]?.validate(),
+            item.description ? this.$refs[`envRefDescription${index}`]?.validate() : Promise.resolve()
+          );
         }
-        if (v.key === '' || v.environment_name === '') {
-          p.push({ ...v, i });
-        }
-        return p;
+        return promises;
       }, []);
-      // 仅一条数据也可删除
+    },
+
+    // 批量编辑保存校验
+    async batchEditSaveValidation() {
+      // 没有数据直接保存，允许删除最后一条
       if (this.envVarList.length === 0) {
-        this.save();
+        this.batchEditSave();
         return;
       }
-      if (flag.length) {
-        // 有数据时
-        for (let index = 0; index < flag.length; index++) {
-          try {
-            await this.$refs[`envRefKey${flag[index].i}`].validate();
-            await this.$refs[`envRefValue${flag[index].i}`].validate();
-            if (flag[index]?.description) {
-              await this.$refs[`envRefDescription${flag[index].i}`].validate();
-            }
-          } catch (error) {
-            validate = false;
-            break;
-          }
-        }
-      } else {
-        // 新增第一条数据时
-        try {
-          await this.$refs.envRefKey0.validate();
-          await this.$refs.envRefValue0.validate();
-          if (this.envVarList[0]?.description) {
-            await this.$refs?.envRefDescription0?.validate();
-          }
-        } catch (error) {
-          validate = false;
-        }
-      }
-      if (validate) {
-        // 通过检验才可以保存
-        this.save();
+      try {
+        const validationPromises = this.getOperatedValidationPromises();
+        // 执行所有验证
+        await Promise.all(validationPromises);
+        this.clearTouchedFlags();
+        this.batchEditSave();
+      } catch (error) {
+        // 捕获并处理验证错误
+        console.error(error);
       }
     },
 
     // 单条环境变量校验
     async singleValidate(i, type) {
       try {
-        await this.$refs[`envRefKey${i}`].validate();
-        await this.$refs[`envRefValue${i}`].validate();
+        const validateRefs = [this.$refs[`envRefKey${i}`].validate(), this.$refs[`envRefValue${i}`].validate()];
         if (this.envVarList[i]?.description) {
-          await this.$refs[`envRefDescription${i}`].validate();
+          validateRefs.push(this.$refs[`envRefDescription${i}`].validate());
         }
+        await Promise.all(validateRefs);
         const data = cloneDeep(this.envVarList[i]);
         // 单条新建编辑操作
         type === 'add' ? this.createdEnvVariable(data, i) : this.updateEnvVariable(data, i);
@@ -923,13 +916,13 @@ export default {
       }
     },
 
-    // 保存
-    async save() {
+    // 批量编辑保存
+    async batchEditSave() {
       try {
         // 保存环境变量，无需传递 is_global
         const params = cloneDeep(this.envVarList).map((item) => this.cleanEnvVarData(item, true));
 
-        await this.$store.dispatch('envVar/saveEnvItem', {
+        await this.$store.dispatch('envVar/batchConfigVars', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
           data: params,
@@ -943,10 +936,9 @@ export default {
         // 批量更新不打乱当前顺序，重新复制当前新建id
         this.getEnvVarList(false);
       } catch (error) {
-        const errorMsg = error.message;
         this.$paasMessage({
           theme: 'error',
-          message: `${this.$t('添加环境变量失败')}，${errorMsg}`,
+          message: `${this.$t('添加环境变量失败')}，${error.message}`,
         });
       }
       this.isBatchEdit = false;
@@ -1337,11 +1329,7 @@ export default {
     handleCancel() {
       this.envVarList = cloneDeep(this.envLocalVarList);
       this.isBatchEdit = false;
-    },
-
-    sourceFilterMethod(value, row, column) {
-      const { property } = column;
-      return row[property] === value;
+      this.$emit('cancel');
     },
 
     handleRenderHander(h, { $index }) {

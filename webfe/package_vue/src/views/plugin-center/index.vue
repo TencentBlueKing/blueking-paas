@@ -17,7 +17,10 @@
         </bk-button>
         <!-- 过滤参数 -->
         <div class="flex-row justify-content-between">
-          <filter-select @change="handleFiltersChange" />
+          <filter-select
+            class="mt0"
+            @change="handleFiltersChange"
+          />
           <bk-input
             v-model="filterKey"
             class="paas-plugin-input"

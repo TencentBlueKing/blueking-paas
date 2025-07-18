@@ -20,7 +20,7 @@
             <bk-button
               :theme="'default'"
               type="submit"
-              @click="handlePageJump('process', 'default')"
+              @click="handlePageJump('cloudAppDeployForBuild')"
             >
               {{ $t('模块配置') }}
             </bk-button>
@@ -132,6 +132,7 @@ export default {
         name,
         params: {
           id: this.appCode,
+          moduleId: 'default',
         },
       });
     },

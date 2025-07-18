@@ -12,7 +12,7 @@ dependencies = [
   'bkpaas-auth (==3.1.2)',
   'apigw-manager (==4.0.1)',
   'bkstorages (==2.0.0)',
-  'bleach (==3.3.0)',
+  'bleach (==3.3.1)',
   "blue-krill (==2.1.2)",
   'bkapi-component-open (==1.1.0)',
   'boto (==2.49.0)',

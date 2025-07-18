@@ -49,8 +49,23 @@
                     :name="$t('最近 400 条')"
                   />
                 </bk-select>
+                <template v-if="isRealTimeLog && isCloudNative">
+                  <i
+                    v-bk-tooltips="isShowTime ? $t('隐藏时间') : $t('显示时间')"
+                    class="paasng-icon paasng-clock ml20"
+                    @click="handleChangeShowTime"
+                  ></i>
+                  <!-- 云原生-实时日志: 建立sse链接，获取日志 -->
+                  <i
+                    v-bk-tooltips="isOpen ? $t('停止刷新') : $t('实时刷新')"
+                    class="paasng-icon ml20"
+                    :class="isOpen ? 'paasng-pause' : 'paasng-play2'"
+                    @click="getStreamRealTimeLog"
+                  ></i>
+                </template>
                 <!-- 刷新 -->
                 <i
+                  v-bk-tooltips="$t('刷新')"
                   class="paasng-icon paasng-refresh ml20"
                   @click="refresh"
                 ></i>
@@ -74,7 +89,6 @@
               v-if="logs.length"
               class="bk-log"
               ref="bkLog"
-              :key="logIndex"
             ></bk-log>
             <div
               v-else
@@ -126,8 +140,8 @@ export default {
       type: Array | String,
       default: () => [],
     },
-    // 直接展示当前行日志
-    isDirect: {
+    // 是否为云原生应用
+    isCloudNative: {
       type: Boolean,
       default: false,
     },
@@ -137,11 +151,12 @@ export default {
       internalVisible: this.value,
       selectValue: this.defaultCondition,
       logType: 'realtime',
-      logIndex: 0,
       logTypeOption: [
         { id: 'realtime', text: this.$t('实时日志') },
         { id: 'restart', text: this.$t('最近一次重启日志') },
       ],
+      isOpen: false,
+      isShowTime: false,
     };
   },
   computed: {
@@ -171,9 +186,9 @@ export default {
     },
     logs: {
       handler(newLogs) {
-        this.logIndex += 1;
         this.$nextTick(() => {
-          this.$refs.bkLog.addLogData(newLogs);
+          this.$refs.bkLog?.changeExecute();
+          this.$refs.bkLog?.addLogData(newLogs);
         });
       },
       deep: true,
@@ -190,7 +205,8 @@ export default {
     },
     // 切换日志类型
     changeLogType(type) {
-      if (this.loading) return;
+      if (this.loading || this.logType === type) return;
+      this.rest();
       this.logType = type;
       this.selectValue = this.isDisabledRestartLog ? 'restart' : this.defaultCondition;
       this.$emit('change', {
@@ -204,10 +220,36 @@ export default {
         type: this.logType,
         value: this.selectValue,
       });
+      this.closeStreamLog();
     },
     // 下载重启日志
     async download() {
       this.$emit('download', this.logType);
+    },
+    rest() {
+      // 清空当前日志
+      this.$refs.bkLog?.changeExecute();
+      this.closeStreamLog();
+    },
+    // 关闭 sse 连接
+    closeStreamLog() {
+      this.$emit('get-stream-log', 'close');
+      this.isOpen = false;
+    },
+    // 获取实时日志(sse)
+    getStreamRealTimeLog() {
+      const type = this.isOpen ? 'close' : 'open';
+      this.$emit('get-stream-log', type);
+      this.isOpen = !this.isOpen;
+    },
+    // 流式获取的 push 进组件，不进行全量替换
+    addLogData(log) {
+      this.$refs.bkLog?.addLogData(log);
+    },
+    // 日志时间
+    handleChangeShowTime() {
+      this.isShowTime = !this.isShowTime;
+      this.$refs.bkLog?.changeShowTime(this.isShowTime);
     },
   },
 };
@@ -299,12 +341,16 @@ export default {
 
     .log-content {
       height: calc(100% - 48px);
+      min-height: 0;
       .bk-log {
         height: 100%;
-        transform: translateY(-5px);
+        margin-top: 0 !important;
         /deep/ .scroll-home .scroll-main .scroll-item {
           font-family: Consolas, Courier New, monospace;
           color: #fff !important;
+        }
+        /deep/ .log-loading {
+          display: none;
         }
       }
       .empty {

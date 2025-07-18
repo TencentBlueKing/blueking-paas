@@ -25,7 +25,7 @@ RUN EDITION=${EDITION} npm run build
 FROM python:3.11.10-slim-bullseye
 USER root
 
-RUN apt-get update && apt-get install -y gcc subversion ssh default-libmysqlclient-dev pkg-config vim git gettext
+RUN apt-get update && apt-get install -y gcc subversion ssh default-libmysqlclient-dev pkg-config vim git gettext libxml2-dev libxml2
 
 RUN mkdir ~/.pip && printf '[global]\nindex-url = https://mirrors.cloud.tencent.com/pypi/simple/\n' > ~/.pip/pip.conf
 

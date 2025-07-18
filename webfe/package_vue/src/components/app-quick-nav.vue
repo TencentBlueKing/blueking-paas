@@ -5,10 +5,10 @@
         <img
           :src="appInfo.logo_url"
           class="overview-title-pic fleft"
-        >
+        />
         <div
           class="app-collect-btn"
-          :class="{ 'marked': curAppInfo.marked }"
+          :class="{ marked: curAppInfo.marked }"
           @click="toggleAppMarked"
         >
           <i class="paasng-icon paasng-star-cover" />
@@ -19,12 +19,16 @@
               <strong
                 v-bk-overflow-tips
                 :class="['app-title', { 'not-migrated': !isMigrating }]"
-              >{{ appInfo.name }}</strong>
+              >
+                {{ appInfo.name }}
+              </strong>
               <div
                 v-if="isMigrating"
                 v-bk-tooltips="$t('迁移云原生应用中…')"
-                class="migrate-tag">
-                {{ $t('迁移中') }}...</div>
+                class="migrate-tag"
+              >
+                {{ $t('迁移中') }}...
+              </div>
             </div>
             <p
               v-bk-overflow-tips
@@ -34,7 +38,10 @@
             </p>
           </div>
 
-          <div class="dropdown-btn" @click.stop="dropdownShow">
+          <div
+            class="dropdown-btn"
+            @click.stop="dropdownShow"
+          >
             <a
               href="javascript:"
               class="overview-title-icon"
@@ -48,7 +55,6 @@
         </template>
       </div>
 
-
       <div
         v-show="isDropdownShow"
         @click.stop
@@ -57,7 +63,7 @@
         <div class="quick-access border-box">
           <h3>
             {{ $t('快速访问') }}
-            <span style="color: #c4c6cc; font-size: 12px;"> {{ $t('(主模块)') }} </span>
+            <span style="color: #c4c6cc; font-size: 12px">{{ $t('(主模块)') }}</span>
           </h3>
           <template v-if="appDeployed">
             <div class="link">
@@ -66,13 +72,17 @@
                 :href="appLinks.stag"
                 target="_blank"
                 class="blue"
-              > {{ $t('预发布环境') }} </a>
+              >
+                {{ $t('预发布环境') }}
+              </a>
               <a
                 v-if="appLinks.prod"
                 :href="appLinks.prod"
                 target="_blank"
                 class="blue"
-              > {{ $t('生产环境') }} </a>
+              >
+                {{ $t('生产环境') }}
+              </a>
             </div>
           </template>
           <template v-else>
@@ -92,7 +102,9 @@
             >
               <h3>
                 {{ $t('独立域名') }}
-                <span style="color: #c4c6cc; font-size: 12px;">({{ key === 'stag' ? $t('预发布环境') : $t('生产环境') }})</span>
+                <span style="color: #c4c6cc; font-size: 12px">
+                  ({{ key === 'stag' ? $t('预发布环境') : $t('生产环境') }})
+                </span>
               </h3>
               <div class="entrances-adress">
                 <p
@@ -106,7 +118,7 @@
                     target="_blank"
                     class="address-link blue"
                   >
-                    <span style="cursor: pointer;">{{ url.hostname }}</span>
+                    <span style="cursor: pointer">{{ url.hostname }}</span>
                   </a>
                 </p>
               </div>
@@ -114,8 +126,8 @@
           </div>
         </div>
         <div class="app-dropdown">
-          <h3> {{ $t('应用列表') }} ( {{ appList.length }} )</h3>
-          <div :class="['paas-search',{ 'focus': isFocused }]">
+          <h3>{{ $t('应用列表') }} ( {{ appList.length }} )</h3>
+          <div :class="['paas-search', { focus: isFocused }]">
             <div class="application-search">
               <input
                 ref="keywordInput"
@@ -127,7 +139,7 @@
                 @keydown.down.prevent="searchAppKeyDown"
                 @keydown.up.prevent="searchAppKeyUp"
                 @keyup.enter="searchApp"
-              >
+              />
               <span
                 v-if="filterKey === ''"
                 class="paasng-icon paasng-search input-icon"
@@ -148,7 +160,6 @@
           />
         </div>
       </div>
-
     </div>
   </div>
 </template>
@@ -164,6 +175,7 @@ export default {
   },
   mixins: [appBaseMixin],
   props: {
+    // 是否为迁移中的应用
     isMigrating: {
       type: Boolean,
       default: false,
@@ -184,17 +196,10 @@ export default {
   },
   computed: {
     appInfo() {
-      const appInfo = this.$store.state.curAppInfo;
-      let logo = '';
-      if (appInfo.application && appInfo.application.logo_url) {
-        logo = appInfo.application.logo_url;
-      } else {
-        logo = '/static/images/default_logo.png';
-      }
+      const { application = {} } = this.curAppInfo;
       return {
-        logo_url: logo,
-        ...appInfo.application,
-
+        logo_url: application.logo_url || '/static/images/default_logo.png',
+        ...application,
       };
     },
     appDeployed() {
@@ -204,7 +209,7 @@ export default {
       return this.appInfo.web_config && this.appInfo.web_config.engine_enabled;
     },
     showEntrances() {
-      return Object.keys(this.customDomainEntrances).some(key => this.customDomainEntrances[key].length);
+      return Object.keys(this.customDomainEntrances).some((key) => this.customDomainEntrances[key].length);
     },
     platformFeature() {
       return this.$store.state.platformFeature;
@@ -227,6 +232,10 @@ export default {
       this.filterKey = '';
     },
   },
+  created() {
+    this.getAppLinks();
+    this.fetchAppCustomDomainEntrance();
+  },
   mounted() {
     bus.$on('market_switch', () => {
       this.getAppLinks();
@@ -235,10 +244,6 @@ export default {
       this.fetchAppCustomDomainEntrance();
     });
   },
-  created() {
-    this.getAppLinks();
-    this.fetchAppCustomDomainEntrance();
-  },
   methods: {
     searchApp() {
       this.$refs.searchAppList.enterSelect();
@@ -246,19 +251,17 @@ export default {
     searchAppKeyDown() {
       this.$refs.searchAppList.onKeyDown();
     },
-
     searchAppKeyUp() {
       this.$refs.searchAppList.onKeyUp();
     },
-
     async fetchAppCustomDomainEntrance() {
       try {
         const res = await this.$store.dispatch('getAppCustomDomainEntrance', this.$route.params.id);
         const domainEntrances = {
           stag: [],
           prod: [],
-        }
-                    ;(res || []).forEach((item) => {
+        };
+        (res || []).forEach((item) => {
           item.addresses.forEach((address) => {
             this.$set(address, 'is_default', item.module.is_default);
           });
@@ -272,7 +275,6 @@ export default {
         });
       }
     },
-
     // 清空筛选框值
     clearInputValue() {
       this.isFocused = false;
@@ -285,30 +287,22 @@ export default {
     getAppLinks() {
       if (this.curAppInfo.web_config.engine_enabled) {
         ['stag', 'prod'].forEach((env) => {
-          this.$store.dispatch('fetchAppExposedLinkUrl', {
-            appCode: this.appCode,
-            env,
-          }).then((link) => {
-            this.appLinks[env] = link;
-          });
+          this.$store
+            .dispatch('fetchAppExposedLinkUrl', {
+              appCode: this.appCode,
+              env,
+            })
+            .then((link) => {
+              this.appLinks[env] = link;
+            });
         });
       }
     },
     // 切换APP后的回调方法
     selectAppCallback() {
-    //   this.$refs.dropdown.close();
       this.isDropdownShow = false;
     },
-    handlerClose() {
-      this.filterKey = '';
-      const addressDom = document.querySelectorAll('.address-link');
-      for (const item of addressDom) {
-        if (item._tippy) {
-          item._tippy.hide();
-        }
-      }
-    },
-    handlerOpen() {
+    handlerFocus() {
       this.$refs.keywordInput.focus();
     },
     // init AppList
@@ -343,379 +337,381 @@ export default {
         this.isAppMarking = false;
       }
     },
-
     dropdownShow() {
       this.filterKey = '';
       this.isDropdownShow = !this.isDropdownShow;
 
-      // 监听点击事件
+      const body = document.body;
       if (this.isDropdownShow) {
-        document.getElementsByTagName('body')[0].className += ' drop-open';
-        document.getElementsByClassName('drop-open')[0].addEventListener('click', () => {
+        body.classList.add('drop-open');
+
+        const clickHandler = () => {
           this.isDropdownShow = false;
-          document.getElementsByTagName('body')[0].className = 'ps-app-detail';
+          body.classList.remove('drop-open');
+          body.removeEventListener('click', clickHandler);
+        };
+        body.addEventListener('click', clickHandler);
+        this.$nextTick(() => {
+          this.handlerFocus();
         });
       } else {
-        document.getElementsByTagName('body')[0].className = 'ps-app-detail';
+        body.classList.remove('drop-open');
       }
     },
   },
 };
-
 </script>
 <style lang="css">
-    .ps-nav-dropdown {
-        z-index: 110 !important;
-    }
+.ps-nav-dropdown {
+  z-index: 110 !important;
+}
 </style>
 <style lang="scss" scoped>
-    @import "../assets/css/components/conf.scss";
+@import '../assets/css/components/conf.scss';
 
-    .entrances-wrapper {
-        margin-top: 30px;
-        .entrances-adress {
-            font-size: 12px;
-            margin-top: 12px;
-            p {
-              height: 32px;
-              line-height: 32px;
-            }
-            a {
-                display: inline-block;
-                max-width: 159px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-        }
-        .set-mt {
-            margin-top: 36px;
-        }
+.entrances-wrapper {
+  margin-top: 30px;
+  .entrances-adress {
+    font-size: 12px;
+    margin-top: 12px;
+    p {
+      height: 32px;
+      line-height: 32px;
     }
-
-    .overview-slidedown {
-        .paas-search.focus {
-            border: 1px solid #3A84FF;
-        }
-    }
-
-    .overview-title-text {
-        display: inline-block;
-        margin-top: 7px;
-
-        p {
-            font-size: 12px;
-            color: #979BA5;
-            margin-top: -3px;
-            line-height: 14px;
-            font-weight: normal;
-        }
-
-        .app-title.not-migrated {
-            max-width: 120px;
-        }
-    }
-
-    .quick-access {
-        width: 100%;
-        background: #FFF;
-
-        .link {
-            margin-top: 9px;
-            a {
-                font-size: 12px;
-                line-height: 28px;
-                display: block;
-            }
-        }
-
-        h3 {
-            line-height: 1;
-            font-size: 12px;
-            color: #313238;
-            padding-bottom: 8px;
-            font-weight: normal;
-            border-bottom: 1px solid #DCDEE5;
-        }
-
-    }
-
-    .select-panel {
-        position: relative;
-    }
-
-    .app-dropdown {
-        background: #FFF;
-
-        h3 {
-            line-height: 1;
-            font-size: 12px;
-            color: #313238;
-            padding: 17px 20px 8px 20px;
-            font-weight: normal;
-
-        }
-    }
-
-    .overview-slidedown {
-        position: absolute;
-        width: 240px;
-        top: 60px;
-        background: #fff;
-        z-index: 9999;
-        border: solid 1px #eaeeee;
-        border-radius: 0 2px 2px 0;
-        left: 0;
-        box-shadow: -2px 2px 5px #e5e5e5;
-    }
-
-    .overview-slidedown .paas-search {
-        position: relative;
-        height: 32px;
-        line-height: 32px;
-        border: solid 1px rgba(196,198,204,1);
-        border-radius: 2px;
-        margin: 0 20px 10px 20px;
-    }
-
-    .overview-slidedown .application-search {
-        width: 100%;
-        height: 32px;
-        line-height: 32px;
-        font-size: 12px;
-    }
-
-    .overview-slidedown .application-search input[type="text"] {
-        background: #fff;
-        width: 240px;
-        height: 30px;
-        line-height: 30px;
-        cursor: text;
-    }
-
-    .overview-slidedown .paas-search.open {
-        background: #fff;
-    }
-
-    .paas-search.on {
-        border: 1px solid #3A84FF;
-    }
-
-    .paas-search.open {
-        height: auto;
-        border-radius: 2px;
-        background: #fafafa;
-        z-index: 999;
-        border: solid 1px #e9edee;
-    }
-
-    .application-search-content {
-        height: auto;
-        border-top: solid 1px #e9edee;
-    }
-
-    .application-search-content a {
-        display: block;
-        height: 32px;
-        line-height: 32px;
-        padding: 0 13px;
-        color: #666666;
-    }
-
-    .application-search-content a:hover {
-        background: #e9f1fb;
-    }
-
-    .application-search {
-        width: 198px;
-        height: 34px;
-        overflow: hidden;
-    }
-
-    .application-search input[type="text"] {
-        border: none;
-        width: 136px;
-        padding: 0 10px;
-        line-height: 34px;
-        height: 34px;
-        float: left;
-        color: #4f515e;
-        background: #fafafa
-    }
-
-    .application-search .input-icon {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        margin-top: -6px;
-        font-size: 12px;
-        color: #C4C6CC;
-    }
-
-    .application-search .paasng-close {
-        cursor: pointer;
-    }
-
-    .overview-title-icon {
-        width: 36px;
-        height: 60px;
-        line-height: 60px;
-        text-align: center;
-        position: absolute;
-        top: 0;
-        right: 0;
-        transition: all .35s;
-        z-index: 99;
-
-        .paasng-icon {
-            font-size: 12px;
-            font-weight: bold;
-            color: #63656E;
-            display: inline-block;
-            transition: all ease 0.3s;
-            transform: scale(0.9);
-        }
-
-        &.drop-enabled {
-            .paasng-icon {
-                transform: rotate(-180deg);
-            }
-        }
-
-        .right-icon-up{
-            transform: rotate(-180deg);
-        }
-    }
-
-    .overview-title-icon.open {
-        background: #fff;
-    }
-
-    .overview-title-icon.open:after,
-    .overview-title-icon.open:hover:after {
-        z-index: 10;
-        content: "";
-        position: absolute;
-        bottom: -1px;
-        left: 0;
-        width: 59px;
-        height: 1px;
-        background: #fff;
-    }
-
-    .nav-dropdown {
-        width: 540px;
-        display: flex;
-        font-size: 12px;
-
-        .quick-access {
-            width: 240px;
-            min-height: 300px;
-            max-height: 380px;
-            border-right: 1px solid #DCDEE5;
-            padding: 17px 20px;
-            overflow-y: auto;
-            &::-webkit-scrollbar {
-                width: 2px;
-                background-color: lighten(transparent, 80%);
-            }
-            &::-webkit-scrollbar-thumb {
-                height: 2px;
-                border-radius: 2px;
-                background-color: #e6e9ea;
-            }
-        }
-
-        .app-dropdown {
-            width: 300px;
-            flex: 1;
-        }
-    }
-
-    .no-data {
-        color: $appMainFontColor;
-        padding: 10px 0;
-        text-align: left;
-    }
-
-    .overview-region {
-        position: relative;
-        top: -3px;
-        margin-left: 2px;
-    }
-
-    .region-tag {
-        display: inline-block;
-        padding: 2px 4px;
-        line-height: 16px;
-        background: #e7fcfa;
-        color: #2dcbae;
-        font-size: 12px;
-        border-radius: 2px;
-        transform: scale(0.8);
-        span {
-            font-weight: normal;
-        }
-        &.inner {
-            background: #fdefd8;
-            color: #ff9c01;
-        }
-        &.clouds {
-            background: #ede8ff;
-            color: #7d01ff;
-        }
-    }
-
-    .migrate-tag {
-      position: relative;
+    a {
       display: inline-block;
-      top: -6px;
-      margin-left: 4px;
-      height: 16px;
-      line-height: 16px;
-      padding: 0 4px;
-      font-weight: 400;
-      background: #FFE8C3;
+      max-width: 159px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+  .set-mt {
+    margin-top: 36px;
+  }
+}
+
+.overview-slidedown {
+  .paas-search.focus {
+    border: 1px solid #3a84ff;
+  }
+}
+
+.overview-title-text {
+  display: inline-block;
+  margin-top: 7px;
+
+  p {
+    font-size: 12px;
+    color: #979ba5;
+    margin-top: -3px;
+    line-height: 14px;
+    font-weight: normal;
+  }
+
+  .app-title.not-migrated {
+    max-width: 120px;
+  }
+}
+
+.quick-access {
+  width: 100%;
+  background: #fff;
+
+  .link {
+    margin-top: 9px;
+    a {
+      font-size: 12px;
+      line-height: 28px;
+      display: block;
+    }
+  }
+
+  h3 {
+    line-height: 1;
+    font-size: 12px;
+    color: #313238;
+    padding-bottom: 8px;
+    font-weight: normal;
+    border-bottom: 1px solid #dcdee5;
+  }
+}
+
+.select-panel {
+  position: relative;
+}
+
+.app-dropdown {
+  background: #fff;
+
+  h3 {
+    line-height: 1;
+    font-size: 12px;
+    color: #313238;
+    padding: 17px 20px 8px 20px;
+    font-weight: normal;
+  }
+}
+
+.overview-slidedown {
+  position: absolute;
+  width: 240px;
+  top: 60px;
+  background: #fff;
+  z-index: 9999;
+  border: solid 1px #eaeeee;
+  border-radius: 0 2px 2px 0;
+  left: 0;
+  box-shadow: -2px 2px 5px #e5e5e5;
+}
+
+.overview-slidedown .paas-search {
+  position: relative;
+  height: 32px;
+  line-height: 32px;
+  border: solid 1px rgba(196, 198, 204, 1);
+  border-radius: 2px;
+  margin: 0 20px 10px 20px;
+}
+
+.overview-slidedown .application-search {
+  width: 100%;
+  height: 32px;
+  line-height: 32px;
+  font-size: 12px;
+}
+
+.overview-slidedown .application-search input[type='text'] {
+  background: #fff;
+  width: 240px;
+  height: 30px;
+  line-height: 30px;
+  cursor: text;
+}
+
+.overview-slidedown .paas-search.open {
+  background: #fff;
+}
+
+.paas-search.on {
+  border: 1px solid #3a84ff;
+}
+
+.paas-search.open {
+  height: auto;
+  border-radius: 2px;
+  background: #fafafa;
+  z-index: 999;
+  border: solid 1px #e9edee;
+}
+
+.application-search-content {
+  height: auto;
+  border-top: solid 1px #e9edee;
+}
+
+.application-search-content a {
+  display: block;
+  height: 32px;
+  line-height: 32px;
+  padding: 0 13px;
+  color: #666666;
+}
+
+.application-search-content a:hover {
+  background: #e9f1fb;
+}
+
+.application-search {
+  width: 198px;
+  height: 34px;
+  overflow: hidden;
+}
+
+.application-search input[type='text'] {
+  border: none;
+  width: 136px;
+  padding: 0 10px;
+  line-height: 34px;
+  height: 34px;
+  float: left;
+  color: #4f515e;
+  background: #fafafa;
+}
+
+.application-search .input-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  margin-top: -6px;
+  font-size: 12px;
+  color: #c4c6cc;
+}
+
+.application-search .paasng-close {
+  cursor: pointer;
+}
+
+.overview-title-icon {
+  width: 36px;
+  height: 60px;
+  line-height: 60px;
+  text-align: center;
+  position: absolute;
+  top: 0;
+  right: 0;
+  transition: all 0.35s;
+  z-index: 99;
+
+  .paasng-icon {
+    font-size: 12px;
+    font-weight: bold;
+    color: #63656e;
+    display: inline-block;
+    transition: all ease 0.3s;
+    transform: scale(0.9);
+  }
+
+  &.drop-enabled {
+    .paasng-icon {
+      transform: rotate(-180deg);
+    }
+  }
+
+  .right-icon-up {
+    transform: rotate(-180deg);
+  }
+}
+
+.overview-title-icon.open {
+  background: #fff;
+}
+
+.overview-title-icon.open:after,
+.overview-title-icon.open:hover:after {
+  z-index: 10;
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 59px;
+  height: 1px;
+  background: #fff;
+}
+
+.nav-dropdown {
+  width: 540px;
+  display: flex;
+  font-size: 12px;
+
+  .quick-access {
+    width: 240px;
+    min-height: 300px;
+    max-height: 380px;
+    border-right: 1px solid #dcdee5;
+    padding: 17px 20px;
+    overflow-y: auto;
+    &::-webkit-scrollbar {
+      width: 2px;
+      background-color: lighten(transparent, 80%);
+    }
+    &::-webkit-scrollbar-thumb {
+      height: 2px;
       border-radius: 2px;
-      font-size: 10px;
-      color: #FE9C00;
+      background-color: #e6e9ea;
     }
+  }
 
-    .app-collect-btn {
-        position: absolute;
-        width: 16px;
-        height: 16px;
-        line-height: 14px;
-        text-align: center;
-        font-size: 11px;
-        border-radius: 50%;
-        left: 44px;
-        top: 38px;
-        color: #FFF;
-        border: 1px solid #FFF;
-        background: #e3e4e8;
-        cursor: pointer;
+  .app-dropdown {
+    width: 300px;
+    flex: 1;
+  }
+}
 
-        &.marked {
-            background: #FF9C01;
-        }
-    }
+.no-data {
+  color: $appMainFontColor;
+  padding: 10px 0;
+  text-align: left;
+}
 
-    .app-code-box {
-        max-width: 120px;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        display: inline-block;
-    }
+.overview-region {
+  position: relative;
+  top: -3px;
+  margin-left: 2px;
+}
 
-    .title {
-        position: relative;
-        display: flex;
-        justify-content: space-between;
-        /deep/ .bk-dropdown-content {
-            width: 540px;
-            height: 385px;
-        }
-    }
+.region-tag {
+  display: inline-block;
+  padding: 2px 4px;
+  line-height: 16px;
+  background: #e7fcfa;
+  color: #2dcbae;
+  font-size: 12px;
+  border-radius: 2px;
+  transform: scale(0.8);
+  span {
+    font-weight: normal;
+  }
+  &.inner {
+    background: #fdefd8;
+    color: #ff9c01;
+  }
+  &.clouds {
+    background: #ede8ff;
+    color: #7d01ff;
+  }
+}
+
+.migrate-tag {
+  position: relative;
+  display: inline-block;
+  top: -6px;
+  margin-left: 4px;
+  height: 16px;
+  line-height: 16px;
+  padding: 0 4px;
+  font-weight: 400;
+  background: #ffe8c3;
+  border-radius: 2px;
+  font-size: 10px;
+  color: #fe9c00;
+}
+
+.app-collect-btn {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  line-height: 14px;
+  text-align: center;
+  font-size: 11px;
+  border-radius: 50%;
+  left: 44px;
+  top: 38px;
+  color: #fff;
+  border: 1px solid #fff;
+  background: #e3e4e8;
+  cursor: pointer;
+
+  &.marked {
+    background: #ff9c01;
+  }
+}
+
+.app-code-box {
+  max-width: 120px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+.title {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  /deep/ .bk-dropdown-content {
+    width: 540px;
+    height: 385px;
+  }
+}
 </style>

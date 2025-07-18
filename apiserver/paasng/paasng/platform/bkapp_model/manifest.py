@@ -338,7 +338,7 @@ class EnvVarsManifestConstructor(ManifestConstructor):
             .order_by("key")
         ]
         scoped_user_vars = [
-            crd.EnvVarOverlay(envName=var.environment.environment, name=var.key, value=var.get_value())
+            crd.EnvVarOverlay(envName=var.environment.environment, name=var.key, value=var.get_unencrypted_value())
             for var in ConfigVar.objects.filter(module=module)
             .exclude(is_global=True)
             .order_by("environment__environment", "key")

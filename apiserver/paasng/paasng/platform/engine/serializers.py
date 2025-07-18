@@ -427,29 +427,18 @@ class ConfigVarSLZ(serializers.ModelSerializer):
 class CreateConfigVarInputSLZ(ConfigVarSLZ):
     """Serializer for creating ConfigVar"""
 
-    def create(self, validated_data):
-        instance = ConfigVar(**validated_data)
-        if instance.is_encrypted:
-            instance.encrypt_value()
-        instance.save()
-        return instance
-
 
 class UpdateConfigVarInputSLZ(ConfigVarSLZ):
     """Serializer for updating ConfigVar"""
 
     value = serializers.CharField(required=False)
 
-    def validate(self, attrs):
-        if self.instance.is_encrypted != attrs["is_encrypted"]:
-            # 更新时不能修改 is_encrypted 字段的值
-            raise ValidationError({"is_encrypted": _("不允许修改加密状态")})
-        return super().validate(attrs)
-
     def update(self, instance: ConfigVar, validated_data):
+        if "is_encrypted" in validated_data:
+            # 更新是忽略更新 is_encrypted 字段
+            validated_data.pop("is_encrypted")
         instance = super().update(instance, validated_data)
         if "value" in validated_data and instance.is_encrypted:
-            instance.encrypt_value()
             instance.save()
         return instance
 

@@ -121,15 +121,12 @@ class ConfigVar(TimestampedModel):
             tenant_id=self.tenant_id,
         )
 
-    def encrypt_value(self):
+    def save(self, *args, **kwargs):
         if self.is_encrypted:
             self.value = EncryptHandler(secret_key=get_default_secret_key()).encrypt(self.value)
+        super().save(*args, **kwargs)
 
-    def decrypt_value(self):
-        if self.is_encrypted:
-            self.value = EncryptHandler(secret_key=get_default_secret_key()).decrypt(self.value)
-
-    def get_value(self) -> str:
+    def get_unencrypted_value(self) -> str:
         """Get the config var value, decrypted if encrypted."""
         if self.is_encrypted:
             return EncryptHandler(secret_key=get_default_secret_key()).decrypt(self.value)

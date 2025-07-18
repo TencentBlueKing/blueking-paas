@@ -248,6 +248,8 @@ class TestOperatorVersionCondition:
                 assert exc_info.value.action_name == DeployConditions.CHECK_OPERATOR_VERSION.value
 
 
+@pytest.mark.usefixtures("_with_wl_apps")
+@pytest.mark.django_db(databases=["default", "workloads"])
 class TestModuleEnvDeployInspector:
     @pytest.mark.parametrize(
         ("user_role", "allowed_roles", "create_token", "create_product", "set_extra_info", "expected"),

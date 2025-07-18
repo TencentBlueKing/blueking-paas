@@ -22,6 +22,7 @@ from typing import Dict, List
 
 import arrow
 import yaml
+from django.core.cache import cache
 from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
@@ -34,20 +35,56 @@ class HelmClient:
     """Helm 客户端，用于获取 Helm Release 相关信息"""
 
     def __init__(self, cluster_name: str):
+        self.cluster_name = cluster_name
         self.client = get_client_by_cluster_name(cluster_name)
 
-    def list_releases(self, namespace: str | None = None) -> List[HelmRelease]:
+    def list_releases(self, namespace: str | None = None, use_cache: bool = True) -> List[HelmRelease]:
         """获取所有 Helm Release 信息（当前部署的最新版本）"""
-        secrets = KSecret(self.client).ops_batch.list(labels={"owner": "helm"}, namespace=namespace).items
-        return self._parse_secrets_to_releases(self._filter_latest_version(secrets))
+        if use_cache:
+            cache_key = f"helm_releases:{self.cluster_name}:{namespace or 'all'}"
+            cached_releases = cache.get(cache_key)
+            if cached_releases is not None:
+                return cached_releases
 
-    def get_release(self, name: str, namespace: str | None = None) -> HelmRelease | None:
+        secrets = KSecret(self.client).ops_batch.list(labels={"owner": "helm"}, namespace=namespace).items
+        releases = self._parse_secrets_to_releases(self._filter_latest_version(secrets))
+
+        if use_cache:
+            # 缓存 5 分钟
+            cache.set(cache_key, releases, 60 * 5)
+
+        return releases
+
+    def get_release(self, name: str, namespace: str | None = None, use_cache: bool = True) -> HelmRelease | None:
         """获取指定组件名称的 Helm Release 信息（当前部署的最新版本）"""
-        for rel in self.list_releases(namespace):
+        if use_cache:
+            cache_key = f"helm_releases:{self.cluster_name}:{namespace or 'all'}:{name}"
+            cached_release = cache.get(cache_key)
+            if cached_release is not None:
+                return cached_release
+
+        for rel in self.list_releases(namespace, use_cache=use_cache):
             if rel.chart.name == name:
+                if use_cache:
+                    # 缓存 5 分钟
+                    cache.set(cache_key, rel, 60 * 5)
                 return rel
 
+        if use_cache:
+            # 如果没有找到，缓存 None 以避免重复查询
+            cache.set(cache_key, None, 60 * 5)
         return None
+
+    def clear_cache(self, namespace: str | None = None, name: str | None = None):
+        """清理缓存"""
+        if name:
+            # 清理指定 release 的缓存
+            cache_key = f"helm_release:{self.cluster_name}:{namespace or 'all'}:{name}"
+            cache.delete(cache_key)
+        else:
+            # 清理所有 releases 的缓存
+            cache_key = f"helm_releases:{self.cluster_name}:{namespace or 'all'}"
+            cache.delete(cache_key)
 
     @staticmethod
     def _filter_latest_version(secrets: List[ResourceInstance]) -> List[ResourceInstance]:

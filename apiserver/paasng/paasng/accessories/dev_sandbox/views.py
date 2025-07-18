@@ -43,11 +43,12 @@ from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxPreDeployCheckOutputSLZ,
     DevSandboxRetrieveOutputSLZ,
 )
+from paasng.accessories.dev_sandbox.source_code import upload_source_code
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.engine.utils.source import get_source_dir, upload_source_code
+from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.utils.error_codes import error_codes

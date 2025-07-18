@@ -230,10 +230,9 @@ class TestOperatorVersionCondition:
         _ = env.wl_app
         fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version=operator_version))
         with (
-            override_settings(APISERVER_OPERATOR_VERSION_CHECK=check_version),
-            mock.patch(
-                "paasng.platform.engine.workflow.protections.BKPAAS_APISERVER_VERSION",
-                api_server_version,
+            override_settings(
+                BKPAAS_APP_OPERATOR_VERSION_CHECK=check_version,
+                BKPAAS_APISERVER_VERSION=api_server_version,
             ),
             mock.patch(
                 "paasng.plat_mgt.infras.clusters.helm.HelmClient.get_release",

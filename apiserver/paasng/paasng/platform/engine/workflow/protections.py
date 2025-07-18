@@ -177,11 +177,11 @@ class OperatorVersionCondition(DeployCondition):
 
     def validate(self):
         # 仅在打开 检查开关的时候检查
-        if not getattr(settings, "PAAS_OPERATOR_VERSION_CHECK", True):
+        if not settings.BKPAAS_APP_OPERATOR_VERSION_CHECK:
             return
 
         # apiserver 根据 Helm 构建时, 注入容器 env
-        apiserver_version = getattr(settings, "PAAS_APISERVER_VERSION", "unknown")
+        apiserver_version = settings.BKPAAS_APISERVER_VERSION
 
         # operator 通过 helm 客户端获取
         cluster_name = EnvClusterService(self.env).get_cluster_name()

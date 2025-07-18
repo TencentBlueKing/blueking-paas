@@ -50,8 +50,23 @@ class SvnRepoController:
         raise NotImplementedError
 
     @classmethod
+    def init_by_user(cls, source_type: str, repo_url: str, user_id: str):
+        """Return a RepoController object from user's authorization credentials
+
+        :param source_type: Code repository type, such as github
+        :param repo_url: repository url
+        :param user_id: current operator's user_id
+        """
+        raise NotImplementedError
+
+    @classmethod
     def list_all_repositories(cls, **kwargs) -> List[Repository]:
         """返回当前 RepoController 可以控制的所有仓库列表"""
+        raise NotImplementedError
+
+    @classmethod
+    def list_owned_groups(cls, api_url: str, user_credentials: dict):
+        """获取用户有管理权限的项目组"""
         raise NotImplementedError
 
     def touch(self) -> bool:

@@ -380,6 +380,17 @@ class Repository:
 
 
 @dataclass
+class GitGroup:
+    """Git 的组模型"""
+
+    name: str
+    path: str
+    description: str
+    avatar_url: str
+    web_url: str
+
+
+@dataclass
 class AlternativeVersion:
     name: str
     type: str

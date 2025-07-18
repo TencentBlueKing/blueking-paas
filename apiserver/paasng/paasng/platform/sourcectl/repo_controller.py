@@ -31,6 +31,7 @@ from paasng.platform.sourcectl.models import (
     AlternativeVersion,
     CommitInfo,
     CommitLog,
+    GitGroup,
     GitProject,
     Repository,
     VersionInfo,
@@ -70,8 +71,23 @@ class RepoController(Protocol):
         raise NotImplementedError
 
     @classmethod
+    def init_by_user(cls, source_type: str, repo_url: str, user_id: str):
+        """Return a RepoController object from user's authorization credentials
+
+        :param source_type: Code repository type, such as github
+        :param repo_url: repository url
+        :param user_id: current operator's user_id
+        """
+        raise NotImplementedError
+
+    @classmethod
     def list_all_repositories(cls, **kwargs) -> List[Repository]:
         """返回当前 RepoController 可以控制的所有仓库列表"""
+
+    @classmethod
+    def list_owned_groups(cls, api_url: str, user_credentials: dict) -> List[GitGroup]:
+        """获取有 owner 权限的项目组列表"""
+        raise NotImplementedError
 
     def touch(self) -> bool:
         """尝试访问远程仓库, 试探是否有访问权限
@@ -176,7 +192,7 @@ class BaseGitRepoController:
 
     @classmethod
     def init_by_server_config(cls, source_type: str, repo_url: str):
-        """Return a RepoController object from given source_type
+        """Return a RepoController object from public account configured through the platform
 
         :param source_type: Code repository type, such as github
         :param repo_url: repository url
@@ -187,6 +203,22 @@ class BaseGitRepoController:
 
         user_credentials = {"private_token": source_config["private_token"], "scope_list": []}
         return cls(api_url=source_config["api_url"], repo_url=repo_url, user_credentials=user_credentials)
+
+    @classmethod
+    def init_by_user(cls, source_type: str, repo_url: str, user_id: str):
+        """Return a RepoController object from user's authorization credentials
+
+        :param source_type: Code repository type, such as github
+        :param repo_url: repository url
+        :param user_id: current operator's user_id
+        """
+        source_config = get_sourcectl_type(source_type).config_as_arguments()
+        if "api_url" not in source_config:
+            raise ValueError("Require api_url to init GitRepoController")
+
+        project = GitProject.parse_from_repo_url(repo_url, sourcectl_type=source_type)
+        user_credentials = cls.get_user_credentials(project, user_id)
+        return cls(repo_url=repo_url, user_credentials=user_credentials, api_url=source_config["api_url"])
 
     @classmethod
     def get_user_credentials(cls, project: GitProject, operator: str) -> Dict[str, Any]:
@@ -231,21 +263,48 @@ def get_repo_controller(module: "Module", operator: Optional[str] = None) -> Rep
     return cls.init_by_module(module, operator)
 
 
-def list_git_repositories(source_control_type: str, operator: str) -> List[Repository]:
-    cls = get_sourcectl_type(source_control_type).repo_controller_class
+def _get_oauth_credentials(source_control_type: str, user_id: str) -> Dict[str, Any]:
+    """获取用户的OAuth凭证用于访问代码仓库
 
-    profile = UserProfile.objects.get(user=operator)
+    :param source_control_type: 源码控制类型，如 gitlab
+    :param user_id: 用户 ID
+    """
+    profile = UserProfile.objects.get(user=user_id)
     token_holder_list = profile.token_holder.filter(provider=source_control_type).all()
     if not token_holder_list:
         raise Oauth2TokenHolder.DoesNotExist
 
-    # 目前工蜂不限制 token 拉取项目列表, 因此简化这里的逻辑只取一个 token
+    # 使用第一个 token_holder 的 access_token
     token_holder = token_holder_list[0]
-    user_credentials = {
+    return {
         "oauth_token": token_holder.access_token,
-        "scope_list": [token_holder.get_scope() for token_holder in token_holder_list],
+        "scope_list": [th.get_scope() for th in token_holder_list],
     }
 
+
+def list_git_repositories(source_control_type: str, user_id: str) -> List[Repository]:
+    """获取用户在指定源码控制类型下的所有代码仓库
+
+    :param source_control_type: 源码控制类型，如 gitlab
+    :param user_id: 用户 ID
+    """
+    cls = get_sourcectl_type(source_control_type).repo_controller_class
+
+    user_credentials = _get_oauth_credentials(source_control_type, user_id)
     type_spec = get_sourcectl_type(source_control_type)
     repo_info = type_spec.config_as_arguments()
     return cls.list_all_repositories(**user_credentials, **repo_info)
+
+
+def list_all_owned_groups(source_control_type: str, user_id: str) -> List[GitGroup]:
+    """获取用户在指定源码控制类型下的所有 owner 权限的项目组
+
+    :param source_control_type: 源码控制类型，如 gitlab
+    :param user_id: 用户 ID
+    """
+    cls = get_sourcectl_type(source_control_type).repo_controller_class
+
+    user_credentials = _get_oauth_credentials(source_control_type, user_id)
+    type_spec = get_sourcectl_type(source_control_type)
+    source_config = type_spec.config_as_arguments()
+    return cls.list_owned_groups(source_config["api_url"], user_credentials)

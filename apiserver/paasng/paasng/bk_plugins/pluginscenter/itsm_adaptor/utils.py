@@ -354,22 +354,37 @@ def _get_leader_by_user(username: str) -> list:
     return [u.username for u in user_detail.leader]
 
 
-def _add_users_to_plugin_admins(plugin: PluginInstance, usernames: list):
+def _add_users_to_plugin_role(plugin: PluginInstance, usernames: list, role: PluginRole):
+    """添加用户到插件角色
+
+    :param plugin: 插件实例
+    :param usernames: 需要添加的用户名列表
+    :param role: 目标角色
+    """
     members = members_api.fetch_plugin_members(plugin)
-    plugin_admins = {m.username for m in members if m.role.id == PluginRole.ADMINISTRATOR}
-    users_to_add = set(usernames) - plugin_admins
+
+    if role == PluginRole.ADMINISTRATOR:
+        # 要添加的角色是管理员：如果用户已经是管理员，无需操作；如果用户是开发者，需要先删除开发者角色，再添加为管理员
+        existing_members = {m.username for m in members if m.role.id == role}
+    else:
+        # 要添加的角色是开发者：用户已经是插件成员，就不需要操作了
+        existing_members = {m.username for m in members}
+
+    users_to_add = set(usernames) - existing_members
     if not users_to_add:
         return
 
     try:
-        # 先删除审批在插件中的所有权限，再添加为管理员。避免审批者已经是开发者角色，再添加为管理员会报错
-        members_api.remove_user_all_roles(plugin, list(usernames))
-        members_api.add_role_members(plugin, role=PluginRole.ADMINISTRATOR, usernames=list(usernames))
+        # 管理员角色需要： 先删除用户在插件中的所有权限，再添加为管理员。避免用户已经是开发者角色，再添加为管理员会报错
+        if role == PluginRole.ADMINISTRATOR:
+            members_api.remove_user_all_roles(plugin, list(users_to_add))
+        members_api.add_role_members(plugin, role=role, usernames=list(users_to_add))
     except BKIAMGatewayServiceError as e:
         raise error_codes.MEMBERSHIP_UPDATE_FAILED.f(
-            f"Failed to add user({usernames}) as plugin({plugin.id}) administrator: {e.message}"
+            f"Failed to add user({usernames}) as plugin({plugin.id}) {role}: {e.message}"
         )
-    # 将成员同步到第三方系统中
+
+    # 同步成员到第三方系统
     sync_members(pd=plugin.pd, instance=plugin)
     return
 
@@ -379,10 +394,10 @@ def add_approver_to_plugin_admins(plugin: PluginInstance, service_name: str, ope
     # 按组织灰度审批，审批者为提单者 leader
     if service_name == ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL:
         operator_leaders = _get_leader_by_user(operator)
-        _add_users_to_plugin_admins(plugin, operator_leaders)
+        _add_users_to_plugin_role(plugin, operator_leaders, PluginRole.DEVELOPER)
     # 全量发布、可见范围修改：平台管理员审批
     elif service_name in [
         ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL,
         ApprovalServiceName.VISIBLE_RANGE_APPROVAL,
     ]:
-        _add_users_to_plugin_admins(plugin, plugin.pd.administrator)
+        _add_users_to_plugin_role(plugin, plugin.pd.administrator, PluginRole.ADMINISTRATOR)

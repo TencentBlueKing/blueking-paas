@@ -435,11 +435,9 @@ class UpdateConfigVarInputSLZ(ConfigVarSLZ):
 
     def update(self, instance: ConfigVar, validated_data):
         if "is_encrypted" in validated_data:
-            # 更新是忽略更新 is_encrypted 字段
+            # 更新时忽略更新 is_encrypted 字段
             validated_data.pop("is_encrypted")
         instance = super().update(instance, validated_data)
-        if "value" in validated_data and instance.is_encrypted:
-            instance.save()
         return instance
 
 

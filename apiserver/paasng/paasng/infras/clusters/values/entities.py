@@ -23,7 +23,7 @@ from typing import Any, Dict
 
 from pydantic import BaseModel, Field
 
-from paasng.plat_mgt.infras.clusters.constants import CLUSTER_COMPONENT_DEFAULT_QUOTA
+from paasng.infras.clusters.constants import CLUSTER_COMPONENT_DEFAULT_QUOTA
 
 
 class ImageConfig(BaseModel):

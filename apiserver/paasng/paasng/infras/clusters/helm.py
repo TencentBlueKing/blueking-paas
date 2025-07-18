@@ -27,8 +27,8 @@ from kubernetes.dynamic import ResourceInstance
 
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KSecret
-from paasng.plat_mgt.infras.clusters.constants import HELM_RELEASE_SECRET_TYPE, HelmChartDeployStatus
-from paasng.plat_mgt.infras.clusters.entities import DeployResult, HelmChart, HelmRelease
+from paasng.infras.clusters.constants import HELM_RELEASE_SECRET_TYPE, HelmChartDeployStatus
+from paasng.infras.clusters.entities import DeployResult, HelmChart, HelmRelease
 
 
 class HelmClient:

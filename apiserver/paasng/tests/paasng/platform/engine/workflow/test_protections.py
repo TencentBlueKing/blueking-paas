@@ -235,7 +235,7 @@ class TestOperatorVersionCondition:
                 BKPAAS_APISERVER_VERSION=api_server_version,
             ),
             mock.patch(
-                "paasng.plat_mgt.infras.clusters.helm.HelmClient.get_release",
+                "paasng.infras.clusters.helm.HelmClient.get_release",
                 return_value=fake_release,
             ),
         ):

@@ -29,14 +29,14 @@ from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterAppImageReg
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding, RegionClusterState
 from paas_wl.workloads.networking.entrance.constants import AddressType
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
-from paasng.plat_mgt.infras.clusters.constants import (
+from paasng.infras.clusters.constants import (
     ClusterAPIAddressType,
     ClusterAuthType,
     ClusterSource,
     TolerationEffect,
     TolerationOperator,
 )
-from paasng.plat_mgt.infras.clusters.state import ClusterAllocationGetter
+from paasng.infras.clusters.state import ClusterAllocationGetter
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.utils.validators import Base64Validator
 

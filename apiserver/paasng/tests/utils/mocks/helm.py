@@ -22,9 +22,9 @@ from typing import Dict, List
 
 from paas_wl.infras.cluster.constants import ClusterComponentName
 from paas_wl.infras.cluster.models import Cluster
-from paasng.plat_mgt.infras.clusters.constants import HelmChartDeployStatus
-from paasng.plat_mgt.infras.clusters.entities import DeployResult, HelmChart, HelmRelease
-from paasng.plat_mgt.infras.clusters.values.constructors import get_values_constructor_cls
+from paasng.infras.clusters.constants import HelmChartDeployStatus
+from paasng.infras.clusters.entities import DeployResult, HelmChart, HelmRelease
+from paasng.infras.clusters.values.constructors import get_values_constructor_cls
 
 
 class StubHelmClient:

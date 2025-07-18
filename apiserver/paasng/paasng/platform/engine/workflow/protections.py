@@ -25,8 +25,8 @@ from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.market.models import Product
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.core.core.protections.exceptions import ConditionNotMatched
+from paasng.infras.clusters.helm import HelmClient
 from paasng.infras.iam.helpers import fetch_user_roles
-from paasng.plat_mgt.infras.clusters.helm import HelmClient
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
 from paasng.platform.engine.constants import DeployConditions, RuntimeType

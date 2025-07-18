@@ -381,7 +381,7 @@ def _add_users_to_plugin_role(plugin: PluginInstance, usernames: list, role: Plu
         members_api.add_role_members(plugin, role=role, usernames=list(users_to_add))
     except BKIAMGatewayServiceError as e:
         raise error_codes.MEMBERSHIP_UPDATE_FAILED.f(
-            f"Failed to add user({usernames}) as plugin({plugin.id}) role({role}): {e.message}"
+            f"Failed to add user({usernames}) as plugin({plugin.id}) {role}: {e.message}"
         )
 
     # 同步成员到第三方系统

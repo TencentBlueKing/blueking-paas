@@ -38,7 +38,7 @@ target "heroku-build-noble" {
     packages = "${BASE_PACKAGES}"
   }
   tags = ["${STACK_BUILDER_IMAGE_NAME}:${STACK_BUILDER_TAG}"]
-  platforms = ["linux/amd64"]
+  platforms = ["linux"]
 }
 
 target "heroku-run-noble" {
@@ -50,5 +50,5 @@ target "heroku-run-noble" {
     packages = "${BASE_PACKAGES}"
   }
   tags = ["${STACK_RUNNER_IMAGE_NAME}:${STACK_RUNNER_TAG}"]
-  platforms = ["linux/amd64"]
+  platforms = ["linux"]
 }

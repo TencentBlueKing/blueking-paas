@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import os
 from typing import List
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
@@ -26,7 +25,6 @@ from paasng.utils.basic import ChoicesEnum
 PROC_DEFAULT_REPLICAS = 1
 DOCKER_BUILD_STEPSET_NAME = "docker-build"
 IMAGE_RELEASE_STEPSET_NAME = "image-release"
-BKPAAS_APISERVER_VERSION = os.getenv("BKPAAS_APISERVER_VERSION", "unknown")
 
 
 class AppEnvName(StrStructuredEnum):

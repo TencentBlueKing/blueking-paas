@@ -29,7 +29,7 @@ from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.plat_mgt.infras.clusters.helm import HelmClient
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
-from paasng.platform.engine.constants import BKPAAS_APISERVER_VERSION, DeployConditions, RuntimeType
+from paasng.platform.engine.constants import DeployConditions, RuntimeType
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
@@ -177,11 +177,11 @@ class OperatorVersionCondition(DeployCondition):
 
     def validate(self):
         # 仅在打开 检查开关的时候检查
-        if not getattr(settings, "APISERVER_OPERATOR_VERSION_CHECK", False):
+        if not getattr(settings, "PAAS_OPERATOR_VERSION_CHECK", True):
             return
 
         # apiserver 根据 Helm 构建时, 注入容器 env
-        apiserver_version = BKPAAS_APISERVER_VERSION
+        apiserver_version = getattr(settings, "PAAS_APISERVER_VERSION", "unknown")
 
         # operator 通过 helm 客户端获取
         cluster_name = EnvClusterService(self.env).get_cluster_name()

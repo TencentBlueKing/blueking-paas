@@ -635,3 +635,97 @@ export function normalizeOrgSelectionData(data, options = {}) {
     name: item.name,
   }));
 }
+
+/**
+ * 初始化一个 EventSource，以连接到服务器发送事件（SSE）流。
+ * @param {string} url - 服务器端 SSE 流的 URL。
+ * @param {Object} options - 事件流的配置选项。
+ * @param {boolean} [options.withCredentials=false] - 是否在请求中包含凭据（如 Cookies、授权报头）。
+ * @param {function} [options.onOpen=() => {}] - 连接成功建立时的回调函数。
+ * @param {function} [options.onMessage=() => {}] - 处理从服务器接收消息的回调函数。
+ * @param {function} [options.onError=() => {}] - 处理流期间发生错误的回调函数。
+ * @param {function} [options.onEOF=() => {}] - 处理'EOF'事件的回调函数，指示流的结束。
+ * @param {number} [options.reconnectInterval=5000] - 在断开连接或出错后尝试重新连接之前等待的毫秒数。
+ * @param {number} [options.maxRetries=Infinity] - 最大重试次数，默认无限重试。
+ * @returns {{ close: function, reconnect: function }} 返回一个包含关闭方法、重连方法的对象。
+ */
+export function createSSE(url, options = {}) {
+  const {
+    withCredentials = false,
+    onOpen = () => {},
+    onMessage = () => {},
+    onError = () => {},
+    onEOF = () => {},
+    reconnectInterval = 5000,
+    maxRetries = Infinity,
+  } = options;
+
+  let eventSource;
+  let retryCount = 0;
+  let isManuallyClosed = false;
+  let reconnectTimer;
+
+  const connect = () => {
+    if (isManuallyClosed) return;
+
+    // 清除之前的连接（如果有）
+    if (eventSource) {
+      eventSource.close();
+    }
+
+    eventSource = new EventSource(url, { withCredentials });
+
+    // 连接成功建立
+    eventSource.onopen = () => {
+      retryCount = 0; // 重置重试计数器
+      onOpen();
+    };
+
+    // 处理接收到的消息
+    eventSource.onmessage = (event) => {
+      onMessage(event);
+    };
+
+    // 处理错误事件
+    eventSource.onerror = (error) => {
+      // 仅在连接关闭时处理错误（EventSource 在重连时也会触发 error 事件）
+      if (eventSource.readyState === EventSource.CLOSED) {
+        onError(error, retryCount);
+        if (retryCount < maxRetries) {
+          retryCount += 1;
+          reconnectTimer = setTimeout(connect, reconnectInterval);
+        }
+      }
+    };
+
+    // 处理流结束事件
+    eventSource.addEventListener('EOF', () => {
+      onEOF();
+      close();
+    });
+  };
+
+  // 开始连接
+  connect();
+
+  // 关闭连接的方法
+  const close = () => {
+    isManuallyClosed = true;
+    clearTimeout(reconnectTimer);
+    if (eventSource) {
+      eventSource.close();
+    }
+  };
+
+  // 主动重连的方法
+  const reconnect = () => {
+    isManuallyClosed = false;
+    connect();
+  };
+
+  return {
+    close,
+    reconnect,
+  };
+};
+

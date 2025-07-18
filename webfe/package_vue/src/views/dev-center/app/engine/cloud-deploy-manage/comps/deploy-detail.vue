@@ -500,18 +500,20 @@
     <!-- 日志弹窗 -->
     <process-log
       v-if="logConfig.visiable"
+      ref="logRef"
       v-model="logConfig.visiable"
       :title="logConfig.title"
       :logs="logConfig.logs"
       :loading="logConfig.isLoading"
       :selection-list="logSelectionList"
       :params="logConfig.params"
-      :is-direct="true"
       :default-condition="'400'"
+      :is-cloud-native="isCloudNativeApp"
       @close="handleClose"
       @change="refreshLogs"
       @refresh="refreshLogs"
       @download="downloadInstanceLog"
+      @get-stream-log="getStreamLog"
     ></process-log>
 
     <!-- 功能依赖项展示 -->
@@ -539,7 +541,7 @@ import scaleDialog from './scale-dialog';
 import i18n from '@/language/i18n.js';
 import { bus } from '@/common/bus';
 import eventDetail from './event-detail.vue';
-import { downloadTxt } from '@/common/tools';
+import { downloadTxt, createSSE } from '@/common/tools';
 import processLog from '@/components/process-log-dialog/log.vue';
 import { cloneDeep, isEqual } from 'lodash';
 import FunctionalDependency from '@blueking/functional-dependency/vue2/index.umd.min.js';
@@ -737,6 +739,8 @@ export default {
         parmas: {},
       },
       showFunctionalDependencyDialog: false,
+      streamLogEvent: null,
+      lastStreamLogTime: null,
     };
   },
   computed: {
@@ -799,6 +803,8 @@ export default {
   beforeDestroy() {
     // 页面销毁 关闭stream
     this.closeServerPush();
+    // 关闭实时日志连接
+    this.closeStreamLogEvent();
   },
 
   methods: {
@@ -1438,13 +1444,11 @@ export default {
           previous,
           lines: this.curTailLines,
         });
-        this.logConfig.logs = res.map((log) => {
-          return { message: log };
-        });
+        this.logConfig.logs = res;
       } catch (e) {
         this.logConfig.logs = [];
         if (e.status === 404) {
-          this.this.noLogMessage();
+          this.noLogMessage();
         }
         this.catchErrorHandler(e);
       } finally {
@@ -1467,7 +1471,7 @@ export default {
         downloadTxt(logs, params.instanceName);
       } catch (e) {
         if (e.status === 404) {
-          this.this.noLogMessage();
+          this.noLogMessage();
         }
         this.catchErrorHandler(e);
       }
@@ -1549,6 +1553,7 @@ export default {
       this.logConfig.visiable = false;
       this.curTailLines = '400';
       this.logConfig.logs = [];
+      this.closeStreamLogEvent();
     },
 
     // 刷新日志
@@ -1612,6 +1617,55 @@ export default {
     // 查看更多-访问控制台
     gotoMore() {
       window.open(this.GLOBAL.DOC.WEB_CONSOLE, '_blank');
+    },
+
+    // 获取实时日志（sse）
+    async getStreamLog(type) {
+      if (type === 'close') {
+        this.closeStreamLogEvent();
+        return;
+      }
+
+      const { appCode, moduleId, env, processType, instanceName } = this.logConfig.params;
+
+      let url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/processes/${processType}/instances/${instanceName}/logs/stream/`;
+      const sinceTime = this.lastStreamLogTime || this.logConfig.logs[this.logConfig.logs.length - 1]?.timestamp;
+      if (sinceTime) {
+        url += `?since_time=${sinceTime}`;
+      }
+
+      // 初始化事件流
+      this.streamLogEvent = createSSE(url, {
+        withCredentials: true,
+        onMessage: (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            // 添加日志
+            this.$refs.logRef?.addLogData([data]);
+            this.lastStreamLogTime = data.timestamp;
+          } catch (e) {
+            console.error('消息解析错误:', e);
+          }
+        },
+        onError: () => {
+          // 服务异常重新连接
+          this.logConfig.logs.push({
+            message: '正在尝试重新连接... ',
+          });
+        },
+        onEOF: () => {
+          this.closeStreamLogEvent();
+          // 流式日志结束，需要重新连接
+          this.streamLogEvent.reconnect();
+        },
+      });
+    },
+
+    // 关闭事件源
+    closeStreamLogEvent() {
+      if (this.streamLogEvent) {
+        this.streamLogEvent.close();
+      }
     },
   },
 };

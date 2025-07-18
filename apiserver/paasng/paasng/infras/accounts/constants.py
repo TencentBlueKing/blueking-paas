@@ -57,6 +57,7 @@ class AccountFeatureFlag(ChoicesEnum):
     ENABLE_WEB_CONSOLE = "ENABLE_WEB_CONSOLE"
     ALLOW_CREATE_SMART_APP = "ALLOW_CREATE_SMART_APP"
     ALLOW_PLUGIN_CENTER = "ALLOW_PLUGIN_CENTER"
+    ALLOW_AI_ASSISTANT = "ALLOW_AI_ASSISTANT"
 
     _choices_labels = [
         (ALLOW_ADVANCED_CREATION_OPTIONS, _("允许创建模块时使用高级选项")),
@@ -64,12 +65,14 @@ class AccountFeatureFlag(ChoicesEnum):
         (ENABLE_WEB_CONSOLE, _("允许打开未加密镜像的访问控制台")),
         (ALLOW_CREATE_SMART_APP, _("允许创建 SMart 应用")),
         (ALLOW_PLUGIN_CENTER, _("允许使用插件开发者中心")),
+        (ALLOW_AI_ASSISTANT, _("允许使用 AI 助手")),
     ]
 
     _defaults = skip(
         {
             ALLOW_ADVANCED_CREATION_OPTIONS: False,
             ENABLE_WEB_CONSOLE: False,
+            ALLOW_AI_ASSISTANT: False,
             ALLOW_CREATE_SMART_APP: settings.IS_ALLOW_CREATE_SMART_APP_BY_DEFAULT,
             ALLOW_PLUGIN_CENTER: settings.IS_ALLOW_PLUGIN_CENTER,
         }

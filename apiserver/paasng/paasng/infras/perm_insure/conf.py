@@ -88,6 +88,7 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "BkAIDevManageView",
     "AppDescTransformAPIView",
     "SMartBuilderViewSet",
+    "AssistantView",
     #
     # == Django views start
     #

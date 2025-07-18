@@ -106,7 +106,7 @@ class DevSandbox(OwnerTimestampedModel):
     token = EncryptField(help_text="访问令牌", null=True)
     code_editor_config = CodeEditorConfigField(help_text="代码编辑器配置", default=None, null=True)
     tenant_id = tenant_id_field_factory()
-    env_vars = EncryptField(help_text="沙箱环境变量", default=list, null=True, blank=True)
+    env_vars = EncryptField(help_text="沙箱环境变量", default=None, null=True, blank=True)
 
     objects = DevSandboxManager()
 

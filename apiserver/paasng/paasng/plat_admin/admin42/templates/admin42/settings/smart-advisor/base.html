@@ -1,0 +1,57 @@
+{% extends "../base.html" %}
+{% load admin_utils %}
+
+{% block content_header %}
+<ul class="paas-breadcrumb">
+    <li class="active">{{ view.name }}</li>
+</ul>
+{% endblock %} 
+
+{% block content_label %}
+<div id="smart-advisor-tab-root">
+    <bk-tab
+        :active.sync="activeTab"
+        type="unborder-card"
+        @tab-change="handleTabChange"
+    >
+        <bk-tab-panel name="document" label="文档管理"></bk-tab-panel>
+        <bk-tab-panel name="failure" label="失败提示管理"></bk-tab-panel>
+    </bk-tab>
+</div>
+{% endblock %}
+
+{% block main_content %}
+
+{% block smart_advisor_content %}
+{% endblock %}
+
+{% endblock %} 
+
+{% block main_script %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: '#smart-advisor-tab-root',
+            delimiters: ['$[', ']'],
+            data: function () {
+                return {
+                    activeTab: window.location.pathname.includes('deploy_failure_tips') ? 'failure' : 'document',
+                    tabPaths: {
+                        failure: '{% url "admin.smart_advisor.deploy_failure_tips.manage" %}',
+                        document: '{% url "admin.smart_advisor.documents.manage" %}',
+                    },
+                };
+            },
+            methods: {
+                handleTabChange(name) {
+                    window.location.href = this.tabPaths[name];
+                },
+            },
+        });
+    });
+</script>
+
+{% block smart_advisor_script %}
+{% endblock %}
+
+{% endblock %}

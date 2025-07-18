@@ -1,0 +1,863 @@
+{% extends "../base.html" %}
+
+{% load admin_utils %}
+
+{% block content_header %}
+<ul class="paas-breadcrumb">
+    <li class="active">{{ view.name }}</li>
+</ul>
+{% endblock %}
+
+{% block main_content %}
+<div id="buildpack-list" class="p20">
+    <bk-alert class="mb20" title="Buildpack 是用于构建的最小单位，用于将源代码转换成镜像层，一般多个 Buildpack 会同属于一个 Slugbuilder。"></bk-alert>
+
+    <bk-button theme="primary" icon="plus" class="create-button" @click="handleCreate">
+        新建
+    </bk-button>
+
+    <!--  数据列表  -->
+    <bk-table :data="data" size="medium" :row-key="rowKey" :expand-row-keys="expandRowKeys">
+        <bk-table-column type="expand" width="0">
+            <template slot-scope="props">
+                <bk-table :data="props.row.allBuilders" :outer-border="false" ext-cls="child-table-cls">
+                    <bk-table-column label="是否绑定" width="80">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.is_bound ? '是' : '否' ] </span>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column label="名称" prop="name" show-overflow-tooltip="true" min-width="250">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.name ] </span>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column label="展示名称" prop="display_name" show-overflow-tooltip="true" min-width="200">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.display_name ] </span>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column label="描述" prop="description" show-overflow-tooltip="true">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.description ] </span>
+                        </template>
+                    </bk-table-column>
+                    <bk-table-column label="镜像" prop="image" show-overflow-tooltip="true" min-width="350">
+                        <template slot-scope="props">
+                            <span :class="props.row.is_bound ? '' : 'off-shelf'">$[ props.row.image + ':' + props.row.tag ]</span>
+                        </template>
+                    </bk-table-column>
+                </bk-table>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="名称" prop="name" min-width="250">
+            <template slot-scope="props">
+                <span class="name" :class="props.row.is_hidden ? 'off-shelf' : ''" @click="showDetailDialog(props.row)">$[ props.row.name ]</span>
+                <span class="display_name" :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.display_name ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="Builder 绑定情况" width="120">
+            <template slot-scope="props">
+                <span class="bind-info" :class="props.row.is_hidden ? 'off-shelf' : ''" @click="handleExpandRow(props.row)">已绑定 $[props.row.slugbuilders.length] 个
+                    <bk-icon class="paasng-icon" :type="expandRowKeys.includes(props.row.id) ? 'angle-double-up' : 'angle-double-down'"></bk-icon>
+                </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="描述" prop="description" show-overflow-tooltip="true"
+                         v-if="setting.selectedFields.find(item => item.id === 'description') !== undefined">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.description ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="引用类型" prop="type" :filters="typeFilters" :filter-multiple="true" :filter-method="filterMethod" width="100">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.type ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="编程语言" prop="language" :filters="languageFilters" :filter-multiple="false" :filter-method="filterMethod">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.language ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="版本" prop="version" v-if="setting.selectedFields.find(item => item.id === 'version') !== undefined">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.version ]</span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="是否显示" prop="is_hidden" width="100" :filters="isHiddenFilters" :filter-multiple="false" :filter-method="filterMethod">
+            <template slot-scope="props">
+                <span :class="props.row.is_hidden ? 'off-shelf' : ''">$[ props.row.is_hidden ? '否' : '是' ] </span>
+            </template>
+        </bk-table-column>
+        <bk-table-column label="操作" width="150">
+            <template slot-scope="props">
+                <bk-button class="mr5" theme="primary" text @click="handleEdit(props.row)">编辑</bk-button>
+                <bk-button class="mr5" theme="primary" text @click="handleBind(props.row)">修改绑定</bk-button>
+                <bk-button class="mr5" theme="danger" text @click="handleDelete(props.row)">删除</bk-button>
+            </template>
+        </bk-table-column>
+        <bk-table-column type="setting" :tippy-options="{ zIndex: 3000 }">
+            <bk-table-setting-content
+                :fields="setting.fields"
+                :selected="setting.selectedFields"
+                :max="setting.max"
+                :size="setting.size"
+                @setting-change="handleSettingChange">
+            </bk-table-setting-content>
+        </bk-table-column>
+    </bk-table>
+
+    <!--  修改绑定弹窗  -->
+    <bk-dialog v-model="bindDialog.visible" width="900" theme="primary" :mask-close="false" header-position="left" :confirm-fn="submitBindDialog" :title="bindDialog.title">
+        <div class="draggable-wrapper">
+            <div class="draggable-box">
+                <div class="draggable-box-header"> 未绑定的 slugbuilder (共$[ bindDialog.unselectedBuilders.length ]条)</div>
+                <div class="beauty-scrollbar">
+                    <draggable :list="bindDialog.unselectedBuilders" group="buildpack" style="min-height: 320px;">
+                        <div
+                            class="draggable-content"
+                            v-for="(element, index) in bindDialog.unselectedBuilders"
+                            :class="element.buildpacks.indexOf(bindDialog.row.id) === -1?'':'draggable-content-remove'"
+                            :key="element.id"
+                        >
+                            <span v-bk-tooltips="`${element.description}`">
+                                $[ element.name ]($[element.display_name])
+                            </span>
+                        </div>
+                        <template slot="footer" key="footer">
+                            <div v-if="bindDialog.unselectedBuilders.length === 0" style="min-height: 0px;"></div>
+                        </template>
+                    </draggable>
+                </div>
+            </div>
+            <div class="transfer-icon"></div>
+            <div class="draggable-box">
+                <div class="draggable-box-header"> 已绑定的 slugbuilder (共$[ bindDialog.selectedBuilders.length ]条)</div>
+                <div class="beauty-scrollbar">
+                    <draggable :list="bindDialog.selectedBuilders" group="buildpack" style="min-height: 320px;">
+                        <div
+                            class="draggable-content"
+                            v-for="(element, index) in bindDialog.selectedBuilders"
+                            :class="element.buildpacks.indexOf(bindDialog.row.id) !== -1?'':'draggable-content-new'"
+                            :key="element.id"
+                        >
+                            <span v-bk-tooltips="`${element.description}`">
+                                $[ element.name ]($[element.display_name])
+                            </span>
+                        </div>
+                        <template slot="footer" key="footer">
+                            <div v-if="bindDialog.selectedBuilders.length === 0" style="min-height: 0px;"></div>
+                        </template>
+                    </draggable>
+                </div>
+            </div>
+        </div>
+    </bk-dialog>
+
+    <!--  详情/创建/修改弹窗  -->
+    <bk-dialog
+        header-position="left"
+        v-model="dialog.visible"
+        theme="primary" width="1200"
+        :confirm-fn="submitDialog"
+        @cancel="cancelDialog"
+        :mask-close="dialog.type === 'detail'"
+        :show-footer="dialog.type !== 'detail'"
+    >
+        <div slot="header" v-if="dialog.type === 'detail'">BuildPack 详情</div>
+        <div slot="header" v-else>$[ dialog.type === 'create' ? '新建' : '修改' ] BuildPack</div>
+        <bk-form ref="form">
+            <bk-container flex :col="32">
+                <bk-row>
+                    <bk-col :span="16">
+                        <bk-form-item label="名称" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.name" :readonly="dialog.type === 'detail'"></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="16">
+                        <bk-form-item label="编程语言" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.language" :readonly="dialog.type === 'detail'"></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="8">
+                        <bk-form-item label="引用类型" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.type" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
+                            <bk-select v-model="dialog.form.type" v-else>
+                                <bk-option v-for="type in buildpack_types" :key="type" :id="type" :name="type"></bk-option>
+                            </bk-select>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="8">
+                        <bk-form-item label="版本" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.version" :readonly="dialog.type === 'detail'"></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="8">
+                        <bk-form-item label="是否隐藏">
+                            <bk-switcher v-model="dialog.form.is_hidden" :disabled="dialog.type === 'detail'"></bk-switcher>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="32">
+                        <bk-form-item label="地址" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.address" :readonly="dialog.type === 'detail'"></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+                <bk-row>
+                    <bk-col :span="16">
+                        <bk-form-item label="展示名称 / 中文">
+                            <bk-input v-model="dialog.form.display_name_zh_cn" :readonly="dialog.type === 'detail'"
+                                      placeholder=" "></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="16">
+                        <bk-form-item label="展示名称 / 英文">
+                            <bk-input v-model="dialog.form.display_name_en" :readonly="dialog.type === 'detail'"
+                                      placeholder=" "></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="16">
+                        <bk-form-item label="描述 / 中文">
+                            <bk-input v-model="dialog.form.description_zh_cn" :readonly="dialog.type === 'detail'"
+                                      placeholder=" "></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="16">
+                        <bk-form-item label="描述 / 英文">
+                            <bk-input v-model="dialog.form.description_en" :readonly="dialog.type === 'detail'"
+                                      placeholder=" "></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="32">
+                        <bk-form-item label="环境变量"></bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
+                    <bk-col :span="2"></bk-col>
+                    <bk-col :span="30">
+                        <bk-table :data="envList">
+                            <!-- 新建环境变量 -->
+                            <template slot="append" v-if="dialog.type !== 'detail'">
+                                <div class="add-wrapper">
+                                    <span class="add-single-variable">
+                                        <bk-link theme="primary" @click="handleAddSingleVariable">添加环境变量</bk-link>
+                                    </span>
+                                </div>
+                            </template>
+
+                            <bk-table-column label="Key" :width="dialog.type === 'detail' ? '300px' : '250px'">
+                                <template slot-scope="props">
+                                    <bk-input v-model="props.row.key" v-if="props.row.isEdit"></bk-input>
+                                    <span v-else>$[ props.row.key ]</span>
+                                </template>
+                            </bk-table-column>
+
+                            <bk-table-column label="Value" :width="dialog.type === 'detail' ? '700px' : '650px'">
+                                <template slot-scope="props">
+                                    <bk-input v-model="props.row.value" v-if="props.row.isEdit"></bk-input>
+                                    <span v-else v-bk-tooltips="props.row.value">$[ props.row.value ]</span>
+                                </template>
+                            </bk-table-column>
+
+                            <bk-table-column label="操作" v-if="dialog.type !== 'detail'">
+                                <template slot-scope="props">
+                                    <bk-button class="mr5" theme="primary" text @click="handleEditEnv(props.row)"
+                                               v-if="props.row.isEdit">保存
+                                    </bk-button>
+                                    <bk-button class="mr5" theme="primary" text @click="handleEditEnv(props.row)"
+                                               v-else>
+                                        编辑
+                                    </bk-button>
+                                    <bk-button class="mr5" theme="primary" text @click="handleCancelEnv(props.row)"
+                                               v-if="props.row.isEdit">取消
+                                    </bk-button>
+                                    <bk-button class="mr5" theme="danger" text @click="handleDeleteEnv(props.row)"
+                                               v-else>
+                                        删除
+                                    </bk-button>
+                                </template>
+                            </bk-table-column>
+                        </bk-table>
+                    </bk-col>
+                </bk-row>
+            </bk-container>
+        </bk-form>
+    </bk-dialog>
+</div>
+{% endblock %}
+
+{% block main_script %}
+<script>
+    const URLRouter = {
+        create: decodeURI("{% url 'admin.runtimes.buildpack' %}"),
+        list: decodeURI("{% url 'admin.runtimes.buildpack' %}"),
+        detail: decodeURI("{% url 'admin.runtimes.buildpack.detail' '${id}' %}"),
+        bind: decodeURI("{% url 'admin.runtimes.buildpack.detail.bind' '${id}' %}"),
+    }
+
+    const buildpack_types = {{ buildpack_types | to_json }}
+
+    let typeFilters = []
+    for (let type in buildpack_types) {
+        typeFilters.push({
+            text: type,
+            value: type,
+        });
+    }
+
+    const settingFields = [
+        {
+            id: 'name',
+            label: '名称',
+            disabled: true,
+        },
+        {
+            id: 'type',
+            label: '引用类型',
+            disabled: true,
+        },
+        {
+            id: 'language',
+            label: '编程语言',
+            disabled: true,
+        },
+        {
+            id: 'description',
+            label: '描述',
+        },
+        {
+            id: 'version',
+            label: '版本',
+        },
+    ]
+
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: "#buildpack-list",
+            delimiters: ['$[', ']'],
+            data: function () {
+                return {
+                    data: [],
+                    dialog: {
+                        visible: false,
+                        type: '',
+                        form: {
+                            key: '',
+                            value: '',
+                            description: '',
+                        },
+                        row: undefined
+                    },
+                    bindDialog: {
+                        visible: false,
+                        title: '',
+                        unselectedBuilders: [],
+                        selectedBuilders: [],
+                        url: '',
+                        row: {
+                            id: 0,
+                        }
+                    },
+                    envList: [],
+                    // oldEnvRow 记录修改前环境变量的数据，用于取消操作恢复数据
+                    oldEnvRow: [],
+                    buildpack_types: buildpack_types,
+                    expandRowKeys: [],
+                    setting: {
+                        max: 3,
+                        fields: settingFields,
+                        selectedFields: settingFields,
+                        size: 'medium'
+                    },
+                    typeFilters: typeFilters,
+                    languageFilters: [
+                        {
+                            text: 'Python',
+                            value: 'Python',
+                        },
+                        {
+                            text: 'Go',
+                            value: 'Go',
+                        },
+                        {
+                            text: 'NodeJS',
+                            value: 'NodeJS',
+                        },
+                    ],
+                    isHiddenFilters: [
+                        {
+                            text: '是',
+                            value: false,
+                        },
+                        {
+                            text: '否',
+                            value: true,
+                        }
+                    ],
+                }
+            },
+            methods: {
+                fetchBuildPackList: async function () {
+                    const el = this.$bkLoading({title: '加载中'});
+                    try {
+                        let url = URLRouter.list;
+                        await this.$http.get(url).then(res => {
+                            this.data = res;
+                        });
+                    } catch (e) {
+                        if (e.response.status === 400) {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: e.response.data.detail,
+                            });
+                        }
+                    } finally {
+                        el.hide = true;
+                    }
+                },
+                showDetailDialog: async function (row) {
+                    this.dialog.row = row;
+                    this.dialog.form = {...row};
+                    this.dialog.type = 'detail';
+                    this.envList = this.jsonToEnvList(this.dialog.form.env_vars || {});
+                    this.$nextTick(() => {
+                        // Clear any previous errors
+                        this.$refs.form.clearError();
+                    });
+                    this.dialog.visible = true;
+                },
+                cancelDialog: function () {
+                    this.dialog.visible = false;
+                },
+                submitDialog: async function () {
+                    if (this.dialog.type === 'detail') {
+                        this.cancelDialog();
+                        return;
+                    }
+                    this.dialog.form.env_vars = this.envListToJson(this.envList);
+                    const url = this.dialog.type === 'create' ? URLRouter.create : this.fillUrlTemplate(URLRouter.detail, {row: this.dialog.row});
+                    let success = true;
+                    const method = this.dialog.type === 'create' ? 'post' : 'put';
+                    try {
+                        await this.$http[method](url, this.dialog.form);
+                    } catch (e) {
+                        success = false;
+                        if (e.response.status === 400) {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: e.response.data.detail,
+                            })
+                        }
+                    }
+                    if (success) {
+                        this.cancelDialog();
+
+                        let loadingInstance = null;
+                        try {
+                            loadingInstance = ({
+                                title: '更新数据中...',
+                                global: true,
+                                delay: 0,
+                            });
+
+                            await this.fetchBuildPackList();
+
+                            this.$bkMessage({
+                                theme: 'success',
+                                message: '保存成功，数据已更新',
+                            });
+                        } catch (error) {
+                            console.error('刷新数据失败', error);
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: '数据刷新失败: ' + (error.message || '未知错误'),
+                            });
+                        } finally {
+                            if (loadingInstance && loadingInstance.close) {
+                                loadingInstance.close();
+                            } else if (loadingInstance && loadingInstance.hide) {
+                                loadingInstance.hide();
+                            } else {
+                                const loadings = document.querySelectorAll('.bk-loading-wrapper');
+                                loadings.forEach(el => el.remove());
+                            }
+                        }
+                    }
+                },
+                handleCreate: function () {
+                    this.dialog.type = "create"
+                    this.dialog.row = undefined
+                    this.dialog.form = {
+                        key: '',
+                        value: '',
+                        description: '',
+                    }
+                    this.envList = [];
+                    this.$nextTick(() => {
+                        // Clear any previous errors
+                        this.$refs.form.clearError();
+                    });
+                    this.dialog.visible = true
+                },
+                handleEdit: function (row) {
+                    this.dialog.type = "edit";
+                    this.dialog.row = row;
+                    this.dialog.form = {...row};
+                    this.envList = this.jsonToEnvList(this.dialog.form.env_vars || {});
+                    this.$nextTick(() => {
+                        // Clear any previous errors
+                        this.$refs.form.clearError();
+                    });
+                    this.dialog.visible = true;
+                },
+                handleDelete: function (row) {
+                    this.$bkInfo({
+                        title: `确定要删除 ${row.name}？`,
+                        confirmLoading: true,
+                        theme: 'danger',
+                        confirmFn: async () => {
+                            try {
+                                await this.deleteRow(row)
+                                await this.fetchBuildPackList();
+                                this.$bkMessage({
+                                    theme: 'success',
+                                    message: '删除成功',
+                                });
+                            } catch (e) {
+                                this.$bkMessage({
+                                    theme: 'error',
+                                    message: e.response.data.detail,
+                                });
+                            }
+                        }
+                    })
+                },
+                deleteRow: async function (row) {
+                    const url = this.fillUrlTemplate(URLRouter.detail, {row});
+                    await this.$http.delete(url);
+                },
+                handleBind: async function (row) {
+                    try {
+                        let url = this.fillUrlTemplate(URLRouter.bind, {row});
+                        await this.$http.get(url).then(res => {
+                            this.bindDialog.selectedBuilders = res.bound_slugbuilders;
+                            this.bindDialog.unselectedBuilders = res.unbound_slugbuilders;
+                        });
+                        this.bindDialog.url = url;
+                        this.bindDialog.title = `${row.name} 绑定详情`;
+                        this.bindDialog.row = row;
+                        this.bindDialog.visible = true;
+                    } catch (e) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: e.response.data.detail,
+                        });
+                    }
+                },
+                submitBindDialog: async function () {
+                    try {
+                        let url = this.bindDialog.url;
+                        await this.$http.post(url, {
+                            slugbuilder_ids: this.bindDialog.selectedBuilders.map(item => item.id),
+                        });
+                        this.bindDialog.visible = false;
+                        this.$bkMessage({
+                            theme: 'success',
+                            message: '修改绑定成功',
+                        });
+                        this.handleExpandRow(this.bindDialog.row, true);
+                    } catch (e) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: e.response.data.detail,
+                        });
+                    }
+                },
+                fillUrlTemplate: function (url_template, {row}) {
+                    if (!row) {
+                        row = {}
+                    }
+                    return url_template.replace("${id}", row.id)
+                },
+                jsonToEnvList: function (json) {
+                    let list = [];
+                    for (let key in json) {
+                        if (json.hasOwnProperty(key)) {
+                            list.push({key: key, value: json[key], isEdit: false, isAdd: false});
+                        }
+                    }
+                    return list;
+                },
+                envListToJson: function (list) {
+                    let json = {};
+                    list.forEach(item => {
+                        json[item.key] = item.value;
+                    });
+                    return json;
+                },
+                // 单独新增一个环境变量
+                handleAddSingleVariable: function () {
+                    this.envList.push({key: '', value: '', isEdit: true, isAdd: true});
+                },
+                handleEditEnv: function (row) {
+                    if (row.isEdit) {
+                        if (row.key === '') {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: '变量名不能为空',
+                            })
+                        } else if (row.value === '') {
+                            this.$bkMessage({
+                                theme: 'error',
+                                message: '变量值不能为空',
+                            })
+                        } else {
+                            row.isEdit = false;
+                            row.isAdd = false;
+                        }
+                    } else {
+                        const index = this.envList.findIndex(item => item.key === row.key);
+                        this.oldEnvRow[index] = {...row};
+                        row.isEdit = true;
+                    }
+                },
+                handleDeleteEnv: function (row) {
+                    const index = this.envList.findIndex(item => item.key === row.key);
+                    if (index !== -1) {
+                        this.envList.splice(index, 1);
+                    }
+                },
+                handleCancelEnv: function (row) {
+                    if (row.isAdd) {
+                        this.handleDeleteEnv(row);
+                    } else {
+                        const index = this.envList.findIndex(item => item.key === row.key);
+                        if (index !== -1) {
+                            row.key = this.oldEnvRow[index].key;
+                            row.value = this.oldEnvRow[index].value;
+                            row.isEdit = false;
+                        }
+                    }
+                },
+                rowKey: function (row) {
+                    return row.id;
+                },
+                handleExpandRow: function (row, is_refresh=false) {
+                    if (this.expandRowKeys.includes(row.id) && !is_refresh) {
+                        this.expandRowKeys.splice(this.expandRowKeys.indexOf(row.id), 1);
+                        return;
+                    }
+                    let url = this.fillUrlTemplate(URLRouter.bind, {row});
+                    try {
+                        this.$http.get(url).then(res => {
+                            row.allBuilders = [];
+                            for (let item of res.bound_slugbuilders) {
+                                row.allBuilders.push({...item, is_bound: true});
+                            }
+                            for (let item of res.unbound_slugbuilders) {
+                                row.allBuilders.push({...item, is_bound: false});
+                            }
+                            this.expandRowKeys.push(row.id);
+                        });
+                    } catch (e) {
+                        this.$bkMessage({
+                            theme: 'error',
+                            message: e.response.data.detail,
+                        });
+                    }
+                },
+                handleSettingChange ({ fields, size }) {
+                    this.setting.size = size;
+                    this.setting.selectedFields = fields;
+                },
+                filterMethod (value, row, column) {
+                    const property = column.property
+                    return row[property] === value
+                }
+            },
+            mounted: async function () {
+                await this.fetchBuildPackList();
+            },
+        })
+    })
+</script>
+<style>
+    .bk-grid-row + .bk-grid-row {
+        margin-top: 20px;
+    }
+
+    .display_name {
+        display: flex;
+    }
+
+    .name {
+        display: flex;
+        font-weight: 700;
+        color: #3A84FF;
+        cursor: pointer;
+    }
+
+    .bind-info {
+        display: inline-block;
+        padding: 5px 5px 5px 0px;
+        user-select: none;
+        color: #3A84FF;
+        cursor: pointer;
+    }
+
+    .create-button {
+        display: flex;
+        float: left;
+        margin-bottom: 20px;
+    }
+
+    .filter-wrapper {
+        display: flex;
+        float: left;
+        margin-left: 10px;
+        width: auto;
+
+        .filter-item {
+            font-weight: normal;
+        }
+    }
+
+    .child-table-cls {
+        .bk-table-header-wrapper thead tr th {
+            background: #FFF !important;
+        }
+
+        .bk-table-body-wrapper table tbody > tr {
+            height: 42px !important;
+            cursor: default;
+
+            td {
+                height: 42px;
+            }
+        }
+
+        .link {
+            cursor: pointer;
+            color: #3A84FF;
+        }
+    }
+
+    .paasng-icon {
+        margin-right: 5px;
+    }
+
+    .off-shelf {
+        color: #c4c6cc;
+    }
+
+    .add-wrapper {
+        height: 42px;
+
+        .add-single-variable {
+            display: inline-block;
+            height: 42px;
+            line-height: 42px;
+            padding: 0 15px;
+            color: #3a84ff;
+            cursor: pointer;
+        }
+    }
+
+    .transfer-icon {
+        width: 30px;
+        height: 30px;
+        background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAKCAYAAABv7tTEAAAAV0lEQVQokZXQQQrAIAxE0W/JvU3O1nXXHqdd1EBbqYwDIgGfMCn70RBSgchhUwTgHQJgwLkAAcJE8IIGlEUodxqQc/eST6IYvpskF+H9rggdn9vzv0ffXGG8Ffrmgf5jAAAAAElFTkSuQmCC) no-repeat 50%;
+    }
+
+    .draggable-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .draggable-box {
+        border: 1px solid #dcdee5;
+        width: 400px;
+        height: 360px;
+    }
+
+    .draggable-box-header {
+        background-color: #fafbfd;
+        height: 38px;
+        font-size: 12px;
+        line-height: 40px;
+        padding: 0 20px;
+        border-bottom: 1px solid #dcdee5;
+    }
+
+    .draggable-content {
+        white-space: nowrap;
+        display: inline-block;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        width: 100%;
+        padding: 0px 20px;
+        cursor: pointer;
+        line-height: 40px;
+    }
+
+    .draggable-content:hover {
+        background-color: #eef6fe;
+        color: #3a84ff;
+    }
+
+    .draggable-content-new {
+        background-color: #94f5a4;
+        color: #3a84ff;
+    }
+
+    .draggable-content-new:hover {
+        background-color: #45e35f;
+        color: #3a84ff;
+    }
+
+    .draggable-content-remove {
+        background-color: #fd9c9c;
+        color: #3a84ff;
+    }
+
+    .draggable-content-remove:hover {
+        background-color: #ff5656;
+        color: #3a84ff;
+    }
+
+    .beauty-scrollbar {
+        height: 340px;
+        overflow: scroll;
+    }
+
+    .beauty-scrollbar::-webkit-scrollbar {
+        overflow: scroll;
+        width: 4px;
+        background-color: hsla(0, 0%, 80%, 0);
+    }
+
+    .beauty-scrollbar::-webkit-scrollbar-thumb {
+        overflow: scroll;
+        height: 5px;
+        border-radius: 2px;
+        background-color: #e6e9ea;
+    }
+
+    .bk-checkbox-text {
+        font-weight: normal;
+    }
+</style>
+{% endblock %}

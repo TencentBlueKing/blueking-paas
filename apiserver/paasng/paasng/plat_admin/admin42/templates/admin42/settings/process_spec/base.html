@@ -1,0 +1,57 @@
+{% extends "../base.html" %}
+{% load admin_utils %}
+
+{% block content_header %}
+<ul class="paas-breadcrumb">
+    <li class="active">{{ view.name }}</li>
+</ul>
+{% endblock %}
+
+{% block content_label %}
+<div id="spec_plan-tab-root">
+    <bk-tab
+        :active.sync="activeTab"
+        type="unborder-card"
+        @tab-change="handleTabChange"
+    >
+        <bk-tab-panel name="plan_list" label="方案列表"></bk-tab-panel>
+        <bk-tab-panel name="plan_manage" label="方案配置"></bk-tab-panel>
+    </bk-tab>
+</div>
+{% endblock %} 
+
+{% block main_content %}
+
+{% block spec_plan_content %}
+{% endblock %}
+
+{% endblock %}
+
+{% block main_script %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: '#spec_plan-tab-root',
+            delimiters: ['$[', ']'],
+            data: function () {
+                return {
+                    activeTab: window.location.pathname.includes('applications') ? 'plan_manage' : 'plan_list',
+                    tabPaths: {
+                        plan_manage: '{% url "admin.process_spec_plan.applications.manage" %}',
+                        plan_list: '{% url "admin.process_spec_plan.manage" %}',
+                    },
+                };
+            },
+            methods: {
+                handleTabChange(name) {
+                    window.location.href = this.tabPaths[name];
+                },
+            },
+        });
+    });
+</script>
+
+{% block spec_plan_script %}
+{% endblock %}
+
+{% endblock %}

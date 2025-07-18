@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class ConfigVarManageView(ApplicationDetailBaseView):
     name = "环境变量管理"
-    template_name = "admin42/applications/detail/engine/config_var.html"
+    template_name = "admin42/operation/applications/detail/engine/config_var.html"
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)

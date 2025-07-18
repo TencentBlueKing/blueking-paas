@@ -47,7 +47,7 @@ from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlug
 
 class BuildPackManageView(GenericTemplateView):
     name = "BuildPack 管理"
-    template_name = "admin42/platformmgr/runtimes/buildpacks.html"
+    template_name = "admin42/settings/runtimes/buildpacks.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
@@ -178,7 +178,7 @@ class BuildPackAPIViewSet(GenericViewSet):
 
 class SlugBuilderManageView(GenericTemplateView):
     name = "SlugBuilder 管理"
-    template_name = "admin42/platformmgr/runtimes/slugbuilders.html"
+    template_name = "admin42/settings/runtimes/slugbuilders.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
@@ -297,7 +297,7 @@ class SlugBuilderAPIViewSet(GenericViewSet):
 
 class AppSlugRunnerManageView(GenericTemplateView):
     name = "SlugRunner 管理"
-    template_name = "admin42/platformmgr/runtimes/slugrunners.html"
+    template_name = "admin42/settings/runtimes/slugrunners.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):

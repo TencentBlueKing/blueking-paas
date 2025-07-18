@@ -34,7 +34,7 @@ from paasng.platform.applications.constants import AppLanguage
 class DashboardTemplateManageView(GenericTemplateView):
     """平台服务管理-仪表盘模板配置"""
 
-    template_name = "admin42/configuration/dashboard_templates.html"
+    template_name = "admin42/settings/dashboard_templates.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
     name = "仪表盘模板配置"
 

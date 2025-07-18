@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class LogConfigView(ApplicationDetailBaseView):
     name = "日志采集管理"
-    template_name = "admin42/applications/detail/engine/log_config.html"
+    template_name = "admin42/operation/applications/detail/engine/log_config.html"
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)

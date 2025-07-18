@@ -35,7 +35,7 @@ from paasng.platform.sourcectl.utils import generate_temp_file
 
 class SourcePackageManageView(ApplicationDetailBaseView):
     name = "包版本管理"
-    template_name = "admin42/applications/detail/engine/package.html"
+    template_name = "admin42/operation/applications/detail/engine/package.html"
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)

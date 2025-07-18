@@ -1,7 +1,8 @@
-{% extends "admin42/platformmgr/base.html" %}
+{% extends "./base.html" %}
 {% load admin_utils %}
+
 {% block main_content %}
-<div id="platform-shared-certs-list" style="width: 100%;" class="p20">
+<div id="configuration-shared-certs-list" style="width: 100%;" class="p20">
     <bk-alert type="info" title="更新证书内容后，请运行 refresh_cert 工具更新各应用已创建的证书 Secret 资源（耗时较长）。"></bk-alert>
     <bk-button :theme="'primary'" :title="'创建共享证书'" class="mt10" @click="handleCreate">
         创建共享证书
@@ -78,7 +79,7 @@ const URLRouter = {
 
 document.addEventListener('DOMContentLoaded', () => {
     new Vue({
-        el: "#platform-shared-certs-list",
+        el: "#configuration-shared-certs-list",
         delimiters: ['$[', ']'],
         mixins: [SubmitMixin],
         data: function () {

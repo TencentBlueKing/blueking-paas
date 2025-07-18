@@ -50,7 +50,7 @@ from paasng.utils.error_codes import error_codes
 class ApplicationServicesView(ApplicationDetailBaseView):
     """Application应用增强服务页"""
 
-    template_name = "admin42/applications/detail/services.html"
+    template_name = "admin42/operation/applications/detail/services.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     name = "增强服务"
 

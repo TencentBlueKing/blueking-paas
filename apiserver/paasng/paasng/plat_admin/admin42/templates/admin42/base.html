@@ -7,36 +7,35 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>蓝鲸 PaaS Admin</title>
+    <title>蓝鲸开发者中心 Admin</title>
     {% block header %}
     {% endblock %}
     <style type="text/css">
-        .navbar-brand {
-            padding-left: 0;
-        }
-        #top-nav {
-            display: flex;
-            padding: 0 20px;
-        }
         html,
         body {
             height: 100%;
             display: flex;
             background: #f5f7fa;
         }
-        a {
-            text-decoration: none;
-        }
+
+        a,
         a:hover,
         a:focus {
             text-decoration: none;
         }
+
         .navbar-brand {
             padding-left: 0;
         }
+
+        .navbar-brand {
+            padding-left: 0;
+        }
+
         #top-nav {
             display: flex;
-            padding: 0 20px;
+            margin: 0;
+            padding: 0;
         }
 
         .navbar-nav {
@@ -44,35 +43,43 @@
             flex-grow: 1;
         }
 
-        #top-nav .navbar-brand-light {
+        #top-nav .navbar-brand-light,
+        .navbar-inverse .navbar-nav > li > a,
+        .navbar-inverse .navbar-text {
             color: #96a2b9;
         }
+
         .navbar-inverse {
             background: rgb(24, 33, 50);
         }
+
+        .nav-group-title {
+            font-size: 12px;
+            color: #999;
+            font-weight: bold;
+            padding: 18px 0 6px 22px;
+            cursor: default;
+            pointer-events: none;
+        }
+
         .container-content {
             min-width: 100vw;
             overflow: auto;
         }
 
-        .navbar-inverse .navbar-nav>li>a {
-            color: #96a2b9;
-        }
-        .navbar-inverse .navbar-text {
-            color: #96a2b9;
-        }
         .main-content {
             min-height: calc(100% - 100px);
             min-width: 800px;
-            margin: 20px;
+            margin: 0px;
             flex: 1;
             overflow: auto;
             background: #fff;
-            box-shadow: 0 2px 4px 0 rgba(25, 25, 41, .05);
+            box-shadow: 0 2px 4px 0 rgba(25, 25, 41, 0.05);
             border-radius: 2px;
             border: 1px solid #dcdee5;
             display: flex;
         }
+
         .footer {
             text-align: center;
             height: 50px;
@@ -81,32 +88,26 @@
             color: #63656e;
             padding-top: 20px;
         }
+
         .paas-container {
             min-width: 800px;
             overflow: visible;
         }
+
         .paas-side-bar {
             width: 260px;
             border-right: 1px solid rgb(220, 222, 229);
             background: #f9fbfd;
         }
-        .paas-side-bar:before {
-            content: '目录列表';
-            height: 48px;
-            line-height: 48px;
-            box-shadow: 0px 3px 4px 0px rgba(64, 112, 203, 0.06);
-            border-bottom: 1px solid #dcdee5;
-            display: block;
-            padding-left: 25px;
-            color: #526e8e;
-        }
 
         .monitor-navigation-header .header-title {
             line-height: 40px;
         }
+
         .monitor-navigation-content {
             padding: 15px 25px;
         }
+
         .monitor-navigation-content h4,
         .monitor-navigation-content .h4 {
             font-size: 14px;
@@ -119,10 +120,12 @@
             justify-content: flex-start;
             align-content: flex-start;
         }
+
         .flex-item {
             width: 33%;
             padding: 10px;
         }
+
         .common-links {
             display: flex;
             flex-flow: row wrap;
@@ -136,23 +139,12 @@
             cursor: pointer;
         }
 
-        .paas-side-bar-title {
-            content: '目录列表';
-            height: 48px;
-            line-height: 48px;
-            box-shadow: 0px 3px 4px 0px rgba(64, 112, 203, 0.06);
-            border-bottom: 1px solid #dcdee5;
-            display: flex;
-            align-items: center;
-            padding-left: 25px;
-            color: #526e8e;
-
-        }
         .overview-title-pic {
             width: 30px;
             height: 30px;
             border-radius: 4px;
         }
+
         .overview-title-text {
             padding: 4px 0px 4px 10px;
             height: 48px;
@@ -167,25 +159,29 @@
 
         .paas-breadcrumb {
             list-style: none;
+            font-size: 24px;
             border-radius: 4px;
             padding-left: 4px;
             margin: 2.5px;
         }
-        .paas-breadcrumb>li {
+
+        .paas-breadcrumb > li {
             display: inline-block;
         }
-        .paas-breadcrumb>li+li:before {
+
+        .paas-breadcrumb > li + li:before {
             padding: 0 5px;
-            content: "/\A0";
+            content: '/\A0';
         }
-        .paas-breadcrumb>li>a {
+
+        .paas-breadcrumb > li > a {
             font-family: inherit;
             font-weight: 500;
             line-height: 1.1;
             color: black;
         }
 
-        .json-view .cell{
+        .json-view .cell {
             display: block !important;
         }
 
@@ -196,6 +192,17 @@
             line-height: 1;
         }
 
+        .bk-navigation-wrapper .navigation-container .container-header {
+            height: auto !important;
+            min-height: 60px;
+            flex-basis: auto !important;
+            align-items: flex-start !important;
+            padding-bottom: 0;
+        }
+
+        .bk-tab-section {
+            padding: 0 !important;
+        }
     </style>
     {% render_bundle 'vendors' 'css' %}
     {% render_bundle 'default' 'css' %}
@@ -216,31 +223,9 @@
     <div style="display: flex; flex-direction: column;">
         <nav id="top-nav" class="navbar navbar-inverse" style="border-radius: 0px;">
             <div class="navbar-header">
-                <a class="navbar-brand navbar-brand-light" href="{% url 'admin.front_page' %}">蓝鲸 PaaS Admin</a>
+                <a class="navbar-brand navbar-brand-light" href="{% url 'admin.front_page' %}">蓝鲸开发者中心 Admin</a>
             </div>
-            <ul class="nav navbar-nav">
-                {% get_user_site_perms as perm %}
-                <li><a href="{% url 'admin.front_page' %}">首页</a></li>
-                {% if perm.manage_platform %}
-                <li><a href="{% url 'admin.platform.index' %}">平台管理</a></li>
-                {% endif %}
-                {% if perm.manage_app_templates %}
-                <li><a href="{% url 'admin.configuration.bk_plugins.tags.manage' %}">应用配置管理</a></li>
-                {% endif %}
-                {% if perm.operate_platform %}
-                    {% url 'admin.operation.index' as operation_index %}
-                    {% if operation_index %}
-                    <li><a href="{% url 'admin.operation.index' %}">运营数据</a></li>
-                    {% endif %}
-                {% endif %}
-                {% if perm.manage_platform %}
-                {# 如果平台不在用户登录的时候自动创建用户，则需要在用户列表中将用户添加为普通用户后，用户才能访问开发者中心 #}
-                {% if not AUTO_CREATE_REGULAR_USER %}
-                <li><a href="{% url 'admin.accountmgr.index' %}">用户管理</a></li>
-                {% endif %}
-                {% endif %}
-            </ul>
-            <p class="navbar-text">{{ request.user.username }}</p>
+            <p class="navbar-text" style="margin-left: auto;">{{ request.user.username }}</p>
         </nav>
 
         <div class="container-content">

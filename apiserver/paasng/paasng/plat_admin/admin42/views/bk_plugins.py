@@ -41,9 +41,10 @@ from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
 class BKPluginTagManageView(GenericTemplateView):
     """平台服务管理-插件分类配置"""
 
-    template_name = "admin42/configuration/bk_plugin_tag.html"
+    # 插件分类配置, 使用 "插件配置" 为了前端导航高亮
+    template_name = "admin42/settings/bk_plugin/bk_plugin_tag.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
-    name = "插件分类配置"
+    name = "插件配置"
 
 
 class BKPluginTagView(GenericViewSet, ListModelMixin):
@@ -103,9 +104,10 @@ class BKPluginTagView(GenericViewSet, ListModelMixin):
 class BKPluginDistributorsManageView(GenericTemplateView):
     """平台服务管理-插件使用方配置"""
 
-    template_name = "admin42/configuration/bk_plugin_distributor.html"
+    # 插件使用方配置, 使用 "插件配置" 为了前端导航高亮
+    template_name = "admin42/settings/bk_plugin/bk_plugin_distributor.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_APP_TEMPLATES)]
-    name = "插件使用方配置"
+    name = "插件配置"
 
 
 class BKPluginDistributorsView(GenericViewSet, ListModelMixin):

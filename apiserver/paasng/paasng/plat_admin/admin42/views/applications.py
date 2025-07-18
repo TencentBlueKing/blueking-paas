@@ -69,7 +69,7 @@ class ApplicationListView(GenericTemplateView):
     name = "应用列表"
     queryset = Application.objects.all()
     serializer_class = ApplicationSLZ
-    template_name = "admin42/applications/list_applications.html"
+    template_name = "admin42/operation/applications/list_applications.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     filter_backends = [ApplicationFilterBackend]
 
@@ -152,7 +152,7 @@ class ApplicationOperationReportMixin:
 
 class ApplicationOperationEvaluationView(ApplicationOperationReportMixin, GenericTemplateView):
     name = "应用运营评估"
-    template_name = "admin42/applications/list_evaluations.html"
+    template_name = "admin42/operation/list_evaluations.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):
@@ -251,7 +251,7 @@ class ApplicationOperationReportExportView(ApplicationOperationReportMixin, view
 class ApplicationDetailBaseView(GenericTemplateView):
     """Application详情概览页"""
 
-    template_name = "admin42/applications/detail/base.html"
+    template_name = "admin42/operation/applications/detail/base.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
     # 描述当前高亮的导航栏
     name: str = ""
@@ -278,7 +278,7 @@ class ApplicationOverviewView(ApplicationDetailBaseView):
 
     queryset = Application.objects.all()
     serializer_class = ApplicationSLZ
-    template_name = "admin42/applications/detail/overview.html"
+    template_name = "admin42/operation/applications/detail/overview.html"
     name = "概览"
 
     def get_context_data(self, **kwargs):
@@ -348,7 +348,7 @@ class AppEnvConfManageView(viewsets.GenericViewSet):
 class ApplicationMembersManageView(ApplicationDetailBaseView):
     """Application 应用成员管理页"""
 
-    template_name = "admin42/applications/detail/base_info/members.html"
+    template_name = "admin42/operation/applications/detail/base_info/members.html"
     name = "成员管理"
 
     def get_context_data(self, **kwargs):
@@ -439,7 +439,7 @@ class ApplicationMembersManageViewSet(viewsets.GenericViewSet):
 class ApplicationFeatureFlagsView(ApplicationDetailBaseView):
     """Application应用特性管理页"""
 
-    template_name = "admin42/applications/detail/base_info/app_feature_flags.html"
+    template_name = "admin42/operation/applications/detail/base_info/app_feature_flags.html"
     name = "特性管理"
 
     def get_context_data(self, **kwargs):

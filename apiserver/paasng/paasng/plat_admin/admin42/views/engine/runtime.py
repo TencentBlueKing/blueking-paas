@@ -81,7 +81,7 @@ class RuntimeStack:
 
 class RuntimeManageView(ApplicationDetailBaseView):
     name = "运行时管理"
-    template_name = "admin42/applications/detail/engine/runtime.html"
+    template_name = "admin42/operation/applications/detail/engine/runtime.html"
 
     def get_context_data(self, **kwargs):
         kwargs = super().get_context_data(**kwargs)

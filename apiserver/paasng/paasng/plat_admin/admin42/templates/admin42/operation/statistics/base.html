@@ -1,0 +1,58 @@
+{% extends "../base.html" %}
+{% load admin_utils %}
+
+{% block content_header %}
+<ul class="paas-breadcrumb">
+    <li class="active">{{ view_name }}</li>
+</ul>
+{% endblock %}
+
+{% block content_label %}
+<div id="statistics-tab-root">
+    <bk-tab
+        :active.sync="activeTab"
+        type="unborder-card"
+        @tab-change="handleTabChange"
+    >
+        <bk-tab-panel name="apps" label="应用部署统计"></bk-tab-panel>
+        <bk-tab-panel name="developers" label="开发者部署统计"></bk-tab-panel>
+    </bk-tab>
+</div>
+{% endblock %}
+
+
+{% block main_content %}
+
+{% block statistics_content %}
+{% endblock %}
+
+{% endblock %} 
+
+{% block main_script %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        new Vue({
+            el: '#statistics-tab-root',
+            delimiters: ['$[', ']'],
+            data: function () {
+                return {
+                    activeTab: window.location.pathname.includes('apps') ? 'apps' : 'developers',
+                    tabPaths: {
+                        apps: '{% url "admin.operation.statistics.deploy.apps" %}',
+                        developers: '{% url "admin.operation.statistics.deploy.developers" %}',
+                    }
+                };
+            },
+            methods: {
+                handleTabChange(name) {
+                    window.location.href = this.tabPaths[name];
+                },
+            },
+        });
+    });
+</script>
+
+{% block statistics_script %}
+{% endblock %}
+
+{% endblock %}

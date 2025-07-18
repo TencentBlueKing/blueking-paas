@@ -42,6 +42,9 @@ class DeployStatisticsView(TemplateView, viewsets.GenericViewSet):
         if "view" not in kwargs:
             kwargs["view"] = self
         kwargs["months"] = self.get_months()
+        # DRF 中 GenericViewSet 再 as_view 时会将 name 属性重置为 None
+        # 这里将直接传递上下文变量 name
+        kwargs["view_name"] = "应用统计"
 
         kwargs["data_list"] = self.serializer_class(self.get_data(), many=True).data
         return kwargs
@@ -98,9 +101,10 @@ class DeployStatisticsView(TemplateView, viewsets.GenericViewSet):
 
 
 class AppDeployStatisticsView(DeployStatisticsView):
-    name = "应用部署统计"
+    # 应用部署统计, 使用 "应用统计" 为了前端导航高亮
+    name = "应用统计"
     export_suffix = "statistics_deploy_apps"
-    template_name = "admin42/operation/statistics_deploy_apps.html"
+    template_name = "admin42/operation/statistics/statistics_deploy_apps.html"
     queryset = Deployment.objects.all()
     serializer_class = AppDeploymentSlz
 
@@ -171,9 +175,10 @@ class AppDeployStatisticsView(DeployStatisticsView):
 
 
 class DevelopersDeployStatisticsView(DeployStatisticsView):
-    name = "开发者部署统计"
+    # 开发者部署统计, 使用 "应用统计" 为了前端导航高亮
+    name = "应用统计"
     export_suffix = "statistics_deploy_developers"
-    template_name = "admin42/operation/statistics_deploy_developers.html"
+    template_name = "admin42/operation/statistics/statistics_deploy_developers.html"
     queryset = Deployment.objects.all()
     serializer_class = DeveloperDeploymentSlz
 

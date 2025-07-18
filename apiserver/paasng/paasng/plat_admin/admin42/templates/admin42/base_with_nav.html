@@ -5,8 +5,6 @@
 {% block container %}
 <div class="paas-container bk-navigation-wrapper">
     <div class="paas-side-bar" id="paas-side-bar">
-        {% block navigation_header %}
-        {% endblock %}
         <bk-navigation-menu
             ref="menu"
             @select="handleSelect"
@@ -17,51 +15,66 @@
             item-active-color="#3a84ff"
             item-default-color="#63656e"
             item-hover-color="#63656e"
-            :default-active="active">
-            <bk-navigation-menu-item
-                v-for="item in navList"
-                :key="item.name"
-                :has-child="item.children && !!item.children.length"
-                :group="item.group"
-                :icon="item.icon"
-                :disabled="item.disabled"
-                :url="item.url"
-                :id="item.name">
-                <span>$[item.name]</span>
-                <div slot="child">
+            :default-active="active"
+            :default-open-keys="defaultOpenKeys">
+            <template v-for="group in navList">
+                <div class="nav-group-title" :key="group.name">
+                    $[group.name]
+                </div>
+                <template v-for="item in group.children">
                     <bk-navigation-menu-item
-                        :key="child.name"
+                        :key="item.name"
+                        :id="item.name"
+                        :group="item.group"
+                        :icon="item.icon"
+                        :disabled="item.disabled"
+                        :url="item.url"
+                    >
+                        <span>$[item.name]</span>
+                    </bk-navigation-menu-item>
+                    <bk-navigation-menu-item
                         v-for="child in item.children"
+                        :key="child.name"
                         :id="child.name"
                         :disabled="child.disabled"
-                        :icon="child.icon"
                         :url="child.url"
-                        :default-active="child.active">
+                    >
+                    <span style="display: inline-flex; align-items: center;">
+                        <span class="navigation-menu-item-default">
+                            <i class="navigation-menu-item-default-icon"></i>
+                        </span>
                         <span>$[child.name]</span>
+                    </span>
                     </bk-navigation-menu-item>
-                </div>
-            </bk-navigation-menu-item>
+                </template>
+            </template>
         </bk-navigation-menu>
     </div>
-    <div class="navigation-container" style="width: 100%; min-width: 540px; overflow-x: visible;">
-        <div class="container-header" id="paas-header" style="flex-basis: 0px; justify-content: flex-start;margin:2px 0px 3px 0px;">
+     <div
+        class="navigation-container"
+        style="width: 100%; min-width: 540px; overflow-x: visible"
+    >
+        <div class="container-header" id="paas-header" style="flex-basis: 0px; justify-content: flex-start; margin: 2px 0px 3px 0px;">
             <div class="monitor-navigation-header">
                 <div class="header-title">
                     {% block content_header %}
                     <!-- 这里需要被重载 -->
                     <ul class="paas-breadcrumb">
-                        <li><a href="{% url 'admin.front_page' %}">首页</a></li>
-                        <li><a href="{% url 'admin.platform.index' %}">平台管理</a></li>
                         <li class="active">{{ view.name }}</li>
                     </ul>
                     {% endblock %}
                 </div>
+                <div>
+                    {% block content_label %}
+                    <!-- 用于有标签的导航显示标签 -->
+                    {% endblock %}
+                </div>
             </div>
         </div>
-        <div class="monitor-navigation-content" style="width: 100%; overflow-x: visible;">
-            <div >
-            {% block main_content %}
-            {% endblock %}
+        <div class="monitor-navigation-content" style="width: 100%; overflow-x: visible">
+            <div>
+                {% block main_content %}
+                {% endblock %}
             </div>
         </div>
     </div>
@@ -83,13 +96,22 @@
                 delimiters: ['$[', ']'],
                 data: function () {
                     return {
-                        active: '{{ view.name }}',
+                        active: "{% if view.name %}{{ view.name }}{% elif view_name %}{{ view_name }}{% endif %}",
                         navList: navList,
+                        defaultOpenKeys: [],
+                    };
+                },
+                created() {
+                    // 初始化时收集所有要展开的菜单项
+                    if (this.navList) {
+                        this.defaultOpenKeys = this.navList.map(
+                            (item) => item.name
+                        );
                     }
                 },
                 methods: {
                     handleSelect: function (name, obj) {
-                        if (obj.url !== undefined && "{{ view.name }}" !== name) {
+                        if (obj.url !== undefined && this.active !== name) {
                             this.$bkLoading({title: '加载中'})
                             window.location.href = obj.url
                         }
@@ -101,6 +123,6 @@
     {% endblock %}
 
     {% block main_script %}
-
     {% endblock %}
+
 {% endblock %}

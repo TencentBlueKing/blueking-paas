@@ -17,6 +17,7 @@
 
 import abc
 import logging
+import shutil
 from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
@@ -36,6 +37,8 @@ from paasng.platform.sourcectl.models import (
     VersionInfo,
 )
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
+from paasng.platform.sourcectl.utils import generate_temp_dir
+from paasng.utils.file import validate_source_dir_str
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models import Module
@@ -125,13 +128,6 @@ class RepoController(Protocol):
     def delete_project(self, *args, **kwargs):
         """删除在 VCS 上的源码项目"""
 
-    def download_directory(self, source_dir: str, local_path: Path) -> Path:
-        """下载指定目录到本地
-
-        :param source_dir: 代码仓库的指定目录
-        :param local_path: 本地路径
-        """
-
     def commit_and_push(
         self,
         local_path: Path,
@@ -163,6 +159,25 @@ class BaseGitRepoController:
 
     def get_client(self):
         raise NotImplementedError
+
+    def extract_source_dir_only(self, local_path: PathLike, source_dir: str):
+        """从导出目录中提取并仅保留指定的子目录内容
+
+        :param local_path: 导出目录路径
+        :param source_dir: 要保留的子目录名
+        """
+        local_path = Path(local_path)
+        full_source_path = validate_source_dir_str(local_path, source_dir)
+        with generate_temp_dir() as temp_dir:
+            # 将指定目录内容移动到临时目录
+            for item in full_source_path.iterdir():
+                shutil.move(str(item), str(temp_dir / item.name))
+
+            # 清空目标目录并将内容移回
+            shutil.rmtree(local_path)
+            local_path.mkdir(parents=True, exist_ok=True)
+            for item in temp_dir.iterdir():
+                shutil.move(str(item), str(local_path / item.name))
 
     @classmethod
     def init_by_module(cls, module: "Module", operator: Optional[str] = None):

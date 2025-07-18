@@ -21,10 +21,12 @@ import logging
 from unittest import mock
 
 import pytest
+from blue_krill.encrypt.handler import EncryptHandler
 from django.urls import reverse
 from django_dynamic_fixture import G
 
 from paasng.platform.applications.constants import ApplicationRole
+from paasng.platform.engine.models.config_var import ConfigVar
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -50,6 +52,26 @@ class TestConfigVarAPIs:
         assert resp.data[0]["key"] == "A1"
         assert resp.data[0]["description"] == "bar"
 
+    def test_encrypted_create(self, api_client, bk_app, bk_module):
+        # 测试加密 configvar 的创建
+        api_client.post(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
+            {"key": "A1", "value": "foo", "is_encrypted": True, "environment_name": "_global_", "description": "bar"},
+        )
+
+        resp = api_client.get(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
+        )
+        assert len(resp.data) == 1
+        assert resp.data[0]["key"] == "A1"
+        assert resp.data[0]["description"] == "bar"
+
+        # Verify the encrypted value is stored correctly
+        config_var = ConfigVar.objects.get(id=resp.data[0]["id"])
+        decrypt_value = EncryptHandler().decrypt(config_var.value)
+        assert decrypt_value == "foo"
+        assert config_var.is_encrypted is True
+
     def test_normal_edit(self, api_client, bk_app, bk_module):
         var_id = api_client.post(
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
@@ -66,6 +88,27 @@ class TestConfigVarAPIs:
         )
         assert resp.data[0]["value"] == "bar"
         assert resp.data[0]["description"] == "bar"
+
+    def test_encrypted_edit(self, api_client, bk_app, bk_module):
+        var_id = api_client.post(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
+            {"key": "A1", "value": "foo", "is_encrypted": True, "environment_name": "_global_", "description": "foo"},
+        ).data["id"]
+
+        api_client.put(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/{var_id}/",
+            {"key": "A1", "value": "bar", "is_encrypted": True, "environment_name": "stag", "description": "bar"},
+        )
+
+        resp = api_client.get(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
+        )
+        assert resp.data[0]["description"] == "bar"
+
+        # Verify the encrypted value is edited correctly
+        config_var = ConfigVar.objects.get(id=resp.data[0]["id"])
+        decrypt_value = EncryptHandler().decrypt(config_var.value)
+        assert decrypt_value == "bar"
 
     def test_normal_delete(self, api_client, bk_app, bk_module):
         var_id = api_client.post(

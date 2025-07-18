@@ -44,6 +44,7 @@ from paasng.platform.sourcectl.constants import VersionType
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.error_codes import error_codes
+from paasng.utils.masked_curlify import MASKED_CONTENT
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import UserField, field_env_var_key
 
@@ -379,6 +380,7 @@ class ConfigVarSLZ(serializers.ModelSerializer):
     description = serializers.CharField(
         allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
     )
+    is_encrypted = serializers.BooleanField(required=False, default=False, help_text="是否加密存储")
     is_global = serializers.BooleanField(required=False, help_text="是否全局有效, 该字段由 slz 补充.")
     # 只读字段, 仅序列化时 ConfigVar 对象时生效
     id = serializers.IntegerField(read_only=True)
@@ -414,6 +416,29 @@ class ConfigVarSLZ(serializers.ModelSerializer):
         data["module"] = module.pk
         data["tenant_id"] = module.tenant_id
         return super().to_internal_value(data)
+
+    def to_representation(self, instance) -> dict:
+        ret = super().to_representation(instance)
+        if ret.get("is_encrypted"):
+            ret["value"] = MASKED_CONTENT
+        return ret
+
+
+class CreateConfigVarInputSLZ(ConfigVarSLZ):
+    """Serializer for creating ConfigVar"""
+
+
+class UpdateConfigVarInputSLZ(ConfigVarSLZ):
+    """Serializer for updating ConfigVar"""
+
+    value = serializers.CharField(required=False)
+
+    def update(self, instance: ConfigVar, validated_data):
+        if "is_encrypted" in validated_data:
+            # 更新时忽略更新 is_encrypted 字段
+            validated_data.pop("is_encrypted")
+        instance = super().update(instance, validated_data)
+        return instance
 
 
 class ListConfigVarsSLZ(serializers.Serializer):

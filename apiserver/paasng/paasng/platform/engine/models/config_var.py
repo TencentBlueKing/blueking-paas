@@ -16,6 +16,8 @@
 # to the current version of the project delivered to anyone in the future.
 from typing import TYPE_CHECKING
 
+from blue_krill.encrypt.handler import EncryptHandler
+from blue_krill.encrypt.utils import get_default_secret_key
 from django.db import models
 
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -58,6 +60,7 @@ class ConfigVar(TimestampedModel):
     description = models.CharField(max_length=200, null=True)
     # is_builtin 表示该环境变量是否为“系统内置”，目前仅当旧应用从 v2 迁移时，写入一些内置环境变量数据会将该字段设为 True
     is_builtin = models.BooleanField(default=False)
+    is_encrypted = models.BooleanField(default=False)
 
     tenant_id = tenant_id_field_factory()
 
@@ -110,6 +113,17 @@ class ConfigVar(TimestampedModel):
             module=module,
             tenant_id=self.tenant_id,
         )
+
+    def save(self, *args, **kwargs):
+        if self.is_encrypted:
+            self.value = EncryptHandler(secret_key=get_default_secret_key()).encrypt(self.value)
+        super().save(*args, **kwargs)
+
+    def get_unencrypted_value(self) -> str:
+        """Get the config var value, decrypted if encrypted."""
+        if self.is_encrypted:
+            return EncryptHandler(secret_key=get_default_secret_key()).decrypt(self.value)
+        return self.value
 
 
 class BuiltinConfigVar(AuditedModel):

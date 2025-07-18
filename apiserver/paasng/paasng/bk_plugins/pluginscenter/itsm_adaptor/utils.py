@@ -380,9 +380,8 @@ def _add_users_to_plugin_role(plugin: PluginInstance, usernames: list, role: Plu
             members_api.remove_user_all_roles(plugin, list(users_to_add))
         members_api.add_role_members(plugin, role=role, usernames=list(users_to_add))
     except BKIAMGatewayServiceError as e:
-        role_name = "管理员" if role == PluginRole.ADMINISTRATOR else "开发者"
         raise error_codes.MEMBERSHIP_UPDATE_FAILED.f(
-            f"添加用户({users_to_add})为插件({plugin.id}){role_name}失败: {e.message}"
+            f"Failed to add user({usernames}) as plugin({plugin.id}) role({role}): {e.message}"
         )
 
     # 同步成员到第三方系统

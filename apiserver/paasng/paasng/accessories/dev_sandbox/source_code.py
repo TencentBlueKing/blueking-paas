@@ -20,13 +20,13 @@ import logging
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 
-from paasng.platform.engine.utils.source import validate_source_dir_str
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.platform.sourcectl.utils import compress_directory_ext, generate_temp_dir, generate_temp_file
 from paasng.utils.blobstore import make_blob_store
+from paasng.utils.file import validate_source_dir_str
 
 logger = logging.getLogger(__name__)
 

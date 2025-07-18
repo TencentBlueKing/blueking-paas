@@ -53,6 +53,7 @@ class TestConfigVarAPIs:
         assert resp.data[0]["description"] == "bar"
 
     def test_encrypted_create(self, api_client, bk_app, bk_module):
+        # 测试加密 configvar 的创建
         api_client.post(
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
             {"key": "A1", "value": "foo", "is_encrypted": True, "environment_name": "_global_", "description": "bar"},

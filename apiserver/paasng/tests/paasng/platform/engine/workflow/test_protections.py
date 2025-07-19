@@ -252,7 +252,15 @@ class TestOperatorVersionCondition:
 @pytest.mark.django_db(databases=["default", "workloads"])
 class TestModuleEnvDeployInspector:
     @pytest.mark.parametrize(
-        ("user_role", "allowed_roles", "create_token", "create_product", "set_extra_info", "expected"),
+        (
+            "user_role",
+            "allowed_roles",
+            "create_token",
+            "create_product",
+            "set_extra_info",
+            "check_operator_version",
+            "expected",
+        ),
         [
             (
                 ApplicationRole.DEVELOPER,
@@ -260,6 +268,7 @@ class TestModuleEnvDeployInspector:
                 False,
                 False,
                 False,
+                True,
                 [
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.CHECK_ENV_PROTECTION,
@@ -274,6 +283,7 @@ class TestModuleEnvDeployInspector:
                 True,
                 False,
                 False,
+                True,
                 [
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.CHECK_ENV_PROTECTION,
@@ -287,6 +297,7 @@ class TestModuleEnvDeployInspector:
                 True,
                 False,
                 False,
+                True,
                 [
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.FILL_EXTRA_INFO,
@@ -299,6 +310,7 @@ class TestModuleEnvDeployInspector:
                 True,
                 True,
                 False,
+                True,
                 [
                     DeployConditions.FILL_EXTRA_INFO,
                     DeployConditions.CHECK_OPERATOR_VERSION,
@@ -310,7 +322,17 @@ class TestModuleEnvDeployInspector:
                 True,
                 True,
                 True,
+                True,
                 [DeployConditions.CHECK_OPERATOR_VERSION],
+            ),
+            (
+                ...,
+                ...,
+                True,
+                True,
+                True,
+                False,
+                [],
             ),
         ],
     )
@@ -324,6 +346,7 @@ class TestModuleEnvDeployInspector:
         create_token,
         create_product,
         set_extra_info,
+        check_operator_version,
         expected,
     ):
         application = bk_module.application
@@ -357,6 +380,7 @@ class TestModuleEnvDeployInspector:
                 availability_level=AvailabilityLevel.STANDARD.value,
             )
 
-        inspector = ModuleEnvDeployInspector(bk_user, env)
-        assert [item.action_name for item in inspector.perform().failed_conditions] == [c.value for c in expected]
-        assert inspector.all_matched is not len(expected)
+        with override_settings(BKPAAS_APP_OPERATOR_VERSION_CHECK=check_operator_version):
+            inspector = ModuleEnvDeployInspector(bk_user, env)
+            assert [item.action_name for item in inspector.perform().failed_conditions] == [c.value for c in expected]
+            assert inspector.all_matched is not len(expected)

@@ -261,11 +261,11 @@ class TestModuleEnvDeployInspector:
                 False,
                 False,
                 [
-                    DeployConditions.CHECK_OPERATOR_VERSION,
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.CHECK_ENV_PROTECTION,
                     DeployConditions.NEED_TO_BIND_OAUTH_INFO,
                     DeployConditions.FILL_EXTRA_INFO,
+                    DeployConditions.CHECK_OPERATOR_VERSION,
                 ],
             ),
             (
@@ -275,10 +275,10 @@ class TestModuleEnvDeployInspector:
                 False,
                 False,
                 [
-                    DeployConditions.CHECK_OPERATOR_VERSION,
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.CHECK_ENV_PROTECTION,
                     DeployConditions.FILL_EXTRA_INFO,
+                    DeployConditions.CHECK_OPERATOR_VERSION,
                 ],
             ),
             (
@@ -288,9 +288,9 @@ class TestModuleEnvDeployInspector:
                 False,
                 False,
                 [
-                    DeployConditions.CHECK_OPERATOR_VERSION,
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.FILL_EXTRA_INFO,
+                    DeployConditions.CHECK_OPERATOR_VERSION,
                 ],
             ),
             (
@@ -300,8 +300,8 @@ class TestModuleEnvDeployInspector:
                 True,
                 False,
                 [
-                    DeployConditions.CHECK_OPERATOR_VERSION,
                     DeployConditions.FILL_EXTRA_INFO,
+                    DeployConditions.CHECK_OPERATOR_VERSION,
                 ],
             ),
             (

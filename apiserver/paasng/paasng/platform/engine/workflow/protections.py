@@ -202,7 +202,6 @@ class ModuleEnvDeployInspector(BaseConditionChecker):
         ProcfileCondition,
         PluginTagValidationCondition,
         ApplicationExtraInfoCondition,
-        OperatorVersionCondition,
     ]
 
     def __init__(self, user: "User", env: "ModuleEnvironment"):

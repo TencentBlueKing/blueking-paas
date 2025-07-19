@@ -17,12 +17,15 @@
 
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.db.models import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.market.models import Product
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.core.core.protections.exceptions import ConditionNotMatched
+from paasng.infras.clusters.helm import HelmClient
 from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -167,6 +170,28 @@ class ApplicationExtraInfoCondition(DeployCondition):
             raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
 
+class OperatorVersionCondition(DeployCondition):
+    """检查 apiserver 和 operator 版本信息是否一致"""
+
+    action_name = DeployConditions.CHECK_OPERATOR_VERSION.value
+
+    def validate(self):
+        # 仅在打开 检查开关的时候检查
+        if not settings.BKPAAS_APP_OPERATOR_VERSION_CHECK:
+            return
+
+        # apiserver 根据 Helm 构建时, 注入容器 env
+        apiserver_version = settings.BKPAAS_APISERVER_VERSION
+
+        # operator 通过 helm 客户端获取
+        cluster_name = EnvClusterService(self.env).get_cluster_name()
+        operator_version = HelmClient(cluster_name).get_release("bkpaas-app-operator")
+
+        if not operator_version or operator_version.chart.app_version != apiserver_version:
+            message = _("Operator 版本不匹配，请检查 Operator 版本")
+            raise ConditionNotMatched(message, self.action_name)
+
+
 class ModuleEnvDeployInspector(BaseConditionChecker):
     """Prepare to deploy a ModuleEnvironment"""
 
@@ -177,6 +202,7 @@ class ModuleEnvDeployInspector(BaseConditionChecker):
         ProcfileCondition,
         PluginTagValidationCondition,
         ApplicationExtraInfoCondition,
+        OperatorVersionCondition,
     ]
 
     def __init__(self, user: "User", env: "ModuleEnvironment"):

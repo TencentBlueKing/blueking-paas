@@ -55,6 +55,9 @@ RUN wget https://github.com/coder/code-server/releases/download/v${CODE_SERVER_V
 # set code-server configuration stored directory
 ENV XDG_DATA_HOME=/coder
 
+# pre-install extensions for developer
+RUN code-server --install-extension ms-python.python
+
 # heroku builder
 ENV HOME=/app CNB_APP_DIR=/app CNB_PLATFORM_API=0.11
 

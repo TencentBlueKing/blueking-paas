@@ -20,8 +20,8 @@ import json
 from bkapi_client_core.exceptions import APIGatewayResponseError, ResponseError
 from django.conf import settings
 
-from paasng.accessories.cloudapi.mcp_servers.apigw.clients import Client
-from paasng.accessories.cloudapi.mcp_servers.exceptions import MCPServerApiGatewayServiceError
+from paasng.accessories.cloudapi_v2.mcp_servers.apigw.clients import Client
+from paasng.accessories.cloudapi_v2.mcp_servers.exceptions import MCPServerApiGatewayServiceError
 from paasng.core.tenant.constants import API_HERDER_TENANT_ID
 
 

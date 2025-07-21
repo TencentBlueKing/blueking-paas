@@ -26,7 +26,6 @@ from rest_framework.response import Response
 
 from paasng.accessories.cloudapi import serializers
 from paasng.accessories.cloudapi.components.bk_apigateway_inner import bk_apigateway_inner_component
-from paasng.accessories.cloudapi.mcp_servers.clients import MCPServerApiClient
 from paasng.accessories.cloudapi.utils import get_user_auth_type
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
@@ -290,59 +289,3 @@ class CloudAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             return f"/api/v1/{path[len(prefix):]}"
 
         raise error_codes.CLOUDAPI_PATH_ERROR
-
-
-class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_CLOUD_API)]
-
-    @swagger_auto_schema(
-        query_serializer=serializers.MCPServerQueryParamsSLZ,
-        tags=["CloudAPIV2"],
-    )
-    def list_mcp_servers(self, request, *args, **kwargs):
-        slz = serializers.MCPServerQueryParamsSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = MCPServerApiClient(tenant_id=tenant_id).list_mcp_servers(**slz.data)
-        return Response(data)
-
-    @swagger_auto_schema(
-        query_serializer=serializers.AppMCPServerPermissionQueryParamsSLZ,
-        tags=["CloudAPIV2"],
-    )
-    def list_app_mcp_server_permissions(self, request, *args, **kwargs):
-        slz = serializers.AppMCPServerPermissionQueryParamsSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = MCPServerApiClient(tenant_id=tenant_id).list_app_permissions(bk_app_code=app.code, **slz.data)
-        return Response(data)
-
-    @swagger_auto_schema(
-        query_serializer=serializers.AppMCPServerPermissionApplyRecordQueryParamsSLZ,
-        tags=["CloudAPIV2"],
-    )
-    def list_mcp_server_permissions_apply_records(self, request, *args, **kwargs):
-        slz = serializers.AppMCPServerPermissionApplyRecordQueryParamsSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = MCPServerApiClient(tenant_id=tenant_id).list_permissions_apply_records(bk_app_code=app.code, **slz.data)
-        return Response(data)
-
-    @swagger_auto_schema(
-        request_body=serializers.ApplyMCPResourcePermissionSLZ,
-        tags=["CloudAPIV2"],
-    )
-    def apply_mcp_server_permissions(self, request, *args, **kwargs):
-        slz = serializers.ApplyMCPResourcePermissionSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = MCPServerApiClient(tenant_id=tenant_id).apply_permissions(bk_app_code=app.code, **slz.data)
-        return Response(data)

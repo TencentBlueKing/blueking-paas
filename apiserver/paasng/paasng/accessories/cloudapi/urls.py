@@ -102,29 +102,4 @@ urlpatterns = [
         views.CloudAPIViewSet.as_view({"get": "retrieve_component_permission_apply_record"}),
         name="api.cloudapi.v1.retrieve_component_permission_apply_record",
     ),
-    # 网关 API v2 相关接口
-    # 获取 mcp-server 列表
-    path(
-        "api/cloudapi-v2/apps/<slug:app_code>/open/mcp-servers/",
-        views.CloudAPIV2ViewSet.as_view({"get": "list_mcp_servers"}),
-        name="api.cloudapi.v2.mcp_servers",
-    ),
-    # 获取 app mcp-server 权限列表
-    path(
-        "api/cloudapi-v2/apps/<slug:app_code>/open/mcp-servers/permissions/",
-        views.CloudAPIV2ViewSet.as_view({"get": "list_app_mcp_server_permissions"}),
-        name="api.cloudapi.v2.app_mcp_server_permissions",
-    ),
-    # 批量申请权限
-    path(
-        "api/cloudapi-v2/apps/<slug:app_code>/open/mcp-servers/permissions/apply/",
-        views.CloudAPIV2ViewSet.as_view({"post": "apply_mcp_server_permissions"}),
-        name="api.cloudapi.v2.mcp_server_permissions_apply",
-    ),
-    # 权限申请记录
-    path(
-        "api/cloudapi-v2/apps/<slug:app_code>/open/mcp-servers/permissions/apply-records/",
-        views.CloudAPIV2ViewSet.as_view({"get": "list_mcp_server_permissions_apply_records"}),
-        name="api.cloudapi.v2.mcp_server_permissions_apply_records",
-    ),
 ]

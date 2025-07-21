@@ -193,33 +193,3 @@ class ESBComponentApplyStatusSLZ(serializers.Serializer):
 
 class ESBPermissionApplyRecordDetailSLZ(ESBPermissionApplyRecordSLZ):
     components = serializers.ListField(child=ESBComponentApplyStatusSLZ())
-
-
-class BaseMCPServerQueryParamsSLZ(serializers.Serializer):
-    limit = serializers.IntegerField(help_text="最大返回条目数", required=False)
-    offset = serializers.IntegerField(help_text="相对于完整未分页数据的起始位置", required=False)
-
-
-class MCPServerQueryParamsSLZ(BaseMCPServerQueryParamsSLZ):
-    """获取 mcp_server 列表请求参数"""
-
-    keyword = serializers.CharField(help_text="搜索条件，支持模糊匹配 MCPServer 名称或描述", required=False)
-
-
-class AppMCPServerPermissionQueryParamsSLZ(BaseMCPServerQueryParamsSLZ):
-    """获取 app mcp_server 权限列表请求参数"""
-
-
-class AppMCPServerPermissionApplyRecordQueryParamsSLZ(BaseMCPServerQueryParamsSLZ):
-    """获取指定应用的 mcp_server 权限申请记录列表"""
-
-    mcp_server_id = serializers.IntegerField(help_text="mcp_server_ids", required=False)
-
-
-class ApplyMCPResourcePermissionSLZ(serializers.Serializer):
-    """申请 mcp_resource 权限请求参数"""
-
-    mcp_server_ids = serializers.ListField(child=serializers.IntegerField(), help_text="mcp_server ID 列表")
-    applied_by = serializers.CharField(help_text="申请人")
-    reason = serializers.CharField(help_text="申请原因")
-    gateway_name = serializers.CharField(help_text="网关/mcp_server 名称，用于记录操作记录")

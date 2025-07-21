@@ -220,7 +220,7 @@ class AppMCPServerPermissionApplyRecordQueryParamsSLZ(BaseMCPServerQueryParamsSL
     """获取指定应用的 mcp_server 权限申请记录列表"""
 
     bk_app_code = serializers.CharField(help_text="app_code")
-    mcp_server_id = serializers.CharField(help_text="mcp_server_id")
+    mcp_server_id = serializers.IntegerField(help_text="mcp_server_ids", required=False)
 
 
 class ApplyMCPResourcePermissionSLZ(serializers.Serializer):

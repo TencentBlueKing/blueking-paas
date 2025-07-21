@@ -109,12 +109,6 @@ urlpatterns = [
         views.CloudAPIV2ViewSet.as_view({"get": "list_mcp_servers"}),
         name="api.cloudapi.v2.mcp_servers",
     ),
-    # 获取指定 mcp-server 权限列表
-    path(
-        "api/cloudapi-v2/apps/<slug:app_code>/open/mcp-servers/<int:mcp_server_id>/permissions/",
-        views.CloudAPIV2ViewSet.as_view({"get": "list_mcp_server_permissions"}),
-        name="api.cloudapi.v2.mcp_server_permissions",
-    ),
     # 获取 app mcp-server 权限列表
     path(
         "api/cloudapi-v2/apps/<slug:app_code>/open/mcp-servers/permissions/",

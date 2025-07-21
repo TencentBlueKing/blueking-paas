@@ -21,28 +21,28 @@ from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationG
 class Group(OperationGroup):
     list_mcp_servers = bind_property(
         Operation,
-        name="mcp_servers",
+        name="list_mcp_servers",
         method="GET",
         path="/api/v2/open/mcp-servers/",
     )
 
     list_app_permissions = bind_property(
         Operation,
-        name="app_codecc_build_id_mapping",
+        name="list_app_permissions",
         method="GET",
         path="/api/v2/open/mcp-servers/permissions/",
     )
 
     list_permissions_apply_records = bind_property(
         Operation,
-        name="app_codecc_build_task_info",
+        name="list_permissions_apply_records",
         method="GET",
         path="/api/v2/open/mcp-servers/permissions/apply-records/",
     )
 
     apply_permissions = bind_property(
         Operation,
-        name="app_codecc_defect_statistic",
+        name="apply_permissions",
         method="POST",
         path="/api/v2/open/mcp-servers/permissions/apply/",
     )

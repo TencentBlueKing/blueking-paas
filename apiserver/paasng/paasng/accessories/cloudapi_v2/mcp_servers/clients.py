@@ -100,13 +100,13 @@ class MCPServerApiClient:
         reason: str,
     ):
         """申请 mcp server 权限"""
-        params = {
+        data = {
             "bk_app_code": bk_app_code,
             "mcp_server_ids": mcp_server_ids,
             "applied_by": applied_by,
             "reason": reason,
         }
         try:
-            self.client.apply_permissions(params=params)
+            self.client.apply_permissions(data=data)
         except (APIGatewayResponseError, ResponseError) as e:
             raise MCPServerApiGatewayServiceError(f"apply permissions error: {e}")

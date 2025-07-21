@@ -209,24 +209,16 @@ class MCPServerQueryParamsSLZ(BaseMCPServerQueryParamsSLZ):
 class AppMCPServerPermissionQueryParamsSLZ(BaseMCPServerQueryParamsSLZ):
     """获取 app mcp_server 权限列表请求参数"""
 
-    bk_app_code = serializers.CharField(help_text="app_code")
-
-
-class MCPServerPermissionQueryParamsSLZ(BaseMCPServerQueryParamsSLZ):
-    """获取 mcp_server 的权限列表请求参数"""
-
 
 class AppMCPServerPermissionApplyRecordQueryParamsSLZ(BaseMCPServerQueryParamsSLZ):
     """获取指定应用的 mcp_server 权限申请记录列表"""
 
-    bk_app_code = serializers.CharField(help_text="app_code")
     mcp_server_id = serializers.IntegerField(help_text="mcp_server_ids", required=False)
 
 
 class ApplyMCPResourcePermissionSLZ(serializers.Serializer):
     """申请 mcp_resource 权限请求参数"""
 
-    bk_app_code = serializers.CharField(help_text="app_code")
     mcp_server_ids = serializers.ListField(child=serializers.IntegerField(), help_text="mcp_server ID 列表")
     applied_by = serializers.CharField(help_text="申请人")
     reason = serializers.CharField(help_text="申请原因")

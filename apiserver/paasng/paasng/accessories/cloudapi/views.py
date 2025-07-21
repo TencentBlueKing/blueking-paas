@@ -318,7 +318,7 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        data = MCPServerApiClient(tenant_id=tenant_id).list_app_permissions(**slz.data)
+        data = MCPServerApiClient(tenant_id=tenant_id).list_app_permissions(bk_app_code=app.code, **slz.data)
         return Response(data)
 
     @swagger_auto_schema(
@@ -331,7 +331,7 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        data = MCPServerApiClient(tenant_id=tenant_id).list_permissions_apply_records(**slz.data)
+        data = MCPServerApiClient(tenant_id=tenant_id).list_permissions_apply_records(bk_app_code=app.code, **slz.data)
         return Response(data)
 
     @swagger_auto_schema(
@@ -344,5 +344,5 @@ class CloudAPIV2ViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        data = MCPServerApiClient(tenant_id=tenant_id).apply_permissions(**slz.data)
+        data = MCPServerApiClient(tenant_id=tenant_id).apply_permissions(bk_app_code=app.code, **slz.data)
         return Response(data)

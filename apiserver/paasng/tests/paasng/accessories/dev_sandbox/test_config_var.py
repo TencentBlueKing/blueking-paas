@@ -67,11 +67,21 @@ class TestGetEnvVarsSelectedAddons:
 
     def test_list_vars_builtin_addons_custom_filter(self, bk_module, bk_stag_env):
         """测试根据增强服务名称过滤"""
-        # 指定要获取的服务名称
+        # 测试服务全选的情况
         selected_services = ["mysql", "rabbitmq"]
         result = list_vars_builtin_addons_custom(bk_stag_env, selected_services)
 
         assert result == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306", "MQ_URL": "mq.com"}
+
+        # 测试仅选择一个服务的情况
+        selected_services = ["mysql"]
+        result = list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        assert result == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306"}
+
+        # 测试不选择服务的情况
+        selected_services = []
+        result = list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        assert result == {}
 
     def test_list_vars_builtin_addons_custom_none_filter(self, bk_module, bk_stag_env):
         result = list_vars_builtin_addons_custom(bk_stag_env, None)

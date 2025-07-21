@@ -257,7 +257,7 @@ class ConfigVarApplyResultSLZ(serializers.Serializer):
 
 
 class ConfigVarWithoutKeyFormatSLZ(serializers.Serializer):
-    value = serializers.CharField(help_text="环境变量值")
+    value = serializers.CharField(required=False, help_text="环境变量值")
     is_sensitive = serializers.BooleanField(required=False, default=False, help_text="value 值是否敏感")
     environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
     description = serializers.CharField(
@@ -293,23 +293,42 @@ class ConfigVarFormatSLZ(ConfigVarWithoutKeyFormatSLZ):
 
     key = field_env_var_key()
 
+    def validate(self, instance: ConfigVar):
+        module = self.context.get("module")
+        key = instance.key
+        environment_name = instance.environment_name
+
+        # 检查数据库中是否已存在该 key/env
+        exists = ConfigVar.objects.filter(
+            module=module,
+            key=key,
+            environment__environment=environment_name,
+        ).exists()
+
+        # 新创建时必须提供 value
+        if not exists and not instance.value:
+            raise ValidationError({"value": "value is required"})
+        return instance
+
 
 class ConfigVarFormatWithIdSLZ(ConfigVarFormatSLZ):
     """When batch editing, need to pass in the id."""
 
     id = serializers.IntegerField(required=False)
-    value = serializers.CharField(required=False, help_text="环境变量值")
 
-    def to_internal_value(self, data):
-        # 校验 id 和 value
+    def validate(self, instance: ConfigVar):
+        """Validate based on id existence"""
         instance_mapping = self.context.get("instance_mapping")
-        ## 存在 id 值且数据库中存在该模型值, value 非必传
-        if data.get("id") is not None and data.get("id") in instance_mapping:
-            return super().to_internal_value(data)
-        elif data.get("value") is None:
-            raise ValidationError("value is required")
+        var_id = instance.id
+        # 如果提供了 id 且存在对应实例，value 可选
+        if not var_id and var_id in instance_mapping:
+            return instance
 
-        return super().to_internal_value(data)
+        # 否则 value 必填
+        if not instance.value:
+            raise ValidationError({"value": "value is required"})
+
+        return instance
 
 
 class ConfigVarImportSLZ(serializers.Serializer):

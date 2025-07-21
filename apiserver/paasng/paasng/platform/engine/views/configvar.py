@@ -183,7 +183,11 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 
         if existing_vars.exists():
             # 存在, 更新已有记录
-            existing_vars.update(value=config_var.value, description=config_var.description)
+            # 构建更新字段字典，如果 value 为空则不更新 value 字段
+            _update_fields = {"description": config_var.description}
+            if config_var.value:
+                _update_fields["value"] = config_var.value
+            existing_vars.update(**_update_fields)
         else:
             # 不存在，创建新记录
             ConfigVar.objects.create(
@@ -191,6 +195,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
                 key=config_vars_key,
                 environment_id=config_var.environment_id,
                 value=config_var.value,
+                is_sensitive=config_var.is_sensitive,
                 description=config_var.description,
                 is_global=config_var.is_global,
             )

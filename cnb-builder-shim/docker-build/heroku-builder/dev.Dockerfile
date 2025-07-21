@@ -52,13 +52,13 @@ RUN wget https://github.com/coder/code-server/releases/download/v${CODE_SERVER_V
   dpkg -i code-server_${CODE_SERVER_VER}_amd64.deb; \
   rm code-server_${CODE_SERVER_VER}_amd64.deb
 
-# dev heroku builder
-ENV HOME /app
+# set code-server configuration stored directory
+ENV XDG_DATA_HOME=/coder
 
-ENV CNB_APP_DIR /app
+# heroku builder
+ENV HOME=/app CNB_APP_DIR=/app CNB_PLATFORM_API=0.11
 
-ENV CNB_PLATFORM_API=0.11
-
+# dev mode for builder
 ENV DEV_MODE=true
 
 RUN apt-get clean && apt-get update && apt-get -y install supervisor

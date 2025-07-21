@@ -23,28 +23,28 @@ class Group(OperationGroup):
         Operation,
         name="mcp_servers",
         method="GET",
-        path="/v2/open/mcp-servers/",
+        path="/api/v2/open/mcp-servers/",
     )
 
     list_app_permissions = bind_property(
         Operation,
         name="app_codecc_build_id_mapping",
         method="GET",
-        path="/v2/open/mcp-servers/permissions/",
+        path="/api/v2/open/mcp-servers/permissions/",
     )
 
     list_permissions_apply_records = bind_property(
         Operation,
         name="app_codecc_build_task_info",
         method="GET",
-        path="/v2/open/mcp-servers/permissions/apply-records/",
+        path="/api/v2/open/mcp-servers/permissions/apply-records/",
     )
 
     apply_permissions = bind_property(
         Operation,
         name="app_codecc_defect_statistic",
         method="POST",
-        path="/v2/open/mcp-servers/permissions/apply/",
+        path="/api/v2/open/mcp-servers/permissions/apply/",
     )
 
 

@@ -62,10 +62,10 @@ class MCPServerApiClient:
 
         return res.get("data", {})
 
-    def list_app_permissions(self, app_code: str, limit: int | None = None, offset: int | None = None) -> dict:
+    def list_app_permissions(self, bk_app_code: str, limit: int | None = None, offset: int | None = None) -> dict:
         """获取应用的 mcp server 权限列表"""
         params = {
-            "bk_app_code": app_code,
+            "bk_app_code": bk_app_code,
             **({"limit": limit} if limit is not None else {}),  # type: ignore
             **({"offset": offset} if offset is not None else {}),  # type: ignore
         }
@@ -76,11 +76,11 @@ class MCPServerApiClient:
         return res.get("data", {})
 
     def list_permissions_apply_records(
-        self, app_code: str, mcp_server_id: int | None = None, limit: int | None = None, offset: int | None = None
+        self, bk_app_code: str, mcp_server_id: int | None = None, limit: int | None = None, offset: int | None = None
     ) -> dict:
         """获取应用权限申请记录列表"""
         params = {
-            "bk_app_code": app_code,
+            "bk_app_code": bk_app_code,
             **({"mcp_server_id": mcp_server_id} if mcp_server_id is not None else {}),  # type: ignore
             **({"limit": limit} if limit is not None else {}),  # type: ignore
             **({"offset": offset} if offset is not None else {}),  # type: ignore
@@ -94,14 +94,14 @@ class MCPServerApiClient:
 
     def apply_permissions(
         self,
-        app_code: str,
+        bk_app_code: str,
         mcp_server_ids: list,
         applied_by: str,
         reason: str,
     ):
         """申请 mcp server 权限"""
         params = {
-            "bk_app_code": app_code,
+            "bk_app_code": bk_app_code,
             "mcp_server_ids": mcp_server_ids,
             "applied_by": applied_by,
             "reason": reason,

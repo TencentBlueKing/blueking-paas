@@ -233,7 +233,11 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
         module = self.get_module_via_path()
-        slz = ConfigVarFormatWithIdSLZ(data=request.data, context={"module": module}, many=True)
+        instance_list = module.configvar_set.filter(is_builtin=False).prefetch_related("environment")
+        instance_mapping = {obj.id: obj for obj in instance_list}
+        slz = ConfigVarFormatWithIdSLZ(
+            data=request.data, context={"module": module, "instance_mapping": instance_mapping}, many=True
+        )
         slz.is_valid(raise_exception=True)
         env_variables = slz.validated_data
 

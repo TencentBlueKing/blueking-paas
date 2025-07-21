@@ -193,6 +193,9 @@ class ConfigVarManager:
                 create_list.append(var_data)
             else:
                 instance_mapping.pop(var_id)
+                # If the value is not provided, use the existing value
+                if not var_data.value:
+                    var_data.value = obj.value
                 # If it is inconsistent with existing data, it needs to be updated
                 if not obj.is_equivalent_to(var_data):
                     _update_data_dict = model_to_dict(var_data, fields=CONFIG_VAR_INPUT_FIELDS)

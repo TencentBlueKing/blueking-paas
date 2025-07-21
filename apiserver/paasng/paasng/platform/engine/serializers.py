@@ -258,6 +258,7 @@ class ConfigVarApplyResultSLZ(serializers.Serializer):
 
 class ConfigVarWithoutKeyFormatSLZ(serializers.Serializer):
     value = serializers.CharField(help_text="环境变量值")
+    is_sensitive = serializers.BooleanField(required=False, default=False, help_text="value 值是否敏感")
     environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
     description = serializers.CharField(
         allow_blank=True,
@@ -297,6 +298,18 @@ class ConfigVarFormatWithIdSLZ(ConfigVarFormatSLZ):
     """When batch editing, need to pass in the id."""
 
     id = serializers.IntegerField(required=False)
+    value = serializers.CharField(required=False, help_text="环境变量值")
+
+    def to_internal_value(self, data):
+        # 校验 id 和 value
+        instance_mapping = self.context.get("instance_mapping")
+        ## 存在 id 值且数据库中存在该模型值, value 非必传
+        if data.get("id") is not None and data.get("id") in instance_mapping:
+            return super().to_internal_value(data)
+        elif data.get("value") is None:
+            raise ValidationError("value is required")
+
+        return super().to_internal_value(data)
 
 
 class ConfigVarImportSLZ(serializers.Serializer):

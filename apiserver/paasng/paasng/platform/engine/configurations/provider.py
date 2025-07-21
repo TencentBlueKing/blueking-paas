@@ -17,9 +17,10 @@
 """Use a separate module to avoid circular imports"""
 
 from collections import OrderedDict
-from typing import Callable, Dict
+from typing import Callable
 
 from paasng.platform.applications.models import ModuleEnvironment
+from paasng.platform.engine.configurations.env_var.entities import EnvVariableList
 
 
 def _make_id(target):
@@ -40,14 +41,14 @@ class EnvVariablesProviders:
         self._registered_funcs_env[_make_id(func)] = func
         return func
 
-    def gather(self, env: ModuleEnvironment) -> Dict:
+    def gather(self, env: ModuleEnvironment) -> EnvVariableList:
         """Gather all env variables for given env
 
         :param deployment: if given, the result will include deployment-scoped env variables
         """
-        result = {}
+        result = EnvVariableList()
         for func in self._registered_funcs_env.values():
-            result.update(func(env))
+            result.extend(func(env))
         return result
 
 

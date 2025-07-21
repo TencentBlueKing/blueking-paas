@@ -18,6 +18,7 @@ from collections import UserList
 from typing import Self
 
 from attrs import define
+from django.conf import settings
 
 
 @define
@@ -27,6 +28,11 @@ class EnvVariableObj:
     key: str
     value: str
     description: str | None
+
+    @classmethod
+    def with_sys_prefix(cls, key: str, value: str, description: str | None = None) -> Self:
+        """Create an EnvVariableObj with the system env key prefix."""
+        return cls.with_prefix(prefix=settings.CONFIGVAR_SYSTEM_PREFIX, key=key, value=value, description=description)
 
     @classmethod
     def with_prefix(cls, prefix: str, key: str, value: str, description: str | None = None) -> Self:
@@ -46,3 +52,10 @@ class EnvVariableList(UserList):
     def kv_map(self) -> dict[str, str]:
         """Return a dictionary with env variable names as keys and their values as values."""
         return {item.key: item.value for item in self}
+
+    def get_data_map(self) -> dict[str, dict]:
+        """Get a dictionary representation, the value is pure data dict.
+
+        :return: The dict, {key: {"value": ..., "description": ...}}.
+        """
+        return {item.key: {"value": item.value, "description": item.description} for item in self}

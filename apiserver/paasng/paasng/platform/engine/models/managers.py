@@ -186,7 +186,7 @@ class ConfigVarManager:
         update_config_vars = {item.id: item for item in config_vars if item.id}
         overwrited_num = 0
         for var_id, var_data in update_config_vars.items():
-            obj = instance_mapping.get(var_id, None)
+            obj = instance_mapping.get(var_id)
             # If the id is provided, but if the id is not in the db, need to create a new data
             if obj is None:
                 var_data.id = None

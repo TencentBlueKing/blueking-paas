@@ -44,6 +44,7 @@ from paasng.platform.sourcectl.constants import VersionType
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.error_codes import error_codes
+from paasng.utils.masked_curlify import MASKED_CONTENT
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import UserField, field_env_var_key
 
@@ -376,6 +377,7 @@ class ConfigVarSLZ(serializers.ModelSerializer):
     )
     key = field_env_var_key()
     value = serializers.CharField(required=True)
+    is_sensitive = serializers.BooleanField(required=False, default=False, help_text="value 值是否敏感")
     description = serializers.CharField(
         allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
     )
@@ -414,6 +416,28 @@ class ConfigVarSLZ(serializers.ModelSerializer):
         data["module"] = module.pk
         data["tenant_id"] = module.tenant_id
         return super().to_internal_value(data)
+
+    def to_representation(self, instance) -> dict:
+        ret = super().to_representation(instance)
+        if ret.get("is_sensitive"):
+            ret["value"] = MASKED_CONTENT
+        return ret
+
+
+class CreateConfigVarInputSLZ(ConfigVarSLZ):
+    """Serializer for creating ConfigVars"""
+
+
+class UpdateConfigVarInputSLZ(ConfigVarSLZ):
+    """Serializer for updating ConfigVars"""
+
+    value = serializers.CharField(required=False)
+
+    def to_internal_value(self, data) -> dict:
+        data = super().to_internal_value(data)
+        # 更新操作忽略对 is_sensitive 的更新
+        data.pop("is_sensitive")
+        return data
 
 
 class ListConfigVarsSLZ(serializers.Serializer):

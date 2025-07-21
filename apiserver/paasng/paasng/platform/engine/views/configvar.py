@@ -52,7 +52,9 @@ from paasng.platform.engine.serializers import (
     ConfigVarSLZ,
     ConfigVarWithoutKeyFormatSLZ,
     ConflictedKeyOutputSLZ,
+    CreateConfigVarInputSLZ,
     ListConfigVarsSLZ,
+    UpdateConfigVarInputSLZ,
 )
 
 
@@ -60,7 +62,6 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     """ViewSet for config vars"""
 
     pagination_class = None
-    serializer_class = ConfigVarSLZ
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def get_object(self):
@@ -80,7 +81,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         """创建环境变量"""
         data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
-        slz = self.get_serializer(data=request.data)
+        slz = CreateConfigVarInputSLZ(data=request.data, context={"module": self.get_module_via_path()})
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -105,7 +106,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         config_var = self.get_object()
         data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
-        slz = self.get_serializer(config_var, data=request.data)
+        slz = UpdateConfigVarInputSLZ(config_var, data=request.data, context={"module": self.get_module_via_path()})
         slz.is_valid(raise_exception=True)
         slz.save()
 
@@ -158,7 +159,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     def retrieve_by_key(self, request, code, module_name, config_vars_key):
         """通过环境变量的 key 获取环境变量"""
         config_vars = self.get_queryset().filter(key=config_vars_key)
-        serializer = self.serializer_class(config_vars, many=True)
+        serializer = ConfigVarSLZ(config_vars, context={"module": self.get_module_via_path()}, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -273,7 +274,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         # Change result ordering
         config_vars = config_vars.order_by(input_slz.data["order_by"], "is_global")
 
-        serializer = self.serializer_class(config_vars, many=True)
+        serializer = ConfigVarSLZ(config_vars, context={"module": self.get_module_via_path()}, many=True)
         return Response(serializer.data)
 
 

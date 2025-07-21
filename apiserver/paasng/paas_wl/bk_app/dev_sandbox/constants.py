@@ -41,4 +41,4 @@ class DevSandboxEnvKey(StrStructuredEnum):
     SOURCE_FETCH_URL = EnumField("SOURCE_FETCH_URL")
     TOKEN = EnumField("TOKEN")
     CODE_EDITOR_PASSWORD = EnumField("PASSWORD")
-    CODE_EDITOR_DISABLE_TELEMETRY = EnumField("DISABLE_TELEMETRY")
+    ENABLE_CODE_EDITOR = EnumField("ENABLE_CODE_EDITOR")

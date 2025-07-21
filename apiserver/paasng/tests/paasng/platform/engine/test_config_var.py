@@ -96,41 +96,41 @@ class TestConfigVarManager:
                 [
                     dict(
                         key="A",
-                        value=2,
+                        value="2",
                     )
                 ],
                 [],
                 (1, 0, 0),
                 {"A": "2"},
             ),
-            ([dict(key="A", value=2)], [dict(key="B", value=2)], (1, 0, 0), {"A": "2", "B": "2"}),
+            ([dict(key="A", value="2")], [dict(key="B", value="2")], (1, 0, 0), {"A": "2", "B": "2"}),
             (
-                [dict(key="B", value=1)],
-                [dict(key="B", value=2)],
+                [dict(key="B", value="1")],
+                [dict(key="B", value="2")],
                 (0, 1, 0),
                 {"B": "1"},
             ),
             (
-                [dict(key="B", value=2, description="???")],
-                [dict(key="B", value=2, description="!!!")],
+                [dict(key="B", value="2", description="???")],
+                [dict(key="B", value="2", description="!!!")],
                 (0, 1, 0),
                 {"B": "2"},
             ),
             (
-                [dict(key="B", value=2, description="")],
-                [dict(key="B", value=2, description="???")],
+                [dict(key="B", value="2", description="")],
+                [dict(key="B", value="2", description="???")],
                 (0, 1, 0),
                 {"B": "2"},
             ),
             (
-                [dict(key="B", value=2, description="aa")],
-                [dict(key="B", value=2, description="aa")],
+                [dict(key="B", value="2", description="aa")],
+                [dict(key="B", value="2", description="aa")],
                 (0, 0, 1),
                 {"B": "2"},
             ),
             (
-                [dict(key="A", value=2, description="A"), dict(key="B", value="d"), dict(key="C", value="d")],
-                [dict(key="A", value=2, description="A"), dict(key="B", description="s")],
+                [dict(key="A", value="2", description="A"), dict(key="B", value="d"), dict(key="C", value="d")],
+                [dict(key="A", value="2", description="A"), dict(key="B", description="s")],
                 (1, 1, 1),
                 {"A": "2", "B": "d", "C": "d"},
             ),
@@ -239,29 +239,29 @@ class TestConfigVarManager:
         [
             (
                 # 更新已有数据
-                [dict(id=1, key="A", value=2, description="A", environment_name="stag")],
-                [dict(id=1, key="A1", value=2, description="A", environment_name="_global_")],
+                [dict(id=1, key="A", value="2", description="A", environment_name="stag")],
+                [dict(id=1, key="A1", value="2", description="A", environment_name="_global_")],
                 (0, 1, 0),
             ),
             (
                 # 修改、删除、新增数据
                 [
-                    dict(id=1, key="A", value=2, description="A", environment_name="stag"),
-                    dict(id=2, key="B", value=2, description="A", environment_name="stag"),
+                    dict(id=1, key="A", value="2", description="A", environment_name="stag"),
+                    dict(id=2, key="B", value="2", description="A", environment_name="stag"),
                 ],
                 [
-                    dict(id=1, key="A1", value=2, description="A", environment_name="_global_"),
-                    dict(key="C", value=2, description="B", environment_name="prod"),
+                    dict(id=1, key="A1", value="2", description="A", environment_name="_global_"),
+                    dict(key="C", value="2", description="B", environment_name="prod"),
                 ],
                 (1, 1, 1),
             ),
             (
                 # 修改(但 id 不在 db 内)、删除数据
                 [
-                    dict(id=1, key="A", value=2, description="A", environment_name="stag"),
-                    dict(id=2, key="B", value=2, description="A", environment_name="stag"),
+                    dict(id=1, key="A", value="2", description="A", environment_name="stag"),
+                    dict(id=2, key="B", value="2", description="A", environment_name="stag"),
                 ],
-                [dict(id=3, key="A1", value=2, description="A", environment_name="_global_")],
+                [dict(id=3, key="A1", value="2", description="A", environment_name="_global_")],
                 (1, 0, 2),
             ),
         ],
@@ -270,9 +270,11 @@ class TestConfigVarManager:
         for var in vars_in_db:
             config_var_maker(module=bk_module, **var)
 
+        instance_list = bk_module.configvar_set.filter(is_builtin=False).prefetch_related("environment")
+        instance_mapping = {obj.id: obj for obj in instance_list}
         serializer = ConfigVarFormatWithIdSLZ(
             data=new_vars,
-            context={"module": bk_module},
+            context={"module": bk_module, "instance_mapping": instance_mapping},
             many=True,
         )
         serializer.is_valid(raise_exception=True)
@@ -403,9 +405,11 @@ class TestConfigVarTenantId:
         """批量编辑环境变量"""
         test_data = [random_config_var_maker(environment_name="prod") for _ in range(3)]
 
+        instance_list = bk_module_with_tenant.configvar_set.filter(is_builtin=False).prefetch_related("environment")
+        instance_mapping = {obj.id: obj for obj in instance_list}
         serializer = ConfigVarFormatWithIdSLZ(
             data=test_data,
-            context={"module": bk_module_with_tenant},
+            context={"module": bk_module_with_tenant, "instance_mapping": instance_mapping},
             many=True,
         )
         serializer.is_valid(raise_exception=True)

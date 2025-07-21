@@ -14,9 +14,8 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from typing import List
 
-from paasng.platform.engine.models.config_var import BuiltInEnvVarDetail
+from paasng.platform.engine.configurations.env_var.entities import EnvVariableList, EnvVariableObj
 
 from .models import get_region
 
@@ -39,31 +38,28 @@ class BuiltInEnvsRegionHelper:
     "FOO" whose value was set to "bar_stag". While in prod environment, the value is "bar_prod".
     """
 
-    def __init__(self, region_name, app_env, prefix, required_env_dict):
+    def __init__(self, region_name, app_env, required_env_dict):
         """
         :param app_env: application environment, such as stag,prod
-        :param prefix: environment variable prefix
         :param required_env_dict: required environment variables, including key descriptions, need to be supplemented with corresponding values
         """
         self.region = get_region(region_name)
         self.app_env = app_env
-        self.prefix = prefix
         self.required_env_dict = required_env_dict
 
-    def get_envs(self) -> List[BuiltInEnvVarDetail]:
+    def get_envs(self) -> EnvVariableList:
         result = []
         for key in self.required_env_dict:
             value = self.region.get_built_in_config_var(key=key, env=self.app_env)
             if value:
                 result.append(
-                    BuiltInEnvVarDetail(
+                    EnvVariableObj.with_sys_prefix(
                         key=key,
-                        prefix=self.prefix,
                         value=value,
                         description=self.required_env_dict[key]["description"],
                     )
                 )
-        return result
+        return EnvVariableList(result)
 
 
 class S3BucketRegionHelper:

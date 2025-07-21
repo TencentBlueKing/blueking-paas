@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import cattr
-from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
@@ -52,13 +51,7 @@ from paasng.platform.sourcectl.exceptions import (
 )
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
-from paasng.platform.sourcectl.utils import (
-    DockerIgnore,
-    compress_directory_ext,
-    generate_temp_dir,
-    generate_temp_file,
-)
-from paasng.utils.blobstore import make_blob_store
+from paasng.platform.sourcectl.utils import DockerIgnore
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 logger = logging.getLogger(__name__)
@@ -333,57 +326,6 @@ def tag_module_from_source_files(module, source_files_path):
         tag_module(module, tags, source="source_analyze")
     except Exception:
         logger.exception("Unable to tagging module")
-
-
-def upload_source_code(
-    module: Module,
-    version_info: VersionInfo,
-    source_dir: str,
-    operator: str,
-) -> str:
-    """上传应用模块源码到 blob 存储, 并且返回源码的下载链接, 参考方法 "BaseBuilder.compress_and_upload"
-    FIXME (沙箱重构) 评估这个函数是否放到沙箱模块中
-
-    return: source fetch url
-    """
-    relative_source_dir = Path(source_dir)
-    if relative_source_dir.is_absolute():
-        logger.warning("Unsupported absolute path<%s>, force transform to relative_to path.", relative_source_dir)
-        relative_source_dir = relative_source_dir.relative_to("/")
-
-    spec = ModuleSpecs(module)
-    with generate_temp_dir() as working_dir:
-        full_source_dir = working_dir.absolute() / relative_source_dir
-        # 下载源码到临时目录
-        if spec.source_origin_specs.source_origin == SourceOrigin.AUTHORIZED_VCS:
-            get_repo_controller(module, operator=operator).export(working_dir, version_info)
-        else:
-            raise NotImplementedError
-
-        # 上传源码
-        with generate_temp_file(suffix=".tar.gz") as package_path:
-            source_destination_path = _get_source_package_path(
-                version_info, module.application.code, module.name, module.region
-            )
-            compress_directory_ext(full_source_dir, package_path)
-            logger.info(f"Uploading source files to {source_destination_path}")
-            store = make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE)
-            store.upload_file(package_path, source_destination_path)
-
-    source_fetch_url = store.generate_presigned_url(
-        key=source_destination_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
-    )
-
-    return source_fetch_url
-
-
-def _get_source_package_path(version_info: VersionInfo, app_code: str, module_name: str, region: str) -> str:
-    """Return the blobstore path for storing source files package"""
-    branch = version_info.version_name
-    revision = version_info.revision
-
-    slug_name = f"{app_code}:{module_name}:{branch}:{revision}:dev"
-    return f"{region}/home/{slug_name}/tar"
 
 
 def validate_source_dir_str(root_path: Path, source_dir_str: str) -> Path:

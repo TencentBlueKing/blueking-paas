@@ -21,11 +21,11 @@ from dataclasses import asdict
 from typing import Collection, Dict, Iterator, List, Mapping, Optional, Tuple, Union
 
 from bkpaas_auth import get_user_by_user_id
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models import QuerySet
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from pydantic import BaseModel, PrivateAttr
 
 from paasng.accessories.publish.entrance.exposer import env_is_deployed
@@ -34,6 +34,7 @@ from paasng.bk_plugins.bk_plugins.constants import PluginTagIdType
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.infras.accounts.utils import id_to_username
 from paasng.platform.applications.models import Application, BaseApplicationFilter, ModuleEnvironment
+from paasng.platform.engine.configurations.env_var.entities import EnvVariableList, EnvVariableObj
 from paasng.platform.engine.configurations.provider import env_vars_providers
 from paasng.utils.models import AuditedModel, OwnerTimestampedModel, TimestampedModel
 
@@ -177,15 +178,22 @@ class BkPluginTag(AuditedModel):
 
 
 @env_vars_providers.register_env
-def get_plugin_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
+def get_plugin_env_variables(env: ModuleEnvironment) -> EnvVariableList:
     """Get env vars for a bk-plugin object"""
     application = env.module.application
     if not is_bk_plugin(application):
-        return {}
+        return EnvVariableList()
 
     profile = application.bk_plugin_profile
-    # Don't forget the system env-var prefix
-    return {settings.CONFIGVAR_SYSTEM_PREFIX + "BK_PLUGIN_APIGW_NAME": profile.api_gw_name or ""}
+    return EnvVariableList(
+        [
+            EnvVariableObj.with_sys_prefix(
+                key="BK_PLUGIN_APIGW_NAME",
+                value=profile.api_gw_name or "",
+                description=_("插件已绑定的 API 网关名称"),
+            )
+        ]
+    )
 
 
 class BkPlugin(BaseModel):

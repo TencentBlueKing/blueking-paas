@@ -1,5 +1,0 @@
-#!/usr/bin/with-contenv bash
-
-echo "starting code-server"
-
-/usr/bin/code-server --bind-addr 0.0.0.0:8080 --disable-telemetry --disable-update-check

@@ -1,0 +1,8 @@
+#!/usr/bin/with-contenv bash
+
+if [ "$ENABLE_CODE_EDITOR" = "true" ]; then
+  echo "starting code-server"
+  /usr/bin/code-server --bind-addr 0.0.0.0:8080 --disable-telemetry --disable-update-check
+else
+  echo "code-server is not enabled, skip..."
+fi

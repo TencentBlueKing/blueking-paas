@@ -14,9 +14,11 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
 import json
 import string
 from datetime import timedelta
+from typing import Dict, List
 
 from blue_krill.models.fields import EncryptField
 from django.db import models
@@ -54,7 +56,7 @@ class DevSandboxQuerySet(models.QuerySet):
         owner: str,
         version_info: VersionInfo | None,
         enable_code_editor: bool = False,
-        env_vars: list | None = None,
+        env_vars: Dict[str, str] | None = None,
     ) -> "DevSandbox":
         charsets = string.ascii_lowercase + string.digits
 
@@ -75,10 +77,9 @@ class DevSandboxQuerySet(models.QuerySet):
         if enable_code_editor:
             code_editor_cfg = CodeEditorConfig(password=generate_password())
 
-        if env_vars is None:
-            env_vars_json = None
-        else:
-            env_vars_json = json.dumps(env_vars)
+        env_vars_list = []
+        if env_vars is not None:
+            env_vars_list = [{"key": key, "value": value, "source": "stag"} for key, value in env_vars.items()]
 
         return super().create(
             code=code,
@@ -89,7 +90,7 @@ class DevSandboxQuerySet(models.QuerySet):
             token=generate_password(),
             code_editor_config=code_editor_cfg,
             tenant_id=module.tenant_id,
-            env_vars=env_vars_json,
+            env_vars=json.dumps(env_vars_list) if env_vars_list else None,
         )
 
 
@@ -115,45 +116,40 @@ class DevSandbox(OwnerTimestampedModel):
         self.expired_at = timezone.now() + DEV_SANDBOX_DEFAULT_EXPIRED_DURATION
         self.save(update_fields=["expired_at", "updated"])
 
-    def retrieve_env_vars(self) -> list:
+    def list_env_vars(self) -> List:
         """获取沙箱环境变量"""
         if not self.env_vars:
             return []
 
         return json.loads(self.env_vars)
 
-    def set_env_vars(self, new_env_vars: list | None):
-        """设置沙箱环境变量"""
-        if new_env_vars is None:
-            setattr(self, "env_vars", None)
-        else:
-            validated_vars = []
-            for item in new_env_vars:
-                if "source" not in item:
-                    item["source"] = "custom"
-                validated_vars.append(item)
+    def upsert_env_vars(self, key: str, value: str):
+        """更新或新增单个环境变量"""
+        env_vars = self.list_env_vars()
+        env_dict = {item["key"]: item for item in env_vars}
+        env_dict[key] = {"key": key, "value": value, "source": "custom"}
 
-            setattr(self, "env_vars", json.dumps(validated_vars))
+        updated_list = list(env_dict.values())
+        self._save_env_vars(updated_list)
 
-    def update_env_vars(self, new_vars: list | None):
-        """更新环境变量"""
-        if new_vars is None:
-            return
+    def delete_env_vars(self, key: str):
+        """删除指定的环境变量"""
+        env_vars = self.list_env_vars()
+        # 直接过滤掉需要删除的 key
+        updated_list = [item for item in env_vars if item["key"] != key]
 
-        current_envs = self.retrieve_env_vars()
-        current_dict = {item["key"]: item for item in current_envs}
+        self._save_env_vars(updated_list)
 
-        # 更新或添加新变量
-        for new_item in new_vars:
-            key = new_item["key"]
+    def _save_env_vars(self, env_list: List[Dict]):
+        """保存环境变量列表"""
+        validated_vars = []
+        for item in env_list:
+            if "source" not in item:
+                item["source"] = "custom"
+            validated_vars.append(item)
 
-            if "source" not in new_item:
-                new_item["source"] = "custom"
-
-            current_dict[key] = new_item
-
-        updated_list = list(current_dict.values())
-        self.set_env_vars(updated_list)
+        setattr(self, "env_vars", json.dumps(validated_vars))
+        self.save(update_fields=["env_vars", "updated"])
 
     class Meta:
         unique_together = ("module", "owner")

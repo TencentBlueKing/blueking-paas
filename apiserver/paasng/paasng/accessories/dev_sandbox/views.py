@@ -39,8 +39,8 @@ from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxCommitOutputSLZ,
     DevSandboxCreateInputSLZ,
     DevSandboxCreateOutputSLZ,
-    DevSandboxDeleteEnvVarsInputSLZ,
-    DevSandboxEditEnvVarsInputSLZ,
+    DevSandboxEnvVarsDeleteInputSLZ,
+    DevSandboxEnvVarsUpsertInputSLZ,
     DevSandboxListOutputSLZ,
     DevSandboxPreDeployCheckOutputSLZ,
     DevSandboxRetrieveOutputSLZ,
@@ -122,14 +122,12 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             stag_env = module.get_envs(AppEnvironment.STAGING)
             envs.update(get_env_vars_selected_addons(stag_env, data.get("enabled_addons_services")))
 
-        envs_list = [{"key": key, "value": value, "source": "stag"} for key, value in envs.items()]
-
         dev_sandbox = DevSandbox.objects.create(
             module=module,
             owner=owner,
             version_info=version_info,
             enable_code_editor=data["enable_code_editor"],
-            env_vars=envs_list,
+            env_vars=envs,
         )
 
         # 下发沙箱 k8s 资源
@@ -257,11 +255,11 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         tags=["accessories.dev_sandbox"],
-        operation_description="新增沙箱环境变量",
-        request_body=DevSandboxEditEnvVarsInputSLZ(),
+        operation_descriptin="更新（新增）沙箱环境变量",
+        request_body=DevSandboxEnvVarsUpsertInputSLZ(),
         response={status.HTTP_204_NO_CONTENT: ""},
     )
-    def add_env_vars(self, request, *args, **kwargs):
+    def upsert_env_vars(self, request, *args, **kwargs):
         module = self.get_module_via_path()
         dev_sandbox = DevSandbox.objects.filter(
             module=module,
@@ -272,56 +270,18 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if not dev_sandbox:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
-        slz = DevSandboxEditEnvVarsInputSLZ(data=request.data)
+        slz = DevSandboxEnvVarsUpsertInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
+        data = slz.validated_data["env_vars"]
 
-        # 获取新增的环境变量
-        new_env_vars = slz.validated_data["env_vars"]
-
-        new_env_vars_list = [{"key": key, "value": value, "source": "custom"} for key, value in new_env_vars.items()]
-
-        dev_sandbox.update_env_vars(new_env_vars_list)
-        dev_sandbox.save(update_fields=["env_vars", "updated"])
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @swagger_auto_schema(
-        tags=["accessories.dev_sandbox"],
-        operation_description="编辑沙箱环境变量",
-        request_body=DevSandboxEditEnvVarsInputSLZ(),
-        response={status.HTTP_204_NO_CONTENT: ""},
-    )
-    def edit_env_vars(self, request, *args, **kwargs):
-        module = self.get_module_via_path()
-        dev_sandbox = DevSandbox.objects.filter(
-            module=module,
-            code=self.kwargs["dev_sandbox_code"],
-            owner=self.request.user.pk,
-        ).first()
-
-        if not dev_sandbox:
-            raise error_codes.DEV_SANDBOX_NOT_FOUND
-
-        slz = DevSandboxEditEnvVarsInputSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-
-        env_vars_to_edit = slz.validated_data["env_vars"]
-
-        edited_var = {
-            "key": env_vars_to_edit["key"],
-            "value": env_vars_to_edit["value"],
-            "source": "custom",
-        }
-
-        dev_sandbox.update_env_vars([edited_var])
-        dev_sandbox.save(update_fields=["env_vars", "updated"])
+        dev_sandbox.upsert_env_vars(key=data["key"], value=data["value"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
         tags=["accessories.dev_sandbox"],
         operation_description="删除沙箱环境变量",
-        request_body=DevSandboxEditEnvVarsInputSLZ(),
+        request_body=DevSandboxEnvVarsDeleteInputSLZ(),
         response={status.HTTP_204_NO_CONTENT: ""},
     )
     def del_env_vars(self, request, *args, **kwargs):
@@ -335,14 +295,10 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if not dev_sandbox:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
-        slz = DevSandboxDeleteEnvVarsInputSLZ(data=request.data)
+        slz = DevSandboxEnvVarsDeleteInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-
         key_to_delete = slz.validated_data["key"]
-        current_env_vars = dev_sandbox.retrieve_env_vars()
-        updated_env_vars = [item for item in current_env_vars if item["key"] != key_to_delete]
 
-        dev_sandbox.set_env_vars(updated_env_vars)
-        dev_sandbox.save(update_fields=["env_vars", "updated"])
+        dev_sandbox.delete_env_vars(key=key_to_delete)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

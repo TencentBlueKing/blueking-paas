@@ -41,14 +41,9 @@ urlpatterns = [
         name="accessories.dev_sandbox.commit",
     ),
     re_path(
-        make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/add_env_vars/$", include_envs=False),
-        DevSandboxViewSet.as_view({"post": "add_env_vars"}),
-        name="accessories.dev_sandbox.add_env_vars",
-    ),
-    re_path(
-        make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/edit_env_vars/$", include_envs=False),
-        DevSandboxViewSet.as_view({"put": "edit_env_vars"}),
-        name="accessories.dev_sandbox.edit_env_vars",
+        make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/upsert_env_vars/$", include_envs=False),
+        DevSandboxViewSet.as_view({"post": "upsert_env_vars"}),
+        name="accessories.dev_sandbox.upsert_env_vars",
     ),
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/del_env_vars/$", include_envs=False),

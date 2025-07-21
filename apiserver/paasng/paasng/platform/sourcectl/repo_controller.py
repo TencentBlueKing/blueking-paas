@@ -89,6 +89,16 @@ class RepoController(Protocol):
         :param version_info: 指定版本信息
         """
 
+    def export_with_source_dir(
+        self, local_path: PathLike, version_info: VersionInfo | None = None, source_dir: str | None = None
+    ):
+        """导出指定版本的整个项目内容或指定目录到本地路径
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        :param source_dir: 可选，指定要导出的子目录
+        """
+
     def build_url(self, version_info: VersionInfo) -> str:
         """拼接生成指定版本的项目源码的可访问地址
 
@@ -160,25 +170,6 @@ class BaseGitRepoController:
     def get_client(self):
         raise NotImplementedError
 
-    def extract_source_dir_only(self, local_path: PathLike, source_dir: str):
-        """从导出目录中提取并仅保留指定的子目录内容
-
-        :param local_path: 导出目录路径
-        :param source_dir: 要保留的子目录名
-        """
-        local_path = Path(local_path)
-        full_source_path = validate_source_dir_str(local_path, source_dir)
-        with generate_temp_dir() as temp_dir:
-            # 将指定目录内容移动到临时目录
-            for item in full_source_path.iterdir():
-                shutil.move(str(item), str(temp_dir / item.name))
-
-            # 清空目标目录并将内容移回
-            shutil.rmtree(local_path)
-            local_path.mkdir(parents=True, exist_ok=True)
-            for item in temp_dir.iterdir():
-                shutil.move(str(item), str(local_path / item.name))
-
     @classmethod
     def init_by_module(cls, module: "Module", operator: Optional[str] = None):
         repo_info = get_sourcectl_type(module.source_type).config_as_arguments()
@@ -229,6 +220,35 @@ class BaseGitRepoController:
         # 用于 refresh token, 通过 oauth_token 无法反查 token_holder
         user_credentials["__token_holder"] = token_holder
         return user_credentials
+
+    def export(self, local_path: PathLike, version_info: VersionInfo | None = None):
+        """导出指定版本下的所有内容到指定目录
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        """
+        raise NotImplementedError
+
+    def export_with_source_dir(
+        self, local_path: PathLike, version_info: VersionInfo | None = None, source_dir: str | None = None
+    ):
+        """导出指定版本的整个项目内容或指定目录到本地路径
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        :param source_dir: 可选，指定要导出的子目录
+        """
+        if not source_dir:
+            self.export(local_path, version_info)
+        else:
+            with generate_temp_dir() as tmp_export_dir:
+                self.export(tmp_export_dir, version_info)
+
+                # 验证并获取完整源路径
+                real_source_dir = validate_source_dir_str(tmp_export_dir, source_dir)
+                # 移动子目录内容到目标路径（local_path）
+                for path in real_source_dir.iterdir():
+                    shutil.move(str(path), str(local_path / path.relative_to(real_source_dir)))
 
 
 def get_repo_controller_cls(source_origin: Union[int, SourceOrigin], source_control_type) -> Type[RepoController]:

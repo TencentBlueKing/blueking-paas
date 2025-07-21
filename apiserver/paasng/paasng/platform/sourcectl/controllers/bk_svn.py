@@ -18,6 +18,7 @@
 import logging
 import os
 import shutil
+from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
@@ -67,12 +68,11 @@ class SvnRepoController:
         else:
             return True
 
-    def export(self, local_path, version_info: VersionInfo | None = None, source_dir: str | None = None):
-        """导出指定版本的整个项目内容或指定目录到本地路径
+    def export(self, local_path: PathLike, version_info: VersionInfo | None = None):
+        """导出指定版本下的所有内容到指定目录
 
         :param local_path: 本地路径
         :param version_info: 可选，指定版本信息
-        :param source_dir: 可选，指定要导出的子目录
         """
         if version_info:
             target_branch, revision = self.extract_version_info(version_info)
@@ -80,21 +80,26 @@ class SvnRepoController:
             target_branch, revision = "trunk", None
         self.svn_client.export(target_branch, local_path=local_path, revision=revision)
 
+    def export_with_source_dir(
+        self, local_path, version_info: VersionInfo | None = None, source_dir: str | None = None
+    ):
+        """导出指定目录到本地路径
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        :param source_dir: 可选，指定要导出的子目录
+        """
         if not source_dir:
-            return
+            self.export(local_path, version_info)
+        else:
+            with generate_temp_dir() as tmp_export_dir:
+                self.export(tmp_export_dir, version_info)
 
-        # 如果指定了 source_dir，则只保留该目录内容
-        full_source_path = validate_source_dir_str(local_path, source_dir)
-        with generate_temp_dir() as temp_dir:
-            # 将指定目录内容移动到临时目录
-            for item in full_source_path.iterdir():
-                shutil.move(str(item), str(temp_dir / item.name))
-
-            # 清空目标目录并将内容移回
-            shutil.rmtree(local_path)
-            local_path.mkdir(parents=True, exist_ok=True)
-            for item in temp_dir.iterdir():
-                shutil.move(str(item), str(local_path / item.name))
+                # 验证并获取完整源路径
+                real_source_dir = validate_source_dir_str(tmp_export_dir, source_dir)
+                # 移动子目录内容到目标路径（local_path）
+                for path in real_source_dir.iterdir():
+                    shutil.move(str(path), str(local_path / path.relative_to(real_source_dir)))
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         try:

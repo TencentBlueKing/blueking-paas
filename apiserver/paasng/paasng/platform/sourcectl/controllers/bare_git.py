@@ -17,6 +17,7 @@
 
 import logging
 import operator
+from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Iterator, List, Optional, Tuple
 from urllib.parse import quote, urlparse
@@ -102,18 +103,17 @@ class BareGitRepoController(BaseGitRepoController):
             raise
         return True
 
-    def export(self, local_path, version_info: VersionInfo | None = None, source_dir: str | None = None):
-        """直接将代码库 clone 下来，由通用逻辑进行打包"""
-        if version_info:
-            branch = version_info.version_name
-        else:
-            branch = None
+    def export(self, local_path: PathLike, version_info: VersionInfo | None = None):
+        """导出指定版本下的所有内容到指定目录
 
+        :param local_path: 本地
+        :param version_info: 可选，指定版本信息
+        """
+        branch = version_info.version_name if version_info else None
+
+        local_path = Path(local_path)
         self.client.clone(self.repo_url, local_path, depth=1, branch=branch)
         self.client.clean_meta_info(local_path)
-
-        if source_dir:
-            self.extract_source_dir_only(local_path, source_dir)
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         """尝试直接从远端获取可选的分支信息"""

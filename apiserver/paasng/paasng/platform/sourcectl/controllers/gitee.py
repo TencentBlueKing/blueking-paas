@@ -99,9 +99,6 @@ class GiteeRepoController(BaseGitRepoController):
         git_client.clone(self._build_repo_url_with_auth(), local_path, branch=branch, depth=1)
         git_client.clean_meta_info(local_path)
 
-        if source_dir:
-            self.extract_source_dir_only(local_path, source_dir)
-
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         """列举仓库所有可用 branch 或 tag"""
         result = []

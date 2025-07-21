@@ -132,9 +132,6 @@ class GitlabRepoController(BaseGitRepoController):
             shutil.move(str(child), str(local_path_obj))
         shutil.rmtree(str(wrapper_dir))
 
-        if source_dir:
-            self.extract_source_dir_only(local_path, source_dir)
-
     @error_converter
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         """仓库级: 罗列所有分支和标签"""

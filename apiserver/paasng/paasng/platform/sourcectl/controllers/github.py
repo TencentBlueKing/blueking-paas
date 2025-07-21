@@ -115,9 +115,6 @@ class GitHubRepoController(BaseGitRepoController):
                     shutil.copytree(src_dir, local_path, dirs_exist_ok=True)
                     shutil.rmtree(src_dir)
 
-        if source_dir:
-            self.extract_source_dir_only(local_path, source_dir)
-
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         """列举仓库所有可用 branch 或 tag"""
         result = []

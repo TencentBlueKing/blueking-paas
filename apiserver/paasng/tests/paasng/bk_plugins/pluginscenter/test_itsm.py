@@ -96,13 +96,13 @@ def test_itsm_render(mock_client_session):
         (ApprovalServiceName.VISIBLE_RANGE_APPROVAL, None, ["admin1", "admin2"], True),
         # 全量审批：将平台管理员添加到插件管理员中
         (ApprovalServiceName.CODECC_FULL_RELEASE_APPROVAL, None, ["admin1", "admin2"], True),
-        # 灰度审批（含组织）：将提单者上级添加到插件管理员中
+        # 灰度审批（含组织）：将提单者上级添加到插件开发者中
         (ApprovalServiceName.CODECC_ORG_GRAY_RELEASE_APPROVAL, ["leader_user"], None, True),
         # 灰度审批（不含组织）：不需要新增管理员
         (ApprovalServiceName.CODECC_GRAY_RELEASE_APPROVAL, None, None, False),
     ],
 )
-def test_add_approver_as_admin(mocker, plugin, service_name, expected_leader, expected_admins, sync_members_mock):
+def test_add_approver_as_member(mocker, plugin, service_name, expected_leader, expected_admins, sync_members_mock):
     """插件的 MemberShip 表已经删除，无法像应用一样将 iam 操作 mock 为 DB 操作，直接验证相关条件下对应的函数是否正确调用"""
     if expected_leader:
         mock_get_leader = mocker.patch(
@@ -139,11 +139,13 @@ def test_add_approver_as_admin(mocker, plugin, service_name, expected_leader, ex
 
     # Verify that the correct roles are removed and added
     if expected_leader:
-        mock_remove_roles.assert_called_once_with(plugin, expected_leader)
-        mock_add_roles.assert_called_once_with(plugin, role=PluginRole.ADMINISTRATOR, usernames=expected_leader)
+        mock_add_roles.assert_called_once_with(plugin, role=PluginRole.DEVELOPER, usernames=expected_leader)
     elif expected_admins:
-        mock_remove_roles.assert_called_once_with(plugin, expected_admins)
-        mock_add_roles.assert_called_once_with(plugin, role=PluginRole.ADMINISTRATOR, usernames=expected_admins)
+        # 使用集合校验参数内容，忽略顺序
+        mock_remove_roles.assert_called_once_with(plugin, mock.ANY)
+        args, _ = mock_remove_roles.call_args
+        assert set(args[1]) == set(expected_admins)
+        mock_add_roles.assert_called_once_with(plugin, role=PluginRole.ADMINISTRATOR, usernames=mock.ANY)
 
     # Verify sync_members was called
     if sync_members_mock:

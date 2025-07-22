@@ -321,7 +321,7 @@ class ConfigVarFormatWithIdSLZ(ConfigVarFormatSLZ):
         instance_mapping = self.context.get("instance_mapping")
         var_id = instance.id
         # 如果提供了 id 且存在对应实例，value 可选
-        if not var_id and var_id in instance_mapping:
+        if var_id and var_id in instance_mapping:
             return instance
 
         # 否则 value 必填

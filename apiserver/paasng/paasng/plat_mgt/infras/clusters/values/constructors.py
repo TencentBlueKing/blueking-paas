@@ -20,7 +20,7 @@ from typing import Any, Dict, Type
 
 from paas_wl.infras.cluster.constants import ClusterComponentName
 from paas_wl.infras.cluster.models import Cluster, ClusterElasticSearchConfig
-from paasng.infras.clusters.values.entities import (
+from paasng.plat_mgt.infras.clusters.values.entities import (
     BCSGPAValues,
     BkAppLogCollectionValues,
     BkIngressNginxValues,

@@ -21,8 +21,8 @@ import pytest
 import yaml
 from kubernetes.dynamic import ResourceInstance
 
-from paasng.infras.clusters.constants import HelmChartDeployStatus
-from paasng.infras.clusters.helm import HelmReleaseParser
+from paasng.plat_mgt.infras.clusters.constants import HelmChartDeployStatus
+from paasng.plat_mgt.infras.clusters.helm import HelmReleaseParser
 
 
 @pytest.fixture

@@ -20,7 +20,7 @@ from typing import Any, Dict, List
 
 from attr import define
 
-from paasng.infras.clusters.constants import HelmChartDeployStatus
+from paasng.plat_mgt.infras.clusters.constants import HelmChartDeployStatus
 
 
 @define

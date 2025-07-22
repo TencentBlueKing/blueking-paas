@@ -25,7 +25,7 @@ from kubernetes.dynamic import ResourceInstance
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KDaemonSet, KDeployment, KNamespace, KStatefulSet
-from paasng.infras.clusters.entities import HelmRelease
+from paasng.plat_mgt.infras.clusters.entities import HelmRelease
 
 logger = logging.getLogger(__name__)
 

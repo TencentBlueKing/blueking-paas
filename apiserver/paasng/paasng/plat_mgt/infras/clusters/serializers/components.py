@@ -17,7 +17,7 @@
 
 from rest_framework import serializers
 
-from paasng.infras.clusters.constants import ClusterComponentStatus, HelmChartDeployStatus
+from paasng.plat_mgt.infras.clusters.constants import ClusterComponentStatus, HelmChartDeployStatus
 
 
 class ClusterComponentListOutputSLZ(serializers.Serializer):

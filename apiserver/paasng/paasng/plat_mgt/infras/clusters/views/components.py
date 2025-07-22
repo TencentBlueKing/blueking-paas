@@ -34,19 +34,19 @@ from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.infras.bcs.client import BCSUserClient
 from paasng.infras.bcs.exceptions import BCSGatewayServiceError, HelmChartNotFound
-from paasng.infras.clusters.constants import ClusterComponentStatus
-from paasng.infras.clusters.helm import HelmClient
-from paasng.infras.clusters.k8s import K8SWorkloadStateGetter, ensure_k8s_namespace
-from paasng.infras.clusters.values.constructors import get_values_constructor_cls
-from paasng.infras.clusters.values.getters import UserValuesGetter
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
+from paasng.plat_mgt.infras.clusters.constants import ClusterComponentStatus
+from paasng.plat_mgt.infras.clusters.helm import HelmClient
+from paasng.plat_mgt.infras.clusters.k8s import K8SWorkloadStateGetter, ensure_k8s_namespace
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterComponentListOutputSLZ,
     ClusterComponentRetrieveOutputSLZ,
     ClusterComponentUpsertInputSLZ,
 )
 from paasng.plat_mgt.infras.clusters.serializers.components import ClusterComponentDiffVersionOutputSLZ
+from paasng.plat_mgt.infras.clusters.values.constructors import get_values_constructor_cls
+from paasng.plat_mgt.infras.clusters.values.getters import UserValuesGetter
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger(__name__)

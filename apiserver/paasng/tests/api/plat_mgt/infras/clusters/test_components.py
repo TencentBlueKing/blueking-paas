@@ -21,7 +21,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from paasng.infras.clusters.constants import CLUSTER_COMPONENT_DEFAULT_QUOTA
+from paasng.plat_mgt.infras.clusters.constants import CLUSTER_COMPONENT_DEFAULT_QUOTA
 from tests.utils.mocks.bcs import StubBCSUserClient
 from tests.utils.mocks.helm import StubHelmClient
 

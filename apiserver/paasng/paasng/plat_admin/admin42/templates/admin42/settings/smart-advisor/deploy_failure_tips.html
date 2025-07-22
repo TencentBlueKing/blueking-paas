@@ -1,6 +1,7 @@
-{% extends "admin42/platformmgr/base.html" %}
+{% extends "./base.html" %}
 {% load admin_utils %}
-{% block main_content %}
+
+{% block smart_advisor_content %}
 <div id="deploy-failure-tips" style="width: 100%;" class="p20">
     <bk-button :theme="'primary'" :title="'添加提示'" class="mr10" @click="handleCreate">
         添加智能提示
@@ -46,7 +47,7 @@
 {% endblock %}
 
 
-{% block main_script %}
+{% block smart_advisor_script %}
 <script>
 const pagination = {{ pagination | to_json }}
 const failure_tips = {{ failure_tips | to_json }}

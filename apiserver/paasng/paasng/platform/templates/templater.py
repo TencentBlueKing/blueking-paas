@@ -36,6 +36,7 @@ from paasng.platform.templates.fixtures import ProcfileFixture
 from paasng.platform.templates.models import Template
 from paasng.platform.templates.utils import StoreType, download_from_blob_store, uncompress_tar_to_local_path
 from paasng.utils.blobstore import BlobStore, make_blob_store
+from paasng.utils.file import validate_source_dir_str
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models import Module
@@ -103,7 +104,17 @@ class TemplateRenderer:
         )
 
         dest_dir = Path(tempfile.mkdtemp())
-        repo_controller.download_directory(self.template.get_source_dir(), dest_dir)
+        source_dir = self.template.source_dir
+        if not source_dir:
+            repo_controller.export(dest_dir)
+        else:
+            with generate_temp_dir() as tmp_export_dir:
+                repo_controller.export(tmp_export_dir)
+
+                # 验证并获取完整源路径
+                real_source_dir = validate_source_dir_str(tmp_export_dir, source_dir)
+                for path in real_source_dir.iterdir():
+                    shutil.move(str(path), str(dest_dir / path.relative_to(real_source_dir)))
         return dest_dir
 
     def render_template(self, source_path: Path, target_path: Path):

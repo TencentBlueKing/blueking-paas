@@ -21,11 +21,11 @@ from typing import TYPE_CHECKING
 
 from paasng.platform.declarative.handlers import get_deploy_desc_by_module
 from paasng.platform.engine.utils.patcher import patch_source_dir_procfile
-from paasng.platform.engine.utils.source import validate_source_dir_str
 from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.sourcectl.models import SPStat
 from paasng.platform.sourcectl.package.client import BinaryTarClient
 from paasng.platform.sourcectl.utils import compress_directory, generate_temp_dir
+from paasng.utils.file import validate_source_dir_str
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models import Module

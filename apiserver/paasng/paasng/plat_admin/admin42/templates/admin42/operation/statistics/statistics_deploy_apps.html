@@ -1,9 +1,10 @@
 {% extends "./base.html" %}
-
 {% load admin_utils %}
-{% block main_content %}
+
+{% block statistics_content %}
 
 <div id="data-list" style="width: 100%;" class="p20">
+
     <div>
         <div class="mb15 fr">
             <bk-checkbox-group v-model="filters" @change="handleFilter">
@@ -22,11 +23,13 @@
                 <img :src="props.row.logo_url" width="30"/>
             </template>
         </bk-table-column>
-        <bk-table-column label="开发者">
+        <bk-table-column label="应用id">
             <template slot-scope="props">
-                <a class="cell">$[props.row.developer] </a>
+                <a class="cell">$[props.row.code] </a>
             </template>
         </bk-table-column>
+        <bk-table-column label="应用名称" prop="name"></bk-table-column>
+        <bk-table-column label="最近操作人" prop="last_operator"></bk-table-column>
         <bk-table-column label="部署总次数" prop="total"></bk-table-column>
         <bk-table-column label="详情" prop="monthly_summary"></bk-table-column>
     </bk-table>
@@ -40,10 +43,11 @@
 </div>
 {% endblock %}
 
-{% block main_script %}
+{% block statistics_script %}
 <script>
 const pagination = {{ pagination | to_json }}
 const data = {{ data_list | to_json }}
+
 // 过滤参数
 let filterKeys = {
         'only_prod': {
@@ -112,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     query[filters[key]] = 1
                 })
                 query = querystring.stringify(query)
-                url = decodeURI("{% url 'admin.operation.statistics.deploy.developers.export' %}")
+                url = decodeURI("{% url 'admin.operation.statistics.deploy.apps.export' %}")
                 open(`${url}?${query}`)
             },
         },

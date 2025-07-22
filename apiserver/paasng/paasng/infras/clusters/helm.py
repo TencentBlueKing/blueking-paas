@@ -34,7 +34,6 @@ class HelmClient:
     """Helm 客户端，用于获取 Helm Release 相关信息"""
 
     def __init__(self, cluster_name: str):
-        self.cluster_name = cluster_name
         self.client = get_client_by_cluster_name(cluster_name)
 
     def list_releases(self, namespace: str | None = None) -> List[HelmRelease]:

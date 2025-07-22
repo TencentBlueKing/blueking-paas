@@ -678,6 +678,9 @@ BK_CI_CLIENT_USERNAME = "blueking"
 ENABLE_BK_NOTICE = False
 # 对接通知中心的环境，默认为生产环境
 BK_NOTICE_ENV = "prod"
+# 蓝鲸 SDK 会统一封装调用各系统的接口，此时由于做多租户改造，需要在调用时使用统一的租户头 X-Bk-Tenant-Id
+# 做了多租户改造的蓝鲸应用，都需要显式配置BK_APP_TENANT_ID=system
+BK_APP_TENANT_ID = "system"
 
 ## ------------------------------------ 蓝鲸审计中心配置置 ------------------------------------
 # 审计中心-审计配置-接入-数据上报中获取这两项配置信息的值

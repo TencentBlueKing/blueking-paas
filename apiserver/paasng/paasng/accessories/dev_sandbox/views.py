@@ -253,13 +253,13 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         result = bool(DevSandbox.objects.count() < settings.DEV_SANDBOX_COUNT_LIMIT)
         return Response(data=DevSandboxPreDeployCheckOutputSLZ({"result": result}).data)
 
-    @swagger_auto_schema(
-        tags=["accessories.dev_sandbox"],
-        operation_descriptin="更新（新增）沙箱环境变量",
-        request_body=DevSandboxEnvVarsUpsertInputSLZ(),
-        response={status.HTTP_204_NO_CONTENT: ""},
-    )
-    def upsert_env_vars(self, request, *args, **kwargs):
+
+class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """沙箱环境变量管理"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def get_dev_sandbox(self) -> DevSandbox:
         module = self.get_module_via_path()
         dev_sandbox = DevSandbox.objects.filter(
             module=module,
@@ -269,6 +269,17 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         if not dev_sandbox:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
+
+        return dev_sandbox
+
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="更新（新增）沙箱环境变量",
+        request_body=DevSandboxEnvVarsUpsertInputSLZ(),
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def upsert_env_vars(self, request, *args, **kwargs):
+        dev_sandbox = self.get_dev_sandbox()
 
         slz = DevSandboxEnvVarsUpsertInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
@@ -282,18 +293,10 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         tags=["accessories.dev_sandbox"],
         operation_description="删除沙箱环境变量",
         request_body=DevSandboxEnvVarsDeleteInputSLZ(),
-        response={status.HTTP_204_NO_CONTENT: ""},
+        responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def del_env_vars(self, request, *args, **kwargs):
-        module = self.get_module_via_path()
-        dev_sandbox = DevSandbox.objects.filter(
-            module=module,
-            code=self.kwargs["dev_sandbox_code"],
-            owner=self.request.user.pk,
-        ).first()
-
-        if not dev_sandbox:
-            raise error_codes.DEV_SANDBOX_NOT_FOUND
+        dev_sandbox = self.get_dev_sandbox()
 
         slz = DevSandboxEnvVarsDeleteInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)

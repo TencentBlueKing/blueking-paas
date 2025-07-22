@@ -142,7 +142,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         except DevSandboxAlreadyExists:
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
         except BuilderDoesNotSupportDevSandbox:
-            raise error_codes.DEV_SANDBOX_CREATE_FAILED.f(_("当前模块基础镜像不支持开发沙箱"))
+            raise error_codes.DEV_SANDBOX_CREATE_FAILED.f(_("当前模块的基础镜像不支持开发沙箱"))
         except Exception:
             logger.exception("Failed to deploy dev sandbox")
             dev_sandbox.delete()

@@ -267,7 +267,7 @@ def _get_oauth_credentials(source_control_type: str, user_id: str) -> Dict[str, 
     """获取用户的OAuth凭证用于访问代码仓库
 
     :param source_control_type: 源码控制类型，如 gitlab
-    :param user_id: 用户 ID
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
     """
     profile = UserProfile.objects.get(user=user_id)
     token_holder_list = profile.token_holder.filter(provider=source_control_type).all()
@@ -286,7 +286,7 @@ def list_git_repositories(source_control_type: str, user_id: str) -> List[Reposi
     """获取用户在指定源码控制类型下的所有代码仓库
 
     :param source_control_type: 源码控制类型，如 gitlab
-    :param user_id: 用户 ID
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
     """
     cls = get_sourcectl_type(source_control_type).repo_controller_class
 
@@ -300,7 +300,7 @@ def list_all_owned_groups(source_control_type: str, user_id: str) -> List[GitGro
     """获取用户在指定源码控制类型下的所有 owner 权限的项目组
 
     :param source_control_type: 源码控制类型，如 gitlab
-    :param user_id: 用户 ID
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
     """
     cls = get_sourcectl_type(source_control_type).repo_controller_class
 

@@ -421,7 +421,7 @@ def create_new_repo(
 def delete_repo(user_id: str, repo_type: str, repo_url: str):
     """Delete the code repository created by the platform
 
-    :param user_id: 用户 ID
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
     :param repo_type: 仓库类型
     :param repo_url: 仓库地址
     """
@@ -434,7 +434,7 @@ def delete_repo(user_id: str, repo_type: str, repo_url: str):
 def delete_repo_on_error(user_id: str, repo_type: str, repo_url: str | None = None):
     """仓库清理上下文管理器，在异常时自动删除新建的仓库
 
-    :param user_id: 用户 ID
+    :param user_id: 用户 ID，，用于查询用户对应的授权凭证
     :param repo_type: 仓库类型
     :param repo_url: 仓库地址
     """

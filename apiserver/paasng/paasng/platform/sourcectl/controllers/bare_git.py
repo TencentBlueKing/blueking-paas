@@ -106,7 +106,7 @@ class BareGitRepoController(BaseGitRepoController):
     def export(self, local_path: PathLike, version_info: VersionInfo | None = None):
         """导出指定版本下的所有内容到指定目录
 
-        :param local_path: 本地
+        :param local_path: 本地路径
         :param version_info: 可选，指定版本信息
         """
         branch = version_info.version_name if version_info else None

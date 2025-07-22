@@ -90,10 +90,7 @@ class GiteeRepoController(BaseGitRepoController):
 
     def export(self, local_path, version_info: VersionInfo | None = None, source_dir: str | None = None):
         """Gitee API 不支持下载压缩包，改成直接将代码库 clone 下来，由通用逻辑进行打包"""
-        if version_info:
-            branch = version_info.version_name
-        else:
-            branch = None
+        branch = version_info.version_name if version_info else None
 
         git_client = GitClient()
         git_client.clone(self._build_repo_url_with_auth(), local_path, branch=branch, depth=1)

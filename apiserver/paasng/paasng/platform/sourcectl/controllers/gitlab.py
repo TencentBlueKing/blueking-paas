@@ -28,6 +28,7 @@ from django.utils.translation import gettext as _
 from gitlab.exceptions import GitlabAuthenticationError, GitlabGetError
 
 from paasng.platform.sourcectl import exceptions
+from paasng.platform.sourcectl.client import DEFAULT_REPO_REF
 from paasng.platform.sourcectl.gitlab.client import GitLabApiClient
 from paasng.platform.sourcectl.models import (
     AlternativeVersion,
@@ -116,11 +117,12 @@ class GitlabRepoController(BaseGitRepoController):
         """
         if version_info:
             tag_or_branch, revision = self.extract_version_info(version_info)
+            ref = revision or tag_or_branch
         else:
-            tag_or_branch, revision = None, None
+            ref = DEFAULT_REPO_REF
 
         with generate_temp_file(suffix=".tar.gz") as tar_file:
-            self.api_client.repo_archive(self.project, tar_file, ref=revision or tag_or_branch)
+            self.api_client.repo_archive(self.project, tar_file, ref=ref)
             uncompress_directory(tar_file, local_path)
 
         # The extracted repo files was put in an extra sub-directory named "{repo}-{sha}/", So we

@@ -183,6 +183,9 @@ class TestBuiltInEnvVars:
             if provide_env_vars_platform:
                 assert set(settings.BK_PAAS2_PLATFORM_ENVS.keys()).issubset(set(config_vars.keys())) == contain_bk_envs
 
+            # 环境变量中的 bool 值需要转为小写开头字符串
+            assert config_vars["BKPAAS_MULTI_TENANT_MODE"] == "false"
+
     def test_builtin_env_keys(self, bk_stag_env):
         config_vars = get_builtin_env_variables(bk_stag_env.engine_app).kv_map
 

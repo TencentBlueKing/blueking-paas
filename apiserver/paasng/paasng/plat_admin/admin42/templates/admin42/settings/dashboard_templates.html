@@ -1,7 +1,8 @@
-{% extends "admin42/configuration/base.html" %}
+{% extends "./base.html" %}
 {% load admin_utils %}
+
 {% block main_content %}
-<div id="platform-dashboard-tmpl-list" class="p20">
+<div id="configuration-dashboard-tmpl-list" class="p20">
     <bk-button theme="primary" class="mb20" @click="handleCreate">
         创建仪表盘模板
     </bk-button>
@@ -75,14 +76,14 @@
 const langChoices = {{ language_choices | to_json }}
 
 const URLRouter = {
-    create: decodeURI("{% url 'admin.configuration.dashboard_tmpl' %}"),
-    list: decodeURI("{% url 'admin.configuration.dashboard_tmpl' %}"),
-    detail: decodeURI("{% url 'admin.configuration.dashboard_tmpl.detail' '${id}' %}"),
+    create: decodeURI("{% url 'admin.settings.dashboard_tmpl' %}"),
+    list: decodeURI("{% url 'admin.settings.dashboard_tmpl' %}"),
+    detail: decodeURI("{% url 'admin.settings.dashboard_tmpl.detail' '${id}' %}"),
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     new Vue({
-        el: "#platform-dashboard-tmpl-list",
+        el: "#configuration-dashboard-tmpl-list",
         delimiters: ['$[', ']'],
         mixins: [SubmitMixin],
         data: function () {

@@ -26,7 +26,7 @@ class SharedCertsManageView(GenericTemplateView):
     """共享证书管理页"""
 
     name = "共享证书管理"
-    template_name = "admin42/platformmgr/certs.html"
+    template_name = "admin42/settings/certs.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
 
     def get_context_data(self, **kwargs):

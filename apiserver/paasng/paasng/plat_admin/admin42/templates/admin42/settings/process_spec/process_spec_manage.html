@@ -1,8 +1,8 @@
-{% extends "admin42/platformmgr/base.html" %}
+{% extends "./base.html" %}
 
 {% load admin_utils %}
 
-{% block main_content %}
+{% block spec_plan_content %}
 <div id="proc-spec-plan-list" style="width: 100%;" class="p20">
     <bk-alert class="mb20" title="资源方案仅对“普通应用”生效。如需进行修改，请先展开应用，并在进程级别进行调整。"></bk-alert>
 
@@ -123,7 +123,7 @@
 
 {% endblock %}
 
-{% block main_script %}
+{% block spec_plan_script %}
 <script>
 const pagination = {{ pagination | to_json }}
 const app_data_list = {{ app_data_list | to_json }}

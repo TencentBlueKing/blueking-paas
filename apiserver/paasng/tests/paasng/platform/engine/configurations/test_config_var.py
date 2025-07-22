@@ -212,7 +212,7 @@ class TestBuiltInEnvVars:
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
-def test_list_vars_builtin_runtime(bk_stag_env):
+def test_list_vars_builtin_runtime(bk_app, bk_stag_env):
     env_vars = list_vars_builtin_runtime(bk_stag_env).kv_map
 
     assert "PORT" in env_vars
@@ -220,6 +220,7 @@ def test_list_vars_builtin_runtime(bk_stag_env):
     assert "BKPAAS_SUB_PATH" in env_vars
     assert env_vars["BKPAAS_PROCESS_TYPE"] == "{{bk_var_process_type}}"
     assert env_vars["BKPAAS_LOG_NAME_PREFIX"].endswith("-{{bk_var_process_type}}")
+    assert env_vars["BKPAAS_ENGINE_REGION"] == bk_app.region
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

@@ -125,13 +125,6 @@ class RepoController(Protocol):
     def delete_project(self, *args, **kwargs):
         """删除在 VCS 上的源码项目"""
 
-    def download_directory(self, source_dir: str, local_path: Path) -> Path:
-        """下载指定目录到本地
-
-        :param source_dir: 代码仓库的指定目录
-        :param local_path: 本地路径
-        """
-
     def commit_and_push(
         self,
         local_path: Path,
@@ -214,6 +207,14 @@ class BaseGitRepoController:
         # 用于 refresh token, 通过 oauth_token 无法反查 token_holder
         user_credentials["__token_holder"] = token_holder
         return user_credentials
+
+    def export(self, local_path: PathLike, version_info: VersionInfo | None = None):
+        """导出指定版本下的所有内容到指定目录
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        """
+        raise NotImplementedError
 
 
 def get_repo_controller_cls(source_origin: Union[int, SourceOrigin], source_control_type) -> Type[RepoController]:

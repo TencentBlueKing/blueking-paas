@@ -26,14 +26,14 @@ from paasng.platform.engine.configurations.building import SlugbuilderInfo
 from paasng.platform.engine.configurations.config_var import (
     EnvVarSource,
     UnifiedEnvVarsReader,
-    generate_env_vars_for_app,
+    list_vars_builtin_app_basic,
 )
 from paasng.platform.engine.deploy.bg_build.utils import get_envs_from_pypi_url
 from paasng.platform.modules.models import Module
 
 
 def generate_envs(module: Module) -> Dict[str, str]:
-    envs = generate_env_vars_for_app(module.application, settings.CONFIGVAR_SYSTEM_PREFIX)
+    envs = list_vars_builtin_app_basic(module.application).kv_map
     envs.update(
         {
             f"{settings.CONFIGVAR_SYSTEM_PREFIX}ENVIRONMENT": "dev",

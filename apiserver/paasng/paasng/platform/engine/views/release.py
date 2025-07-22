@@ -120,8 +120,8 @@ class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     def release(self, request, code, module_name, environment):
-        """
-        单纯的release
+        """跳过构建，使用最近一次的构建产物发布应用。
+
         - /api/bkapps/applications/{code}/envs/{environment}/release/
         - param: env, 选择发布环境
         ----
@@ -135,11 +135,11 @@ class ReleasesViewset(viewsets.ViewSet, ApplicationCodeInPathMixin):
             application_envs = module.envs.filter(environment=environment)
 
         for application_env in application_envs:
-            try:
-                build_id = get_latest_build_id(application_env)
-                if build_id:
+            build_id = get_latest_build_id(application_env)
+            if build_id:
+                try:
                     release_by_engine(application_env, str(build_id))
-            except Exception:
-                raise error_codes.CANNOT_DEPLOY_APP.f(_("服务异常"))
+                except ValueError:
+                    raise error_codes.CANNOT_DEPLOY_APP.f(_("服务异常"))
 
         return Response(status=status.HTTP_201_CREATED)

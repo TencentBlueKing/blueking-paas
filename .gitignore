@@ -162,8 +162,9 @@ webfe/package_vue/.bk.local.env
 .codecc
 .vscode
 
-
 pre-*-bkcodeai
 bkcodeai.json
 bin
 cover.out
+
+!cnb-builder-shim/rootfs/devsandbox/usr/bin/

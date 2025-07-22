@@ -25,11 +25,11 @@ USER root
 
 WORKDIR /app
 
-# copy check health script
-ADD ./scripts/check_health.sh /check_health.sh
+# copy custom binaries
+COPY ./rootfs/devsandbox/usr/bin/ /usr/bin/
 
 # copy config to /etc/s6-overlay
-ADD ./rootfs/devsandbox/etc/s6-overlay /etc/s6-overlay
+COPY ./rootfs/devsandbox/etc/s6-overlay /etc/s6-overlay
 
 # install s6-overlay
 ARG S6_OVERLAY_DOWNLOAD_URL=https://github.com/just-containers/s6-overlay/releases/download

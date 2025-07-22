@@ -76,7 +76,7 @@ class TestDevSandboxSLZ:
                             {"containerPort": settings.DEV_SANDBOX_CODE_EDITOR_PORT},
                         ],
                         "readinessProbe": {
-                            "exec": {"command": ["check_health"]},
+                            "exec": {"command": ["check-health"]},
                         },
                         "resources": {
                             "requests": {"cpu": "500m", "memory": "1Gi"},

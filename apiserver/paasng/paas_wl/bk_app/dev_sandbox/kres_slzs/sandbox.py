@@ -63,7 +63,7 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
                 for cfg in get_network_configs(obj)
             ],
             "readinessProbe": {
-                "exec": {"command": ["check_health"]},
+                "exec": {"command": ["check-health"]},
             },
             "resources": DEV_SANDBOX_RESOURCE_QUOTA.to_dict(),
         }

@@ -52,15 +52,12 @@ class DevSandboxConfigMap(AppEntity):
                     "workbench.colorTheme": "Visual Studio Dark",
                     # window.autoDetectColorScheme 用于配置编辑器颜色不随系统主题颜色变化
                     "window.autoDetectColorScheme": False,
-                    # 自定义终端启动命令
+                    # 自定义终端启动命令以尝试使用 cnb buildpack 上下文
                     # https://code.visualstudio.com/docs/terminal/profiles
-                    # cnb 运行时执行其他命令需要用 `launcher` 以进入 buildpack 上下文
-                    # See: https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
-                    # FIXME: /cnb/lifecycle/launcher 需要在 buildpack 执行构建后才可用（点击立即运行后）
+                    # https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
                     "terminal.integrated.profiles.linux": {
                         "cnb-bash": {
-                            "path": "/cnb/lifecycle/launcher",
-                            "args": ["bash"],
+                            "path": "/usr/bin/cnb-bash",
                             "overrideName": True,
                         }
                     },

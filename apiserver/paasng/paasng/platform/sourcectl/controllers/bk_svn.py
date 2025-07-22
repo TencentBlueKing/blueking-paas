@@ -17,7 +17,6 @@
 
 import logging
 import os
-import shutil
 from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Tuple
@@ -26,8 +25,6 @@ from paasng.platform.sourcectl.exceptions import BasicAuthError
 from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
 from paasng.platform.sourcectl.svn.client import SvnRepositoryClient, svn_version_types
 from paasng.platform.sourcectl.svn.server_config import get_bksvn_config
-from paasng.platform.sourcectl.utils import generate_temp_dir
-from paasng.utils.file import validate_source_dir_str
 
 logger = logging.getLogger(__name__)
 
@@ -79,27 +76,6 @@ class SvnRepoController:
         else:
             target_branch, revision = "trunk", None
         self.svn_client.export(target_branch, local_path=local_path, revision=revision)
-
-    def export_with_source_dir(
-        self, local_path, version_info: VersionInfo | None = None, source_dir: str | None = None
-    ):
-        """导出指定目录到本地路径
-
-        :param local_path: 本地路径
-        :param version_info: 可选，指定版本信息
-        :param source_dir: 可选，指定要导出的子目录
-        """
-        if not source_dir:
-            self.export(local_path, version_info)
-        else:
-            with generate_temp_dir() as tmp_export_dir:
-                self.export(tmp_export_dir, version_info)
-
-                # 验证并获取完整源路径
-                real_source_dir = validate_source_dir_str(tmp_export_dir, source_dir)
-                # 移动子目录内容到目标路径（local_path）
-                for path in real_source_dir.iterdir():
-                    shutil.move(str(path), str(local_path / path.relative_to(real_source_dir)))
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         try:

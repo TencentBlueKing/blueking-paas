@@ -36,9 +36,10 @@ class GitTemplateDownloader:
 
         source_dir = template.sourceDir
         with generate_temp_dir() as temp_dir:
-            real_source_dir = validate_source_dir_str(temp_dir, source_dir)
             self.client.clone(repo_url, path=temp_dir, depth=1)
             self.client.clean_meta_info(temp_dir)
+
+            real_source_dir = validate_source_dir_str(temp_dir, source_dir)
             for path in real_source_dir.iterdir():
                 shutil.move(str(path), str(dest_dir / path.relative_to(real_source_dir)))
         return dest_dir

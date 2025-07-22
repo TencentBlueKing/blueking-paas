@@ -30,8 +30,8 @@ logger = logging.getLogger(__name__)
 
 
 class APIGatewayHeaderAuth(AuthBase):
-    def __init__(self, credentials: str, tenant_id: str):
-        self.credentials = credentials
+    def __init__(self, credential: str, tenant_id: str):
+        self.credential = credential
         self.tenant_id = tenant_id
 
     def __call__(self, r):
@@ -39,12 +39,16 @@ class APIGatewayHeaderAuth(AuthBase):
             {
                 "bk_app_code": settings.BK_APP_CODE,
                 "bk_app_secret": settings.BK_APP_SECRET,
-                settings.BK_COOKIE_NAME: self.credentials,
+                settings.BK_COOKIE_NAME: self.credential,
             }
         )
         r.headers[API_HERDER_TENANT_ID] = self.tenant_id
         r.headers["Content-Type"] = "application/json"
+        # 禁用客户端和代理缓存，确保每次请求都获取最新响应
+        # no-cache: 不直接使用缓存，必须向服务器验证资源有效性
         r.headers["Cache-Control"] = "no-cache"
+        # 禁用 Nginx 代理缓冲，用于实时流式传输场景
+        # no: 关闭代理缓冲，允许服务器直接推送数据到客户端
         r.headers["X-Accel-Buffering"] = "no"
         return r
 
@@ -55,17 +59,17 @@ class AIAgentClient:
     NOTE: API 为流式调用，所以不能使用 APIGW 提供的 SDK
     """
 
-    _AI_Agent_Gateway_Name = "bp-ai-bkpaas"
+    AI_AGENT_GATEWAY_NAME = "bp-ai-bkpaas"
 
-    def __init__(self, tenant_id: str, credentials: str, stage: str = "prod"):
+    def __init__(self, tenant_id: str, credential: str, stage: str = "prod"):
         """
         :param tenant_id: 租户 ID
-        :param credentials: 用户凭证（bk_ticket / bk_token）
+        :param credential: 用户凭证（bk_ticket / bk_token）
         :param stage: 网关环境
         """
         self.client = requests.Session()
-        self.client.auth = APIGatewayHeaderAuth(credentials, tenant_id)
-        self.url_prefix = f"{settings.BK_API_URL_TMPL.format(api_name=self._AI_Agent_Gateway_Name)}/{stage}"
+        self.client.auth = APIGatewayHeaderAuth(credential, tenant_id)
+        self.url_prefix = f"{settings.BK_API_URL_TMPL.format(api_name=self.AI_AGENT_GATEWAY_NAME)}/{stage}"
 
     def chat_completion(self, input: str, operator: str, chat_history: list):
         """流式调用 AI 助手的聊天接口
@@ -103,5 +107,4 @@ class AIAgentClient:
                 f"Response: {response.text}"
             )
             raise AIAgentServiceError(error_msg) from e
-        else:
-            return response
+        return response

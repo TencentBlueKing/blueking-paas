@@ -22,7 +22,7 @@ from . import views
 urlpatterns = [
     re_path(
         r"^api/ai/assistant/$",
-        views.AssistantView.as_view({"post": "post"}),
+        views.AssistantView.as_view({"post": "chat"}),
         name="ai-assistant",
     ),
 ]

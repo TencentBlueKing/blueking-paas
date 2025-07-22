@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from contextlib import closing
 
 from django.conf import settings
 from django.http import StreamingHttpResponse
@@ -30,45 +31,39 @@ logger = logging.getLogger(__name__)
 
 
 class AssistantView(ViewSet):
-    def post(self, request):
+    def chat(self, request):
         """处理 AI 助手请求"""
         slz = AssistantRequestSerializer(data=request.data)
         slz.is_valid(raise_exception=True)
 
         inputs = slz.validated_data["inputs"]
-        bk_ticket = request.COOKIES.get(settings.BK_COOKIE_NAME, "")
+        credential = request.COOKIES.get(settings.BK_COOKIE_NAME, "")
         username = request.user.username
         tenant_id = request.user.tenant_id
 
         try:
-            client = AIAgentClient(tenant_id=tenant_id, credentials=bk_ticket)
+            client = AIAgentClient(tenant_id=tenant_id, credential=credential)
 
             stream_response = client.chat_completion(
                 input=inputs["input"], operator=username, chat_history=inputs["chat_history"]
             )
 
-            # 创建流式响应
+            # 创建流式响应（使用内联生成器函数和自动资源管理）
+            def generate_stream():
+                with closing(stream_response):
+                    for line in stream_response.iter_lines():
+                        if line:
+                            # 确保每行以换行符结束
+                            yield line + b"\n"
+
             return StreamingHttpResponse(
-                self._generate_stream(stream_response),
+                generate_stream(),
                 content_type="text/event-stream; charset=utf-8",
+                # no-cache: 不直接使用缓存，必须向服务器验证资源有效性
+                # no: 关闭代理缓冲，允许服务器直接推送数据到客户端
                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
             )
 
         except AIAgentServiceError:
             logger.exception("failed to call ai agent service")
             raise error_codes.AI_AGENT_SERVICE_ERROR
-
-    def _generate_stream(self, response):
-        """生成流式响应内容
-
-        :param response: requests.Response 对象
-        :return: 逐行生成响应内容生成器
-        """
-        try:
-            for line in response.iter_lines():
-                if line:
-                    # 确保每行以换行符结束
-                    yield line + b"\n"
-        finally:
-            # 确保关闭响应流
-            response.close()

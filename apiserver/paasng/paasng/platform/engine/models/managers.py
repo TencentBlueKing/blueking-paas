@@ -78,7 +78,7 @@ class PlainConfigVar(BaseModel):
 class ExportedConfigVars(BaseModel):
     env_variables: List[PlainConfigVar]
 
-    def to_file_content(self) -> str:
+    def to_file_content(self, ignored_count: int = 0) -> str:
         """Dump the ExportedConfigVars to file content(yaml format)"""
         directions = dedent(
             """\
@@ -93,6 +93,10 @@ class ExportedConfigVars(BaseModel):
             #       - _global_: 所有环境
             """
         )
+        # 添加敏感变量忽略注释
+        if ignored_count > 0:
+            directions += f"# 已忽略 {ignored_count} 条敏感环境变量。\n"
+
         content = yaml.safe_dump(self.dict(), allow_unicode=True, default_flow_style=False)
         return f"{directions}{content}"
 

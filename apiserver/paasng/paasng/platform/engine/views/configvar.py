@@ -319,13 +319,10 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @staticmethod
-    def make_exported_vars_response(data: ExportedConfigVars, file_name: str) -> HttpResponse:
-        """Generate http response(with attachment) for given config vars data
+    def make_file_response(file_content: str, file_name: str) -> HttpResponse:
+        """Generate http response(with attachment)"""
 
-        :param data: config vars data
-        :param file_name: attachment filename
-        """
-        response = HttpResponse(data.to_file_content(), content_type="application/octet-stream")
+        response = HttpResponse(file_content, content_type="application/octet-stream")
         response["Content-Disposition"] = f'attachment; filename="{file_name}"'
         return response
 
@@ -365,8 +362,13 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
             .order_by(order_by, "is_global")
         )
 
-        result = ExportedConfigVars.from_list(list(queryset))
-        return self.make_exported_vars_response(result, f"bk_paas3_{code}_{module_name}_config_vars.yaml")
+        # 统计总数和过滤敏感变量
+        filtered_queryset = queryset.filter(is_sensitive=False)
+        ignored_count = queryset.filter(is_sensitive=True).count()
+
+        result = ExportedConfigVars.from_list(list(filtered_queryset))
+        file_content = result.to_file_content(ignored_count)
+        return self.make_file_response(file_content, f"{self.get_application().code}_{module_name}_config_vars.yaml")
 
     @swagger_auto_schema(tags=["环境配置"])
     def template(self, request, **kwargs):
@@ -378,7 +380,9 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
                 PlainConfigVar(key="GLOBAL", value="example", environment_name="_global_", description="example"),
             ]
         )
-        return self.make_exported_vars_response(config_vars, "bk_paas3_config_vars_template.yaml")
+
+        file_content = config_vars.to_file_content()
+        return self.make_file_response(file_content, "bk_paas3_config_vars_template.yaml")
 
 
 class ConflictedConfigVarsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

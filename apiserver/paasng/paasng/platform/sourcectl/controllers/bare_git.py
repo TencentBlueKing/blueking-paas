@@ -17,6 +17,7 @@
 
 import logging
 import operator
+from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Iterator, List, Optional, Tuple
 from urllib.parse import quote, urlparse
@@ -30,6 +31,7 @@ from paasng.platform.sourcectl.exceptions import (
     ReadLinkFileOutsideDirectoryError,
 )
 from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
+from paasng.platform.sourcectl.repo_controller import BaseGitRepoController
 from paasng.platform.sourcectl.utils import generate_temp_dir
 
 if TYPE_CHECKING:
@@ -41,7 +43,7 @@ from paasng.platform.sourcectl.git.client import GitClient, GitCommandExecutionE
 logger = logging.getLogger(__name__)
 
 
-class BareGitRepoController:
+class BareGitRepoController(BaseGitRepoController):
     """Git 协议仓库控制器"""
 
     def __init__(self, repo_url: str, repo_obj: "RepositoryInstance"):
@@ -101,9 +103,16 @@ class BareGitRepoController:
             raise
         return True
 
-    def export(self, local_path, version_info: VersionInfo):
-        """直接将代码库 clone 下来，由通用逻辑进行打包"""
-        self.client.clone(self.repo_url, local_path, depth=1, branch=version_info.version_name)
+    def export(self, local_path: PathLike, version_info: VersionInfo | None = None):
+        """导出指定版本下的所有内容到指定目录
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        """
+        branch = version_info.version_name if version_info else None
+
+        local_path = Path(local_path)
+        self.client.clone(self.repo_url, local_path, depth=1, branch=branch)
         self.client.clean_meta_info(local_path)
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
@@ -170,14 +179,6 @@ class BareGitRepoController:
 
     def delete_project(self, *args, **kwargs):
         """删除在 VCS 上的源码项目"""
-        raise NotImplementedError
-
-    def download_directory(self, source_dir: str, local_path: Path) -> Path:
-        """下载指定目录到本地
-
-        :param source_dir: 代码仓库的指定目录
-        :param local_path: 本地路径
-        """
         raise NotImplementedError
 
     def commit_and_push(

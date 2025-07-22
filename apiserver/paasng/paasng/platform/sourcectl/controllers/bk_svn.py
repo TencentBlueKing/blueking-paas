@@ -17,6 +17,7 @@
 
 import logging
 import os
+from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
@@ -64,8 +65,16 @@ class SvnRepoController:
         else:
             return True
 
-    def export(self, local_path, version_info: VersionInfo):
-        target_branch, revision = self.extract_version_info(version_info)
+    def export(self, local_path: PathLike, version_info: VersionInfo | None = None):
+        """导出指定版本下的所有内容到指定目录
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        """
+        if version_info:
+            target_branch, revision = self.extract_version_info(version_info)
+        else:
+            target_branch, revision = "trunk", None
         self.svn_client.export(target_branch, local_path=local_path, revision=revision)
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
@@ -119,14 +128,6 @@ class SvnRepoController:
 
     def delete_project(self, *args, **kwargs):
         """删除在 VCS 上的源码项目"""
-        raise NotImplementedError
-
-    def download_directory(self, source_dir: str, local_path: Path) -> Path:
-        """下载指定目录到本地
-
-        :param source_dir: 代码仓库的指定目录
-        :param local_path: 本地路径
-        """
         raise NotImplementedError
 
     def commit_and_push(

@@ -1,125 +1,244 @@
-{% extends "admin42/base.html" %}
+{% extends "./base_with_nav.html" %}
 
 {% load admin_utils %}
 
-{% block container %}
-<div class="flex-panel-container" id="flex-panel-container">
-    <div v-for="(panel, idx) in panelList "class="flex-item">
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <a v-if="panel.url" class="panel-title" :href="panel.url" style="font-family: inherit;font-weight: 500;line-height: 1.1;">$[ panel.name ]</a>
-                <h3 v-else class="panel-title">$[ panel.name ]</h3>
-            </div>
-            <div class="panel-body common-links">
-                <a :href="item.url" v-for="item in panel.children">$[ item.name ]</a>
-            </div>
-        </div>
-    </div>
-</div>
+{% block content_header %}
+<ul class="paas-breadcrumb">
+    <li class="active">平台功能介绍</li>
+</ul>
+{% endblock %}
 
+{% block main_content %}
+<div class="function-intro-list">
+    <ul id="function-intro-list" class="intro-list"></ul>
+</div>
+{% endblock %}
+
+{% block nav_list %}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    new Vue({
-        el: "#flex-panel-container",
-        delimiters: ['$[', ']'],
-        data: function () {
-            return {
-                panelList: [
-                    {% get_user_site_perms as perm %}
-                    {% if perm.manage_platform %}
-                    {
-                        name: "平台管理",
-                        url: "{% url 'admin.platform.index' %}",
-                        children: [
-                            {
-                                name: "应用列表",
-                                url: "{% url 'admin.applications.list' %}"
-                            },
-                            {
-                                name: "应用运营评估",
-                                url: "{% url 'admin.applications.operation_evaluation.list' %}"
-                            },
-                            {
-                                name: "部署概览",
-                                url: "{% url 'admin.deployments.list' %}"
-                            },
-                            {
-                                name: "运行时管理",
-                                url: "{% url 'admin.runtimes.buildpack.manage' %}",
-                            },
-                            {
-                                name: "智能顾问",
-                                url: "{% url 'admin.smart_advisor.documents.manage' %}",
-                            },
-                            {
-                                name: "应用资源方案",
-                                url: "{% url 'admin.process_spec_plan.manage' %}",
-                            },
-                            {
-                                name: "共享证书管理",
-                                url: "{% url 'admin.shared.certs.manage' %}",
-                            },
-                        ]
-                    },
-                    {% endif %}
-                    {% if perm.manage_app_templates %}
-                    {
-                        name: "应用配置管理",
-                        url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}",
-                        children: [
-                            {
-                                name: "插件分类配置",
-                                url: "{% url 'admin.configuration.bk_plugins.tags.manage' %}"
-                            },
-                            {
-                                name: "插件使用方配置",
-                                url: "{% url 'admin.configuration.bk_plugins.distributors.manage' %}"
-                            },
-                            {
-                                name: "仪表盘模板配置",
-                                url: "{% url 'admin.configuration.dashboard_tmpl.manage' %}"
-                            }
-                        ]
-                    },
-                    {% endif %}
-                    {% if perm.operate_platform %}
-                        {% url 'admin.operation.index' as operation_index_view %}
-                        {% if operation_index_view %}
+    var navList = [
+        {% get_user_site_perms as perm %}
+
+        {% if perm.manage_platform %}
+        {
+            name: '配置管理',
+            children: [
+                {
+                    name: '运行时管理',
+                    icon: 'icon-block-shape',
+                    url: '{% url "admin.runtimes.buildpack.manage" %}',
+                    desc: '修改和调整应用基础镜像、构建包配置，由平台运维人员操作，大部分时候由平台的安装脚本完成初始化，无需调整；',
+                    children: [
                         {
-                            name: "运营数据",
-                            url: "{% url 'admin.operation.index' %}",
-                            children: [
-                                {
-                                    name: "应用部署统计",
-                                    url: "{% url 'admin.operation.statistics.deploy.apps' %}"
-                                },
-                                {
-                                    name: "开发者部署统计",
-                                    url: "{% url 'admin.operation.statistics.deploy.developers' %}"
-                                },
-                            ]
+                            name: 'BuildPack 管理',
+                            url: '{% url "admin.runtimes.buildpack.manage" %}',
                         },
-                        {% endif %}
-                    {% endif %}
-                    {% if perm.manage_platform %}
-                    {% if not AUTO_CREATE_REGULAR_USER %}
-                    // 如果平台不在用户登录的时候自动创建用户，则需要在用户列表中将用户添加为普通用户后，用户才能访问开发者中心
+                        {
+                            name: 'SlugBuilder 管理',
+                            url: '{% url "admin.runtimes.slugbuilder.manage" %}',
+                        },
+                        {
+                            name: 'SlugRunner 管理',
+                            url: '{% url "admin.runtimes.slugrunner.manage" %}',
+                        },
+                    ],
+                },
+                {
+                    name: '应用资源方案',
+                    icon: 'icon-block-shape',
+                    desc: '用于配置和管理应用的进程资源配额（如 CPU、内存等），支持为不同应用类型分配专属资源方案。通常由平台运维人员维护。',
+                    url: '{% url "admin.process_spec_plan.manage" %}',
+                },
+                {
+                    name: '智能顾问',
+                    icon: 'icon-block-shape',
+                    desc: '为应用提供智能分析和优化建议，帮助提升运维效率。',
+                    url: "{% url 'admin.smart_advisor.documents.manage' %}",
+                },
+                {
+                    name: '共享证书管理',
+                    icon: 'icon-block-shape',
+                    desc: '统一管理平台证书，支持多应用共享，提高安全性和运维便捷性。',
+                    url: "{% url 'admin.shared.certs.manage' %}",
+                },
+                {% if perm.manage_app_templates %}
                     {
-                        name: "用户管理",
-                        url: "{% url 'admin.accountmgr.index' %}",
-                        children: [
-                            {
-                                name: "用户列表",
-                                url: "{% url 'admin.accountmgr.userprofiles.index' %}"
-                            },
-                        ]
+                        name: '仪表盘模板配置',
+                        icon: 'icon-block-shape',
+                        desc: '配置和管理应用仪表盘模板，提升数据可视化能力。',
+                        url: "{% url 'admin.settings.dashboard_tmpl.manage' %}",
+                    },
+                    {
+                        name: '插件配置',
+                        icon: 'icon-block-shape',
+                        desc: '管理平台插件分类及使用方，支持插件扩展和集成。',
+                        url: "{% url 'admin.settings.bk_plugins.tags.manage' %}",
+                    },
+                {% endif %}
+            ],
+        },
+        {
+            name: '运营管理',
+            children: [
+                {
+                    name: '应用运营评估',
+                    icon: 'icon-block-shape',
+                    desc: '统计和分析应用运营数据，辅助决策和优化。',
+                    url: "{% url 'admin.applications.operation_evaluation.list' %}",
+                },
+                {
+                    name: '部署概览',
+                    icon: 'icon-block-shape',
+                    desc: '展示应用各环境的部署状态和历史，便于快速定位问题。',
+                    url: "{% url 'admin.deployments.list' %}",
+                },
+                {% if perm.operate_platform %}
+                    {% url 'admin.operation.index' as operation_index_view %}
+                    {% if operation_index_view %}
+                    {
+                        name: '应用统计',
+                        icon: 'icon-block-shape',
+                        desc: '汇总平台应用的部署、运行等统计信息，支持多维度分析。',
+                        url: "{% url 'admin.operation.statistics.deploy.apps' %}",
                     },
                     {% endif %}
-                    {% endif %}
-                ]
-            }
+                {% endif %}
+                {
+                    name: '应用列表',
+                    icon: 'icon-block-shape',
+                    desc: '展示平台所有应用，支持快速检索和管理。',
+                    url: "{% url 'admin.applications.list' %}",
+                },
+            ],
         },
-    })
-})
+        {% endif %}
+
+        {% if perm.manage_platform %}
+            {% if not AUTO_CREATE_REGULAR_USER %}
+            // 如果平台不在用户登录的时候自动创建用户，则需要在用户列表中将用户添加为普通用户后，用户才能访问开发者中心
+                {
+                    name: '用户管理',
+                    children: [
+                        {
+                            name: '用户列表',
+                            icon: 'icon-block-shape',
+                            desc: '仅在平台启用用户灰度访问限制时，需要管理员手动添加用户时使用；',
+                            url: "{% url 'admin.accountmgr.userprofiles.index' %}",
+                        },
+                    ],
+                },
+            {% endif %}
+        {% endif %}
+    ];
+</script>
+{% endblock %}
+
+
+{% block main_script %}
+<style>
+    .function-intro-list {
+        margin: 32px 0;
+        padding: 24px 32px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px 0 #e6e9f0;
+        min-width: 600px;
+    }
+    .intro-main-title {
+        font-size: 26px;
+        font-weight: 700;
+        color: #222;
+        margin-bottom: 32px;
+        letter-spacing: 1px;
+    }
+    .intro-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-size: 16px;
+    }
+    .intro-group {
+        margin-bottom: 32px;
+        background: #f7faff;
+        border-radius: 6px;
+        padding: 18px 24px 12px 24px;
+        box-shadow: 0 1px 4px 0 #f0f1f5;
+        transition: box-shadow 0.2s;
+    }
+    .intro-group:hover {
+        box-shadow: 0 4px 16px 0 #e6e9f0;
+    }
+    .intro-title {
+        font-weight: bold;
+        font-size: 19px;
+        margin-bottom: 12px;
+        color: #3a84ff;
+        display: flex;
+        align-items: center;
+        border-left: 4px solid #3a84ff;
+        padding-left: 12px;
+        letter-spacing: 1px;
+    }
+    .intro-title i {
+        color: #3a84ff;
+        margin-right: 8px;
+        font-size: 20px;
+    }
+    .intro-item {
+        margin-left: 12px;
+        margin-bottom: 8px;
+        line-height: 1.8;
+        color: #444;
+        position: relative;
+        padding-left: 22px;
+        font-size: 15px;
+        border-left: 2px solid #e1ecff;
+        transition: background 0.2s;
+    }
+    .intro-item:before {
+        content: "●";
+        color: #3a84ff;
+        position: absolute;
+        left: 0;
+        font-size: 13px;
+        top: 4px;
+    }
+    .intro-item b {
+        color: #222;
+        font-weight: 600;
+        margin-right: 4px;
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var ul = document.getElementById('function-intro-list');
+        navList.forEach(function(group) {
+            if (group.children && group.children.length) {
+                var groupLi = document.createElement('li');
+                groupLi.className = 'intro-group';
+                var title = document.createElement('div');
+                title.className = 'intro-title';
+                title.innerHTML = '<i class="paasng-icon paasng-apps"></i>' + group.name;
+                groupLi.appendChild(title);
+
+                var subUl = document.createElement('ul');
+                subUl.style.listStyle = 'none';
+                subUl.style.padding = '0';
+                group.children.forEach(function(item) {
+                    var subLi = document.createElement('li');
+                    subLi.className = 'intro-item';
+                    subLi.innerHTML = '<b>' + item.name + '</b>' + (item.desc ? '：' + item.desc : '');
+                    subUl.appendChild(subLi);
+                });
+                groupLi.appendChild(subUl);
+                ul.appendChild(groupLi);
+            } else {
+                var li = document.createElement('li');
+                li.className = 'intro-item';
+                li.innerHTML = '<b>' + group.name + '</b>' + (group.desc ? '：' + group.desc : '');
+                ul.appendChild(li);
+            }
+        });
+    });
 </script>
 {% endblock %}

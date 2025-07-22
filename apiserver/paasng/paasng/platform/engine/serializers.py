@@ -258,7 +258,7 @@ class ConfigVarApplyResultSLZ(serializers.Serializer):
 
 class ConfigVarWithoutKeyFormatSLZ(serializers.Serializer):
     value = serializers.CharField(required=False, help_text="环境变量值")
-    is_sensitive = serializers.BooleanField(required=False, default=False, help_text="value 值是否敏感")
+    is_sensitive = serializers.BooleanField(required=False, default=False, help_text="变量值是否敏感")
     environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
     description = serializers.CharField(
         allow_blank=True,
@@ -464,12 +464,7 @@ class UpdateConfigVarInputSLZ(ConfigVarSLZ):
     """Serializer for updating ConfigVars"""
 
     value = serializers.CharField(required=False)
-
-    def to_internal_value(self, data) -> dict:
-        data = super().to_internal_value(data)
-        # 更新操作忽略对 is_sensitive 的更新
-        data.pop("is_sensitive")
-        return data
+    is_sensitive = serializers.BooleanField(read_only=True)
 
 
 class ListConfigVarsSLZ(serializers.Serializer):

@@ -234,7 +234,33 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         responses={201: ConfigVarApplyResultSLZ()},
     )
     def batch(self, request, **kwargs):
-        """批量保存环境变量"""
+        """
+        批量保存环境变量
+
+        前端传值格式:
+        [
+            {
+                "id": 123,                 # 已存在则传id, 新增则不传
+                "key": "ENV_KEY",          # 环境变量名
+                "value": "xxx",            # 环境变量值 (新增必填，更新可选)
+                "is_sensitive": true,      # (可选, 默认为 false), 决定 value 是否敏感, 更新时忽略该字段的修改
+                "description": "desc",     # 变量描述
+                "environment_name": "prod" # 生效环境, 可选值: "prod", "stag", "_global_"
+            },
+        ]
+
+        后端处理逻辑:
+        - 有id且数据库存在该id, 则为更新, value可不传 (不传则不更新value字段)
+        - 无id或id不存在, 则为新增, value字段必填
+        - 校验通过后, 批量保存环境变量, 返回新增/更新/忽略的数量统计
+
+        返回值：
+        {
+            "create_num": 0,     # 新增数量,
+            "overwrited_num": 1, # 更新数量,
+            "deleted_num":1      # 删除数量
+        }
+        """
         data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
 
         module = self.get_module_via_path()
@@ -367,7 +393,7 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
         ignored_count = queryset.filter(is_sensitive=True).count()
 
         result = ExportedConfigVars.from_list(list(filtered_queryset))
-        file_content = result.to_file_content(ignored_count)
+        file_content = result.to_file_content(extra_cmt=f"# 已忽略 {ignored_count} 条敏感环境变量。")
         return self.make_file_response(file_content, f"{self.get_application().code}_{module_name}_config_vars.yaml")
 
     @swagger_auto_schema(tags=["环境配置"])

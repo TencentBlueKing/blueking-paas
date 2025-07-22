@@ -217,6 +217,36 @@
             </template>
           </bk-table-column>
 
+          <!-- 编辑 & 加密，输入框禁用 -->
+          <bk-table-column
+            :render-header="handleRenderHander"
+            class-name="table-colum-module-cls"
+            prop="environment_name"
+          >
+            <template slot-scope="{ row }">
+              <div v-if="isPageEdit || row.isEdit">
+                <bk-select
+                  v-model="row.is_sensitive"
+                  :clearable="false"
+                  :disabled="!row.isAdd"
+                >
+                  <bk-option
+                    v-for="option in isEncryptedSelectList"
+                    :id="option.value"
+                    :key="option.text"
+                    :name="option.text"
+                  />
+                </bk-select>
+              </div>
+              <bk-tag
+                v-else
+                :theme="!!row.is_sensitive ? 'success' : ''"
+              >
+                {{ !!row.is_sensitive ? $t('是') : $t('否') }}
+              </bk-tag>
+            </template>
+          </bk-table-column>
+
           <bk-table-column
             :render-header="handleRenderHander"
             class-name="table-colum-module-cls"
@@ -236,19 +266,23 @@
                     :property="'value'"
                     :rules="rules.value"
                   >
+                    <!-- 加密 & 编辑模式下为密码框 -->
                     <bk-input
                       ref="valueInput"
                       v-model="row.value"
                       placeholder="env_value"
                       class="env-input-cls"
+                      :password-icon="[]"
+                      :type="!!row.is_sensitive && !row.isAdd ? 'password' : 'text'"
                       @enter="handleInputEvent(row, $index)"
                       @blur="handleInputEvent(row, $index)"
                       @keydown="(value, event) => handleKeyDown('descriptionInput', event)"
+                      @focus="handleValueFocus(row)"
                     ></bk-input>
                   </bk-form-item>
                 </bk-form>
               </div>
-              <div v-else>{{ row.value }}</div>
+              <div v-else>{{ !!row.is_sensitive ? DEFAULT_ENCRYPTED_VALUE : row.value }}</div>
             </template>
           </bk-table-column>
 
@@ -331,7 +365,7 @@
                   @click="handleEnvTableListData('add', row)"
                 ></i>
                 <i
-                  class="icon paasng-icon paasng-minus-circle-shape ml10"
+                  class="icon paasng-icon paasng-minus-circle-shape"
                   @click="handleEnvTableListData('reduce', row)"
                 ></i>
               </div>
@@ -691,6 +725,12 @@ export default {
       varPresetlLength: 0,
       isDeployEnvVarChange: false,
       envVarChangeText: '',
+      isEncryptedSelectList: [
+        { value: 1, text: this.$t('是') },
+        { value: 0, text: this.$t('否') },
+      ],
+      // 加密后 Value 的默认值。与接口一致
+      DEFAULT_ENCRYPTED_VALUE: '******',
     };
   },
   computed: {
@@ -776,6 +816,8 @@ export default {
           isEdit: false, // 取消编辑态
           conflict: conflictedKeys.length > 0 ? this.getConflictMessage(conflictedKeys, item.key) : {},
           id: item.id || res.find((i) => i.key === item.key)?.id,
+          // 1 表示加密，0 表示不加密，兼容下拉框
+          is_sensitive: item.is_sensitive ? 1 : 0,
         }));
         this.envLocalVarList = cloneDeep(this.envVarList);
         if (isUpdate) {
@@ -798,6 +840,13 @@ export default {
       // 批量编辑模式下为全量数据可以使用index
       if (this.isPageEdit) {
         this.markAsTouched(index);
+      }
+    },
+
+    // 加密状态 & 编辑模式，focus时清除密码输入框的内容
+    handleValueFocus(rowItem) {
+      if (!!rowItem.is_sensitive && !rowItem.isAdd) {
+        rowItem.value = '';
       }
     },
 
@@ -868,10 +917,18 @@ export default {
      * @return {Object} 清理后的数据
      */
     cleanEnvVarData(data, includeGlobal = false) {
-      const cleanedData = { ...data };
+      const cleanedData = { ...data, is_sensitive: !!data.is_sensitive };
       const redundantFields = ['isEdit', 'isAdd', 'isPresent', 'conflictingService'];
       if (includeGlobal) {
         redundantFields.push('is_global');
+      }
+      // 编辑模式 & 加密 & value为默认值时删除该字段
+      if (
+        !cleanedData.isAdd &&
+        cleanedData.is_sensitive === true &&
+        cleanedData.value === this.DEFAULT_ENCRYPTED_VALUE
+      ) {
+        delete cleanedData.value;
       }
       redundantFields.forEach((field) => delete cleanedData[field]);
       return cleanedData;
@@ -1016,9 +1073,7 @@ export default {
 
     // 编辑页面
     handleEditClick() {
-      let isEmpty = false;
       if (!this.envVarList.length) {
-        isEmpty = true;
         this.envVarList.push({
           key: '',
           value: '',
@@ -1027,7 +1082,7 @@ export default {
         });
       }
       // 批量编辑展示所有环境变量
-      !isEmpty && this.handleFilterEnv('all');
+      this.handleFilterEnv('all');
       this.isBatchEdit = true;
       this.$store.commit('cloudApi/updatePageEdit', true);
     },
@@ -1038,10 +1093,12 @@ export default {
       if (v === 'add') {
         this.envVarList.push({
           key: '',
+          is_sensitive: 0,
           value: '',
           environment_name: 'stag',
           description: '',
           isEdit: true,
+          isAdd: true,
         });
       } else {
         this.envVarList.splice(index, 1);
@@ -1333,24 +1390,24 @@ export default {
     },
 
     handleRenderHander(h, { $index }) {
-      let columnName = 'Key';
-      switch ($index) {
-        case 0:
-          columnName = 'Key';
-          break;
-        case 1:
-          columnName = 'Value';
-          break;
-        case 2:
-          columnName = this.$t('生效环境');
-          break;
-        default:
-          break;
-      }
-      return h('span', { class: 'custom-header-cls flex-row align-items-center' }, [
-        h('span', null, columnName),
-        h('span', { class: 'header-required' }, '*'),
-      ]);
+      const columns = ['Key', this.$t('是否敏感'), 'Value', this.$t('生效环境')];
+      const columnName = columns[$index] || 'Key';
+      const isEncrypt = $index === 1;
+      const directive = {
+        content: this.$t('环境变量的值加密存储后，页面上脱敏展示，仅在应用进程能获取变量值的明文。'),
+        width: 240,
+        placement: 'top',
+        disabled: !isEncrypt,
+      };
+      return (
+        <span
+          class={`custom-header-cls flex-row align-items-center${isEncrypt ? ' is-encrypt' : ''}`}
+          v-bk-tooltips={directive}
+        >
+          <span class="column-title">{columnName}</span>
+          <span class="header-required">*</span>
+        </span>
+      );
     },
 
     // 单个环境编辑
@@ -1398,6 +1455,7 @@ export default {
       if (curEnvVarLength - this.envLocalVarList.length <= 1) {
         this.envVarList.push({
           key: '',
+          is_sensitive: 0,
           value: '',
           environment_name: this.activeEnvValue === 'all' ? 'stag' : this.activeEnvValue,
           description: '',
@@ -1969,6 +2027,13 @@ a.is-disabled {
 .variable-table-cls {
   /deep/ .bk-table-empty-block {
     display: none;
+  }
+  /deep/ .bk-table-header {
+    .is-encrypt .column-title {
+      text-decoration: underline;
+      text-decoration-style: dashed;
+      text-underline-position: under;
+    }
   }
   .var-key-wrapper {
     display: flex;

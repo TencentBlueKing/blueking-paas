@@ -18,6 +18,7 @@
 from typing import TYPE_CHECKING
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 
@@ -185,9 +186,18 @@ class OperatorVersionCondition(DeployCondition):
 
         # operator 通过 helm 客户端获取
         cluster_name = EnvClusterService(self.env).get_cluster_name()
-        operator_version = HelmClient(cluster_name).get_release("bkpaas-app-operator")
 
-        if not operator_version or operator_version.chart.app_version != apiserver_version:
+        # 使用缓存
+        cache_key = f"helm_release:{cluster_name}:bkpaas-app-operator:chart:app_version"
+        app_version = cache.get(cache_key)
+
+        if app_version is None:
+            operator_release = HelmClient(cluster_name).get_release("bkpaas-app-operator")
+            app_version = operator_release.chart.app_version if operator_release else None
+            # 缓存 5 分钟
+            cache.set(cache_key, app_version, 60 * 5)
+
+        if app_version != apiserver_version:
             message = _("Operator 版本不匹配，请检查 Operator 版本")
             raise ConditionNotMatched(message, self.action_name)
 

@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 
 
 class PlanSchema(BaseModel):
-    """RabbitMQ 服务配置"""
+    """RabbitMQ 服务方案配置"""
 
     host: Optional[str] = Field(None, description="RabbitMQ 服务器主机地址", example="rabbitmq.example.com")
     port: Optional[int] = Field(None, description="RabbitMQ 服务端口号", example=5672)
@@ -32,10 +32,27 @@ class PlanSchema(BaseModel):
     password: Optional[str] = Field(None, description="RabbitMQ 管理员密码", example="password123")
     version: Optional[str] = Field(None, description="RabbitMQ 服务版本", example="3.9.5")
     tls: Dict[str, str] = Field(
-        default_factory=dict, description="TLS 配置参数", example={"ca_cert": "/path/to/ca.pem", "verify": "true"}
+        default_factory=dict,
+        description="TLS 配置参数",
+        example={"ca": "ca_test", "cert": "cert_test", "cert_key": "cert_key_test", "insecure_skip_verify": True},
     )
     clusters: List[Dict] = Field(
         default_factory=list,
         description="RabbitMQ 集群配置列表",
-        example=[{"host": "node1.example.com", "port": 5672}],
+        example=[
+            {
+                "host": "node1.example.com",
+                "port": 5672,
+                "management_api": "http://node1.example.com:15672",
+                "admin": "cluster_admin",
+                "password": "cluster_password123",
+            },
+            {
+                "host": "node2.example.com",
+                "port": 5673,
+                "management_api": "http://node2.example.com:15673",
+                "admin": "cluster_admin2",
+                "password": "cluster_password456",
+            },
+        ],
     )

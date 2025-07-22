@@ -179,7 +179,7 @@
 
 <script>
 import ServiceList from './service-list';
-import SwitchDisplay from '../../app-cluster/comps/switch-display.vue';
+import SwitchDisplay from '@/components/switch-display';
 import ServicesSideslider from './services-sideslider.vue';
 export default {
   components: { ServiceList, SwitchDisplay, ServicesSideslider },

@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
@@ -104,13 +103,6 @@ class PluginCodeTemplate(BaseModel):
     applicableLanguage: Optional[str] = Field(default=None, description="适用语言")
     repository: str = Field(description="仓库地址")
     sourceDir: str = Field(default="./", description="源码目录")
-
-    def get_source_dir(self) -> Path:
-        """get relative source_dir"""
-        source_dir = Path(self.sourceDir)
-        if source_dir.is_absolute():
-            return source_dir.relative_to("/")
-        return source_dir
 
 
 @prepare_json_field

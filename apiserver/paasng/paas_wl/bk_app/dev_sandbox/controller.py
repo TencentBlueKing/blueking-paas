@@ -19,7 +19,6 @@ import logging
 from typing import TYPE_CHECKING, Dict
 
 from attr import define, field
-from django.conf import settings
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
@@ -178,11 +177,10 @@ class DevSandboxController:
     def _gen_sandbox_image(self) -> str:
         """生成开发沙箱使用的容器镜像"""
         mgr = ModuleRuntimeManager(self.dev_sandbox.module)
-        if not mgr.is_support_dev_sandbox:
-            raise BuilderDoesNotSupportDevSandbox(f"module {mgr.module.name} does not support dev sandbox")
+        if image := mgr.get_dev_sandbox_image():
+            return image
 
-        # 按规范，沙箱镜像应该与基础 builder 镜像保持相同的 tag
-        return f"{settings.DEV_SANDBOX_IMAGE_NAME}:{mgr.get_slug_builder().tag}"
+        raise BuilderDoesNotSupportDevSandbox(f"module {mgr.module.name} does not support dev sandbox")
 
 
 class DevWlAppConstructor:

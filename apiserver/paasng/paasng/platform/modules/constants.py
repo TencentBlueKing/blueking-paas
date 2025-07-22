@@ -60,7 +60,7 @@ class SourceOrigin(IntStructuredEnum):
         return [SourceOrigin.BK_LESS_CODE, SourceOrigin.S_MART, SourceOrigin.AI_AGENT]
 
 
-class APP_CATEGORY(StrStructuredEnum):
+class AppCategory(StrStructuredEnum):
     """Application category, used when setting label to images"""
 
     NORMAL_APP = "normal_app"
@@ -122,3 +122,11 @@ class AppImageType(StrStructuredEnum):
                 BuildPackType.OCI_FILE,
             ],
         }
+
+
+class SlugBuilderEnvVarKey(StrStructuredEnum):
+    """SlugBuilder environment variable key"""
+
+    CNB_RUN_IMAGE = EnumField("CNB_RUN_IMAGE", label="slug runner image")
+    CNB_PLATFORM_API = EnumField("CNB_PLATFORM_API", label="slug platform api")
+    CNB_DEV_SANDBOX_IMAGE = EnumField("CNB_DEV_SANDBOX_IMAGE", label="dev sandbox image")

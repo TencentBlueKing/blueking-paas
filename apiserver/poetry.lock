@@ -303,6 +303,7 @@ optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main"]
 files = [
+    {file = "bkpaas_auth-3.1.2-py3-none-any.whl", hash = "sha256:4bb5614d38679144f7c1ec82d54529f956e5fa2e778b6d14e420d40f14164d13"},
     {file = "bkpaas_auth-3.1.2.tar.gz", hash = "sha256:20595bcfbce7ea6f7fd0cd21cd7136cdb1452752cf5ebbc3c610dd5658f6950e"},
 ]
 

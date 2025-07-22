@@ -44,8 +44,8 @@ def upload_source_code(module: Module, version_info: VersionInfo, source_dir: st
 
     with generate_temp_dir() as working_dir:
         # 下载源码到临时目录
-        full_source_dir = validate_source_dir_str(working_dir, source_dir)
         get_repo_controller(module, operator=operator).export(working_dir, version_info)
+        full_source_dir = validate_source_dir_str(working_dir, source_dir)
 
         # 上传源码包到对象存储
         with generate_temp_file(suffix=".tar.gz") as package_path:

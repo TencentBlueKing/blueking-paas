@@ -23,7 +23,6 @@ from django.conf import settings
 
 from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.engine.constants import AppInfoBuiltinEnv
 from paasng.platform.engine.utils.query import DeploymentGetter
 
 if typing.TYPE_CHECKING:
@@ -41,7 +40,8 @@ def get_app_secret_in_instance(ins_list: List["Instance"]) -> Optional[str]:
     """获取进程实例中环境变量中的应用密钥(BKPAAS_APP_SECRET)的值"""
     if not ins_list:
         return None
-    return ins_list[0].envs.get(f"{settings.CONFIGVAR_SYSTEM_PREFIX}{AppInfoBuiltinEnv.APP_SECRET}")
+    # TODO: Use a more robust way to get the key of app secret
+    return ins_list[0].envs.get(f"{settings.CONFIGVAR_SYSTEM_PREFIX}APP_SECRET")
 
 
 def get_deployed_secret_list(application: Application) -> list:

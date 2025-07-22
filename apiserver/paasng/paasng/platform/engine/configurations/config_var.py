@@ -287,6 +287,8 @@ def list_vars_builtin_region(region: str, environment: str) -> EnvVariableList:
 
 def list_vars_builtin_plat_addrs() -> EnvVariableList:
     """List the platform address builtin env vars."""
+    # 环境变量中的 bool 值需要转为小写开头字符串，"true" 表示开启，"false" 表示不开启
+    multi_tenant_mode = "true" if settings.ENABLE_MULTI_TENANT_MODE else "false"
     system_envs_with_prefix = [
         sys_var("BK_DOMAIN", settings.BK_DOMAIN, _("蓝鲸根域，用于获取登录票据、国际化语言等 cookie 信息")),
         sys_var("URL", settings.BKPAAS_URL, _("蓝鲸PaaS平台访问URL")),
@@ -314,7 +316,7 @@ def list_vars_builtin_plat_addrs() -> EnvVariableList:
             settings.BK_CRYPTO_TYPE,
             _("加密数据库内容的推荐算法有：SHANGMI（对应 SM4CTR 算法）和 CLASSIC（对应 Fernet 算法）"),
         ),
-        sys_var("MULTI_TENANT_MODE", settings.ENABLE_MULTI_TENANT_MODE, _("是否开启多租户模式")),
+        sys_var("MULTI_TENANT_MODE", multi_tenant_mode, _("是否开启多租户模式")),
     ]
     # 兼容私有化版本保留的 BK_ 前缀的环境变量
     system_envs_with_prefix.extend(

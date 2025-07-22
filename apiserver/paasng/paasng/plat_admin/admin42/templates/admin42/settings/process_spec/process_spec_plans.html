@@ -1,8 +1,8 @@
-{% extends "../platformmgr/base.html" %}
+{% extends "./base.html" %}
 
 {% load admin_utils %}
 
-{% block main_content %}
+{% block spec_plan_content %}
 <div id="spec-plan-list" style="width: 100%;" class="p20">
     <bk-alert class="mb20" title="资源方案仅对“普通应用”生效，对“云原生应用”无效。请注意，调整后将影响所有已绑定的应用"></bk-alert>
 
@@ -121,7 +121,7 @@
 
 {% endblock %}
 
-{% block main_script %}
+{% block spec_plan_script %}
 <script>
 const pagination = {{ pagination | to_json }}
 

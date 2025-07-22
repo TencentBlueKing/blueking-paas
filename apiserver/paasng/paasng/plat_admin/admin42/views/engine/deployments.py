@@ -30,7 +30,7 @@ class DeploymentListView(GenericTemplateView):
     name = "部署概览"
     serializer_class = DeploymentForListSLZ
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.MANAGE_PLATFORM)]
-    template_name = "admin42/applications/list_deployments.html"
+    template_name = "admin42/operation/list_deployments.html"
 
     def get_queryset(self):
         queryset = Deployment.objects.all().order_by("-created").select_related("app_environment")

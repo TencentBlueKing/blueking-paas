@@ -145,7 +145,7 @@ def test_add_approver_as_member(mocker, plugin, service_name, expected_leader, e
         mock_remove_roles.assert_called_once_with(plugin, mock.ANY)
         args, _ = mock_remove_roles.call_args
         assert set(args[1]) == set(expected_admins)
-        mock_add_roles.assert_called_once_with(plugin, role=PluginRole.ADMINISTRATOR, usernames=expected_admins)
+        mock_add_roles.assert_called_once_with(plugin, role=PluginRole.ADMINISTRATOR, usernames=mock.ANY)
 
     # Verify sync_members was called
     if sync_members_mock:

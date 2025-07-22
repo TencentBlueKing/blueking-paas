@@ -221,6 +221,7 @@ class ModuleRuntimeManager:
     SECURE_ENCRYPTED_LABEL = "secureEncrypted"
     HTTP_SUPPORTED_LABEL = "supportHttp"
     CNB_LABEL = "isCloudNativeBuilder"
+    DEV_SANDBOX_SUPPORTED_LABEL = "supportDevSandbox"
 
     def __init__(self, module: "Module"):
         self.module = module
@@ -265,6 +266,18 @@ class ModuleRuntimeManager:
         try:
             return str2bool(runner.get_label(self.CNB_LABEL))
         except Exception:
+            return False
+
+    @property
+    def is_support_dev_sandbox(self) -> bool:
+        """描述当前模块绑定的运行时是否支持开发沙箱"""
+        try:
+            builder = self.get_slug_builder()
+        except AppSlugBuilder.DoesNotExist:
+            return False
+        try:
+            return str2bool(builder.get_label(self.DEV_SANDBOX_SUPPORTED_LABEL))
+        except Exception:  # noqa
             return False
 
     @overload

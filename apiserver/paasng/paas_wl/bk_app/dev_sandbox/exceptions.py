@@ -22,3 +22,10 @@ class DevSandboxAlreadyExists(Exception):
 
 class DevSandboxResourceNotFound(Exception):
     """resource of dev sandbox not found exception"""
+
+
+class BuilderDoesNotSupportDevSandbox(Exception):
+    """
+    builder does not support dev sandbox exception
+    (not has 'supportDevSandbox' label)
+    """

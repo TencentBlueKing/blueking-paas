@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from unittest import mock
 
 import pytest
 from kubernetes.client.apis import VersionApi
@@ -27,6 +28,7 @@ from paas_wl.bk_app.dev_sandbox.names import (
     get_dev_sandbox_service_name,
 )
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
+from paas_wl.utils.basic import AttrDict
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -40,6 +42,18 @@ def _skip_if_old_k8s_version():
         pytest.skip("Skip TestDevContainerController because current k8s version less than 1.20")
 
 
+class MockModuleRuntimeManager:
+    def __init__(self, *args, **kwargs): ...
+
+    @property
+    def is_support_dev_sandbox(self):
+        return True
+
+    @staticmethod
+    def get_slug_builder(*args, **kwargs):
+        return AttrDict(tag="v2.0.0")
+
+
 class TestDevSandboxController:
     @pytest.fixture()
     def controller(self, dev_sandbox_model):
@@ -50,7 +64,15 @@ class TestDevSandboxController:
 
     @pytest.fixture(autouse=True)
     def _do_deploy(self, controller, dev_sandbox):
-        controller.deploy(dev_sandbox.runtime.envs, dev_sandbox.source_code_cfg, dev_sandbox.code_editor_cfg)
+        with mock.patch(
+            "paas_wl.bk_app.dev_sandbox.controller.ModuleRuntimeManager",
+            new=MockModuleRuntimeManager,
+        ):
+            controller.deploy(
+                dev_sandbox.runtime.envs,
+                dev_sandbox.source_code_cfg,
+                dev_sandbox.code_editor_cfg,
+            )
 
     def test_deploy_success(self, controller, dev_wl_app, default_cluster):
         sandbox = controller.sandbox_mgr.get(dev_wl_app, get_dev_sandbox_name(dev_wl_app))

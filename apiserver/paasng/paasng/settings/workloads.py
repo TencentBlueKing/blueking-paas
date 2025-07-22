@@ -95,8 +95,8 @@ SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})
 
 # devserver 监听端口
 DEV_SANDBOX_DEVSERVER_PORT = settings.get("DEV_SANDBOX_DEVSERVER_PORT", 8000)
-# devserver 镜像
-DEV_SANDBOX_IMAGE = settings.get("DEV_SANDBOX_IMAGE", "bkpaas/dev-heroku-bionic:latest")
+# devserver 镜像名称（不包含 tag）
+DEV_SANDBOX_IMAGE_NAME = settings.get("DEV_SANDBOX_IMAGE_NAME", "bkpaas/dev-heroku-bionic")
 
 # 启动沙箱的数量上限
 DEV_SANDBOX_COUNT_LIMIT = settings.get("DEV_SANDBOX_COUNT_LIMIT", 5)

@@ -221,7 +221,6 @@ class ModuleRuntimeManager:
     SECURE_ENCRYPTED_LABEL = "secureEncrypted"
     HTTP_SUPPORTED_LABEL = "supportHttp"
     CNB_LABEL = "isCloudNativeBuilder"
-    DEV_SANDBOX_SUPPORTED_LABEL = "supportDevSandbox"
 
     def __init__(self, module: "Module"):
         self.module = module

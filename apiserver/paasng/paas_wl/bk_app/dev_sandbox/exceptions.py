@@ -25,7 +25,4 @@ class DevSandboxResourceNotFound(Exception):
 
 
 class BuilderDoesNotSupportDevSandbox(Exception):
-    """
-    builder does not support dev sandbox exception
-    (not has 'supportDevSandbox' label)
-    """
+    """builder does not support dev sandbox exception"""

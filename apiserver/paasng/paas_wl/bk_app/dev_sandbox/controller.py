@@ -153,7 +153,7 @@ class DevSandboxController:
             self.wl_app,
             code=self.dev_sandbox.code,
             token=self.dev_sandbox.token,
-            runtime=Runtime(envs=envs, image=self._gen_sandbox_image()),
+            runtime=Runtime(envs=envs, image=self._get_dev_sandbox_image()),
             source_code_cfg=source_code_cfg,
             code_editor_cfg=code_editor_cfg,
         )
@@ -174,7 +174,7 @@ class DevSandboxController:
         # 6. upsert ingress
         self.ingress_mgr.upsert(DevSandboxIngress.create(sandbox))
 
-    def _gen_sandbox_image(self) -> str:
+    def _get_dev_sandbox_image(self) -> str:
         """生成开发沙箱使用的容器镜像"""
         mgr = ModuleRuntimeManager(self.dev_sandbox.module)
         if image := mgr.get_dev_sandbox_image():

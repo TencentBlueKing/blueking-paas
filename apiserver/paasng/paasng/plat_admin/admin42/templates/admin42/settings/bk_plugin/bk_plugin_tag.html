@@ -1,15 +1,15 @@
-{% extends "admin42/configuration/base.html" %}
+{% extends "./base.html" %}
 {% load admin_utils %}
-{% block main_content %}
-<div id="platform-shared-tag-list" style="width: 100%;" class="p20">
-    <bk-button :theme="'primary'" :title="'创建插件使用方'" class="mr10" @click="handleCreate">
-        创建插件使用方
+
+{% block bk_plugin_content %}
+<div id="configuration-shared-tag-list" style="width: 100%;" class="p20">
+    <bk-button :theme="'primary'" :title="'创建插件分类'" class="mr10" @click="handleCreate">
+        创建插件分类
     </bk-button>
     <bk-table :data="data" style="margin-top: 20px;">
-        <bk-table-column label="英文名称" prop="code_name"></bk-table-column>
-        <bk-table-column label="名称" prop="name"></bk-table-column>
-        <bk-table-column label="蓝鲸应用ID" prop="bk_app_code"></bk-table-column>
-        <bk-table-column label="使用方简介" prop="introduction"></bk-table-column>
+        <bk-table-column label="分类英文名称" prop="code_name"></bk-table-column>
+        <bk-table-column label="分类名称" prop="name"></bk-table-column>
+        <bk-table-column label="优先级" prop="priority"></bk-table-column>
         <bk-table-column label="操作">
             <template slot-scope="props">
                 <a class="bk-text-button mr10" href="javascript:void(0);" @click="handleEdit(props.row)">编辑</a>
@@ -20,33 +20,26 @@
 
     <bk-dialog v-model="dialog.visible" header-position="left" width="800" :confirm-fn="submitDialog" @cancel="cancelDialog" :mask-close="false" :fullscreen="dialog.fullscreen">
         <div slot="header">
-            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]插件使用方
+            $[ dialog.type === 'create'?'添加':(dialog.type === 'edit'?'编辑':'删除') ]插件分类
         </div>
         <bk-form :label-width="120" :model="dialog.form" :rules="rules">
-            <bk-form-item label="英文名称" :property="'code_name'" :required="true">
+            <bk-form-item label="分类英文名称" :property="'code_name'" :required="true">
                 <bk-input
                     placeholder="请直接输入分类英文名称"
                     v-model="dialog.form.code_name">
                 </bk-input>
             </bk-form-item>
-            <bk-form-item label="名称" :property="'name'" :required="true">
+            <bk-form-item label="分类名称" :property="'name'" :required="true">
                 <bk-input
                     placeholder="请直接输入分类名称"
                     v-model="dialog.form.name">
                 </bk-input>
             </bk-form-item>
-            <bk-form-item label="蓝鲸应用ID" :property="'bk_app_code'" :required="true">
+            <bk-form-item label="优先级" :property="'priority'" :required="true">
                 <bk-input
-                    placeholder="请直接输入蓝鲸应用ID"
-                    v-model="dialog.form.bk_app_code">
-                </bk-input>
-            </bk-form-item>
-            <bk-form-item label="使用方简介" :property="'introduction'" :required="false">
-                <bk-input
-                    placeholder="请直接输入使用方简介"
-                    :type="'textarea'"
-                    :rows="3"
-                    v-model="dialog.form.introduction">
+                    type="number" :min="0"
+                    placeholder="默认为 0，数字越大，优先级越高"
+                    v-model="dialog.form.priority">
                 </bk-input>
             </bk-form-item>
         </bk-form>
@@ -56,18 +49,18 @@
 {% endblock %}
 
 
-{% block main_script %}
+{% block bk_plugin_script %}
 <script>
 
 const URLRouter = {
-    create: decodeURI("{% url 'admin.configuration.bk_plugins.distributors' %}"),
-    list: decodeURI("{% url 'admin.configuration.bk_plugins.distributors' %}"),
-    detail: decodeURI("{% url 'admin.configuration.bk_plugins.distributors.detail' '${distributor_id}' %}"),
+    create: decodeURI("{% url 'admin.settings.bk_plugins.tags' %}"),
+    list: decodeURI("{% url 'admin.settings.bk_plugins.tags' %}"),
+    detail: decodeURI("{% url 'admin.settings.bk_plugins.tags.detail' '${tag_id}' %}"),
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     new Vue({
-        el: "#platform-shared-tag-list",
+        el: "#configuration-shared-tag-list",
         delimiters: ['$[', ']'],
         mixins: [SubmitMixin],
         data: function () {
@@ -106,18 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             message: '不能多于30个字符',
                             trigger: 'blur'
                         }
-                    ],
-                    bk_app_code: [
-                        {
-                            required: true,
-                            message: '必填项',
-                            trigger: 'blur'
-                        },
-                        {
-                            max: 20,
-                            message: '不能多于20个字符',
-                            trigger: 'blur'
-                        }
                     ]
                 }
             }
@@ -129,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fillUrlTemplate: function (url_template, {row}) {
                 if (!row)
                     row = {}
-              return url_template.replace("${distributor_id}", row.id)
+              return url_template.replace("${tag_id}", row.id)
             },
             cancelDialog: function () {
 
@@ -159,8 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.dialog.form.id = undefined
                 this.dialog.form.name = undefined
                 this.dialog.form.code_name = undefined
-                this.dialog.form.bk_app_code = undefined
-                this.dialog.form.introduction = undefined
                 this.dialog.visible = true
             },
             handleEdit: function (row){

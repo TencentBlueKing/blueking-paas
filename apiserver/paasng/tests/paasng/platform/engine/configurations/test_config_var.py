@@ -183,6 +183,9 @@ class TestBuiltInEnvVars:
             if provide_env_vars_platform:
                 assert set(settings.BK_PAAS2_PLATFORM_ENVS.keys()).issubset(set(config_vars.keys())) == contain_bk_envs
 
+            # 环境变量中的 bool 值需要转为小写开头字符串
+            assert config_vars["BKPAAS_MULTI_TENANT_MODE"] == "false"
+
     def test_builtin_env_keys(self, bk_stag_env):
         config_vars = get_builtin_env_variables(bk_stag_env.engine_app).kv_map
 
@@ -209,7 +212,7 @@ class TestBuiltInEnvVars:
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
-def test_list_vars_builtin_runtime(bk_stag_env):
+def test_list_vars_builtin_runtime(bk_app, bk_stag_env):
     env_vars = list_vars_builtin_runtime(bk_stag_env).kv_map
 
     assert "PORT" in env_vars
@@ -217,6 +220,7 @@ def test_list_vars_builtin_runtime(bk_stag_env):
     assert "BKPAAS_SUB_PATH" in env_vars
     assert env_vars["BKPAAS_PROCESS_TYPE"] == "{{bk_var_process_type}}"
     assert env_vars["BKPAAS_LOG_NAME_PREFIX"].endswith("-{{bk_var_process_type}}")
+    assert env_vars["BKPAAS_ENGINE_REGION"] == bk_app.region
 
 
 @pytest.mark.usefixtures("_with_wl_apps")

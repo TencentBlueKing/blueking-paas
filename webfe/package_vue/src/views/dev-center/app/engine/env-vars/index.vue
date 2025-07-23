@@ -610,7 +610,7 @@ export default {
         buildpackValueList: [],
       },
       isDropdownShow: false,
-      curSortKey: '-created',
+      curSortKey: 'created',
       exportDialog: {
         visiable: false,
         width: 480,
@@ -979,7 +979,7 @@ export default {
     async init() {
       this.isLoading = true;
       this.isEdited = false;
-      this.curSortKey = '-created';
+      this.curSortKey = 'created';
       this.loadConfigVar();
       this.fetchReleaseInfo();
       this.getAllImages();

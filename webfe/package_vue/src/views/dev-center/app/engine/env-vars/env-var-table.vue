@@ -90,7 +90,7 @@
           :show-overflow-tooltip="true"
         >
           <template slot-scope="{ row, $index }">
-            <span v-if="!row.isEditing">{{ !!row.is_sensitive ? DEFAULT_ENCRYPTED_VALUE : row.value }}</span>
+            <span v-if="!row.isEditing">{{ !!row.is_sensitive ? ENCRYPTED_PLACEHOLDER : row.value }}</span>
             <bk-form-item
               v-else
               :property="`varList.${$index}.value`"
@@ -101,7 +101,7 @@
                 v-model="row.value"
                 placeholder="env_value"
                 :password-icon="[]"
-                :type="row.is_sensitive ? 'password' : 'text'"
+                type="text"
                 @focus="handleValueFocus(row)"
                 @keydown="(value, event) => handleKeyDown(`descriptionInput${$index}`, event)"
               ></bk-input>
@@ -266,8 +266,8 @@ export default {
         { value: 'prod', text: this.$t('生产环境') },
       ],
       ENV_ENUM,
-      // 加密后 Value 的默认值。与接口一致
-      DEFAULT_ENCRYPTED_VALUE: '******',
+      // 加密占位符号，前端展示使用，后端加密后默认返回 ******
+      ENCRYPTED_PLACEHOLDER: '••••••',
       // 批量编辑模式
       isBatchEditing: false,
       rules: {
@@ -328,6 +328,8 @@ export default {
       this.varList = cloneDeep(this.list).map((item) => ({
         ...item,
         isEditing: false,
+        // 替换为前端展示占位符
+        value: item.is_sensitive ? this.ENCRYPTED_PLACEHOLDER : item.value,
       }));
       this.syncFormDataWithFilteredList();
     },
@@ -474,14 +476,18 @@ export default {
         }
       } else {
         const originalData = this.list.find((item) => item.id === row.id) || {};
-        Object.assign(row, originalData, { isEditing: false });
+        Object.assign(row, originalData, {
+          isEditing: false,
+          // 替换为前端展示占位符
+          value: originalData.is_sensitive ? this.ENCRYPTED_PLACEHOLDER : originalData.value,
+        });
       }
     },
 
     // 过滤掉自定义属性
     getCleanVariable(row) {
       const { isEditing, isNew, is_sensitive, ...cleanData } = row;
-      if (!isNew && !!is_sensitive && cleanData.value === this.DEFAULT_ENCRYPTED_VALUE) {
+      if (!isNew && !!is_sensitive && cleanData.value === this.ENCRYPTED_PLACEHOLDER) {
         delete cleanData.value;
       }
       if (this.isBatchEditing && typeof cleanData.id === 'string') {

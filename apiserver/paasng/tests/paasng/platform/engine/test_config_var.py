@@ -32,7 +32,7 @@ from paasng.platform.engine.models.config_var import (
     ConfigVar,
 )
 from paasng.platform.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
-from paasng.platform.engine.serializers import ConfigVarFormatSLZ, ConfigVarFormatWithIdSLZ, ConfigVarSLZ
+from paasng.platform.engine.serializers import ConfigVarBaseInputSLZ, ConfigVarBatchInputSLZ, ConfigVarSLZ
 from paasng.platform.modules.models import Module
 from tests.utils.helpers import initialize_module
 
@@ -149,7 +149,7 @@ class TestConfigVarManager:
 
     @pytest.mark.parametrize("maker_params", [{}, {"description": None}])
     def test_apply_vars_to_module(self, bk_module, random_config_var_maker, maker_params):
-        serializer = ConfigVarFormatSLZ(
+        serializer = ConfigVarBaseInputSLZ(
             data=[random_config_var_maker(environment_name="prod", **maker_params) for i in range(10)],
             context={"module": bk_module},
             many=True,
@@ -175,7 +175,7 @@ class TestConfigVarManager:
             )
             for var in config_vars
         ]
-        serializer = ConfigVarFormatSLZ(data=another_list, context={"module": bk_module}, many=True)
+        serializer = ConfigVarBaseInputSLZ(data=another_list, context={"module": bk_module}, many=True)
         serializer.is_valid(raise_exception=True)
         another_config_vars = serializer.validated_data
 
@@ -272,7 +272,7 @@ class TestConfigVarManager:
 
         instance_list = bk_module.configvar_set.filter(is_builtin=False).prefetch_related("environment")
         instance_mapping = {obj.id: obj for obj in instance_list}
-        serializer = ConfigVarFormatWithIdSLZ(
+        serializer = ConfigVarBatchInputSLZ(
             data=new_vars,
             context={"module": bk_module, "instance_mapping": instance_mapping},
             many=True,
@@ -309,7 +309,7 @@ class TestConfigVarFormatSLZ:
         [{"key": "foo"}, {"key": "KUBERNETES_FOO"}, {"key": "BKPAAS_FOO"}, {"description": "x" * 201}],
     )
     def test_key_error(self, bk_module, random_config_var_maker, params):
-        serializer = ConfigVarFormatSLZ(
+        serializer = ConfigVarBaseInputSLZ(
             data=random_config_var_maker(**params, environment_name="stag"), context={"module": bk_module}
         )
         with pytest.raises(ValidationError):
@@ -407,7 +407,7 @@ class TestConfigVarTenantId:
 
         instance_list = bk_module_with_tenant.configvar_set.filter(is_builtin=False).prefetch_related("environment")
         instance_mapping = {obj.id: obj for obj in instance_list}
-        serializer = ConfigVarFormatWithIdSLZ(
+        serializer = ConfigVarBatchInputSLZ(
             data=test_data,
             context={"module": bk_module_with_tenant, "instance_mapping": instance_mapping},
             many=True,

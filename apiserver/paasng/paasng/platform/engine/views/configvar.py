@@ -21,6 +21,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -46,14 +47,15 @@ from paasng.platform.engine.models.config_var import (
 from paasng.platform.engine.models.managers import ConfigVarManager, ExportedConfigVars, PlainConfigVar
 from paasng.platform.engine.serializers import (
     ConfigVarApplyResultSLZ,
-    ConfigVarFormatSLZ,
-    ConfigVarFormatWithIdSLZ,
+    ConfigVarBaseInputSLZ,
+    ConfigVarBatchInputSLZ,
     ConfigVarImportSLZ,
+    ConfigVarOperateAuditOutputSLZ,
     ConfigVarSLZ,
-    ConfigVarWithoutKeyFormatSLZ,
+    ConfigVarUpsertByKeyInputSLZ,
     ConflictedKeyOutputSLZ,
     CreateConfigVarInputSLZ,
-    ListConfigVarsSLZ,
+    ListConfigVarsQuerySLZ,
     UpdateConfigVarInputSLZ,
 )
 
@@ -79,7 +81,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(request_body=ConfigVarSLZ, tags=["环境配置"], responses={201: ""})
     def create(self, request, *args, **kwargs):
         """创建环境变量"""
-        data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
+        data_before = DataDetail(data=list(ConfigVarOperateAuditOutputSLZ(self.get_queryset(), many=True).data))
 
         slz = CreateConfigVarInputSLZ(data=request.data, context={"module": self.get_module_via_path()})
         slz.is_valid(raise_exception=True)
@@ -96,7 +98,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             module_name=self.get_module_via_path().name,
             environment=request.data["environment_name"],
             data_before=data_before,
-            data_after=DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)),
+            data_after=DataDetail(data=list(ConfigVarOperateAuditOutputSLZ(self.get_queryset(), many=True).data)),
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
@@ -104,7 +106,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     def update(self, request, *args, **kwargs):
         """更新环境变量"""
         config_var = self.get_object()
-        data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
+        data_before = DataDetail(data=list(ConfigVarOperateAuditOutputSLZ(self.get_queryset(), many=True).data))
 
         slz = UpdateConfigVarInputSLZ(config_var, data=request.data, context={"module": self.get_module_via_path()})
         slz.is_valid(raise_exception=True)
@@ -121,7 +123,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             module_name=config_var.module.name,
             environment=request.data["environment_name"],
             data_before=data_before,
-            data_after=DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)),
+            data_after=DataDetail(data=list(ConfigVarOperateAuditOutputSLZ(self.get_queryset(), many=True).data)),
         )
 
         return Response(slz.data)
@@ -130,7 +132,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     def destroy(self, request, *args, **kwargs):
         """删除环境变量"""
         config_var = self.get_object()
-        data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
+        data_before = DataDetail(data=list(ConfigVarOperateAuditOutputSLZ(self.get_queryset(), many=True).data))
         config_var.delete()
 
         env = ENVIRONMENT_NAME_FOR_GLOBAL
@@ -147,15 +149,11 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             module_name=config_var.module.name,
             environment=env,
             data_before=data_before,
-            data_after=DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)),
+            data_after=DataDetail(data=list(ConfigVarOperateAuditOutputSLZ(self.get_queryset(), many=True).data)),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(
-        query_serializer=ListConfigVarsSLZ(),
-        tags=["环境配置"],
-        responses={status.HTTP_200_OK: ConfigVarSLZ(many=True)},
-    )
+    @swagger_auto_schema(tags=["环境配置"], responses={status.HTTP_200_OK: ConfigVarSLZ(many=True)})
     def retrieve_by_key(self, request, code, module_name, config_vars_key):
         """通过环境变量的 key 获取环境变量"""
         config_vars = self.get_queryset().filter(key=config_vars_key)
@@ -163,7 +161,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        request_body=ConfigVarWithoutKeyFormatSLZ,
+        request_body=ConfigVarUpsertByKeyInputSLZ,
         tags=["环境配置"],
         responses={status.HTTP_200_OK: None},
     )
@@ -172,7 +170,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         data = request.data.copy()
         data["key"] = config_vars_key
         module = self.get_module_via_path()
-        slz = ConfigVarFormatSLZ(data=data, context={"module": module})
+        slz = ConfigVarBaseInputSLZ(data=data, context={"module": module})
         slz.is_valid(raise_exception=True)
         config_var = slz.validated_data
 
@@ -182,14 +180,17 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         )
 
         if existing_vars.exists():
-            # 存在, 更新已有记录
+            # 存在该变量, 进行更新操作
             # 构建更新字段字典，如果 value 为空则不更新 value 字段
             _update_fields = {"description": config_var.description}
             if config_var.value:
                 _update_fields["value"] = config_var.value
             existing_vars.update(**_update_fields)
         else:
-            # 不存在，创建新记录
+            # 不存在该变量，进行创建操作
+            # 创建之前, 验证 value 是否传入
+            if not config_var.value:
+                raise ValidationError({"value": "value is required"})
             ConfigVar.objects.create(
                 module=module,
                 key=config_vars_key,
@@ -205,7 +206,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(tags=["环境配置"], responses={201: ConfigVarApplyResultSLZ()})
     def clone(self, request, **kwargs):
         """从某一模块克隆环境变量至当前模块"""
-        data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
+        data_before = DataDetail(data=list(ConfigVarOperateAuditOutputSLZ(self.get_queryset(), many=True).data))
 
         application = self.get_application()
         source = application.get_module(module_name=self.kwargs["source_module_name"])
@@ -224,12 +225,12 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.ENV_VAR,
             module_name=self.kwargs["source_module_name"],
             data_before=data_before,
-            data_after=DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)),
+            data_after=DataDetail(data=list(ConfigVarOperateAuditOutputSLZ(self.get_queryset(), many=True).data)),
         )
         return Response(slz.data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
-        request_body=ConfigVarFormatWithIdSLZ(many=True),
+        request_body=ConfigVarBatchInputSLZ(many=True),
         tags=["环境配置"],
         responses={201: ConfigVarApplyResultSLZ()},
     )
@@ -261,14 +262,10 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             "deleted_num":1      # 删除数量
         }
         """
-        data_before = DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data))
+        data_before = DataDetail(data=list(ConfigVarOperateAuditOutputSLZ(self.get_queryset(), many=True).data))
 
         module = self.get_module_via_path()
-        instance_list = module.configvar_set.filter(is_builtin=False).prefetch_related("environment")
-        instance_mapping = {obj.id: obj for obj in instance_list}
-        slz = ConfigVarFormatWithIdSLZ(
-            data=request.data, context={"module": module, "instance_mapping": instance_mapping}, many=True
-        )
+        slz = ConfigVarBatchInputSLZ(data=request.data, context={"module": module}, many=True)
         slz.is_valid(raise_exception=True)
         env_variables = slz.validated_data
 
@@ -285,18 +282,18 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
             target=OperationTarget.ENV_VAR,
             module_name=module.name,
             data_before=data_before,
-            data_after=DataDetail(data=list(ConfigVarFormatSLZ(self.get_queryset(), many=True).data)),
+            data_after=DataDetail(data=list(ConfigVarOperateAuditOutputSLZ(self.get_queryset(), many=True).data)),
         )
         return Response(res.data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
-        query_serializer=ListConfigVarsSLZ(),
+        query_serializer=ListConfigVarsQuerySLZ(),
         tags=["环境配置"],
         responses={200: ConfigVarSLZ(many=True)},
     )
     def list(self, request, **kwargs):
         """查看应用的所有环境变量"""
-        input_slz = ListConfigVarsSLZ(data=request.query_params)
+        input_slz = ListConfigVarsQuerySLZ(data=request.query_params)
         input_slz.is_valid(raise_exception=True)
 
         config_vars = self.get_queryset()
@@ -374,10 +371,10 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
         res = ConfigVarApplyResultSLZ(apply_result)
         return Response(res.data, status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(tags=["环境配置"])
+    @swagger_auto_schema(query_serializer=ListConfigVarsQuerySLZ(), tags=["环境配置"])
     def export_to_file(self, request, code, module_name):
         """导出环境变量到文件"""
-        list_vars_slz = ListConfigVarsSLZ(data=request.query_params)
+        list_vars_slz = ListConfigVarsQuerySLZ(data=request.query_params)
         list_vars_slz.is_valid(raise_exception=True)
         order_by = list_vars_slz.data["order_by"]
 

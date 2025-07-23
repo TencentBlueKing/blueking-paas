@@ -106,6 +106,7 @@ class ConfigVar(TimestampedModel):
             value=self.value,
             description=self.description,
             is_global=self.is_global,
+            is_sensitive=self.is_sensitive,
             is_builtin=self.is_builtin,
             # 差异点
             environment_id=environment_id,

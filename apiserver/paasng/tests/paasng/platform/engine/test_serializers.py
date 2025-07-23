@@ -198,7 +198,7 @@ class TestConfigVarImportSLZ:
 
 
 @pytest.mark.django_db
-class TestConfigVarFormatSLZ:
+class TestConfigVarBaseInputSLZ:
     @pytest.fixture()
     def expected(self, request):
         request.param["environment"] = (
@@ -218,6 +218,6 @@ class TestConfigVarFormatSLZ:
         indirect=["expected"],
     )
     def test_normal(self, bk_module, data, expected):
-        slz = slzs.ConfigVarFormatSLZ(data=data, context={"module": bk_module})
+        slz = slzs.ConfigVarBaseInputSLZ(data=data, context={"module": bk_module})
         slz.is_valid(raise_exception=True)
         assert slzs.ConfigVarSLZ(slz.validated_data).data == slzs.ConfigVarSLZ(expected).data

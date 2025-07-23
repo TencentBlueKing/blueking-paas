@@ -247,108 +247,75 @@ class GetReleasedInfoSLZ(serializers.Serializer):
     with_processes = serializers.BooleanField(default=False)
 
 
-class ConfigVarApplyResultSLZ(serializers.Serializer):
-    """Serializer for ConfigVar ApplyResult"""
-
-    create_num = serializers.IntegerField()
-    overwrited_num = serializers.IntegerField()
-    ignore_num = serializers.IntegerField()
-    deleted_num = serializers.IntegerField()
+class CreateOfflineOperationSLZ(serializers.Serializer):
+    pass
 
 
-class ConfigVarWithoutKeyFormatSLZ(serializers.Serializer):
-    value = serializers.CharField(required=False, help_text="环境变量值")
-    is_sensitive = serializers.BooleanField(required=False, default=False, help_text="变量值是否敏感")
-    environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
-    description = serializers.CharField(
-        allow_blank=True,
-        allow_null=True,
-        max_length=200,
-        required=False,
-        default="",
-        help_text="变量描述，不超过 200 个字符",
-    )
+class OfflineOperationSLZ(serializers.ModelSerializer):
+    operator = UserField(read_only=True)
 
-    def to_internal_value(self, data):
-        """Do following things:
+    class Meta:
+        model = OfflineOperation
+        fields = ["id", "status", "operator", "created", "log", "err_detail"]
 
-        - Query for environment_id
-        - bind module from context
-        - return a non-persistent ConfigVar
-        """
-        data = super().to_internal_value(data)
-        module = self.context.get("module")
-        env_name = data.pop("environment_name")
-        if env_name == ENVIRONMENT_NAME_FOR_GLOBAL:
-            data["is_global"] = True
-            data["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
-        else:
-            data["is_global"] = False
-            data["environment_id"] = module.envs.get(environment=env_name).pk
-        return ConfigVar(**data, module=module, tenant_id=module.tenant_id)
+    def get_repo_info(self, obj: OfflineOperation) -> dict:
+        """Get deployment's repo info as dict"""
+        version_info = obj.get_version_info()
+        revision = version_info.revision
+        version_type = version_info.version_type
+        version_name = version_info.version_name
 
+        return {
+            "source_type": obj.source_type,
+            "type": version_type,
+            "name": version_name,
+            "url": obj.source_location,
+            "revision": revision,
+            "comment": obj.source_comment,
+        }
 
-class ConfigVarFormatSLZ(ConfigVarWithoutKeyFormatSLZ):
-    """Serializer for ConfigVar"""
-
-    key = field_env_var_key()
-
-    def validate(self, instance: ConfigVar):
-        module = self.context.get("module")
-        key = instance.key
-        environment_name = instance.environment_name
-
-        # 检查数据库中是否已存在该 key/env
-        exists = ConfigVar.objects.filter(
-            module=module,
-            key=key,
-            environment__environment=environment_name,
-        ).exists()
-
-        # 新创建时必须提供 value
-        if not exists and not instance.value:
-            raise ValidationError({"value": "value is required"})
-        return instance
+    def to_representation(self, obj):
+        """Format a obj to presentation"""
+        result = super(OfflineOperationSLZ, self).to_representation(obj)
+        result.update(
+            offline_operation_id=obj.id, environment=obj.app_environment.environment, repo=self.get_repo_info(obj)
+        )
+        return result
 
 
-class ConfigVarFormatWithIdSLZ(ConfigVarFormatSLZ):
-    """When batch editing, need to pass in the id."""
+class OperationSLZ(serializers.ModelSerializer):
+    """This serializer is only for presentation purpose"""
 
-    id = serializers.IntegerField(required=False)
+    operator = UserField(read_only=True)
+    offline_operation = OfflineOperationSLZ(source="get_offline_obj")
+    deployment = DeploymentSLZ(source="get_deployment_obj")
+    module_name = SerializerMethodField()
 
-    def validate(self, instance: ConfigVar):
-        """Validate based on id existence"""
-        instance_mapping = self.context.get("instance_mapping")
-        var_id = instance.id
-        # 如果提供了 id 且存在对应实例，value 可选
-        if var_id and var_id in instance_mapping:
-            return instance
+    class Meta:
+        model = ModuleEnvironmentOperations
+        fields = [
+            "id",
+            "status",
+            "operator",
+            "created",
+            "operation_type",
+            "offline_operation",
+            "deployment",
+            "module_name",
+        ]
 
-        # 否则 value 必填
-        if not instance.value:
-            raise ValidationError({"value": "value is required"})
-
-        return instance
+    def get_module_name(self, obj: ModuleEnvironmentOperations) -> str:
+        return obj.app_environment.module.name
 
 
-class ConfigVarImportSLZ(serializers.Serializer):
-    """Serializer for ConfigVarImport"""
-
-    file = serializers.FileField(required=True, help_text="Only yaml format files are accepted")
-    env_variables = ConfigVarFormatSLZ(required=False, many=True, help_text="Only yaml format files are accepted")
-
-    def to_internal_value(self, data):
-        # 从 request 获取的 data 属于 MultiValueDict, 在解析数组时会有奇怪的逻辑, 这里将 data 转换成原生的 dict 类型, 避免意外情况。
-        # see also: rest_framework.utils.html::parse_html_list
-        data = dict(data.items())
-        try:
-            content = yaml.safe_load(data["file"])
-        except yaml.YAMLError:
-            raise error_codes.NOT_YAML_FILE
-        if "env_variables" not in content:
-            raise error_codes.ERROR_FILE_FORMAT
-        data["env_variables"] = content["env_variables"]
-        return super().to_internal_value(data)
+#################
+# env variables #
+#################
+class PresetEnvVarSLZ(serializers.Serializer):
+    key = serializers.CharField()
+    value = serializers.CharField()
+    environment_name = serializers.CharField()
+    description = serializers.CharField(default="")
 
 
 class EnvironmentSlugFieldSupportGlobal(serializers.RelatedField):
@@ -467,8 +434,8 @@ class UpdateConfigVarInputSLZ(ConfigVarSLZ):
     is_sensitive = serializers.BooleanField(read_only=True)
 
 
-class ListConfigVarsSLZ(serializers.Serializer):
-    """Serializer for listing ConfigVars"""
+class ListConfigVarsQuerySLZ(serializers.Serializer):
+    """Query Serializer for listing ConfigVars"""
 
     valid_order_by_fields = {"created", "key"}
 
@@ -487,72 +454,99 @@ class ListConfigVarsSLZ(serializers.Serializer):
         return field
 
 
-class PresetEnvVarSLZ(serializers.Serializer):
-    key = serializers.CharField()
-    value = serializers.CharField()
-    environment_name = serializers.CharField()
-    description = serializers.CharField(default="")
+class ConfigVarBaseSLZ(serializers.Serializer):
+    """ConfigVar 基础 SLZ"""
+
+    value = serializers.CharField(required=False, help_text="环境变量值")
+    is_sensitive = serializers.BooleanField(required=False, default=False, help_text="变量值是否敏感")
+    environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
+    description = serializers.CharField(
+        allow_blank=True,
+        allow_null=True,
+        max_length=200,
+        required=False,
+        default="",
+        help_text="变量描述，不超过 200 个字符",
+    )
+
+    def to_internal_value(self, data):
+        """Do following things:
+
+        - Query for environment_id
+        - bind module from context
+        - return a non-persistent ConfigVar
+        """
+        data = super().to_internal_value(data)
+        module = self.context.get("module")
+        env_name = data.pop("environment_name")
+        if env_name == ENVIRONMENT_NAME_FOR_GLOBAL:
+            data["is_global"] = True
+            data["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
+        else:
+            data["is_global"] = False
+            data["environment_id"] = module.envs.get(environment=env_name).pk
+        return ConfigVar(**data, module=module, tenant_id=module.tenant_id)
 
 
-class CreateOfflineOperationSLZ(serializers.Serializer):
-    pass
+class ConfigVarBaseInputSLZ(ConfigVarBaseSLZ):
+    """ConfigVar 基础输入 SLZ"""
+
+    key = field_env_var_key()
 
 
-class OfflineOperationSLZ(serializers.ModelSerializer):
-    operator = UserField(read_only=True)
-
-    class Meta:
-        model = OfflineOperation
-        fields = ["id", "status", "operator", "created", "log", "err_detail"]
-
-    def get_repo_info(self, obj: OfflineOperation) -> dict:
-        """Get deployment's repo info as dict"""
-        version_info = obj.get_version_info()
-        revision = version_info.revision
-        version_type = version_info.version_type
-        version_name = version_info.version_name
-
-        return {
-            "source_type": obj.source_type,
-            "type": version_type,
-            "name": version_name,
-            "url": obj.source_location,
-            "revision": revision,
-            "comment": obj.source_comment,
-        }
-
-    def to_representation(self, obj):
-        """Format a obj to presentation"""
-        result = super(OfflineOperationSLZ, self).to_representation(obj)
-        result.update(
-            offline_operation_id=obj.id, environment=obj.app_environment.environment, repo=self.get_repo_info(obj)
-        )
-        return result
+class ConfigVarUpsertByKeyInputSLZ(ConfigVarBaseSLZ):
+    """通过 key 更新或创建 ConfigVar 的输入 SLZ"""
 
 
-class OperationSLZ(serializers.ModelSerializer):
-    """This serializer is only for presentation purpose"""
+class ConfigVarOperateAuditOutputSLZ(ConfigVarBaseInputSLZ):
+    """ConfigVar 审计输出 SLZ, 敏感值会被 masked"""
 
-    operator = UserField(read_only=True)
-    offline_operation = OfflineOperationSLZ(source="get_offline_obj")
-    deployment = DeploymentSLZ(source="get_deployment_obj")
-    module_name = SerializerMethodField()
+    def to_representation(self, instance) -> dict:
+        ret = super().to_representation(instance)
+        if ret.get("is_sensitive"):
+            ret["value"] = MASKED_CONTENT
+        return ret
 
-    class Meta:
-        model = ModuleEnvironmentOperations
-        fields = [
-            "id",
-            "status",
-            "operator",
-            "created",
-            "operation_type",
-            "offline_operation",
-            "deployment",
-            "module_name",
-        ]
 
-    def get_module_name(self, obj: ModuleEnvironmentOperations) -> str:
-        return obj.app_environment.module.name
+class ConfigVarApplyResultSLZ(serializers.Serializer):
+    """Serializer for ConfigVar ApplyResult"""
+
+    create_num = serializers.IntegerField()
+    overwrited_num = serializers.IntegerField()
+    ignore_num = serializers.IntegerField()
+    deleted_num = serializers.IntegerField()
+
+
+class ConfigVarBatchInputSLZ(ConfigVarBaseInputSLZ):
+    """批量编辑 ConfigVar 输入 SLZ, 更新需传入 id, 新建不必传入 id"""
+
+    id = serializers.IntegerField(required=False)
+
+
+class ConfigVarImportItemSLZ(ConfigVarBaseInputSLZ):
+    """从文件中导入 ConfigVar 的 SLZ, 必须传入 value"""
+
+    value = serializers.CharField(required=True, help_text="环境变量值")
+
+
+class ConfigVarImportSLZ(serializers.Serializer):
+    """Serializer for ConfigVarImport"""
+
+    file = serializers.FileField(required=True, help_text="Only yaml format files are accepted")
+    env_variables = ConfigVarImportItemSLZ(required=False, many=True, help_text="Only yaml format files are accepted")
+
+    def to_internal_value(self, data):
+        # 从 request 获取的 data 属于 MultiValueDict, 在解析数组时会有奇怪的逻辑, 这里将 data 转换成原生的 dict 类型, 避免意外情况。
+        # see also: rest_framework.utils.html::parse_html_list
+        data = dict(data.items())
+        try:
+            content = yaml.safe_load(data["file"])
+        except yaml.YAMLError:
+            raise error_codes.NOT_YAML_FILE
+        if "env_variables" not in content:
+            raise error_codes.ERROR_FILE_FORMAT
+        data["env_variables"] = content["env_variables"]
+        return super().to_internal_value(data)
 
 
 #####################

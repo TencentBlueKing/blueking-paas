@@ -385,7 +385,7 @@ def list_vars_builtin_runtime(env: ModuleEnvironment, include_deprecated: bool =
         sys_var("APP_MODULE_NAME", env.module.name, _("应用当前模块名")),
         sys_var("ENVIRONMENT", env.environment, _("应用当前环境，预发布环境为 stag、生产环境为 prod")),
         sys_var("MAJOR_VERSION", str(3), _("应用当前运行的开发者中心版本，值为 3")),
-        sys_var("ENGINE_REGION", env.region, _("应用版本，默认版本为 default")),
+        sys_var("ENGINE_REGION", engine_app.region, _("应用版本，默认版本为 default")),
         sys_var("APP_LOG_PATH", settings.MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR, _("应用日志文件存放路径")),
         EnvVariableObj(key="PORT", value=str(settings.CONTAINER_PORT), description=_("目标端口号，值为 5000")),
     ]

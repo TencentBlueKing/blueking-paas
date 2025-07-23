@@ -24,7 +24,6 @@ from django.db import transaction
 from django.db.models import Model
 from django.forms.models import model_to_dict
 from pydantic import BaseModel
-from rest_framework.exceptions import ValidationError
 
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models import ConfigVar
@@ -215,10 +214,6 @@ class ConfigVarManager:
         for obj in instance_mapping.values():
             obj.delete()
 
-        # before bulk_create, need to check obj.value is not blank
-        for obj in create_list:
-            if not obj.value:
-                raise ValidationError({"value": "value is required"})
         ConfigVar.objects.bulk_create(create_list)
 
         return ApplyResult(

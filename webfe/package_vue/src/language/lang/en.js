@@ -3052,4 +3052,6 @@ export default {
   当前配置将覆盖内置变量: 'Current configuration will override built-in variables',
   和平台的内置环境变量冲突: 'Conflicts with the platforms built-in environment variables',
   '和 {k} 增强服务的环境变量冲突': 'Conflicts with the environment variables of the {k} enhanced service',
+  使用的增强服务: 'Used Enhanced Services',
+  '沙箱会复用已选中增强服务 “预发布环境” 的环境变量': 'The sandbox will reuse the environment variables of the selected enhanced services "Staging Env"',
 };

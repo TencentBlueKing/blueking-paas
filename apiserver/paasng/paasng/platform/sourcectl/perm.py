@@ -73,6 +73,8 @@ def render_providers(providers: Sequence[str]) -> List[Dict[str, str]]:
             {
                 "auth_method": spec.connector_class.auth_method,
                 "repository_group": spec.server_config.get("repository_group", ""),
+                # 是否支持由平台新建代码仓库
+                "repo_creation_enabled": spec.repo_provisioner_class is not None,
             }
         )
         results.append(provider_info)

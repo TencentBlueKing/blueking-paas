@@ -223,8 +223,8 @@ class ModuleInitializer:
         # 将模板代码初始化到应用的代码仓库中
         if write_template_to_repo and repo_url:
             source_type = get_sourcectl_type(self.module.source_type)
-            repo_controller = source_type.repo_controller_class.init_by_user(
-                self.module.source_type, repo_url, self.module.owner
+            repo_controller = source_type.repo_controller_class.init_by_module(
+                self.module.source_type, self.module.owner
             )
             repo_controller.commit_and_push(initial_code_path, commit_message="init repo")
 
@@ -370,52 +370,60 @@ def _humanize_exception(step_name: str, message: str):
         raise ModuleInitializationError(message) from e
 
 
-def create_new_repo(
-    module: Module, repo_type: str, username: str, repo_group: str | None = None, repo_name: str | None = None
-) -> str:
-    """创建一个新的代码仓库，并将指定用户添加为成员
-
-    参数规则：
-    - 插件应用: 忽略 repo_group/repo_name 参数，使用平台配置
-    - 非插件应用: 必须提供 repo_group 和 repo_name 参数
+def create_repo_with_platform_account(module: Module, repo_type: str, username: str) -> str:
+    """使用平台账号创建代码仓库（提供给插件应用使用）
 
     :param module: 需要创建仓库的模块对象
-    :param repo_type: 代码仓库类型
     :param username: 需要添加为仓库成员的初始用户名
-    :param repo_group: 代码仓库组（非插件应用必填）
-    :param repo_name: 代码仓库名称（非插件应用必填）
+    :param repo_type: 代码仓库类型
     :return: 新创建的代码仓库地址
     """
     source_type = get_sourcectl_type(repo_type)
+    source_type_config = source_type.config_as_arguments()
 
-    # 插件应用使用平台的系统账号创建仓库
-    if module.application.is_plugin_app:
-        # 获取平台配置的仓库租
-        source_type_config = source_type.config_as_arguments()
-        if "repo_group" not in source_type_config:
-            logger.error("repo_group is not found in source type config")
-            raise error_codes.CANNOT_CREATE_APP.f(_("平台代码仓库组配置缺失"))
+    if "repo_group" not in source_type_config:
+        logger.error("repo_group is not found in source type config")
+        raise error_codes.CANNOT_CREATE_APP.f(_("平台代码仓库组配置缺失"))
 
-        repo_group = source_type_config["repository_group"]
-        repo_name = f"{module.application.code}_{module.name}"
-        # 初始化仓库控制器（平台账号）
-        repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url="")
-    else:
-        if not (repo_group and repo_name):
-            raise error_codes.CANNOT_CREATE_APP.f("需要提供代码仓库组和仓库名称")
+    if not source_type.repo_provisioner_class:
+        raise error_codes.CANNOT_CREATE_APP.f(_("当前代码源不支持新建仓库"))
 
-        # 初始化仓库控制器（用户账号）
-        repo_controller = source_type.repo_controller_class.init_by_user(
-            repo_type, repo_url=f"{repo_group}/{repo_name}", user_id=module.owner
-        )
+    repo_group = source_type_config["repository_group"]
+    repo_name = f"{module.application.code}_{module.name}"
+    repo_provisioner = source_type.repo_provisioner_class.init_by_platform_account(repo_type)
 
-    repo_url = repo_controller.create_with_member(
+    return repo_provisioner.create_with_member(
         repo_group=repo_group,
         repo_name=repo_name,
         description=f"{module.application.name}({module.name} 模块)",
         username=username,
     )
-    return repo_url
+
+
+def create_repo_with_user_account(
+    module: Module, repo_type: str, repo_group: str, repo_name: str, username: str
+) -> str:
+    """使用用户凭证创建仓库
+
+    :param module: 需要创建仓库的模块对象
+    :param repo_type: 代码仓库类型
+    :param repo_group: 代码仓库组
+    :param repo_name: 代码仓库名称
+    :param username: 需要添加为仓库成员的初始用户名
+    :return: 新创建的代码仓库地址
+    """
+    source_type = get_sourcectl_type(repo_type)
+    if not source_type.repo_provisioner_class:
+        raise error_codes.CANNOT_CREATE_APP.f(_("当前代码源不支持新建仓库"))
+
+    repo_provisioner = source_type.repo_provisioner_class.init_by_user(repo_type, user_id=module.owner)
+
+    return repo_provisioner.create_with_member(
+        repo_group=repo_group,
+        repo_name=repo_name,
+        description=f"{module.application.name}({module.name} 模块)",
+        username=username,
+    )
 
 
 def delete_repo(user_id: str, repo_type: str, repo_url: str):
@@ -426,17 +434,20 @@ def delete_repo(user_id: str, repo_type: str, repo_url: str):
     :param repo_url: 仓库地址
     """
     source_type = get_sourcectl_type(repo_type)
-    repo_controller = source_type.repo_controller_class.init_by_user(repo_type, repo_url, user_id)
-    repo_controller.delete_project(repo_url)
+    if not source_type.repo_provisioner_class:
+        raise error_codes.CANNOT_CREATE_APP.f(_("当前代码源不支持删除仓库"))
+
+    repo_provisioner = source_type.repo_provisioner_class.init_by_user(repo_type, user_id)
+    repo_provisioner.delete_project(repo_url)
 
 
 @contextmanager
 def delete_repo_on_error(user_id: str, repo_type: str, repo_url: str | None = None):
     """仓库清理上下文管理器，在异常时自动删除新建的仓库
 
-    :param user_id: 用户 ID，，用于查询用户对应的授权凭证
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
     :param repo_type: 仓库类型
-    :param repo_url: 仓库地址
+    :param repo_url: 仓库地址（可选）
     """
     try:
         yield

@@ -25,13 +25,13 @@ from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
 from typing_extensions import Protocol
 
 from paasng.infras.accounts.models import Oauth2TokenHolder, PrivateTokenHolder, UserProfile
+from paasng.infras.accounts.utils import get_oauth_credentials
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.models import (
     AlternativeVersion,
     CommitInfo,
     CommitLog,
-    GitGroup,
     GitProject,
     Repository,
     VersionInfo,
@@ -71,23 +71,8 @@ class RepoController(Protocol):
         raise NotImplementedError
 
     @classmethod
-    def init_by_user(cls, source_type: str, repo_url: str, user_id: str):
-        """Return a RepoController object from user's authorization credentials
-
-        :param source_type: Code repository type, such as github
-        :param repo_url: repository url
-        :param user_id: current operator's user_id
-        """
-        raise NotImplementedError
-
-    @classmethod
     def list_all_repositories(cls, **kwargs) -> List[Repository]:
         """返回当前 RepoController 可以控制的所有仓库列表"""
-
-    @classmethod
-    def list_owned_groups(cls, api_url: str, user_credentials: dict) -> List[GitGroup]:
-        """获取有 owner 权限的项目组列表"""
-        raise NotImplementedError
 
     def touch(self) -> bool:
         """尝试访问远程仓库, 试探是否有访问权限
@@ -131,15 +116,6 @@ class RepoController(Protocol):
 
     def commit_files(self, commit_info: CommitInfo) -> None:
         """批量提交文件"""
-
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
 
     def commit_and_push(
         self,
@@ -186,32 +162,14 @@ class BaseGitRepoController:
     @classmethod
     def init_by_server_config(cls, source_type: str, repo_url: str):
         """Return a RepoController object from public account configured through the platform
-
         :param source_type: Code repository type, such as github
         :param repo_url: repository url
         """
         source_config = get_sourcectl_type(source_type).config_as_arguments()
         if "api_url" not in source_config or "private_token" not in source_config:
             raise ValueError("Require api_url and private_token to init GitRepoController")
-
         user_credentials = {"private_token": source_config["private_token"], "scope_list": []}
         return cls(api_url=source_config["api_url"], repo_url=repo_url, user_credentials=user_credentials)
-
-    @classmethod
-    def init_by_user(cls, source_type: str, repo_url: str, user_id: str):
-        """Return a RepoController object from user's authorization credentials
-
-        :param source_type: Code repository type, such as github
-        :param repo_url: repository url
-        :param user_id: current operator's user_id
-        """
-        source_config = get_sourcectl_type(source_type).config_as_arguments()
-        if "api_url" not in source_config:
-            raise ValueError("Require api_url to init GitRepoController")
-
-        project = GitProject.parse_from_repo_url(repo_url, sourcectl_type=source_type)
-        user_credentials = cls.get_user_credentials(project, user_id)
-        return cls(repo_url=repo_url, user_credentials=user_credentials, api_url=source_config["api_url"])
 
     @classmethod
     def get_user_credentials(cls, project: GitProject, operator: str) -> Dict[str, Any]:
@@ -240,14 +198,6 @@ class BaseGitRepoController:
         user_credentials["__token_holder"] = token_holder
         return user_credentials
 
-    def export(self, local_path: PathLike, version_info: VersionInfo | None = None):
-        """导出指定版本下的所有内容到指定目录
-
-        :param local_path: 本地路径
-        :param version_info: 可选，指定版本信息
-        """
-        raise NotImplementedError
-
 
 def get_repo_controller_cls(source_origin: Union[int, SourceOrigin], source_control_type) -> Type[RepoController]:
     source_origin = SourceOrigin(source_origin)
@@ -264,25 +214,6 @@ def get_repo_controller(module: "Module", operator: Optional[str] = None) -> Rep
     return cls.init_by_module(module, operator)
 
 
-def _get_oauth_credentials(source_control_type: str, user_id: str) -> Dict[str, Any]:
-    """获取用户的OAuth凭证用于访问代码仓库
-
-    :param source_control_type: 源码控制类型，如 gitlab
-    :param user_id: 用户 ID，用于查询用户对应的授权凭证
-    """
-    profile = UserProfile.objects.get(user=user_id)
-    token_holder_list = profile.token_holder.filter(provider=source_control_type).all()
-    if not token_holder_list:
-        raise Oauth2TokenHolder.DoesNotExist
-
-    # 使用第一个 token_holder 的 access_token
-    token_holder = token_holder_list[0]
-    return {
-        "oauth_token": token_holder.access_token,
-        "scope_list": [th.get_scope() for th in token_holder_list],
-    }
-
-
 def list_git_repositories(source_control_type: str, user_id: str) -> List[Repository]:
     """获取用户在指定源码控制类型下的所有代码仓库
 
@@ -291,21 +222,7 @@ def list_git_repositories(source_control_type: str, user_id: str) -> List[Reposi
     """
     cls = get_sourcectl_type(source_control_type).repo_controller_class
 
-    user_credentials = _get_oauth_credentials(source_control_type, user_id)
+    user_credentials = get_oauth_credentials(source_control_type, user_id)
     type_spec = get_sourcectl_type(source_control_type)
     repo_info = type_spec.config_as_arguments()
     return cls.list_all_repositories(**user_credentials, **repo_info)
-
-
-def list_all_owned_groups(source_control_type: str, user_id: str) -> List[GitGroup]:
-    """获取用户在指定源码控制类型下的所有 owner 权限的项目组
-
-    :param source_control_type: 源码控制类型，如 gitlab
-    :param user_id: 用户 ID，用于查询用户对应的授权凭证
-    """
-    cls = get_sourcectl_type(source_control_type).repo_controller_class
-
-    user_credentials = _get_oauth_credentials(source_control_type, user_id)
-    type_spec = get_sourcectl_type(source_control_type)
-    source_config = type_spec.config_as_arguments()
-    return cls.list_owned_groups(source_config["api_url"], user_credentials)

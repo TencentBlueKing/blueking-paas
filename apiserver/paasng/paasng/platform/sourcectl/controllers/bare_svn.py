@@ -54,22 +54,3 @@ class BareSvnRepoController(SvnRepoController):
                 "password": holder.basic_auth.password,
             },
         )
-
-    @classmethod
-    def init_by_server_config(cls, source_type: str, repo_url: str):
-        """Return a RepoController object from given source_type
-
-        :param source_type: Code repository type, such as github
-        :param repo_url: repository url
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def init_by_user(cls, source_type: str, repo_url: str, user_id: str):
-        """Return a RepoController object from user's authorization credentials
-
-        :param source_type: Code repository type, such as github
-        :param repo_url: repository url
-        :param user_id: current operator's user_id
-        """
-        raise NotImplementedError

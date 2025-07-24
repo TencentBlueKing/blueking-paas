@@ -74,32 +74,8 @@ class BareGitRepoController(BaseGitRepoController):
         return cls(repo_url=repo_url_with_auth, repo_obj=repo_obj)
 
     @classmethod
-    def init_by_server_config(cls, source_type: str, repo_url: str):
-        """Return a RepoController object from given source_type
-
-        :param source_type: Code repository type, such as github
-        :param repo_url: repository url
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def init_by_user(cls, source_type: str, repo_url: str, user_id: str):
-        """Return a RepoController object from user's authorization credentials
-
-        :param source_type: Code repository type, such as github
-        :param repo_url: repository url
-        :param user_id: current operator's user_id
-        """
-        raise NotImplementedError
-
-    @classmethod
     def list_all_repositories(cls, **kwargs) -> List[Repository]:
         """返回当前 RepoController 可以控制的所有仓库列表"""
-        raise NotImplementedError
-
-    @classmethod
-    def list_owned_groups(cls, api_url: str, user_credentials: dict):
-        """获取用户有管理权限的项目组"""
         raise NotImplementedError
 
     def touch(self) -> bool:
@@ -182,18 +158,6 @@ class BareGitRepoController(BaseGitRepoController):
         raise NotImplementedError
 
     def commit_files(self, commit_info: CommitInfo) -> None:
-        raise NotImplementedError
-
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-        raise NotImplementedError
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-        raise NotImplementedError
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
         raise NotImplementedError
 
     def commit_and_push(

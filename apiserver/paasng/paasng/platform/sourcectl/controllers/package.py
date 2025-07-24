@@ -40,25 +40,6 @@ class PackageController:
     def init_by_module(cls, module: "Module", operator: Optional[str] = None):
         return cls(module)
 
-    @classmethod
-    def init_by_server_config(cls, source_type: str, repo_url: str):
-        """Return a RepoController object from given source_type
-
-        :param source_type: Code repository type, such as github
-        :param repo_url: repository url
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def init_by_user(cls, source_type: str, repo_url: str, user_id: str):
-        """Return a RepoController object from user's authorization credentials
-
-        :param source_type: Code repository type, such as github
-        :param repo_url: repository url
-        :param user_id: current operator's user_id
-        """
-        raise NotImplementedError
-
     def get_client(self, **kwargs) -> BasePackageClient:
         """[private] 根据源码包存储信息, 获取对应的源码包操作客户端"""
         return get_client(package=kwargs["package"])

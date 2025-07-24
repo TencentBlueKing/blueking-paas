@@ -35,7 +35,6 @@ from paasng.platform.sourcectl.models import (
     CommitInfo,
     CommitLog,
     DiffChange,
-    GitGroup,
     GitProject,
     Repository,
     VersionInfo,
@@ -98,25 +97,6 @@ class GitlabRepoController(BaseGitRepoController):
                 last_activity_at=strftime_for_gitlab_project(project.last_activity_at),
             )
             for project in api_client.list_repo()
-        ]
-
-    @classmethod
-    def list_owned_groups(cls, api_url: str, user_credentials: dict) -> List[GitGroup]:
-        """获取用户有管理权限的项目组
-
-        :param api_url: 源码控制类型的 API 地址
-        :param user_credentials: 用户凭证
-        """
-        api_client = GitLabApiClient(api_url=api_url, **user_credentials)
-        return [
-            GitGroup(
-                name=group.name,
-                path=group.path,
-                description=group.description,
-                avatar_url=group.avatar_url,
-                web_url=group.web_url,
-            )
-            for group in api_client.list_group(owned=True)
         ]
 
     def touch(self) -> bool:
@@ -216,18 +196,6 @@ class GitlabRepoController(BaseGitRepoController):
 
     def commit_files(self, commit_info: CommitInfo) -> None:
         """gitlab 不支持该功能"""
-        raise NotImplementedError
-
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-        raise NotImplementedError
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-        raise NotImplementedError
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
         raise NotImplementedError
 
     def commit_and_push(

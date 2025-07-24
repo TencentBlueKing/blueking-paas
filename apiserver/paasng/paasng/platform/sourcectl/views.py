@@ -61,7 +61,8 @@ from paasng.platform.sourcectl.exceptions import (
 from paasng.platform.sourcectl.models import SvnAccount, VersionInfo
 from paasng.platform.sourcectl.package.uploader import upload_package_via_url
 from paasng.platform.sourcectl.perm import UserSourceProviders, render_providers
-from paasng.platform.sourcectl.repo_controller import get_repo_controller, list_all_owned_groups, list_git_repositories
+from paasng.platform.sourcectl.repo_controller import get_repo_controller, list_git_repositories
+from paasng.platform.sourcectl.repo_provisioner import list_all_owned_groups
 from paasng.platform.sourcectl.signals import empty_svn_accounts_fetched, repo_updated, svn_account_updated
 from paasng.platform.sourcectl.source_types import get_sourcectl_type, get_sourcectl_types
 from paasng.platform.sourcectl.svn.admin import promote_repo_privilege_temporary

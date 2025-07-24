@@ -79,11 +79,6 @@ class GitHubRepoController(BaseGitRepoController):
             for repo in api_client.list_repo()
         ]
 
-    @classmethod
-    def list_owned_groups(cls, api_url: str, user_credentials: dict):
-        """获取用户有管理权限的项目组"""
-        raise NotImplementedError
-
     def touch(self) -> bool:
         try:
             self.list_alternative_versions()
@@ -156,18 +151,6 @@ class GitHubRepoController(BaseGitRepoController):
 
     def commit_files(self, commit_info: CommitInfo) -> None:
         """github 不支持该功能"""
-        raise NotImplementedError
-
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-        raise NotImplementedError
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-        raise NotImplementedError
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
         raise NotImplementedError
 
     def commit_and_push(

@@ -65,7 +65,13 @@ from paasng.platform.modules.helpers import (
     get_image_labels_by_module,
     update_build_config_with_method,
 )
-from paasng.platform.modules.manager import ModuleCleaner, create_new_repo, delete_repo_on_error, init_module_in_view
+from paasng.platform.modules.manager import (
+    ModuleCleaner,
+    create_repo_with_platform_account,
+    create_repo_with_user_account,
+    delete_repo_on_error,
+    init_module_in_view,
+)
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig, Module
 from paasng.platform.modules.protections import ModuleDeletionPreparer
 from paasng.platform.modules.serializers import (
@@ -318,7 +324,10 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         # 由平台创建代码仓库
         auto_repo_url = None
         if source_config.get("auto_create_repo"):
-            auto_repo_url = create_new_repo(module, repo_type, username, repo_group, repo_name)
+            if application.is_plugin_app:
+                auto_repo_url = create_repo_with_platform_account(module, repo_type, username)
+            else:
+                auto_repo_url = create_repo_with_user_account(module, repo_type, repo_group, repo_name, username)
             repo_url = auto_repo_url
 
         user_id = request.user.pk

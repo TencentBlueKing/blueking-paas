@@ -56,8 +56,8 @@ class DevSandboxQuerySet(models.QuerySet):
         module: Module,
         owner: str,
         version_info: VersionInfo | None,
+        env_vars: Dict[str, str],
         enable_code_editor: bool = False,
-        env_vars: Dict[str, str] | None = None,
     ) -> "DevSandbox":
         charsets = string.ascii_lowercase + string.digits
 
@@ -78,9 +78,8 @@ class DevSandboxQuerySet(models.QuerySet):
         if enable_code_editor:
             code_editor_cfg = CodeEditorConfig(password=generate_password())
 
-        env_vars = env_vars or {}
         env_vars_list = [
-            {"key": key, "value": value, "source": DevSandboxEnvVarSource.STAGE} for key, value in env_vars.items()
+            {"key": key, "value": value, "source": DevSandboxEnvVarSource.STAG} for key, value in env_vars.items()
         ]
 
         return super().create(
@@ -122,27 +121,27 @@ class DevSandbox(OwnerTimestampedModel):
         """获取沙箱环境变量"""
         return json.loads(self.env_vars)
 
-    def upsert_env_vars(self, key: str, value: str):
+    def upsert_env_var(self, key: str, value: str):
         """更新或新增单个环境变量"""
         env_vars = self.list_env_vars()
+        pre_upsert_env_vars = {"key": key, "value": value, "source": DevSandboxEnvVarSource.CUSTOM}
 
-        for i, item in enumerate(env_vars):
+        for item in env_vars:
             if item["key"] == key:
-                env_vars[i] = {"key": key, "value": value, "source": "custom"}
+                item.update(pre_upsert_env_vars)
                 break
         else:
-            env_vars.append({"key": key, "value": value, "source": "custom"})
+            env_vars.append(pre_upsert_env_vars)
 
-        setattr(self, "env_vars", json.dumps(env_vars))
+        self.env_vars = json.dumps(env_vars)  # type: ignore
         self.save(update_fields=["env_vars", "updated"])
 
-    def delete_env_vars(self, key: str):
+    def delete_env_var(self, key: str):
         """删除指定的环境变量"""
-        env_vars = self.list_env_vars()
         # 直接过滤掉需要删除的 key
-        updated_list = [item for item in env_vars if item["key"] != key]
+        env_vars = [v for v in self.list_env_vars() if v["key"] != key]
 
-        setattr(self, "env_vars", json.dumps(updated_list))
+        self.env_vars = json.dumps(env_vars)  # type: ignore
         self.save(update_fields=["env_vars", "updated"])
 
     class Meta:

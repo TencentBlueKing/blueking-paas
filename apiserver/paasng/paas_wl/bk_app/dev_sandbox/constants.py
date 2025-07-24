@@ -47,4 +47,5 @@ class DevSandboxEnvKey(StrStructuredEnum):
 class DevSandboxEnvVarSource(StrStructuredEnum):
     """沙箱环境变量来源"""
 
-    STAGE = EnumField("stag")
+    STAG = EnumField("stag")
+    CUSTOM = EnumField("custom")

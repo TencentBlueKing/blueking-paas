@@ -29,7 +29,11 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 def dev_sandbox(bk_cnative_app, bk_module, bk_user) -> DevSandbox:
     version_info = VersionInfo(revision="...", version_name="master", version_type="branch")
     return DevSandbox.objects.create(
-        module=bk_module, owner=bk_user, version_info=version_info, enable_code_editor=True
+        module=bk_module,
+        owner=bk_user,
+        version_info=version_info,
+        env_vars=json.dumps([]),
+        enable_code_editor=True,
     )
 
 
@@ -55,7 +59,7 @@ class TestDevSandboxModelMethods:
         assert dev_sandbox.list_env_vars() == []
 
         # 新增环境变量
-        dev_sandbox.upsert_env_vars(key="NEW_VAR", value="new_value")
+        dev_sandbox.upsert_env_var(key="NEW_VAR", value="new_value")
 
         result = dev_sandbox.list_env_vars()
         assert result == [{"key": "NEW_VAR", "value": "new_value", "source": "custom"}]
@@ -71,7 +75,7 @@ class TestDevSandboxModelMethods:
         dev_sandbox.save()
 
         # 更新环境变量
-        dev_sandbox.upsert_env_vars(key="EXISTING_VAR", value="updated_value")
+        dev_sandbox.upsert_env_var(key="EXISTING_VAR", value="updated_value")
 
         result = dev_sandbox.list_env_vars()
         assert len(result) == 2
@@ -90,7 +94,7 @@ class TestDevSandboxModelMethods:
         dev_sandbox.save()
 
         # 删除环境变量
-        dev_sandbox.delete_env_vars(key="VAR2")
+        dev_sandbox.delete_env_var(key="VAR2")
 
         result = dev_sandbox.list_env_vars()
         assert len(result) == 2
@@ -108,7 +112,7 @@ class TestDevSandboxModelMethods:
         dev_sandbox.save()
 
         # 删除不存在的环境变量
-        dev_sandbox.delete_env_vars(key="NON_EXISTING")
+        dev_sandbox.delete_env_var(key="NON_EXISTING")
 
         result = dev_sandbox.list_env_vars()
         assert result == initial_vars
@@ -124,8 +128,8 @@ class TestDevSandboxModelMethods:
         dev_sandbox.save()
 
         # 更新环境变量（覆盖为 custom）
-        dev_sandbox.upsert_env_vars(key="VAR1", value="updated_value")
-        dev_sandbox.upsert_env_vars(key="VAR2", value="updated_value")
+        dev_sandbox.upsert_env_var(key="VAR1", value="updated_value")
+        dev_sandbox.upsert_env_var(key="VAR2", value="updated_value")
 
         result = dev_sandbox.list_env_vars()
         assert len(result) == 2
@@ -138,7 +142,7 @@ class TestDevSandboxModelMethods:
         assert dev_sandbox.list_env_vars() == []
 
         # 删除环境变量
-        dev_sandbox.delete_env_vars(key="ANY_KEY")
+        dev_sandbox.delete_env_var(key="ANY_KEY")
 
         assert dev_sandbox.list_env_vars() == []
 
@@ -148,9 +152,9 @@ class TestDevSandboxModelMethods:
         assert dev_sandbox.list_env_vars() == []
 
         # 多次更新环境变量
-        dev_sandbox.upsert_env_vars(key="VAR1", value="value1")
-        dev_sandbox.upsert_env_vars(key="VAR2", value="value2")
-        dev_sandbox.upsert_env_vars(key="VAR1", value="updated_value")
+        dev_sandbox.upsert_env_var(key="VAR1", value="value1")
+        dev_sandbox.upsert_env_var(key="VAR2", value="value2")
+        dev_sandbox.upsert_env_var(key="VAR1", value="updated_value")
 
         result = dev_sandbox.list_env_vars()
         assert len(result) == 2

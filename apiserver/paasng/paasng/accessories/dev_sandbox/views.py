@@ -39,7 +39,6 @@ from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxCommitOutputSLZ,
     DevSandboxCreateInputSLZ,
     DevSandboxCreateOutputSLZ,
-    DevSandboxEnvVarsDeleteInputSLZ,
     DevSandboxEnvVarsUpsertInputSLZ,
     DevSandboxListOutputSLZ,
     DevSandboxPreDeployCheckOutputSLZ,
@@ -275,30 +274,23 @@ class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         request_body=DevSandboxEnvVarsUpsertInputSLZ(),
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def upsert_env_vars(self, request, *args, **kwargs):
+    def upsert(self, request, *args, **kwargs):
         slz = DevSandboxEnvVarsUpsertInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
-
-        key = slz.validated_data["key"]
-        value = slz.validated_data["value"]
+        data = slz.validated_data
 
         dev_sandbox = self.get_object()
-        dev_sandbox.upsert_env_vars(key=key, value=value)
+        dev_sandbox.upsert_env_var(key=data["key"], value=data["value"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
         tags=["accessories.dev_sandbox"],
         operation_description="删除沙箱环境变量",
-        request_body=DevSandboxEnvVarsDeleteInputSLZ(),
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def del_env_vars(self, request, *args, **kwargs):
-        slz = DevSandboxEnvVarsDeleteInputSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
-        data = slz.validated_data["key"]
-
+    def destroy(self, request, key, *args, **kwargs):
         dev_sandbox = self.get_object()
-        dev_sandbox.delete_env_vars(key=data)
+        dev_sandbox.delete_env_var(key=key)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -62,6 +62,7 @@ urlpatterns = [
     re_path(r"^", include("paasng.bk_plugins.pluginscenter.itsm_adaptor.open_apis.urls")),
     re_path(r"^", include("paasng.accessories.app_secret.urls")),
     re_path(r"^", include("paasng.misc.tools.urls")),
+    re_path(r"^", include("paasng.misc.ai_agent.urls")),
     # PaaS Admin system
     re_path(r"^admin42/", include("paasng.plat_admin.admin42.urls")),
     re_path(r"^admin42/", include("paas_wl.apis.admin.urls")),

@@ -193,7 +193,7 @@ class GitRepoViewSet(viewsets.ViewSet):
         :param user_id: 操作者用户 ID
         """
         try:
-            return operation(source_control_type=source_control_type, user_id=user_id)
+            return operation(source_control_type, user_id)
         except Oauth2TokenHolder.DoesNotExist:
             logger.debug(
                 f"User is not bound to token_holder of type: {source_control_type}, detail: TokenHolder Not Found"

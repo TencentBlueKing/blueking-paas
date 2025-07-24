@@ -186,6 +186,14 @@ class ConfigVarManager:
         instance_list = module.configvar_set.filter(is_builtin=False).prefetch_related("environment")
         instance_mapping = {obj.id: obj for obj in instance_list}
 
+        # validate: new ConfigVar must have value
+        errors = []
+        for var_data in config_vars:
+            if (not var_data.id or var_data.id not in instance_mapping) and not var_data.value:
+                errors.append({"key": var_data.key, "error": "value is required"})
+        if errors:
+            raise ValueError(errors)
+
         # Create new instance if id is not provided
         create_list = [item for item in config_vars if not item.id]
 

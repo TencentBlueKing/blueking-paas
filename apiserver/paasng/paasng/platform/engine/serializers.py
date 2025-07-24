@@ -375,8 +375,8 @@ class ConfigVarSLZ(serializers.ModelSerializer):
         source="environment",
     )
     key = field_env_var_key()
-    value = serializers.CharField(required=True)
-    is_sensitive = serializers.BooleanField(required=False, default=False, help_text="value 值是否敏感")
+    value = serializers.CharField(required=True, help_text="环境变量值")
+    is_sensitive = serializers.BooleanField(required=False, default=False, help_text="变量值是否敏感")
     description = serializers.CharField(
         allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
     )
@@ -430,7 +430,7 @@ class CreateConfigVarInputSLZ(ConfigVarSLZ):
 class UpdateConfigVarInputSLZ(ConfigVarSLZ):
     """Serializer for updating ConfigVars"""
 
-    value = serializers.CharField(required=False)
+    value = serializers.CharField(required=False, help_text="环境变量值")
     is_sensitive = serializers.BooleanField(read_only=True)
 
 

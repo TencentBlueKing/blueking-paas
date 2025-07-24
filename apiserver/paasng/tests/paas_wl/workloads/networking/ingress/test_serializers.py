@@ -29,9 +29,9 @@ class TestDomainEditableMixin:
             (None, True, "/"),
             ("", True, "/"),
             ("/foo/", True, "/foo/"),
+            ("/foo/bar/", True, "/foo/bar/"),
             # Does not match pattern
             ("/foo///", False, None),
-            ("/foo/bar/", False, None),
             ("foobar", False, None),
         ],
     )

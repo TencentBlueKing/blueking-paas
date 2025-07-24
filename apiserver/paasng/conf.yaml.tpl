@@ -159,7 +159,6 @@ BK_CMSI_ENABLED_METHODS: ["send_mail", "send_sms", "send_weixin"]
 ## 网关 API 接口地址模板
 ## 更多参考：https://github.com/TencentBlueKing/bkpaas-python-sdk/tree/master/sdks/apigw-manager
 # BK_API_URL_TMPL: 'http://localhost:8080/api/{api_name}/'
-# BK_API_V2_URL_TMPL: 'http://localhost:8080/api/{api_name}/'
 ## 开发者中心 region 与 APIGW user_auth_type 的对应关系
 # REGION_TO_USER_AUTH_TYPE_MAP: {}
 ## 指标服务相关 Token 配置

@@ -87,7 +87,6 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        gateway_name = data.pop("gateway_name")
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
         MCPServerApiClient(tenant_id=tenant_id).apply_permissions(bk_app_code=app.code, **data)
@@ -103,7 +102,6 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 action_id=AppAction.MANAGE_CLOUD_API,
                 operation=OperationEnum.APPLY,
                 target=OperationTarget.CLOUD_API,
-                attribute=gateway_name,
                 result_code=ResultCode.SUCCESS,
                 data_after=data_after,
             )

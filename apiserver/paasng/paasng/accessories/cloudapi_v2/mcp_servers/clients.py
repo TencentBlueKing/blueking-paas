@@ -30,7 +30,7 @@ class MCPServerApiClient:
 
     def __init__(self, tenant_id: str):
         self.tenant_id = tenant_id
-        client = Client(endpoint=settings.BK_API_V2_URL_TMPL, stage="prod")
+        client = Client(endpoint=settings.BK_API_URL_TMPL_FOR_APIGW, stage="prod")
         client.update_headers(self._prepare_headers())
         self.client = client.api
 
@@ -50,11 +50,14 @@ class MCPServerApiClient:
         self, keyword: str | None = None, limit: int | None = None, offset: int | None = None
     ) -> dict:
         """获取 mcp server 列表"""
-        params = {
-            **({"keyword": keyword} if keyword is not None else {}),
-            **({"limit": limit} if limit is not None else {}),  # type: ignore
-            **({"offset": offset} if offset is not None else {}),  # type: ignore
-        }
+        params = {}
+        if keyword:
+            params["keyword"] = keyword
+        if limit:
+            params["limit"] = limit  # type: ignore
+        if offset:
+            params["offset"] = offset  # type: ignore
+
         try:
             res = self.client.list_mcp_servers(params=params)
         except (APIGatewayResponseError, ResponseError) as e:
@@ -64,11 +67,12 @@ class MCPServerApiClient:
 
     def list_app_permissions(self, bk_app_code: str, limit: int | None = None, offset: int | None = None) -> dict:
         """获取应用的 mcp server 权限列表"""
-        params = {
-            "bk_app_code": bk_app_code,
-            **({"limit": limit} if limit is not None else {}),  # type: ignore
-            **({"offset": offset} if offset is not None else {}),  # type: ignore
-        }
+        params = {"bk_app_code": bk_app_code}
+        if limit:
+            params["limit"] = limit  # type: ignore
+        if offset:
+            params["offset"] = offset  # type: ignore
+
         try:
             res = self.client.list_app_permissions(params=params)
         except (APIGatewayResponseError, ResponseError) as e:
@@ -79,12 +83,14 @@ class MCPServerApiClient:
         self, bk_app_code: str, mcp_server_id: int | None = None, limit: int | None = None, offset: int | None = None
     ) -> dict:
         """获取应用权限申请记录列表"""
-        params = {
-            "bk_app_code": bk_app_code,
-            **({"mcp_server_id": mcp_server_id} if mcp_server_id is not None else {}),  # type: ignore
-            **({"limit": limit} if limit is not None else {}),  # type: ignore
-            **({"offset": offset} if offset is not None else {}),  # type: ignore
-        }
+        params = {"bk_app_code": bk_app_code}
+        if mcp_server_id:
+            params["mcp_server_id"] = mcp_server_id  # type: ignore
+        if limit:
+            params["limit"] = limit  # type: ignore
+        if offset:
+            params["offset"] = offset  # type: ignore
+
         try:
             res = self.client.list_permissions_apply_records(params=params)
         except (APIGatewayResponseError, ResponseError) as e:

@@ -45,4 +45,3 @@ class ApplyMCPResourcePermissionSLZ(serializers.Serializer):
     mcp_server_ids = serializers.ListField(child=serializers.IntegerField(), help_text="mcp_server ID 列表")
     applied_by = serializers.CharField(help_text="申请人")
     reason = serializers.CharField(help_text="申请原因")
-    gateway_name = serializers.CharField(help_text="网关名称，用于记录操作记录")

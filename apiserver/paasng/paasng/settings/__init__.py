@@ -705,8 +705,8 @@ BK_API_URL_TMPL = settings.get("BK_API_URL_TMPL", "http://localhost:8080/api/{ap
 # 网关 API 默认网关环境
 BK_API_DEFAULT_STAGE_MAPPINGS = settings.get("BK_API_DEFAULT_STAGE_MAPPINGS", {})
 
-# 网关 API v2 访问地址模板
-BK_API_V2_URL_TMPL = settings.get("BK_API_V2_URL_TMPL", "http://localhost:8080/api/{api_name}/")
+# 网关 APIGW API 访问地址模板
+BK_API_URL_TMPL_FOR_APIGW = settings.get("BK_API_URL_TMPL_FOR_APIGW", BK_API_URL_TMPL)
 
 # 开发者中心 region 与 APIGW user_auth_type 的对应关系
 REGION_TO_USER_AUTH_TYPE_MAP = settings.get("REGION_TO_USER_AUTH_TYPE_MAP", {"default": "default"})

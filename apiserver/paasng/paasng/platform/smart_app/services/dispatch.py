@@ -33,7 +33,7 @@ from paasng.platform.smart_app.constants import SMartPackageBuilderVersionFlag
 from paasng.platform.smart_app.entities import DockerExportedImageManifest
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.image_mgr import SMartImageManager
-from paasng.platform.smart_app.services.patcher import SourceCodePatcher
+from paasng.platform.smart_app.services.patcher import patch_smart_tarball
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
@@ -91,7 +91,7 @@ def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat
     """
     logger.debug("Patching module for module '%s'", module.name)
     with generate_temp_dir() as workplace:
-        dest = SourceCodePatcher.patch_tarball(module, tarball_path=tarball_filepath, working_dir=workplace, stat=stat)
+        dest = patch_smart_tarball(tarball_path=tarball_filepath, dest_dir=workplace, module=module, stat=stat)
         stat = SourcePackageStatReader(dest).read()
 
         # store package to blobstore

@@ -14,8 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING
 
 from django.db import models
 
@@ -30,12 +29,6 @@ ENVIRONMENT_ID_FOR_GLOBAL = -1
 ENVIRONMENT_NAME_FOR_GLOBAL = ConfigVarEnvName.GLOBAL.value
 # 需要设置 environment(外键) 而非 environment_id, model_to_dict 只认 environment
 CONFIG_VAR_INPUT_FIELDS = ["is_global", "environment", "key", "value", "description"]
-
-
-def get_custom_builtin_config_vars(config_vars_prefix: str) -> Dict[str, str]:
-    """Get default config vars as dict, with prefix"""
-    builtin_config_vars = dict(BuiltinConfigVar.objects.values_list("key", "value"))
-    return add_prefix_to_key(builtin_config_vars, config_vars_prefix)
 
 
 class ConfigVarQuerySet(models.QuerySet):
@@ -117,27 +110,6 @@ class ConfigVar(TimestampedModel):
             module=module,
             tenant_id=self.tenant_id,
         )
-
-
-def add_prefix_to_key(items: dict, prefix: str) -> Dict[str, Any]:
-    return {f"{prefix}{key}": value for key, value in items.items()}
-
-
-@dataclass
-class BuiltInEnvVarDetail:
-    """A detailed builtin env variable object."""
-
-    key: str
-    value: str
-    description: Optional[str]
-    prefix: str = field(default="")
-
-    def __post_init__(self):
-        if self.prefix:
-            self.key = f"{self.prefix}{self.key}"
-
-    def to_dict(self):
-        return {self.key: {"value": self.value, "description": self.description}}
 
 
 class BuiltinConfigVar(AuditedModel):

@@ -41,7 +41,7 @@ from paasng.utils.error_codes import error_codes
 
 class EgressManageView(ApplicationDetailBaseView):
     name = "Egress 管理"
-    template_name = "admin42/applications/detail/engine/egress.html"
+    template_name = "admin42/operation/applications/detail/engine/egress.html"
 
 
 class EgressManageViewSet(ListModelMixin, GenericViewSet):

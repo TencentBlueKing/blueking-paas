@@ -17,8 +17,6 @@
 
 from typing import Iterator
 
-from django.conf import settings
-
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
@@ -110,26 +108,14 @@ def list_vars_builtin_default_entrance(env: ModuleEnvironment) -> EnvVariableLis
 def list_vars_builtin_misc(env: ModuleEnvironment) -> EnvVariableList:
     """List the miscellaneous built-in env variables."""
     from paasng.platform.engine.configurations.config_var import (
-        generate_wl_builtin_env_vars,
         get_builtin_env_variables,
     )
 
     result = EnvVariableList()
     # Part: Gather values from registered env variables providers
-    result.extend(
-        EnvVariableObj(key=key, value=value, description="misc built-in")
-        for key, value in env_vars_providers.gather(env).items()
-    )
-    # TODO: Refactor get_builtin_env_variables to return EnvVariableObj instances directly
-    # to preserve the description field.
-    result.extend(
-        EnvVariableObj(key=key, value=value, description="misc built-in")
-        for key, value in get_builtin_env_variables(env.get_engine_app(), settings.CONFIGVAR_SYSTEM_PREFIX).items()
-    )
+    result.extend(env_vars_providers.gather(env))
 
-    # Port: workloads related env vars
-    result.extend(
-        EnvVariableObj(key=item.key, value=item.value, description=item.description)
-        for item in generate_wl_builtin_env_vars(settings.CONFIGVAR_SYSTEM_PREFIX, env)
-    )
+    # TODO: Merge the `get_builtin_env_variables` function into this lister
+    # Part: The built-in env variables
+    result.extend(get_builtin_env_variables(env.get_engine_app()))
     return result

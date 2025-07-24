@@ -31,7 +31,7 @@ from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paas_wl.bk_app.dev_sandbox.entities import SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
 from paasng.accessories.dev_sandbox.commit import DevSandboxCodeCommit
-from paasng.accessories.dev_sandbox.config_var import generate_envs
+from paasng.accessories.dev_sandbox.config_var import generate_envs, get_env_vars_selected_addons
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.accessories.dev_sandbox.serializers import (
@@ -43,12 +43,12 @@ from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxPreDeployCheckOutputSLZ,
     DevSandboxRetrieveOutputSLZ,
 )
+from paasng.accessories.dev_sandbox.source_code import upload_source_code
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
-from paasng.platform.engine.configurations.config_var import get_env_variables
-from paasng.platform.engine.utils.source import get_source_dir, upload_source_code
+from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.utils.error_codes import error_codes
@@ -125,7 +125,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         envs = generate_envs(module)
         if data["inject_staging_env_vars"]:
             stag_env = module.get_envs(AppEnvironment.STAGING)
-            envs.update(get_env_variables(stag_env))
+            envs.update(get_env_vars_selected_addons(stag_env, data.get("enabled_addons_services")))
 
         # 下发沙箱 k8s 资源
         try:

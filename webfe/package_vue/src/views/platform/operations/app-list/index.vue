@@ -1,13 +1,21 @@
 <template>
   <div class="platform-app-list-container">
-    <div class="top-box flex-row justify-content-between">
+    <bk-alert
+      v-if="isSoftDeletePage"
+      type="info"
+      :title="
+        $t('删除应用时，应用只是被标记为已删除，同名应用无法被重新创建。如需彻底删除应用数据，请使用 “彻底删除” 功能。')
+      "
+    ></bk-alert>
+    <div class="mt-16 top-box flex-row justify-content-between">
       <div class="tenants">
         <TenantSelect
           class="tenant-select-cls"
           v-model="curTenantId"
-          :panels="tabData"
+          :panels="tenantSelectList"
           :label="$t('所属租户')"
           :count-map="appCountInfo"
+          :has-count="!isSoftDeletePage"
           @change="getPlatformApps"
         />
       </div>
@@ -29,7 +37,7 @@
         ref="tableRef"
         size="medium"
         v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
-        :default-sort="{ prop: 'created_humanized', order: 'ascending' }"
+        :default-sort="{ prop: defaultSort, order: 'ascending' }"
         @page-change="pgHandlePageChange"
         @page-limit-change="pgHandlePageLimitChange"
         @filter-change="handleFilterChange"
@@ -64,9 +72,9 @@
               />
               <div class="flex-column app-infos text-ellipsis">
                 <span
-                  class="text-ellipsis app-name"
+                  :class="['text-ellipsis app-name', { link: !isSoftDeletePage }]"
                   v-bk-overflow-tips
-                  @click="toAppDetail(row)"
+                  @click="!isSoftDeletePage && toAppDetail(row)"
                 >
                   {{ row['name'] }}
                 </span>
@@ -97,22 +105,71 @@
               v-else-if="column.userDisplay && platformFeature.MULTI_TENANT_MODE"
               :user-id="row[column.prop]"
             ></bk-user-display-name>
-            <span v-else>{{ row[column.prop] || '--' }}</span>
+            <span
+              v-else
+              v-bk-tooltips="{ content: row[column.tooltipsProp], disabled: !column.tooltipsProp }"
+            >
+              {{ row[column.prop] || '--' }}
+            </span>
+          </template>
+        </bk-table-column>
+        <!-- 软删除-操作列 -->
+        <bk-table-column
+          v-if="isSoftDeletePage"
+          :label="$t('操作')"
+          :width="localLanguage === 'en' ? 140 : 120"
+        >
+          <template slot-scope="{ row }">
+            <bk-button
+              theme="primary"
+              text
+              @click="showDeleteDialog(row)"
+            >
+              {{ $t('彻底删除') }}
+            </bk-button>
           </template>
         </bk-table-column>
       </bk-table>
     </div>
+
+    <!-- 软删除应用弹窗 -->
+    <DeleteDialog
+      :show.sync="deleteDialogConfig.visible"
+      :title="$t('确认彻底删除应用')"
+      :expected-confirm-text="deleteDialogConfig.deletedKey"
+      :loading="deleteDialogConfig.loading"
+      @confirm="permanentDeleteApp"
+    >
+      <div class="hint-text">
+        <span>{{ $t('该操作不可撤销，请输入应用 ID') }}</span>
+        <span class="hint-text">
+          （
+          <span class="sign">{{ deleteDialogConfig.deletedKey }}</span>
+          <i
+            class="paasng-icon paasng-general-copy"
+            v-copy="deleteDialogConfig.deletedKey"
+          />
+          ）
+        </span>
+        {{ $t('进行确认') }}
+      </div>
+    </DeleteDialog>
   </div>
 </template>
 
 <script>
 import TenantSelect from '../../services/service-plan/tenant-select';
+import DeleteDialog from '@/components/delete-dialog';
 import { mapState } from 'vuex';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/zh-cn';
 
 export default {
   name: 'PlatformAppList',
   components: {
     TenantSelect,
+    DeleteDialog,
   },
   props: {
     tenants: {
@@ -151,11 +208,16 @@ export default {
         keyword: '',
         isAbnormal: false,
       },
+      deleteDialogConfig: {
+        visible: false,
+        loading: false,
+        deletedKey: '',
+      },
     };
   },
   computed: {
-    ...mapState(['platformFeature']),
-    tabData() {
+    ...mapState(['platformFeature', 'localLanguage']),
+    tenantSelectList() {
       const tenantList = this.tenants.map((item) => {
         return {
           name: item.id,
@@ -170,8 +232,16 @@ export default {
         ...tenantList,
       ];
     },
+    // 软删除应用列
+    isSoftDeletePage() {
+      return this.$route.name === 'platformSoftDeleteApps';
+    },
+    // 表头默认排序字段
+    defaultSort() {
+      return this.isSoftDeletePage ? 'deletedHumanized' : 'created_humanized';
+    },
     columns() {
-      return [
+      const commonColumns = [
         {
           label: this.$t('应用'),
           prop: 'code',
@@ -196,6 +266,33 @@ export default {
           'filter-multiple': false,
           'column-key': 'type',
         },
+      ];
+      if (this.isSoftDeletePage) {
+        return [
+          ...commonColumns,
+          {
+            label: this.$t('创建人'),
+            prop: 'creator',
+            userDisplay: true,
+          },
+          {
+            label: this.$t('创建时间'),
+            prop: 'created_humanized',
+            sortable: 'custom',
+            'column-key': 'order_by',
+            tooltipsProp: 'created_at',
+          },
+          {
+            label: this.$t('删除时间'),
+            prop: 'deletedHumanized',
+            sortable: 'custom',
+            'column-key': 'order_by',
+            tooltipsProp: 'deleted_at',
+          },
+        ];
+      }
+      return [
+        ...commonColumns,
         {
           label: this.$t('应用分类'),
           prop: 'category',
@@ -224,6 +321,7 @@ export default {
           prop: 'created_humanized',
           sortable: 'custom',
           'column-key': 'order_by',
+          tooltipsProp: 'created_at',
         },
       ];
     },
@@ -236,10 +334,15 @@ export default {
     },
   },
   async created() {
+    this.restOrderBy();
     this.getPlatformApps();
     this.getTenantAppStatistics();
     this.getAppTypes();
     this.getCategoryTypes();
+    dayjs.extend(relativeTime);
+    if (this.localLanguage !== 'en') {
+      dayjs.locale('zh-cn');
+    }
   },
   methods: {
     // 页码重置
@@ -283,7 +386,16 @@ export default {
     },
     // 表头排序-时间
     handleSortChange(sort) {
-      const orderBy = sort.order ? (sort.order === 'ascending' ? '-created' : 'created') : undefined;
+      const propMap = {
+        created_humanized: 'created',
+        deletedHumanized: 'updated',
+      };
+
+      const orderBy = sort.order
+        ? sort.order === 'ascending'
+          ? `-${propMap[sort.prop]}`
+          : propMap[sort.prop]
+        : undefined;
       this.$set(this.tableFilterMap, 'order_by', orderBy);
       this.getPlatformApps();
     },
@@ -323,11 +435,9 @@ export default {
         offset: limit * (current - 1),
         ...filteredData,
       };
-      // 已下架的应用永远排在最后
-      if (queryParams.order_by) {
-        queryParams.order_by = `-is_active,${queryParams.order_by}`;
-      } else {
-        queryParams.order_by = '-is_active';
+      if (!this.isSoftDeletePage) {
+        // 已下架的应用永远排在最后
+        queryParams.order_by = queryParams.order_by ? `-is_active,${queryParams.order_by}` : '-is_active';
       }
       if (this.searchValue) {
         queryParams.search = this.searchValue;
@@ -338,13 +448,23 @@ export default {
       }
       return queryParams;
     },
-    // 获取应用列表
+    processAppList(results) {
+      if (!this.isSoftDeletePage) {
+        return results;
+      }
+      return results.map((item) => ({
+        ...item,
+        deletedHumanized: dayjs(item.deleted_at).fromNow(),
+      }));
+    },
+    // 获取应用列表 | 获取管理已删除应用
     async getPlatformApps() {
       this.isTableLoading = true;
       const queryParams = this.constructQueryParams();
       try {
-        const res = await this.$store.dispatch('tenantOperations/getPlatformApps', { queryParams });
-        this.appList = res.results;
+        const actionName = this.isSoftDeletePage ? 'getDeletedApplications' : 'getPlatformApps';
+        const res = await this.$store.dispatch(`tenantOperations/${actionName}`, { queryParams });
+        this.appList = this.processAppList(res.results || []);
         this.pagination.count = res.count;
         this.tableEmptyConf.isAbnormal = false;
         this.updateTableEmptyConfig();
@@ -392,6 +512,30 @@ export default {
         this.catchErrorHandler(e);
       }
     },
+    // 删除应用弹窗
+    showDeleteDialog(row) {
+      this.deleteDialogConfig.visible = true;
+      this.deleteDialogConfig.deletedKey = row.code;
+    },
+    // 软删除：确认彻底删除
+    async permanentDeleteApp() {
+      try {
+        this.deleteDialogConfig.loading = true;
+        await this.$store.dispatch('tenantOperations/deletedApplications', {
+          appCode: this.deleteDialogConfig.deletedKey,
+        });
+        this.deleteDialogConfig.visible = false;
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除成功'),
+        });
+        this.getPlatformApps();
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.deleteDialogConfig.loading = false;
+      }
+    },
     // 跳转应用详情
     toAppDetail(data) {
       this.$router.push({
@@ -405,11 +549,14 @@ export default {
         },
       });
     },
+    restOrderBy() {
+      this.tableFilterMap = {
+        order_by: this.isSoftDeletePage ? '-updated' : '-created',
+      };
+    },
     // 清空搜索筛选条件
     clearFilterKey() {
-      this.tableFilterMap = {
-        order_by: '-created',
-      };
+      this.restOrderBy();
       this.searchValue = '';
       this.curTenantId = 'all';
       this.$refs.tableRef?.clearFilter();
@@ -450,8 +597,10 @@ export default {
       font-size: 12px;
       justify-content: center;
       .app-name {
-        color: #3a84ff;
         font-weight: 700;
+      }
+      .link {
+        color: #3a84ff;
         cursor: pointer;
       }
     }

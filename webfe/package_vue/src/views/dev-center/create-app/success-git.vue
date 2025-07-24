@@ -305,11 +305,10 @@ export default {
       });
     },
     handlePageJump(name, moduleId) {
-      if (name === 'process') {
-        name = this.isRuntimeType ? 'cloudAppDeployForBuild' : 'cloudAppDeployForProcess';
-      }
+      const targetRouteName =
+        name === 'process' ? (this.isRuntimeType ? 'cloudAppDeployForBuild' : 'cloudAppDeployForProcess') : name;
       this.$router.push({
-        name,
+        name: targetRouteName,
         params: {
           id: this.appCode,
           moduleId,

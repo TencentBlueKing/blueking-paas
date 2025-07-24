@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import cattr
-from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
@@ -30,13 +29,15 @@ from paasng.accessories.smart_advisor.tagging import dig_tags_local_repo
 from paasng.platform.applications.constants import AppFeatureFlag, ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.declarative.handlers import DeployDescHandler, get_deploy_desc_handler, get_source_dir_from_desc
+from paasng.platform.declarative.models import DeploymentDescription
 from paasng.platform.engine.configurations.building import get_dockerfile_path
 from paasng.platform.engine.configurations.source_file import get_metadata_reader
-from paasng.platform.engine.exceptions import InitDeployDescHandlerError, SkipPatchCode
+from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.exceptions import InitDeployDescHandlerError
 from paasng.platform.engine.models import Deployment, EngineApp
 from paasng.platform.engine.models.deployment import ProcessTmpl
 from paasng.platform.engine.utils.output import DeployStream, Style
-from paasng.platform.engine.utils.patcher import SourceCodePatcherWithDBDriver
+from paasng.platform.engine.utils.patcher import patch_source_dir_procfile
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.specs import ModuleSpecs
@@ -50,13 +51,8 @@ from paasng.platform.sourcectl.exceptions import (
 )
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
-from paasng.platform.sourcectl.utils import (
-    DockerIgnore,
-    compress_directory_ext,
-    generate_temp_dir,
-    generate_temp_file,
-)
-from paasng.utils.blobstore import make_blob_store
+from paasng.platform.sourcectl.utils import DockerIgnore
+from paasng.utils.file import validate_source_dir_str
 from paasng.utils.validators import PROC_TYPE_MAX_LENGTH, PROC_TYPE_PATTERN
 
 logger = logging.getLogger(__name__)
@@ -232,16 +228,19 @@ def get_source_package_path(deployment: Deployment) -> str:
     return f"{engine_app.region}/home/{slug_name}/tar"
 
 
-def download_source_to_dir(module: Module, operator: str, deployment: Deployment, working_path: Path):
+def download_source_to_dir(module: Module, operator: str, deployment: Deployment, root_path: Path) -> tuple[str, Path]:
     """Download and extract the module's source files to local path, will generate Procfile if necessary
 
-    :param operator: current operator's user_id
+    :param root_path: The local path to download the source files
+    :return: (the configured source directory string, the source directory path), the path can be different
+        with the `root_path` if source_dir is configured.
+    :raise ValueError: If the configured source directory is invalid
     """
     spec = ModuleSpecs(module)
     if spec.source_origin_specs.source_origin == SourceOrigin.AUTHORIZED_VCS:
-        get_repo_controller(module, operator=operator).export(working_path, deployment.version_info)
+        get_repo_controller(module, operator=operator).export(root_path, deployment.version_info)
     elif spec.deploy_via_package:
-        PackageController.init_by_module(module, operator).export(working_path, deployment.version_info)
+        PackageController.init_by_module(module, operator).export(root_path, deployment.version_info)
     else:
         raise NotImplementedError
 
@@ -256,11 +255,50 @@ def download_source_to_dir(module: Module, operator: str, deployment: Deployment
     # A: The repository might be extremely large and contain a vast number of files;
     #    scanning the entire directory would be too slow.
 
-    try:
-        SourceCodePatcherWithDBDriver(module, working_path, deployment).add_procfile()
-    except SkipPatchCode as e:
-        logger.warning("skip the injection process: %s", e.reason)
-        return
+    # Get the "source_dir" from 2 sources: `Deployment` object and `DeploymentDescription` object.
+    #
+    # 1. `deployment.get_source_dir()`: written when the deployment is initialized `initialize_deployment()`,
+    #    the value was from returned by `get_source_dir()` function.
+    # 2. `DeploymentDescription.source_dir`: written when the package was parsed and handled by the
+    #    server, the value was written by the `DeploymentDeclarativeController`.
+    #
+    # Using the value from source 1 (deployment) should be fine in most cases, but the legacy logic used to
+    # query the `DeploymentDescription` model also. For backward compatibility and to avoid surprises,
+    # we will check the `source_dir` in both sources and use the one from `DeploymentDescription` in case of conflict.
+    #
+    source_dir_str_deployment = str(deployment.get_source_dir())
+    source_dir_str_desc = ""
+    if ModuleSpecs(module).deploy_via_package:
+        # TODO: Remove this we are sure that the value in the description is always equal to the one in deployment
+        try:
+            desc_obj = DeploymentDescription.objects.get(deployment=deployment)
+        except DeploymentDescription.DoesNotExist:
+            pass
+        else:
+            source_dir_str_desc = desc_obj.source_dir
+
+    source_dir_str = source_dir_str_deployment
+    if source_dir_str_desc and source_dir_str_desc != source_dir_str_deployment:
+        logger.warning(
+            "The source_dir in deployment description is different from the one in deployment object: %s != %s",
+            source_dir_str_desc,
+            source_dir_str_deployment,
+        )
+        # Use the one in description object for backward compatibility
+        source_dir_str = source_dir_str_desc
+
+    source_dir = validate_source_dir_str(root_path, source_dir_str)
+
+    if (
+        module.application.type == ApplicationType.CLOUD_NATIVE
+        and module.build_config.build_method == RuntimeType.DOCKERFILE
+    ):
+        logger.info("Skip Procfile patching for Dockerfile cnative application.")
+        return source_dir_str, source_dir
+
+    if reason := patch_source_dir_procfile(source_dir=source_dir, procfile=deployment.get_procfile()):
+        logger.warning("skip the source patching process: %s", reason)
+    return source_dir_str, source_dir
 
 
 def check_source_package(engine_app: EngineApp, package_path: Path, stream: DeployStream):
@@ -289,54 +327,3 @@ def tag_module_from_source_files(module, source_files_path):
         tag_module(module, tags, source="source_analyze")
     except Exception:
         logger.exception("Unable to tagging module")
-
-
-def upload_source_code(
-    module: Module,
-    version_info: VersionInfo,
-    source_dir: str,
-    operator: str,
-) -> str:
-    """上传应用模块源码到 blob 存储, 并且返回源码的下载链接, 参考方法 "BaseBuilder.compress_and_upload"
-    FIXME (沙箱重构) 评估这个函数是否放到沙箱模块中
-
-    return: source fetch url
-    """
-    relative_source_dir = Path(source_dir)
-    if relative_source_dir.is_absolute():
-        logger.warning("Unsupported absolute path<%s>, force transform to relative_to path.", relative_source_dir)
-        relative_source_dir = relative_source_dir.relative_to("/")
-
-    spec = ModuleSpecs(module)
-    with generate_temp_dir() as working_dir:
-        full_source_dir = working_dir.absolute() / relative_source_dir
-        # 下载源码到临时目录
-        if spec.source_origin_specs.source_origin == SourceOrigin.AUTHORIZED_VCS:
-            get_repo_controller(module, operator=operator).export(working_dir, version_info)
-        else:
-            raise NotImplementedError
-
-        # 上传源码
-        with generate_temp_file(suffix=".tar.gz") as package_path:
-            source_destination_path = _get_source_package_path(
-                version_info, module.application.code, module.name, module.region
-            )
-            compress_directory_ext(full_source_dir, package_path)
-            logger.info(f"Uploading source files to {source_destination_path}")
-            store = make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE)
-            store.upload_file(package_path, source_destination_path)
-
-    source_fetch_url = store.generate_presigned_url(
-        key=source_destination_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
-    )
-
-    return source_fetch_url
-
-
-def _get_source_package_path(version_info: VersionInfo, app_code: str, module_name: str, region: str) -> str:
-    """Return the blobstore path for storing source files package"""
-    branch = version_info.version_name
-    revision = version_info.revision
-
-    slug_name = f"{app_code}:{module_name}:{branch}:{revision}:dev"
-    return f"{region}/home/{slug_name}/tar"

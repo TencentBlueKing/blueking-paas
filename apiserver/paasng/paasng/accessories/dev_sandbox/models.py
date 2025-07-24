@@ -55,8 +55,8 @@ class DevSandboxQuerySet(models.QuerySet):
         self,
         module: Module,
         owner: str,
-        version_info: VersionInfo | None,
         env_vars: Dict[str, str],
+        version_info: VersionInfo | None,
         enable_code_editor: bool = False,
     ) -> "DevSandbox":
         charsets = string.ascii_lowercase + string.digits
@@ -87,11 +87,11 @@ class DevSandboxQuerySet(models.QuerySet):
             module=module,
             owner=owner,
             expired_at=timezone.now() + DEV_SANDBOX_DEFAULT_EXPIRED_DURATION,
+            env_vars=json.dumps(env_vars_list),
             version_info=version_info,
             token=generate_password(),
             code_editor_config=code_editor_cfg,
             tenant_id=module.tenant_id,
-            env_vars=json.dumps(env_vars_list),
         )
 
 
@@ -124,14 +124,14 @@ class DevSandbox(OwnerTimestampedModel):
     def upsert_env_var(self, key: str, value: str):
         """更新或新增单个环境变量"""
         env_vars = self.list_env_vars()
-        pre_upsert_env_vars = {"key": key, "value": value, "source": DevSandboxEnvVarSource.CUSTOM}
+        pre_upsert_env_var = {"key": key, "value": value, "source": DevSandboxEnvVarSource.CUSTOM}
 
         for item in env_vars:
             if item["key"] == key:
-                item.update(pre_upsert_env_vars)
+                item.update(pre_upsert_env_var)
                 break
         else:
-            env_vars.append(pre_upsert_env_vars)
+            env_vars.append(pre_upsert_env_var)
 
         self.env_vars = json.dumps(env_vars)  # type: ignore
         self.save(update_fields=["env_vars", "updated"])

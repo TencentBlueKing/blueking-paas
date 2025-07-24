@@ -230,14 +230,26 @@ class TestEnvVarsDevSandbox:
         resp = api_client.post(url, {"key": "VALID_VAR", "value": "value"})
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_delete_env_var_success(self, api_client, bk_cnative_app, bk_module, mocker):
-        mock_delete = mocker.patch("paasng.accessories.dev_sandbox.models.DevSandbox.delete_env_vars")
-
-        url = (
+    def test_delete_env_var_success(self, api_client, bk_cnative_app, bk_module):
+        env_var_url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/dev_sandboxes/{self.dev_sandbox.code}/env_vars/"
         )
 
-        resp = api_client.delete(url, {"key": "EXISTING_VAR"})
+        api_client.post(env_var_url, {"key": "EXISTING_VAR", "value": "value"})
+        self.dev_sandbox.refresh_from_db()
+        assert "EXISTING_VAR" in {item["key"] for item in self.dev_sandbox.list_env_vars()}
+
+        delete_url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/dev_sandboxes/{self.dev_sandbox.code}/"
+            f"env_vars/EXISTING_VAR/"
+        )
+
+        resp = api_client.delete(delete_url)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
-        mock_delete.assert_called_once_with(key="EXISTING_VAR")
+
+        self.dev_sandbox.refresh_from_db()
+        env_vars = self.dev_sandbox.list_env_vars()
+        env_var_keys = {item["key"] for item in env_vars}
+        assert "EXISTING_VAR" not in env_var_keys

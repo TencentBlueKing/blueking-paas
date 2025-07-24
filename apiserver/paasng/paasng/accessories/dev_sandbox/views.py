@@ -124,9 +124,9 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         dev_sandbox = DevSandbox.objects.create(
             module=module,
             owner=owner,
+            env_vars=env_vars,
             version_info=version_info,
             enable_code_editor=data["enable_code_editor"],
-            env_vars=env_vars,
         )
 
         # 下发沙箱 k8s 资源

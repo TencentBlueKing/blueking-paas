@@ -21,12 +21,10 @@ from unittest import mock
 import pytest
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 
 from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_WORKSPACE
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxDetail, DevSandboxUrls
-from paasng.infras.accounts.permissions.application import BaseAppPermission
 from paasng.platform.sourcectl.models import AlternativeVersion
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -189,25 +187,12 @@ class TestCommitDevSandbox:
         assert resp.status_code == status.HTTP_200_OK
 
 
-class AlwaysAllowAppPermission(BaseAppPermission):
-    def has_permission(self, request, view):
-        return True
-
-
 class TestEnvVarsDevSandbox:
     """沙箱环境变量"""
 
     @pytest.fixture(autouse=True)
     def _setup(self, bk_dev_sandbox):
         self.dev_sandbox = bk_dev_sandbox
-
-    @pytest.fixture(autouse=True)
-    def _patch_permissions(self):
-        with mock.patch(
-            "paasng.accessories.dev_sandbox.views.DevSandboxEnvVarViewSet.permission_classes",
-            [IsAuthenticated, AlwaysAllowAppPermission],
-        ):
-            yield
 
     def test_upsert_env_vars_success(self, api_client, bk_cnative_app, bk_module):
         env_var_url = (

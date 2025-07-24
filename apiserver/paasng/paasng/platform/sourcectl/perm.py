@@ -75,6 +75,8 @@ def render_providers(providers: Sequence[str]) -> List[Dict[str, str]]:
                 "repository_group": spec.server_config.get("repository_group", ""),
                 # 是否支持由平台新建代码仓库
                 "repo_creation_enabled": spec.repo_provisioner_class is not None,
+                # 仓库地址
+                "repository_url": spec.server_config.get("repository_url", ""),
             }
         )
         results.append(provider_info)

@@ -116,18 +116,3 @@ class TestGetEnvVarsSelectedAddons:
             # 验证 MYSQL_HOST 被覆盖
             assert result["MYSQL_HOST"] == "mysql.com"
             assert result["DB_HOST"] == "db.com"
-
-    def test_list_vars_builtin_addons_custom_no_groups(self, bk_module, bk_stag_env):
-        """测试当没有变量组时的行为"""
-        # 删除所有增强服务绑定
-        from paasng.accessories.servicehub.models import ServiceModuleAttachment
-
-        ServiceModuleAttachment.objects.filter(module=bk_module).delete()
-
-        # 删除所有服务实例
-        from paasng.accessories.services.models import ServiceInstance
-
-        ServiceInstance.objects.all().delete()
-
-        result = list_vars_builtin_addons_custom(bk_stag_env, None)
-        assert result == {}

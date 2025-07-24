@@ -397,10 +397,10 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
 
         # 统计总数和过滤敏感变量
         filtered_queryset = queryset.filter(is_sensitive=False)
-        ignored_count = queryset.filter(is_sensitive=True).count()
+        ignored_keys = list(queryset.filter(is_sensitive=True).values_list("key", flat=True))
 
         result = ExportedConfigVars.from_list(list(filtered_queryset))
-        file_content = result.to_file_content(extra_cmt=f"# 已忽略 {ignored_count} 条敏感环境变量。")
+        file_content = result.to_file_content(extra_cmt=f"# 已忽略 {len(ignored_keys)} 条敏感环境变量: {ignored_keys}")
         return self.make_file_response(file_content, f"{self.get_application().code}_{module_name}_config_vars.yaml")
 
     @swagger_auto_schema(tags=["环境配置"])

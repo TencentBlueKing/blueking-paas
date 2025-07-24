@@ -62,6 +62,7 @@ from paasng.platform.sourcectl.models import SvnAccount, VersionInfo
 from paasng.platform.sourcectl.package.uploader import upload_package_via_url
 from paasng.platform.sourcectl.perm import UserSourceProviders, render_providers
 from paasng.platform.sourcectl.repo_controller import get_repo_controller, list_git_repositories
+from paasng.platform.sourcectl.repo_provisioner import list_all_owned_groups
 from paasng.platform.sourcectl.signals import empty_svn_accounts_fetched, repo_updated, svn_account_updated
 from paasng.platform.sourcectl.source_types import get_sourcectl_type, get_sourcectl_types
 from paasng.platform.sourcectl.svn.admin import promote_repo_privilege_temporary
@@ -184,17 +185,20 @@ class GitRepoViewSet(viewsets.ViewSet):
         else:
             return super().handle_exception(exc)
 
-    def get_repo_list(self, request, source_control_type):
-        """通过用户绑定的 access_token 查询对应仓库列表
-        :param source_control_type: 源码类型
+    def _handle_git_operation(self, operation, source_control_type, user_id):
+        """处理Git操作的通用异常处理逻辑
+
+        :param operation: 要执行的Git操作函数
+        :param source_control_type: 源码控制类型
+        :param user_id: 操作者用户 ID
         """
         try:
-            repos = list_git_repositories(source_control_type=source_control_type, operator=request.user.pk)
+            return operation(source_control_type=source_control_type, user_id=user_id)
         except Oauth2TokenHolder.DoesNotExist:
             logger.debug(
                 f"User is not bound to token_holder of type: {source_control_type}, detail: TokenHolder Not Found"
             )
-            if source_control_type in UserSourceProviders(user=request.user).list_available():
+            if source_control_type in UserSourceProviders(user=self.request.user).list_available():
                 backend = get_backend(source_control_type)
                 raise OauthAuthorizationRequired(
                     authorization_url=backend.get_authorization_url(), auth_docs=backend.get_auth_docs()
@@ -204,13 +208,25 @@ class GitRepoViewSet(viewsets.ViewSet):
             raise error_codes.CANNOT_GET_REPO.f(_("当前 AccessToken 无法获取到仓库列表，请检查后重试")) from e
         except Exception as e:
             logger.exception(
-                "Unknown error occurred when getting repo list, user_id: %s, sourcectl_type: %s",
-                request.user.pk,
+                "Unknown error occurred when performing git operation, user_id: %s, sourcectl_type: %s",
+                self.request.user.pk,
                 source_control_type,
             )
             raise error_codes.CANNOT_GET_REPO.f(_("访问源码仓库失败，请联系项目管理员")) from e
 
+    def get_repo_list(self, request, source_control_type):
+        """通过用户绑定的 access_token 查询对应仓库列表
+        :param source_control_type: 源码类型
+        """
+        repos = self._handle_git_operation(list_git_repositories, source_control_type, request.user.pk)
         return Response({"results": slzs.RepoSLZ(repos, many=True).data})
+
+    def get_group_list(self, request, source_control_type):
+        """通过用户绑定的 access_token 查询有 owner 权限的 group 列表
+        :param source_control_type: 源码类型
+        """
+        groups = self._handle_git_operation(list_all_owned_groups, source_control_type, request.user.pk)
+        return Response({"results": slzs.GroupSLZ(groups, many=True).data})
 
 
 class AccountAllowAppSourceControlView(APIView):

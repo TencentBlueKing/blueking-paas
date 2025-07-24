@@ -15,11 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Set, Type
+from typing import Any, Dict, Set, Type
 
 from bkpaas_auth import get_user_by_user_id
 from django.conf import settings
 
+from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
 from paasng.infras.accounts.oauth.backends import get_bkapp_oauth_backend_cls
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.models import Application
@@ -69,3 +70,22 @@ def create_app_oauth_backend(application: Application, env_name: str = settings.
         app_secret=app_secret,
         env_name=env_name,
     )
+
+
+def get_oauth_credentials(source_control_type: str, user_id: str) -> Dict[str, Any]:
+    """获取用户的OAuth凭证用于访问代码仓库
+
+    :param source_control_type: 源码控制类型，如 gitlab
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
+    """
+    profile = UserProfile.objects.get(user=user_id)
+    token_holder_list = profile.token_holder.filter(provider=source_control_type).all()
+    if not token_holder_list:
+        raise Oauth2TokenHolder.DoesNotExist
+
+    # 使用第一个 token_holder 的 access_token
+    token_holder = token_holder_list[0]
+    return {
+        "oauth_token": token_holder.access_token,
+        "scope_list": [th.get_scope() for th in token_holder_list],
+    }

@@ -32,12 +32,12 @@ class DomainEditableMixin(serializers.Serializer):
     """A collection of editable fields for Domain"""
 
     path_prefix = serializers.RegexField(
-        r"^/[^/]*/?$",
+        r"^/([^/]+/?)*$",
         default="/",
         required=False,
         allow_null=True,
         allow_blank=True,
-        help_text='支持一级子目录，格式: "/path/"',
+        help_text='支持多级子目录，格式: "/path/" 或 "/path/subpath/"',
     )
     domain_name = serializers.RegexField(
         re.compile(r"^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+\.?$"),

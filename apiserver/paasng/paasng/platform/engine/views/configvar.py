@@ -285,24 +285,33 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def _get_enum_choices_dict(self, enum_obj) -> Dict[str, str]:
         return {field[0]: field[1] for field in enum_obj.get_choices()}
 
-    def get_builtin_envs_for_app(self, request, code):
-        env_vars = list_vars_builtin_app_basic(self.get_application(), include_deprecated=False)
-        return Response({obj.key: obj.description for obj in env_vars})
+    def get_builtin_envs(self, request, code):
+        """获取内置环境变量"""
 
-    def get_builtin_envs_bk_platform(self, request, code):
-        bk_address_envs = list_vars_builtin_plat_addrs()
         application = self.get_application()
+
+        # 获取应用基础内置环境变量
+        app_basic_vars = list_vars_builtin_app_basic(application, include_deprecated=False)
+        app_basic_vars_dict = {obj.key: obj.description for obj in app_basic_vars}
+
+        # 获取平台相关的内置环境变量
+        bk_address_envs = list_vars_builtin_plat_addrs()
         # 默认展示正式环境的环境变量
         region_and_env_envs = list_vars_builtin_region(application.region, AppEnvironment.PRODUCTION.value)
+        bk_platform_vars_dict = {**bk_address_envs.get_data_map(), **region_and_env_envs.get_data_map()}
 
-        combined = {**bk_address_envs.get_data_map(), **region_and_env_envs.get_data_map()}
-        return Response(combined)
+        # 获取运行时相关的内置环境变量
+        env = application.default_module.get_envs(AppEnvironment.PRODUCTION)
+        runtime_vars = list_vars_builtin_runtime(env, include_deprecated=False)
+        runtime_vars_dict = {obj.key: obj.description for obj in runtime_vars}
 
-    def get_runtime_envs(self, request, code):
-        # 使用默认模块的正式环境获取变量
-        env = self.get_application().default_module.get_envs(AppEnvironment.PRODUCTION)
-        env_vars = list_vars_builtin_runtime(env, include_deprecated=False)
-        return Response({obj.key: obj.description for obj in env_vars})
+        combined_envs = {
+            "app_basic_vars": app_basic_vars_dict,
+            "bk_platform_vars": bk_platform_vars_dict,
+            "runtime_vars": runtime_vars_dict,
+        }
+
+        return Response(combined_envs)
 
 
 class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

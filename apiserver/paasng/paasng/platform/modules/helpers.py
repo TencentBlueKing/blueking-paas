@@ -26,7 +26,7 @@ from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
-from paasng.platform.modules.constants import AppCategory, ExposedURLType, SlugBuilderEnvVarKey, SourceOrigin
+from paasng.platform.modules.constants import AppCategory, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError, BuildPacksNotFound, BuildPackStackNotFound
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
 from paasng.platform.modules.models.build_cfg import ImageTagOptions
@@ -315,7 +315,7 @@ class ModuleRuntimeManager:
         except AppSlugBuilder.DoesNotExist:
             return None
 
-        return builder.environments.get(SlugBuilderEnvVarKey.CNB_DEV_SANDBOX_IMAGE)
+        return builder.dev_sandbox_image
 
 
 def get_module_clusters(module: "Module") -> Dict[AppEnvName, Cluster]:

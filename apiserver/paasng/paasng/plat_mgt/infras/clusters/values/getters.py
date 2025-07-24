@@ -20,7 +20,7 @@ from typing import Any, Dict, Type
 from pydantic import BaseModel
 
 from paas_wl.infras.cluster.constants import ClusterComponentName
-from paasng.plat_mgt.infras.clusters.entities import HelmRelease
+from paas_wl.infras.cluster.entities import HelmRelease
 from paasng.plat_mgt.infras.clusters.values.entities import (
     BCSGPAValues,
     BkAppLogCollectionValues,

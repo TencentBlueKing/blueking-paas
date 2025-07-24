@@ -27,6 +27,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from semver import VersionInfo
 
+from paas_wl.infras.cluster.helm import HelmClient
 from paas_wl.infras.cluster.models import Cluster, ClusterComponent
 from paas_wl.utils.basic import to_error_string
 from paasng.core.tenant.user import get_tenant
@@ -37,7 +38,6 @@ from paasng.infras.bcs.exceptions import BCSGatewayServiceError, HelmChartNotFou
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.plat_mgt.infras.clusters.constants import ClusterComponentStatus
-from paasng.plat_mgt.infras.clusters.helm import HelmClient
 from paasng.plat_mgt.infras.clusters.k8s import K8SWorkloadStateGetter, ensure_k8s_namespace
 from paasng.plat_mgt.infras.clusters.serializers import (
     ClusterComponentListOutputSLZ,

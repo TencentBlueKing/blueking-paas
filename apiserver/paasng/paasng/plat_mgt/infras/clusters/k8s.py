@@ -22,10 +22,10 @@ from kubernetes.client import ApiClient, Configuration, CoreV1Api
 from kubernetes.config.kube_config import FileOrData
 from kubernetes.dynamic import ResourceInstance
 
+from paas_wl.infras.cluster.entities import HelmRelease
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.exceptions import ResourceMissing
 from paas_wl.infras.resources.base.kres import KDaemonSet, KDeployment, KNamespace, KStatefulSet
-from paasng.plat_mgt.infras.clusters.entities import HelmRelease
 
 logger = logging.getLogger(__name__)
 

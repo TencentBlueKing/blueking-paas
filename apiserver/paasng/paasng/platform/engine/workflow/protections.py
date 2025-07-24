@@ -17,9 +17,13 @@
 
 from typing import TYPE_CHECKING
 
+from django.conf import settings
+from django.core.cache import cache
 from django.db.models import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 
+from paas_wl.infras.cluster.helm import HelmClient
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.market.models import Product
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.core.core.protections.exceptions import ConditionNotMatched
@@ -167,6 +171,37 @@ class ApplicationExtraInfoCondition(DeployCondition):
             raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
 
+class OperatorVersionCondition(DeployCondition):
+    """检查 apiserver 和 operator 版本信息是否一致"""
+
+    action_name = DeployConditions.CHECK_OPERATOR_VERSION.value
+
+    def validate(self):
+        # 仅在打开 检查开关的时候检查
+        if not settings.BKPAAS_APP_OPERATOR_VERSION_CHECK:
+            return
+
+        # apiserver 根据 Helm 构建时, 注入容器 env
+        apiserver_version = settings.BKPAAS_APISERVER_VERSION
+
+        # operator 通过 helm 客户端获取
+        cluster_name = EnvClusterService(self.env).get_cluster_name()
+
+        # 使用缓存
+        cache_key = f"helm_release:{cluster_name}:bkpaas-app-operator:chart:app_version"
+        app_version = cache.get(cache_key)
+
+        if app_version is None:
+            operator_release = HelmClient(cluster_name).get_release("bkpaas-app-operator")
+            app_version = operator_release.chart.app_version if operator_release else None
+            # 缓存 5 分钟
+            cache.set(cache_key, app_version, 60 * 5)
+
+        if app_version != apiserver_version:
+            message = _("Operator 版本不匹配，请检查 Operator 版本")
+            raise ConditionNotMatched(message, self.action_name)
+
+
 class ModuleEnvDeployInspector(BaseConditionChecker):
     """Prepare to deploy a ModuleEnvironment"""
 
@@ -177,6 +212,7 @@ class ModuleEnvDeployInspector(BaseConditionChecker):
         ProcfileCondition,
         PluginTagValidationCondition,
         ApplicationExtraInfoCondition,
+        OperatorVersionCondition,
     ]
 
     def __init__(self, user: "User", env: "ModuleEnvironment"):

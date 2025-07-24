@@ -16,15 +16,16 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from datetime import datetime
 from operator import attrgetter
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from attrs import Factory, asdict, define
 from cattr import register_structure_hook, structure_attrs_fromdict
 from django.conf import settings
 
 from paas_wl.bk_app.applications.models import WlApp
-from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType
+from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, HelmChartDeployStatus
 from paasng.core.tenant.user import DEFAULT_TENANT_ID, OP_TYPE_TENANT_ID
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -226,3 +227,45 @@ class AppImageRegistry:
     namespace: str
     username: str
     password: str
+
+
+@define
+class DeployResult:
+    # 部署状态
+    status: HelmChartDeployStatus
+    # 部署详情
+    description: str
+    # 部署时间
+    created_at: datetime
+
+
+@define
+class HelmChart:
+    # Chart 名称
+    name: str
+    # Chart 版本
+    version: str
+    # App 版本
+    app_version: str
+    # Chart 描述
+    description: str
+
+
+@define
+class HelmRelease:
+    # release 名称
+    name: str
+    # 部署的命名空间
+    namespace: str
+    # release 版本
+    version: int
+    # chart 信息
+    chart: HelmChart
+    # 部署信息
+    deploy_result: DeployResult
+    # 部署配置信息
+    values: Dict
+    # 部署的 k8s 资源信息
+    resources: List[Dict[str, Any]]
+    # 存储 release secret 名称
+    secret_name: str

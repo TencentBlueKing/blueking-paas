@@ -20,48 +20,20 @@ import json
 import pytest
 
 from paasng.accessories.dev_sandbox.models import DevSandbox
-from paasng.infras.accounts.models import User
-from paasng.platform.applications.models import Application
-from paasng.platform.modules.models import Module
+from paasng.platform.sourcectl.models import VersionInfo
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+
+
+@pytest.fixture()
+def dev_sandbox(bk_cnative_app, bk_module, bk_user) -> DevSandbox:
+    version_info = VersionInfo(revision="...", version_name="master", version_type="branch")
+    return DevSandbox.objects.create(
+        module=bk_module, owner=bk_user, version_info=version_info, enable_code_editor=True
+    )
 
 
 class TestDevSandboxModelMethods:
-    @pytest.fixture
-    def bk_user(self):
-        """创建测试用户"""
-        return User.objects.create(username="test_user")
-
-    @pytest.fixture
-    def bk_app(self, bk_user):
-        """创建测试应用"""
-        return Application.objects.create(
-            code="test-app",
-            name="Test Application",
-            owner=bk_user.username,
-            creator=bk_user.username,
-        )
-
-    @pytest.fixture
-    def bk_module(self, bk_app):
-        """创建测试模块"""
-        return Module.objects.create(
-            application=bk_app,
-            name="default",
-            is_default=True,
-        )
-
-    @pytest.fixture
-    def dev_sandbox(self, bk_module):
-        return DevSandbox.objects.create(
-            module=bk_module,
-            owner="test-owner",
-            version_info=None,
-            enable_code_editor=False,
-            env_vars=None,
-        )
-
     def test_list_env_vars_empty(self, dev_sandbox):
         """测试获取空环境变量列表"""
         assert dev_sandbox.list_env_vars() == []
@@ -86,8 +58,7 @@ class TestDevSandboxModelMethods:
         dev_sandbox.upsert_env_vars(key="NEW_VAR", value="new_value")
 
         result = dev_sandbox.list_env_vars()
-        assert len(result) == 1
-        assert result[0] == {"key": "NEW_VAR", "value": "new_value", "source": "custom"}
+        assert result == [{"key": "NEW_VAR", "value": "new_value", "source": "custom"}]
 
     def test_upsert_env_vars_update(self, dev_sandbox):
         """测试更新环境变量"""

@@ -42,3 +42,9 @@ class DevSandboxEnvKey(StrStructuredEnum):
     TOKEN = EnumField("TOKEN")
     CODE_EDITOR_PASSWORD = EnumField("PASSWORD")
     CODE_EDITOR_DISABLE_TELEMETRY = EnumField("DISABLE_TELEMETRY")
+
+
+class DevSandboxEnvVarSource(StrStructuredEnum):
+    """沙箱环境变量来源"""
+
+    STAGE = EnumField("stag")

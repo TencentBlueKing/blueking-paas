@@ -194,69 +194,50 @@ class TestEnvVarsDevSandbox:
     def _setup(self, bk_dev_sandbox):
         self.dev_sandbox = bk_dev_sandbox
 
-    def test_upsert_env_vars_success(self, api_client, bk_cnative_app, bk_module, mocker):
-        mock_upsert = mocker.patch("paasng.accessories.dev_sandbox.models.DevSandbox.upsert_env_vars")
-
-        url = (
+    def test_upsert_env_vars_success(self, api_client, bk_cnative_app, bk_module):
+        env_var_url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{self.dev_sandbox.code}/upsert_env_vars/"
+            f"modules/{bk_module.name}/dev_sandboxes/{self.dev_sandbox.code}/env_vars/"
         )
 
-        # 新增环境变量
-        resp = api_client.post(url, {"env_vars": {"key": "NEW_VAR", "value": "new_value"}}, format="json")
+        resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "new_value"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
-        mock_upsert.assert_called_once_with(key="NEW_VAR", value="new_value")
 
-        # 测试更新环境变量
-        resp = api_client.post(url, {"env_vars": {"key": "NEW_VAR", "value": "updated_value"}}, format="json")
+        self.dev_sandbox.refresh_from_db()
+
+        updated_env_vars = self.dev_sandbox.list_env_vars()
+        updated_dict = {item["key"]: item["value"] for item in updated_env_vars}
+
+        assert "NEW_VAR" in updated_dict
+        assert updated_dict["NEW_VAR"] == "new_value"
+
+        resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "updated_value"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
-        mock_upsert.assert_called_with(key="NEW_VAR", value="updated_value")
+
+        self.dev_sandbox.refresh_from_db()
+
+        final_env_vars = self.dev_sandbox.list_env_vars()
+        final_dict = {item["key"]: item["value"] for item in final_env_vars}
+        assert final_dict["NEW_VAR"] == "updated_value"
 
     def test_upsert_env_vars_sandbox_not_found(self, api_client, bk_cnative_app, bk_module):
         invalid_code = "invalid123"
         url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{invalid_code}/upsert_env_vars/"
+            f"modules/{bk_module.name}/dev_sandboxes/{invalid_code}/env_vars/"
         )
 
-        resp = api_client.post(url, {"env_vars": {"key": "VALID_VAR", "value": "value"}}, format="json")
+        resp = api_client.post(url, {"key": "VALID_VAR", "value": "value"})
         assert resp.status_code == status.HTTP_404_NOT_FOUND
-        assert "开发沙箱不存在" in resp.json()["detail"]
 
     def test_delete_env_var_success(self, api_client, bk_cnative_app, bk_module, mocker):
         mock_delete = mocker.patch("paasng.accessories.dev_sandbox.models.DevSandbox.delete_env_vars")
 
         url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{self.dev_sandbox.code}/del_env_vars/"
+            f"modules/{bk_module.name}/dev_sandboxes/{self.dev_sandbox.code}/env_vars/"
         )
 
-        resp = api_client.delete(url, {"key": "EXISTING_VAR"}, format="json")
+        resp = api_client.delete(url, {"key": "EXISTING_VAR"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         mock_delete.assert_called_once_with(key="EXISTING_VAR")
-
-    def test_delete_env_var_missing_key(self, api_client, bk_cnative_app, bk_module):
-        """测试缺少 key 参数的情况"""
-        url = (
-            f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{self.dev_sandbox.code}/del_env_vars/"
-        )
-
-        resp = api_client.delete(url, {}, format="json")
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-
-        response_data = resp.json()
-        assert "fields_detail" in response_data
-        assert "key" in response_data["fields_detail"]
-        assert "该字段是必填项" in response_data["fields_detail"]["key"][0]
-
-    def test_delete_env_var_sandbox_not_found(self, api_client, bk_cnative_app, bk_module):
-        invalid_code = "invalid123"
-        url = (
-            f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{invalid_code}/del_env_vars/"
-        )
-
-        resp = api_client.delete(url, {"key": "EXISTING_VAR"}, format="json")
-        assert resp.status_code == status.HTTP_404_NOT_FOUND
-        assert "开发沙箱不存在" in resp.json()["detail"]

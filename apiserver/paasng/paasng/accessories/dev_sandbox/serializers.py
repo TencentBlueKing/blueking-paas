@@ -28,6 +28,7 @@ from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service
+from paasng.utils.serializers import field_env_var_key
 
 
 class DevSandboxListOutputSLZ(serializers.Serializer):
@@ -117,13 +118,9 @@ class DevSandboxPreDeployCheckOutputSLZ(serializers.Serializer):
     result = serializers.BooleanField(help_text="预部署检查结果")
 
 
-class DevSandboxEnvVarsSLZ(serializers.Serializer):
-    key = serializers.CharField(help_text="环境变量键名")
-    value = serializers.CharField(help_text="环境变量值")
-
-
 class DevSandboxEnvVarsUpsertInputSLZ(serializers.Serializer):
-    env_vars = DevSandboxEnvVarsSLZ(help_text="需要更新（新增）的环境变量")
+    key = field_env_var_key()
+    value = serializers.CharField(help_text="环境变量值", max_length=255)
 
 
 class DevSandboxEnvVarsDeleteInputSLZ(serializers.Serializer):

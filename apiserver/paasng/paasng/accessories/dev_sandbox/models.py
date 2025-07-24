@@ -25,6 +25,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig
 from paasng.accessories.dev_sandbox.utils import generate_password
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -77,9 +78,10 @@ class DevSandboxQuerySet(models.QuerySet):
         if enable_code_editor:
             code_editor_cfg = CodeEditorConfig(password=generate_password())
 
-        env_vars_list = []
-        if env_vars is not None:
-            env_vars_list = [{"key": key, "value": value, "source": "stag"} for key, value in env_vars.items()]
+        env_vars = env_vars or {}
+        env_vars_list = [
+            {"key": key, "value": value, "source": DevSandboxEnvVarSource.STAGE} for key, value in env_vars.items()
+        ]
 
         return super().create(
             code=code,
@@ -90,7 +92,7 @@ class DevSandboxQuerySet(models.QuerySet):
             token=generate_password(),
             code_editor_config=code_editor_cfg,
             tenant_id=module.tenant_id,
-            env_vars=json.dumps(env_vars_list) if env_vars_list else None,
+            env_vars=json.dumps(env_vars_list),
         )
 
 
@@ -107,7 +109,7 @@ class DevSandbox(OwnerTimestampedModel):
     token = EncryptField(help_text="访问令牌", null=True)
     code_editor_config = CodeEditorConfigField(help_text="代码编辑器配置", default=None, null=True)
     tenant_id = tenant_id_field_factory()
-    env_vars = EncryptField(help_text="沙箱环境变量", default=None, null=True, blank=True)
+    env_vars = EncryptField(help_text="沙箱环境变量")
 
     objects = DevSandboxManager()
 
@@ -118,19 +120,21 @@ class DevSandbox(OwnerTimestampedModel):
 
     def list_env_vars(self) -> List:
         """获取沙箱环境变量"""
-        if not self.env_vars:
-            return []
-
         return json.loads(self.env_vars)
 
     def upsert_env_vars(self, key: str, value: str):
         """更新或新增单个环境变量"""
         env_vars = self.list_env_vars()
-        env_dict = {item["key"]: item for item in env_vars}
-        env_dict[key] = {"key": key, "value": value, "source": "custom"}
 
-        updated_list = list(env_dict.values())
-        self._save_env_vars(updated_list)
+        for i, item in enumerate(env_vars):
+            if item["key"] == key:
+                env_vars[i] = {"key": key, "value": value, "source": "custom"}
+                break
+        else:
+            env_vars.append({"key": key, "value": value, "source": "custom"})
+
+        setattr(self, "env_vars", json.dumps(env_vars))
+        self.save(update_fields=["env_vars", "updated"])
 
     def delete_env_vars(self, key: str):
         """删除指定的环境变量"""
@@ -138,17 +142,7 @@ class DevSandbox(OwnerTimestampedModel):
         # 直接过滤掉需要删除的 key
         updated_list = [item for item in env_vars if item["key"] != key]
 
-        self._save_env_vars(updated_list)
-
-    def _save_env_vars(self, env_list: List[Dict]):
-        """保存环境变量列表"""
-        validated_vars = []
-        for item in env_list:
-            if "source" not in item:
-                item["source"] = "custom"
-            validated_vars.append(item)
-
-        setattr(self, "env_vars", json.dumps(validated_vars))
+        setattr(self, "env_vars", json.dumps(updated_list))
         self.save(update_fields=["env_vars", "updated"])
 
     class Meta:

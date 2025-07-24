@@ -704,7 +704,6 @@ APIGW_ENVIRONMENT = settings.get("APIGW_ENVIRONMENT", "prod")
 BK_API_URL_TMPL = settings.get("BK_API_URL_TMPL", "http://localhost:8080/api/{api_name}/")
 # 网关 API 默认网关环境
 BK_API_DEFAULT_STAGE_MAPPINGS = settings.get("BK_API_DEFAULT_STAGE_MAPPINGS", {})
-
 # 网关 APIGW API 访问地址模板
 BK_API_URL_TMPL_FOR_APIGW = settings.get("BK_API_URL_TMPL_FOR_APIGW", BK_API_URL_TMPL)
 

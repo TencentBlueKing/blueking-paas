@@ -270,10 +270,11 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
         env_variables = slz.validated_data
 
         # 检验数据, 新建的 ConfigVar 需要传入 value
+        # FIXME: 在之后的 batch_save 中也会查询一遍 instance_mapping, 考虑是否修改
         instance_list = module.configvar_set.filter(is_builtin=False).prefetch_related("environment")
         instance_mapping = {obj.id: obj for obj in instance_list}
         for var_data in env_variables:
-            if not var_data.id or var_data.id not in instance_mapping:
+            if (not var_data.id or var_data.id not in instance_mapping) and not var_data.value:
                 raise ValidationError({"value": "value is required when create"})
 
         apply_result = ConfigVarManager().batch_save(module, env_variables)

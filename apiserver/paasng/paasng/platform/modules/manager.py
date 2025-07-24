@@ -447,7 +447,7 @@ def delete_repo_on_error(user_id: str, repo_type: str, repo_url: str | None = No
 
     :param user_id: 用户 ID，用于查询用户对应的授权凭证
     :param repo_type: 仓库类型
-    :param repo_url: 仓库地址（可选）
+    :param repo_url: 仓库地址（可选），用于判断是否需要删除代码仓库
     """
     try:
         yield

@@ -43,7 +43,7 @@
           </div>
         </template>
       </bk-table-column>
-      <bk-table-column>
+      <bk-table-column :width="100">
         <template slot-scope="{ row }">
           {{ $t('否') }}
         </template>
@@ -69,7 +69,7 @@
           </div>
         </template>
       </bk-table-column>
-      <bk-table-column width="120"></bk-table-column>
+      <bk-table-column width="140"></bk-table-column>
     </bk-table>
   </div>
 </template>

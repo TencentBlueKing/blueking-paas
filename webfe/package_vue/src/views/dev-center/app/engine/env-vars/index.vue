@@ -1157,8 +1157,6 @@ export default {
           ...item,
           // 与内置环境变量冲突提示
           conflict: conflictedKeys.length > 0 ? this.getConflictMessage(conflictedKeys, item.key) : {},
-          // 1 表示加密，0 表示不加密，兼容下拉框
-          is_sensitive: item.is_sensitive ? 1 : 0,
         }));
       } catch (e) {
         this.catchErrorHandler(e);
@@ -1685,12 +1683,12 @@ a.is-disabled {
 }
 
 .link-a:hover {
-  color: #699df4;
+  color: #3a84ff;
 }
 
 .built-in-env {
   text-decoration: none !important;
-  color: #699df4;
+  color: #3a84ff;
 
   &:hover {
     cursor: pointer;

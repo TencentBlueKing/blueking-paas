@@ -51,7 +51,7 @@
               <bk-input
                 :ref="`keyInput${$index}`"
                 v-model="row.key"
-                placeholder="ENV_KEY"
+                :placeholder="$t('仅支持大写字母、数字和下划线')"
                 @keydown="(value, event) => handleKeyDown(`valueInput${$index}`, event)"
               ></bk-input>
             </bk-form-item>
@@ -59,28 +59,25 @@
         </bk-table-column>
 
         <!-- 是否敏感列 -->
-        <bk-table-column :render-header="handleRenderHander">
+        <bk-table-column
+          :render-header="handleRenderHander"
+          width="100"
+        >
           <template slot-scope="{ row }">
             <bk-tag
+              class="ml0"
               v-if="!row.isEditing"
-              :theme="!!row.is_sensitive ? 'success' : ''"
+              :theme="row.is_sensitive ? 'success' : ''"
             >
-              {{ !!row.is_sensitive ? $t('是') : $t('否') }}
+              {{ row.is_sensitive ? $t('是') : $t('否') }}
             </bk-tag>
-            <bk-select
+            <bk-switcher
               v-else
               v-model="row.is_sensitive"
-              :clearable="false"
+              theme="primary"
               tabindex="-1"
               :disabled="!row.isNew && row.isEditing"
-            >
-              <bk-option
-                v-for="option in isEncryptedSelectList"
-                :id="option.value"
-                :key="option.text"
-                :name="option.text"
-              />
-            </bk-select>
+            ></bk-switcher>
           </template>
         </bk-table-column>
 
@@ -90,21 +87,48 @@
           :show-overflow-tooltip="true"
         >
           <template slot-scope="{ row, $index }">
-            <span v-if="!row.isEditing">{{ !!row.is_sensitive ? ENCRYPTED_PLACEHOLDER : row.value }}</span>
+            <div v-if="!row.isEditing">
+              <div
+                v-if="row.is_sensitive"
+                class="sensitive-wrapper"
+              >
+                <span
+                  v-for="dot in 6"
+                  class="sensitive-dot"
+                  :key="dot"
+                ></span>
+              </div>
+              <span v-else>{{ row.value }}</span>
+            </div>
             <bk-form-item
               v-else
               :property="`varList.${$index}.value`"
               :rules="rules.value"
             >
-              <bk-input
-                :ref="`valueInput${$index}`"
-                v-model="row.value"
-                placeholder="env_value"
-                :password-icon="[]"
-                type="text"
-                @focus="handleValueFocus(row)"
-                @keydown="(value, event) => handleKeyDown(`descriptionInput${$index}`, event)"
-              ></bk-input>
+              <bk-popover
+                ref="valuePopover"
+                placement="right"
+                :content="$t('如需更改密码，请清空再输入')"
+                class="var-value-popover"
+                :disabled="row.isNew || !row.is_sensitive"
+              >
+                <div class="input-wrapper">
+                  <bk-input
+                    :ref="`valueInput${$index}`"
+                    v-model="row.value"
+                    :password-icon="[]"
+                    type="text"
+                    @focus="handleValueFocus(row)"
+                    @input="(value, event) => handleValueInput(row, event, value)"
+                    @keydown="(value, event) => handleKeyDown(`descriptionInput${$index}`, event)"
+                  ></bk-input>
+                  <i
+                    v-if="row.is_sensitive && !row.isNew && row.value === ''"
+                    class="paasng-icon paasng-undo"
+                    @click.stop="handleUndo(row, $index)"
+                  ></i>
+                </div>
+              </bk-popover>
             </bk-form-item>
           </template>
         </bk-table-column>
@@ -391,9 +415,17 @@ export default {
       this.formData.varList = [...this.filteredVarList];
     },
 
-    // 加密状态 & 编辑模式，focus时清除密码输入框的内容
-    handleValueFocus(row) {
-      if (!!row.is_sensitive && !row.isNew) {
+    // 聚焦时显示 tip
+    handleValueFocus() {
+      this.$refs['valuePopover'].showHandler();
+    },
+
+    // 处理输入事件，特殊按钮清空输入框
+    handleValueInput(row, event) {
+      if (!row.is_sensitive || row.isNew) {
+        return;
+      }
+      if (row.value.startsWith(this.ENCRYPTED_PLACEHOLDER) || ['deleteContentBackward'].includes(event.inputType)) {
         row.value = '';
       }
     },
@@ -445,7 +477,7 @@ export default {
       const newRow = {
         key: '',
         value: '',
-        is_sensitive: 0,
+        is_sensitive: false,
         environment_name: this.active === 'all' ? 'stag' : this.active,
         description: '',
         isEditing: true,
@@ -487,7 +519,7 @@ export default {
     // 过滤掉自定义属性
     getCleanVariable(row) {
       const { isEditing, isNew, is_sensitive, ...cleanData } = row;
-      if (!isNew && !!is_sensitive && cleanData.value === this.ENCRYPTED_PLACEHOLDER) {
+      if (!isNew && is_sensitive && cleanData.value === this.ENCRYPTED_PLACEHOLDER) {
         delete cleanData.value;
       }
       if (this.isBatchEditing && typeof cleanData.id === 'string') {
@@ -497,7 +529,6 @@ export default {
       }
       return {
         ...cleanData,
-        is_sensitive: !!is_sensitive,
       };
     },
 
@@ -534,7 +565,7 @@ export default {
       const isEncrypt = $index === 1;
       const directive = {
         content: this.$t('敏感环境变量的值将在页面上以脱敏形式展示，只有应用进程内能够获取到这些变量的明文值。'),
-        width: 200,
+        width: 220,
         placement: 'top',
         disabled: !isEncrypt,
       };
@@ -565,7 +596,7 @@ export default {
         id: `costum-${Date.now()}`, // 使用时间戳作为唯一标识
         key: '',
         value: '',
-        is_sensitive: 0,
+        is_sensitive: false,
         environment_name: 'stag',
         description: '',
         isEditing: true,
@@ -618,6 +649,15 @@ export default {
         this.$refs[nextRef]?.focus();
       }
     },
+
+    // 撤销操作
+    handleUndo(row, index) {
+      // 清空当前错误提示
+      this.$refs.validateForm?.clearFieldError(`varList.${index}.value`);
+      Object.assign(row, {
+        value: this.ENCRYPTED_PLACEHOLDER,
+      });
+    },
   },
 };
 </script>
@@ -635,6 +675,43 @@ export default {
         text-decoration: underline;
         text-decoration-style: dashed;
         text-underline-position: under;
+      }
+    }
+    .var-value-popover {
+      width: 100%;
+      /deep/ .bk-tooltip-ref {
+        width: 100%;
+      }
+    }
+    .sensitive-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      .sensitive-dot {
+        width: 6px;
+        height: 6px;
+        display: inline-block;
+        border-radius: 50%;
+        background-color: #4d4f56;
+      }
+    }
+    .input-wrapper {
+      position: relative;
+      .bk-input {
+        width: 100%;
+      }
+      i.paasng-undo {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 16px;
+        color: #c4c6cc;
+        z-index: 99;
+        cursor: pointer;
+        &:hover {
+          color: #3a84ff;
+        }
       }
     }
     .key-wrapper {

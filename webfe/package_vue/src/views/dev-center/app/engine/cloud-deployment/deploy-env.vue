@@ -506,8 +506,6 @@ export default {
           isEdit: false, // 取消编辑态
           conflict: conflictedKeys.length > 0 ? this.getConflictMessage(conflictedKeys, item.key) : {},
           id: item.id || res.find((i) => i.key === item.key)?.id,
-          // 1 表示加密，0 表示不加密，兼容下拉框
-          is_sensitive: item.is_sensitive ? 1 : 0,
         }));
       } catch (e) {
         this.showErrorMessage(e);

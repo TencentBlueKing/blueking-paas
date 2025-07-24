@@ -3052,4 +3052,6 @@ export default {
   当前配置将覆盖内置变量: 'Current configuration will override built-in variables',
   和平台的内置环境变量冲突: 'Conflicts with the platforms built-in environment variables',
   '和 {k} 增强服务的环境变量冲突': 'Conflicts with the environment variables of the {k} enhanced service',
+  '仅支持大写字母、数字和下划线': 'Only uppercase letters, numbers, and underscores are supported',
+  '如需更改密码，请清空再输入': 'To change the password, please clear and re-enter',
 };

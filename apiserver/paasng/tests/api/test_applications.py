@@ -622,7 +622,7 @@ class TestCreateCloudNativeApp:
 
         # 验证异常时的仓库清理
         if init_error and auto_create_repo:
-            mock_delete_repo.assert_called_once_with(bk_user.pk, "github", mock.ANY)
+            mock_delete_repo.assert_called_once_with("github", mock.ANY, bk_user.pk)
         else:
             mock_delete_repo.assert_not_called()
 

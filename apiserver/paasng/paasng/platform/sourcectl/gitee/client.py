@@ -52,14 +52,6 @@ class GiteeApiClient(BaseGitApiClient):
         """
         return list(self._fetch_all_items(urljoin(self.api_url, "user/repos")))
 
-    def list_group(self, admin: bool) -> List[Dict]:
-        """从 Gitee API 获取用户的所有组
-        https://gitee.com/api/v5/swagger#/getV5UserOrgs
-
-        :param admin: 只列出授权用户管理的组织
-        """
-        return list(self._fetch_all_items(urljoin(self.api_url, "user/orgs"), params={"admin": admin}))
-
     def repo_get_raw_file(self, project: GitProject, filepath: str, ref=DEFAULT_REPO_REF, **kwargs) -> bytes:
         """从远程仓库下载 filepath 的文件
         https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoContents(Path)

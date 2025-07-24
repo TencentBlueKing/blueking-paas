@@ -426,12 +426,12 @@ def create_repo_with_user_account(
     )
 
 
-def delete_repo(user_id: str, repo_type: str, repo_url: str):
+def delete_repo(repo_type: str, repo_url: str, user_id: str):
     """Delete the code repository created by the platform
 
-    :param user_id: 用户 ID，用于查询用户对应的授权凭证
     :param repo_type: 仓库类型
     :param repo_url: 仓库地址
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
     """
     source_type = get_sourcectl_type(repo_type)
     if not source_type.repo_provisioner_class:
@@ -454,7 +454,7 @@ def delete_repo_on_error(user_id: str, repo_type: str, repo_url: str | None = No
     except Exception:
         if repo_url:
             try:
-                delete_repo(user_id, repo_type, repo_url)
+                delete_repo(repo_type, repo_url, user_id)
                 logger.info(f"Repository({repo_url}) deleted successfully  during rollback")
             except Exception:
                 logger.exception(f"Failed to delete repository({repo_url}) during rollback")

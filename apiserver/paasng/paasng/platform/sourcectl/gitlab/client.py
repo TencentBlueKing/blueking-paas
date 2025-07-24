@@ -22,7 +22,7 @@ from typing import Dict, Generator, List
 import arrow
 import gitlab
 from gitlab.exceptions import GitlabGetError
-from gitlab.v4.objects import Group, ProjectFile
+from gitlab.v4.objects import ProjectFile
 
 from paasng.platform.sourcectl.exceptions import ReadFileNotFoundError
 from paasng.platform.sourcectl.models import GitProject
@@ -47,13 +47,6 @@ class GitLabApiClient:
             public:     The project can be cloned without any authentication.
         """
         return self.gl.projects.list(all=True, visibility=visibility)
-
-    def list_group(self, owned: bool) -> List[Group]:
-        """从远程服务器获取当前用户的所有组
-
-        :param owned: Limit by projects owned by the current user
-        """
-        return self.gl.groups.list(all=True, owned=owned)
 
     def get_project_info(self, project):
         """尝试访问远程仓库, 试探是否有访问权限"""

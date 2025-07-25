@@ -52,6 +52,8 @@ class FrontendFeatureViewSet(ViewSet):
             "DEV_SANDBOX": settings.FE_FEATURE_SETTINGS_DEV_SANDBOX,
             # 是否展示应用可用性保障
             "APP_AVAILABILITY_LEVEL": settings.FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL,
+            # 是否展示 MCP Server 云 API 权限
+            "MCP_SERVER_API": settings.FE_FEATURE_SETTINGS_MCP_SERVER_API,
         }
         # 部分前端的特性复用了后端的配置
         features_reuses_backend_settings = {

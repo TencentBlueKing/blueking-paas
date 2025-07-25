@@ -42,6 +42,7 @@ urlpatterns = [
     re_path(r"^", include("paasng.platform.sourcectl.urls")),
     re_path(r"^", include("paasng.accessories.servicehub.urls")),
     re_path(r"^", include("paasng.accessories.cloudapi.urls")),
+    re_path(r"^", include("paasng.accessories.cloudapi_v2.urls")),
     re_path(r"^", include("paasng.bk_plugins.bk_plugins.urls")),
     re_path(r"^", include("paasng.platform.templates.urls")),
     re_path(r"^", include("paasng.platform.smart_app.urls")),

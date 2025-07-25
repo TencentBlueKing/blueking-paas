@@ -13,8 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="appslugbuilder",
             name="dev_sandbox_image",
-            field=models.CharField(
-                blank=True, max_length=256, verbose_name="开发沙箱镜像"
-            ),
+            field=models.CharField(blank=True, max_length=256, verbose_name="开发沙箱镜像（含 Tag）"),
         ),
     ]

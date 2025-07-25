@@ -28,7 +28,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
-from paasng.platform.applications.constants import AppEnvironment
+from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import (
     get_user_conflicted_keys,
@@ -52,6 +52,7 @@ from paasng.platform.engine.serializers import (
     ConfigVarSLZ,
     ConfigVarWithoutKeyFormatSLZ,
     ConflictedKeyOutputSLZ,
+    ListConfigVarBuiltinOutputSLZ,
     ListConfigVarsSLZ,
 )
 
@@ -285,24 +286,57 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def _get_enum_choices_dict(self, enum_obj) -> Dict[str, str]:
         return {field[0]: field[1] for field in enum_obj.get_choices()}
 
-    def get_builtin_envs_for_app(self, request, code):
-        env_vars = list_vars_builtin_app_basic(self.get_application(), include_deprecated=False)
-        return Response({obj.key: obj.description for obj in env_vars})
+    def get_builtin_envs(self, request, code):
+        """获取内置环境变量"""
 
-    def get_builtin_envs_bk_platform(self, request, code):
-        bk_address_envs = list_vars_builtin_plat_addrs()
         application = self.get_application()
+        # 云原生应用特殊规则: 所有内置变量都不可被覆盖
+        override_conflicted = False
+        if application.type != ApplicationType.CLOUD_NATIVE:
+            # 因为下面内置变量均属于 EnvVarSource.BUILTIN_MISC
+            # 根据 UnifiedEnvVarsReader 变量的加载顺序, 均可以被覆盖修改
+            override_conflicted = True
+
+        # 获取应用基础内置环境变量
+        app_basic_vars = list_vars_builtin_app_basic(application, include_deprecated=False)
+        app_basic_vars_list = [
+            {
+                "key": obj.key,
+                "description": obj.description,
+                "override_conflicted": override_conflicted,
+            }
+            for obj in app_basic_vars
+        ]
+
+        # 获取平台相关的内置环境变量
+        bk_address_envs = list_vars_builtin_plat_addrs()
         # 默认展示正式环境的环境变量
         region_and_env_envs = list_vars_builtin_region(application.region, AppEnvironment.PRODUCTION.value)
+        bk_platform_vars_list = [
+            {
+                "key": obj.key,
+                "value": obj.value,
+                "description": obj.description,
+                "override_conflicted": override_conflicted,
+            }
+            for obj in list(bk_address_envs) + list(region_and_env_envs)
+        ]
 
-        combined = {**bk_address_envs.get_data_map(), **region_and_env_envs.get_data_map()}
-        return Response(combined)
+        # 获取运行时相关的内置环境变量
+        env = application.default_module.get_envs(AppEnvironment.PRODUCTION)
+        runtime_vars = list_vars_builtin_runtime(env, include_deprecated=False)
+        runtime_vars_list = [
+            {"key": obj.key, "description": obj.description, "override_conflicted": override_conflicted}
+            for obj in runtime_vars
+        ]
 
-    def get_runtime_envs(self, request, code):
-        # 使用默认模块的正式环境获取变量
-        env = self.get_application().default_module.get_envs(AppEnvironment.PRODUCTION)
-        env_vars = list_vars_builtin_runtime(env, include_deprecated=False)
-        return Response({obj.key: obj.description for obj in env_vars})
+        combined_envs = {
+            "app_basic_vars": app_basic_vars_list,
+            "bk_platform_vars": bk_platform_vars_list,
+            "runtime_vars": runtime_vars_list,
+        }
+
+        return Response(ListConfigVarBuiltinOutputSLZ(combined_envs).data)
 
 
 class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

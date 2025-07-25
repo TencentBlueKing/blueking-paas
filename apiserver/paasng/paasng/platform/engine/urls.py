@@ -187,31 +187,13 @@ urlpatterns = [
 # Built-in envs
 urlpatterns += [
     re_path(
-        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/app/$",
+        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/$",
         views.ConfigVarBuiltinViewSet.as_view(
             {
-                "get": "get_builtin_envs_for_app",
+                "get": "get_builtin_envs",
             }
         ),
-        name="api.config_vars.builtin.app",
-    ),
-    re_path(
-        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/bk_platform/$",
-        views.ConfigVarBuiltinViewSet.as_view(
-            {
-                "get": "get_builtin_envs_bk_platform",
-            }
-        ),
-        name="api.config_vars.builtin.bk_platform",
-    ),
-    re_path(
-        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/runtime/$",
-        views.ConfigVarBuiltinViewSet.as_view(
-            {
-                "get": "get_runtime_envs",
-            }
-        ),
-        name="api.config_vars.builtin.runtime",
+        name="api.config_vars.builtin",
     ),
 ]
 

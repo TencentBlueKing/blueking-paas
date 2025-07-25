@@ -715,6 +715,26 @@ class EnvOverviewSLZ(serializers.Serializer):
     modules = ModuleEnvOverviewSLZ(many=True)
 
 
+class ConfigVarBuiltinFormatSLZ(serializers.Serializer):
+    """Serializer for Builtin ConfigVar"""
+
+    key = serializers.CharField(help_text="内置环境变量 key")
+    description = serializers.CharField(help_text="内置环境变量描述")
+    override_conflicted = serializers.BooleanField(help_text="冲突发生后, 该 key 是否会被覆盖")
+
+
+class ConfigVarBuiltinWithValueFormatSLZ(ConfigVarBuiltinFormatSLZ):
+    """Serializer for Builtin ConfigVar with value"""
+
+    value = serializers.CharField(help_text="内置环境变量值")
+
+
+class ListConfigVarBuiltinOutputSLZ(serializers.Serializer):
+    app_basic_vars = ConfigVarBuiltinFormatSLZ(many=True)
+    bk_platform_vars = ConfigVarBuiltinWithValueFormatSLZ(many=True)
+    runtime_vars = ConfigVarBuiltinFormatSLZ(many=True)
+
+
 class ConflictedKeyOutputSLZ(serializers.Serializer):
     """Serializer for represent ConflictedKey"""
 

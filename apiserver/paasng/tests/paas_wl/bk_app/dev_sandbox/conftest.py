@@ -35,7 +35,7 @@ def default_cluster():
 
 @pytest.fixture()
 def dev_sandbox_model(bk_cnative_app, bk_module) -> DevSandboxModel:
-    return DevSandboxModel.objects.create(module=bk_module, version_info=None, owner="admin")
+    return DevSandboxModel.objects.create(module=bk_module, env_vars={}, version_info=None, owner="admin")
 
 
 @pytest.fixture()

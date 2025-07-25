@@ -20,6 +20,7 @@ import logging
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -29,7 +30,11 @@ from rest_framework.viewsets import GenericViewSet
 from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paas_wl.bk_app.dev_sandbox.entities import SourceCodeConfig
-from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
+from paas_wl.bk_app.dev_sandbox.exceptions import (
+    BuilderDoesNotSupportDevSandbox,
+    DevSandboxAlreadyExists,
+    DevSandboxResourceNotFound,
+)
 from paasng.accessories.dev_sandbox.commit import DevSandboxCodeCommit
 from paasng.accessories.dev_sandbox.config_var import generate_env_vars, get_env_vars_selected_addons
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
@@ -138,6 +143,8 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             )
         except DevSandboxAlreadyExists:
             raise error_codes.DEV_SANDBOX_ALREADY_EXISTS
+        except BuilderDoesNotSupportDevSandbox:
+            raise error_codes.DEV_SANDBOX_CREATE_FAILED.f(_("当前模块的基础镜像不支持开发沙箱"))
         except Exception:
             logger.exception("Failed to deploy dev sandbox")
             dev_sandbox.delete()

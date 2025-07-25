@@ -46,7 +46,8 @@ RUN set -eux; \
     rm -f *.tar.xz
 
 # install code-server
-ARG CODE_SERVER_VER=4.102.1
+# since v4.17.0 code-server use nodejs 18 which is not compatible with our bionic (heroku18) builder
+ARG CODE_SERVER_VER=4.16.1
 
 RUN wget https://github.com/coder/code-server/releases/download/v${CODE_SERVER_VER}/code-server_${CODE_SERVER_VER}_amd64.deb; \
   dpkg -i code-server_${CODE_SERVER_VER}_amd64.deb; \

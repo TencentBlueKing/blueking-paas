@@ -35,7 +35,7 @@ class PreCreatedInstanceOutputSLZ(serializers.Serializer):
     def to_representation(self, instance):
         result = super().to_representation(instance)
         # config 以 dict 形式返回
-        if not isinstance(result["config"], dict):
+        if isinstance(result["config"], str):
             result["config"] = json.loads(result["config"])
 
         return result

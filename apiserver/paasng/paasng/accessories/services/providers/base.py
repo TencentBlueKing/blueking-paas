@@ -80,10 +80,13 @@ class ResourcePoolProvider(BaseProvider):
             instance.acquire()
 
             creds = json.loads(instance.credentials)
-            ins_config = instance.config
-            if type(ins_config) is not dict:
-                ins_config = json.loads(ins_config)
-            tls = ins_config.get("tls", {})
+            # 兼容不同格式的历史数据
+            if isinstance(instance.config, str):
+                cfg = json.loads(instance.config)
+            else:
+                cfg = instance.config
+
+            tls = cfg.get("tls", {})
             provider_name = instance.plan.service.provider_name
             # 如果实例配置中有证书，则在凭证部分中添加挂载证书的路径
             # 证书内容会在部署时候以 Secret 形式挂载到容器中
@@ -105,7 +108,7 @@ class ResourcePoolProvider(BaseProvider):
                     "is_pre_created": True,
                     "provider_name": provider_name,
                     "enable_tls": bool(ca or cert or cert_key),
-                    "recyclable": ins_config.get("recyclable", False),
+                    "recyclable": cfg.get("recyclable", False),
                 },
             )
 

@@ -44,6 +44,7 @@ from paasng.platform.sourcectl.constants import VersionType
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.datetime import calculate_gap_seconds_interval, get_time_delta
 from paasng.utils.error_codes import error_codes
+from paasng.utils.masked_curlify import MASKED_CONTENT
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import UserField, field_env_var_key
 
@@ -246,203 +247,6 @@ class GetReleasedInfoSLZ(serializers.Serializer):
     with_processes = serializers.BooleanField(default=False)
 
 
-class ConfigVarApplyResultSLZ(serializers.Serializer):
-    """Serializer for ConfigVar ApplyResult"""
-
-    create_num = serializers.IntegerField()
-    overwrited_num = serializers.IntegerField()
-    ignore_num = serializers.IntegerField()
-    deleted_num = serializers.IntegerField()
-
-
-class ConfigVarWithoutKeyFormatSLZ(serializers.Serializer):
-    value = serializers.CharField(help_text="环境变量值")
-    environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
-    description = serializers.CharField(
-        allow_blank=True,
-        allow_null=True,
-        max_length=200,
-        required=False,
-        default="",
-        help_text="变量描述，不超过 200 个字符",
-    )
-
-    def to_internal_value(self, data):
-        """Do following things:
-
-        - Query for environment_id
-        - bind module from context
-        - return a non-persistent ConfigVar
-        """
-        data = super().to_internal_value(data)
-        module = self.context.get("module")
-        env_name = data.pop("environment_name")
-        if env_name == ENVIRONMENT_NAME_FOR_GLOBAL:
-            data["is_global"] = True
-            data["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
-        else:
-            data["is_global"] = False
-            data["environment_id"] = module.envs.get(environment=env_name).pk
-        return ConfigVar(**data, module=module, tenant_id=module.tenant_id)
-
-
-class ConfigVarFormatSLZ(ConfigVarWithoutKeyFormatSLZ):
-    """Serializer for ConfigVar"""
-
-    key = field_env_var_key()
-
-
-class ConfigVarFormatWithIdSLZ(ConfigVarFormatSLZ):
-    """When batch editing, need to pass in the id."""
-
-    id = serializers.IntegerField(required=False)
-
-
-class ConfigVarImportSLZ(serializers.Serializer):
-    """Serializer for ConfigVarImport"""
-
-    file = serializers.FileField(required=True, help_text="Only yaml format files are accepted")
-    env_variables = ConfigVarFormatSLZ(required=False, many=True, help_text="Only yaml format files are accepted")
-
-    def to_internal_value(self, data):
-        # 从 request 获取的 data 属于 MultiValueDict, 在解析数组时会有奇怪的逻辑, 这里将 data 转换成原生的 dict 类型, 避免意外情况。
-        # see also: rest_framework.utils.html::parse_html_list
-        data = dict(data.items())
-        try:
-            content = yaml.safe_load(data["file"])
-        except yaml.YAMLError:
-            raise error_codes.NOT_YAML_FILE
-        if "env_variables" not in content:
-            raise error_codes.ERROR_FILE_FORMAT
-        data["env_variables"] = content["env_variables"]
-        return super().to_internal_value(data)
-
-
-class EnvironmentSlugFieldSupportGlobal(serializers.RelatedField):
-    queryset = ModuleEnvironment.objects.all()
-    default_error_messages = {
-        "does_not_exist": _("Object with {slug_name}={value} does not exist."),
-        "invalid": _("Invalid value."),
-    }
-
-    def get_choices(self, cutoff=None):
-        return ConfigVarEnvName.get_choices()
-
-    def get_attribute(self, instance):
-        # 实际上全局环境变量并未绑定到 environment, 因此 super().get_attribute(instance) 会返回 None. 这里将其替换成 ENVIRONMENT_NAME_FOR_GLOBAL
-        return super().get_attribute(instance) or ENVIRONMENT_NAME_FOR_GLOBAL
-
-    def to_representation(self, value: ModuleEnvironment):
-        if isinstance(value, ModuleEnvironment):
-            value = value.environment
-        return ConfigVarEnvName(value).value
-
-    def to_internal_value(self, name: str):
-        # 约定使用 -1 代表全局环境变量, 因此返回 None
-        if name == ENVIRONMENT_NAME_FOR_GLOBAL:
-            return None
-
-        try:
-            return self.queryset.get(environment=name, module=self.context["module"])
-        except ModuleEnvironment.DoesNotExist:
-            self.fail("does_not_exist", slug_name="environment", value=str(name))
-        except (TypeError, ValueError):
-            self.fail("invalid")
-
-
-class ConfigVarUniqueTogetherValidator(UniqueTogetherValidator):
-    def __call__(self, attrs, serializer):
-        # 实现复制自 UniqueTogetherValidator, 但是将报错信息转为更可读的文案。
-        self.enforce_required_fields(attrs, serializer)
-        queryset = self.queryset
-        queryset = self.filter_queryset(attrs, queryset, serializer)
-        queryset = self.exclude_current_instance(attrs, queryset, serializer.instance)
-
-        # Ignore validation if any field is None
-        checked_values = [value for field, value in attrs.items() if field in self.fields]
-        if None not in checked_values and qs_exists(queryset):
-            if serializer.instance is not None:
-                message = _("该环境下同名变量 {key} 已存在。").format(key=attrs["key"])
-            else:
-                message = _("该环境下名称为 {key} 的变量已经存在，不能重复添加。").format(key=attrs["key"])
-            raise ValidationError(message, code="unique")
-
-
-class ConfigVarSLZ(serializers.ModelSerializer):
-    environment_name = EnvironmentSlugFieldSupportGlobal(
-        allow_null=True,
-        required=True,
-        source="environment",
-    )
-    key = field_env_var_key()
-    value = serializers.CharField(required=True)
-    description = serializers.CharField(
-        allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
-    )
-    is_global = serializers.BooleanField(required=False, help_text="是否全局有效, 该字段由 slz 补充.")
-    # 只读字段, 仅序列化时 ConfigVar 对象时生效
-    id = serializers.IntegerField(read_only=True)
-    is_builtin = serializers.BooleanField(read_only=True)
-    created = serializers.DateTimeField(read_only=True)
-    # 只写字段, 仅参与 UniqueTogetherValidator 的校验. 对于 global 类型的环境变量, environment=None, 因此不能使用 environment 作为唯一约束.
-    environment_id = serializers.IntegerField(write_only=True, help_text="该字段由 slz 补充.")
-
-    class Meta:
-        model = ConfigVar
-        validators = [
-            ConfigVarUniqueTogetherValidator(
-                queryset=ConfigVar.objects.all(),
-                fields=("module", "is_global", "environment_id", "key"),
-            )
-        ]
-        exclude = ("region", "environment")
-
-    def to_internal_value(self, data):
-        """Do following things:
-
-        - Query for environment_id for validator.
-        - Add Module field from context.
-        """
-        module = self.context.get("module")
-        env_name = data["environment_name"]
-        if env_name == ENVIRONMENT_NAME_FOR_GLOBAL:
-            data["is_global"] = True
-            data["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
-        else:
-            data["is_global"] = False
-            data["environment_id"] = module.get_envs(env_name).pk
-        data["module"] = module.pk
-        data["tenant_id"] = module.tenant_id
-        return super().to_internal_value(data)
-
-
-class ListConfigVarsSLZ(serializers.Serializer):
-    """Serializer for listing ConfigVars"""
-
-    valid_order_by_fields = {"created", "key"}
-
-    environment_name = serializers.ChoiceField(
-        choices=ConfigVarEnvName.get_choices(), required=False, help_text="按生效环境过滤"
-    )
-    order_by = serializers.CharField(default="-created", help_text='排序方式，可选："-created", "key"')
-
-    def validate_environment_name(self, value: str) -> ConfigVarEnvName:
-        return ConfigVarEnvName(value)
-
-    def validate_order_by(self, field: str) -> str:
-        f = OrderByField.from_string(field)
-        if f.name not in self.valid_order_by_fields:
-            raise ValidationError(_("无效的排序选项：%s") % f)
-        return field
-
-
-class PresetEnvVarSLZ(serializers.Serializer):
-    key = serializers.CharField()
-    value = serializers.CharField()
-    environment_name = serializers.CharField()
-    description = serializers.CharField(default="")
-
-
 class CreateOfflineOperationSLZ(serializers.Serializer):
     pass
 
@@ -502,6 +306,247 @@ class OperationSLZ(serializers.ModelSerializer):
 
     def get_module_name(self, obj: ModuleEnvironmentOperations) -> str:
         return obj.app_environment.module.name
+
+
+#################
+# env variables #
+#################
+class PresetEnvVarSLZ(serializers.Serializer):
+    key = serializers.CharField()
+    value = serializers.CharField()
+    environment_name = serializers.CharField()
+    description = serializers.CharField(default="")
+
+
+class EnvironmentSlugFieldSupportGlobal(serializers.RelatedField):
+    queryset = ModuleEnvironment.objects.all()
+    default_error_messages = {
+        "does_not_exist": _("Object with {slug_name}={value} does not exist."),
+        "invalid": _("Invalid value."),
+    }
+
+    def get_choices(self, cutoff=None):
+        return ConfigVarEnvName.get_choices()
+
+    def get_attribute(self, instance):
+        # 实际上全局环境变量并未绑定到 environment, 因此 super().get_attribute(instance) 会返回 None. 这里将其替换成 ENVIRONMENT_NAME_FOR_GLOBAL
+        return super().get_attribute(instance) or ENVIRONMENT_NAME_FOR_GLOBAL
+
+    def to_representation(self, value: ModuleEnvironment):
+        if isinstance(value, ModuleEnvironment):
+            value = value.environment
+        return ConfigVarEnvName(value).value
+
+    def to_internal_value(self, name: str):
+        # 约定使用 -1 代表全局环境变量, 因此返回 None
+        if name == ENVIRONMENT_NAME_FOR_GLOBAL:
+            return None
+
+        try:
+            return self.queryset.get(environment=name, module=self.context["module"])
+        except ModuleEnvironment.DoesNotExist:
+            self.fail("does_not_exist", slug_name="environment", value=str(name))
+        except (TypeError, ValueError):
+            self.fail("invalid")
+
+
+class ConfigVarUniqueTogetherValidator(UniqueTogetherValidator):
+    def __call__(self, attrs, serializer):
+        # 实现复制自 UniqueTogetherValidator, 但是将报错信息转为更可读的文案。
+        self.enforce_required_fields(attrs, serializer)
+        queryset = self.queryset
+        queryset = self.filter_queryset(attrs, queryset, serializer)
+        queryset = self.exclude_current_instance(attrs, queryset, serializer.instance)
+
+        # Ignore validation if any field is None
+        checked_values = [value for field, value in attrs.items() if field in self.fields]
+        if None not in checked_values and qs_exists(queryset):
+            if serializer.instance is not None:
+                message = _("该环境下同名变量 {key} 已存在。").format(key=attrs["key"])
+            else:
+                message = _("该环境下名称为 {key} 的变量已经存在，不能重复添加。").format(key=attrs["key"])
+            raise ValidationError(message, code="unique")
+
+
+class ConfigVarSLZ(serializers.ModelSerializer):
+    environment_name = EnvironmentSlugFieldSupportGlobal(
+        allow_null=True,
+        required=True,
+        source="environment",
+    )
+    key = field_env_var_key()
+    value = serializers.CharField(required=True, help_text="环境变量值")
+    is_sensitive = serializers.BooleanField(required=False, default=False, help_text="变量值是否敏感")
+    description = serializers.CharField(
+        allow_blank=True, max_length=200, required=False, default="", help_text="变量描述，不超过 200 个字符"
+    )
+    is_global = serializers.BooleanField(required=False, help_text="是否全局有效, 该字段由 slz 补充.")
+    # 只读字段, 仅序列化时 ConfigVar 对象时生效
+    id = serializers.IntegerField(read_only=True)
+    is_builtin = serializers.BooleanField(read_only=True)
+    created = serializers.DateTimeField(read_only=True)
+    # 只写字段, 仅参与 UniqueTogetherValidator 的校验. 对于 global 类型的环境变量, environment=None, 因此不能使用 environment 作为唯一约束.
+    environment_id = serializers.IntegerField(write_only=True, help_text="该字段由 slz 补充.")
+
+    class Meta:
+        model = ConfigVar
+        validators = [
+            ConfigVarUniqueTogetherValidator(
+                queryset=ConfigVar.objects.all(),
+                fields=("module", "is_global", "environment_id", "key"),
+            )
+        ]
+        exclude = ("region", "environment")
+
+    def to_internal_value(self, data):
+        """Do following things:
+
+        - Query for environment_id for validator.
+        - Add Module field from context.
+        """
+        module = self.context.get("module")
+        env_name = data["environment_name"]
+        if env_name == ENVIRONMENT_NAME_FOR_GLOBAL:
+            data["is_global"] = True
+            data["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
+        else:
+            data["is_global"] = False
+            data["environment_id"] = module.get_envs(env_name).pk
+        data["module"] = module.pk
+        data["tenant_id"] = module.tenant_id
+        return super().to_internal_value(data)
+
+    def to_representation(self, instance) -> dict:
+        ret = super().to_representation(instance)
+        if ret.get("is_sensitive"):
+            ret["value"] = MASKED_CONTENT
+        return ret
+
+
+class CreateConfigVarInputSLZ(ConfigVarSLZ):
+    """Serializer for creating ConfigVars"""
+
+
+class UpdateConfigVarInputSLZ(ConfigVarSLZ):
+    """Serializer for updating ConfigVars"""
+
+    value = serializers.CharField(required=False, help_text="环境变量值")
+    is_sensitive = serializers.BooleanField(read_only=True)
+
+
+class ListConfigVarsQuerySLZ(serializers.Serializer):
+    """Query Serializer for listing ConfigVars"""
+
+    valid_order_by_fields = {"created", "key"}
+
+    environment_name = serializers.ChoiceField(
+        choices=ConfigVarEnvName.get_choices(), required=False, help_text="按生效环境过滤"
+    )
+    order_by = serializers.CharField(default="-created", help_text='排序方式，可选："-created", "key"')
+
+    def validate_environment_name(self, value: str) -> ConfigVarEnvName:
+        return ConfigVarEnvName(value)
+
+    def validate_order_by(self, field: str) -> str:
+        f = OrderByField.from_string(field)
+        if f.name not in self.valid_order_by_fields:
+            raise ValidationError(_("无效的排序选项：%s") % f)
+        return field
+
+
+class ConfigVarBaseSLZ(serializers.Serializer):
+    """ConfigVar 基础 SLZ"""
+
+    value = serializers.CharField(required=False, help_text="环境变量值")
+    is_sensitive = serializers.BooleanField(required=False, default=False, help_text="变量值是否敏感")
+    environment_name = serializers.ChoiceField(choices=ConfigVarEnvName.get_choices(), required=True)
+    description = serializers.CharField(
+        allow_blank=True,
+        allow_null=True,
+        max_length=200,
+        required=False,
+        default="",
+        help_text="变量描述，不超过 200 个字符",
+    )
+
+    def to_internal_value(self, data):
+        """Do following things:
+
+        - Query for environment_id
+        - bind module from context
+        - return a non-persistent ConfigVar
+        """
+        data = super().to_internal_value(data)
+        module = self.context.get("module")
+        env_name = data.pop("environment_name")
+        if env_name == ENVIRONMENT_NAME_FOR_GLOBAL:
+            data["is_global"] = True
+            data["environment_id"] = ENVIRONMENT_ID_FOR_GLOBAL
+        else:
+            data["is_global"] = False
+            data["environment_id"] = module.envs.get(environment=env_name).pk
+        return ConfigVar(**data, module=module, tenant_id=module.tenant_id)
+
+
+class ConfigVarBaseInputSLZ(ConfigVarBaseSLZ):
+    """ConfigVar 基础输入 SLZ"""
+
+    key = field_env_var_key()
+
+
+class ConfigVarUpsertByKeyInputSLZ(ConfigVarBaseSLZ):
+    """通过 key 更新或创建 ConfigVar 的输入 SLZ"""
+
+
+class ConfigVarOperateAuditOutputSLZ(ConfigVarBaseInputSLZ):
+    """ConfigVar 审计输出 SLZ, 敏感值会被 masked"""
+
+    def to_representation(self, instance) -> dict:
+        ret = super().to_representation(instance)
+        if ret.get("is_sensitive"):
+            ret["value"] = MASKED_CONTENT
+        return ret
+
+
+class ConfigVarApplyResultSLZ(serializers.Serializer):
+    """Serializer for ConfigVar ApplyResult"""
+
+    create_num = serializers.IntegerField()
+    overwrited_num = serializers.IntegerField()
+    ignore_num = serializers.IntegerField()
+    deleted_num = serializers.IntegerField()
+
+
+class ConfigVarBatchInputSLZ(ConfigVarBaseInputSLZ):
+    """批量编辑 ConfigVar 输入 SLZ, 更新需传入 id, 新建不必传入 id"""
+
+    id = serializers.IntegerField(required=False)
+
+
+class ConfigVarImportItemSLZ(ConfigVarBaseInputSLZ):
+    """从文件中导入 ConfigVar 的 SLZ, 必须传入 value"""
+
+    value = serializers.CharField(required=True, help_text="环境变量值")
+
+
+class ConfigVarImportSLZ(serializers.Serializer):
+    """Serializer for ConfigVarImport"""
+
+    file = serializers.FileField(required=True, help_text="Only yaml format files are accepted")
+    env_variables = ConfigVarImportItemSLZ(required=False, many=True, help_text="Only yaml format files are accepted")
+
+    def to_internal_value(self, data):
+        # 从 request 获取的 data 属于 MultiValueDict, 在解析数组时会有奇怪的逻辑, 这里将 data 转换成原生的 dict 类型, 避免意外情况。
+        # see also: rest_framework.utils.html::parse_html_list
+        data = dict(data.items())
+        try:
+            content = yaml.safe_load(data["file"])
+        except yaml.YAMLError:
+            raise error_codes.NOT_YAML_FILE
+        if "env_variables" not in content:
+            raise error_codes.ERROR_FILE_FORMAT
+        data["env_variables"] = content["env_variables"]
+        return super().to_internal_value(data)
 
 
 #####################

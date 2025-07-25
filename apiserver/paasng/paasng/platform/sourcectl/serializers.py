@@ -137,6 +137,14 @@ class RepoSLZ(serializers.Serializer):
     last_activity_at = serializers.DateTimeField()
 
 
+class GroupSLZ(serializers.Serializer):
+    name = serializers.CharField()
+    path = serializers.CharField()
+    description = serializers.CharField()
+    avatar_url = serializers.CharField()
+    web_url = serializers.CharField()
+
+
 class CommitLogSLZ(serializers.Serializer):
     message = serializers.CharField()
     revision = serializers.CharField()

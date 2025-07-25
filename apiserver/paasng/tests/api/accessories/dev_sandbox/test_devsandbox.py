@@ -21,12 +21,10 @@ from unittest import mock
 import pytest
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 
 from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_WORKSPACE
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxDetail, DevSandboxUrls
-from paasng.infras.accounts.permissions.application import BaseAppPermission
 from paasng.platform.sourcectl.models import AlternativeVersion
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -189,38 +187,20 @@ class TestCommitDevSandbox:
         assert resp.status_code == status.HTTP_200_OK
 
 
-class AlwaysAllowAppPermission(BaseAppPermission):
-    def has_permission(self, request, view):
-        return True
-
-
 class TestEnvVarsDevSandbox:
     """沙箱环境变量"""
 
-    @pytest.fixture(autouse=True)
-    def _setup(self, bk_dev_sandbox):
-        self.dev_sandbox = bk_dev_sandbox
-
-    @pytest.fixture(autouse=True)
-    def _patch_permissions(self):
-        with mock.patch(
-            "paasng.accessories.dev_sandbox.views.DevSandboxEnvVarViewSet.permission_classes",
-            [IsAuthenticated, AlwaysAllowAppPermission],
-        ):
-            yield
-
-    def test_upsert_env_vars_success(self, api_client, bk_cnative_app, bk_module):
+    def test_upsert_env_vars_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
         env_var_url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{self.dev_sandbox.code}/env_vars/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
 
         resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "new_value"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
-        self.dev_sandbox.refresh_from_db()
-
-        updated_env_vars = self.dev_sandbox.list_env_vars()
+        bk_dev_sandbox.refresh_from_db()
+        updated_env_vars = bk_dev_sandbox.list_env_vars()
         updated_dict = {item["key"]: item["value"] for item in updated_env_vars}
 
         assert "NEW_VAR" in updated_dict
@@ -229,9 +209,8 @@ class TestEnvVarsDevSandbox:
         resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "updated_value"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
-        self.dev_sandbox.refresh_from_db()
-
-        final_env_vars = self.dev_sandbox.list_env_vars()
+        bk_dev_sandbox.refresh_from_db()
+        final_env_vars = bk_dev_sandbox.list_env_vars()
         final_dict = {item["key"]: item["value"] for item in final_env_vars}
         assert final_dict["NEW_VAR"] == "updated_value"
 
@@ -245,26 +224,29 @@ class TestEnvVarsDevSandbox:
         resp = api_client.post(url, {"key": "VALID_VAR", "value": "value"})
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_delete_env_var_success(self, api_client, bk_cnative_app, bk_module):
+    def test_delete_env_var_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
         env_var_url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{self.dev_sandbox.code}/env_vars/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
 
+        # 添加环境变量
         api_client.post(env_var_url, {"key": "EXISTING_VAR", "value": "value"})
-        self.dev_sandbox.refresh_from_db()
-        assert "EXISTING_VAR" in {item["key"] for item in self.dev_sandbox.list_env_vars()}
+        bk_dev_sandbox.refresh_from_db()
+        assert "EXISTING_VAR" in {item["key"] for item in bk_dev_sandbox.list_env_vars()}
 
+        # 删除环境变量
         delete_url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{self.dev_sandbox.code}/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/"
             f"env_vars/EXISTING_VAR/"
         )
 
         resp = api_client.delete(delete_url)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
-        self.dev_sandbox.refresh_from_db()
-        env_vars = self.dev_sandbox.list_env_vars()
+        # 验证环境变量已被删除
+        bk_dev_sandbox.refresh_from_db()
+        env_vars = bk_dev_sandbox.list_env_vars()
         env_var_keys = {item["key"] for item in env_vars}
         assert "EXISTING_VAR" not in env_var_keys

@@ -25,6 +25,7 @@ from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
 from typing_extensions import Protocol
 
 from paasng.infras.accounts.models import Oauth2TokenHolder, PrivateTokenHolder, UserProfile
+from paasng.infras.accounts.utils import get_oauth_credentials
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl import exceptions
 from paasng.platform.sourcectl.models import (
@@ -116,15 +117,6 @@ class RepoController(Protocol):
     def commit_files(self, commit_info: CommitInfo) -> None:
         """批量提交文件"""
 
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
-
     def commit_and_push(
         self,
         local_path: Path,
@@ -169,7 +161,7 @@ class BaseGitRepoController:
 
     @classmethod
     def init_by_server_config(cls, source_type: str, repo_url: str):
-        """Return a RepoController object from given source_type
+        """Return a RepoController object from public account configured through the platform
 
         :param source_type: Code repository type, such as github
         :param repo_url: repository url
@@ -177,7 +169,6 @@ class BaseGitRepoController:
         source_config = get_sourcectl_type(source_type).config_as_arguments()
         if "api_url" not in source_config or "private_token" not in source_config:
             raise ValueError("Require api_url and private_token to init GitRepoController")
-
         user_credentials = {"private_token": source_config["private_token"], "scope_list": []}
         return cls(api_url=source_config["api_url"], repo_url=repo_url, user_credentials=user_credentials)
 
@@ -208,14 +199,6 @@ class BaseGitRepoController:
         user_credentials["__token_holder"] = token_holder
         return user_credentials
 
-    def export(self, local_path: PathLike, version_info: VersionInfo | None = None):
-        """导出指定版本下的所有内容到指定目录
-
-        :param local_path: 本地路径
-        :param version_info: 可选，指定版本信息
-        """
-        raise NotImplementedError
-
 
 def get_repo_controller_cls(source_origin: Union[int, SourceOrigin], source_control_type) -> Type[RepoController]:
     source_origin = SourceOrigin(source_origin)
@@ -232,21 +215,15 @@ def get_repo_controller(module: "Module", operator: Optional[str] = None) -> Rep
     return cls.init_by_module(module, operator)
 
 
-def list_git_repositories(source_control_type: str, operator: str) -> List[Repository]:
+def list_git_repositories(source_control_type: str, user_id: str) -> List[Repository]:
+    """获取用户在指定源码控制类型下的所有代码仓库
+
+    :param source_control_type: 源码控制类型，如 gitlab
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
+    """
     cls = get_sourcectl_type(source_control_type).repo_controller_class
 
-    profile = UserProfile.objects.get(user=operator)
-    token_holder_list = profile.token_holder.filter(provider=source_control_type).all()
-    if not token_holder_list:
-        raise Oauth2TokenHolder.DoesNotExist
-
-    # 目前工蜂不限制 token 拉取项目列表, 因此简化这里的逻辑只取一个 token
-    token_holder = token_holder_list[0]
-    user_credentials = {
-        "oauth_token": token_holder.access_token,
-        "scope_list": [token_holder.get_scope() for token_holder in token_holder_list],
-    }
-
+    user_credentials = get_oauth_credentials(source_control_type, user_id)
     type_spec = get_sourcectl_type(source_control_type)
     repo_info = type_spec.config_as_arguments()
     return cls.list_all_repositories(**user_credentials, **repo_info)

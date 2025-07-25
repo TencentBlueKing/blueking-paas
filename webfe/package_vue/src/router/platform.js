@@ -97,7 +97,7 @@ export const platformRouters = [
     name: 'platformManagement',
     component: platformManagement,
     redirect: {
-      name: 'platformAppCluster',
+      name: 'platformAppList',
     },
     children: [
       {

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+
+# consider developer runtimes ready when this file exists
+if [[ -e "/layers/config/metadata.toml" ]]; then
+    # use launcher to run bash with cnb buildpack context
+    # https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
+    exec /cnb/lifecycle/launcher bash "$@"
+else
+    # native bash as default
+    exec bash "$@"
+fi

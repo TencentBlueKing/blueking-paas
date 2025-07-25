@@ -31,7 +31,7 @@ from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paas_wl.bk_app.dev_sandbox.entities import SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
 from paasng.accessories.dev_sandbox.commit import DevSandboxCodeCommit
-from paasng.accessories.dev_sandbox.config_var import generate_envs, get_env_vars_selected_addons
+from paasng.accessories.dev_sandbox.config_var import generate_env_vars, get_env_vars_selected_addons
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.accessories.dev_sandbox.serializers import (
@@ -39,6 +39,7 @@ from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxCommitOutputSLZ,
     DevSandboxCreateInputSLZ,
     DevSandboxCreateOutputSLZ,
+    DevSandboxEnvVarsUpsertInputSLZ,
     DevSandboxListOutputSLZ,
     DevSandboxPreDeployCheckOutputSLZ,
     DevSandboxRetrieveOutputSLZ,
@@ -115,22 +116,23 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             source_code_cfg.source_fetch_url = upload_source_code(module, version_info, source_dir, owner)
             source_code_cfg.source_fetch_method = SourceCodeFetchMethod.BK_REPO
 
+        env_vars = generate_env_vars(module)
+        if data["inject_staging_env_vars"]:
+            stag_env = module.get_envs(AppEnvironment.STAGING)
+            env_vars.update(get_env_vars_selected_addons(stag_env, data.get("enabled_addons_services")))
+
         dev_sandbox = DevSandbox.objects.create(
             module=module,
             owner=owner,
+            env_vars=env_vars,
             version_info=version_info,
             enable_code_editor=data["enable_code_editor"],
         )
 
-        envs = generate_envs(module)
-        if data["inject_staging_env_vars"]:
-            stag_env = module.get_envs(AppEnvironment.STAGING)
-            envs.update(get_env_vars_selected_addons(stag_env, data.get("enabled_addons_services")))
-
         # 下发沙箱 k8s 资源
         try:
             DevSandboxController(dev_sandbox).deploy(
-                envs=envs,
+                envs=env_vars,
                 source_code_cfg=source_code_cfg,
                 code_editor_cfg=dev_sandbox.code_editor_config,
             )
@@ -249,3 +251,49 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 判断开发沙箱数量是否超过限制
         result = bool(DevSandbox.objects.count() < settings.DEV_SANDBOX_COUNT_LIMIT)
         return Response(data=DevSandboxPreDeployCheckOutputSLZ({"result": result}).data)
+
+
+class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
+    """沙箱环境变量管理"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    def _get_dev_sandbox(self) -> DevSandbox:
+        module = self.get_module_via_path()
+        dev_sandbox = DevSandbox.objects.filter(
+            module=module,
+            code=self.kwargs["dev_sandbox_code"],
+            owner=self.request.user.pk,
+        ).first()
+
+        if not dev_sandbox:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
+        return dev_sandbox
+
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="更新（新增）沙箱环境变量",
+        request_body=DevSandboxEnvVarsUpsertInputSLZ(),
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def upsert(self, request, *args, **kwargs):
+        slz = DevSandboxEnvVarsUpsertInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        dev_sandbox = self._get_dev_sandbox()
+        dev_sandbox.upsert_env_var(key=data["key"], value=data["value"])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="删除沙箱环境变量",
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def destroy(self, request, key, *args, **kwargs):
+        dev_sandbox = self._get_dev_sandbox()
+        dev_sandbox.delete_env_var(key=key)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

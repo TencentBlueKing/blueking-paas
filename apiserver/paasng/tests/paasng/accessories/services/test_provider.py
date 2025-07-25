@@ -51,6 +51,22 @@ class TestResourcePoolProvider:
         }
         assert expect.is_allocated
 
+    def test_provision_with_str_config(self, bk_service, bk_plan):
+        # 测试 config 为 str 类型时，能够正常运行
+        ins = G(
+            PreCreatedInstance, plan=bk_plan, config='{\n  "recyclable": true\n}\n', credentials=json.dumps({"idx": 0})
+        )
+        instance = bk_service.create_service_instance_by_plan(bk_plan, {})
+        assert json.loads(instance.credentials)["REDIS_IDX"] == 0
+        assert instance.config.pop("__pk__") == str(ins.pk)
+        assert instance.config == {
+            "enable_tls": False,
+            "is_pre_created": True,
+            "provider_name": "redis",
+            "recyclable": True,
+        }
+        assert PreCreatedInstance.objects.get(pk=ins.pk).is_allocated
+
     def test_delete(self, bk_service, bk_plan, pools):
         instance = bk_service.create_service_instance_by_plan(bk_plan, {})
         assert PreCreatedInstance.objects.get(pk=pools[0].pk).is_allocated

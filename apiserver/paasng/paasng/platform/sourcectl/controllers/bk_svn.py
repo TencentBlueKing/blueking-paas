@@ -48,6 +48,11 @@ class SvnRepoController:
 
     @classmethod
     def init_by_server_config(cls, source_type: str, repo_url: str):
+        """Return a RepoController object from given source_type
+
+        :param source_type: Code repository type, such as github
+        :param repo_url: repository url
+        """
         raise NotImplementedError
 
     @classmethod
@@ -116,18 +121,6 @@ class SvnRepoController:
 
     def commit_files(self, commit_info: CommitInfo) -> None:
         """bk_svn 不支持该功能"""
-        raise NotImplementedError
-
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-        raise NotImplementedError
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-        raise NotImplementedError
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
         raise NotImplementedError
 
     def commit_and_push(

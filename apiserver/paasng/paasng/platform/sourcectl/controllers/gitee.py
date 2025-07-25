@@ -134,18 +134,6 @@ class GiteeRepoController(BaseGitRepoController):
         """gitee 不支持该功能"""
         raise NotImplementedError
 
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-        raise NotImplementedError
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-        raise NotImplementedError
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
-        raise NotImplementedError
-
     def commit_and_push(
         self,
         local_path: Path,

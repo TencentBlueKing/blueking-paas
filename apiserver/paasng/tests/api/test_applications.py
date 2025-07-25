@@ -529,7 +529,7 @@ class TestCreateCloudNativeApp:
         assert process_spec.get_target_replicas("prod") == 2
 
     @pytest.mark.usefixtures("_init_tmpls")
-    @mock.patch("paasng.platform.applications.views.creation.create_new_repo")
+    @mock.patch("paasng.platform.applications.views.creation.create_repo_with_user_account")
     @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")
     @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
     @mock.patch("paasng.platform.modules.manager.delete_repo")
@@ -550,10 +550,11 @@ class TestCreateCloudNativeApp:
         mock_delete_repo,
         mocked_binder,
         mocked_manager,
-        mock_create_new_repo,
+        mock_create_repo_with_user_account,
         api_client,
         auto_create_repo,
         init_error,
+        bk_user,
     ):
         """托管方式：源码 & 镜像（使用 buildpack 进行构建）"""
         mocked_binder().bind_bp_stack.return_value = None
@@ -581,6 +582,8 @@ class TestCreateCloudNativeApp:
                             "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                             "source_control_type": "github",
                             "auto_create_repo": auto_create_repo,
+                            "repo_group": "http://git.example.com/groups/user1/",
+                            "repo_name": "helloWorld",
                             "source_origin": SourceOrigin.AUTHORIZED_VCS,
                             "source_repo_url": source_repo_url,
                             "source_repo_auth_info": {},
@@ -598,6 +601,8 @@ class TestCreateCloudNativeApp:
                         "source_init_template": settings.DUMMY_TEMPLATE_NAME,
                         "source_control_type": "github",
                         "auto_create_repo": auto_create_repo,
+                        "repo_group": "http://git.example.com/groups/user1/",
+                        "repo_name": "helloWorld",
                         "source_origin": SourceOrigin.AUTHORIZED_VCS,
                         "source_repo_url": source_repo_url,
                         "source_repo_auth_info": {},
@@ -611,13 +616,13 @@ class TestCreateCloudNativeApp:
             assert app_data["modules"][0]["web_config"]["artifact_type"] == "image"
 
         if auto_create_repo:
-            mock_create_new_repo.assert_called_once()
+            mock_create_repo_with_user_account.assert_called_once()
         else:
-            mock_create_new_repo.assert_not_called()
+            mock_create_repo_with_user_account.assert_not_called()
 
         # 验证异常时的仓库清理
         if init_error and auto_create_repo:
-            mock_delete_repo.assert_called_once_with("github", mock.ANY)
+            mock_delete_repo.assert_called_once_with("github", mock.ANY, bk_user.pk)
         else:
             mock_delete_repo.assert_not_called()
 

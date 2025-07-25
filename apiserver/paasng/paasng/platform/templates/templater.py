@@ -99,6 +99,7 @@ class TemplateRenderer:
     def download_from_vcs_repository(self) -> Path:
         """从代码仓库下载模板代码"""
         source_type = get_sourcectl_type(self.template.repo_type)
+        # NOTE: 用户并一不定有开发框架模板代码仓库的权限，所以必须用在代码仓库中配置的公共账号下载
         repo_controller = source_type.repo_controller_class.init_by_server_config(
             self.template.repo_type, self.template.repo_url
         )

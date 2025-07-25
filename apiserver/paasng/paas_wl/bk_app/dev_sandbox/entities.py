@@ -18,7 +18,6 @@
 from typing import Dict, List
 
 from attrs import asdict, define, field
-from django.conf import settings
 
 from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
@@ -29,7 +28,7 @@ class Runtime:
     """容器运行时"""
 
     envs: Dict[str, str]
-    image: str = settings.DEV_SANDBOX_IMAGE
+    image: str
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.ALWAYS)
 
 

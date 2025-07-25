@@ -22,7 +22,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.test import override_settings
 from django_dynamic_fixture import G
 
-from paasng.platform.modules.constants import APP_CATEGORY, SourceOrigin
+from paasng.platform.modules.constants import AppCategory, SourceOrigin
 from paasng.platform.modules.models import AppSlugBuilder, AppSlugRunner, BuildConfig
 
 pytestmark = pytest.mark.django_db
@@ -85,9 +85,9 @@ class TestAppImageModel:
             instance.set_label(key, labels[key])
         runtime_labels = {"language": language}
         if source_origin == SourceOrigin.S_MART.value:
-            runtime_labels["category"] = APP_CATEGORY.S_MART_APP.value
+            runtime_labels["category"] = AppCategory.S_MART_APP.value
         else:
-            runtime_labels["category"] = APP_CATEGORY.NORMAL_APP.value
+            runtime_labels["category"] = AppCategory.NORMAL_APP.value
         available_qs = type(instance).objects.filter_by_labels(bk_module, runtime_labels)
         if expect_matched:
             assert available_qs.count() > 0

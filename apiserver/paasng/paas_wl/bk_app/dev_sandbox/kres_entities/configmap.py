@@ -43,13 +43,26 @@ class DevSandboxConfigMap(AppEntity):
     def create(cls, dev_sandbox: "DevSandbox") -> "DevSandboxConfigMap":
         cfg_mp_name = f"{dev_sandbox.name}-code-editor-config"
 
+        # https://code.visualstudio.com/docs/configure/themes#_color-themes
+        # https://code.visualstudio.com/docs/configure/themes#_automatically-switch-based-on-os-color-scheme
         data = {
             "settings.json": json.dumps(
-                # workbench.colorTheme 用于设置编辑器的默认配色；window.autoDetectColorScheme 用于配置编辑器颜色不随系统主题颜色变化
-                # 参考文档：
-                # https://code.visualstudio.com/docs/configure/themes#_color-themes
-                # https://code.visualstudio.com/docs/configure/themes#_automatically-switch-based-on-os-color-scheme
-                {"workbench.colorTheme": "Visual Studio Dark", "window.autoDetectColorScheme": False}
+                {
+                    # workbench.colorTheme 用于设置编辑器的默认配色
+                    "workbench.colorTheme": "Visual Studio Dark",
+                    # window.autoDetectColorScheme 用于配置编辑器颜色不随系统主题颜色变化
+                    "window.autoDetectColorScheme": False,
+                    # 自定义终端启动命令以尝试使用 cnb buildpack 上下文
+                    # https://code.visualstudio.com/docs/terminal/profiles
+                    # https://github.com/buildpacks/lifecycle/blob/main/cmd/launcher/cli/launcher.go
+                    "terminal.integrated.profiles.linux": {
+                        "cnb-bash": {
+                            "path": "/usr/bin/cnb-bash",
+                            "overrideName": True,
+                        }
+                    },
+                    "terminal.integrated.defaultProfile.linux": "cnb-bash",
+                }
             )
         }
 

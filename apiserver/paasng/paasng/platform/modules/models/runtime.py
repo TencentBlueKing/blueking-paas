@@ -284,6 +284,8 @@ class AppSlugBuilder(AppImage):
 
     # 字段指示该环境可用的 buildpacks
     buildpacks = models.ManyToManyField(AppBuildPack, related_name="slugbuilders")
+    # 开发沙箱镜像（若为空表示不支持沙箱）
+    dev_sandbox_image = models.CharField(verbose_name="开发沙箱镜像（含 Tag）", max_length=256, blank=True)
 
     step_meta_set = models.ForeignKey(
         "engine.StepMetaSet",

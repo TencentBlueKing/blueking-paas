@@ -132,10 +132,12 @@ class GitLabSourceTypeSpec(SourceTypeSpec):
 try:
     from paasng.infras.accounts.oauth.backends_ext import TcGitBackend
     from paasng.platform.sourcectl.controllers.tcgit import TcGitRepoController
+    from paasng.platform.sourcectl.tc_git.provisioner import TcGitRepoProvisioner
 
     class TcGitSourceTypeSpec(SourceTypeSpec):
         connector_class = ExternalGitAppRepoConnector
         repo_controller_class = TcGitRepoController
+        repo_provisioner_class = TcGitRepoProvisioner
         oauth_backend_class = TcGitBackend
         basic_type = "git"
 

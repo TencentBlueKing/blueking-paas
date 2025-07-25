@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import re
-from typing import Dict
 
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
@@ -110,7 +109,7 @@ class ServiceCreateSLZ(serializers.Serializer):
 
     is_visible = serializers.BooleanField(help_text="是否可见")
 
-    def to_internal_value(self, data) -> Dict:
+    def to_internal_value(self, data):
         data = super().to_internal_value(data)
         language_code = get_language()
         # 国际化相关的字段需要按当前用户的语言来确定字段

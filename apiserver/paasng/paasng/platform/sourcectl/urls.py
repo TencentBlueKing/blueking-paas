@@ -34,6 +34,9 @@ urlpatterns = [
     re_path(
         r"^api/sourcectl/(?P<source_control_type>.+)/repos/", views.GitRepoViewSet.as_view({"get": "get_repo_list"})
     ),
+    re_path(
+        r"^api/sourcectl/(?P<source_control_type>.+)/groups/", views.GitRepoViewSet.as_view({"get": "get_group_list"})
+    ),
     # 获取用户可用源码仓库
     re_path(
         r"^api/sourcectl/providers/$",

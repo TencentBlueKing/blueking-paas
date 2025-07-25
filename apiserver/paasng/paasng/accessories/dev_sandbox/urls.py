@@ -43,11 +43,11 @@ urlpatterns = [
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/env_vars/$", include_envs=False),
         DevSandboxEnvVarViewSet.as_view({"post": "upsert"}),
-        name="accessories.dev_sandbox.upsert",
+        name="accessories.dev_sandbox.env_var.upsert",
     ),
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/env_vars/(?P<key>[^/]+)/$", include_envs=False),
         DevSandboxEnvVarViewSet.as_view({"delete": "destroy"}),
-        name="accessories.dev_sandbox.destroy",
+        name="accessories.dev_sandbox.env_var.destroy",
     ),
 ]

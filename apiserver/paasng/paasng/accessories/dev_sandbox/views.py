@@ -258,15 +258,18 @@ class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    lookup_field = "code"
-    lookup_url_kwarg = "dev_sandbox_code"
-
-    def get_queryset(self):
+    def _get_dev_sandbox(self) -> DevSandbox:
         module = self.get_module_via_path()
-        return DevSandbox.objects.filter(
+        dev_sandbox = DevSandbox.objects.filter(
             module=module,
+            code=self.kwargs["dev_sandbox_code"],
             owner=self.request.user.pk,
-        )
+        ).first()
+
+        if not dev_sandbox:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
+        return dev_sandbox
 
     @swagger_auto_schema(
         tags=["accessories.dev_sandbox"],
@@ -279,7 +282,7 @@ class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        dev_sandbox = self.get_object()
+        dev_sandbox = self._get_dev_sandbox()
         dev_sandbox.upsert_env_var(key=data["key"], value=data["value"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -290,7 +293,7 @@ class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
     def destroy(self, request, key, *args, **kwargs):
-        dev_sandbox = self.get_object()
+        dev_sandbox = self._get_dev_sandbox()
         dev_sandbox.delete_env_var(key=key)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

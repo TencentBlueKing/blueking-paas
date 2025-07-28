@@ -213,6 +213,15 @@ urlpatterns += [
         ),
         name="api.config_vars.builtin.runtime",
     ),
+    re_path(
+        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/custom/$",
+        views.ConfigVarBuiltinViewSet.as_view(
+            {
+                "get": "get_custom_envs",
+            }
+        ),
+        name="api.config_vars.builtin.custom",
+    ),
 ]
 
 # Process Metrics Start

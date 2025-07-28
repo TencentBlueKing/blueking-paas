@@ -69,10 +69,10 @@
           :key="index"
           class="log-item"
         >
-          <span v-html="formatTime(item.timestamp)" />
+          <span>{{ formatTime(item.timestamp) }}</span>
           <span
-            style="margin-left: 25px;"
-            v-html="item.message"
+            style="margin-left: 25px"
+            v-dompurify-html="item.message"
           />
         </p>
       </div>

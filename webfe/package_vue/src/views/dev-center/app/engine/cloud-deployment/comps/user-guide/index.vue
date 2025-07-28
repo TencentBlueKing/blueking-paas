@@ -18,8 +18,7 @@
         >
         </bk-tab-panel>
       </bk-tab>
-      <!-- eslint-disable-next-line vue/no-v-html -->
-      <div class="markdown-body" v-html="markdownContent" />
+      <div class="markdown-body" v-dompurify-html="markdownContent" />
     </div>
   </bk-sideslider>
 </template>

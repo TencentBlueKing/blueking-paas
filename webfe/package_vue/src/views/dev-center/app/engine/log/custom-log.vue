@@ -217,14 +217,14 @@
                       {{ formatTime(log.timestamp) }}
                     </td>
                     <td class="log-message">
-                      <div v-html="log.message || '--'" />
+                      <div v-dompurify-html="log.message || '--'" />
                     </td>
                     <template v-for="field of fieldSelectedList">
                       <td
                         :key="field"
                         class="field"
                       >
-                        <div v-html="log.detail[field] || '--'" />
+                        <div v-dompurify-html="log.detail[field] || '--'" />
                       </td>
                     </template>
                   </tr>
@@ -244,7 +244,7 @@
                           <span class="key">{{ key }}：</span>
                           <pre
                             class="value"
-                            v-html="keyItem || '--'"
+                            v-dompurify-html="keyItem || '--'"
                           />
                         </li>
                       </ul>

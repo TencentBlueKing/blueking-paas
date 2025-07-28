@@ -16,7 +16,7 @@
           <p
             v-else
             class="info"
-            v-html="infoMsg"
+            v-dompurify-html="infoMsg"
           ></p>
           <div
             class="edit-container"

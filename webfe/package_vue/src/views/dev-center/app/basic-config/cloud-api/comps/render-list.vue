@@ -132,9 +132,7 @@
                   :href="props.row.doc_link"
                   class="api-link"
                 >
-                  <span
-                    v-html="highlight(props.row)"
-                  />
+                  <span v-dompurify-html="highlight(props.row)" />
                   <i
                     class="fa fa-book"
                     aria-hidden="true"
@@ -144,7 +142,7 @@
               <template v-else>
                 <span
                   v-bk-overflow-tips
-                  v-html="highlight(props.row)"
+                  v-dompurify-html="highlight(props.row)"
                 />
               </template>
             </template>
@@ -155,8 +153,7 @@
             :show-overflow-tooltip="true"
           >
             <template slot-scope="props">
-              <!-- <span v-html="highlightDesc(props.row)" v-bk-tooltips="props.row.description"></span> -->
-              <span v-html="highlightDesc(props.row)" />
+              <span v-dompurify-html="highlightDesc(props.row)" />
             </template>
           </bk-table-column>
           <bk-table-column

@@ -35,7 +35,7 @@
       </section>
     </section>
     <div v-else v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
-      <div class="search-tip-cls" v-html="searchTip"></div>
+      <div class="search-tip-cls" v-dompurify-html="searchTip"></div>
       <!-- 蓝鲸应用 -->
       <section class="app">
         <div class="title-wrapper">
@@ -59,9 +59,9 @@
               <p
                 class="code"
                 v-bk-overflow-tips="item.code"
-                v-html="highlight(item.code)"
+                v-dompurify-html="highlight(item.code)"
               ></p>
-              <p v-html="highlight(item.name)"></p>
+              <p v-dompurify-html="highlight(item.name)"></p>
             </div>
           </li>
         </ul>
@@ -87,9 +87,8 @@
           >
             <div
               class="title"
-              :title="item.title"
               v-bk-overflow-tips="item.title"
-              v-html="highlight(item.title)"
+              v-dompurify-html="highlight(item.title)"
             ></div>
             <div class="type">{{ item.source_type === 'iwiki' ? 'iwiki' : $t('资料库') }}</div>
           </li>
@@ -243,8 +242,12 @@ export default {
 
     highlight(text) {
       const keyword = this.searchValue;
-      if (!keyword) return text;
-      const regex = new RegExp(`(${keyword})`, 'gi');
+      if (!keyword || !text) return text;
+      const escapeRegExp = (str) => {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      };
+      const escapedKeyword = escapeRegExp(keyword);
+      const regex = new RegExp(`(${escapedKeyword})`, 'gi');
       return text.replace(regex, '<pasmark>$1</pasmark>');
     },
 

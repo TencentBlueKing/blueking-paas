@@ -44,6 +44,7 @@ func NewAppDeployer(appCode string) (Deployer, error) {
 	}
 }
 
+// BaseDeployer ...
 type BaseDeployer struct{}
 
 // GetResult 获取部署结果
@@ -148,7 +149,7 @@ func (d CNativeAppDeployer) Deploy(opts model.DeployOptions) error {
 	manifest, tag, branch := opts.BkAppManifest, opts.Tag, opts.Branch
 	if manifest != nil {
 		// 导入 manifest
-		_, err := apiresources.DefaultRequester.UpdateBkappModel(appCode, appModule, manifest)
+		_, err := apiresources.DefaultRequester.UpdateBkAppModel(appCode, appModule, manifest)
 		if err != nil {
 			return err
 		}

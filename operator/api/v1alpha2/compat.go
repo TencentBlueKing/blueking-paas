@@ -16,8 +16,8 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// This file contains some compatibility utilities which is able to handle the legacy
-// API version of BkApp CRD.
+// Package v1alpha2 contains some compatibility utilities
+// which is able to handle the legacy API version of BkApp CRD.
 package v1alpha2
 
 import (

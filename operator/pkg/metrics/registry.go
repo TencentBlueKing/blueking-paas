@@ -29,7 +29,7 @@ var collectorGroup = []prometheus.Collector{
 	DeployActionUpdateBkappStatusFailures,
 	DeleteOutdatedDeployFailures,
 	DeployExpectedDeployFailures,
-	GetBkappInfoFailures,
+	GetBkAppInfoFailures,
 	ProvisionAddonInstanceFailures,
 	QueryAddonSpecsFailures,
 	QueryAddonSpecsDuration,

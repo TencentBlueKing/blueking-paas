@@ -47,6 +47,6 @@ type Requester interface {
 	GetAppDeployResult(appCode, appModule, deployID string) (map[string]any, error)
 	// ListAppDeployHistory 获取应用部署历史（最近N次）
 	ListAppDeployHistory(appCode, appModule, appEnv string) (map[string]any, error)
-	// UpdateBkappModel 导入 manifest 更新 BkappModel
-	UpdateBkappModel(appCode, appModule string, manifest map[string]any) ([]map[string]any, error)
+	// UpdateBkAppModel 导入 manifest 更新 BkAppModel
+	UpdateBkAppModel(appCode, appModule string, manifest map[string]any) ([]map[string]any, error)
 }

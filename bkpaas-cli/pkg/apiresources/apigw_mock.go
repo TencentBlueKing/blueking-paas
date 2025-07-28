@@ -135,7 +135,7 @@ func (r MockedRequester) GetAppInfo(appCode string) (map[string]any, error) {
 	}, nil
 }
 
-// DeployDefaultApp ...
+// DeployApp ...
 func (r MockedRequester) DeployApp(appCode, appModule, deployEnv string, data map[string]any) (map[string]any, error) {
 	return map[string]any{
 		"deployment_id": "b2d4cccc-f535-4282-9b8c-74162e817413",
@@ -206,8 +206,8 @@ func (r MockedRequester) ListAppDeployHistory(appCode, appModule, appEnv string)
 	}, nil
 }
 
-// DeployCNativeApp ...
-func (r MockedRequester) UpdateBkappModel(
+// UpdateBkAppModel ...
+func (r MockedRequester) UpdateBkAppModel(
 	appCode, appModule string, manifest map[string]any,
 ) ([]map[string]any, error) {
 	return []map[string]any{manifest}, nil

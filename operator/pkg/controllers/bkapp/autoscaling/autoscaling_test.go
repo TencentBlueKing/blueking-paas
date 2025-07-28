@@ -35,7 +35,7 @@ import (
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
-var _ = Describe("Test AutoscalingReconciler", func() {
+var _ = Describe("Test Reconciler", func() {
 	var bkapp *paasv1alpha2.BkApp
 	var fakeGPA *autoscaling.GeneralPodAutoscaler
 	var builder *fake.ClientBuilder
@@ -98,7 +98,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 	Describe("test Reconcile", func() {
 		It("case with autoscaling", func() {
 			client := builder.WithObjects(bkapp, fakeGPA).Build()
-			r := AutoscalingReconciler{Client: client}
+			r := Reconciler{Client: client}
 			ret := r.Reconcile(ctx, bkapp)
 			Expect(ret.Error()).To(BeNil())
 			Expect(ret.IsFinished).To(BeFalse())
@@ -108,7 +108,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 			bkapp.Spec.Processes[0].Autoscaling = nil
 
 			client := builder.WithObjects(bkapp, fakeGPA).Build()
-			r := AutoscalingReconciler{Client: client}
+			r := Reconciler{Client: client}
 			ret := r.Reconcile(ctx, bkapp)
 			Expect(ret.Error()).To(BeNil())
 			Expect(ret.IsFinished).To(BeFalse())
@@ -118,7 +118,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 	Describe("test getCurrentState", func() {
 		It("gpa not exists", func() {
 			client := builder.WithObjects(bkapp).Build()
-			r := AutoscalingReconciler{Client: client}
+			r := Reconciler{Client: client}
 			gpaList, err := r.getCurrentState(ctx, bkapp)
 			Expect(err).To(BeNil())
 			Expect(len(gpaList)).To(Equal(0))
@@ -126,7 +126,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 
 		It("gpa exists", func() {
 			client := builder.WithObjects(bkapp, fakeGPA).Build()
-			r := AutoscalingReconciler{Client: client}
+			r := Reconciler{Client: client}
 			gpaList, err := r.getCurrentState(ctx, bkapp)
 			Expect(err).To(BeNil())
 			Expect(len(gpaList)).To(Equal(1))
@@ -136,7 +136,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 	Describe("test updateCondition", func() {
 		It("gpa not exists", func() {
 			client := builder.WithObjects(bkapp).Build()
-			r := AutoscalingReconciler{Client: client}
+			r := Reconciler{Client: client}
 			err := r.updateCondition(ctx, bkapp)
 			Expect(err).To(BeNil())
 			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AutoscalingAvailable)
@@ -152,7 +152,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 				Message: "the GPA was unable to compute the replica count: unable to get metrics for resource cpu.",
 			}}
 			client := builder.WithObjects(bkapp, fakeGPA).Build()
-			r := AutoscalingReconciler{Client: client}
+			r := Reconciler{Client: client}
 			err := r.updateCondition(ctx, bkapp)
 			Expect(err).To(BeNil())
 			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AutoscalingAvailable)
@@ -168,7 +168,7 @@ var _ = Describe("Test AutoscalingReconciler", func() {
 				Message: "the GPA was able to successfully calculate a replica count from.",
 			}}
 			client := builder.WithObjects(bkapp, fakeGPA).Build()
-			r := AutoscalingReconciler{Client: client}
+			r := Reconciler{Client: client}
 			err := r.updateCondition(ctx, bkapp)
 			Expect(err).To(BeNil())
 			cond := apimeta.FindStatusCondition(bkapp.Status.Conditions, paasv1alpha2.AutoscalingAvailable)

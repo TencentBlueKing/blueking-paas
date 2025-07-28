@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package config provides bkpaas-cli config definition
 package config
 
 import (
@@ -32,8 +33,8 @@ import (
 
 // 以下变量值可通过环境变量指定
 var (
-	// ConfigFilePath 配置文件所在路径
-	ConfigFilePath = envx.Get("BKPAAS_CLI_CONFIG", filepath.Join(pathx.GetHomeDir(), ".blueking-paas", "config.yaml"))
+	// FilePath 配置文件所在路径
+	FilePath = envx.Get("BKPAAS_CLI_CONFIG", filepath.Join(pathx.GetHomeDir(), ".blueking-paas", "config.yaml"))
 )
 
 // G is a global configuration instance that can be used in code logic
@@ -97,7 +98,7 @@ type Conf struct {
 func (c *Conf) String() string {
 	return fmt.Sprintf(
 		"configFilePath: %s\n\npaasApigwUrl: %s\npaasUrl: %s\ncheckTokenUrl: %s\nusername: %s\naccessToken: [REDACTED]",
-		ConfigFilePath,
+		FilePath,
 		G.PaaSApigwUrl,
 		G.PaaSUrl,
 		G.CheckTokenUrl,

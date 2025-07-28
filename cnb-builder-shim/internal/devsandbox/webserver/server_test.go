@@ -47,7 +47,7 @@ var _ = Describe("Test webserver api", func() {
 
 	oldUploadDir := os.Getenv("UPLOAD_DIR")
 
-	_ = config.InitConfig()
+	_ = config.Init()
 
 	BeforeEach(func() {
 		tmpUploadDir, _ = os.MkdirTemp("", "upload")

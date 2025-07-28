@@ -15,6 +15,7 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
+
 package dockercreds
 
 import (
@@ -31,8 +32,8 @@ const EnvRegistryAuth = "CNB_REGISTRY_AUTH"
 
 // DefaultKeychain returns a keychain containing authentication configuration for the given images
 // from the following sources, if they exist, in order of precedence:
-// the provided environment variable
-// the docker config.json file
+// - the provided environment variable
+// - the docker config.json file
 func DefaultKeychain() authn.Keychain {
 	envKeychain, err := NewEnvKeychain(EnvRegistryAuth)
 	if err != nil {
@@ -44,8 +45,10 @@ func DefaultKeychain() authn.Keychain {
 	)
 }
 
-// NewEnvKeychain returns an authn.Keychain that uses the provided environment variable as a source of credentials.
-// The value of the environment variable should be a JSON object that maps OCI registry hostnames to Authorization headers.
+// NewEnvKeychain returns an authn.Keychain that uses the provided
+// environment variable as a source of credentials.
+// The value of the environment variable should be a JSON object
+// that maps OCI registry hostnames to Authorization headers.
 func NewEnvKeychain(envVarName string) (authn.Keychain, error) {
 	authHeaders, err := ReadEnvVar(envVarName)
 	if err != nil {

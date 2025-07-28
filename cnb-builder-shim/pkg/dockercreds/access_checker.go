@@ -15,6 +15,8 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
+
+// Package dockercreds provides a shim to use docker credentials.
 package dockercreds
 
 import (
@@ -81,7 +83,9 @@ func VerifyReadAccess(keychain authn.Keychain, reference string) error {
 		return errors.Wrapf(err, "Error parsing reference %q", reference)
 	}
 
-	if _, err = remote.Get(ref, remote.WithAuthFromKeychain(keychain), remote.WithTransport(DefaultTransport)); err != nil {
+	if _, err = remote.Get(
+		ref, remote.WithAuthFromKeychain(keychain), remote.WithTransport(DefaultTransport),
+	); err != nil {
 		return diagnoseIfTransportError(err)
 	}
 

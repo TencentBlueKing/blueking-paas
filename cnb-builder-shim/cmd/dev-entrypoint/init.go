@@ -67,7 +67,7 @@ type Group struct {
 	Group []GroupElement `toml:"group"`
 }
 
-// A GroupElement represents a buildpack referenced in a buildpack.toml's [[order.group]] OR
+// GroupElement represents a buildpack referenced in a buildpack.toml's [[order.group]] OR
 // a buildpack or extension in order.toml OR a buildpack or extension in group.toml.
 type GroupElement struct {
 	// ID specifies the ID of the buildpack or extension.
@@ -157,7 +157,7 @@ func initializeSourceCode() error {
 		return nil
 	}
 	switch config.G.SourceCode.FetchMethod {
-	case config.BK_REPO:
+	case config.BkRepo:
 		// 下载源码
 		if err = http.NewFetcher(logger).Fetch(config.G.SourceCode.FetchUrl, workspace); err != nil {
 			return errors.Wrap(err, "download source code")

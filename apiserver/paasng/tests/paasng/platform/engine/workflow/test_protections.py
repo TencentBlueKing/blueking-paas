@@ -227,7 +227,6 @@ class TestOperatorVersionCondition:
     )
     def test_validate(self, bk_user, bk_module, check_version, api_server_version, operator_version, ok):
         env = bk_module.get_envs("stag")
-        _ = env.wl_app
         fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version=operator_version))
         with (
             override_settings(
@@ -380,7 +379,17 @@ class TestModuleEnvDeployInspector:
                 availability_level=AvailabilityLevel.STANDARD.value,
             )
 
-        with override_settings(BKPAAS_APP_OPERATOR_VERSION_CHECK=check_operator_version):
+        fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version="v1.0.1"))
+        with (
+            override_settings(
+                BKPAAS_APP_OPERATOR_VERSION_CHECK=check_operator_version,
+                BKPAAS_APISERVER_VERSION="v1.0.0",
+            ),
+            mock.patch(
+                "paas_wl.infras.cluster.helm.HelmClient.get_release",
+                return_value=fake_release,
+            ),
+        ):
             inspector = ModuleEnvDeployInspector(bk_user, env)
             assert [item.action_name for item in inspector.perform().failed_conditions] == [c.value for c in expected]
             assert inspector.all_matched is not len(expected)

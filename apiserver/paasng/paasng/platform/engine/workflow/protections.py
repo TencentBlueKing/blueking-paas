@@ -198,6 +198,8 @@ class OperatorVersionCondition(DeployCondition):
             cache.set(cache_key, app_version, 60 * 5)
 
         if app_version != apiserver_version:
+            # 版本不一致时，主动清理缓存，促使下次强制刷新
+            cache.delete(cache_key)
             message = _("Operator 版本不匹配，请检查 Operator 版本")
             raise ConditionNotMatched(message, self.action_name)
 

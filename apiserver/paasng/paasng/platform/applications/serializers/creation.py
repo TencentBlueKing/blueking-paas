@@ -17,7 +17,6 @@
 
 from typing import Any, Dict
 
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -56,12 +55,6 @@ class ApplicationCreateInputV2SLZ(AppBasicInfoMixin):
 
         return attrs
 
-    def validate_is_plugin_app(self, is_plugin_app: bool) -> bool:
-        if is_plugin_app and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
-            raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
-
-        return is_plugin_app
-
 
 class CloudNativeAppCreateInputSLZ(AppBasicInfoMixin):
     """创建云原生架构应用的表单"""
@@ -86,12 +79,6 @@ class CloudNativeAppCreateInputSLZ(AppBasicInfoMixin):
         self._validate_image_credential(build_cfg.image_credential)
 
         return attrs
-
-    def validate_is_plugin_app(self, is_plugin_app: bool) -> bool:
-        if is_plugin_app and not settings.IS_ALLOW_CREATE_BK_PLUGIN_APP:
-            raise ValidationError(_("当前版本下无法创建蓝鲸插件应用"))
-
-        return is_plugin_app
 
     def _validate_image_credential(self, image_credential: Dict[str, str] | None):
         if not image_credential:

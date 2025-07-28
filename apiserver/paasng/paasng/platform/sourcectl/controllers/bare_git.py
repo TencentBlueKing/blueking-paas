@@ -74,7 +74,7 @@ class BareGitRepoController(BaseGitRepoController):
         return cls(repo_url=repo_url_with_auth, repo_obj=repo_obj)
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
+    def list_all_repositories(cls, api_url: str, user_credentials: dict) -> List[Repository]:
         """返回当前 RepoController 可以控制的所有仓库列表"""
         raise NotImplementedError
 

@@ -56,7 +56,7 @@ class SvnRepoController:
         raise NotImplementedError
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
+    def list_all_repositories(cls, api_url: str, user_credentials: dict) -> List[Repository]:
         """返回当前 RepoController 可以控制的所有仓库列表"""
         raise NotImplementedError
 

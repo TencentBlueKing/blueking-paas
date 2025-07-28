@@ -27,18 +27,15 @@ from paasng.platform.applications.models import Application
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_deploy_desc_handler
 from paasng.platform.engine.configurations.config_var import (
-    ConflictedKey,
     EnvVarSource,
     UnifiedEnvVarsReader,
     get_builtin_env_variables,
     get_env_variables,
-    get_user_conflicted_keys,
     list_vars_builtin_runtime,
 )
 from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
 from paasng.platform.modules.models.module import Module
 from tests.utils.helpers import override_region_configs
-from tests.utils.mocks.services import create_local_mysql_service, provision_with_credentials
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -224,68 +221,6 @@ def test_list_vars_builtin_runtime(bk_app, bk_stag_env):
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
-class Test__get_user_conflicted_keys:
-    def test_should_return_empty_by_default(self, bk_module):
-        assert get_user_conflicted_keys(bk_module) == []
-
-    def test_normal_found_conflicts(self, bk_module, bk_stag_env):
-        expected_override_conflicted_map = {
-            "BK_API_URL_TMPL": True,
-            "BK_COMPONENT_API_URL": True,
-            "MYSQL_HOST": False,
-        }
-        self._setup_and_test_conflicts(bk_module, bk_stag_env, expected_override_conflicted_map)
-
-    def test_cnative_found_conflicts(self, bk_cnative_app, bk_module, bk_stag_env):
-        # For cnative apps, the override_conflicted value should always be False
-        expected_override_conflicted_map = {
-            "BK_API_URL_TMPL": False,
-            "BK_COMPONENT_API_URL": False,
-            "MYSQL_HOST": False,
-        }
-        self._setup_and_test_conflicts(bk_module, bk_stag_env, expected_override_conflicted_map)
-
-    def _setup_and_test_conflicts(self, bk_module, bk_stag_env, expected_override_conflicted_map):
-        """Helper method to setup and test the results."""
-        # Setup service and credentials
-        local_mysql_service = create_local_mysql_service()
-        provision_with_credentials(bk_module, local_mysql_service, credentials={"MYSQL_HOST": "localhost"})
-
-        # Create config vars for testing
-        for key in [
-            "BK_COMPONENT_API_URL",
-            "BK_API_URL_TMPL",
-            "ANOTHER_NORMAL_VALUE",
-            "MYSQL_HOST",
-            "FOOBAR",
-        ]:
-            ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key=key, value="")
-
-        # Get conflicted keys and assert
-        conflicted_keys = get_user_conflicted_keys(bk_module)
-
-        assert len(conflicted_keys) == 3
-        assert conflicted_keys[0] == ConflictedKey(
-            key="BK_API_URL_TMPL",
-            conflicted_source="builtin_misc",
-            conflicted_detail="网关 API 访问地址模板",
-            override_conflicted=expected_override_conflicted_map["BK_API_URL_TMPL"],
-        )
-        assert conflicted_keys[1] == ConflictedKey(
-            key="BK_COMPONENT_API_URL",
-            conflicted_source="builtin_misc",
-            conflicted_detail="组件 API 访问地址",
-            override_conflicted=expected_override_conflicted_map["BK_COMPONENT_API_URL"],
-        )
-        assert conflicted_keys[2] == ConflictedKey(
-            key="MYSQL_HOST",
-            conflicted_source="builtin_addons",
-            conflicted_detail="MySQL",
-            override_conflicted=expected_override_conflicted_map["MYSQL_HOST"],
-        )
-
-
-@pytest.mark.usefixtures("_with_wl_apps")
 class TestUnifiedEnvVarsReader:
     def test_exclude_sources(self, bk_module, bk_stag_env):
         ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key="FOO", value="bar")
@@ -296,30 +231,4 @@ class TestUnifiedEnvVarsReader:
         env_vars = UnifiedEnvVarsReader(bk_stag_env).get_kv_map(exclude_sources=[EnvVarSource.USER_CONFIGURED])
         assert "FOO" not in env_vars
 
-    def test_get_user_conflicted_keys_normal(self, bk_module, bk_stag_env):
-        vars_reader = UnifiedEnvVarsReader(bk_stag_env)
-
-        for key in ["FOOBAR", "BK_API_URL_TMPL", "BKPAAS_DEFAULT_SUBPATH_ADDRESS"]:
-            ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key=key, value="")
-
-        conflicts = vars_reader.get_user_conflicted_keys()
-
-        assert len(conflicts) == 2
-        assert conflicts[0].key == "BKPAAS_DEFAULT_SUBPATH_ADDRESS"
-        assert conflicts[0].conflicted_source == "builtin_default_entrance"
-        assert conflicts[0].override_conflicted is False
-
-        assert conflicts[1].key == "BK_API_URL_TMPL"
-        assert conflicts[1].conflicted_source == "builtin_misc"
-        assert conflicts[1].override_conflicted is True
-
-    def test_get_user_conflicted_keys_exclude_sources(self, bk_module, bk_stag_env):
-        vars_reader = UnifiedEnvVarsReader(bk_stag_env)
-
-        for key in ["FOOBAR", "BK_API_URL_TMPL", "BKPAAS_DEFAULT_SUBPATH_ADDRESS"]:
-            ConfigVar.objects.create(module=bk_module, environment=bk_stag_env, key=key, value="")
-
-        conflicts = vars_reader.get_user_conflicted_keys(exclude_sources=[EnvVarSource.BUILTIN_DEFAULT_ENTRANCE])
-
-        assert len(conflicts) == 1
-        assert conflicts[0].key == "BK_API_URL_TMPL"
+    # TODO: 需要添加一个测试函数

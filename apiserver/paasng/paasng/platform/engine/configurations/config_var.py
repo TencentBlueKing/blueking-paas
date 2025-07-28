@@ -18,9 +18,8 @@
 
 import logging
 from enum import StrEnum
-from typing import TYPE_CHECKING, Dict, Iterator, List
+from typing import TYPE_CHECKING, Dict, Iterator
 
-from attrs import define
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
@@ -111,20 +110,15 @@ class UnifiedEnvVarsReader:
             env_list.extend(self._source_lister_func_map[source](self.env))
         return env_list.kv_map
 
-    def get_user_conflicted_keys(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedKey]":
-        """Get the conflicted keys. A conflicted key is a key that defined in the USER_CONFIGURED
-        source, but also exists in other sources.
-
-        :param exclude_sources: A list of sources to exclude when checking conflicts.
-        :return: A list of ConflictedKey objects.
-        """
+    def get_builtin_vars_override_conflicted_flag(
+        self, vars: EnvVariableList, exclude_sources: list[EnvVarSource] | None = None
+    ):
+        """TODO: 添加注释, 给内置环境变量添加 override_conflicted 字段"""
         # Whether the current source being checked is after the USER_CONFIGURED source
         after_source = False
-        # Get all keys defined by the user in the USER_CONFIGURED source
-        user_keys = {item.key for item in self._source_lister_func_map[EnvVarSource.USER_CONFIGURED](self.env)}
 
-        # Use a dict to store the result in case a key conflicts with multiple sources
-        conflicted_keys = {}
+        # 结果
+        conflicted_keys = []
         for current_source in self._default_order:
             # Skip all user preset source, because they will be overridden anyway so conflict checking
             # is not needed.
@@ -138,33 +132,31 @@ class UnifiedEnvVarsReader:
                 continue
 
             data = self._source_lister_func_map[current_source](self.env).map
-            for key in user_keys:
-                if key in data:
-                    conflicted_keys[key] = ConflictedKey(
-                        key=key,
-                        conflicted_source=current_source,
-                        conflicted_detail=data[key].description,
-                        override_conflicted=not after_source,
+            for var in vars:
+                if var.key in data:
+                    conflicted_keys.append(
+                        {
+                            "key": var.key,
+                            "value": data[var.key].value,
+                            "description": data[var.key].description,
+                            "override_conflicted": not after_source,
+                        }
                     )
 
         # Sort and return the result
-        return sorted(conflicted_keys.values(), key=lambda x: x.key)
+        return sorted(conflicted_keys, key=lambda x: x["key"])
 
 
-def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
-    """Get user defined config vars keys that conflict with built-in env vars, the result can be
-    an useful hint for users to avoid conflicts.
-
-    :param module: The module to check for conflicts.
-    :return: List of conflicting keys.
-    """
-    app = module.application
+def list_builtin_vars_with_override_flag(module: Module, env_vars: EnvVariableList):
+    """TODO: 添加注释"""
     # Use a dict remove duplicated keys between different environments
     results = {}
+    app = module.application
     # Check all environments in the module and merge the results
     for env in module.get_envs():
         if app.type == ApplicationType.CLOUD_NATIVE:
-            keys = UnifiedEnvVarsReader(env).get_user_conflicted_keys(
+            vars = UnifiedEnvVarsReader(env).get_builtin_vars_override_conflicted_flag(
+                env_vars,
                 # Exclude some sources because cloud-native apps does use them directly,
                 # see `apply_builtin_env_vars()` for more details.
                 exclude_sources=[
@@ -173,30 +165,14 @@ def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
                 ],
             )
             # Any conflicted keys should not take effect because the special mechanism used for cloud-native apps
-            for item in keys:
-                item.override_conflicted = False
+            for item in vars:
+                item["override_conflicted"] = False
 
-            results.update({item.key: item for item in keys})
+            results.update({item["key"]: item for item in vars})
         else:
-            keys = UnifiedEnvVarsReader(env).get_user_conflicted_keys()
-            results.update({item.key: item for item in keys})
+            keys = UnifiedEnvVarsReader(env).get_builtin_vars_override_conflicted_flag(env_vars)
+            results.update({item["key"]: item for item in keys})
     return list(results.values())
-
-
-@define
-class ConflictedKey:
-    """A conflicted config var key object.
-
-    :param key: The key of the config var.
-    :param conflicted_source: The source of the conflict, such as "builtin_addons", "builtin_blobstore".
-    :param conflicted_detail: Additional details about the conflict, if any.
-    :param override_conflicted: Whether the config var key has overridden the conflicting one.
-    """
-
-    key: str
-    conflicted_source: str
-    override_conflicted: bool
-    conflicted_detail: str | None = None
 
 
 def sys_var(key: str, value: str, description: str | None) -> EnvVariableObj:

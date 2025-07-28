@@ -31,7 +31,7 @@ import (
 
 var _ = Describe("TestConfig", func() {
 	confFilePath := pathx.GetCurPKGPath() + "/../../etc/conf.yaml"
-	config.ConfigFilePath = confFilePath
+	config.FilePath = confFilePath
 
 	It("TestLoadConfig", func() {
 		conf, err := config.LoadConf(confFilePath)

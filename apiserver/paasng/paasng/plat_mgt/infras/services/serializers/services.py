@@ -103,6 +103,7 @@ class ServiceCreateSLZ(serializers.Serializer):
     description = serializers.CharField(help_text="描述")
     long_description = serializers.CharField(help_text="详细描述")
     instance_tutorial = serializers.CharField(help_text="服务 markdown 描述")
+    provider_name = serializers.CharField(help_text="供应商")
 
     config = serializers.JSONField(required=False, default=dict)
 
@@ -110,11 +111,6 @@ class ServiceCreateSLZ(serializers.Serializer):
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
-        # 本地增强服务已删除 specifications 字段
-        # 但是远程增强服务还没有删除，并且各个远程增强服务
-        # paas_service 包版本依赖不一致，通过添加空列表作为兜底策略
-        data["specifications"] = []
-
         language_code = get_language()
         # 国际化相关的字段需要按当前用户的语言来确定字段
         i18n_fields = ["display_name", "description", "long_description", "instance_tutorial"]

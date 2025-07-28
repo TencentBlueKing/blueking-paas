@@ -26,7 +26,7 @@ from paas_wl.infras.cluster.models import Cluster
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
-from paasng.platform.modules.constants import APP_CATEGORY, ExposedURLType, SourceOrigin
+from paasng.platform.modules.constants import AppCategory, ExposedURLType, SourceOrigin
 from paasng.platform.modules.exceptions import BindError, BuildPacksNotFound, BuildPackStackNotFound
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner, BuildConfig
 from paasng.platform.modules.models.build_cfg import ImageTagOptions
@@ -308,6 +308,15 @@ class ModuleRuntimeManager:
             .prefetch_related("appbuildpack")
         ]
 
+    def get_dev_sandbox_image(self) -> str | None:
+        """获取开发沙箱容器镜像，如果不支持则返回 None"""
+        try:
+            builder = self.get_slug_builder()
+        except AppSlugBuilder.DoesNotExist:
+            return None
+
+        return builder.dev_sandbox_image
+
 
 def get_module_clusters(module: "Module") -> Dict[AppEnvName, Cluster]:
     """return all cluster info of module envs"""
@@ -337,9 +346,9 @@ def get_image_labels_by_module(module: "Module") -> Dict[str, str]:
     """根据 module 的属性获取筛选镜像的label"""
     labels = {}
     if module.application.type == ApplicationType.CLOUD_NATIVE:
-        labels[APP_CATEGORY.CNATIVE_APP.value] = "1"
+        labels[AppCategory.CNATIVE_APP.value] = "1"
     elif module.source_origin == SourceOrigin.S_MART:
-        labels[APP_CATEGORY.S_MART_APP.value] = "1"
+        labels[AppCategory.S_MART_APP.value] = "1"
     else:
-        labels[APP_CATEGORY.NORMAL_APP.value] = "1"
+        labels[AppCategory.NORMAL_APP.value] = "1"
     return labels

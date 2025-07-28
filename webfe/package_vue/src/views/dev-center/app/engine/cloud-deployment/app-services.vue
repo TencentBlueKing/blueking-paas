@@ -295,7 +295,7 @@
           <div id="markdown" v-bkloading="{ isLoading: guideLoading, opacity: 1 }">
             <div
               class="markdown-body"
-              v-html="compiledMarkdown"
+              v-dompurify-html="compiledMarkdown"
             />
           </div>
         </div>
@@ -384,7 +384,7 @@ export default {
             $(this).attr('target', '_blank');
           });
       });
-      return marked(this.serviceMarkdown, { sanitize: true });
+      return marked(this.serviceMarkdown);
     },
     getVersionValue() {
       return function (name, data) {

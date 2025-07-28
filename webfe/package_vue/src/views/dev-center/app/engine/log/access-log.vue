@@ -167,8 +167,7 @@
                     </td>
                     <template v-for="field of fieldSelectedList">
                       <td :key="field" class="field">
-                        <!-- eslint-disable-next-line vue/no-v-html -->
-                        <div v-if="log.detail[field]" v-html="log.detail[field]"></div>
+                        <div v-if="log.detail[field]" v-dompurify-html="log.detail[field]"></div>
                         <span v-else>--</span>
                       </td>
                     </template>
@@ -178,8 +177,7 @@
                       <ul class="detail-box">
                         <li v-for="(keyItem, key) of log.detail" :key="key">
                           <span class="key">{{ key }}：</span>
-                          <!-- eslint-disable-next-line vue/no-v-html -->
-                          <pre class="value" v-html="keyItem || '--'" />
+                          <pre class="value" v-dompurify-html="keyItem || '--'" />
                         </li>
                       </ul>
                     </td>

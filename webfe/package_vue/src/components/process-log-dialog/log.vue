@@ -88,13 +88,13 @@
                     <span class="pod-name">{{ log.podShortName }}</span>
                     <pre
                       class="message"
-                      v-html="log.message || '--'"
+                      v-dompurify-html="log.message || '--'"
                     />
                   </template>
                   <template v-else>
                     <pre
                       class="message"
-                      v-html="log"
+                      v-dompurify-html="log"
                     />
                   </template>
                 </li>

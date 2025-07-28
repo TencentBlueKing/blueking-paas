@@ -13,7 +13,7 @@
           v-for="(item, index) in data"
           :key="index"
           class="log-item"
-          v-html="item"
+          v-dompurify-html="item"
         />
       </section>
       <div
@@ -46,7 +46,7 @@
           v-for="(item, index) in data"
           :key="index"
           class="log-item"
-          v-html="item"
+          v-dompurify-html="item"
         />
       </div>
     </bk-dialog>

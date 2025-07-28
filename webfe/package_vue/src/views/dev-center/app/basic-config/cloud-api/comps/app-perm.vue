@@ -169,7 +169,7 @@
                   target="_blank"
                   :href="props.row.doc_link"
                 >
-                  <span v-html="highlight(props.row)" />
+                  <span v-dompurify-html="highlight(props.row)" />
                   <i
                     class="fa fa-book"
                     aria-hidden="true"
@@ -177,7 +177,7 @@
                 </a>
               </template>
               <template v-else>
-                <span v-html="highlight(props.row)" />
+                <span v-dompurify-html="highlight(props.row)" />
               </template>
             </template>
           </bk-table-column>
@@ -188,7 +188,7 @@
             <template slot-scope="props">
               <span
                 v-bk-tooltips="{ content: props.row.description, disabled: props.row.description === '' }"
-                v-html="highlightDesc(props.row)"
+                v-dompurify-html="highlightDesc(props.row)"
               />
             </template>
           </bk-table-column>

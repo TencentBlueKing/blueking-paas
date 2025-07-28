@@ -12,8 +12,10 @@
     <div class="content">
       <paasng-alert>
         <div slot="title">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-html="dialogTips" class="renew-tips-container"></div>
+          <div
+            v-dompurify-html="dialogTips"
+            class="renew-tips-container"
+          ></div>
         </div>
       </paasng-alert>
       <div class="api-batch-apply-content">

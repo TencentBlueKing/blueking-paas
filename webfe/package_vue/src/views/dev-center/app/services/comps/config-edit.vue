@@ -88,7 +88,7 @@
         <div id="markdown">
           <div
             class="markdown-body"
-            v-html="compiledMarkdown"
+            v-dompurify-html="compiledMarkdown"
           />
         </div>
       </div>
@@ -153,14 +153,13 @@ export default {
       return this.listDisplay.length > 0;
     },
     compiledMarkdown() {
-      // eslint-disable-next-line vue/no-async-in-computed-properties
       this.$nextTick(() => {
         $('#markdown').find('a')
           .each(function () {
             $(this).attr('target', '_blank');
           });
       });
-      return marked(this.guide, { sanitize: true });
+      return marked(this.guide);
     },
   },
   watch: {

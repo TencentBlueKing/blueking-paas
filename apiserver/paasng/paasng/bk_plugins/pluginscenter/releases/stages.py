@@ -225,7 +225,7 @@ class PipelineStage(BaseStageController):
         pipeline_env = "prod"
         if stage_definition and stage_definition.pipelineEnv:
             pipeline_env = stage_definition.pipelineEnv
-        self.ctl = PipelineController(bk_username="admin", stage=pipeline_env)
+        self.ctl = PipelineController(bk_username=settings.BK_CI_CLIENT_USERNAME, stage=pipeline_env)
 
         if stage.status == constants.PluginReleaseStatus.INITIAL or stage.pipeline_detail is None:
             self.build = None

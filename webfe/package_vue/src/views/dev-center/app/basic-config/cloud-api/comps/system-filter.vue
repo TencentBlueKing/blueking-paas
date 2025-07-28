@@ -29,7 +29,7 @@
               v-bk-overflow-tips
               class="name"
             >
-              <span v-html="highlight(item)" />
+              <span v-dompurify-html="highlight(item)" />
               <PaasTag
                 v-if="!isGateway && item.tag !== ''"
                 size="small"
@@ -51,7 +51,7 @@
             <p
               v-bk-overflow-tips
               class="desc"
-              v-html="highlightDesc(item)"
+              v-dompurify-html="highlightDesc(item)"
             />
           </div>
         </template>

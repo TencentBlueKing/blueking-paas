@@ -18,7 +18,7 @@
           v-for="(item, index) in releaseList"
           :key="index"
           class="log-item"
-          v-html="item"
+          v-dompurify-html="item"
         />
       </section>
     </section>

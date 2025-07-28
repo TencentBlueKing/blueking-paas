@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package app provide command to manage application (deploy, get info, etc)
 package app
 
 import (

@@ -39,6 +39,8 @@ type AppReloadEvent struct {
 	Rebuild bool
 	// 是否重启应用
 	Relaunch bool
+	// 最新注入的环境变量
+	EnvVars map[string]string
 }
 
 // DevWatchServer 是 dev sandbox 中常驻 WatchServer 的接口协议

@@ -19,6 +19,7 @@
 package devsandbox
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -92,8 +93,16 @@ func (m HotReloadManager) Rebuild(reloadID string) error {
 }
 
 // Relaunch ...
-func (m HotReloadManager) Relaunch(reloadID string) error {
+func (m HotReloadManager) Relaunch(reloadID string, envVars map[string]string) error {
 	cmd := phase.MakeLauncherCmd(reloadSubCommand)
+
+	// 使用最新传入的全量环境变量
+	newEnv := make([]string, 0, len(envVars))
+	for key, value := range envVars {
+		newEnv = append(newEnv, fmt.Sprintf("%s=%s", key, value))
+	}
+	cmd.Env = newEnv
+
 	return m.runCmd(reloadID, cmd)
 }
 

@@ -460,7 +460,7 @@
               <p
                 v-for="(item, itemIndex) in logDetail"
                 :key="itemIndex"
-                v-html="item"
+                v-dompurify-html="item"
               />
             </div>
             <div class="log-loading-container">

@@ -60,7 +60,7 @@ class SourceOrigin(IntStructuredEnum):
         return [SourceOrigin.BK_LESS_CODE, SourceOrigin.S_MART, SourceOrigin.AI_AGENT]
 
 
-class APP_CATEGORY(StrStructuredEnum):
+class AppCategory(StrStructuredEnum):
     """Application category, used when setting label to images"""
 
     NORMAL_APP = "normal_app"

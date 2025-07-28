@@ -29,7 +29,11 @@ from paas_wl.bk_app.dev_sandbox.conf import (
     DEV_SERVER_NETWORK_CONFIG,
 )
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Runtime, SourceCodeConfig
-from paas_wl.bk_app.dev_sandbox.exceptions import DevSandboxAlreadyExists, DevSandboxResourceNotFound
+from paas_wl.bk_app.dev_sandbox.exceptions import (
+    BuilderDoesNotSupportDevSandbox,
+    DevSandboxAlreadyExists,
+    DevSandboxResourceNotFound,
+)
 from paas_wl.bk_app.dev_sandbox.kres_entities import (
     DevSandbox,
     DevSandboxConfigMap,
@@ -41,6 +45,7 @@ from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
+from paasng.platform.modules.helpers import ModuleRuntimeManager
 
 if TYPE_CHECKING:
     from paasng.accessories.dev_sandbox.models import DevSandbox as DevSandboxModel
@@ -143,33 +148,39 @@ class DevSandboxController:
         code_editor_cfg: CodeEditorConfig | None = None,
     ):
         """部署 sandbox 服务"""
-        #  step 1. ensure namespace
-        ns_handler = NamespacesHandler.new_by_app(self.wl_app)
-        ns_handler.ensure_namespace(namespace=self.wl_app.namespace)
-
-        # step 2. create dev sandbox
+        # 1. create dev sandbox
         sandbox = DevSandbox.create(
             self.wl_app,
             code=self.dev_sandbox.code,
             token=self.dev_sandbox.token,
-            runtime=Runtime(envs=envs),
+            runtime=Runtime(envs=envs, image=self._get_dev_sandbox_image()),
             source_code_cfg=source_code_cfg,
             code_editor_cfg=code_editor_cfg,
         )
 
-        # step 3. create configmap
-        cfg_map = DevSandboxConfigMap.create(sandbox)
-        # deliver code-editor config via ConfigMap
-        self.configmap_mgr.upsert(cfg_map)
+        # 2. ensure namespace
+        ns_handler = NamespacesHandler.new_by_app(self.wl_app)
+        ns_handler.ensure_namespace(namespace=self.wl_app.namespace)
 
-        # 创建沙箱 pod
+        # 3. create configmap (code-editor config)
+        self.configmap_mgr.upsert(DevSandboxConfigMap.create(sandbox))
+
+        # 4. create dev sandbox in k8s cluster
         self.sandbox_mgr.create(sandbox)
 
-        # step 4. upsert service
+        # 5. upsert service
         self.service_mgr.upsert(DevSandboxService.create(sandbox))
 
-        # step 5. upsert ingress
+        # 6. upsert ingress
         self.ingress_mgr.upsert(DevSandboxIngress.create(sandbox))
+
+    def _get_dev_sandbox_image(self) -> str:
+        """生成开发沙箱使用的容器镜像"""
+        mgr = ModuleRuntimeManager(self.dev_sandbox.module)
+        if image := mgr.get_dev_sandbox_image():
+            return image
+
+        raise BuilderDoesNotSupportDevSandbox(f"module {mgr.module.name} does not support dev sandbox")
 
 
 class DevWlAppConstructor:

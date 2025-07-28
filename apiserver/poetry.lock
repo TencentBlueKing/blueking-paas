@@ -231,13 +231,13 @@ six = ">=1.11.0"
 
 [[package]]
 name = "bk-notice-sdk"
-version = "1.3.2"
+version = "1.4.2"
 description = "A project for fetching and displaying announcement notifications."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "bk-notice-sdk-1.3.2.tar.gz", hash = "sha256:286d873bf8e652e3b750b442b81a9e42f7dda82b52fb334a321c677e6b95272d"},
+    {file = "bk-notice-sdk-1.4.2.tar.gz", hash = "sha256:13c0aa65aa495f8237722587f65235a4c4d2c7915460b556e4902613b22023b4"},
 ]
 
 [package.dependencies]
@@ -4365,4 +4365,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "0267b9b484f148417a8d20d9b3b78601d46958ca4b4a69a5328d35421aeabc27"
+content-hash = "9172cfaeab2e9fad9510ccc1e256356bdcbf03f433d5bf8907b3b728f09ecad4"

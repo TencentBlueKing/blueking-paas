@@ -38,6 +38,15 @@ def create_local_mysql_service() -> ServiceObj:
     return mixed_service_mgr.get(service.uuid)
 
 
+def create_local_rabbitmq_service() -> ServiceObj:
+    """Create a local RabbitMQ service with 2 random plans."""
+    service = G(Service, name="rabbitmq", display_name_zh_cn="RabbitMQ", category=G(ServiceCategory), logo_b64="dummy")
+    # Create some plans
+    G(Plan, name=generate_random_string(), service=service)
+    G(Plan, name=generate_random_string(), service=service)
+    return mixed_service_mgr.get(service.uuid)
+
+
 def provision_with_credentials(module: Module, service_obj: ServiceObj, credentials: dict[str, str]):
     """Bind a module with a given service and provision instances with credentials.
 

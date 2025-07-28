@@ -185,3 +185,68 @@ class TestCommitDevSandbox:
             data={"message": "this is my commit message!"},
         )
         assert resp.status_code == status.HTTP_200_OK
+
+
+class TestEnvVarsDevSandbox:
+    """沙箱环境变量"""
+
+    def test_upsert_env_vars_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
+        env_var_url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
+        )
+
+        resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "new_value"})
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+        bk_dev_sandbox.refresh_from_db()
+        updated_env_vars = bk_dev_sandbox.list_env_vars()
+        updated_dict = {item["key"]: item["value"] for item in updated_env_vars}
+
+        assert "NEW_VAR" in updated_dict
+        assert updated_dict["NEW_VAR"] == "new_value"
+
+        resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "updated_value"})
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+        bk_dev_sandbox.refresh_from_db()
+        final_env_vars = bk_dev_sandbox.list_env_vars()
+        final_dict = {item["key"]: item["value"] for item in final_env_vars}
+        assert final_dict["NEW_VAR"] == "updated_value"
+
+    def test_upsert_env_vars_sandbox_not_found(self, api_client, bk_cnative_app, bk_module):
+        invalid_code = "invalid123"
+        url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/dev_sandboxes/{invalid_code}/env_vars/"
+        )
+
+        resp = api_client.post(url, {"key": "VALID_VAR", "value": "value"})
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_env_var_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
+        env_var_url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
+        )
+
+        # 添加环境变量
+        api_client.post(env_var_url, {"key": "EXISTING_VAR", "value": "value"})
+        bk_dev_sandbox.refresh_from_db()
+        assert "EXISTING_VAR" in {item["key"] for item in bk_dev_sandbox.list_env_vars()}
+
+        # 删除环境变量
+        delete_url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/"
+            f"env_vars/EXISTING_VAR/"
+        )
+
+        resp = api_client.delete(delete_url)
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+        # 验证环境变量已被删除
+        bk_dev_sandbox.refresh_from_db()
+        env_vars = bk_dev_sandbox.list_env_vars()
+        env_var_keys = {item["key"] for item in env_vars}
+        assert "EXISTING_VAR" not in env_var_keys

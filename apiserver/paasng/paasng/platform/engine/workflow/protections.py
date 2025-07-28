@@ -195,10 +195,11 @@ class OperatorVersionCondition(DeployCondition):
             operator_release = HelmClient(cluster_name).get_release("bkpaas-app-operator")
             app_version = operator_release.chart.app_version if operator_release else None
 
-        if app_version and apiserver_version and app_version == apiserver_version:
-            # 只有版本一致时才缓存, 减少后续 helm 查询
-            cache.set(cache_key, app_version, 60 * 5)
-        else:
+            if app_version == apiserver_version:
+                # 只有版本一致时才缓存, 减少后续 helm 查询
+                cache.set(cache_key, app_version, 60 * 5)
+
+        if app_version != apiserver_version:
             # 版本不一致时, 主动清理缓存, 促使下次强制刷新
             cache.delete(cache_key)
             message = _("Operator 版本不匹配，请检查 Operator 版本")

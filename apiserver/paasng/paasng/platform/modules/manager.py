@@ -393,23 +393,27 @@ def create_repo_with_platform_account(module: Module, repo_type: str, username: 
     repo_provisioner = source_type.repo_provisioner_class.init_by_platform_account(repo_type)
 
     return repo_provisioner.create_with_member(
-        repo_group=repo_group,
         repo_name=repo_name,
         description=f"{module.application.name}({module.name} 模块)",
         username=username,
+        repo_group=repo_group,
     )
 
 
 def create_repo_with_user_account(
-    module: Module, repo_type: str, repo_group: str, repo_name: str, username: str
+    module: Module,
+    repo_type: str,
+    repo_name: str,
+    username: str,
+    repo_group: str | None = None,
 ) -> str:
     """使用用户凭证创建仓库
 
     :param module: 需要创建仓库的模块对象
     :param repo_type: 代码仓库类型
-    :param repo_group: 代码仓库组
     :param repo_name: 代码仓库名称
     :param username: 需要添加为仓库成员的初始用户名
+    :param repo_group: 代码仓库组，可选，不填则默认在用户命名空间下创建
     :return: 新创建的代码仓库地址
     """
     source_type = get_sourcectl_type(repo_type)
@@ -419,10 +423,10 @@ def create_repo_with_user_account(
     repo_provisioner = source_type.repo_provisioner_class.init_by_user(repo_type, user_id=module.owner)
 
     return repo_provisioner.create_with_member(
-        repo_group=repo_group,
         repo_name=repo_name,
         description=f"{module.application.name}({module.name} 模块)",
         username=username,
+        repo_group=repo_group,
     )
 
 

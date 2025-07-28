@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package login provide login command
 package login
 
 import (
@@ -133,7 +134,7 @@ func login(accessToken string) error {
 	// update global config and dump to file
 	config.G.Username = username
 	config.G.AccessToken = accessToken
-	if err = config.DumpConf(config.ConfigFilePath); err != nil {
+	if err = config.DumpConf(config.FilePath); err != nil {
 		return errors.Wrap(err, "Login Success but failed to dump config")
 	}
 	color.Green("Success!")

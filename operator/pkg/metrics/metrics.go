@@ -51,7 +51,7 @@ func IncDeployExpectedDeployFailures(bkapp *paasv1alpha2.BkApp, deploymentName s
 
 // IncGetBkappInfoFailures ...
 func IncGetBkappInfoFailures(bkapp *paasv1alpha2.BkApp) {
-	GetBkappInfoFailures.WithLabelValues(bkapp.Name, bkapp.Namespace).Inc()
+	GetBkAppInfoFailures.WithLabelValues(bkapp.Name, bkapp.Namespace).Inc()
 }
 
 // IncProvisionAddonInstanceFailures ...

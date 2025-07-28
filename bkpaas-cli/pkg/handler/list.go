@@ -26,6 +26,7 @@ import (
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 )
 
+// AppLister ...
 type AppLister struct{}
 
 // NewAppLister ...

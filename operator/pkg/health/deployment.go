@@ -103,7 +103,8 @@ func CheckDeploymentHealthStatus(deployment *appsv1.Deployment) *HealthStatus {
 }
 
 // GetDeploymentDirectFailMessage 从 Deployment 关联的 Pod 获取失败的直接原因
-// this method will return the fail message if any pod associated with the given deployment is unhealthy or the container is not creating
+// this method will return the fail message if any pod associated
+// with the given deployment is unhealthy or the container is not creating
 // if no any pod is unhealthy, will return ErrDeploymentStillProgressing
 func GetDeploymentDirectFailMessage(
 	ctx context.Context,

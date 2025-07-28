@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+
+echo "starting dev-builder"
+
+/cnb/devsandbox/bin/dev-entrypoint

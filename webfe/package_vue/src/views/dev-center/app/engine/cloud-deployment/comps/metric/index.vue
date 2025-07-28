@@ -13,13 +13,14 @@
         ></bk-switcher>
         <span class="metric-tips">
           <i class="paasng-icon paasng-info-line"></i>
-          <span
-            v-html="metricTipsHtml"
-          ></span>
+          <span v-dompurify-html="metricTipsHtml"></span>
         </span>
       </div>
       <!-- 编辑模式 -->
-      <div class="form-container" v-if="metric">
+      <div
+        class="form-container"
+        v-if="metric"
+      >
         <bk-form
           :label-width="145"
           :model="metricData"
@@ -38,13 +39,14 @@
               :disabled="false"
               v-model="metricData.service_name"
               ext-cls="service-select-custom"
-              @change="handleChangeName">
+              @change="handleChangeName"
+            >
               <bk-option
                 v-for="option in data.services"
                 :key="option.name"
                 :id="option.name"
-                :name="option.name">
-              </bk-option>
+                :name="option.name"
+              ></bk-option>
             </bk-select>
           </bk-form-item>
           <bk-form-item
@@ -53,11 +55,12 @@
             :property="'path'"
             :error-display-type="'normal'"
           >
-            <bk-input v-model="metricData.path" @input="handleChangePath"></bk-input>
+            <bk-input
+              v-model="metricData.path"
+              @input="handleChangePath"
+            ></bk-input>
           </bk-form-item>
-          <bk-form-item
-            :label="`Metric ${$t('参数')}`"
-          >
+          <bk-form-item :label="`Metric ${$t('参数')}`">
             <key-value-form
               ref="keyValueForm"
               :data="metricData.params"
@@ -88,7 +91,7 @@ export default {
   props: {
     data: {
       type: Object,
-      default: (() => {}),
+      default: () => {},
     },
     isEdit: {
       type: Boolean,
@@ -209,12 +212,12 @@ export default {
   display: flex;
   margin: 22px 0;
   .metric-tips {
-    color: #63656E;
+    color: #63656e;
     font-size: 12px;
     margin-left: 16px;
     i {
       font-size: 14px;
-      color: #979BA5;
+      color: #979ba5;
       transform: translateY(0px);
     }
     span {
@@ -231,12 +234,12 @@ export default {
       line-height: 22px;
       padding: 0 8px;
       font-size: 12px;
-      color: #63656E;
-      background: #F0F1F5;
+      color: #63656e;
+      background: #f0f1f5;
       border-radius: 2px;
       &.enable {
-        color: #14A568;
-        background: #E4FAF0;
+        color: #14a568;
+        background: #e4faf0;
       }
     }
   }

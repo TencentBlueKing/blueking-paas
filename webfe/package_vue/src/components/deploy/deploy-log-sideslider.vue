@@ -10,11 +10,17 @@
       slot="header"
       class="deploy-header"
     >
-      <div style="float: left;">
+      <div style="float: left">
         {{ historySideslider.title }}
       </div>
-      <div style="float: right;">
-        <bk-button class="mr10" size="small" @click="handleExportLog">{{ $t('下载日志') }}</bk-button>
+      <div style="float: right">
+        <bk-button
+          class="mr10"
+          size="small"
+          @click="handleExportLog"
+        >
+          {{ $t('下载日志') }}
+        </bk-button>
       </div>
     </div>
     <div
@@ -65,14 +71,15 @@
             type="warning"
             :title="$t('仅展示准备阶段、构建阶段日志')"
           />
-          <pre v-html="curDeployLog" />
+          <pre v-dompurify-html="curDeployLog" />
         </div>
       </template>
     </div>
   </bk-sideslider>
 </template>
 
-<script>import deployTimeline from './deploy-timeline';
+<script>
+import deployTimeline from './deploy-timeline';
 
 export default {
   components: {
@@ -168,7 +175,9 @@ export default {
         return false;
       }
       this.isLogLoading = true;
-      this.logExportUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${params.moduleName || this.moduleId}/deployments/${params.deployment_id}/logs/export`;
+      this.logExportUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${
+        params.moduleName || this.moduleId
+      }/deployments/${params.deployment_id}/logs/export`;
       try {
         const res = await this.$store.dispatch('deploy/getDeployLog', {
           appCode: this.appCode,
@@ -250,7 +259,9 @@ export default {
       const time = row.created;
       const moduleName = row.moduleName;
       if (row.operation_type === 'offline') {
-        const title = `${moduleName}${this.$t(' 模块')}${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
+        const title = `${moduleName}${this.$t(' 模块')}${
+          row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')
+        }${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
         this.historySideslider.title = title;
         this.curDeployLog = row.logDetail;
       } else {
@@ -282,8 +293,8 @@ export default {
     },
 
     handleExportLog() {
-      window.open(this.logExportUrl, '_blank')
-    }
+      window.open(this.logExportUrl, '_blank');
+    },
   },
 };
 </script>

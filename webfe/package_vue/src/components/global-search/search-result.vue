@@ -1,13 +1,19 @@
 <template>
-  <div class="search-content">
+  <div class="global-search-content">
     <section
       v-if="!curSearchKeyword"
       class="search-history-wrapper"
     >
-      <section class="search-history" v-if="searchHistory.length">
+      <section
+        class="search-history"
+        v-if="searchHistory.length"
+      >
         <div class="top-wrapper">
           <p class="sub-title">{{ $t('历史搜索') }}</p>
-          <div class="clear-history" @click="handleClearHistory">
+          <div
+            class="clear-history"
+            @click="handleClearHistory"
+          >
             <i class="paasng-icon paasng-delete"></i>
             {{ $t('清空历史') }}
           </div>
@@ -34,20 +40,30 @@
         </span>
       </section>
     </section>
-    <div v-else v-bkloading="{ isLoading: isLoading, zIndex: 10 }">
-      <div class="search-tip-cls" v-html="searchTip"></div>
+    <div
+      v-else
+      v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
+    >
+      <div
+        class="search-tip-cls"
+        v-dompurify-html="searchTip"
+      ></div>
       <!-- 蓝鲸应用 -->
       <section class="app">
         <div class="title-wrapper">
-          <div class="total">{{ $t('蓝鲸应用') }}（{{searchData.appList.length}}）</div>
+          <div class="total">{{ $t('蓝鲸应用') }}（{{ searchData.appList.length }}）</div>
           <div
             v-if="visibleApps.length"
             class="more"
-            @click="handleSeeMore('app')">
+            @click="handleSeeMore('app')"
+          >
             {{ $t('查看更多') }}
           </div>
         </div>
-        <ul class="app-list-container" v-if="visibleApps.length">
+        <ul
+          class="app-list-container"
+          v-if="visibleApps.length"
+        >
           <li
             class="item"
             v-for="item in visibleApps"
@@ -59,26 +75,37 @@
               <p
                 class="code"
                 v-bk-overflow-tips="item.code"
-                v-html="highlight(item.code)"
+                v-dompurify-html="highlight(item.code)"
               ></p>
-              <p v-html="highlight(item.name)"></p>
+              <p v-dompurify-html="highlight(item.name)"></p>
             </div>
           </li>
         </ul>
-        <p v-else class="empty-tips">{{ $t('没有找到相关结果') }}</p>
+        <p
+          v-else
+          class="empty-tips"
+        >
+          {{ $t('没有找到相关结果') }}
+        </p>
       </section>
       <!-- 产品文档 -->
       <section>
         <div class="title-wrapper">
-          <div class="total">{{ $t('产品文档') }}（{{searchData.docuList.length + searchData.iwikiList.length}}）</div>
+          <div class="total">
+            {{ $t('产品文档') }}（{{ searchData.docuList.length + searchData.iwikiList.length }}）
+          </div>
           <div
             v-if="visibleProductDoc.length"
             class="more"
-            @click="handleSeeMore('doc')">
+            @click="handleSeeMore('doc')"
+          >
             {{ $t('查看更多') }}
           </div>
         </div>
-        <ul class="doc-container" v-if="visibleProductDoc.length">
+        <ul
+          class="doc-container"
+          v-if="visibleProductDoc.length"
+        >
           <li
             class="item"
             v-for="item in visibleProductDoc"
@@ -87,14 +114,18 @@
           >
             <div
               class="title"
-              :title="item.title"
               v-bk-overflow-tips="item.title"
-              v-html="highlight(item.title)"
+              v-dompurify-html="highlight(item.title)"
             ></div>
             <div class="type">{{ item.source_type === 'iwiki' ? 'iwiki' : $t('资料库') }}</div>
           </li>
         </ul>
-        <p v-else class="empty-tips">{{ $t('没有找到相关结果') }}</p>
+        <p
+          v-else
+          class="empty-tips"
+        >
+          {{ $t('没有找到相关结果') }}
+        </p>
       </section>
     </div>
   </div>
@@ -158,7 +189,7 @@ export default {
     },
     isEmptyData() {
       const values = Object.values(this.searchData);
-      return values.every(value => Array.isArray(value) && value.length === 0);
+      return values.every((value) => Array.isArray(value) && value.length === 0);
     },
   },
   methods: {
@@ -172,7 +203,9 @@ export default {
       let allCount = 0;
       try {
         this.curSearchKeyword = this.searchValue;
-        const res = await Promise.all([this.fetchApp(), this.fetchIwiki(), this.fetchDocu()].map(item => this.promiseWithError(item)));
+        const res = await Promise.all(
+          [this.fetchApp(), this.fetchIwiki(), this.fetchDocu()].map((item) => this.promiseWithError(item))
+        );
         res.forEach((item, index) => {
           const { count, results } = item;
           allCount += count;
@@ -241,11 +274,15 @@ export default {
       });
     },
 
+    escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    },
+
     highlight(text) {
       const keyword = this.searchValue;
       if (!keyword) return text;
       const regex = new RegExp(`(${keyword})`, 'gi');
-      return text.replace(regex, '<pasmark>$1</pasmark>');
+      return text.replace(regex, '<marked>$1</marked>');
     },
 
     // 清空搜索历史
@@ -291,7 +328,7 @@ export default {
         name: appItem.type === 'cloud_native' ? 'cloudAppSummary' : 'appSummary',
         params: {
           id: appItem.code,
-          moduleId: appItem.modules.find(item => item.is_default).name,
+          moduleId: appItem.modules.find((item) => item.is_default).name,
         },
       });
     },
@@ -330,14 +367,14 @@ export default {
   justify-content: space-between;
   align-items: center;
 }
-.search-content {
+.global-search-content {
   padding: 24px;
   .search-tip-cls {
     font-size: 12px;
     line-height: 20px;
-    color: #63656E;
+    color: #63656e;
     padding-bottom: 16px;
-    border-bottom: 1px solid #EAEBF0;
+    border-bottom: 1px solid #eaebf0;
   }
 }
 .search-history-wrapper {
@@ -380,7 +417,7 @@ export default {
 section {
   &.app {
     padding-bottom: 16px;
-    border-bottom: 1px solid #EAEBF0;
+    border-bottom: 1px solid #eaebf0;
   }
   .empty-tips {
     text-align: center;
@@ -392,10 +429,10 @@ section {
     margin: 16px 0 8px;
     font-size: 12px;
     .total {
-      color: #979BA5;
+      color: #979ba5;
     }
     .more {
-      color: #3A84FF;
+      color: #3a84ff;
       cursor: pointer;
     }
   }
@@ -426,7 +463,7 @@ section {
         color: #313238;
         cursor: pointer;
         &:hover {
-          color: #3A84FF;
+          color: #3a84ff;
         }
       }
       .type {
@@ -451,7 +488,7 @@ section {
       border-radius: 2px;
       cursor: pointer;
       &:hover {
-        background: #F0F1F5;
+        background: #f0f1f5;
       }
       img {
         width: 32px;
@@ -482,18 +519,20 @@ section {
   font-weight: 700;
   font-style: normal;
 }
-section {
-  .app-list-container .item .app-info p {
-    pasmark {
-      color: #FF9C01;
+.global-search-content {
+  section {
+    .app-list-container .item .app-info p {
+      marked {
+        color: #ff9c01 !important;
+      }
     }
-  }
-  .doc-container .item .title {
-    pasmark {
-      color: #FF9C01;
-    }
-    &:hover pasmark {
-      color: #3A84FF;
+    .doc-container .item .title {
+      marked {
+        color: #ff9c01 !important;
+      }
+      &:hover marked {
+        color: #3a84ff !important;
+      }
     }
   }
 }

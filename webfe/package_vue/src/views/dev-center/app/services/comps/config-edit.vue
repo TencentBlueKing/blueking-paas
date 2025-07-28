@@ -100,7 +100,7 @@
         <div id="markdown">
           <div
             class="markdown-body"
-            v-html="compiledMarkdown"
+            v-dompurify-html="compiledMarkdown"
           />
         </div>
       </div>
@@ -161,7 +161,6 @@ export default {
   },
   computed: {
     compiledMarkdown() {
-      // eslint-disable-next-line vue/no-async-in-computed-properties
       this.$nextTick(() => {
         $('#markdown')
           .find('a')
@@ -169,7 +168,7 @@ export default {
             $(this).attr('target', '_blank');
           });
       });
-      return marked(this.guide, { sanitize: true });
+      return marked(this.guide);
     },
   },
   watch: {

@@ -6,7 +6,10 @@
       :status-map="CODECC_RELEASE_STATUS"
       :is-codecc="true"
     >
-      <template slot="right" v-if="canTerminateStatus.includes(versionData.gray_status)">
+      <template
+        slot="right"
+        v-if="canTerminateStatus.includes(versionData.gray_status)"
+      >
         <bk-button @click="handleCodeccCancelReleases">
           <i class="paasng-icon paasng-minus-circle" />
           {{ $t('终止发布') }}
@@ -32,7 +35,11 @@
             {{ $t('审批未通过，请修改发布信息后重新申请') }}
           </span>
           <span v-else>
-            {{ $t('单据{d}，请修改发布信息后重新申请', { d: versionData.latest_release_strategy?.ticket_info?.current_status_display }) }}
+            {{
+              $t('单据{d}，请修改发布信息后重新申请', {
+                d: versionData.latest_release_strategy?.ticket_info?.current_status_display,
+              })
+            }}
           </span>
           <bk-button
             size="small"
@@ -156,7 +163,7 @@
           <p
             class="release-tips"
             v-bk-overflow-tips
-            v-html="curStrategyType === 'full' ? officialReleaseTips : canaryReleaseTips"
+            v-dompurify-html="curStrategyType === 'full' ? officialReleaseTips : canaryReleaseTips"
           ></p>
         </template>
       </section>
@@ -237,7 +244,7 @@ export default {
       return this.releaseStatus === 'successful' && this.approvalStatus === 'FINISHED';
     },
     curVersionData() {
-      return this.scheme.source_versions.find(v => v.name === this.versionData.source_version_name);
+      return this.scheme.source_versions.find((v) => v.name === this.versionData.source_version_name);
     },
   },
   created() {

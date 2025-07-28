@@ -11,9 +11,15 @@
     <section slot="header">
       <span class="dialog-migration-title mr10">{{ `${data.name} ${$t('迁移为云原生应用')}` }}</span>
       <!-- 迁移中 -->
-      <round-loading v-if="migrationData.status === 'on_migration'" class="migration-title-loading" />
+      <round-loading
+        v-if="migrationData.status === 'on_migration'"
+        class="migration-title-loading"
+      />
     </section>
-    <div class="app-migration-main" v-bkloading="{ isLoading: isMainLoading, zIndex: 10 }">
+    <div
+      class="app-migration-main"
+      v-bkloading="{ isLoading: isMainLoading, zIndex: 10 }"
+    >
       <!-- 开始迁移 -->
       <section v-if="currentStep === 1">
         <p class="migration-title no-margin">{{ $t('迁移风险') }}</p>
@@ -21,8 +27,11 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.address"></bk-checkbox>
             <span class="title">{{ $t('变更应用访问地址') }}</span>
-            <!-- eslint-disable-next-line vue/no-v-html -->
-            <span class="tips" v-bk-overflow-tips v-html="domainsTips"></span>
+            <span
+              class="tips"
+              v-bk-overflow-tips
+              v-dompurify-html="domainsTips"
+            ></span>
           </div>
           <div class="content">
             <p>1. {{ $t('应用间不同模块间若通过 API 访问，需要修改调用地址') }}</p>
@@ -34,25 +43,41 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.process"></bk-checkbox>
             <span class="title">{{ $t('变更进程间通信地址') }}</span>
-            <!-- eslint-disable-next-line vue/no-v-html -->
-            <span class="tips" v-bk-overflow-tips v-html="namespaceTips"></span>
+            <span
+              class="tips"
+              v-bk-overflow-tips
+              v-dompurify-html="namespaceTips"
+            ></span>
           </div>
           <div class="content">
             {{ $t('可搜索应用代码、环境变量中是否有以下内容来确认') }}：
             <p>{{ `http://${data.region}-bkapp-${data.code}-` }}</p>
           </div>
         </div>
-        <div class="info-item" v-if="appChecklistInfo.rcs_bindings">
+        <div
+          class="info-item"
+          v-if="appChecklistInfo.rcs_bindings"
+        >
           <div class="title-wrapper">
-            <bk-checkbox v-model="migrationRisk.ip" disabled></bk-checkbox>
+            <bk-checkbox
+              v-model="migrationRisk.ip"
+              disabled
+            ></bk-checkbox>
             <span class="title">{{ $t('变更出口 IP ') }}</span>
           </div>
           <div class="content">
             {{ $t('当前应用绑定了出口 IP，暂不支持迁移。并且无法勾选') }}
           </div>
         </div>
-        <bk-alert type="warning" class="alert-tip-cls" :show-icon="false">
-          <div slot="title" class="alert-warning">
+        <bk-alert
+          type="warning"
+          class="alert-tip-cls"
+          :show-icon="false"
+        >
+          <div
+            slot="title"
+            class="alert-warning"
+          >
             <i class="paasng-icon paasng-remind"></i>
             <span>{{ $t('点击“开始迁移”后，应用服务将不会受到任何影响') }}</span>
             <a
@@ -70,13 +95,24 @@
       <section v-else>
         <div class="migration-status">
           <!-- 成功、失败、未执行 -->
-          <div class="item mt10" v-for="(item, index) in migrateStateData" :key="index">
+          <div
+            class="item mt10"
+            v-for="(item, index) in migrateStateData"
+            :key="index"
+          >
             <div
               class="dot-status mr10"
               :class="item.status"
-              v-bk-tooltips="{ content: item.errorMsg, disabled: item.status !== 'failed' }">
-              <img src="/static/images/not-executed-icon.png" v-if="item.status === 'not-executed'">
-              <i :class="['paasng-icon', item.icon]" v-else></i>
+              v-bk-tooltips="{ content: item.errorMsg, disabled: item.status !== 'failed' }"
+            >
+              <img
+                src="/static/images/not-executed-icon.png"
+                v-if="item.status === 'not-executed'"
+              />
+              <i
+                :class="['paasng-icon', item.icon]"
+                v-else
+              ></i>
             </div>
             <span class="title">{{ item.title }}</span>
           </div>
@@ -96,14 +132,21 @@
               >
                 {{ $t('去部署') }}
               </bk-button>
-            <!-- 重新部署 -->
+              <!-- 重新部署 -->
             </div>
             <div class="content">
               {{ $t('如果有 Celery 等后台任务，同时部署(普通和云原生进程都存在时)可能会导致任务抢占，请确认影响。') }}
             </div>
           </div>
-          <bk-alert type="warning" class="alert-tip-cls" :show-icon="false">
-            <div slot="title" class="alert-warning">
+          <bk-alert
+            type="warning"
+            class="alert-tip-cls"
+            :show-icon="false"
+          >
+            <div
+              slot="title"
+              class="alert-warning"
+            >
               <i class="paasng-icon paasng-remind"></i>
               <span>{{ $t('点击“确认迁移”后，会停掉应用迁移前的进程，并将桌面的访问入口切换为新的访问地址。') }}</span>
               <a
@@ -117,7 +160,10 @@
             </div>
           </bk-alert>
         </template>
-        <section v-else class="migration-status-diagram">
+        <section
+          v-else
+          class="migration-status-diagram"
+        >
           <!-- 迁移失败 -->
           <bk-exception
             v-if="isMigrationStepFailed"
@@ -128,8 +174,11 @@
             <div class="msg">{{ migrationFailureTip }}</div>
           </bk-exception>
           <!-- 迁移中 -->
-          <div class="migrating" v-else>
-            <img src="/static/images/migrating.png">
+          <div
+            class="migrating"
+            v-else
+          >
+            <img src="/static/images/migrating.png" />
             <p>{{ $t('云原生应用迁移中') }}…</p>
           </div>
         </section>
@@ -140,7 +189,8 @@
         v-if="isMigrationStepFailed"
         class="ml10"
         :theme="'primary'"
-        @click="handleReMigrate(migrationData.id)">
+        @click="handleReMigrate(migrationData.id)"
+      >
         {{ $t('重试') }}
       </bk-button>
       <bk-button
@@ -149,7 +199,8 @@
         :theme="'primary'"
         :loading="isConfirmMigrationLoading"
         :disabled="isMigrationDisabled"
-        @click="handleAppMigration">
+        @click="handleAppMigration"
+      >
         {{ isStartMigration ? $t('开始迁移') : $t('确定迁移') }}
       </bk-button>
       <bk-button
@@ -287,7 +338,10 @@ export default {
       return '--';
     },
     domainsTips() {
-      return this.$t('如 {l} 变更为：<em>{c}</em>', { l: this.appChecklistInfo.rootDomainsLegacy || '--', c: this.appChecklistInfo.rootDomainsCnative || '--' });
+      return this.$t('如 {l} 变更为：<em>{c}</em>', {
+        l: this.appChecklistInfo.rootDomainsLegacy || '--',
+        c: this.appChecklistInfo.rootDomainsCnative || '--',
+      });
     },
     namespaceTips() {
       return this.$t('如 {l} 变更为：<em>{c}</em>', {
@@ -331,12 +385,15 @@ export default {
     },
     // 当前事项是否勾选
     handleAreAllChecked(data) {
-      return Object.values(data).every(value => value === true);
+      return Object.values(data).every((value) => value === true);
     },
     // 刷新操作
     async handleWindowReload() {
       // 当前状态与进入时的初始状态不同，且为迁移成功状态，需要刷新当前页
-      if (this.initStatus !== this.migrationData.status && (this.isMigrationStepSuccessful || this.isMigrationConfirmed)) {
+      if (
+        this.initStatus !== this.migrationData.status &&
+        (this.isMigrationStepSuccessful || this.isMigrationConfirmed)
+      ) {
         if (this.$route.name === 'myApplications') {
           // 列表页直接刷新
           window.location.reload();
@@ -425,8 +482,8 @@ export default {
         // root_domains 变更应用访问地址
         if (res.root_domains) {
           const { legacy, cnative } = res.root_domains;
-          this.appChecklistInfo.rootDomainsLegacy = legacy.length ? legacy.map(v => `*.${v}`).join() : '--';
-          this.appChecklistInfo.rootDomainsCnative = cnative.length ? cnative.map(v => `*.${v}`).join() : '--';
+          this.appChecklistInfo.rootDomainsLegacy = legacy.length ? legacy.map((v) => `*.${v}`).join() : '--';
+          this.appChecklistInfo.rootDomainsCnative = cnative.length ? cnative.map((v) => `*.${v}`).join() : '--';
         }
         // 变更出口 IP
         if (!this.appChecklistInfo.rcs_bindings) {
@@ -543,7 +600,10 @@ export default {
     async handleToDeploy() {
       // 重新获取当前应用信息
       const appCode = this.data.code || this.$route.params.id;
-      await Promise.all([this.$store.dispatch('getAppInfo', { appCode }), this.$store.dispatch('getAppFeature', { appCode })]);
+      await Promise.all([
+        this.$store.dispatch('getAppInfo', { appCode }),
+        this.$store.dispatch('getAppFeature', { appCode }),
+      ]);
       this.handleCancel(false);
       this.$router.push({
         name: 'cloudAppDeployManageStag',
@@ -582,10 +642,11 @@ export default {
       }
       .retry-wrapper {
         margin-left: 15px;
-        color: #3A84FF;
+        color: #3a84ff;
         cursor: pointer;
 
-        i, span {
+        i,
+        span {
           user-select: none;
           margin-right: 3px;
           font-size: 14px;
@@ -602,8 +663,8 @@ export default {
       width: 21px;
       height: 21px;
       border-radius: 50%;
-      color: #63656E;
-      background-color: #F5F7FA;
+      color: #63656e;
+      background-color: #f5f7fa;
 
       img {
         width: 21px;
@@ -611,13 +672,13 @@ export default {
       }
 
       &.success {
-        color: #3FC06D;
-        background-color: #E5F6EA;
+        color: #3fc06d;
+        background-color: #e5f6ea;
       }
 
       &.failed {
-        color: #EA3636;
-        background-color: #FFDDDD;
+        color: #ea3636;
+        background-color: #ffdddd;
       }
     }
     i {
@@ -632,7 +693,7 @@ export default {
 
     .migrating {
       font-size: 14px;
-      color: #63656E;
+      color: #63656e;
       text-align: center;
       img {
         width: 220px;
@@ -647,21 +708,20 @@ export default {
       }
       .title {
         font-size: 14px;
-        color: #63656E;
+        color: #63656e;
       }
       .msg {
         font-size: 12px;
-        color: #979BA5;
+        color: #979ba5;
       }
-
     }
   }
   .alert-warning {
     font-size: 12px;
-    color: #63656E;
+    color: #63656e;
     i.paasng-remind {
       font-size: 14px;
-      color: #FF9C01;
+      color: #ff9c01;
       margin-right: 10px;
       transform: translateY(0);
     }
@@ -669,7 +729,7 @@ export default {
       i {
         margin-left: 5px;
       }
-      color: #3A84FF;
+      color: #3a84ff;
       cursor: pointer;
     }
   }
@@ -714,7 +774,7 @@ export default {
       background: #f5f7fa;
       border-radius: 2px;
       font-size: 12px;
-      color: #63656E;
+      color: #63656e;
       line-height: 20px;
     }
   }

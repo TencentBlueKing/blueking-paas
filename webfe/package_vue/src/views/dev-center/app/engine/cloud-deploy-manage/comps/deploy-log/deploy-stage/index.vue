@@ -9,7 +9,10 @@
       />
     </label>
 
-    <section class="content-wrapper" v-if="releaseList.length">
+    <section
+      class="content-wrapper"
+      v-if="releaseList.length"
+    >
       <section
         ref="content"
         class="log-content"
@@ -18,7 +21,7 @@
           v-for="(item, index) in releaseList"
           :key="index"
           class="log-item"
-          v-html="item"
+          v-dompurify-html="item"
         />
       </section>
     </section>
@@ -130,85 +133,85 @@ export default {
 };
 </script>
 <style lang="scss">
-    .paas-deploy-log-deploy-stage-wrapper {
-        .title {
-            display: inline-block;
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: #979ba5;
-        }
-        .content-wrapper {
-            position: relative;
-            width: 100%;
-            min-height: 60px;
-            background: #2a2b2f;
-            border-radius: 2px;
-            .screen-wrapper {
-                position: absolute;
-                top: 15px;
-                right: 20px;
-                cursor: pointer;
-                i {
-                    font-size: 16px;
-                    color: #63656e;
-                }
-            }
-        }
-        .log-content {
-            padding: 15px 20px;
-            width: 100%;
-            max-height: 500px;
-            overflow-y: auto;
-            &::-webkit-scrollbar {
-                width: 4px;
-                background-color: lighten(transparent, 80%);
-            }
-            &::-webkit-scrollbar-thumb {
-                height: 5px;
-                border-radius: 2px;
-                background-color: #63656e;
-            }
-            .log-item {
-                line-height: 20px;
-                font-size: 12px;
-                color: #c4c6cc;
-                font-family: Consolas,source code pro,Bitstream Vera Sans Mono,Courier,monospace,\\5FAE\8F6F\96C5\9ED1,Arial;
-            }
-        }
-        .content {
-            width: 100%;
-            background: #2a2b2f;
-            border-radius: 2px;
-            &::-webkit-scrollbar {
-                width: 4px;
-                background-color: lighten(transparent, 80%);
-            }
-            &::-webkit-scrollbar-thumb {
-                height: 5px;
-                border-radius: 2px;
-                background-color: #63656e;
-            }
-            .log-item {
-                display: flex;
-                justify-content: flex-start;
-                line-height: 20px;
-                font-size: 12px;
-                color: #fff;
-            }
-        }
-        .process-content {
-            position: relative;
-            min-height: 90px;
-            padding: 10px 20px 20px 20px;
-            .log-empty,
-            .empty-process {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                font-size: 12px;
-                color: #979ba5;
-            }
-        }
+.paas-deploy-log-deploy-stage-wrapper {
+  .title {
+    display: inline-block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #979ba5;
+  }
+  .content-wrapper {
+    position: relative;
+    width: 100%;
+    min-height: 60px;
+    background: #2a2b2f;
+    border-radius: 2px;
+    .screen-wrapper {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      cursor: pointer;
+      i {
+        font-size: 16px;
+        color: #63656e;
+      }
     }
+  }
+  .log-content {
+    padding: 15px 20px;
+    width: 100%;
+    max-height: 500px;
+    overflow-y: auto;
+    &::-webkit-scrollbar {
+      width: 4px;
+      background-color: lighten(transparent, 80%);
+    }
+    &::-webkit-scrollbar-thumb {
+      height: 5px;
+      border-radius: 2px;
+      background-color: #63656e;
+    }
+    .log-item {
+      line-height: 20px;
+      font-size: 12px;
+      color: #c4c6cc;
+      font-family: Consolas, source code pro, Bitstream Vera Sans Mono, Courier, monospace, \\5FAE\8F6F\96C5\9ED1, Arial;
+    }
+  }
+  .content {
+    width: 100%;
+    background: #2a2b2f;
+    border-radius: 2px;
+    &::-webkit-scrollbar {
+      width: 4px;
+      background-color: lighten(transparent, 80%);
+    }
+    &::-webkit-scrollbar-thumb {
+      height: 5px;
+      border-radius: 2px;
+      background-color: #63656e;
+    }
+    .log-item {
+      display: flex;
+      justify-content: flex-start;
+      line-height: 20px;
+      font-size: 12px;
+      color: #fff;
+    }
+  }
+  .process-content {
+    position: relative;
+    min-height: 90px;
+    padding: 10px 20px 20px 20px;
+    .log-empty,
+    .empty-process {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 12px;
+      color: #979ba5;
+    }
+  }
+}
 </style>

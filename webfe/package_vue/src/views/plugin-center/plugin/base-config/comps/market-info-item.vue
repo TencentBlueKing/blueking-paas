@@ -32,20 +32,14 @@
           <div class="content">{{ marketInfo.contactArr?.length ? marketInfo.contactArr.join() : '--' }}</div>
         </li>
         <li class="item-info">
-          <div class="describe">
-            {{ $t('详情描述') }}
-          </div>
+          <div class="describe">{{ $t('详情描述') }}</div>
           <div class="content description-content">
             <div
-              :class="[
-                'display-description',
-                { 'description-ellipsis': hideBeyondArea },
-                isExpanded ? 'unfold' : 'up',
-              ]"
+              :class="['display-description', { 'description-ellipsis': hideBeyondArea }, isExpanded ? 'unfold' : 'up']"
             >
               <div
                 ref="editorRef"
-                v-html="marketInfo.description ? marketInfo.description : '--'"
+                v-dompurify-html="marketInfo.description ? marketInfo.description : '--'"
               />
             </div>
             <span

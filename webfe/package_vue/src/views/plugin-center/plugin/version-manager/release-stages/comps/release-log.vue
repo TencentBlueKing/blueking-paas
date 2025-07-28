@@ -8,7 +8,7 @@
         v-for="(item, index) in logs"
         :key="index"
         class="log log-item pt10"
-        v-html="item"
+        v-dompurify-html="item"
       />
     </template>
     <section
@@ -41,7 +41,7 @@ export default {
   computed: {
     logs() {
       if (this.ansiUp) {
-        return this.log.map(item => this.ansiUp.ansi_to_html(item));
+        return this.log.map((item) => this.ansiUp.ansi_to_html(item));
       }
       return this.log;
     },
@@ -59,48 +59,48 @@ export default {
   mounted() {
     // 初始化日志彩色组件
     // eslint-disable-next-line
-    const AU = require('ansi_up')
+    const AU = require('ansi_up');
     // eslint-disable-next-line
-    this.ansiUp = new AU.default
+    this.ansiUp = new AU.default();
   },
 };
 </script>
 
 <style scoped lang="scss">
-    .release-log-warp{
-        padding: 17px 30px;
-        flex: 1;
-        height: calc(100vh - 288px);
-        // height: 720px;
-        background: #313238;
-        overflow-y: auto;
-        // 滚动条
-        &::-webkit-scrollbar {
-            width: 4px;
-            background-color: lighten(transparent, 80%);
-        }
-        &::-webkit-scrollbar-thumb {
-            height: 5px;
-            border-radius: 2px;
-            background-color: #63656e;
-        }
-        .log{
-            font-size: 12px;
-            color: #FFFFFF;
-        }
-        .content{
-            position: relative;
-            min-height: 60px;
-            padding: 0 10px 10px 0;
-            color: #fff;
-            .log-empty {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                font-size: 14px;
-                color: #979ba5;
-            }
-        }
+.release-log-warp {
+  padding: 17px 30px;
+  flex: 1;
+  height: calc(100vh - 288px);
+  // height: 720px;
+  background: #313238;
+  overflow-y: auto;
+  // 滚动条
+  &::-webkit-scrollbar {
+    width: 4px;
+    background-color: lighten(transparent, 80%);
+  }
+  &::-webkit-scrollbar-thumb {
+    height: 5px;
+    border-radius: 2px;
+    background-color: #63656e;
+  }
+  .log {
+    font-size: 12px;
+    color: #ffffff;
+  }
+  .content {
+    position: relative;
+    min-height: 60px;
+    padding: 0 10px 10px 0;
+    color: #fff;
+    .log-empty {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      color: #979ba5;
     }
+  }
+}
 </style>

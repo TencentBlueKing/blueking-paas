@@ -1,17 +1,15 @@
 <template lang="html">
   <footer class="ps-sample-footer">
-    <!-- eslint-disable-next-line vue/no-v-html -->
-    <div class="info" v-html="footerInfo"></div>
+    <div
+      class="info"
+      v-dompurify-html="footerInfo"
+    ></div>
     <div>{{ platformConfig.footerCopyrightContent }}</div>
   </footer>
 </template>
 
 <script>
 export default {
-  data() {
-    return {
-    };
-  },
   computed: {
     platformConfig() {
       return this.$store.state.platformConfig;
@@ -42,12 +40,12 @@ export default {
 }
 
 // ps-footer
-.ps-footer{
+.ps-footer {
   background: #191929;
   padding: 44px 80px;
   overflow: hidden;
 }
-.ps-footer .wrap{
+.ps-footer .wrap {
   position: relative;
 
   &.center {
@@ -56,7 +54,7 @@ export default {
     text-align: left;
   }
 }
-.ps-footer-copy{
+.ps-footer-copy {
   width: 451px;
   float: left;
   border-right: solid 1px #2c2d3c;
@@ -64,30 +62,30 @@ export default {
   color: #9394a3;
   line-height: 20px;
 }
-.ps-footer-logo{
+.ps-footer-logo {
   padding: 16px 0 20px 0;
 }
-.ps-footer-nav{
+.ps-footer-nav {
   position: absolute;
   right: -60px;
   top: 0;
   padding-left: 69px;
 }
-.ps-footer-nav dl{
+.ps-footer-nav dl {
   float: left;
   padding: 0 60px;
 }
-.ps-footer-nav dt{
+.ps-footer-nav dt {
   line-height: 36px;
   color: #ffffff;
   font-weight: bold;
   padding-top: 4px;
 }
-.ps-footer-nav dd a{
+.ps-footer-nav dd a {
   color: #9394a3;
   line-height: 24px;
 }
-.ps-footer-nav dd a:hover{
-  color: #3A84FF;
+.ps-footer-nav dd a:hover {
+  color: #3a84ff;
 }
 </style>

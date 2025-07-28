@@ -30,9 +30,7 @@
       v-if="curExpanded"
       class="content"
     >
-      <section
-        v-bkloading="{ isLoading: instanceLogLoading, color: '#2a2b2f' }"
-      >
+      <section v-bkloading="{ isLoading: instanceLogLoading, color: '#2a2b2f' }">
         <render-stage
           v-if="!instanceLogLoading && logs.length > 0"
           :data="logs"
@@ -69,17 +67,15 @@
           :key="index"
           class="log-item"
         >
-          <span v-html="formatTime(item.timestamp)" />
-          <span
-            style="margin-left: 25px;"
-            v-html="item.message"
-          />
+          <span>{{ formatTime(item.timestamp) }}</span>
+          <span style="margin-left: 25px">{{ item.message }}</span>
         </p>
       </div>
     </bk-dialog>
   </div>
 </template>
-<script>import appBaseMixin from '@/mixins/app-base-mixin.js';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin.js';
 import RenderStage from '../render-deploy-stage';
 import StatusItem from './render-status-item';
 import { formatDate } from '@/common/tools';
@@ -173,90 +169,90 @@ export default {
 };
 </script>
 <style lang="scss">
-    .paas-deploy-process-item-wrapper {
-        border-bottom: 1px solid rgba(99, 101, 110, .3);
-        .header {
-            position: relative;
-            line-height: 42px;
-            cursor: pointer;
-            .expanded-icon {
-                position: absolute;
-                left: -18px;
-                top: 15px;
-            }
-            .process-title {
-                color: #fff;
-            }
-            .process-sub-title {
-                color: #979ba5;
-            }
+.paas-deploy-process-item-wrapper {
+  border-bottom: 1px solid rgba(99, 101, 110, 0.3);
+  .header {
+    position: relative;
+    line-height: 42px;
+    cursor: pointer;
+    .expanded-icon {
+      position: absolute;
+      left: -18px;
+      top: 15px;
+    }
+    .process-title {
+      color: #fff;
+    }
+    .process-sub-title {
+      color: #979ba5;
+    }
 
-            .refresh-wrapper {
-                position: absolute;
-                top: 0;
-                right: 30px;
-                cursor: pointer;
-                i {
-                    font-size: 16px;
-                    color: #63656e;
-                }
-                &.reset-right {
-                    right: 0;
-                }
-            }
+    .refresh-wrapper {
+      position: absolute;
+      top: 0;
+      right: 30px;
+      cursor: pointer;
+      i {
+        font-size: 16px;
+        color: #63656e;
+      }
+      &.reset-right {
+        right: 0;
+      }
+    }
 
-            .screen-wrapper {
-                position: absolute;
-                top: 0;
-                right: 0;
-                cursor: pointer;
-                i {
-                    font-size: 16px;
-                    color: #63656e;
-                }
-            }
-        }
-        .content {
-            position: relative;
-            min-height: 60px;
-            padding: 0 10px 10px 0;
-            color: #fff;
-        }
+    .screen-wrapper {
+      position: absolute;
+      top: 0;
+      right: 0;
+      cursor: pointer;
+      i {
+        font-size: 16px;
+        color: #63656e;
+      }
     }
-    .deploy-process-instance-log-cls {
-        .content {
-            padding: 0 !important;
-        }
+  }
+  .content {
+    position: relative;
+    min-height: 60px;
+    padding: 0 10px 10px 0;
+    color: #fff;
+  }
+}
+.deploy-process-instance-log-cls {
+  .content {
+    padding: 0 !important;
+  }
+}
+.paas-deploy-log-full-screen-cls {
+  .screen-icon-wrapper {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+    i {
+      font-size: 18px;
+      color: #63656e;
     }
-    .paas-deploy-log-full-screen-cls {
-        .screen-icon-wrapper {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            cursor: pointer;
-            i {
-                font-size: 18px;
-                color: #63656e;
-            }
-        }
-        .dialog-log-content {
-            padding: 15px 20px;
-            max-height: 100vh;
-            overflow-y: auto;
-            &::-webkit-scrollbar {
-                width: 4px;
-                background-color: lighten(transparent, 80%);
-            }
-            &::-webkit-scrollbar-thumb {
-                height: 5px;
-                border-radius: 2px;
-                background-color: #63656e;
-            }
-            .log-item {
-                line-height: 20px;
-                font-size: 12px;
-                color: #c4c6cc;
-            }
-        }
+  }
+  .dialog-log-content {
+    padding: 15px 20px;
+    max-height: 100vh;
+    overflow-y: auto;
+    &::-webkit-scrollbar {
+      width: 4px;
+      background-color: lighten(transparent, 80%);
     }
+    &::-webkit-scrollbar-thumb {
+      height: 5px;
+      border-radius: 2px;
+      background-color: #63656e;
+    }
+    .log-item {
+      line-height: 20px;
+      font-size: 12px;
+      color: #c4c6cc;
+    }
+  }
+}
 </style>

@@ -9,11 +9,11 @@
     <bk-form form-type="inline">
       <bk-form-item
         :label="$t('环境')"
-        style="vertical-align: top;"
+        style="vertical-align: top"
       >
         <bk-select
           v-model="choosedEnv"
-          style="width: 150px;"
+          style="width: 150px"
           :clearable="false"
           @change="getDeployHistory(1)"
         >
@@ -27,11 +27,11 @@
       </bk-form-item>
       <bk-form-item
         :label="$t('操作人')"
-        style="vertical-align: top;"
+        style="vertical-align: top"
       >
         <user
           v-model="personnelSelectorList"
-          style="width: 350px;"
+          style="width: 350px"
           :placeholder="$t('请选择')"
           :multiple="false"
           @change="getDeployHistory(1)"
@@ -63,8 +63,8 @@
         :render-header="$renderHeader"
       >
         <template slot-scope="props">
-          <span v-if="props.row.environment === 'stag'"> {{ $t('预发布环境') }} </span>
-          <span v-else> {{ $t('生产环境') }} </span>
+          <span v-if="props.row.environment === 'stag'">{{ $t('预发布环境') }}</span>
+          <span v-else>{{ $t('生产环境') }}</span>
         </template>
       </bk-table-column>
       <bk-table-column
@@ -78,10 +78,12 @@
             <span class="branch-name">{{ props.row.name }}</span>
             <div slot="content">
               <p class="flex">
-                <span class="label"> {{ $t('部署分支：') }} </span><span class="value">{{ props.row.name }}</span>
+                <span class="label">{{ $t('部署分支：') }}</span>
+                <span class="value">{{ props.row.name }}</span>
               </p>
               <p class="flex">
-                <span class="label"> {{ $t('仓库地址：') }} </span><span class="value">{{ props.row.url }}</span>
+                <span class="label">{{ $t('仓库地址：') }}</span>
+                <span class="value">{{ props.row.url }}</span>
               </p>
             </div>
           </bk-popover>
@@ -118,19 +120,24 @@
       <bk-table-column :label="$t('结果')">
         <template slot-scope="props">
           <div v-if="props.row.status === 'successful'">
-            <span class="dot success" /> {{ $t('成功') }}
+            <span class="dot success" />
+            {{ $t('成功') }}
           </div>
           <div v-if="props.row.status === 'failed'">
-            <span class="dot danger" /> {{ $t('失败') }}
+            <span class="dot danger" />
+            {{ $t('失败') }}
           </div>
           <div v-if="props.row.status === 'interrupted'">
-            <span class="dot warning" /> {{ $t('中断') }}
+            <span class="dot warning" />
+            {{ $t('中断') }}
           </div>
           <div v-if="props.row.status === 'pending' && props.row.operation_type === 'online'">
-            <span class="dot warning" /> {{ $t('部署中') }}
+            <span class="dot warning" />
+            {{ $t('部署中') }}
           </div>
           <div v-if="props.row.status === 'pending' && props.row.operation_type === 'offline'">
-            <span class="dot warning" /> {{ $t('下架中') }}
+            <span class="dot warning" />
+            {{ $t('下架中') }}
           </div>
         </template>
       </bk-table-column>
@@ -151,11 +158,17 @@
         slot="header"
         class="deploy-header"
       >
-        <div style="float: left;">
+        <div style="float: left">
           {{ historySideslider.title }}
         </div>
-        <div style="float: right;">
-          <bk-button class="mr10" size="small" @click="handleExportLog">{{ $t('下载日志') }}</bk-button>
+        <div style="float: right">
+          <bk-button
+            class="mr10"
+            size="small"
+            @click="handleExportLog"
+          >
+            {{ $t('下载日志') }}
+          </bk-button>
         </div>
       </div>
       <div
@@ -169,7 +182,7 @@
             :list="timeLineList"
             :disabled="true"
             class="mt20 ml15 mr15"
-            style="min-width: 250px;"
+            style="min-width: 250px"
           />
           <div class="paas-log-box">
             <div
@@ -179,7 +192,7 @@
               <div class="fl">
                 <span class="paasng-icon paasng-info-circle-shape" />
               </div>
-              <section style="position: relative; margin-left: 50px;">
+              <section style="position: relative; margin-left: 50px">
                 <p class="deploy-pending-text">
                   {{ $t('部署失败') }}
                 </p>
@@ -202,11 +215,11 @@
             </div>
             <bk-alert
               v-else
-              style="margin: -20px -20px 10px -20px; border-radius: 0;"
+              style="margin: -20px -20px 10px -20px; border-radius: 0"
               type="warning"
               :title="$t('仅展示准备阶段、构建阶段日志')"
             />
-            <pre v-html="curDeployLog" />
+            <pre v-dompurify-html="curDeployLog" />
           </div>
         </template>
       </div>
@@ -287,11 +300,11 @@ export default {
   mounted() {
     const AU = require('ansi_up');
     // eslint-disable-next-line
-    this.ansiUp = new AU.default
+    this.ansiUp = new AU.default();
   },
   methods: {
     updateValue(curVal) {
-      curVal ? this.personnelSelectorList = curVal : this.personnelSelectorList = '';
+      curVal ? (this.personnelSelectorList = curVal) : (this.personnelSelectorList = '');
     },
 
     computedDeployTime(payload) {
@@ -319,8 +332,8 @@ export default {
         return '--';
       }
 
-      const start = (new Date(startTime).getTime()) / 1000;
-      const end = (new Date(endTime).getTime()) / 1000;
+      const start = new Date(startTime).getTime() / 1000;
+      const end = new Date(endTime).getTime() / 1000;
       const interval = Math.ceil(end - start);
 
       if (!interval) {
@@ -421,7 +434,7 @@ export default {
 
         // 如果有deployid，默认显示
         if (this.$route.query.deployId) {
-          const recordItem = this.historyList.find(item => item.deployment_id === this.$route.query.deployId);
+          const recordItem = this.historyList.find((item) => item.deployment_id === this.$route.query.deployId);
           if (recordItem) {
             this.handleShowLog(recordItem);
           }
@@ -461,12 +474,16 @@ export default {
       const operator = row.operator.username;
       const time = row.created;
       if (row.operation_type === 'offline') {
-        const title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
+        const title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t(
+          '下架日志'
+        )} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
         this.historySideslider.title = title;
         this.curDeployLog = row.logDetail;
       } else {
         const branch = row.name;
-        this.historySideslider.title = `${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('部署日志')} (${operator}${this.$t('于')}${time}${this.$t('部署')}${branch}${this.$t('分支')})`;
+        this.historySideslider.title = `${
+          row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')
+        }${this.$t('部署日志')} (${operator}${this.$t('于')}${time}${this.$t('部署')}${branch}${this.$t('分支')})`;
         this.getDeployTimeline(row);
         this.getDeployLog(row);
       }
@@ -517,7 +534,9 @@ export default {
         return false;
       }
       this.isLogLoading = true;
-      this.logExportUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${params.module_name || params.moduleName}/deployments/${params.deployment_id}/logs/export`;
+      this.logExportUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${
+        params.module_name || params.moduleName
+      }/deployments/${params.deployment_id}/logs/export`;
       try {
         const res = await this.$store.dispatch('deploy/getDeployLog', {
           appCode: this.appCode,
@@ -552,164 +571,164 @@ export default {
       this.tableEmptyConf.keyword = '';
     },
     handleExportLog() {
-      window.open(this.logExportUrl, '_blank')
+      window.open(this.logExportUrl, '_blank');
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-    .deploy-history {
-        min-height: 500px !important;
+.deploy-history {
+  min-height: 500px !important;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+
+  &.success {
+    background: #a0f5e3;
+    border: 1px solid #18c0a1;
+  }
+
+  &.danger {
+    background: #fd9c9c;
+    border: 1px solid #ea3636;
+  }
+
+  &.warning {
+    background: #ffe8c3;
+    border: 1px solid #ff9c01;
+  }
+}
+
+.wrapper {
+  margin: -20px -20px 10px;
+  height: 64px;
+  background: #f5f6fa;
+  line-height: 64px;
+  padding: 0 20px;
+
+  &::after {
+    display: block;
+    clear: both;
+    content: '';
+    font-size: 0;
+    height: 0;
+    visibility: hidden;
+  }
+
+  &.default-box {
+    padding: 11px 12px 11px 20px;
+    height: auto;
+    line-height: 16px;
+    .span {
+      height: 16px;
     }
-    .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 5px;
+  }
 
-        &.success {
-            background: #a0f5e3;
-            border: 1px solid #18c0a1;
-        }
+  &.not-deploy {
+    height: 42px;
+    line-height: 42px;
+  }
 
-        &.danger {
-            background: #fd9c9c;
-            border: 1px solid #ea3636;
-        }
+  &.primary {
+    background: #e1ecff;
+    color: #979ba5;
+  }
 
-        &.warning {
-            background: #FFE8C3;
-            border: 1px solid #FF9C01;
-        }
+  &.warning {
+    background: #fff4e2;
+    border-color: #ffdfac;
+
+    .paasng-icon {
+      color: #fe9f07;
     }
+  }
 
-    .wrapper {
-        margin: -20px -20px 10px;
-        height: 64px;
-        background: #F5F6FA;
-        line-height: 64px;
-        padding: 0 20px;
+  &.danger {
+    background: #ffecec;
+    color: #979ba5;
 
-        &::after {
-            display: block;
-            clear: both;
-            content: "";
-            font-size: 0;
-            height: 0;
-            visibility: hidden;
-        }
-
-        &.default-box {
-            padding: 11px 12px 11px 20px;
-            height: auto;
-            line-height: 16px;
-            .span {
-                height: 16px;
-            }
-        }
-
-        &.not-deploy {
-            height: 42px;
-            line-height: 42px;
-        }
-
-        &.primary {
-            background: #E1ECFF;
-            color: #979BA5;
-        }
-
-        &.warning {
-            background: #FFF4E2;
-            border-color: #FFDFAC;
-
-            .paasng-icon {
-                color: #fe9f07;
-            }
-        }
-
-        &.danger {
-            background: #FFECEC;
-            color: #979BA5;
-
-            .paasng-icon {
-                color: #eb3635;
-                position: relative;
-                top: 4px;
-                font-size: 32px;
-            }
-        }
-
-        &.success {
-            background: #E7FCFA;
-            color: #979BA5;
-
-            .paasng-icon {
-                position: relative;
-                top: 4px;
-                color: #3fc06d;
-                font-size: 32px;
-            }
-        }
-        .deploy-pending-text {
-            position: relative;
-            top: 5px;
-            font-size: 14px;
-            color: #313238;
-            font-weight: 500;
-            line-height: 32px;
-        }
-        .deploy-text-wrapper {
-            position: relative;
-            top: -5px;
-            line-height: 32px;
-            font-size: 12px;
-            .branch-text,
-            .version-text,
-            .time-text {
-                font-size: 12px;
-                color: #63656e;
-                opacity: .9;
-            }
-            .branch-text,
-            .version-text {
-                margin-right: 30px;
-            }
-        }
+    .paasng-icon {
+      color: #eb3635;
+      position: relative;
+      top: 4px;
+      font-size: 32px;
     }
+  }
 
-    .deploy-detail {
-        display: flex;
-        height: 100%;
+  &.success {
+    background: #e7fcfa;
+    color: #979ba5;
 
-        /deep/ .paas-deploy-log-wrapper {
-            height: 100%;
-        }
+    .paasng-icon {
+      position: relative;
+      top: 4px;
+      color: #3fc06d;
+      font-size: 32px;
     }
-
-    .flex {
-        display: flex;
-        line-height: 16px;
-        margin-bottom: 3px;
-
-        .label {
-            display: inline-block;
-            width: 60px;
-        }
-
-        .value {
-            text-align: left;
-            display: inline-block;
-            flex: 1;
-        }
+  }
+  .deploy-pending-text {
+    position: relative;
+    top: 5px;
+    font-size: 14px;
+    color: #313238;
+    font-weight: 500;
+    line-height: 32px;
+  }
+  .deploy-text-wrapper {
+    position: relative;
+    top: -5px;
+    line-height: 32px;
+    font-size: 12px;
+    .branch-text,
+    .version-text,
+    .time-text {
+      font-size: 12px;
+      color: #63656e;
+      opacity: 0.9;
     }
-
-    .branch-name {
-        width: 130px;
-        display: block;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    .branch-text,
+    .version-text {
+      margin-right: 30px;
     }
+  }
+}
+
+.deploy-detail {
+  display: flex;
+  height: 100%;
+
+  /deep/ .paas-deploy-log-wrapper {
+    height: 100%;
+  }
+}
+
+.flex {
+  display: flex;
+  line-height: 16px;
+  margin-bottom: 3px;
+
+  .label {
+    display: inline-block;
+    width: 60px;
+  }
+
+  .value {
+    text-align: left;
+    display: inline-block;
+    flex: 1;
+  }
+}
+
+.branch-name {
+  width: 130px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 </style>

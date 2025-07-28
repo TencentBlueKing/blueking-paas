@@ -24,18 +24,28 @@
           >
             {{ $t('查看审批详情') }}
           </bk-button>
-          <i class="paasng-icon paasng-refresh-line refresh" @click="getVisibleRange" />
+          <i
+            class="paasng-icon paasng-refresh-line refresh"
+            @click="getVisibleRange"
+          />
         </div>
       </bk-alert>
       <!-- 无数据状态 -->
-      <section class="exception-wrapper" v-if="!isEdit">
-        <bk-exception class="exception-wrap-item exception-part" type="empty" scene="part">
+      <section
+        class="exception-wrapper"
+        v-if="!isEdit"
+      >
+        <bk-exception
+          class="exception-wrap-item exception-part"
+          type="empty"
+          scene="part"
+        >
           <p class="text-btn">{{ $t('暂未设置可见范围') }}</p>
           <bk-button
             :text="true"
             title="primary"
             size="small"
-            @click="() => isEdit = true"
+            @click="() => (isEdit = true)"
           >
             {{ $t('去设置') }}
           </bk-button>
@@ -49,14 +59,18 @@
             :label-width="150"
             :model="formData"
             ext-cls="visible-range-form-cls"
-            ref="visibleRangeForm">
+            ref="visibleRangeForm"
+          >
             <bk-form-item
               :label="$t('蓝盾项目')"
               :property="'projectIds'"
               :error-display-type="'normal'"
               :rules="rules.projectIds"
             >
-              <bk-input v-model="formData.projectIds" :placeholder="$t('请输入蓝盾项目 ID，并用英文分号分隔')"></bk-input>
+              <bk-input
+                v-model="formData.projectIds"
+                :placeholder="$t('请输入蓝盾项目 ID，并用英文分号分隔')"
+              ></bk-input>
             </bk-form-item>
             <bk-form-item
               :label="$t('组织')"
@@ -64,8 +78,16 @@
               :error-display-type="'normal'"
               :rules="rules.organization"
             >
-              <bk-button :theme="'default'" @click="handleSelectOrganization">{{ $t('选择组织') }}</bk-button>
-              <div class="render-member-wrapper" v-if="departments.length > 0">
+              <bk-button
+                :theme="'default'"
+                @click="handleSelectOrganization"
+              >
+                {{ $t('选择组织') }}
+              </bk-button>
+              <div
+                class="render-member-wrapper"
+                v-if="departments.length > 0"
+              >
                 <render-member-list
                   type="department"
                   :data="organizationLevel"
@@ -80,11 +102,12 @@
             <bk-button
               :theme="'primary'"
               :disabled="submitDisabled"
-              @click="submitReview">
+              @click="submitReview"
+            >
               {{ $t('提交审核') }}
             </bk-button>
           </span>
-          <p v-html="tips"></p>
+          <p v-dompurify-html="tips"></p>
         </div>
       </template>
     </paas-content-loader>
@@ -194,15 +217,18 @@ export default {
   methods: {
     // 提交审核
     submitReview() {
-      this.$refs.visibleRangeForm.validate().then(() => {
-        const params = {
-          bkci_project: this.formData.projectIds.length ? this.formData.projectIds.split(';') : [],
-          organization: this.formData.organization,
-        };
-        this.updateVisibleRange(params);
-      }, (validator) => {
-        console.warn(validator);
-      });
+      this.$refs.visibleRangeForm.validate().then(
+        () => {
+          const params = {
+            bkci_project: this.formData.projectIds.length ? this.formData.projectIds.split(';') : [],
+            organization: this.formData.organization,
+          };
+          this.updateVisibleRange(params);
+        },
+        (validator) => {
+          console.warn(validator);
+        }
+      );
     },
     // 组织弹窗
     handleSelectOrganization() {
@@ -274,9 +300,9 @@ export default {
 
       if (type === 'search') {
         // 搜索过滤出指定部门数据
-        return [data.filter(v => v.full_name.startsWith(prefix))];
+        return [data.filter((v) => v.full_name.startsWith(prefix))];
       }
-      const tc = data.find(v => v.id === TCID);
+      const tc = data.find((v) => v.id === TCID);
       return tc ? [tc] : [];
     },
     // 查看申请详情
@@ -286,9 +312,12 @@ export default {
     },
     // 手动触发校验
     triggerValidate() {
-      this.$refs.visibleRangeForm?.validate().then(() => {}, (validator) => {
-        console.warn(validator);
-      });;
+      this.$refs.visibleRangeForm?.validate().then(
+        () => {},
+        (validator) => {
+          console.warn(validator);
+        }
+      );
     },
   },
 };
@@ -312,7 +341,7 @@ export default {
     display: flex;
     align-items: center;
     p {
-      color: #979BA5;
+      color: #979ba5;
       font-size: 12px;
       margin-left: 8px;
     }
@@ -324,7 +353,7 @@ export default {
   .text-btn {
     margin-bottom: 8px;
   }
-  .mb16  {
+  .mb16 {
     margin-bottom: 16px;
   }
   .warning-alert-cls {

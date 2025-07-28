@@ -1,14 +1,21 @@
 <template>
   <div class="paas-iwiki-wrapper">
-    <section v-for="(item, index) in data" :key="index" class="iwiki-item">
-      <p class="name" @click.stop="handleOpen(item)">
-        <span v-html="handleHighlight(item.title)" />
+    <section
+      v-for="(item, index) in data"
+      :key="index"
+      class="iwiki-item"
+    >
+      <p
+        class="name"
+        @click.stop="handleOpen(item)"
+      >
+        <span v-dompurify-html="handleHighlight(item.title)" />
       </p>
       <div
         v-if="isShowContent(item.digest)"
         class="digest-content"
         @click.stop="handleOpen(item)"
-        v-html="handleContentHighlight(item.digest)"
+        v-dompurify-html="handleContentHighlight(item.digest)"
       />
       <p class="author-info">
         <span>{{ item.author_name }}</span>
@@ -90,12 +97,12 @@ export default {
       &:hover {
         color: #3a84ff;
         .keyword {
-          color: #ff9c01;
+          color: #ff9c01 !important;
         }
       }
       .keyword {
         padding: 0 3px;
-        color: #ff9c01;
+        color: #ff9c01 !important;
       }
     }
     .digest-content {

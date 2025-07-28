@@ -10,16 +10,18 @@
         :active.sync="active"
         type="unborder-card"
         ext-cls="guide-tab-cls"
-        @tab-change="handleChange">
+        @tab-change="handleChange"
+      >
         <bk-tab-panel
           v-for="(panel, index) in panels"
           v-bind="panel"
           :key="index"
-        >
-        </bk-tab-panel>
+        ></bk-tab-panel>
       </bk-tab>
-      <!-- eslint-disable-next-line vue/no-v-html -->
-      <div class="markdown-body" v-html="markdownContent" />
+      <div
+        class="markdown-body"
+        v-dompurify-html="markdownContent"
+      />
     </div>
   </bk-sideslider>
 </template>
@@ -57,9 +59,15 @@ export default {
       let markdownContent = '';
       // 引入md文件/区分语言环境
       if (this.active === 'hook') {
-        markdownContent = this.localLanguage === 'en' ? require('!!raw-loader!@/assets/md/en/guide-hook.md').default : require('!!raw-loader!@/assets/md/guide-hook.md').default;
+        markdownContent =
+          this.localLanguage === 'en'
+            ? require('!!raw-loader!@/assets/md/en/guide-hook.md').default
+            : require('!!raw-loader!@/assets/md/guide-hook.md').default;
       } else {
-        markdownContent = this.localLanguage === 'en' ? require('!!raw-loader!@/assets/md/en/guide-process.md').default : require('!!raw-loader!@/assets/md/guide-process.md').default;
+        markdownContent =
+          this.localLanguage === 'en'
+            ? require('!!raw-loader!@/assets/md/en/guide-process.md').default
+            : require('!!raw-loader!@/assets/md/guide-process.md').default;
       }
       const htmlStr = md.render(markdownContent);
       // 替换a标签属性，使用新标签页打开

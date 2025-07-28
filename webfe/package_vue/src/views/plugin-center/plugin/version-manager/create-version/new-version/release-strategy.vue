@@ -19,7 +19,10 @@
           :error-display-type="'normal'"
           :rules="rules.strategy"
         >
-          <bk-radio-group v-model="releaseStrategy.strategy" @change="handleChange">
+          <bk-radio-group
+            v-model="releaseStrategy.strategy"
+            @change="handleChange"
+          >
             <bk-radio
               v-for="item in releaseStrategyMap"
               :value="item.value"
@@ -81,7 +84,10 @@
                   slot="tip"
                 >
                   {{ $t('最小范围可以选择中心。') }}
-                  <span v-html="organizationTips" class="t2"></span>
+                  <span
+                    v-dompurify-html="organizationTips"
+                    class="t2"
+                  ></span>
                 </p>
               </bk-form-item>
             </bk-form>
@@ -337,9 +343,9 @@ export default {
 
       if (type === 'search') {
         // 搜索过滤出指定部门数据
-        return [data.filter(v => v.full_name.startsWith(prefix))];
+        return [data.filter((v) => v.full_name.startsWith(prefix))];
       }
-      const tc = data.find(v => v.id === TCID);
+      const tc = data.find((v) => v.id === TCID);
       return tc ? [tc] : [];
     },
     // 自定义粘贴规则
@@ -383,7 +389,7 @@ export default {
     // 是否允许删除已勾选的组织
     handleDisableIconFn(id) {
       if (!this.isDetailStep) return false;
-      return this.initDepartments.findIndex(v => v.id === id) !== -1;
+      return this.initDepartments.findIndex((v) => v.id === id) !== -1;
     },
     handleChange(value) {
       this.$emit('strategy-change', value);

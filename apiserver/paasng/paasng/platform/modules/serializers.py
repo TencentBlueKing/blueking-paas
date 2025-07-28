@@ -310,7 +310,7 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
 
             # 非插件应用则则需要提供仓库命项目组和仓库名称
             if not self.parent.initial_data.get("is_plugin_app") and not attrs.get("repo_name"):
-                raise ValidationError(_("新建代码仓库时，必须同时提供仓库名称"))
+                raise ValidationError(_("新建代码仓库时，必须提供仓库名称"))
 
         if source_repo_url:
             self._validate_source_repo_url(source_repo_url, attrs["source_origin"])

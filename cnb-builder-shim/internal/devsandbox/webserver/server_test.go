@@ -97,6 +97,7 @@ var _ = Describe("Test webserver api", func() {
 			s.server.ServeHTTP(w, req)
 
 			Expect(w.Code).To(Equal(200))
+
 			select {
 			case event := <-s.ch:
 				Expect(event.EnvVars).To(HaveKeyWithValue("ENV_VAR1", "value1"))

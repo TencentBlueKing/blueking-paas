@@ -30,8 +30,8 @@ class AppMCPServerPermissionApplyRecordQueryParamsSLZ(serializers.Serializer):
     """获取指定应用的 mcp_server 权限申请记录列表"""
 
     applied_by = serializers.CharField(help_text="申请人", required=False)
-    applied_time_start = serializers.DateTimeField(help_text="申请开始时间", required=False)
-    applied_time_end = serializers.DateTimeField(help_text="申请截止时间", required=False)
+    applied_time_start = serializers.IntegerField(help_text="申请开始时间（Unix 时间戳）", required=False)
+    applied_time_end = serializers.IntegerField(help_text="申请截止时间（Unix 时间戳）", required=False)
     apply_status = serializers.ChoiceField(
         choices=constants.PermissionApplyStatus.get_django_choices(),
         required=False,

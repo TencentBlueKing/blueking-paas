@@ -46,50 +46,49 @@ class MCPServerApiClient:
         }
         return headers
 
-    def list_mcp_servers(
-        self, keyword: str | None = None, limit: int | None = None, offset: int | None = None
-    ) -> dict:
+    def list_app_mcp_servers(self, app_code: str, keyword: str | None = None) -> dict:
         """获取 mcp server 列表"""
-        params = {}
+        params = {"target_app_code": app_code}
         if keyword:
             params["keyword"] = keyword
-        if limit:
-            params["limit"] = limit  # type: ignore
-        if offset:
-            params["offset"] = offset  # type: ignore
 
         try:
-            res = self.client.list_mcp_servers(params=params)
+            res = self.client.list_app_mcp_servers(params=params)
         except (APIGatewayResponseError, ResponseError) as e:
             raise MCPServerApiGatewayServiceError(f"list mcp servers error: {e}")
 
         return res.get("data", {})
 
-    def list_app_permissions(self, bk_app_code: str, limit: int | None = None, offset: int | None = None) -> dict:
+    def list_app_permissions(self, app_code: str) -> dict:
         """获取应用的 mcp server 权限列表"""
-        params = {"bk_app_code": bk_app_code}
-        if limit:
-            params["limit"] = limit  # type: ignore
-        if offset:
-            params["offset"] = offset  # type: ignore
 
         try:
-            res = self.client.list_app_permissions(params=params)
+            res = self.client.list_app_permissions(params={"target_app_code": app_code})
         except (APIGatewayResponseError, ResponseError) as e:
             raise MCPServerApiGatewayServiceError(f"list app permissions error: {e}")
         return res.get("data", {})
 
     def list_permissions_apply_records(
-        self, bk_app_code: str, mcp_server_id: int | None = None, limit: int | None = None, offset: int | None = None
+        self,
+        app_code: str,
+        applied_by: str | None = None,
+        applied_time_start: str | None = None,
+        applied_time_end: str | None = None,
+        apply_status: str | None = None,
+        query: str | None = None,
     ) -> dict:
         """获取应用权限申请记录列表"""
-        params = {"bk_app_code": bk_app_code}
-        if mcp_server_id:
-            params["mcp_server_id"] = mcp_server_id  # type: ignore
-        if limit:
-            params["limit"] = limit  # type: ignore
-        if offset:
-            params["offset"] = offset  # type: ignore
+        params = {"target_app_code": app_code}
+        if applied_by:
+            params["applied_by"] = applied_by
+        if applied_time_start:
+            params["applied_time_start"] = applied_time_start
+        if applied_time_end:
+            params["applied_time_end"] = applied_time_end
+        if apply_status:
+            params["apply_status"] = apply_status
+        if query:
+            params["query"] = query
 
         try:
             res = self.client.list_permissions_apply_records(params=params)
@@ -100,14 +99,14 @@ class MCPServerApiClient:
 
     def apply_permissions(
         self,
-        bk_app_code: str,
+        app_code: str,
         mcp_server_ids: list,
         applied_by: str,
         reason: str,
     ):
         """申请 mcp server 权限"""
         data = {
-            "bk_app_code": bk_app_code,
+            "target_app_code": app_code,
             "mcp_server_ids": mcp_server_ids,
             "applied_by": applied_by,
             "reason": reason,

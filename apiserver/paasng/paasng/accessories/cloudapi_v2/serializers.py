@@ -17,26 +17,26 @@
 
 from rest_framework import serializers
 
-
-class BaseMCPServerQueryParamsSLZ(serializers.Serializer):
-    limit = serializers.IntegerField(help_text="最大返回条目数", required=False)
-    offset = serializers.IntegerField(help_text="相对于完整未分页数据的起始位置", required=False)
+from . import constants
 
 
-class MCPServerQueryParamsSLZ(BaseMCPServerQueryParamsSLZ):
+class MCPServerQueryParamsSLZ(serializers.Serializer):
     """获取 mcp_server 列表请求参数"""
 
     keyword = serializers.CharField(help_text="搜索条件，支持模糊匹配 MCPServer 名称或描述", required=False)
 
 
-class AppMCPServerPermissionQueryParamsSLZ(BaseMCPServerQueryParamsSLZ):
-    """获取 app mcp_server 权限列表请求参数"""
-
-
-class AppMCPServerPermissionApplyRecordQueryParamsSLZ(BaseMCPServerQueryParamsSLZ):
+class AppMCPServerPermissionApplyRecordQueryParamsSLZ(serializers.Serializer):
     """获取指定应用的 mcp_server 权限申请记录列表"""
 
-    mcp_server_id = serializers.IntegerField(help_text="mcp_server_ids", required=False)
+    applied_by = serializers.CharField(help_text="申请人", required=False)
+    applied_time_start = serializers.DateTimeField(help_text="申请开始时间", required=False)
+    applied_time_end = serializers.DateTimeField(help_text="申请截止时间", required=False)
+    apply_status = serializers.ChoiceField(
+        choices=constants.PermissionApplyStatus.get_django_choices(),
+        required=False,
+    )
+    query = serializers.CharField(help_text="搜索条件，支持模糊匹配 MCPServer 名称", required=False)
 
 
 class ApplyMCPResourcePermissionSLZ(serializers.Serializer):

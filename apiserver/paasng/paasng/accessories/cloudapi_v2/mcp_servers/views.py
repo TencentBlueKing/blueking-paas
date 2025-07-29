@@ -47,20 +47,14 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        data = MCPServerApiClient(tenant_id=tenant_id).list_mcp_servers(**slz.validated_data)
+        data = MCPServerApiClient(tenant_id=tenant_id).list_app_mcp_servers(app_code=app.code, **slz.validated_data)
         return Response(data)
 
-    @swagger_auto_schema(
-        query_serializer=serializers.AppMCPServerPermissionQueryParamsSLZ,
-        tags=["CloudAPIV2"],
-    )
+    @swagger_auto_schema(tags=["CloudAPIV2"])
     def list_app_mcp_server_permissions(self, request, *args, **kwargs):
-        slz = serializers.AppMCPServerPermissionQueryParamsSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
-
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        data = MCPServerApiClient(tenant_id=tenant_id).list_app_permissions(bk_app_code=app.code, **slz.validated_data)
+        data = MCPServerApiClient(tenant_id=tenant_id).list_app_permissions(app_code=app.code)
         return Response(data)
 
     @swagger_auto_schema(
@@ -74,7 +68,7 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
         data = MCPServerApiClient(tenant_id=tenant_id).list_permissions_apply_records(
-            bk_app_code=app.code, **slz.validated_data
+            app_code=app.code, **slz.validated_data
         )
         return Response(data)
 
@@ -89,7 +83,7 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        MCPServerApiClient(tenant_id=tenant_id).apply_permissions(bk_app_code=app.code, **data)
+        MCPServerApiClient(tenant_id=tenant_id).apply_permissions(app_code=app.code, **data)
 
         try:
             # 云 API 申请记录 ID，用于操作详情的展示

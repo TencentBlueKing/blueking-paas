@@ -166,7 +166,7 @@
 
 <script>
 import { bus } from '@/common/bus';
-import SwitchDisplay from './comps/switch-display.vue';
+import SwitchDisplay from '@/components/switch-display';
 import ClusterAllocationSideslider from './comps/cluster-allocation-sideslider.vue';
 export default {
   name: 'PlatformConfig',

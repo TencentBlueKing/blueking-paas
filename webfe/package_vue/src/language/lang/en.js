@@ -3052,4 +3052,7 @@ export default {
   当前配置将覆盖内置变量: 'Current configuration will override built-in variables',
   和平台的内置环境变量冲突: 'Conflicts with the platforms built-in environment variables',
   '和 {k} 增强服务的环境变量冲突': 'Conflicts with the environment variables of the {k} enhanced service',
+  '仅支持大写字母、数字和下划线': 'Only uppercase letters, numbers, and underscores are supported',
+  '敏感环境变量的值将在页面上以脱敏形式展示，只有应用进程内能够获取到这些变量的明文值。': 'The values of sensitive environment variables will be displayed in a desensitized form on the page; only within the application process can these variables plaintext values be accessed.',
+  是否敏感: 'Is Sensitive',
 };

@@ -43,6 +43,11 @@
           </div>
         </template>
       </bk-table-column>
+      <bk-table-column :width="100">
+        <template slot-scope="{ row }">
+          {{ $t('否') }}
+        </template>
+      </bk-table-column>
       <bk-table-column prop="value">
         <template slot-scope="{ row }">
           <div v-bk-overflow-tips>
@@ -64,7 +69,7 @@
           </div>
         </template>
       </bk-table-column>
-      <bk-table-column width="120"></bk-table-column>
+      <bk-table-column width="140"></bk-table-column>
     </bk-table>
   </div>
 </template>

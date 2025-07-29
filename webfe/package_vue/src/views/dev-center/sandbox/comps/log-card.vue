@@ -75,13 +75,13 @@
             v-for="(item, index) in displayLogs"
             :key="index"
             class="log log-item"
-            v-html="item"
+            v-dompurify-html="item"
           />
         </template>
         <pre
           v-else
           class="log log-item"
-          v-html="loading ? '' : displayLogs"
+          v-dompurify-html="loading ? '' : displayLogs"
         />
       </template>
       <table-empty

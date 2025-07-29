@@ -60,7 +60,7 @@
                   </p>
                   <div
                     class="row spacing-x2"
-                    v-html="currentResult"
+                    v-dompurify-html="currentResult"
                   />
                   <div
                     class="spacing-x2"

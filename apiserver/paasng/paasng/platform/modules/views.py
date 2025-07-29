@@ -325,7 +325,8 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         auto_repo_url = None
         if source_config.get("auto_create_repo"):
             try:
-                if application.is_plugin_app:
+                # 不传仓库名称，则使用平台账号创建仓库
+                if not repo_name:
                     auto_repo_url = create_repo_with_platform_account(module, repo_type, username)
                 else:
                     auto_repo_url = create_repo_with_user_account(module, repo_type, repo_name, username, repo_group)

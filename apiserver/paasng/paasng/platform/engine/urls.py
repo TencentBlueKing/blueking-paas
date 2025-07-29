@@ -183,11 +183,7 @@ urlpatterns = [
 urlpatterns += [
     re_path(
         make_app_pattern(r"/config_vars/builtin/$", include_envs=False),
-        views.ConfigVarBuiltinViewSet.as_view(
-            {
-                "get": "get_builtin_envs",
-            }
-        ),
+        views.ConfigVarBuiltinViewSet.as_view({"get": "get_builtin_envs"}),
         name="api.config_vars.builtin",
     ),
 ]

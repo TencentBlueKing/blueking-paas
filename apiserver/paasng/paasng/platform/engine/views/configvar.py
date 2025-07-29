@@ -288,26 +288,25 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         # 获取应用基础内置环境变量
         app_basic_vars = list_vars_builtin_app_basic(application, include_deprecated=False)
-        app_basic_vars_list = list_builtin_vars_with_override_flag(module, app_basic_vars)
 
         # 获取平台相关的内置环境变量
         bk_address_envs = list_vars_builtin_plat_addrs()
         # 默认展示正式环境的环境变量
         region_and_env_envs = list_vars_builtin_region(application.region, AppEnvironment.PRODUCTION.value)
-        bk_platform_vars_list = list_builtin_vars_with_override_flag(module, bk_address_envs + region_and_env_envs)
 
         # 获取运行时相关的内置环境变量
         env = application.default_module.get_envs(AppEnvironment.PRODUCTION)
         runtime_vars = list_vars_builtin_runtime(env, include_deprecated=False)
-        runtime_vars_list = list_builtin_vars_with_override_flag(module, runtime_vars)
 
-        combined_envs = {
-            "app_basic_vars": app_basic_vars_list,
-            "bk_platform_vars": bk_platform_vars_list,
-            "runtime_vars": runtime_vars_list,
+        env_var_groups = {
+            "app_basic_vars": app_basic_vars,
+            "bk_platform_vars": bk_address_envs + region_and_env_envs,
+            "runtime_vars": runtime_vars,
         }
 
-        return Response(ListConfigVarBuiltinOutputSLZ(combined_envs).data)
+        built_vars_with_conflicted = list_builtin_vars_with_override_flag(module, env_var_groups)
+
+        return Response(ListConfigVarBuiltinOutputSLZ(built_vars_with_conflicted).data)
 
 
 class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

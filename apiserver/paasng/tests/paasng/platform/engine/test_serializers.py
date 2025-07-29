@@ -29,7 +29,7 @@ from paasng.platform.engine.models.config_var import ConfigVar
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "environment_name, bk_env",
+    ("environment_name", "bk_env"),
     [("stag", "bk_stag_env"), ("prod", "bk_prod_env"), ("_global_", None)],
     indirect=["bk_env"],
 )
@@ -37,7 +37,7 @@ class TestConfigVar:
     @pytest.mark.parametrize(
         ("data", "expected"),
         [
-            (dict(key="FOO", value="bar", description="baz"), {}),
+            (dict(key="FOO", value="bar", is_sensitive=False, description="baz"), {}),
             pytest.param(
                 dict(key="BKPAAS_FOO", value="bar", description="baz"),
                 {},
@@ -59,7 +59,7 @@ class TestConfigVar:
 
     @pytest.mark.parametrize(
         "data",
-        [dict(key="FOO", value="bar", description="baz")],
+        [dict(key="FOO", value="bar", is_sensitive=False, description="baz")],
     )
     def test_output(self, bk_module, environment_name, bk_env, data):
         slz = slzs.ConfigVarSLZ(dict(module=bk_module, environment=bk_env, **data))
@@ -198,7 +198,7 @@ class TestConfigVarImportSLZ:
 
 
 @pytest.mark.django_db
-class TestConfigVarFormatSLZ:
+class TestConfigVarBaseInputSLZ:
     @pytest.fixture()
     def expected(self, request):
         request.param["environment"] = (
@@ -218,6 +218,6 @@ class TestConfigVarFormatSLZ:
         indirect=["expected"],
     )
     def test_normal(self, bk_module, data, expected):
-        slz = slzs.ConfigVarFormatSLZ(data=data, context={"module": bk_module})
+        slz = slzs.ConfigVarBaseInputSLZ(data=data, context={"module": bk_module})
         slz.is_valid(raise_exception=True)
         assert slzs.ConfigVarSLZ(slz.validated_data).data == slzs.ConfigVarSLZ(expected).data

@@ -42,5 +42,5 @@ type ProcessCtl interface {
 // NewProcessController ...
 func NewProcessController() (ProcessCtl, error) {
 	// 暂时只支持一种类型的进程控制，后续可以根据需求扩展
-	return supervisor.NewSupervisorRPCProcessController()
+	return supervisor.NewRPCProcessController()
 }

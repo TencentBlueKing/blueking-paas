@@ -37,23 +37,8 @@ type ProcessInfo struct {
 	Pid           int    `xmlrpc:"pid"`
 }
 
-type ProcessState int
-
-// Process states
-// https://supervisord.org/subprocess.html#process-states
-const (
-	Stopped  ProcessState = 0    // The process has been stopped due to a stop request or has never been started
-	Starting ProcessState = 10   // The process is starting due to a start request
-	Running  ProcessState = 20   // The process is running
-	Backoff  ProcessState = 30   // The process entered the StateStarting state but subsequently exited too quickly to move to the StateRunning state
-	Stopping ProcessState = 40   // The process is stopping due to a stop request
-	Exited   ProcessState = 100  // The process exited from the StateRunning state (expectedly or unexpectedly)
-	Fatal    ProcessState = 200  // The process could not be started successfully
-	Unknown  ProcessState = 1000 // The process is in an unknown state (supervisord programming error)
-)
-
 // 请求 rpc 方法接口，并且返回进程信息列表
-func (c *Client) callMethodForProcessInfos(method string, args ...interface{}) ([]ProcessInfo, error) {
+func (c *Client) callMethodForProcessInfos(method string, args ...any) ([]ProcessInfo, error) {
 	var processInfo []ProcessInfo
 	err := c.rpcClient.Call(method, args, &processInfo)
 	if err != nil {

@@ -72,8 +72,8 @@ class MCPServerApiClient:
         self,
         app_code: str,
         applied_by: str | None = None,
-        applied_time_start: str | None = None,
-        applied_time_end: str | None = None,
+        applied_time_start: int | None = None,
+        applied_time_end: int | None = None,
         apply_status: str | None = None,
         query: str | None = None,
     ) -> dict:
@@ -82,9 +82,9 @@ class MCPServerApiClient:
         if applied_by:
             params["applied_by"] = applied_by
         if applied_time_start:
-            params["applied_time_start"] = applied_time_start
+            params["applied_time_start"] = applied_time_start  # type: ignore
         if applied_time_end:
-            params["applied_time_end"] = applied_time_end
+            params["applied_time_end"] = applied_time_end  # type: ignore
         if apply_status:
             params["apply_status"] = apply_status
         if query:

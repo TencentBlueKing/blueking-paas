@@ -414,7 +414,7 @@ export default {
             $(this).attr('target', '_blank');
           });
       });
-      return marked(this.serviceMarkdown, { sanitize: true });
+      return marked(this.serviceMarkdown);
     },
     region() {
       return this.curAppInfo.application.region;

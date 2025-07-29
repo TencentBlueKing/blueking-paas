@@ -1,7 +1,6 @@
 <template lang="html">
   <footer class="ps-sample-footer">
-    <!-- eslint-disable-next-line vue/no-v-html -->
-    <div class="info" v-html="footerInfo"></div>
+    <div class="info" v-dompurify-html="footerInfo"></div>
     <div>{{ platformConfig.footerCopyrightContent }}</div>
   </footer>
 </template>

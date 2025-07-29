@@ -65,7 +65,7 @@
             type="warning"
             :title="$t('仅展示准备阶段、构建阶段日志')"
           />
-          <pre v-html="curDeployLog" />
+          <pre v-dompurify-html="curDeployLog" />
         </div>
       </template>
     </div>

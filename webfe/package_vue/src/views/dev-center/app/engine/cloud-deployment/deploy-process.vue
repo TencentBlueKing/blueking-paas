@@ -758,7 +758,7 @@
                 </span>
                 <span class="item-tips">
                   <i class="paasng-icon paasng-info-line" />
-                  <span v-html="metricTipsHtml"></span>
+                  <span v-dompurify-html="metricTipsHtml"></span>
                 </span>
                 <metric-view-mode
                   v-if="formData.monitoring"

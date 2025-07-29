@@ -41,7 +41,7 @@
       <p class="empty-text">{{ $t('太棒了！') }}</p>
       <p
         class="empty-tips"
-        v-html="emptyTips"
+        v-dompurify-html="emptyTips"
       ></p>
     </div>
     <!-- 操作记录 -->

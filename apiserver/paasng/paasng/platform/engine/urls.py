@@ -188,30 +188,23 @@ urlpatterns = [
 urlpatterns += [
     re_path(
         "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/app/$",
-        views.ConfigVarBuiltinViewSet.as_view(
-            {
-                "get": "get_builtin_envs_for_app",
-            }
-        ),
+        views.ConfigVarBuiltinViewSet.as_view({"get": "get_builtin_envs_for_app"}),
         name="api.config_vars.builtin.app",
     ),
     re_path(
         "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/bk_platform/$",
-        views.ConfigVarBuiltinViewSet.as_view(
-            {
-                "get": "get_builtin_envs_bk_platform",
-            }
-        ),
+        views.ConfigVarBuiltinViewSet.as_view({"get": "get_builtin_envs_bk_platform"}),
         name="api.config_vars.builtin.bk_platform",
     ),
     re_path(
         "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/runtime/$",
-        views.ConfigVarBuiltinViewSet.as_view(
-            {
-                "get": "get_runtime_envs",
-            }
-        ),
+        views.ConfigVarBuiltinViewSet.as_view({"get": "get_runtime_envs"}),
         name="api.config_vars.builtin.runtime",
+    ),
+    re_path(
+        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/custom/$",
+        views.ConfigVarBuiltinViewSet.as_view({"get": "get_custom_builtin_envs"}),
+        name="api.config_vars.builtin.custom",
     ),
 ]
 

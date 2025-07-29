@@ -15,7 +15,7 @@
     <!-- 默认插槽用于提示内容 -->
     <div
       v-if="!loading"
-      v-html="confirmTip"
+      v-dompurify-html="confirmTip"
       class="assign-instance-info"
     ></div>
     <div

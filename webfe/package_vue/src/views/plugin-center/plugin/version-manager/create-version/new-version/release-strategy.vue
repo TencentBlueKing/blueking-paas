@@ -81,7 +81,7 @@
                   slot="tip"
                 >
                   {{ $t('最小范围可以选择中心。') }}
-                  <span v-html="organizationTips" class="t2"></span>
+                  <span v-dompurify-html="organizationTips" class="t2"></span>
                 </p>
               </bk-form-item>
             </bk-form>

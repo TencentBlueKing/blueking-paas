@@ -16,7 +16,6 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package metrics provides reconcile metrics
 package metrics
 
 import "github.com/prometheus/client_golang/prometheus"

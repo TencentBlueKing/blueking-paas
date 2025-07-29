@@ -71,7 +71,7 @@ class RepoController(Protocol):
         raise NotImplementedError
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
+    def list_all_repositories(cls, api_url: str, user_credentials: Dict) -> List[Repository]:
         """返回当前 RepoController 可以控制的所有仓库列表"""
 
     def touch(self) -> bool:
@@ -167,9 +167,9 @@ class BaseGitRepoController:
         :param repo_url: repository url
         """
         source_config = get_sourcectl_type(source_type).config_as_arguments()
-        if "api_url" not in source_config or "private_token" not in source_config:
-            raise ValueError("Require api_url and private_token to init GitRepoController")
-        user_credentials = {"private_token": source_config["private_token"], "scope_list": []}
+        if "api_url" not in source_config or "bkpaas_private_token" not in source_config:
+            raise ValueError("Require api_url and bkpaas_private_token to init GitRepoController")
+        user_credentials = {"private_token": source_config["bkpaas_private_token"], "scope_list": []}
         return cls(api_url=source_config["api_url"], repo_url=repo_url, user_credentials=user_credentials)
 
     @classmethod
@@ -226,4 +226,4 @@ def list_git_repositories(source_control_type: str, user_id: str) -> List[Reposi
     user_credentials = get_oauth_credentials(source_control_type, user_id)
     type_spec = get_sourcectl_type(source_control_type)
     repo_info = type_spec.config_as_arguments()
-    return cls.list_all_repositories(**user_credentials, **repo_info)
+    return cls.list_all_repositories(api_url=repo_info["api_url"], user_credentials=user_credentials)

@@ -81,9 +81,13 @@ class GitlabRepoController(BaseGitRepoController):
         return GitProject.parse_from_repo_url(self.repo_url, get_sourcectl_names().GitLab)
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
-        """返回当前 RepoController 可以控制的所有仓库列表"""
-        api_client = GitLabApiClient(**kwargs)
+    def list_all_repositories(cls, api_url: str, user_credentials: Dict) -> List[Repository]:
+        """返回当前 RepoController 可以控制的所有仓库列表
+
+        :param api_url: GitLab API URL
+        :param user_credentials: 用户凭证
+        """
+        api_client = GitLabApiClient(api_url=api_url, **user_credentials)
         return [
             Repository(
                 namespace=project.namespace["name"],

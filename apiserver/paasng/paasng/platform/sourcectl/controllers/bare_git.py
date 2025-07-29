@@ -19,7 +19,7 @@ import logging
 import operator
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, Generator, Iterator, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Generator, Iterator, List, Optional, Tuple
 from urllib.parse import quote, urlparse
 
 from blue_krill.data_types.url import MutableURL
@@ -74,7 +74,7 @@ class BareGitRepoController(BaseGitRepoController):
         return cls(repo_url=repo_url_with_auth, repo_obj=repo_obj)
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
+    def list_all_repositories(cls, api_url: str, user_credentials: Dict) -> List[Repository]:
         """返回当前 RepoController 可以控制的所有仓库列表"""
         raise NotImplementedError
 

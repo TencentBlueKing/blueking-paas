@@ -104,31 +104,25 @@
               v-else
               :property="`varList.${$index}.value`"
               :rules="rules.value"
+              ext-cls="var-value-form-item"
             >
-              <bk-popover
-                ref="valuePopover"
-                placement="right"
-                :content="$t('如需更改密码，请清空再输入')"
-                class="var-value-popover"
-                :disabled="row.isNew || !row.is_sensitive"
-              >
-                <div class="input-wrapper">
-                  <bk-input
-                    :ref="`valueInput${$index}`"
-                    v-model="row.value"
-                    :password-icon="[]"
-                    type="text"
-                    @focus="handleValueFocus(row)"
-                    @input="(value, event) => handleValueInput(row, event, value)"
-                    @keydown="(value, event) => handleKeyDown(`descriptionInput${$index}`, event)"
-                  ></bk-input>
-                  <i
-                    v-if="row.is_sensitive && !row.isNew && row.value === ''"
-                    class="paasng-icon paasng-undo"
-                    @click.stop="handleUndo(row, $index)"
-                  ></i>
-                </div>
-              </bk-popover>
+              <div class="input-wrapper">
+                <bk-input
+                  :ref="`valueInput${$index}`"
+                  v-model="row.value"
+                  :password-icon="[]"
+                  type="text"
+                  :ext-cls="row.value === ENCRYPTED_PLACEHOLDER ? 'encrypted-input' : ''"
+                  @focus="handleValueFocus(row)"
+                  @input="(value, event) => handleValueInput(row, event, value)"
+                  @keydown="(value, event) => handleKeyDown(`descriptionInput${$index}`, event)"
+                ></bk-input>
+                <i
+                  v-if="row.is_sensitive && !row.isNew && row.value !== ENCRYPTED_PLACEHOLDER"
+                  class="paasng-icon paasng-undo"
+                  @click.stop="handleUndo(row, $index)"
+                ></i>
+              </div>
             </bk-form-item>
           </template>
         </bk-table-column>
@@ -677,12 +671,6 @@ export default {
         text-underline-position: under;
       }
     }
-    .var-value-popover {
-      width: 100%;
-      /deep/ .bk-tooltip-ref {
-        width: 100%;
-      }
-    }
     .sensitive-wrapper {
       display: flex;
       align-items: center;
@@ -700,6 +688,11 @@ export default {
       .bk-input {
         width: 100%;
       }
+      .encrypted-input {
+        /deep/ input {
+          font-size: 24px;
+        }
+      }
       i.paasng-undo {
         position: absolute;
         right: 10px;
@@ -713,6 +706,9 @@ export default {
           color: #3a84ff;
         }
       }
+    }
+    .var-value-form-item.is-error .input-wrapper i.paasng-undo {
+      right: 28px;
     }
     .key-wrapper {
       display: flex;

@@ -29,7 +29,6 @@ class TestConfigVarBuiltinViewSet:
         BuiltinConfigVar.objects.create(key="CUSTOM_VAR", value="value", description="自定义内置变量")
 
         url = reverse("api.config_vars.builtin.custom", kwargs={"code": bk_app.code})
-
         response = api_client.get(url)
 
         assert response.status_code == 200
@@ -46,7 +45,6 @@ class TestConfigVarBuiltinViewSet:
         BuiltinConfigVar.objects.create(key="CUSTOM_VAR_3", value="value3", description="自定义内置变量3")
 
         url = reverse("api.config_vars.builtin.custom", kwargs={"code": bk_app.code})
-
         response = api_client.get(url)
 
         assert response.status_code == 200
@@ -55,20 +53,20 @@ class TestConfigVarBuiltinViewSet:
         assert len(data) == 3
         assert "BKPAAS_CUSTOM_VAR_1" in data
         assert data["BKPAAS_CUSTOM_VAR_1"]["value"] == "value1"
+        assert data["BKPAAS_CUSTOM_VAR_1"]["description"] == "自定义内置变量1"
         assert "BKPAAS_CUSTOM_VAR_2" in data
         assert data["BKPAAS_CUSTOM_VAR_2"]["value"] == "value2"
+        assert data["BKPAAS_CUSTOM_VAR_2"]["description"] == "自定义内置变量2"
         assert "BKPAAS_CUSTOM_VAR_3" in data
         assert data["BKPAAS_CUSTOM_VAR_3"]["value"] == "value3"
+        assert data["BKPAAS_CUSTOM_VAR_3"]["description"] == "自定义内置变量3"
 
     def test_get_custom_builtin_envs_with_no_data(self, api_client, bk_app):
         """测试没有平台内置环境变量时的返回结果"""
         BuiltinConfigVar.objects.all().delete()
 
         url = reverse("api.config_vars.builtin.custom", kwargs={"code": bk_app.code})
-
         response = api_client.get(url)
 
         assert response.status_code == 200
-        data = response.json()
-
-        assert data == {}
+        assert response.json() == {}

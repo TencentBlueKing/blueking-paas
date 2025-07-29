@@ -56,5 +56,14 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/third-party/`;
       return http.post(url, data, config);
     },
+
+    /**
+     * 获取新建代码仓库下拉列表
+     * @param {Object} type - 代码仓库类型
+     */
+    getNewCodeRepositoryOptions({}, { type }) {
+      const url = `${BACKEND_URL}/api/sourcectl/${type}/groups/`;
+      return http.get(url);
+    },
   },
 };

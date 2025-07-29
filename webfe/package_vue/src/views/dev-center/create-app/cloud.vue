@@ -361,178 +361,214 @@
             >
               <div class="form-item-title mb10">{{ $t('源码管理') }}</div>
 
-              <bk-form-item
-                :required="true"
-                :label="$t('代码源')"
-                error-display-type="normal"
-                ext-cls="form-item-cls mt20"
-              >
-                <div class="flex-row align-items-center code-depot mb20">
-                  <div
-                    v-for="(item, index) in sourceControlTypes"
-                    :key="index"
-                    :class="['code-depot-item mr10', { on: item.value === sourceControlTypeItem }]"
-                    @click="changeSourceControl(item)"
-                  >
-                    <img :src="'/static/images/' + item.imgSrc + '.png'" />
-                    <div
-                      class="source-control-title"
-                      :title="item.name"
-                    >
-                      {{ item.name }}
-                    </div>
-                  </div>
-                </div>
-              </bk-form-item>
-              <section v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
-                <git-extend
-                  ref="extend"
-                  :key="sourceControlTypeItem"
-                  :git-control-type="sourceControlTypeItem"
-                  :is-auth="gitExtendConfig[sourceControlTypeItem].isAuth"
-                  :is-loading="gitExtendConfig[sourceControlTypeItem].isLoading"
-                  :alert-text="gitExtendConfig[sourceControlTypeItem].alertText"
-                  :auth-address="gitExtendConfig[sourceControlTypeItem].authAddress"
-                  :auth-docs="gitExtendConfig[sourceControlTypeItem].authDocs"
-                  :fetch-method="gitExtendConfig[sourceControlTypeItem].fetchMethod"
-                  :repo-list="gitExtendConfig[sourceControlTypeItem].repoList"
-                  :selected-repo-url.sync="gitExtendConfig[sourceControlTypeItem].selectedRepoUrl"
-                />
+              <template v-if="codeRepositoryConfig.creationRepositories?.length">
+                <bk-form-item
+                  :required="true"
+                  :label="$t('仓库类型')"
+                  ext-cls="form-item-cls mt20"
+                >
+                  <bk-radio-group v-model="codeRepositoryConfig.type">
+                    <bk-radio :value="'existing'">{{ $t('已有代码仓库') }}</bk-radio>
+                    <bk-radio :value="'platform'">
+                      {{ $t('新建代码仓库（由平台自动创建）') }}
+                    </bk-radio>
+                  </bk-radio-group>
+                </bk-form-item>
 
                 <bk-form-item
-                  :label="$t('构建目录')"
-                  :property="'buildDir'"
+                  v-show="isCreatedByPlatform"
+                  :required="true"
+                  :label="$t('代码仓库')"
+                  ext-cls="form-item-cls mt20"
+                >
+                  <PlatformCodeRepositoryForm
+                    ref="newCodeRepositoryForm"
+                    :app-id="formData.code"
+                    :list="codeRepositoryConfig.creationRepositories"
+                  ></PlatformCodeRepositoryForm>
+                  <p
+                    slot="tip"
+                    class="g-tip"
+                  >
+                    {{ $t('将自动创建该开源仓库，将模版代码初始化到仓库中，并将创建者初始化为仓库管理员') }}
+                  </p>
+                </bk-form-item>
+              </template>
+
+              <template v-if="!isCreatedByPlatform">
+                <bk-form-item
+                  :required="true"
+                  :label="$t('代码源')"
                   error-display-type="normal"
                   ext-cls="form-item-cls mt20"
                 >
+                  <div class="flex-row align-items-center code-depot mb20">
+                    <div
+                      v-for="(item, index) in sourceControlTypes"
+                      :key="index"
+                      :class="['code-depot-item mr10', { on: item.value === sourceControlTypeItem }]"
+                      @click="changeSourceControl(item)"
+                    >
+                      <img :src="'/static/images/' + item.imgSrc + '.png'" />
+                      <div
+                        class="source-control-title"
+                        :title="item.name"
+                      >
+                        {{ item.name }}
+                      </div>
+                    </div>
+                  </div>
+                </bk-form-item>
+                <section v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
+                  <git-extend
+                    ref="extend"
+                    :key="sourceControlTypeItem"
+                    :git-control-type="sourceControlTypeItem"
+                    :is-auth="gitExtendConfig[sourceControlTypeItem].isAuth"
+                    :is-loading="gitExtendConfig[sourceControlTypeItem].isLoading"
+                    :alert-text="gitExtendConfig[sourceControlTypeItem].alertText"
+                    :auth-address="gitExtendConfig[sourceControlTypeItem].authAddress"
+                    :auth-docs="gitExtendConfig[sourceControlTypeItem].authDocs"
+                    :fetch-method="gitExtendConfig[sourceControlTypeItem].fetchMethod"
+                    :repo-list="gitExtendConfig[sourceControlTypeItem].repoList"
+                    :selected-repo-url.sync="gitExtendConfig[sourceControlTypeItem].selectedRepoUrl"
+                  />
+
+                  <bk-form-item
+                    :label="$t('构建目录')"
+                    :property="'buildDir'"
+                    error-display-type="normal"
+                    ext-cls="form-item-cls mt20"
+                  >
+                    <div class="flex-row align-items-center code-depot">
+                      <bk-input
+                        v-model="formData.buildDir"
+                        class="form-input-width"
+                        :placeholder="$t('请输入应用所在子目录，不填则默认为根目录')"
+                      />
+                    </div>
+                  </bk-form-item>
+                </section>
+
+                <section v-if="curSourceControl && curSourceControl.auth_method === 'basic'">
+                  <repo-info
+                    ref="repoInfo"
+                    :key="sourceControlTypeItem"
+                    :type="sourceControlTypeItem"
+                    :source-dir-label="'构建目录'"
+                    :is-cloud-created="true"
+                    :default-url="repoData.url"
+                    :default-account="repoData.account"
+                    :default-password="repoData.password"
+                    :default-dir="repoData.sourceDir"
+                    @dir-change="($event) => (curRepoDir = $event)"
+                  />
+                </section>
+
+                <!-- Dockerfile 构建 -->
+                <bk-form-item
+                  v-if="isDockerfile"
+                  :label="$t('Dockerfile 路径')"
+                  :rules="absolutePathRule"
+                  :property="'dockerfilePath'"
+                  error-display-type="normal"
+                  ext-cls="form-dockerfile-cls mt20"
+                >
                   <div class="flex-row align-items-center code-depot">
                     <bk-input
-                      v-model="formData.buildDir"
+                      v-model="formData.dockerfilePath"
                       class="form-input-width"
-                      :placeholder="$t('请输入应用所在子目录，不填则默认为根目录')"
+                      :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
                     />
                   </div>
                 </bk-form-item>
-              </section>
 
-              <section v-if="curSourceControl && curSourceControl.auth_method === 'basic'">
-                <repo-info
-                  ref="repoInfo"
-                  :key="sourceControlTypeItem"
-                  :type="sourceControlTypeItem"
-                  :source-dir-label="'构建目录'"
-                  :is-cloud-created="true"
-                  :default-url="repoData.url"
-                  :default-account="repoData.account"
-                  :default-password="repoData.password"
-                  :default-dir="repoData.sourceDir"
-                  @dir-change="($event) => (curRepoDir = $event)"
+                <!-- 用户输入 构建目录 + Dockerfile 路径文件示例目录 -->
+                <ExamplesDirectory
+                  style="margin-left: 100px"
+                  :root-path="rootPath"
+                  :append-path="appendPath"
+                  :default-files="defaultFiles"
+                  :is-dockerfile="isDockerfile"
+                  :show-root="false"
+                  :type="'string'"
                 />
-              </section>
 
-              <!-- Dockerfile 构建 -->
-              <bk-form-item
-                v-if="isDockerfile"
-                :label="$t('Dockerfile 路径')"
-                :rules="absolutePathRule"
-                :property="'dockerfilePath'"
-                error-display-type="normal"
-                ext-cls="form-dockerfile-cls mt20"
-              >
-                <div class="flex-row align-items-center code-depot">
-                  <bk-input
-                    v-model="formData.dockerfilePath"
-                    class="form-input-width"
-                    :placeholder="$t('相对于构建目录的路径，若留空，默认为构建目录下名为 “Dockerfile” 的文件')"
-                  />
-                </div>
-              </bk-form-item>
-
-              <!-- 用户输入 构建目录 + Dockerfile 路径文件示例目录 -->
-              <ExamplesDirectory
-                style="margin-left: 100px"
-                :root-path="rootPath"
-                :append-path="appendPath"
-                :default-files="defaultFiles"
-                :is-dockerfile="isDockerfile"
-                :show-root="false"
-                :type="'string'"
-              />
-
-              <!-- 构建参数 -->
-              <template v-if="isDockerfile">
-                <bk-form
-                  :model="dockerfileData"
-                  form-type="vertical"
-                  ext-cls="build-params-form"
-                >
-                  <div class="form-label">
-                    {{ $t('构建参数') }}
-                  </div>
-                  <div class="form-value-wrapper">
-                    <bk-button
-                      v-if="!dockerfileData.buildParams.length"
-                      :text="true"
-                      title="primary"
-                      @click="addBuildParams"
-                    >
-                      <i class="paasng-icon paasng-plus-thick" />
-                      {{ $t('新建构建参数') }}
-                    </bk-button>
-                    <template v-if="dockerfileData.buildParams.length">
-                      <div class="build-params-header">
-                        <div class="name">{{ $t('参数名') }}</div>
-                        <div class="value">{{ $t('参数值') }}</div>
-                      </div>
-                      <div
-                        v-for="(item, index) in dockerfileData.buildParams"
-                        class="build-params-item"
-                        :key="index"
+                <!-- 构建参数 -->
+                <template v-if="isDockerfile">
+                  <bk-form
+                    :model="dockerfileData"
+                    form-type="vertical"
+                    ext-cls="build-params-form"
+                  >
+                    <div class="form-label">
+                      {{ $t('构建参数') }}
+                    </div>
+                    <div class="form-value-wrapper">
+                      <bk-button
+                        v-if="!dockerfileData.buildParams.length"
+                        :text="true"
+                        title="primary"
+                        @click="addBuildParams"
                       >
-                        <bk-form
-                          :ref="`name-${index}`"
-                          :model="item"
+                        <i class="paasng-icon paasng-plus-thick" />
+                        {{ $t('新建构建参数') }}
+                      </bk-button>
+                      <template v-if="dockerfileData.buildParams.length">
+                        <div class="build-params-header">
+                          <div class="name">{{ $t('参数名') }}</div>
+                          <div class="value">{{ $t('参数值') }}</div>
+                        </div>
+                        <div
+                          v-for="(item, index) in dockerfileData.buildParams"
+                          class="build-params-item"
+                          :key="index"
                         >
-                          <bk-form-item
-                            :rules="rules.buildParams"
-                            :property="'name'"
+                          <bk-form
+                            :ref="`name-${index}`"
+                            :model="item"
                           >
-                            <bk-input
-                              v-model="item.name"
-                              :placeholder="$t('参数名')"
-                            ></bk-input>
-                          </bk-form-item>
-                        </bk-form>
-                        <span class="equal">=</span>
-                        <bk-form
-                          :ref="`value-${index}`"
-                          :model="item"
-                        >
-                          <bk-form-item
-                            :rules="rules.buildParams"
-                            :property="'value'"
+                            <bk-form-item
+                              :rules="rules.buildParams"
+                              :property="'name'"
+                            >
+                              <bk-input
+                                v-model="item.name"
+                                :placeholder="$t('参数名')"
+                              ></bk-input>
+                            </bk-form-item>
+                          </bk-form>
+                          <span class="equal">=</span>
+                          <bk-form
+                            :ref="`value-${index}`"
+                            :model="item"
                           >
-                            <bk-input v-model="item.value"></bk-input>
-                          </bk-form-item>
-                        </bk-form>
-                        <i
-                          class="paasng-icon paasng-minus-circle-shape"
-                          @click="removeBuildParams(index)"
-                        ></i>
-                      </div>
-                    </template>
-                  </div>
-                </bk-form>
-                <bk-button
-                  v-if="dockerfileData.buildParams.length"
-                  ext-cls="add-build-params"
-                  :text="true"
-                  title="primary"
-                  @click="addBuildParams"
-                >
-                  <i class="paasng-icon paasng-plus-thick" />
-                  {{ $t('新建构建参数') }}
-                </bk-button>
+                            <bk-form-item
+                              :rules="rules.buildParams"
+                              :property="'value'"
+                            >
+                              <bk-input v-model="item.value"></bk-input>
+                            </bk-form-item>
+                          </bk-form>
+                          <i
+                            class="paasng-icon paasng-minus-circle-shape"
+                            @click="removeBuildParams(index)"
+                          ></i>
+                        </div>
+                      </template>
+                    </div>
+                  </bk-form>
+                  <bk-button
+                    v-if="dockerfileData.buildParams.length"
+                    ext-cls="add-build-params"
+                    :text="true"
+                    title="primary"
+                    @click="addBuildParams"
+                  >
+                    <i class="paasng-icon paasng-plus-thick" />
+                    {{ $t('新建构建参数') }}
+                  </bk-button>
+                </template>
               </template>
             </bk-form>
           </template>
@@ -708,6 +744,7 @@ import createSmartApp from './smart';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import { mapGetters, mapState } from 'vuex';
 import ExamplesDirectory from '@/components/examples-directory';
+import PlatformCodeRepositoryForm from './comps/platform-code-repository-form.vue';
 
 export default {
   components: {
@@ -719,6 +756,7 @@ export default {
     defaultAppType,
     createSmartApp,
     ExamplesDirectory,
+    PlatformCodeRepositoryForm,
   },
   mixins: [sidebarDiffMixin],
   data() {
@@ -930,6 +968,12 @@ export default {
       notAllowCreateAppMessage: this.$t(
         '当前用户无可用的应用集群，无法创建应用；请联系平台管理员添加集群或调整集群分配策略。'
       ),
+      // 代码仓库配置
+      codeRepositoryConfig: {
+        type: 'existing',
+        creationRepositories: [],
+        formData: {},
+      },
     };
   },
   computed: {
@@ -1020,6 +1064,10 @@ export default {
         return { content: this.$t('请先授权代码源，然后选代码仓库'), disabled: !this.isNextStepAllowed };
       }
       return this.disableCreateTips;
+    },
+    // 是否为平台自动创建
+    isCreatedByPlatform() {
+      return this.codeRepositoryConfig.type === 'platform';
     },
   },
   watch: {
@@ -1165,6 +1213,10 @@ export default {
           }
           return e;
         });
+
+        // 判断是否提供选择仓库类型
+        this.codeRepositoryConfig.creationRepositories = res.filter((item) => item.repo_creation_enabled);
+
         this.sourceControlTypeItem =
           this.sourceControlTypes.find((item) => item.imgSrc === this.sourceControlTypeItem)?.imgSrc ??
           this.sourceControlTypes[0]?.imgSrc;
@@ -1299,6 +1351,10 @@ export default {
               break;
           }
         }
+        // 获取新建代码仓库数据
+        if (this.isCreatedByPlatform) {
+          this.codeRepositoryConfig.formData = this.$refs.newCodeRepositoryForm?.getFromData();
+        }
         this.repoData = this.$refs?.repoInfo?.getData() ?? {};
         this.curStep = 2;
         this.$nextTick(() => {
@@ -1340,6 +1396,20 @@ export default {
       return true;
     },
 
+    // 参数区分：已有代码仓库 / 由平台创建代码仓库
+    getRepositoryParams() {
+      if (this.isCreatedByPlatform) {
+        return {
+          auto_create_repo: true,
+          write_template_to_repo: true,
+          ...this.codeRepositoryConfig.formData,
+        };
+      }
+      return {
+        source_repo_url: this.formData.sourceRepoUrl,
+      };
+    },
+
     // 创建应用
     async handleCreateApp() {
       if (this.cloudAppData.spec?.hooks) {
@@ -1364,7 +1434,7 @@ export default {
         source_config: {
           source_init_template: this.isBkPlugin ? this.curPluginTemplate : this.formData.sourceInitTemplate,
           source_control_type: this.sourceControlTypeItem,
-          source_repo_url: this.formData.sourceRepoUrl,
+          ...this.getRepositoryParams(),
           source_origin: this.sourceOrigin,
           source_dir: this.formData.buildDir || '',
         },
@@ -1468,13 +1538,10 @@ export default {
         };
       }
 
-      // 过滤空值容器端口
-      // if (params.manifest?.spec) {
-      //   params.manifest.spec.processes = params.manifest.spec.processes.map((process) => {
-      //     const { targetPort, ...processValue } = process;
-      //     return (targetPort === '' || targetPort === null) ? processValue : process;
-      //   });
-      // }
+      // 由平台创建代码仓库过滤source_repo_url
+      if (this.isCreatedByPlatform) {
+        delete params.source_config.source_repo_url;
+      }
 
       try {
         const res = await this.$store.dispatch('cloudApi/createCloudApp', {
@@ -1493,6 +1560,7 @@ export default {
           query: {
             method: params.bkapp_spec.build_config.build_method,
             template: params.source_config.source_init_template,
+            type: this.codeRepositoryConfig.type,
             objectKey,
           },
         });

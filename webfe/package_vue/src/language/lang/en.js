@@ -3059,4 +3059,10 @@ export default {
   工具数: 'Number of Tools',
   工具列表: 'Tools List',
   '请输入 MCP Server 名称或描述': 'Please enter the MCP Server name or description',
+  本地开发: 'Local Development',
+  仓库类型: 'Repository Type',
+  已有代码仓库: 'Existing Code Repository',
+  提交代码到代码仓库: 'Submit Code to Repository',
+  '新建代码仓库（由平台自动创建）': 'Create New Repository (Automatically Created by the Platform)',
+  '将自动创建该开源仓库，将模版代码初始化到仓库中，并将创建者初始化为仓库管理员': 'This open-source repository will be automatically created, the template code will be initialized in the repository, and the creator will be initialized as the repository administrator',
 };

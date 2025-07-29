@@ -177,20 +177,18 @@ class OperatorVersionCondition(DeployCondition):
     action_name = DeployConditions.CHECK_OPERATOR_VERSION.value
 
     def validate(self):
-        # 仅在打开 检查开关的时候检查
-        if not settings.BKPAAS_OPERATOR_VERSION_CHECK or not settings.BKPAAS_APISERVER_VERSION:
-            return
-
         # apiserver 根据 Helm 构建时, 注入容器 env
         apiserver_version = settings.BKPAAS_APISERVER_VERSION
 
+        # 仅在打开 检查开关的时候检查
+        if not settings.BKPAAS_OPERATOR_VERSION_CHECK or not apiserver_version:
+            return
+
         # operator 通过 helm 客户端获取
         cluster_name = EnvClusterService(self.env).get_cluster_name()
-
         # 使用缓存
         cache_key = f"helm_release:{cluster_name}:operator_version"
         operator_version = cache.get(cache_key)
-
         if operator_version is None:
             operator_release = HelmClient(cluster_name).get_release("bkpaas-app-operator")
             operator_version = operator_release.chart.app_version if operator_release else None

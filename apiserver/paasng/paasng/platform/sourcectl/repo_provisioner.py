@@ -75,10 +75,10 @@ class BaseGitProvisioner:
         :param repo_url: repository url
         """
         source_config = get_sourcectl_type(source_type).config_as_arguments()
-        if "api_url" not in source_config or "private_token" not in source_config:
-            raise ValueError("Require api_url and private_token to init GitRepoController")
+        if "api_url" not in source_config or "bkpaas_private_token" not in source_config:
+            raise ValueError("Require api_url and bkpaas_private_token to init GitRepoController")
 
-        user_credentials = {"private_token": source_config["private_token"], "scope_list": []}
+        user_credentials = {"private_token": source_config["bkpaas_private_token"], "scope_list": []}
         return cls(api_url=source_config["api_url"], user_credentials=user_credentials)
 
     @classmethod

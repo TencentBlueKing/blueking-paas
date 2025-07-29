@@ -1,7 +1,5 @@
 <template>
-  <div
-    :class="['usage-guide-wrapper', { 'not-cloud-native-app': !isCloudNative }]"
-  >
+  <div :class="['usage-guide-wrapper', { 'not-cloud-native-app': !isCloudNative }]">
     <!-- 设置相对高度防止出现双重滚动条 -->
     <div
       class="usage-guide-content"
@@ -14,7 +12,7 @@
       >
         <div
           class="markdown-body"
-          v-html="data"
+          v-dompurify-html="data"
         />
       </div>
     </div>

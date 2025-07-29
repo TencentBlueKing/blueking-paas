@@ -156,7 +156,7 @@
           <p
             class="release-tips"
             v-bk-overflow-tips
-            v-html="curStrategyType === 'full' ? officialReleaseTips : canaryReleaseTips"
+            v-dompurify-html="curStrategyType === 'full' ? officialReleaseTips : canaryReleaseTips"
           ></p>
         </template>
       </section>

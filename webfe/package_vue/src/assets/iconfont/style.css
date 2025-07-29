@@ -1058,6 +1058,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .paasng-file-5:before {
 	content: "\e295";
 }
+.paasng-undo:before {
+	content: "\e2a1";
+}
 .paasng-unfinished:before {
 	content: "\e292";
 }

@@ -112,13 +112,13 @@ class UnifiedEnvVarsReader:
 
     def get_builtin_vars_override_conflicted_flag(
         self, env_vars: EnvVariableList, exclude_sources: list[EnvVarSource] | None = None
-    ) -> list:
+    ) -> list[dict]:
         """Automatically fetch all built-in variables and detect conflicts"""
         # Whether the current source being checked is after the USER_CONFIGURED source
         after_source = False
 
         # Result for List EnvVariableObj with override conflicted field
-        result = []
+        result_dict = {}
         for current_source in self._default_order:
             # Skip all user preset source, because they will be overridden anyway so conflict checking
             # is not needed.
@@ -134,20 +134,21 @@ class UnifiedEnvVarsReader:
             data = self._source_lister_func_map[current_source](self.env).map
             for key, var in env_vars.map.items():
                 if key in data:
-                    result.append(
-                        {
-                            "key": key,
-                            "value": var.value,
-                            "description": var.description,
-                            "override_conflicted": not after_source,
-                        }
-                    )
+                    # Use key as dict key to deduplicate
+                    result_dict[key] = {
+                        "key": key,
+                        "value": var.value,
+                        "description": var.description,
+                        "override_conflicted": not after_source,
+                    }
 
         # Sort and return the result
-        return sorted(result, key=lambda x: x["key"])
+        return sorted(result_dict.values(), key=lambda x: x["key"])
 
 
-def list_builtin_vars_with_override_flag(module: Module, env_var_groups: Dict[str, EnvVariableList]):
+def list_builtin_vars_with_override_flag(
+    module: Module, env_var_groups: Dict[str, EnvVariableList]
+) -> Dict[str, list[dict]]:
     """Automatically fetch all built-in variables and detect conflicts"""
     app = module.application
     # Use a dict remove duplicated keys between different environments
@@ -155,6 +156,7 @@ def list_builtin_vars_with_override_flag(module: Module, env_var_groups: Dict[st
 
     # Check all environments in the module and merge the results
     for group_name, env_vars in env_var_groups.items():
+        vars_with_flag = []
         for env in module.get_envs():
             if app.type == ApplicationType.CLOUD_NATIVE:
                 vars_with_flag = UnifiedEnvVarsReader(env).get_builtin_vars_override_conflicted_flag(

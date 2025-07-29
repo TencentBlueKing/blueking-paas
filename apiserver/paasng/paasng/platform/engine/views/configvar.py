@@ -30,6 +30,7 @@ from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import (
+    get_custom_builtin_config_vars,
     list_builtin_vars_with_override_flag,
     list_vars_builtin_app_basic,
     list_vars_builtin_plat_addrs,
@@ -341,10 +342,14 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         env = application.default_module.get_envs(AppEnvironment.PRODUCTION)
         runtime_vars = list_vars_builtin_runtime(env, include_deprecated=False)
 
+        # 获取自定义的平台内置变量
+        custom_vars = get_custom_builtin_config_vars()
+
         env_var_groups = {
             "app_basic_vars": app_basic_vars,
             "bk_platform_vars": bk_address_envs + region_and_env_envs,
             "runtime_vars": runtime_vars,
+            "custom_vars": custom_vars,
         }
 
         built_vars_with_conflicted = list_builtin_vars_with_override_flag(module, env_var_groups)

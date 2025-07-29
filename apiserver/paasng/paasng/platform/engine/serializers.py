@@ -778,3 +778,4 @@ class ListConfigVarBuiltinOutputSLZ(serializers.Serializer):
     app_basic_vars = ConfigVarBuiltinFormatSLZ(many=True)
     bk_platform_vars = ConfigVarBuiltinWithValueFormatSLZ(many=True)
     runtime_vars = ConfigVarBuiltinFormatSLZ(many=True)
+    custom_vars = ConfigVarBuiltinWithValueFormatSLZ(many=True)

@@ -12,7 +12,7 @@
     <div class="content">
       <paasng-alert>
         <div slot="title">
-          <span v-html="alertTxt"></span>
+          <span v-dompurify-html="alertTxt"></span>
           {{ renewalRows.length > 0 ? '，' : '。' }}
           <template v-if="renewalRows.length > 0">
             <span style="color: #ff9c01">{{ renewalRows.length }}</span>

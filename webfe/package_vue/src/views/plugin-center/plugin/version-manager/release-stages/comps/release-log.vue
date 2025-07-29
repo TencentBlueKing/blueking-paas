@@ -8,7 +8,7 @@
         v-for="(item, index) in logs"
         :key="index"
         class="log log-item pt10"
-        v-html="item"
+        v-dompurify-html="item"
       />
     </template>
     <section

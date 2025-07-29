@@ -327,7 +327,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             if application.is_plugin_app:
                 auto_repo_url = create_repo_with_platform_account(module, repo_type, username)
             else:
-                auto_repo_url = create_repo_with_user_account(module, repo_type, repo_group, repo_name, username)
+                auto_repo_url = create_repo_with_user_account(module, repo_type, repo_name, username, repo_group)
             repo_url = auto_repo_url
 
         user_id = request.user.pk

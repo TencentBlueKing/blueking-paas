@@ -19,11 +19,11 @@
       <p>{{ $t('集群（{n}）正在被以下租户、应用使用，无法删除', { n: clusterName }) }}：</p>
       <div class="del-alert-info-content">
         <div
-          v-html="deletePromptOne"
+          v-dompurify-html="deletePromptOne"
           v-if="config.allocated_tenant_ids?.length"
         ></div>
         <div
-          v-html="deletePromptTwo"
+          v-dompurify-html="deletePromptTwo"
           v-if="displayBoundApps.length"
         ></div>
       </div>

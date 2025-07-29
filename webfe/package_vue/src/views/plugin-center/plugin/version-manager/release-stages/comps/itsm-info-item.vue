@@ -12,7 +12,7 @@
             > {{ item.value }} </a>
           </template>
           <template v-else>
-            <div v-html="item.value" v-if="item.value"></div>
+            <div v-dompurify-html="item.value" v-if="item.value"></div>
             <div v-else>--</div>
           </template>
         </div>

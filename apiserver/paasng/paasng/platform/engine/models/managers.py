@@ -78,8 +78,12 @@ class PlainConfigVar(BaseModel):
 class ExportedConfigVars(BaseModel):
     env_variables: List[PlainConfigVar]
 
-    def to_file_content(self) -> str:
-        """Dump the ExportedConfigVars to file content(yaml format)"""
+    def to_file_content(self, extra_cmt: str = "") -> str:
+        """Dump the ExportedConfigVars to file content(yaml format)
+
+        :param str extra_cmt: Additional comments will be appended after the file header description
+        :returns: A yaml string, containing ConfigVar and description comments
+        """
         directions = dedent(
             """\
             # 环境变量文件字段说明：
@@ -93,6 +97,9 @@ class ExportedConfigVars(BaseModel):
             #       - _global_: 所有环境
             """
         )
+        if extra_cmt:
+            directions += extra_cmt.rstrip() + "\n"
+
         content = yaml.safe_dump(self.dict(), allow_unicode=True, default_flow_style=False)
         return f"{directions}{content}"
 
@@ -179,6 +186,14 @@ class ConfigVarManager:
         instance_list = module.configvar_set.filter(is_builtin=False).prefetch_related("environment")
         instance_mapping = {obj.id: obj for obj in instance_list}
 
+        # validate: new ConfigVar must have value
+        errors = []
+        for var_data in config_vars:
+            if (not var_data.id or var_data.id not in instance_mapping) and not var_data.value:
+                errors.append({"key": var_data.key, "error": "value is required"})
+        if errors:
+            raise ValueError(errors)
+
         # Create new instance if id is not provided
         create_list = [item for item in config_vars if not item.id]
 
@@ -186,13 +201,16 @@ class ConfigVarManager:
         update_config_vars = {item.id: item for item in config_vars if item.id}
         overwrited_num = 0
         for var_id, var_data in update_config_vars.items():
-            obj = instance_mapping.get(var_id, None)
+            obj = instance_mapping.get(var_id)
             # If the id is provided, but if the id is not in the db, need to create a new data
             if obj is None:
                 var_data.id = None
                 create_list.append(var_data)
             else:
                 instance_mapping.pop(var_id)
+                # If the value is not provided, use the existing value
+                if not var_data.value:
+                    var_data.value = obj.value
                 # If it is inconsistent with existing data, it needs to be updated
                 if not obj.is_equivalent_to(var_data):
                     _update_data_dict = model_to_dict(var_data, fields=CONFIG_VAR_INPUT_FIELDS)

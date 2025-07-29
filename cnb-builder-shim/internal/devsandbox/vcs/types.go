@@ -16,7 +16,6 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package vcs 版本控制系统（VersionControlSystem）
 package vcs
 
 import (

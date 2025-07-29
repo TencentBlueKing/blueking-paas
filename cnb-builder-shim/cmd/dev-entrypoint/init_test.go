@@ -102,10 +102,10 @@ version = 'v213'
 	})
 })
 
-var _ = Describe("Test InitConfig", func() {
+var _ = Describe("Test Init", func() {
 	var err error
 	BeforeEach(func() {
-		err = config.InitConfig()
+		err = config.Init()
 		Expect(err).To(BeNil())
 	})
 	It("test load config with default values", func() {

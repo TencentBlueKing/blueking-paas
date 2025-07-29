@@ -1,3 +1,21 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+ * Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://opensource.org/licenses/MIT
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ * to the current version of the project delivered to anyone in the future.
+ */
+
 package executor
 
 import (
@@ -17,11 +35,11 @@ import (
 )
 
 // archiveSourceTarball 生成 Procfile 文件后写入 sourceDir, 并将其打包成 destTGZ 文件
-func archiveSourceTarball(sourceDir, destTGZ string, Procfile map[string]string) error {
+func archiveSourceTarball(sourceDir, destTGZ string, procfile map[string]string) error {
 	procfileContent := ""
 
 	// heroku Procfile: https://devcenter.heroku.com/articles/procfile#procfile-format
-	for procType, procCommand := range Procfile {
+	for procType, procCommand := range procfile {
 		procfileContent += fmt.Sprintf("%s: %s\n", procType, procCommand)
 	}
 
@@ -115,7 +133,7 @@ func makeRunArgs(group *plan.ModuleBuildGroup, moduleSrcTGZ string, runImage str
 // writeArtifactJsonFile 根据 buildPlan, 在目录 artifactDir 写入 artifact.json.
 // artifact.json 描述应用模块与镜像 tar 的对应关系以及进程 entrypoints, 格式如下:
 //
-//	{
+//	 {
 //	  "module1": {"image_tar": "module1.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}},
 //	  "module2": {"image_tar": "module2.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}}
 //	}

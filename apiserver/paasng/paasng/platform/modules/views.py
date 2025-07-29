@@ -331,7 +331,7 @@ class ModuleViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                     auto_repo_url = create_repo_with_user_account(module, repo_type, repo_name, username, repo_group)
             except Exception:
                 logger.exception("create repo failed")
-                raise error_codes.CREATE_REPO_FAILED.f(_("创建代码仓库失败"))
+                raise error_codes.CREATE_APP_FAILED.f(_("创建代码仓库失败"))
 
             repo_url = auto_repo_url
 

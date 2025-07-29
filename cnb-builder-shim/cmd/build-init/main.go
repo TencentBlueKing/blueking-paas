@@ -15,6 +15,8 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
+
+// Package main is the entrypoint of cnb-builder-shim
 package main
 
 import (
@@ -70,22 +72,60 @@ const (
 )
 
 var (
-	cacheImage  = flag.String("cache-image", os.Getenv(CacheImageEnvVarKey), "cache image tag name.")
-	outputImage = flag.String("output-image", os.Getenv(OutputImageEnvVarKey), "The name of image that will get created by the lifecycle.")
-	runImage    = flag.String("run-image", os.Getenv(RunImageEnvVarKey), "The base image from which application images are built.")
-	useDaemon   = flag.Bool("daemon", utils.BoolEnv(UseDockerDaemonEnvVarKey), "export image to docker daemon.")
+	cacheImage = flag.String(
+		"cache-image",
+		os.Getenv(CacheImageEnvVarKey),
+		"cache image tag name.",
+	)
+	outputImage = flag.String(
+		"output-image",
+		os.Getenv(OutputImageEnvVarKey),
+		"The name of image that will get created by the lifecycle.",
+	)
+	runImage = flag.String(
+		"run-image",
+		os.Getenv(RunImageEnvVarKey),
+		"The base image from which application images are built.",
+	)
+	useDaemon = flag.Bool(
+		"daemon",
+		utils.BoolEnv(UseDockerDaemonEnvVarKey),
+		"export image to docker daemon.",
+	)
 
-	buildpacks = flag.String("buildpacks", os.Getenv(RequiredBuildpacksEnvVarKey), "Those buildpacks that will used by the lifecycle.")
+	buildpacks = flag.String(
+		"buildpacks",
+		os.Getenv(RequiredBuildpacksEnvVarKey),
+		"Those buildpacks that will used by the lifecycle.",
+	)
 
-	sourceUrl   = flag.String("source-url", os.Getenv(SourceUrlEnvVarKey), "The url of the source code.")
-	gitRevision = flag.String("git-revision", os.Getenv(GitRevisionEnvVarKey), "The Git revision to make the repository HEAD.")
+	sourceUrl = flag.String(
+		"source-url",
+		os.Getenv(SourceUrlEnvVarKey),
+		"The url of the source code.",
+	)
+	gitRevision = flag.String(
+		"git-revision",
+		os.Getenv(GitRevisionEnvVarKey),
+		"The Git revision to make the repository HEAD.",
+	)
 
-	uid = flag.Int("uid", DefaultUid, "UID of user's group in the stack's build and run images.")
-	gid = flag.Int("gid", DefaultGid, "GID of user's group in the stack's build and run images.")
+	uid = flag.Int(
+		"uid",
+		DefaultUid,
+		"UID of user's group in the stack's build and run images.",
+	)
+	gid = flag.Int(
+		"gid",
+		DefaultGid,
+		"GID of user's group in the stack's build and run images.",
+	)
 
-	skipTLSVerify = flag.Bool("skip-tls-verify",
+	skipTLSVerify = flag.Bool(
+		"skip-tls-verify",
 		utils.BoolEnv(SkipTLSVerifyEnvVarKey),
-		"Skip verify TLS certificates.")
+		"Skip verify TLS certificates.",
+	)
 )
 
 func init() {
@@ -105,14 +145,20 @@ func main() {
 	if *runImage == "" {
 		logger.Error(
 			fmt.Errorf("runImage is empty"),
-			fmt.Sprintf("please provide it by using --run-image or setting it as an environment variable %s", RunImageEnvVarKey),
+			fmt.Sprintf(
+				"please provide it by using --run-image or setting it as an environment variable %s",
+				RunImageEnvVarKey,
+			),
 		)
 		os.Exit(1)
 	}
 	if *sourceUrl == "" {
 		logger.Error(
 			fmt.Errorf("sourceUrl is empty"),
-			fmt.Sprintf("please provide it by using --source-url or setting it as an environment variable %s", SourceUrlEnvVarKey),
+			fmt.Sprintf(
+				"please provide it by using --source-url or setting it as an environment variable %s",
+				SourceUrlEnvVarKey,
+			),
 		)
 		os.Exit(1)
 	}
@@ -242,7 +288,7 @@ type Group struct {
 	Group []GroupElement `toml:"group"`
 }
 
-// A GroupElement represents a buildpack referenced in a buildpack.toml's [[order.group]] OR
+// GroupElement represents a buildpack referenced in a buildpack.toml's [[order.group]] OR
 // a buildpack or extension in order.toml OR a buildpack or extension in group.toml.
 type GroupElement struct {
 	// ID specifies the ID of the buildpack or extension.

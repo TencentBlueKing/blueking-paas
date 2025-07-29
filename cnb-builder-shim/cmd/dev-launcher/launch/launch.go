@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package launch provides a shim to launch processes.
 package launch
 
 import (

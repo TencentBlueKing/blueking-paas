@@ -152,38 +152,38 @@ func RefreshConf(processes []base.Process, procEnvs ...appdesc.Env) error {
 }
 
 // RPCProcessController ...
-type SupervisorRPCProcessController struct {
+type RPCProcessController struct {
 	client *rpc.Client
 }
 
-// 创建 Supervisor RPC 类型的 ProcessController
-func NewSupervisorRPCProcessController() (*SupervisorRPCProcessController, error) {
+// NewRPCProcessController 创建 Supervisor RPC 类型的 ProcessController
+func NewRPCProcessController() (*RPCProcessController, error) {
 	client, err := rpc.NewClient(rpcAddress)
 	if err != nil {
 		return nil, err
 	}
-	return &SupervisorRPCProcessController{
+	return &RPCProcessController{
 		client: client,
 	}, nil
 }
 
 // Status 获取所有进程的状态
-func (p *SupervisorRPCProcessController) Status() ([]rpc.ProcessInfo, error) {
+func (p *RPCProcessController) Status() ([]rpc.ProcessInfo, error) {
 	return p.client.GetAllProcessInfo()
 }
 
 // Stop 停止(不是删除)进程
-func (p *SupervisorRPCProcessController) Stop(name string) error {
+func (p *RPCProcessController) Stop(name string) error {
 	return p.client.StopProcess(name, true)
 }
 
 // Start 启动进程（只能操作已存在的进程）
-func (p *SupervisorRPCProcessController) Start(name string) error {
+func (p *RPCProcessController) Start(name string) error {
 	return p.client.StartProcess(name, true)
 }
 
 // Reload 批量更新和重启进程列表
-func (p *SupervisorRPCProcessController) Reload(processes []base.Process, procEnvs ...appdesc.Env) error {
+func (p *RPCProcessController) Reload(processes []base.Process, procEnvs ...appdesc.Env) error {
 	if err := RefreshConf(processes, procEnvs...); err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (p *SupervisorRPCProcessController) Reload(processes []base.Process, procEn
 }
 
 // StopAllProcesses 停止所有进程
-func (p *SupervisorRPCProcessController) StopAllProcesses() error {
+func (p *RPCProcessController) StopAllProcesses() error {
 	_, err := p.client.StopAllProcesses(true)
 	return err
 }

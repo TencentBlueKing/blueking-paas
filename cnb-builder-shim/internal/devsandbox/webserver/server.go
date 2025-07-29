@@ -188,7 +188,7 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 				return
 			}
 			srcFilePath = path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
-		case config.BK_REPO:
+		case config.BkRepo:
 			srcFilePath = config.G.SourceCode.Workspace
 		case config.GIT:
 			fallthrough
@@ -342,7 +342,7 @@ func CodeDiffsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 由于目前 HTTP 附带文件的源码初始化逻辑不同，暂时不支持
 		// TODO 后续重构时需要统一
-		if config.G.SourceCode.FetchMethod != config.BK_REPO {
+		if config.G.SourceCode.FetchMethod != config.BkRepo {
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{"message": fmt.Sprintf("unsupported fetch method: %s", config.G.SourceCode.FetchMethod)},
@@ -381,7 +381,7 @@ func CodeCommitHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 由于目前 HTTP 附带文件的源码初始化逻辑不同，暂时不支持
 		// TODO 后续重构时需要统一
-		if config.G.SourceCode.FetchMethod != config.BK_REPO {
+		if config.G.SourceCode.FetchMethod != config.BkRepo {
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{"message": fmt.Sprintf("unsupported fetch method: %s", config.G.SourceCode.FetchMethod)},

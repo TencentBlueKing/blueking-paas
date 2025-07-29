@@ -419,7 +419,7 @@ export default {
       if (!row.is_sensitive || row.isNew) {
         return;
       }
-      if (row.value.startsWith(this.ENCRYPTED_PLACEHOLDER) || ['deleteContentBackward'].includes(event.inputType)) {
+      if (row.value.startsWith(this.ENCRYPTED_PLACEHOLDER.substring(0, 5))) {
         row.value = '';
       }
     },

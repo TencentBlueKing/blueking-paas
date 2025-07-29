@@ -436,7 +436,6 @@ class TestCreateBkPlugin:
         ],
     )
     def test_normal(self, api_client, mock_wl_services_in_creation, settings, bk_user, source_init_template, language):
-        settings.IS_ALLOW_CREATE_BK_PLUGIN_APP = True
         response = self._send_creation_request(api_client, source_init_template)
 
         assert response.status_code == 201, f"error: {response.json()['detail']}"
@@ -444,12 +443,6 @@ class TestCreateBkPlugin:
         # TODO: Update tests when bk_plugin supports multiple languages
         assert response.json()["application"]["modules"][0]["language"] == language
         assert response.json()["application"]["modules"][0]["repo"] is not None
-
-    def test_forbidden_via_config(self, api_client, settings):
-        settings.IS_ALLOW_CREATE_BK_PLUGIN_APP = False
-        response = self._send_creation_request(api_client)
-
-        assert response.status_code == 400, "the creation of bk_plugin must fail"
 
     def _send_creation_request(self, api_client, source_init_template=""):
         random_suffix = generate_random_string(length=6)

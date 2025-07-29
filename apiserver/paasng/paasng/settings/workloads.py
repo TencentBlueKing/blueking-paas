@@ -60,7 +60,7 @@ settings = LazySettings(
     ENVVAR_FOR_DYNACONF="PAAS_SETTINGS",
 )
 
-# paas-apiserver 版本号，由 Helm 注入, 主要用于 Operator 版本一致性校验
+# apiserver 版本号，用于与 operator 进行版本的一致性校验
 BKPAAS_APISERVER_VERSION = settings.get("BKPAAS_APISERVER_VERSION")
 
 # ---------------

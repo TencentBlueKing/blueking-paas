@@ -252,7 +252,9 @@ msgstr ""
 
 #: paas_wl/bk_app/processes/controllers.py:50
 msgid "进程操作过于频繁，请间隔 {operation_interval.total_seconds()} 秒再试。"
-msgstr "The process operation is too frequent, please try again after {operation_interval.total_seconds()} seconds."
+msgstr ""
+"The process operation is too frequent, "
+"please try again after {operation_interval.total_seconds()} seconds."
 
 #: paas_wl/bk_app/processes/serializers.py:322
 msgid "资源指标值/百分比"
@@ -3364,8 +3366,12 @@ msgstr ""
 "contact the APP administrator"
 
 #: paasng/platform/engine/workflow/protections.py:201
-msgid "Operator 版本不匹配，请检查 Operator 版本"
-msgstr "Operator version does not match, please check the Operator version"
+msgid ""
+"apiserver 与 operator 版本不一致，apiserver 版本: {apiserver_version}，"
+"operator 版本: {operator_version}"
+msgstr ""
+"The apiserver and operator versions are inconsistent, apiserver version: {apiserver_version}, "
+"operator version: {operator_version}"
 
 #: paasng/platform/evaluation/constants.py:25
 msgid "运行中"

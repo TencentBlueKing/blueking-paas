@@ -178,7 +178,7 @@ class OperatorVersionCondition(DeployCondition):
 
     def validate(self):
         # 仅在打开 检查开关的时候检查
-        if not settings.BKPAAS_APP_OPERATOR_VERSION_CHECK:
+        if not settings.BKPAAS_OPERATOR_VERSION_CHECK or not settings.BKPAAS_APISERVER_VERSION:
             return
 
         # apiserver 根据 Helm 构建时, 注入容器 env
@@ -188,21 +188,26 @@ class OperatorVersionCondition(DeployCondition):
         cluster_name = EnvClusterService(self.env).get_cluster_name()
 
         # 使用缓存
-        cache_key = f"helm_release:{cluster_name}:bkpaas-app-operator:chart:app_version"
-        app_version = cache.get(cache_key)
+        cache_key = f"helm_release:{cluster_name}:operator_version"
+        operator_version = cache.get(cache_key)
 
-        if app_version is None:
+        if operator_version is None:
             operator_release = HelmClient(cluster_name).get_release("bkpaas-app-operator")
-            app_version = operator_release.chart.app_version if operator_release else None
+            operator_version = operator_release.chart.app_version if operator_release else None
 
-            if app_version == apiserver_version:
+            if operator_version == apiserver_version:
                 # 只有版本一致时才缓存, 减少后续 helm 查询
-                cache.set(cache_key, app_version, 60 * 5)
+                # 缓存不主动过期, 当检测到版本不一致的时候会删除缓存
+                cache.set(cache_key, operator_version, None)
 
-        if app_version != apiserver_version:
+        if operator_version != apiserver_version:
             # 版本不一致时, 主动清理缓存, 促使下次强制刷新
             cache.delete(cache_key)
-            message = _("Operator 版本不匹配，请检查 Operator 版本")
+            message = _(
+                "apiserver 与 operator 版本不一致，apiserver 版本: {apiserver_version}，operator 版本: {operator_version}".format(
+                    apiserver_version=apiserver_version, operator_version=operator_version
+                )
+            )
             raise ConditionNotMatched(message, self.action_name)
 
 

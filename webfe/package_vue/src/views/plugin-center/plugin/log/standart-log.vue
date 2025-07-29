@@ -84,7 +84,7 @@
                     </template> -->
           <pre
             class="message"
-            v-html="log.message || '--'"
+            v-dompurify-html="log.message || '--'"
           />
         </li>
       </ul>

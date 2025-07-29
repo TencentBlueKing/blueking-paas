@@ -30,6 +30,7 @@ from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.models import EnvRoleProtection
 from paasng.platform.sourcectl.constants import VersionType
+from paasng.utils.masked_curlify import MASKED_CONTENT
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,22 @@ class TestConfigVarAPIs:
         assert resp.data[0]["key"] == "A1"
         assert resp.data[0]["description"] == "bar"
 
+    def test_encrypted_create(self, api_client, bk_app, bk_module):
+        # 测试加密 configvar 的创建
+        api_client.post(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
+            {"key": "A1", "value": "foo", "is_sensitive": True, "environment_name": "_global_", "description": "bar"},
+        )
+
+        resp = api_client.get(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
+        )
+        assert len(resp.data) == 1
+        assert resp.data[0]["key"] == "A1"
+        assert resp.data[0]["value"] == MASKED_CONTENT
+        assert resp.data[0]["description"] == "bar"
+        assert resp.data[0]["is_sensitive"]
+
     def test_normal_edit(self, api_client, bk_app, bk_module):
         var_id = api_client.post(
             f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
@@ -66,6 +83,23 @@ class TestConfigVarAPIs:
         )
         assert resp.data[0]["value"] == "bar"
         assert resp.data[0]["description"] == "bar"
+
+    def test_encrypted_edit(self, api_client, bk_app, bk_module):
+        var_id = api_client.post(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
+            {"key": "A1", "value": "foo", "is_sensitive": True, "environment_name": "_global_", "description": "foo"},
+        ).data["id"]
+
+        api_client.put(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/{var_id}/",
+            {"key": "A1", "value": "bar", "is_sensitive": True, "environment_name": "stag", "description": "bar"},
+        )
+
+        resp = api_client.get(
+            f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/",
+        )
+        assert resp.data[0]["description"] == "bar"
+        assert resp.data[0]["value"] == MASKED_CONTENT
 
     def test_normal_delete(self, api_client, bk_app, bk_module):
         var_id = api_client.post(

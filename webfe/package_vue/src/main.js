@@ -42,6 +42,7 @@ import { bkInfoBox, bkMessage, bkNotify } from 'bk-magic-vue';
 import moment from 'moment';
 import Clipboard from 'clipboard';
 import Directives from '@/directives';
+import '@/utils/dompurify';
 import '@/common/bkmagic.js';
 import '@/common/event-tracking.js';
 import PaasContentLoader from '@/components/loader';

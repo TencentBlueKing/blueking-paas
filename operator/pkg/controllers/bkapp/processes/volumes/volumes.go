@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package volumes provides volume related functions
 package volumes
 
 import (
@@ -33,18 +34,18 @@ import (
 )
 
 const (
-	// VOLUME_NAME_APP_LOGGING 应用日志(legacy)-挂载卷名称
-	VOLUME_NAME_APP_LOGGING = "applogs"
-	// VOLUME_HOST_PATH_APP_LOGGING_DIR 应用日志(legacy)-宿主机挂载路径
-	VOLUME_HOST_PATH_APP_LOGGING_DIR = "/data/bkapp/logs"
-	// VOLUME_MOUNT_APP_LOGGING_DIR 应用日志(legacy)-容器内挂载点
-	VOLUME_MOUNT_APP_LOGGING_DIR = "/app/logs"
-	// MUL_MODULE_VOLUME_NAME_APP_LOGGING 应用日志-挂载卷名称
-	MUL_MODULE_VOLUME_NAME_APP_LOGGING = "appv3logs"
-	// MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR 应用日志-宿主机挂载路径
-	MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR = "/data/bkapp/v3logs"
-	// MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR 应用日志-容器内挂载点
-	MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR = "/app/v3logs"
+	// VolumeNameAppLogging 应用日志(legacy)-挂载卷名称
+	VolumeNameAppLogging = "applogs"
+	// VolumeHostPathAppLoggingDir 应用日志(legacy)-宿主机挂载路径
+	VolumeHostPathAppLoggingDir = "/data/bkapp/logs"
+	// VolumeMountAppLoggingDir 应用日志(legacy)-容器内挂载点
+	VolumeMountAppLoggingDir = "/app/logs"
+	// MulModuleVolumeNameAppLogging 应用日志-挂载卷名称
+	MulModuleVolumeNameAppLogging = "appv3logs"
+	// MulModuleVolumeHostPathAppLoggingDir 应用日志-宿主机挂载路径
+	MulModuleVolumeHostPathAppLoggingDir = "/data/bkapp/v3logs"
+	// MulModuleVolumeMountAppLoggingDir 应用日志-容器内挂载点
+	MulModuleVolumeMountAppLoggingDir = "/app/v3logs"
 )
 
 // VolumeMounter ...
@@ -157,7 +158,8 @@ func (vm *GenericVolumeMount) getVolumeMounts() []corev1.VolumeMount {
 }
 
 // BuiltinLogsVolumeMount 内置日志挂载卷
-// TODO: when GenericVolumeMount support HostPath type, delete all code about BuiltinLogsVolumeMount and replace with GenericVolumeMount
+// TODO: when GenericVolumeMount support HostPath type, delete all code
+// about BuiltinLogsVolumeMount and replace with GenericVolumeMount
 type BuiltinLogsVolumeMount struct {
 	Name      string
 	MountPath string
@@ -257,17 +259,17 @@ func GetBuiltinLogsVolumeMounts(bkapp *paasv1alpha2.BkApp) ([]BuiltinLogsVolumeM
 
 	return []BuiltinLogsVolumeMount{
 		{
-			Name:      VOLUME_NAME_APP_LOGGING,
-			MountPath: VOLUME_MOUNT_APP_LOGGING_DIR,
+			Name:      VolumeNameAppLogging,
+			MountPath: VolumeMountAppLoggingDir,
 			Source: &corev1.HostPathVolumeSource{
-				Path: path.Join(VOLUME_HOST_PATH_APP_LOGGING_DIR, legacyLogPath),
+				Path: path.Join(VolumeHostPathAppLoggingDir, legacyLogPath),
 			},
 		},
 		{
-			Name:      MUL_MODULE_VOLUME_NAME_APP_LOGGING,
-			MountPath: MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR,
+			Name:      MulModuleVolumeNameAppLogging,
+			MountPath: MulModuleVolumeMountAppLoggingDir,
 			Source: &corev1.HostPathVolumeSource{
-				Path: path.Join(MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR, moduleLogPath),
+				Path: path.Join(MulModuleVolumeHostPathAppLoggingDir, moduleLogPath),
 			},
 		},
 	}, nil

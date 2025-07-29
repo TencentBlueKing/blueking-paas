@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package cmd provides some helper functions for cobra commands.
 package cmd
 
 import (

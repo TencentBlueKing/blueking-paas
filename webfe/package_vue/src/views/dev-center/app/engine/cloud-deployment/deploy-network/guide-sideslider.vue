@@ -11,10 +11,9 @@
         class="sideslider-content"
         slot="content"
       >
-        <!-- eslint-disable-next-line vue/no-v-html -->
         <div
           class="markdown-body"
-          v-html="markdownContent"
+          v-dompurify-html="markdownContent"
         />
         <app-description :doc="doc" />
       </div>

@@ -86,6 +86,7 @@ var _ = Describe("Test webserver api", func() {
 			writer := multipart.NewWriter(body)
 			part, _ := writer.CreateFormFile("file", filepath.Base(srcPath))
 			_, _ = io.Copy(part, file)
+			_ = writer.WriteField("env_vars", `{"ENV_VAR1":"value1","ENV_VAR2":"value2"}`)
 			_ = writer.Close()
 
 			w := httptest.NewRecorder()
@@ -96,6 +97,13 @@ var _ = Describe("Test webserver api", func() {
 			s.server.ServeHTTP(w, req)
 
 			Expect(w.Code).To(Equal(200))
+			select {
+			case event := <-s.ch:
+				Expect(event.EnvVars).To(HaveKeyWithValue("ENV_VAR1", "value1"))
+				Expect(event.EnvVars).To(HaveKeyWithValue("ENV_VAR2", "value2"))
+			default:
+				Fail("No event received")
+			}
 		})
 
 		It("get deploy result", func() {

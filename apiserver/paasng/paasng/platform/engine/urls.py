@@ -217,7 +217,7 @@ urlpatterns += [
         "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/custom/$",
         views.ConfigVarBuiltinViewSet.as_view(
             {
-                "get": "get_custom_envs",
+                "get": "get_custom_builtin_envs",
             }
         ),
         name="api.config_vars.builtin.custom",

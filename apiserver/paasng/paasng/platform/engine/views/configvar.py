@@ -305,7 +305,7 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         env_vars = list_vars_builtin_runtime(env, include_deprecated=False)
         return Response({obj.key: obj.description for obj in env_vars})
 
-    def get_custom_envs(self, request, code):
+    def get_custom_builtin_envs(self, request, code):
         # 获取平台管理内置环境变量
         env_vars = get_custom_builtin_config_vars()
         return Response(env_vars.get_data_map())

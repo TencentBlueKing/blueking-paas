@@ -379,7 +379,7 @@ def create_repo_with_platform_account(module: Module, repo_type: str, username: 
     source_type = get_sourcectl_type(repo_type)
     source_type_config = source_type.config_as_arguments()
 
-    if "repo_group" not in source_type_config:
+    if "repository_group" not in source_type_config:
         logger.error("repo_group is not found in source type config")
         raise error_codes.CANNOT_CREATE_APP.f(_("平台代码仓库组配置缺失"))
 

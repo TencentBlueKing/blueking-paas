@@ -19,7 +19,7 @@ import logging
 import os
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from paasng.platform.sourcectl.exceptions import BasicAuthError
 from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
@@ -56,7 +56,7 @@ class SvnRepoController:
         raise NotImplementedError
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
+    def list_all_repositories(cls, api_url: str, user_credentials: Dict) -> List[Repository]:
         """返回当前 RepoController 可以控制的所有仓库列表"""
         raise NotImplementedError
 

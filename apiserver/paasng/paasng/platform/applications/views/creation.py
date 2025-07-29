@@ -170,10 +170,15 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         # 由平台创建代码仓库
         auto_repo_url = None
         if src_cfg.get("auto_create_repo"):
-            if application.is_plugin_app:
-                auto_repo_url = create_repo_with_platform_account(module, repo_type, username)
-            else:
-                auto_repo_url = create_repo_with_user_account(module, repo_type, repo_name, username, repo_group)
+            try:
+                if application.is_plugin_app:
+                    auto_repo_url = create_repo_with_platform_account(module, repo_type, username)
+                else:
+                    auto_repo_url = create_repo_with_user_account(module, repo_type, repo_name, username, repo_group)
+            except Exception:
+                logger.exception("create repo failed")
+                raise error_codes.CREATE_APP_FAILED.f(_("创建代码仓库失败"))
+
             repo_url = auto_repo_url
 
         user_id = request.user.pk

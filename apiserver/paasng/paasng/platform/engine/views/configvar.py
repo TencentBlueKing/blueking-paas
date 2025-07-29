@@ -417,4 +417,5 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
                 PlainConfigVar(key="GLOBAL", value="example", environment_name="_global_", description="example"),
             ]
         )
-        return self.make_exported_vars_response(config_vars, "bk_paas3_config_vars_template.yaml")
+        file_content = config_vars.to_file_content()
+        return self.make_file_response(file_content, "bk_paas3_config_vars_template.yaml")

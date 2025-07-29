@@ -149,10 +149,10 @@ class UnifiedEnvVarsReader:
 
 def list_builtin_vars_with_override_flag(module: Module, env_var_groups: Dict[str, EnvVariableList]):
     """Automatically fetch all built-in variables and detect conflicts"""
+    app = module.application
     # Use a dict remove duplicated keys between different environments
     results = {}
 
-    app = module.application
     # Check all environments in the module and merge the results
     for group_name, env_vars in env_var_groups.items():
         for env in module.get_envs():

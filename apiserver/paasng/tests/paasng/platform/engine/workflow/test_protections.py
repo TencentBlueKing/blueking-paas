@@ -20,6 +20,7 @@ from unittest import mock
 
 import gitlab.exceptions
 import pytest
+from django.core.cache import cache
 from django_dynamic_fixture import G
 
 from paasng.accessories.publish.market.models import ApplicationExtraInfo, Product, Tag
@@ -57,6 +58,13 @@ def git_client(bk_module):
     ):
         get_backends.return_value = GitProject(name="baz", namespace="bar", type="dft_gitlab")
         yield client()
+
+
+@pytest.fixture()
+def clear_cache():
+    cache.clear()
+    yield
+    cache.clear()
 
 
 class TestProductInfoCondition:
@@ -216,7 +224,7 @@ class TestAppExtraInfoCondition:
 @pytest.mark.django_db(databases=["default", "workloads"])
 class TestOperatorVersionCondition:
     @pytest.mark.parametrize(
-        ("check_version", "api_server_version", "operator_version", "ok"),
+        ("check_version", "api_server_version", "operator_version", "expected"),
         [
             (False, "v1.0.0", "v1.0.0", True),
             (False, "v1.0.1", "v1.0.0", True),
@@ -224,7 +232,16 @@ class TestOperatorVersionCondition:
             (True, "v1.0.1", "v1.0.0", False),
         ],
     )
-    def test_validate(self, bk_user, bk_module, check_version, api_server_version, operator_version, ok):
+    def test_validate(
+        self,
+        bk_user,
+        bk_module,
+        clear_cache,
+        check_version,
+        api_server_version,
+        operator_version,
+        expected,
+    ):
         env = bk_module.get_envs("stag")
         fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version=operator_version))
         with (
@@ -237,7 +254,7 @@ class TestOperatorVersionCondition:
                 return_value=fake_release,
             ),
         ):
-            if ok:
+            if expected:
                 OperatorVersionCondition(bk_user, env).validate()
             else:
                 with pytest.raises(ConditionNotMatched) as exc_info:
@@ -338,6 +355,7 @@ class TestModuleEnvDeployInspector:
         bk_user,
         bk_module,
         git_client,
+        clear_cache,
         user_role,
         allowed_roles,
         create_token,

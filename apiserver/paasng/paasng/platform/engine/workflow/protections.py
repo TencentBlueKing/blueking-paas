@@ -180,8 +180,6 @@ class OperatorVersionCondition(DeployCondition):
         # apiserver 根据 Helm 构建时, 注入容器 env
         apiserver_version = settings.BKPAAS_APISERVER_VERSION
 
-        print("版本", settings.BKPAAS_APISERVER_VERSION, settings.BKPAAS_OPERATOR_VERSION_CHECK)
-
         # 仅在打开 检查开关的时候检查
         if not settings.BKPAAS_OPERATOR_VERSION_CHECK or not apiserver_version:
             return
@@ -199,11 +197,9 @@ class OperatorVersionCondition(DeployCondition):
                 # 只有版本一致时才缓存, 减少后续 helm 查询
                 # 缓存不主动过期, 当检测到版本不一致的时候会删除缓存
                 cache.set(cache_key, operator_version, None)
-        print("两者的版本", operator_version, operator_version)
 
         if operator_version != apiserver_version:
             # 版本不一致时, 主动清理缓存, 促使下次强制刷新
-            print("版本不一致", operator_version, operator_version)
             cache.delete(cache_key)
             message = _(
                 "apiserver 与 operator 版本不一致，apiserver 版本: {apiserver_version}，operator 版本: {operator_version}".format(

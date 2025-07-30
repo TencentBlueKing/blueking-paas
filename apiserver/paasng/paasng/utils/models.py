@@ -417,6 +417,11 @@ class RobustEncryptHandler(EncryptHandler):
             return cipher.encrypt(text)
 
 
+class _EncryptedString(UserString):
+    """A string that is encrypted, this type is used to distinguish between normal
+    strings and encrypted ones."""
+
+
 class RobustEncryptField(models.TextField):
     """相比原有的 EncryptField，有以下调整：
 
@@ -431,10 +436,6 @@ class RobustEncryptField(models.TextField):
         self.handler = RobustEncryptHandler(encrypt_cipher_type=encrypt_cipher_type, secret_key=secret_key)
 
     def get_prep_value(self, value):
-        class _EncryptedString(UserString):
-            """A string that is encrypted, this type is used to distinguish between normal
-            strings and encrypted ones."""
-
         if value is None:
             return value
         # 如果值已经是 EncryptedString 实例，则直接返回，避免重复触发加密逻辑

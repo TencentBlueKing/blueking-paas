@@ -92,7 +92,8 @@
   </div>
 </template>
 
-<script>import paasPluginTitle from '@/components/pass-plugin-title';
+<script>
+import paasPluginTitle from '@/components/pass-plugin-title';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import user from '@/components/user';
 import { quillEditor } from 'vue-quill-editor';
@@ -102,6 +103,7 @@ import 'quill/dist/quill.core.css';
 import 'quill/dist/quill.snow.css';
 import 'quill/dist/quill.bubble.css';
 import { cloneDeep } from 'lodash';
+import { filterRichText } from '@/utils/xss-filter.js';
 export default {
   components: {
     paasPluginTitle,
@@ -207,8 +209,11 @@ export default {
           pluginId: this.pluginId,
         };
         const res = await this.$store.dispatch('plugin/getMarketInfo', params);
-        this.form = res;
-        this.form.contact = (res.contact && res.contact.split(',')) || [];
+        this.form = {
+          ...res,
+          description: filterRichText(res.description),
+          contact: (res.contact && res.contact.split(',')) || [],
+        };
       } catch (e) {
         this.$bkMessage({
           theme: 'error',
@@ -226,6 +231,8 @@ export default {
         async () => {
           try {
             const data = cloneDeep(this.form);
+            // XSS 过滤处理
+            data.description = filterRichText(data.description);
             data.contact = data.contact.join(',');
             const params = {
               pdId: this.pdId,
@@ -250,7 +257,7 @@ export default {
         (validator) => {
           // 显示第一个出错位置
           console.warn(validator.content);
-        },
+        }
       );
     },
     goBack() {

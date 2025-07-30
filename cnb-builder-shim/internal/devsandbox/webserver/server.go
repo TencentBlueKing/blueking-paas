@@ -142,13 +142,18 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 	return func(c *gin.Context) {
 		envVarsJSON := c.PostForm("env_vars")
 		var envVars map[string]string
-		// 解析最新的环境变量
-		if err := json.Unmarshal([]byte(envVarsJSON), &envVars); err != nil {
-			c.JSON(
-				http.StatusBadRequest,
-				gin.H{"message": fmt.Sprintf("invalid env_vars format: %s", err.Error())},
-			)
-			return
+
+		if envVarsJSON == "" || envVarsJSON == "{}" {
+			envVars = make(map[string]string)
+		} else {
+			// env_vars 非空，解析最新的环境变量
+			if err := json.Unmarshal([]byte(envVarsJSON), &envVars); err != nil {
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"message": fmt.Sprintf("invalid env_vars format: %s", err.Error())},
+				)
+				return
+			}
 		}
 
 		var srcFilePath string

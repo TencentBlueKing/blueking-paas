@@ -76,34 +76,71 @@ var _ = Describe("Test webserver api", func() {
 	})
 
 	Describe("deploy", func() {
-		It("deploy app", func() {
-			srcPath := filepath.Join("service", "testdata", "helloworld.zip")
+		Context("deploy with env_vars", func() {
+			testCases := []struct {
+				name      string
+				envVars   string
+				expected  map[string]string
+				expectErr bool
+			}{
+				{
+					name:     "with valid env_vars",
+					envVars:  `{"ENV_VAR1":"value1","ENV_VAR2":"value2"}`,
+					expected: map[string]string{"ENV_VAR1": "value1", "ENV_VAR2": "value2"},
+				},
+				{
+					name:     "with empty env_vars string",
+					envVars:  "",
+					expected: map[string]string{},
+				},
+				{
+					name:     "with empty JSON object",
+					envVars:  "{}",
+					expected: map[string]string{},
+				},
+				{
+					name:      "with invalid JSON format",
+					envVars:   `{invalid:json}`,
+					expected:  nil,
+					expectErr: true,
+				},
+			}
 
-			file, _ := os.Open(srcPath)
-			defer file.Close()
+			for _, tc := range testCases {
+				tc := tc
+				It(tc.name, func() {
+					srcPath := filepath.Join("service", "testdata", "helloworld.zip")
+					file, err := os.Open(srcPath)
+					Expect(err).NotTo(HaveOccurred())
+					defer file.Close()
 
-			body := &bytes.Buffer{}
-			writer := multipart.NewWriter(body)
-			part, _ := writer.CreateFormFile("file", filepath.Base(srcPath))
-			_, _ = io.Copy(part, file)
-			_ = writer.WriteField("env_vars", `{"ENV_VAR1":"value1","ENV_VAR2":"value2"}`)
-			_ = writer.Close()
+					body := &bytes.Buffer{}
+					writer := multipart.NewWriter(body)
+					part, _ := writer.CreateFormFile("file", filepath.Base(srcPath))
+					_, _ = io.Copy(part, file)
+					_ = writer.WriteField("env_vars", tc.envVars)
+					_ = writer.Close()
 
-			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("POST", "/deploys", body)
-			req.Header.Set("Content-Type", writer.FormDataContentType())
-			req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+					w := httptest.NewRecorder()
+					req, _ := http.NewRequest("POST", "/deploys", body)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
 
-			s.server.ServeHTTP(w, req)
+					s.server.ServeHTTP(w, req)
 
-			Expect(w.Code).To(Equal(200))
+					if tc.expectErr {
+						Expect(w.Code).To(Equal(400))
+					} else {
+						Expect(w.Code).To(Equal(200))
 
-			select {
-			case event := <-s.ch:
-				Expect(event.EnvVars).To(HaveKeyWithValue("ENV_VAR1", "value1"))
-				Expect(event.EnvVars).To(HaveKeyWithValue("ENV_VAR2", "value2"))
-			default:
-				Fail("No event received")
+						select {
+						case event := <-s.ch:
+							Expect(event.EnvVars).To(Equal(tc.expected))
+						default:
+							Fail("No event received")
+						}
+					}
+				})
 			}
 		})
 
@@ -128,36 +165,6 @@ var _ = Describe("Test webserver api", func() {
 			s.server.ServeHTTP(w, req)
 
 			Expect(w.Code).To(Equal(401))
-		})
-
-		It("deploy app with empty env_vars string", func() {
-			srcPath := filepath.Join("service", "testdata", "helloworld.zip")
-			file, _ := os.Open(srcPath)
-			defer file.Close()
-
-			body := &bytes.Buffer{}
-			writer := multipart.NewWriter(body)
-			part, _ := writer.CreateFormFile("file", filepath.Base(srcPath))
-			_, _ = io.Copy(part, file)
-			// env_vars 为空
-			_ = writer.WriteField("env_vars", "")
-			_ = writer.Close()
-
-			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("POST", "/deploys", body)
-			req.Header.Set("Content-Type", writer.FormDataContentType())
-			req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
-
-			s.server.ServeHTTP(w, req)
-
-			Expect(w.Code).To(Equal(200))
-
-			select {
-			case event := <-s.ch:
-				Expect(event.EnvVars).To(BeEmpty())
-			default:
-				Fail("No event received")
-			}
 		})
 	})
 })

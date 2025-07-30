@@ -140,14 +140,10 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 // TODO 将本地源码部署的方式与请求传输源码文件的方式进行接口上的拆分
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		envVarsJSON := c.PostForm("env_vars")
-		var envVars map[string]string
-
-		if envVarsJSON == "" || envVarsJSON == "{}" {
-			envVars = make(map[string]string)
-		} else {
+		envVars := map[string]string{}
+		if raw := c.PostForm("env_vars"); raw != "" {
 			// env_vars 非空，解析最新的环境变量
-			if err := json.Unmarshal([]byte(envVarsJSON), &envVars); err != nil {
+			if err := json.Unmarshal([]byte(raw), &envVars); err != nil {
 				c.JSON(
 					http.StatusBadRequest,
 					gin.H{"message": fmt.Sprintf("invalid env_vars format: %s", err.Error())},

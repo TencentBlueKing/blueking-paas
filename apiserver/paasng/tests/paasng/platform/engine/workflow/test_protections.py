@@ -23,6 +23,7 @@ import pytest
 from django.core.cache import cache
 from django_dynamic_fixture import G
 
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.market.models import ApplicationExtraInfo, Product, Tag
 from paasng.bk_plugins.bk_plugins.models import BkPluginTag
 from paasng.core.core.protections.exceptions import ConditionNotMatched
@@ -45,7 +46,7 @@ from paasng.platform.sourcectl.models import GitProject
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
 from tests.utils.helpers import override_settings
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.fixture()
@@ -61,10 +62,13 @@ def git_client(bk_module):
 
 
 @pytest.fixture()
-def clear_cache():
-    cache.clear()
+def clear_cache(bk_module):
+    """A fixture used to clear cache key in OperatorVersionCondition"""
+    cluster_name = EnvClusterService(bk_module.get_envs("prod")).get_cluster_name()
+    key = f"helm_release:{cluster_name}:operator_version"
+    cache.delete(key)
     yield
-    cache.clear()
+    cache.delete(key)
 
 
 class TestProductInfoCondition:
@@ -221,7 +225,6 @@ class TestAppExtraInfoCondition:
             assert exc_info.value.action_name == DeployConditions.FILL_EXTRA_INFO.value
 
 
-@pytest.mark.django_db(databases=["default", "workloads"])
 class TestOperatorVersionCondition:
     @pytest.mark.parametrize(
         ("check_version", "api_server_version", "operator_version", "expected"),
@@ -263,7 +266,6 @@ class TestOperatorVersionCondition:
                 assert exc_info.value.action_name == DeployConditions.CHECK_OPERATOR_VERSION.value
 
 
-@pytest.mark.django_db(databases=["default", "workloads"])
 class TestModuleEnvDeployInspector:
     @pytest.mark.parametrize(
         (

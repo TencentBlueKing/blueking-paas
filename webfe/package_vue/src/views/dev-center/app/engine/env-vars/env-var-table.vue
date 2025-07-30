@@ -103,8 +103,8 @@
             <bk-form-item
               v-else
               :property="`varList.${$index}.value`"
-              :rules="rules.value"
-              ext-cls="var-value-form-item"
+              :rules="getValueRules($index)"
+              :icon-offset="varList[$index].is_sensitive && !varList[$index].isNew ? 28 : 8"
             >
               <div class="input-wrapper">
                 <bk-input
@@ -113,7 +113,7 @@
                   :password-icon="[]"
                   type="text"
                   :ext-cls="row.value === ENCRYPTED_PLACEHOLDER ? 'encrypted-input' : ''"
-                  @input="(value, event) => handleValueInput(row, event, value)"
+                  @focus="handleValueFocus(row)"
                   @keydown="(value, event) => handleKeyDown(`descriptionInput${$index}`, event)"
                 ></bk-input>
                 <i
@@ -288,18 +288,6 @@ export default {
       // 批量编辑模式
       isBatchEditing: false,
       rules: {
-        value: [
-          {
-            required: true,
-            message: this.$t('VALUE是必填项'),
-            trigger: 'blur',
-          },
-          {
-            max: 2048,
-            message: this.$t('不能超过2048个字符'),
-            trigger: 'blur',
-          },
-        ],
         description: [
           {
             max: 200,
@@ -378,6 +366,25 @@ export default {
       return baseRules;
     },
 
+    // 动态生成value的校验规则
+    getValueRules(index) {
+      const currentRow = this.formData.varList[index];
+      const isSensitiveAndNotNew = currentRow?.is_sensitive && !currentRow?.isNew;
+      const baseRules = [
+        {
+          required: true,
+          message: this.$t('VALUE是必填项'),
+          trigger: isSensitiveAndNotNew ? 'change' : 'blur',
+        },
+        {
+          max: 2048,
+          message: this.$t('不能超过2048个字符'),
+          trigger: 'blur',
+        },
+      ];
+      return baseRules;
+    },
+
     // 校验KEY是否重复
     validateDuplicateKey(value, index) {
       if (!value) return true;
@@ -408,12 +415,9 @@ export default {
       this.formData.varList = [...this.filteredVarList];
     },
 
-    // 处理输入事件，特殊按钮清空输入框
-    handleValueInput(row, event) {
-      if (!row.is_sensitive || row.isNew) {
-        return;
-      }
-      if (row.value.startsWith(this.ENCRYPTED_PLACEHOLDER.substring(0, 5))) {
+    // 聚焦后清空加密占位符
+    handleValueFocus(row) {
+      if (row.is_sensitive && !row.isNew && row.value === this.ENCRYPTED_PLACEHOLDER) {
         row.value = '';
       }
     },
@@ -690,7 +694,7 @@ export default {
       }
       i.paasng-undo {
         position: absolute;
-        right: 10px;
+        right: 8px;
         top: 50%;
         transform: translateY(-50%);
         font-size: 16px;
@@ -701,9 +705,6 @@ export default {
           color: #3a84ff;
         }
       }
-    }
-    .var-value-form-item.is-error .input-wrapper i.paasng-undo {
-      right: 28px;
     }
     .key-wrapper {
       display: flex;

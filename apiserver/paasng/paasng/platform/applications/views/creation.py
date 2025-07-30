@@ -65,6 +65,7 @@ from paasng.platform.modules.manager import (
     delete_repo_on_error,
     init_module_in_view,
 )
+from paasng.platform.sourcectl.exceptions import AccessTokenError, AccessTokenForbidden, RepoNameConflict
 from paasng.platform.templates.models import Template
 from paasng.utils.error_codes import error_codes
 
@@ -176,6 +177,13 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
                     auto_repo_url = create_repo_with_platform_account(module, repo_type, username)
                 else:
                     auto_repo_url = create_repo_with_user_account(module, repo_type, repo_name, username, repo_group)
+            except (AccessTokenError, AccessTokenForbidden):
+                # 前端需要根据这个 error_code，在错误信息中添加操作指引
+                raise error_codes.REPO_ACCESS_TOKEN_ERROR.f(
+                    _("您没有权限操作该代码仓库，请在“代码库管理”页面确认您的授权信息。")
+                )
+            except RepoNameConflict:
+                raise error_codes.CREATE_APP_FAILED.f(_("仓库名称已存在"))
             except Exception:
                 logger.exception("create repo failed")
                 raise error_codes.CREATE_APP_FAILED.f(_("创建代码仓库失败"))

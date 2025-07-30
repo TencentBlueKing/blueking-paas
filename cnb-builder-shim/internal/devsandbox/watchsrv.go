@@ -39,7 +39,7 @@ type AppReloadEvent struct {
 	Rebuild bool
 	// 是否重启应用
 	Relaunch bool
-	// 最新注入的环境变量
+	// 自定义环境变量
 	EnvVars map[string]string
 }
 

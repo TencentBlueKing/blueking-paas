@@ -96,7 +96,7 @@ func (m HotReloadManager) Relaunch(reloadID string, envVars map[string]string) e
 	cmd := phase.MakeLauncherCmd(reloadSubCommand)
 
 	if len(envVars) > 0 {
-		// 传入的 env_vars 非空，使用最新传入的全量环境变量
+		// 传入的 env_vars 非空，使用传入的自定义环境变量
 		newEnv := make([]string, 0, len(envVars))
 		for key, value := range envVars {
 			newEnv = append(newEnv, key+"="+value)

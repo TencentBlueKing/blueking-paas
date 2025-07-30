@@ -142,7 +142,7 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 	return func(c *gin.Context) {
 		envVars := map[string]string{}
 		if raw := c.PostForm("env_vars"); raw != "" {
-			// env_vars 非空，解析最新的环境变量
+			// env_vars 非空，解析自定义环境变量
 			if err := json.Unmarshal([]byte(raw), &envVars); err != nil {
 				c.JSON(
 					http.StatusBadRequest,

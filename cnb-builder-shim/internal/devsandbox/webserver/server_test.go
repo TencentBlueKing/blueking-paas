@@ -129,5 +129,35 @@ var _ = Describe("Test webserver api", func() {
 
 			Expect(w.Code).To(Equal(401))
 		})
+
+		It("deploy app with empty env_vars string", func() {
+			srcPath := filepath.Join("service", "testdata", "helloworld.zip")
+			file, _ := os.Open(srcPath)
+			defer file.Close()
+
+			body := &bytes.Buffer{}
+			writer := multipart.NewWriter(body)
+			part, _ := writer.CreateFormFile("file", filepath.Base(srcPath))
+			_, _ = io.Copy(part, file)
+			// env_vars 为空
+			_ = writer.WriteField("env_vars", "")
+			_ = writer.Close()
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("POST", "/deploys", body)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+			req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+
+			s.server.ServeHTTP(w, req)
+
+			Expect(w.Code).To(Equal(200))
+
+			select {
+			case event := <-s.ch:
+				Expect(event.EnvVars).To(BeEmpty())
+			default:
+				Fail("No event received")
+			}
+		})
 	})
 })

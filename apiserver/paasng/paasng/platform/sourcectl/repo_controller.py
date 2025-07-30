@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from bkpaas_auth.core.encoder import ProviderType, user_id_encoder
+from cattr import unstructure
 from typing_extensions import Protocol
 
 from paasng.infras.accounts.models import Oauth2TokenHolder, PrivateTokenHolder, UserProfile
@@ -226,4 +227,4 @@ def list_git_repositories(source_control_type: str, user_id: str) -> List[Reposi
     user_credentials = get_oauth_credentials(source_control_type, user_id)
     type_spec = get_sourcectl_type(source_control_type)
     repo_info = type_spec.config_as_arguments()
-    return cls.list_all_repositories(api_url=repo_info["api_url"], user_credentials=user_credentials.to_dict())
+    return cls.list_all_repositories(api_url=repo_info["api_url"], user_credentials=unstructure(user_credentials))

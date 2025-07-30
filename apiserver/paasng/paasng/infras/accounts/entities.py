@@ -22,13 +22,3 @@ class OauthCredential:
 
     oauth_token: str
     scope_list: List
-
-    def to_dict(self) -> dict:
-        """将对象转换为字典格式
-
-        :return: 包含凭证信息的字典，格式为 {
-            'oauth_token': 'xxx',
-            'scope_list': ['scope1', 'scope2']
-        }
-        """
-        return {"oauth_token": self.oauth_token, "scope_list": self.scope_list}

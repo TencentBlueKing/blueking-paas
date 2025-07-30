@@ -14,9 +14,9 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
 from typing import Dict, List, Optional
 
+from cattr import unstructure
 from typing_extensions import Protocol
 
 from paasng.infras.accounts.utils import OauthCredential, get_oauth_credentials
@@ -91,7 +91,7 @@ class BaseGitProvisioner:
         if "api_url" not in source_config:
             raise ValueError("Require api_url to init GitRepoController")
 
-        return cls(api_url=source_config["api_url"], user_credentials=oauth_credential.to_dict())
+        return cls(api_url=source_config["api_url"], user_credentials=unstructure(oauth_credential))
 
 
 def list_all_owned_groups(source_type: str, user_id: str) -> List[GitGroup]:
@@ -107,4 +107,4 @@ def list_all_owned_groups(source_type: str, user_id: str) -> List[GitGroup]:
     user_credentials = get_oauth_credentials(source_type, user_id)
     type_spec = get_sourcectl_type(source_type)
     source_config = type_spec.config_as_arguments()
-    return repo_provisioner_class.list_owned_groups(source_config["api_url"], user_credentials.to_dict())
+    return repo_provisioner_class.list_owned_groups(source_config["api_url"], unstructure(user_credentials))

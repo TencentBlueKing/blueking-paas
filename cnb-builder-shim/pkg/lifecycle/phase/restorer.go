@@ -43,7 +43,6 @@ func MakeRestorerStep(
 		"-gid", fmt.Sprintf("%d", gid),
 	}
 	if useDaemon {
-		args = append(args, "-daemon")
 		opts = append(opts, WithRoot())
 	} else {
 		opts = append(opts, WithUser(uid, gid))

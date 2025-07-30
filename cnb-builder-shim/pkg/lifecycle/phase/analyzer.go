@@ -34,6 +34,8 @@ func MakeAnalyzerStep(
 	uid, gid uint32,
 ) Step {
 	var opts []CmdOptsProvider
+
+	// see analyzer command args: https://github.com/buildpacks/spec/blob/platform/v0.11/platform.md#analyzer
 	args := []string{
 		"-analyzed", analyzedPath,
 		"-layers", layersDir,
@@ -54,5 +56,4 @@ func MakeAnalyzerStep(
 	args = append(args, outputImage)
 	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "analyzer"), args...)
 	return makeStep("Analyze", "Analyzing optimization plan...", cmd, opts...)
-
 }

@@ -764,18 +764,19 @@ class ConfigVarBuiltinFormatSLZ(serializers.Serializer):
     """Serializer for Builtin ConfigVar"""
 
     key = serializers.CharField(help_text="内置环境变量 key")
+    value = serializers.CharField(help_text="内置环境变量值")
     description = serializers.CharField(help_text="内置环境变量描述")
     override_conflicted = serializers.BooleanField(help_text="冲突发生后, 该 key 是否会被覆盖")
 
-
-class ConfigVarBuiltinWithValueFormatSLZ(ConfigVarBuiltinFormatSLZ):
-    """Serializer for Builtin ConfigVar with value"""
-
-    value = serializers.CharField(help_text="内置环境变量值")
+    def to_representation(self, instance) -> dict:
+        # BKPAAS_APP_SECRET 蓝鲸应用密钥脱敏处理
+        ret = super().to_representation(instance)
+        if ret["key"] == "BKPAAS_APP_SECRET":
+            ret["value"] = MASKED_CONTENT
+            ret["description"] = _("蓝鲸应用密钥, 已脱敏处理")
+        return ret
 
 
 class ListConfigVarBuiltinOutputSLZ(serializers.Serializer):
-    app_basic_vars = ConfigVarBuiltinFormatSLZ(many=True)
-    bk_platform_vars = ConfigVarBuiltinWithValueFormatSLZ(many=True)
-    runtime_vars = ConfigVarBuiltinFormatSLZ(many=True)
-    custom_vars = ConfigVarBuiltinWithValueFormatSLZ(many=True)
+    stag = ConfigVarBuiltinFormatSLZ(many=True)
+    prod = ConfigVarBuiltinFormatSLZ(many=True)

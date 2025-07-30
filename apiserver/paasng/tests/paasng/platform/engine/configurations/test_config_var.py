@@ -33,7 +33,6 @@ from paasng.platform.engine.configurations.config_var import (
     get_builtin_env_variables,
     get_env_variables,
     list_builtin_vars_with_override_flag,
-    list_vars_builtin_app_basic,
     list_vars_builtin_runtime,
 )
 from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
@@ -229,19 +228,20 @@ class Test__list_builtin_vars_with_override_flag:
         ("app_type", "expected_override_conflicted"),
         [(ApplicationType.DEFAULT, True), (ApplicationType.CLOUD_NATIVE, False)],
     )
-    def test_list_builtin_vars_with_override_flag(self, bk_module, app_type, expected_override_conflicted):
+    def test_list_builtin_vars_with_override_flag(
+        self, bk_module, bk_stag_env, app_type, expected_override_conflicted
+    ):
         bk_module.application.type = app_type
         bk_module.application.save(update_fields=["type"])
-        # 因为 list_vars_builtin_app_basic 列出的 EnvVariableList 属于 EnvVarSource.BUILTIN_MISC
+        # 因为 list_vars_builtin_runtime 列出的 EnvVariableList 属于 EnvVarSource.BUILTIN_MISC
         # 在 云原生应用 中会将 override_conflicted 修改为 False
         # 在 非云原生应用 中 override_conflicted 为 True
-        env_var_groups = {"test_group": list_vars_builtin_app_basic(bk_module.application, include_deprecated=False)}
-        result = list_builtin_vars_with_override_flag(bk_module, env_var_groups)
-        assert "test_group" in result
-        assert isinstance(result["test_group"], list)
+        env_vars = list_vars_builtin_runtime(bk_stag_env, include_deprecated=False)
+        result = list_builtin_vars_with_override_flag(bk_stag_env, env_vars)
+        assert isinstance(result, list)
         assert any(
             "override_conflicted" in item and item["override_conflicted"] is expected_override_conflicted
-            for item in result["test_group"]
+            for item in result
         )
 
 

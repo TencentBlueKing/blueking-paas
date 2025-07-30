@@ -27,15 +27,10 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
-from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import (
-    get_custom_builtin_config_vars,
+    get_builtin_env_variables,
     list_builtin_vars_with_override_flag,
-    list_vars_builtin_app_basic,
-    list_vars_builtin_plat_addrs,
-    list_vars_builtin_region,
-    list_vars_builtin_runtime,
 )
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models import ConfigVar
@@ -326,35 +321,15 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     def get_builtin_envs(self, request, code, module_name):
         """获取内置环境变量"""
-
-        application = self.get_application()
         module = self.get_module_via_path()
 
-        # 获取应用基础内置环境变量
-        app_basic_vars = list_vars_builtin_app_basic(application, include_deprecated=False)
+        result = {}
+        for env in module.get_envs():
+            env_vars = get_builtin_env_variables(env.get_engine_app())
+            builtin_vars_with_conflicted = list_builtin_vars_with_override_flag(env, env_vars)
+            result[env.environment] = builtin_vars_with_conflicted
 
-        # 获取平台相关的内置环境变量
-        bk_address_envs = list_vars_builtin_plat_addrs()
-        # 默认展示正式环境的环境变量
-        region_and_env_envs = list_vars_builtin_region(application.region, AppEnvironment.PRODUCTION.value)
-
-        # 获取运行时相关的内置环境变量
-        env = application.default_module.get_envs(AppEnvironment.PRODUCTION)
-        runtime_vars = list_vars_builtin_runtime(env, include_deprecated=False)
-
-        # 获取自定义的平台内置变量
-        custom_vars = get_custom_builtin_config_vars()
-
-        env_var_groups = {
-            "app_basic_vars": app_basic_vars,
-            "bk_platform_vars": bk_address_envs + region_and_env_envs,
-            "runtime_vars": runtime_vars,
-            "custom_vars": custom_vars,
-        }
-
-        built_vars_with_conflicted = list_builtin_vars_with_override_flag(module, env_var_groups)
-
-        return Response(ListConfigVarBuiltinOutputSLZ(built_vars_with_conflicted).data)
+        return Response(ListConfigVarBuiltinOutputSLZ(result).data)
 
 
 class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

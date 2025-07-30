@@ -35,7 +35,6 @@ from paasng.platform.engine.configurations.env_var.entities import EnvVariableLi
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
-from paasng.platform.modules.models import Module
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
@@ -146,35 +145,27 @@ class UnifiedEnvVarsReader:
         return sorted(result_dict.values(), key=lambda x: x["key"])
 
 
-def list_builtin_vars_with_override_flag(
-    module: Module, env_var_groups: Dict[str, EnvVariableList]
-) -> Dict[str, list[dict]]:
-    """Automatically fetch all built-in variables and detect conflicts"""
-    app = module.application
+def list_builtin_vars_with_override_flag(env: ModuleEnvironment, env_vars: EnvVariableList) -> list[dict]:
+    """Get a list of built-in environment variables with override conflict flag."""
+    app = env.application
     # Use a dict remove duplicated keys between different environments
-    results = {}
-
-    # Check all environments in the module and merge the results
-    for group_name, env_vars in env_var_groups.items():
-        vars_with_flag = []
-        for env in module.get_envs():
-            if app.type == ApplicationType.CLOUD_NATIVE:
-                vars_with_flag = UnifiedEnvVarsReader(env).get_builtin_vars_override_conflicted_flag(
-                    env_vars,
-                    # Exclude some sources because cloud-native apps does use them directly,
-                    # see `apply_builtin_env_vars()` for more details.
-                    exclude_sources=[
-                        EnvVarSource.BUILTIN_SVC_DISC,
-                        EnvVarSource.BUILTIN_BLOBSTORE,
-                    ],
-                )
-                # Any conflicted keys should not take effect because the special mechanism used for cloud-native apps
-                for item in vars_with_flag:
-                    item["override_conflicted"] = False
-            else:
-                vars_with_flag = UnifiedEnvVarsReader(env).get_builtin_vars_override_conflicted_flag(env_vars)
-        results[group_name] = vars_with_flag
-    return results
+    vars_with_flag = []
+    if app.type == ApplicationType.CLOUD_NATIVE:
+        vars_with_flag = UnifiedEnvVarsReader(env).get_builtin_vars_override_conflicted_flag(
+            env_vars,
+            # Exclude some sources because cloud-native apps does use them directly,
+            # see `apply_builtin_env_vars()` for more details.
+            exclude_sources=[
+                EnvVarSource.BUILTIN_SVC_DISC,
+                EnvVarSource.BUILTIN_BLOBSTORE,
+            ],
+        )
+        # Any conflicted keys should not take effect because the special mechanism used for cloud-native apps
+        for item in vars_with_flag:
+            item["override_conflicted"] = False
+    else:
+        vars_with_flag = UnifiedEnvVarsReader(env).get_builtin_vars_override_conflicted_flag(env_vars)
+    return vars_with_flag
 
 
 def sys_var(key: str, value: str, description: str | None) -> EnvVariableObj:
@@ -329,7 +320,7 @@ def get_builtin_env_variables(engine_app: "EngineApp") -> EnvVariableList:
     # 蓝鲸文档地址前缀
     result.append(EnvVariableObj(key="BK_DOCS_URL_PREFIX", value=get_bk_doc_url_prefix(), description=""))
 
-    # admin42 中自定义的环境变量
+    # 平台管理中自定义的环境变量
     custom_sys_envs = get_custom_builtin_config_vars()
     # 如果自定义的系统内置变量有冲突，打印出来
     custom_sys_kv, result_kv = custom_sys_envs.kv_map, result.kv_map

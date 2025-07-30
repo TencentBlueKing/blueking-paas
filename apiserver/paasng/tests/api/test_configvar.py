@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import pytest
-from django.urls import reverse
 
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 
@@ -26,44 +25,34 @@ pytestmark = pytest.mark.django_db
 @pytest.mark.usefixtures("_with_wl_apps")
 @pytest.mark.django_db(databases=["default", "workloads"])
 class TestConfigVarBuiltinViewSet:
-    def test_get_builtin_envs_with_single_custom_var(self, api_client, bk_app):
-        """测试返回单个平台内置环境变量"""
-        BuiltinConfigVar.objects.create(key="CUSTOM_VAR", value="value", description="自定义内置变量")
+    def test_get_builtin_envs(self, api_client, bk_app, bk_module):
+        """测试返回内置环境变量"""
 
-        url = reverse("api.config_vars.builtin", kwargs={"code": bk_app.code})
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/builtin/"
         response = api_client.get(url)
 
         assert response.status_code == 200
         data = response.json()
 
-        assert len(data["custom_vars"]) == 1
-        item = data["custom_vars"][0]
-        assert item["key"] == "BKPAAS_CUSTOM_VAR"
-        assert item["value"] == "value"
-        assert item["description"] == "自定义内置变量"
+        assert len(data) == 2
+        assert isinstance(data["stag"], list)
+        assert isinstance(data["prod"], list)
 
-    def test_get_builtin_envs_with_multiple_custom_vars(self, api_client, bk_app):
-        """测试返回多个平台内置环境变量"""
-        BuiltinConfigVar.objects.create(key="CUSTOM_VAR_1", value="value1", description="自定义内置变量1")
+    def test_get_builtin_envs_with_custom_vars(self, api_client, bk_app, bk_module):
+        """测试平台管理自定义内置环境变量覆盖原有内置环境变量"""
+        # 测试 BKPAAS_MULTI_TENANT_MODE, 原有内置环境值为 False
+        # 因为 BKPAAS_ 前缀默认添加, 在数据库中不存储该前缀
+        BuiltinConfigVar.objects.create(key="MULTI_TENANT_MODE", value="value1", description="自定义内置变量1")
         BuiltinConfigVar.objects.create(key="CUSTOM_VAR_2", value="value2", description="自定义内置变量2")
-        BuiltinConfigVar.objects.create(key="CUSTOM_VAR_3", value="value3", description="自定义内置变量3")
 
-        url = reverse("api.config_vars.builtin", kwargs={"code": bk_app.code})
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/builtin/"
         response = api_client.get(url)
 
         assert response.status_code == 200
         data = response.json()
 
-        assert len(data["custom_vars"]) == 3
-
-    def test_get_builtin_envs_with_no_custom_data(self, api_client, bk_app):
-        """测试没有平台内置环境变量时的返回结果"""
-        BuiltinConfigVar.objects.all().delete()
-
-        url = reverse("api.config_vars.builtin", kwargs={"code": bk_app.code})
-        response = api_client.get(url)
-
-        assert response.status_code == 200
-        data = response.json()
-
-        assert len(data["custom_vars"]) == 0
+        for env in ["stag", "prod"]:
+            env_vars = data[env]
+            mt_var = next((item for item in env_vars if item["key"] == "BKPAAS_MULTI_TENANT_MODE"))
+            assert mt_var is not None
+            assert mt_var["value"] == "value1"

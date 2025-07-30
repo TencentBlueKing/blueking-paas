@@ -19,7 +19,7 @@ from typing import Dict, List, Optional
 
 from typing_extensions import Protocol
 
-from paasng.infras.accounts.utils import get_oauth_credentials
+from paasng.infras.accounts.utils import OauthCredential, get_oauth_credentials
 from paasng.platform.sourcectl.models import GitGroup
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 
@@ -37,12 +37,11 @@ class RepoProvisioner(Protocol):
         raise NotImplementedError
 
     @classmethod
-    def init_by_user(cls, source_type: str, user_id: str):
+    def init_by_user(cls, source_type: str, oauth_credential: OauthCredential):
         """Return a RepoController object from user's authorization credentials
 
         :param source_type: Code repository type, such as github
-        :param repo_url: repository url
-        :param user_id: current operator's user_id
+        :param oauth_credential: user's oauth credential
         """
         raise NotImplementedError
 
@@ -82,18 +81,17 @@ class BaseGitProvisioner:
         return cls(api_url=source_config["api_url"], user_credentials=user_credentials)
 
     @classmethod
-    def init_by_user(cls, source_type: str, user_id: str):
+    def init_by_user(cls, source_type: str, oauth_credential: OauthCredential):
         """Return a RepoController object from user's authorization credentials
 
         :param source_type: Code repository type, such as github
-        :param user_id: current operator's user_id
+        :param oauth_credential: user's oauth credential
         """
         source_config = get_sourcectl_type(source_type).config_as_arguments()
         if "api_url" not in source_config:
             raise ValueError("Require api_url to init GitRepoController")
 
-        user_credentials = get_oauth_credentials(source_type, user_id)
-        return cls(api_url=source_config["api_url"], user_credentials=user_credentials)
+        return cls(api_url=source_config["api_url"], user_credentials=oauth_credential.to_dict())
 
 
 def list_all_owned_groups(source_type: str, user_id: str) -> List[GitGroup]:
@@ -109,4 +107,4 @@ def list_all_owned_groups(source_type: str, user_id: str) -> List[GitGroup]:
     user_credentials = get_oauth_credentials(source_type, user_id)
     type_spec = get_sourcectl_type(source_type)
     source_config = type_spec.config_as_arguments()
-    return repo_provisioner_class.list_owned_groups(source_config["api_url"], user_credentials)
+    return repo_provisioner_class.list_owned_groups(source_config["api_url"], user_credentials.to_dict())

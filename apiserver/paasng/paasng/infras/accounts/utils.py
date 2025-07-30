@@ -15,15 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Any, Dict, Set, Type
+from typing import Set, Type
 
 from bkpaas_auth import get_user_by_user_id
 from django.conf import settings
 
+from paasng.infras.accounts.entities import OauthCredential
 from paasng.infras.accounts.models import Oauth2TokenHolder, UserProfile
 from paasng.infras.accounts.oauth.backends import get_bkapp_oauth_backend_cls
 from paasng.infras.oauth2.utils import get_oauth2_client_secret
 from paasng.platform.applications.models import Application
+from paasng.platform.sourcectl.models import GitProject
 
 
 def get_user_avatar(username):
@@ -72,7 +74,7 @@ def create_app_oauth_backend(application: Application, env_name: str = settings.
     )
 
 
-def get_oauth_credentials(source_control_type: str, user_id: str) -> Dict[str, Any]:
+def get_oauth_credentials(source_control_type: str, user_id: str) -> OauthCredential:
     """获取用户的OAuth凭证用于访问代码仓库
 
     :param source_control_type: 源码控制类型，如 gitlab
@@ -85,7 +87,46 @@ def get_oauth_credentials(source_control_type: str, user_id: str) -> Dict[str, A
 
     # 使用第一个 token_holder 的 access_token
     token_holder = token_holder_list[0]
-    return {
-        "oauth_token": token_holder.access_token,
-        "scope_list": [th.get_scope() for th in token_holder_list],
-    }
+    return OauthCredential(
+        oauth_token=token_holder.access_token, scope_list=[th.get_scope() for th in token_holder_list]
+    )
+
+
+def get_oauth_credential_by_repo(source_type: str, repo_url: str, user_id: str) -> OauthCredential:
+    """根据仓库地址获取对应的 OAuth 凭证
+
+    :param source_type: 源码仓库类型
+    :param repo_url: 仓库地址
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
+    """
+    project = GitProject.parse_from_repo_url(repo_url, sourcectl_type=source_type)
+    try:
+        profile = UserProfile.objects.get(user=user_id)
+    except UserProfile.DoesNotExist:
+        raise Oauth2TokenHolder.DoesNotExist
+
+    try:
+        token_holder = profile.token_holder.get_by_project(project)
+    except Oauth2TokenHolder.DoesNotExist:
+        raise Oauth2TokenHolder.DoesNotExist
+
+    return OauthCredential(token_holder.access_token, [token_holder.get_scope()])
+
+
+def get_oauth_credential_by_user(source_type: str, user_id: str) -> OauthCredential:
+    """根据用户 ID 获取用户级别的 OAuth 凭证
+
+    :param source_type: 源码仓库类型
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
+    """
+    try:
+        profile = UserProfile.objects.get(user=user_id)
+    except UserProfile.DoesNotExist:
+        raise Oauth2TokenHolder.DoesNotExist
+
+    try:
+        token_holder = profile.token_holder.filter_user_scope(source_type)
+    except Oauth2TokenHolder.DoesNotExist:
+        raise Oauth2TokenHolder.DoesNotExist
+
+    return OauthCredential(token_holder.access_token, [token_holder.get_scope()])

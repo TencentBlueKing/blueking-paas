@@ -34,6 +34,8 @@ func MakeRestorerStep(
 	uid, gid uint32,
 ) Step {
 	var opts []CmdOptsProvider
+
+	// see restorer command args: https://github.com/buildpacks/spec/blob/platform/v0.11/platform.md#restorer
 	args := []string{
 		"-cache-image", cacheImage,
 		"-group", groupPath,

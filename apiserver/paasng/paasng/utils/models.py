@@ -24,7 +24,6 @@ import uuid
 import logging
 from dataclasses import dataclass
 from typing import Any, Optional, Type, TypeVar
-from collections import UserString
 from typing import Optional
 from django.db import models
 from blue_krill.encrypt.handler import EncryptHandler
@@ -417,7 +416,7 @@ class RobustEncryptHandler(EncryptHandler):
             return cipher.encrypt(text)
 
 
-class _EncryptedString(UserString):
+class _EncryptedString(str):
     """A string that is encrypted, this type is used to distinguish between normal
     strings and encrypted ones."""
 

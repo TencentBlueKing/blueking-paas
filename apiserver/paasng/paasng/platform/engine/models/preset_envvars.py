@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from blue_krill.models.fields import EncryptField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -23,6 +22,7 @@ from paas_wl.utils.models import AuditedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.modules.models import Module
+from paasng.utils.models import RobustEncryptField
 
 
 class PresetEnvVariable(AuditedModel):
@@ -33,7 +33,7 @@ class PresetEnvVariable(AuditedModel):
         verbose_name=_("环境名称"), choices=ConfigVarEnvName.get_choices(), max_length=16
     )
     key = models.CharField(max_length=128, null=False)
-    value = EncryptField(null=False)
+    value = RobustEncryptField(null=False)
     description = models.CharField(verbose_name=_("变量描述"), max_length=200, blank=True, null=True)
 
     tenant_id = tenant_id_field_factory()

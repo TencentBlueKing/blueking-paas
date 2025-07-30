@@ -113,7 +113,6 @@
                   :password-icon="[]"
                   type="text"
                   :ext-cls="row.value === ENCRYPTED_PLACEHOLDER ? 'encrypted-input' : ''"
-                  @focus="handleValueFocus(row)"
                   @input="(value, event) => handleValueInput(row, event, value)"
                   @keydown="(value, event) => handleKeyDown(`descriptionInput${$index}`, event)"
                 ></bk-input>
@@ -409,17 +408,12 @@ export default {
       this.formData.varList = [...this.filteredVarList];
     },
 
-    // 聚焦时显示 tip
-    handleValueFocus() {
-      this.$refs['valuePopover'].showHandler();
-    },
-
     // 处理输入事件，特殊按钮清空输入框
     handleValueInput(row, event) {
       if (!row.is_sensitive || row.isNew) {
         return;
       }
-      if (row.value.startsWith(this.ENCRYPTED_PLACEHOLDER) || ['deleteContentBackward'].includes(event.inputType)) {
+      if (row.value.startsWith(this.ENCRYPTED_PLACEHOLDER.substring(0, 5))) {
         row.value = '';
       }
     },
@@ -523,6 +517,7 @@ export default {
       }
       return {
         ...cleanData,
+        is_sensitive,
       };
     },
 

@@ -46,6 +46,15 @@ class ComponentManager:
                 }
         return components
 
+    def validate_properties(self, component_type: str, version: str, properties: Dict[str, Any] | None):
+        """验证组件参数"""
+        schema = self._get_component_schema(component_type, version)
+        if properties is not None:
+            try:
+                jsonschema_validate(instance=properties, schema=schema)
+            except SchemaValidationError as e:
+                raise ComponentPropertiesInvalid(f"component {component_type}:{version} properties invalid") from e
+
     def _get_component_schema(self, component_type: str, version: str) -> Dict:
         """获取组件 schema"""
         schema_file = self._get_component_file(component_type, version, "schema.json")
@@ -55,15 +64,6 @@ class ComponentManager:
         """获取组件说明文档"""
         doc_file = self._get_component_file(component_type, version, "docs.md")
         return doc_file.read_text()
-
-    def validate_properties(self, component_type: str, version: str, properties: Dict[str, Any] | None):
-        """验证组件参数"""
-        schema = self._get_component_schema(component_type, version)
-        if properties is not None:
-            try:
-                jsonschema_validate(instance=properties, schema=schema)
-            except SchemaValidationError as e:
-                raise ComponentPropertiesInvalid(f"component {component_type}:{version} properties invalid") from e
 
     def _get_component_file(self, component_type: str, version: str, filename: str) -> Path:
         """获取组件文件路径并验证"""

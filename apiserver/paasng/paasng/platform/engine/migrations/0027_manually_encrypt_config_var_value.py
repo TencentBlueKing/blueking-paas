@@ -26,7 +26,15 @@ logger = logging.getLogger(__name__)
 
 
 def forwards_func(apps, schema_editor):
-    """加密数据库中以 bkcrypt$ 开头的环境变量值"""
+    """加密数据库中以 bkcrypt$ 开头的环境变量值
+
+    目前 blue_krill 库中的加/解密函数会以 bkcrypt$ 这个前缀来判断是否为加密数据
+    如果用户填写的环境变量值就是以 bkcrypt$ 开头的，那么也会被认为是加密数据（其实是明文），
+    在取出进行解密的时候，会报 InvalidToken 的错误，因此本 migration 会对此类数据二次加密
+
+    但是又存在这样一个场景：密文使用 bkpaas 的密钥进行加密，此时会无法区分是平台加密的，还是从其他地方获取的密文
+    这种情况理论上不会出现，但是为了保险起见，这里还是加上了强制检查，如果出现则会抛出异常，需要运维介入处理
+    """
     with connection.cursor() as cursor:
         cursor.execute("SELECT id, value FROM engine_configvar WHERE value LIKE %s", ("bkcrypt$%",))
         config_vars = dict(cursor.fetchall())

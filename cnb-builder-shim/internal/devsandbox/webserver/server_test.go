@@ -107,7 +107,6 @@ var _ = Describe("Test webserver api", func() {
 			}
 
 			for _, tc := range testCases {
-				tc := tc
 				It(tc.name, func() {
 					srcPath := filepath.Join("service", "testdata", "helloworld.zip")
 					file, err := os.Open(srcPath)

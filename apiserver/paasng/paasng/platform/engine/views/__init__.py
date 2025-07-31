@@ -20,6 +20,7 @@ from .configvar import (
     ConfigVarBuiltinViewSet,
     ConfigVarImportExportViewSet,
     ConfigVarViewSet,
+    ConflictedConfigVarsViewSet,
 )
 from .configvar_preset import PresetConfigVarViewSet
 from .deploy import DeploymentViewSet, DeployPhaseViewSet
@@ -40,4 +41,5 @@ __all__ = [
     "ReleasedInfoViewSet",
     "ReleasesViewset",
     "PresetConfigVarViewSet",
+    "ConflictedConfigVarsViewSet",
 ]

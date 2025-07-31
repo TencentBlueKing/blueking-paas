@@ -30,7 +30,7 @@ from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import (
     get_builtin_env_variables,
-    list_builtin_vars_with_override_flag,
+    list_conflicted_env_vars_summary,
 )
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models import ConfigVar
@@ -47,8 +47,9 @@ from paasng.platform.engine.serializers import (
     ConfigVarOperateAuditOutputSLZ,
     ConfigVarSLZ,
     ConfigVarUpsertByKeyInputSLZ,
+    ConflictedEnvVarInfoOutputSLZ,
     CreateConfigVarInputSLZ,
-    ListConfigVarBuiltinOutputSLZ,
+    ListBuiltinConfigVarOutputSLZ,
     ListConfigVarsQuerySLZ,
     UpdateConfigVarInputSLZ,
 )
@@ -315,7 +316,7 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 
 
 class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    """View the built-in environment variables of the app"""
+    """View the built-in environment variables of the app module"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
@@ -323,13 +324,21 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """获取内置环境变量"""
         module = self.get_module_via_path()
 
+        # 使用 dict 删除重复键, 比如平台管理中自定义的环境变量覆盖了其他内置环境变量
+        # 详情见 get_builtin_env_variables
         result = {}
         for env in module.get_envs():
             env_vars = get_builtin_env_variables(env.get_engine_app())
-            builtin_vars_with_conflicted = list_builtin_vars_with_override_flag(env, env_vars)
-            result[env.environment] = builtin_vars_with_conflicted
+            result[env.environment] = [
+                {
+                    "key": key,
+                    "value": var.value,
+                    "description": var.description,
+                }
+                for key, var in env_vars.map.items()
+            ]
 
-        return Response(ListConfigVarBuiltinOutputSLZ(result).data)
+        return Response(ListBuiltinConfigVarOutputSLZ(result).data)
 
 
 class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -399,3 +408,27 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
         )
         file_content = config_vars.to_file_content()
         return self.make_file_response(file_content, "bk_paas3_config_vars_template.yaml")
+
+
+class ConflictedConfigVarsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    """与内置变量冲突的用户环境变量相关 ViewSet"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(
+        responses={200: ConflictedEnvVarInfoOutputSLZ(many=True)},
+    )
+    def list_configvar_conflicted_keys(self, request, code, module_name):
+        """获取环境变量及其可覆盖性
+
+        “冲突”指用户自定义变量与平台内置变量同名。 不同类型的应用，平台处理冲突变量的行为有所不同，
+        本接口返回的 key 列表主要作引导和提示用。
+
+        - 对于 conflicted_source 为 builtin_addons 的增强服务环境变量冲突，建议前端读取 conflicted_detail
+          直接详细展示与哪一个环境变量冲突。
+        - 其他 conflicted_source 建议统一展示为“与平台内置变量冲突”，然后补充 conflicted_detail 里的信息。
+        - 按照 override_conflicted 字段的值，展示字段已经覆盖冲突项，是否生效。
+        """
+        module = self.get_module_via_path()
+        keys = list_conflicted_env_vars_summary(module)
+        return Response(ConflictedEnvVarInfoOutputSLZ(keys, many=True).data)

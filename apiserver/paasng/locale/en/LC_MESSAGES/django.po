@@ -3307,12 +3307,6 @@ msgstr ""
 msgid "无效的排序选项：%s"
 msgstr "Invalid sort option: %s"
 
-#: paasng/platform/engine/serializers.py:776
-#, fuzzy
-#| msgid "蓝鲸应用密钥"
-msgid "蓝鲸应用密钥, 已脱敏处理"
-msgstr "BK APP Secret"
-
 #: paasng/platform/engine/utils/source.py:313
 #, python-brace-format
 msgid ""

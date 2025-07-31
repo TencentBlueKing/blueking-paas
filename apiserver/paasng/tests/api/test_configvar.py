@@ -19,11 +19,10 @@ import pytest
 
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
-@pytest.mark.django_db(databases=["default", "workloads"])
 class TestConfigVarBuiltinViewSet:
     def test_get_builtin_envs(self, api_client, bk_app, bk_module):
         """测试返回内置环境变量"""
@@ -53,6 +52,21 @@ class TestConfigVarBuiltinViewSet:
 
         for env in ["stag", "prod"]:
             env_vars = data[env]
-            mt_var = next((item for item in env_vars if item["key"] == "BKPAAS_MULTI_TENANT_MODE"))
+            mt_var = next(item for item in env_vars if item["key"] == "BKPAAS_MULTI_TENANT_MODE")
             assert mt_var is not None
             assert mt_var["value"] == "value1"
+
+
+@pytest.mark.usefixtures("_with_wl_apps")
+class TestConflictedConfigVarsViewSet:
+    def test_list_with_override_flag(self, api_client, bk_app, bk_module):
+        """测试获取环境变量及其可覆盖性"""
+
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/conflicted_keys/"
+        response = api_client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert isinstance(data, list)
+        assert len(data) > 0

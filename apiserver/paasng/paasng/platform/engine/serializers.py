@@ -766,17 +766,28 @@ class ConfigVarBuiltinFormatSLZ(serializers.Serializer):
     key = serializers.CharField(help_text="内置环境变量 key")
     value = serializers.CharField(help_text="内置环境变量值")
     description = serializers.CharField(help_text="内置环境变量描述")
-    override_conflicted = serializers.BooleanField(help_text="冲突发生后, 该 key 是否会被覆盖")
+    is_masked = serializers.BooleanField(default=False, help_text="是否为脱敏字段")
 
     def to_representation(self, instance) -> dict:
         # BKPAAS_APP_SECRET 蓝鲸应用密钥脱敏处理
         ret = super().to_representation(instance)
         if ret["key"] == "BKPAAS_APP_SECRET":
             ret["value"] = MASKED_CONTENT
-            ret["description"] = _("蓝鲸应用密钥, 已脱敏处理")
+            ret["is_masked"] = True
         return ret
 
 
-class ListConfigVarBuiltinOutputSLZ(serializers.Serializer):
+class ListBuiltinConfigVarOutputSLZ(serializers.Serializer):
     stag = ConfigVarBuiltinFormatSLZ(many=True)
     prod = ConfigVarBuiltinFormatSLZ(many=True)
+
+
+class ConflictedEnvVarInfoOutputSLZ(serializers.Serializer):
+    """Serializer for represent ConflictedEnvVarInfo"""
+
+    key = serializers.CharField(help_text="有冲突的环境变量 Key")
+    conflicted_source = serializers.CharField(help_text="冲突来源，比如 builtin_addons, builtin_svc_disc 等")
+    override_conflicted = serializers.BooleanField(help_text="冲突发生后，用户定义的 Key 是否生效")
+    conflicted_detail = serializers.CharField(
+        help_text="冲突详情，通常为该环境变量的详细描述，比如 builtin_addons 来源的该字段为增强服务名称"
+    )

@@ -32,7 +32,7 @@ from paasng.platform.engine.configurations.config_var import (
     UnifiedEnvVarsReader,
     get_builtin_env_variables,
     get_env_variables,
-    list_builtin_vars_with_override_flag,
+    list_conflicted_env_vars_summary,
     list_vars_builtin_runtime,
 )
 from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
@@ -223,26 +223,20 @@ def test_list_vars_builtin_runtime(bk_app, bk_stag_env):
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
-class Test__list_builtin_vars_with_override_flag:
+class Test__list_conflicted_env_vars_summary:
     @pytest.mark.parametrize(
         ("app_type", "expected_override_conflicted"),
         [(ApplicationType.DEFAULT, True), (ApplicationType.CLOUD_NATIVE, False)],
     )
-    def test_list_builtin_vars_with_override_flag(
-        self, bk_module, bk_stag_env, app_type, expected_override_conflicted
-    ):
+    def test_list_conflicted_env_vars_summary(self, bk_module, bk_stag_env, app_type, expected_override_conflicted):
         bk_module.application.type = app_type
         bk_module.application.save(update_fields=["type"])
         # 因为 list_vars_builtin_runtime 列出的 EnvVariableList 属于 EnvVarSource.BUILTIN_MISC
         # 在 云原生应用 中会将 override_conflicted 修改为 False
         # 在 非云原生应用 中 override_conflicted 为 True
-        env_vars = list_vars_builtin_runtime(bk_stag_env, include_deprecated=False)
-        result = list_builtin_vars_with_override_flag(bk_stag_env, env_vars)
+        result = list_conflicted_env_vars_summary(bk_module)
         assert isinstance(result, list)
-        assert any(
-            "override_conflicted" in item and item["override_conflicted"] is expected_override_conflicted
-            for item in result
-        )
+        assert any(item.override_conflicted is expected_override_conflicted for item in result)
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
@@ -256,22 +250,18 @@ class TestUnifiedEnvVarsReader:
         env_vars = UnifiedEnvVarsReader(bk_stag_env).get_kv_map(exclude_sources=[EnvVarSource.USER_CONFIGURED])
         assert "FOO" not in env_vars
 
-    def test_get_builtin_vars_override_conflicted_flag_normal(self, bk_module, bk_stag_env):
+    def test_list_env_conflicts_normal(self, bk_module, bk_stag_env):
         vars_reader = UnifiedEnvVarsReader(bk_stag_env)
 
-        env_vars = list_vars_builtin_runtime(bk_stag_env, include_deprecated=False)
-        conflicts = vars_reader.get_builtin_vars_override_conflicted_flag(env_vars)
+        conflicts = vars_reader.list_env_conflicts()
 
-        assert len(conflicts) == len(env_vars.map)
         assert isinstance(conflicts, list)
-        assert any("override_conflicted" in item for item in conflicts)
+        assert any(item.override_conflicted is not None for item in conflicts)
 
-    def test_get_builtin_vars_override_conflicted_flag_exclude_sources(self, bk_module, bk_stag_env):
+    def test_list_env_conflicts_exclude_sources(self, bk_module, bk_stag_env):
         vars_reader = UnifiedEnvVarsReader(bk_stag_env)
 
-        env_vars = list_vars_builtin_runtime(bk_stag_env, include_deprecated=False)
-        conflicts = vars_reader.get_builtin_vars_override_conflicted_flag(
-            env_vars, exclude_sources=[EnvVarSource.BUILTIN_MISC]
-        )
+        conflicts = vars_reader.list_env_conflicts(exclude_sources=[EnvVarSource.BUILTIN_MISC])
 
-        assert conflicts == []
+        assert isinstance(conflicts, list)
+        assert any(item.override_conflicted is not None for item in conflicts)

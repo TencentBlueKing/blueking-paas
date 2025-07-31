@@ -495,18 +495,12 @@
       :width="800"
       :title="$t('内置环境变量')"
       :quick-close="true"
-      @shown="showEnvVariable"
     >
       <div
         slot="content"
-        v-bkloading="{ isLoading: envLoading, zIndex: 10 }"
         class="slider-env-content"
       >
-        <builtIn-env-var-display
-          :basic-info="basicInfo"
-          :app-runtime-info="appRuntimeInfo"
-          :bk-platform-info="bkPlatformInfo"
-        />
+        <builtIn-env-var-display :app-code="appCode" />
       </div>
     </bk-sideslider>
   </div>
@@ -633,14 +627,6 @@ export default {
       envSidesliderConf: {
         visiable: false,
       },
-      basicInfo: [],
-      appRuntimeInfo: [],
-      bkPlatformInfo: [],
-      loadingConf: {
-        basicLoading: false,
-        appRuntimeLoading: false,
-        bkPlatformLoading: false,
-      },
       targetListData: [],
       switchConfig: {
         list: [
@@ -700,9 +686,6 @@ export default {
     },
     curModuleList() {
       return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
-    },
-    envLoading() {
-      return this.loadingConf.basicLoading || this.loadingConf.appRuntimeLoading || this.loadingConf.bkPlatformLoading;
     },
     canModifyEnvVariable() {
       return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
@@ -1303,71 +1286,6 @@ export default {
 
     handleShoEnvDialog() {
       this.envSidesliderConf.visiable = true;
-    },
-
-    showEnvVariable() {
-      this.getBasicInfo();
-      this.getAppRuntimeInfo();
-      this.getBkPlatformInfo();
-    },
-
-    async getBasicInfo() {
-      try {
-        this.loadingConf.basicLoading = true;
-        const data = await this.$store.dispatch('envVar/getBasicInfo', { appCode: this.appCode });
-        this.basicInfo = this.convertArray(data);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        this.loadingConf.basicLoading = false;
-      }
-    },
-
-    async getAppRuntimeInfo() {
-      try {
-        this.loadingConf.appRuntimeLoading = true;
-        const data = await this.$store.dispatch('envVar/getAppRuntimeInfo', { appCode: this.appCode });
-        this.appRuntimeInfo = this.convertArray(data);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        this.loadingConf.appRuntimeLoading = false;
-      }
-    },
-
-    async getBkPlatformInfo() {
-      try {
-        this.loadingConf.bkPlatformLoading = true;
-        const data = await this.$store.dispatch('envVar/getBkPlatformInfo', { appCode: this.appCode });
-        this.bkPlatformInfo = this.convertArray(data);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        setTimeout(() => {
-          this.loadingConf.bkPlatformLoading = false;
-        }, 300);
-      }
-    },
-
-    convertArray(data) {
-      const list = [];
-      for (const key in data) {
-        list.push({
-          label: key,
-          value: data[key],
-          isTips: true,
-        });
-      }
-      return list;
     },
 
     // 添加环境变量

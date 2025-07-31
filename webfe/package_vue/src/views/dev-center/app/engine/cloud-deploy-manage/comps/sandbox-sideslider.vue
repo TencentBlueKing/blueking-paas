@@ -207,6 +207,29 @@
             {{ $t('仅支持通过代码分支创建沙箱，不支持选择 Tag') }}
           </p>
         </bk-form-item>
+        <bk-form-item :label="$t('使用的增强服务')">
+          <bk-select
+            style="height: 100%"
+            v-model="servicesConfig.list"
+            :loading="servicesConfig.loading"
+            searchable
+            multiple
+            display-tag
+          >
+            <bk-option
+              v-for="option in servicesConfig.servicelist"
+              :key="option?.service?.name"
+              :id="option?.service?.name"
+              :name="option?.service?.name"
+            ></bk-option>
+          </bk-select>
+          <p
+            class="dialog-tip"
+            slot="tip"
+          >
+            {{ $t('沙箱会复用已选中增强服务 “预发布环境” 的环境变量') }}
+          </p>
+        </bk-form-item>
       </bk-form>
       <!-- 错误提示 -->
       <div
@@ -288,6 +311,11 @@ export default {
       errorInfo: {},
       isShowErrorAlert: false,
       dataReady: false,
+      servicesConfig: {
+        list: [],
+        servicelist: [],
+        loading: false,
+      },
       rules: {
         branch: [
           {
@@ -460,6 +488,7 @@ export default {
         this.insufficientResourcesNotify();
         return;
       }
+      this.getServices(row.name);
       this.sandboxDialog.visible = true;
       this.sandboxDialog.name = row.name;
       this.sandboxDialog.branch = '';
@@ -488,6 +517,7 @@ export default {
             version_type: curBranchData.type,
             version_name: curBranchData.name,
           },
+          enabled_addons_services: this.servicesConfig.list,
         };
         const ret = await this.$store.dispatch('sandbox/createSandbox', {
           appCode: this.appCode,
@@ -512,6 +542,26 @@ export default {
     hanndleToAuthorize() {
       const route = this.$router.resolve({ name: 'serviceCode' });
       window.open(route.href, '_blank');
+    },
+    // 获取增强服务
+    async getServices(moduleId) {
+      this.servicesConfig.loading = true;
+      try {
+        const { bound = [], shared = [] } = await this.$store.dispatch('service/getServicesList', {
+          appCode: this.appCode,
+          moduleId,
+        });
+        const enabledServices = [...bound, ...shared];
+        this.servicesConfig = {
+          ...this.servicesConfig,
+          servicelist: enabledServices,
+          list: enabledServices.map((item) => item.service?.name),
+        };
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.servicesConfig.loading = false;
+      }
     },
   },
 };

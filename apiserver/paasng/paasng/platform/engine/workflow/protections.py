@@ -195,8 +195,8 @@ class OperatorVersionCondition(DeployCondition):
 
             if operator_version == apiserver_version:
                 # 只有版本一致时才缓存, 减少后续 helm 查询
-                # 缓存不主动过期, 当检测到版本不一致的时候会删除缓存
-                cache.set(cache_key, operator_version, None)
+                # 缓存在 24h 之后过期, 之后需要重新查询 helm
+                cache.set(cache_key, operator_version, 24 * 60 * 60)
 
         if operator_version != apiserver_version:
             # 版本不一致时, 主动清理缓存, 促使下次强制刷新

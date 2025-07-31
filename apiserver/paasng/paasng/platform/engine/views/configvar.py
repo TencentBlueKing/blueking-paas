@@ -324,8 +324,6 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """获取内置环境变量"""
         module = self.get_module_via_path()
 
-        # 使用 dict 删除重复键, 比如平台管理中自定义的环境变量覆盖了其他内置环境变量
-        # 详情见 get_builtin_env_variables
         result = {}
         for env in module.get_envs():
             env_vars = get_builtin_env_variables(env.get_engine_app())
@@ -406,6 +404,7 @@ class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin)
                 PlainConfigVar(key="GLOBAL", value="example", environment_name="_global_", description="example"),
             ]
         )
+
         file_content = config_vars.to_file_content()
         return self.make_file_response(file_content, "bk_paas3_config_vars_template.yaml")
 
@@ -423,6 +422,8 @@ class ConflictedConfigVarsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         “冲突”指用户自定义变量与平台内置变量同名。 不同类型的应用，平台处理冲突变量的行为有所不同，
         本接口返回的 key 列表主要作引导和提示用。
+
+        客户端展示建议：
 
         - 对于 conflicted_source 为 builtin_addons 的增强服务环境变量冲突，建议前端读取 conflicted_detail
           直接详细展示与哪一个环境变量冲突。

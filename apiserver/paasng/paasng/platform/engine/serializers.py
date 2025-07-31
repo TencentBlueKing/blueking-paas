@@ -787,7 +787,7 @@ class ConflictedEnvVarInfoOutputSLZ(serializers.Serializer):
 
     key = serializers.CharField(help_text="有冲突的环境变量 Key")
     conflicted_source = serializers.CharField(help_text="冲突来源，比如 builtin_addons, builtin_svc_disc 等")
-    override_conflicted = serializers.BooleanField(help_text="冲突发生后，用户定义的 Key 是否生效")
     conflicted_detail = serializers.CharField(
         help_text="冲突详情，通常为该环境变量的详细描述，比如 builtin_addons 来源的该字段为增强服务名称"
     )
+    override_conflicted = serializers.BooleanField(help_text="冲突发生后，用户定义的 Key 是否生效")

@@ -186,6 +186,7 @@ class ConflictedEnvVarInfo:
     """A conflicted config var key object.
 
     :param key: The key of the config var.
+    :param conflicted_source: The source of the conflict, such as "builtin_addons", "builtin_blobstore".
     :param override_conflicted: Whether the config var key has overridden the conflicting one.
     :param conflicted_detail: Additional details about the conflict, if any.
     """

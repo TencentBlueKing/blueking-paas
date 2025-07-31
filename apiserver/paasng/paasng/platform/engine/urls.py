@@ -100,7 +100,6 @@ urlpatterns = [
         views.PresetConfigVarViewSet.as_view({"get": "list"}),
         name="api.preset_config_vars",
     ),
-    # Built-in envs
     re_path(
         make_app_pattern(r"/config_vars/builtin/$", include_envs=False),
         views.ConfigVarBuiltinViewSet.as_view({"get": "get_builtin_envs"}),

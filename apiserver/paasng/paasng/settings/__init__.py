@@ -1047,9 +1047,6 @@ CONFIGVAR_PROTECTED_NAMES = (
 # 环境变量保留前缀列表
 CONFIGVAR_PROTECTED_PREFIXES = settings.get("CONFIGVAR_PROTECTED_PREFIXES", ["BKPAAS_", "KUBERNETES_"])
 
-# 是否开启 apiserver 与 operator 的版本一致性校验
-BKPAAS_OPERATOR_VERSION_CHECK = settings.get("BKPAAS_OPERATOR_VERSION_CHECK", True)
-
 # 用于校验内部服务间请求的 JWT 配置，携带用以下任何一个 key 签名的 JWT 的请求会被认为有效
 PAAS_SERVICE_JWT_CLIENTS = get_paas_service_jwt_clients(settings)
 
@@ -1538,3 +1535,8 @@ FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_A
 
 # FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
 FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])
+
+# 部署应用时, 是否检查 apiserver 与 operator 的版本一致性
+APISERVER_OPERATOR_VERSION_CHECK = settings.get("APISERVER_OPERATOR_VERSION_CHECK", True)
+# apiserver 的版本号
+APISERVER_VERSION = settings.get("APISERVER_VERSION")

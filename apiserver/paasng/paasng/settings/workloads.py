@@ -60,9 +60,6 @@ settings = LazySettings(
     ENVVAR_FOR_DYNACONF="PAAS_SETTINGS",
 )
 
-# apiserver 版本号，用于与 operator 进行版本的一致性校验
-BKPAAS_APISERVER_VERSION = settings.get("BKPAAS_APISERVER_VERSION")
-
 # ---------------
 # 运行时默认配置
 # ---------------

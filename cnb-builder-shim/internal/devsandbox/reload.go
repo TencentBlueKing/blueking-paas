@@ -92,8 +92,18 @@ func (m HotReloadManager) Rebuild(reloadID string) error {
 }
 
 // Relaunch ...
-func (m HotReloadManager) Relaunch(reloadID string) error {
+func (m HotReloadManager) Relaunch(reloadID string, envVars map[string]string) error {
 	cmd := phase.MakeLauncherCmd(reloadSubCommand)
+
+	if len(envVars) > 0 {
+		// 传入的 env_vars 非空，使用传入的自定义环境变量
+		newEnv := make([]string, 0, len(envVars))
+		for key, value := range envVars {
+			newEnv = append(newEnv, key+"="+value)
+		}
+		cmd.Env = newEnv
+	}
+
 	return m.runCmd(reloadID, cmd)
 }
 

@@ -1294,7 +1294,7 @@ a.is-disabled {
 }
 .built-in-env {
   text-decoration: none !important;
-  color: #699df4;
+  color: #3a84ff;
 
   &:hover {
     cursor: pointer;

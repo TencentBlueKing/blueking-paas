@@ -84,7 +84,7 @@ func runDevContainerServer() {
 				}
 			}
 			if event.Relaunch {
-				if innerErr := mgr.Relaunch(event.ID); innerErr != nil {
+				if innerErr := mgr.Relaunch(event.ID, event.EnvVars); innerErr != nil {
 					_ = mgr.WriteStatus(event.ID, devsandbox.ReloadFailed)
 					logger.Error(innerErr, "HotReload Relaunch failed")
 					continue

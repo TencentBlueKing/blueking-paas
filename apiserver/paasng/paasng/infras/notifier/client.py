@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 # We undertake not to change the open source license (MIT license) applicable
-import copy
+
 import logging
 from typing import Dict, List
 
@@ -30,7 +30,6 @@ from paasng.infras.notifier.exceptions import (
     MethodNotDefinedError,
     NotificationSendFailedError,
 )
-from paasng.utils.masked_curlify import MASKED_CONTENT
 
 logger = logging.getLogger(__name__)
 
@@ -137,18 +136,14 @@ class BkNotificationService:
         1. API 方法并未在 ESB 或者 API 网关上定义
         2. 配置项中 BK_CMSI_ENABLED_METHODS 中未配置该方法
         """
-        masked_params = copy.deepcopy(params)
-        if "password" in masked_params:
-            masked_params["password"] = MASKED_CONTENT
-
         if method not in self.enabled_methods:
-            logger.warning("CMSI method %s is not enabled, skip: params:%s", method, masked_params)
+            logger.warning("CMSI method %s is not enabled, skip: params:%s", method, params)
             return
 
         try:
             self.client.call_api(method, params)
         except MethodNotDefinedError:
-            logger.warning("CMSI %s is not registered, skip sending notifications, params: %s", method, masked_params)
+            logger.warning("CMSI %s is not registered, skip sending notifications, params: %s", method, params)
             return
         except Exception:
             raise

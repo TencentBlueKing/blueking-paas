@@ -62,7 +62,7 @@ def git_client(bk_module):
 
 
 @pytest.fixture()
-def clear_cache(bk_module):
+def _clear_operator_version_cache(bk_module):
     """A fixture used to clear cache key in OperatorVersionCondition"""
     cluster_name = EnvClusterService(bk_module.get_envs("prod")).get_cluster_name()
     key = f"helm_release:{cluster_name}:operator_version"
@@ -225,6 +225,7 @@ class TestAppExtraInfoCondition:
             assert exc_info.value.action_name == DeployConditions.FILL_EXTRA_INFO.value
 
 
+@pytest.mark.usefixtures("_clear_operator_version_cache")
 class TestOperatorVersionCondition:
     @pytest.mark.parametrize(
         ("check_version", "api_server_version", "operator_version", "expected"),
@@ -239,13 +240,12 @@ class TestOperatorVersionCondition:
         self,
         bk_user,
         bk_module,
-        clear_cache,
         check_version,
         api_server_version,
         operator_version,
         expected,
     ):
-        env = bk_module.get_envs("stag")
+        env = bk_module.get_envs("prod")
         fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version=operator_version))
         with (
             override_settings(
@@ -266,6 +266,7 @@ class TestOperatorVersionCondition:
                 assert exc_info.value.action_name == DeployConditions.CHECK_OPERATOR_VERSION.value
 
 
+@pytest.mark.usefixtures("_clear_operator_version_cache")
 class TestModuleEnvDeployInspector:
     @pytest.mark.parametrize(
         (
@@ -357,7 +358,6 @@ class TestModuleEnvDeployInspector:
         bk_user,
         bk_module,
         git_client,
-        clear_cache,
         user_role,
         allowed_roles,
         create_token,

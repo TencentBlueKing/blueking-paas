@@ -17,8 +17,7 @@
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
-# Helm 存储 Release 信息的 Secret 类型
-HELM_RELEASE_SECRET_TYPE = "helm.sh/release.v1"
+from paas_wl.infras.cluster.constants import HelmChartDeployStatus
 
 # 目前 bk-ingress-nginx，bcs-general-pod-autoscaler 没有默认的 Quota，通过平台下发时需默认带上
 CLUSTER_COMPONENT_DEFAULT_QUOTA = {
@@ -63,25 +62,6 @@ class TolerationEffect(StrStructuredEnum):
     NO_EXECUTE = EnumField("NoExecute", "不执行")
     NO_SCHEDULE = EnumField("NoSchedule", "不调度")
     PREFER_NO_SCHEDULE = EnumField("PreferNoSchedule", "倾向不调度")
-
-
-class HelmChartDeployStatus(StrStructuredEnum):
-    """
-    Helm Chart 部署状态
-
-    ref: https://github.com/helm/helm/blob/fb54996b001697513cdb1ffa5915c0ba90149fff/pkg/release/status.go#L19
-    """
-
-    UNKNOWN = EnumField("unknown", "未知")
-    FAILED = EnumField("failed", "失败")
-    DEPLOYED = EnumField("deployed", "部署完成")
-    SUPERSEDED = EnumField("superseded", "被取代")
-    UNINSTALLING = EnumField("uninstalling", "卸载中")
-    UNINSTALLED = EnumField("uninstalled", "已卸载")
-
-    PENDING_INSTALL = EnumField("pending-install", "待安装")
-    PENDING_UPGRADE = EnumField("pending-upgrade", "待升级")
-    PENDING_ROLLBACK = EnumField("pending-rollback", "待回滚")
 
 
 class ClusterComponentStatus(StrStructuredEnum):

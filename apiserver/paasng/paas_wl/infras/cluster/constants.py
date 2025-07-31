@@ -100,3 +100,22 @@ class ClusterComponentName(StrStructuredEnum):
     BKAPP_LOG_COLLECTION = EnumField("bkapp-log-collection")
     BK_LOG_COLLECTOR = EnumField("bk-log-collector")
     BCS_GENERAL_POD_AUTOSCALER = EnumField("bcs-general-pod-autoscaler")
+
+
+class HelmChartDeployStatus(StrStructuredEnum):
+    """
+    Helm Chart 部署状态
+
+    ref: https://github.com/helm/helm/blob/fb54996b001697513cdb1ffa5915c0ba90149fff/pkg/release/status.go#L19
+    """
+
+    UNKNOWN = EnumField("unknown", "未知")
+    FAILED = EnumField("failed", "失败")
+    DEPLOYED = EnumField("deployed", "部署完成")
+    SUPERSEDED = EnumField("superseded", "被取代")
+    UNINSTALLING = EnumField("uninstalling", "卸载中")
+    UNINSTALLED = EnumField("uninstalled", "已卸载")
+
+    PENDING_INSTALL = EnumField("pending-install", "待安装")
+    PENDING_UPGRADE = EnumField("pending-upgrade", "待升级")
+    PENDING_ROLLBACK = EnumField("pending-rollback", "待回滚")

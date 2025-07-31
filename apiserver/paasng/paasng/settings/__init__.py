@@ -1047,6 +1047,9 @@ CONFIGVAR_PROTECTED_NAMES = (
 # 环境变量保留前缀列表
 CONFIGVAR_PROTECTED_PREFIXES = settings.get("CONFIGVAR_PROTECTED_PREFIXES", ["BKPAAS_", "KUBERNETES_"])
 
+# 是否开启 apiserver 与 operator 的版本一致性校验
+BKPAAS_OPERATOR_VERSION_CHECK = settings.get("BKPAAS_OPERATOR_VERSION_CHECK", True)
+
 # 用于校验内部服务间请求的 JWT 配置，携带用以下任何一个 key 签名的 JWT 的请求会被认为有效
 PAAS_SERVICE_JWT_CLIENTS = get_paas_service_jwt_clients(settings)
 

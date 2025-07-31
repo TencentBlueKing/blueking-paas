@@ -401,13 +401,13 @@ var _ = Describe("test builtin logs", func() {
 		volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
 		volumes := deployment.Spec.Template.Spec.Volumes
 
-		Expect(volumeMounts[0].Name).To(Equal(VOLUME_NAME_APP_LOGGING))
-		Expect(volumeMounts[0].MountPath).To(Equal(VOLUME_MOUNT_APP_LOGGING_DIR))
-		Expect(volumes[0].HostPath.Path).To(HavePrefix(VOLUME_HOST_PATH_APP_LOGGING_DIR))
+		Expect(volumeMounts[0].Name).To(Equal(VolumeNameAppLogging))
+		Expect(volumeMounts[0].MountPath).To(Equal(VolumeMountAppLoggingDir))
+		Expect(volumes[0].HostPath.Path).To(HavePrefix(VolumeHostPathAppLoggingDir))
 
-		Expect(volumeMounts[1].Name).To(Equal(MUL_MODULE_VOLUME_NAME_APP_LOGGING))
-		Expect(volumeMounts[1].MountPath).To(Equal(MUL_MODULE_VOLUME_MOUNT_APP_LOGGING_DIR))
-		Expect(volumes[1].HostPath.Path).To(HavePrefix(MUL_MODULE_VOLUME_HOST_PATH_APP_LOGGING_DIR))
+		Expect(volumeMounts[1].Name).To(Equal(MulModuleVolumeNameAppLogging))
+		Expect(volumeMounts[1].MountPath).To(Equal(MulModuleVolumeMountAppLoggingDir))
+		Expect(volumes[1].HostPath.Path).To(HavePrefix(MulModuleVolumeHostPathAppLoggingDir))
 	})
 
 	DescribeTable(

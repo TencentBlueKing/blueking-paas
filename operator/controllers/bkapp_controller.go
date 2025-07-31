@@ -146,7 +146,7 @@ func (r *BkAppReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		// Other reconcilers related with workloads
 		processes.NewDeploymentReconciler(r.client),
 		processes.NewServiceReconciler(r.client),
-		autoscalingctrl.NewAutoscalingReconciler(r.client),
+		autoscalingctrl.NewReconciler(r.client),
 	} {
 		if reflect2.IsNil(reconciler) {
 			continue

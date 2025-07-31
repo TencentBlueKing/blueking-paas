@@ -192,19 +192,19 @@
                 </bk-row>
 
                 <bk-row>
-                    <bk-col :span="10">
-                        <bk-form-item label="镜像类型" :required="dialog.type !== 'detail'">
-                            <bk-input v-model="dialog.form.type" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
-                            <bk-select v-model="dialog.form.type" v-else>
-                                <bk-option v-for="type in image_types" :key="type" :id="type" :name="type"></bk-option>
-                            </bk-select>
-                        </bk-form-item>
-                    </bk-col>
-                    <bk-col :span="14">
+                    <bk-col :span="16">
                         <bk-form-item label="构建步骤集">
                             <bk-input v-model="stepMetaSet" :readonly="true" v-if="dialog.type === 'detail'" placeholder="--"></bk-input>
                             <bk-select placeholder="--" v-model="dialog.form.step_meta_set" v-else>
                                 <bk-option v-for="(name, key) in step_meta_sets" :key="key" :id="key" :name="name"></bk-option>
+                            </bk-select>
+                        </bk-form-item>
+                    </bk-col>
+                    <bk-col :span="8">
+                        <bk-form-item label="镜像类型" :required="dialog.type !== 'detail'">
+                            <bk-input v-model="dialog.form.type" :readonly="true" v-if="dialog.type === 'detail'"></bk-input>
+                            <bk-select v-model="dialog.form.type" v-else>
+                                <bk-option v-for="type in image_types" :key="type" :id="type" :name="type"></bk-option>
                             </bk-select>
                         </bk-form-item>
                     </bk-col>
@@ -222,12 +222,12 @@
                 </bk-row>
 
                 <bk-row>
-                    <bk-col :span="12">
+                    <bk-col :span="16">
                         <bk-form-item label="镜像" :required="dialog.type !== 'detail'">
                             <bk-input v-model="dialog.form.image" v-bk-tooltips="dialog.form.image" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
                     </bk-col>
-                    <bk-col :span="12">
+                    <bk-col :span="8">
                         <bk-form-item label="标签" :required="dialog.type !== 'detail'">
                             <bk-input v-model="dialog.form.tag" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
@@ -235,16 +235,26 @@
                 </bk-row>
 
                 <bk-row>
+                    <bk-col :span="24">
+                        <bk-form-item
+                            label="开发沙箱镜像"
+                            desc="需要包含 Tag 信息，目前只有 cnb 镜像才支持沙箱，为空表示不支持"
+                            :readonly="dialog.type === 'detail'"
+                        >
+                            <bk-input v-model="dialog.form.dev_sandbox_image" :readonly="dialog.type === 'detail'"></bk-input>
+                        </bk-form-item>
+                    </bk-col>
+                </bk-row>
+
+                <bk-row>
                     <bk-col :span="12">
                         <bk-form-item label="展示名称 / 中文">
-                            <bk-input v-model="dialog.form.display_name_zh_cn" :readonly="dialog.type === 'detail'"
-                                      placeholder=" "></bk-input>
+                            <bk-input v-model="dialog.form.display_name_zh_cn" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
                     </bk-col>
                     <bk-col :span="12">
                         <bk-form-item label="展示名称 / 英文">
-                            <bk-input v-model="dialog.form.display_name_en" :readonly="dialog.type === 'detail'"
-                                      placeholder=" "></bk-input>
+                            <bk-input v-model="dialog.form.display_name_en" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
                     </bk-col>
                 </bk-row>
@@ -252,14 +262,12 @@
                 <bk-row>
                     <bk-col :span="12">
                         <bk-form-item label="描述 / 中文">
-                            <bk-input v-model="dialog.form.description_zh_cn" :readonly="dialog.type === 'detail'"
-                                      placeholder=" "></bk-input>
+                            <bk-input v-model="dialog.form.description_zh_cn" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
                     </bk-col>
                     <bk-col :span="12">
                         <bk-form-item label="描述 / 英文">
-                            <bk-input v-model="dialog.form.description_en" :readonly="dialog.type === 'detail'"
-                                      placeholder=" "></bk-input>
+                            <bk-input v-model="dialog.form.description_en" :readonly="dialog.type === 'detail'"></bk-input>
                         </bk-form-item>
                     </bk-col>
                 </bk-row>
@@ -431,11 +439,7 @@
                     dialog: {
                         visible: false,
                         type: '',
-                        form: {
-                            key: '',
-                            value: '',
-                            description: '',
-                        },
+                        form: {},
                         row: undefined
                     },
                     bindDialog: {
@@ -593,9 +597,6 @@
                     this.dialog.type = "create";
                     this.dialog.row = undefined;
                     this.dialog.form = {
-                        key: '',
-                        value: '',
-                        description: '',
                         buildpacks: [],
                     };
                     this.envList = [];

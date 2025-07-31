@@ -31,10 +31,12 @@ type MinimalApplications struct {
 	Apps  []AppBasicInfo
 }
 
+// Length ...
 func (a MinimalApplications) Length() int {
 	return a.Total
 }
 
+// String ...
 func (a MinimalApplications) String() string {
 	sb := strings.Builder{}
 	sb.WriteString("Application List\n")

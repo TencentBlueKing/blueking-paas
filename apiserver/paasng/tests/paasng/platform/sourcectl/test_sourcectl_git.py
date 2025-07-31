@@ -208,7 +208,7 @@ class TestGithubRepoController:
             ]
 
         client.list_repo.side_effect = mock_list_repo
-        ret = GitHubRepoController.list_all_repositories(api_url=github_repo_url, **user_credentials)
+        ret = GitHubRepoController.list_all_repositories(api_url=github_repo_url, user_credentials=user_credentials)
         assert len(ret) == 2
         assert ret[0].namespace == "octocat"
         assert ret[0].project == "Hello-World"
@@ -319,7 +319,7 @@ class TestGiteebRepoController:
             ]
 
         client.list_repo.side_effect = mock_list_repo
-        ret = GiteeRepoController.list_all_repositories(api_url=gitee_repo_url, **user_credentials)
+        ret = GiteeRepoController.list_all_repositories(api_url=gitee_repo_url, user_credentials=user_credentials)
         assert len(ret) == 1
         assert ret[0].namespace == "octocat"
         assert ret[0].project == "Hello-World"

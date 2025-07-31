@@ -260,7 +260,13 @@ class ImageTagOptionsSLZ(serializers.Serializer):
 
 
 class ModuleSourceConfigSLZ(serializers.Serializer):
-    """模块源码仓库/模板等信息"""
+    """模块源码仓库/模板等信息，支持三种情况：
+
+    1. auto_create_repo=False + source_repo_url：使用用户提供的代码仓库地址
+    2. auto_create_repo=True + repo_name：在用户默认的空间下仓库代码仓库
+    3. auto_create_repo=True + repo_group + repo_name：在用户指定的项目组下创建代码仓库
+    4. auto_create_repo=True：平台自动分配仓库地址（由虚拟账号创建仓库，无需用户进行授权，用于插件应用）
+    """
 
     source_init_template = serializers.CharField(required=False, default="", allow_blank=True)
     source_origin = serializers.ChoiceField(choices=SourceOrigin.get_choices(), default=SourceOrigin.AUTHORIZED_VCS)
@@ -271,6 +277,13 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     auto_create_repo = serializers.BooleanField(required=False, default=False, help_text="是否由平台新建代码仓库")
     write_template_to_repo = serializers.BooleanField(
         required=False, default=False, help_text="是否将模板代码初始化到代码仓库中"
+    )
+    # 当 auto_create_repo=True 时，非插件应用需要指定新建仓库的项目组和仓库名称
+    repo_group = serializers.CharField(
+        help_text="新建代码仓库的项目组", required=False, allow_blank=True, default=None
+    )
+    repo_name = serializers.CharField(
+        help_text="新建代码仓库的名称，不传则使用平台创自动分配仓库", required=False, allow_blank=True, default=None
     )
 
     def validate_source_init_template(self, tmpl_name: str) -> str:

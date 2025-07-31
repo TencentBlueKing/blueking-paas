@@ -60,6 +60,9 @@ settings = LazySettings(
     ENVVAR_FOR_DYNACONF="PAAS_SETTINGS",
 )
 
+# apiserver 版本号，用于与 operator 进行版本的一致性校验
+BKPAAS_APISERVER_VERSION = settings.get("BKPAAS_APISERVER_VERSION")
+
 # ---------------
 # 运行时默认配置
 # ---------------
@@ -95,18 +98,15 @@ SERVICES_PLUGINS = settings.get("SERVICES_PLUGINS", default={})
 
 # devserver 监听端口
 DEV_SANDBOX_DEVSERVER_PORT = settings.get("DEV_SANDBOX_DEVSERVER_PORT", 8000)
-# devserver 镜像
-DEV_SANDBOX_IMAGE = settings.get("DEV_SANDBOX_IMAGE", "bkpaas/dev-heroku-bionic:latest")
 
 # 启动沙箱的数量上限
 DEV_SANDBOX_COUNT_LIMIT = settings.get("DEV_SANDBOX_COUNT_LIMIT", 5)
+
 # 沙箱跨域访问源地址
 DEV_SANDBOX_CORS_ALLOW_ORIGINS = settings.get("DEV_SANDBOX_CORS_ALLOW_ORIGINS", "")
 
 # code editor 监听端口
 DEV_SANDBOX_CODE_EDITOR_PORT = settings.get("DEV_SANDBOX_CODE_EDITOR_PORT", 8080)
-# code editor 镜像
-DEV_SANDBOX_CODE_EDITOR_IMAGE = settings.get("DEV_SANDBOX_CODE_EDITOR_IMAGE", "codercom/code-server:4.9.0")
 
 # 沙箱部署集群，若不配置则使用默认集群
 DEV_SANDBOX_CLUSTER = settings.get("DEV_SANDBOX_CLUSTER", "")

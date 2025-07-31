@@ -21,8 +21,7 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.address"></bk-checkbox>
             <span class="title">{{ $t('变更应用访问地址') }}</span>
-            <!-- eslint-disable-next-line vue/no-v-html -->
-            <span class="tips" v-bk-overflow-tips v-html="domainsTips"></span>
+            <span class="tips" v-bk-overflow-tips v-dompurify-html="domainsTips"></span>
           </div>
           <div class="content">
             <p>1. {{ $t('应用间不同模块间若通过 API 访问，需要修改调用地址') }}</p>
@@ -34,8 +33,11 @@
           <div class="title-wrapper">
             <bk-checkbox v-model="migrationRisk.process"></bk-checkbox>
             <span class="title">{{ $t('变更进程间通信地址') }}</span>
-            <!-- eslint-disable-next-line vue/no-v-html -->
-            <span class="tips" v-bk-overflow-tips v-html="namespaceTips"></span>
+            <span class="tips"
+              v-bk-overflow-tips
+              v-dompurify-html="namespaceTips"
+            >
+            </span>
           </div>
           <div class="content">
             {{ $t('可搜索应用代码、环境变量中是否有以下内容来确认') }}：

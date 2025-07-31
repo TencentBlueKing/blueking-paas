@@ -25,5 +25,9 @@ from paasng.platform.sourcectl.models import VersionInfo
 def bk_dev_sandbox(bk_cnative_app, bk_module, bk_user) -> DevSandbox:
     version_info = VersionInfo(revision="...", version_name="master", version_type="branch")
     return DevSandbox.objects.create(
-        module=bk_module, owner=bk_user, version_info=version_info, enable_code_editor=True
+        module=bk_module,
+        owner=bk_user,
+        env_vars={},
+        version_info=version_info,
+        enable_code_editor=True,
     )

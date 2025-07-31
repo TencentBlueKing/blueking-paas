@@ -14,3 +14,18 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+
+from rest_framework import serializers
+
+
+class AssistantInputSerializer(serializers.Serializer):
+    """AI 助手输入参数序列化器"""
+
+    chat_history = serializers.ListField(child=serializers.DictField(), required=True, help_text="聊天历史记录")
+    input = serializers.CharField(required=True, help_text="用户输入")
+
+
+class AssistantRequestSerializer(serializers.Serializer):
+    """AI 助手请求体序列化器"""
+
+    inputs = AssistantInputSerializer(required=True)

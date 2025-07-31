@@ -14,7 +14,7 @@
         <span class="metric-tips">
           <i class="paasng-icon paasng-info-line"></i>
           <span
-            v-html="metricTipsHtml"
+            v-dompurify-html="metricTipsHtml"
           ></span>
         </span>
       </div>

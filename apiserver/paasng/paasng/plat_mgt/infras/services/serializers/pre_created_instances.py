@@ -14,6 +14,8 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import json
+from typing import Dict
 
 from rest_framework import serializers
 
@@ -30,3 +32,11 @@ class PreCreatedInstanceOutputSLZ(serializers.Serializer):
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
     is_allocated = serializers.BooleanField(help_text="实例是否已被分配")
     tenant_id = serializers.CharField(help_text="租户 id")
+
+    def to_representation(self, instance) -> Dict:
+        result = super().to_representation(instance)
+        # config 以 dict 形式返回
+        if isinstance(result["config"], str):
+            result["config"] = json.loads(result["config"])
+
+        return result

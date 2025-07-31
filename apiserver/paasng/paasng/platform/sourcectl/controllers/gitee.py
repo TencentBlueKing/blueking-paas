@@ -61,9 +61,13 @@ class GiteeRepoController(BaseGitRepoController):
         return GitProject.parse_from_repo_url(self.repo_url, get_sourcectl_names().Gitee)
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
-        """返回当前 RepoController 可以控制的所有仓库列表"""
-        api_client = GiteeApiClient(**kwargs)
+    def list_all_repositories(cls, api_url: str, user_credentials: Dict) -> List[Repository]:
+        """返回当前 RepoController 可以控制的所有仓库列表
+
+        :param api_url: Gitee API 地址
+        :param user_credentials: 用户凭证
+        """
+        api_client = GiteeApiClient(api_url=api_url, **user_credentials)
         return [
             Repository(
                 namespace=repo["namespace"]["path"],
@@ -132,18 +136,6 @@ class GiteeRepoController(BaseGitRepoController):
 
     def commit_files(self, commit_info: CommitInfo) -> None:
         """gitee 不支持该功能"""
-        raise NotImplementedError
-
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-        raise NotImplementedError
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-        raise NotImplementedError
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
         raise NotImplementedError
 
     def commit_and_push(

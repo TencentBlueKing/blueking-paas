@@ -20,7 +20,7 @@ from django.db import models
 
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import ConfigVarEnvName
-from paasng.utils.models import AuditedModel, BkUserField, TimestampedModel
+from paasng.utils.models import AuditedModel, BkUserField, RobustEncryptField, TimestampedModel
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models.module import Module
@@ -54,7 +54,8 @@ class ConfigVar(TimestampedModel):
     )
 
     key = models.CharField(max_length=128, null=False)
-    value = models.TextField(null=False)
+    value = RobustEncryptField(null=False)
+    is_sensitive = models.BooleanField(default=False, help_text="value 值是否敏感")
     description = models.CharField(max_length=200, null=True)
     # is_builtin 表示该环境变量是否为“系统内置”，目前仅当旧应用从 v2 迁移时，写入一些内置环境变量数据会将该字段设为 True
     is_builtin = models.BooleanField(default=False)
@@ -104,6 +105,7 @@ class ConfigVar(TimestampedModel):
             value=self.value,
             description=self.description,
             is_global=self.is_global,
+            is_sensitive=self.is_sensitive,
             is_builtin=self.is_builtin,
             # 差异点
             environment_id=environment_id,

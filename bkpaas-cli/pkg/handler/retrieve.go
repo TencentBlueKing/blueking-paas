@@ -25,7 +25,7 @@ import (
 	"github.com/TencentBlueKing/blueking-paas/client/pkg/model"
 )
 
-// 应用基础信息查看
+// BasicInfoRetriever 应用基础信息查看
 type BasicInfoRetriever struct{}
 
 // NewBasicInfoRetriever ...

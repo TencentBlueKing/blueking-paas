@@ -16,8 +16,8 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// This reconciler helps initialize the status of the BkApp when a new deploy action
-// is issued.
+// Package bkapp provides reconciler helps initialize the status of
+// the BkApp when a new deploy action is issued.
 package bkapp
 
 import (

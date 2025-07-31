@@ -32,10 +32,9 @@
           v-bkloading="{ isLoading: contactLoading, zIndex: 10 }"
           class="log-version-right"
         >
-          <!-- eslint-disable vue/no-v-html -->
           <div
             class="detail-container"
-            v-html="currentLog"
+            v-dompurify-html="currentLog"
           />
           <!--eslint-enable-->
         </div>

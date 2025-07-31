@@ -82,7 +82,7 @@
                   </div>
                   <a
                     class="ps-btn ps-btn-l ps-btn-link spacing-h-x2"
-                    @click="skipRelease"
+                    @click="setEditedStatus(false)"
                   >
                     {{ $t('跳过，以后手动发布') }}
                   </a>
@@ -186,368 +186,88 @@
                 </bk-alert>
               </p>
             </div>
-
-            <div class="filter-list">
-              <div class="label">
-                <i class="paasng-icon paasng-funnel" />
-                {{ $t('生效环境：') }}
-              </div>
-              <div class="bk-button-group">
-                <bk-button
-                  theme="primary"
-                  style="width: 130px"
-                  :outline="activeEnvTab !== '_global_'"
-                  @click="filterConfigVarByEnv('_global_')"
-                >
-                  {{ $t('所有环境') }}
-                </bk-button>
-                <bk-button
-                  theme="primary"
-                  style="width: 130px"
-                  :outline="activeEnvTab !== 'stag'"
-                  @click="filterConfigVarByEnv('stag')"
-                >
-                  {{ $t('仅预发布环境') }}
-                </bk-button>
-                <bk-button
-                  theme="primary"
-                  style="width: 130px"
-                  :outline="activeEnvTab !== 'prod'"
-                  @click="filterConfigVarByEnv('prod')"
-                >
-                  {{ $t('仅生产环境') }}
-                </bk-button>
-              </div>
-              <bk-button
-                v-if="activeEnvTab !== ''"
-                ext-cls="reset-button"
-                theme="primary"
-                text
-                @click="handleReset"
-              >
-                {{ $t('重置') }}
-              </bk-button>
-              <bk-dropdown-menu
-                ref="largeDropdown"
-                trigger="click"
-                ext-cls="env-export-wrapper"
-              >
-                <bk-button
-                  slot="dropdown-trigger"
-                  :loading="exportLoading"
-                >
-                  {{ $t('批量导入/导出') }}
-                </bk-button>
-                <ul
-                  slot="dropdown-content"
-                  class="bk-dropdown-list"
-                >
-                  <li>
-                    <a
-                      href="javascript:;"
-                      style="margin: 0"
-                      :class="curModuleList.length < 1 || !canModifyEnvVariable ? 'is-disabled' : ''"
-                      @click="handleCloneFromModule"
-                    >
-                      {{ $t('从模块导入') }}
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="javascript:;"
-                      style="margin: 0"
-                      :class="!canModifyEnvVariable ? 'is-disabled' : ''"
-                      @click="handleImportFromFile"
-                    >
-                      {{ $t('从文件导入') }}
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="javascript:;"
-                      style="margin: 0"
-                      @click="handleExportToFile"
-                    >
-                      {{ $t('批量导出') }}
-                    </a>
-                  </li>
-                </ul>
-              </bk-dropdown-menu>
-              <bk-dropdown-menu
-                ref="dropdown"
-                ext-cls="env-sort-wrapper"
-                trigger="click"
-                align="right"
-                @show="dropdownShow"
-                @hide="dropdownHide"
-              >
-                <bk-button slot="dropdown-trigger">
-                  <i class="paasng-icon paasng-general-sort sort-icon" />
-                  <span class="text">{{ $t('排序') }}</span>
-                </bk-button>
-                <ul
-                  slot="dropdown-content"
-                  class="bk-dropdown-list"
-                >
-                  <li>
-                    <a
-                      href="javascript:;"
-                      style="margin: 0"
-                      :class="curSortKey === '-created' ? 'active' : ''"
-                      @click="handleSort('-created')"
-                    >
-                      {{ $t('最新创建') }}
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="javascript:;"
-                      style="margin: 0"
-                      :class="curSortKey === 'key' ? 'active' : ''"
-                      @click="handleSort('key')"
-                    >
-                      {{ $t('KEY 名称(A-Z)') }}
-                    </a>
-                  </li>
-                </ul>
-              </bk-dropdown-menu>
-            </div>
-            <div
-              v-if="isVarLoading"
-              class="result-table-content"
-            >
-              <div class="ps-no-result">
-                <div class="text">
-                  <div class="bk-loading1 bk-loading2">
-                    <div class="point point1" />
-                    <div class="point point2" />
-                    <div class="point point3" />
-                    <div class="point point4" />
-                  </div>
-                </div>
-              </div>
-            </div>
           </section>
         </div>
-        <!-- 展示 -->
-        <table
-          v-if="!isVarLoading"
-          class="ps-table ps-table-default ps-table-width-overflowed"
-          style="margin-bottom: 24px"
-        >
-          <tr
-            v-for="(varItem, index) in envVarList"
-            :key="index"
-          >
-            <td>
-              <bk-form
-                :ref="varItem.id"
-                form-type="inline"
-                :model="varItem"
+        <!-- 环境变量 -->
+        <div class="top-box flex-row align-items-center justify-content-between mb-16">
+          <div class="flex-row align-items-center">
+            <bk-button
+              class="mr10"
+              :theme="'primary'"
+              @click="handleAddVariable"
+            >
+              <i class="paasng-icon paasng-plus-thick" />
+              {{ $t('新增环境变量') }}
+            </bk-button>
+            <SwitchDisplay
+              :list="switchConfig.list"
+              :active="switchConfig.active"
+              :has-icon="false"
+              :has-count="false"
+              @change="($event) => (switchConfig.active = $event.name)"
+            />
+          </div>
+          <div class="filter-list">
+            <bk-dropdown-menu
+              ref="largeDropdown"
+              trigger="click"
+              ext-cls="env-export-wrapper"
+            >
+              <bk-button
+                slot="dropdown-trigger"
+                :loading="exportLoading"
               >
-                <bk-form-item
-                  :rules="varRules.key"
-                  :property="'key'"
-                  style="flex: 1 1 25%; width: 0"
-                >
-                  <template v-if="isReadOnlyRow(index)">
-                    <div class="variable-key-wrapper">
-                      <div
-                        v-bk-overflow-tips
-                        class="desc-form-content"
-                      >
-                        {{ varItem.key }}
-                      </div>
-                      <i
-                        v-if="!!varItem.conflict?.message"
-                        :class="['paasng-icon paasng-remind', { warning: varItem.conflict?.overrideConflicted }]"
-                        v-bk-tooltips="{
-                          content: varItem.conflict?.message,
-                          width: 200,
-                        }"
-                      ></i>
-                    </div>
-                  </template>
-                  <template v-else>
-                    <bk-input
-                      v-model="varItem.key"
-                      placeholder="KEY"
-                      :clearable="false"
-                      :readonly="isReadOnlyRow(index)"
-                    />
-                  </template>
-                </bk-form-item>
-                <bk-form-item
-                  :rules="varRules.value"
-                  :property="'value'"
-                  style="flex: 1 1 25%; width: 0"
-                >
-                  <template v-if="isReadOnlyRow(index)">
-                    <div
-                      v-bk-overflow-tips
-                      class="desc-form-content"
-                    >
-                      {{ varItem.value }}
-                    </div>
-                  </template>
-                  <template v-else>
-                    <bk-input
-                      v-model="varItem.value"
-                      placeholder="VALUE"
-                      :clearable="false"
-                      :readonly="isReadOnlyRow(index)"
-                    />
-                  </template>
-                </bk-form-item>
-                <bk-form-item
-                  :rules="varRules.description"
-                  :property="'description'"
-                  style="flex: 1 1 25%; width: 0"
-                >
-                  <template v-if="isReadOnlyRow(index)">
-                    <div
-                      v-if="varItem.description !== ''"
-                      v-bk-overflow-tips
-                      class="desc-form-content"
-                    >
-                      {{ varItem.description }}
-                    </div>
-                    <div
-                      v-else
-                      class="desc-form-content"
-                    >
-                      {{ varItem.description }}
-                    </div>
-                  </template>
-                  <template v-else>
-                    <bk-input
-                      v-model="varItem.description"
-                      :placeholder="$t('描述')"
-                      :clearable="false"
-                    />
-                  </template>
-                </bk-form-item>
-                <bk-form-item style="flex: 1 1 18%">
-                  <bk-select
-                    v-model="varItem.environment_name"
-                    :placeholder="$t('请选择')"
-                    :clearable="false"
-                    :disabled="isReadOnlyRow(index)"
-                  >
-                    <bk-option
-                      v-for="(option, optionIndex) in envSelectList"
-                      :id="option.id"
-                      :key="optionIndex"
-                      :name="option.text"
-                    />
-                  </bk-select>
-                </bk-form-item>
-                <bk-form-item
-                  v-if="canModifyEnvVariable"
-                  style="flex: 1 1 7%; text-align: right; min-width: 80px"
-                >
-                  <template v-if="isReadOnlyRow(index)">
-                    <a
-                      class="paasng-icon paasng-edit ps-btn ps-btn-icon-only btn-ms-primary"
-                      @click="editingRowToggle({}, index)"
-                    />
-                    <tooltip-confirm
-                      ref="deleteTooltip"
-                      :ok-text="$t('确定')"
-                      :cancel-text="$t('取消')"
-                      :theme="'ps-tooltip'"
-                      @ok="deleteConfigVar(varItem.id)"
-                    >
-                      <a
-                        v-show="isReadOnlyRow(index)"
-                        slot="trigger"
-                        class="paasng-icon paasng-delete ps-btn ps-btn-icon-only btn-ms-primary"
-                      />
-                    </tooltip-confirm>
-                  </template>
-                  <template v-else>
-                    <a
-                      class="paasng-icon paasng-check-1 ps-btn ps-btn-icon-only"
-                      type="submit"
-                      @click="updateConfigVar(varItem.id, index, varItem)"
-                    />
-                    <a
-                      class="paasng-icon paasng-close ps-btn ps-btn-icon-only"
-                      style="margin-left: 0"
-                      @click="editingRowToggle(varItem, index, 'cancel')"
-                    />
-                  </template>
-                </bk-form-item>
-              </bk-form>
-            </td>
-          </tr>
-          <tr v-if="canModifyEnvVariable">
-            <td>
-              <bk-form
-                ref="newVarForm"
-                form-type="inline"
-                :model="newVarConfig"
+                {{ $t('批量导入/导出') }}
+              </bk-button>
+              <ul
+                slot="dropdown-content"
+                class="bk-dropdown-list"
               >
-                <bk-form-item
-                  :rules="varRules.key"
-                  :property="'key'"
-                  style="flex: 1 1 25%"
-                >
-                  <bk-input
-                    v-model="newVarConfig.key"
-                    placeholder="KEY"
-                    :clearable="false"
-                  />
-                </bk-form-item>
-                <bk-form-item
-                  :rules="varRules.value"
-                  :property="'value'"
-                  style="flex: 1 1 25%"
-                >
-                  <bk-input
-                    v-model="newVarConfig.value"
-                    placeholder="VALUE"
-                    :clearable="false"
-                  />
-                </bk-form-item>
-                <bk-form-item
-                  :rules="varRules.description"
-                  :property="'description'"
-                  style="flex: 1 1 25%"
-                >
-                  <bk-input
-                    v-model="newVarConfig.description"
-                    :placeholder="$t('描述')"
-                    :clearable="false"
-                  />
-                </bk-form-item>
-                <bk-form-item style="flex: 1 1 18%">
-                  <bk-select
-                    v-model="newVarConfig.env"
-                    :placeholder="$t('请选择')"
-                    :clearable="false"
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0"
+                    :class="curModuleList.length < 1 || !canModifyEnvVariable ? 'is-disabled' : ''"
+                    @click="handleCloneFromModule"
                   >
-                    <bk-option
-                      v-for="(option, optionIndex) in envSelectList"
-                      :id="option.id"
-                      :key="optionIndex"
-                      :name="option.text"
-                    />
-                  </bk-select>
-                </bk-form-item>
-                <bk-form-item style="flex: 1 1 7%; text-align: right; min-width: 80px">
-                  <bk-button
-                    theme="primary"
-                    :outline="true"
-                    @click.stop.prevent="createConfigVar"
+                    {{ $t('从模块导入') }}
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0"
+                    :class="!canModifyEnvVariable ? 'is-disabled' : ''"
+                    @click="handleImportFromFile"
                   >
-                    {{ $t('添加') }}
-                  </bk-button>
-                </bk-form-item>
-              </bk-form>
-            </td>
-          </tr>
-        </table>
+                    {{ $t('从文件导入') }}
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="javascript:;"
+                    style="margin: 0"
+                    @click="handleExportToFile"
+                  >
+                    {{ $t('批量导出') }}
+                  </a>
+                </li>
+              </ul>
+            </bk-dropdown-menu>
+          </div>
+        </div>
+        <!-- 环境变量列表 -->
+        <EnvVarTable
+          ref="envVarTableRef"
+          :list="envVarList"
+          :active="switchConfig.active"
+          :loading="isVarLoading"
+          @add="createConfigVar"
+          @update="updateConfigVar"
+          @delete="deleteConfigVar"
+          @sort="handleSortChange"
+          @batch-edit="() => (switchConfig.active = 'all')"
+        />
       </section>
     </paas-content-loader>
 
@@ -775,18 +495,12 @@
       :width="800"
       :title="$t('内置环境变量')"
       :quick-close="true"
-      @shown="showEnvVariable"
     >
       <div
         slot="content"
-        v-bkloading="{ isLoading: envLoading, zIndex: 10 }"
         class="slider-env-content"
       >
-        <builtIn-env-var-display
-          :basic-info="basicInfo"
-          :app-runtime-info="appRuntimeInfo"
-          :bk-platform-info="bkPlatformInfo"
-        />
+        <builtIn-env-var-display :app-code="appCode" />
       </div>
     </bk-sideslider>
   </div>
@@ -800,6 +514,8 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import transferDrag from '@/mixins/transfer-drag';
 import appTopBar from '@/components/paas-app-bar';
 import builtInEnvVarDisplay from '@/components/builtIn-env-var-display';
+import EnvVarTable from './env-var-table.vue';
+import SwitchDisplay from '@/components/switch-display';
 
 export default {
   components: {
@@ -807,12 +523,13 @@ export default {
     tooltipConfirm,
     appTopBar,
     builtInEnvVarDisplay,
+    EnvVarTable,
+    SwitchDisplay,
   },
   mixins: [appBaseMixin, transferDrag],
   data() {
     return {
       envVarList: [],
-      envVarListBackup: [],
       runtimeImageList: [],
       buildpackValueList: [],
       runtimeImage: '',
@@ -887,7 +604,7 @@ export default {
         buildpackValueList: [],
       },
       isDropdownShow: false,
-      curSortKey: '-created',
+      curSortKey: 'created',
       exportDialog: {
         visiable: false,
         width: 480,
@@ -910,15 +627,16 @@ export default {
       envSidesliderConf: {
         visiable: false,
       },
-      basicInfo: [],
-      appRuntimeInfo: [],
-      bkPlatformInfo: [],
-      loadingConf: {
-        basicLoading: false,
-        appRuntimeLoading: false,
-        bkPlatformLoading: false,
-      },
       targetListData: [],
+      switchConfig: {
+        list: [
+          { name: 'all', label: this.$t('全部') },
+          { name: '_global_', label: this.$t('所有环境') },
+          { name: 'stag', label: this.$t('预发布环境') },
+          { name: 'prod', label: this.$t('生产环境') },
+        ],
+        active: 'all',
+      },
     };
   },
   computed: {
@@ -968,9 +686,6 @@ export default {
     },
     curModuleList() {
       return this.curAppModuleList.filter((item) => item.name !== this.curModuleId);
-    },
-    envLoading() {
-      return this.loadingConf.basicLoading || this.loadingConf.appRuntimeLoading || this.loadingConf.bkPlatformLoading;
     },
     canModifyEnvVariable() {
       return this.curAppInfo && this.curAppInfo.feature.MODIFY_ENVIRONMENT_VARIABLE;
@@ -1149,7 +864,7 @@ export default {
       try {
         const response = await this.$store.dispatch('envVar/getEnvVariables', {
           appCode: this.appCode,
-          moduleId: this.curModuleId,
+          moduleId: name,
           orderBy: '-created',
         });
         this.exportDialog.count = (response || []).length;
@@ -1158,19 +873,6 @@ export default {
       } finally {
         this.exportDialog.isLoading = false;
       }
-    },
-
-    dropdownShow() {
-      this.isDropdownShow = true;
-    },
-    dropdownHide() {
-      this.isDropdownShow = false;
-    },
-    handleSort(key) {
-      this.curSortKey = key;
-      this.editRowList = [];
-      this.$refs.dropdown.hide();
-      this.loadConfigVar();
     },
     handleReset() {
       this.activeEnvTab = '';
@@ -1259,8 +961,8 @@ export default {
     },
     async init() {
       this.isLoading = true;
-      this.isEdited = false;
-      this.curSortKey = '-created';
+      this.setEditedStatus(false);
+      this.curSortKey = 'created';
       this.loadConfigVar();
       this.fetchReleaseInfo();
       this.getAllImages();
@@ -1439,7 +1141,6 @@ export default {
           // 与内置环境变量冲突提示
           conflict: conflictedKeys.length > 0 ? this.getConflictMessage(conflictedKeys, item.key) : {},
         }));
-        this.envVarListBackup = cloneDeep(this.envVarList);
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -1447,148 +1148,72 @@ export default {
         this.isLoading = false;
       }
     },
-    isReadOnlyRow(rowIndex) {
-      return !includes(this.editRowList, rowIndex);
-    },
     isEnvAvailable(envName) {
       return includes(this.availableEnv, envName);
     },
-    editingRowToggle(rowItem = {}, rowIndex, type = '') {
-      if (type === 'cancel') {
-        const currentItem = this.envVarListBackup.find((envItem) => envItem.id === rowItem.id);
-        rowItem.key = currentItem.key;
-        rowItem.value = currentItem.value;
-        rowItem.description = currentItem.description;
-        rowItem.environment_name = currentItem.environment_name;
-        if (this.$refs[`${rowItem.id}`] && this.$refs[`${rowItem.id}`].length) {
-          this.$refs[`${rowItem.id}`][0].formItems.forEach((item) => {
-            item.validator.content = '';
-            item.validator.state = '';
-          });
-        }
+    // 更新环境变量
+    async updateConfigVar(data) {
+      try {
+        await this.$store.dispatch('envVar/updateEnvVariable', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          varId: data.id,
+          data: data,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('修改环境变量成功'),
+        });
+        this.setEditedStatus(true);
+        this.loadConfigVar();
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('修改环境变量失败')}，${e.message}`,
+        });
       }
-      if (includes(this.editRowList, rowIndex)) {
-        this.editRowList.pop(rowIndex);
-      } else {
-        this.editRowList.push(rowIndex);
+    },
+    // 添加环境变量
+    async createConfigVar(data) {
+      try {
+        await this.$store.dispatch('envVar/createdEnvVariable', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          data,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('添加环境变量成功'),
+        });
+        this.loadConfigVar();
+        this.setEditedStatus(true);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('添加环境变量失败')}，${e.message}`,
+        });
       }
     },
-    updateConfigVar(configVarID, index, varItem) {
-      const updateEnv = varItem.environment_name;
-      const updateKey = varItem.key;
-      const updateValue = varItem.value;
-      const { description } = varItem;
-      const updateForm = {
-        environment_name: updateEnv,
-        key: updateKey,
-        value: updateValue,
-        description,
-      };
-      this.$refs[configVarID][0].validate().then((validator) => {
-        if (updateEnv === '_global_') {
-          updateForm.is_global = true;
-        }
-        const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/${configVarID}/`;
-        this.$http.put(url, updateForm).then(
-          (response) => {
-            this.$paasMessage({
-              theme: 'success',
-              message: this.$t('修改环境变量成功'),
-            });
-
-            this.loadConfigVar();
-            // this.editingRowToggle({}, index)
-            this.editRowList = [];
-            this.isEdited = true;
-          },
-          (errRes) => {
-            const errorMsg = errRes.message;
-            this.$paasMessage({
-              theme: 'error',
-              message: `${this.$t('修改环境变量失败')}，${errorMsg}`,
-            });
-          }
-        );
-      });
-    },
-    filterConfigVarByEnv(env) {
-      this.envVarList = [];
-      this.envVarListBackup = [];
-      if (this.addingConfigVarEnv === env) {
-        this.activeEnvTab = this.activeEnvTab === '' ? env : '';
-        this.newVarConfig.env = this.activeEnvTab === '' ? 'stag' : env;
-      } else {
-        this.activeEnvTab = env;
-        this.addingConfigVarEnv = env;
-        this.newVarConfig.env = env;
+    // 删除单个环境变量
+    async deleteConfigVar(row) {
+      try {
+        await this.$store.dispatch('envVar/deleteEnvVariable', {
+          appCode: this.appCode,
+          moduleId: this.curModuleId,
+          varId: row.id,
+        });
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('删除环境变量成功'),
+        });
+        this.loadConfigVar();
+        this.setEditedStatus(true);
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: `${this.$t('删除环境变量失败')}，${e.message}`,
+        });
       }
-      this.loadConfigVar();
-    },
-    createConfigVar() {
-      const createForm = {
-        key: this.newVarConfig.key,
-        value: this.newVarConfig.value,
-        environment_name: this.newVarConfig.env,
-        description: this.newVarConfig.description,
-      };
-      this.$refs.newVarForm.validate().then(
-        (validator) => {
-          const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/`;
-          this.$http.post(url, createForm).then(
-            (response) => {
-              this.$paasMessage({
-                theme: 'success',
-                message: this.$t('添加环境变量成功'),
-              });
-              this.loadConfigVar();
-              this.newVarConfig = {
-                key: '',
-                value: '',
-                env: this.newVarConfig.env,
-                description: '',
-              };
-              this.isEdited = true;
-            },
-            (errRes) => {
-              const errorMsg = errRes.message;
-              this.$paasMessage({
-                theme: 'error',
-                message: `${this.$t('添加环境变量失败')}，${errorMsg}`,
-              });
-            }
-          );
-        },
-        (e) => {
-          console.error(e);
-        }
-      );
-    },
-    deleteConfigVar(configVarID) {
-      this.$http
-        .delete(
-          `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${this.curModuleId}/config_vars/${configVarID}/`
-        )
-        .then(
-          (response) => {
-            this.$paasMessage({
-              theme: 'success',
-              message: this.$t('删除环境变量成功'),
-            });
-            this.editRowList = [];
-            this.loadConfigVar();
-            this.isEdited = true;
-          },
-          (errRes) => {
-            const errorMsg = errRes.message;
-            this.$paasMessage({
-              theme: 'error',
-              message: `${this.$t('删除环境变量失败')}，${errorMsg}`,
-            });
-          }
-        );
-    },
-    cancelDelete() {
-      this.$refs.deleteTooltip[0].close();
     },
     releaseEnv(envName) {
       this.$refs.releaseDropDown.close();
@@ -1611,10 +1236,11 @@ export default {
             });
           }
         );
-      this.isEdited = false;
+      this.setEditedStatus(false);
     },
-    skipRelease() {
-      this.isEdited = false;
+    // 设置 change 状态
+    setEditedStatus(flag) {
+      this.isEdited = flag;
     },
     async handleShowRuntimeDialog() {
       this.runtimeDialogConf.visiable = true;
@@ -1666,69 +1292,15 @@ export default {
       this.envSidesliderConf.visiable = true;
     },
 
-    showEnvVariable() {
-      this.getBasicInfo();
-      this.getAppRuntimeInfo();
-      this.getBkPlatformInfo();
+    // 添加环境变量
+    handleAddVariable() {
+      this.$refs.envVarTableRef.add();
     },
 
-    async getBasicInfo() {
-      try {
-        this.loadingConf.basicLoading = true;
-        const data = await this.$store.dispatch('envVar/getBasicInfo', { appCode: this.appCode });
-        this.basicInfo = this.convertArray(data);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        this.loadingConf.basicLoading = false;
-      }
-    },
-
-    async getAppRuntimeInfo() {
-      try {
-        this.loadingConf.appRuntimeLoading = true;
-        const data = await this.$store.dispatch('envVar/getAppRuntimeInfo', { appCode: this.appCode });
-        this.appRuntimeInfo = this.convertArray(data);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        this.loadingConf.appRuntimeLoading = false;
-      }
-    },
-
-    async getBkPlatformInfo() {
-      try {
-        this.loadingConf.bkPlatformLoading = true;
-        const data = await this.$store.dispatch('envVar/getBkPlatformInfo', { appCode: this.appCode });
-        this.bkPlatformInfo = this.convertArray(data);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
-      } finally {
-        setTimeout(() => {
-          this.loadingConf.bkPlatformLoading = false;
-        }, 300);
-      }
-    },
-
-    convertArray(data) {
-      const list = [];
-      for (const key in data) {
-        list.push({
-          label: key,
-          value: data[key],
-          isTips: true,
-        });
-      }
-      return list;
+    // 处理排序变化
+    handleSortChange(sortKey) {
+      this.curSortKey = sortKey;
+      this.loadConfigVar();
     },
   },
 };
@@ -1738,18 +1310,6 @@ export default {
 .query-button {
   width: auto;
   padding-right: 30px;
-}
-</style>
-
-<style lang="scss">
-.ps-table-default {
-  .bk-form-item {
-    .bk-form-content {
-      width: 100%;
-      float: none !important;
-      display: block !important;
-    }
-  }
 }
 </style>
 
@@ -1824,36 +1384,6 @@ a.is-disabled {
   }
 }
 
-.ps-table-width-overflowed {
-  width: 100%;
-  margin-left: 0;
-
-  td {
-    border-bottom: 0;
-    padding: 15px 0 0 0;
-  }
-
-  .desc-form-content {
-    display: inline-block;
-    padding: 0 10px;
-    padding-right: 25px;
-    width: 100%;
-    height: 32px;
-    border: 1px solid #dcdee5;
-    border-radius: 2px;
-    text-align: left;
-    font-size: 12px;
-    color: #63656e;
-    background-color: #fafbfd;
-    vertical-align: middle;
-    cursor: default;
-    @include ellipsis;
-  }
-  .bk-inline-form {
-    display: flex;
-  }
-}
-
 .variable-main {
   border-bottom: 0;
 
@@ -1920,11 +1450,6 @@ a.is-disabled {
 }
 
 .filter-list {
-  position: relative;
-  font-size: 0;
-  letter-spacing: -5px;
-  margin: 25px 0 5px 0;
-
   .label {
     position: relative;
     display: inline-block;
@@ -1937,30 +1462,6 @@ a.is-disabled {
     position: relative;
     top: 4px;
     padding-left: 10px;
-  }
-
-  .env-export-wrapper {
-    position: absolute;
-    right: 80px;
-  }
-
-  .env-sort-wrapper {
-    position: absolute;
-    right: 0;
-    .sort-icon {
-      position: absolute;
-      // width: 26px;
-      font-size: 26px;
-      left: 5px;
-      top: 2px;
-    }
-    .text {
-      padding-left: 15px;
-    }
-    a.active {
-      background-color: #eaf3ff;
-      color: #3a84ff;
-    }
   }
 
   a {
@@ -2104,12 +1605,12 @@ a.is-disabled {
 }
 
 .link-a:hover {
-  color: #699df4;
+  color: #3a84ff;
 }
 
 .built-in-env {
   text-decoration: none !important;
-  color: #699df4;
+  color: #3a84ff;
 
   &:hover {
     cursor: pointer;
@@ -2156,20 +1657,6 @@ a.is-disabled {
     .text {
       padding-bottom: 2px;
       border-bottom: 1px dashed #666;
-    }
-  }
-}
-.variable-key-wrapper {
-  position: relative;
-  .paasng-remind {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 14px;
-    color: #ea3636;
-    &.warning {
-      color: #ff9c01;
     }
   }
 }

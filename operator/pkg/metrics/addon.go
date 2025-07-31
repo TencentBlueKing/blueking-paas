@@ -22,7 +22,7 @@ import "github.com/prometheus/client_golang/prometheus"
 
 // addon reconcile metrics
 var (
-	GetBkappInfoFailures = prometheus.NewCounterVec(
+	GetBkAppInfoFailures = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "bkapp_metrics_get_bkapp_info_failures",
 			Help: "Failures when getting blue whale application metadata",

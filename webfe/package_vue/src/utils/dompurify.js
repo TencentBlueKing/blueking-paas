@@ -21,13 +21,15 @@ import VueDOMPurifyHTML from 'vue-dompurify-html';
 
 const ALLOWED_TAGS = [
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr', 'span', 'div',
-  'em', 'i', 'strong', 'b', 'del', 'ins',
+  'em', 'i', 'strong', 'b', 'u', 's', 'del', 'ins',
   'ul', 'ol', 'li',
   'code', 'pre',
+  'a', 'img',
+  'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
   'marked', 'pasmark', 'filtermark',
-  'sub', 'sup', 'small',
+  'sub', 'sup', 'small', 'abbr', 'cite', 'q', 'time'
 ];
-const ALLOWED_ATTR = ['class', 'style', 'id'];
+const ALLOWED_ATTR = ['class', 'style', 'id', 'src'];
 const ADDITIONAL_ATTR = ['target', 'href'];
 
 // DOMPurify 配置对象
@@ -49,13 +51,17 @@ const dompurifyConfig = {
           node.setAttribute('rel', 'noopener noreferrer');
           node.setAttribute('target', '_blank');
         }
-        // 确保图片安全
+        // 严格限制图片只允许 base64
         if (node.tagName === 'IMG') {
-          // 强制添加 alt 属性如果不存在
-          if (!node.getAttribute('alt')) {
-            node.setAttribute('alt', 'image');
+          const src = node.getAttribute('src') || '';
+          if (!src.startsWith('data:image/')) {
+            node.removeAttribute('src');
+          } else {
+            // 强制添加 alt 属性
+            if (!node.getAttribute('alt')) {
+              node.setAttribute('alt', 'user image');
+            }
           }
-          node.setAttribute('loading', 'lazy');
         }
       },
     },

@@ -207,25 +207,25 @@ class Oauth2TokenHolderQS(models.QuerySet):
 
         :param provider: Oauth2 授权提供商，如 Github
         """
+
         for token_holder in self.filter(provider=provider):
             try:
                 scope = Scope.parse_from_str(token_holder.get_scope())
                 if scope.type == ScopeType.USER:
                     return token_holder
-            except (ValueError, KeyError) as e:
+            except (ValueError, KeyError):
                 # 记录解析 scope 时的格式错误
-                logger.warning(
-                    "Parse scope failed for token_holder<%s> provider=%s, error: %s",
+                logger.exception(
+                    "Parse scope failed for token_holder<%s> provider=%s",
                     token_holder.id,
                     provider,
-                    str(e),
                 )
-            except Exception as e:
-                logger.warning(
-                    "Unexpected error when processing token_holder<%s> provider=%s, error: %s",
+                continue
+            except Exception:
+                logger.exception(
+                    "Unexpected error when processing token_holder<%s> provider=%s",
                     token_holder.id,
                     provider,
-                    str(e),
                 )
                 continue
         raise self.model.DoesNotExist

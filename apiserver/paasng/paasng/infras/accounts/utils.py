@@ -79,15 +79,40 @@ def get_oauth_credential(
 ) -> OauthCredential:
     """获取 OAuth 凭证的统一入口函数
 
-    :param source_type: 源码仓库类型，如 gitlab
-    :param user_id: 用户 ID，用于查询用户对应的授权凭证
+    该函数根据不同的模式获取不同范围的 OAuth 凭证：
+    - default: 获取第一个可用凭证（适用于获取用户所有有权限的代码和项目组等）
+    - repo: 根据仓库地址获取精确匹配的凭证（适用于仓库创建等需要精确权限的场景）
+    - user: 获取用户级别凭证（适用于用户默认个人空间操作）
+
+    :param source_type: 源码仓库类型，需与认证提供商标识一致（如 'gitlab'/'github'）
+    :param user_id: 用户唯一标识，用于查询关联的授权凭证
     :param mode: 凭证获取模式，可选值：
-        - 'default': 获取第一个可用凭证（原 get_oauth_credentials）
-        - 'repo': 根据仓库地址获取精确匹配凭证（原 get_oauth_credential_by_repo）
-        - 'user': 获取用户级别 scope 的凭证（原 get_oauth_credential_by_user）
-    :param repo_url: 可选，当 mode='repo' 时必须提供，仓库地址
-    :raises: Oauth2TokenHolder.DoesNotExist 当凭证不存在时
+        - 'default' (默认): 获取第一个可用凭证
+        - 'repo': 根据仓库地址获取精确匹配凭证
+        - 'user': 获取用户级别 scope 的凭证
+    :param repo_url: 当 mode='repo' 时必须提供，仓库地址（支持未创建仓库的地址）
+    :return: 包含 access_token 和 scope 列表的凭证对象
+    :raises:
+        Oauth2TokenHolder.DoesNotExist: 当凭证不存在时
+        ValueError: 当参数不合法或缺少必要参数时
+        UserProfile.DoesNotExist: 当用户资料不存在时
+
+    示例用法：
+        # 获取默认凭证
+        cred = get_oauth_credential('gitlab', 'user123')
+
+        # 获取仓库匹配凭证
+        cred = get_oauth_credential('gitlab', 'user123', mode='repo', repo_url='http://git.example.com/my/repo.git')
+
+        # 获取用户级别凭证
+        cred = get_oauth_credential('gitlab', 'user123', mode='user')
     """
+    # 校验 mode 的合法性
+    mode = mode.lower()
+    valid_modes = ("default", "repo", "user")
+    if mode not in valid_modes:
+        raise ValueError(f"Invalid mode: {mode}, must be one of {valid_modes}")
+
     try:
         profile = UserProfile.objects.get(user=user_id)
     except UserProfile.DoesNotExist:

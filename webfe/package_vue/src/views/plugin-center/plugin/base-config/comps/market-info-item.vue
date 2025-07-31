@@ -82,7 +82,9 @@ export default {
   watch: {
     marketInfo: {
       handler() {
-        this.handleExpandOperation();
+        this.$nextTick(() => {
+          this.handleExpandOperation();
+        });
       },
       immediate: true,
     },

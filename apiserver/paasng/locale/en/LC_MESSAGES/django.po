@@ -589,9 +589,7 @@ msgstr "Duplicate value {value} found in the ports list"
 #: paasng/accessories/app_secret/views.py:83
 #, python-brace-format
 msgid "密钥已达到上限，应用仅允许有 {MAX_SECRET_COUNT} 个密钥"
-msgstr ""
-"The key limit has been reached, "
-"only {MAX_SECRET_COUNT} keys are allowed for the application"
+msgstr "The key limit has been reached, only {MAX_SECRET_COUNT} keys are allowed for the application"
 
 #: paasng/accessories/app_secret/views.py:109
 msgid "当前密钥为内置密钥，不允许被禁用"
@@ -806,8 +804,8 @@ msgid "其它"
 msgstr "Other"
 
 #: paasng/accessories/publish/market/protections.py:48
-#: paasng/platform/engine/constants.py:127
-#: paasng/platform/engine/workflow/protections.py:68
+#: paasng/platform/engine/constants.py:128
+#: paasng/platform/engine/workflow/protections.py:72
 msgid "未完善应用市场信息"
 msgstr "Incomplete app basic information"
 
@@ -1717,7 +1715,7 @@ msgstr "BKCC"
 #: paasng/infras/iam/exceptions.py:59
 #, python-brace-format
 msgid "用户 {user} 在蓝鲸权限中心的角色数已经超出了 {quota} 个的限制"
-msgstr "The number of roles for user {user} in the Blue Whale Permission Center has exceeded the limit of {quota}"
+msgstr "The number of roles for user {user} in the bk-iam has exceeded the limit of {quota}"
 
 #: paasng/infras/iam/permissions/resources/application.py:41
 msgid "基础信息查看"
@@ -3029,7 +3027,7 @@ msgstr ""
 "Path for custom configuration of BlueKing product title/footer/name/logo, "
 "etc."
 
-#: paasng/platform/engine/configurations/config_var.py:286
+#: paasng/platform/engine/configurations/config_var.py:401
 msgid ""
 "加密数据库内容的推荐算法有：SHANGMI（对应 SM4CTR 算法）和 CLASSIC（对应 "
 "Fernet 算法）"
@@ -3037,61 +3035,39 @@ msgstr ""
 "Recommended algorithms for database encryption: SHANGMI (corresponding to "
 "the SM4CTR algorithm) and CLASSIC (corresponding to the Fernet algorithm)"
 
-#: paasng/platform/engine/configurations/config_var.py:288
+#: paasng/platform/engine/configurations/config_var.py:407
 msgid "是否开启多租户模式"
 msgstr "Is multi-tenant mode enabled"
 
-#: paasng/platform/engine/configurations/config_var.py:294
+#: paasng/platform/engine/configurations/config_var.py:415
 msgid "网关 API 访问地址模板"
 msgstr "API Gateway API access URL template"
 
-#: paasng/platform/engine/configurations/config_var.py:297
+#: paasng/platform/engine/configurations/config_var.py:418
 msgid "组件 API 访问地址"
 msgstr "Component API access URL"
 
-#: paasng/platform/engine/configurations/config_var.py:299
+#: paasng/platform/engine/configurations/config_var.py:421
 msgid "PaaS2.0 开发者中心地址"
 msgstr "PaaS 2.0 developer center URL"
 
-#: paasng/platform/engine/configurations/config_var.py:354
-msgid "应用当前模块名"
-msgstr "Current Module Name"
-
-#: paasng/platform/engine/configurations/config_var.py:355
-msgid "应用当前环境，预发布环境为 stag、生产环境为 prod"
-msgstr ""
-"Current environment, the pre-release environment is stag, and the production "
-"environment is prod"
-
-#: paasng/platform/engine/configurations/config_var.py:356
-msgid "应用当前运行的开发者中心版本，值为 3"
-msgstr "The currently running Dev Center version, the value is 3"
-
-#: paasng/platform/engine/configurations/config_var.py:357
-msgid "应用版本，默认版本为 default"
-msgstr "APP version, the default version is default"
-
-#: paasng/platform/engine/configurations/config_var.py:358
+#: paasng/platform/engine/configurations/config_var.py:485
 msgid "应用日志文件存放路径"
 msgstr "Application log file storage path"
 
-#: paasng/platform/engine/configurations/config_var.py:359
+#: paasng/platform/engine/configurations/config_var.py:488
 msgid "目标端口号，值为 5000"
 msgstr "Destination port number, the value is 5000"
 
-#: paasng/platform/engine/configurations/config_var.py:365
-msgid "[不推荐使用] 内部变量，不推荐使用"
-msgstr "[Deprecated] Internal variable, not recommended for use"
-
-#: paasng/platform/engine/configurations/config_var.py:369
+#: paasng/platform/engine/configurations/config_var.py:498
 msgid "日志文件推荐使用的前缀"
 msgstr "Recommended prefix for log files"
 
-#: paasng/platform/engine/configurations/config_var.py:371
+#: paasng/platform/engine/configurations/config_var.py:504
 msgid "[不推荐使用] 当前进程类型"
 msgstr "[Deprecated] Current process type"
 
-#: paasng/platform/engine/configurations/config_var.py:375
+#: paasng/platform/engine/configurations/config_var.py:510
 msgid "[不推荐使用] 基于规则拼接的应用访问子路径，仅适合向前兼容时使用"
 msgstr ""
 "[Deprecated] Rule-based application access sub-path, suitable for backward "
@@ -3105,50 +3081,92 @@ msgstr "Stag Env"
 msgid "生产环境"
 msgstr "Prod Env"
 
-#: paasng/platform/engine/constants.py:128
+#: paasng/platform/engine/constants.py:129
 msgid "当前用户无部署该环境的权限"
 msgstr "The current user does not have permission to deploy this environment"
 
-#: paasng/platform/engine/constants.py:129
+#: paasng/platform/engine/constants.py:130
 msgid "当前用户尚未绑定 OAUTH 授权信息"
 msgstr "The current user has not yet bound the OAUTH authorization information"
 
-#: paasng/platform/engine/constants.py:130
+#: paasng/platform/engine/constants.py:131
 msgid "当前用户没有访问源码仓库的权限"
 msgstr "The current user does not have permission to access the repository"
 
-#: paasng/platform/engine/constants.py:131
+#: paasng/platform/engine/constants.py:132
 msgid "当前源码仓库信息异常"
 msgstr "The current source code repository information is abnormal"
 
-#: paasng/platform/engine/constants.py:132
-#: paasng/platform/engine/workflow/protections.py:127
+#: paasng/platform/engine/constants.py:133
+#: paasng/platform/engine/workflow/protections.py:131
 msgid "未完善进程启动命令"
 msgstr "Incomplete process start command"
 
-#: paasng/platform/engine/constants.py:133
+#: paasng/platform/engine/constants.py:134
 msgid "当前用户未授权 CI 组件访问仓库的权限"
 msgstr ""
 "The current user does not authorize the CI component to access the repository"
 
-#: paasng/platform/engine/constants.py:134
-#: paasng/platform/engine/workflow/protections.py:151
+#: paasng/platform/engine/constants.py:135
+#: paasng/platform/engine/workflow/protections.py:155
 msgid "未设置插件分类"
 msgstr "Plugin category not set"
 
-#: paasng/platform/engine/constants.py:135
-#: paasng/platform/engine/workflow/protections.py:164
-#: paasng/platform/engine/workflow/protections.py:167
+#: paasng/platform/engine/constants.py:136
+#: paasng/platform/engine/workflow/protections.py:168
+#: paasng/platform/engine/workflow/protections.py:171
 msgid "未完善应用基本信息"
 msgstr "Incomplete app basic information"
 
-#: paasng/platform/engine/constants.py:140
+#: paasng/platform/engine/constants.py:137
+msgid "Operator 版本不匹配"
+msgstr ""
+
+#: paasng/platform/engine/constants.py:142
 msgid "使用 Buildpacks 构建"
 msgstr "Build using Buildpacks"
 
-#: paasng/platform/engine/constants.py:141
+#: paasng/platform/engine/constants.py:143
 msgid "使用 Dockerfile 构建"
 msgstr "Build using Dockerfile"
+
+#: paasng/platform/engine/constants.py:150
+msgid "蓝鲸应用ID"
+msgstr "BK APP ID"
+
+#: paasng/platform/engine/constants.py:151
+msgid "蓝鲸应用密钥"
+msgstr "BK APP Secret"
+
+#: paasng/platform/engine/constants.py:152
+msgid "蓝鲸应用租户 ID"
+msgstr "BK APP Tenant ID"
+
+#: paasng/platform/engine/constants.py:158
+msgid "应用当前模块名"
+msgstr "Current Module Name"
+
+#: paasng/platform/engine/constants.py:159
+msgid "应用当前环境，预发布环境为 stag、生产环境为 prod"
+msgstr ""
+"Current environment, the pre-release environment is stag, and the production "
+"environment is prod"
+
+#: paasng/platform/engine/constants.py:160
+msgid "应用当前运行的开发者中心版本，值为 3"
+msgstr "The currently running Dev Center version, the value is 3"
+
+#: paasng/platform/engine/constants.py:161
+msgid "应用版本，默认版本为 default"
+msgstr "APP version, the default version is default"
+
+#: paasng/platform/engine/constants.py:164
+msgid ""
+"应用模块各环境的访问地址，如 {\"stag\": \"http://stag.com\", \"prod\": "
+"\"http://prod.com\"}"
+msgstr ""
+"Access URLs for different environments of the application modules, such as "
+"{\"stag\": \"http://stag.com\", \"prod\": \"http://prod.com\"}"
 
 #: paasng/platform/engine/deploy/archive/base.py:67
 msgid "存在正在进行的下架任务"
@@ -3365,40 +3383,48 @@ msgstr "Error in step [{title}], reason: {reason}."
 msgid "步骤 [{title}] 出错了，请稍候重试。"
 msgstr "Error in step [{title}], please try again later"
 
-#: paasng/platform/engine/workflow/protections.py:80
+#: paasng/platform/engine/workflow/protections.py:84
 msgid "当前用户尚未授权访问仓库"
 msgstr "The current user is not authorized to access the repository"
 
-#: paasng/platform/engine/workflow/protections.py:82
+#: paasng/platform/engine/workflow/protections.py:86
 #, python-brace-format
 msgid "当前用户尚未授权访问仓库: {source_type}"
 msgstr ""
 "The current user is not authorized to access the repository: {source_type}"
 
-#: paasng/platform/engine/workflow/protections.py:89
+#: paasng/platform/engine/workflow/protections.py:93
 #, python-brace-format
 msgid "当前用户没有访问源码仓库的权限，请给 {repo} 授权"
 msgstr ""
 "The current user does not have permission to access the source code "
 "repository, please authorize {repo}"
 
-#: paasng/platform/engine/workflow/protections.py:93
+#: paasng/platform/engine/workflow/protections.py:97
 msgid "当前账户没有访问源码仓库的权限，请确保账户名/密码正确"
 msgstr ""
 "The current account does not have permission to access the source code "
 "repository, please make sure the account name/password is correct"
 
-#: paasng/platform/engine/workflow/protections.py:97
+#: paasng/platform/engine/workflow/protections.py:101
 msgid "获取源码仓库信息失败，请确保仓库信息填写正确"
 msgstr ""
 "Failed to obtain source code repository information, please make sure that "
 "the repository information is filled in correctly"
 
-#: paasng/platform/engine/workflow/protections.py:112
+#: paasng/platform/engine/workflow/protections.py:116
 msgid "当前用户无部署该环境的权限, 请联系应用管理员"
 msgstr ""
 "The current user does not have permission to deploy this environment, please "
 "contact the APP administrator"
+
+#: paasng/platform/engine/workflow/protections.py:201
+msgid ""
+"apiserver 与 operator 版本不一致，apiserver 版本: {apiserver_version}，"
+"operator 版本: {operator_version}"
+msgstr ""
+"The apiserver and operator versions are inconsistent, apiserver version: {apiserver_version}, "
+"operator version: {operator_version}"
 
 #: paasng/platform/evaluation/constants.py:25
 msgid "运行中"
@@ -3452,50 +3478,6 @@ msgstr "Creating APP objects"
 msgid "同步应用基本信息"
 msgstr "Basic information about the Sync APP"
 
-#: paasng/platform/mgrlegacy/app_migrations/code.py:97
-msgid "变更应用代码"
-msgstr "Change of APP code"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:40
-msgid "部署到预发布环境和生产环境"
-msgstr "Deployment to s'tag and prod env"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:147
-msgid "旧版本测试环境没有部署或者已经下架，跳过测试环境部署"
-msgstr ""
-"Older versions of the test environment are not deployed or have been "
-"archive, skip the test environment deployment"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:151
-msgid "开始部署预发布环境"
-msgstr "Start deploying a stag e'nv"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:154
-msgid "预发布环境部署失败"
-msgstr "stag env deployment failure"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:156
-msgid "预发布环境部署成功"
-msgstr "stag env deployed successfully"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:160
-msgid "旧版本正式环境没有部署或者已经下架，跳过正式环境部署"
-msgstr ""
-"Older versions of the test environment are not deployed or have been "
-"archive, Skip formal environment deployment"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:162
-msgid "开始部署生产环境"
-msgstr "Start deploying a prod env"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:167
-msgid "生产环境部署失败"
-msgstr "Failure to deploy to a prod env"
-
-#: paasng/platform/mgrlegacy/app_migrations/deploy.py:169
-msgid "生产环境部署成功"
-msgstr "Successful deployment in prod env"
-
 #: paasng/platform/mgrlegacy/app_migrations/egress_gateway.py:48
 #, python-brace-format
 msgid "{env} 环境绑定出口 IP 异常, 详情: 找不到集群或集群状态信息"
@@ -3544,26 +3526,6 @@ msgstr "Synchronising environment variables"
 #: paasng/platform/mgrlegacy/app_migrations/market.py:31
 msgid "同步应用市场信息"
 msgstr "Synchronise Market information"
-
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:27
-msgid "迁移权限管理: 用户白名单及IP白名单"
-msgstr "Relocation  Permissions : user whitelisting and IP whitelisting"
-
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:38
-msgid "开始迁移白名单"
-msgstr "Start migration whitelist"
-
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:62
-msgid "白名单迁移成功"
-msgstr "Whitelist migration successful"
-
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:69
-msgid "开始回滚白名单"
-msgstr "Start rolling back the whitelist"
-
-#: paasng/platform/mgrlegacy/app_migrations/permission.py:91
-msgid "白名单回滚成功"
-msgstr "Whitelist rollback successful"
 
 #: paasng/platform/mgrlegacy/app_migrations/product.py:35
 msgid "同步产品信息"
@@ -3621,27 +3583,16 @@ msgid "同步SVN版本库信息"
 msgstr "Sync SVN repository information"
 
 #: paasng/platform/mgrlegacy/legacy_proxy.py:79
-#: paasng/platform/mgrlegacy/legacy_proxy_te.py:101
 msgid "暂不支持轻应用迁移"
 msgstr " Mini-APP migration is not currently supported"
 
 #: paasng/platform/mgrlegacy/legacy_proxy.py:83
-#: paasng/platform/mgrlegacy/legacy_proxy_te.py:107
 msgid "暂不支持该类型应用迁移"
 msgstr "This type of APP migration is not currently supported"
 
 #: paasng/platform/mgrlegacy/legacy_proxy.py:86
-#: paasng/platform/mgrlegacy/legacy_proxy_te.py:116
 msgid "目前仅支持Python应用迁移"
 msgstr "Previously only supported Python APP migration"
-
-#: paasng/platform/mgrlegacy/legacy_proxy_te.py:120
-msgid "该项目没有trunk分支，请先添加trunk分支"
-msgstr "This project has no trunk branch, please add the trunk branch first"
-
-#: paasng/platform/mgrlegacy/legacy_proxy_te.py:128
-msgid "未知原因, 请联系管理员处理"
-msgstr "No known reason, please contact the administrator"
 
 #: paasng/platform/mgrlegacy/views.py:196
 msgid "已确认后的应用无法回滚"
@@ -3859,7 +3810,7 @@ msgstr "No valid APP descriptions found"
 
 #: paasng/platform/smart_app/services/detector.py:130
 msgid "应用描述文件的所在目录不合法"
-msgstr ""
+msgstr "Invalid application description file directory"
 
 #: paasng/platform/smart_app/services/detector.py:139
 #: paasng/platform/smart_app/services/detector.py:140
@@ -4083,6 +4034,12 @@ msgstr ""
 msgid "%s的仓库信息查询异常"
 msgstr "The warehouse information query of %s is abnormal"
 
+#: paasng/platform/sourcectl/views.py:488
+#, fuzzy, python-brace-format
+#| msgid "%s的仓库信息查询异常"
+msgid "仓库信息查询异常: {e}"
+msgstr "The warehouse information query of %s is abnormal"
+
 #: paasng/platform/sourcectl/views.py:504
 #, fuzzy, python-brace-format
 #| msgid "%s的仓库信息查询异常"
@@ -4175,28 +4132,6 @@ msgstr "Is Hidden"
 msgid "被隐藏的模板不会出现在创建应用时的列表中"
 msgstr ""
 "hidden templates will not appear in the list when creating new applications"
-
-#: paasng/security/access_control/views.py:94
-msgid "该应用对外网开放，白名单禁止关闭"
-msgstr "The APP is open to the extranet, whitelisting is disabled"
-
-#: paasng/security/access_control/views.py:96
-msgid "白名单禁止关闭"
-msgstr "Whitelist ban off"
-
-#: paasng/security/access_control/views.py:148
-#: paasng/security/access_control/views.py:199
-#: paasng/security/access_control/views.py:267
-msgid "存在相同的策略"
-msgstr "The same strategy exists"
-
-#: paasng/security/access_control/views.py:408
-msgid "已经在审核中,请勿重复申请"
-msgstr "Already under review, please do not repeat your APP"
-
-#: paasng/security/access_control/views.py:411
-msgid "提交申请成功"
-msgstr "Submitted successfully"
 
 #: paasng/settings/__init__.py:888
 msgid "蓝鲸权限中心旧版地址，建议切换为 BKPAAS_IAM_URL"

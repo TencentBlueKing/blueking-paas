@@ -418,6 +418,9 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 ## 环境变量保留前缀列表
 # CONFIGVAR_PROTECTED_PREFIXES: ["BKPAAS_", "KUBERNETES_"]
 
+# 是否开启 apiserver 与 operator 版本依赖检测
+# BKPAAS_OPERATOR_VERSION_CHECK: true
+
 ## 调用 PAAS 服务 JWT 配置，支持使用 ONE_SIMPLE_JWT_AUTH_KEY 简化配置
 # PAAS_SERVICE_JWT_CLIENTS:
 #   - iss: paas-v3

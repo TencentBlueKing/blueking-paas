@@ -51,7 +51,7 @@ target "heroku-build-bionic" {
     EOF
   }
   tags = ["${build_image_name("heroku-18", BUILD_IMAGE_NAME)}:${STACK_BUILDER_TAG}"]
-  platforms = ["linux/amd64"]
+  platforms = ["linux"]
 }
 
 target "heroku-run-bionic" {
@@ -79,7 +79,7 @@ target "heroku-run-bionic" {
     EOF
   }
   tags = ["${run_image_name("heroku-18", RUN_IMAGE_NAME)}:${STACK_RUNNER_TAG}"]
-  platforms = ["linux/amd64"]
+  platforms = ["linux"]
 }
 
 
@@ -108,7 +108,7 @@ target "heroku-build-jammy" {
     EOF
   }
   tags = ["${build_image_name("heroku-22", BUILD_IMAGE_NAME)}:${STACK_BUILDER_TAG}"]
-  platforms = ["linux/amd64"]
+  platforms = ["linux"]
 }
 
 target "heroku-run-jammy" {
@@ -136,5 +136,5 @@ target "heroku-run-jammy" {
     EOF
   }
   tags = ["${run_image_name("heroku-22", RUN_IMAGE_NAME)}:${STACK_RUNNER_TAG}"]
-  platforms = ["linux/amd64"]
+  platforms = ["linux"]
 }

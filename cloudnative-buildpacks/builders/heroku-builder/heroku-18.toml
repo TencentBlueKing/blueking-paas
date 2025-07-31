@@ -2,7 +2,7 @@ description = "Ubuntu bionic base image with buildpacks for Apt, Go, Python and 
 
 
 [[buildpacks]]
-  uri = "docker://gcr.io/paketo-buildpacks/procfile:5.6.1"
+  uri = "docker://paketobuildpacks/procfile:5.6.1"
   version = "5.6.1"
 
 

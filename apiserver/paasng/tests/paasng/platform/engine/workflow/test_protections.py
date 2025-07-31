@@ -249,8 +249,8 @@ class TestOperatorVersionCondition:
         fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version=operator_version))
         with (
             override_settings(
-                BKPAAS_OPERATOR_VERSION_CHECK=check_version,
-                BKPAAS_APISERVER_VERSION=api_server_version,
+                APISERVER_OPERATOR_VERSION_CHECK=check_version,
+                APISERVER_VERSION=api_server_version,
             ),
             mock.patch(
                 "paas_wl.infras.cluster.helm.HelmClient.get_release",
@@ -400,8 +400,8 @@ class TestModuleEnvDeployInspector:
         fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version="v1.0.1"))
         with (
             override_settings(
-                BKPAAS_OPERATOR_VERSION_CHECK=check_operator_version,
-                BKPAAS_APISERVER_VERSION="v1.0.0",
+                APISERVER_OPERATOR_VERSION_CHECK=check_operator_version,
+                APISERVER_VERSION="v1.0.0",
             ),
             mock.patch(
                 "paas_wl.infras.cluster.helm.HelmClient.get_release",

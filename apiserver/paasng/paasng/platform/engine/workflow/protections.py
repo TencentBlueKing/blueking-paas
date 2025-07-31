@@ -178,10 +178,10 @@ class OperatorVersionCondition(DeployCondition):
 
     def validate(self):
         # apiserver 根据 Helm 构建时, 注入容器 env
-        apiserver_version = settings.BKPAAS_APISERVER_VERSION
+        apiserver_version = settings.APISERVER_VERSION
 
         # 仅在打开 检查开关的时候检查
-        if not settings.BKPAAS_OPERATOR_VERSION_CHECK or not apiserver_version:
+        if not settings.APISERVER_OPERATOR_VERSION_CHECK or not apiserver_version:
             return
 
         # operator 通过 helm 客户端获取

@@ -35,23 +35,27 @@ def forwards_func(apps, schema_editor):
     但是又存在这样一个场景：密文使用 bkpaas 的密钥进行加密，此时会无法区分是平台加密的，还是从其他地方获取的密文
     这种情况理论上不会出现，但是为了保险起见，这里还是加上了强制检查，如果出现则会抛出异常，需要运维介入处理
     """
+    handler = RobustEncryptHandler()
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id, value FROM engine_configvar WHERE value LIKE %s", ("bkcrypt$%",))
-        config_vars = dict(cursor.fetchall())
-        handler = RobustEncryptHandler()
+        # 所有加密类都需要处理，可能的前缀有：bkcrypt$, sm4ctr$...
+        for cipher_name, cipher_class in handler.cipher_classes.items():
+            header = cipher_class.header.header
+            logger.info(f"Processing cipher class {cipher_name}, header: {header}")
+            cursor.execute("SELECT id, value FROM engine_configvar WHERE value LIKE %s", [f"{header}%"])
+            config_vars = dict(cursor.fetchall())
 
-        for var_id, value in config_vars.items():
-            try:
-                handler.decrypt(value)
-                # 确保数据库中不存在能被 bkpaas 密钥解密的数据，避免后续误将明文当做密文进行解密
-                raise ValueError(f"Invalid ConfigVar (id: {var_id}) value can be decrypted with bkpaas secret")
-            except InvalidToken:
-                continue
+            for var_id, value in config_vars.items():
+                try:
+                    handler.decrypt(value)
+                    # 确保数据库中不存在能被 bkpaas 密钥解密的数据，避免后续误将明文当做密文进行解密
+                    raise ValueError(f"ConfigVar (id: {var_id}) value can be decrypted by {cipher_name}")
+                except InvalidToken:
+                    continue
 
-        # 批量对数据库中的值以 bkcrypt$ 开头的环境变量值进行加密
-        if update_data := [(handler.encrypt(value), var_id) for var_id, value in config_vars.items()]:
-            with transaction.atomic():
-                cursor.executemany("UPDATE engine_configvar SET value = %s WHERE id = %s", update_data)
+            # 批量对数据库中的值以 bkcrypt$ 开头的环境变量值进行加密
+            if update_data := [(handler.encrypt(value), var_id) for var_id, value in config_vars.items()]:
+                with transaction.atomic():
+                    cursor.executemany("UPDATE engine_configvar SET value = %s WHERE id = %s", update_data)
 
 
 class Migration(migrations.Migration):

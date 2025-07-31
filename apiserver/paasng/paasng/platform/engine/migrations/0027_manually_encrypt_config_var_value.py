@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def forwards_func(apps, schema_editor):
-    """将数据库中是 bkcrypt$ 开头的环境变量值"""
+    """加密数据库中以 bkcrypt$ 开头的环境变量值"""
     with connection.cursor() as cursor:
         cursor.execute("SELECT id, value FROM engine_configvar WHERE value LIKE %s", ("bkcrypt$%",))
         config_vars = dict(cursor.fetchall())
@@ -40,10 +40,10 @@ def forwards_func(apps, schema_editor):
             except InvalidToken:
                 continue
 
-        # 批量更新数据库
-        update_data = [(handler.encrypt(value), var_id) for var_id, value in config_vars.items()]
-        with transaction.atomic():
-            cursor.executemany("UPDATE engine_configvar SET value = %s WHERE id = %s", update_data)
+        # 批量对数据库中的值以 bkcrypt$ 开头的环境变量值进行加密
+        if update_data := [(handler.encrypt(value), var_id) for var_id, value in config_vars.items()]:
+            with transaction.atomic():
+                cursor.executemany("UPDATE engine_configvar SET value = %s WHERE id = %s", update_data)
 
 
 class Migration(migrations.Migration):

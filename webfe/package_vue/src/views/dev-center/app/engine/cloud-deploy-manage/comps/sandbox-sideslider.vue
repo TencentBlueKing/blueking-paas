@@ -356,7 +356,7 @@ export default {
             ...currentModuleDeploy,
             isCreationAllowed:
               module.web_config?.build_method === 'buildpack' &&
-              module.language?.toLowerCase() === 'python' &&
+              ['golang', 'python'].includes(module.language?.toLowerCase()) &&
               currentModuleDeploy?.isDeployed,
           };
           acc.push(itemData);

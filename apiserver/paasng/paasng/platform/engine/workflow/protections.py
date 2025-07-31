@@ -194,9 +194,9 @@ class OperatorVersionCondition(DeployCondition):
             operator_version = operator_release.chart.app_version if operator_release else None
 
             if operator_version == apiserver_version:
-                # 只有版本一致时才缓存, 减少后续 helm 查询
-                # 缓存在 24h 之后过期, 之后需要重新查询 helm
+                # 通常 apiserver 会先于 operator 升级. 基于这一前提, 缓存时间设置为 24h, 进一步减少查询 helm release 的频次
                 cache.set(cache_key, operator_version, 24 * 60 * 60)
+                return
 
         if operator_version != apiserver_version:
             # 版本不一致时, 主动清理缓存, 促使下次强制刷新

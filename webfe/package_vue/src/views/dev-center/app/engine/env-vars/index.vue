@@ -82,7 +82,7 @@
                   </div>
                   <a
                     class="ps-btn ps-btn-l ps-btn-link spacing-h-x2"
-                    @click="skipRelease"
+                    @click="setEditedStatus(false)"
                   >
                     {{ $t('跳过，以后手动发布') }}
                   </a>
@@ -961,7 +961,7 @@ export default {
     },
     async init() {
       this.isLoading = true;
-      this.isEdited = false;
+      this.setEditedStatus(false);
       this.curSortKey = 'created';
       this.loadConfigVar();
       this.fetchReleaseInfo();
@@ -1164,6 +1164,7 @@ export default {
           theme: 'success',
           message: this.$t('修改环境变量成功'),
         });
+        this.setEditedStatus(true);
         this.loadConfigVar();
       } catch (e) {
         this.$paasMessage({
@@ -1185,6 +1186,7 @@ export default {
           message: this.$t('添加环境变量成功'),
         });
         this.loadConfigVar();
+        this.setEditedStatus(true);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1205,6 +1207,7 @@ export default {
           message: this.$t('删除环境变量成功'),
         });
         this.loadConfigVar();
+        this.setEditedStatus(true);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1233,10 +1236,11 @@ export default {
             });
           }
         );
-      this.isEdited = false;
+      this.setEditedStatus(false);
     },
-    skipRelease() {
-      this.isEdited = false;
+    // 设置 change 状态
+    setEditedStatus(flag) {
+      this.isEdited = flag;
     },
     async handleShowRuntimeDialog() {
       this.runtimeDialogConf.visiable = true;

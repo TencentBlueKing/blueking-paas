@@ -220,7 +220,7 @@
               v-for="option in servicesConfig.servicelist"
               :key="option?.service?.name"
               :id="option?.service?.name"
-              :name="option?.service?.name"
+              :name="option?.service?.display_name"
             ></bk-option>
           </bk-select>
           <p

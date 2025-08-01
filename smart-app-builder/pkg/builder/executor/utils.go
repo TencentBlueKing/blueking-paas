@@ -90,7 +90,7 @@ func archiveArtifactTarball(buildPlan *plan.BuildPlan, artifactDir string) (stri
 }
 
 // makeRunArgs 生成运行命令, 其中 moduleSrcTGZ 为模块源码包, runImage 为运行时镜像
-func makeRunArgs(group *plan.ModuleBuildGroup, moduleSrcTGZ string, runImage string) []string {
+func makeRunArgs(appCode string, group *plan.ModuleBuildGroup, moduleSrcTGZ string, runImage string) []string {
 	args := make([]string, 0)
 
 	envSlice := lo.MapToSlice(group.Envs, func(k string, v string) string {
@@ -116,6 +116,15 @@ func makeRunArgs(group *plan.ModuleBuildGroup, moduleSrcTGZ string, runImage str
 
 	for _, env := range envSlice {
 		args = append(args, "-e", env)
+	}
+
+	// 添加缓存配置
+	if config.G.CacheRegistry != "" {
+		cacheImage := fmt.Sprintf("%s/%s/%s:cnb-build-cache", config.G.CacheRegistry, appCode, group.BuildModuleName)
+		args = append(args, "-e", fmt.Sprintf("CACHE_IMAGE=%s", cacheImage))
+		if config.G.RegistryAuth != "" {
+			args = append(args, "-e", fmt.Sprintf("CNB_REGISTRY_AUTH=%s", config.G.RegistryAuth))
+		}
 	}
 
 	// 挂载源码压缩包

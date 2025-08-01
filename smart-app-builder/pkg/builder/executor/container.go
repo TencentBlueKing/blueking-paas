@@ -133,7 +133,7 @@ func (c *containerExecutor) runBuilder(buildPlan *plan.BuildPlan, runImage strin
 		}
 
 		// 2. 生成运行命令参数
-		args := makeRunArgs(group, moduleSrcTGZ, runImage)
+		args := makeRunArgs(buildPlan.AppCode, group, moduleSrcTGZ, runImage)
 		c.logger.Info("build", "module name", group.BuildModuleName, "run args", args)
 
 		// 3. 运行构建命令, 并打印输出

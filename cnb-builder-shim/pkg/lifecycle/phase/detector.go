@@ -31,6 +31,7 @@ func MakeDetectorStep(
 	ctx context.Context,
 	lifecycleDir, appDir, orderPath, groupPath, planPath, layersDir, logLevel string, uid, gid uint32,
 ) Step {
+	// see detector command args: https://github.com/buildpacks/spec/blob/platform/v0.11/platform.md#detector
 	args := []string{
 		"-app", appDir,
 		"-order", orderPath,

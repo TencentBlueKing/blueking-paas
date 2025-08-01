@@ -111,7 +111,7 @@ class UnifiedEnvVarsReader:
             env_list.extend(self._source_lister_func_map[source](self.env))
         return env_list.kv_map
 
-    def get_user_conflicted_keys(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedKey]":
+    def list_env_conflicts(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedEnvVarInfo]":
         """Get the conflicted keys. A conflicted key is a key that defined in the USER_CONFIGURED
         source, but also exists in other sources.
 
@@ -120,11 +120,9 @@ class UnifiedEnvVarsReader:
         """
         # Whether the current source being checked is after the USER_CONFIGURED source
         after_source = False
-        # Get all keys defined by the user in the USER_CONFIGURED source
-        user_keys = {item.key for item in self._source_lister_func_map[EnvVarSource.USER_CONFIGURED](self.env)}
 
         # Use a dict to store the result in case a key conflicts with multiple sources
-        conflicted_keys = {}
+        result_dict = {}
         for current_source in self._default_order:
             # Skip all user preset source, because they will be overridden anyway so conflict checking
             # is not needed.
@@ -138,22 +136,22 @@ class UnifiedEnvVarsReader:
                 continue
 
             data = self._source_lister_func_map[current_source](self.env).map
-            for key in user_keys:
-                if key in data:
-                    conflicted_keys[key] = ConflictedKey(
-                        key=key,
-                        conflicted_source=current_source,
-                        conflicted_detail=data[key].description,
-                        override_conflicted=not after_source,
-                    )
+            for key in data:
+                # Use key as dict key to deduplicate
+                result_dict[key] = ConflictedEnvVarInfo(
+                    key=key,
+                    conflicted_source=current_source,
+                    override_conflicted=not after_source,
+                    conflicted_detail=data[key].description,
+                )
 
         # Sort and return the result
-        return sorted(conflicted_keys.values(), key=lambda x: x.key)
+        return sorted(result_dict.values(), key=lambda x: x.key)
 
 
-def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
-    """Get user defined config vars keys that conflict with built-in env vars, the result can be
-    an useful hint for users to avoid conflicts.
+def list_conflicted_env_vars_summary(module: Module) -> "List[ConflictedEnvVarInfo]":
+    """Get the key of the env vars, including the behavior when there is a conflict,
+    for front-end to make judgments
 
     :param module: The module to check for conflicts.
     :return: List of conflicting keys.
@@ -164,7 +162,7 @@ def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
     # Check all environments in the module and merge the results
     for env in module.get_envs():
         if app.type == ApplicationType.CLOUD_NATIVE:
-            keys = UnifiedEnvVarsReader(env).get_user_conflicted_keys(
+            keys = UnifiedEnvVarsReader(env).list_env_conflicts(
                 # Exclude some sources because cloud-native apps does use them directly,
                 # see `apply_builtin_env_vars()` for more details.
                 exclude_sources=[
@@ -178,19 +176,19 @@ def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
 
             results.update({item.key: item for item in keys})
         else:
-            keys = UnifiedEnvVarsReader(env).get_user_conflicted_keys()
+            keys = UnifiedEnvVarsReader(env).list_env_conflicts()
             results.update({item.key: item for item in keys})
     return list(results.values())
 
 
 @define
-class ConflictedKey:
+class ConflictedEnvVarInfo:
     """A conflicted config var key object.
 
     :param key: The key of the config var.
     :param conflicted_source: The source of the conflict, such as "builtin_addons", "builtin_blobstore".
-    :param conflicted_detail: Additional details about the conflict, if any.
     :param override_conflicted: Whether the config var key has overridden the conflicting one.
+    :param conflicted_detail: Additional details about the conflict, if any.
     """
 
     key: str
@@ -351,7 +349,7 @@ def get_builtin_env_variables(engine_app: "EngineApp") -> EnvVariableList:
     # 蓝鲸文档地址前缀
     result.append(EnvVariableObj(key="BK_DOCS_URL_PREFIX", value=get_bk_doc_url_prefix(), description=""))
 
-    # admin42 中自定义的环境变量
+    # 平台管理中自定义的环境变量
     custom_sys_envs = get_custom_builtin_config_vars()
     # 如果自定义的系统内置变量有冲突，打印出来
     custom_sys_kv, result_kv = custom_sys_envs.kv_map, result.kv_map

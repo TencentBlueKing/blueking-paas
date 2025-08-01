@@ -15,8 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict
-
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
@@ -29,15 +27,10 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
-from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import (
-    get_custom_builtin_config_vars,
-    get_user_conflicted_keys,
-    list_vars_builtin_app_basic,
-    list_vars_builtin_plat_addrs,
-    list_vars_builtin_region,
-    list_vars_builtin_runtime,
+    get_builtin_env_variables,
+    list_conflicted_env_vars_summary,
 )
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models import ConfigVar
@@ -54,8 +47,9 @@ from paasng.platform.engine.serializers import (
     ConfigVarOperateAuditOutputSLZ,
     ConfigVarSLZ,
     ConfigVarUpsertByKeyInputSLZ,
-    ConflictedKeyOutputSLZ,
+    ConflictedEnvVarInfoOutputSLZ,
     CreateConfigVarInputSLZ,
+    ListBuiltinConfigVarOutputSLZ,
     ListConfigVarsQuerySLZ,
     UpdateConfigVarInputSLZ,
 )
@@ -322,36 +316,27 @@ class ConfigVarViewSet(viewsets.ModelViewSet, ApplicationCodeInPathMixin):
 
 
 class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    """View the built-in environment variables of the app"""
+    """View the built-in environment variables of the app module"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    def _get_enum_choices_dict(self, enum_obj) -> Dict[str, str]:
-        return {field[0]: field[1] for field in enum_obj.get_choices()}
+    def get_builtin_envs(self, request, code, module_name):
+        """获取内置环境变量"""
+        module = self.get_module_via_path()
 
-    def get_builtin_envs_for_app(self, request, code):
-        env_vars = list_vars_builtin_app_basic(self.get_application(), include_deprecated=False)
-        return Response({obj.key: obj.description for obj in env_vars})
+        result = {}
+        for env in module.get_envs():
+            env_vars = get_builtin_env_variables(env.get_engine_app())
+            result[env.environment] = [
+                {
+                    "key": key,
+                    "value": var.value,
+                    "description": var.description,
+                }
+                for key, var in env_vars.map.items()
+            ]
 
-    def get_builtin_envs_bk_platform(self, request, code):
-        bk_address_envs = list_vars_builtin_plat_addrs()
-        application = self.get_application()
-        # 默认展示正式环境的环境变量
-        region_and_env_envs = list_vars_builtin_region(application.region, AppEnvironment.PRODUCTION.value)
-
-        combined = {**bk_address_envs.get_data_map(), **region_and_env_envs.get_data_map()}
-        return Response(combined)
-
-    def get_runtime_envs(self, request, code):
-        # 使用默认模块的正式环境获取变量
-        env = self.get_application().default_module.get_envs(AppEnvironment.PRODUCTION)
-        env_vars = list_vars_builtin_runtime(env, include_deprecated=False)
-        return Response({obj.key: obj.description for obj in env_vars})
-
-    def get_custom_builtin_envs(self, request, code):
-        # 获取平台管理内置环境变量
-        env_vars = get_custom_builtin_config_vars()
-        return Response(env_vars.get_data_map())
+        return Response(ListBuiltinConfigVarOutputSLZ(result).data)
 
 
 class ConfigVarImportExportViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
@@ -430,10 +415,10 @@ class ConflictedConfigVarsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(
-        responses={200: ConflictedKeyOutputSLZ(many=True)},
+        responses={200: ConflictedEnvVarInfoOutputSLZ(many=True)},
     )
-    def get_user_conflicted_keys(self, request, code, module_name):
-        """获取当前模块中有冲突的环境变量 Key 列表
+    def list_configvar_conflicted_keys(self, request, code, module_name):
+        """获取环境变量及其可覆盖性
 
         “冲突”指用户自定义变量与平台内置变量同名。 不同类型的应用，平台处理冲突变量的行为有所不同，
         本接口返回的 key 列表主要作引导和提示用。
@@ -446,5 +431,5 @@ class ConflictedConfigVarsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         - 按照 override_conflicted 字段的值，展示字段已经覆盖冲突项，是否生效。
         """
         module = self.get_module_via_path()
-        keys = get_user_conflicted_keys(module)
-        return Response(ConflictedKeyOutputSLZ(keys, many=True).data)
+        keys = list_conflicted_env_vars_summary(module)
+        return Response(ConflictedEnvVarInfoOutputSLZ(keys, many=True).data)

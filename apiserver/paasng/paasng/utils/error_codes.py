@@ -171,6 +171,8 @@ class ErrorCodes:
     # 创建应用相关
     CREATE_LESSCODE_APP_ERROR = ErrorCode(_("创建蓝鲸运维开发平台应用错误"))
     CREATE_APP_FAILED = ErrorCode(_("创建应用失败"))
+    REPO_ACCESS_TOKEN_PERM_DENIED = ErrorCode(_("没有权限操作代码仓库"))
+    REPO_DEFAULT_SCOPE_PERMISSION_ERROR = ErrorCode(_("没有权在默认空间创建仓库"))
 
     # Admin 相关
     CONTROLLER_INTERNAL_ERROR = ErrorCode(_("engine 服务错误"))

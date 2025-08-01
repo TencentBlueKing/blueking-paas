@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import datetime
+import logging
 import random
 from typing import Dict, List
 
@@ -34,9 +35,12 @@ from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.core.tenant.user import get_tenant
 from paasng.infras.accounts.constants import FUNCTION_TYPE_MAP, SiteRole
 from paasng.infras.accounts.constants import AccountFeatureFlag as AccountFeatureFlagConst
+from paasng.infras.accounts.oauth.constants import ScopeType
 from paasng.infras.accounts.oauth.models import Project, Scope
 from paasng.infras.accounts.oauth.utils import get_backend
 from paasng.utils.models import AuditedModel, BkUserField, TimestampedModel
+
+logger = logging.getLogger(__name__)
 
 
 class User(AbstractBaseUser):
@@ -197,6 +201,34 @@ class Oauth2TokenHolderQS(models.QuerySet):
     def filter_valid_tokens(self) -> List["Oauth2TokenHolder"]:
         """获取所有未过期的 token"""
         return [token_holder for token_holder in self.all() if not token_holder.expired]
+
+    def filter_user_scope(self, provider: str) -> "Oauth2TokenHolder":
+        """获取 scope type 为 USER 的 token
+
+        :param provider: Oauth2 授权提供商，如 Github
+        """
+
+        for token_holder in self.filter(provider=provider):
+            try:
+                scope = Scope.parse_from_str(token_holder.get_scope())
+                if scope.type == ScopeType.USER:
+                    return token_holder
+            except (ValueError, KeyError):
+                # 记录解析 scope 时的格式错误
+                logger.exception(
+                    "Parse scope failed for token_holder<%s> provider=%s",
+                    token_holder.id,
+                    provider,
+                )
+                continue
+            except Exception:
+                logger.exception(
+                    "Unexpected error when processing token_holder<%s> provider=%s",
+                    token_holder.id,
+                    provider,
+                )
+                continue
+        raise self.model.DoesNotExist
 
 
 class Oauth2TokenHolder(TimestampedModel):

@@ -435,7 +435,7 @@ def create_repo_with_user_account(
             oauth_credential = get_oauth_credential_by_repo(repo_type, repo_url, user_id)
         except ObjectDoesNotExist:
             raise error_codes.REPO_ACCESS_TOKEN_PERM_DENIED.f(
-                _("您没有权限操作该代码仓库，请在“代码库管理”页面确认您的授权信息"), replace=True
+                _("您没有权限操作该代码仓库，请确认您的授权信息"), replace=True
             )
     else:
         try:
@@ -458,6 +458,7 @@ def create_repo_with_user_account(
             repo_group=repo_group,
         )
     except (AccessTokenError, AccessTokenForbidden):
+        logger.exception("create repo failed")
         # 前端需要根据这个 error_code，在错误信息中添加操作指引
         raise error_codes.REPO_ACCESS_TOKEN_PERM_DENIED.f(
             _("您没有权限操作该代码仓库，请在“代码库管理”页面确认您的授权信息"), replace=True

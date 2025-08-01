@@ -205,7 +205,7 @@ func getBuilderSteps(ctx context.Context) []phase.Step {
 	}
 	if *cacheImage != "" {
 		steps = append(steps, phase.MakeRestorerStep(ctx, *lifecycleDir, *cacheImage, *groupPath, *layersDir,
-			*logLevel, *useDaemon, *uid, *gid))
+			*logLevel, *uid, *gid))
 	}
 	steps = append(steps,
 		phase.MakeBuilderStep(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir,

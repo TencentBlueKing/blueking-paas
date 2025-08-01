@@ -30,7 +30,6 @@ import (
 func MakeRestorerStep(
 	ctx context.Context,
 	lifecycleDir, cacheImage, groupPath, layersDir, logLevel string,
-	useDaemon bool,
 	uid, gid uint32,
 ) Step {
 	var opts []CmdOptsProvider
@@ -44,11 +43,9 @@ func MakeRestorerStep(
 		"-uid", fmt.Sprintf("%d", uid),
 		"-gid", fmt.Sprintf("%d", gid),
 	}
-	if useDaemon {
-		opts = append(opts, WithRoot())
-	} else {
-		opts = append(opts, WithUser(uid, gid))
-	}
+
+	opts = append(opts, WithUser(uid, gid))
+
 	cmd := exec.CommandContext(ctx, filepath.Join(lifecycleDir, "restorer"), args...)
 	return makeStep("Restore", "Restoring layers from the cache...", cmd, opts...)
 }

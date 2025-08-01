@@ -33,6 +33,8 @@ docker run -it --rm --privileged \
     -e SOURCE_GET_URL=file:///podman/source \
     -e DEST_PUT_URL=file:///podman/dest \
     -e BUILDER_SHIM_IMAGE=bk-builder-heroku-bionic:v1.0.2 \
+    -e CACHE_REGISTRY='mirrors.example.com/foo' \
+    -e REGISTRY_AUTH='{"mirrors.example.com": "Basic xxx"}' \
     -v $APP_PATH:/podman/source \
     -v $SMART_PATH:/podman/dest \
     smart-app-builder:pind
@@ -49,6 +51,8 @@ docker run -it --rm --privileged \
 - `DEST_PUT_URL`: S-Mart 包的生成路径。同样地，`podman` 用户需要对目录具有读写权限(如示例中的 `/podman/dest`)。
 - `BUILDER_SHIM_IMAGE`: CNB
   构建工具镜像。镜像的制作方法可以参考 [cnb-builder-shim]([blueking-paas/cnb-builder-shim/README.md at builder-stack · TencentBlueKing/blueking-paas · GitHub](https://github.com/TencentBlueKing/blueking-paas/blob/builder-stack/cnb-builder-shim/README.md))。
+- `CACHE_REGISTRY`: (可选) 用于缓存的镜像仓库。设置后, 构建过程会启用缓存功能, 否则不启用。
+- `REGISTRY_AUTH`: (可选) 镜像仓库凭证。如果镜像仓库需要鉴权, 则必须设置此参数。
 
 #### 2.2 基于 DIND 构建
 
@@ -70,6 +74,8 @@ docker run -it --rm --privileged \
     -e SOURCE_GET_URL=file:///tmp/source \
     -e DEST_PUT_URL=file:///tmp/dest \
     -e BUILDER_SHIM_IMAGE=bk-builder-heroku-bionic:v1.0.2 \
+    -e CACHE_REGISTRY='mirrors.example.com/foo' \
+    -e REGISTRY_AUTH='{"mirrors.example.com": "Basic xxx"}' \
     -v $APP_PATH:/tmp/source \
     -v $SMART_PATH:/tmp/dest \
     smart-app-builder:dind
@@ -84,6 +90,8 @@ docker run -it --rm --privileged \
 - `DEST_PUT_URL`: S-Mart 包的生成路径
 - `BUILDER_SHIM_IMAGE`: CNB
   构建工具镜像。镜像的制作方法可以参考 [cnb-builder-shim]([blueking-paas/cnb-builder-shim/README.md at builder-stack · TencentBlueKing/blueking-paas · GitHub](https://github.com/TencentBlueKing/blueking-paas/blob/builder-stack/cnb-builder-shim/README.md))。
+- `CACHE_REGISTRY`: (可选) 用于缓存的镜像仓库。设置后, 构建过程会启用缓存功能, 否则不启用。
+- `REGISTRY_AUTH`: (可选) 镜像仓库凭证。如果镜像仓库需要鉴权, 则必须设置此参数。
 
 #### 2.3 PIND vs DIND
 

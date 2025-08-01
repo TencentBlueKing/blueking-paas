@@ -19,7 +19,7 @@ from typing import Dict, List, Optional
 from cattr import unstructure
 from typing_extensions import Protocol
 
-from paasng.infras.accounts.utils import OauthCredential, get_oauth_credential_with_merged_scopes
+from paasng.infras.accounts.utils import OauthCredential, get_oauth_credential_with_union_scopes
 from paasng.platform.sourcectl.models import GitGroup
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 
@@ -104,7 +104,7 @@ def list_all_owned_groups(source_type: str, user_id: str) -> List[GitGroup]:
     if not repo_provisioner_class:
         raise ValueError(f"Source type {source_type} not support list repository groups")
 
-    user_credentials = get_oauth_credential_with_merged_scopes(source_type, user_id)
+    user_credentials = get_oauth_credential_with_union_scopes(source_type, user_id)
     type_spec = get_sourcectl_type(source_type)
     source_config = type_spec.config_as_arguments()
     return repo_provisioner_class.list_owned_groups(source_config["api_url"], unstructure(user_credentials))

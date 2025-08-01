@@ -75,19 +75,19 @@ def create_app_oauth_backend(application: Application, env_name: str = settings.
 
 
 def get_oauth_credential(
-    source_type: str, user_id: str, mode: Literal["user", "repo", "merged"], repo_url: str | None = None
+    source_type: str, user_id: str, mode: Literal["user", "repo", "union"], repo_url: str | None = None
 ) -> OauthCredential:
     """获取 OAuth 凭证的统一入口函数
 
     该函数根据不同的模式获取不同范围的 OAuth 凭证：
     - repo: 根据仓库地址获取精确匹配的凭证（适用于仓库创建等需要精确权限的场景）
     - user: 获取用户级别凭证（适用于用户默认个人空间操作）
-    - merged: 获取第一个可用凭证，但授权范围是所有可用凭证的集合（适用于需要合并多个凭证权限的场景）
+    - union: 获取第一个可用凭证，但授权范围是所有可用凭证的集合（适用于需要合并多个凭证权限的场景）
 
     :param source_type: 源码仓库类型，需与认证提供商标识一致（如 'gitlab'/'github'）
     :param user_id: 用户唯一标识，用于查询关联的授权凭证
     :param mode: 凭证获取模式，可选值：
-        - 'merged': 获取第一个可用凭证，但授权范围是所有可用凭证的集合
+        - 'union': 获取第一个可用凭证，但授权范围是所有可用凭证的集合
         - 'repo': 根据仓库地址获取精确匹配凭证
         - 'user': 获取用户级别 scope 的凭证
     :param repo_url: 当 mode='repo' 时必须提供，仓库地址（支持未创建仓库的地址）
@@ -95,7 +95,7 @@ def get_oauth_credential(
 
     示例用法：
         # 获取第一个可用凭证，但合并所有可用凭证的授权范围
-        cred = get_oauth_credential('gitlab', 'user123', mode='merged')
+        cred = get_oauth_credential('gitlab', 'user123', mode='union')
 
         # 获取仓库匹配凭证
         cred = get_oauth_credential('gitlab', 'user123', mode='repo', repo_url='http://git.example.com/my/repo.git')
@@ -119,7 +119,7 @@ def get_oauth_credential(
         token_holder = profile.token_holder.filter_user_scope(source_type)
         return OauthCredential(token_holder.access_token, [token_holder.get_scope()])
 
-    elif mode == "merged":
+    elif mode == "union":
         token_holder_list = profile.token_holder.filter(provider=source_type).all()
         if not token_holder_list:
             raise Oauth2TokenHolder.DoesNotExist
@@ -133,14 +133,14 @@ def get_oauth_credential(
         raise ValueError(f"Invalid mode: {mode}")
 
 
-def get_oauth_credential_with_merged_scopes(source_type: str, user_id: str) -> OauthCredential:
+def get_oauth_credential_with_union_scopes(source_type: str, user_id: str) -> OauthCredential:
     """获取第一个可用凭证，但合并所有可用凭证的授权范围。用于拉取用户明下所有仓库列表、项目组等场景
 
     :param source_type: 源码仓库类型
     :param user_id: 用户 ID
     :return: 包含第一个凭证的access_token和所有凭证合并后的scope列表
     """
-    return get_oauth_credential(source_type, user_id, "merged")
+    return get_oauth_credential(source_type, user_id, "union")
 
 
 def get_oauth_credential_by_repo(source_type: str, repo_url: str, user_id: str) -> OauthCredential:

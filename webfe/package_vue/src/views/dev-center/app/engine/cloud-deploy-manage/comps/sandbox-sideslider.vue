@@ -123,7 +123,7 @@
                   v-bk-tooltips="{
                     content: disabledContent,
                     disabled: row.isCreationAllowed,
-                    width: 310,
+                    width: 260,
                     allowHTML: true,
                   }"
                 >

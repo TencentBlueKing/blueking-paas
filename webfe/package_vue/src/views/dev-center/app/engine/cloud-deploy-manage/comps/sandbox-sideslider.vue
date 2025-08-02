@@ -123,7 +123,7 @@
                   v-bk-tooltips="{
                     content: disabledContent,
                     disabled: row.isCreationAllowed,
-                    width: 310,
+                    width: 260,
                     allowHTML: true,
                   }"
                 >
@@ -306,7 +306,7 @@ export default {
         versionInfo: {},
       },
       disabledContent: this.$t(
-        '<p>同时满足下列条件的模块才能新建沙箱环境：</p><p>1. 使用“蓝鲸 Buildpack”构建且开发语言为 Python</p>2. 已经部署到预发布环境'
+        '<p>同时满足以下条件的模块才能创建沙箱：</p><p>1. 使用 “蓝鲸 Buildpack” 构建</p><p>2. 开发语言为 Python 或 Go</p><p>3. 已经部署到预发布环境</p>'
       ),
       errorInfo: {},
       isShowErrorAlert: false,
@@ -356,7 +356,7 @@ export default {
             ...currentModuleDeploy,
             isCreationAllowed:
               module.web_config?.build_method === 'buildpack' &&
-              module.language?.toLowerCase() === 'python' &&
+              ['go', 'python'].includes(module.language?.toLowerCase()) &&
               currentModuleDeploy?.isDeployed,
           };
           acc.push(itemData);

@@ -44,6 +44,7 @@ class ServiceObjOutputSLZ(serializers.Serializer):
     long_description = serializers.CharField(help_text="详细描述")
     instance_tutorial = serializers.CharField(help_text="服务 markdown 描述")
     config = serializers.JSONField(required=False, default=dict)
+    plan_schema = serializers.JSONField(required=False, default=dict)
 
     is_visible = serializers.BooleanField(help_text="是否可见")
 

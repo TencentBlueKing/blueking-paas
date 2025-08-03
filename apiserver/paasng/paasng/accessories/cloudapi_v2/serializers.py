@@ -17,7 +17,7 @@
 
 from rest_framework import serializers
 
-from . import constants
+from paasng.accessories.cloudapi_v2.constants import PermissionApplyStatus
 
 
 class MCPServerQueryParamsSLZ(serializers.Serializer):
@@ -33,13 +33,13 @@ class AppMCPServerPermissionApplyRecordQueryParamsSLZ(serializers.Serializer):
     applied_time_start = serializers.IntegerField(help_text="申请开始时间（Unix 时间戳）", required=False)
     applied_time_end = serializers.IntegerField(help_text="申请截止时间（Unix 时间戳）", required=False)
     apply_status = serializers.ChoiceField(
-        choices=constants.PermissionApplyStatus.get_django_choices(),
+        choices=PermissionApplyStatus.get_django_choices(),
         required=False,
     )
     query = serializers.CharField(help_text="搜索条件，支持模糊匹配 MCPServer 名称", required=False)
 
 
-class ApplyMCPResourcePermissionSLZ(serializers.Serializer):
+class ApplyMCPResourcePermissionInputSLZ(serializers.Serializer):
     """申请 mcp_resource 权限请求参数"""
 
     mcp_server_ids = serializers.ListField(child=serializers.IntegerField(), help_text="mcp_server ID 列表")

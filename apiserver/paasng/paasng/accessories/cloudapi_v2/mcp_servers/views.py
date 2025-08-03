@@ -73,11 +73,11 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         return Response(data)
 
     @swagger_auto_schema(
-        request_body=serializers.ApplyMCPResourcePermissionSLZ,
+        request_body=serializers.ApplyMCPResourcePermissionInputSLZ,
         tags=["CloudAPIV2"],
     )
     def apply_mcp_server_permissions(self, request, *args, **kwargs):
-        slz = serializers.ApplyMCPResourcePermissionSLZ(data=request.data)
+        slz = serializers.ApplyMCPResourcePermissionInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -85,21 +85,18 @@ class MCPServerAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         tenant_id = get_tenant_id_for_app(app.code)
         MCPServerApiClient(tenant_id=tenant_id).apply_permissions(app_code=app.code, **data)
 
-        try:
-            # 云 API 申请记录 ID，用于操作详情的展示
-            data_after = DataDetail(type=DataType.CLOUD_API_RECORD, data=data)
+        # 云 API 申请记录 ID，用于操作详情的展示
+        data_after = DataDetail(type=DataType.CLOUD_API_RECORD, data=data)
 
-            add_app_audit_record(
-                app_code=app.code,
-                tenant_id=tenant_id,
-                user=request.user.pk,
-                action_id=AppAction.MANAGE_CLOUD_API,
-                operation=OperationEnum.APPLY,
-                target=OperationTarget.CLOUD_API,
-                result_code=ResultCode.SUCCESS,
-                data_after=data_after,
-            )
-        except Exception:
-            logger.exception("An exception occurred in the operation record of adding cloud API permissions")
+        add_app_audit_record(
+            app_code=app.code,
+            tenant_id=tenant_id,
+            user=request.user.pk,
+            action_id=AppAction.MANAGE_CLOUD_API,
+            operation=OperationEnum.APPLY,
+            target=OperationTarget.CLOUD_API,
+            result_code=ResultCode.SUCCESS,
+            data_after=data_after,
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)

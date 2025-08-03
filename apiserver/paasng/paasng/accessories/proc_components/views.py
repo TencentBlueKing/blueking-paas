@@ -16,12 +16,12 @@
 # to the current version of the project delivered to anyone in the future.
 
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status, viewsets
+from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.proc_components.constants import DEFAULT_COMPONENT_DIR
-from paasng.accessories.proc_components.manager import ComponentManager
+from paasng.accessories.proc_components.manager import ComponentLoader
 
 from .exceptions import ComponentNotFound
 
@@ -31,9 +31,9 @@ class ProcessComponentViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(operation_summary="获取进程组件列表")
     def list(self, request):
-        mgr = ComponentManager(DEFAULT_COMPONENT_DIR)
+        mgr = ComponentLoader()
         try:
             data = mgr.get_all_components()
         except ComponentNotFound:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response([])
         return Response(data)

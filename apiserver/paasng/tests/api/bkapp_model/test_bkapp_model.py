@@ -52,8 +52,7 @@ class TestModuleProcessSpecViewSet:
             args=["-m", "http.server"],
             port=8000,
             components=[
-                Component(type="cl5", version="v1"),
-                Component(type="env_overlay", version="v2"),
+                Component(name="env_overlay", version="v2"),
             ],
         )
 
@@ -80,7 +79,6 @@ class TestModuleProcessSpecViewSet:
         }
         assert proc_specs[0]["services"] is None
         assert proc_specs[0]["components"] == [
-            {"type": "cl5", "version": "v1", "properties": {}},
             {"type": "env_overlay", "version": "v2", "properties": {}},
         ]
 
@@ -560,8 +558,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
             args=["-m", "http.server"],
             port=8000,
             components=[
-                Component(type="cl5", version="v1"),
-                Component(type="env_overlay", version="v2"),
+                Component(name="env_overlay", version="v2"),
             ],
         )
 
@@ -577,11 +574,6 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
                         "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
                     }
                 ],
-                200,
-                "",
-            ),
-            (
-                [{"type": "cl5", "version": "v1"}],
                 200,
                 "",
             ),

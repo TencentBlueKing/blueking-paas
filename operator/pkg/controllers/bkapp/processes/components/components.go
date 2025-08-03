@@ -35,7 +35,6 @@ import (
 // ComponentMutator inject component to deployment
 type ComponentMutator struct {
 	component     paasv1alpha2.Component
-	componentDir  string
 	defaultParams map[string]any
 }
 
@@ -43,7 +42,7 @@ type ComponentMutator struct {
 func (c *ComponentMutator) patchToDeployment(deployment *appsv1.Deployment) error {
 	patchBytes, err := c.getTemplate()
 	if err != nil {
-		return errors.Wrapf(err, "get template %s:%s", c.component.Type, c.component.Version)
+		return errors.Wrapf(err, "get template %s:%s", c.component.Name, c.component.Version)
 	}
 	originalBytes, err := json.Marshal(deployment)
 	if err != nil {
@@ -66,11 +65,11 @@ func (c *ComponentMutator) patchToDeployment(deployment *appsv1.Deployment) erro
 
 // getTemplate get component template from configmap
 func (c *ComponentMutator) getTemplate() ([]byte, error) {
-	manager, err := components.NewComponentManager(c.componentDir)
+	manager, err := components.NewComponentLoader()
 	if err != nil {
 		return nil, err
 	}
-	tpl, err := manager.GetTemplate(c.component.Type, c.component.Version)
+	tpl, err := manager.GetTemplate(c.component.Name, c.component.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -90,15 +89,16 @@ func (c *ComponentMutator) renderTemplate(templateContent string) ([]byte, error
 	}
 
 	var paramValues map[string]any
+	for k, v := range c.defaultParams {
+		paramValues[k] = v
+	}
+
 	if len(c.component.Properties.Raw) > 0 {
 		if err = json.Unmarshal(c.component.Properties.Raw, &paramValues); err != nil {
 			return nil, err
 		}
 	} else {
 		paramValues = make(map[string]any)
-	}
-	for k, v := range c.defaultParams {
-		paramValues[k] = v
 	}
 
 	var buf bytes.Buffer
@@ -116,8 +116,7 @@ func PatchToDeployment(
 ) error {
 	for _, component := range proc.Components {
 		mutator := &ComponentMutator{
-			component:    component,
-			componentDir: components.DefaultComponentDir,
+			component: component,
 			defaultParams: map[string]any{
 				"procName": proc.Name,
 			},

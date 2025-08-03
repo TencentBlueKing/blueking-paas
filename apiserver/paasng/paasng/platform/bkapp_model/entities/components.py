@@ -27,11 +27,11 @@ class Component(BaseModel):
     """
     进程组件
 
-    :param type: 组件类型
+    :param name: 组件名称
     :param version: 组件版本
     :param properties: 组件参数
     """
 
-    type: str
+    name: str
     version: str
     properties: Dict[str, Any] = {}

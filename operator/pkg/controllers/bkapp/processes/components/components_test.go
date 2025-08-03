@@ -86,7 +86,7 @@ var _ = Describe("ComponentMutator", func() {
 				Name: "web",
 				Components: []paasv1alpha2.Component{
 					{
-						Type:    "env_overlay",
+						Name:    "env_overlay",
 						Version: "v1",
 						Properties: runtime.RawExtension{
 							Raw: []byte(
@@ -120,7 +120,7 @@ var _ = Describe("ComponentMutator", func() {
 				Name: "web",
 				Components: []paasv1alpha2.Component{
 					{
-						Type:    "cl5",
+						Name:    "cl5",
 						Version: "v1",
 					},
 				},
@@ -196,7 +196,7 @@ var _ = Describe("ComponentMutator", func() {
 				Name: "web",
 				Components: []paasv1alpha2.Component{
 					{
-						Type:    "non-existent",
+						Name:    "non-existent",
 						Version: "v1",
 						Properties: runtime.RawExtension{
 							Raw: []byte(

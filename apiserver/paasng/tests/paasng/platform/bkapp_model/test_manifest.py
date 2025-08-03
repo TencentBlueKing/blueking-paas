@@ -256,7 +256,6 @@ class TestProcessesManifestConstructor:
     def process_web_with_proc_components(self, process_web) -> ModuleProcessSpec:
         """ProcessSpec for web, with components"""
         process_web.components = [
-            Component(type="cl5", version="v1"),
             Component(
                 type="env_overlay",
                 version="v1",
@@ -360,7 +359,6 @@ class TestProcessesManifestConstructor:
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
         data = blank_resource.spec.dict(exclude_none=True, include={"processes"})["processes"][0]
         assert data["components"] == [
-            {"properties": None, "type": "cl5", "version": "v1"},
             {
                 "properties": '{"env": [{"name": "proc_name", "value": "FOO"}, {"name": ' '"key", "value": "1"}]}',
                 "type": "env_overlay",

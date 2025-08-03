@@ -21,4 +21,4 @@ class ComponentPropertiesInvalid(Exception):
 
 
 class ComponentNotFound(Exception):
-    """raised when Component is not found"""
+    """raised when component is not found"""

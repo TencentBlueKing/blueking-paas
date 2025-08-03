@@ -22,9 +22,8 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paas_wl.utils.camel_converter import camel_to_snake_case
-from paasng.accessories.proc_components.constants import DEFAULT_COMPONENT_DIR
 from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
-from paasng.accessories.proc_components.manager import ComponentManager
+from paasng.accessories.proc_components.manager import validate_component_properties
 from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
     ImagePullPolicy,
@@ -245,9 +244,8 @@ class ComponentInputSLZ(serializers.Serializer):
         return internal_value
 
     def validate(self, attrs: Dict) -> Dict:
-        mgr = ComponentManager(DEFAULT_COMPONENT_DIR)
         try:
-            mgr.validate_properties(attrs["type"], attrs["version"], attrs.get("properties"))
+            validate_component_properties(attrs["type"], attrs["version"], attrs.get("properties"))
         except ComponentNotFound:
             raise ValidationError(_("组件 {}-{} 不存在").format(attrs["type"], attrs["version"]))
         except ComponentPropertiesInvalid as e:

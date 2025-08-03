@@ -1469,7 +1469,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 		It("env_overlay component", func() {
 			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
 				{
-					Type:    "env_overlay",
+					Name:    "env_overlay",
 					Version: "v1",
 					Properties: runtime.RawExtension{
 						Raw: []byte(
@@ -1486,7 +1486,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 		It("env_overlay component with invalid properties", func() {
 			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
 				{
-					Type:    "env_overlay",
+					Name:    "env_overlay",
 					Version: "v1",
 					Properties: runtime.RawExtension{
 						Raw: []byte(
@@ -1498,12 +1498,13 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 
 			err := bkapp.ValidateCreate()
 			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid properties"))
 		})
 
 		It("cl5 component", func() {
 			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
 				{
-					Type:    "cl5",
+					Name:    "cl5",
 					Version: "v1",
 				},
 			}
@@ -1515,7 +1516,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 		It("invalid component type", func() {
 			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
 				{
-					Type:    "invalid_type",
+					Name:    "invalid_type",
 					Version: "v1",
 					Properties: runtime.RawExtension{
 						Raw: []byte(
@@ -1532,7 +1533,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 		It("invalid component version", func() {
 			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
 				{
-					Type:    "env_overlay",
+					Name:    "env_overlay",
 					Version: "v2",
 					Properties: runtime.RawExtension{
 						Raw: []byte(

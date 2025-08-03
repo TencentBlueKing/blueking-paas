@@ -29,8 +29,8 @@ import (
 
 // Component is used to specify process component
 type Component struct {
-	// Type of component
-	Type string `json:"type"`
+	// Name of component
+	Name string `json:"name"`
 	// Version of component
 	Version string `json:"version"`
 	// Properties of component
@@ -38,21 +38,21 @@ type Component struct {
 }
 
 func (c *Component) validate() error {
-	manager, err := components.NewComponentManager(components.DefaultComponentDir)
+	manager, err := components.NewComponentLoader()
 	if err != nil {
 		return errors.Wrap(err, "new component mgr")
 	}
-	componentInfo, err := manager.GetComponentInfo(c.Type, c.Version)
+	componentInfo, err := manager.GetComponentInfo(c.Name, c.Version)
 	if err != nil || componentInfo == nil {
 		return errors.Wrap(err, "can not find component")
 	}
 	var paramValues map[string]any
 	if len(c.Properties.Raw) > 0 {
 		if err = json.Unmarshal(c.Properties.Raw, &paramValues); err != nil {
-			return errors.Wrap(err, "new component mgr")
+			return errors.Wrap(err, "invalid properties")
 		}
 	} else {
 		paramValues = make(map[string]any)
 	}
-	return manager.ValidateSchema(c.Type, c.Version, paramValues)
+	return manager.ValidateSchema(c.Name, c.Version, paramValues)
 }

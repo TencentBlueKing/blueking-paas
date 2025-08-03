@@ -22,63 +22,82 @@ from typing import Any, Dict, List
 from jsonschema import validate as jsonschema_validate
 from jsonschema.exceptions import ValidationError as SchemaValidationError
 
+from paasng.accessories.proc_components.constants import DEFAULT_COMPONENT_DIR
 from .exceptions import ComponentNotFound, ComponentPropertiesInvalid
 
 
-class ComponentManager:
-    def __init__(self, components_dir: Path):
+class ComponentLoader:
+    def __init__(self):
         """
         初始化组件管理器
 
         :param components_dir: 组件根目录路径
         """
-        self.components_dir = components_dir
+        self.components_dir = DEFAULT_COMPONENT_DIR
 
     def get_all_components(self) -> Dict[str, Dict[str, Dict]]:
-        """获取所有组件信息的结构化数据"""
+        """获取所有组件信息的结构化数据
+        返回值结构说明：
+        {
+            "组件名称1": {                  # 第一层：组件名称作为键
+                "版本号1": {                # 第二层：该组件的版本号作为键
+                    "schema": {...},        # 第三层：该版本组件的 schema 定义
+                    "documentation": "..."  # 第三层：该版本组件的文档说明
+                },
+                "版本号2": {
+                    # 同版本号1的结构
+                }
+            },
+            "组件名称2": {
+                # 同组件名称1的结构
+            }
+        }
+        """
         components: Dict[str, Dict[str, Dict]] = {}
-        for component_type in self._get_component_types():
-            components[component_type] = {}
-            for version in self._get_component_versions(component_type):
-                components[component_type][version] = {
-                    "schema": self._get_component_schema(component_type, version),
-                    "documentation": self._get_component_documentation(component_type, version),
+        for component_name in self._get_component_names():
+            components[component_name] = {}
+            for version in self._get_component_versions(component_name):
+                components[component_name][version] = {
+                    "schema": self.get_component_schema(component_name, version),
+                    "documentation": self._get_component_documentation(component_name, version),
                 }
         return components
 
-    def validate_properties(self, component_type: str, version: str, properties: Dict[str, Any] | None):
-        """验证组件参数"""
-        schema = self._get_component_schema(component_type, version)
-        if properties is not None:
-            try:
-                jsonschema_validate(instance=properties, schema=schema)
-            except SchemaValidationError as e:
-                raise ComponentPropertiesInvalid(f"component {component_type}:{version} properties invalid") from e
-
-    def _get_component_schema(self, component_type: str, version: str) -> Dict:
+    def get_component_schema(self, component_name: str, version: str) -> Dict:
         """获取组件 schema"""
-        schema_file = self._get_component_file(component_type, version, "schema.json")
+        schema_file = self._get_component_file(component_name, version, "schema.json")
         return json.loads(schema_file.read_text())
 
-    def _get_component_documentation(self, component_type: str, version: str) -> str:
+    def _get_component_documentation(self, component_name: str, version: str) -> str:
         """获取组件说明文档"""
-        doc_file = self._get_component_file(component_type, version, "docs.md")
+        doc_file = self._get_component_file(component_name, version, "docs.md")
         return doc_file.read_text()
 
-    def _get_component_file(self, component_type: str, version: str, filename: str) -> Path:
+    def _get_component_file(self, component_name: str, version: str, filename: str) -> Path:
         """获取组件文件路径并验证"""
-        file_path = self.components_dir / component_type / version / filename
+        file_path = self.components_dir / component_name / version / filename
         if not file_path.exists():
             raise ComponentNotFound(f"Component file not found: {file_path}")
         return file_path
 
-    def _get_component_types(self) -> List[str]:
+    def _get_component_names(self) -> List[str]:
         """获取所有可用的组件类型"""
         return [d.name for d in self.components_dir.iterdir() if d.is_dir()]
 
-    def _get_component_versions(self, component_type: str) -> List[str]:
+    def _get_component_versions(self, component_name: str) -> List[str]:
         """获取指定组件类型的所有版本"""
-        type_dir = self.components_dir / component_type
+        type_dir = self.components_dir / component_name
         if not type_dir.exists():
-            raise ComponentNotFound(f"Component type not found: {component_type}")
+            raise ComponentNotFound(f"Component type not found: {component_name}")
         return [d.name for d in type_dir.iterdir() if d.is_dir()]
+
+
+def validate_component_properties(component_name: str, version: str, properties: Dict[str, Any]):
+    """验证组件参数"""
+    loader = ComponentLoader()
+    schema = loader.get_component_schema(component_name, version)
+    if properties is not None:
+        try:
+            jsonschema_validate(instance=properties, schema=schema)
+        except SchemaValidationError as e:
+            raise ComponentPropertiesInvalid(f"component {component_name}:{version} properties invalid") from e

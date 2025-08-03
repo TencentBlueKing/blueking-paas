@@ -16,59 +16,30 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// 组件管理器用于管理平台支持的各类组件及其不同版本
-// 包括组件的模板定义、参数 Schema、文档等信息
-//
-// 目录结构说明：
-//   components/
-//   ├── cl5/                 # cl5 类型组件
-//   │   ├── v1/              # v1版本
-//   │   │   ├── template.yaml  # 组件部署模板
-//   │   │   ├── schema.json    # 组件参数 Schema 定义
-//   │   │   └── docs.md        # 组件详细文档说明
-//   │   └── v2/              # v2版本
-//   │       ├── template.yaml
-//   │       ├── schema.json
-//   │       └── docs.md
-//   ├── env_overlay/              # env_overlay 类型组件
-//   │   ├── v1/
-//   │   │   ├── template.yaml
-//   │   │   ├── schema.json
-//   │   │   └── docs.md
-//   │   └── v2/
-//   │       ├── template.yaml
-//   │       ├── schema.json
-//   │       └── docs.md
-//
-// 主要功能：
-//   - 组件信息的加载与管理
-//   - 组件模板的获取
-//   - 组件参数 Schema 的验证
-
 package components
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/xeipuuv/gojsonschema"
 )
 
 // DefaultComponentDir 默认存放组件的目录
 var DefaultComponentDir = "/components"
 
-// ComponentManager 管理所有组件
-type ComponentManager struct {
+// ComponentLoader 读取所有组件
+type ComponentLoader struct {
 	componentsDir string
 }
 
-// NewComponentManager 创建组件管理器
-func NewComponentManager(componentsDir string) (*ComponentManager, error) {
-	absPath, err := filepath.Abs(componentsDir)
+// NewComponentLoader 创建组件加载器
+func NewComponentLoader() (*ComponentLoader, error) {
+	absPath, err := filepath.Abs(DefaultComponentDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "get absolute path")
 	}
@@ -77,25 +48,25 @@ func NewComponentManager(componentsDir string) (*ComponentManager, error) {
 		return nil, errors.Wrap(err, "components directory does not exist")
 	}
 
-	return &ComponentManager{
+	return &ComponentLoader{
 		componentsDir: absPath,
 	}, nil
 }
 
 // GetTemplate 获取组件模板内容
-func (m *ComponentManager) GetTemplate(componentType, version string) ([]byte, error) {
+func (m *ComponentLoader) GetTemplate(componentType, version string) ([]byte, error) {
 	templatePath := filepath.Join(m.componentsDir, componentType, version, "template.yaml")
 	return m.readFileContent(templatePath)
 }
 
 // GetSchema 获取组件 schema 内容
-func (m *ComponentManager) GetSchema(componentType, version string) ([]byte, error) {
+func (m *ComponentLoader) GetSchema(componentType, version string) ([]byte, error) {
 	schemaPath := filepath.Join(m.componentsDir, componentType, version, "schema.json")
 	return m.readFileContent(schemaPath)
 }
 
 // GetComponentInfo 获取组件的完整信息
-func (m *ComponentManager) GetComponentInfo(componentType, version string) (*ComponentInfo, error) {
+func (m *ComponentLoader) GetComponentInfo(componentType, version string) (*ComponentInfo, error) {
 	template, err := m.GetTemplate(componentType, version)
 	if err != nil {
 		return nil, err
@@ -115,7 +86,7 @@ func (m *ComponentManager) GetComponentInfo(componentType, version string) (*Com
 }
 
 // ValidateSchema 验证给定的参数是否符合组件的 schema
-func (m *ComponentManager) ValidateSchema(componentType, version string, properties map[string]any) error {
+func (m *ComponentLoader) ValidateSchema(componentType, version string, properties map[string]any) error {
 	schema, err := m.GetSchema(componentType, version)
 	if err != nil {
 		return err
@@ -137,7 +108,7 @@ func (m *ComponentManager) ValidateSchema(componentType, version string, propert
 		for _, desc := range result.Errors() {
 			errMsgs = append(errMsgs, fmt.Sprintf("- %s", desc))
 		}
-		msg := fmt.Sprintf("component  validation failed: %s", strings.Join(errMsgs, "\n"))
+		msg := fmt.Sprintf("component validation failed: %s", strings.Join(errMsgs, "\n"))
 		return errors.New(msg)
 	}
 
@@ -145,11 +116,7 @@ func (m *ComponentManager) ValidateSchema(componentType, version string, propert
 }
 
 // readFileContent 读取文件内容
-func (m *ComponentManager) readFileContent(filePath string) ([]byte, error) {
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, errors.Wrap(err, "read component file")
-	}
-
+func (m *ComponentLoader) readFileContent(filePath string) ([]byte, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "read component file")

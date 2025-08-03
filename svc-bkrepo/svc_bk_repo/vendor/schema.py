@@ -15,9 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Optional
-
-from django.conf import settings
 from pydantic import BaseModel, Field
 
 
@@ -25,18 +22,6 @@ class PlanSchema(BaseModel):
     """服务方案配置"""
 
     endpoint_url: str = Field(description="bkrepo url", example="https://api.example.com/v1")
-
     username: str = Field(description="用户名", example="admin_user")
-
-    password: str = Field(
-        description="密码",
-        example="password123",
-    )
-
+    password: str = Field(description="密码", example="password123")
     project: str = Field(description="项目名称", example="my_project")
-
-    quota: Optional[int] = Field(
-        default=settings.BKREPO_DEFAULT_QUOTA if hasattr(settings, "BKREPO_DEFAULT_QUOTA") else None,
-        description="资源配额限制（可选）",
-        example=1000,
-    )

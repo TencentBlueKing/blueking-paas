@@ -149,9 +149,9 @@ class UnifiedEnvVarsReader:
         return sorted(result_dict.values(), key=lambda x: x.key)
 
 
-def list_conflicted_env_vars_summary(module: Module) -> "List[ConflictedEnvVarInfo]":
-    """Get the key of the env vars, including the behavior when there is a conflict,
-    for front-end to make judgments
+def list_conflicted_env_vars_for_view(module: Module) -> "List[ConflictedEnvVarInfo]":
+    """Get env vars, including the behavior after when there is a conflict,
+    for front-end to determine whether a conflict occurs when saving and modifying env vars
 
     :param module: The module to check for conflicts.
     :return: List of conflicting keys.

@@ -760,7 +760,7 @@ class EnvOverviewSLZ(serializers.Serializer):
     modules = ModuleEnvOverviewSLZ(many=True)
 
 
-class ConfigVarBuiltinFormatSLZ(serializers.Serializer):
+class ConfigVarBuiltinSLZ(serializers.Serializer):
     """Serializer for Builtin ConfigVar"""
 
     key = serializers.CharField(help_text="内置环境变量 key")
@@ -777,9 +777,9 @@ class ConfigVarBuiltinFormatSLZ(serializers.Serializer):
         return ret
 
 
-class ListBuiltinConfigVarOutputSLZ(serializers.Serializer):
-    stag = ConfigVarBuiltinFormatSLZ(many=True)
-    prod = ConfigVarBuiltinFormatSLZ(many=True)
+class ListConfigVarBuiltinSLZ(serializers.Serializer):
+    stag = ConfigVarBuiltinSLZ(many=True)
+    prod = ConfigVarBuiltinSLZ(many=True)
 
 
 class ConflictedEnvVarInfoOutputSLZ(serializers.Serializer):

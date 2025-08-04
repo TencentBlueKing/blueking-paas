@@ -32,7 +32,7 @@ from paasng.platform.engine.configurations.config_var import (
     UnifiedEnvVarsReader,
     get_builtin_env_variables,
     get_env_variables,
-    list_conflicted_env_vars_summary,
+    list_conflicted_env_vars_for_view,
     list_vars_builtin_runtime,
 )
 from paasng.platform.engine.models.config_var import BuiltinConfigVar, ConfigVar
@@ -223,18 +223,18 @@ def test_list_vars_builtin_runtime(bk_app, bk_stag_env):
 
 
 @pytest.mark.usefixtures("_with_wl_apps")
-class Test__list_conflicted_env_vars_summary:
+class Test__list_conflicted_env_vars_for_view:
     @pytest.mark.parametrize(
         ("app_type", "expected_override_conflicted"),
         [(ApplicationType.DEFAULT, True), (ApplicationType.CLOUD_NATIVE, False)],
     )
-    def test_list_conflicted_env_vars_summary(self, bk_module, bk_stag_env, app_type, expected_override_conflicted):
+    def test_list_conflicted_env_vars_for_view(self, bk_module, bk_stag_env, app_type, expected_override_conflicted):
         bk_module.application.type = app_type
         bk_module.application.save(update_fields=["type"])
         # 因为 list_vars_builtin_runtime 列出的 EnvVariableList 属于 EnvVarSource.BUILTIN_MISC
         # 在 云原生应用 中会将 override_conflicted 修改为 False
         # 在 非云原生应用 中 override_conflicted 为 True
-        result = list_conflicted_env_vars_summary(bk_module)
+        result = list_conflicted_env_vars_for_view(bk_module)
         assert isinstance(result, list)
         assert any(item.override_conflicted is expected_override_conflicted for item in result)
 

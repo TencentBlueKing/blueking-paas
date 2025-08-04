@@ -434,5 +434,5 @@ class ConflictedConfigVarsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         - 按照 override_conflicted 字段的值，展示字段已经覆盖冲突项，是否生效。
         """
         module = self.get_module_via_path()
-        keys = list_conflicted_env_vars_for_view(module)
-        return Response(ConflictedEnvVarInfoOutputSLZ(keys, many=True).data)
+        conflicted_env_vars = list_conflicted_env_vars_for_view(module)
+        return Response(ConflictedEnvVarInfoOutputSLZ(conflicted_env_vars, many=True).data)

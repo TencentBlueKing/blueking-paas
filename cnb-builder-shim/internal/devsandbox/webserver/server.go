@@ -81,7 +81,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.GET("/healthz", HealthzHandler())
 
 	// 添加 token 验证中间件
-	r.Use(tokenAuthMiddleware(cfg.Token))
+	//r.Use(tokenAuthMiddleware(cfg.Token))
 
 	s := &WebServer{
 		server: r,
@@ -100,6 +100,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.POST("/processes/:processName", ProcessStartHandler())
 	r.GET("/codes/diffs", CodeDiffsHandler())
 	r.GET("/codes/commit", CodeCommitHandler())
+	r.GET("/settings", SettingsHandler())
 
 	return s, nil
 }
@@ -428,3 +429,23 @@ func HealthzHandler() gin.HandlerFunc {
 }
 
 var _ devsandbox.DevWatchServer = (*WebServer)(nil)
+
+// SettingsHandler 获取 settings.json
+func SettingsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 文件路径
+		filePath := "/coder/code-server/User/settings.json"
+
+		// 读取文件内容
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": fmt.Sprintf("read file error: %s", err.Error()),
+			})
+			return
+		}
+
+		// 返回文件内容
+		c.Data(http.StatusOK, "application/json", content)
+	}
+}

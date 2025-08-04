@@ -37,6 +37,7 @@ from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.models import Module
+from paasng.utils.masked_curlify import MASKED_CONTENT
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
@@ -111,12 +112,14 @@ class UnifiedEnvVarsReader:
             env_list.extend(self._source_lister_func_map[source](self.env))
         return env_list.kv_map
 
-    def list_env_conflicts(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedEnvVarInfo]":
-        """Get the conflicted keys. A conflicted key is a key that defined in the USER_CONFIGURED
-        source, but also exists in other sources.
+    def list_conflicted_info(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedEnvVarInfo]":
+        """Get the system keys that will conflict with user-defined vars, including conflict details.
+
+        These are system-builtin keys that also exist in user configuration, potentially causing conflicts.
+        The function returns detailed information about these impending conflicts.
 
         :param exclude_sources: A list of sources to exclude when checking conflicts.
-        :return: A list of ConflictedKey objects.
+        :return: A list of ConflictedEnvVarInfo objects containing conflict details.
         """
         # Whether the current source being checked is after the USER_CONFIGURED source
         after_source = False
@@ -150,11 +153,10 @@ class UnifiedEnvVarsReader:
 
 
 def list_conflicted_env_vars_for_view(module: Module) -> "List[ConflictedEnvVarInfo]":
-    """Get env vars, including the behavior after when there is a conflict,
-    for front-end to determine whether a conflict occurs when saving and modifying env vars
+    """Get env vars conflict information for front-end display.
 
     :param module: The module to check for conflicts.
-    :return: List of conflicting keys.
+    :return: List of conflicting keys with detailed information.
     """
     app = module.application
     # Use a dict remove duplicated keys between different environments
@@ -162,7 +164,7 @@ def list_conflicted_env_vars_for_view(module: Module) -> "List[ConflictedEnvVarI
     # Check all environments in the module and merge the results
     for env in module.get_envs():
         if app.type == ApplicationType.CLOUD_NATIVE:
-            keys = UnifiedEnvVarsReader(env).list_env_conflicts(
+            keys = UnifiedEnvVarsReader(env).list_conflicted_info(
                 # Exclude some sources because cloud-native apps does use them directly,
                 # see `apply_builtin_env_vars()` for more details.
                 exclude_sources=[
@@ -176,7 +178,7 @@ def list_conflicted_env_vars_for_view(module: Module) -> "List[ConflictedEnvVarI
 
             results.update({item.key: item for item in keys})
         else:
-            keys = UnifiedEnvVarsReader(env).list_env_conflicts()
+            keys = UnifiedEnvVarsReader(env).list_conflicted_info()
             results.update({item.key: item for item in keys})
     return list(results.values())
 
@@ -329,6 +331,27 @@ def list_vars_builtin_plat_addrs() -> EnvVariableList:
         ]
     )
     return EnvVariableList(system_envs_with_prefix)
+
+
+def mask_vars_for_view(env_vars: EnvVariableList) -> EnvVariableList:
+    """Mask sensitive environment variable values for display purposes."""
+
+    mask_keys = {"BKPAAS_APP_SECRET"}
+    masked_vars = EnvVariableList()
+    for var in env_vars:
+        if var.key in mask_keys:
+            # create a new EnvVariableObj with masked value
+            masked_var = EnvVariableObj(
+                key=var.key,
+                value=MASKED_CONTENT,
+                description=var.description,
+            )
+            masked_vars.append(masked_var)
+        else:
+            # keep non-sensitive vars unchanged
+            masked_vars.append(var)
+
+    return masked_vars
 
 
 def get_builtin_env_variables(engine_app: "EngineApp") -> EnvVariableList:

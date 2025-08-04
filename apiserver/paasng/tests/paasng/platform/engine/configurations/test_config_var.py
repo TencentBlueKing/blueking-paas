@@ -250,18 +250,18 @@ class TestUnifiedEnvVarsReader:
         env_vars = UnifiedEnvVarsReader(bk_stag_env).get_kv_map(exclude_sources=[EnvVarSource.USER_CONFIGURED])
         assert "FOO" not in env_vars
 
-    def test_list_env_conflicts_normal(self, bk_module, bk_stag_env):
+    def test_list_conflicted_info_normal(self, bk_module, bk_stag_env):
         vars_reader = UnifiedEnvVarsReader(bk_stag_env)
 
-        conflicts = vars_reader.list_env_conflicts()
+        conflicts = vars_reader.list_conflicted_info()
 
         assert isinstance(conflicts, list)
         assert any(item.override_conflicted is not None for item in conflicts)
 
-    def test_list_env_conflicts_exclude_sources(self, bk_module, bk_stag_env):
+    def test_list_conflicted_info_exclude_sources(self, bk_module, bk_stag_env):
         vars_reader = UnifiedEnvVarsReader(bk_stag_env)
 
-        conflicts = vars_reader.list_env_conflicts(exclude_sources=[EnvVarSource.BUILTIN_MISC])
+        conflicts = vars_reader.list_conflicted_info(exclude_sources=[EnvVarSource.BUILTIN_MISC])
 
         assert isinstance(conflicts, list)
         assert any(item.override_conflicted is not None for item in conflicts)

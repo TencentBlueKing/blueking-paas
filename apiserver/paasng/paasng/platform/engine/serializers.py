@@ -760,26 +760,17 @@ class EnvOverviewSLZ(serializers.Serializer):
     modules = ModuleEnvOverviewSLZ(many=True)
 
 
-class ConfigVarBuiltinSLZ(serializers.Serializer):
+class BuiltinConfigVarSLZ(serializers.Serializer):
     """Serializer for Builtin ConfigVar"""
 
     key = serializers.CharField(help_text="内置环境变量 key")
     value = serializers.CharField(help_text="内置环境变量值")
     description = serializers.CharField(help_text="内置环境变量描述")
-    is_masked = serializers.BooleanField(default=False, help_text="是否为脱敏字段")
-
-    def to_representation(self, instance) -> dict:
-        # BKPAAS_APP_SECRET 蓝鲸应用密钥脱敏处理
-        ret = super().to_representation(instance)
-        if ret["key"] == "BKPAAS_APP_SECRET":
-            ret["value"] = MASKED_CONTENT
-            ret["is_masked"] = True
-        return ret
 
 
-class ListConfigVarBuiltinSLZ(serializers.Serializer):
-    stag = ConfigVarBuiltinSLZ(many=True)
-    prod = ConfigVarBuiltinSLZ(many=True)
+class ListBuiltinConfigVarSLZ(serializers.Serializer):
+    stag = BuiltinConfigVarSLZ(many=True, help_text="预发布环境下的内置环境变量")
+    prod = BuiltinConfigVarSLZ(many=True, help_text="生产环境下的内置环境变量")
 
 
 class ConflictedEnvVarInfoOutputSLZ(serializers.Serializer):

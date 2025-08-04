@@ -81,7 +81,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.GET("/healthz", HealthzHandler())
 
 	// 添加 token 验证中间件
-	//r.Use(tokenAuthMiddleware(cfg.Token))
+	r.Use(tokenAuthMiddleware(cfg.Token))
 
 	s := &WebServer{
 		server: r,

@@ -3056,4 +3056,6 @@ export default {
   '敏感环境变量的值将在页面上以脱敏形式展示，只有应用进程内能够获取到这些变量的明文值。': 'The values of sensitive environment variables will be displayed in a desensitized form on the page; only within the application process can these variables plaintext values be accessed.',
   是否敏感: 'Is Sensitive',
   其他: 'Other',
+  使用的增强服务: 'Used Enhanced Services',
+  '沙箱会复用已选中增强服务 “预发布环境” 的环境变量': 'The sandbox will reuse the environment variables of the selected enhanced services "Staging Env"',
 };

@@ -704,7 +704,7 @@ APIGW_ENVIRONMENT = settings.get("APIGW_ENVIRONMENT", "prod")
 BK_API_URL_TMPL = settings.get("BK_API_URL_TMPL", "http://localhost:8080/api/{api_name}/")
 # 网关 API 默认网关环境
 BK_API_DEFAULT_STAGE_MAPPINGS = settings.get("BK_API_DEFAULT_STAGE_MAPPINGS", {})
-# 网关 APIGATEWAY API 访问地址模板，默认与使用网关 API 访问地址渲染
+# 上云版预发布环境是与 API 网关的测试环境联调，所以需要单独配置这个配置项。其他环境直接使用 BK_API_URL_TMPL 的值即可，无需单独配置
 BK_API_URL_TMPL_FOR_APIGW = settings.get("BK_API_URL_TMPL_FOR_APIGW", BK_API_URL_TMPL)
 
 # 开发者中心 region 与 APIGW user_auth_type 的对应关系

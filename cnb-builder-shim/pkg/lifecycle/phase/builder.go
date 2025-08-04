@@ -31,6 +31,7 @@ func MakeBuilderStep(
 	lifecycleDir, appDir, groupPath, planPath, layersDir, logLevel string,
 	uid, gid uint32,
 ) Step {
+	// see builder command args: https://github.com/buildpacks/spec/blob/platform/v0.11/platform.md#builder
 	args := []string{
 		"-app", appDir,
 		"-group", groupPath,

@@ -35,7 +35,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := config.InitConfig(); err != nil {
+	if err := config.Init(); err != nil {
 		logger.Error(err, "Init config failed")
 		os.Exit(1)
 	}
@@ -84,7 +84,7 @@ func runDevContainerServer() {
 				}
 			}
 			if event.Relaunch {
-				if innerErr := mgr.Relaunch(event.ID); innerErr != nil {
+				if innerErr := mgr.Relaunch(event.ID, event.EnvVars); innerErr != nil {
 					_ = mgr.WriteStatus(event.ID, devsandbox.ReloadFailed)
 					logger.Error(innerErr, "HotReload Relaunch failed")
 					continue

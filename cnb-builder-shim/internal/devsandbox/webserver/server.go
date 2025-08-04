@@ -19,6 +19,7 @@
 package webserver
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -139,6 +140,18 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 // TODO 将本地源码部署的方式与请求传输源码文件的方式进行接口上的拆分
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		envVars := map[string]string{}
+		if raw := c.PostForm("env_vars"); raw != "" {
+			// env_vars 非空，解析自定义环境变量
+			if err := json.Unmarshal([]byte(raw), &envVars); err != nil {
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"message": fmt.Sprintf("invalid env_vars format: %s", err.Error())},
+				)
+				return
+			}
+		}
+
 		var srcFilePath string
 		switch config.G.SourceCode.FetchMethod {
 		case config.HTTP:
@@ -188,7 +201,7 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 				return
 			}
 			srcFilePath = path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
-		case config.BK_REPO:
+		case config.BkRepo:
 			srcFilePath = config.G.SourceCode.Workspace
 		case config.GIT:
 			fallthrough
@@ -209,6 +222,7 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 			ID:       status.DeployID,
 			Rebuild:  status.StepOpts.Rebuild,
 			Relaunch: status.StepOpts.Relaunch,
+			EnvVars:  envVars,
 		}:
 			c.JSON(http.StatusOK, gin.H{"deployID": status.DeployID})
 		default:
@@ -342,7 +356,7 @@ func CodeDiffsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 由于目前 HTTP 附带文件的源码初始化逻辑不同，暂时不支持
 		// TODO 后续重构时需要统一
-		if config.G.SourceCode.FetchMethod != config.BK_REPO {
+		if config.G.SourceCode.FetchMethod != config.BkRepo {
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{"message": fmt.Sprintf("unsupported fetch method: %s", config.G.SourceCode.FetchMethod)},
@@ -381,7 +395,7 @@ func CodeCommitHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 由于目前 HTTP 附带文件的源码初始化逻辑不同，暂时不支持
 		// TODO 后续重构时需要统一
-		if config.G.SourceCode.FetchMethod != config.BK_REPO {
+		if config.G.SourceCode.FetchMethod != config.BkRepo {
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{"message": fmt.Sprintf("unsupported fetch method: %s", config.G.SourceCode.FetchMethod)},

@@ -29,7 +29,7 @@ import (
 var logger = logging.Default()
 
 func main() {
-	if err := config.InitConfig(); err != nil {
+	if err := config.Init(); err != nil {
 		logger.Error(err, "Init config failed")
 		os.Exit(1)
 	}

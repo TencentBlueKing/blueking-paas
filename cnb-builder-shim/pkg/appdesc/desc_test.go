@@ -152,7 +152,7 @@ modules:
 	BeforeEach(func() {
 		tmpAppDir, _ = os.MkdirTemp("", "app")
 		tmpDescFilePath = filepath.Join(tmpAppDir, "app_desc.yaml")
-		_ = config.InitConfig()
+		_ = config.Init()
 		config.G.ModuleName = "backend"
 	})
 	AfterEach(func() {

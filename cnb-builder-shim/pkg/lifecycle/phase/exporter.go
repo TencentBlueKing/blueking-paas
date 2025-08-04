@@ -30,8 +30,11 @@ import (
 func MakeExporterStep(ctx context.Context,
 	lifecycleDir, outputImage, appDir, analyzedPath, cacheImage, groupPath, layersDir, logLevel string,
 	useDaemon bool,
-	uid, gid uint32) Step {
+	uid, gid uint32,
+) Step {
 	var opts []CmdOptsProvider
+
+	// see exporter command args: https://github.com/buildpacks/spec/blob/platform/v0.11/platform.md#exporter
 	args := []string{
 		"-app", appDir,
 		"-analyzed", analyzedPath,
@@ -44,7 +47,6 @@ func MakeExporterStep(ctx context.Context,
 	// export cache when cacheImage is set
 	if cacheImage != "" {
 		args = append(args, "-cache-image", cacheImage)
-
 	}
 	if useDaemon {
 		args = append(args, "-daemon")

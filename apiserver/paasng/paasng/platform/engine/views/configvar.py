@@ -329,14 +329,15 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         result = {}
         for env in module.get_envs():
             env_vars = get_builtin_env_variables(env.get_engine_app())
-            env_vars = mask_vars_for_view(env_vars)
+            masked_env_vars = mask_vars_for_view(env_vars)
             result[env.environment] = [
                 {
-                    "key": key,
-                    "value": var.value,
-                    "description": var.description,
+                    "key": var["key"],
+                    "value": var["value"],
+                    "description": var["description"],
+                    "is_sensitive": var["is_sensitive"],
                 }
-                for key, var in env_vars.map.items()
+                for var in masked_env_vars
             ]
 
         return Response(ListBuiltinConfigVarSLZ(result).data)

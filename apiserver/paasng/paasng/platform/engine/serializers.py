@@ -766,6 +766,7 @@ class BuiltinConfigVarSLZ(serializers.Serializer):
     key = serializers.CharField(help_text="内置环境变量 key")
     value = serializers.CharField(help_text="内置环境变量值")
     description = serializers.CharField(help_text="内置环境变量描述")
+    is_sensitive = serializers.BooleanField(default=False, help_text="是否为敏感字段")
 
 
 class ListBuiltinConfigVarSLZ(serializers.Serializer):

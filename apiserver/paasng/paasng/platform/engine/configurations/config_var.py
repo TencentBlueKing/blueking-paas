@@ -333,25 +333,23 @@ def list_vars_builtin_plat_addrs() -> EnvVariableList:
     return EnvVariableList(system_envs_with_prefix)
 
 
-def mask_vars_for_view(env_vars: EnvVariableList) -> EnvVariableList:
+def mask_vars_for_view(env_vars: EnvVariableList) -> List[Dict]:
     """Mask sensitive environment variable values for display purposes."""
 
     mask_keys = {"BKPAAS_APP_SECRET"}
-    masked_vars = EnvVariableList()
+    result = []
     for var in env_vars:
-        if var.key in mask_keys:
-            # create a new EnvVariableObj with masked value
-            masked_var = EnvVariableObj(
-                key=var.key,
-                value=MASKED_CONTENT,
-                description=var.description,
-            )
-            masked_vars.append(masked_var)
-        else:
-            # keep non-sensitive vars unchanged
-            masked_vars.append(var)
+        is_sensitive = var.key in mask_keys
+        result.append(
+            {
+                "key": var.key,
+                "value": MASKED_CONTENT if is_sensitive else var.value,
+                "description": var.description,
+                "is_sensitive": is_sensitive,
+            }
+        )
 
-    return masked_vars
+    return result
 
 
 def get_builtin_env_variables(engine_app: "EngineApp") -> EnvVariableList:

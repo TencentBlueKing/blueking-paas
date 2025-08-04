@@ -18,7 +18,10 @@
 
 package appdesc
 
-import "github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+import (
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
+)
 
 // EnvV3 ...
 type EnvV3 struct {
@@ -40,8 +43,10 @@ type HooksV3 struct {
 
 // ProcessV3 ...
 type ProcessV3 struct {
-	Name        string `yaml:"name"`
-	ProcCommand string `yaml:"procCommand"`
+	Name        string   `yaml:"name"`
+	ProcCommand string   `yaml:"procCommand"`
+	Command     []string `yaml:"command"`
+	Args        []string `yaml:"args"`
 }
 
 // SpecV3 ...
@@ -94,10 +99,20 @@ func (d *AppDescV3) GetProcesses() []Process {
 	for _, p := range module.Spec.Processes {
 		processes = append(processes, Process{
 			Name:        p.Name,
-			ProcCommand: p.ProcCommand,
+			ProcCommand: d.getProcCommand(p),
 		})
 	}
 	return processes
+}
+
+// 获取进程命令
+func (d *AppDescV3) getProcCommand(p ProcessV3) string {
+	// 优先使用 ProcCommand
+	if p.ProcCommand != "" {
+		return p.ProcCommand
+	}
+	// 其次使用 command + args
+	return utils.GenBashCommandWithTokens(p.Command, p.Args)
 }
 
 // GetPreReleaseHook ...

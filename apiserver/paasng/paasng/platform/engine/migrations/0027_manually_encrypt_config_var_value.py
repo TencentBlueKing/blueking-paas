@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def forwards_func(apps, schema_editor):
-    """加密数据库中以 bkcrypt$ 开头的环境变量值
+    """加密数据库中以 bkcrypt$ 开头的环境变量值（sm4crt$ 等同样处理)
 
     目前 blue_krill 库中的加/解密函数会以 bkcrypt$ 这个前缀来判断是否为加密数据
     如果用户填写的环境变量值就是以 bkcrypt$ 开头的，那么也会被认为是加密数据（其实是明文），
@@ -52,7 +52,7 @@ def forwards_func(apps, schema_editor):
                 except InvalidToken:
                     continue
 
-            # 批量对数据库中的值以 bkcrypt$ 开头的环境变量值进行加密
+            # 批量对数据库中的值以 header 开头的环境变量值进行加密
             if update_data := [(handler.encrypt(value), var_id) for var_id, value in config_vars.items()]:
                 with transaction.atomic():
                     cursor.executemany("UPDATE engine_configvar SET value = %s WHERE id = %s", update_data)

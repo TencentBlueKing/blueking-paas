@@ -21,6 +21,7 @@ from typing import cast
 
 from celery import shared_task
 
+from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import LocalServiceObj, mixed_service_mgr
 from paasng.accessories.servicehub.models import ServiceEngineAppAttachment
 from paasng.core.core.storages.redisdb import DefaultRediStore
@@ -34,11 +35,16 @@ logger = logging.getLogger(__name__)
 def sync_developers_to_sentry(application_id):
     """Sync the developers list to sentry"""
     application = Application.objects.get(id=application_id)
+
+    try:
+        service_obj = cast(LocalServiceObj, mixed_service_mgr.find_by_name(name="sentry"))
+    except ServiceObjNotFound:
+        logger.warning("sentry service not found, skip sync developers to sentry")
+        return
+
     for app_env in application.get_app_envs():
         engine_app = app_env.engine_app
         region = engine_app.region
-        service_obj = mixed_service_mgr.find_by_name(name="sentry")
-        service_obj = cast(LocalServiceObj, service_obj)
 
         if list(mixed_service_mgr.list_provisioned_rels(engine_app, service_obj)):
             # WARN: 之后的逻辑完全假设 sentry service 是一个 Local 增强服务，并不通用，但是考虑到目前

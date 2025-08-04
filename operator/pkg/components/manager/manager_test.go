@@ -26,8 +26,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("ComponentManager", func() {
-	var manager *ComponentManager
+var _ = Describe("ComponentLoader", func() {
+	var manager *ComponentLoader
 	var tempDir string
 
 	const (
@@ -58,7 +58,7 @@ var _ = Describe("ComponentManager", func() {
 }`
 		createTestComponent(tempDir, "env_overlay", "v1", env_overlay_schema, "template: overlay")
 
-		manager, err = NewComponentManager(tempDir)
+		manager, err = NewComponentLoader()
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -66,10 +66,10 @@ var _ = Describe("ComponentManager", func() {
 		Expect(os.RemoveAll(tempDir)).To(Succeed())
 	})
 
-	Describe("NewComponentManager", func() {
+	Describe("NewComponentLoader", func() {
 		Context("when directory exists", func() {
 			It("should create manager successfully", func() {
-				_, err := NewComponentManager(tempDir)
+				_, err := NewComponentLoader()
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

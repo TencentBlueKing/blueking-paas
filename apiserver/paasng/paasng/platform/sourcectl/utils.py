@@ -193,14 +193,10 @@ generate_temp_dir: Callable[..., ContextManager[Path]] = contextmanager(_generat
 
 
 def _generate_temp_file_(suffix="") -> Iterator[Path]:
-    path = None
-    try:
-        path = Path(tempfile.mktemp(suffix=suffix))
+    with tempfile.NamedTemporaryFile(delete=True, suffix=suffix) as f:
+        path = Path(f.name)
         logger.debug("Generating temp path: %s", path)
         yield path
-    finally:
-        if path and path.exists():
-            path.unlink()
 
 
 generate_temp_file: Callable[..., ContextManager[Path]] = contextmanager(_generate_temp_file_)

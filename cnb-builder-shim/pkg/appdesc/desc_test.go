@@ -138,7 +138,15 @@ modules:
             - '-A'
             - app
             - worker
-            - --loglevel=info
+            - '--loglevel=info'
+      hooks:
+        preRelease:
+          command:
+            - python
+          args:
+            - manage.py
+            - migrate
+            - '--no-input'
 `
 
 	BeforeEach(func() {
@@ -162,24 +170,31 @@ modules:
 				Expect(appDesc.GetPreReleaseHook()).To(Equal(expectedHookCommand))
 			},
 			Entry(
-				"has pre_release_hook in single module appDescV2 test yaml",
+				"single module appDescV2 pre release hook",
 				appDescV2TestYamlWithSingleModule,
 				"python manage.py migrate --no-input",
 			),
 			Entry(
-				"has pre_release_hook in multi-module appDescV2 test yaml",
+				"multi-module appDescV2 pre release hook",
 				appDescV2TestYamlWithModules,
 				"python manage.py migrate --no-input",
 			),
 			Entry(
-				"has pre_release_hook in single module appDescV3 test yaml",
+				"single module appDescV3 pre release hook",
 				appDescV3TestYamlWithSingleModule,
 				"python manage.py migrate --no-input",
 			),
 			Entry(
-				"has pre_release_hook in multi-module appDescV3 test yaml",
+				"multi-module appDescV3 pre release hook",
 				appDescV3TestYamlWithModules,
 				"python manage.py migrate --no-input",
+			),
+			Entry(
+				"pre release hook use command and args",
+				appDescV3TestYamlWithCommandAndArgs,
+				"bash -c '\"$(eval echo \\\"$0\\\")\" \"$(eval echo \\\"${1}\\\")\" "+
+					"\"$(eval echo \\\"${2}\\\")\" \"$(eval echo \\\"${3}\\\")\"' "+
+					"'python' 'manage.py' 'migrate' '--no-input'",
 			),
 			Entry("no pre_release_hook", `spec_version: 2
 module:
@@ -190,7 +205,7 @@ test: "python"`, ""),
 		)
 
 		DescribeTable(
-			"Test get procCommand",
+			"Test GetProcesses",
 			func(appDescYaml string, expectedProcesses []Process) {
 				Expect(os.WriteFile(tmpDescFilePath, []byte(appDescYaml), 0o644)).To(BeNil())
 

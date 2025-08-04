@@ -19,6 +19,8 @@
 package appdesc
 
 import (
+	"github.com/samber/lo"
+
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
@@ -37,7 +39,9 @@ type ConfigurationV3 struct {
 // HooksV3 ...
 type HooksV3 struct {
 	PreRelease struct {
-		ProcCommand string `yaml:"procCommand"`
+		ProcCommand string   `yaml:"procCommand"`
+		Command     []string `yaml:"command"`
+		Args        []string `yaml:"args"`
 	} `yaml:"preRelease"`
 }
 
@@ -98,21 +102,16 @@ func (d *AppDescV3) GetProcesses() []Process {
 	var processes []Process
 	for _, p := range module.Spec.Processes {
 		processes = append(processes, Process{
-			Name:        p.Name,
-			ProcCommand: d.getProcCommand(p),
+			Name: p.Name,
+			// 优先使用 ProcCommand，其次使用 command + args
+			ProcCommand: lo.Ternary(
+				p.ProcCommand != "",
+				p.ProcCommand,
+				utils.GenBashCommandWithTokens(p.Command, p.Args),
+			),
 		})
 	}
 	return processes
-}
-
-// 获取进程命令
-func (d *AppDescV3) getProcCommand(p ProcessV3) string {
-	// 优先使用 ProcCommand
-	if p.ProcCommand != "" {
-		return p.ProcCommand
-	}
-	// 其次使用 command + args
-	return utils.GenBashCommandWithTokens(p.Command, p.Args)
 }
 
 // GetPreReleaseHook ...
@@ -121,7 +120,13 @@ func (d *AppDescV3) GetPreReleaseHook() string {
 	if module == nil {
 		return ""
 	}
-	return module.Spec.Hooks.PreRelease.ProcCommand
+	hook := module.Spec.Hooks.PreRelease
+	// 优先使用 ProcCommand
+	if hook.ProcCommand != "" {
+		return hook.ProcCommand
+	}
+	// 其次使用 command + args
+	return utils.GenBashCommandWithTokens(hook.Command, hook.Args)
 }
 
 // GetEnvs ...

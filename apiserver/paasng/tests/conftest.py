@@ -108,14 +108,6 @@ def _configure_default_region():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def _disable_periodical_jobs():
-    """禁用定时任务调度器"""
-    # 定时调度任务目前都定义在文件: paasng/platform/scheduler/jobs.py 中
-    with override_settings(DISABLE_PERIODICAL_JOBS=True):
-        yield
-
-
-@pytest.fixture(autouse=True, scope="session")
 def _drop_legacy_db(request, django_db_keepdb: bool):
     """在单元测试结束后, 自动摧毁测试数据库, 除非用户显式要求保留"""
     if django_db_keepdb:

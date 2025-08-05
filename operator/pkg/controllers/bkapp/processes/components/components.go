@@ -89,6 +89,7 @@ func (c *ComponentMutator) renderTemplate(templateContent string) ([]byte, error
 	}
 
 	var paramValues map[string]any
+	paramValues = make(map[string]any)
 	for k, v := range c.defaultParams {
 		paramValues[k] = v
 	}
@@ -97,8 +98,6 @@ func (c *ComponentMutator) renderTemplate(templateContent string) ([]byte, error
 		if err = json.Unmarshal(c.component.Properties.Raw, &paramValues); err != nil {
 			return nil, err
 		}
-	} else {
-		paramValues = make(map[string]any)
 	}
 
 	var buf bytes.Buffer

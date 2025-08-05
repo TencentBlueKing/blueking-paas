@@ -40,6 +40,7 @@ var _ = Describe("ComponentLoader", func() {
 	BeforeEach(func() {
 		var err error
 		tempDir, err = os.MkdirTemp("", "components_test")
+		DefaultComponentDir = tempDir
 		Expect(err).NotTo(HaveOccurred())
 
 		// 创建测试组件结构

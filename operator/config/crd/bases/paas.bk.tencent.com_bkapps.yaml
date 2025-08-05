@@ -1580,18 +1580,18 @@ spec:
                       items:
                         description: Component is used to specify process component
                         properties:
+                          name:
+                            description: Name of component
+                            type: string
                           properties:
                             description: Properties of component
                             type: object
                             x-kubernetes-preserve-unknown-fields: true
-                          type:
-                            description: Type of component
-                            type: string
                           version:
                             description: Version of component
                             type: string
                         required:
-                        - type
+                        - name
                         - version
                         type: object
                       type: array

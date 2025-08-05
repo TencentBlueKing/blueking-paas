@@ -108,7 +108,7 @@ func (m *ComponentLoader) ValidateSchema(componentType, version string, properti
 		for _, desc := range result.Errors() {
 			errMsgs = append(errMsgs, fmt.Sprintf("- %s", desc))
 		}
-		msg := fmt.Sprintf("component validation failed: %s", strings.Join(errMsgs, "\n"))
+		msg := fmt.Sprintf("properties validation failed: %s", strings.Join(errMsgs, "\n"))
 		return errors.New(msg)
 	}
 

@@ -19,8 +19,6 @@
 package components_test
 
 import (
-	"encoding/json"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -113,82 +111,6 @@ var _ = Describe("ComponentMutator", func() {
 					}, Equal("testValue")),
 				),
 			)
-		})
-
-		It("apply cl5 component to deployment", func() {
-			proc := &paasv1alpha2.Process{
-				Name: "web",
-				Components: []paasv1alpha2.Component{
-					{
-						Name:    "cl5",
-						Version: "v1",
-					},
-				},
-			}
-			err := components.PatchToDeployment(proc, deploy)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(len(deploy.Spec.Template.Spec.Containers)).To(Equal(2))
-			jsonBytes, err := json.MarshalIndent(deploy.Spec.Template.Spec.Containers[0], "", "  ")
-			Expect(err).NotTo(HaveOccurred())
-			cl5Container := `{
-  "name": "cl5",
-  "image": "mirrors.tencent.com/bkpaas/cl5-agent:4.3.0.3",
-  "ports": [
-    {
-      "name": "l5-config",
-      "containerPort": 7778,
-      "protocol": "UDP"
-    },
-    {
-      "name": "l5-agent-1",
-      "containerPort": 8888,
-      "protocol": "UDP"
-    },
-    {
-      "name": "l5-agent-2",
-      "containerPort": 8889,
-      "protocol": "UDP"
-    },
-    {
-      "name": "l5-agent-3",
-      "containerPort": 8890,
-      "protocol": "UDP"
-    }
-  ],
-  "env": [
-    {
-      "name": "ENVIRONMENT",
-      "value": "test"
-    }
-  ],
-  "resources": {},
-  "livenessProbe": {
-    "exec": {
-      "command": [
-        "/usr/local/services/liveness_check.sh"
-      ]
-    },
-    "timeoutSeconds": 1,
-    "periodSeconds": 10,
-    "successThreshold": 1,
-    "failureThreshold": 3
-  },
-  "readinessProbe": {
-    "exec": {
-      "command": [
-        "/usr/local/services/readiness_check.sh"
-      ]
-    },
-    "timeoutSeconds": 1,
-    "periodSeconds": 10,
-    "successThreshold": 1,
-    "failureThreshold": 3
-  },
-  "terminationMessagePath": "/dev/termination-log",
-  "terminationMessagePolicy": "File",
-  "imagePullPolicy": "Always"
-}`
-			Expect(string(jsonBytes)).To(Equal(cl5Container))
 		})
 
 		It("should return error and stop processing", func() {

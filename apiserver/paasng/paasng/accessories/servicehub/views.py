@@ -92,7 +92,8 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
     ]
 
     @swagger_auto_schema(
-        request_body=slzs.EnvServiceAttachmentInputSLZ(), response_serializer=slzs.EnvServiceAttachmentSLZ(many=True)
+        request_body=slzs.EnvServiceAttachmentInputSLZ(),
+        response_serializer=slzs.EnvServiceAttachmentOutputSLZ(many=True),
     )
     def list(self, request, code, module_name, environment):
         """获取增强服务附件列表"""
@@ -110,7 +111,7 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
         # 根据用户选择的增强服务筛选需要展示的增强服务
         enabled_services = data.get("enabled_addons_services")
         all_rels = [rel for rel in all_rels if rel.get_service().name in enabled_services]
-        return Response(data=slzs.EnvServiceAttachmentSLZ(all_rels, many=True).data)
+        return Response(data=slzs.EnvServiceAttachmentOutputSLZ(all_rels, many=True).data)
 
     @swagger_auto_schema(response_serializer=slzs.ModuleServiceInfoSLZ)
     def retrieve_info(self, request, code, module_name):

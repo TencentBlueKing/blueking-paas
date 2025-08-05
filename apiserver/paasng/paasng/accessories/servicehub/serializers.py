@@ -85,7 +85,7 @@ class ApplicationWithLogoSLZ(serializers.Serializer):
     logo_url = serializers.CharField(help_text="Logo 图片", read_only=True, source="get_logo_url")
 
 
-class EnvServiceAttachmentSLZ(serializers.Serializer):
+class EnvServiceAttachmentOutputSLZ(serializers.Serializer):
     """部署环境增强服务附件配置状态"""
 
     service = ServiceMinimalSLZ(source="get_service")

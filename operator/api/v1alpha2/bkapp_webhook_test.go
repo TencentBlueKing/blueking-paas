@@ -1516,6 +1516,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 
 			err := bkapp.ValidateCreate()
 			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("can not find component"))
 		})
 
 		It("invalid component version", func() {
@@ -1533,6 +1534,7 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 
 			err := bkapp.ValidateCreate()
 			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("can not find component"))
 		})
 	})
 })

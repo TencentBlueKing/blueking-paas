@@ -18,5 +18,5 @@ relations:
   - bk_monitorv3^3.9.0
 - rationale: "注册资源到 API 网关"
   requires:
-  - bk-apigateway^1.14.0
+  - bk-apigateway^1.16.0
 bkimports:

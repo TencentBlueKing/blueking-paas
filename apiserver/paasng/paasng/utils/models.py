@@ -24,13 +24,10 @@ import uuid
 import logging
 from dataclasses import dataclass
 from typing import Any, Optional, Type, TypeVar
-from typing import Optional
-from django.db import models
-from blue_krill.encrypt.handler import EncryptHandler
-
 
 import cattr
 from bkpaas_auth import get_user_by_user_id
+from blue_krill.encrypt.handler import EncryptHandler
 from cattr._compat import is_bare as _is_bare
 from cattr._compat import is_mapping as _is_mapping
 from cattr._compat import is_sequence as _is_sequence

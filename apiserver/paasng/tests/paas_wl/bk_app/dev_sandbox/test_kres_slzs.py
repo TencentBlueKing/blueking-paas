@@ -18,7 +18,6 @@
 import pytest
 from django.conf import settings
 
-from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_WORKSPACE
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvKey
 from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox, DevSandboxIngress, DevSandboxService
 from paas_wl.bk_app.dev_sandbox.kres_slzs import (
@@ -59,7 +58,7 @@ class TestDevSandboxSLZ:
             "spec": {
                 "containers": [
                     {
-                        "name": "dev-sandbox",
+                        "name": "main",
                         "image": dev_sandbox.runtime.image,
                         "imagePullPolicy": dev_sandbox.runtime.image_pull_policy,
                         "env": [
@@ -68,55 +67,31 @@ class TestDevSandboxSLZ:
                             {"name": "TOKEN", "value": dev_sandbox.runtime.envs[DevSandboxEnvKey.TOKEN]},
                             {"name": "SOURCE_FETCH_METHOD", "value": "BK_REPO"},
                             {"name": "SOURCE_FETCH_URL", "value": "http://bkrepo.example.com"},
+                            {"name": "PASSWORD", "value": dev_sandbox.code_editor_cfg.password},
+                            {"name": "ENABLE_CODE_EDITOR", "value": "true"},
                         ],
                         "ports": [
                             {"containerPort": settings.DEV_SANDBOX_DEVSERVER_PORT},
                             {"containerPort": settings.CONTAINER_PORT},
-                        ],
-                        "readinessProbe": {
-                            "httpGet": {"port": settings.DEV_SANDBOX_DEVSERVER_PORT, "path": "/healthz"},
-                        },
-                        "resources": {
-                            "requests": {"cpu": "200m", "memory": "512Mi"},
-                            "limits": {"cpu": "4", "memory": "2Gi"},
-                        },
-                        "volumeMounts": [{"name": "workspace", "mountPath": DEV_SANDBOX_WORKSPACE}],
-                    },
-                    {
-                        "name": "code-editor",
-                        "image": settings.DEV_SANDBOX_CODE_EDITOR_IMAGE,
-                        "imagePullPolicy": "IfNotPresent",
-                        "command": ["/usr/bin/code-server"],
-                        "args": ["--bind-addr", "0.0.0.0:8080", "--disable-telemetry", "--disable-update-check"],
-                        "env": [
-                            {"name": "PASSWORD", "value": dev_sandbox.code_editor_cfg.password},
-                            {"name": "DISABLE_TELEMETRY", "value": "true"},
-                        ],
-                        "ports": [
                             {"containerPort": settings.DEV_SANDBOX_CODE_EDITOR_PORT},
                         ],
                         "readinessProbe": {
-                            "httpGet": {"port": settings.DEV_SANDBOX_CODE_EDITOR_PORT, "path": "/healthz"},
+                            "exec": {"command": ["check-health"]},
                         },
                         "resources": {
                             "requests": {"cpu": "500m", "memory": "1Gi"},
                             "limits": {"cpu": "4", "memory": "2Gi"},
                         },
                         "volumeMounts": [
-                            {"name": "workspace", "mountPath": DEV_SANDBOX_WORKSPACE},
                             {
                                 "name": "code-editor-config",
-                                "mountPath": "/home/coder/.local/share/code-server/User/settings.json",
+                                "mountPath": "/coder/code-server/User/settings.json",
                                 "subPath": "settings.json",
                             },
                         ],
                     },
                 ],
                 "volumes": [
-                    {
-                        "name": "workspace",
-                        "emptyDir": {"sizeLimit": "1Gi"},
-                    },
                     {
                         "name": "code-editor-config",
                         "configMap": {

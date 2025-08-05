@@ -93,7 +93,7 @@
 
 <script>
 import RuleBasedForm from '../../app-cluster/comps/rule-based-form.vue';
-import SwitchDisplay from '../../app-cluster/comps/switch-display.vue';
+import SwitchDisplay from '@/components/switch-display';
 import UniformForm from '../../app-cluster/comps/uniform-form.vue';
 import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 export default {

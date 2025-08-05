@@ -111,18 +111,6 @@ class BaseGitApiClient(abc.ABC):
     def commit_files(self, project: GitProject, commit_info: CommitInfo) -> Dict:
         """批量提交修改文件"""
 
-    @abc.abstractmethod
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-
-    @abc.abstractmethod
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-
-    @abc.abstractmethod
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
-
     def _fetch_all_items(self, target_url: str, params: Optional[Dict] = None) -> Generator[Dict, None, None]:
         for cur_page in itertools.count(start=PAGE_START_AT):
             items = self._fetch_items(target_url, cur_page, params=params)

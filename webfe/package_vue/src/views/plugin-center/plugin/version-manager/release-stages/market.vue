@@ -80,7 +80,8 @@
     </div>
   </div>
 </template>
-<script>import _ from 'lodash';
+<script>
+import { cloneDeep } from 'lodash';
 import user from '@/components/user';
 import { quillEditor } from 'vue-quill-editor';
 import 'quill/dist/quill.core.css';
@@ -88,6 +89,8 @@ import 'quill/dist/quill.snow.css';
 import 'quill/dist/quill.bubble.css';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import stageBaseMixin from './stage-base-mixin';
+import { TOOLBAR_OPTIONS } from '@/common/constants';
+import { filterRichText } from '@/utils/xss-filter.js';
 
 export default {
   components: {
@@ -116,6 +119,9 @@ export default {
       curPluginData: {},
       editorOption: {
         placeholder: this.$t('开始编辑...'),
+        modules: {
+          toolbar: TOOLBAR_OPTIONS,
+        },
       },
       rules: {
         category: [
@@ -173,6 +179,7 @@ export default {
         };
         const res = await this.$store.dispatch('plugin/getMarketInfo', params);
         this.form = res;
+        this.form.description = filterRichText(res.description);
         if (res.contact) {
           this.form.contact = res.contact.split(',') || [];
         } else {
@@ -180,10 +187,7 @@ export default {
           this.form.contact = founder.split(',');
         }
       } catch (e) {
-        this.$bkMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       } finally {
         setTimeout(() => {
           this.isLoading = false;
@@ -214,8 +218,9 @@ export default {
     async nextStage(resolve) {
       await this.$refs.visitForm.validate().then(async () => {
         try {
-          const data = _.cloneDeep(this.form);
+          const data = cloneDeep(this.form);
           data.contact = data.contact.join(',');
+          data.description = filterRichText(data.description);
           const params = {
             pdId: this.pdId,
             pluginId: this.pluginId,
@@ -228,10 +233,7 @@ export default {
           });
           await resolve();
         } catch (e) {
-          this.$bkMessage({
-            theme: 'error',
-            message: e.detail || e.message || this.$t('接口异常'),
-          });
+          this.catchErrorHandler(e);
         } finally {
           this.cateLoading = false;
         }
@@ -276,6 +278,11 @@ export default {
   }
   .label {
     padding-bottom: 2px;
+  }
+}
+.edit-form-item .editor {
+  /deep/ .ql-container {
+    height: calc(100% - 48px);
   }
 }
 </style>

@@ -245,7 +245,7 @@ class ComponentInputSLZ(serializers.Serializer):
 
     def validate(self, attrs: Dict) -> Dict:
         try:
-            validate_component_properties(attrs["type"], attrs["version"], attrs.get("properties"))
+            validate_component_properties(attrs["type"], attrs["version"], attrs.get("properties", {}))
         except ComponentNotFound:
             raise ValidationError(_("组件 {}-{} 不存在").format(attrs["type"], attrs["version"]))
         except ComponentPropertiesInvalid as e:

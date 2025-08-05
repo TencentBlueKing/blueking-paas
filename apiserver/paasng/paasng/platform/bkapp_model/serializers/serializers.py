@@ -26,13 +26,12 @@ from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
-from paasng.accessories.proc_components.manager import ComponentLoader
+from paasng.accessories.proc_components.manager import validate_component_properties
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
 from paasng.utils.validators import DNS_MAX_LENGTH, DNS_SAFE_PATTERN
-from paasng.accessories.proc_components.manager import validate_component_properties
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -180,7 +179,7 @@ class ProcComponentSLZ(serializers.Serializer):
 
     def validate(self, attrs: Dict) -> Dict:
         try:
-            validate_component_properties(attrs["type"], attrs["version"], attrs.get("properties"))
+            validate_component_properties(attrs["type"], attrs["version"], attrs.get("properties", {}))
         except ComponentNotFound:
             raise ValidationError(_("组件 {}-{} 不存在").format(attrs["type"], attrs["version"]))
         except ComponentPropertiesInvalid as e:

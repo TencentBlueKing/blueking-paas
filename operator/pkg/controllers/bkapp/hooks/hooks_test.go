@@ -116,7 +116,7 @@ var _ = Describe("Test HookReconciler", func() {
 				phase corev1.PodPhase,
 				startTime metav1.Time,
 				shouldHangup bool,
-				RequeueAfter time.Duration,
+				requeueAfter time.Duration,
 				errMatcher types.GomegaMatcher,
 			) {
 				hookStatus := paasv1alpha2.HookStatus{
@@ -134,7 +134,7 @@ var _ = Describe("Test HookReconciler", func() {
 
 				ret := r.Reconcile(ctx, bkapp)
 				Expect(ret.ShouldAbort()).To(Equal(shouldHangup))
-				Expect(ret.Duration()).To(Equal(RequeueAfter))
+				Expect(ret.Duration()).To(Equal(requeueAfter))
 				Expect(ret.Error()).To(errMatcher)
 			},
 			Entry("pending", corev1.PodPending, metav1.Now(), true, hookres.HookExecuteTimeoutThreshold, BeNil()),

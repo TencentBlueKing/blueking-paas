@@ -26,6 +26,7 @@ import arrow
 from django.utils.functional import cached_property
 
 from paasng.platform.sourcectl import exceptions
+from paasng.platform.sourcectl.client import DEFAULT_REPO_REF
 from paasng.platform.sourcectl.github.client import GitHubApiClient
 from paasng.platform.sourcectl.models import (
     AlternativeVersion,
@@ -59,9 +60,13 @@ class GitHubRepoController(BaseGitRepoController):
         return GitProject.parse_from_repo_url(self.repo_url, get_sourcectl_names().GitHub)
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
-        """返回当前 RepoController 可以控制的所有仓库列表"""
-        api_client = GitHubApiClient(**kwargs)
+    def list_all_repositories(cls, api_url: str, user_credentials: Dict) -> List[Repository]:
+        """返回当前 RepoController 可以控制的所有仓库列表
+
+        :param api_url: Githab API 地址
+        :param user_credentials: 用户凭证
+        """
+        api_client = GitHubApiClient(api_url=api_url, **user_credentials)
         return [
             Repository(
                 namespace=repo["owner"]["login"],
@@ -86,11 +91,21 @@ class GitHubRepoController(BaseGitRepoController):
         else:
             return True
 
-    def export(self, local_path: PathLike, version_info: VersionInfo):
-        """下载 zip 包并解压到指定路径"""
-        target_branch, revision = self.extract_version_info(version_info)
+    def export(self, local_path: PathLike, version_info: VersionInfo | None = None, source_dir: str | None = None):
+        """导出指定版本的整个项目内容或指定目录到本地路径
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        :param source_dir: 可选，指定要导出的子目录
+        """
+        if version_info:
+            target_branch, revision = self.extract_version_info(version_info)
+            ref = revision or target_branch
+        else:
+            ref = DEFAULT_REPO_REF
+
         with generate_temp_file(suffix=".zip") as zip_file:
-            self.api_client.repo_archive(self.project, zip_file, ref=revision or target_branch)
+            self.api_client.repo_archive(self.project, zip_file, ref=ref)
             ZipFile(zip_file, "r").extractall(local_path)
 
         # Github 下载的 zip 包比较特殊，外层有格式为 {username}-{proj_name}-{ref} 的目录，需要平铺开
@@ -103,8 +118,6 @@ class GitHubRepoController(BaseGitRepoController):
                     logger.info("copy dir %s's content to dir %s during export github repo", src_dir, local_path)
                     shutil.copytree(src_dir, local_path, dirs_exist_ok=True)
                     shutil.rmtree(src_dir)
-
-        return local_path
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
         """列举仓库所有可用 branch 或 tag"""
@@ -142,26 +155,6 @@ class GitHubRepoController(BaseGitRepoController):
 
     def commit_files(self, commit_info: CommitInfo) -> None:
         """github 不支持该功能"""
-        raise NotImplementedError
-
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-        raise NotImplementedError
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-        raise NotImplementedError
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
-        raise NotImplementedError
-
-    def download_directory(self, source_dir: str, local_path: Path) -> Path:
-        """下载指定目录到本地
-
-        :param source_dir: 代码仓库的指定目录
-        :param local_path: 本地路径
-        """
         raise NotImplementedError
 
     def commit_and_push(

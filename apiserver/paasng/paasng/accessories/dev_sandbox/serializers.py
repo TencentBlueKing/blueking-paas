@@ -28,6 +28,7 @@ from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service
+from paasng.utils.serializers import field_env_var_key
 
 
 class DevSandboxListOutputSLZ(serializers.Serializer):
@@ -76,6 +77,9 @@ class DevSandboxCreateInputSLZ(serializers.Serializer):
     enable_code_editor = serializers.BooleanField(help_text="是否启用代码编辑器", default=False)
     inject_staging_env_vars = serializers.BooleanField(help_text="是否注入预发布环境变量", default=False)
     source_code_version_info = SourceCodeVersionInfoSLZ(help_text="源代码配置", required=False)
+    enabled_addons_services = serializers.ListField(
+        help_text="启用的增强服务", child=serializers.CharField(), required=False
+    )
 
 
 class DevSandboxCreateOutputSLZ(serializers.Serializer):
@@ -112,3 +116,8 @@ class DevSandboxCommitOutputSLZ(serializers.Serializer):
 
 class DevSandboxPreDeployCheckOutputSLZ(serializers.Serializer):
     result = serializers.BooleanField(help_text="预部署检查结果")
+
+
+class DevSandboxEnvVarsUpsertInputSLZ(serializers.Serializer):
+    key = field_env_var_key()
+    value = serializers.CharField(max_length=255, help_text="环境变量值")

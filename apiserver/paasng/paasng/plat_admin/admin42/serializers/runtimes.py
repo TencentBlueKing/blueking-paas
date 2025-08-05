@@ -72,10 +72,11 @@ class BuildPackBindInputSLZ(serializers.Serializer):
 
 
 class AppSlugBuilderCreateInputSLZ(serializers.ModelSerializer):
-    name = serializers.CharField(required=True, max_length=64)
-    type = serializers.ChoiceField(required=True, choices=AppImageType.get_choices())
-    image = serializers.CharField(required=True, max_length=256)
-    tag = serializers.CharField(required=True, max_length=32)
+    name = serializers.CharField(max_length=64)
+    type = serializers.ChoiceField(choices=AppImageType.get_choices())
+    image = serializers.CharField(max_length=256)
+    tag = serializers.CharField(max_length=32)
+    dev_sandbox_image = serializers.CharField(max_length=256, allow_blank=True, default="")
     env_vars = serializers.JSONField(required=False, default={}, source="environments", help_text="环境变量")
     labels = serializers.JSONField(required=False, default={})
     is_hidden = serializers.BooleanField(required=False, default=False)

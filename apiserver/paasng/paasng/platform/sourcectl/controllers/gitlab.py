@@ -18,6 +18,7 @@
 import datetime
 import shutil
 from functools import wraps
+from os import PathLike
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -27,6 +28,7 @@ from django.utils.translation import gettext as _
 from gitlab.exceptions import GitlabAuthenticationError, GitlabGetError
 
 from paasng.platform.sourcectl import exceptions
+from paasng.platform.sourcectl.client import DEFAULT_REPO_REF
 from paasng.platform.sourcectl.gitlab.client import GitLabApiClient
 from paasng.platform.sourcectl.models import (
     AlternativeVersion,
@@ -79,9 +81,13 @@ class GitlabRepoController(BaseGitRepoController):
         return GitProject.parse_from_repo_url(self.repo_url, get_sourcectl_names().GitLab)
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
-        """返回当前 RepoController 可以控制的所有仓库列表"""
-        api_client = GitLabApiClient(**kwargs)
+    def list_all_repositories(cls, api_url: str, user_credentials: Dict) -> List[Repository]:
+        """返回当前 RepoController 可以控制的所有仓库列表
+
+        :param api_url: GitLab API URL
+        :param user_credentials: 用户凭证
+        """
+        api_client = GitLabApiClient(api_url=api_url, **user_credentials)
         return [
             Repository(
                 namespace=project.namespace["name"],
@@ -106,10 +112,21 @@ class GitlabRepoController(BaseGitRepoController):
             return True
 
     @error_converter
-    def export(self, local_path: str, version_info: VersionInfo):
-        tag_or_branch, revision = self.extract_version_info(version_info)
+    def export(self, local_path: PathLike, version_info: VersionInfo | None = None, source_dir: str | None = None):
+        """导出指定版本的整个项目内容或指定目录到本地路径
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        :param source_dir: 可选，指定要导出的子目录
+        """
+        if version_info:
+            tag_or_branch, revision = self.extract_version_info(version_info)
+            ref = revision or tag_or_branch
+        else:
+            ref = DEFAULT_REPO_REF
+
         with generate_temp_file(suffix=".tar.gz") as tar_file:
-            self.api_client.repo_archive(self.project, tar_file, ref=revision or tag_or_branch)
+            self.api_client.repo_archive(self.project, tar_file, ref=ref)
             uncompress_directory(tar_file, local_path)
 
         # The extracted repo files was put in an extra sub-directory named "{repo}-{sha}/", So we
@@ -183,26 +200,6 @@ class GitlabRepoController(BaseGitRepoController):
 
     def commit_files(self, commit_info: CommitInfo) -> None:
         """gitlab 不支持该功能"""
-        raise NotImplementedError
-
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-        raise NotImplementedError
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-        raise NotImplementedError
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
-        raise NotImplementedError
-
-    def download_directory(self, source_dir: str, local_path: Path) -> Path:
-        """下载指定目录到本地
-
-        :param source_dir: 代码仓库的指定目录
-        :param local_path: 本地路径
-        """
         raise NotImplementedError
 
     def commit_and_push(

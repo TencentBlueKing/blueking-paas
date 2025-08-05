@@ -17,8 +17,9 @@
 
 import logging
 import os
+from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from paasng.platform.sourcectl.exceptions import BasicAuthError
 from paasng.platform.sourcectl.models import AlternativeVersion, CommitInfo, CommitLog, Repository, VersionInfo
@@ -47,10 +48,15 @@ class SvnRepoController:
 
     @classmethod
     def init_by_server_config(cls, source_type: str, repo_url: str):
+        """Return a RepoController object from given source_type
+
+        :param source_type: Code repository type, such as github
+        :param repo_url: repository url
+        """
         raise NotImplementedError
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
+    def list_all_repositories(cls, api_url: str, user_credentials: Dict) -> List[Repository]:
         """返回当前 RepoController 可以控制的所有仓库列表"""
         raise NotImplementedError
 
@@ -64,8 +70,16 @@ class SvnRepoController:
         else:
             return True
 
-    def export(self, local_path, version_info: VersionInfo):
-        target_branch, revision = self.extract_version_info(version_info)
+    def export(self, local_path: PathLike, version_info: VersionInfo | None = None):
+        """导出指定版本下的所有内容到指定目录
+
+        :param local_path: 本地路径
+        :param version_info: 可选，指定版本信息
+        """
+        if version_info:
+            target_branch, revision = self.extract_version_info(version_info)
+        else:
+            target_branch, revision = "trunk", None
         self.svn_client.export(target_branch, local_path=local_path, revision=revision)
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
@@ -107,26 +121,6 @@ class SvnRepoController:
 
     def commit_files(self, commit_info: CommitInfo) -> None:
         """bk_svn 不支持该功能"""
-        raise NotImplementedError
-
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-        raise NotImplementedError
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-        raise NotImplementedError
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
-        raise NotImplementedError
-
-    def download_directory(self, source_dir: str, local_path: Path) -> Path:
-        """下载指定目录到本地
-
-        :param source_dir: 代码仓库的指定目录
-        :param local_path: 本地路径
-        """
         raise NotImplementedError
 
     def commit_and_push(

@@ -61,9 +61,13 @@ class GiteeRepoController(BaseGitRepoController):
         return GitProject.parse_from_repo_url(self.repo_url, get_sourcectl_names().Gitee)
 
     @classmethod
-    def list_all_repositories(cls, **kwargs) -> List[Repository]:
-        """返回当前 RepoController 可以控制的所有仓库列表"""
-        api_client = GiteeApiClient(**kwargs)
+    def list_all_repositories(cls, api_url: str, user_credentials: Dict) -> List[Repository]:
+        """返回当前 RepoController 可以控制的所有仓库列表
+
+        :param api_url: Gitee API 地址
+        :param user_credentials: 用户凭证
+        """
+        api_client = GiteeApiClient(api_url=api_url, **user_credentials)
         return [
             Repository(
                 namespace=repo["namespace"]["path"],
@@ -88,10 +92,12 @@ class GiteeRepoController(BaseGitRepoController):
         else:
             return True
 
-    def export(self, local_path, version_info: VersionInfo):
+    def export(self, local_path, version_info: VersionInfo | None = None, source_dir: str | None = None):
         """Gitee API 不支持下载压缩包，改成直接将代码库 clone 下来，由通用逻辑进行打包"""
+        branch = version_info.version_name if version_info else None
+
         git_client = GitClient()
-        git_client.clone(self._build_repo_url_with_auth(), local_path, branch=version_info.version_name, depth=1)
+        git_client.clone(self._build_repo_url_with_auth(), local_path, branch=branch, depth=1)
         git_client.clean_meta_info(local_path)
 
     def list_alternative_versions(self) -> List[AlternativeVersion]:
@@ -131,34 +137,6 @@ class GiteeRepoController(BaseGitRepoController):
     def commit_files(self, commit_info: CommitInfo) -> None:
         """gitee 不支持该功能"""
         raise NotImplementedError
-
-    def create_with_member(self, *args, **kwargs):
-        """创建代码仓库并添加成员"""
-        raise NotImplementedError
-
-    def create_project(self, *args, **kwargs):
-        """创建代码仓库"""
-        raise NotImplementedError
-
-    def delete_project(self, *args, **kwargs):
-        """删除在 VCS 上的源码项目"""
-        raise NotImplementedError
-
-    def download_directory(self, source_dir: str, local_path: Path) -> Path:
-        """下载指定目录到本地
-
-        :param source_dir: 代码仓库的指定目录
-        :param local_path: 本地路径
-        """
-        git_client = GitClient()
-        with generate_temp_dir() as temp_dir:
-            real_source_dir = temp_dir / source_dir
-            git_client.clone(self._build_repo_url_with_auth(), path=temp_dir, depth=1)
-            git_client.clean_meta_info(temp_dir)
-            for path in real_source_dir.iterdir():
-                shutil.move(str(path), str(local_path / path.relative_to(real_source_dir)))
-
-        return local_path
 
     def commit_and_push(
         self,

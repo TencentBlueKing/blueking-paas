@@ -17,7 +17,7 @@
 
 from paasng.utils.basic import make_app_pattern, re_path
 
-from .views import DevSandboxViewSet
+from .views import DevSandboxEnvVarViewSet, DevSandboxViewSet
 
 urlpatterns = [
     re_path(
@@ -39,5 +39,15 @@ urlpatterns = [
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/commit/$", include_envs=False),
         DevSandboxViewSet.as_view({"post": "commit"}),
         name="accessories.dev_sandbox.commit",
+    ),
+    re_path(
+        make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/env_vars/$", include_envs=False),
+        DevSandboxEnvVarViewSet.as_view({"post": "upsert"}),
+        name="accessories.dev_sandbox.env_var.upsert",
+    ),
+    re_path(
+        make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/env_vars/(?P<key>[^/]+)/$", include_envs=False),
+        DevSandboxEnvVarViewSet.as_view({"delete": "destroy"}),
+        name="accessories.dev_sandbox.env_var.destroy",
     ),
 ]

@@ -111,7 +111,7 @@ def pd():
         },
         name_schema={
             "title": "插件名称",
-            "pattern": r"[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}",
+            "pattern": "[\\u4300-\\u9fa5\\w\\d\\-_]{1,20}$",
             "description": "由汉字、英文字母、数字组成，长度小于 20 个字符",
         },
         init_templates=[

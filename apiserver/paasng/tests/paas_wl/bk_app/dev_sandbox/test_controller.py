@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from unittest import mock
 
 import pytest
 from kubernetes.client.apis import VersionApi
@@ -50,9 +51,17 @@ class TestDevSandboxController:
 
     @pytest.fixture(autouse=True)
     def _do_deploy(self, controller, dev_sandbox):
-        controller.deploy(dev_sandbox.runtime.envs, dev_sandbox.source_code_cfg, dev_sandbox.code_editor_cfg)
+        with mock.patch(
+            "paas_wl.bk_app.dev_sandbox.controller.ModuleRuntimeManager.get_dev_sandbox_image",
+            return_value="bkpaas/bk-dev-heroku-noble:v2.0.0",
+        ):
+            controller.deploy(
+                dev_sandbox.runtime.envs,
+                dev_sandbox.source_code_cfg,
+                dev_sandbox.code_editor_cfg,
+            )
 
-    def test_deploy_success(self, controller, dev_wl_app, default_cluster):
+    def test_deploy_success(self, controller, dev_sandbox, dev_wl_app, default_cluster):
         sandbox = controller.sandbox_mgr.get(dev_wl_app, get_dev_sandbox_name(dev_wl_app))
         assert sandbox.runtime.envs == {
             "FOO": "BAR",
@@ -60,6 +69,8 @@ class TestDevSandboxController:
             "TOKEN": sandbox.runtime.envs[DevSandboxEnvKey.TOKEN],
             "SOURCE_FETCH_METHOD": "BK_REPO",
             "SOURCE_FETCH_URL": "http://bkrepo.example.com",
+            "ENABLE_CODE_EDITOR": "true",
+            "PASSWORD": dev_sandbox.code_editor_cfg.password,
         }
 
         service = controller.service_mgr.get(dev_wl_app, get_dev_sandbox_service_name(dev_wl_app))
@@ -87,4 +98,4 @@ class TestDevSandboxController:
             + f"/dev_sandbox/{dev_sandbox.code}"
         )
         assert detail.status in ["pending", "ready"]
-        assert detail.envs == dev_sandbox.runtime.envs
+        assert all(item in detail.envs.items() for item in dev_sandbox.runtime.envs.items())

@@ -107,8 +107,8 @@ func (r apigwRequester) ListAppDeployHistory(appCode, appModule, appEnv string) 
 	return r.handlePaaSApiRequest(grequests.Get, url, opts)
 }
 
-// UpdateBkappModel ...
-func (r apigwRequester) UpdateBkappModel(
+// UpdateBkAppModel ...
+func (r apigwRequester) UpdateBkAppModel(
 	appCode, appModule string, manifest map[string]any,
 ) ([]map[string]any, error) {
 	url := fmt.Sprintf(

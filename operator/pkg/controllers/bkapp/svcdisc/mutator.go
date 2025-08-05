@@ -15,6 +15,8 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
+
+// Package svcdisc provides svc-discovery related functions
 package svcdisc
 
 import (

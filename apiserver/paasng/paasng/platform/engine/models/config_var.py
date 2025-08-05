@@ -14,14 +14,13 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING
 
 from django.db import models
 
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import ConfigVarEnvName
-from paasng.utils.models import AuditedModel, BkUserField, TimestampedModel
+from paasng.utils.models import AuditedModel, BkUserField, RobustEncryptField, TimestampedModel
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models.module import Module
@@ -30,12 +29,6 @@ ENVIRONMENT_ID_FOR_GLOBAL = -1
 ENVIRONMENT_NAME_FOR_GLOBAL = ConfigVarEnvName.GLOBAL.value
 # 需要设置 environment(外键) 而非 environment_id, model_to_dict 只认 environment
 CONFIG_VAR_INPUT_FIELDS = ["is_global", "environment", "key", "value", "description"]
-
-
-def get_custom_builtin_config_vars(config_vars_prefix: str) -> Dict[str, str]:
-    """Get default config vars as dict, with prefix"""
-    builtin_config_vars = dict(BuiltinConfigVar.objects.values_list("key", "value"))
-    return add_prefix_to_key(builtin_config_vars, config_vars_prefix)
 
 
 class ConfigVarQuerySet(models.QuerySet):
@@ -61,7 +54,8 @@ class ConfigVar(TimestampedModel):
     )
 
     key = models.CharField(max_length=128, null=False)
-    value = models.TextField(null=False)
+    value = RobustEncryptField(null=False)
+    is_sensitive = models.BooleanField(default=False, help_text="value 值是否敏感")
     description = models.CharField(max_length=200, null=True)
     # is_builtin 表示该环境变量是否为“系统内置”，目前仅当旧应用从 v2 迁移时，写入一些内置环境变量数据会将该字段设为 True
     is_builtin = models.BooleanField(default=False)
@@ -111,33 +105,13 @@ class ConfigVar(TimestampedModel):
             value=self.value,
             description=self.description,
             is_global=self.is_global,
+            is_sensitive=self.is_sensitive,
             is_builtin=self.is_builtin,
             # 差异点
             environment_id=environment_id,
             module=module,
             tenant_id=self.tenant_id,
         )
-
-
-def add_prefix_to_key(items: dict, prefix: str) -> Dict[str, Any]:
-    return {f"{prefix}{key}": value for key, value in items.items()}
-
-
-@dataclass
-class BuiltInEnvVarDetail:
-    """A detailed builtin env variable object."""
-
-    key: str
-    value: str
-    description: Optional[str]
-    prefix: str = field(default="")
-
-    def __post_init__(self):
-        if self.prefix:
-            self.key = f"{self.prefix}{self.key}"
-
-    def to_dict(self):
-        return {self.key: {"value": self.value, "description": self.description}}
 
 
 class BuiltinConfigVar(AuditedModel):

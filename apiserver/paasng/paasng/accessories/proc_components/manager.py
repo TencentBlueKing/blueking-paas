@@ -17,12 +17,13 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from jsonschema import validate as jsonschema_validate
 from jsonschema.exceptions import ValidationError as SchemaValidationError
 
 from paasng.accessories.proc_components.constants import DEFAULT_COMPONENT_DIR
+
 from .exceptions import ComponentNotFound, ComponentPropertiesInvalid
 
 
@@ -92,7 +93,7 @@ class ComponentLoader:
         return [d.name for d in type_dir.iterdir() if d.is_dir()]
 
 
-def validate_component_properties(component_name: str, version: str, properties: Dict[str, Any]):
+def validate_component_properties(component_name: str, version: str, properties: Optional[Any]):
     """验证组件参数"""
     loader = ComponentLoader()
     schema = loader.get_component_schema(component_name, version)

@@ -58,13 +58,7 @@ def get_network_configs(dev_sandbox: "DevSandbox") -> List[NetworkConfig]:
 
 
 # 开发沙箱默认资源配额
-DEV_SERVER_RESOURCE_QUOTA = Resources(
-    limits=ResourceSpec(cpu="4", memory="2Gi"),
-    requests=ResourceSpec(cpu="200m", memory="512Mi"),
-)
-
-# 代码编辑器默认资源配额
-CODE_EDITOR_RESOURCE_QUOTA = Resources(
+DEV_SANDBOX_RESOURCE_QUOTA = Resources(
     limits=ResourceSpec(cpu="4", memory="2Gi"),
     requests=ResourceSpec(cpu="500m", memory="1Gi"),
 )

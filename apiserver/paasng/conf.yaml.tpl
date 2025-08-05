@@ -418,6 +418,11 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 ## 环境变量保留前缀列表
 # CONFIGVAR_PROTECTED_PREFIXES: ["BKPAAS_", "KUBERNETES_"]
 
+## 部署应用时, 是否检查 apiserver 与 operator 的版本一致性
+# APISERVER_OPERATOR_VERSION_CHECK: true
+## apiserver 的版本号
+# APISERVER_VERSION: v1.7.0-beta.1
+
 ## 调用 PAAS 服务 JWT 配置，支持使用 ONE_SIMPLE_JWT_AUTH_KEY 简化配置
 # PAAS_SERVICE_JWT_CLIENTS:
 #   - iss: paas-v3
@@ -678,6 +683,8 @@ BK_CI_CLIENT_USERNAME = "blueking"
 ENABLE_BK_NOTICE = False
 # 对接通知中心的环境，默认为生产环境
 BK_NOTICE_ENV = "prod"
+# bk-notice-sdk 支持多租户需要显式配置 BK_APP_TENANT_ID=system
+BK_APP_TENANT_ID = "system"
 
 ## ------------------------------------ 蓝鲸审计中心配置置 ------------------------------------
 # 审计中心-审计配置-接入-数据上报中获取这两项配置信息的值

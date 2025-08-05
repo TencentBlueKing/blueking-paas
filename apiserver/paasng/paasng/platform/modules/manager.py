@@ -37,6 +37,7 @@ from paas_wl.infras.cluster.shim import EnvClusterService, get_exposed_url_type
 from paasng.accessories.servicehub.exceptions import ServiceObjNotFound
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import SharingReferencesManager
+from paasng.infras.accounts.utils import get_oauth_credential_by_repo, get_oauth_credential_by_user
 from paasng.platform.applications.constants import AppEnvironment, ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.entities import Monitoring, Process
@@ -61,6 +62,7 @@ from paasng.platform.modules.specs import ModuleSpecs
 from paasng.platform.modules.utils import get_module_init_repo_context
 from paasng.platform.sourcectl.connector import get_repo_connector
 from paasng.platform.sourcectl.docker.models import init_image_repo
+from paasng.platform.sourcectl.exceptions import AccessTokenError, AccessTokenForbidden, RepoNameConflict
 from paasng.platform.sourcectl.source_types import get_sourcectl_type
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.manager import AppBuildPack, TemplateRuntimeManager
@@ -222,10 +224,8 @@ class ModuleInitializer:
 
         # 将模板代码初始化到应用的代码仓库中
         if write_template_to_repo and repo_url:
-            source_type = get_sourcectl_type(self.module.source_type)
-            repo_controller = source_type.repo_controller_class.init_by_server_config(
-                self.module.source_type, repo_url
-            )
+            source_spec = get_sourcectl_type(self.module.source_type)
+            repo_controller = source_spec.repo_controller_class.init_by_module(self.module, self.module.owner)
             repo_controller.commit_and_push(initial_code_path, commit_message="init repo")
 
         # 返回应用初始化代码同步到对象存储的地址信息，用于前端创建成功页面的展示
@@ -370,58 +370,135 @@ def _humanize_exception(step_name: str, message: str):
         raise ModuleInitializationError(message) from e
 
 
-def create_new_repo(module: Module, repo_type: str, username: str) -> str:
-    """创建一个新的代码仓库，并将指定用户添加为成员
+def create_repo_with_platform_account(module: Module, repo_type: str, username: str) -> str:
+    """使用平台账号创建代码仓库（提供给插件应用使用）
 
-    仓库命名规则：
-    - 格式: {应用ID}_{模块名}
-    - 仓库可见级别为: public
+    :param module: 需要创建仓库的模块对象
+    :param username: 需要添加为仓库成员的初始用户名
+    :param repo_type: 代码仓库类型
+    :return: 新创建的代码仓库地址
+    """
+    source_spec = get_sourcectl_type(repo_type)
+    source_spec_config = source_spec.config_as_arguments()
+
+    if "repository_group" not in source_spec_config:
+        logger.error("repo_group is not found in source type config")
+        raise error_codes.CANNOT_CREATE_APP.f(_("平台代码仓库组配置缺失"))
+
+    if not source_spec.repo_provisioner_class:
+        raise error_codes.CANNOT_CREATE_APP.f(_("当前代码源不支持新建仓库"))
+
+    try:
+        repo_group = source_spec_config["repository_group"]
+        repo_name = f"{module.application.code}_{module.name}"
+        repo_provisioner = source_spec.repo_provisioner_class.init_by_platform_account(repo_type)
+
+        return repo_provisioner.create_with_member(
+            repo_name=repo_name,
+            description=f"{module.application.name}({module.name} 模块)",
+            username=username,
+            repo_group=repo_group,
+        )
+    except RepoNameConflict:
+        raise error_codes.CREATE_APP_FAILED.f(_("仓库名称已存在"))
+    except Exception:
+        logger.exception("create repo failed")
+        raise error_codes.CREATE_APP_FAILED.f(_("创建代码仓库失败"))
+
+
+def create_repo_with_user_account(
+    module: Module,
+    repo_type: str,
+    repo_name: str,
+    username: str,
+    repo_group: str | None = None,
+) -> str:
+    """使用用户凭证创建仓库
 
     :param module: 需要创建仓库的模块对象
     :param repo_type: 代码仓库类型
+    :param repo_name: 代码仓库名称
     :param username: 需要添加为仓库成员的初始用户名
+    :param repo_group: 代码仓库组，可选，不填则默认在用户命名空间下创建
     :return: 新创建的代码仓库地址
     """
-    repo_name = f"{module.application.code}_{module.name}"
-    description = f"{module.application.name}({module.name} 模块)"
+    # 1. 验证仓库类型是否支持创建
+    source_spec = get_sourcectl_type(repo_type)
+    if not source_spec.repo_provisioner_class:
+        raise error_codes.CANNOT_CREATE_APP.f(_("当前代码源不支持新建仓库"))
 
-    source_type = get_sourcectl_type(repo_type)
-    repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url="")
+    # 2. 获取用户凭证
+    user_id = module.owner
+    if repo_group:
+        repo_url = f"{repo_group}/{repo_name}"
+        try:
+            oauth_credential = get_oauth_credential_by_repo(repo_type, repo_url, user_id)
+        except ObjectDoesNotExist:
+            logger.exception("get oauth credential failed")
+            raise error_codes.REPO_ACCESS_TOKEN_PERM_DENIED.f(
+                _("您没有权限操作该代码仓库，请确认您的授权信息"), replace=True
+            )
+    else:
+        try:
+            # 未指定仓库组，则在用户默认命名空间下创建仓库，则代码仓库必须按 user 级别授权
+            oauth_credential = get_oauth_credential_by_user(repo_type, user_id)
+        except ObjectDoesNotExist:
+            raise error_codes.REPO_DEFAULT_SCOPE_PERMISSION_ERROR.f(
+                _("必须使用“当前账号”授权才能在用户命名空间下创建仓库"), replace=True
+            )
 
-    source_type_config = source_type.config_as_arguments()
-    if "repository_group" not in source_type_config:
-        logger.error("repository_group is not found in source type config")
-        raise error_codes.CANNOT_CREATE_APP.f("repository_group is not found in source type config")
+    try:
+        # 3. 初始化仓库操作器
+        repo_provisioner = source_spec.repo_provisioner_class.init_by_user(repo_type, oauth_credential)
 
-    repo_url = repo_controller.create_with_member(
-        repository_group=source_type_config["repository_group"],
-        repo_name=repo_name,
-        description=description,
-        username=username,
-    )
-    return repo_url
+        # 4. 创建仓库并添加成员
+        return repo_provisioner.create_with_member(
+            repo_name=repo_name,
+            description=f"{module.application.name}({module.name} 模块)",
+            username=username,
+            repo_group=repo_group,
+        )
+    except (AccessTokenError, AccessTokenForbidden):
+        logger.exception("create repo failed")
+        # 前端需要根据这个 error_code，在错误信息中添加操作指引
+        raise error_codes.REPO_ACCESS_TOKEN_PERM_DENIED.f(_("创建代码仓库失败，请确认您的授权信息"), replace=True)
+    except RepoNameConflict:
+        raise error_codes.CREATE_APP_FAILED.f(_("仓库名称已存在"))
+    except Exception:
+        logger.exception("create repo failed")
+        raise error_codes.CREATE_APP_FAILED.f(_("创建代码仓库失败"))
 
 
-def delete_repo(repo_type: str, repo_url: str):
-    """Delete the code repository created by the platform"""
-    source_type = get_sourcectl_type(repo_type)
-    repo_controller = source_type.repo_controller_class.init_by_server_config(repo_type, repo_url)
-    repo_controller.delete_project(repo_url)
-
-
-@contextmanager
-def delete_repo_on_error(repo_type: str, repo_url: str | None = None):
-    """仓库清理上下文管理器，在异常时自动删除新建的仓库
+def delete_repo(repo_type: str, repo_url: str, user_id: str):
+    """Delete the code repository created by the platform
 
     :param repo_type: 仓库类型
     :param repo_url: 仓库地址
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
+    """
+    source_spec = get_sourcectl_type(repo_type)
+    if not source_spec.repo_provisioner_class:
+        raise error_codes.CANNOT_CREATE_APP.f(_("当前代码源不支持删除仓库"))
+
+    oauth_credential = get_oauth_credential_by_repo(repo_type, repo_url, user_id)
+    repo_provisioner = source_spec.repo_provisioner_class.init_by_user(repo_type, oauth_credential)
+    repo_provisioner.delete_project(repo_url)
+
+
+@contextmanager
+def delete_repo_on_error(user_id: str, repo_type: str, repo_url: str | None = None):
+    """仓库清理上下文管理器，在异常时自动删除新建的仓库
+
+    :param user_id: 用户 ID，用于查询用户对应的授权凭证
+    :param repo_type: 仓库类型
+    :param repo_url: 仓库地址（可选），用于判断是否需要删除代码仓库
     """
     try:
         yield
     except Exception:
         if repo_url:
             try:
-                delete_repo(repo_type, repo_url)
+                delete_repo(repo_type, repo_url, user_id)
                 logger.info(f"Repository({repo_url}) deleted successfully  during rollback")
             except Exception:
                 logger.exception(f"Failed to delete repository({repo_url}) during rollback")

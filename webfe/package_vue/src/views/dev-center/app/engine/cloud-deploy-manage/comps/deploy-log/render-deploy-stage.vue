@@ -14,10 +14,10 @@
           :key="index"
           class="log-item"
         >
-          <span v-html="item.timestamp" />
+          <span v-dompurify-html="item.timestamp" />
           <span
             style="margin-left: 25px;"
-            v-html="item.message"
+            v-dompurify-html="item.message"
           />
         </p>
       </section>
@@ -52,10 +52,10 @@
           :key="index"
           class="log-item"
         >
-          <span v-html="item.timestamp" />
+          <span v-dompurify-html="item.timestamp" />
           <span
             style="margin-left: 25px;"
-            v-html="item.message"
+            v-dompurify-html="item.message"
           />
         </p>
       </div>

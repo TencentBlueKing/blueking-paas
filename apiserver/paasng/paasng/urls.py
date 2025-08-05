@@ -42,6 +42,7 @@ urlpatterns = [
     re_path(r"^", include("paasng.platform.sourcectl.urls")),
     re_path(r"^", include("paasng.accessories.servicehub.urls")),
     re_path(r"^", include("paasng.accessories.cloudapi.urls")),
+    re_path(r"^", include("paasng.accessories.cloudapi_v2.urls")),
     re_path(r"^", include("paasng.bk_plugins.bk_plugins.urls")),
     re_path(r"^", include("paasng.platform.templates.urls")),
     re_path(r"^", include("paasng.platform.smart_app.urls")),
@@ -63,6 +64,7 @@ urlpatterns = [
     re_path(r"^", include("paasng.accessories.app_secret.urls")),
     re_path(r"^", include("paasng.misc.tools.urls")),
     re_path("^", include("paasng.accessories.proc_components.urls")),
+    re_path(r"^", include("paasng.misc.ai_agent.urls")),
     # PaaS Admin system
     re_path(r"^admin42/", include("paasng.plat_admin.admin42.urls")),
     re_path(r"^admin42/", include("paas_wl.apis.admin.urls")),

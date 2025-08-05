@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package autoscaling provides autoscaling reconciler
 package autoscaling
 
 import (
@@ -36,22 +37,22 @@ import (
 	autoscaling "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-general-pod-autoscaler/pkg/apis/autoscaling/v1alpha1"
 )
 
-// NewAutoscalingReconciler will return a AutoscalingReconciler with given k8s client
-func NewAutoscalingReconciler(client client.Client) *AutoscalingReconciler {
+// NewReconciler will return a Reconciler with given k8s client
+func NewReconciler(client client.Client) *Reconciler {
 	if !config.Global.IsAutoscalingEnabled() {
 		return nil
 	}
-	return &AutoscalingReconciler{Client: client}
+	return &Reconciler{Client: client}
 }
 
-// AutoscalingReconciler 负责处理 Deployment 相关的调和逻辑
-type AutoscalingReconciler struct {
+// Reconciler 负责处理 Deployment 相关的调和逻辑
+type Reconciler struct {
 	Client client.Client
 	Result base.Result
 }
 
 // Reconcile ...
-func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) base.Result {
+func (r *Reconciler) Reconcile(ctx context.Context, bkapp *paasv1alpha2.BkApp) base.Result {
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
 		return r.Result.WithError(err)
@@ -82,7 +83,7 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, bkapp *paasv1alph
 }
 
 // 获取应用当前在集群中的状态
-func (r *AutoscalingReconciler) getCurrentState(
+func (r *Reconciler) getCurrentState(
 	ctx context.Context, bkapp *paasv1alpha2.BkApp,
 ) (result []*autoscaling.GeneralPodAutoscaler, err error) {
 	gpaList := autoscaling.GeneralPodAutoscalerList{}
@@ -98,12 +99,12 @@ func (r *AutoscalingReconciler) getCurrentState(
 }
 
 // 将给定的 general-pod-autoscaler 下发到 k8s 集群中, 如果不存在则创建，若存在，则更新，不会进行版本比较
-func (r *AutoscalingReconciler) deploy(ctx context.Context, gpa *autoscaling.GeneralPodAutoscaler) error {
+func (r *Reconciler) deploy(ctx context.Context, gpa *autoscaling.GeneralPodAutoscaler) error {
 	return kubeutil.UpsertObject(ctx, r.Client, gpa, r.updateHandler)
 }
 
 // GPA 更新策略: 总是更新，但是需要填充 resourceVersion，uid 等信息，否则无法通过 gpa webhook 的检查
-func (r *AutoscalingReconciler) updateHandler(
+func (r *Reconciler) updateHandler(
 	ctx context.Context,
 	cli client.Client,
 	current *autoscaling.GeneralPodAutoscaler,
@@ -121,7 +122,7 @@ func (r *AutoscalingReconciler) updateHandler(
 }
 
 // 根据 GPA 状态（Conditions），更新 BkApp 状态（Conditions）
-func (r *AutoscalingReconciler) updateCondition(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
+func (r *Reconciler) updateCondition(ctx context.Context, bkapp *paasv1alpha2.BkApp) error {
 	current, err := r.getCurrentState(ctx, bkapp)
 	if err != nil {
 		return err

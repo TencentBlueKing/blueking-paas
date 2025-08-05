@@ -122,6 +122,7 @@ class DeployConditions(ChoicesEnum):
     CHECK_CI_GIT_TOKEN = "CHECK_CI_GIT_TOKEN"
     FILL_PLUGIN_TAG_INFO = "FILL_PLUGIN_TAG_INFO"
     FILL_EXTRA_INFO = "FILL_EXTRA_INFO"
+    CHECK_OPERATOR_VERSION = "CHECK_OPERATOR_VERSION"
 
     _choices_labels = (
         (FILL_PRODUCT_INFO, _("未完善应用市场信息")),
@@ -133,6 +134,7 @@ class DeployConditions(ChoicesEnum):
         (CHECK_CI_GIT_TOKEN, _("当前用户未授权 CI 组件访问仓库的权限")),
         (FILL_PLUGIN_TAG_INFO, _("未设置插件分类")),
         (FILL_EXTRA_INFO, _("未完善应用基本信息")),
+        (CHECK_OPERATOR_VERSION, _("Operator 版本不匹配")),
     )
 
 
@@ -140,24 +142,3 @@ class RuntimeType(StrStructuredEnum):
     BUILDPACK = EnumField("buildpack", label=_("使用 Buildpacks 构建"))
     DOCKERFILE = EnumField("dockerfile", label=_("使用 Dockerfile 构建"))
     CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image(云原生和旧镜像应用)")
-
-
-class AppInfoBuiltinEnv(StrStructuredEnum):
-    """应用基本信息的内置环境变量built-in"""
-
-    APP_ID = EnumField("APP_ID", label=_("蓝鲸应用ID"))
-    APP_SECRET = EnumField("APP_SECRET", label=_("蓝鲸应用密钥"))
-    APP_TENANT_ID = EnumField("APP_TENANT_ID", label=_("蓝鲸应用租户 ID"))
-
-
-class AppRunTimeBuiltinEnv(StrStructuredEnum):
-    """Built-in envs in the app runtime"""
-
-    APP_MODULE_NAME = EnumField("APP_MODULE_NAME", label=_("应用当前模块名"))
-    ENVIRONMENT = EnumField("ENVIRONMENT", label=_("应用当前环境，预发布环境为 stag、生产环境为 prod"))
-    MAJOR_VERSION = EnumField("MAJOR_VERSION", label=_("应用当前运行的开发者中心版本，值为 3"))
-    ENGINE_REGION = EnumField("ENGINE_REGION", label=_("应用版本，默认版本为 default"))
-    DEFAULT_PREALLOCATED_URLS = EnumField(
-        "DEFAULT_PREALLOCATED_URLS",
-        label=_('应用模块各环境的访问地址，如 {"stag": "http://stag.com", "prod": "http://prod.com"}'),
-    )

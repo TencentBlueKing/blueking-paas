@@ -84,7 +84,7 @@
               {{ $t('提交审核') }}
             </bk-button>
           </span>
-          <p v-html="tips"></p>
+          <p v-dompurify-html="tips"></p>
         </div>
       </template>
     </paas-content-loader>

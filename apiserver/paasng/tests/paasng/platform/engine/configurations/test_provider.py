@@ -17,6 +17,7 @@
 
 import pytest
 
+from paasng.platform.engine.configurations.env_var.entities import EnvVariableList, EnvVariableObj
 from paasng.platform.engine.configurations.provider import EnvVariablesProviders
 
 pytestmark = pytest.mark.django_db
@@ -27,10 +28,20 @@ def test_providers(bk_stag_env, bk_deployment):
 
     @providers.register_env
     def test_get_vars(env):
-        return {"FOO": "bar", "FOOBAR": "z"}
+        return EnvVariableList(
+            [
+                EnvVariableObj(key="FOO", value="bar", description=""),
+                EnvVariableObj(key="FOOBAR", value="z", description=""),
+            ]
+        )
 
     @providers.register_env
     def test_get_vars_2(env):
-        return {"FOO": "1", "BAR": str(env.id)}
+        return EnvVariableList(
+            [
+                EnvVariableObj(key="FOO", value="1", description=""),
+                EnvVariableObj(key="BAR", value=str(env.id), description=""),
+            ]
+        )
 
-    assert providers.gather(bk_stag_env) == {"FOO": "1", "BAR": str(bk_stag_env.id), "FOOBAR": "z"}
+    assert providers.gather(bk_stag_env).kv_map == {"FOO": "1", "BAR": str(bk_stag_env.id), "FOOBAR": "z"}

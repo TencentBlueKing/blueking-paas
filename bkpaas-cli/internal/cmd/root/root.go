@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package root is the root command of bkpaas-cli
 package root
 
 import (
@@ -49,7 +50,7 @@ func NewRootCmd() *cobra.Command {
 				cliConf.EnableDebugMode()
 			}
 			// load global config ...
-			if _, err := cliConf.LoadConf(cliConf.ConfigFilePath); err != nil {
+			if _, err := cliConf.LoadConf(cliConf.FilePath); err != nil {
 				console.Tips("Please follow the user guide (Readme.md) to initialize the configuration...")
 				return errors.Wrap(err, "Failed to load config")
 			}

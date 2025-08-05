@@ -45,7 +45,7 @@
             >
               <div
                 ref="editorRef"
-                v-html="marketInfo.description ? marketInfo.description : '--'"
+                v-dompurify-html="marketInfo.description ? marketInfo.description : '--'"
               />
             </div>
             <span
@@ -82,7 +82,9 @@ export default {
   watch: {
     marketInfo: {
       handler() {
-        this.handleExpandOperation();
+        this.$nextTick(() => {
+          this.handleExpandOperation();
+        });
       },
       immediate: true,
     },

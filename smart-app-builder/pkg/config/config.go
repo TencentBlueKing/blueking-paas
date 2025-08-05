@@ -48,6 +48,11 @@ var G = struct {
 
 	// BuildpackType is the type of buildpack to use. Supported values: oci-embedded and tgz, default is oci-embedded
 	BuildpackType string
+
+	// CacheRegistry is a registry used to cache image layers. e.g., mirrors.tencent.com/bkapps
+	CacheRegistry string
+	// RegistryAuth is the cache registry auth. e.g., '{"mirrors.tencent.com": "Basic xxx"}'
+	RegistryAuth string
 }{Viper: viper.New()}
 
 // SetGlobalConfig set global config
@@ -95,4 +100,7 @@ func SetGlobalConfig() {
 
 	// set bk-buildpack-apt env
 	G.SetDefault("APT_BUILDPACK_VERSION", "v2")
+
+	G.CacheRegistry = G.GetString("CACHE_REGISTRY")
+	G.RegistryAuth = G.GetString("REGISTRY_AUTH")
 }

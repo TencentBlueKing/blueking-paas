@@ -79,7 +79,7 @@ class TestModuleProcessSpecViewSet:
         }
         assert proc_specs[0]["services"] is None
         assert proc_specs[0]["components"] == [
-            {"type": "env_overlay", "version": "v2", "properties": {}},
+            {"name": "env_overlay", "version": "v2", "properties": {}},
         ]
 
         assert proc_specs[1]["name"] == "worker"
@@ -569,7 +569,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
             (
                 [
                     {
-                        "type": "env_overlay",
+                        "name": "env_overlay",
                         "version": "v1",
                         "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
                     }
@@ -581,7 +581,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
             (
                 [
                     {
-                        "type": "env_overlay",
+                        "name": "env_overlay",
                         "version": "v2",
                         "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
                     }
@@ -592,7 +592,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
             (
                 [
                     {
-                        "type": "not_exist",
+                        "name": "not_exist",
                         "version": "v1",
                         "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
                     }
@@ -604,7 +604,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
             (
                 [
                     {
-                        "type": "env_overlay",
+                        "name": "env_overlay",
                         "version": "v1",
                         "properties": {"invalid": [{"proc_xxx": "FOO", "value": "1"}]},
                     }
@@ -647,7 +647,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
                 "args": ["http.server"],
                 "components": [
                     {
-                        "type": "env_overlay",
+                        "name": "env_overlay",
                         "version": "v1",
                         "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
                     }
@@ -660,7 +660,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
         assert resp.status_code == 200
         assert resp.data["proc_specs"][0]["components"] == [
             {
-                "type": "env_overlay",
+                "name": "env_overlay",
                 "version": "v1",
                 "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
             }

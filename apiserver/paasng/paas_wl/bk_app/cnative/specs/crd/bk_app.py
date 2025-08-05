@@ -150,12 +150,12 @@ class ProcComponent(BaseModel):
     """
     Process component model
 
-    :param type: The type of the component
+    :param name: The name of the component
     :param version: The version of the component
     :param properties: A dictionary of component properties
     """
 
-    type: str
+    name: str
     version: str
     properties: Dict[str, Any] = {}
 

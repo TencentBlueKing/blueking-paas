@@ -257,7 +257,7 @@ class TestProcessesManifestConstructor:
         """ProcessSpec for web, with components"""
         process_web.components = [
             Component(
-                type="env_overlay",
+                name="env_overlay",
                 version="v1",
                 properties={"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
             ),
@@ -361,7 +361,7 @@ class TestProcessesManifestConstructor:
         assert data["components"] == [
             {
                 "properties": '{"env": [{"name": "proc_name", "value": "FOO"}, {"name": ' '"key", "value": "1"}]}',
-                "type": "env_overlay",
+                "name": "env_overlay",
                 "version": "v1",
             },
         ]

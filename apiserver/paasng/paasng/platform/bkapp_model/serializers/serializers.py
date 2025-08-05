@@ -173,15 +173,15 @@ class MonitoringSLZ(serializers.Serializer):
 class ProcComponentSLZ(serializers.Serializer):
     """进程组件配置"""
 
-    type = serializers.CharField(help_text="组件类型")
+    name = serializers.CharField(help_text="组件类型")
     version = serializers.CharField(help_text="组件版本")
     properties = serializers.DictField(help_text="组件属性", required=False, allow_null=True)
 
     def validate(self, attrs: Dict) -> Dict:
         try:
-            validate_component_properties(attrs["type"], attrs["version"], attrs.get("properties", {}))
+            validate_component_properties(attrs["name"], attrs["version"], attrs.get("properties", {}))
         except ComponentNotFound:
-            raise ValidationError(_("组件 {}-{} 不存在").format(attrs["type"], attrs["version"]))
+            raise ValidationError(_("组件 {}-{} 不存在").format(attrs["name"], attrs["version"]))
         except ComponentPropertiesInvalid as e:
             raise ValidationError(_("参数校验失败")) from e
 

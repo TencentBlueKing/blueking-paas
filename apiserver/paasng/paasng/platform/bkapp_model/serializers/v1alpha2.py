@@ -230,7 +230,7 @@ class ProcServiceInputSLZ(serializers.Serializer):
 
 
 class ComponentInputSLZ(serializers.Serializer):
-    type = serializers.CharField(help_text="组件类型", max_length=32)
+    name = serializers.CharField(help_text="组件类型", max_length=32)
     version = serializers.CharField(help_text="组件版本", max_length=32)
     properties = serializers.DictField(help_text="组件参数", required=False)
 
@@ -245,9 +245,9 @@ class ComponentInputSLZ(serializers.Serializer):
 
     def validate(self, attrs: Dict) -> Dict:
         try:
-            validate_component_properties(attrs["type"], attrs["version"], attrs.get("properties", {}))
+            validate_component_properties(attrs["name"], attrs["version"], attrs.get("properties", {}))
         except ComponentNotFound:
-            raise ValidationError(_("组件 {}-{} 不存在").format(attrs["type"], attrs["version"]))
+            raise ValidationError(_("组件 {}-{} 不存在").format(attrs["name"], attrs["version"]))
         except ComponentPropertiesInvalid as e:
             raise ValidationError(_("参数校验失败")) from e
 

@@ -79,8 +79,11 @@ class TestProcessesField:
                         "replicas": 1,
                         "components": [
                             {
-                                "type": "cl5",
+                                "name": "env_overlay",
                                 "version": "v1",
+                                "properties": {
+                                    "env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]
+                                },
                             },
                         ],
                     }
@@ -101,7 +104,11 @@ class TestProcessesField:
             == 'bash -c \'"$(eval echo \\"$0\\")" "$(eval echo \\"${1}\\")" "$(eval echo \\"${2}\\")" "$(eval echo \\"${3}\\")" "$(eval echo \\"${4}\\")" "$(eval echo \\"${5}\\")" "$(eval echo \\"${6}\\")" "$(eval echo \\"${7}\\")" "$(eval echo \\"${8}\\")" "$(eval echo \\"${9}\\")" "$(eval echo \\"${10}\\")" "$(eval echo \\"${11}\\")"\' gunicorn wsgi -w 4 -b \'[::]:${PORT:-5000}\' --access-logfile - --error-logfile - --access-logformat \'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
         )
         assert web.components == [
-            Component(type="cl5", version="v1"),
+            Component(
+                name="env_overlay",
+                version="v1",
+                properties={"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
+            ),
         ]
 
     def test_proc_component_not_exists(self, bk_module, bk_deployment):
@@ -115,7 +122,7 @@ class TestProcessesField:
                         "replicas": 1,
                         "components": [
                             {
-                                "type": "not_exists",
+                                "name": "not_exists",
                                 "version": "v1",
                                 "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]},
                             },
@@ -142,7 +149,7 @@ class TestProcessesField:
                         "replicas": 1,
                         "components": [
                             {
-                                "type": "env_overlay",
+                                "name": "env_overlay",
                                 "version": "v1",
                                 "properties": {"envs": [{"procXX": "FOO", "value": "1"}]},
                             },

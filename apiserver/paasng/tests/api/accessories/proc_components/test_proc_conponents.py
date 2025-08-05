@@ -53,10 +53,4 @@ class TestProcessComponentViewSet:
                     "documentation": "",
                 }
             },
-            "cl5": {
-                "v1": {
-                    "schema": {"description": "不需要任何参数", "type": "object", "additionalProperties": False},
-                    "documentation": "",
-                }
-            },
         }

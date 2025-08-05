@@ -689,7 +689,6 @@ BK_IAM_SKIP = settings.get("BK_IAM_SKIP", False)
 # 退出用户组同理，因此在退出的一定时间内，需要先 exclude 掉避免退出后还可以看到应用的问题
 IAM_PERM_EFFECTIVE_TIMEDELTA = settings.get("BK_IAM_PERM_EFFECTIVE_TIMEDELTA", 5 * 60)
 
-
 # 蓝鲸的云 API 地址，用于内置环境变量的配置项
 BK_COMPONENT_API_URL = settings.get("BK_COMPONENT_API_URL", "")
 # 蓝鲸的组件 API 地址，网关 SDK 依赖该配置项（该项值与 BK_COMPONENT_API_URL 一致）
@@ -705,6 +704,8 @@ APIGW_ENVIRONMENT = settings.get("APIGW_ENVIRONMENT", "prod")
 BK_API_URL_TMPL = settings.get("BK_API_URL_TMPL", "http://localhost:8080/api/{api_name}/")
 # 网关 API 默认网关环境
 BK_API_DEFAULT_STAGE_MAPPINGS = settings.get("BK_API_DEFAULT_STAGE_MAPPINGS", {})
+# 上云版预发布环境是与 API 网关的测试环境联调，所以需要单独配置这个配置项。其他环境直接使用 BK_API_URL_TMPL 的值即可，无需单独配置
+BK_API_URL_TMPL_FOR_APIGW = settings.get("BK_API_URL_TMPL_FOR_APIGW", BK_API_URL_TMPL)
 
 # 开发者中心 region 与 APIGW user_auth_type 的对应关系
 REGION_TO_USER_AUTH_TYPE_MAP = settings.get("REGION_TO_USER_AUTH_TYPE_MAP", {"default": "default"})
@@ -959,7 +960,6 @@ REGION_CONFIGS = settings.get("REGION_CONFIGS", {"regions": [copy.deepcopy(DEFAU
 # 蓝鲸 OAuth 服务地址（用于纳管蓝鲸应用 bk_app_code/bk_app_secret/）
 BK_OAUTH_API_URL = settings.get("BK_OAUTH_API_URL", "http://localhost:8080")
 
-
 # --------
 # 用户鉴权模块 bkpaas_auth SDK 相关配置
 # --------
@@ -1014,7 +1014,6 @@ AUTH_ENV_NAME = settings.get("AUTH_ENV_NAME", "prod")
 CLI_AUTH_CODE = settings.get("CLI_AUTH_CODE", "")
 CLI_AUTH_SECRET = settings.get("CLI_AUTH_SECRET", "")
 
-
 # === 插件应用相关
 # 是否允许创建蓝鲸插件应用
 IS_ALLOW_CREATE_BK_PLUGIN_APP = settings.get("IS_ALLOW_CREATE_BK_PLUGIN_APP", False)
@@ -1061,16 +1060,13 @@ BLOBSTORE_BUCKET_AP_PACKAGES = settings.get("BLOBSTORE_BUCKET_AP_PACKAGES", "bkp
 # S-Mart 应用默认增强服务配置信息
 SMART_APP_DEFAULT_SERVICES_CONFIG = settings.get("SMART_APP_DEFAULT_SERVICES_CONFIG", {"mysql": {}})
 
-
 # 针对 slug 环境对敏感信息加密密钥
 SLUG_ENCRYPT_SECRET_KEY = settings.get("SLUG_ENCRYPT_SECRET_KEY", BKKRILL_ENCRYPT_SECRET_KEY)
-
 
 # 默认进程规格套餐名称
 DEFAULT_PROC_SPEC_PLAN = "Starter"
 PREMIUM_PROC_SPEC_PLAN = "4C2G5R"
 ULTIMATE_PROC_SPEC_PLAN = "4C4G5R"
-
 
 # 应用副本数相关配置：
 
@@ -1086,7 +1082,6 @@ ENGINE_APP_SOURCE_SIZE_WARNING_THRESHOLD_MB = 300
 
 # 可恢复下架操作的最长时限
 ENGINE_OFFLINE_RESUMABLE_SECS = 60
-
 
 # == 应用运行时相关配置
 #
@@ -1155,7 +1150,6 @@ PAAS_API_LOG_REDIS_HANDLER = settings.get(
     },
 )
 
-
 # --------------
 # 应用日志相关配置
 # --------------
@@ -1191,7 +1185,6 @@ ES_JSON_FIELD_BLACKLIST = ["json.message", "json.asctime", "json.process"]
 # 日志高亮标签，用于前端高亮显示结果
 BK_LOG_HIGHLIGHT_TAG = ("[bk-mark]", "[/bk-mark]")
 
-
 # ---------------
 # 访问控制相关配置
 # ---------------
@@ -1210,7 +1203,6 @@ ACCESS_CONTROL_CONFIG = settings.get(
     },
 )
 
-
 # 白名单策略默认生效时长，单位为天
 # NOTE: 根据业务层的反馈, 白名单申请时间过短会导致开发商需要频发申请权限. 反馈建议默认时间设置成 90d - 180d 比较合适. 因此这里取值 90d
 ACCESS_CONTROL_STRATEGY_DEFAULT_EXPIRES_DAYS = 90
@@ -1221,7 +1213,6 @@ ACCESS_CONTROL_STRATEGY_DEFAULT_EXPIRES_DAYS = 90
 
 PAAS_ANALYSIS_BASE_URL = settings.get("PAAS_ANALYSIS_BASE_URL", "http://localhost:8085")
 PAAS_ANALYSIS_JWT_CONF = settings.get("PAAS_ANALYSIS_JWT_CONF", {})
-
 
 # ---------------
 # 搜索服务相关配置
@@ -1237,7 +1228,6 @@ MK_SEARCH_API_BASE_URL = settings.get("MK_SEARCH_API_BASE_URL", "http://localhos
 MK_SEARCH_API_RIO_GW_TOKEN = settings.get("MK_SEARCH_API_RIO_GW_TOKEN", "")
 MK_SEARCH_API_PRIVATE_TOKEN = settings.get("MK_SEARCH_API_PRIVATE_TOKEN", "")
 
-
 # ---------------
 # 应用一键迁移配置
 # ---------------
@@ -1252,7 +1242,6 @@ MIGRATION_REMIND_DAYS = 7
 
 # 迁移时，是否 patch 用户代码
 IS_PATCH_CODE_IN_MGRLEGACY = settings.get("IS_PATCH_CODE_IN_MGRLEGACY", True)
-
 
 # ------------------
 # 蓝鲸文档中心配置
@@ -1504,7 +1493,6 @@ DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = settings.get("DEFAULT_PERSISTENT_STORAGE
 # 持久存储默认存储大小
 DEFAULT_PERSISTENT_STORAGE_SIZE = settings.get("DEFAULT_PERSISTENT_STORAGE_SIZE", "1Gi")
 
-
 # ---------------------------------------------
 #  前端特性配置
 # ---------------------------------------------
@@ -1532,6 +1520,8 @@ FE_FEATURE_SETTINGS_APP_ACCESS_TOKEN = settings.get("FE_FEATURE_SETTINGS_APP_ACC
 FE_FEATURE_SETTINGS_DEV_SANDBOX = settings.get("FE_FEATURE_SETTINGS_DEV_SANDBOX", False)
 # 是否展示应用可用性保障
 FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL", False)
+# 是否展示 MCP Server 云 API 权限
+FE_FEATURE_SETTINGS_MCP_SERVER_API = settings.get("FE_FEATURE_SETTINGS_MCP_SERVER_API", False)
 
 # FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
 FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])

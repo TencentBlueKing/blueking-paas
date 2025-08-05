@@ -2,8 +2,9 @@
   <div class="paasng-api-panel">
     <div class="search-wrapper flex-row justify-content-between">
       <div class="left-btns flex-row flex-shrink-0">
-        <!-- 续期：支持跨网关/组件续期 -->
+        <!-- 续期：支持跨网关/组件续期、MCP Server 默认为永久权限无需续期  -->
         <bk-button
+          v-if="!isMcpService"
           class="flex-shrink-0"
           theme="primary"
           :disabled="isRenewalDisabled"
@@ -48,6 +49,7 @@
     >
       <div>
         <paasng-alert
+          v-if="!isMcpService"
           :title="$t('若有效期限不足180天，但应用仍在访问 API，有效期限将自动延长至 180 天（不限次数）。')"
           style="margin-bottom: 16px; width: 100%"
         />
@@ -74,7 +76,9 @@
               @clear-filter="clearFilterKey"
             />
           </div>
+          <!-- 无续期操作 -->
           <bk-table-column
+            v-if="!isMcpService"
             label="id"
             type="selection"
             :selectable="selectable"
@@ -102,50 +106,19 @@
               </template>
             </template>
           </bk-table-column>
-          <template v-if="tableList.length > 0">
-            <bk-table-column
-              :label="isComponentApi ? $t('系统') : $t('网关')"
-              min-width="100"
-              :prop="isComponentApi ? 'system_name' : 'api_name'"
-              :column-key="isComponentApi ? 'system_name' : 'api_name'"
-              :filters="nameFilters"
-              :filter-multiple="true"
-            >
-              <template slot-scope="props">
-                <template v-if="isComponentApi">
-                  {{ props.row.system_name || '--' }}
-                </template>
-                <template v-else>
-                  {{ props.row.api_name || '--' }}
-                </template>
-              </template>
-            </bk-table-column>
-          </template>
-          <template v-else>
-            <bk-table-column
-              :label="isComponentApi ? $t('系统') : $t('网关')"
-              min-width="100"
-            >
-              <template slot-scope="props">
-                <template v-if="isComponentApi">
-                  {{ props.row.system_name }}
-                  <template v-if="!!props.row.tag">
-                    <span
-                      :class="[
-                        { inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) },
-                        { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) },
-                      ]"
-                    >
-                      {{ props.row.tag }}
-                    </span>
-                  </template>
-                </template>
-                <template v-else>
-                  {{ props.row.api_name }}
-                </template>
-              </template>
-            </bk-table-column>
-          </template>
+          <bk-table-column
+            v-if="!isMcpService"
+            :label="isComponentApi ? $t('系统') : $t('网关')"
+            min-width="100"
+            :prop="isComponentApi ? 'system_name' : 'api_name'"
+            :column-key="isComponentApi ? 'system_name' : 'api_name'"
+            :filters="isTableEmpty ? null : nameFilters"
+            :filter-multiple="true"
+          >
+            <template slot-scope="{ row }">
+              {{ row[isComponentApi ? 'system_name' : 'api_name'] || '--' }}
+            </template>
+          </bk-table-column>
           <bk-table-column
             :label="$t('描述')"
             min-width="120"
@@ -158,6 +131,7 @@
             </template>
           </bk-table-column>
           <bk-table-column
+            v-if="!isMcpService"
             :label="$t('权限等级')"
             :render-header="$renderHeader"
           >
@@ -175,79 +149,29 @@
               {{ getComputedExpires(props.row) }}
             </template>
           </bk-table-column>
-          <template v-if="tableList.length > 0">
-            <bk-table-column
-              :label="$t('状态')"
-              prop="permission_status"
-              column-key="status"
-              :filters="statusFilters"
-              :filter-multiple="true"
-              :render-header="$renderHeader"
-            >
-              <template slot-scope="props">
-                <template v-if="props.row.permission_status === 'owned'">
-                  <span class="paasng-icon paasng-pass" />
-                  {{ $t('已拥有') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'unlimited'">
-                  <span class="paasng-icon paasng-pass" />
-                  {{ $t('无限制') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'need_apply'">
-                  <span class="paasng-icon paasng-reject" />
-                  {{ $t('未申请') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'expired'">
-                  <span class="paasng-icon paasng-reject" />
-                  {{ $t('已过期') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'rejected'">
-                  <span class="paasng-icon paasng-reject" />
-                  {{ $t('已拒绝') }}
-                </template>
-                <template v-else>
-                  <round-loading ext-cls="applying" />
-                  {{ $t('申请中') }}
-                </template>
+          <bk-table-column
+            :label="$t('状态')"
+            prop="permission_status"
+            column-key="status"
+            :filters="isTableEmpty ? null : statusFilters"
+            :filter-multiple="true"
+            :render-header="$renderHeader"
+          >
+            <template slot-scope="{ row }">
+              <template v-if="statusConfig[row.permission_status]">
+                <span :class="['paasng-icon', statusConfig[row.permission_status].icon]" />
+                {{ statusConfig[row.permission_status].text }}
               </template>
-            </bk-table-column>
-          </template>
-          <template v-else>
-            <bk-table-column
-              :label="$t('状态')"
-              :render-header="$renderHeader"
-            >
-              <template slot-scope="props">
-                <template v-if="props.row.permission_status === 'owned'">
-                  <span class="paasng-icon paasng-pass" />
-                  {{ $t('已拥有') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'unlimited'">
-                  <span class="paasng-icon paasng-pass" />
-                  {{ $t('无限制') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'need_apply'">
-                  <span class="paasng-icon paasng-reject" />
-                  {{ $t('未申请') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'expired'">
-                  <span class="paasng-icon paasng-reject" />
-                  {{ $t('已过期') }}
-                </template>
-                <template v-else-if="props.row.permission_status === 'rejected'">
-                  <span class="paasng-icon paasng-reject" />
-                  {{ $t('已拒绝') }}
-                </template>
-                <template v-else>
-                  <round-loading ext-cls="applying" />
-                  {{ $t('申请中') }}
-                </template>
+              <template v-else>
+                <round-loading ext-cls="applying" />
+                {{ $t('申请中') }}
               </template>
-            </bk-table-column>
-          </template>
+            </template>
+          </bk-table-column>
           <bk-table-column
             :label="$t('操作')"
             :width="localLanguage === 'en' ? 130 : 110"
+            v-if="!isMcpService"
           >
             <template slot-scope="{ row }">
               <div class="table-operate-buttons">
@@ -348,14 +272,6 @@ export default {
         sensitive: this.$t('敏感'),
         unlimited: this.$t('无限制'),
       },
-      statusFilters: [
-        { text: this.$t('已拥有'), value: 'owned' },
-        { text: this.$t('无限制'), value: 'unlimited' },
-        { text: this.$t('未申请'), value: 'need_apply' },
-        { text: this.$t('已过期'), value: 'expired' },
-        { text: this.$t('已拒绝'), value: 'rejected' },
-        { text: this.$t('申请中'), value: 'pending' },
-      ],
       is_up: true,
       nameFilters: [],
       tableKey: -1,
@@ -376,6 +292,13 @@ export default {
       statusFilterValues: [],
       nameFilterValues: [],
       filterAllList: [],
+      statusConfig: {
+        owned: { icon: 'paasng-pass', text: this.$t('已拥有') },
+        unlimited: { icon: 'paasng-pass', text: this.$t('无限制') },
+        need_apply: { icon: 'paasng-reject', text: this.$t('未申请') },
+        expired: { icon: 'paasng-reject', text: this.$t('已过期') },
+        rejected: { icon: 'paasng-reject', text: this.$t('已拒绝') },
+      },
     };
   },
   computed: {
@@ -386,7 +309,12 @@ export default {
       return this.$route.params.id;
     },
     curDispatchMethod() {
-      return this.typeValue === 'component' ? 'getSysAppPermissions' : 'getAppPermissions';
+      const methodMap = {
+        component: 'getSysAppPermissions',
+        gateway: 'getAppPermissions',
+        mcp: 'getMcpAppliedPermissions',
+      };
+      return methodMap[this.typeValue] || 'getSysAppPermissions';
     },
     localLanguage() {
       return this.$store.state.localLanguage;
@@ -397,6 +325,30 @@ export default {
     },
     isSesetTableList() {
       return !this.nameFilterValues.length && !this.statusFilterValues.length;
+    },
+    isTableEmpty() {
+      return this.tableList.length === 0;
+    },
+    // 是否为 MCP 服务类型
+    isMcpService() {
+      return this.typeValue === 'mcp';
+    },
+    statusFilters() {
+      if (this.isMcpService) {
+        return [
+          { text: this.$t('已拥有'), value: 'owned' },
+          { text: this.$t('已拒绝'), value: 'rejected' },
+          { text: this.$t('申请中'), value: 'pending' },
+        ];
+      }
+      return [
+        { text: this.$t('已拥有'), value: 'owned' },
+        { text: this.$t('无限制'), value: 'unlimited' },
+        { text: this.$t('未申请'), value: 'need_apply' },
+        { text: this.$t('已过期'), value: 'expired' },
+        { text: this.$t('已拒绝'), value: 'rejected' },
+        { text: this.$t('申请中'), value: 'pending' },
+      ];
     },
   },
   watch: {
@@ -520,6 +472,9 @@ export default {
       this.nameFilters = [];
       this.selectedList = [];
       this.fetchList();
+      this.$nextTick(() => {
+        this.$refs.permRef?.doLayout();
+      });
     },
 
     sortTable() {
@@ -527,38 +482,6 @@ export default {
         return;
       }
       this.is_up = !this.is_up;
-    },
-
-    renderExpireHeader(h, { column }) {
-      return h(
-        'div',
-        {
-          on: {
-            click: this.sortTable,
-          },
-          style: {
-            cursor: this.pagination.count ? 'pointer' : 'not-allowed',
-          },
-        },
-        [
-          h('span', {
-            domProps: {
-              innerHTML: this.$t('权限期限'),
-            },
-          }),
-          h('img', {
-            style: {
-              position: 'relative',
-              top: '1px',
-              left: '1px',
-              transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)',
-            },
-            attrs: {
-              src: '/static/images/sort-icon.png',
-            },
-          }),
-        ]
-      );
     },
 
     handleSuccessRenewal() {
@@ -696,20 +619,34 @@ export default {
       this.fetchList();
     },
 
+    // mcp service 数据格式化
+    formatMcpServiceData(data) {
+      return data.map((item) => ({
+        ...item.permission,
+        ...item.mcp_server,
+        ...item,
+        permission_status: item.permission.status,
+      }));
+    },
+
+    // 获取已申请的权限列表
     async fetchList() {
       this.loading = true;
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, { appCode: this.appCode });
-        (res.data || []).forEach((item) => {
+        // 网关、组件使用 res.data / MCP使用 res
+        let apiData = this.isMcpService ? this.formatMcpServiceData(res) : res.data || [];
+        apiData.forEach((item) => {
           item.type = this.typeValue;
         });
         // 权限续期处理
-        if (res.data.length) {
-          res.data = res.data.map((v) => {
+        if (apiData.length) {
+          apiData = apiData.map((v) => {
             // 申请
             const apply = formatApplyFun(v.permission_status);
             // 续期
             const renew = formatRenewFun(v.permission_status, v);
+            // Mcp Service 为永久权限，直接禁用
             return {
               ...v,
               applyDisabled: apply.disabled,
@@ -719,26 +656,19 @@ export default {
             };
           });
         }
-        // this.apiList = Object.freeze(res.data.sort(this.compareName('name')))
-        this.apiList = Object.freeze(res.data);
+        this.apiList = Object.freeze(apiData);
+        const nameSet = new Set(this.nameFilters.map((item) => item.value));
         this.apiList.forEach((item) => {
-          if (this.isComponentApi) {
-            if (!this.nameFilters.map((_) => _.value).includes(item.system_name)) {
-              this.nameFilters.push({
-                text: item.system_name,
-                value: item.system_name,
-              });
-            }
-          } else {
-            if (!this.nameFilters.map((_) => _.value).includes(item.api_name)) {
-              this.nameFilters.push({
-                text: item.api_name,
-                value: item.api_name,
-              });
-            }
+          const name = item[this.isComponentApi ? 'system_name' : 'api_name'];
+          if (!nameSet.has(name)) {
+            nameSet.add(name);
+            this.nameFilters.push({
+              text: name,
+              value: name,
+            });
           }
         });
-        this.allData = res.data;
+        this.allData = apiData;
         this.initPageConf();
         this.tableList = this.getDataByPage();
         this.indeterminate = false;

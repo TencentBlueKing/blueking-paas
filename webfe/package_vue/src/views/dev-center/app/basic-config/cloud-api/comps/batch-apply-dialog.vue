@@ -10,7 +10,10 @@
     @after-leave="handleAfterLeave"
   >
     <div class="content">
-      <paasng-alert>
+      <paasng-alert
+        v-if="!isMcpService"
+        class="mb-16"
+      >
         <div slot="title">
           <span v-dompurify-html="alertTxt"></span>
           {{ renewalRows.length > 0 ? '，' : '。' }}
@@ -20,85 +23,45 @@
           </template>
         </div>
       </paasng-alert>
-      <div class="api-batch-apply-content">
-        <table class="bk-table api-batch-apply-fixed-table">
-          <colgroup>
-            <col style="width: 200px" />
-            <col style="width: 200px" />
-            <col />
-          </colgroup>
-          <thead>
-            <tr>
-              <th style="padding-left: 20px">
-                {{ isComponent ? $t('系统') : $t('网关') }}
-              </th>
-              <th>API</th>
-              <th>{{ $t('描述') }}</th>
-            </tr>
-          </thead>
-        </table>
-        <div
-          ref="apiTableRef"
-          :class="['api-batch-apply-table', { 'has-bottom-border': !isScrollBottom && rows.length > 4 }]"
-          @scroll.stop="handleScroll($event)"
+      <bk-table
+        ref="batchTable"
+        style="width: 100%"
+        :data="rows"
+        :max-height="240"
+        ext-cls="batch-apply-table-cls"
+      >
+        <bk-table-column
+          :label="getTypeLabel()"
+          width="200"
         >
-          <table class="bk-table has-table-hover">
-            <colgroup>
-              <col style="width: 200px" />
-              <col style="width: 200px" />
-              <col />
-            </colgroup>
-            <tbody style="background: #fff">
-              <template v-if="rows.length > 0">
-                <tr
-                  v-for="(item, index) in rows"
-                  :key="index"
-                >
-                  <td style="text-align: left; padding-left: 20px">
-                    <span class="name">{{ isComponent ? item.system_name : item.api_name }}</span>
-                  </td>
-                  <td>
-                    <span
-                      class="api-batch-apply-name"
-                      :title="item.name"
-                    >
-                      {{ item.name }}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      class="desc"
-                      :title="item.description ? item.description : ''"
-                    >
-                      <template v-if="item.permission_action === 'renew'">
-                        <span style="color: #ff9c01">{{ $t('已有权限，不可重复申请') }}</span>
-                      </template>
-                      <template v-else>
-                        {{ item.description || '--' }}
-                      </template>
-                    </span>
-                  </td>
-                </tr>
-              </template>
-              <template v-if="rows.length < 1">
-                <tr>
-                  <td colspan="3">
-                    <div class="search-empty-wrapper">
-                      <div class="empty-wrapper">
-                        <i class="bk-icon icon-empty" />
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
-      </div>
+          <template slot-scope="{ row }">
+            {{ getItemDisplayName(row) }}
+          </template>
+        </bk-table-column>
+        <bk-table-column
+          v-if="!isMcpService"
+          label="API"
+          width="200"
+        >
+          <template slot-scope="{ row }">
+            {{ row.name }}
+          </template>
+        </bk-table-column>
+        <bk-table-column :label="$t('描述')">
+          <template slot-scope="{ row }">
+            <template v-if="row.permission_action === 'renew'">
+              <span style="color: #ff9c01">{{ $t('已有权限，不可重复申请') }}</span>
+            </template>
+            <template v-else>
+              {{ row.description || '--' }}
+            </template>
+          </template>
+        </bk-table-column>
+      </bk-table>
       <bk-form
         :label-width="localLanguage === 'en' ? 110 : 80"
         :model="formData"
-        style="margin-top: 25px"
+        class="mt-24"
       >
         <bk-form-item
           :label="$t('申请理由')"
@@ -112,6 +75,7 @@
           />
         </bk-form-item>
         <bk-form-item
+          v-if="isApplyTime"
           :label="$t('有效时间')"
           required
           property="expired"
@@ -151,6 +115,8 @@
 <script>
 import PaasngAlert from './paasng-alert';
 import i18n from '@/language/i18n';
+import { mapState } from 'vuex';
+
 export default {
   name: '',
   components: {
@@ -185,6 +151,16 @@ export default {
       type: Boolean,
       default: false,
     },
+    apiType: {
+      type: String,
+      default: 'gateway',
+      validator: (value) => ['gateway', 'component', 'mcp-service'].includes(value),
+    },
+    // 是否需要申请时间
+    isApplyTime: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     return {
@@ -194,10 +170,10 @@ export default {
         reason: '',
         expired: 12,
       },
-      isScrollBottom: false,
     };
   },
   computed: {
+    ...mapState(['curUserInfo']),
     // 可申请
     applyRows() {
       return this.rows.filter((item) => !item.applyDisabled);
@@ -208,6 +184,17 @@ export default {
     },
     localLanguage() {
       return this.$store.state.localLanguage;
+    },
+    // 当前类型，兼容旧的 isComponent prop
+    currentApiType() {
+      if (this.apiType !== 'gateway') {
+        return this.apiType;
+      }
+      return this.isComponent ? 'component' : 'gateway';
+    },
+    // 是否为 MCP 服务类型
+    isMcpService() {
+      return this.currentApiType === 'mcp-service';
     },
     alertTxt() {
       return this.$t('将申请{t} {n} 下 <i class="l1">{l}</i> 个{y}API的权限', {
@@ -222,32 +209,108 @@ export default {
     show: {
       handler(value) {
         this.visible = !!value;
+        if (value) {
+          // 弹窗显示时，延迟重新计算表格布局
+          setTimeout(() => {
+            this.resizeTable();
+          }, 100);
+        }
       },
       immediate: true,
     },
   },
   methods: {
+    // 获取权限类型
+    getTypeLabel() {
+      const typeMap = {
+        gateway: this.$t('网关'),
+        component: this.$t('系统'),
+        'mcp-service': 'MCP Server',
+      };
+      return typeMap[this.currentApiType] || this.$t('网关');
+    },
+
+    // 获取申请权限的名称
+    getItemDisplayName(item) {
+      switch (this.currentApiType) {
+        case 'component':
+          return item.system_name;
+        case 'mcp-service':
+          return item.name;
+        case 'gateway':
+        default:
+          return item.api_name;
+      }
+    },
+
+    // 构建申请参数
+    buildApplyParams() {
+      const commonData = {
+        reason: this.formData.reason,
+      };
+
+      // 公共扩展参数
+      const extendedData = {
+        expire_days: this.formData.expired * 30,
+        gateway_name: this.apiName,
+      };
+
+      // 根据不同类型构建特定参数
+      const typeSpecificParams = {
+        component: {
+          systemId: this.apiId,
+          data: {
+            ...commonData,
+            ...extendedData,
+            component_ids: this.applyRows.map((item) => item.id),
+          },
+        },
+        'mcp-service': {
+          data: {
+            ...commonData,
+            mcp_server_ids: this.applyRows.map((item) => item.id),
+            applied_by: this.curUserInfo.username,
+          },
+        },
+        gateway: {
+          apiId: this.apiId,
+          data: {
+            ...commonData,
+            ...extendedData,
+            resource_ids: this.applyRows.map((item) => item.id),
+            grant_dimension: 'resource',
+          },
+        },
+      };
+
+      return {
+        appCode: this.appCode,
+        ...(typeSpecificParams[this.currentApiType] || typeSpecificParams.gateway),
+      };
+    },
+
+    // 获取 actions name
+    getDispatchMethod() {
+      const methodMap = {
+        component: 'sysApply',
+        gateway: 'apply',
+        'mcp-service': 'applyMcpServerPermission',
+      };
+      return methodMap[this.currentApiType] || 'apply';
+    },
+
+    // 重新计算表格布局
+    resizeTable() {
+      this.$refs.batchTable?.doLayout();
+    },
+
+    // 确认申请
     async handleConfirm() {
       this.loading = true;
       try {
-        const params = {
-          data: {
-            reason: this.formData.reason,
-            expire_days: this.formData.expired * 30,
-            gateway_name: this.apiName,
-          },
-          appCode: this.appCode,
-        };
-        if (this.isComponent) {
-          params.data.component_ids = this.applyRows.map((item) => item.id);
-          params.systemId = this.apiId;
-        } else {
-          params.data.resource_ids = this.applyRows.map((item) => item.id);
-          params.data.grant_dimension = 'resource';
-          params.apiId = this.apiId;
-        }
-        const methods = this.isComponent ? 'sysApply' : 'apply';
-        await this.$store.dispatch(`cloudApi/${methods}`, params);
+        const params = this.buildApplyParams();
+        const method = this.getDispatchMethod();
+        await this.$store.dispatch(`cloudApi/${method}`, params);
         this.$emit('on-apply');
       } catch (e) {
         this.catchErrorHandler(e);
@@ -271,14 +334,6 @@ export default {
       this.$emit('update:show', false);
       this.$emit('after-leave');
     },
-
-    handleScroll(event) {
-      if (event.target.scrollTop + event.target.offsetHeight >= event.target.scrollHeight) {
-        this.isScrollBottom = true;
-      } else {
-        this.isScrollBottom = false;
-      }
-    },
   },
 };
 </script>
@@ -288,104 +343,9 @@ export default {
     color: #2dcb56;
     font-style: normal;
   }
-  .api-batch-apply-content {
-    position: relative;
-    margin-top: 10px;
-  }
-  .api-batch-apply-fixed-table {
-    width: 100%;
-    border-top: 1px solid #e6e6e6;
-    border-left: 1px solid #e6e6e6;
-    border-right: 1px solid #e6e6e6;
-    border-bottom: none;
-    thead {
-      tr {
-        th {
-          height: 42px;
-          font-size: 12px;
-          background: #f5f6fa;
-          .bk-form-checkbox .bk-checkbox-text {
-            font-size: 12px;
-          }
-        }
-      }
-    }
-  }
-  .api-batch-apply-table {
-    position: relative;
-    width: 100%;
-    max-height: 200px;
-    margin-top: -1px;
-    overflow-y: auto;
-    border-left: 1px solid #e6e6e6;
-    border-right: 1px solid #e6e6e6;
-    border-bottom: none;
-    &.has-bottom-border {
-      border-bottom: 1px solid #e6e6e6;
-    }
-    &::-webkit-scrollbar {
-      width: 4px;
-      background-color: lighten(transparent, 80%);
-    }
-    &::-webkit-scrollbar-thumb {
-      height: 5px;
-      border-radius: 2px;
-      background-color: #e6e9ea;
-    }
-    .bk-table {
-      width: 100%;
-      border: none;
-      thead {
-        tr {
-          th {
-            height: 42px;
-            font-size: 12px;
-          }
-        }
-      }
-      tbody {
-        tr {
-          position: relative;
-          td {
-            height: 42px;
-            font-size: 12px;
-          }
-        }
-        .search-empty-wrapper {
-          position: relative;
-          min-height: 200px;
-          .empty-wrapper {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            text-align: center;
-            transform: translate(-50%, -50%);
-            i {
-              font-size: 50px;
-              color: #c3cdd7;
-            }
-          }
-        }
-      }
-      .api-batch-apply-name,
-      .name {
-        display: inline-block;
-        max-width: 140px;
-        font-size: 12px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        vertical-align: middle;
-      }
-      .desc {
-        display: inline-block;
-        max-width: 200px;
-        font-size: 12px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        vertical-align: middle;
-      }
+  .batch-apply-table-cls {
+    .bk-table-empty-block {
+      height: 180px;
     }
   }
 }

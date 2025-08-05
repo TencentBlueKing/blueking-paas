@@ -55,26 +55,11 @@
               v-bind="panel"
             />
             <div class="cloud-type-item">
-              <render-api
-                v-if="active === 'gatewayApi'"
+              <component
+                :is="activeComponent"
                 :key="comKey"
                 :app-code="appCode"
-                @data-ready="handlerDataReady"
-              />
-              <render-api
-                v-if="active === 'componentApi'"
-                :key="comKey"
-                api-type="component"
-                :app-code="appCode"
-                @data-ready="handlerDataReady"
-              />
-              <app-perm
-                v-if="active === 'appPerm'"
-                :type-list="typeList"
-                @data-ready="handlerDataReady"
-              />
-              <apply-record
-                v-if="active === 'applyRecord'"
+                :api-type="apiType"
                 :type-list="typeList"
                 @data-ready="handlerDataReady"
               />
@@ -214,12 +199,14 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import RenderApi from './comps/render-api';
 import AppPerm from './comps/app-perm';
 import ApplyRecord from './comps/apply-record';
+import McpServer from './comps/mcp-server.vue';
 
 export default {
   components: {
     AppPerm,
     ApplyRecord,
     RenderApi,
+    McpServer,
   },
   mixins: [appBaseMixin],
   data() {
@@ -265,6 +252,8 @@ export default {
       return [
         { name: 'gatewayApi', label: this.$t('网关API') },
         { name: 'componentApi', label: this.$t('组件API') },
+        // 根据 flag 判断是否显示 MCP Server
+        { name: 'mcpServer', label: this.$t('MCP Server') },
         { name: 'appPerm', label: this.$t('已申请的权限') },
         { name: 'applyRecord', label: this.$t('申请记录') },
       ].filter((item) => item.name !== 'componentApi' || this.platformFeature?.ESB_API);
@@ -273,7 +262,26 @@ export default {
       return [
         { id: 'gateway', name: this.$t('网关API') },
         { id: 'component', name: this.$t('组件API') },
+        { id: 'mcp', name: this.$t('MCP Server') },
       ].filter((item) => item.id !== 'component' || this.platformFeature?.ESB_API);
+    },
+    activeComponent() {
+      const componentMap = {
+        gatewayApi: 'RenderApi',
+        mcpServer: 'McpServer',
+        componentApi: 'RenderApi',
+        appPerm: 'AppPerm',
+        applyRecord: 'ApplyRecord',
+      };
+      return componentMap[this.active];
+    },
+    apiType() {
+      const typeMap = {
+        gatewayApi: 'gateway',
+        mcpServer: 'mcp',
+        componentApi: 'component',
+      };
+      return typeMap[this.active] || 'gateway';
     },
   },
   watch: {

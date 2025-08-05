@@ -14,7 +14,6 @@
         :placeholder="$t('请输入 MCP Server 名称或描述')"
         :clearable="true"
         :right-icon="'bk-icon icon-search'"
-        @enter="handleSearch"
         @clear="handleSearch"
         @right-icon-click="handleSearch"
       ></bk-input>
@@ -62,15 +61,20 @@
               v-else
               :class="['dot-icon', 'paasng-icon', row.permission?.status]"
             />
-            {{ MCP_SERVER_STATUS[row.permission?.status] || '--' }}
+            {{ $t(MCP_SERVER_STATUS[row.permission?.status]) || '--' }}
           </span>
-          <a
-            v-else-if="row.mcp_server?.doc_link"
-            :href="row.mcp_server?.doc_link"
-            target="_blank"
-          >
-            {{ row.mcp_server?.name }}
-          </a>
+          <span v-else-if="['name', 'description'].includes(column.prop)">
+            <a
+              v-if="row.mcp_server?.doc_link && column.prop === 'name'"
+              :href="row.mcp_server?.doc_link"
+              target="_blank"
+              v-dompurify-html="highlight(row.mcp_server?.name || '--')"
+            ></a>
+            <span
+              v-else
+              v-dompurify-html="highlight(row.mcp_server?.[column.prop] || '--')"
+            ></span>
+          </span>
           <template v-else>
             {{ row.mcp_server?.[column.prop] || '--' }}
           </template>
@@ -157,7 +161,7 @@ export default {
       },
       MCP_SERVER_STATUS,
       statusFilters: Object.keys(MCP_SERVER_STATUS).map((key) => ({
-        text: MCP_SERVER_STATUS[key],
+        text: this.$t(MCP_SERVER_STATUS[key]),
         value: key,
       })),
     };
@@ -362,6 +366,18 @@ export default {
 
     handleAfterLeave() {
       this.applyDialog.visiable = false;
+    },
+
+    // 搜索关键词高亮
+    highlight(text) {
+      const keyword = this.searchQuery;
+      if (!keyword || !text) return text;
+      const escapeRegExp = (str) => {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      };
+      const escapedKeyword = escapeRegExp(keyword);
+      const regex = new RegExp(`(${escapedKeyword})`, 'gi');
+      return text.replace(regex, '<marked>$1</marked>');
     },
   },
 };

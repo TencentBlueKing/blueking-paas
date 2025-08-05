@@ -11,7 +11,7 @@
       class="item"
     >
       <div class="key">
-        {{ $t('授权维度：') }}
+        {{ `${$t('授权维度')}：` }}
       </div>
       <div class="value">
         {{ curRecord.grant_dimension === 'resource' ? $t('按资源') : $t('按网关') }}
@@ -67,7 +67,7 @@
     </div>
     <div class="item">
       <div class="key">
-        {{ $t('审批内容：') }}
+        {{ `${$t('审批内容')}：` }}
       </div>
       <div
         class="value"
@@ -89,7 +89,7 @@
       class="item"
     >
       <div class="key">
-        {{ $t('API列表：') }}
+        {{ `API ${$t('列表')}：` }}
       </div>
       <div
         class="value"
@@ -135,7 +135,7 @@
       class="item"
     >
       <div class="key">
-        {{ $t('API列表：') }}
+        {{ `API ${$t('列表')}：` }}
       </div>
       <div
         v-if="curRecord.grant_dimension === 'resource'"
@@ -212,7 +212,7 @@ export default {
   },
   methods: {
     getHandleBy(payload) {
-      const list = payload?.filter(item => !!item) || [];
+      const list = payload?.filter((item) => !!item) || [];
       if (list.length < 1) {
         return '--';
       }

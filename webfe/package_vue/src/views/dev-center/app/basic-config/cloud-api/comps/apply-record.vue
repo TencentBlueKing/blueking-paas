@@ -59,6 +59,7 @@
     >
       <div>
         <bk-table
+          :key="typeValue"
           :data="tableList"
           ref="tableRef"
           size="small"
@@ -135,19 +136,16 @@
             :show-overflow-tooltip="true"
           >
             <template slot-scope="{ row }">
-              <template v-if="!row.handled_by.length">--</template>
-              <span v-else>
-                <template v-if="platformFeature.MULTI_TENANT_MODE">
-                  <span
-                    v-for="userId in row.handled_by"
-                    :key="userId"
-                  >
-                    <bk-user-display-name :user-id="userId"></bk-user-display-name>
-                    <span>，</span>
-                  </span>
-                </template>
-                <template>{{ getHandleBy(row.handled_by) }}</template>
-              </span>
+              <template v-if="platformFeature.MULTI_TENANT_MODE">
+                <span
+                  v-for="userId in row.handled_by"
+                  :key="userId"
+                >
+                  <bk-user-display-name :user-id="userId"></bk-user-display-name>
+                  <span>，</span>
+                </span>
+              </template>
+              <template v-else>{{ getHandleBy(row.handled_by) }}</template>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -239,7 +237,7 @@
             v-if="!isMcpService"
             class="item"
           >
-            <div class="key">{{ $t('API列表') }}：</div>
+            <div class="key">{{ `API ${$t('列表')}：` }}</div>
             <div
               v-if="!isComponentApi && curRecord.grant_dimension !== 'resource'"
               class="value"
@@ -669,11 +667,7 @@ export default {
     },
 
     getHandleBy(payload) {
-      const list = payload.filter((item) => !!item);
-      if (list.length < 1) {
-        return '--';
-      }
-      return list.join('，');
+      return payload?.length ? payload.join('，') : '--';
     },
 
     pageChange(page) {

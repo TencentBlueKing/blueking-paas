@@ -21,6 +21,7 @@ package appdesc
 import (
 	"os"
 	"path/filepath"
+	"sort"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -117,6 +118,36 @@ modules:
         preRelease:
           procCommand: python manage.py migrate --no-input
 `
+	appDescV3TestYamlWithCommandAndArgs := `
+specVersion: 3
+modules:
+  - name: backend
+    isDefault: true
+    spec:
+      processes:
+        - name: web
+          command:
+            - python
+          args:
+            - manage.py
+            - runserver
+        - name: worker
+          command:
+            - celery
+          args:
+            - '-A'
+            - app
+            - worker
+            - '--loglevel=info'
+      hooks:
+        preRelease:
+          command:
+            - python
+          args:
+            - manage.py
+            - migrate
+            - '--no-input'
+`
 
 	BeforeEach(func() {
 		tmpAppDir, _ = os.MkdirTemp("", "app")
@@ -129,49 +160,163 @@ modules:
 	})
 
 	Context("Test valid app desc file", func() {
-		DescribeTable("Test parse PreReleaseHook", func(appDescYaml, expectedHookCommand string) {
-			Expect(os.WriteFile(tmpDescFilePath, []byte(appDescYaml), 0o644)).To(BeNil())
+		DescribeTable(
+			"Test parse PreReleaseHook",
+			func(appDescYaml, expectedHookCommand string) {
+				Expect(os.WriteFile(tmpDescFilePath, []byte(appDescYaml), 0o644)).To(BeNil())
 
-			appDesc, err := UnmarshalToAppDesc(tmpDescFilePath)
-			Expect(err).To(BeNil())
-			Expect(appDesc.GetPreReleaseHook()).To(Equal(expectedHookCommand))
-		}, Entry("has pre_release_hook in single module appDescV2 test yaml", appDescV2TestYamlWithSingleModule, "python manage.py migrate --no-input"),
-			Entry("has pre_release_hook in multi-module appDescV2 test yaml", appDescV2TestYamlWithModules, "python manage.py migrate --no-input"),
-			Entry("has pre_release_hook in single module appDescV3 test yaml", appDescV3TestYamlWithSingleModule, "python manage.py migrate --no-input"),
-			Entry("has pre_release_hook in multi-module appDescV3 test yaml", appDescV3TestYamlWithModules, "python manage.py migrate --no-input"),
+				appDesc, err := UnmarshalToAppDesc(tmpDescFilePath)
+				Expect(err).To(BeNil())
+				Expect(appDesc.GetPreReleaseHook()).To(Equal(expectedHookCommand))
+			},
+			Entry(
+				"single module appDescV2 pre release hook",
+				appDescV2TestYamlWithSingleModule,
+				"python manage.py migrate --no-input",
+			),
+			Entry(
+				"multi-module appDescV2 pre release hook",
+				appDescV2TestYamlWithModules,
+				"python manage.py migrate --no-input",
+			),
+			Entry(
+				"single module appDescV3 pre release hook",
+				appDescV3TestYamlWithSingleModule,
+				"python manage.py migrate --no-input",
+			),
+			Entry(
+				"multi-module appDescV3 pre release hook",
+				appDescV3TestYamlWithModules,
+				"python manage.py migrate --no-input",
+			),
+			Entry(
+				"pre release hook use command and args",
+				appDescV3TestYamlWithCommandAndArgs,
+				"bash -c '\"$(eval echo \\\"$0\\\")\" \"$(eval echo \\\"${1}\\\")\" "+
+					"\"$(eval echo \\\"${2}\\\")\" \"$(eval echo \\\"${3}\\\")\"' "+
+					"'python' 'manage.py' 'migrate' '--no-input'",
+			),
 			Entry("no pre_release_hook", `spec_version: 2
 module:
 language: Python
 scripts:
 test: "python"`, ""),
-			Entry("no pre_release_hook", `spec_version: 2`, ""))
+			Entry("no pre_release_hook", `spec_version: 2`, ""),
+		)
 
-		DescribeTable("Test parse env_variables", func(appDescYaml string, expectedEnvs []Env) {
-			Expect(os.WriteFile(tmpDescFilePath, []byte(appDescYaml), 0o644)).To(BeNil())
+		DescribeTable(
+			"Test GetProcesses",
+			func(appDescYaml string, expectedProcesses []Process) {
+				Expect(os.WriteFile(tmpDescFilePath, []byte(appDescYaml), 0o644)).To(BeNil())
 
-			appDesc, err := UnmarshalToAppDesc(tmpDescFilePath)
-			Expect(err).To(BeNil())
-			Expect(appDesc.GetEnvs()).To(Equal(expectedEnvs))
-		}, Entry("has env_variables in single module appDescV2 test yaml", appDescV2TestYamlWithSingleModule, []Env{
-			{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"},
-		}), Entry("has env_variables in multi-module appDescV2 test yaml", appDescV2TestYamlWithModules, []Env{
-			{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"},
-		}), Entry("has env_variables in single module appDescV3 test yaml", appDescV3TestYamlWithSingleModule, []Env{
-			{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"},
-		}), Entry("has env_variables in multi-module appDescV3 test yaml", appDescV3TestYamlWithModules, []Env{
-			{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"},
-		}), Entry("no env_variables", `spec_version: 2`, nil))
+				appDesc, err := UnmarshalToAppDesc(tmpDescFilePath)
+				Expect(err).To(BeNil())
 
-		DescribeTable("Test TransformToProcfile", func(appDescYaml string) {
-			Expect(os.WriteFile(tmpDescFilePath, []byte(appDescV2TestYamlWithSingleModule), 0o644)).To(BeNil())
-			procString, err := TransformToProcfile(tmpDescFilePath)
-			Expect(err).To(BeNil())
-			Expect(procString).To(ContainSubstring("worker: celery -A app worker --loglevel=info"))
-			Expect(procString).To(ContainSubstring("web: python manage.py runserver"))
-		}, Entry("has env_variables in single module appDescV2 test yaml", appDescV2TestYamlWithSingleModule),
+				// 由于 v2 中 processes 是 key-value 顺序，这里排序下确保能与测试数据一致
+				processes := appDesc.GetProcesses()
+				sort.Slice(processes, func(i, j int) bool {
+					return processes[i].Name < processes[j].Name
+				})
+				Expect(processes).To(Equal(expectedProcesses))
+			},
+			Entry(
+				"single module appDescV2 processes",
+				appDescV2TestYamlWithSingleModule,
+				[]Process{
+					{Name: "web", ProcCommand: "python manage.py runserver"},
+					{Name: "worker", ProcCommand: "celery -A app worker --loglevel=info"},
+				},
+			),
+			Entry(
+				"multi-module appDescV2 processes",
+				appDescV2TestYamlWithModules,
+				[]Process{
+					{Name: "web", ProcCommand: "python manage.py runserver"},
+					{Name: "worker", ProcCommand: "celery -A app worker --loglevel=info"},
+				},
+			),
+			Entry(
+				"single module appDescV3 processes",
+				appDescV3TestYamlWithSingleModule,
+				[]Process{
+					{Name: "web", ProcCommand: "python manage.py runserver"},
+					{Name: "worker", ProcCommand: "celery -A app worker --loglevel=info"},
+				},
+			),
+			Entry(
+				"multi-module appDescV3 processes",
+				appDescV3TestYamlWithModules,
+				[]Process{
+					{Name: "web", ProcCommand: "python manage.py runserver"},
+					{Name: "worker", ProcCommand: "celery -A app worker --loglevel=info"},
+				},
+			),
+			Entry(
+				"command and args appDescV3 processes",
+				appDescV3TestYamlWithCommandAndArgs, []Process{
+					{
+						Name: "web",
+						ProcCommand: "bash -c " +
+							"'\"$(eval echo \\\"$0\\\")\" \"$(eval echo \\\"${1}\\\")\"" +
+							" \"$(eval echo \\\"${2}\\\")\"' 'python' 'manage.py' 'runserver'",
+					},
+					{
+						Name: "worker",
+						ProcCommand: "bash -c " +
+							"'\"$(eval echo \\\"$0\\\")\" \"$(eval echo \\\"${1}\\\")\"" +
+							" \"$(eval echo \\\"${2}\\\")\" \"$(eval echo \\\"${3}\\\")\"" +
+							" \"$(eval echo \\\"${4}\\\")\"' 'celery' '-A' 'app' 'worker' '--loglevel=info'",
+					},
+				},
+			),
+		)
+
+		DescribeTable(
+			"Test parse env_variables",
+			func(appDescYaml string, expectedEnvs []Env) {
+				Expect(os.WriteFile(tmpDescFilePath, []byte(appDescYaml), 0o644)).To(BeNil())
+
+				appDesc, err := UnmarshalToAppDesc(tmpDescFilePath)
+				Expect(err).To(BeNil())
+				Expect(appDesc.GetEnvs()).To(Equal(expectedEnvs))
+			},
+			Entry(
+				"has env_variables in single module appDescV2 test yaml",
+				appDescV2TestYamlWithSingleModule,
+				[]Env{{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"}},
+			),
+			Entry(
+				"has env_variables in multi-module appDescV2 test yaml",
+				appDescV2TestYamlWithModules,
+				[]Env{{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"}},
+			),
+			Entry(
+				"has env_variables in single module appDescV3 test yaml",
+				appDescV3TestYamlWithSingleModule,
+				[]Env{{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"}},
+			),
+			Entry(
+				"has env_variables in multi-module appDescV3 test yaml",
+				appDescV3TestYamlWithModules,
+				[]Env{{Name: "FOO", Value: "value_of_foo"}, {Name: "BAR", Value: "value_of_bar"}},
+			),
+			Entry("no env_variables", `spec_version: 2`, nil),
+		)
+
+		DescribeTable(
+			"Test TransformToProcfile",
+			func(appDescYaml string) {
+				Expect(os.WriteFile(tmpDescFilePath, []byte(appDescV2TestYamlWithSingleModule), 0o644)).To(BeNil())
+				procString, err := TransformToProcfile(tmpDescFilePath)
+				Expect(err).To(BeNil())
+				Expect(procString).To(ContainSubstring("worker: celery -A app worker --loglevel=info"))
+				Expect(procString).To(ContainSubstring("web: python manage.py runserver"))
+			},
+			Entry("has env_variables in single module appDescV2 test yaml", appDescV2TestYamlWithSingleModule),
 			Entry("has env_variables in multi-module appDescV2 test yaml", appDescV2TestYamlWithModules),
 			Entry("has env_variables in single module appDescV3 test yaml", appDescV3TestYamlWithSingleModule),
-			Entry("has env_variables in multi-module appDescV3 test yaml", appDescV3TestYamlWithModules))
+			Entry("has env_variables in multi-module appDescV3 test yaml", appDescV3TestYamlWithModules),
+		)
 	})
 	Context("Test invalid app desc file", func() {
 		It("Test unmarshal to app desc", func() {

@@ -18,6 +18,7 @@ require (
 	github.com/onsi/gomega v1.27.6
 	github.com/pelletier/go-toml/v2 v2.2.1
 	github.com/pkg/errors v0.9.1
+	github.com/samber/lo v1.51.0
 	github.com/shabbywu/logfmtr v0.2.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
@@ -75,9 +76,9 @@ require (
 	golang.org/x/arch v0.7.0 // indirect
 	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 )

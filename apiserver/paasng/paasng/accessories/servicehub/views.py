@@ -91,15 +91,26 @@ class ModuleServiceAttachmentsViewSet(viewsets.ViewSet, ApplicationCodeInPathMix
         res_must_not_be_protected_perm(ProtectedRes.SERVICES_MODIFICATIONS),
     ]
 
-    @swagger_auto_schema(response_serializer=slzs.EnvServiceAttachmentSLZ(many=True))
+    @swagger_auto_schema(
+        request_body=slzs.EnvServiceAttachmentInputSLZ(), response_serializer=slzs.EnvServiceAttachmentSLZ(many=True)
+    )
     def list(self, request, code, module_name, environment):
         """获取增强服务附件列表"""
+
+        slz = slzs.EnvServiceAttachmentInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
 
         env = self.get_env_via_path()
         engine_app = env.get_engine_app()
         provisioned_rels = list(mixed_service_mgr.list_provisioned_rels(engine_app))
         unprovisioned_rels = list(mixed_service_mgr.list_unprovisioned_rels(engine_app))
-        return Response(data=slzs.EnvServiceAttachmentSLZ(provisioned_rels + unprovisioned_rels, many=True).data)
+        all_rels = provisioned_rels + unprovisioned_rels
+
+        # 根据用户选择的增强服务筛选需要展示的增强服务
+        enabled_services = data.get("enabled_addons_services")
+        all_rels = [rel for rel in all_rels if rel.get_service().name in enabled_services]
+        return Response(data=slzs.EnvServiceAttachmentSLZ(all_rels, many=True).data)
 
     @swagger_auto_schema(response_serializer=slzs.ModuleServiceInfoSLZ)
     def retrieve_info(self, request, code, module_name):

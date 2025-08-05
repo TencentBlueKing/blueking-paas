@@ -280,3 +280,9 @@ class PossiblePlansOutputSLZ(serializers.Serializer):
         help_text="静态方案列表", child=serializers.DictField(), default=None, read_only=True
     )
     env_specific_plans = serializers.DictField(help_text="环境特定方案列表", default=None, read_only=True)
+
+
+class EnvServiceAttachmentInputSLZ(serializers.Serializer):
+    enabled_addons_services = serializers.ListField(
+        help_text="启用的增强服务", child=serializers.CharField(), required=False
+    )

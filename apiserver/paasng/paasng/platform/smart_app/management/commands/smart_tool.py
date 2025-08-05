@@ -88,9 +88,9 @@ class Command(BaseCommand):
         )
         parser.add_argument("--app_tenant_id", dest="raw_tenant_id", required=False, type=str, help="租户ID")
         parser.add_argument(
-            "--force",
+            "--overwrite",
             action="store_true",
-            help="设置后, 强制覆盖已上传的包. 默认不覆盖上传",
+            help="设置后，强制覆盖已上传的包。默认不覆盖上传",
         )
 
     @handle_error
@@ -102,14 +102,14 @@ class Command(BaseCommand):
         if not stat.version:
             raise error_codes.MISSING_VERSION_INFO
 
-        is_force_mode = options.get("force", False)
+        is_overwrite_mode = options.get("overwrite", False)
 
         if SourcePackage.objects.filter(pkg_sha256_signature=stat.sha256_signature).exists():
-            if not is_force_mode:
+            if not is_overwrite_mode:
                 self.stderr.write("S-Mart package already uploaded, skip！")
                 return
 
-            self.stdout.write("S-Mart package already exists, but force mode enabled, will override！")
+            self.stdout.write("S-Mart package already exists, but force mode enabled, will overwrite！")
 
         # Step 1. create application, module
         original_app_desc = get_app_description(stat)

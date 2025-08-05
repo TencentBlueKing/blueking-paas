@@ -42,11 +42,12 @@
           style="width: 100%"
           v-model="searchSelectValue"
           :data="searchSelectData"
-          :placeholder="$t('搜索网关名称/申请人')"
+          :placeholder="searchPlaceholder"
           :clearable="true"
           :show-condition="false"
           :remote-method="handleRemoteMethod"
           :remote-empty-text="Object.keys(searchData).length ? $t('无匹配人员') : $t('请输入申请人')"
+          :key="typeValue"
         />
       </div>
     </div>
@@ -58,6 +59,7 @@
     >
       <div>
         <bk-table
+          :key="typeValue"
           :data="tableList"
           ref="tableRef"
           size="small"
@@ -99,28 +101,32 @@
           <bk-table-column
             :label="$t('API类型')"
             :render-header="$renderHeader"
+            v-if="!isMcpService"
           >
-            <template slot-scope="props">
-              {{ typeMap[props.row.type] }}
+            <template slot-scope="{ row }">
+              {{ typeMap[row.type] }}
             </template>
           </bk-table-column>
-          <bk-table-column :label="isComponentApi ? $t('系统') : $t('网关')">
-            <template slot-scope="props">
-              <template v-if="isComponentApi">
-                {{ props.row.system_name }}
-                <template v-if="!!props.row.tag">
+          <bk-table-column :label="getTypeLabel()">
+            <template slot-scope="{ row }">
+              <template v-if="row.type === 'mcp'">
+                {{ row.mcp_server?.name }}
+              </template>
+              <template v-else-if="isComponentApi">
+                {{ row.system_name }}
+                <template v-if="!!row.tag">
                   <span
                     :class="[
-                      { inner: [$t('内部版'), $t('互娱外部版')].includes(props.row.tag) },
-                      { clound: [$t('上云版'), $t('互娱外部上云版')].includes(props.row.tag) },
+                      { inner: [$t('内部版'), $t('互娱外部版')].includes(row.tag) },
+                      { clound: [$t('上云版'), $t('互娱外部上云版')].includes(row.tag) },
                     ]"
                   >
-                    {{ props.row.tag }}
+                    {{ row.tag }}
                   </span>
                 </template>
               </template>
               <template v-else>
-                {{ props.row.api_name }}
+                {{ row.api_name }}
               </template>
             </template>
           </bk-table-column>
@@ -130,19 +136,16 @@
             :show-overflow-tooltip="true"
           >
             <template slot-scope="{ row }">
-              <template v-if="!row.handled_by.length">--</template>
-              <span v-else>
-                <template v-if="platformFeature.MULTI_TENANT_MODE">
-                  <span
-                    v-for="userId in row.handled_by"
-                    :key="userId"
-                  >
-                    <bk-user-display-name :user-id="userId"></bk-user-display-name>
-                    <span>，</span>
-                  </span>
-                </template>
-                <template>{{ getHandleBy(row.handled_by) }}</template>
-              </span>
+              <template v-if="platformFeature.MULTI_TENANT_MODE">
+                <span
+                  v-for="userId in row.handled_by"
+                  :key="userId"
+                >
+                  <bk-user-display-name :user-id="userId"></bk-user-display-name>
+                  <span>，</span>
+                </span>
+              </template>
+              <template v-else>{{ getHandleBy(row.handled_by) }}</template>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -152,44 +155,45 @@
             column-key="apply_status"
             :filters="statusFilters"
             :filter-multiple="false"
+            :key="typeValue"
           >
-            <template slot-scope="props">
-              <template v-if="props.row.apply_status === 'approved'">
-                <span class="paasng-icon paasng-pass" />
-                {{ getStatusDisplay(props.row.apply_status) }}
-              </template>
-              <template v-else-if="props.row.apply_status === 'partial_approved'">
-                {{ getStatusDisplay(props.row.apply_status) }}
-              </template>
-              <template v-else-if="props.row.apply_status === 'rejected'">
-                <span class="paasng-icon paasng-reject" />
-                {{ getStatusDisplay(props.row.apply_status) }}
-              </template>
-              <template v-else>
-                <round-loading ext-cls="applying" />
-                {{ getStatusDisplay(props.row.apply_status) }}
-              </template>
+            <template slot-scope="{ row }">
+              <span
+                v-if="['approved', 'rejected'].includes(row.apply_status)"
+                :class="[
+                  'paasng-icon',
+                  {
+                    'paasng-pass': row.apply_status === 'approved',
+                    'paasng-reject': row.apply_status === 'rejected',
+                  },
+                ]"
+              />
+              <round-loading
+                v-else-if="row.apply_status === 'pending'"
+                ext-cls="applying"
+              />
+              {{ getStatusDisplay(row.apply_status) }}
             </template>
           </bk-table-column>
           <bk-table-column
             :label="$t('审批时间')"
             :render-header="$renderHeader"
           >
-            <template slot-scope="props">
-              {{ props.row.handled_time || '--' }}
+            <template slot-scope="{ row }">
+              {{ row.handled_time || '--' }}
             </template>
           </bk-table-column>
           <bk-table-column
             :label="$t('操作')"
             width="100"
           >
-            <template slot-scope="props">
+            <template slot-scope="{ row }">
               <div class="table-operate-buttons">
                 <bk-button
                   theme="primary"
                   size="small"
                   text
-                  @click="handleOpenDetail(props.row)"
+                  @click="handleOpenDetail(row)"
                 >
                   {{ $t('详情') }}
                 </bk-button>
@@ -215,187 +219,79 @@
           v-if="!detailLoading"
           class="paasng-kv-list"
         >
-          <div class="item">
-            <div class="key">{{ $t('申请人') }}：</div>
-            <div class="value">
-              {{ curRecord.applied_by }}
+          <div
+            v-for="field in detailFields"
+            :key="field.label"
+            v-show="field.show"
+            class="item"
+          >
+            <div class="key">{{ field.label }}：</div>
+            <div
+              class="value"
+              :style="field.isTextarea ? 'line-height: 22px; padding-top: 10px' : ''"
+            >
+              {{ field.value || '--' }}
             </div>
           </div>
           <div
-            v-if="!isComponentApi"
+            v-if="!isMcpService"
             class="item"
           >
-            <div class="key">
-              {{ $t('授权维度：') }}
-            </div>
-            <div class="value">
-              {{ curRecord.grant_dimension === 'resource' ? $t('按资源') : $t('按网关') }}
-            </div>
-          </div>
-          <div class="item">
-            <div class="key">
-              {{ $t('有效时间：') }}
-            </div>
-            <div class="value">
-              {{ curRecord.expire_days === 0 ? $t('永久') : Math.ceil(curRecord.expire_days / 30) + $t('个月') }}
-            </div>
-          </div>
-          <div class="item">
-            <div class="key">
-              {{ $t('申请理由：') }}
-            </div>
-            <div class="value">
-              {{ curRecord.reason || '--' }}
-            </div>
-          </div>
-          <div class="item">
-            <div class="key">
-              {{ $t('申请时间：') }}
-            </div>
-            <div class="value">
-              {{ curRecord.applied_time }}
-            </div>
-          </div>
-          <div class="item">
-            <div class="key">
-              {{ $t('审批人：') }}
-            </div>
-            <div class="value">
-              {{ getHandleBy(curRecord.handled_by) || '--' }}
-            </div>
-          </div>
-          <div class="item">
-            <div class="key">
-              {{ $t('审批时间：') }}
-            </div>
-            <div class="value">
-              {{ curRecord.handled_time || '--' }}
-            </div>
-          </div>
-          <div class="item">
-            <div class="key">
-              {{ $t('审批状态：') }}
-            </div>
-            <div class="value">
-              {{ $t(curRecord.apply_status_display) || '--' }}
-            </div>
-          </div>
-          <div class="item">
-            <div class="key">
-              {{ $t('审批内容：') }}
-            </div>
+            <div class="key">{{ `API ${$t('列表')}：` }}</div>
             <div
+              v-if="!isComponentApi && curRecord.grant_dimension !== 'resource'"
               class="value"
-              style="line-height: 22px; padding-top: 10px"
             >
-              {{ curRecord.comment || '--' }}
-            </div>
-          </div>
-          <div class="item">
-            <div class="key">
-              {{ isComponentApi ? $t('系统名称：') : $t('网关名称：') }}
-            </div>
-            <div class="value">
-              {{ (isComponentApi ? curRecord.system_name : curRecord.api_name) || '--' }}
-            </div>
-          </div>
-          <div
-            v-if="isComponentApi"
-            class="item"
-          >
-            <div class="key">
-              {{ $t('API列表：') }}
-            </div>
-            <div
-              class="value"
-              style="line-height: 22px; padding-top: 10px"
-            >
-              <bk-table
-                :size="'small'"
-                :data="curRecord.components"
-                :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
-                ext-cls="paasng-expand-table"
-              >
-                <div slot="empty">
-                  <table-empty empty />
-                </div>
-                <bk-table-column
-                  prop="name"
-                  :label="$t('API名称')"
-                />
-                <bk-table-column
-                  prop="method"
-                  :label="$t('审批状态')"
-                >
-                  <template slot-scope="prop">
-                    <template v-if="prop.row['apply_status'] === 'rejected'">
-                      <span class="paasng-icon paasng-reject" />
-                      {{ $t('驳回') }}
-                    </template>
-                    <template v-else-if="prop.row['apply_status'] === 'pending'">
-                      <round-loading ext-cls="applying" />
-                      {{ $t('待审批') }}
-                    </template>
-                    <template v-else>
-                      <span class="paasng-icon paasng-pass" />
-                      {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
-                    </template>
-                  </template>
-                </bk-table-column>
-              </bk-table>
-            </div>
-          </div>
-          <div
-            v-else
-            class="item"
-          >
-            <div class="key">
-              {{ $t('API列表：') }}
-            </div>
-            <div
-              v-if="curRecord.grant_dimension === 'resource'"
-              class="value"
-              style="line-height: 22px; padding-top: 10px"
-            >
-              <bk-table
-                :size="'small'"
-                :data="curRecord.resources"
-                :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
-                ext-cls="paasng-expand-table"
-              >
-                <div slot="empty">
-                  <table-empty empty />
-                </div>
-                <bk-table-column
-                  prop="name"
-                  :label="$t('API名称')"
-                />
-                <bk-table-column
-                  prop="method"
-                  :label="$t('审批状态')"
-                >
-                  <template slot-scope="prop">
-                    <template v-if="prop.row['apply_status'] === 'rejected'">
-                      <span class="paasng-icon paasng-reject" />
-                      {{ $t('驳回') }}
-                    </template>
-                    <template v-else-if="prop.row['apply_status'] === 'pending'">
-                      <round-loading ext-cls="applying" />
-                      {{ $t('待审批') }}
-                    </template>
-                    <template v-else>
-                      <span class="paasng-icon paasng-pass" />
-                      {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
-                    </template>
-                  </template>
-                </bk-table-column>
-              </bk-table>
+              {{ $t('网关下所有资源') }}
             </div>
             <div
               v-else
               class="value"
+              style="line-height: 22px; padding-top: 10px"
             >
-              {{ $t('网关下所有资源') }}
+              <bk-table
+                :size="'small'"
+                :data="isComponentApi ? curRecord.components : curRecord.resources"
+                :header-cell-style="{ background: '#fafbfd', borderRight: 'none' }"
+                ext-cls="paasng-expand-table"
+              >
+                <div slot="empty">
+                  <table-empty empty />
+                </div>
+                <bk-table-column
+                  prop="name"
+                  :label="$t('API名称')"
+                />
+                <bk-table-column
+                  prop="method"
+                  :label="$t('审批状态')"
+                >
+                  <template slot-scope="prop">
+                    <template v-if="prop.row['apply_status'] === 'rejected'">
+                      <span class="paasng-icon paasng-reject" />
+                      {{ $t('驳回') }}
+                    </template>
+                    <template v-else-if="prop.row['apply_status'] === 'pending'">
+                      <round-loading ext-cls="applying" />
+                      {{ $t('待审批') }}
+                    </template>
+                    <template v-else>
+                      <span class="paasng-icon paasng-pass" />
+                      {{ prop.row['apply_status'] === 'approved' ? $t('通过') : $t('部分通过') }}
+                    </template>
+                  </template>
+                </bk-table-column>
+              </bk-table>
+            </div>
+          </div>
+          <!-- 工具列表（MCP服务才显示） -->
+          <div
+            v-else
+            class="item"
+          >
+            <div class="key">{{ $t('工具列表') }}：</div>
+            <div class="value">
+              {{ curRecord.tool_names?.join(', ') || '--' }}
             </div>
           </div>
         </section>
@@ -454,12 +350,6 @@ export default {
         reason: '',
         grant_dimension: '',
       },
-      statusList: [
-        { id: 'approved', name: this.$t('全部通过') },
-        { id: 'partial_approved', name: this.$t('部分通过') },
-        { id: 'rejected', name: this.$t('已驳回') },
-        { id: 'pending', name: this.$t('待审批') },
-      ],
       statusValue: '',
       initDateTimeRange: [],
       daterange: [new Date(), new Date()],
@@ -528,13 +418,39 @@ export default {
       return this.$route.params.id;
     },
     curDispatchMethod() {
-      return this.typeValue === 'component' ? 'getSysApplyRecords' : 'getApplyRecords';
+      const methodMap = {
+        gateway: 'getApplyRecords',
+        component: 'getSysApplyRecords',
+        mcp: 'getMcpServerApplyRecords',
+      };
+      return methodMap[this.typeValue] || 'getApplyRecords';
     },
     curDetailDispatchMethod() {
       return this.typeValue === 'component' ? 'getSysApplyRecordDetail' : 'getApplyRecordDetail';
     },
     sliderTitle() {
-      return this.isComponentApi ? this.$t('申请组件API单据详情') : this.$t('申请网关API单据详情');
+      const typeMap = {
+        gateway: `${this.$t('网关')} API`,
+        component: `${this.$t('组件')} API`,
+        mcp: ' MCP Server',
+      };
+      return this.$t('申请{n} 单据详情', { n: typeMap[this.typeValue] });
+    },
+    // 状态列表
+    statusList() {
+      if (this.isMcpService) {
+        return [
+          { id: 'approved', name: this.$t('通过') },
+          { id: 'pending', name: this.$t('待审批') },
+          { id: 'rejected', name: this.$t('已驳回') },
+        ];
+      }
+      return [
+        { id: 'approved', name: this.$t('全部通过') },
+        { id: 'partial_approved', name: this.$t('部分通过') },
+        { id: 'rejected', name: this.$t('已驳回') },
+        { id: 'pending', name: this.$t('待审批') },
+      ];
     },
     statusFilters() {
       return this.statusList.map((v) => {
@@ -546,11 +462,25 @@ export default {
     },
     searchSelectData() {
       const isTenantMode = this.platformFeature.MULTI_TENANT_MODE || false;
+      const keywordConfig = {
+        mcp: {
+          name: this.$t('MCP Server 名称'),
+          placeholder: this.$t('请输入MCP Server 名称'),
+        },
+        component: {
+          name: this.$t('系统名称'),
+          placeholder: this.$t('请输入系统名称'),
+        },
+        gateway: {
+          name: this.$t('网关名称'),
+          placeholder: this.$t('请输入网关名'),
+        },
+      };
       return [
         {
-          name: this.isComponentApi ? this.$t('系统名称') : this.$t('网关名称'),
+          name: keywordConfig[this.typeValue].name,
           id: 'keyword',
-          placeholder: this.isComponentApi ? this.$t('请输入系统名称') : this.$t('请输入网关名'),
+          placeholder: keywordConfig[this.typeValue].placeholder,
           children: [],
         },
         {
@@ -562,6 +492,95 @@ export default {
           children: [],
         },
       ];
+    },
+    // 是否为 MCP 服务类型
+    isMcpService() {
+      return this.typeValue === 'mcp';
+    },
+    searchPlaceholder() {
+      const nameMap = {
+        mcp: this.localLanguage === 'en' ? 'MCP Server' : ' MCP Server ',
+        component: this.$t('系统'),
+        gateway: this.$t('网关'),
+      };
+      return this.$t('请输入{n}名称/申请人', { n: nameMap[this.typeValue] });
+    },
+    // 详情侧栏的字段配置
+    detailFields() {
+      const fields = [
+        {
+          label: this.$t('申请人'),
+          value: this.curRecord.applied_by,
+          show: true,
+        },
+      ];
+      // 授权维度（非组件API才显示）
+      if (!this.isComponentApi) {
+        fields.push({
+          label: this.$t('授权维度'),
+          value: this.isMcpService
+            ? this.$t('按 MCP Service')
+            : this.curRecord.grant_dimension === 'resource'
+            ? this.$t('按资源')
+            : this.$t('按网关'),
+          show: true,
+        });
+      }
+      fields.push(
+        {
+          label: this.$t('有效时间'),
+          value:
+            this.curRecord.expire_days === 0
+              ? this.$t('永久')
+              : Math.ceil(this.curRecord.expire_days / 30) + this.$t('个月'),
+          show: true,
+        },
+        {
+          label: this.$t('申请理由'),
+          value: this.curRecord.reason,
+          show: true,
+        },
+        {
+          label: this.$t('申请时间'),
+          value: this.curRecord.applied_time,
+          show: true,
+        },
+        {
+          label: this.$t('审批人'),
+          value: this.getHandleBy(this.curRecord.handled_by),
+          show: true,
+        },
+        {
+          label: this.$t('审批时间'),
+          value: this.curRecord.handled_time,
+          show: true,
+        },
+        {
+          label: this.$t('审批状态'),
+          value: this.$t(this.curRecord.apply_status_display),
+          show: true,
+        },
+        {
+          label: this.$t('审批内容'),
+          value: this.curRecord.comment,
+          show: true,
+          isTextarea: true,
+        },
+        {
+          label: this.isMcpService
+            ? this.$t('MCP Server')
+            : this.isComponentApi
+            ? this.$t('系统名称')
+            : this.$t('网关名称'),
+          value: this.isMcpService
+            ? this.curRecord.name
+            : this.isComponentApi
+            ? this.curRecord.system_name
+            : this.curRecord.api_name,
+          show: true,
+        }
+      );
+      return fields;
     },
   },
   watch: {
@@ -602,6 +621,15 @@ export default {
     this.init();
   },
   methods: {
+    getTypeLabel() {
+      const typeMap = {
+        gateway: this.$t('网关'),
+        component: this.$t('系统'),
+        mcp: this.$t('MCP Server'),
+      };
+      return typeMap[this.typeValue];
+    },
+
     resetPagination() {
       this.pagination = Object.assign(
         {},
@@ -613,8 +641,8 @@ export default {
       );
     },
 
-    getStatusDisplay(payload) {
-      const data = this.statusList.find((item) => item.id === payload);
+    getStatusDisplay(status) {
+      const data = this.statusList.find((item) => item.id === status);
       if (data) {
         return data.name;
       }
@@ -633,14 +661,13 @@ export default {
     handleSelect(value, option) {
       this.resetPagination();
       this.fetchList();
+      this.$nextTick(() => {
+        this.$refs.tableRef?.doLayout();
+      });
     },
 
     getHandleBy(payload) {
-      const list = payload.filter((item) => !!item);
-      if (list.length < 1) {
-        return '--';
-      }
-      return list.join('，');
+      return payload?.length ? payload.join('，') : '--';
     },
 
     pageChange(page) {
@@ -670,6 +697,16 @@ export default {
       this.fetchList();
     },
 
+    // mcp service 数据格式化
+    formatMcpServiceData(data) {
+      return data.map((item) => ({
+        ...item.record,
+        ...item.mcp_server,
+        ...item,
+      }));
+    },
+
+    // 获取申请记录
     async fetchList() {
       this.loading = true;
       const params = {
@@ -684,11 +721,12 @@ export default {
       };
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params);
-        (res.data.results || []).forEach((item) => {
+        const records = this.isMcpService ? this.formatMcpServiceData(res) : res.data?.results || [];
+        records.forEach((item) => {
           item.type = this.typeValue;
         });
-        this.pagination.count = res.data.count;
-        this.tableList = res.data.results;
+        this.pagination.count = this.isMcpService ? records.length : res.data.count;
+        this.tableList = records;
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
@@ -699,13 +737,20 @@ export default {
       }
     },
 
-    async handleOpenDetail({ id }) {
+    // 详情侧栏
+    async handleOpenDetail(row) {
+      console.log('handleOpenDetail', row);
       this.detailSliderConf.show = true;
+      // mcp service 使用当前行数据
+      if (row.type === 'mcp') {
+        this.curRecord = row;
+        return;
+      }
       this.detailLoading = true;
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDetailDispatchMethod}`, {
           appCode: this.appCode,
-          recordId: id,
+          recordId: row.id,
         });
         this.curRecord = Object.assign(this.curRecord, res.data);
       } catch (e) {
@@ -846,7 +891,7 @@ span.paasng-reject {
   border: 1px solid #f0f1f5;
   border-radius: 2px;
   background: #fafbfd;
-  padding: 10px 20px;
+  padding: 10px 12px;
 
   .item {
     display: flex;
@@ -860,8 +905,8 @@ span.paasng-reject {
     }
 
     .key {
-      min-width: 105px;
-      padding-right: 24px;
+      min-width: 115px;
+      padding-right: 10px;
       color: #63656e;
       text-align: right;
     }

@@ -33,6 +33,7 @@ from paasng.platform.engine.configurations.config_var import (
     list_conflicted_env_vars_for_view,
     mask_vars_for_view,
 )
+from paasng.platform.engine.configurations.env_var.entities import EnvVariableList
 from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models import ConfigVar
 from paasng.platform.engine.models.config_var import (
@@ -329,16 +330,9 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         result = {}
         for env in module.get_envs():
             env_vars = get_builtin_env_variables(env.get_engine_app())
-            masked_env_vars = mask_vars_for_view(env_vars)
-            result[env.environment] = [
-                {
-                    "key": var["key"],
-                    "value": var["value"],
-                    "description": var["description"],
-                    "is_sensitive": var["is_sensitive"],
-                }
-                for var in masked_env_vars
-            ]
+            # 使用 map 去重后转化为 EnvVariableList
+            deduped_vars = EnvVariableList(env_vars.map.values())
+            result[env.environment] = mask_vars_for_view(deduped_vars)
 
         return Response(ListBuiltinConfigVarSLZ(result).data)
 

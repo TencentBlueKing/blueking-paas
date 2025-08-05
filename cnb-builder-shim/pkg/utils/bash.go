@@ -37,6 +37,33 @@ import (
 // ref:
 //   - https://github.com/buildpacks/lifecycle/blob/435d226f1ed54b0bec806716ba79e14a2a093736/launch/bash.go#L55
 //   - https://github.com/TencentBlueKing/blueking-paas/blob/95b99c5a1a41d31efa3b2270968bfc846102cfcb/apiserver/paasng/paasng/utils/procfile.py#L22
+//
+// Important: complex bash command should use procCommand rather than GenBashCommandWithTokens
+//
+// Good:
+//
+//	procCommand: gunicorn wsgi -w 4 -b [::]:${PORT:-5000} --log-level info --access-logfile -
+//	  --error-logfile - --access-logformat '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s"
+//	  %(s)s %(D)s %(b)s "%(f)s" "%(a)s"'
+//
+// Bad:
+//
+//	 command:
+//		 - gunicorn
+//	 args:
+//		 - wsgi
+//		 - '-w'
+//		 - '4'
+//		 - '-b'
+//		 - '[::]:${PORT:-5000}'
+//		 - '--log-level'
+//		 - 'info'
+//		 - '--access-logfile'
+//		 - '-'
+//		 - '--error-logfile'
+//		 - '-'
+//		 - '--access-logformat'
+//		 - "'[%(h)s] %({request_id}i)s %(u)s %(t)s %(r)s %(s)s %(D)s %(b)s %(f)s %(a)s'"
 func GenBashCommandWithTokens(command []string, args []string) string {
 	// 将 command 和 args 都认为 bash 命令的参数
 	tokens := append(command, args...)

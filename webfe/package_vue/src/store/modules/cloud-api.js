@@ -215,8 +215,40 @@ export default {
     /**
      * 获取蓝鲸插件模板信息
      */
-    getPluginTmpls({}) {
+    getPluginTmpls() {
       const url = `${BACKEND_URL}/api/bkapps/plugin/tmpls/`;
+      return http.get(url);
+    },
+
+    /**
+     * MCP-获取 MCP Server 列表
+     */
+    getMcpServerList({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/mcp-servers/`;
+      return http.get(url);
+    },
+
+    /**
+     * 申请 MCP Server 权限
+     */
+    applyMcpServerPermission({}, { appCode, data }) {
+      const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/mcp-servers/permissions/apply/`;
+      return http.post(url, data);
+    },
+
+    /**
+     * MCP-获取已申请权限列表
+     */
+    getMcpAppliedPermissions({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/mcp-servers/permissions/`;
+      return http.get(url);
+    },
+
+     /**
+     * MCP-获取申请记录
+     */
+    getMcpServerApplyRecords({}, { appCode, ...requsetParams }) {
+      const url = `${BACKEND_URL}/api/cloudapi-v2/apps/${appCode}/inner/mcp-servers/permissions/apply-records/?${json2Query(requsetParams)}`;
       return http.get(url);
     },
   },

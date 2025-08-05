@@ -416,3 +416,13 @@ export const COMPONENT_STATUS = {
   installed: '已安装',
   installation_failed: '安装失败',
 };
+
+/**
+ * mcp-server 状态
+ */
+export const MCP_SERVER_STATUS = {
+  approved: '已申请',
+  rejected: '已拒绝',
+  pending: '申请中',
+  need_apply: '未申请',
+};

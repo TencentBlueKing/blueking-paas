@@ -88,8 +88,7 @@ func (c *ComponentMutator) renderTemplate(templateContent string) ([]byte, error
 		return nil, err
 	}
 
-	var paramValues map[string]any
-	paramValues = make(map[string]any)
+	paramValues := make(map[string]any)
 	for k, v := range c.defaultParams {
 		paramValues[k] = v
 	}

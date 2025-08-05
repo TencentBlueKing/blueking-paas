@@ -37,6 +37,7 @@ from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.smart_app.services.app_desc import get_app_description
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.dispatch import dispatch_package_to_modules
+from paasng.platform.sourcectl.models import SourcePackage
 from paasng.utils.error_codes import error_codes
 
 logger = logging.getLogger("commands")
@@ -86,6 +87,11 @@ class Command(BaseCommand):
             help="租户类型，可选值：global, single",
         )
         parser.add_argument("--app_tenant_id", dest="raw_tenant_id", required=False, type=str, help="租户ID")
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="设置后, 强制覆盖已上传的包. 默认不覆盖上传",
+        )
 
     @handle_error
     def handle(self, file_path: str, operator, raw_tenant_mode, raw_tenant_id, *args, **options):
@@ -95,6 +101,15 @@ class Command(BaseCommand):
         stat = SourcePackageStatReader(filepath).read()
         if not stat.version:
             raise error_codes.MISSING_VERSION_INFO
+
+        is_force_mode = options.get("force", False)
+
+        if SourcePackage.objects.filter(pkg_sha256_signature=stat.sha256_signature).exists():
+            if not is_force_mode:
+                self.stderr.write("S-Mart package already uploaded, skip！")
+                return
+
+            self.stdout.write("S-Mart package already exists, but force mode enabled, will override！")
 
         # Step 1. create application, module
         original_app_desc = get_app_description(stat)

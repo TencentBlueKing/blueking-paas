@@ -637,6 +637,7 @@ export default {
         ],
         active: 'all',
       },
+      allConflictedKeys: [],
     };
   },
   computed: {
@@ -1092,8 +1093,8 @@ export default {
       }
     },
     // 获取环境变量冲突提示信息
-    getConflictMessage(conflictedKeys, key) {
-      const conflictItem = conflictedKeys.find((item) => item.key === key);
+    getConflictMessage(key) {
+      const conflictItem = this.allConflictedKeys.find((item) => item.key === key);
 
       if (!conflictItem) return {};
 
@@ -1110,11 +1111,10 @@ export default {
       };
     },
     // 获取冲突的环境变量
-    async getConflictedEnvVariables() {
+    async getConflictInfo() {
       try {
-        const res = await this.$store.dispatch('envVar/getConflictedEnvVariables', {
+        const res = await this.$store.dispatch('envVar/getConflictInfo', {
           appCode: this.appCode,
-          moduleId: this.curModuleId,
         });
         return res || [];
       } catch (e) {
@@ -1125,7 +1125,9 @@ export default {
     async loadConfigVar() {
       this.isVarLoading = true;
       try {
-        const conflictedKeys = await this.getConflictedEnvVariables();
+        if (!this.allConflictedKeys?.length) {
+          this.allConflictedKeys = await this.getConflictInfo();
+        }
         const res = await this.$store.dispatch('envVar/getEnvVariables', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -1139,7 +1141,7 @@ export default {
         this.envVarList = this.envVarList.map((item) => ({
           ...item,
           // 与内置环境变量冲突提示
-          conflict: conflictedKeys.length > 0 ? this.getConflictMessage(conflictedKeys, item.key) : {},
+          conflict: this.getConflictMessage(item.key),
         }));
       } catch (e) {
         this.catchErrorHandler(e);

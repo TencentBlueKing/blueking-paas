@@ -102,10 +102,10 @@ export default {
     },
 
     /**
-     * 获取有冲突的环境变量列表
+     * 获取内置环境变量的可覆盖性
      */
-    getConflictedEnvVariables({}, { appCode, moduleId }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/conflicted_keys/`;
+    getConflictInfo({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/conflict_info/`;
       return http.get(url);
     },
 

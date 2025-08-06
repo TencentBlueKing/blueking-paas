@@ -86,6 +86,14 @@ export default {
     },
 
     /**
+     * 获取内置环境变量-其他
+     */
+    getOtherBuiltInEnvVars({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/custom/`;
+      return http.get(url);
+    },
+
+    /**
      * 获取环境变量
      */
     getEnvVariables({}, { appCode, moduleId, orderBy }) {

@@ -22,7 +22,7 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
-from paasng.platform.engine.serializers import ListConfigVarsSLZ, PresetEnvVarSLZ
+from paasng.platform.engine.serializers import ListConfigVarsQuerySLZ, PresetEnvVarSLZ
 
 
 class PresetConfigVarViewSet(mixins.ListModelMixin, viewsets.GenericViewSet, ApplicationCodeInPathMixin):
@@ -33,7 +33,7 @@ class PresetConfigVarViewSet(mixins.ListModelMixin, viewsets.GenericViewSet, App
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
-        slz = ListConfigVarsSLZ(data=self.request.query_params)
+        slz = ListConfigVarsQuerySLZ(data=self.request.query_params)
         slz.is_valid(raise_exception=True)
         query_params = slz.validated_data
 
@@ -43,7 +43,7 @@ class PresetConfigVarViewSet(mixins.ListModelMixin, viewsets.GenericViewSet, App
         return queryset.order_by(query_params["order_by"])
 
     @swagger_auto_schema(
-        query_serializer=ListConfigVarsSLZ(),
+        query_serializer=ListConfigVarsQuerySLZ(),
         tags=["预设环境变量"],
         responses={200: PresetEnvVarSLZ(many=True)},
     )

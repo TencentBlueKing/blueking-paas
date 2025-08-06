@@ -24,10 +24,11 @@ import arrow
 import yaml
 from kubernetes.dynamic import ResourceInstance
 
+from paas_wl.apis.admin.constants import HELM_RELEASE_SECRET_TYPE
+from paas_wl.infras.cluster.constants import HelmChartDeployStatus
+from paas_wl.infras.cluster.entities import DeployResult, HelmChart, HelmRelease
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.base.kres import KSecret
-from paasng.plat_mgt.infras.clusters.constants import HELM_RELEASE_SECRET_TYPE, HelmChartDeployStatus
-from paasng.plat_mgt.infras.clusters.entities import DeployResult, HelmChart, HelmRelease
 
 
 class HelmClient:

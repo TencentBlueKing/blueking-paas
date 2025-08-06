@@ -21,7 +21,7 @@ from django_dynamic_fixture import G
 
 from paas_wl.infras.cluster.models import Cluster
 from paasng.platform.mgrlegacy.models import CNativeMigrationProcess
-from paasng.platform.modules.constants import APP_CATEGORY
+from paasng.platform.modules.constants import AppCategory
 from paasng.platform.modules.models import AppBuildPack, AppSlugBuilder, AppSlugRunner
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 from tests.utils.helpers import create_pending_wl_apps
@@ -72,26 +72,26 @@ def buildpack(bk_module):
 
 @pytest.fixture()
 def slugbuilder(bk_module, buildpack, image_name):
-    slugbuilder = G(AppSlugBuilder, name=image_name, labels={APP_CATEGORY.NORMAL_APP.value: "1"})
+    slugbuilder = G(AppSlugBuilder, name=image_name, labels={AppCategory.NORMAL_APP.value: "1"})
     slugbuilder.buildpacks.add(buildpack)
     return slugbuilder
 
 
 @pytest.fixture()
 def slugrunner(bk_module, buildpack, image_name):
-    return G(AppSlugRunner, name=image_name, labels={APP_CATEGORY.NORMAL_APP.value: "1"})
+    return G(AppSlugRunner, name=image_name, labels={AppCategory.NORMAL_APP.value: "1"})
 
 
 @pytest.fixture()
 def cnb_builder(bk_module, buildpack, cnb_image_name):
-    builder = G(AppSlugBuilder, name=cnb_image_name, labels={APP_CATEGORY.CNATIVE_APP.value: "1"})
+    builder = G(AppSlugBuilder, name=cnb_image_name, labels={AppCategory.CNATIVE_APP.value: "1"})
     builder.buildpacks.add(buildpack)
     return builder
 
 
 @pytest.fixture()
 def cnb_runner(bk_module, cnb_image_name):
-    return G(AppSlugRunner, name=cnb_image_name, labels={APP_CATEGORY.CNATIVE_APP.value: "1"})
+    return G(AppSlugRunner, name=cnb_image_name, labels={AppCategory.CNATIVE_APP.value: "1"})
 
 
 @pytest.fixture()

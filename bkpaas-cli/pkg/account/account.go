@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package account provide account related functions
 package account
 
 import (
@@ -65,7 +66,7 @@ func FetchUserNameByAccessToken(accessToken string) (string, error) {
 // IsUserAuthorized 检查用户身份认证情况
 func IsUserAuthorized(accessToken string) bool {
 	username, err := FetchUserNameByAccessToken(accessToken)
-	return (username != "" && err == nil)
+	return username != "" && err == nil
 }
 
 // GetOAuthTokenUrl 返回获取 AccessToken 的 API 地址

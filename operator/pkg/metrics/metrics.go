@@ -16,6 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package metrics provides reconcile metrics
 package metrics
 
 import (
@@ -51,7 +52,7 @@ func IncDeployExpectedDeployFailures(bkapp *paasv1alpha2.BkApp, deploymentName s
 
 // IncGetBkappInfoFailures ...
 func IncGetBkappInfoFailures(bkapp *paasv1alpha2.BkApp) {
-	GetBkappInfoFailures.WithLabelValues(bkapp.Name, bkapp.Namespace).Inc()
+	GetBkAppInfoFailures.WithLabelValues(bkapp.Name, bkapp.Namespace).Inc()
 }
 
 // IncProvisionAddonInstanceFailures ...

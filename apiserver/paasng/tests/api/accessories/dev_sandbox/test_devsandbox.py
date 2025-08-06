@@ -250,3 +250,30 @@ class TestEnvVarsDevSandbox:
         env_vars = bk_dev_sandbox.list_env_vars()
         env_var_keys = {item["key"] for item in env_vars}
         assert "EXISTING_VAR" not in env_var_keys
+
+    def test_list_env_vars_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
+        env_var_url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
+        )
+        api_client.post(env_var_url, {"key": "TEST_VAR1", "value": "value1"})
+        api_client.post(env_var_url, {"key": "TEST_VAR2", "value": "value2"})
+        resp = api_client.get(env_var_url)
+
+        assert resp.status_code == status.HTTP_200_OK
+
+        data = resp.json()
+        assert any(item["key"] == "TEST_VAR1" and item["value"] == "value1" for item in data)
+        assert any(item["key"] == "TEST_VAR2" and item["value"] == "value2" for item in data)
+
+    def test_list_env_vars_empty(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
+        env_var_url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
+        )
+        resp = api_client.get(env_var_url)
+
+        assert resp.status_code == status.HTTP_200_OK
+
+        data = resp.json()
+        assert len(data) == 0

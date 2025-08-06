@@ -38,7 +38,6 @@ class ServerVersionChecker:
     def check_version(self) -> Tuple[bool, Dict]:
         """检查 apiserver 和 operator 版本是否一致
 
-        :param env: 应用环境对象
         :returns: (是否一致, 版本信息)
         """
         # 初始化返回信息

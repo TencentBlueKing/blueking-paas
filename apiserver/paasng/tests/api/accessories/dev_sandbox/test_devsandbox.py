@@ -274,6 +274,4 @@ class TestEnvVarsDevSandbox:
         resp = api_client.get(env_var_url)
 
         assert resp.status_code == status.HTTP_200_OK
-
-        data = resp.json()
-        assert len(data) == 0
+        assert len(resp.json()) == 0

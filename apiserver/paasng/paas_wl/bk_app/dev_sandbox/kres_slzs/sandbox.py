@@ -115,7 +115,7 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
                 # 参考文档：
                 # https://github.com/coder/code-server/blob/main/docs/FAQ.md#how-does-the-config-file-work
                 # https://github.com/coder/code-server/blob/main/docs/FAQ.md#where-is-vs-code-configuration-stored
-                "mountPath": "/coder/code-server/User/settings.json",
+                "mountPath": "/tmp/code-editor-config",
                 "subPath": "settings.json",
             }
         ]

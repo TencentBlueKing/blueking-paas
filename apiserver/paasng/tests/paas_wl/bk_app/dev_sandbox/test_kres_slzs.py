@@ -85,7 +85,7 @@ class TestDevSandboxSLZ:
                         "volumeMounts": [
                             {
                                 "name": "code-editor-config",
-                                "mountPath": "/coder/code-server/User/settings.json",
+                                "mountPath": "/tmp/code-editor-config",
                                 "subPath": "settings.json",
                             },
                         ],

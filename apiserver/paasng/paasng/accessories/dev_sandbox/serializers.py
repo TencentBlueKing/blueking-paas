@@ -127,5 +127,5 @@ class DevSandboxEnvVarsUpsertInputSLZ(DevSandboxEnvVarsBaseSLZ):
     """创建/更新环境变量输入"""
 
 
-class DevSandboxEnvVarsOutputSLZ(DevSandboxEnvVarsBaseSLZ):
+class DevSandboxEnvVarsListOutputSLZ(DevSandboxEnvVarsBaseSLZ):
     source = serializers.CharField(help_text="环境变量来源")

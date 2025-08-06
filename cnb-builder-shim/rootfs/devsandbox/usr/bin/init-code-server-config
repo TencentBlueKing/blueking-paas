@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Q: 为什么不能直接将初始化配置代码放到 init-config/up 文件中？
+# A: up/down 是特殊文件，不是 shell 脚本，仅支持单行命令：
+#  - https://github.com/just-containers/s6-overlay/blob/d6f37bb2/MOVING-TO-V3.md?plain=1#L90
+#  - https://github.com/just-containers/s6-overlay/blob/d6f37bb2/README.md?plain=1#L643
+
+source="/tmp/code-editor-config/settings.json"
+target="/code/code-server/User/settings.json"
+
+# if source file exists, copy to replace target file
+if [[ -f "$source" ]]; then
+  echo "$source exists, copy it to $target"
+  cp -f "$source" "$target"
+else
+  echo "$source not exists, skip copy config..."
+fi

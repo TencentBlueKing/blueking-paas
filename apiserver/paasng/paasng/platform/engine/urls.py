@@ -106,9 +106,9 @@ urlpatterns = [
         name="api.config_vars.builtin",
     ),
     re_path(
-        make_app_pattern(r"/config_vars/conflicted_keys/$", include_envs=False),
+        make_app_pattern(r"/config_vars/conflict_info/$", include_envs=False),
         views.ConflictedConfigVarsViewSet.as_view({"get": "list_configvar_conflicted_keys"}),
-        name="api.config_vars.conflicted_keys",
+        name="api.config_vars.conflict_info",
     ),
     re_path(
         make_app_pattern(r"/config_vars/(?P<config_vars_key>[A-Z][A-Z0-9_]*)/$", include_envs=False),

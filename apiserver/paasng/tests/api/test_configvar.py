@@ -62,7 +62,7 @@ class TestConflictedConfigVarsViewSet:
     def test_list_with_override_flag(self, api_client, bk_app, bk_module):
         """测试获取环境变量及其可覆盖性"""
 
-        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/conflicted_keys/"
+        url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/conflict_info/"
         response = api_client.get(url)
 
         assert response.status_code == 200

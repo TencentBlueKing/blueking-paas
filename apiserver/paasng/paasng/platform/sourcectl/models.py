@@ -530,10 +530,13 @@ class GitProject:
         -   http://domain/{user_name}/{project_name}.git
         -   http://domain/{group_name}/{project_name}
         -   http://domain/{user_name}/{project_name}
+        -   http://domain/groups/{group_name}/{project_name}
         """
         parsing_repo_url = remove_suffix(repo_url, ".git")
         parsed_result = urlparse(parsing_repo_url)
         path_with_namespace = remove_prefix(parsed_result.path, "/")
+        # 去除可能的'groups/'前缀（如果存在）
+        path_with_namespace = remove_prefix(path_with_namespace, "groups/")
 
         return cls.parse_from_path_with_namespace(
             path_with_namespace=path_with_namespace, sourcectl_type=sourcectl_type

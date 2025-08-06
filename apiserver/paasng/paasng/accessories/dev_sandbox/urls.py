@@ -42,8 +42,8 @@ urlpatterns = [
     ),
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/env_vars/$", include_envs=False),
-        DevSandboxEnvVarViewSet.as_view({"post": "upsert"}),
-        name="accessories.dev_sandbox.env_var.upsert",
+        DevSandboxEnvVarViewSet.as_view({"post": "upsert", "get": "list"}),
+        name="accessories.dev_sandbox.env_var.upsert_list",
     ),
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/env_vars/(?P<key>[^/]+)/$", include_envs=False),

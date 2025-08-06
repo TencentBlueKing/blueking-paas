@@ -44,6 +44,7 @@ from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxCommitOutputSLZ,
     DevSandboxCreateInputSLZ,
     DevSandboxCreateOutputSLZ,
+    DevSandboxEnvVarsOutputSLZ,
     DevSandboxEnvVarsUpsertInputSLZ,
     DevSandboxListOutputSLZ,
     DevSandboxPreDeployCheckOutputSLZ,
@@ -304,3 +305,15 @@ class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         dev_sandbox.delete_env_var(key=key)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="获取沙箱环境变量",
+        response={status.HTTP_200_OK: DevSandboxEnvVarsOutputSLZ()},
+    )
+    def list(self, request, *args, **kwargs):
+        """"""
+        dev_sandbox = self._get_dev_sandbox()
+        env_vars = dev_sandbox.list_env_vars()
+
+        return Response(DevSandboxEnvVarsOutputSLZ(env_vars, many=True).data)

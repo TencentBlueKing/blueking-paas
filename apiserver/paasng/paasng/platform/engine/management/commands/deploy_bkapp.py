@@ -39,6 +39,7 @@ from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_dep
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.workflow import DeploymentCoordinator, ServerSendEvent
+from paasng.platform.engine.workflow.srv_version import ServerVersionChecker
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service
@@ -120,6 +121,11 @@ class Command(BaseCommand):
         module = application.get_module(module_name=module_name)
         env = module.get_envs(environment)
         version_service = get_version_service(module, operator=operator.pk)
+
+        # 部署前校验平台服务版本一致性
+        matched, versions = ServerVersionChecker(env).check_version()
+        if not matched:
+            raise DeployError(f"平台服务版本不一致, 无法进行部署. {versions}")
 
         version_type, version_name = smart_revision.split(":", 1)
 

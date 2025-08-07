@@ -90,7 +90,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--overwrite",
             action="store_true",
-            help="设置后，强制覆盖已上传的包。默认不覆盖上传",
+            help="启用此选项后，将强制覆盖已上传的同名包（判断依据为包的 sha256 签名是否一致）。默认情况下，不重复上传。",
         )
 
     @handle_error
@@ -106,7 +106,7 @@ class Command(BaseCommand):
 
         if SourcePackage.objects.filter(pkg_sha256_signature=stat.sha256_signature).exists():
             if not is_overwrite_mode:
-                self.stderr.write("S-Mart package already uploaded, skip！")
+                self.stderr.write("S-Mart package already uploaded, sha256 signature matched, skip！")
                 return
 
             self.stdout.write("S-Mart package already exists, but force mode enabled, will overwrite！")

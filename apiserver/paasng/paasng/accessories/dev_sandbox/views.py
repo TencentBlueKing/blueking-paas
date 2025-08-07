@@ -270,14 +270,13 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         operation_description="返回沙箱使用的增强服务",
         responses={status.HTTP_200_OK: DevSandboxAddonServicesListOutputSLZ()},
     )
-    def addon_services_list(self, request, *args, **kwargs):
-        module = self.get_module_via_path()
+    def addon_services_list(self, request, code, module_name, environment, *args, **kwargs):
         dev_sandbox_code = self.kwargs.get("dev_sandbox_code")
 
         cache_key = f"dev_sandbox_addons_{request.user.pk}_{dev_sandbox_code}"
         enabled_services = cache.get(cache_key, [])
 
-        env = module.get_envs(AppEnvironment.STAGING)
+        env = self.get_env_via_path()
         engine_app = env.get_engine_app()
         provisioned_rels = list(mixed_service_mgr.list_provisioned_rels(engine_app))
         unprovisioned_rels = list(mixed_service_mgr.list_unprovisioned_rels(engine_app))

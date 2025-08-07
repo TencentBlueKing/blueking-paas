@@ -22,20 +22,13 @@ import pytest
 from django.core.cache import cache
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 
 from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_WORKSPACE
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxDetail, DevSandboxUrls
-from paasng.infras.accounts.permissions.application import BaseAppPermission
 from paasng.platform.sourcectl.models import AlternativeVersion
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
-
-class AlwaysAllowAppPermission(BaseAppPermission):
-    def has_permission(self, request, view):
-        return True
 
 
 class TestListDevSandbox:
@@ -96,14 +89,6 @@ class TestCreateDevSandbox:
                 "paasng.accessories.dev_sandbox.views.DevSandboxController.deploy",
                 return_value=None,
             ),
-        ):
-            yield
-
-    @pytest.fixture(autouse=True)
-    def _patch_permissions(self):
-        with mock.patch(
-            "paasng.accessories.dev_sandbox.views.DevSandboxViewSet.permission_classes",
-            [IsAuthenticated, AlwaysAllowAppPermission],
         ):
             yield
 
@@ -203,141 +188,6 @@ class TestCommitDevSandbox:
         assert resp.status_code == status.HTTP_200_OK
 
 
-class TestAddonServicesList:
-    """测试获取沙箱使用的增强服务列表"""
-
-    @pytest.fixture(autouse=True)
-    def _setup(self, settings):
-        # 配置缓存
-        settings.CACHES = {
-            "default": {
-                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-                "LOCATION": "dev-sandbox-test",
-            }
-        }
-
-    @pytest.fixture(autouse=True)
-    def _mock_patch(self):
-        mock_version_service = mock.MagicMock()
-        mock_alternative_versions = [
-            AlternativeVersion(
-                name="master",
-                type="branch",
-                revision="...",
-                url="https://github.com/example/helloworld.git",
-            )
-        ]
-        mock_version_service.list_alternative_versions.return_value = mock_alternative_versions
-
-        with (
-            mock.patch(
-                "paasng.accessories.dev_sandbox.serializers.get_version_service",
-                return_value=mock_version_service,
-            ),
-            mock.patch(
-                "paasng.accessories.dev_sandbox.views.upload_source_code",
-                return_value="https://bkrepo.example.com/helloworld.zip",
-            ),
-            mock.patch(
-                "paasng.accessories.dev_sandbox.views.get_env_vars_selected_addons",
-                return_value={"FOO": "BAR"},
-            ),
-            mock.patch(
-                "paasng.accessories.dev_sandbox.views.DevSandboxController.deploy",
-                return_value=None,
-            ),
-        ):
-            yield
-
-    @pytest.fixture(autouse=True)
-    def _patch_permissions(self):
-        with mock.patch(
-            "paasng.accessories.dev_sandbox.views.DevSandboxViewSet.permission_classes",
-            [IsAuthenticated, AlwaysAllowAppPermission],
-        ):
-            yield
-
-    def test_with_enabled_services(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
-        # 创建沙箱请求数据
-        resp = api_client.post(
-            # 注：reverse 无法解析动态路由
-            f"/api/bkapps/applications/{bk_cnative_app.code}/modules/{bk_module.name}/dev_sandboxes/",
-            data={
-                "enable_code_editor": True,
-                "inject_staging_env_vars": True,
-                "source_code_version_info": {"version_type": "branch", "version_name": "master", "revision": "..."},
-                "enabled_addons_services": ["mysql", "redis", "sentry"],
-            },
-        )
-        assert resp.status_code == status.HTTP_201_CREATED
-        assert resp.json()["code"] is not None
-        sandbox_code = resp.json()["code"]
-
-        # 获取增强服务列表的 URL
-        list_url = (
-            f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{sandbox_code}/addon_services/"
-        )
-
-        # 模拟增强服务
-        with (
-            mock.patch(
-                "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_provisioned_rels",
-                return_value=[
-                    mock.MagicMock(get_service=mock.MagicMock(return_value=mock.MagicMock(name="mysql"))),
-                    mock.MagicMock(get_service=mock.MagicMock(return_value=mock.MagicMock(name="redis"))),
-                ],
-            ),
-            mock.patch(
-                "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_unprovisioned_rels",
-                return_value=[
-                    mock.MagicMock(get_service=mock.MagicMock(return_value=mock.MagicMock(name="sentry"))),
-                ],
-            ),
-        ):
-            resp = api_client.get(list_url)
-
-        assert resp.status_code == status.HTTP_200_OK
-        data = resp.json()
-        assert len(data) == 2
-        assert {item["name"] for item in data} == {"mysql", "redis"}
-
-    def test_with_no_enabled_services(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
-        # 设置缓存数据为空列表
-        cache_key = f"dev_sandbox_addons_{bk_user.pk}_{bk_dev_sandbox.code}"
-        cache.set(cache_key, [], timeout=1800)
-
-        url = (
-            f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/addon_services/"
-        )
-
-        # 模拟增强服务
-        with mock.patch(
-            "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_provisioned_rels",
-            return_value=[
-                mock.MagicMock(get_service=mock.MagicMock(return_value=mock.MagicMock(name="mysql"))),
-            ],
-        ):
-            resp = api_client.get(url)
-
-        assert resp.status_code == status.HTTP_200_OK
-        data = resp.json()
-        assert len(data) == 0
-
-    def test_with_cache_expired(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
-        url = (
-            f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/addon_services/"
-        )
-
-        resp = api_client.get(url)
-
-        assert resp.status_code == status.HTTP_200_OK
-        data = resp.json()
-        assert len(data) == 0
-
-
 class TestEnvVarsDevSandbox:
     """沙箱环境变量"""
 
@@ -401,3 +251,113 @@ class TestEnvVarsDevSandbox:
         env_vars = bk_dev_sandbox.list_env_vars()
         env_var_keys = {item["key"] for item in env_vars}
         assert "EXISTING_VAR" not in env_var_keys
+
+
+class TestAddonServicesList:
+    """测试获取沙箱使用的增强服务列表
+
+    主要验证 addon_services_list API 的筛选逻辑：根据用户选择的增强服务列表过滤返回结果，因此这里简单模拟 Service 和 Rel 对象
+    如果直接 mock 的话，需要模拟 get_service() 返回服务对象
+    但是序列化器在访问 get_service().name 时，实际访问的是 MagicMock 对象的属性
+    例如：
+        assert {"<MagicMock name='mock.get_service.name' id='4750617488'>",\n "<MagicMock name='mock.get_service.name' id='4755145296'>"}
+            == {'redis', 'mysql'}
+    """
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, settings):
+        # 设置缓存方式为 Django 的默认缓存
+        settings.CACHES = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "dev-sandbox-test",
+            }
+        }
+
+    def create_service_obj(self, name):
+        """创建简单的服务对象"""
+
+        class SimpleServiceObj:
+            def __init__(self, name):
+                self.name = name
+                self.uuid = f"{name}-uuid"
+                self.logo = f"{name}-logo"
+                self.display_name = name.capitalize()
+                self.description = f"{name} service"
+                self.category = mock.MagicMock()
+
+        return SimpleServiceObj(name)
+
+    def create_rel_obj(self, service):
+        """创建简单的关系对象"""
+
+        class SimpleRelObj:
+            def __init__(self, service):
+                self.service = service
+
+            def get_service(self):
+                return self.service
+
+        return SimpleRelObj(service)
+
+    def test_with_enabled_services(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
+        cache_key = f"dev_sandbox_addons_{bk_user.pk}_{bk_dev_sandbox.code}"
+        cache.set(cache_key, ["mysql", "redis"], timeout=1800)
+
+        mysql_service = self.create_service_obj("mysql")
+        redis_service = self.create_service_obj("redis")
+        sentry_service = self.create_service_obj("sentry")
+
+        mysql_rel = self.create_rel_obj(mysql_service)
+        redis_rel = self.create_rel_obj(redis_service)
+        sentry_rel = self.create_rel_obj(sentry_service)
+
+        url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/"
+            f"envs/stag/"
+            f"dev_sandboxes/{bk_dev_sandbox.code}/addon_services/"
+        )
+
+        # 模拟增强服务
+        with (
+            mock.patch(
+                "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_provisioned_rels",
+                return_value=[mysql_rel, redis_rel],
+            ),
+            mock.patch(
+                "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_unprovisioned_rels",
+                return_value=[sentry_rel],
+            ),
+        ):
+            resp = api_client.get(url)
+
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.json()
+        assert len(data) == 2
+        assert {item["service"]["name"] for item in data} == {"mysql", "redis"}
+
+    def test_with_no_enabled_services(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
+        cache_key = f"dev_sandbox_addons_{bk_user.pk}_{bk_dev_sandbox.code}"
+        cache.set(cache_key, [], timeout=1800)
+
+        mysql_service = self.create_service_obj("mysql")
+
+        mysql_rel = self.create_rel_obj(mysql_service)
+
+        url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/"
+            f"envs/stag/"
+            f"dev_sandboxes/{bk_dev_sandbox.code}/addon_services/"
+        )
+
+        # 模拟增强服务
+        with mock.patch(
+            "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_provisioned_rels", return_value=[mysql_rel]
+        ):
+            resp = api_client.get(url)
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert len(resp.json()) == 0
+        assert resp.json() == []

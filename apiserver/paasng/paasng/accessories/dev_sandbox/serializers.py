@@ -124,5 +124,5 @@ class DevSandboxEnvVarsUpsertInputSLZ(serializers.Serializer):
     value = serializers.CharField(max_length=255, help_text="环境变量值")
 
 
-class DevSandboxAddonServicesListOutputSLZ(serializers.Serializer):
+class DevSandboxAddonsServicesListOutputSLZ(serializers.Serializer):
     service = ServiceMinimalSLZ(source="get_service")

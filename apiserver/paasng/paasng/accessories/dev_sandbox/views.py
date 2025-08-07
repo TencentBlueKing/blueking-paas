@@ -41,7 +41,7 @@ from paasng.accessories.dev_sandbox.config_var import generate_env_vars, get_env
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.accessories.dev_sandbox.serializers import (
-    DevSandboxAddonServicesListOutputSLZ,
+    DevSandboxAddonsServicesListOutputSLZ,
     DevSandboxCommitInputSLZ,
     DevSandboxCommitOutputSLZ,
     DevSandboxCreateInputSLZ,
@@ -268,7 +268,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(
         tags=["accessories.dev_sandbox"],
         operation_description="返回沙箱使用的增强服务",
-        responses={status.HTTP_200_OK: DevSandboxAddonServicesListOutputSLZ()},
+        responses={status.HTTP_200_OK: DevSandboxAddonsServicesListOutputSLZ()},
     )
     def addons_services_list(self, request, code, module_name, environment, *args, **kwargs):
         dev_sandbox_code = self.kwargs.get("dev_sandbox_code")
@@ -285,7 +285,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 根据用户选择的增强服务筛选需要展示的增强服务
         all_rels = [rel for rel in all_rels if rel.get_service().name in enabled_addons_services]
 
-        return Response(data=DevSandboxAddonServicesListOutputSLZ(all_rels, many=True).data)
+        return Response(data=DevSandboxAddonsServicesListOutputSLZ(all_rels, many=True).data)
 
 
 class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):

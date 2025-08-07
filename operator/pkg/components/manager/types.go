@@ -20,7 +20,7 @@ package components
 
 // ComponentInfo 包含组件的完整信息
 type ComponentInfo struct {
-	Type     string
+	Name     string
 	Version  string
 	Template []byte
 	Schema   []byte

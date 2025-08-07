@@ -31,9 +31,9 @@ var _ = Describe("ComponentLoader", func() {
 	var tempDir string
 
 	const (
-		validComponentType   = "web"
+		validComponentName   = "web"
 		validVersion         = "v1"
-		invalidComponentType = "invalid"
+		invalidComponentName = "invalid"
 		invalidVersion       = "v999"
 	)
 
@@ -44,7 +44,7 @@ var _ = Describe("ComponentLoader", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// 创建测试组件结构
-		createTestComponent(tempDir, validComponentType, validVersion, `{"key": "value"}`, "template: content")
+		createTestComponent(tempDir, validComponentName, validVersion, `{"key": "value"}`, "template: content")
 		env_overlay_schema := `{
   "type": "object",
   "required": ["env"],
@@ -79,7 +79,7 @@ var _ = Describe("ComponentLoader", func() {
 	Describe("GetTemplate", func() {
 		Context("with valid component and version", func() {
 			It("should return template content", func() {
-				content, err := manager.GetTemplate(validComponentType, validVersion)
+				content, err := manager.GetTemplate(validComponentName, validVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(content)).To(Equal("template: content"))
 			})
@@ -87,14 +87,14 @@ var _ = Describe("ComponentLoader", func() {
 
 		Context("with invalid component", func() {
 			It("should return error", func() {
-				_, err := manager.GetTemplate(invalidComponentType, validVersion)
+				_, err := manager.GetTemplate(invalidComponentName, validVersion)
 				Expect(err).To(HaveOccurred())
 			})
 		})
 
 		Context("with invalid version", func() {
 			It("should return error", func() {
-				_, err := manager.GetTemplate(validComponentType, invalidVersion)
+				_, err := manager.GetTemplate(validComponentName, invalidVersion)
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -103,7 +103,7 @@ var _ = Describe("ComponentLoader", func() {
 	Describe("GetSchema", func() {
 		Context("with valid component and version", func() {
 			It("should return schema content", func() {
-				content, err := manager.GetSchema(validComponentType, validVersion)
+				content, err := manager.GetSchema(validComponentName, validVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(content)).To(Equal(`{"key": "value"}`))
 			})
@@ -145,9 +145,9 @@ var _ = Describe("ComponentLoader", func() {
 	Describe("GetComponentInfo", func() {
 		Context("with valid component and version", func() {
 			It("should return complete component info", func() {
-				info, err := manager.GetComponentInfo(validComponentType, validVersion)
+				info, err := manager.GetComponentInfo(validComponentName, validVersion)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(info.Type).To(Equal(validComponentType))
+				Expect(info.Name).To(Equal(validComponentName))
 				Expect(info.Version).To(Equal(validVersion))
 				Expect(string(info.Template)).To(Equal("template: content"))
 				Expect(string(info.Schema)).To(Equal(`{"key": "value"}`))
@@ -156,15 +156,15 @@ var _ = Describe("ComponentLoader", func() {
 
 		Context("with invalid component", func() {
 			It("should return error", func() {
-				_, err := manager.GetComponentInfo(invalidComponentType, validVersion)
+				_, err := manager.GetComponentInfo(invalidComponentName, validVersion)
 				Expect(err).To(HaveOccurred())
 			})
 		})
 	})
 })
 
-func createTestComponent(baseDir, cType, version, schema, template string) {
-	versionDir := filepath.Join(baseDir, cType, version)
+func createTestComponent(baseDir, cName, version, schema, template string) {
+	versionDir := filepath.Join(baseDir, cName, version)
 	Expect(os.MkdirAll(versionDir, 0o755)).To(Succeed())
 
 	// 创建 schema.json

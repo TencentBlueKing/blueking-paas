@@ -54,31 +54,31 @@ func NewComponentLoader() (*ComponentLoader, error) {
 }
 
 // GetTemplate 获取组件模板内容
-func (m *ComponentLoader) GetTemplate(componentType, version string) ([]byte, error) {
-	templatePath := filepath.Join(m.componentsDir, componentType, version, "template.yaml")
+func (m *ComponentLoader) GetTemplate(componentName, version string) ([]byte, error) {
+	templatePath := filepath.Join(m.componentsDir, componentName, version, "template.yaml")
 	return m.readFileContent(templatePath)
 }
 
 // GetSchema 获取组件 schema 内容
-func (m *ComponentLoader) GetSchema(componentType, version string) ([]byte, error) {
-	schemaPath := filepath.Join(m.componentsDir, componentType, version, "schema.json")
+func (m *ComponentLoader) GetSchema(componentName, version string) ([]byte, error) {
+	schemaPath := filepath.Join(m.componentsDir, componentName, version, "schema.json")
 	return m.readFileContent(schemaPath)
 }
 
 // GetComponentInfo 获取组件的完整信息
-func (m *ComponentLoader) GetComponentInfo(componentType, version string) (*ComponentInfo, error) {
-	template, err := m.GetTemplate(componentType, version)
+func (m *ComponentLoader) GetComponentInfo(componentName, version string) (*ComponentInfo, error) {
+	template, err := m.GetTemplate(componentName, version)
 	if err != nil {
 		return nil, err
 	}
 
-	schema, err := m.GetSchema(componentType, version)
+	schema, err := m.GetSchema(componentName, version)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ComponentInfo{
-		Type:     componentType,
+		Name:     componentName,
 		Version:  version,
 		Template: template,
 		Schema:   schema,
@@ -86,8 +86,8 @@ func (m *ComponentLoader) GetComponentInfo(componentType, version string) (*Comp
 }
 
 // ValidateSchema 验证给定的参数是否符合组件的 schema
-func (m *ComponentLoader) ValidateSchema(componentType, version string, properties map[string]any) error {
-	schema, err := m.GetSchema(componentType, version)
+func (m *ComponentLoader) ValidateSchema(componentName, version string, properties map[string]any) error {
+	schema, err := m.GetSchema(componentName, version)
 	if err != nil {
 		return err
 	}

@@ -183,8 +183,8 @@ spec:
 	})
 })
 
-func createTestComponent(baseDir, cType, version, schema, template string) {
-	versionDir := filepath.Join(baseDir, cType, version)
+func createTestComponent(baseDir, cName, version, schema, template string) {
+	versionDir := filepath.Join(baseDir, cName, version)
 	Expect(os.MkdirAll(versionDir, 0o755)).To(Succeed())
 
 	// 创建 schema.json

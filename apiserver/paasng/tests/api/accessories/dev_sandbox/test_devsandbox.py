@@ -19,7 +19,6 @@ from typing import List
 from unittest import mock
 
 import pytest
-from django.core.cache import cache
 from django.urls import reverse
 from rest_framework import status
 
@@ -264,16 +263,6 @@ class TestAddonsServicesList:
             == {'redis', 'mysql'}
     """
 
-    @pytest.fixture(autouse=True)
-    def _setup(self, settings):
-        # 设置缓存方式为 Django 的默认缓存
-        settings.CACHES = {
-            "default": {
-                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-                "LOCATION": "dev-sandbox-test",
-            }
-        }
-
     def create_service_obj(self, name):
         """创建简单的服务对象"""
 
@@ -301,8 +290,8 @@ class TestAddonsServicesList:
         return SimpleRelObj(service)
 
     def test_with_enabled_services(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
-        cache_key = f"dev_sandbox_addons_{bk_user.pk}_{bk_dev_sandbox.code}"
-        cache.set(cache_key, ["mysql", "redis"], timeout=1800)
+        bk_dev_sandbox.enabled_addons_services = ["mysql", "redis"]
+        bk_dev_sandbox.save()
 
         mysql_service = self.create_service_obj("mysql")
         redis_service = self.create_service_obj("redis")
@@ -338,8 +327,8 @@ class TestAddonsServicesList:
         assert {item["service"]["name"] for item in data} == {"mysql", "redis"}
 
     def test_with_no_enabled_services(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
-        cache_key = f"dev_sandbox_addons_{bk_user.pk}_{bk_dev_sandbox.code}"
-        cache.set(cache_key, [], timeout=1800)
+        bk_dev_sandbox.enabled_addons_services = []
+        bk_dev_sandbox.save()
 
         mysql_service = self.create_service_obj("mysql")
 

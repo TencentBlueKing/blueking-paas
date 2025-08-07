@@ -37,6 +37,8 @@ VersionInfoField = make_json_field("VersionInfoField", VersionInfo)
 
 CodeEditorConfigField = make_json_field("CodeEditorConfigField", CodeEditorConfig)
 
+EnabledAddonsServicesField = make_json_field("EnabledAddonsServicesField", List[str])
+
 # 默认 2h 无活动后会回收沙箱
 DEV_SANDBOX_DEFAULT_EXPIRED_DURATION = timedelta(hours=2)
 
@@ -58,6 +60,7 @@ class DevSandboxQuerySet(models.QuerySet):
         env_vars: Dict[str, str],
         version_info: VersionInfo | None,
         enable_code_editor: bool = False,
+        enabled_addons_services: List[str] | None = None,
     ) -> "DevSandbox":
         charsets = string.ascii_lowercase + string.digits
 
@@ -92,6 +95,7 @@ class DevSandboxQuerySet(models.QuerySet):
             token=generate_password(),
             code_editor_config=code_editor_cfg,
             tenant_id=module.tenant_id,
+            enabled_addons_services=enabled_addons_services,
         )
 
 
@@ -109,6 +113,7 @@ class DevSandbox(OwnerTimestampedModel):
     code_editor_config = CodeEditorConfigField(help_text="代码编辑器配置", default=None, null=True)
     tenant_id = tenant_id_field_factory()
     env_vars = EncryptField(help_text="沙箱环境变量")
+    enabled_addons_services = EnabledAddonsServicesField(help_text="用户复用的增强服务", default=list)
 
     objects = DevSandboxManager()
 
@@ -143,6 +148,10 @@ class DevSandbox(OwnerTimestampedModel):
 
         self.env_vars = json.dumps(env_vars)  # type: ignore
         self.save(update_fields=["env_vars", "updated"])
+
+    def list_enabled_addons_services(self) -> List[str]:
+        """获取用户复用的增强服务"""
+        return self.enabled_addons_services
 
     class Meta:
         unique_together = ("module", "owner")

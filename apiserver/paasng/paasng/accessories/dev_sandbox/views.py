@@ -18,7 +18,6 @@
 import logging
 
 from django.conf import settings
-from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
@@ -125,9 +124,10 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             source_code_cfg.source_fetch_method = SourceCodeFetchMethod.BK_REPO
 
         env_vars = generate_env_vars(module)
+        enabled_addons_services = data.get("enabled_addons_services")
         if data["inject_staging_env_vars"]:
             stag_env = module.get_envs(AppEnvironment.STAGING)
-            env_vars.update(get_env_vars_selected_addons(stag_env, data.get("enabled_addons_services")))
+            env_vars.update(get_env_vars_selected_addons(stag_env, enabled_addons_services))
 
         dev_sandbox = DevSandbox.objects.create(
             module=module,
@@ -135,6 +135,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             env_vars=env_vars,
             version_info=version_info,
             enable_code_editor=data["enable_code_editor"],
+            enabled_addons_services=enabled_addons_services,
         )
 
         # 下发沙箱 k8s 资源
@@ -152,10 +153,6 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             logger.exception("Failed to deploy dev sandbox")
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_CREATE_FAILED
-
-        # 完成沙箱后，将用户选择的增强服务存到 cache 中
-        cache_key = f"dev_sandbox_addons_{request.user.pk}_{dev_sandbox.code}"
-        cache.set(cache_key, data.get("enabled_addons_services", []), timeout=1800)
 
         return Response(data=DevSandboxCreateOutputSLZ(dev_sandbox).data, status=status.HTTP_201_CREATED)
 
@@ -271,12 +268,16 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         operation_description="返回沙箱使用的增强服务",
         responses={status.HTTP_200_OK: DevSandboxAddonsServicesListOutputSLZ()},
     )
-    def list_addons_services(self, request, code, module_name, environment, *args, **kwargs):
-        dev_sandbox_code = self.kwargs.get("dev_sandbox_code")
+    def list_addons_services(self, request, *args, **kwargs):
+        module = self.get_module_via_path()
+        dev_sandbox = DevSandbox.objects.filter(
+            module=module,
+            code=self.kwargs["dev_sandbox_code"],
+            owner=self.request.user.pk,
+        ).first()
 
-        # 从 cache 中拿到 create API 接收的参数
-        cache_key = f"dev_sandbox_addons_{request.user.pk}_{dev_sandbox_code}"
-        enabled_addons_services = cache.get(cache_key, [])
+        if not dev_sandbox:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
 
         env = self.get_env_via_path()
         engine_app = env.get_engine_app()
@@ -284,6 +285,8 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         unprovisioned_rels = list(mixed_service_mgr.list_unprovisioned_rels(engine_app))
         all_rels = provisioned_rels + unprovisioned_rels
 
+        # 用户选择的增强服务
+        enabled_addons_services = dev_sandbox.list_enabled_addons_services()
         # 根据用户选择的增强服务筛选需要展示的增强服务
         all_rels = [rel for rel in all_rels if rel.get_service().name in enabled_addons_services]
 

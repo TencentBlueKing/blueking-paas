@@ -36,6 +36,7 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import (
     DeployShouldAbortError,
     HandleAppDescriptionError,
+    ServerVersionCheckFailed,
     StepNotInPresetListError,
 )
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
@@ -93,7 +94,12 @@ class DeployProcedure:
         # Only some types of exception should be output directly into the stream,
         # others have to be masked as "Unknown error" in order to provide better
         # user experiences.
-        is_known_exc = exc_type in [DeployShouldAbortError, ProvisionInstanceError, HandleAppDescriptionError]
+        is_known_exc = exc_type in [
+            DeployShouldAbortError,
+            ProvisionInstanceError,
+            HandleAppDescriptionError,
+            ServerVersionCheckFailed,
+        ]
         if is_known_exc:
             msg = _("步骤 [{title}] 出错了，原因：{reason}。").format(
                 title=Style.Title(self.title), reason=Style.Warning(exc_val)

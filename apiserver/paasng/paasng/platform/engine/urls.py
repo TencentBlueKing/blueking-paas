@@ -149,11 +149,6 @@ urlpatterns = [
         views.DeploymentViewSet.as_view({"get": "check_preparations"}),
         name="api.deploy.check_preparations",
     ),
-    re_path(
-        make_app_pattern(r"/deploy/check_srv_version/$"),
-        views.DeploymentViewSet.as_view({"get": "check_srv_version"}),
-        name="api.deploy.check_srv_version",
-    ),
     re_path(make_app_pattern(r"/offlines/$"), views.OfflineViewset.as_view({"post": "offline"}), name="api.offline"),
     re_path(
         make_app_pattern(r"/offlines/resumable/$"),

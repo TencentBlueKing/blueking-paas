@@ -84,3 +84,14 @@ class HandleAppDescriptionError(Exception):
 
 class InitDeployDescHandlerError(Exception):
     """Error when initialing the description handler for deployment."""
+
+
+class ServerVersionCheckFailed(Exception):
+    """Raise this exception when apiserver and operator versions do not match."""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(self.reason)
+
+    def __str__(self):
+        return self.reason

@@ -64,7 +64,6 @@ from paasng.platform.engine.utils.ansi import strip_ansi
 from paasng.platform.engine.utils.query import DeploymentGetter
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.engine.workflow.protections import ModuleEnvDeployInspector
-from paasng.platform.engine.workflow.srv_version import ServerVersionChecker
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.exceptions import RoleNotAllowError
 from paasng.platform.environments.utils import env_role_protection_check
@@ -113,21 +112,6 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 ).data
             )
         )
-
-    @swagger_auto_schema(responses={"200": Dict})
-    def check_srv_version(self, request, code, module_name, environment):
-        """检查平台的 apiserver 和 operator 版本信息是否一致"""
-        env = self.get_env_via_path()
-
-        # 检查 apiserver 和 operator 版本的一致性
-        matched, versions = ServerVersionChecker(env).check_version()
-        if not matched:
-            raise error_codes.SVR_VERSION_CHECK_FAILED.set_data(
-                {"svr_comp_versions": versions},
-            )
-
-        result = {"matched": matched, "versions": versions}
-        return JsonResponse(result)
 
     @swagger_auto_schema(request_body=CreateDeploymentSLZ, responses={"201": CreateDeploymentResponseSLZ()})
     def deploy(self, request, code, module_name, environment):

@@ -118,14 +118,12 @@ class DevSandboxPreDeployCheckOutputSLZ(serializers.Serializer):
     result = serializers.BooleanField(help_text="预部署检查结果")
 
 
-class DevSandboxEnvVarsBaseSLZ(serializers.Serializer):
+class DevSandboxEnvVarsUpsertInputSLZ(serializers.Serializer):
     key = field_env_var_key()
     value = serializers.CharField(max_length=255, help_text="环境变量值")
 
 
-class DevSandboxEnvVarsUpsertInputSLZ(DevSandboxEnvVarsBaseSLZ):
-    """创建/更新环境变量输入"""
-
-
-class DevSandboxEnvVarsListOutputSLZ(DevSandboxEnvVarsBaseSLZ):
+class DevSandboxEnvVarsListOutputSLZ(serializers.Serializer):
+    key = serializers.CharField(help_text="环境变量键")
+    value = serializers.CharField(help_text="环境变量值")
     source = serializers.CharField(help_text="环境变量来源")

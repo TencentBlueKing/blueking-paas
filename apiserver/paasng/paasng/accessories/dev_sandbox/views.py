@@ -312,7 +312,6 @@ class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         response={status.HTTP_200_OK: DevSandboxEnvVarsListOutputSLZ()},
     )
     def list(self, request, *args, **kwargs):
-        """"""
         dev_sandbox = self._get_dev_sandbox()
         env_vars = dev_sandbox.list_env_vars()
 

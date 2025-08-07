@@ -191,12 +191,12 @@ class TestEnvVarsDevSandbox:
     """沙箱环境变量"""
 
     def test_upsert_env_vars_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
-        env_var_url = (
+        url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
 
-        resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "new_value"})
+        resp = api_client.post(url, {"key": "NEW_VAR", "value": "new_value"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         bk_dev_sandbox.refresh_from_db()
@@ -206,7 +206,7 @@ class TestEnvVarsDevSandbox:
         assert "NEW_VAR" in updated_dict
         assert updated_dict["NEW_VAR"] == "new_value"
 
-        resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "updated_value"})
+        resp = api_client.post(url, {"key": "NEW_VAR", "value": "updated_value"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         bk_dev_sandbox.refresh_from_db()
@@ -225,13 +225,13 @@ class TestEnvVarsDevSandbox:
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_env_var_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
-        env_var_url = (
+        url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
 
         # 添加环境变量
-        api_client.post(env_var_url, {"key": "EXISTING_VAR", "value": "value"})
+        api_client.post(url, {"key": "EXISTING_VAR", "value": "value"})
         bk_dev_sandbox.refresh_from_db()
         assert "EXISTING_VAR" in {item["key"] for item in bk_dev_sandbox.list_env_vars()}
 
@@ -252,26 +252,27 @@ class TestEnvVarsDevSandbox:
         assert "EXISTING_VAR" not in env_var_keys
 
     def test_list_env_vars_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
-        env_var_url = (
+        url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
-        api_client.post(env_var_url, {"key": "TEST_VAR1", "value": "value1"})
-        api_client.post(env_var_url, {"key": "TEST_VAR2", "value": "value2"})
-        resp = api_client.get(env_var_url)
+        api_client.post(url, {"key": "TEST_VAR1", "value": "value1"})
+        api_client.post(url, {"key": "TEST_VAR2", "value": "value2"})
+        resp = api_client.get(url)
 
         assert resp.status_code == status.HTTP_200_OK
-
-        data = resp.json()
-        assert any(item["key"] == "TEST_VAR1" and item["value"] == "value1" for item in data)
-        assert any(item["key"] == "TEST_VAR2" and item["value"] == "value2" for item in data)
+        assert resp.json() == [
+            {"key": "TEST_VAR1", "value": "value1", "source": "custom"},
+            {"key": "TEST_VAR2", "value": "value2", "source": "custom"},
+        ]
 
     def test_list_env_vars_empty(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
-        env_var_url = (
+        url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
-        resp = api_client.get(env_var_url)
+        resp = api_client.get(url)
 
         assert resp.status_code == status.HTTP_200_OK
         assert len(resp.json()) == 0
+        assert resp.json() == []

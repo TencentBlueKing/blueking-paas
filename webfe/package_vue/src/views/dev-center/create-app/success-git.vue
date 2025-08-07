@@ -42,10 +42,24 @@
             </bk-button>
           </p>
         </div>
-        <div class="content">
+
+        <!-- 平台提供代码仓库，开发指引 -->
+        <div
+          class="content"
+          v-if="isCreatedByPlatform"
+        >
+          <section>
+            <p class="step-title">{{ $t('开发指引') }}</p>
+            <StepGuide :steps="platformCodeRepositorySteps" />
+          </section>
+        </div>
+        <div
+          class="content"
+          v-else
+        >
           <div
             v-if="downloadableAddress"
-            class="input-wrapper"
+            class="input-wrapper mb-16"
           >
             <div class="title-wrapper">
               <p class="title">{{ $t('应用初始化模板地址：') }}</p>
@@ -74,114 +88,18 @@
               {{ downloadableAddress }}
             </div>
           </div>
-          <div
-            v-if="application.is_plugin_app"
-            class="btn-check-svn spacing-x4"
-          >
-            <div class="tips-wrapper">
-              <div class="title">
-                {{ $t('初始化插件项目') }}
-                <div
-                  class="icon-wrapper"
-                  v-copy="pluginTips"
-                >
-                  <i
-                    :class="[
-                      'paasng-icon',
-                      'paasng-general-copy',
-                      localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon',
-                    ]"
-                  />
-                  {{ $t('复制') }}
-                </div>
-              </div>
-              <div class="tips line">
-                <code>
-                  <p>{{ pluginTips }}</p>
-                </code>
-              </div>
-              <div class="tips tips-plugin line">
-                <code>
-                  {{ initTips }}
-                </code>
-              </div>
-              <div class="title">
-                {{ $t('添加远程仓库地址并完成推送') }}
-                <div
-                  class="icon-wrapper"
-                  v-copy="pushTips"
-                >
-                  <i
-                    :class="[
-                      'paasng-icon',
-                      'paasng-general-copy',
-                      'copy-icon',
-                      localLanguage === 'en' ? 'copy-icon-two' : '',
-                    ]"
-                  />
-                  {{ $t('复制') }}
-                </div>
-              </div>
-              <div class="tips">
-                <code>
-                  <p>{{ pushTips }}</p>
-                </code>
-              </div>
-            </div>
-          </div>
-          <div
-            v-if="isShowGitBash"
-            class="btn-check-svn spacing-x4"
-          >
-            <p class="log-title">
-              {{ $t('使用 Git 命令推送代码到远程仓库') }}
-            </p>
-            <div class="tips-wrapper">
-              <div class="title">
-                {{ $t('下载并解压代码到本地目录') }}
-                <div
-                  class="icon-wrapper"
-                  v-copy="downloadTips"
-                >
-                  <i
-                    :class="[
-                      'paasng-icon',
-                      'paasng-general-copy',
-                      localLanguage === 'en' ? 'copy-icon-en' : 'copy-icon',
-                    ]"
-                  />
-                  {{ $t('复制') }}
-                </div>
-              </div>
-              <div class="tips line">
-                <code>
-                  <p>{{ downloadTips }}</p>
-                </code>
-              </div>
-              <div class="title mt10">
-                {{ $t('添加远程仓库地址并完成推送') }}
-                <div
-                  class="icon-wrapper"
-                  v-copy="pushTips"
-                >
-                  <i
-                    :class="[
-                      'paasng-icon',
-                      'paasng-general-copy',
-                      'copy-icon',
-                      localLanguage === 'en' ? 'copy-icon-two' : '',
-                    ]"
-                  />
-                  {{ $t('复制') }}
-                </div>
-              </div>
-              <div class="tips">
-                <code>
-                  <p>{{ pushTips }}</p>
-                </code>
-              </div>
-            </div>
-          </div>
+
+          <!-- 插件成功指引 -->
+          <section v-if="application.is_plugin_app">
+            <p class="step-title">{{ $t('插件开发指引') }}</p>
+            <StepGuide :steps="pluginSteps" />
+          </section>
+
+          <!-- 云原生应用，已有代码仓库开发指引 -->
+          <section v-if="isShowGitBash">
+            <p class="step-title">{{ $t('使用 Git 命令推送代码到远程仓库') }}</p>
+            <StepGuide :steps="gitSteps" />
+          </section>
         </div>
         <section
           class="doc-panel"
@@ -215,15 +133,15 @@
 import topBar from './comps/top-bar.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import auth from '@/auth';
+import StepGuide from './comps/step-guide.vue';
 export default {
   components: {
     topBar,
+    StepGuide,
   },
   mixins: [appBaseMixin],
   data() {
-    // const appCode = this.$route.params.id
     return {
-      // appCode: appCode,
       application: {
         code: '',
         config_info: {},
@@ -282,6 +200,52 @@ export default {
         return true;
       }
       return false;
+    },
+    isCreatedByPlatform() {
+      return this.$route.query.type === 'platform';
+    },
+    gitSteps() {
+      return [
+        {
+          title: this.$t('下载并解压代码到本地目录'),
+          code: this.downloadTips,
+        },
+        {
+          title: this.$t('添加远程仓库地址并完成推送'),
+          code: this.pushTips,
+        },
+      ];
+    },
+    // 插件成功指引
+    pluginSteps() {
+      return [
+        {
+          title: this.$t('初始化插件项目'),
+          code: [this.pluginTips, '\n', this.initTips],
+          copyText: this.pluginTips,
+        },
+        {
+          title: this.$t('添加远程仓库地址并完成推送'),
+          code: this.pushTips,
+        },
+      ];
+    },
+    // 平台提供代码仓库，开发指引
+    platformCodeRepositorySteps() {
+      return [
+        {
+          title: this.$t('拉取代码到本地'),
+          code: `git clone ${this.trunkURL}`,
+        },
+        {
+          title: this.$t('本地开发'),
+        },
+        {
+          title: this.$t('提交代码到代码仓库'),
+          code: ['git add .', 'git commit -m "Your modified content"', 'git push'],
+          copyText: 'git add .\ngit commit -m "Your modified content"\ngit push',
+        },
+      ];
     },
   },
   created() {

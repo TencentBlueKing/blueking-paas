@@ -225,13 +225,13 @@ class TestEnvVarsDevSandbox:
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_env_var_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
-        url = (
+        env_var_url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
 
         # 添加环境变量
-        api_client.post(url, {"key": "EXISTING_VAR", "value": "value"})
+        api_client.post(env_var_url, {"key": "EXISTING_VAR", "value": "value"})
         bk_dev_sandbox.refresh_from_db()
         assert "EXISTING_VAR" in {item["key"] for item in bk_dev_sandbox.list_env_vars()}
 

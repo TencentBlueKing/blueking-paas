@@ -124,6 +124,6 @@ class DevSandboxEnvVarsUpsertInputSLZ(serializers.Serializer):
 
 
 class DevSandboxEnvVarsListOutputSLZ(serializers.Serializer):
-    key = serializers.CharField(help_text="环境变量键")
+    key = serializers.CharField(help_text="环境变量键名")
     value = serializers.CharField(help_text="环境变量值")
     source = serializers.CharField(help_text="环境变量来源")

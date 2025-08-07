@@ -1269,7 +1269,8 @@ export default {
         params.source_config.source_dir = this.repoData.sourceDir;
       }
 
-      if (this.sourceOrigin !== this.GLOBAL.APP_TYPES.NORMAL_APP) {
+      // 由平台创建代码仓库过滤 source_repo_url
+      if (this.sourceOrigin !== this.GLOBAL.APP_TYPES.NORMAL_APP || this.isCreatedByPlatform) {
         delete params.source_config.source_repo_url;
       }
 
@@ -1281,9 +1282,8 @@ export default {
         };
       }
 
-      // 由平台创建代码仓库过滤source_repo_url
       if (this.isCreatedByPlatform) {
-        delete params.source_config.source_repo_url;
+        params.source_config.write_template_to_repo = !!params.source_config?.source_init_template;
       }
 
       try {
@@ -1328,7 +1328,7 @@ export default {
         return;
       }
       if (this.isDockerfile) {
-        await this.$refs.dockerfileRef.validate();
+        await this.$refs.dockerfileRef?.validate();
       }
       if (this.structureType === 'mirror') {
         // 仅镜像

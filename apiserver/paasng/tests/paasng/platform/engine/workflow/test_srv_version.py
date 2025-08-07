@@ -98,8 +98,8 @@ class TestServerVersionChecker:
         fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version=operator_version))
         with (
             override_settings(
-                BKPAAS_OPERATOR_VERSION_CHECK=check_enabled,
-                BKPAAS_APISERVER_VERSION=apiserver_version,
+                APISERVER_OPERATOR_VERSION_CHECK=check_enabled,
+                APISERVER_VERSION=apiserver_version,
             ),
             mock.patch(
                 "paas_wl.infras.cluster.helm.HelmClient.get_release",

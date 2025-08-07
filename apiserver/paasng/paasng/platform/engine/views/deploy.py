@@ -117,9 +117,7 @@ class DeploymentViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     @swagger_auto_schema(responses={"200": Dict})
     def check_srv_version(self, request, code, module_name, environment):
         """检查平台的 apiserver 和 operator 版本信息是否一致"""
-        application = self.get_application()
-        module = application.get_module(module_name)
-        env = module.get_envs(environment)
+        env = self.get_env_via_path()
 
         # 检查 apiserver 和 operator 版本的一致性
         matched, versions = ServerVersionChecker(env).check_version()

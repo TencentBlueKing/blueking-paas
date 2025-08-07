@@ -48,11 +48,11 @@ class ServerVersionChecker:
             return True, versions
 
         # apiserver 版本信息, 根据 Helm 构建时, 注入容器的 env
-        apiserver_version = settings.BKPAAS_APISERVER_VERSION
+        apiserver_version = settings.APISERVER_VERSION
         versions["apiserver"] = apiserver_version
 
         # 仅在打开检查开关和获取到 apiserver_version 的时候才需要检查
-        if not settings.BKPAAS_OPERATOR_VERSION_CHECK or not apiserver_version:
+        if not settings.APISERVER_OPERATOR_VERSION_CHECK or not apiserver_version:
             return True, versions
 
         # operator 版本信息, 通过 helm 客户端获取

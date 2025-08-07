@@ -18,6 +18,7 @@
 import logging
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
@@ -40,6 +41,7 @@ from paasng.accessories.dev_sandbox.config_var import generate_env_vars, get_env
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.accessories.dev_sandbox.serializers import (
+    DevSandboxAddonServicesListOutputSLZ,
     DevSandboxCommitInputSLZ,
     DevSandboxCommitOutputSLZ,
     DevSandboxCreateInputSLZ,
@@ -50,6 +52,7 @@ from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxRetrieveOutputSLZ,
 )
 from paasng.accessories.dev_sandbox.source_code import upload_source_code
+from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import AppEnvironment
@@ -149,6 +152,9 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             logger.exception("Failed to deploy dev sandbox")
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_CREATE_FAILED
+
+        cache_key = f"dev_sandbox_addons_{request.user.pk}_{dev_sandbox.code}"
+        cache.set(cache_key, data.get("enabled_addons_services", []), timeout=1800)
 
         return Response(data=DevSandboxCreateOutputSLZ(dev_sandbox).data, status=status.HTTP_201_CREATED)
 
@@ -258,6 +264,29 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 判断开发沙箱数量是否超过限制
         result = bool(DevSandbox.objects.count() < settings.DEV_SANDBOX_COUNT_LIMIT)
         return Response(data=DevSandboxPreDeployCheckOutputSLZ({"result": result}).data)
+
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="返回沙箱使用的增强服务",
+        responses={status.HTTP_200_OK: DevSandboxAddonServicesListOutputSLZ()},
+    )
+    def addon_services_list(self, request, *args, **kwargs):
+        module = self.get_module_via_path()
+        dev_sandbox_code = self.kwargs.get("dev_sandbox_code")
+
+        cache_key = f"dev_sandbox_addons_{request.user.pk}_{dev_sandbox_code}"
+        enabled_services = cache.get(cache_key, [])
+
+        env = module.get_envs(AppEnvironment.STAGING)
+        engine_app = env.get_engine_app()
+        provisioned_rels = list(mixed_service_mgr.list_provisioned_rels(engine_app))
+        unprovisioned_rels = list(mixed_service_mgr.list_unprovisioned_rels(engine_app))
+        all_rels = provisioned_rels + unprovisioned_rels
+
+        # 根据用户选择的增强服务筛选需要展示的增强服务
+        all_rels = [rel for rel in all_rels if rel.get_service().name in enabled_services]
+
+        return Response(data=DevSandboxAddonServicesListOutputSLZ(all_rels, many=True).data)
 
 
 class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):

@@ -41,6 +41,11 @@ urlpatterns = [
         name="accessories.dev_sandbox.commit",
     ),
     re_path(
+        make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/addon_services/$", include_envs=False),
+        DevSandboxViewSet.as_view({"get": "addon_services_list"}),
+        name="accessories.dev_sandbox.addon_services_list",
+    ),
+    re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/env_vars/$", include_envs=False),
         DevSandboxEnvVarViewSet.as_view({"post": "upsert"}),
         name="accessories.dev_sandbox.env_var.upsert",

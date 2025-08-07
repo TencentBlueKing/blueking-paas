@@ -25,6 +25,7 @@ from rest_framework.exceptions import ValidationError
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
 from paasng.accessories.dev_sandbox.models import DevSandbox
+from paasng.accessories.servicehub.serializers import ServiceMinimalSLZ
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service
@@ -121,3 +122,7 @@ class DevSandboxPreDeployCheckOutputSLZ(serializers.Serializer):
 class DevSandboxEnvVarsUpsertInputSLZ(serializers.Serializer):
     key = field_env_var_key()
     value = serializers.CharField(max_length=255, help_text="环境变量值")
+
+
+class DevSandboxAddonServicesListOutputSLZ(serializers.Serializer):
+    service = ServiceMinimalSLZ(source="get_service")

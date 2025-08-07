@@ -234,7 +234,7 @@ export default {
       white-space: pre-line;
       background: 0 0;
       box-sizing: inherit;
-      font-family: MicrosoftYaHei;
+      font-family: Consolas, monospace, tahoma, Arial;
       font-size: 14px;
       color: #313238;
     }

@@ -226,7 +226,7 @@ class ModuleInitializer:
         if write_template_to_repo and repo_url:
             source_spec = get_sourcectl_type(self.module.source_type)
             repo_controller = source_spec.repo_controller_class.init_by_module(self.module, self.module.owner)
-            repo_controller.commit_and_push(initial_code_path, commit_message="init repo")
+            repo_controller.commit_and_push(initial_code_path, commit_message="feat: init repo")
 
         # 返回应用初始化代码同步到对象存储的地址信息，用于前端创建成功页面的展示
         return result

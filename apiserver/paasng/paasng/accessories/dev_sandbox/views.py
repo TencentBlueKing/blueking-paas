@@ -153,6 +153,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             dev_sandbox.delete()
             raise error_codes.DEV_SANDBOX_CREATE_FAILED
 
+        # 完成沙箱后，将用户选择的增强服务存到 cache 中
         cache_key = f"dev_sandbox_addons_{request.user.pk}_{dev_sandbox.code}"
         cache.set(cache_key, data.get("enabled_addons_services", []), timeout=1800)
 
@@ -270,9 +271,10 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         operation_description="返回沙箱使用的增强服务",
         responses={status.HTTP_200_OK: DevSandboxAddonsServicesListOutputSLZ()},
     )
-    def addons_services_list(self, request, code, module_name, environment, *args, **kwargs):
+    def list_addons_services(self, request, code, module_name, environment, *args, **kwargs):
         dev_sandbox_code = self.kwargs.get("dev_sandbox_code")
 
+        # 从 cache 中拿到 create API 接收的参数
         cache_key = f"dev_sandbox_addons_{request.user.pk}_{dev_sandbox_code}"
         enabled_addons_services = cache.get(cache_key, [])
 

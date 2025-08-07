@@ -393,6 +393,7 @@
                   </bk-form-item>
 
                   <bk-form-item
+                    v-if="gitExtendConfig[sourceControlTypeItem]?.isAuth"
                     :required="true"
                     :label="$t('代码仓库')"
                     ext-cls="form-item-cls mt20"
@@ -412,6 +413,13 @@
                       {{ $t('将自动创建该私有仓库并完成模板代码初始化，当前用户默认为仓库管理员') }}
                     </p>
                   </bk-form-item>
+                  <!-- 未授权提示 -->
+                  <UnauthorizedTips
+                    v-else
+                    class="mt20"
+                    :type="sourceControlTypeItem"
+                    :data="gitExtendConfig[sourceControlTypeItem]"
+                  />
                 </template>
               </template>
 
@@ -757,6 +765,7 @@ import { mapGetters, mapState } from 'vuex';
 import ExamplesDirectory from '@/components/examples-directory';
 import PlatformCodeRepositoryForm from './comps/platform-code-repository-form.vue';
 import CodeSourceSelector from './comps/code-source-selector.vue';
+import UnauthorizedTips from './comps/unauthorized-tips.vue';
 
 export default {
   components: {
@@ -770,6 +779,7 @@ export default {
     ExamplesDirectory,
     PlatformCodeRepositoryForm,
     CodeSourceSelector,
+    UnauthorizedTips,
   },
   mixins: [sidebarDiffMixin],
   data() {

@@ -304,6 +304,7 @@
                 </bk-form-item>
 
                 <bk-form-item
+                  v-if="gitExtendConfig[sourceControlType].isAuth"
                   :required="true"
                   :label="$t('代码仓库')"
                 >
@@ -321,6 +322,13 @@
                     {{ $t('将自动创建该私有仓库并完成模板代码初始化，当前用户默认为仓库管理员') }}
                   </p>
                 </bk-form-item>
+                <!-- 未授权提示 -->
+                <UnauthorizedTips
+                  v-else
+                  class="mt20"
+                  :type="sourceControlType"
+                  :data="gitExtendConfig[sourceControlType]"
+                />
               </template>
             </bk-form>
 
@@ -646,6 +654,7 @@ import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import ExamplesDirectory from '@/components/examples-directory';
 import PlatformCodeRepositoryForm from '@/views/dev-center/create-app/comps/platform-code-repository-form.vue';
 import CodeSourceSelector from '@/views/dev-center/create-app/comps/code-source-selector.vue';
+import UnauthorizedTips from '@/views/dev-center/create-app/comps/unauthorized-tips.vue';
 
 export default {
   components: {
@@ -657,6 +666,7 @@ export default {
     ExamplesDirectory,
     PlatformCodeRepositoryForm,
     CodeSourceSelector,
+    UnauthorizedTips,
   },
   mixins: [appPreloadMixin],
   data() {
@@ -1173,6 +1183,16 @@ export default {
 
       // Remove all serverError error messages
       this.globalErrorMessage = '';
+
+      // 授权校验
+      if (this.isCreatedByPlatform && !this.gitExtendConfig[this.sourceControlType].isAuth) {
+        this.handlePrev();
+        this.$paasMessage({
+          theme: 'error',
+          message: this.$t('请先授权代码源'),
+        });
+        return;
+      }
 
       if (this.sourceOrigin === this.GLOBAL.APP_TYPES.NORMAL_APP && !this.isCreatedByPlatform) {
         switch (this.sourceControlType) {

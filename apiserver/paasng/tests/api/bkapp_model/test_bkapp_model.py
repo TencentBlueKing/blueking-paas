@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from pathlib import Path
+
 import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
@@ -548,6 +550,11 @@ class TestModuleProcessSpecWithMonitoringViewSet:
 
 
 class TestModuleProcessSpecWithProcComponentsViewSet:
+    @pytest.fixture(autouse=True)
+    def _mock_components_dir(self, monkeypatch):
+        test_dir = Path(settings.BASE_DIR) / "tests" / "support-files" / "test_components"
+        monkeypatch.setattr("paasng.accessories.proc_components.manager.DEFAULT_COMPONENT_DIR", test_dir)
+
     @pytest.fixture()
     def web(self, bk_module):
         return G(
@@ -558,7 +565,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
             args=["-m", "http.server"],
             port=8000,
             components=[
-                Component(name="env_overlay", version="v2"),
+                Component(name="test_env_overlay", version="v2"),
             ],
         )
 
@@ -569,7 +576,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
             (
                 [
                     {
-                        "name": "env_overlay",
+                        "name": "test_env_overlay",
                         "version": "v1",
                         "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
                     }
@@ -581,13 +588,13 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
             (
                 [
                     {
-                        "name": "env_overlay",
+                        "name": "test_env_overlay",
                         "version": "v2",
                         "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
                     }
                 ],
                 400,
-                "proc_specs.0.components: 组件 env_overlay-v2 不存在",
+                "proc_specs.0.components: 组件 test_env_overlay-v2 不存在",
             ),
             (
                 [
@@ -604,7 +611,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
             (
                 [
                     {
-                        "name": "env_overlay",
+                        "name": "test_env_overlay",
                         "version": "v1",
                         "properties": {"invalid": [{"proc_xxx": "FOO", "value": "1"}]},
                     }
@@ -647,7 +654,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
                 "args": ["http.server"],
                 "components": [
                     {
-                        "name": "env_overlay",
+                        "name": "test_env_overlay",
                         "version": "v1",
                         "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
                     }
@@ -660,7 +667,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
         assert resp.status_code == 200
         assert resp.data["proc_specs"][0]["components"] == [
             {
-                "name": "env_overlay",
+                "name": "test_env_overlay",
                 "version": "v1",
                 "properties": {"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
             }

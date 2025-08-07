@@ -262,6 +262,8 @@ if SENTRY_DSN:
 
 # 增强服务供应商类
 PAAS_SERVICE_PROVIDER_CLS = "svc_mysql.vendor.provider.Provider"
+# 增强服务方案配置 schema 类
+PAAS_SERVICE_PLAN_SCHEMA_CLS = "svc_mysql.vendor.schema.PlanSchema"
 # 增强服务实例信息渲染函数
 PAAS_SERVICE_SVC_INSTANCE_RENDER_FUNC = "svc_mysql.vendor.render.render_instance_data"
 

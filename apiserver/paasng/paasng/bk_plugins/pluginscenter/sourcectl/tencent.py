@@ -296,7 +296,7 @@ class PluginRepoInitializer:
             self._client.add(dest_dir, Path("."))
             self._fix_git_user_config(dest_dir / ".git" / "config")
             # git commit -m "init repo"
-            self._client.commit(dest_dir, message="init repo")
+            self._client.commit(dest_dir, message="feat: init repo")
             # git push
             self._client.push(dest_dir)
 

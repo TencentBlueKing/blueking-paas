@@ -111,6 +111,7 @@ class RemoteServiceSLZ(serializers.Serializer):
     is_active = serializers.BooleanField(required=False, default=True)
     is_visible = serializers.BooleanField()
     plans = RemotePlanSLZ(many=True)
+    plan_schema = serializers.JSONField(required=False, default=dict)
 
 
 # Serializers end

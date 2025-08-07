@@ -71,10 +71,10 @@ class ComponentLoader:
 
     def _get_component_versions(self, component_name: str) -> List[str]:
         """获取指定组件类型的所有版本"""
-        type_dir = self.components_dir / component_name
-        if not type_dir.exists():
+        name_dir = self.components_dir / component_name
+        if not name_dir.exists():
             raise ComponentNotFound(f"Component type not found: {component_name}")
-        return [d.name for d in type_dir.iterdir() if d.is_dir()]
+        return [d.name for d in name_dir.iterdir() if d.is_dir()]
 
 
 def validate_component_properties(component_name: str, version: str, properties: Optional[Any]):

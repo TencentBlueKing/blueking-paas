@@ -584,7 +584,7 @@ class TestModuleProcessSpecWithProcComponentsViewSet:
                 200,
                 "",
             ),
-            # invalid type or version
+            # invalid name or version
             (
                 [
                     {

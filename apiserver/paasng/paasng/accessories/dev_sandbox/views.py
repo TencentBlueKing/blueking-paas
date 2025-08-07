@@ -270,11 +270,11 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         operation_description="返回沙箱使用的增强服务",
         responses={status.HTTP_200_OK: DevSandboxAddonServicesListOutputSLZ()},
     )
-    def addon_services_list(self, request, code, module_name, environment, *args, **kwargs):
+    def addons_services_list(self, request, code, module_name, environment, *args, **kwargs):
         dev_sandbox_code = self.kwargs.get("dev_sandbox_code")
 
         cache_key = f"dev_sandbox_addons_{request.user.pk}_{dev_sandbox_code}"
-        enabled_services = cache.get(cache_key, [])
+        enabled_addons_services = cache.get(cache_key, [])
 
         env = self.get_env_via_path()
         engine_app = env.get_engine_app()
@@ -283,7 +283,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         all_rels = provisioned_rels + unprovisioned_rels
 
         # 根据用户选择的增强服务筛选需要展示的增强服务
-        all_rels = [rel for rel in all_rels if rel.get_service().name in enabled_services]
+        all_rels = [rel for rel in all_rels if rel.get_service().name in enabled_addons_services]
 
         return Response(data=DevSandboxAddonServicesListOutputSLZ(all_rels, many=True).data)
 

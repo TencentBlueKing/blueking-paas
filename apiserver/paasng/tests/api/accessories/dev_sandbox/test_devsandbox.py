@@ -253,7 +253,7 @@ class TestEnvVarsDevSandbox:
         assert "EXISTING_VAR" not in env_var_keys
 
 
-class TestAddonServicesList:
+class TestAddonsServicesList:
     """测试获取沙箱使用的增强服务列表
 
     主要验证 addon_services_list API 的筛选逻辑：根据用户选择的增强服务列表过滤返回结果，因此这里简单模拟 Service 和 Rel 对象
@@ -316,7 +316,7 @@ class TestAddonServicesList:
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/"
             f"envs/stag/"
-            f"dev_sandboxes/{bk_dev_sandbox.code}/addon_services/"
+            f"dev_sandboxes/{bk_dev_sandbox.code}/addons_services/"
         )
 
         # 模拟增强服务
@@ -349,7 +349,7 @@ class TestAddonServicesList:
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/"
             f"envs/stag/"
-            f"dev_sandboxes/{bk_dev_sandbox.code}/addon_services/"
+            f"dev_sandboxes/{bk_dev_sandbox.code}/addons_services/"
         )
 
         # 模拟增强服务

@@ -50,13 +50,17 @@ export default {
       type: Array,
       default: () => [],
     },
+    data: {
+      type: Object,
+      default: () => ({}),
+    },
   },
   data() {
     return {
       formData: {
         repository_url: '',
       },
-      repositoryName: `${this.appId}-${this.moduleName}`,
+      repositoryName: '',
       selectValue: '',
       selectLoading: false,
       selectOptions: [],
@@ -82,13 +86,13 @@ export default {
     },
     appId: {
       handler(newAppId) {
-        this.repositoryName = `${newAppId}-${this.moduleName}`;
+        this.repositoryName = this.formatRepositoryName(newAppId, this.moduleName);
       },
       immediate: true,
     },
     moduleName: {
       handler(newModuleName) {
-        this.repositoryName = `${this.appId}-${newModuleName}`;
+        this.repositoryName = this.formatRepositoryName(this.appId, newModuleName);
       },
       immediate: true,
     },
@@ -99,15 +103,13 @@ export default {
       try {
         const res = await this.$store.dispatch('createApp/getNewCodeRepositoryOptions', { type });
         // 将当前用户名作为默认选项
-        this.selectOptions =
-          [
-            {
-              name: this.curUsername,
-              path: this.curUsername,
-            },
-            ...res.results,
-          ] || [];
+        const baseOption = { name: this.curUsername, path: this.curUsername };
+        this.selectOptions = [baseOption, ...res.results] || [];
         this.selectValue = this.curUsername || '';
+        if (Object.keys(this.data)?.length) {
+          const curOption = this.selectOptions.find((item) => item.web_url === this.data.repo_group);
+          this.selectValue = curOption?.name ?? this.curUsername;
+        }
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
@@ -125,6 +127,12 @@ export default {
         repo_name: this.repositoryName,
         repo_group: selectedItem.web_url,
       };
+    },
+    formatRepositoryName(appId, moduleName) {
+      if (moduleName) {
+        return `${appId}-${moduleName}`;
+      }
+      return appId || '';
     },
   },
 };

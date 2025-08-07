@@ -3064,5 +3064,5 @@ export default {
   已有代码仓库: 'Existing Code Repository',
   提交代码到代码仓库: 'Submit Code to Repository',
   '新建代码仓库（由平台自动创建）': 'Create New Repository (Automatically Created by the Platform)',
-  '将自动创建该开源仓库，将模版代码初始化到仓库中，并将创建者初始化为仓库管理员': 'This open-source repository will be automatically created, the template code will be initialized in the repository, and the creator will be initialized as the repository administrator',
+  '将自动创建该私有仓库并完成模板代码初始化，当前用户默认为仓库管理员': 'The private repository will be automatically created and the template code will be initialized, with the current user set as the default repository administrator',
 };

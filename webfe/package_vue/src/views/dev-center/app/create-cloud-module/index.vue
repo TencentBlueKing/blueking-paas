@@ -279,7 +279,6 @@
               <bk-form-item
                 :required="true"
                 :label="$t('仓库类型')"
-                ext-cls="form-item-cls mt20"
               >
                 <bk-radio-group v-model="codeRepositoryConfig.type">
                   <bk-radio :value="'existing'">{{ $t('已有代码仓库') }}</bk-radio>
@@ -289,25 +288,40 @@
                 </bk-radio-group>
               </bk-form-item>
 
-              <bk-form-item
-                v-show="isCreatedByPlatform"
-                :required="true"
-                :label="$t('代码仓库')"
-                ext-cls="form-item-cls mt20"
-              >
-                <PlatformCodeRepositoryForm
-                  ref="newCodeRepositoryForm"
-                  :app-id="curAppInfo.application?.code"
-                  :module-name="formData.name"
-                  :list="codeRepositoryConfig.creationRepositories"
-                ></PlatformCodeRepositoryForm>
-                <p
-                  slot="tip"
-                  class="g-tip"
+              <!-- 新建代码仓库（由平台自动创建） -->
+              <template v-if="isCreatedByPlatform">
+                <bk-form-item
+                  :required="true"
+                  :label="$t('代码源')"
                 >
-                  {{ $t('将自动创建该开源仓库，将模版代码初始化到仓库中，并将创建者初始化为仓库管理员') }}
-                </p>
-              </bk-form-item>
+                  <CodeSourceSelector
+                    :items="codeRepositoryConfig.creationRepositories"
+                    :value="0"
+                    selection-type="index"
+                    :clickable="false"
+                    :auto-select-single="true"
+                  />
+                </bk-form-item>
+
+                <bk-form-item
+                  :required="true"
+                  :label="$t('代码仓库')"
+                >
+                  <PlatformCodeRepositoryForm
+                    ref="newCodeRepositoryForm"
+                    :app-id="curAppInfo.application?.code"
+                    :module-name="formData.name"
+                    :list="codeRepositoryConfig.creationRepositories"
+                    :data="codeRepositoryConfig.formData"
+                  ></PlatformCodeRepositoryForm>
+                  <p
+                    slot="tip"
+                    class="g-tip"
+                  >
+                    {{ $t('将自动创建该私有仓库并完成模板代码初始化，当前用户默认为仓库管理员') }}
+                  </p>
+                </bk-form-item>
+              </template>
             </bk-form>
 
             <template v-if="!isCreatedByPlatform">
@@ -315,17 +329,12 @@
                 <label class="form-label">
                   {{ $t('代码源') }}
                 </label>
-                <div
-                  v-for="(item, index) in sourceControlTypes"
-                  :key="index"
-                  :class="['code-depot-item mr10', { on: item.value === sourceControlType }]"
-                  @click="changeSourceControl(item)"
-                >
-                  <img :src="'/static/images/' + item.imgSrc + '.png'" />
-                  <p class="sourceControlTypeInfo">
-                    {{ item.name }}
-                  </p>
-                </div>
+                <CodeSourceSelector
+                  :items="sourceControlTypes"
+                  :value="sourceControlType"
+                  selection-type="value"
+                  @change="changeSourceControl"
+                />
               </section>
 
               <template v-if="sourceOrigin === GLOBAL.APP_TYPES.NORMAL_APP">
@@ -636,6 +645,7 @@ import deployHook from '@/views/dev-center/app/engine/cloud-deployment/deploy-ho
 import { TE_MIRROR_EXAMPLE } from '@/common/constants.js';
 import ExamplesDirectory from '@/components/examples-directory';
 import PlatformCodeRepositoryForm from '@/views/dev-center/create-app/comps/platform-code-repository-form.vue';
+import CodeSourceSelector from '@/views/dev-center/create-app/comps/code-source-selector.vue';
 
 export default {
   components: {
@@ -646,6 +656,7 @@ export default {
     deployHook,
     ExamplesDirectory,
     PlatformCodeRepositoryForm,
+    CodeSourceSelector,
   },
   mixins: [appPreloadMixin],
   data() {

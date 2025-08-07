@@ -79,7 +79,7 @@ export default {
     background: #f5f7fa;
     border-radius: 2px;
     line-height: 22px;
-    font-family: MicrosoftYaHei;
+    font-family: Consolas, monospace, tahoma, Arial;
     font-size: 14px;
     color: #313238;
     .code {

@@ -375,24 +375,44 @@
                   </bk-radio-group>
                 </bk-form-item>
 
-                <bk-form-item
-                  v-show="isCreatedByPlatform"
-                  :required="true"
-                  :label="$t('代码仓库')"
-                  ext-cls="form-item-cls mt20"
-                >
-                  <PlatformCodeRepositoryForm
-                    ref="newCodeRepositoryForm"
-                    :app-id="formData.code"
-                    :list="codeRepositoryConfig.creationRepositories"
-                  ></PlatformCodeRepositoryForm>
-                  <p
-                    slot="tip"
-                    class="g-tip"
+                <!-- 新建代码仓库（由平台自动创建） -->
+                <template v-if="isCreatedByPlatform">
+                  <bk-form-item
+                    :required="true"
+                    :label="$t('代码源')"
+                    ext-cls="form-item-cls mt20"
                   >
-                    {{ $t('将自动创建该开源仓库，将模版代码初始化到仓库中，并将创建者初始化为仓库管理员') }}
-                  </p>
-                </bk-form-item>
+                    <!-- 默认只有一项 -->
+                    <CodeSourceSelector
+                      :items="codeRepositoryConfig.creationRepositories"
+                      :value="0"
+                      :clickable="false"
+                      :auto-select-single="true"
+                      selection-type="index"
+                    />
+                  </bk-form-item>
+
+                  <bk-form-item
+                    :required="true"
+                    :label="$t('代码仓库')"
+                    ext-cls="form-item-cls mt20"
+                  >
+                    <!-- 创建应用只需展示应用 code -->
+                    <PlatformCodeRepositoryForm
+                      ref="newCodeRepositoryForm"
+                      :app-id="formData.code"
+                      :module-name="''"
+                      :list="codeRepositoryConfig.creationRepositories"
+                      :data="codeRepositoryConfig.formData"
+                    ></PlatformCodeRepositoryForm>
+                    <p
+                      slot="tip"
+                      class="g-tip"
+                    >
+                      {{ $t('将自动创建该私有仓库并完成模板代码初始化，当前用户默认为仓库管理员') }}
+                    </p>
+                  </bk-form-item>
+                </template>
               </template>
 
               <template v-if="!isCreatedByPlatform">
@@ -402,22 +422,13 @@
                   error-display-type="normal"
                   ext-cls="form-item-cls mt20"
                 >
-                  <div class="flex-row align-items-center code-depot mb20">
-                    <div
-                      v-for="(item, index) in sourceControlTypes"
-                      :key="index"
-                      :class="['code-depot-item mr10', { on: item.value === sourceControlTypeItem }]"
-                      @click="changeSourceControl(item)"
-                    >
-                      <img :src="'/static/images/' + item.imgSrc + '.png'" />
-                      <div
-                        class="source-control-title"
-                        :title="item.name"
-                      >
-                        {{ item.name }}
-                      </div>
-                    </div>
-                  </div>
+                  <CodeSourceSelector
+                    class="mb20"
+                    :items="sourceControlTypes"
+                    :value="sourceControlTypeItem"
+                    selection-type="value"
+                    @change="changeSourceControl"
+                  />
                 </bk-form-item>
                 <section v-if="curSourceControl && curSourceControl.auth_method === 'oauth'">
                   <git-extend
@@ -745,6 +756,7 @@ import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import { mapGetters, mapState } from 'vuex';
 import ExamplesDirectory from '@/components/examples-directory';
 import PlatformCodeRepositoryForm from './comps/platform-code-repository-form.vue';
+import CodeSourceSelector from './comps/code-source-selector.vue';
 
 export default {
   components: {
@@ -757,6 +769,7 @@ export default {
     createSmartApp,
     ExamplesDirectory,
     PlatformCodeRepositoryForm,
+    CodeSourceSelector,
   },
   mixins: [sidebarDiffMixin],
   data() {
@@ -1538,8 +1551,9 @@ export default {
         };
       }
 
-      // 由平台创建代码仓库过滤source_repo_url
+      // 新建代码仓库（由平台自动创建）过滤 source_repo_url
       if (this.isCreatedByPlatform) {
+        params.source_config.write_template_to_repo = !!params.source_config.source_init_template;
         delete params.source_config.source_repo_url;
       }
 
@@ -1565,13 +1579,79 @@ export default {
           },
         });
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.handleAppCreationSpecificErrors(e);
       } finally {
         this.formLoading = false;
       }
+    },
+
+    // 处理应用创建过程中的特定错误
+    handleAppCreationSpecificErrors(error) {
+      const { code, detail, message } = error;
+
+      // 特殊错误代码集合
+      const errorCodeList = [
+        'REPO_ACCESS_TOKEN_PERM_DENIED',
+        'REPO_DEFAULT_SCOPE_PERMISSION_ERROR',
+        'CREATE_APP_FAILED',
+      ];
+
+      if (errorCodeList.includes(code)) {
+        this.handlePrev();
+        if (code !== 'CREATE_APP_FAILED') {
+          this.showCodeAuthModal(code, detail || message);
+          return;
+        }
+      }
+
+      this.catchErrorHandler(error);
+    },
+
+    /**
+     * 显示代码授权弹窗
+     * @param {string} code - 错误代码
+     * @param {string} message - 错误消息
+     */
+    showCodeAuthModal(code, message) {
+      const h = this.$createElement;
+      const { href: authPageUrl } = this.$router.resolve({ name: 'serviceCode' });
+
+      const messageContent = h(
+        'div',
+        {
+          class: 'flex-row justify-content-between',
+          style: { width: '100%' },
+        },
+        [message, this.createAuthLinkButton(h, authPageUrl)]
+      );
+
+      this.$paasMessage({
+        theme: 'error',
+        message: messageContent,
+        delay: 0, // 消息不自动关闭
+        extCls: 'custom-message-close-icon-ml5',
+      });
+    },
+
+    /**
+     * 创建授权链接按钮
+     * @param {Function} h - createElement 函数
+     * @param {string} authPageUrl - 授权页面URL
+     */
+    createAuthLinkButton(h, authPageUrl) {
+      return h(
+        'div',
+        {
+          style: {
+            color: '#3a84ff',
+            cursor: 'pointer',
+          },
+          on: {
+            click: () => window.open(authPageUrl, '_blank'),
+          },
+        },
+        [h('i', { class: 'paasng-icon paasng-jump-link mr5' }), this.$t('查看授权信息')]
+      );
     },
 
     // 初始化应用编排数据

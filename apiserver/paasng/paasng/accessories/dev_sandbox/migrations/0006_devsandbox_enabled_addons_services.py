@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='devsandbox',
             name='enabled_addons_services',
-            field=paasng.accessories.dev_sandbox.models.EnabledAddonsServicesField(default=list, help_text='用户选择复用的增强服务'),
+            field=paasng.accessories.dev_sandbox.models.EnabledAddonsServicesField(default=list, help_text='用户复用的增强服务'),
         ),
     ]

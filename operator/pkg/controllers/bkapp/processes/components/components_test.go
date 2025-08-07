@@ -19,6 +19,9 @@
 package components_test
 
 import (
+	"os"
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -43,9 +46,51 @@ var _ = Describe("ComponentMutator", func() {
 
 	Describe("PatchToDeployment", func() {
 		var deploy *appsv1.Deployment
+		var tempDir string
 
 		BeforeEach(func() {
-			componentsMgr.DefaultComponentDir = "../../../../components/components"
+			tempDir, _ = os.MkdirTemp("", "components_test")
+			componentsMgr.DefaultComponentDir = tempDir
+
+			// 创建测试组件结构
+			schema := `{
+  "type": "object",
+  "required": ["env"],
+  "properties": {
+    "env": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}`
+
+			template := `
+spec:
+  template:
+    spec:
+      containers:
+        - name: {{.procName}}
+          env:
+            {{- range .env }}
+            - name: {{.name}}
+              value: {{.value}}
+            {{- end }}`
+			createTestComponent(tempDir, "test_env_overlay", "v1", schema, template)
 
 			deploy = &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
@@ -79,12 +124,16 @@ var _ = Describe("ComponentMutator", func() {
 			}
 		})
 
-		It("apply env_overlay component to deployment", func() {
+		AfterEach(func() {
+			Expect(os.RemoveAll(tempDir)).To(Succeed())
+		})
+
+		It("apply component to deployment", func() {
 			proc := &paasv1alpha2.Process{
 				Name: "web",
 				Components: []paasv1alpha2.Component{
 					{
-						Name:    "env_overlay",
+						Name:    "test_env_overlay",
 						Version: "v1",
 						Properties: runtime.RawExtension{
 							Raw: []byte(
@@ -133,3 +182,16 @@ var _ = Describe("ComponentMutator", func() {
 		})
 	})
 })
+
+func createTestComponent(baseDir, cType, version, schema, template string) {
+	versionDir := filepath.Join(baseDir, cType, version)
+	Expect(os.MkdirAll(versionDir, 0o755)).To(Succeed())
+
+	// 创建 schema.json
+	schemaPath := filepath.Join(versionDir, "schema.json")
+	Expect(os.WriteFile(schemaPath, []byte(schema), 0o644)).To(Succeed())
+
+	// 创建 template.yaml
+	templatePath := filepath.Join(versionDir, "template.yaml")
+	Expect(os.WriteFile(templatePath, []byte(template), 0o644)).To(Succeed())
+}

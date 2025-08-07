@@ -21,6 +21,8 @@ package v1alpha2_test
 import (
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -1436,9 +1438,39 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 
 	_ = Describe("test webhook.Validator validate process components", func() {
 		var bkapp *paasv1alpha2.BkApp
+		var tempDir string
 
 		BeforeEach(func() {
-			components.DefaultComponentDir = "../../pkg/components/components"
+			tempDir, _ = os.MkdirTemp("", "components_test")
+			components.DefaultComponentDir = tempDir
+			// 创建测试组件结构
+			schema := `{
+  "type": "object",
+  "required": ["env"],
+  "properties": {
+    "env": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}`
+			createTestComponent(tempDir, "test_env_overlay", "v1", schema, "template: overlay")
+
 			bkapp = &paasv1alpha2.BkApp{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       paasv1alpha2.KindBkApp,
@@ -1466,10 +1498,14 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 			}
 		})
 
-		It("env_overlay component", func() {
+		AfterEach(func() {
+			Expect(os.RemoveAll(tempDir)).To(Succeed())
+		})
+
+		It("valid component", func() {
 			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
 				{
-					Name:    "env_overlay",
+					Name:    "test_env_overlay",
 					Version: "v1",
 					Properties: runtime.RawExtension{
 						Raw: []byte(
@@ -1483,10 +1519,10 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 			Expect(err).To(BeNil())
 		})
 
-		It("env_overlay component with invalid properties", func() {
+		It("component with invalid properties", func() {
 			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
 				{
-					Name:    "env_overlay",
+					Name:    "test_env_overlay",
 					Version: "v1",
 					Properties: runtime.RawExtension{
 						Raw: []byte(
@@ -1501,10 +1537,10 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 			Expect(err.Error()).To(ContainSubstring("properties validation failed"))
 		})
 
-		It("invalid component type", func() {
+		It("invalid component name", func() {
 			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
 				{
-					Name:    "invalid_type",
+					Name:    "invalid_name",
 					Version: "v1",
 					Properties: runtime.RawExtension{
 						Raw: []byte(
@@ -1538,3 +1574,16 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 		})
 	})
 })
+
+func createTestComponent(baseDir, cType, version, schema, template string) {
+	versionDir := filepath.Join(baseDir, cType, version)
+	Expect(os.MkdirAll(versionDir, 0o755)).To(Succeed())
+
+	// 创建 schema.json
+	schemaPath := filepath.Join(versionDir, "schema.json")
+	Expect(os.WriteFile(schemaPath, []byte(schema), 0o644)).To(Succeed())
+
+	// 创建 template.yaml
+	templatePath := filepath.Join(versionDir, "template.yaml")
+	Expect(os.WriteFile(templatePath, []byte(template), 0o644)).To(Succeed())
+}

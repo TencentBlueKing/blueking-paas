@@ -24,44 +24,28 @@ from jsonschema.exceptions import ValidationError as SchemaValidationError
 
 from paasng.accessories.proc_components.constants import DEFAULT_COMPONENT_DIR
 
+from .components import ComponentInfo
 from .exceptions import ComponentNotFound, ComponentPropertiesInvalid
 
 
 class ComponentLoader:
     def __init__(self):
-        """
-        初始化组件管理器
-
-        :param components_dir: 组件根目录路径
-        """
+        """初始化组件管理器"""
         self.components_dir = DEFAULT_COMPONENT_DIR
 
-    def get_all_components(self) -> Dict[str, Dict[str, Dict]]:
-        """获取所有组件信息的结构化数据
-        返回值结构说明：
-        {
-            "组件名称1": {                  # 第一层：组件名称作为键
-                "版本号1": {                # 第二层：该组件的版本号作为键
-                    "schema": {...},        # 第三层：该版本组件的 schema 定义
-                    "documentation": "..."  # 第三层：该版本组件的文档说明
-                },
-                "版本号2": {
-                    # 同版本号1的结构
-                }
-            },
-            "组件名称2": {
-                # 同组件名称1的结构
-            }
-        }
-        """
-        components: Dict[str, Dict[str, Dict]] = {}
+    def get_all_components(self) -> List[ComponentInfo]:
+        """获取所有组件信息的列表数据"""
+        components = []
         for component_name in self._get_component_names():
-            components[component_name] = {}
             for version in self._get_component_versions(component_name):
-                components[component_name][version] = {
-                    "schema": self.get_component_schema(component_name, version),
-                    "documentation": self._get_component_documentation(component_name, version),
-                }
+                components.append(
+                    ComponentInfo(
+                        name=component_name,
+                        version=version,
+                        schema=self.get_component_schema(component_name, version),
+                        documentation=self._get_component_documentation(component_name, version),
+                    )
+                )
         return components
 
     def get_component_schema(self, component_name: str, version: str) -> Dict:

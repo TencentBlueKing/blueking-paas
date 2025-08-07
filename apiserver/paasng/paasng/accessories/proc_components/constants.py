@@ -14,7 +14,9 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-import os
+
 from pathlib import Path
 
-DEFAULT_COMPONENT_DIR = Path(os.path.dirname(__file__)) / "components"
+from django.conf import settings
+
+DEFAULT_COMPONENT_DIR = Path(settings.BASE_DIR) / "support-files" / "components"

@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from pathlib import Path
+
 import cattr
 import pytest
 from django.conf import settings
@@ -55,6 +57,11 @@ pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.
 
 
 class TestProcessesField:
+    @pytest.fixture(autouse=True)
+    def _mock_components_dir(self, monkeypatch):
+        test_dir = Path(settings.BASE_DIR) / "tests" / "support-files" / "test_components"
+        monkeypatch.setattr("paasng.accessories.proc_components.manager.DEFAULT_COMPONENT_DIR", test_dir)
+
     def test_python_framework_case(self, bk_module, bk_deployment):
         json_data = builder.make_module(
             module_name="test",
@@ -79,7 +86,7 @@ class TestProcessesField:
                         "replicas": 1,
                         "components": [
                             {
-                                "name": "env_overlay",
+                                "name": "test_env_overlay",
                                 "version": "v1",
                                 "properties": {
                                     "env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]
@@ -105,7 +112,7 @@ class TestProcessesField:
         )
         assert web.components == [
             Component(
-                name="env_overlay",
+                name="test_env_overlay",
                 version="v1",
                 properties={"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
             ),
@@ -149,7 +156,7 @@ class TestProcessesField:
                         "replicas": 1,
                         "components": [
                             {
-                                "name": "env_overlay",
+                                "name": "test_env_overlay",
                                 "version": "v1",
                                 "properties": {"envs": [{"procXX": "FOO", "value": "1"}]},
                             },

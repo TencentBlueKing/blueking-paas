@@ -15,25 +15,15 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from drf_yasg.utils import swagger_auto_schema
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
-from paasng.accessories.proc_components.manager import ComponentLoader
-
-from .exceptions import ComponentNotFound
-from .serializers import ComponentInfoOutputSerializer
+from dataclasses import dataclass
+from typing import Dict
 
 
-class ProcessComponentViewSet(viewsets.GenericViewSet):
-    permission_classes = [IsAuthenticated]
+@dataclass
+class ComponentInfo:
+    """组件信息"""
 
-    @swagger_auto_schema(operation_summary="获取进程组件列表")
-    def list(self, request):
-        mgr = ComponentLoader()
-        try:
-            components = mgr.get_all_components()
-        except ComponentNotFound:
-            return Response([])
-        return Response(ComponentInfoOutputSerializer(components, many=True).data)
+    name: str
+    version: str
+    schema: Dict
+    documentation: str

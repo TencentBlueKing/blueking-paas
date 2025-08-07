@@ -15,7 +15,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from pathlib import Path
+
 import pytest
+from django.conf import settings
 
 pytestmark = pytest.mark.django_db
 
@@ -23,34 +26,45 @@ pytestmark = pytest.mark.django_db
 class TestProcessComponentViewSet:
     """测试进程组件视图集"""
 
+    @pytest.fixture(autouse=True)
+    def _mock_components_dir(self, monkeypatch):
+        test_dir = Path(settings.BASE_DIR) / "tests" / "support-files" / "test_components"
+        monkeypatch.setattr("paasng.accessories.proc_components.manager.DEFAULT_COMPONENT_DIR", test_dir)
+
     def test_list(self, api_client):
         """测试获取进程组件列表"""
         resp = api_client.get("/api/proc_components")
         assert resp.status_code == 200
-        assert resp.data == {
-            "env_overlay": {
-                "v1": {
-                    "schema": {
-                        "type": "object",
-                        "required": ["env"],
-                        "properties": {
-                            "env": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "required": ["name", "value"],
-                                    "properties": {
-                                        "name": {"type": "string", "minLength": 1},
-                                        "value": {"type": "string"},
-                                    },
-                                    "additionalProperties": False,
+        assert resp.data == [
+            {
+                "name": "test_env_overlay",
+                "version": "v1",
+                "schema": {
+                    "type": "object",
+                    "required": ["env"],
+                    "properties": {
+                        "env": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["name", "value"],
+                                "properties": {
+                                    "name": {"type": "string", "minLength": 1},
+                                    "value": {"type": "string"},
                                 },
-                                "minItems": 1,
-                            }
-                        },
-                        "additionalProperties": False,
+                                "additionalProperties": False,
+                            },
+                            "minItems": 1,
+                        }
                     },
-                    "documentation": "",
-                }
+                    "additionalProperties": False,
+                },
+                "documentation": "test_env_overlay\n",
             },
-        }
+            {
+                "name": "test_sidecar",
+                "version": "v1",
+                "schema": {"description": "不需要任何参数", "type": "object", "additionalProperties": False},
+                "documentation": "test_sidecar\n",
+            },
+        ]

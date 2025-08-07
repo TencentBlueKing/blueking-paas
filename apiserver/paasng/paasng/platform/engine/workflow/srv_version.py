@@ -49,7 +49,7 @@ class ServerVersionChecker:
 
         # apiserver 版本信息, 根据 Helm 构建时, 注入容器的 env
         apiserver_version = settings.APISERVER_VERSION
-        versions["apiserver"] = apiserver_version
+        versions["apiserver"] = apiserver_version if apiserver_version else ""
 
         # 仅在打开检查开关和获取到 apiserver_version 的时候才需要检查
         if not settings.APISERVER_OPERATOR_VERSION_CHECK or not apiserver_version:

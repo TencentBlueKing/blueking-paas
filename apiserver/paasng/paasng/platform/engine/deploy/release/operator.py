@@ -19,7 +19,6 @@ import logging
 import time
 
 from django.db import IntegrityError
-from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs import svc_disc
@@ -197,14 +196,14 @@ def release_by_k8s_operator(
 def preflight_deploy(env: ModuleEnvironment, res: BkAppResource):
     """执行应用部署前的关键条件预检，确保集群满足部署要求。
 
+    - 仅云原生应用会校验 apiserver/operator 版本一致性, 若版本不一致, 中止部署流程
     - 当检测到应用声明了 bk/grpc 来暴露服务, 但集群不支持对应特性时, 中止部署流程
     """
-    # 检查平台的 apiserver 和 operator 版本信息的一致性
-    matched, versions = ServerVersionChecker(env).check_version()
-    if not matched:
-        raise ServerVersionCheckFailed(
-            reason=_("平台未正常部署, 无法进行应用部署, 请联系管理员. 平台各组件版本号: {}".format(versions))
-        )
+    try:
+        # 检查平台的 apiserver 和 operator 版本信息的一致性
+        ServerVersionChecker(env).validate_version()
+    except ServerVersionCheckFailed as e:
+        raise DeployShouldAbortError(str(e))
 
     if not is_exposed_grpc_svc(res):
         return

@@ -88,10 +88,3 @@ class InitDeployDescHandlerError(Exception):
 
 class ServerVersionCheckFailed(Exception):
     """Raise this exception when apiserver and operator versions do not match."""
-
-    def __init__(self, reason: str):
-        self.reason = reason
-        super().__init__(self.reason)
-
-    def __str__(self):
-        return self.reason

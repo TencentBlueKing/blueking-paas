@@ -23,6 +23,7 @@ from django.core.cache import cache
 
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.engine.exceptions import ServerVersionCheckFailed
 from paasng.platform.engine.workflow.srv_version import ServerVersionChecker
 from tests.utils.helpers import override_settings
 
@@ -49,47 +50,31 @@ class TestServerVersionChecker:
             "check_enabled",
             "apiserver_version",
             "operator_version",
-            "expected_matched",
-            "expected_versions",
+            "should_raise_exception",
         ),
         [
             # 非云原生应用
-            (ApplicationType.DEFAULT, True, "v1.0.0", "v1.0.0", True, {"apiserver": "", "operator": ""}),
+            (ApplicationType.DEFAULT, True, "v1.0.0", "v1.0.0", False),
             # 云原生应用, 检查开关关闭
-            (ApplicationType.CLOUD_NATIVE, False, "v1.0.0", "v1.0.0", True, {"apiserver": "v1.0.0", "operator": ""}),
+            (ApplicationType.CLOUD_NATIVE, False, "v1.0.0", "v1.0.0", False),
             # 云原生应用, 检查开关打开, 但 apiserver_version 为空
-            (ApplicationType.CLOUD_NATIVE, True, "", "v1.0.0", True, {"apiserver": "", "operator": ""}),
+            (ApplicationType.CLOUD_NATIVE, True, "", "v1.0.0", False),
             # 版本一致
-            (
-                ApplicationType.CLOUD_NATIVE,
-                True,
-                "v1.0.0",
-                "v1.0.0",
-                True,
-                {"apiserver": "v1.0.0", "operator": "v1.0.0"},
-            ),
+            (ApplicationType.CLOUD_NATIVE, True, "v1.0.0", "v1.0.0", False),
             # 版本不一致
-            (
-                ApplicationType.CLOUD_NATIVE,
-                True,
-                "v2.0.0",
-                "v1.0.0",
-                False,
-                {"apiserver": "v2.0.0", "operator": "v1.0.0"},
-            ),
+            (ApplicationType.CLOUD_NATIVE, True, "v2.0.0", "v1.0.0", True),
             # operator 版本获取失败
-            (ApplicationType.CLOUD_NATIVE, True, "v1.0.0", "", False, {"apiserver": "v1.0.0", "operator": ""}),
+            (ApplicationType.CLOUD_NATIVE, True, "v1.0.0", "", True),
         ],
     )
-    def test_check_version(
+    def test_validate_version(
         self,
         bk_stag_env,
         app_type,
         check_enabled,
         apiserver_version,
         operator_version,
-        expected_matched,
-        expected_versions,
+        should_raise_exception,
     ):
         """测试检查 apiserver 和 operator 版本的一致性"""
         # 设置应用类型
@@ -106,7 +91,8 @@ class TestServerVersionChecker:
                 return_value=fake_release,
             ),
         ):
-            matched, versions = ServerVersionChecker(bk_stag_env).check_version()
-
-            assert matched == expected_matched
-            assert versions == expected_versions
+            if should_raise_exception:
+                with pytest.raises(ServerVersionCheckFailed):
+                    ServerVersionChecker(bk_stag_env).validate_version()
+            else:
+                ServerVersionChecker(bk_stag_env).validate_version()

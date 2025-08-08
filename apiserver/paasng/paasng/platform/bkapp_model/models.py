@@ -27,6 +27,7 @@ from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
+    Component,
     HostAlias,
     Metric,
     Monitoring,
@@ -65,6 +66,7 @@ def env_overlay_getter_factory(field_name: str):
 AutoscalingConfigField = make_json_field("AutoscalingConfigField", AutoscalingConfig)
 ProbeSetField = make_json_field("ProbeSetField", ProbeSet)
 ProcServicesField = make_json_field("ProcServicesField", List[ProcService])
+ComponentsField = make_json_field("ComponentsField", List[Component])
 
 
 class ModuleProcessSpec(TimestampedModel):
@@ -91,6 +93,7 @@ class ModuleProcessSpec(TimestampedModel):
     autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
     scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
     probes: Optional[ProbeSet] = ProbeSetField("容器探针配置", default=None, null=True)
+    components: Optional[List[Component]] = ComponentsField("组件配置", default=None, null=True)
 
     tenant_id = tenant_id_field_factory()
 

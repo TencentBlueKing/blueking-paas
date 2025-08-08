@@ -1,0 +1,5 @@
+{
+  "description": "不需要任何参数",
+  "type": "object",
+  "additionalProperties": false
+}

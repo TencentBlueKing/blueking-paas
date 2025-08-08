@@ -20,6 +20,7 @@ import logging
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -27,7 +28,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource, SourceCodeFetchMethod
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paas_wl.bk_app.dev_sandbox.entities import SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.exceptions import (
@@ -57,8 +58,10 @@ from paasng.infras.accounts.permissions.application import application_perm_clas
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.utils.error_codes import error_codes
 
@@ -280,18 +283,35 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         if not dev_sandbox:
             raise error_codes.DEV_SANDBOX_NOT_FOUND
 
-        env = self.get_env_via_path()
+        # 沙箱环境复用 stag 环境的增强服务
+        env = self._get_stag_env()
         engine_app = env.get_engine_app()
         provisioned_rels = list(mixed_service_mgr.list_provisioned_rels(engine_app))
-        unprovisioned_rels = list(mixed_service_mgr.list_unprovisioned_rels(engine_app))
-        all_rels = provisioned_rels + unprovisioned_rels
 
         # 用户选择的增强服务
-        enabled_addons_services = dev_sandbox.list_enabled_addons_services()
-        # 根据用户选择的增强服务筛选需要展示的增强服务
-        all_rels = [rel for rel in all_rels if rel.get_service().name in enabled_addons_services]
+        enabled_addons_services = dev_sandbox.enabled_addons_services
 
-        return Response(data=DevSandboxAddonsServicesListOutputSLZ(all_rels, many=True).data)
+        # 根据用户选择的增强服务筛选需要展示的增强服务
+        provisioned_rels = [rel for rel in provisioned_rels if rel.get_service().name in enabled_addons_services]
+        selected_services = [rel.get_service() for rel in provisioned_rels]
+
+        return Response(data=DevSandboxAddonsServicesListOutputSLZ(selected_services, many=True).data)
+
+    def _get_stag_env(self) -> ModuleEnvironment:
+        """获取 stag 环境的环境变量"""
+
+        application = self.get_application()
+        module_name = self._get_param_from_kwargs(["module_name"])
+        environment = DevSandboxEnvVarSource.STAG
+
+        try:
+            module = application.get_module(module_name)
+        except Module.DoesNotExist:
+            raise Http404
+        try:
+            return module.get_envs(environment=environment)
+        except ModuleEnvironment.DoesNotExist:
+            raise Http404
 
 
 class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):

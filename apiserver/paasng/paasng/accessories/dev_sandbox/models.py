@@ -147,9 +147,5 @@ class DevSandbox(OwnerTimestampedModel):
         self.env_vars = json.dumps(env_vars)  # type: ignore
         self.save(update_fields=["env_vars", "updated"])
 
-    def list_enabled_addons_services(self) -> List[str]:
-        """获取用户复用的增强服务"""
-        return self.enabled_addons_services
-
     class Meta:
         unique_together = ("module", "owner")

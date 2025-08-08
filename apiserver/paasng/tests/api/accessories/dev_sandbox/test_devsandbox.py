@@ -329,7 +329,6 @@ class TestAddonsServicesList:
         url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/"
-            f"envs/stag/"
             f"dev_sandboxes/{bk_dev_sandbox.code}/addons_services/"
         )
 
@@ -337,11 +336,7 @@ class TestAddonsServicesList:
         with (
             mock.patch(
                 "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_provisioned_rels",
-                return_value=[mysql_rel, redis_rel],
-            ),
-            mock.patch(
-                "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_unprovisioned_rels",
-                return_value=[sentry_rel],
+                return_value=[mysql_rel, redis_rel, sentry_rel],
             ),
         ):
             resp = api_client.get(url)
@@ -349,7 +344,7 @@ class TestAddonsServicesList:
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert len(data) == 2
-        assert {item["service"]["name"] for item in data} == {"mysql", "redis"}
+        assert {item["name"] for item in data} == {"mysql", "redis"}
 
     def test_with_no_enabled_services(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
         bk_dev_sandbox.enabled_addons_services = []
@@ -362,7 +357,6 @@ class TestAddonsServicesList:
         url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/"
-            f"envs/stag/"
             f"dev_sandboxes/{bk_dev_sandbox.code}/addons_services/"
         )
 
@@ -373,4 +367,4 @@ class TestAddonsServicesList:
             resp = api_client.get(url)
 
         assert resp.status_code == status.HTTP_200_OK
-        assert len(resp.json()) == 0
+        assert resp.json() == []

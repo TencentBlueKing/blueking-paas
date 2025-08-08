@@ -43,7 +43,7 @@ urlpatterns = [
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/addons_services/$", include_envs=False),
         DevSandboxViewSet.as_view({"get": "list_addons_services"}),
-        name="accessories.dev_sandbox.addons_services_list",
+        name="accessories.dev_sandbox.list_addons_services",
     ),
     re_path(
         make_app_pattern(r"/dev_sandboxes/(?P<dev_sandbox_code>[^/]+)/env_vars/$", include_envs=False),

@@ -269,7 +269,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
     @swagger_auto_schema(
         tags=["accessories.dev_sandbox"],
-        operation_description="返回沙箱使用的增强服务",
+        operation_description="获取沙箱使用的增强服务",
         responses={status.HTTP_200_OK: DevSandboxAddonsServicesListOutputSLZ()},
     )
     def list_addons_services(self, request, *args, **kwargs):
@@ -292,8 +292,9 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         enabled_addons_services = dev_sandbox.enabled_addons_services
 
         # 根据用户选择的增强服务筛选需要展示的增强服务
-        provisioned_rels = [rel for rel in provisioned_rels if rel.get_service().name in enabled_addons_services]
-        selected_services = [rel.get_service() for rel in provisioned_rels]
+        selected_services = [
+            service for rel in provisioned_rels if (service := rel.get_service()).name in enabled_addons_services
+        ]
 
         return Response(data=DevSandboxAddonsServicesListOutputSLZ(selected_services, many=True).data)
 

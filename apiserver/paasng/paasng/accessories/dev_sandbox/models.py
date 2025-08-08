@@ -83,9 +83,6 @@ class DevSandboxQuerySet(models.QuerySet):
             {"key": key, "value": value, "source": DevSandboxEnvVarSource.STAG} for key, value in env_vars.items()
         ]
 
-        if enabled_addons_services is None:
-            enabled_addons_services = []
-
         return super().create(
             code=code,
             module=module,
@@ -96,7 +93,7 @@ class DevSandboxQuerySet(models.QuerySet):
             token=generate_password(),
             code_editor_config=code_editor_cfg,
             tenant_id=module.tenant_id,
-            enabled_addons_services=enabled_addons_services,
+            enabled_addons_services=enabled_addons_services or [],
         )
 
 

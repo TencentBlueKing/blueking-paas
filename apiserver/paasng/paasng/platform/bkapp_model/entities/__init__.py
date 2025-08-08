@@ -29,6 +29,7 @@
 
 from .addons import Addon, AddonSpec
 from .build import AppBuildConfig
+from .components import Component
 from .domain_resolution import DomainResolution, HostAlias
 from .env_vars import EnvVar, EnvVarOverlay
 from .hooks import HookCmd, Hooks
@@ -77,4 +78,6 @@ __all__ = [
     "Monitoring",
     "Observability",
     "Metric",
+    # component types
+    "Component",
 ]

@@ -21,6 +21,7 @@ Use `pydantic` to get good JSON-Schema support, which is essential for CRD.
 """
 
 import datetime
+import json
 from typing import Any, Dict, List, Literal, Union
 
 from pydantic import BaseModel, Field, validator
@@ -145,6 +146,29 @@ class ProcService(BaseModel):
     port: int | None = None
 
 
+class ProcComponent(BaseModel):
+    """
+    Process component model
+
+    :param name: The name of the component
+    :param version: The version of the component
+    :param properties: A dictionary of component properties
+    """
+
+    name: str
+    version: str
+    properties: Dict[str, Any] = {}
+
+    def dict(self, *args, **kwargs) -> Dict:
+        """Override dict() to serialize properties as JSON string"""
+        data = super().dict(*args, **kwargs)
+        if "properties" in data:
+            # 由于 properties 字段在 bkapp 模型中是 runtime.RawExtension
+            # 需要将其序列化为 JSON 字符串下发
+            data["properties"] = json.dumps(data["properties"]) if data["properties"] else None
+        return data
+
+
 class BkAppProcess(BaseModel):
     """Process resource"""
 
@@ -159,6 +183,7 @@ class BkAppProcess(BaseModel):
     autoscaling: AutoscalingSpec | None = None
     probes: ProbeSet | None = None
     services: List[ProcService] | None = None
+    components: List[ProcComponent] | None = None
 
 
 class Hook(BaseModel):

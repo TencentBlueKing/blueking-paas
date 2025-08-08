@@ -44,7 +44,7 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.bkapp_model.constants import ResQuotaPlan
-from paasng.platform.bkapp_model.entities import ProcService
+from paasng.platform.bkapp_model.entities import Component, ProcService
 from paasng.platform.bkapp_model.manifest import (
     AddonsManifestConstructor,
     BuiltinAnnotsManifestConstructor,
@@ -252,6 +252,19 @@ class TestProcessesManifestConstructor:
         process_web.save()
         return process_web
 
+    @pytest.fixture()
+    def process_web_with_proc_components(self, process_web) -> ModuleProcessSpec:
+        """ProcessSpec for web, with components"""
+        process_web.components = [
+            Component(
+                name="env_overlay",
+                version="v1",
+                properties={"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
+            ),
+        ]
+        process_web.save()
+        return process_web
+
     @pytest.mark.parametrize(
         ("plan_name", "expected"),
         [
@@ -297,6 +310,7 @@ class TestProcessesManifestConstructor:
                     "autoscaling": None,
                     "probes": None,
                     "services": None,
+                    "components": None,
                 }
             ],
             "envOverlay": {
@@ -339,6 +353,17 @@ class TestProcessesManifestConstructor:
         assert data["services"] == [
             {"name": "web", "port": 8000, "protocol": "TCP", "targetPort": 8000, "exposedType": {"name": "bk/http"}},
             {"name": "metric", "port": 8001, "protocol": "TCP", "targetPort": settings.CONTAINER_PORT},
+        ]
+
+    def test_integrated_proc_components(self, bk_module, blank_resource, process_web_with_proc_components):
+        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
+        data = blank_resource.spec.dict(exclude_none=True, include={"processes"})["processes"][0]
+        assert data["components"] == [
+            {
+                "properties": '{"env": [{"name": "proc_name", "value": "FOO"}, {"name": ' '"key", "value": "1"}]}',
+                "name": "env_overlay",
+                "version": "v1",
+            },
         ]
 
 

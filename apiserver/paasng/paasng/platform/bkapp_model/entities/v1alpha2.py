@@ -23,6 +23,7 @@ from paasng.utils.structure import NOTSET, AllowNotsetModel, NotSetType, prepare
 
 from .addons import Addon
 from .build import AppBuildConfig
+from .components import Component
 from .domain_resolution import DomainResolution
 from .env_vars import EnvVar, EnvVarOverlay
 from .hooks import Hooks
@@ -64,6 +65,7 @@ class BkAppSpec(AllowNotsetModel):
     :param svc_discovery: 服务发现
     :param env_overlay: 分环境重写配置
     :param observability: 可观测功能配置
+    :param components: 进程组件
     """
 
     build: Optional[AppBuildConfig] = None
@@ -76,3 +78,4 @@ class BkAppSpec(AllowNotsetModel):
     svc_discovery: SvcDiscConfig | NotSetType | None = NOTSET
     env_overlay: BkAppEnvOverlay | NotSetType | None = NOTSET
     observability: Optional[Observability] = None
+    components: Optional[List[Component]] = None

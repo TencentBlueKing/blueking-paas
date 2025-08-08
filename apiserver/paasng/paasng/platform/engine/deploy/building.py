@@ -53,10 +53,7 @@ from paasng.platform.engine.constants import BuildStatus, JobStatus, RuntimeType
 from paasng.platform.engine.deploy.base import DeployPoller
 from paasng.platform.engine.deploy.bg_build.bg_build import start_bg_build_process
 from paasng.platform.engine.deploy.release import start_release_step
-from paasng.platform.engine.exceptions import (
-    HandleAppDescriptionError,
-    InitDeployDescHandlerError,
-)
+from paasng.platform.engine.exceptions import HandleAppDescriptionError, InitDeployDescHandlerError
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
 from paasng.platform.engine.phases_steps.steps import update_step_by_line

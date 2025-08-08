@@ -70,7 +70,11 @@ class ServerVersionChecker:
             # 通常 apiserver 会先于 operator 升级. 版本不一致时, 主动清理缓存, 促使下次强制刷新
             cache.delete(cache_key)
             raise ServerVersionCheckFailed(
-                _("平台未正常部署，无法进行操作，请联系管理员。组件版本不一致：{}".format(versions))
+                _(
+                    "平台未正常部署，无法进行操作，请联系管理员。组件版本不一致：apiserver:'{}', operator:'{}'".format(
+                        versions["apiserver"], versions["operator"]
+                    )
+                )
             )
 
         return

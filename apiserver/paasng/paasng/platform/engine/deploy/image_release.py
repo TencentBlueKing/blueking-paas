@@ -97,7 +97,6 @@ class ImageReleaseMgr(DeployStep):
     def _handle_check_srv_version(self):
         """检查平台的 apiserver 和 operator 版本信息的一致性"""
         matched, versions = ServerVersionChecker(self.module_environment).check_version()
-        matched = False
         if not matched:
             raise ServerVersionCheckFailed(
                 reason=_("平台未正常部署, 无法进行应用部署, 请联系管理员. 平台各组件版本号: {}".format(versions))

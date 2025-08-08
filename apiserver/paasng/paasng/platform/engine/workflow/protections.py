@@ -17,13 +17,9 @@
 
 from typing import TYPE_CHECKING
 
-from django.conf import settings
-from django.core.cache import cache
 from django.db.models import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 
-from paas_wl.infras.cluster.helm import HelmClient
-from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.market.models import Product
 from paasng.core.core.protections.base import BaseCondition, BaseConditionChecker
 from paasng.core.core.protections.exceptions import ConditionNotMatched
@@ -171,44 +167,6 @@ class ApplicationExtraInfoCondition(DeployCondition):
             raise ConditionNotMatched(_("未完善应用基本信息"), self.action_name)
 
 
-class OperatorVersionCondition(DeployCondition):
-    """检查 apiserver 和 operator 版本信息是否一致"""
-
-    action_name = DeployConditions.CHECK_OPERATOR_VERSION.value
-
-    def validate(self):
-        # apiserver 根据 Helm 构建时, 注入容器 env
-        apiserver_version = settings.APISERVER_VERSION
-
-        # 仅在打开 检查开关的时候检查
-        if not settings.APISERVER_OPERATOR_VERSION_CHECK or not apiserver_version:
-            return
-
-        # operator 通过 helm 客户端获取
-        cluster_name = EnvClusterService(self.env).get_cluster_name()
-        # 使用缓存
-        cache_key = f"helm_release:{cluster_name}:operator_version"
-        operator_version = cache.get(cache_key)
-        if operator_version is None:
-            operator_release = HelmClient(cluster_name).get_release("bkpaas-app-operator")
-            operator_version = operator_release.chart.app_version if operator_release else None
-
-            if operator_version == apiserver_version:
-                # 通常 apiserver 会先于 operator 升级. 基于这一前提, 缓存时间设置为 24h, 进一步减少查询 helm release 的频次
-                cache.set(cache_key, operator_version, 24 * 60 * 60)
-                return
-
-        if operator_version != apiserver_version:
-            # 版本不一致时, 主动清理缓存, 促使下次强制刷新
-            cache.delete(cache_key)
-            message = _(
-                "apiserver 与 operator 版本不一致，apiserver 版本: {apiserver_version}，operator 版本: {operator_version}".format(
-                    apiserver_version=apiserver_version, operator_version=operator_version
-                )
-            )
-            raise ConditionNotMatched(message, self.action_name)
-
-
 class ModuleEnvDeployInspector(BaseConditionChecker):
     """Prepare to deploy a ModuleEnvironment"""
 
@@ -219,7 +177,6 @@ class ModuleEnvDeployInspector(BaseConditionChecker):
         ProcfileCondition,
         PluginTagValidationCondition,
         ApplicationExtraInfoCondition,
-        OperatorVersionCondition,
     ]
 
     def __init__(self, user: "User", env: "ModuleEnvironment"):

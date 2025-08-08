@@ -3065,10 +3065,6 @@ msgstr "Plugin category not set"
 msgid "未完善应用基本信息"
 msgstr "Incomplete app basic information"
 
-#: paasng/platform/engine/constants.py:137
-msgid "Operator 版本不匹配"
-msgstr ""
-
 #: paasng/platform/engine/constants.py:142
 msgid "使用 Buildpacks 构建"
 msgstr "Build using Buildpacks"

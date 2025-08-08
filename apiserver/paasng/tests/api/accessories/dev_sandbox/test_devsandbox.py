@@ -191,12 +191,12 @@ class TestEnvVarsDevSandbox:
     """沙箱环境变量"""
 
     def test_upsert_env_vars_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
-        env_var_url = (
+        url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
 
-        resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "new_value"})
+        resp = api_client.post(url, {"key": "NEW_VAR", "value": "new_value"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         bk_dev_sandbox.refresh_from_db()
@@ -206,7 +206,7 @@ class TestEnvVarsDevSandbox:
         assert "NEW_VAR" in updated_dict
         assert updated_dict["NEW_VAR"] == "new_value"
 
-        resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "updated_value"})
+        resp = api_client.post(url, {"key": "NEW_VAR", "value": "updated_value"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         bk_dev_sandbox.refresh_from_db()
@@ -250,3 +250,28 @@ class TestEnvVarsDevSandbox:
         env_vars = bk_dev_sandbox.list_env_vars()
         env_var_keys = {item["key"] for item in env_vars}
         assert "EXISTING_VAR" not in env_var_keys
+
+    def test_list_env_vars_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
+        url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
+        )
+        api_client.post(url, {"key": "TEST_VAR1", "value": "value1"})
+        api_client.post(url, {"key": "TEST_VAR2", "value": "value2"})
+        resp = api_client.get(url)
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json() == [
+            {"key": "TEST_VAR1", "value": "value1", "source": "custom"},
+            {"key": "TEST_VAR2", "value": "value2", "source": "custom"},
+        ]
+
+    def test_list_env_vars_empty(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
+        url = (
+            f"/api/bkapps/applications/{bk_cnative_app.code}/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
+        )
+        resp = api_client.get(url)
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json() == []

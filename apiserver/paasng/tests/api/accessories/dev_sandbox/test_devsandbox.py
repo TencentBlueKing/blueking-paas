@@ -191,12 +191,12 @@ class TestEnvVarsDevSandbox:
     """沙箱环境变量"""
 
     def test_upsert_env_vars_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
-        env_var_url = (
+        url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
             f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
 
-        resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "new_value"})
+        resp = api_client.post(url, {"key": "NEW_VAR", "value": "new_value"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         bk_dev_sandbox.refresh_from_db()
@@ -206,7 +206,7 @@ class TestEnvVarsDevSandbox:
         assert "NEW_VAR" in updated_dict
         assert updated_dict["NEW_VAR"] == "new_value"
 
-        resp = api_client.post(env_var_url, {"key": "NEW_VAR", "value": "updated_value"})
+        resp = api_client.post(url, {"key": "NEW_VAR", "value": "updated_value"})
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         bk_dev_sandbox.refresh_from_db()
@@ -251,102 +251,27 @@ class TestEnvVarsDevSandbox:
         env_var_keys = {item["key"] for item in env_vars}
         assert "EXISTING_VAR" not in env_var_keys
 
-
-class TestAddonsServicesList:
-    """测试获取沙箱使用的增强服务列表
-
-    主要验证 addon_services_list API 的筛选逻辑：根据用户选择的增强服务列表过滤返回结果，因此这里简单模拟 Service 和 Rel 对象
-    如果直接 mock 的话，需要模拟 get_service() 返回服务对象
-    但是序列化器在访问 get_service().name 时，实际访问的是 MagicMock 对象的属性
-    例如：
-        assert {"<MagicMock name='mock.get_service.name' id='4750617488'>",\n "<MagicMock name='mock.get_service.name' id='4755145296'>"}
-            == {'redis', 'mysql'}
-    """
-
-    def create_service_obj(self, name):
-        """创建简单的服务对象"""
-
-        class SimpleServiceObj:
-            def __init__(self, name):
-                self.name = name
-                self.uuid = f"{name}-uuid"
-                self.logo = f"{name}-logo"
-                self.display_name = name.capitalize()
-                self.description = f"{name} service"
-                self.category = mock.MagicMock()
-
-        return SimpleServiceObj(name)
-
-    def create_rel_obj(self, service):
-        """创建简单的关系对象"""
-
-        class SimpleRelObj:
-            def __init__(self, service):
-                self.service = service
-
-            def get_service(self):
-                return self.service
-
-        return SimpleRelObj(service)
-
-    def test_with_enabled_services(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
-        bk_dev_sandbox.enabled_addons_services = ["mysql", "redis"]
-        bk_dev_sandbox.save()
-
-        mysql_service = self.create_service_obj("mysql")
-        redis_service = self.create_service_obj("redis")
-        sentry_service = self.create_service_obj("sentry")
-
-        mysql_rel = self.create_rel_obj(mysql_service)
-        redis_rel = self.create_rel_obj(redis_service)
-        sentry_rel = self.create_rel_obj(sentry_service)
-
+    def test_list_env_vars_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
         url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/"
-            f"envs/stag/"
-            f"dev_sandboxes/{bk_dev_sandbox.code}/addons_services/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
-
-        # 模拟增强服务
-        with (
-            mock.patch(
-                "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_provisioned_rels",
-                return_value=[mysql_rel, redis_rel],
-            ),
-            mock.patch(
-                "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_unprovisioned_rels",
-                return_value=[sentry_rel],
-            ),
-        ):
-            resp = api_client.get(url)
+        api_client.post(url, {"key": "TEST_VAR1", "value": "value1"})
+        api_client.post(url, {"key": "TEST_VAR2", "value": "value2"})
+        resp = api_client.get(url)
 
         assert resp.status_code == status.HTTP_200_OK
-        data = resp.json()
-        assert len(data) == 2
-        assert {item["service"]["name"] for item in data} == {"mysql", "redis"}
+        assert resp.json() == [
+            {"key": "TEST_VAR1", "value": "value1", "source": "custom"},
+            {"key": "TEST_VAR2", "value": "value2", "source": "custom"},
+        ]
 
-    def test_with_no_enabled_services(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
-        bk_dev_sandbox.enabled_addons_services = []
-        bk_dev_sandbox.save()
-
-        mysql_service = self.create_service_obj("mysql")
-
-        mysql_rel = self.create_rel_obj(mysql_service)
-
+    def test_list_env_vars_empty(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
         url = (
             f"/api/bkapps/applications/{bk_cnative_app.code}/"
-            f"modules/{bk_module.name}/"
-            f"envs/stag/"
-            f"dev_sandboxes/{bk_dev_sandbox.code}/addons_services/"
+            f"modules/{bk_module.name}/dev_sandboxes/{bk_dev_sandbox.code}/env_vars/"
         )
-
-        # 模拟增强服务
-        with mock.patch(
-            "paasng.accessories.dev_sandbox.views.mixed_service_mgr.list_provisioned_rels", return_value=[mysql_rel]
-        ):
-            resp = api_client.get(url)
+        resp = api_client.get(url)
 
         assert resp.status_code == status.HTTP_200_OK
-        assert len(resp.json()) == 0
         assert resp.json() == []

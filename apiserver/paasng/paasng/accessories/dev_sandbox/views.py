@@ -40,18 +40,17 @@ from paasng.accessories.dev_sandbox.config_var import generate_env_vars, get_env
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.accessories.dev_sandbox.serializers import (
-    DevSandboxAddonsServicesListOutputSLZ,
     DevSandboxCommitInputSLZ,
     DevSandboxCommitOutputSLZ,
     DevSandboxCreateInputSLZ,
     DevSandboxCreateOutputSLZ,
+    DevSandboxEnvVarsListOutputSLZ,
     DevSandboxEnvVarsUpsertInputSLZ,
     DevSandboxListOutputSLZ,
     DevSandboxPreDeployCheckOutputSLZ,
     DevSandboxRetrieveOutputSLZ,
 )
 from paasng.accessories.dev_sandbox.source_code import upload_source_code
-from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import AppEnvironment
@@ -263,35 +262,6 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         result = bool(DevSandbox.objects.count() < settings.DEV_SANDBOX_COUNT_LIMIT)
         return Response(data=DevSandboxPreDeployCheckOutputSLZ({"result": result}).data)
 
-    @swagger_auto_schema(
-        tags=["accessories.dev_sandbox"],
-        operation_description="返回沙箱使用的增强服务",
-        responses={status.HTTP_200_OK: DevSandboxAddonsServicesListOutputSLZ()},
-    )
-    def list_addons_services(self, request, *args, **kwargs):
-        module = self.get_module_via_path()
-        dev_sandbox = DevSandbox.objects.filter(
-            module=module,
-            code=self.kwargs["dev_sandbox_code"],
-            owner=self.request.user.pk,
-        ).first()
-
-        if not dev_sandbox:
-            raise error_codes.DEV_SANDBOX_NOT_FOUND
-
-        env = self.get_env_via_path()
-        engine_app = env.get_engine_app()
-        provisioned_rels = list(mixed_service_mgr.list_provisioned_rels(engine_app))
-        unprovisioned_rels = list(mixed_service_mgr.list_unprovisioned_rels(engine_app))
-        all_rels = provisioned_rels + unprovisioned_rels
-
-        # 用户选择的增强服务
-        enabled_addons_services = dev_sandbox.list_enabled_addons_services()
-        # 根据用户选择的增强服务筛选需要展示的增强服务
-        all_rels = [rel for rel in all_rels if rel.get_service().name in enabled_addons_services]
-
-        return Response(data=DevSandboxAddonsServicesListOutputSLZ(all_rels, many=True).data)
-
 
 class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
     """沙箱环境变量管理"""
@@ -337,3 +307,14 @@ class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         dev_sandbox.delete_env_var(key=key)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="获取沙箱环境变量",
+        response={status.HTTP_200_OK: DevSandboxEnvVarsListOutputSLZ()},
+    )
+    def list(self, request, *args, **kwargs):
+        dev_sandbox = self._get_dev_sandbox()
+        env_vars = dev_sandbox.list_env_vars()
+
+        return Response(DevSandboxEnvVarsListOutputSLZ(env_vars, many=True).data)

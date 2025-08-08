@@ -3,7 +3,7 @@
     :is-show.sync="sidesliderVisible"
     :quick-close="true"
     show-mask
-    width="800"
+    width="960"
     @hidden="hidden"
     @shown="shown"
   >

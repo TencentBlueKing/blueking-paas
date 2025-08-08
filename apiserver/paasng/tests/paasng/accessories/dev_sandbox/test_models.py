@@ -34,6 +34,7 @@ def dev_sandbox(bk_cnative_app, bk_module, bk_user) -> DevSandbox:
         env_vars={},
         version_info=version_info,
         enable_code_editor=True,
+        enabled_addons_services=[],
     )
 
 

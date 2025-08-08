@@ -58,6 +58,7 @@ class DevSandboxQuerySet(models.QuerySet):
         env_vars: Dict[str, str],
         version_info: VersionInfo | None,
         enable_code_editor: bool = False,
+        enabled_addons_services: List[str] | None = None,
     ) -> "DevSandbox":
         charsets = string.ascii_lowercase + string.digits
 
@@ -92,6 +93,7 @@ class DevSandboxQuerySet(models.QuerySet):
             token=generate_password(),
             code_editor_config=code_editor_cfg,
             tenant_id=module.tenant_id,
+            enabled_addons_services=enabled_addons_services or [],
         )
 
 
@@ -109,6 +111,7 @@ class DevSandbox(OwnerTimestampedModel):
     code_editor_config = CodeEditorConfigField(help_text="代码编辑器配置", default=None, null=True)
     tenant_id = tenant_id_field_factory()
     env_vars = EncryptField(help_text="沙箱环境变量")
+    enabled_addons_services = models.JSONField(help_text="沙箱使用的增强服务", default=list)
 
     objects = DevSandboxManager()
 

@@ -127,3 +127,10 @@ class DevSandboxEnvVarsListOutputSLZ(serializers.Serializer):
     key = serializers.CharField(help_text="环境变量键名")
     value = serializers.CharField(help_text="环境变量值")
     source = serializers.CharField(help_text="环境变量来源")
+
+
+class DevSandboxAddonsServicesListOutputSLZ(serializers.Serializer):
+    uuid = serializers.CharField()
+    name = serializers.CharField()
+    display_name = serializers.CharField()
+    description = serializers.CharField()

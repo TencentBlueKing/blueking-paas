@@ -20,6 +20,7 @@ import logging
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -27,7 +28,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource, SourceCodeFetchMethod
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxController
 from paas_wl.bk_app.dev_sandbox.entities import SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.exceptions import (
@@ -40,6 +41,7 @@ from paasng.accessories.dev_sandbox.config_var import generate_env_vars, get_env
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.accessories.dev_sandbox.serializers import (
+    DevSandboxAddonsServicesListOutputSLZ,
     DevSandboxCommitInputSLZ,
     DevSandboxCommitOutputSLZ,
     DevSandboxCreateInputSLZ,
@@ -51,12 +53,15 @@ from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxRetrieveOutputSLZ,
 )
 from paasng.accessories.dev_sandbox.source_code import upload_source_code
+from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
+from paasng.platform.modules.models import Module
 from paasng.platform.sourcectl.repo_controller import get_repo_controller
 from paasng.utils.error_codes import error_codes
 
@@ -123,9 +128,10 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             source_code_cfg.source_fetch_method = SourceCodeFetchMethod.BK_REPO
 
         env_vars = generate_env_vars(module)
+        enabled_addons_services = data.get("enabled_addons_services")
         if data["inject_staging_env_vars"]:
             stag_env = module.get_envs(AppEnvironment.STAGING)
-            env_vars.update(get_env_vars_selected_addons(stag_env, data.get("enabled_addons_services")))
+            env_vars.update(get_env_vars_selected_addons(stag_env, enabled_addons_services))
 
         dev_sandbox = DevSandbox.objects.create(
             module=module,
@@ -133,6 +139,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             env_vars=env_vars,
             version_info=version_info,
             enable_code_editor=data["enable_code_editor"],
+            enabled_addons_services=enabled_addons_services,
         )
 
         # 下发沙箱 k8s 资源
@@ -259,6 +266,53 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 判断开发沙箱数量是否超过限制
         result = bool(DevSandbox.objects.count() < settings.DEV_SANDBOX_COUNT_LIMIT)
         return Response(data=DevSandboxPreDeployCheckOutputSLZ({"result": result}).data)
+
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="获取沙箱使用的增强服务",
+        responses={status.HTTP_200_OK: DevSandboxAddonsServicesListOutputSLZ()},
+    )
+    def list_addons_services(self, request, *args, **kwargs):
+        module = self.get_module_via_path()
+        dev_sandbox = DevSandbox.objects.filter(
+            module=module,
+            code=self.kwargs["dev_sandbox_code"],
+            owner=self.request.user.pk,
+        ).first()
+
+        if not dev_sandbox:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
+        # 沙箱环境复用 stag 环境的增强服务
+        env = self._get_stag_env()
+        engine_app = env.get_engine_app()
+        provisioned_rels = list(mixed_service_mgr.list_provisioned_rels(engine_app))
+
+        # 用户选择的增强服务
+        enabled_addons_services = dev_sandbox.enabled_addons_services
+
+        # 根据用户选择的增强服务筛选需要展示的增强服务
+        selected_services = [
+            service for rel in provisioned_rels if (service := rel.get_service()).name in enabled_addons_services
+        ]
+
+        return Response(data=DevSandboxAddonsServicesListOutputSLZ(selected_services, many=True).data)
+
+    def _get_stag_env(self) -> ModuleEnvironment:
+        """获取 stag 环境的环境变量"""
+
+        application = self.get_application()
+        module_name = self._get_param_from_kwargs(["module_name"])
+        environment = DevSandboxEnvVarSource.STAG
+
+        try:
+            module = application.get_module(module_name)
+        except Module.DoesNotExist:
+            raise Http404
+        try:
+            return module.get_envs(environment=environment)
+        except ModuleEnvironment.DoesNotExist:
+            raise Http404
 
 
 class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):

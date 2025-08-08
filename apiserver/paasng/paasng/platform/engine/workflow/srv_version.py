@@ -65,8 +65,7 @@ class ServerVersionChecker:
 
             if operator_version == apiserver_version:
                 # 通常 apiserver 会先于 operator 升级.
-                # 基于这一前提, 缓存时间设置为 24h, 进一步减少查询 helm release 的频次
-                cache.set(cache_key, operator_version, 24 * 60 * 60)
+                cache.set(cache_key, operator_version)
 
         versions["operator"] = operator_version
 

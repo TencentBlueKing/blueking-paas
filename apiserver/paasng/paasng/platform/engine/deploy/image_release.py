@@ -38,7 +38,6 @@ from paasng.platform.engine.exceptions import (
     DeployShouldAbortError,
     HandleAppDescriptionError,
     InitDeployDescHandlerError,
-    ServerVersionCheckFailed,
 )
 from paasng.platform.engine.models import Deployment, DeployPhaseTypes
 from paasng.platform.engine.models.deployment import ProcessTmpl
@@ -46,7 +45,6 @@ from paasng.platform.engine.signals import post_phase_end, pre_phase_start
 from paasng.platform.engine.utils.output import Style
 from paasng.platform.engine.utils.source import get_deploy_desc_handler_by_version
 from paasng.platform.engine.workflow import DeployProcedure, DeployStep
-from paasng.platform.engine.workflow.srv_version import ServerVersionChecker
 from paasng.utils.i18n.celery import I18nTask
 
 logger = logging.getLogger(__name__)
@@ -85,22 +83,11 @@ class ImageReleaseMgr(DeployStep):
             self._setup_image_credentials()
 
         with self.procedure_force_phase("配置资源实例", phase=preparation_phase) as p:
-            if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE.value:
-                # 云原生应用需要检查平台组件 apiserver 和 operator 版本信息是否一致
-                self._handle_check_srv_version()
             self._provision_services(p)
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息
         post_phase_end.send(self, status=JobStatus.SUCCESSFUL, phase=DeployPhaseTypes.PREPARATION)
         start_release_step(deployment_id=self.deployment.id)
-
-    def _handle_check_srv_version(self):
-        """检查平台的 apiserver 和 operator 版本信息的一致性"""
-        matched, versions = ServerVersionChecker(self.module_environment).check_version()
-        if not matched:
-            raise ServerVersionCheckFailed(
-                reason=_("平台未正常部署, 无法进行应用部署, 请联系管理员. 平台各组件版本号: {}".format(versions))
-            )
 
     def _handle_app_processes_and_dummy_build(self):
         """处理应用进程信息并且完成 dummy build"""

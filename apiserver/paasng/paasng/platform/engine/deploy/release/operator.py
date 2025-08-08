@@ -19,6 +19,7 @@ import logging
 import time
 
 from django.db import IntegrityError
+from django.utils.translation import gettext as _
 
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs import svc_disc
@@ -40,10 +41,15 @@ from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_command.tasks import exec_bkapp_hook
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
-from paasng.platform.engine.exceptions import DeployShouldAbortError, StepNotInPresetListError
+from paasng.platform.engine.exceptions import (
+    DeployShouldAbortError,
+    ServerVersionCheckFailed,
+    StepNotInPresetListError,
+)
 from paasng.platform.engine.models import DeployPhaseTypes
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeployStep
+from paasng.platform.engine.workflow.srv_version import ServerVersionChecker
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +199,13 @@ def preflight_deploy(env: ModuleEnvironment, res: BkAppResource):
 
     - 当检测到应用声明了 bk/grpc 来暴露服务, 但集群不支持对应特性时, 中止部署流程
     """
+    # 检查平台的 apiserver 和 operator 版本信息的一致性
+    matched, versions = ServerVersionChecker(env).check_version()
+    if not matched:
+        raise ServerVersionCheckFailed(
+            reason=_("平台未正常部署, 无法进行应用部署, 请联系管理员. 平台各组件版本号: {}".format(versions))
+        )
+
     if not is_exposed_grpc_svc(res):
         return
 

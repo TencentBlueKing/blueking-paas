@@ -56,7 +56,6 @@ from paasng.platform.engine.deploy.release import start_release_step
 from paasng.platform.engine.exceptions import (
     HandleAppDescriptionError,
     InitDeployDescHandlerError,
-    ServerVersionCheckFailed,
 )
 from paasng.platform.engine.models import Deployment
 from paasng.platform.engine.models.phases import DeployPhaseTypes
@@ -72,7 +71,6 @@ from paasng.platform.engine.utils.source import (
     tag_module_from_source_files,
 )
 from paasng.platform.engine.workflow import DeploymentCoordinator, DeploymentStateMgr, DeployProcedure, DeployStep
-from paasng.platform.engine.workflow.srv_version import ServerVersionChecker
 from paasng.platform.modules.models.module import Module
 from paasng.platform.sourcectl.utils import (
     ExcludeChecker,
@@ -139,14 +137,6 @@ class BaseBuilder(DeployStep):
                 make_blob_store(bucket=settings.BLOBSTORE_BUCKET_APP_SOURCE).upload_file(
                     package_path, source_destination_path
                 )
-
-    def handle_check_srv_version(self):
-        """检查平台的 apiserver 和 operator 版本信息的一致性"""
-        matched, versions = ServerVersionChecker(self.module_environment).check_version()
-        if not matched:
-            raise ServerVersionCheckFailed(
-                reason=_("平台未正常部署, 无法进行应用部署, 请联系管理员. 平台各组件版本号: {}".format(versions))
-            )
 
     def handle_app_description(self) -> DeployHandleResult:
         """Handle the description files for deployment. It try to parse the app description
@@ -263,9 +253,6 @@ class ApplicationBuilder(BaseBuilder):
             self.compress_and_upload(source_destination_path)
 
         with self.procedure_force_phase("配置资源实例", phase=preparation_phase) as p:
-            if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE.value:
-                # 如果是云原生应用, 部署前需要检查平台 apiserver 和 operator 版本一致性
-                self.handle_check_srv_version()
             self.provision_services(p, module)
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息
@@ -362,9 +349,6 @@ class DockerBuilder(BaseBuilder):
             )
 
         with self.procedure_force_phase("配置资源实例", phase=preparation_phase) as p:
-            if self.module_environment.application.type == ApplicationType.CLOUD_NATIVE.value:
-                # 如果是云原生应用, 部署前需要检查平台 apiserver 和 operator 版本一致性
-                self.handle_check_srv_version()
             self.provision_services(p, module)
 
         # 由于准备阶段比较特殊，额外手动发送 phase end 消息

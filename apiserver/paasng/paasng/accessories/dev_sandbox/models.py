@@ -37,8 +37,6 @@ VersionInfoField = make_json_field("VersionInfoField", VersionInfo)
 
 CodeEditorConfigField = make_json_field("CodeEditorConfigField", CodeEditorConfig)
 
-EnabledAddonsServicesField = make_json_field("EnabledAddonsServicesField", List[str])
-
 # 默认 2h 无活动后会回收沙箱
 DEV_SANDBOX_DEFAULT_EXPIRED_DURATION = timedelta(hours=2)
 
@@ -113,7 +111,7 @@ class DevSandbox(OwnerTimestampedModel):
     code_editor_config = CodeEditorConfigField(help_text="代码编辑器配置", default=None, null=True)
     tenant_id = tenant_id_field_factory()
     env_vars = EncryptField(help_text="沙箱环境变量")
-    enabled_addons_services = EnabledAddonsServicesField(help_text="用户复用的增强服务", default=list)
+    enabled_addons_services = models.JSONField(help_text="沙箱使用的增强服务", default=list)
 
     objects = DevSandboxManager()
 

@@ -83,6 +83,9 @@ class DevSandboxQuerySet(models.QuerySet):
             {"key": key, "value": value, "source": DevSandboxEnvVarSource.STAG} for key, value in env_vars.items()
         ]
 
+        if enabled_addons_services is None:
+            enabled_addons_services = []
+
         return super().create(
             code=code,
             module=module,

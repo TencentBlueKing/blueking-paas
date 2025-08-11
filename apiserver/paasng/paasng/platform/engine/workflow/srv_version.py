@@ -38,8 +38,6 @@ class ServerVersionChecker:
 
     def validate_version(self):
         """检查 apiserver 和 operator 版本是否一致"""
-        # 初始化返回信息
-        versions = {"apiserver": "", "operator": ""}
 
         # 只有部署云原生应用才需要检测
         if self.env.application.type != ApplicationType.CLOUD_NATIVE:
@@ -47,7 +45,6 @@ class ServerVersionChecker:
 
         # apiserver 版本信息, 根据 Helm 构建时, 注入容器的 env
         apiserver_version = settings.APISERVER_VERSION
-        versions["apiserver"] = apiserver_version if apiserver_version else ""
 
         # 仅在打开检查开关和获取到 apiserver_version 的时候才需要检查
         if not settings.APISERVER_OPERATOR_VERSION_CHECK or not apiserver_version:
@@ -64,15 +61,13 @@ class ServerVersionChecker:
             if operator_version == apiserver_version:
                 cache.set(cache_key, operator_version)
 
-        versions["operator"] = operator_version
-
         if operator_version != apiserver_version:
             # 通常 apiserver 会先于 operator 升级. 版本不一致时, 主动清理缓存, 促使下次强制刷新
             cache.delete(cache_key)
             raise ServerVersionCheckFailed(
                 _(
                     "平台未正常部署，无法进行操作，请联系管理员。组件版本不一致：apiserver:'{}', operator:'{}'".format(
-                        versions["apiserver"], versions["operator"]
+                        apiserver_version, operator_version
                     )
                 )
             )

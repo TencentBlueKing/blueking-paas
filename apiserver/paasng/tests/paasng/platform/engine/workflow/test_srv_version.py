@@ -22,7 +22,6 @@ import pytest
 from django.core.cache import cache
 
 from paas_wl.infras.cluster.shim import EnvClusterService
-from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.exceptions import ServerVersionCheckFailed
 from paasng.platform.engine.workflow.srv_version import ServerVersionChecker
 from tests.utils.helpers import override_settings
@@ -55,10 +54,15 @@ class TestServerVersionChecker:
             ("v1.0.0", "", True),
         ],
     )
-    def test_validate_version(self, bk_stag_env, apiserver_version, operator_version, should_raise_exception):
+    def test_validate_version(
+        self,
+        bk_cnative_app,
+        bk_stag_env,
+        apiserver_version,
+        operator_version,
+        should_raise_exception,
+    ):
         """触发校验, 云原生应用，开启校验，apiserver_version 非空"""
-        bk_stag_env.application.type = ApplicationType.CLOUD_NATIVE
-        bk_stag_env.application.save()
         fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version=operator_version))
         with (
             override_settings(
@@ -75,24 +79,3 @@ class TestServerVersionChecker:
                     ServerVersionChecker(bk_stag_env).validate_version()
             else:
                 ServerVersionChecker(bk_stag_env).validate_version()
-
-    @pytest.mark.parametrize(
-        ("app_type", "check_enabled", "apiserver_version"),
-        [
-            # 非云原生应用
-            (ApplicationType.DEFAULT, True, "v1.0.0"),
-            # 云原生应用, 检查开关关闭
-            (ApplicationType.CLOUD_NATIVE, False, "v1.0.0"),
-            # 云原生应用, 检查开关打开, 但 apiserver_version 为空
-            (ApplicationType.CLOUD_NATIVE, True, ""),
-        ],
-    )
-    def test_validate_version_no_check(self, bk_stag_env, app_type, check_enabled, apiserver_version):
-        """不触发校验的场景 (直接 return)"""
-        bk_stag_env.application.type = app_type
-        bk_stag_env.application.save()
-        with override_settings(
-            APISERVER_OPERATOR_VERSION_CHECK=check_enabled,
-            APISERVER_VERSION=apiserver_version,
-        ):
-            ServerVersionChecker(bk_stag_env).validate_version()

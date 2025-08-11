@@ -53,6 +53,21 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_
 
 ### Response Result Parameter Description
 
-| Parameter Name | Parameter Type | Parameter Description                                     |
-|----------------|----------------|------------------------------------------------------------|
-| has_deployed   | bool           | Indicates whether the plugin has been deployed after creation, can be filtered by `has_deployed` parameter |
+| Parameter Name           | Parameter Type | Description                                                      |
+|--------------------------|----------------|------------------------------------------------------------------|
+| count                    | int            | Total number of results that meet the criteria.                  |
+| next                     | string         | Link to the next page; will be `null` if there are no more results. |
+| previous                 | string         | Link to the previous page; will be `null` if currently on the first page. |
+| results                  | array          | An array of resource items that meet the criteria, each element being an object with the structure defined below. |
+| results.id               | string         | Unique identifier for the plugin that can be used to identify it. |
+| results.name             | string         | The name of the plugin.                                         |
+| results.code             | string         | The code identifier for the plugin.                             |
+| results.logo_url         | string         | Link to the plugin’s logo image, used for displaying its identity. |
+| results.has_deployed     | bool           | Indicates whether the plugin has been deployed after creation; `true` means deployed, `false` means not deployed. |
+| results.creator          | string         | Username of the person who created the plugin.                  |
+| results.created          | string         | The creation time of the plugin in the format `YYYY-MM-DD HH:mm:ss`. |
+| results.updated          | string         | The last update time of the plugin in the format `YYYY-MM-DD HH:mm:ss`. |
+| results.tag_info         | object         | Object containing information about the plugin's tags, including the following fields: |
+| results.tag_info.id      | int            | Unique identifier for the tag.                                  |
+| results.tag_info.name    | string         | Name of the tag.                                               |
+| results.tag_info.code_name| string        | Code identifier for the tag.                                   |

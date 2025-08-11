@@ -208,6 +208,9 @@ type Process struct {
 
 	// Probes specifies the probe configuration
 	Probes *ProbeSet `json:"probes,omitempty"`
+
+	// Components is a list of component
+	Components []Component `json:"components,omitempty"`
 }
 
 // Addon is used to specify add-on service

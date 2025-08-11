@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from pathlib import Path
+
 import cattr
 import pytest
 from django.conf import settings
@@ -23,6 +25,7 @@ from django_dynamic_fixture import G
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model import fieldmgr
+from paasng.platform.bkapp_model.entities import Component
 from paasng.platform.bkapp_model.entities import DomainResolution as DomainResolutionEntity
 from paasng.platform.bkapp_model.entities.hooks import HookCmd, Hooks
 from paasng.platform.bkapp_model.entities.svc_discovery import SvcDiscEntryBkSaaS
@@ -54,6 +57,11 @@ pytestmark = [pytest.mark.django_db(databases=["default", "workloads"]), pytest.
 
 
 class TestProcessesField:
+    @pytest.fixture(autouse=True)
+    def _mock_components_dir(self, monkeypatch):
+        test_dir = Path(settings.BASE_DIR) / "tests" / "support-files" / "test_components"
+        monkeypatch.setattr("paasng.accessories.proc_components.manager.DEFAULT_COMPONENT_DIR", test_dir)
+
     def test_python_framework_case(self, bk_module, bk_deployment):
         json_data = builder.make_module(
             module_name="test",
@@ -76,6 +84,15 @@ class TestProcessesField:
                             '[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"',
                         ],
                         "replicas": 1,
+                        "components": [
+                            {
+                                "name": "test_env_overlay",
+                                "version": "v1",
+                                "properties": {
+                                    "env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]
+                                },
+                            },
+                        ],
                     }
                 ]
             },
@@ -93,6 +110,65 @@ class TestProcessesField:
             bk_deployment.declarative_config.spec.processes[0].get_proc_command()
             == 'bash -c \'"$(eval echo \\"$0\\")" "$(eval echo \\"${1}\\")" "$(eval echo \\"${2}\\")" "$(eval echo \\"${3}\\")" "$(eval echo \\"${4}\\")" "$(eval echo \\"${5}\\")" "$(eval echo \\"${6}\\")" "$(eval echo \\"${7}\\")" "$(eval echo \\"${8}\\")" "$(eval echo \\"${9}\\")" "$(eval echo \\"${10}\\")" "$(eval echo \\"${11}\\")"\' gunicorn wsgi -w 4 -b \'[::]:${PORT:-5000}\' --access-logfile - --error-logfile - --access-logformat \'[%(h)s] %({request_id}i)s %(u)s %(t)s "%(r)s" %(s)s %(D)s %(b)s "%(f)s" "%(a)s"\''
         )
+        assert web.components == [
+            Component(
+                name="test_env_overlay",
+                version="v1",
+                properties={"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
+            ),
+        ]
+
+    def test_proc_component_not_exists(self, bk_module, bk_deployment):
+        json_data = builder.make_module(
+            module_name="test",
+            module_spec={
+                "processes": [
+                    {
+                        "name": "web",
+                        "command": ["gunicorn"],
+                        "replicas": 1,
+                        "components": [
+                            {
+                                "name": "not_exists",
+                                "version": "v1",
+                                "properties": {"envs": [{"proc_name": "FOO", "value": "1"}]},
+                            },
+                        ],
+                    }
+                ]
+            },
+        )
+
+        controller = DeploymentDeclarativeController(bk_deployment)
+        with pytest.raises(
+            DescriptionValidationError, match="spec.processes.0.components.0: 组件 not_exists-v1 不存在"
+        ):
+            controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
+
+    def test_proc_component_with_invalid_properties(self, bk_module, bk_deployment):
+        json_data = builder.make_module(
+            module_name="test",
+            module_spec={
+                "processes": [
+                    {
+                        "name": "web",
+                        "command": ["gunicorn"],
+                        "replicas": 1,
+                        "components": [
+                            {
+                                "name": "test_env_overlay",
+                                "version": "v1",
+                                "properties": {"envs": [{"procXX": "FOO", "value": "1"}]},
+                            },
+                        ],
+                    }
+                ]
+            },
+        )
+
+        controller = DeploymentDeclarativeController(bk_deployment)
+        with pytest.raises(DescriptionValidationError, match="spec.processes.0.components.0: 参数校验失败"):
+            controller.perform_action(desc=validate_desc(DeploymentDescSLZ, json_data))
 
 
 class TestEnvVariablesField:

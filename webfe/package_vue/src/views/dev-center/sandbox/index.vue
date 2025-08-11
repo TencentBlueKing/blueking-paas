@@ -809,6 +809,8 @@ export default {
 }
 .sandbox-container {
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   background: #f5f7fa;
   .fadeout {
@@ -875,6 +877,7 @@ export default {
       flex: 1;
       &.collapse {
         margin-right: 0;
+        overflow-x: hidden;
         /deep/ .bk-resize-layout-aside {
           width: 0 !important;
         }

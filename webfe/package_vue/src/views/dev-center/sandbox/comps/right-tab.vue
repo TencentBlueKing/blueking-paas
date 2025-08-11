@@ -108,6 +108,10 @@
 <script>
 import configInfo from './config-info.vue';
 import log from './log.vue';
+
+// body overflow 控制类名
+const BODY_LOCK_CLASS = 'sandbox-overflow-hidden-body-lock';
+
 export default {
   components: { configInfo, log },
   name: 'SandboxTab',
@@ -156,14 +160,34 @@ export default {
       return this.isBuildSuccess || this.isRerun;
     },
   },
+  mounted() {
+    if (this.active === 'config') {
+      this.toggleBodyOverflow(true);
+    }
+  },
+  beforeDestroy() {
+    this.removeBodyOverflow();
+  },
   methods: {
     handleTabChange(item) {
       this.active = item.name;
       this.$emit('tab-change', item.name);
+      // 配置页面禁止滚动、防止tooltips滚动导致页面出现滚动条
+      this.toggleBodyOverflow(item.name === 'config');
     },
     handleSwitchSide() {
       this.isExpand = !this.isExpand;
       this.$emit('collapse-change', this.isExpand);
+    },
+    toggleBodyOverflow(hidden) {
+      if (hidden) {
+        document.body.classList.add(BODY_LOCK_CLASS);
+      } else {
+        document.body.classList.remove(BODY_LOCK_CLASS);
+      }
+    },
+    removeBodyOverflow() {
+      document.body.classList.remove(BODY_LOCK_CLASS);
     },
   },
 };
@@ -279,5 +303,11 @@ export default {
       color: #a3c5fd;
     }
   }
+}
+</style>
+
+<style lang="scss">
+.sandbox-overflow-hidden-body-lock {
+  overflow-y: hidden !important;
 }
 </style>

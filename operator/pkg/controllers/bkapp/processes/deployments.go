@@ -238,6 +238,10 @@ func (r *DeploymentReconciler) updateCondition(ctx context.Context, bkapp *paasv
 			continue
 		}
 
+		if healthStatus.Phase == paasv1alpha2.HealthProgressing {
+			continue
+		}
+
 		failMessage, err := health.GetDeploymentDirectFailMessage(ctx, r.Client, deployment)
 		if errors.Is(err, health.ErrDeploymentStillProgressing) {
 			continue

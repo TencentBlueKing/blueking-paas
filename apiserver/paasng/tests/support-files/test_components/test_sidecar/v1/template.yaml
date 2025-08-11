@@ -1,0 +1,29 @@
+spec:
+  template:
+    spec:
+      containers:
+        - image: 'hello-world:1.0'
+          name: hello-world
+          imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+                - /usr/local/services/liveness_check.sh
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - /usr/local/services/readiness_check.sh
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File

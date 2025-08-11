@@ -274,8 +274,8 @@ paths:
       tags:
       - 访问统计
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         enableWebsocket: false
         backend:
@@ -663,8 +663,8 @@ paths:
       tags:
       - 访问统计
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         enableWebsocket: false
         backend:
@@ -686,8 +686,8 @@ paths:
       tags:
       - 访问统计
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         enableWebsocket: false
         backend:
@@ -1612,8 +1612,8 @@ paths:
       tags:
       - 访问统计
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         enableWebsocket: false
         backend:

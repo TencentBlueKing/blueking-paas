@@ -303,6 +303,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
 
         application = self.get_application()
         module_name = self._get_param_from_kwargs(["module_name"])
+        # 显式指定为 stag 环境
         environment = DevSandboxEnvVarSource.STAG
 
         try:

@@ -115,7 +115,8 @@ class V1SysStructuredLogAPIView(ModuleStructuredLogAPIView):
                         for log in data["logs"]
                     ],
                     "page": {
-                        "page": query_params.get("page") or (offset / limit + 1),
+                        # page 的类型为 init，这里要用整除
+                        "page": query_params.get("page") or (offset // limit + 1),
                         "page_size": limit,
                         "total": data["total"],
                     },

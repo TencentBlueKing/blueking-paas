@@ -7,7 +7,7 @@
 
 |   参数名称   |    参数类型  |  必须  |     参数说明     |
 | ------------ | ------------ | ------ | ---------------- |
-| app_code   | string | 是 | 应用 ID |
+| code   | string | 是 | 应用 ID |
 | module_name   | string | 是 | 模块名称，如 "default" |
 
 #### 2、接口参数：
@@ -25,7 +25,7 @@
 
 ### 请求示例
 ```bash
-curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/applications/{app_code}/modules/{module_name}/log/structured/list/?time_range=1h'
+curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/applications/{code}/modules/{module_name}/log/structured/list/?time_range=1h'
 ```
 
 ### 返回结果示例
@@ -91,7 +91,7 @@ curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_ap
 | code | int | 返回码，0表示成功 |
 | data | dict | 返回数据 |
 | data.page | dict | 分页信息 |
-| data.page.page | int | 当前页码 |
+| data.page.page | float | 当前页码 |
 | data.page.page_size | int | 每页数量 |
 | data.page.total | int | 总记录数 |
 | data.logs | list | 日志列表 |

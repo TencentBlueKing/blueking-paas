@@ -62,34 +62,10 @@ export default {
     },
 
     /**
-     * 应用基本信息
+     * 获取全量内置环境变量
      */
-    getBasicInfo({}, { appCode }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/app/`;
-      return http.get(url);
-    },
-
-    /**
-     * 应用运行时信息
-     */
-    getBkPlatformInfo({}, { appCode }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/bk_platform/`;
-      return http.get(url);
-    },
-
-    /**
-     * 蓝鲸体系内平台信息
-     */
-    getAppRuntimeInfo({}, { appCode }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/runtime/`;
-      return http.get(url);
-    },
-
-    /**
-     * 获取内置环境变量-其他
-     */
-    getOtherBuiltInEnvVars({}, { appCode }) {
-      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/config_vars/builtin/custom/`;
+    getAllBuiltInEnvVars({}, { appCode, moduleId }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/config_vars/builtin/`;
       return http.get(url);
     },
 

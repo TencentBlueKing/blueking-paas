@@ -192,7 +192,10 @@
         slot="content"
         class="slider-env-content"
       >
-        <builtIn-env-var-display :app-code="appCode" />
+        <BuiltInEnvVarDisplay
+          :app-code="appCode"
+          :module-id="curModuleId"
+        />
       </div>
     </bk-sideslider>
 
@@ -343,14 +346,14 @@
 
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
-import builtInEnvVarDisplay from '@/components/builtIn-env-var-display';
+import BuiltInEnvVarDisplay from '@/components/builtIn-env-var-display';
 import AppDescriptionFile from './app-description-file.vue';
 import EnvVarTable from '../env-vars/env-var-table.vue';
 import SwitchDisplay from '@/components/switch-display';
 
 export default {
   components: {
-    builtInEnvVarDisplay,
+    BuiltInEnvVarDisplay,
     AppDescriptionFile,
     EnvVarTable,
     SwitchDisplay,
@@ -1305,7 +1308,7 @@ a.is-disabled {
 
 .slider-env-content {
   padding: 20px 24px;
-  min-height: calc(100vh - 50px);
+  height: 100%;
 }
 .env-title {
   font-size: 14px;

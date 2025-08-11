@@ -24,9 +24,6 @@ Upload the source code package to the platform according to the download link.
 curl -X POST -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "bk_ticket": "***"}' -d '{ "package_url": "https://example.com/generic/example.tar.gz", "version": "0.0.5" }' --insecure https://paas.example.apigw.o.woav3..com/stag/bkapps/applications/app_code/modules/default/source_package/link/
 ```
 
-#### Get your access_token
-Before calling the interface, please obtain your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
-
 ### Response Result Example
 #### Success Response
 ```json

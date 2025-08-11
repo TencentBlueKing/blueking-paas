@@ -76,5 +76,26 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/${devSandboxCode}/commit/`;
       return http.post(url, data, config);
     },
+    /**
+     * 获取沙箱环境变量
+     */
+    getSandboxEnvVars({}, { appCode, moduleId, devSandboxCode }, config = {}) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/${devSandboxCode}/env_vars/`;
+      return http.get(url, config);
+    },
+    /**
+     * 新增/编辑环境变量
+     */
+    sandboxAddEnv({}, { appCode, moduleId, devSandboxCode, data }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/${devSandboxCode}/env_vars/`;
+      return http.post(url, data);
+    },
+    /**
+     * 删除环境变量
+     */
+    sandboxDelEnv({}, { appCode, moduleId, devSandboxCode, envVarKey }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/${devSandboxCode}/env_vars/${envVarKey}/`;
+      return http.delete(url);
+    },
   },
 };

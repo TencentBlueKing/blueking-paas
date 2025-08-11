@@ -38,3 +38,16 @@
   margin-left: 5px !important;
 }
 /*message end*/
+
+/*bk-input 暗色配置 start*/
+.paas-custom-input-dark-cls {
+  input {
+    background: #1a1a1a;
+    border-color: #979BA5;
+    color: #979BA5;
+  }
+  .bk-form-input:focus {
+    background: #1a1a1a !important;
+  }
+}
+/*bk-input end*/

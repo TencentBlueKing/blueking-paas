@@ -107,8 +107,8 @@ paths:
       tags:
       - 应用访问控制
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         enableWebsocket: false
         backend:
@@ -130,8 +130,8 @@ paths:
       tags:
       - 应用访问控制
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         enableWebsocket: false
         backend:

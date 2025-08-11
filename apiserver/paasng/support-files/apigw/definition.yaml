@@ -8,9 +8,9 @@ apigateway:
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.0
-  title: "add: create_cloud_native_app, set_config_var_value, get_repo_branches, get_runtime_overview."
-  comment: "add: create_cloud_native_app, set_config_var_value, get_repo_branches, get_runtime_overview."
+  version: 1.4.1
+  title: "feat: corrected some document return results."
+  comment: "feat: corrected some document return results."
 
 
 stage:

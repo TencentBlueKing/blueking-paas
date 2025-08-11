@@ -29,8 +29,12 @@ from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_app_audit_record
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.engine.configurations.config_var import (
-    get_builtin_env_variables,
+    get_custom_builtin_config_vars,
     list_conflicted_env_vars_for_view,
+    list_vars_builtin_app_basic,
+    list_vars_builtin_plat_addrs,
+    list_vars_builtin_region,
+    list_vars_builtin_runtime,
     mask_vars_for_view,
 )
 from paasng.platform.engine.configurations.env_var.entities import EnvVariableList
@@ -326,10 +330,27 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     def list_builtin_envs(self, request, code, module_name):
         """获取内置环境变量"""
         module = self.get_module_via_path()
+        app = module.application
 
         result = {}
         for env in module.get_envs():
-            env_vars = get_builtin_env_variables(env.get_engine_app())
+            env_vars = EnvVariableList()
+
+            # 应用基本信息环境变量
+            env_vars.extend(list_vars_builtin_app_basic(app=app, include_deprecated=False))
+
+            # 蓝鲸体系内平台的访问地址
+            env_vars.extend(list_vars_builtin_plat_addrs())
+
+            # 需要根据 region、env 写入不同值的系统环境变量
+            env_vars.extend(list_vars_builtin_region(app.region, env.environment))
+
+            # 平台管理中自定义的环境变量
+            env_vars.extend(get_custom_builtin_config_vars())
+
+            # 应用运行时相关环境变量
+            env_vars.extend(list_vars_builtin_runtime(env=env, include_deprecated=False))
+
             # 使用 map 去重后转化为 EnvVariableList
             deduped_vars = EnvVariableList(env_vars.map.values())
             result[env.environment] = mask_vars_for_view(deduped_vars)

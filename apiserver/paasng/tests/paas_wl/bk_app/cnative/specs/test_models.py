@@ -49,6 +49,7 @@ class TestCreateAppResource:
                         "name": "web",
                         "replicas": 1,
                         "command": [],
+                        "components": None,
                         "args": [],
                         "targetPort": None,
                         "services": None,

@@ -49,6 +49,7 @@ class ServiceObj:
     is_active: bool = True
     available_languages: str = ""
     config: Dict = field(default_factory=dict, compare=False)
+    plan_schema: Dict = field(default_factory=dict, compare=False)
 
     display_name: str = ""
     description: str = ""

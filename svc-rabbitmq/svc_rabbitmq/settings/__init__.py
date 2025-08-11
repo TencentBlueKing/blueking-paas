@@ -229,6 +229,7 @@ METRIC_CLIENT_TOKEN_DICT = {
 }
 
 PAAS_SERVICE_PROVIDER_CLS = "vendor.provider.Provider"
+PAAS_SERVICE_PLAN_SCHEMA_CLS = "vendor.schema.PlanSchema"
 PAAS_SERVICE_JWT_CLIENTS = [
     {
         "iss": env.str("PAAS_SERVICE_JWT_CLIENTS_ISS", "paas-v3"),

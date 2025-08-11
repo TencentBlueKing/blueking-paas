@@ -121,3 +121,9 @@ class DevSandboxPreDeployCheckOutputSLZ(serializers.Serializer):
 class DevSandboxEnvVarsUpsertInputSLZ(serializers.Serializer):
     key = field_env_var_key()
     value = serializers.CharField(max_length=255, help_text="环境变量值")
+
+
+class DevSandboxEnvVarsListOutputSLZ(serializers.Serializer):
+    key = serializers.CharField(help_text="环境变量键名")
+    value = serializers.CharField(help_text="环境变量值")
+    source = serializers.CharField(help_text="环境变量来源")

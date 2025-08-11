@@ -271,7 +271,13 @@ class SourcePackageManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().exclude(is_deleted=True)
 
-    def store(self, module: "Module", policy: "SPStoragePolicy", operator: Optional[User] = None):
+    def store(
+        self,
+        module: "Module",
+        policy: "SPStoragePolicy",
+        operator: Optional[User] = None,
+        image_sha256_signature: str = "",
+    ):
         """根据存储策略, 将 package 的配置记录到数据库中"""
         qs = self.filter(module=module)
         if qs.filter(version=policy.stat.version).exists() and not policy.allow_overwrite:
@@ -281,7 +287,8 @@ class SourcePackageManager(models.Manager):
             defaults=dict(
                 package_name=policy.stat.name,
                 package_size=policy.stat.size,
-                sha256_signature=policy.stat.sha256_signature,
+                sha256_signature=image_sha256_signature or policy.stat.sha256_signature,
+                pkg_sha256_signature=policy.stat.sha256_signature,
                 meta_info=policy.stat.meta_info,
                 relative_path=policy.stat.relative_path,
                 storage_engine=policy.engine,
@@ -312,7 +319,13 @@ class SourcePackage(OwnerTimestampedModel):
     storage_url = models.CharField(verbose_name="存储地址", max_length=1024, help_text="可获取到源码包的 URL 地址")
 
     meta_info = JSONField(null=True, help_text="源码包的元信息, 例如 S-Mart 应用的 app.yaml")
-    sha256_signature = models.CharField(verbose_name="sha256数字签名", max_length=64, null=True)
+    sha256_signature = models.CharField(
+        verbose_name="sha256 数字签名",
+        max_length=64,
+        null=True,
+        help_text="镜像方案时, 该字段记录镜像配置文件的 sha256; 原始包方案时, 该字段记录原始包的 sha256",
+    )
+    pkg_sha256_signature = models.CharField(verbose_name="原始包的 sha256 数字签名", max_length=64, null=True)
     relative_path = models.CharField(
         max_length=255,
         verbose_name="源码入口的相对路径",
@@ -530,10 +543,13 @@ class GitProject:
         -   http://domain/{user_name}/{project_name}.git
         -   http://domain/{group_name}/{project_name}
         -   http://domain/{user_name}/{project_name}
+        -   http://domain/groups/{group_name}/{project_name}
         """
         parsing_repo_url = remove_suffix(repo_url, ".git")
         parsed_result = urlparse(parsing_repo_url)
         path_with_namespace = remove_prefix(parsed_result.path, "/")
+        # 去除可能的'groups/'前缀（如果存在）
+        path_with_namespace = remove_prefix(path_with_namespace, "groups/")
 
         return cls.parse_from_path_with_namespace(
             path_with_namespace=path_with_namespace, sourcectl_type=sourcectl_type

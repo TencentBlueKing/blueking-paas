@@ -21,17 +21,21 @@ package v1alpha2_test
 import (
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/components/manager"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
@@ -1431,4 +1435,155 @@ var _ = Describe("Integrated tests for webhooks, v1alpha2 version", func() {
 
 		Expect(k8sClient.Create(ctx, bkapp).Error()).To(ContainSubstring("Duplicate value"))
 	})
+
+	_ = Describe("test webhook.Validator validate process components", func() {
+		var bkapp *paasv1alpha2.BkApp
+		var tempDir string
+
+		BeforeEach(func() {
+			tempDir, _ = os.MkdirTemp("", "components_test")
+			components.DefaultComponentDir = tempDir
+			// 创建测试组件结构
+			schema := `{
+  "type": "object",
+  "required": ["env"],
+  "properties": {
+    "env": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}`
+			createTestComponent(tempDir, "test_env_overlay", "v1", schema, "template: overlay")
+
+			bkapp = &paasv1alpha2.BkApp{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       paasv1alpha2.KindBkApp,
+					APIVersion: paasv1alpha2.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bkapp-sample",
+					Namespace: "default",
+					Annotations: map[string]string{
+						paasv1alpha2.BkAppCodeKey:  "bkapp-sample",
+						paasv1alpha2.ModuleNameKey: paasv1alpha2.DefaultModuleName,
+					},
+				},
+				Spec: paasv1alpha2.AppSpec{Build: paasv1alpha2.BuildConfig{
+					Image:           "nginx:latest",
+					ImagePullPolicy: corev1.PullIfNotPresent,
+				}, Processes: []paasv1alpha2.Process{
+					{
+						Name:         "web",
+						Replicas:     paasv1alpha2.ReplicasTwo,
+						ResQuotaPlan: paasv1alpha2.ResQuotaPlanDefault,
+						TargetPort:   80,
+					},
+				}},
+			}
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(tempDir)).To(Succeed())
+		})
+
+		It("valid component", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				{
+					Name:    "test_env_overlay",
+					Version: "v1",
+					Properties: runtime.RawExtension{
+						Raw: []byte(
+							`{"env": [{"name":"testKey","value":"testValue"}, {"name":"testKey2","value":"testValue2"}]}`,
+						),
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("component with invalid properties", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				{
+					Name:    "test_env_overlay",
+					Version: "v1",
+					Properties: runtime.RawExtension{
+						Raw: []byte(
+							`{"invalidEnv": [{"name":"testKey","value":"testValue"}, {"name":"testKey2","value":"testValue2"}]}`,
+						),
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("properties validation failed"))
+		})
+
+		It("invalid component name", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				{
+					Name:    "invalid_name",
+					Version: "v1",
+					Properties: runtime.RawExtension{
+						Raw: []byte(
+							`{"invalidEnv": [{"name":"testKey","value":"testValue"}, {"name":"testKey2","value":"testValue2"}]}`,
+						),
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("can not find component"))
+		})
+
+		It("invalid component version", func() {
+			bkapp.Spec.Processes[0].Components = []paasv1alpha2.Component{
+				{
+					Name:    "env_overlay",
+					Version: "v2",
+					Properties: runtime.RawExtension{
+						Raw: []byte(
+							`{"invalidEnv": [{"name":"testKey","value":"testValue"}, {"name":"testKey2","value":"testValue2"}]}`,
+						),
+					},
+				},
+			}
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("can not find component"))
+		})
+	})
 })
+
+func createTestComponent(baseDir, cName, version, schema, template string) {
+	versionDir := filepath.Join(baseDir, cName, version)
+	Expect(os.MkdirAll(versionDir, 0o755)).To(Succeed())
+
+	// 创建 schema.json
+	schemaPath := filepath.Join(versionDir, "schema.json")
+	Expect(os.WriteFile(schemaPath, []byte(schema), 0o644)).To(Succeed())
+
+	// 创建 template.yaml
+	templatePath := filepath.Join(versionDir, "template.yaml")
+	Expect(os.WriteFile(templatePath, []byte(template), 0o644)).To(Succeed())
+}

@@ -6,7 +6,7 @@
         {{ $t('云 API 权限') }}
         <div
           class="guide-wrapper"
-          v-if="frontendFeature.APP_ACCESS_TOKEN"
+          v-if="userFeature.APP_ACCESS_TOKEN"
         >
           <bk-button
             class="f12"
@@ -55,26 +55,11 @@
               v-bind="panel"
             />
             <div class="cloud-type-item">
-              <render-api
-                v-if="active === 'gatewayApi'"
+              <component
+                :is="activeComponent"
                 :key="comKey"
                 :app-code="appCode"
-                @data-ready="handlerDataReady"
-              />
-              <render-api
-                v-if="active === 'componentApi'"
-                :key="comKey"
-                api-type="component"
-                :app-code="appCode"
-                @data-ready="handlerDataReady"
-              />
-              <app-perm
-                v-if="active === 'appPerm'"
-                :type-list="typeList"
-                @data-ready="handlerDataReady"
-              />
-              <apply-record
-                v-if="active === 'applyRecord'"
+                :api-type="apiType"
                 :type-list="typeList"
                 @data-ready="handlerDataReady"
               />
@@ -214,12 +199,15 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import RenderApi from './comps/render-api';
 import AppPerm from './comps/app-perm';
 import ApplyRecord from './comps/apply-record';
+import McpServer from './comps/mcp-server.vue';
+import { mapState } from 'vuex';
 
 export default {
   components: {
     AppPerm,
     ApplyRecord,
     RenderApi,
+    McpServer,
   },
   mixins: [appBaseMixin],
   data() {
@@ -249,31 +237,45 @@ export default {
     };
   },
   computed: {
+    ...mapState(['localLanguage', 'userFeature', 'platformFeature']),
     createTokenTip() {
       return this.$t('请完整输入应用 ID（{code}）确认', { code: this.appCode });
     },
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
-    frontendFeature() {
-      return this.$store.state.userFeature;
-    },
-    platformFeature() {
-      return this.$store.state.platformFeature;
-    },
     displayPanels() {
-      return [
+      const panels = [
         { name: 'gatewayApi', label: this.$t('网关API') },
-        { name: 'componentApi', label: this.$t('组件API') },
+        { name: 'componentApi', label: this.$t('组件API'), show: this.platformFeature?.ESB_API },
+        { name: 'mcpServer', label: this.$t('MCP Server'), show: this.userFeature?.MCP_SERVER_API },
         { name: 'appPerm', label: this.$t('已申请的权限') },
         { name: 'applyRecord', label: this.$t('申请记录') },
-      ].filter((item) => item.name !== 'componentApi' || this.platformFeature?.ESB_API);
+      ];
+      return panels.filter((panel) => panel.show === undefined || !!panel.show);
     },
     typeList() {
-      return [
+      const types = [
         { id: 'gateway', name: this.$t('网关API') },
-        { id: 'component', name: this.$t('组件API') },
-      ].filter((item) => item.id !== 'component' || this.platformFeature?.ESB_API);
+        { id: 'component', name: this.$t('组件API'), visible: this.platformFeature?.ESB_API },
+        { id: 'mcp', name: this.$t('MCP Server'), visible: this.userFeature?.MCP_SERVER_API },
+      ];
+      return types.filter((type) => type.visible !== false);
+    },
+    activeComponent() {
+      const componentMap = {
+        gatewayApi: 'RenderApi',
+        mcpServer: 'McpServer',
+        componentApi: 'RenderApi',
+        appPerm: 'AppPerm',
+        applyRecord: 'ApplyRecord',
+      };
+      return componentMap[this.active];
+    },
+    apiType() {
+      const typeMap = {
+        gatewayApi: 'gateway',
+        mcpServer: 'mcp',
+        componentApi: 'component',
+      };
+      return typeMap[this.active] || 'gateway';
     },
   },
   watch: {

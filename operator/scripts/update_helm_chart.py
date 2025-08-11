@@ -659,7 +659,7 @@ class HelmChartUpdater:
             "registry": "hub.bktencent.com",
             "repository": "blueking/kube-rbac-proxy",
             "pullPolicy": "IfNotPresent",
-            "tag": "v0.12.0",
+            "tag": "v0.14.0",
         }
         values["image"] = {
             "registry": "hub.bktencent.com",

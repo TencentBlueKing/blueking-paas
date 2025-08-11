@@ -57,6 +57,7 @@ from paasng.accessories.servicehub.services import (
     UnboundEngineAppInstanceRel,
 )
 from paasng.accessories.services.models import Plan, Service
+from paasng.accessories.services.providers import get_plan_schema_by_provider_name
 from paasng.misc.metrics import SERVICE_PROVISION_COUNTER
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -108,7 +109,12 @@ class LocalServiceObj(ServiceObj):
         # format uuid instance to str
         if isinstance(fields["uuid"], UUID):
             fields["uuid"] = str(fields["uuid"])
-        fields["provider_name"] = service.config.get("provider_name", None)
+        provider_name = service.config.get("provider_name", None)
+        fields["provider_name"] = provider_name
+
+        # plan schema
+        if provider_name:
+            fields["plan_schema"] = get_plan_schema_by_provider_name(provider_name)
 
         result = cls(**fields)
         result.db_object = service

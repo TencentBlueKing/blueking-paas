@@ -134,7 +134,7 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     logger.debug("Start pushing Image.")
     manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)
 
-    stat.sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
+    image_sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
     policy = SPStoragePolicy(
         path=new_image_info.name,
         url=f"{new_image_info.domain}/{new_image_info.name}:{new_image_info.tag}",
@@ -142,7 +142,9 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
         allow_overwrite=True,
         engine="docker",
     )
-    source_package = SourcePackage.objects.store(module, policy, operator=operator)
+    source_package = SourcePackage.objects.store(
+        module, policy, operator=operator, image_sha256_signature=image_sha256_signature
+    )
     return source_package
 
 
@@ -187,7 +189,7 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
 
         manifest = image_ref.push(max_worker=5 if _PARALLEL_PATCHING else 1)
 
-    stat.sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
+    image_sha256_signature = remove_prefix(manifest.config.digest, "sha256:")
     policy = SPStoragePolicy(
         path=new_image_info.name,
         url=f"{new_image_info.domain}/{new_image_info.name}:{new_image_info.tag}",
@@ -195,7 +197,9 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
         allow_overwrite=True,
         engine="docker",
     )
-    source_package = SourcePackage.objects.store(module, policy, operator=operator)
+    source_package = SourcePackage.objects.store(
+        module, policy, operator=operator, image_sha256_signature=image_sha256_signature
+    )
     return source_package
 
 

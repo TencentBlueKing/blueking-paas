@@ -25,6 +25,8 @@ from typing_extensions import TypeAlias
 from paas_wl.bk_app.cnative.specs.constants import ScalingPolicy
 from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
+from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
+from paasng.accessories.proc_components.manager import validate_component_properties
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
@@ -168,6 +170,24 @@ class MonitoringSLZ(serializers.Serializer):
     metric = MetricSLZ(help_text="metric 配置", required=False, allow_null=True)
 
 
+class ProcComponentSLZ(serializers.Serializer):
+    """进程组件配置"""
+
+    name = serializers.CharField(help_text="组件类型")
+    version = serializers.CharField(help_text="组件版本")
+    properties = serializers.DictField(help_text="组件属性", required=False, allow_null=True)
+
+    def validate(self, attrs: Dict) -> Dict:
+        try:
+            validate_component_properties(attrs["name"], attrs["version"], attrs.get("properties", {}))
+        except ComponentNotFound:
+            raise ValidationError(_("组件 {}-{} 不存在").format(attrs["name"], attrs["version"]))
+        except ComponentPropertiesInvalid as e:
+            raise ValidationError(_("参数校验失败")) from e
+
+        return attrs
+
+
 class ModuleProcessSpecSLZ(serializers.Serializer):
     """进程配置"""
 
@@ -192,6 +212,9 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
     probes = ProbeSetSLZ(help_text="容器探针配置", required=False, allow_null=True)
     monitoring = MonitoringSLZ(help_text="可观测性监控配置", required=False, allow_null=True)
+    components = serializers.ListSerializer(
+        child=ProcComponentSLZ(), help_text="进程组件列表", allow_null=True, required=False
+    )
 
     def validate_services(self, value):
         """check whether name, target_port or port are duplicated"""

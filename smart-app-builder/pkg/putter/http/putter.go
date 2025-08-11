@@ -28,14 +28,30 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	defaultTimeout = 30 * time.Minute
+)
+
 // Putter ...
 type Putter struct {
-	Logger logr.Logger
+	Logger  logr.Logger
+	Timeout time.Duration
 }
 
-// NewPutter ...
+// NewPutter creates a new Putter with default timeout
 func NewPutter(log logr.Logger) *Putter {
-	return &Putter{log}
+	return &Putter{
+		Logger:  log,
+		Timeout: defaultTimeout,
+	}
+}
+
+// NewPutterWithTimeOut creates a new Putter with custom timeout
+func NewPutterWithTimeOut(log logr.Logger, timeout time.Duration) *Putter {
+	return &Putter{
+		Logger:  log,
+		Timeout: timeout,
+	}
 }
 
 // Put will put src blob to destUrl
@@ -64,7 +80,7 @@ func (p *Putter) Put(src string, destUrl *url.URL) error {
 
 	p.Logger.Info("Uploading file to bkrepo", "url", safeUrl)
 
-	client := http.Client{Timeout: 30 * time.Minute}
+	client := http.Client{Timeout: p.Timeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "Failed to upload to bkrepo")

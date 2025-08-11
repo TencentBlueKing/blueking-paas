@@ -45,7 +45,7 @@ func (p *Putter) Put(src string, destUrl *url.URL) error {
 		if err := os.MkdirAll(filepath.Dir(filePath), 0o744); err != nil {
 			return err
 		}
-		return utils.CopyDir(src, filePath)
+		return utils.CopyFile(src, filePath)
 	}
 
 	// Assume dest is a directory, otherwise an error occurs.

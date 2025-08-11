@@ -39,7 +39,7 @@ def _clear_operator_version_cache(bk_module):
     cache.delete(key)
 
 
-@pytest.mark.usefixtures("_clear_operator_version_cache")
+@pytest.mark.usefixtures("_clear_operator_version_cache", "bk_cnative_app")
 class TestServerVersionChecker:
     """测试校验平台服务版本一致性"""
 
@@ -56,7 +56,6 @@ class TestServerVersionChecker:
     )
     def test_validate_version(
         self,
-        bk_cnative_app,
         bk_stag_env,
         apiserver_version,
         operator_version,

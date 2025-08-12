@@ -397,4 +397,6 @@ export default {
   管理已删除应用: 'Manage Deleted Apps',
   确认彻底删除应用: 'Confirm Permanent Deletion of App',
   '删除应用时，应用只是被标记为已删除，同名应用无法被重新创建。如需彻底删除应用数据，请使用 “彻底删除” 功能。': 'When an app is deleted, it is merely marked as deleted, and an app with the same name cannot be recreated. To permanently delete app data, please use the "Permanently Delete" feature.',
+  实例凭证: 'Instance Credentials',
+  配置示例: 'Config Example',
 };

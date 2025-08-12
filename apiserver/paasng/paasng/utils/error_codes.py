@@ -79,6 +79,7 @@ class ErrorCodes:
     RESTRICT_ROLE_DEPLOY_ENABLED = ErrorCode(_("已开启部署权限控制，仅管理员可以操作"), code_num=4311006)
     CHANNEL_NOT_FOUND = ErrorCode(_("日志流管道不存在"), status_code=404, code_num=4311007)
     DEPLOY_INTERRUPTION_FAILED = ErrorCode(_("中止部署失败"), code_num=4311008)
+    SVR_VERSION_CHECK_FAILED = ErrorCode(_("平台服务版本检测失败"), code_num=4311009)
     # CI
     RESOURCE_NOT_READY_BEFORE_OAUTH = ErrorCode(_("CI 相关资源尚未创建，无法获取授权链接"))
     FAILED_TO_GET_OAUTH_URL = ErrorCode(_("获取授权链接失败"))
@@ -172,7 +173,7 @@ class ErrorCodes:
     CREATE_LESSCODE_APP_ERROR = ErrorCode(_("创建蓝鲸运维开发平台应用错误"))
     CREATE_APP_FAILED = ErrorCode(_("创建应用失败"))
     REPO_ACCESS_TOKEN_PERM_DENIED = ErrorCode(_("没有权限操作代码仓库"))
-    REPO_DEFAULT_SCOPE_PERMISSION_ERROR = ErrorCode(_("没有权在默认空间创建仓库"))
+    REPO_DEFAULT_SCOPE_PERMISSION_ERROR = ErrorCode(_("没有权限在默认空间创建仓库"))
 
     # Admin 相关
     CONTROLLER_INTERNAL_ERROR = ErrorCode(_("engine 服务错误"))

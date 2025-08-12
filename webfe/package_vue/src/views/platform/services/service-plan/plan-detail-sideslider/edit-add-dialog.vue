@@ -53,8 +53,9 @@
           ></bk-switcher>
         </bk-form-item>
         <bk-form-item
-          :label="$t('实例配置')"
+          :label="$t('实例凭证')"
           :required="true"
+          :desc="credentialDesc"
         >
           <div class="json-editor-wrapper">
             <JsonEditorVue
@@ -62,6 +63,21 @@
               ref="jsonEditor"
               style="width: 100%; height: 100%"
               v-model="valuesJson"
+              :debounce="20"
+              :mode="'text'"
+            />
+          </div>
+        </bk-form-item>
+        <bk-form-item
+          :label="`TLS ${$t('配置')}`"
+          :desc="tlsDesc"
+        >
+          <div class="json-editor-wrapper">
+            <JsonEditorVue
+              class="pt-json-editor-custom-cls"
+              ref="tlsConfigEditor"
+              style="width: 100%; height: 100%"
+              v-model="tlsConfigJson"
               :debounce="20"
               :mode="'text'"
             />
@@ -98,6 +114,8 @@ export default {
       },
       valuesJson: {},
       dialogLoading: false,
+      // tls配置
+      tlsConfigJson: {},
     };
   },
   computed: {
@@ -112,16 +130,27 @@ export default {
     isAdd() {
       return this.data.type === 'add';
     },
+    tlsDesc() {
+      return `${this.$t('配置示例')}：{ "ca": "...", "cert": "...", "key": "..." }`;
+    },
+    credentialDesc() {
+      return `${this.$t('配置示例')}：{ "host": "127.0.0.1", "port": 6379, "password": "" }`;
+    },
   },
   methods: {
+    parseJsonData(data) {
+      return typeof data === 'string' ? JSON.parse(data) : data;
+    },
     valueChange(flag) {
       this.dialogLoading = false;
       if (flag && !this.isAdd) {
         const { row = {} } = this.data;
-        this.formData.recyclable = !!Object.keys(row.config)?.length;
+        this.formData.recyclable = row.config?.recyclable ?? false;
         this.valuesJson = JSON.parse(row.credentials);
+        this.tlsConfigJson = row.config?.tls ? this.parseJsonData(row.config.tls) : {};
       } else {
         this.valuesJson = {};
+        this.tlsConfigJson = {};
         this.formData = {
           recyclable: true,
           config: {},
@@ -131,6 +160,18 @@ export default {
     close() {
       this.dialogVisible = false;
     },
+    formatConfig() {
+      const config = {};
+      // 可回收复用：开启
+      if (this.formData.recyclable) {
+        config.recyclable = true;
+      }
+      const tls = this.parseJsonData(this.tlsConfigJson);
+      if (Object.keys(tls || {}).length) {
+        config.tls = tls;
+      }
+      return config;
+    },
     // 确认
     handleConfirm() {
       this.$refs.formRef
@@ -138,7 +179,8 @@ export default {
         .then(() => {
           // 基础JSON校验
           const validateResult = validateJson(this.valuesJson, this.$refs.jsonEditor?.jsonEditor);
-          if (!validateResult) {
+          const tlsValidateResult = validateJson(this.tlsConfigJson, this.$refs.tlsConfigEditor?.jsonEditor);
+          if (!validateResult || !tlsValidateResult) {
             return;
           }
           this.dialogLoading = true;
@@ -146,8 +188,7 @@ export default {
             plan: this.data.planId,
             // 实例配置：JSON格式
             credentials: typeof this.valuesJson === 'object' ? JSON.stringify(this.valuesJson) : this.valuesJson,
-            // 可回收复用：：开启：{config: {recyclable:true} } / 停用：{}
-            config: this.formData.recyclable ? { recyclable: true } : {},
+            config: this.formatConfig(),
           };
           if (this.isAdd) {
             this.addResourcePool(params);
@@ -211,7 +252,7 @@ export default {
     margin-bottom: 16px;
   }
   .json-editor-wrapper {
-    height: 350px;
+    height: 220px;
   }
   .pt-json-editor-custom-cls .jse-main .jse-message.jse-error {
     display: none;

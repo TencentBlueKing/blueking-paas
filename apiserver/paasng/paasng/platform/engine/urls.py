@@ -101,6 +101,16 @@ urlpatterns = [
         name="api.preset_config_vars",
     ),
     re_path(
+        make_app_pattern(r"/config_vars/builtin/$", include_envs=False),
+        views.ConfigVarBuiltinViewSet.as_view({"get": "list_builtin_envs"}),
+        name="api.config_vars.builtin",
+    ),
+    re_path(
+        make_app_pattern(r"/config_vars/conflict_info/$", include_envs=False),
+        views.ConflictedConfigVarsViewSet.as_view({"get": "list_configvar_conflicted_keys"}),
+        name="api.config_vars.conflict_info",
+    ),
+    re_path(
         make_app_pattern(r"/config_vars/(?P<config_vars_key>[A-Z][A-Z0-9_]*)/$", include_envs=False),
         views.ConfigVarViewSet.as_view(
             {
@@ -109,11 +119,6 @@ urlpatterns = [
             }
         ),
         name="api.config_vars_by_key",
-    ),
-    re_path(
-        make_app_pattern(r"/config_vars/conflicted_keys/$", include_envs=False),
-        views.ConflictedConfigVarsViewSet.as_view({"get": "get_user_conflicted_keys"}),
-        name="api.config_vars.conflicted_keys",
     ),
     # deploy
     re_path(
@@ -184,29 +189,6 @@ urlpatterns = [
     ),
 ]
 
-# Built-in envs
-urlpatterns += [
-    re_path(
-        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/app/$",
-        views.ConfigVarBuiltinViewSet.as_view({"get": "get_builtin_envs_for_app"}),
-        name="api.config_vars.builtin.app",
-    ),
-    re_path(
-        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/bk_platform/$",
-        views.ConfigVarBuiltinViewSet.as_view({"get": "get_builtin_envs_bk_platform"}),
-        name="api.config_vars.builtin.bk_platform",
-    ),
-    re_path(
-        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/runtime/$",
-        views.ConfigVarBuiltinViewSet.as_view({"get": "get_runtime_envs"}),
-        name="api.config_vars.builtin.runtime",
-    ),
-    re_path(
-        "^api/bkapps/applications/(?P<code>[^/]+)/config_vars/builtin/custom/$",
-        views.ConfigVarBuiltinViewSet.as_view({"get": "get_custom_builtin_envs"}),
-        name="api.config_vars.builtin.custom",
-    ),
-]
 
 # Process Metrics Start
 

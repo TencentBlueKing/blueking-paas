@@ -45,7 +45,7 @@ curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret"
     "logo": "http://demo.com/app-logo/o_demo-0727-001_ps.png",
     "developers": [
       "admin"
-    ]
+    ],
   },
   "result": true
 }
@@ -62,4 +62,3 @@ curl -X POST -H 'X-Bkapi-Authorization: {"bk_app_code": "appid", "bk_app_secret"
 | creator      | string | 创建者            |
 | logo         | string | 图标地址          |
 | developers   | array  | 开发者列表        |
-| state        | int    | 应用状态          |

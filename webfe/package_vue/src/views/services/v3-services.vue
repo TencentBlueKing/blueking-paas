@@ -22,6 +22,7 @@
             <li
               v-for="(service, index) in categoryObject.services"
               :key="index"
+              class="text-ellipsis"
             >
               <router-link :to="{ name: 'serviceInnerPage', params: { category_id: categoryId, name: service.name } }">
                 <img
@@ -106,13 +107,12 @@ export default {
 
 <style lang="scss" scoped>
 .service-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
 
 .service-list li {
-  flex: 0 0 calc(25% - 16px);
   box-sizing: border-box;
 }
 
@@ -165,7 +165,7 @@ export default {
 .service-container {
   margin-top: 16px;
   background: #fff;
-  padding: 16px 0 16px 16px;
+  padding: 16px;
   min-height: 260px;
 }
 </style>

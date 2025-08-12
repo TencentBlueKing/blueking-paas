@@ -33,7 +33,6 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_
   "results": [
     {
       "id": "9eafc30c50874c34a9499cb56ccb4bfc",
-      "region": "ieod",
       "name": "testplugin",
       "code": "testplugin",
       "logo_url": "https://example.com/app-logo/blueking_app_default.png",
@@ -53,6 +52,21 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_
 
 ### 返回结果参数说明
 
-| 参数名称     | 参数类型 | 参数说明                                              |
-|--------------|----------|---------------------------------------------------|
-| has_deployed | bool     | 表示插件创建后是否部署过，可由 `has_deployed` 参数过滤 |
+| 参数名称       | 参数类型 | 参数说明                                                      |
+|----------------|----------|-----------------------------------------------------------|
+| count          | int      | 返回结果的总数，表示符合条件的记录总数。                               |
+| next           | string   | 下一页的链接，如果没有更多结果，则为 `null`。                          |
+| previous       | string   | 上一页的链接，如果当前是第一页，则为 `null`。                          |
+| results        | array    | 包含符合条件的资源项数组，每个元素为一个对象，具体结构见下文。              |
+| results.id     | string   | 唯一标识符，通过该 ID 可识别该插件。                                   |
+| results.name   | string   | 插件的名称。                                                |
+| results.code   | string   | 插件的代码标识。                                            |
+| results.logo_url| string  | 插件的 logo 图片链接，用于展示该插件的标识。                          |
+| results.has_deployed | bool | 表示插件创建后是否已部署过，值为 `true` 表示已部署，`false` 表示未部署。     |
+| results.creator | string  | 创建该插件的用户名。                                        |
+| results.created | string  | 插件创建时间，格式为 `YYYY-MM-DD HH:mm:ss`。                   |
+| results.updated | string  | 插件最后更新时间，格式为 `YYYY-MM-DD HH:mm:ss`。                 |
+| results.tag_info | object  | 插件分类信息对象，包含以下字段：                                |
+| results.tag_info.id | int | 插件分类的唯一标识符。                                          |
+| results.tag_info.name | string | 插件分类的名称。                                           |
+| results.tag_info.code_name | string | 插件分类标识。                                    |

@@ -23,9 +23,6 @@
 curl -X POST -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app_secret": "***", "bk_ticket": "***"}' -d '{ "package_url": "https://example.com/generic/example.tar.gz", "version": "0.0.5" }' --insecure http://bkapi.example.com/api/bkpaas3/stag/bkapps/applications/app_code/modules/default/source_package/link/
 ```
 
-#### 获取你的 access_token
-在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
-
 ### 返回结果示例
 #### 正常返回
 ```json

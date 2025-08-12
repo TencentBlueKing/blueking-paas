@@ -19,9 +19,6 @@ App 下架接口，用于将指定的 App 从指定环境中下架。
 curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{AppCode}}/modules/{{module_name}}/envs/{env:stag/prod}/offlines/
 ```
 
-#### 获取你的 access_token
-在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
-
 ### 返回结果示例
 ```json
 {

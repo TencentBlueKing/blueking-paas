@@ -74,10 +74,6 @@ curl -X PUT -H 'Content-Type: application/json' -H 'X-Bkapi-Authorization: {"bk_
 ```
 manifest.metafata.name should be equal to the name of the application.
 
-#### Obtain Your Access Token
-
-Before using the API, please obtain your access token. Refer to [Accessing PaaS V3 with access_token](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
-
 ### Response Example
 #### Success Response
 ```json

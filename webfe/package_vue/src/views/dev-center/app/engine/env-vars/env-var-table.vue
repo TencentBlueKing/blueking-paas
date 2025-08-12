@@ -511,14 +511,15 @@ export default {
     // 过滤掉自定义属性
     getCleanVariable(row) {
       const { isEditing, isNew, is_sensitive, ...cleanData } = row;
+      // 编辑状态下，无需传递 value
       if (!isNew && is_sensitive && cleanData.value === this.ENCRYPTED_PLACEHOLDER) {
         delete cleanData.value;
       }
-      if (this.isBatchEditing && typeof cleanData.id === 'string') {
-        if (cleanData.id.startsWith('costum-')) {
-          delete cleanData.id; // 删除批量添加的行的临时标记
-        }
+      // 删除批量添加的行的临时标记
+      if (this.isBatchEditing && typeof cleanData.id === 'string' && cleanData.id?.startsWith('costum-')) {
+        delete cleanData.id;
       }
+      delete cleanData.conflict;
       return {
         ...cleanData,
         is_sensitive,
@@ -541,9 +542,19 @@ export default {
         } else {
           this.$emit('update', data, index);
         }
-        row.isEditing = false;
       } catch (e) {
         console.error('验证失败', e);
+      }
+    },
+
+    // 设置指定行的编辑状态（供父组件调用）
+    setEditingStatus(data, isEditing) {
+      const curIndex = this.varList.findIndex(
+        (item) => item.key === data.key && item.environment_name === data.environment_name
+      );
+      const row = this.varList[curIndex];
+      if (row) {
+        row.isEditing = isEditing;
       }
     },
 

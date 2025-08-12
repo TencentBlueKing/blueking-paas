@@ -192,7 +192,10 @@
         slot="content"
         class="slider-env-content"
       >
-        <builtIn-env-var-display :app-code="appCode" />
+        <BuiltInEnvVarDisplay
+          :app-code="appCode"
+          :module-id="curModuleId"
+        />
       </div>
     </bk-sideslider>
 
@@ -343,14 +346,14 @@
 
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
-import builtInEnvVarDisplay from '@/components/builtIn-env-var-display';
+import BuiltInEnvVarDisplay from '@/components/builtIn-env-var-display';
 import AppDescriptionFile from './app-description-file.vue';
 import EnvVarTable from '../env-vars/env-var-table.vue';
 import SwitchDisplay from '@/components/switch-display';
 
 export default {
   components: {
-    builtInEnvVarDisplay,
+    BuiltInEnvVarDisplay,
     AppDescriptionFile,
     EnvVarTable,
     SwitchDisplay,
@@ -408,6 +411,7 @@ export default {
       },
       // 是否开启批量编辑
       isBatchEditing: false,
+      allConflictedKeys: [],
     };
   },
   computed: {
@@ -436,8 +440,8 @@ export default {
     },
 
     // 获取环境变量冲突提示
-    getConflictMessage(conflictedKeys, key) {
-      const conflictItem = conflictedKeys.find((item) => item.key === key);
+    getConflictMessage(key) {
+      const conflictItem = this.allConflictedKeys.find((item) => item.key === key);
 
       if (!conflictItem) return {};
 
@@ -454,12 +458,11 @@ export default {
       };
     },
 
-    // 获取冲突的环境变量
-    async getConflictedEnvVariables() {
+    // 获取全量内置环境变量可覆盖性信息
+    async getConflictInfo() {
       try {
-        const res = await this.$store.dispatch('envVar/getConflictedEnvVariables', {
+        const res = await this.$store.dispatch('envVar/getConflictInfo', {
           appCode: this.appCode,
-          moduleId: this.curModuleId,
         });
         return res || [];
       } catch (e) {
@@ -471,7 +474,9 @@ export default {
     async getEnvVarList(isUpdate = true) {
       this.isTableLoading = true;
       try {
-        const conflictedKeys = await this.getConflictedEnvVariables();
+        if (!this.allConflictedKeys?.length) {
+          this.allConflictedKeys = await this.getConflictInfo();
+        }
         const res = await this.$store.dispatch('envVar/getEnvVariables', {
           appCode: this.appCode,
           moduleId: this.curModuleId,
@@ -483,7 +488,7 @@ export default {
         this.envLocalVarList = res.map((item) => ({
           ...item,
           isEdit: false, // 取消编辑态
-          conflict: conflictedKeys.length > 0 ? this.getConflictMessage(conflictedKeys, item.key) : {},
+          conflict: this.getConflictMessage(item.key), // 环境变量冲突提示
           id: item.id || res.find((i) => i.key === item.key)?.id,
         }));
       } catch (e) {
@@ -505,6 +510,10 @@ export default {
       }
     },
 
+    setRowEditingStatus(data, isEditing) {
+      this.$refs.envVarTableRef?.setEditingStatus(data, isEditing);
+    },
+
     // 新增加单个环境变量
     async createdEnvVariable(data) {
       try {
@@ -515,6 +524,7 @@ export default {
         });
         this.handleEnvVarChange(this.$t('添加'));
         this.getEnvVarList();
+        this.setRowEditingStatus(data, false);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -534,6 +544,7 @@ export default {
         });
         this.handleEnvVarChange(this.$t('修改'));
         this.getEnvVarList();
+        this.setRowEditingStatus(data, false);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -1303,7 +1314,7 @@ a.is-disabled {
 
 .slider-env-content {
   padding: 20px 24px;
-  min-height: calc(100vh - 50px);
+  height: 100%;
 }
 .env-title {
   font-size: 14px;

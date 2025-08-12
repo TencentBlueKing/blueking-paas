@@ -1897,7 +1897,7 @@ export default {
   应用运行时信息: 'APP runtime information',
   蓝鲸体系内平台地址: 'The platform address in the BlueKing system',
   变量: 'Variable',
-  '增强服务也会写入内置环境变量，详情请查看增强服务页面。更多说明请参考': 'Add-ons will also be written into built-in environment variables. For details, please refer to the Add-ons page. For more information, please refer to',
+  '此处展示的内置变量不包含增强服务所写入的环境变量，更多说明请参考': 'The built-in variables displayed here do not include environment variables written by enhanced services. For more information, please refer to',
   内置环境变量说明: 'Built-in Environment Variables Description',
   操作记录: 'Operation Record',
   发布: 'Release',
@@ -3066,4 +3066,8 @@ export default {
   提交代码到代码仓库: 'Submit Code to Repository',
   '新建代码仓库（由平台自动创建）': 'Create New Repository (Automatically Created by the Platform)',
   '将自动创建该私有仓库并完成模板代码初始化，当前用户默认为仓库管理员': 'The private repository will be automatically created and the template code will be initialized, with the current user set as the default repository administrator',
+  '搜索变量名/变量值': 'Search Variable Name/Value',
+  '搜索变量名/变量值/描述': 'Search Variable Name/Value/Description',
+  变量名: 'Variable Name',
+  变量值: 'Variable Value',
 };

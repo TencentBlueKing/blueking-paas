@@ -257,3 +257,33 @@ class TestDeploymentViewSet:
         )
         assert resp.status_code == 400
         assert resp.json() == {"code": "CANNOT_DEPLOY_APP", "detail": "部署失败: 部署请求异常，请稍候再试"}
+
+
+class TestDeployOptionsViewSet:
+    @pytest.fixture
+    def deploy_options(self, bk_app):
+        return bk_app.deploy_options.create(replicas_override_policy="web_form")
+
+    def test_create(self, api_client, bk_app):
+        assert bk_app.deploy_options.exists() is False
+
+        url = reverse("api.deploy_options", kwargs={"code": bk_app.code})
+        resp = api_client.post(url, data={"replicas_override_policy": "web_form"})
+        assert resp.status_code == 200
+        assert resp.json() == {"replicas_override_policy": "web_form"}
+        assert bk_app.deploy_options.last().replicas_override_policy == "web_form"
+
+    def test_update(self, api_client, bk_app, deploy_options):
+        assert deploy_options.replicas_override_policy == "web_form"
+
+        url = reverse("api.deploy_options", kwargs={"code": bk_app.code})
+        resp = api_client.post(url, data={"replicas_override_policy": "app_desc"})
+        assert resp.status_code == 200
+        assert resp.json() == {"replicas_override_policy": "app_desc"}
+        assert bk_app.deploy_options.last().replicas_override_policy == "app_desc"
+
+    def test_get(self, api_client, bk_app, deploy_options):
+        url = reverse("api.deploy_options", kwargs={"code": bk_app.code})
+        resp = api_client.get(url)
+        assert resp.status_code == 200
+        assert resp.json() == {"replicas_override_policy": deploy_options.replicas_override_policy}

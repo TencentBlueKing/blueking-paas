@@ -30,7 +30,7 @@ from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnv
 from paasng.platform.declarative.deployment.resources import DeploymentDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import (
-    adjust_desc_to_lock_replicas,
+    apply_form_replicas_overrides,
     get_deploy_desc_handler,
     get_desc_handler,
 )
@@ -111,21 +111,21 @@ class TestGetDeployDescHandlerIncorrectVersions:
             get_deploy_desc_handler(yaml.safe_load(yaml_content))
 
 
-class Test__adjust_desc_to_lock_replicas:
+class Test__apply_form_replicas_overrides:
     def test(self, bk_stag_env):
         """测试场景: 首次部署"""
         new_replicas = 5
 
         # without spec.env_overlay.replicas
         desc = self._make_desc(new_replicas)
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == new_replicas
         self._assert_is_notset(desc.spec.env_overlay)
 
         # with spec.env_overlay.replicas
         overlay_replicas = self.make_overlay_replicas(new_replicas, new_replicas * 2)
         desc = self._make_desc(new_replicas, overlay_replicas=overlay_replicas)
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == new_replicas
         assert desc.spec.env_overlay.replicas == overlay_replicas
 
@@ -149,7 +149,7 @@ class Test__adjust_desc_to_lock_replicas:
 
         # without spec.env_overlay.replicas
         desc = self._make_desc(new_replicas)
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         self._assert_is_notset(desc.spec.processes[0].replicas)
         self._assert_is_notset(desc.spec.env_overlay)
 
@@ -157,7 +157,7 @@ class Test__adjust_desc_to_lock_replicas:
         desc = self._make_desc(
             new_replicas, overlay_replicas=self.make_overlay_replicas(new_replicas, new_replicas * 2)
         )
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         self._assert_is_notset(desc.spec.processes[0].replicas)
         self._assert_is_notset(desc.spec.env_overlay.replicas)
 
@@ -165,7 +165,7 @@ class Test__adjust_desc_to_lock_replicas:
             new_replicas,
             overlay_replicas=self.make_overlay_replicas_by_env("prod", new_replicas * 2),
         )
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         self._assert_is_notset(desc.spec.processes[0].replicas)
         self._assert_is_notset(desc.spec.env_overlay.replicas)
 
@@ -195,7 +195,7 @@ class Test__adjust_desc_to_lock_replicas:
 
         # without spec.env_overlay.replicas
         desc = self._make_desc(new_replicas)
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         self._assert_is_notset(desc.spec.processes[0].replicas)
         self._assert_is_notset(desc.spec.env_overlay)
 
@@ -204,7 +204,7 @@ class Test__adjust_desc_to_lock_replicas:
             new_replicas,
             overlay_replicas=self.make_overlay_replicas(new_replicas, new_replicas * 2),
         )
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         self._assert_is_notset(desc.spec.processes[0].replicas)
         self._assert_is_notset(desc.spec.env_overlay.replicas)
 
@@ -224,7 +224,7 @@ class Test__adjust_desc_to_lock_replicas:
 
         # without spec.env_overlay.replicas
         desc = self._make_desc(new_replicas)
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
         self._assert_is_notset(desc.spec.env_overlay)
 
@@ -233,7 +233,7 @@ class Test__adjust_desc_to_lock_replicas:
             new_replicas,
             overlay_replicas=self.make_overlay_replicas(new_replicas, new_replicas * 2),
         )
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
         self._assert_is_notset(desc.spec.env_overlay.replicas)
 
@@ -258,7 +258,7 @@ class Test__adjust_desc_to_lock_replicas:
 
         # without spec.env_overlay.replicas
         desc = self._make_desc(new_replicas)
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
         assert desc.spec.env_overlay.replicas == self.make_overlay_replicas_by_env("stag", stag_online_replicas)
 
@@ -267,7 +267,7 @@ class Test__adjust_desc_to_lock_replicas:
             new_replicas,
             overlay_replicas=self.make_overlay_replicas(new_replicas, new_replicas * 2),
         )
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         assert desc.spec.processes[0].replicas == online_replicas
         assert desc.spec.env_overlay.replicas == self.make_overlay_replicas_by_env("stag", stag_online_replicas)
 
@@ -295,7 +295,7 @@ class Test__adjust_desc_to_lock_replicas:
 
         # without spec.env_overlay.replicas
         desc = self._make_desc(new_replicas)
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         assert (
             sorted(desc.spec.env_overlay.replicas, key=attrgetter("env_name"), reverse=True)
             == online_env_overlay_replicas
@@ -306,7 +306,7 @@ class Test__adjust_desc_to_lock_replicas:
             new_replicas,
             overlay_replicas=self.make_overlay_replicas(new_replicas, new_replicas * 2),
         )
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         assert (
             sorted(desc.spec.env_overlay.replicas, key=attrgetter("env_name"), reverse=True)
             == online_env_overlay_replicas
@@ -316,7 +316,7 @@ class Test__adjust_desc_to_lock_replicas:
             new_replicas,
             overlay_replicas=self.make_overlay_replicas_by_env("prod", new_replicas * 2),
         )
-        adjust_desc_to_lock_replicas(desc, bk_stag_env)
+        apply_form_replicas_overrides(desc, bk_stag_env)
         assert (
             sorted(desc.spec.env_overlay.replicas, key=attrgetter("env_name"), reverse=True)
             == online_env_overlay_replicas

@@ -351,8 +351,9 @@ class ConfigVarBuiltinViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             # 应用运行时相关环境变量
             env_vars.extend(list_vars_builtin_runtime(env=env, include_deprecated=False))
 
-            # 使用 map 去重后转化为 EnvVariableList
-            deduped_vars = EnvVariableList(env_vars.map.values())
+            # 使用 map 去重后转化为 EnvVariableList, 并按照 key 排序
+            sorted_vars = sorted(env_vars.map.values(), key=lambda v: v.key.lower())
+            deduped_vars = EnvVariableList(sorted_vars)
             result[env.environment] = mask_vars_for_view(deduped_vars)
 
         return Response(ListBuiltinConfigVarSLZ(result).data)

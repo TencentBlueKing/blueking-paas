@@ -4143,7 +4143,7 @@ msgstr "{source_type} source code does not currently support packaging"
 #: paasng/platform/sourcectl/views.py:573
 #, python-brace-format
 msgid "{module} 的仓库信息查询异常"
-msgstr "The warehouse information query of %s is abnormal"
+msgstr "{module} warehouse information query exception"
 
 #: paasng/platform/templates/constants.py:25
 msgid "普通应用"

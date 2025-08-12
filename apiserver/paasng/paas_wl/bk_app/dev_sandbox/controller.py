@@ -18,6 +18,7 @@
 import logging
 from typing import TYPE_CHECKING, Dict
 
+import requests
 from attr import define, field
 
 from paas_wl.bk_app.applications.models import WlApp
@@ -41,7 +42,7 @@ from paas_wl.bk_app.dev_sandbox.kres_entities import (
     DevSandboxService,
 )
 from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_ingress_name, get_dev_sandbox_name
-from paas_wl.infras.resources.kube_res.base import AppEntityManager
+from paas_wl.infras.resources.kube_res.base import AppEntityManager, AppEntityReader
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
@@ -115,6 +116,7 @@ class DevSandboxController:
 
     def delete(self):
         """通过直接删除命名空间的方式, 销毁 dev sandbox 服务"""
+        self._save_settings_via_ingress()
         ns_handler = NamespacesHandler.new_by_app(self.wl_app)
         ns_handler.delete(namespace=self.wl_app.namespace)
 
@@ -181,6 +183,48 @@ class DevSandboxController:
             return image
 
         raise BuilderDoesNotSupportDevSandbox(f"module {mgr.module.name} does not support dev sandbox")
+
+    def _save_settings_via_ingress(self):
+        """通过 Ingress 访问沙箱 API"""
+
+        # 获取 Ingress 实体
+        ingress_name = get_dev_sandbox_ingress_name(self.wl_app)
+        try:
+            reader = AppEntityReader(DevSandboxIngress)
+            ingress = reader.get(self.wl_app, ingress_name)
+        except AppEntityNotFound:
+            raise DevSandboxResourceNotFound("dev sandbox ingress not found")
+
+        # 获取 ingress IP 地址
+        if not ingress.ip_address:
+            raise ValueError("No IP address found in Ingress status")
+        ingress_ip = ingress.ip_address
+        api_url = f"http://{ingress_ip}/dev_sandbox/{self.dev_sandbox.code}/devserver/settings"
+
+        domain = self._get_ingress_domain()
+        headers = {
+            "Authorization": f"Bearer {self.dev_sandbox.token}",
+            "Host": domain,
+        }
+
+        # 调用 devserver API 获取 settings.json
+        session = requests.Session()
+        response = session.get(
+            api_url,
+            headers=headers,
+        )
+        response.raise_for_status()
+
+    def _get_ingress_domain(self) -> str:
+        """获取 Ingress 域名"""
+        ingress_name = get_dev_sandbox_ingress_name(self.wl_app)
+        try:
+            ingress: DevSandboxIngress = self.ingress_mgr.get(self.wl_app, ingress_name)
+            if not ingress.domains:
+                raise ValueError("No domains found in ingress")
+            return ingress.domains[0].host
+        except AppEntityNotFound:
+            raise DevSandboxResourceNotFound("dev sandbox ingress not found")
 
 
 class DevWlAppConstructor:

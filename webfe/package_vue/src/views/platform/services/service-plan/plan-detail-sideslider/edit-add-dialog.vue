@@ -55,6 +55,7 @@
         <bk-form-item
           :label="$t('实例凭证')"
           :required="true"
+          :desc="credentialDesc"
         >
           <div class="json-editor-wrapper">
             <JsonEditorVue
@@ -115,7 +116,6 @@ export default {
       dialogLoading: false,
       // tls配置
       tlsConfigJson: {},
-      tlsDesc: `${this.$t('配置示例')}：{ "ca": "...", "cert": "...", "key": "..." }`,
     };
   },
   computed: {
@@ -129,6 +129,12 @@ export default {
     },
     isAdd() {
       return this.data.type === 'add';
+    },
+    tlsDesc() {
+      return `${this.$t('配置示例')}：{ "ca": "...", "cert": "...", "key": "..." }`;
+    },
+    credentialDesc() {
+      return `${this.$t('配置示例')}：{ "host": "127.0.0.1", "port": 6379, "password": "" }`;
     },
   },
   methods: {

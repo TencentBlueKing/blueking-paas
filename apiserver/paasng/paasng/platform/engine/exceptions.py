@@ -84,3 +84,7 @@ class HandleAppDescriptionError(Exception):
 
 class InitDeployDescHandlerError(Exception):
     """Error when initialing the description handler for deployment."""
+
+
+class ServerVersionCheckFailed(Exception):
+    """Raise this exception when apiserver and operator versions do not match."""

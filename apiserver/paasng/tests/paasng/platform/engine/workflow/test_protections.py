@@ -15,15 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import types
 from unittest import mock
 
 import gitlab.exceptions
 import pytest
-from django.core.cache import cache
 from django_dynamic_fixture import G
 
-from paas_wl.infras.cluster.shim import EnvClusterService
 from paasng.accessories.publish.market.models import ApplicationExtraInfo, Product, Tag
 from paasng.bk_plugins.bk_plugins.models import BkPluginTag
 from paasng.core.core.protections.exceptions import ConditionNotMatched
@@ -35,7 +32,6 @@ from paasng.platform.engine.workflow.protections import (
     ApplicationExtraInfoCondition,
     EnvProtectionCondition,
     ModuleEnvDeployInspector,
-    OperatorVersionCondition,
     PluginTagValidationCondition,
     ProductInfoCondition,
     RepoAccessCondition,
@@ -44,9 +40,8 @@ from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.models import EnvRoleProtection
 from paasng.platform.sourcectl.models import GitProject
 from paasng.platform.sourcectl.source_types import get_sourcectl_names
-from tests.utils.helpers import override_settings
 
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture()
@@ -59,16 +54,6 @@ def git_client(bk_module):
     ):
         get_backends.return_value = GitProject(name="baz", namespace="bar", type="dft_gitlab")
         yield client()
-
-
-@pytest.fixture()
-def _clear_operator_version_cache(bk_module):
-    """A fixture used to clear cache key in OperatorVersionCondition"""
-    cluster_name = EnvClusterService(bk_module.get_envs("prod")).get_cluster_name()
-    key = f"helm_release:{cluster_name}:operator_version"
-    cache.delete(key)
-    yield
-    cache.delete(key)
 
 
 class TestProductInfoCondition:
@@ -225,59 +210,9 @@ class TestAppExtraInfoCondition:
             assert exc_info.value.action_name == DeployConditions.FILL_EXTRA_INFO.value
 
 
-@pytest.mark.usefixtures("_clear_operator_version_cache")
-class TestOperatorVersionCondition:
-    @pytest.mark.parametrize(
-        ("check_version", "api_server_version", "operator_version", "expected"),
-        [
-            (False, "v1.0.0", "v1.0.0", True),
-            (False, "v1.0.1", "v1.0.0", True),
-            (True, "v1.0.0", "v1.0.0", True),
-            (True, "v1.0.1", "v1.0.0", False),
-        ],
-    )
-    def test_validate(
-        self,
-        bk_user,
-        bk_module,
-        check_version,
-        api_server_version,
-        operator_version,
-        expected,
-    ):
-        env = bk_module.get_envs("prod")
-        fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version=operator_version))
-        with (
-            override_settings(
-                APISERVER_OPERATOR_VERSION_CHECK=check_version,
-                APISERVER_VERSION=api_server_version,
-            ),
-            mock.patch(
-                "paas_wl.infras.cluster.helm.HelmClient.get_release",
-                return_value=fake_release,
-            ),
-        ):
-            if expected:
-                OperatorVersionCondition(bk_user, env).validate()
-            else:
-                with pytest.raises(ConditionNotMatched) as exc_info:
-                    OperatorVersionCondition(bk_user, env).validate()
-
-                assert exc_info.value.action_name == DeployConditions.CHECK_OPERATOR_VERSION.value
-
-
-@pytest.mark.usefixtures("_clear_operator_version_cache")
 class TestModuleEnvDeployInspector:
     @pytest.mark.parametrize(
-        (
-            "user_role",
-            "allowed_roles",
-            "create_token",
-            "create_product",
-            "set_extra_info",
-            "check_operator_version",
-            "expected",
-        ),
+        ("user_role", "allowed_roles", "create_token", "create_product", "set_extra_info", "expected"),
         [
             (
                 ApplicationRole.DEVELOPER,
@@ -285,13 +220,11 @@ class TestModuleEnvDeployInspector:
                 False,
                 False,
                 False,
-                True,
                 [
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.CHECK_ENV_PROTECTION,
                     DeployConditions.NEED_TO_BIND_OAUTH_INFO,
                     DeployConditions.FILL_EXTRA_INFO,
-                    DeployConditions.CHECK_OPERATOR_VERSION,
                 ],
             ),
             (
@@ -300,12 +233,10 @@ class TestModuleEnvDeployInspector:
                 True,
                 False,
                 False,
-                True,
                 [
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.CHECK_ENV_PROTECTION,
                     DeployConditions.FILL_EXTRA_INFO,
-                    DeployConditions.CHECK_OPERATOR_VERSION,
                 ],
             ),
             (
@@ -314,11 +245,9 @@ class TestModuleEnvDeployInspector:
                 True,
                 False,
                 False,
-                True,
                 [
                     DeployConditions.FILL_PRODUCT_INFO,
                     DeployConditions.FILL_EXTRA_INFO,
-                    DeployConditions.CHECK_OPERATOR_VERSION,
                 ],
             ),
             (
@@ -327,10 +256,8 @@ class TestModuleEnvDeployInspector:
                 True,
                 True,
                 False,
-                True,
                 [
                     DeployConditions.FILL_EXTRA_INFO,
-                    DeployConditions.CHECK_OPERATOR_VERSION,
                 ],
             ),
             (
@@ -339,16 +266,6 @@ class TestModuleEnvDeployInspector:
                 True,
                 True,
                 True,
-                True,
-                [DeployConditions.CHECK_OPERATOR_VERSION],
-            ),
-            (
-                ...,
-                ...,
-                True,
-                True,
-                True,
-                False,
                 [],
             ),
         ],
@@ -363,7 +280,6 @@ class TestModuleEnvDeployInspector:
         create_token,
         create_product,
         set_extra_info,
-        check_operator_version,
         expected,
     ):
         application = bk_module.application
@@ -397,17 +313,6 @@ class TestModuleEnvDeployInspector:
                 availability_level=AvailabilityLevel.STANDARD.value,
             )
 
-        fake_release = types.SimpleNamespace(chart=types.SimpleNamespace(app_version="v1.0.1"))
-        with (
-            override_settings(
-                APISERVER_OPERATOR_VERSION_CHECK=check_operator_version,
-                APISERVER_VERSION="v1.0.0",
-            ),
-            mock.patch(
-                "paas_wl.infras.cluster.helm.HelmClient.get_release",
-                return_value=fake_release,
-            ),
-        ):
-            inspector = ModuleEnvDeployInspector(bk_user, env)
-            assert [item.action_name for item in inspector.perform().failed_conditions] == [c.value for c in expected]
-            assert inspector.all_matched is not len(expected)
+        inspector = ModuleEnvDeployInspector(bk_user, env)
+        assert [item.action_name for item in inspector.perform().failed_conditions] == [c.value for c in expected]
+        assert inspector.all_matched is not len(expected)

@@ -79,6 +79,7 @@ class ErrorCodes:
     RESTRICT_ROLE_DEPLOY_ENABLED = ErrorCode(_("已开启部署权限控制，仅管理员可以操作"), code_num=4311006)
     CHANNEL_NOT_FOUND = ErrorCode(_("日志流管道不存在"), status_code=404, code_num=4311007)
     DEPLOY_INTERRUPTION_FAILED = ErrorCode(_("中止部署失败"), code_num=4311008)
+    SVR_VERSION_CHECK_FAILED = ErrorCode(_("平台服务版本检测失败"), code_num=4311009)
     # CI
     RESOURCE_NOT_READY_BEFORE_OAUTH = ErrorCode(_("CI 相关资源尚未创建，无法获取授权链接"))
     FAILED_TO_GET_OAUTH_URL = ErrorCode(_("获取授权链接失败"))

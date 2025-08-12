@@ -541,9 +541,19 @@ export default {
         } else {
           this.$emit('update', data, index);
         }
-        row.isEditing = false;
       } catch (e) {
         console.error('验证失败', e);
+      }
+    },
+
+    // 设置指定行的编辑状态（供父组件调用）
+    setEditingStatus(data, isEditing) {
+      const curIndex = this.varList.findIndex(
+        (item) => item.key === data.key && item.environment_name === data.environment_name
+      );
+      const row = this.varList[curIndex];
+      if (row) {
+        row.isEditing = isEditing;
       }
     },
 

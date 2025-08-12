@@ -510,6 +510,10 @@ export default {
       }
     },
 
+    setRowEditingStatus(data, isEditing) {
+      this.$refs.envVarTableRef?.setEditingStatus(data, isEditing);
+    },
+
     // 新增加单个环境变量
     async createdEnvVariable(data) {
       try {
@@ -520,6 +524,7 @@ export default {
         });
         this.handleEnvVarChange(this.$t('添加'));
         this.getEnvVarList();
+        this.setRowEditingStatus(data, false);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
@@ -539,6 +544,7 @@ export default {
         });
         this.handleEnvVarChange(this.$t('修改'));
         this.getEnvVarList();
+        this.setRowEditingStatus(data, false);
       } catch (e) {
         this.$paasMessage({
           theme: 'error',

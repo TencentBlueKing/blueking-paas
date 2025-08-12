@@ -1156,6 +1156,26 @@ export default {
     isEnvAvailable(envName) {
       return includes(this.availableEnv, envName);
     },
+    // 环境变量错误处理
+    handleEnvVarError(operation, error) {
+      this.$paasMessage({
+        theme: 'error',
+        message: `${this.$t(`${operation}环境变量失败`)}，${error.message || error.detail}`,
+      });
+    },
+    // 环境变量操作成功处理
+    handleEnvVarSuccess(operation, data = null) {
+      this.$paasMessage({
+        theme: 'success',
+        message: this.$t(`${operation}环境变量成功`),
+      });
+      this.setEditedStatus(true);
+      this.loadConfigVar();
+      // 取消编辑状态
+      if (data) {
+        this.$refs.envVarTableRef?.setEditingStatus(data, false);
+      }
+    },
     // 更新环境变量
     async updateConfigVar(data) {
       try {
@@ -1165,17 +1185,9 @@ export default {
           varId: data.id,
           data: data,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('修改环境变量成功'),
-        });
-        this.setEditedStatus(true);
-        this.loadConfigVar();
+        this.handleEnvVarSuccess('修改', data);
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('修改环境变量失败')}，${e.message}`,
-        });
+        this.handleEnvVarError('修改', e, data);
       }
     },
     // 添加环境变量
@@ -1186,17 +1198,9 @@ export default {
           moduleId: this.curModuleId,
           data,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('添加环境变量成功'),
-        });
-        this.loadConfigVar();
-        this.setEditedStatus(true);
+        this.handleEnvVarSuccess('添加', data);
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('添加环境变量失败')}，${e.message}`,
-        });
+        this.handleEnvVarError('添加', e, data);
       }
     },
     // 删除单个环境变量
@@ -1207,17 +1211,9 @@ export default {
           moduleId: this.curModuleId,
           varId: row.id,
         });
-        this.$paasMessage({
-          theme: 'success',
-          message: this.$t('删除环境变量成功'),
-        });
-        this.loadConfigVar();
-        this.setEditedStatus(true);
+        this.handleEnvVarSuccess('删除');
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('删除环境变量失败')}，${e.message}`,
-        });
+        this.handleEnvVarError('删除', e);
       }
     },
     releaseEnv(envName) {

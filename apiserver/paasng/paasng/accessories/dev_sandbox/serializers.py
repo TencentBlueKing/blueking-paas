@@ -130,7 +130,7 @@ class DevSandboxEnvVarsListOutputSLZ(serializers.Serializer):
 
 
 class DevSandboxAddonsServicesListOutputSLZ(serializers.Serializer):
-    uuid = serializers.CharField()
-    name = serializers.CharField()
-    display_name = serializers.CharField()
-    description = serializers.CharField()
+    uuid = serializers.CharField(help_text="增强服务唯一标识")
+    name = serializers.CharField(help_text="增强服务名称")
+    display_name = serializers.CharField(help_text="增强服务展示名称")
+    description = serializers.CharField(help_text="增强服务描述")

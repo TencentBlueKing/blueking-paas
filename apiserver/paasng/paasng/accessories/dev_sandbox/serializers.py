@@ -28,7 +28,7 @@ from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
 from paasng.platform.sourcectl.version_services import get_version_service
-from paasng.utils.serializers import field_env_var_key
+from paasng.utils.validators import RE_CONFIG_VAR_KEY
 
 
 class DevSandboxListOutputSLZ(serializers.Serializer):
@@ -119,7 +119,12 @@ class DevSandboxPreDeployCheckOutputSLZ(serializers.Serializer):
 
 
 class DevSandboxEnvVarsUpsertInputSLZ(serializers.Serializer):
-    key = field_env_var_key()
+    key = serializers.RegexField(
+        RE_CONFIG_VAR_KEY,
+        max_length=1024,
+        required=True,
+        error_messages={"invalid": _("格式错误，只能以大写字母开头，由大写字母、数字与下划线组成。")},
+    )
     value = serializers.CharField(max_length=255, help_text="环境变量值")
 
 

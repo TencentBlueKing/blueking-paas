@@ -40,6 +40,7 @@ from paasng.accessories.dev_sandbox.config_var import generate_env_vars, get_env
 from paasng.accessories.dev_sandbox.exceptions import CannotCommitToRepository, DevSandboxApiException
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.accessories.dev_sandbox.serializers import (
+    DevSandboxAddonsServicesListOutputSLZ,
     DevSandboxCommitInputSLZ,
     DevSandboxCommitOutputSLZ,
     DevSandboxCreateInputSLZ,
@@ -51,6 +52,7 @@ from paasng.accessories.dev_sandbox.serializers import (
     DevSandboxRetrieveOutputSLZ,
 )
 from paasng.accessories.dev_sandbox.source_code import upload_source_code
+from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.applications.constants import AppEnvironment
@@ -123,9 +125,10 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             source_code_cfg.source_fetch_method = SourceCodeFetchMethod.BK_REPO
 
         env_vars = generate_env_vars(module)
+        enabled_addons_services = data.get("enabled_addons_services")
         if data["inject_staging_env_vars"]:
             stag_env = module.get_envs(AppEnvironment.STAGING)
-            env_vars.update(get_env_vars_selected_addons(stag_env, data.get("enabled_addons_services")))
+            env_vars.update(get_env_vars_selected_addons(stag_env, enabled_addons_services))
 
         dev_sandbox = DevSandbox.objects.create(
             module=module,
@@ -133,6 +136,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             env_vars=env_vars,
             version_info=version_info,
             enable_code_editor=data["enable_code_editor"],
+            enabled_addons_services=enabled_addons_services,
         )
 
         # 下发沙箱 k8s 资源
@@ -259,6 +263,33 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 判断开发沙箱数量是否超过限制
         result = bool(DevSandbox.objects.count() < settings.DEV_SANDBOX_COUNT_LIMIT)
         return Response(data=DevSandboxPreDeployCheckOutputSLZ({"result": result}).data)
+
+    @swagger_auto_schema(
+        tags=["accessories.dev_sandbox"],
+        operation_description="获取沙箱使用的增强服务",
+        responses={status.HTTP_200_OK: DevSandboxAddonsServicesListOutputSLZ()},
+    )
+    def list_addons_services(self, request, *args, **kwargs):
+        module = self.get_module_via_path()
+        dev_sandbox = DevSandbox.objects.filter(
+            module=module,
+            code=self.kwargs["dev_sandbox_code"],
+            owner=self.request.user.pk,
+        ).first()
+
+        if not dev_sandbox:
+            raise error_codes.DEV_SANDBOX_NOT_FOUND
+
+        # 沙箱目前复用的预发布环境（stag）的增强服务
+        engine_app = module.get_envs(AppEnvironment.STAGING).get_engine_app()
+
+        addons_services = []
+        for rel in mixed_service_mgr.list_provisioned_rels(engine_app):
+            svc = rel.get_service()
+            if svc.name in dev_sandbox.enabled_addons_services:
+                addons_services.append(svc)
+
+        return Response(data=DevSandboxAddonsServicesListOutputSLZ(addons_services, many=True).data)
 
 
 class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):

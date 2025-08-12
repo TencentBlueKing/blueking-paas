@@ -37,6 +37,7 @@ from paasng.platform.engine.constants import ConfigVarEnvName
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 from paasng.platform.engine.models.preset_envvars import PresetEnvVariable
 from paasng.platform.modules.models import Module
+from paasng.utils.masked_curlify import MASKED_CONTENT
 
 if TYPE_CHECKING:
     from paasng.platform.applications.models import Application
@@ -111,20 +112,20 @@ class UnifiedEnvVarsReader:
             env_list.extend(self._source_lister_func_map[source](self.env))
         return env_list.kv_map
 
-    def get_user_conflicted_keys(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedKey]":
-        """Get the conflicted keys. A conflicted key is a key that defined in the USER_CONFIGURED
-        source, but also exists in other sources.
+    def list_conflicted_info(self, exclude_sources: list[EnvVarSource] | None = None) -> "List[ConflictedEnvVarInfo]":
+        """Get the system keys that will conflict with user-defined vars, including conflict details.
+
+        These are system-builtin keys that also exist in user configuration, potentially causing conflicts.
+        The function returns detailed information about these impending conflicts.
 
         :param exclude_sources: A list of sources to exclude when checking conflicts.
-        :return: A list of ConflictedKey objects.
+        :return: A list of ConflictedEnvVarInfo objects containing conflict details.
         """
         # Whether the current source being checked is after the USER_CONFIGURED source
         after_source = False
-        # Get all keys defined by the user in the USER_CONFIGURED source
-        user_keys = {item.key for item in self._source_lister_func_map[EnvVarSource.USER_CONFIGURED](self.env)}
 
         # Use a dict to store the result in case a key conflicts with multiple sources
-        conflicted_keys = {}
+        result_dict = {}
         for current_source in self._default_order:
             # Skip all user preset source, because they will be overridden anyway so conflict checking
             # is not needed.
@@ -138,25 +139,24 @@ class UnifiedEnvVarsReader:
                 continue
 
             data = self._source_lister_func_map[current_source](self.env).map
-            for key in user_keys:
-                if key in data:
-                    conflicted_keys[key] = ConflictedKey(
-                        key=key,
-                        conflicted_source=current_source,
-                        conflicted_detail=data[key].description,
-                        override_conflicted=not after_source,
-                    )
+            for key in data:
+                # Use key as dict key to deduplicate
+                result_dict[key] = ConflictedEnvVarInfo(
+                    key=key,
+                    conflicted_source=current_source,
+                    override_conflicted=not after_source,
+                    conflicted_detail=data[key].description,
+                )
 
         # Sort and return the result
-        return sorted(conflicted_keys.values(), key=lambda x: x.key)
+        return sorted(result_dict.values(), key=lambda x: x.key)
 
 
-def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
-    """Get user defined config vars keys that conflict with built-in env vars, the result can be
-    an useful hint for users to avoid conflicts.
+def list_conflicted_env_vars_for_view(module: Module) -> "List[ConflictedEnvVarInfo]":
+    """Get env vars conflict information for front-end display.
 
     :param module: The module to check for conflicts.
-    :return: List of conflicting keys.
+    :return: List of conflicting keys with detailed information.
     """
     app = module.application
     # Use a dict remove duplicated keys between different environments
@@ -164,7 +164,7 @@ def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
     # Check all environments in the module and merge the results
     for env in module.get_envs():
         if app.type == ApplicationType.CLOUD_NATIVE:
-            keys = UnifiedEnvVarsReader(env).get_user_conflicted_keys(
+            keys = UnifiedEnvVarsReader(env).list_conflicted_info(
                 # Exclude some sources because cloud-native apps does use them directly,
                 # see `apply_builtin_env_vars()` for more details.
                 exclude_sources=[
@@ -178,19 +178,19 @@ def get_user_conflicted_keys(module: Module) -> "List[ConflictedKey]":
 
             results.update({item.key: item for item in keys})
         else:
-            keys = UnifiedEnvVarsReader(env).get_user_conflicted_keys()
+            keys = UnifiedEnvVarsReader(env).list_conflicted_info()
             results.update({item.key: item for item in keys})
     return list(results.values())
 
 
 @define
-class ConflictedKey:
+class ConflictedEnvVarInfo:
     """A conflicted config var key object.
 
     :param key: The key of the config var.
     :param conflicted_source: The source of the conflict, such as "builtin_addons", "builtin_blobstore".
-    :param conflicted_detail: Additional details about the conflict, if any.
     :param override_conflicted: Whether the config var key has overridden the conflicting one.
+    :param conflicted_detail: Additional details about the conflict, if any.
     """
 
     key: str
@@ -333,6 +333,25 @@ def list_vars_builtin_plat_addrs() -> EnvVariableList:
     return EnvVariableList(system_envs_with_prefix)
 
 
+def mask_vars_for_view(env_vars: EnvVariableList) -> List[Dict]:
+    """Mask sensitive environment variable values for display purposes."""
+
+    mask_keys = {"BKPAAS_APP_SECRET"}
+    result = []
+    for var in env_vars:
+        is_sensitive = var.key in mask_keys
+        result.append(
+            {
+                "key": var.key,
+                "value": MASKED_CONTENT if is_sensitive else var.value,
+                "description": var.description,
+                "is_sensitive": is_sensitive,
+            }
+        )
+
+    return result
+
+
 def get_builtin_env_variables(engine_app: "EngineApp") -> EnvVariableList:
     """Get all platform built-in env vars"""
     app = engine_app.env.application
@@ -351,7 +370,7 @@ def get_builtin_env_variables(engine_app: "EngineApp") -> EnvVariableList:
     # 蓝鲸文档地址前缀
     result.append(EnvVariableObj(key="BK_DOCS_URL_PREFIX", value=get_bk_doc_url_prefix(), description=""))
 
-    # admin42 中自定义的环境变量
+    # 平台管理中自定义的环境变量
     custom_sys_envs = get_custom_builtin_config_vars()
     # 如果自定义的系统内置变量有冲突，打印出来
     custom_sys_kv, result_kv = custom_sys_envs.kv_map, result.kv_map

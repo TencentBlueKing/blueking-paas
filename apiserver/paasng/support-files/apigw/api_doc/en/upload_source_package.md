@@ -17,8 +17,6 @@ Upload source code package to the platform
 | package         | file    | Yes      | Source code package file             |
 | allow_overwrite | boolean | No       | Whether to allow overwriting existing source code package |
 
-### Get your access_token
-Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
 
 ### Return Result Example
 ```json

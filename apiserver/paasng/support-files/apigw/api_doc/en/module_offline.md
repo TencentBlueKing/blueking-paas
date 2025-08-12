@@ -19,9 +19,6 @@ None.
 curl -X POST -H 'X-BKAPI-AUTHORIZATION: {"access_token": "{{Enter your AccessToken}}"}' http://bkapi.example.com/api/bkpaas3/prod/bkapps/applications/{{Enter your AppCode}}/modules/{{Enter your module name}}/envs/{Enter App deployment environment:stag or prod}/offlines/
 ```
 
-#### Get your access_token
-Before calling the interface, please get your access_token first. For specific guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
-
 ### Response Result Example
 ```json
 {

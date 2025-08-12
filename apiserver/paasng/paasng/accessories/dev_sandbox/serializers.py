@@ -132,3 +132,10 @@ class DevSandboxEnvVarsListOutputSLZ(serializers.Serializer):
     key = serializers.CharField(help_text="环境变量键名")
     value = serializers.CharField(help_text="环境变量值")
     source = serializers.CharField(help_text="环境变量来源")
+
+
+class DevSandboxAddonsServicesListOutputSLZ(serializers.Serializer):
+    uuid = serializers.CharField(help_text="沙箱增强服务唯一标识")
+    name = serializers.CharField(help_text="沙箱增强服务名称")
+    display_name = serializers.CharField(help_text="沙箱增强服务展示名称")
+    description = serializers.CharField(help_text="沙箱增强服务描述")

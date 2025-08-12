@@ -40,10 +40,15 @@ from paasng.platform.bkapp_model.manifest import get_bkapp_resource_for_deploy
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.bg_command.tasks import exec_bkapp_hook
 from paasng.platform.engine.deploy.bg_wait.wait_bkapp import DeployStatusHandler, WaitAppModelReady
-from paasng.platform.engine.exceptions import DeployShouldAbortError, StepNotInPresetListError
+from paasng.platform.engine.exceptions import (
+    DeployShouldAbortError,
+    ServerVersionCheckFailed,
+    StepNotInPresetListError,
+)
 from paasng.platform.engine.models import DeployPhaseTypes
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.workflow import DeployStep
+from paasng.platform.engine.workflow.srv_version import ServerVersionChecker
 
 logger = logging.getLogger(__name__)
 
@@ -191,8 +196,15 @@ def release_by_k8s_operator(
 def preflight_deploy(env: ModuleEnvironment, res: BkAppResource):
     """执行应用部署前的关键条件预检，确保集群满足部署要求。
 
+    - 仅云原生应用会校验 apiserver/operator 版本一致性, 若版本不一致, 中止部署流程
     - 当检测到应用声明了 bk/grpc 来暴露服务, 但集群不支持对应特性时, 中止部署流程
     """
+    try:
+        # 检查平台的 apiserver 和 operator 版本信息的一致性
+        ServerVersionChecker(env).validate_version()
+    except ServerVersionCheckFailed as e:
+        raise DeployShouldAbortError(str(e))
+
     if not is_exposed_grpc_svc(res):
         return
 

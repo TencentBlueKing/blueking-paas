@@ -8,7 +8,7 @@
       class="mb-16"
     >
       <span slot="title">
-        {{ $t('增强服务也会写入内置环境变量，详情请查看增强服务页面。更多说明请参考') }}
+        {{ $t('此处展示的内置变量不包含增强服务所写入的环境变量，更多说明请参考') }}
         <a
           class="ml5"
           :href="GLOBAL.DOC.ENV_VAR_INLINE"
@@ -31,7 +31,7 @@
         v-model="searchKey"
         class="flex-shrink-0"
         style="width: 320px"
-        :placeholder="$t('搜索变量名/变量值')"
+        :placeholder="$t('搜索变量名/变量值/描述')"
         :clearable="true"
         :right-icon="'bk-icon icon-search'"
       ></bk-input>
@@ -82,6 +82,7 @@
               </template>
             </div>
             <i
+              v-if="!item.is_sensitive"
               v-copy="item.value"
               class="paasng-icon paasng-general-copy copy-icon"
             />
@@ -130,15 +131,16 @@ export default {
     // 根据搜索关键字过滤环境变量
     filteredEnvVars() {
       const envVars = this.allBuiltInEnvVars[this.envSelected] || [];
-      if (!this.searchKey) {
+      if (!this.searchKey?.trim()) {
         return envVars;
       }
       const keyword = this.searchKey.toLowerCase().trim();
-      return envVars.filter((item) => {
-        const keyMatch = item.key && item.key.toLowerCase().includes(keyword);
-        const valueMatch = item.value && !item.is_sensitive && item.value.toString().toLowerCase().includes(keyword);
-        return keyMatch || valueMatch;
-      });
+      return envVars.filter(
+        (item) =>
+          item.key?.toLowerCase().includes(keyword) ||
+          item.description?.toLowerCase().includes(keyword) ||
+          (!item.is_sensitive && item.value?.toString().toLowerCase().includes(keyword))
+      );
     },
   },
   methods: {

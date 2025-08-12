@@ -511,14 +511,15 @@ export default {
     // 过滤掉自定义属性
     getCleanVariable(row) {
       const { isEditing, isNew, is_sensitive, ...cleanData } = row;
+      // 编辑状态下，无需传递 value
       if (!isNew && is_sensitive && cleanData.value === this.ENCRYPTED_PLACEHOLDER) {
         delete cleanData.value;
       }
-      if (this.isBatchEditing && typeof cleanData.id === 'string') {
-        if (cleanData.id.startsWith('costum-')) {
-          delete cleanData.id; // 删除批量添加的行的临时标记
-        }
+      // 删除批量添加的行的临时标记
+      if (this.isBatchEditing && typeof cleanData.id === 'string' && cleanData.id?.startsWith('costum-')) {
+        delete cleanData.id;
       }
+      delete cleanData.conflict;
       return {
         ...cleanData,
         is_sensitive,

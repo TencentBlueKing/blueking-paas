@@ -277,7 +277,7 @@ class TestEnvVarsDevSandbox:
         assert resp.json() == []
 
 
-class TestAddonsServicesList:
+class TestListDevSandboxAddonsServices:
     """测试获取沙箱使用的增强服务列表
 
     主要验证 addon_services_list API 的筛选逻辑：根据用户选择的增强服务列表过滤返回结果，因此这里简单模拟 Service 和 Rel 对象
@@ -342,9 +342,7 @@ class TestAddonsServicesList:
             resp = api_client.get(url)
 
         assert resp.status_code == status.HTTP_200_OK
-        data = resp.json()
-        assert len(data) == 2
-        assert {item["name"] for item in data} == {"mysql", "redis"}
+        assert {item["name"] for item in resp.json()} == {"mysql", "redis"}
 
     def test_with_no_enabled_services(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox, bk_user):
         bk_dev_sandbox.enabled_addons_services = []

@@ -91,7 +91,7 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 | code | int | 返回码，0表示成功 |
 | data | dict | 返回数据 |
 | data.page | dict | 分页信息 |
-| data.page.page | float | 当前页码 |
+| data.page.page | int | 当前页码 |
 | data.page.page_size | int | 每页数量 |
 | data.page.total | int | 总记录数 |
 | data.logs | list | 日志列表 |

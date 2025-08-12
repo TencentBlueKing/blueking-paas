@@ -433,10 +433,8 @@ var _ devsandbox.DevWatchServer = (*WebServer)(nil)
 // SettingsHandler 获取 settings.json
 func SettingsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 文件路径
 		filePath := "/coder/code-server/User/settings.json"
 
-		// 读取文件内容
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -445,7 +443,6 @@ func SettingsHandler() gin.HandlerFunc {
 			return
 		}
 
-		// 返回文件内容
 		c.Data(http.StatusOK, "application/json", content)
 	}
 }

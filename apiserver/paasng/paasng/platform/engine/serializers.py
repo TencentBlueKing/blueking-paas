@@ -760,8 +760,22 @@ class EnvOverviewSLZ(serializers.Serializer):
     modules = ModuleEnvOverviewSLZ(many=True)
 
 
-class ConflictedKeyOutputSLZ(serializers.Serializer):
-    """Serializer for represent ConflictedKey"""
+class BuiltinConfigVarSLZ(serializers.Serializer):
+    """Serializer for Builtin ConfigVar"""
+
+    key = serializers.CharField(help_text="内置环境变量 key")
+    value = serializers.CharField(help_text="内置环境变量值")
+    description = serializers.CharField(help_text="内置环境变量描述")
+    is_sensitive = serializers.BooleanField(default=False, help_text="是否为敏感字段")
+
+
+class ListBuiltinConfigVarSLZ(serializers.Serializer):
+    stag = BuiltinConfigVarSLZ(many=True, help_text="预发布环境下的内置环境变量")
+    prod = BuiltinConfigVarSLZ(many=True, help_text="生产环境下的内置环境变量")
+
+
+class ConflictedEnvVarInfoOutputSLZ(serializers.Serializer):
+    """Serializer for represent ConflictedEnvVarInfo"""
 
     key = serializers.CharField(help_text="有冲突的环境变量 Key")
     conflicted_source = serializers.CharField(help_text="冲突来源，比如 builtin_addons, builtin_svc_disc 等")

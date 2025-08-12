@@ -20,6 +20,7 @@ package webserver
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -68,6 +69,7 @@ var _ = Describe("Test webserver api", func() {
 		mgr := &service.FakeDeployManger{}
 		r.POST("/deploys", DeployHandler(s, mgr))
 		r.GET("/deploys/:deployID/results", ResultHandler(mgr))
+		r.GET("/settings", SettingsHandler())
 	})
 
 	AfterEach(func() {
@@ -164,6 +166,135 @@ var _ = Describe("Test webserver api", func() {
 			s.server.ServeHTTP(w, req)
 
 			Expect(w.Code).To(Equal(401))
+		})
+	})
+
+	Describe("get settings.json", func() {
+		var (
+			tmpSettingsDir string
+			settingsPath   string
+			oldEnv         string
+		)
+
+		// 这里需要在单测中设置环境变量来测试路径，因为：
+		// 1. settings API 中的 "/coder/code-server/User" 是写死的，而根目录 "/" 是只读的：'mkdir /coder: read-only file system'
+		// 2. 在单测中普通用户没有权限创建 /coder 这样的顶级目录，因此需要使用临时目录来模拟固定路径
+		// 3. 由于 settings.json 的路径固定，所以需要通过环境变量来设置 API 读取的路径
+		BeforeEach(func() {
+			oldEnv = os.Getenv("SETTINGS_FILE_PATH")
+
+			// 创建临时目录用于存放 settings.json
+			var err error
+			tmpSettingsDir, err = os.MkdirTemp("", "settings-test")
+			Expect(err).NotTo(HaveOccurred())
+
+			// 设置环境变量覆盖默认路径
+			settingsPath = filepath.Join(tmpSettingsDir, "settings.json")
+			os.Setenv("SETTINGS_FILE_PATH", settingsPath)
+		})
+
+		AfterEach(func() {
+			// 清理临时目录和环境变量
+			os.RemoveAll(tmpSettingsDir)
+			if oldEnv != "" {
+				os.Setenv("SETTINGS_FILE_PATH", oldEnv)
+			} else {
+				os.Unsetenv("SETTINGS_FILE_PATH")
+			}
+		})
+
+		Context("settings.json does not exist", func() {
+			It("should return 404 Not Found", func() {
+				// 确保文件不存在
+				if _, err := os.Stat(settingsPath); err == nil {
+					os.Remove(settingsPath)
+				}
+
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusNotFound))
+				Expect(w.Body.String()).To(ContainSubstring("配置文件不存在"))
+			})
+		})
+
+		Context("settings.json is too large", func() {
+			BeforeEach(func() {
+				// 创建大小超过 2MB 的文件
+				f, err := os.Create(settingsPath)
+				Expect(err).NotTo(HaveOccurred())
+				defer f.Close()
+
+				// 写入超过 2MB 的数据
+				data := make([]byte, 3*1024*1024)
+				_, err = f.Write(data)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return 400 Bad Request", func() {
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusBadRequest))
+
+				var resp map[string]string
+				err := json.Unmarshal(w.Body.Bytes(), &resp)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(resp["error"]).To(ContainSubstring("配置文件过大"))
+				Expect(resp["error"]).To(ContainSubstring("3.0MB"))
+				Expect(resp["error"]).To(ContainSubstring("2.0MB"))
+			})
+		})
+
+		Context("settings.json is valid", func() {
+			const validSettings = `{
+				"editor.fontSize": 14,
+				"workbench.colorTheme": "Default Dark+",
+				"git.confirmSync": false
+			}`
+
+			BeforeEach(func() {
+				err := os.WriteFile(settingsPath, []byte(validSettings), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return the file content with correct headers", func() {
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusOK))
+				Expect(w.Header().Get("Content-Type")).To(Equal("application/json"))
+				Expect(w.Body.String()).To(Equal(validSettings))
+			})
+		})
+
+		Context("file is a directory", func() {
+			BeforeEach(func() {
+				if _, err := os.Stat(settingsPath); err == nil {
+					os.Remove(settingsPath)
+				}
+
+				// 创建一个名为 settings.json 的目录
+				err := os.Mkdir(settingsPath, 0755)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return 500 Internal Server Error", func() {
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusInternalServerError))
+				Expect(w.Body.String()).To(ContainSubstring("读取文件失败"))
+			})
 		})
 	})
 })

@@ -187,7 +187,6 @@ class DevSandboxController:
 
     def _save_settings_via_ingress(self):
         """通过 Ingress 访问沙箱 API"""
-
         ingress_name = get_dev_sandbox_ingress_name(self.wl_app)
         try:
             reader = AppEntityReader(DevSandboxIngress)

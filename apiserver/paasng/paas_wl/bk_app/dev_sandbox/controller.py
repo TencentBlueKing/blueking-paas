@@ -116,7 +116,7 @@ class DevSandboxController:
             raise DevSandboxAlreadyExists(f"dev sandbox {sandbox_name} already exists")
 
     def delete(self):
-        """通过直接删除命名空间的方式, 销毁 dev sandbox 服务"""
+        """通过直接删除命名空间的方式, 销毁 dev sandbox 服务，销毁沙箱前保存用户的 settings 配置"""
         self._save_settings_via_ingress()
         ns_handler = NamespacesHandler.new_by_app(self.wl_app)
         ns_handler.delete(namespace=self.wl_app.namespace)
@@ -197,10 +197,10 @@ class DevSandboxController:
         # 获取 ingress IP 地址
         if not ingress.ip_address:
             raise ValueError("No IP address found in Ingress status")
-        ingress_ip = ingress.ip_address
-        api_url = f"http://{ingress_ip}/dev_sandbox/{self.dev_sandbox.code}/devserver/settings"
+        url = f"http://{ingress.ip_address}/dev_sandbox/{self.dev_sandbox.code}/devserver/settings"
 
-        domain = self._get_ingress_domain()
+        # 获取 ingress 域名
+        domain = self._get_ingress_domain(ingress_name)
         headers = {
             "Authorization": f"Bearer {self.dev_sandbox.token}",
             "Host": domain,
@@ -209,25 +209,21 @@ class DevSandboxController:
         # 调用 devserver API 获取 settings.json
         session = requests.Session()
         response = session.get(
-            api_url,
+            url,
             headers=headers,
         )
 
         # 保存 settings.json
-        settings = response.json()
-        owner = self.dev_sandbox.owner
-        DevSandboxUserPrefs.objects.update_or_create(owner=owner, defaults={"settings": settings})
+        DevSandboxUserPrefs.objects.update_or_create(
+            owner=self.dev_sandbox.owner, defaults={"settings": response.json()}
+        )
 
-    def _get_ingress_domain(self) -> str:
+    def _get_ingress_domain(self, ingress_name: str) -> str:
         """获取 Ingress 域名"""
-        ingress_name = get_dev_sandbox_ingress_name(self.wl_app)
-        try:
-            ingress: DevSandboxIngress = self.ingress_mgr.get(self.wl_app, ingress_name)
-            if not ingress.domains:
-                raise ValueError("No domains found in ingress")
-            return ingress.domains[0].host
-        except AppEntityNotFound:
-            raise DevSandboxResourceNotFound("dev sandbox ingress not found")
+        ingress: DevSandboxIngress = self.ingress_mgr.get(self.wl_app, ingress_name)
+        if not ingress.domains:
+            raise ValueError("No domains found in ingress")
+        return ingress.domains[0].host
 
 
 class DevWlAppConstructor:

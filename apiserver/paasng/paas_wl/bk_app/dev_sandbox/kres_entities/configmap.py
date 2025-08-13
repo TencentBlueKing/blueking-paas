@@ -46,7 +46,7 @@ class DevSandboxConfigMap(AppEntity):
         cfg_mp_name = f"{dev_sandbox.name}-code-editor-config"
 
         try:
-            # 从 db 中获取用户偏好设置
+            # 从 db 中获取用户偏好配置
             db_sandbox = DevSandboxModel.objects.get(code=dev_sandbox.code)
             user_settings = DevSandboxUserPrefs.objects.get(owner=db_sandbox.owner).settings
         except DevSandboxUserPrefs.DoesNotExist:
@@ -69,7 +69,7 @@ class DevSandboxConfigMap(AppEntity):
                         }
                     },
                     "terminal.integrated.defaultProfile.linux": "cnb-bash",
-                    # 如果用户设置存在，覆盖默认设置
+                    # 如果用户设置存在，覆盖默认配置
                     **user_settings,
                 }
             )

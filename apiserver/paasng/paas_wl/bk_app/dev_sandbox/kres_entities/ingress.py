@@ -59,20 +59,12 @@ class DevSandboxIngress(AppEntity):
         if not self._kube_data:
             return None
 
-        status = getattr(self._kube_data, "status", None)
-        if not status:
-            return None
-
-        load_balancer = getattr(status, "loadBalancer", {})
-        ingress_list = getattr(load_balancer, "ingress", [])
-
-        if not isinstance(ingress_list, list):
-            return None
-
-        if ingress_list:
-            first_ingress = ingress_list[0]
-            return getattr(first_ingress, "ip", None)
-
+        try:
+            ingress_list = self._kube_data.status.loadBalancer.ingress
+            if ingress_list and isinstance(ingress_list, list):
+                return ingress_list[0].ip
+        except AttributeError:
+            pass
         return None
 
 

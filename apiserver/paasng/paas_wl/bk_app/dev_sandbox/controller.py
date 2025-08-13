@@ -44,6 +44,7 @@ from paas_wl.bk_app.dev_sandbox.kres_entities import (
 from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_ingress_name, get_dev_sandbox_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager, AppEntityReader
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paasng.accessories.dev_sandbox.models import DevSandboxUserPrefs
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -187,7 +188,6 @@ class DevSandboxController:
     def _save_settings_via_ingress(self):
         """通过 Ingress 访问沙箱 API"""
 
-        # 获取 Ingress 实体
         ingress_name = get_dev_sandbox_ingress_name(self.wl_app)
         try:
             reader = AppEntityReader(DevSandboxIngress)
@@ -213,7 +213,11 @@ class DevSandboxController:
             api_url,
             headers=headers,
         )
-        response.raise_for_status()
+
+        # 保存 settings.json
+        settings = response.json()
+        owner = self.dev_sandbox.owner
+        DevSandboxUserPrefs.objects.update_or_create(owner=owner, defaults={"settings": settings})
 
     def _get_ingress_domain(self) -> str:
         """获取 Ingress 域名"""

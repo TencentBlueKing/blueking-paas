@@ -149,3 +149,12 @@ class DevSandbox(OwnerTimestampedModel):
 
     class Meta:
         unique_together = ("module", "owner")
+
+
+class DevSandboxUserPrefs(OwnerTimestampedModel):
+    """沙箱用户使用偏好"""
+
+    settings = models.JSONField(help_text="用户沙箱 IDE 配置", default=dict)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["owner"], name="unique_owner_prefs")]

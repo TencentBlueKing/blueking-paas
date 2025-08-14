@@ -71,3 +71,19 @@ class ClusterFeatureFlag(FeatureFlag):  # type: ignore
         if cluster_type == ClusterType.VIRTUAL:
             default_flags[cls.ENABLE_MOUNT_LOG_TO_HOST] = False
         return default_flags
+
+
+class ClusterAnnotationKey(StrStructuredEnum):
+    """集群注解键"""
+
+    BCS_PROJECT_ID = EnumField("bcs_project_id", label=_("BCS 项目 ID"))
+    BCS_CLUSTER_ID = EnumField("bcs_cluster_id", label=_("BCS 集群 ID"))
+    BK_BIZ_ID = EnumField("bk_biz_id", label=_("蓝鲸业务 ID"))
+    SKIP_INJECT_BUILTIN_IMAGE_CREDENTIAL = EnumField(
+        "skip_inject_builtin_image_credential", label=_("跳过内置镜像凭证注入")
+    )
+    # NOTE: 该配置仅对普通应用生效，云原生应用需要在 Operator 的 Helm Chart Values 中配置
+    INGRESS_CLASS_NAME = EnumField("ingress_class_name", label=_("Ingress 类名"))
+    # 集群 slugbuilder 资源配额，其值格式如下（非字符串）：
+    # {"requests": {"cpu": "1", "memory": "1Gi"}, "limits": {"cpu": "4", "memory": "4Gi"}}
+    SLUGBUILDER_RESOURCE_QUOTA = EnumField("slugbuilder_resource_quota", label=_("Slugbuilder 资源配额"))

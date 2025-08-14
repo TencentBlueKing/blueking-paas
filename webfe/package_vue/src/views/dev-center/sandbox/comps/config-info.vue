@@ -28,7 +28,12 @@
       </div>
       <div class="info-item">
         <div class="label">{{ $t('增强服务') }}：</div>
-        <div class="value">{{ serviceName }}</div>
+        <div
+          class="value"
+          v-bk-overflow-tips
+        >
+          {{ displayServices }}
+        </div>
       </div>
       <div class="info-item">
         <div class="label">{{ $t('环境变量') }}：</div>
@@ -147,6 +152,7 @@ export default {
     return {
       searchValue: '',
       tooltipInstances: new Map(), // 使用 Map 存储多个 tooltip 实例
+      addonsServices: [],
     };
   },
   computed: {
@@ -194,6 +200,12 @@ export default {
     editHtmlConfig() {
       return this.baseHtmlConfig('#edit-sandbox-env-html', 'edit');
     },
+    displayServices() {
+      return this.addonsServices.map((service) => service.display_name)?.join('，');
+    },
+  },
+  created() {
+    this.getSandboxAddonsServices();
   },
   beforeDestroy() {
     // 组件销毁前清理所有 tooltip 实例
@@ -272,6 +284,20 @@ export default {
     // 删除环境变量
     async handleDeleteEnv(envVarKey) {
       await this.handleEnvAction('sandbox/sandboxDelEnv', { envVarKey }, this.$t('删除成功'));
+    },
+
+    // 获取增强服务
+    async getSandboxAddonsServices() {
+      try {
+        const res = await this.$store.dispatch('sandbox/getSandboxAddonsServices', {
+          appCode: this.code,
+          moduleId: this.module,
+          devSandboxCode: this.devSandboxCode,
+        });
+        this.addonsServices = res;
+      } catch (error) {
+        this.catchErrorHandler(error);
+      }
     },
   },
 };

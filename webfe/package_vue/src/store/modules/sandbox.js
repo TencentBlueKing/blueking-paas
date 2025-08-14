@@ -97,5 +97,12 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/${devSandboxCode}/env_vars/${envVarKey}/`;
       return http.delete(url);
     },
+    /**
+     * 获取配置信息-增强服务
+     */
+    getSandboxAddonsServices({}, { appCode, moduleId, devSandboxCode }) {
+      const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/dev_sandboxes/${devSandboxCode}/addons_services/`;
+      return http.get(url);
+    },
   },
 };

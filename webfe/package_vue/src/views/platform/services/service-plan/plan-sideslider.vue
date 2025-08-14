@@ -3,7 +3,7 @@
     :is-show.sync="sidesliderVisible"
     :quick-close="true"
     show-mask
-    width="640"
+    width="960"
     @shown="shown"
     @hidden="reset"
   >
@@ -69,6 +69,11 @@
               :mode="'text'"
             />
           </div>
+          <!-- 配置示例 -->
+          <ConfigExample
+            v-if="curServiceSchema"
+            :schema="curServiceSchema"
+          />
         </bk-form-item>
       </bk-form>
       <section class="footer-btns">
@@ -95,10 +100,12 @@
 <script>
 import JsonEditorVue from 'json-editor-vue';
 import { validateJson } from '../validators';
+import ConfigExample from './config-example.vue';
 export default {
   name: 'EditAddSideslider',
   components: {
     JsonEditorVue,
+    ConfigExample,
   },
   props: {
     show: {
@@ -197,6 +204,10 @@ export default {
     },
     isAdd() {
       return this.config.type === 'add';
+    },
+    // 当前服务的方案配置示例
+    curServiceSchema() {
+      return this.services.find((v) => v.name === this.formData.service_name)?.plan_schema;
     },
   },
   methods: {

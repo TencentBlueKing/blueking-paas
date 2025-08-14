@@ -41,12 +41,12 @@ from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.constants import ReplicasOverridePolicy, RuntimeType
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
 from paasng.platform.engine.logs import get_all_logs
-from paasng.platform.engine.models import Deployment
+from paasng.platform.engine.models import Deployment, DeployOptions
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
 from paasng.platform.engine.phases_steps.steps import get_sorted_steps
 from paasng.platform.engine.serializers import (
@@ -57,6 +57,7 @@ from paasng.platform.engine.serializers import (
     DeploymentResultQuerySLZ,
     DeploymentResultSLZ,
     DeploymentSLZ,
+    DeployOptionsSLZ,
     DeployPhaseSLZ,
     QueryDeploymentsSLZ,
 )
@@ -347,6 +348,36 @@ class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         for p in phases:
             p._sorted_steps = get_sorted_steps(p)
         return Response(data=DeployPhaseSLZ(phases, many=True).data)
+
+
+class DeployOptionsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(tags=["部署选项"], responses={"200": DeployOptionsSLZ})
+    def upsert_options(self, request, code):
+        slz = DeployOptionsSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        deploy_options, _ = DeployOptions.objects.update_or_create(
+            application=self.get_application(),
+            defaults={"replicas_override_policy": slz.validated_data["replicas_override_policy"]},
+        )
+
+        return Response(
+            data=DeployOptionsSLZ({"replicas_override_policy": deploy_options.replicas_override_policy}).data
+        )
+
+    @swagger_auto_schema(tags=["部署选项"], responses={"200": DeployOptionsSLZ})
+    def get_options(self, request, code):
+        app = self.get_application()
+
+        deploy_options = app.deploy_options.last()
+        if deploy_options and deploy_options.replicas_override_policy:
+            replicas_override_policy = deploy_options.replicas_override_policy
+        else:
+            replicas_override_policy = ReplicasOverridePolicy.APP_DESC
+
+        return Response(data=DeployOptionsSLZ({"replicas_override_policy": replicas_override_policy}).data)
 
 
 def _get_deployment(module: Module, uuid: str) -> Deployment:

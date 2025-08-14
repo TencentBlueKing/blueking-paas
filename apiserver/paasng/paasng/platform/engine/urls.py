@@ -170,6 +170,11 @@ urlpatterns = [
         views.OperationsViewset.as_view({"get": "list"}),
         name="api.deploy_operation.lists",
     ),
+    re_path(
+        "^api/bkapps/applications/(?P<code>[^/]+)/deploy_options/$",
+        views.DeployOptionsViewSet.as_view({"get": "get_options", "post": "upsert_options"}),
+        name="api.deploy_options",
+    ),
     # build artifact
     re_path(
         make_app_pattern(r"/build/artifact/image/$", include_envs=False),

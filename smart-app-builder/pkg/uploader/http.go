@@ -111,9 +111,14 @@ func (p *HttpUploader) Upload(src string, destUrl *url.URL) error {
 
 // maskURL hides the username and password in the URL for logging purposes,
 func maskURL(u *url.URL) string {
-	safe := *u
-	if safe.User != nil {
-		safe.User = url.UserPassword("***", "***")
+	if u == nil {
+		return ""
 	}
-	return safe.String()
+
+	ru := *u
+	if _, has := ru.User.Password(); has {
+		ru.User = url.UserPassword("xxxxx", "xxxxx")
+	}
+
+	return ru.String()
 }

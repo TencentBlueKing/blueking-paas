@@ -15,9 +15,11 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
-package http
+
+package uploader
 
 import (
+	"encoding/base64"
 	"io"
 	"net/http"
 	"net/url"
@@ -29,40 +31,38 @@ import (
 )
 
 const (
-	defaultTimeout = 30 * time.Minute
+	defaultTimeout = 10 * time.Minute
 )
 
-// Putter ...
-type Putter struct {
+// HttpUploader ...
+type HttpUploader struct {
 	Logger  logr.Logger
-	Timeout time.Duration
+	timeout time.Duration
 }
 
-// NewPutter creates a new Putter with default timeout
-func NewPutter(log logr.Logger) *Putter {
-	return &Putter{
+// HttpUploader creates a new Putter with default timeout
+func NewHttpUploader(log logr.Logger) *HttpUploader {
+	return &HttpUploader{
 		Logger:  log,
-		Timeout: defaultTimeout,
+		timeout: defaultTimeout,
 	}
 }
 
-// NewPutterWithTimeOut creates a new Putter with custom timeout
-func NewPutterWithTimeOut(log logr.Logger, timeout time.Duration) *Putter {
-	return &Putter{
-		Logger:  log,
-		Timeout: timeout,
-	}
+// SetTimeout sets the timeout for the uploader and returns itself
+func (p *HttpUploader) SetTimeout(timeout time.Duration) *HttpUploader {
+	p.timeout = timeout
+	return p
 }
 
-// Put will put src blob to destUrl
-func (p *Putter) Put(src string, destUrl *url.URL) error {
+// Upload will put src blob to destUrl
+func (p *HttpUploader) Upload(src string, destUrl *url.URL) error {
 	safeUrl := maskURL(destUrl)
 
-	p.Logger.Info("Start uploading build products to bkrepo", "url", safeUrl, "src", src)
+	p.Logger.Info("Start uploading file", "src", src, "url", safeUrl)
 
 	file, err := os.Open(src)
 	if err != nil {
-		return errors.Wrap(err, "Failed to open the build product file")
+		return errors.Wrap(err, "Failed to open the file")
 	}
 	defer file.Close()
 
@@ -77,26 +77,39 @@ func (p *Putter) Put(src string, destUrl *url.URL) error {
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.ContentLength = fileInfo.Size()
+	if destUrl.User != nil {
+		username := destUrl.User.Username()
+		password, hasPassword := destUrl.User.Password()
+		if hasPassword {
+			auth := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
+			req.Header.Set("Authorization", auth)
+		}
+	}
 
-	p.Logger.Info("Uploading file to bkrepo", "url", safeUrl)
+	p.Logger.Info("Uploading file", "src", src, "url", safeUrl)
 
-	client := http.Client{Timeout: p.Timeout}
+	client := http.Client{Timeout: p.timeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "Failed to upload to bkrepo")
+		return errors.Wrap(err, "Failed to upload file")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return errors.Errorf("Failed to upload to bkrepo: HTTP %d - %s", resp.StatusCode, string(body))
+		body, errRead := io.ReadAll(resp.Body)
+		if errRead != nil {
+			p.Logger.Error(errRead, "Failed to read response body")
+			return errors.Errorf("Failed to upload file: HTTP %d - unable to read response body", resp.StatusCode)
+		}
+		return errors.Errorf("Failed to upload file: HTTP %d - %s", resp.StatusCode, string(body))
 	}
 
-	p.Logger.Info("Successfully uploaded file to bkrepo", "url", safeUrl, "status", resp.Status)
+	p.Logger.Info("Successfully uploaded file", "url", safeUrl, "status", resp.Status)
 
 	return nil
 }
 
+// maskURL hides the username and password in the URL for logging purposes,
 func maskURL(u *url.URL) string {
 	safe := *u
 	if safe.User != nil {

@@ -16,16 +16,41 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package fs
+package uploader
 
 import (
-	"testing"
+	"net/url"
+	"os"
+	"path/filepath"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
+	"github.com/go-logr/logr"
 )
 
-func TestFileSystemPutter(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "putter/fs Suite")
+// FsUploader ...
+type FsUploader struct {
+	Logger logr.Logger
+}
+
+// NewFsUploader ...
+func NewFsUploader(log logr.Logger) *FsUploader {
+	return &FsUploader{log}
+}
+
+// upload src from local filesystem to destUrl
+func (p *FsUploader) Upload(src string, destUrl *url.URL) error {
+	filePath := destUrl.Path
+	fileName := filepath.Base(filePath)
+	if filepath.Ext(fileName) == ".tgz" {
+		if err := os.MkdirAll(filepath.Dir(filePath), 0o744); err != nil {
+			return err
+		}
+		return utils.CopyFile(src, filePath)
+	}
+
+	// Assume dest is a directory, otherwise an error occurs.
+	if err := os.MkdirAll(filePath, 0o744); err != nil {
+		return err
+	}
+	return utils.CopyFile(src, filepath.Join(filePath, filepath.Base(src)))
 }

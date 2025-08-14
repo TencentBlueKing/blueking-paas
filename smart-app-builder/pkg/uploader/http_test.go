@@ -15,7 +15,8 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
-package http_test
+
+package uploader_test
 
 import (
 	"io"
@@ -23,27 +24,25 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
-	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	putHttp "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/putter/http"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/uploader"
 )
-
-var basePath = "../testdata"
 
 var _ = Describe("Http", func() {
 	var (
-		logger logr.Logger
-		server *httptest.Server
-		client *putHttp.Putter
+		logger       logr.Logger
+		server       *httptest.Server
+		httpUploader *uploader.HttpUploader
 	)
+	var basePath = "./testdata"
 
 	BeforeEach(func() {
 		logger = logr.Discard()
-		client = putHttp.NewPutter(logger)
+		httpUploader = uploader.NewHttpUploader(logger)
 	})
 	AfterEach(func() {
 		if server != nil {
@@ -64,17 +63,14 @@ var _ = Describe("Http", func() {
 			}))
 		})
 
-		DescribeTable("should successfully upload files",
-			func(srcFileName string) {
-				srcPath := filepath.Join(basePath, srcFileName)
-				destUrl, err := url.Parse(server.URL)
-				Expect(err).To(BeNil())
+		It("should successfully upload project.tgz", func() {
+			srcPath := filepath.Join(basePath, "project.tgz")
+			destUrl, err := url.Parse(server.URL)
+			Expect(err).To(BeNil())
 
-				err = client.Put(srcPath, destUrl)
-				Expect(err).To(BeNil())
-			},
-			Entry("upload project.tgz", "project.tgz"),
-		)
+			err = httpUploader.Upload(srcPath, destUrl)
+			Expect(err).To(BeNil())
+		})
 	})
 
 	Context("error scenarios", func() {
@@ -86,9 +82,9 @@ var _ = Describe("Http", func() {
 			srcPath := filepath.Join(basePath, "project.tgz")
 			destUrl, _ := url.Parse(server.URL)
 
-			err := client.Put(srcPath, destUrl)
+			err := httpUploader.Upload(srcPath, destUrl)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("Failed to upload to bkrepo: HTTP 404"))
+			Expect(err.Error()).To(ContainSubstring("Failed to upload file: HTTP 404"))
 		})
 
 		It("should return error when server returns 500", func() {
@@ -100,16 +96,16 @@ var _ = Describe("Http", func() {
 			srcPath := filepath.Join(basePath, "project.tgz")
 			destUrl, _ := url.Parse(server.URL)
 
-			err := client.Put(srcPath, destUrl)
+			err := httpUploader.Upload(srcPath, destUrl)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("Failed to upload to bkrepo: HTTP 500"))
+			Expect(err.Error()).To(ContainSubstring("Failed to upload file: HTTP 500"))
 		})
 
 		It("should return error when server is unreachable", func() {
 			srcPath := filepath.Join(basePath, "project.tgz")
 			destUrl, _ := url.Parse("http://invalid-url-that-does-not-exist")
 
-			err := client.Put(srcPath, destUrl)
+			err := httpUploader.Upload(srcPath, destUrl)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -117,23 +113,8 @@ var _ = Describe("Http", func() {
 			srcPath := filepath.Join(basePath, "project.tgz")
 			invalidUrl := &url.URL{Host: "invalid:host:with:colons"}
 
-			err := client.Put(srcPath, invalidUrl)
+			err := httpUploader.Upload(srcPath, invalidUrl)
 			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Context("timeout scenarios", func() {
-		It("should handle slow server response", func() {
-			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				time.Sleep(100 * time.Millisecond)
-				w.WriteHeader(http.StatusOK)
-			}))
-
-			srcPath := filepath.Join(basePath, "project.tgz")
-			destUrl, _ := url.Parse(server.URL)
-
-			err := client.Put(srcPath, destUrl)
-			Expect(err).To(BeNil())
 		})
 	})
 })

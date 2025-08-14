@@ -15,42 +15,17 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
-package fs
+
+package builder
 
 import (
 	"net/url"
-	"os"
-	"path/filepath"
-
-	"github.com/go-logr/logr"
-
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
+	"testing"
 )
 
-// Putter ...
-type Putter struct {
-	Logger logr.Logger
-}
-
-// NewPutter ...
-func NewPutter(log logr.Logger) *Putter {
-	return &Putter{log}
-}
-
-// Put src from local filesystem to destDir
-func (p *Putter) Put(src string, destUrl *url.URL) error {
-	filePath := destUrl.Path
-	fileName := filepath.Base(filePath)
-	if filepath.Ext(fileName) == ".tgz" {
-		if err := os.MkdirAll(filepath.Dir(filePath), 0o744); err != nil {
-			return err
-		}
-		return utils.CopyFile(src, filePath)
-	}
-
-	// Assume dest is a directory, otherwise an error occurs.
-	if err := os.MkdirAll(filePath, 0o744); err != nil {
-		return err
-	}
-	return utils.CopyFile(src, filepath.Join(filePath, filepath.Base(src)))
+func TestUrl(t *testing.T) {
+	base_url := "http://username:password@example.com/path/to/resource?query=123#section"
+	parse_url, _ := url.Parse(base_url)
+	t.Log(parse_url)
+	t.Log(parse_url.User)
 }

@@ -15,7 +15,8 @@
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
  */
-package fs_test
+
+package uploader_test
 
 import (
 	"net/url"
@@ -26,13 +27,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	putFs "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/putter/fs"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/uploader"
 )
-
-var basePath = "../testdata"
 
 var _ = Describe("FileSystem", func() {
 	var destDir string
+	var basePath = "./testdata"
 
 	BeforeEach(func() {
 		var err error
@@ -44,38 +44,37 @@ var _ = Describe("FileSystem", func() {
 		os.RemoveAll(destDir)
 	})
 
-	DescribeTable("Put smart file to destDir",
-		func(srcFileName string, isDestFile bool) {
-			srcPath := filepath.Join(basePath, srcFileName)
+	Context("put tgz file to file path", func() {
+		It("should copy content correctly", func() {
+			srcPath := filepath.Join(basePath, "project.tgz")
 			destPath := filepath.Join(destDir, "artifact.tgz")
-			if !isDestFile {
-				destPath = destDir
-			}
 			u := &url.URL{Scheme: "file", Path: destPath}
 
-			err := putFs.NewPutter(logr.Discard()).Put(srcPath, u)
+			err := uploader.NewFsUploader(logr.Discard()).Upload(srcPath, u)
 			Expect(err).To(BeNil())
 
-			if isDestFile {
-				srcContent, err := os.ReadFile(srcPath)
-				Expect(err).To(BeNil())
+			srcContent, err := os.ReadFile(srcPath)
+			Expect(err).To(BeNil())
+			destContent, err := os.ReadFile(destPath)
+			Expect(err).To(BeNil())
+			Expect(destContent).To(Equal(srcContent))
+		})
+	})
 
-				destContent, err := os.ReadFile(destPath)
-				Expect(err).To(BeNil())
+	Context("put tgz file to directory", func() {
+		It("should copy content correctly", func() {
+			srcPath := filepath.Join(basePath, "project.tgz")
+			u := &url.URL{Scheme: "file", Path: destDir}
 
-				Expect(destContent).To(Equal(srcContent))
-			} else {
-				srcContent, err := os.ReadFile(srcPath)
-				Expect(err).To(BeNil())
+			err := uploader.NewFsUploader(logr.Discard()).Upload(srcPath, u)
+			Expect(err).To(BeNil())
 
-				dstFile := filepath.Join(destPath, filepath.Base(srcPath))
-				destContent, err := os.ReadFile(dstFile)
-				Expect(err).To(BeNil())
-
-				Expect(destContent).To(Equal(srcContent))
-			}
-		},
-		Entry("put valid tgz file to .tgz", "project.tgz", true),
-		Entry("put valid tgz file to .tgz in dir", "project.tgz", false),
-	)
+			srcContent, err := os.ReadFile(srcPath)
+			Expect(err).To(BeNil())
+			dstFile := filepath.Join(destDir, filepath.Base(srcPath))
+			destContent, err := os.ReadFile(dstFile)
+			Expect(err).To(BeNil())
+			Expect(destContent).To(Equal(srcContent))
+		})
+	})
 })

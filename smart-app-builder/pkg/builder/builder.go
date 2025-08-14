@@ -26,13 +26,12 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
-	fetchFs "github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
-	fetchHttp "github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
+	ffetcher "github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
+	hfetcher "github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 
 	bexec "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/executor"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
-	putFs "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/putter/fs"
-	putHttp "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/putter/http"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/uploader"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 )
 
@@ -87,7 +86,7 @@ func (a *AppBuilder) fetchSource(destDir string) error {
 		}
 
 		if !fileInfo.IsDir() {
-			if err = fetchFs.NewFetcher(a.logger).Fetch(filePath, destDir); err != nil {
+			if err = ffetcher.NewFetcher(a.logger).Fetch(filePath, destDir); err != nil {
 				return err
 			} else {
 				return nil
@@ -101,7 +100,7 @@ func (a *AppBuilder) fetchSource(destDir string) error {
 		return nil
 
 	case "http", "https":
-		if err := fetchHttp.NewFetcher(a.logger).Fetch(a.sourceURL, destDir); err != nil {
+		if err := hfetcher.NewFetcher(a.logger).Fetch(a.sourceURL, destDir); err != nil {
 			return err
 		}
 	default:
@@ -114,15 +113,15 @@ func (a *AppBuilder) fetchSource(destDir string) error {
 func (a *AppBuilder) pushArtifact(artifactTGZ string) error {
 	parsedURL, err := url.Parse(a.destURL)
 	if err != nil {
-		return errors.Errorf("destURL parse error")
+		return errors.New("destURL parse error")
 	}
 
 	switch parsedURL.Scheme {
 	case "file":
-		return putFs.NewPutter(a.logger).Put(artifactTGZ, parsedURL)
+		return uploader.NewUploader(parsedURL.Scheme, a.logger).Upload(artifactTGZ, parsedURL)
 
 	case "http", "https":
-		return putHttp.NewPutter(a.logger).Put(artifactTGZ, parsedURL)
+		return uploader.NewUploader(parsedURL.Scheme, a.logger).Upload(artifactTGZ, parsedURL)
 	default:
 		return errors.Errorf("not support dest-url scheme: %s", parsedURL.Scheme)
 	}

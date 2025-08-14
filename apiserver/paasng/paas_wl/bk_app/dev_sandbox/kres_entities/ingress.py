@@ -53,20 +53,6 @@ class DevSandboxIngress(AppEntity):
         )
         return cls(app=dev_sandbox.app, name=get_dev_sandbox_ingress_name(dev_sandbox.app), domains=[sub_domain])
 
-    @property
-    def ip_address(self) -> str | None:
-        """获取 Ingress 的 IP 地址"""
-        if not self._kube_data:
-            return None
-
-        try:
-            ingress_list = self._kube_data.status.loadBalancer.ingress
-            if ingress_list and isinstance(ingress_list, list):
-                return ingress_list[0].ip
-        except AttributeError:
-            pass
-        return None
-
 
 def _get_path_backends(dev_sandbox: "DevSandbox") -> List[IngressPathBackend]:
     return [

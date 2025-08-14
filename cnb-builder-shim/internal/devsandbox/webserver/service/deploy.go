@@ -181,7 +181,19 @@ func (m DeployManager) generateProcfile(appDir string) error {
 //	oldDir string - the directory where old build dependent files are located
 //	newDir string - the directory where new build dependent files are located
 func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
-	buildDependentFiles := []string{"requirements.txt", "Aptfile", "runtime.txt", "Procfile", "app_desc.yaml"}
+	buildDependentFiles := []string{
+		// apt
+		"Aptfile",
+		// python
+		"requirements.txt",
+		"runtime.txt",
+		// go
+		"go.mod",
+		"go.sum",
+		// process
+		"Procfile",
+		"app_desc.yaml",
+	}
 	rebuild := false
 
 	for _, fileName := range buildDependentFiles {
@@ -201,12 +213,16 @@ func parseDeployStepOpts(oldDir, newDir string) *deployStepOpts {
 			rebuild = true
 			break
 		}
-
 	}
 
 	// 如果 metadata.toml 不存在, 说明上次构建失败, 需要重新构建
-	_, err := os.Stat(path.Join(devsandbox.DefaultLayersDir, "config", "metadata.toml"))
-	if os.IsNotExist(err) {
+	if _, err := os.Stat(
+		path.Join(devsandbox.DefaultLayersDir, "config", "metadata.toml"),
+	); os.IsNotExist(err) {
+		rebuild = true
+	}
+	// 目前 go buildpack 需重建可执行二进制文件，因此检查到 go.mod 存在时需要 rebuild
+	if _, err := os.Stat(path.Join(newDir, "go.mod")); err == nil {
 		rebuild = true
 	}
 

@@ -430,54 +430,37 @@ func HealthzHandler() gin.HandlerFunc {
 
 var _ devsandbox.DevWatchServer = (*WebServer)(nil)
 
-const (
-	// settings.json 限制最大 2MB
-	maxConfigSize    = 2 * 1024 * 1024
-	settingsFileName = "settings.json"
+var (
+	// MaxConfigSize 因为 settings.json 需要存储到 db，为了保证存储的安全，对其大小限制为最大 2MB
+	MaxConfigSize    = int64(2 * 1024 * 1024)
+	SettingsDirPath  = "/coder/code-server/User"
+	SettingsFileName = "settings.json"
 )
 
 // SettingsHandler 获取 settings.json
 func SettingsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 这里通过环境变量读取文件路径是出于单元测试的考虑，单测中无权限创建 "/coder/code-server/User" 路径
-		// 只能通过环境变量来设置临时路径进行测试，详细解释可参考：internal/devsandbox/webserver/server_test.go:179
-		filePath := os.Getenv("SETTINGS_FILE_PATH")
-		if filePath == "" {
-			filePath = filepath.Join("/coder/code-server/User", settingsFileName)
-		}
+		filePath := filepath.Join(SettingsDirPath, SettingsFileName)
 
-		// 检查 settings 是否存在
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "配置文件不存在",
-			})
-			return
-		}
-
-		// 获取 settings 信息
 		info, err := os.Stat(filePath)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "获取文件信息失败: " + err.Error(),
-			})
+		if os.IsNotExist(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "配置文件不存在"})
 			return
 		}
 
-		// 检查 settings 大小
-		if info.Size() > maxConfigSize {
+		if info.Size() > MaxConfigSize {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": fmt.Sprintf("配置文件过大 (%.1fMB > %.1fMB)",
 					float64(info.Size())/(1024*1024),
-					float64(maxConfigSize)/(1024*1024)),
+					float64(MaxConfigSize)/(1024*1024)),
 			})
 			return
 		}
 
-		// 读取内容
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "读取文件失败: " + err.Error(), // 修改为中文
+				"error": "读取文件失败: " + err.Error(),
 			})
 			return
 		}

@@ -34,7 +34,7 @@ type FsUploader struct {
 
 // NewFsUploader ...
 func NewFsUploader(log logr.Logger) *FsUploader {
-	return &FsUploader{log}
+	return &FsUploader{Logger: log}
 }
 
 // upload src from local filesystem to destUrl

@@ -33,14 +33,17 @@ import (
 )
 
 var _ = Describe("Http", func() {
+	// basePath is the directory containing test data files used in these tests.
+	const basePath = "./testdata"
+
 	var (
 		logger       logr.Logger
 		server       *httptest.Server
 		httpUploader *uploader.HttpUploader
 	)
-	var basePath = "./testdata"
 
 	BeforeEach(func() {
+		// Discard logger output in tests to avoid cluttering test logs.
 		logger = logr.Discard()
 		httpUploader = uploader.NewHttpUploader(logger)
 	})
@@ -53,10 +56,10 @@ var _ = Describe("Http", func() {
 	Context("successful uploads", func() {
 		BeforeEach(func() {
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				defer r.Body.Close()
 				Expect(r.Method).To(Equal(http.MethodPut))
 				body, err := io.ReadAll(r.Body)
 				Expect(err).NotTo(HaveOccurred())
-				defer r.Body.Close()
 
 				Expect(len(body)).To(BeNumerically(">", 0))
 				w.WriteHeader(http.StatusOK)

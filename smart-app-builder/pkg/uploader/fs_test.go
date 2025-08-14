@@ -31,14 +31,22 @@ import (
 )
 
 var _ = Describe("FileSystem", func() {
-	var destDir string
-	var basePath = "./testdata"
+	// basePath is the directory containing test data files used in these tests.
+	const basePath = "./testdata"
 
+	var (
+		destDir    string
+		logger     logr.Logger
+		fsUploader *uploader.FsUploader
+	)
 	BeforeEach(func() {
 		var err error
 		destDir, err = os.MkdirTemp("", "put_test")
 		Expect(err).To(BeNil())
 
+		// Discard logger output in tests to avoid cluttering test logs.
+		logger = logr.Discard()
+		fsUploader = uploader.NewFsUploader(logger)
 	})
 	AfterEach(func() {
 		os.RemoveAll(destDir)
@@ -50,7 +58,7 @@ var _ = Describe("FileSystem", func() {
 			destPath := filepath.Join(destDir, "artifact.tgz")
 			u := &url.URL{Scheme: "file", Path: destPath}
 
-			err := uploader.NewFsUploader(logr.Discard()).Upload(srcPath, u)
+			err := fsUploader.Upload(srcPath, u)
 			Expect(err).To(BeNil())
 
 			srcContent, err := os.ReadFile(srcPath)
@@ -66,13 +74,13 @@ var _ = Describe("FileSystem", func() {
 			srcPath := filepath.Join(basePath, "project.tgz")
 			u := &url.URL{Scheme: "file", Path: destDir}
 
-			err := uploader.NewFsUploader(logr.Discard()).Upload(srcPath, u)
+			err := fsUploader.Upload(srcPath, u)
 			Expect(err).To(BeNil())
 
 			srcContent, err := os.ReadFile(srcPath)
 			Expect(err).To(BeNil())
-			dstFile := filepath.Join(destDir, filepath.Base(srcPath))
-			destContent, err := os.ReadFile(dstFile)
+			destFile := filepath.Join(destDir, filepath.Base(srcPath))
+			destContent, err := os.ReadFile(destFile)
 			Expect(err).To(BeNil())
 			Expect(destContent).To(Equal(srcContent))
 		})

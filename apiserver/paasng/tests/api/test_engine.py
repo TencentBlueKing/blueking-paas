@@ -15,8 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Tests for Engine APIS
-"""
+"""Tests for Engine APIS"""
+
 import logging
 from unittest import mock
 
@@ -32,7 +32,8 @@ from paasng.platform.environments.models import EnvRoleProtection
 from paasng.platform.sourcectl.constants import VersionType
 
 logger = logging.getLogger(__name__)
-pytestmark = pytest.mark.django_db
+
+pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
 class TestConfigVarAPIs:

@@ -27,7 +27,6 @@ from typing import Any, Optional, Type, TypeVar
 
 import cattr
 from bkpaas_auth import get_user_by_user_id
-from blue_krill.encrypt.handler import EncryptHandler
 from cattr._compat import is_bare as _is_bare
 from cattr._compat import is_mapping as _is_mapping
 from cattr._compat import is_sequence as _is_sequence
@@ -391,58 +390,3 @@ def __get_module_from_frame() -> Optional[str]:
         module = None
 
     return module
-
-
-class RobustEncryptHandler(EncryptHandler):
-    """相比原有的 EncryptHandler，在 encrypt 函数中，不再前置判断 header 是否已经存在，总是加密，
-    因此调用方需要避免重复调用 encrypt 函数。
-
-    此改动有助于解决特殊场景中可能产生的错误。用户输入本身就是包含加密标识 header 的特殊值，这导致数
-    据在存储时跳过加密，数据入库后，最终在读取时触发 InvalidToken 错误。
-    """
-
-    def encrypt(self, text: str) -> str:
-        """根据指定加密算法，加密字段"""
-        # 根据加密类型配置选择不同的加密算法
-        try:
-            cipher_class = self.cipher_classes[self.encrypt_cipher_type]
-        except KeyError:
-            raise ValueError(f"Invalid cipher type: {self.encrypt_cipher_type}")
-        else:
-            cipher = cipher_class(self.secret_key)
-            return cipher.encrypt(text)
-
-
-class _EncryptedString(str):
-    """A string that is encrypted, this type is used to distinguish between normal
-    strings and encrypted ones."""
-
-
-class RobustEncryptField(models.TextField):
-    """相比原有的 EncryptField，有以下调整：
-
-    - 使用 RobustEncryptHandler 作为加密处理器（encrypt 总是加密）
-    - 优化 get_prep_value 函数，避免重复触发加密逻辑
-    """
-
-    description = "a field which will be encrypted"
-
-    def __init__(self, encrypt_cipher_type: Optional[str] = None, secret_key: Optional[bytes] = None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.handler = RobustEncryptHandler(encrypt_cipher_type=encrypt_cipher_type, secret_key=secret_key)
-
-    def get_prep_value(self, value):
-        if value is None:
-            return value
-        # 如果值已经是 EncryptedString 实例，则直接返回，避免重复触发加密逻辑
-        if isinstance(value, _EncryptedString):
-            return value
-        return _EncryptedString(self.handler.encrypt(value))
-
-    def get_db_prep_value(self, value, connection, prepared=False):
-        return self.get_prep_value(value)
-
-    def from_db_value(self, value, expression, connection, context=None):
-        if value is None:
-            return value
-        return self.handler.decrypt(value)

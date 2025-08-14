@@ -20,7 +20,7 @@ import logging
 from cryptography.fernet import InvalidToken
 from django.db import migrations, connection, transaction
 
-from paasng.utils.models import RobustEncryptHandler
+from blue_krill.encrypt.handler import EncryptHandler
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def forwards_func(apps, schema_editor):
     但是又存在这样一个场景：密文使用 bkpaas 的密钥进行加密，此时会无法区分是平台加密的，还是从其他地方获取的密文
     这种情况理论上不会出现，但是为了保险起见，这里还是加上了强制检查，如果出现则会抛出异常，需要运维介入处理
     """
-    handler = RobustEncryptHandler()
+    handler = EncryptHandler()
     # 所有加密类都需要处理，可能的前缀有：bkcrypt$, sm4ctr$...
     for cipher_name, cipher_class in handler.cipher_classes.items():
         header = cipher_class.header.header

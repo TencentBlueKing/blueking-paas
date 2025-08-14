@@ -98,7 +98,8 @@ class ResourcePoolProvider(BaseProvider):
                 creds["cert"] = gen_addons_cert_mount_path(provider_name, "tls.crt")
                 creds["cert_key"] = gen_addons_cert_mount_path(provider_name, "tls.key")
 
-            if tls.get("insecure_skip_verify") is True:
+            # 兼容各类 True 的情况
+            if tls.get("insecure_skip_verify") in [True, "true", "True"]:
                 creds["insecure_skip_verify"] = "true"
 
             return InstanceData(

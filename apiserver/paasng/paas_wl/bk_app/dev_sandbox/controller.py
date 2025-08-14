@@ -195,8 +195,7 @@ class DevSandboxController:
 
         # 通过沙箱域名访问 API
         base_url = f"http://{ingress.domains[0].host}/dev_sandbox/{self.dev_sandbox.code}"
-        urls = DevSandboxUrls(base=base_url)
-        url = f"{urls.devserver}settings"
+        url = f"{DevSandboxUrls(base=base_url).devserver}settings"
 
         headers = {
             "Authorization": f"Bearer {self.dev_sandbox.token}",

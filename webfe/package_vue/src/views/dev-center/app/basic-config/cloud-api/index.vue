@@ -12,12 +12,7 @@
             class="f12"
             theme="primary"
             :outline="true"
-            v-bk-tooltips.bottom-end="{
-              content: $t('令牌（access_token）可用于调用用户态的云 API，有效期 180 天。'),
-              theme: 'light',
-              width: 220,
-              extCls: 'create-token-tips-cls',
-            }"
+            v-bk-tooltips="createNewTokenTips"
             @click="handleShowDialogCreateToken"
           >
             {{ $t('创建新令牌') }}
@@ -167,7 +162,6 @@
         <bk-button
           v-if="curStep === 1"
           :theme="'primary'"
-          class="mr10"
           :disabled="nextBtnDisabled"
           :loading="nextBtnLoading"
           @click="handleNext"
@@ -177,15 +171,14 @@
         <bk-button
           v-else
           :theme="'primary'"
-          class="mr10"
           @click="handleCancel"
         >
           {{ $t('确定') }}
         </bk-button>
         <bk-button
+          class="ml-8"
           :theme="'default'"
           @click="handleCancel"
-          class="mr10"
         >
           {{ $t('取消') }}
         </bk-button>
@@ -234,6 +227,17 @@ export default {
       ],
       tokenUrl: '',
       errorObject: null,
+      createNewTokenTips: {
+        allowHtml: true,
+        content: this.$t('令牌（access_token）可用于调用用户态的云 API，有效期 180 天。'),
+        html: `${this.$t('令牌（access_token）可用于调用用户态的云 API，有效期 180 天。')} <a target="_blank" href="${
+          this.GLOBAL.DOC.ACCESS_TOKEN_USAGE_GUIDE
+        }" style="color: #3a84ff">${this.$t('使用指引')}</a>`,
+        placements: ['bottom-end'],
+        theme: 'light',
+        width: 260,
+        extCls: 'create-token-tips-cls',
+      },
     };
   },
   computed: {

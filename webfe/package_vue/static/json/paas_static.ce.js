@@ -295,7 +295,7 @@ export const PLATFORM_CONFIG = {
         APM_FEATURE_DOC: DOCS_URL_PREFIX + '/topics/paas/services/svc_otel.md',
 
         // 令牌使用指引
-        ACCESS_TOKEN_USAGE_GUIDE: DOCS_URL_PREFIX + '/topics/paas/access_token',
+        ACCESS_TOKEN_USAGE_GUIDE: APIGW_DOCS_PREFIX + '/UserGuide/Explanation/access-token.md',
 
         // 沙箱开发指引
         SANDBOX_DEVELOPMENT_GUIDE: DOCS_URL_PREFIX + '/topics/paas/paas3_dev_sandbox_intro',

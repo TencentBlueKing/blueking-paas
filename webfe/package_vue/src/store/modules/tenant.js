@@ -31,6 +31,7 @@ export default {
     clustersStatusCache: Object.create(null),
     detailActiveName: '',
     detailTabActive: '',
+    selectedServiceItem: '', // 当前选中的服务项
   },
   mutations: {
     updateAvailableClusters(state, data) {
@@ -62,6 +63,9 @@ export default {
     },
     updatedDtailTabActive(state, data) {
       state.detailTabActive = data;
+    },
+    updateSelectedServiceItem(state, serviceUuid) {
+      state.selectedServiceItem = serviceUuid || '';
     },
   },
   actions: {

@@ -100,6 +100,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.POST("/processes/:processName", ProcessStartHandler())
 	r.GET("/codes/diffs", CodeDiffsHandler())
 	r.GET("/codes/commit", CodeCommitHandler())
+	r.GET("/settings", SettingsHandler())
 
 	return s, nil
 }
@@ -428,3 +429,42 @@ func HealthzHandler() gin.HandlerFunc {
 }
 
 var _ devsandbox.DevWatchServer = (*WebServer)(nil)
+
+var (
+	// MaxConfigSize 因为 settings.json 需要存储到 db，为了保证存储的安全，对其大小限制为最大 2MB
+	MaxConfigSize    = int64(2 * 1024 * 1024)
+	SettingsDirPath  = "/coder/code-server/User"
+	SettingsFileName = "settings.json"
+)
+
+// SettingsHandler 获取 settings.json
+func SettingsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		filePath := filepath.Join(SettingsDirPath, SettingsFileName)
+
+		info, err := os.Stat(filePath)
+		if os.IsNotExist(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "配置文件不存在"})
+			return
+		}
+
+		if info.Size() > MaxConfigSize {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": fmt.Sprintf("配置文件过大 (%.1fMB > %.1fMB)",
+					float64(info.Size())/(1024*1024),
+					float64(MaxConfigSize)/(1024*1024)),
+			})
+			return
+		}
+
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "读取文件失败: " + err.Error(),
+			})
+			return
+		}
+
+		c.Data(http.StatusOK, "application/json", content)
+	}
+}

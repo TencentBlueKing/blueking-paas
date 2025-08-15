@@ -18,6 +18,7 @@
 import logging
 from typing import TYPE_CHECKING, Dict
 
+import requests
 from attr import define, field
 
 from paas_wl.bk_app.applications.models import WlApp
@@ -43,6 +44,7 @@ from paas_wl.bk_app.dev_sandbox.kres_entities import (
 from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_ingress_name, get_dev_sandbox_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paasng.accessories.dev_sandbox.models import DevSandboxUserPrefs
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -114,7 +116,8 @@ class DevSandboxController:
             raise DevSandboxAlreadyExists(f"dev sandbox {sandbox_name} already exists")
 
     def delete(self):
-        """通过直接删除命名空间的方式, 销毁 dev sandbox 服务"""
+        """通过直接删除命名空间的方式, 销毁 dev sandbox 服务，销毁沙箱前保存用户的 settings 配置"""
+        self._save_settings_via_ingress()
         ns_handler = NamespacesHandler.new_by_app(self.wl_app)
         ns_handler.delete(namespace=self.wl_app.namespace)
 
@@ -181,6 +184,22 @@ class DevSandboxController:
             return image
 
         raise BuilderDoesNotSupportDevSandbox(f"module {mgr.module.name} does not support dev sandbox")
+
+    def _save_settings_via_ingress(self):
+        """通过 Ingress 访问沙箱 API"""
+        dev_sandbox_detail = self.get_detail()
+
+        # 通过沙箱域名访问 API
+        url = f"http://{dev_sandbox_detail.urls.devserver}settings"
+        headers = {"Authorization": f"Bearer {self.dev_sandbox.token}"}
+
+        # 调用 devserver API 获取 settings.json
+        response = requests.get(url, headers=headers)
+
+        # 保存 settings.json
+        DevSandboxUserPrefs.objects.update_or_create(
+            owner=self.dev_sandbox.owner, defaults={"code_server_settings": response.json()}
+        )
 
 
 class DevWlAppConstructor:

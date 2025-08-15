@@ -187,31 +187,18 @@ class DevSandboxController:
 
     def _save_settings_via_ingress(self):
         """通过 Ingress 访问沙箱 API"""
-        try:
-            ingress_name = get_dev_sandbox_ingress_name(self.wl_app)
-            ingress: DevSandboxIngress = self.ingress_mgr.get(self.wl_app, ingress_name)
-        except AppEntityNotFound:
-            raise DevSandboxResourceNotFound("dev sandbox ingress not found")
+        dev_sandbox_detail = self.get_detail()
 
         # 通过沙箱域名访问 API
-        base_url = f"http://{ingress.domains[0].host}/dev_sandbox/{self.dev_sandbox.code}"
-        url = f"{DevSandboxUrls(base=base_url).devserver}settings"
-
-        headers = {
-            "Authorization": f"Bearer {self.dev_sandbox.token}",
-            "Host": ingress.domains[0].host,
-        }
+        url = f"http://{dev_sandbox_detail.urls.devserver}settings"
+        headers = {"Authorization": f"Bearer {self.dev_sandbox.token}"}
 
         # 调用 devserver API 获取 settings.json
-        session = requests.Session()
-        response = session.get(
-            url,
-            headers=headers,
-        )
+        response = requests.get(url, headers=headers)
 
         # 保存 settings.json
         DevSandboxUserPrefs.objects.update_or_create(
-            owner=self.dev_sandbox.owner, defaults={"settings": response.json()}
+            owner=self.dev_sandbox.owner, defaults={"code_server_settings": response.json()}
         )
 
 

@@ -48,7 +48,7 @@ class DevSandboxConfigMap(AppEntity):
         try:
             # 从 db 中获取用户偏好配置
             db_sandbox = DevSandboxModel.objects.get(code=dev_sandbox.code)
-            user_settings = DevSandboxUserPrefs.objects.get(owner=db_sandbox.owner).settings
+            user_settings = DevSandboxUserPrefs.objects.get(owner=db_sandbox.owner).code_server_settings
         except DevSandboxUserPrefs.DoesNotExist:
             user_settings = {}
 

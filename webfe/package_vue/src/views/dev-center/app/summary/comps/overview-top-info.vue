@@ -19,24 +19,21 @@
         <div class="right">
           <p>
             <span
-              v-bk-tooltips="$t('所有进程 CPU limit 的总和')"
+              v-bk-tooltips="getResourceTips('CPU')"
               v-dashed
             >
               CPU:
             </span>
-            {{ appInfo.data.cpuProd || '-- ' }}{{ $t('核（生产环境）') }}、{{ appInfo.data.cpuStag || '-- '
-            }}{{ $t('核（预发布环境）') }}
+            {{ displayCpuText }}
           </p>
           <p>
             <span
-              v-bk-tooltips="$t('所有进程 Memory limit 的总和')"
+              v-bk-tooltips="getResourceTips('Memory')"
               v-dashed
             >
               {{ $t('内存') }}:
             </span>
-            {{ appInfo.data.memProd || '-- ' }}G{{ $t('（生产环境 ）') }}、{{ appInfo.data.memStag || '-- ' }}G{{
-              $t('（预发布环境）')
-            }}
+            {{ displayMemoryText }}
           </p>
         </div>
       </div>
@@ -48,7 +45,7 @@
           <i class="paasng-icon paasng-alert" />
         </div>
         <div class="description">
-          <h4>{{ appInfo.data.alarmCount }}</h4>
+          <h4>{{ appData.alarmCount }}</h4>
           <p>{{ $t('告警数量') }}</p>
         </div>
       </div>
@@ -151,6 +148,18 @@ export default {
     curModuleId() {
       return this.curAppModule.name;
     },
+    // 应用数据（cpu、内存）
+    appData() {
+      return this.appInfo.data || {};
+    },
+    // 获取 CPU 文案
+    displayCpuText() {
+      return this.formatResourceText('Cpu', '核');
+    },
+    // 获取内存文案
+    displayMemoryText() {
+      return this.formatResourceText('Memory', 'GB');
+    },
   },
   watch: {
     viewData() {
@@ -179,6 +188,46 @@ export default {
     formatNumber(num) {
       num = Number(num);
       return num >= 1e3 && num < 1e4 ? `${(num / 1e3).toFixed(1)}k` : num >= 1e4 ? `${(num / 1e4).toFixed(1)}w` : num;
+    },
+    /**
+     * 格式化资源文本（CPU/内存）
+     * @param {string} resourceType - 资源类型，如 'Cpu' 或 'Memory'
+     * @param {string} unit - 单位，如 '核' 或 'GB'
+     * @returns {string} 格式化后的文本
+     */
+    formatResourceText(resourceType, unit) {
+      const { stag, prod, hasAutoscaling } = this.appData;
+      const minProp = `min${resourceType}`;
+      const maxProp = `max${resourceType}`;
+
+      // 格式化单个环境的资源文本
+      const formatEnvResource = (env, envName) => {
+        const minValue = env?.[minProp];
+        const maxValue = env?.[maxProp];
+
+        if (hasAutoscaling) {
+          // 启用扩缩容时显示范围
+          const rangeText = minValue && maxValue ? `${minValue} ~ ${maxValue}` : '--';
+          return `${rangeText} ${this.$t(`${unit}（${envName}）`)}`;
+        } else {
+          // 未启用扩缩容时只显示单个值
+          const valueText = minValue || '--';
+          return `${valueText} ${this.$t(`${unit}（${envName}）`)}`;
+        }
+      };
+
+      const prodText = formatEnvResource(prod, '生产环境');
+      const stagText = formatEnvResource(stag, '预发布环境');
+
+      return `${prodText}、${stagText}`;
+    },
+    getResourceTips(resourceType) {
+      const baseText = this.$t('所有进程 {n} limit 的总和', { n: resourceType });
+      if (this.appData.hasAutoscaling) {
+        const autoscalingText = this.$t('已启用自动扩缩容，按弹性范围展示');
+        return `${baseText}（${autoscalingText}）`;
+      }
+      return baseText;
     },
     toDataDetails(data) {
       if (data.id === 'apiNumber' || data.id === 'gateway') {

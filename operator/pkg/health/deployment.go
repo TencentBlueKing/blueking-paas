@@ -121,6 +121,10 @@ func GetDeploymentDirectFailMessage(
 		return "", err
 	}
 	for _, pod := range pods.Items {
+		// WARNING: 删除 Deployment 后，集群可能有秒级时延才能将关联的 Pod 标记为删除状态.
+		// 因此, 立即通过 MatchLabels 过滤 Pod, 再忽略已删除的 Pod, 可能会出现不准确的情况.
+		// 如果需要精确查询 Deployment 关联的 Pod, 需要通过 ownerReference 精准过滤.
+
 		// 忽略已被标记删除的 Pod
 		if !pod.DeletionTimestamp.IsZero() {
 			continue

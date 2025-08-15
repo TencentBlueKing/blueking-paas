@@ -66,7 +66,6 @@ class MetaDataReader(Protocol):
 
 class MetaDataFileReader:
     source_dir: Path = Path(".")
-    error_tips: str = ""
 
     def read_file(self, file_path: str, version_info: VersionInfo) -> bytes:
         """从当前仓库指定版本(version_info)的代码中读取指定文件(file_path) 的内容"""
@@ -84,10 +83,8 @@ class MetaDataFileReader:
         content, error_msg = self.safe_read_files(possible_keys, version_info)
 
         if content is None:
-            error_msg_prefix = "Can not read Procfile file from repository"
-            # Only append error tips when no other error message is available
-            msg = error_msg if error_msg else self.error_tips
-            raise exceptions.GetProcfileError(f"{error_msg_prefix}, {msg}")
+            error_msg_prefix = "Failed to read the Procfile file in app directory"
+            raise exceptions.GetProcfileError(f"{error_msg_prefix}, {error_msg}")
 
         try:
             procfile = yaml.safe_load(content)
@@ -115,10 +112,8 @@ class MetaDataFileReader:
         content, error_msg = self.safe_read_files(possible_keys, version_info)
 
         if content is None:
-            error_msg_prefix = "Can not read app description file from repository"
-            # Only append error tips when no other error message is available
-            msg = error_msg if error_msg else self.error_tips
-            raise exceptions.GetAppYamlError(f"{error_msg_prefix}, {msg}")
+            error_msg_prefix = "Failed to read the app description file in app directory"
+            raise exceptions.GetAppYamlError(f"{error_msg_prefix}, {error_msg}")
 
         try:
             app_description = yaml.safe_load(content)
@@ -137,18 +132,11 @@ class MetaDataFileReader:
         if self.source_dir != Path("."):
             possible_keys = [str(self.source_dir / ".dockerignore"), ".dockerignore"]
 
-        content = None
-        for possible_key in possible_keys:
-            try:
-                content = self.read_file(possible_key, version_info)
-                break
-            except Exception:
-                continue
+        content, error_msg = self.safe_read_files(possible_keys, version_info)
+
         if content is None:
-            error_msg = "Can not read .dockerignore file from repository"
-            if self.error_tips:
-                error_msg += f", {self.error_tips}"
-            raise exceptions.GetDockerIgnoreError(error_msg)
+            error_msg_prefix = "Failed to read the .dockerignore file in app directory"
+            raise exceptions.GetDockerIgnoreError(f"{error_msg_prefix}, {error_msg}")
         return content.decode()
 
     def safe_read_files(self, file_paths: Sequence[str], version_info: VersionInfo) -> Tuple[bytes | None, str]:
@@ -158,29 +146,31 @@ class MetaDataFileReader:
         :param file_paths: A sequence of possible file paths to read
         :return: (file content | None, error message)
         """
-        content, error_msg = None, ""
+        not_found_map = {key: False for key in file_paths}
         for possible_key in file_paths:
             try:
                 content = self.read_file(possible_key, version_info)
-                break
             except exceptions.RequestTimeOutError as e:
-                error_msg = str(e)
-                break
+                return None, str(e)
             except exceptions.ReadLinkFileOutsideDirectoryError:
-                error_msg = f'file "{possible_key}" is an invalid link which points to outside the repository'
-                break
+                return None, f'file "{possible_key}" is an illegal link'
             except exceptions.ReadFileNotFoundError:
-                # Continue when the file does not exist
+                # Set the mark and try the next file path if file not found
+                not_found_map[possible_key] = True
                 continue
             except Exception as e:
-                logger.info("Failed to read file, location: %s, unexpected error: %s.", possible_key, str(e))
+                logger.info("Failed to read file, location: %s, error: %s.", possible_key, str(e))
                 continue
-        return content, error_msg
+            else:
+                return content, ""
+
+        # Every tried key in the file_paths is not found
+        if all(not_found_map.values()):
+            return None, f"file not found, tried: {file_paths!r}"
+        return None, "unknown error"
 
 
 class VCSMetaDataReader(MetaDataFileReader):
-    error_tips = "please ensure the file exists in the repository and the network or proxy is working normally"
-
     def __init__(self, repo_controller: RepoController, source_dir: Path = _current_path):
         self.repo_controller = repo_controller
         self.source_dir = source_dir
@@ -191,8 +181,6 @@ class VCSMetaDataReader(MetaDataFileReader):
 
 
 class PackageMetaDataReader(MetaDataFileReader):
-    error_tips = "please ensure the file exists in the package"
-
     def __init__(self, module: "Module", source_dir: Path = _current_path):
         self.module = module
         self._client: Optional[BasePackageClient] = None

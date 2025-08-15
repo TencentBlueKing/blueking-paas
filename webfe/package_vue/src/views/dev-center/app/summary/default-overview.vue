@@ -351,14 +351,9 @@ export default {
   data() {
     return {
       loading: true,
-      trunkUrl: '',
       operationsList: [],
       interval: 3600,
       current: -1,
-      // 开发语言
-      appDevLang: '',
-      // 已托管至
-      sourceType: '',
       cpuLine: chartOption.cpu,
       memLine: chartOption.memory,
       envChartOption: {
@@ -568,16 +563,10 @@ export default {
       this.loading = true;
       this.isChartLoading = true;
       this.isProcessDataReady = false;
-
       this.curProcessName = '';
-      this.appDevLang = this.curAppModule?.language;
       await this.getOverViewData();
       // 获取动态
       this.getModuleOperations();
-      if (this.curAppModule && this.curAppModule?.repo) {
-        this.trunkUrl = this.curAppModule.repo.trunk_url || '';
-        this.sourceType = this.curAppModule.repo.source_type || '';
-      }
       if (this.userFeature.MONITORING) {
         this.getAlarmData();
       }
@@ -1268,46 +1257,76 @@ export default {
 
     // 计算当前应用使用资源用量
     computingAppInfo() {
-      let cpuStag = 0;
-      let cpuProd = 0;
-      let memStag = 0;
-      let memProd = 0;
+      // 扩缩容标识
+      let hasAutoscaling = false;
+      // 初始化资源统计对象
+      const resources = {
+        stag: { minCpu: 0, minMemory: 0, maxCpu: 0, maxMemory: 0 },
+        prod: { minCpu: 0, minMemory: 0, maxCpu: 0, maxMemory: 0 },
+      };
       const data = this.overViewData;
-      for (const key in data) {
-        // 获取 stag processes
-        const stagProcessList = data[key].envs.stag.processes;
-        if (stagProcessList.length) {
-          for (const i in stagProcessList) {
-            // 每一项 processes
-            const stagProcess = stagProcessList[i];
-            for (const nameStag in stagProcess) {
-              const targetReplicas = stagProcess[nameStag].target_replicas;
-              cpuStag += stagProcess[nameStag].resource_limit_quota.cpu * targetReplicas;
-              memStag += stagProcess[nameStag].resource_limit_quota.memory * targetReplicas;
-            }
-          }
-        }
 
-        // 获取 prod processes
-        const prodProcessList = data[key].envs.prod.processes;
-        if (prodProcessList.length) {
-          for (const i in prodProcessList) {
-            const prodProcess = prodProcessList[i];
-            for (const nameProd in prodProcess) {
-              const targetReplicas = prodProcess[nameProd].target_replicas;
-              cpuProd += prodProcess[nameProd].resource_limit_quota.cpu * targetReplicas;
-              memProd += prodProcess[nameProd].resource_limit_quota.memory * targetReplicas;
-            }
-          }
-        }
+      // 默认按扩缩容方式计算所有资源
+      for (const moduleName in data) {
+        const moduleData = data[moduleName];
+
+        ['stag', 'prod'].forEach((envName) => {
+          const processes = moduleData.envs[envName]?.processes || [];
+
+          processes.forEach((processGroup) => {
+            Object.keys(processGroup).forEach((processName) => {
+              const process = processGroup[processName];
+              const { resource_limit_quota, scaling_config, target_replicas } = process;
+
+              if (!resource_limit_quota) return;
+
+              const cpuQuota = resource_limit_quota.cpu || 0;
+              const memoryQuota = resource_limit_quota.memory || 0;
+
+              // 检查是否有扩缩容配置（用于标识）
+              if (process.autoscaling && scaling_config) {
+                hasAutoscaling = true;
+              }
+
+              // 默认按扩缩容方式计算
+              if (process.autoscaling && scaling_config) {
+                // 有扩缩容配置的进程
+                const minReplicas = scaling_config.min_replicas || 0;
+                const maxReplicas = scaling_config.max_replicas || minReplicas;
+
+                resources[envName].minCpu += cpuQuota * minReplicas;
+                resources[envName].minMemory += memoryQuota * minReplicas;
+                resources[envName].maxCpu += cpuQuota * maxReplicas;
+                resources[envName].maxMemory += memoryQuota * maxReplicas;
+              } else {
+                // 没有扩缩容配置的进程，用 target_replicas 作为边界值
+                const replicas = target_replicas || 0;
+                resources[envName].minCpu += cpuQuota * replicas;
+                resources[envName].minMemory += memoryQuota * replicas;
+                resources[envName].maxCpu += cpuQuota * replicas;
+                resources[envName].maxMemory += memoryQuota * replicas;
+              }
+            });
+          });
+        });
       }
 
-      // 转为显示单位
       return {
-        cpuStag: this.unitConvert(cpuStag, 1000),
-        cpuProd: this.unitConvert(cpuProd, 1000),
-        memStag: this.unitConvert(memStag, 1024),
-        memProd: this.unitConvert(memProd, 1024),
+        hasAutoscaling,
+        // 预发布环境数据
+        stag: {
+          minCpu: this.unitConvert(resources.stag.minCpu, 1000),
+          minMemory: this.unitConvert(resources.stag.minMemory, 1024),
+          maxCpu: this.unitConvert(resources.stag.maxCpu, 1000),
+          maxMemory: this.unitConvert(resources.stag.maxMemory, 1024),
+        },
+        // 生产环境数据
+        prod: {
+          minCpu: this.unitConvert(resources.prod.minCpu, 1000),
+          minMemory: this.unitConvert(resources.prod.minMemory, 1024),
+          maxCpu: this.unitConvert(resources.prod.maxCpu, 1000),
+          maxMemory: this.unitConvert(resources.prod.maxMemory, 1024),
+        },
       };
     },
 

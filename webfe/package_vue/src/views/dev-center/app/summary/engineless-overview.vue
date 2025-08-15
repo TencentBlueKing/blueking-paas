@@ -251,12 +251,17 @@ export default {
     this.init();
   },
   methods: {
-    init() {
-      if (this.curFeatureAnalytics) {
-        this.getAnalysisConfig();
+    async init() {
+      try {
+        if (this.curFeatureAnalytics) {
+          await this.getAnalysisConfig();
+        }
+        await Promise.all([this.getModuleOperations(), this.getAppliedPermissionApi()]);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        this.loading = false;
       }
-      this.getModuleOperations();
-      this.getAppliedPermissionApi();
     },
     initDate() {
       moment.locale(this.localLanguage);

@@ -173,10 +173,18 @@ func (f ReloadResultFile) WriteStatus(reloadID string, status ReloadStatus) erro
 
 // ReadLog is a function that reads a log file based on the given reloadID.
 func (f ReloadResultFile) ReadLog(reloadID string) (string, error) {
-	content, err := os.ReadFile(path.Join(f.rootLogDir, reloadID))
+	filePath := path.Join(f.rootDir, reloadID)
+
+	// 检查日志文件是否就绪
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return "", nil
+	}
+
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to read log")
 	}
+
 	return string(content), nil
 }
 

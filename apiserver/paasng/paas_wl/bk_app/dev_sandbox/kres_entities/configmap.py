@@ -69,7 +69,7 @@ class DevSandboxConfigMap(AppEntity):
                         }
                     },
                     "terminal.integrated.defaultProfile.linux": "cnb-bash",
-                    # 如果用户设置存在，覆盖默认配置
+                    # 如果用户配置存在，覆盖默认配置
                     **user_settings,
                 }
             )

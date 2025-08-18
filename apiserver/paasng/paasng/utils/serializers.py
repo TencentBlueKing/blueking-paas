@@ -335,6 +335,11 @@ class SafePathField(serializers.RegexField):
     def __init__(self, **kwargs):
         super().__init__(regex=self.regex, **kwargs)
 
+    def to_internal_value(self, data):
+        if isinstance(data, bool) or not isinstance(data, (str, int, float)):
+            self.fail("invalid", path=data)
+        return super().to_internal_value(data)
+
     def run_validation(self, data=empty):
         data = super().run_validation(data)
 

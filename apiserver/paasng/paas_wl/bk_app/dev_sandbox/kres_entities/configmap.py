@@ -26,7 +26,7 @@ from paas_wl.bk_app.dev_sandbox.kres_slzs.configmap import (
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
 from paasng.accessories.dev_sandbox.models import DevSandbox as DevSandboxModel
-from paasng.accessories.dev_sandbox.models import DevSandboxUserPrefs
+from paasng.accessories.dev_sandbox.models import DevSandboxUserSettings
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
@@ -48,8 +48,8 @@ class DevSandboxConfigMap(AppEntity):
         try:
             # 从 db 中获取用户偏好配置
             db_sandbox = DevSandboxModel.objects.get(code=dev_sandbox.code)
-            user_settings = DevSandboxUserPrefs.objects.get(owner=db_sandbox.owner).code_server_settings
-        except DevSandboxUserPrefs.DoesNotExist:
+            user_settings = DevSandboxUserSettings.objects.get(owner=db_sandbox.owner).code_server_settings
+        except DevSandboxUserSettings.DoesNotExist:
             user_settings = {}
 
         data = {

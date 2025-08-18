@@ -44,7 +44,7 @@ from paas_wl.bk_app.dev_sandbox.kres_entities import (
 from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_ingress_name, get_dev_sandbox_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
-from paasng.accessories.dev_sandbox.models import DevSandboxUserPrefs
+from paasng.accessories.dev_sandbox.models import DevSandboxUserSettings
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
 from paasng.platform.modules.helpers import ModuleRuntimeManager
@@ -117,7 +117,7 @@ class DevSandboxController:
 
     def delete(self):
         """通过直接删除命名空间的方式, 销毁 dev sandbox 服务，销毁沙箱前保存用户的 settings 配置"""
-        self._save_settings_via_ingress()
+        self._save_user_settings()
         ns_handler = NamespacesHandler.new_by_app(self.wl_app)
         ns_handler.delete(namespace=self.wl_app.namespace)
 
@@ -185,7 +185,7 @@ class DevSandboxController:
 
         raise BuilderDoesNotSupportDevSandbox(f"module {mgr.module.name} does not support dev sandbox")
 
-    def _save_settings_via_ingress(self):
+    def _save_user_settings(self):
         """通过 Ingress 访问沙箱 API"""
         dev_sandbox_detail = self.get_detail()
 
@@ -197,7 +197,7 @@ class DevSandboxController:
         response = requests.get(url, headers=headers)
 
         # 保存 settings.json
-        DevSandboxUserPrefs.objects.update_or_create(
+        DevSandboxUserSettings.objects.update_or_create(
             owner=self.dev_sandbox.owner, defaults={"code_server_settings": response.json()}
         )
 

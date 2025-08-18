@@ -152,7 +152,7 @@ class DevSandbox(OwnerTimestampedModel):
         unique_together = ("module", "owner")
 
 
-class DevSandboxUserPrefs(OwnerTimestampedModel):
+class DevSandboxUserSettings(OwnerTimestampedModel):
     """沙箱用户使用偏好"""
 
     owner = BkUserField(unique=True, help_text="沙箱绑定用户")

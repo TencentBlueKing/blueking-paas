@@ -434,6 +434,7 @@ var _ devsandbox.DevWatchServer = (*WebServer)(nil)
 func SettingsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		const (
+			// DefaultMaxSizeKB 因为 settings.json 需要存储到 db，为了保证存储的安全，对其默认大小限制为最大 512KB
 			DefaultMaxSizeKB = 512
 			SettingsDirPath  = "/coder/code-server/User"
 			SettingsFileName = "settings.json"

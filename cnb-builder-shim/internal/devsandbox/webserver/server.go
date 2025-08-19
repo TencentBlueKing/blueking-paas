@@ -430,17 +430,17 @@ func HealthzHandler() gin.HandlerFunc {
 
 var _ devsandbox.DevWatchServer = (*WebServer)(nil)
 
+var (
+	// DefaultMaxSizeKB 默认最大文件大小限制（KB）
+	DefaultMaxSizeKB = 512
+	SettingsDirPath  = "/coder/code-server/User"
+	SettingsFileName = "settings.json"
+	SizeEnvVar       = "MAX_SETTINGS_SIZE_KB"
+)
+
 // SettingsHandler 获取 settings.json
 func SettingsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		const (
-			// DefaultMaxSizeKB 因为 settings.json 需要存储到 db，为了保证存储的安全，对其默认大小限制为最大 512KB
-			DefaultMaxSizeKB = 512
-			SettingsDirPath  = "/coder/code-server/User"
-			SettingsFileName = "settings.json"
-			SizeEnvVar       = "MAX_SETTINGS_SIZE_KB"
-		)
-
 		// 通过环境变量获取 settings 最大范围
 		maxSizeKB := DefaultMaxSizeKB
 		if envSize, exists := os.LookupEnv(SizeEnvVar); exists {

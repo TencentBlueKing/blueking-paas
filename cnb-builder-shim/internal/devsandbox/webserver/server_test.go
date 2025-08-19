@@ -216,41 +216,41 @@ var _ = Describe("Test webserver api", func() {
 			BeforeEach(func() {
 				settingsPath := getSettingsPath()
 
-				// 创建大小超过 2MB 的文件
+				// 创建大小超过默认限制（512KB）的文件
 				f, err := os.Create(settingsPath)
 				Expect(err).NotTo(HaveOccurred())
 				defer f.Close()
 
-				// 写入超过 2MB 的数据
-				data := make([]byte, 3*1024*1024)
+				// 写入超过 512KB 的数据
+				data := make([]byte, 600*1024)
 				_, err = f.Write(data)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should return 400 Bad Request", func() {
+			It("should return 413 Request Entity Too Large", func() {
 				req, _ := http.NewRequest("GET", "/settings", nil)
 				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
 				w := httptest.NewRecorder()
 				s.server.ServeHTTP(w, req)
 
-				Expect(w.Code).To(Equal(http.StatusBadRequest))
+				Expect(w.Code).To(Equal(http.StatusRequestEntityTooLarge))
 
 				var resp map[string]string
 				err := json.Unmarshal(w.Body.Bytes(), &resp)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(resp["error"]).To(ContainSubstring("配置文件过大"))
-				Expect(resp["error"]).To(ContainSubstring("3.0MB"))
-				Expect(resp["error"]).To(ContainSubstring("2.0MB"))
+				Expect(resp["message"]).To(ContainSubstring("配置文件过大"))
+				Expect(resp["message"]).To(ContainSubstring("600.0KB"))
+				Expect(resp["message"]).To(ContainSubstring("512KB"))
 			})
 		})
 
 		Context("settings.json is valid", func() {
 			const validSettings = `{
-			"editor.fontSize": 14,
-			"workbench.colorTheme": "Default Dark+",
-			"git.confirmSync": false
-		}`
+            "editor.fontSize": 14,
+            "workbench.colorTheme": "Default Dark+",
+            "git.confirmSync": false
+        }`
 
 			BeforeEach(func() {
 				settingsPath := getSettingsPath()

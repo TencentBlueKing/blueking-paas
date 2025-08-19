@@ -241,7 +241,7 @@ def cache_from_redis_sentinel_url(url: str, sentinel_manager: str, sentinel_pass
 def cache_from_redis_url(url: str) -> Dict[str, Any]:
     """根据 redis url 生成 django CACHES setting
 
-    :param url: redis url (not sentinel)，support redis://... and rediss://...
+    :param url: redis url（非 sentinel 类型），如：redis://localhost:6379/0
     """
     cache_cfg = Env.cache_url_config(url)
 

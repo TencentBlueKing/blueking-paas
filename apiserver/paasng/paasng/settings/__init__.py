@@ -56,11 +56,11 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from dynaconf import LazySettings, Validator
-from environ import Env
 from moby_distribution.registry.utils import parse_image
 
 from .utils import (
-    cache_redis_sentinel_url,
+    cache_from_redis_sentinel_url,
+    cache_from_redis_url,
     get_database_conf,
     get_default_keepalive_options,
     get_paas_service_jwt_clients,
@@ -555,33 +555,13 @@ DEFAULT_CACHE_CONFIG = settings.get("DEFAULT_CACHE_CONFIG")
 if DEFAULT_CACHE_CONFIG:
     CACHES = {"default": DEFAULT_CACHE_CONFIG}
 elif REDIS_URL:
-    if is_redis_sentinel_backend(REDIS_URL):
-        cache_cfg = cache_redis_sentinel_url(REDIS_URL, SENTINEL_MASTER_NAME, SENTINEL_PASSWORD)
-    else:
-        cache_cfg = Env.cache_url_config(REDIS_URL)
-
-        # django_redis 会使用 pool 初始化 redisClient，分析源码 & 文档可知，
-        # 其 ssl 证书需要放在 OPTIONS.CONNECTION_POOL_KWARGS 中，因此这里做下转换
-        # 参考：
-        # - https://github.com/jazzband/django-redis/blob/5.4.0/README.rst#ssltls-and-self-signed-certificates
-        # - https://github.com/jazzband/django-redis/blob/2a3770f1/django_redis/pool.py#L124
-        # - https://github.com/redis/redis-py/blob/2c9f41f4/redis/connection.py#L1089
-        # - https://github.com/redis/redis-py/blob/2c9f41f4/redis/connection.py#L1227
-        # - https://github.com/redis/redis-py/blob/2c9f41f4/redis/connection.py#L1048
-        # - https://github.com/redis/redis-py/blob/2c9f41f4/redis/connection.py#L820
-        #
-        # 注意：CACHES 暂不配置 REDIS_CONNECTION_OPTIONS，该配置目前仅用于 Redis 作为 Celery 消息队列时
-
-        # 当存在 ssl 相关配置时，需要挪位置到 CONNECTION_POOL_KWARGS 中
-        if cache_cfg_options := cache_cfg.get("OPTIONS"):
-            connection_pool_kwargs = cache_cfg_options.pop("CONNECTION_POOL_KWARGS", {})
-            for key in ["ssl_ca_certs", "ssl_certfile", "ssl_keyfile", "ssl_cert_reqs", "ssl_check_hostname"]:
-                if key.upper() in cache_cfg_options:
-                    connection_pool_kwargs[key] = cache_cfg_options.pop(key.upper())
-
-            cache_cfg_options["CONNECTION_POOL_KWARGS"] = connection_pool_kwargs
-
-    CACHES = {"default": cache_cfg}
+    CACHES = {
+        "default": (
+            cache_from_redis_sentinel_url(REDIS_URL, SENTINEL_MASTER_NAME, SENTINEL_PASSWORD)
+            if is_redis_sentinel_backend(REDIS_URL)
+            else cache_from_redis_url(REDIS_URL)
+        )
+    }
 else:
     CACHES = {
         "default": {"BACKEND": "django.core.cache.backends.filebased.FileBasedCache", "LOCATION": "/tmp/django_cache"}

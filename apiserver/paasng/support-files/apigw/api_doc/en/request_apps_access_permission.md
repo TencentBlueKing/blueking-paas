@@ -19,9 +19,6 @@ None.
 | reason             | string           | Yes      | Reason for application        |
 | app_code_list      | Array of strings | Yes      | List of application IDs to be accessed |
 
-### Get Your Access Token
-Before calling the interface, please get your access_token first. For detailed guidance, please refer to [Using access_token to access PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token).
-
 ### Request Example
 ```python
 import json

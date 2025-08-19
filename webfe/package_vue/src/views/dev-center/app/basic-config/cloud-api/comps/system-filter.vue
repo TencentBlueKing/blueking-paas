@@ -260,6 +260,9 @@ export default {
     overflow-y: auto;
     .item {
       position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
       padding: 0 10px;
       height: 52px;
       text-align: left;

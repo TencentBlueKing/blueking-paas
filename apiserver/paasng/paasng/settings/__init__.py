@@ -56,11 +56,11 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from dynaconf import LazySettings, Validator
-from environ import Env
 from moby_distribution.registry.utils import parse_image
 
 from .utils import (
-    cache_redis_sentinel_url,
+    cache_from_redis_sentinel_url,
+    cache_from_redis_url,
     get_database_conf,
     get_default_keepalive_options,
     get_paas_service_jwt_clients,
@@ -557,9 +557,9 @@ if DEFAULT_CACHE_CONFIG:
 elif REDIS_URL:
     CACHES = {
         "default": (
-            cache_redis_sentinel_url(REDIS_URL, SENTINEL_MASTER_NAME, SENTINEL_PASSWORD)
+            cache_from_redis_sentinel_url(REDIS_URL, SENTINEL_MASTER_NAME, SENTINEL_PASSWORD)
             if is_redis_sentinel_backend(REDIS_URL)
-            else Env.cache_url_config(REDIS_URL)
+            else cache_from_redis_url(REDIS_URL)
         )
     }
 else:

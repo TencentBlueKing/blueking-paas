@@ -17,9 +17,6 @@
 | package | file | 是 | 源码包文件 |
 | allow_overwrite | boolean | 否 | 是否允许覆盖原有的源码包 |
 
-### 获取你的 access_token
-在调用接口之前，请先获取你的 access_token，具体指引请参照 [使用 access_token 访问 PaaS V3](https://bk.tencent.com/docs/markdown/PaaS3.0/topics/paas/access_token)
-
 ### 返回结果示例
 ```json
 {

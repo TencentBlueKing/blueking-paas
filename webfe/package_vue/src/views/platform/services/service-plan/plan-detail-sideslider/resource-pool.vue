@@ -17,7 +17,7 @@
       v-bkloading="{ isLoading: isTableLoading, zIndex: 10 }"
     >
       <bk-table-column
-        :label="$t('实例配置')"
+        :label="$t('实例凭证')"
         prop="conditions"
       >
         <div
@@ -37,6 +37,28 @@
             class="paasng-icon paasng-general-copy"
             v-copy="handleCopy(row.jsonData)"
           ></i>
+        </div>
+      </bk-table-column>
+      <bk-table-column :label="`TLS ${$t('配置')}`">
+        <div
+          class="json-pretty-wrapper"
+          slot-scope="{ row }"
+        >
+          <template v-if="!row.tlsConfig">--</template>
+          <template v-else>
+            <vue-json-pretty
+              class="paas-vue-json-pretty-cls"
+              :data="row.tlsConfig"
+              :deep="Object.keys(row.tlsConfig)?.length ? 1 : 0"
+              :show-length="true"
+              :highlight-mouseover-node="true"
+            />
+            <i
+              v-bk-tooltips="$t('复制')"
+              class="paasng-icon paasng-general-copy"
+              v-copy="handleCopy(row.tlsConfig)"
+            ></i>
+          </template>
         </div>
       </bk-table-column>
       <bk-table-column
@@ -164,6 +186,20 @@ export default {
       this.dialogConfig.planId = this.data?.uuid;
       this.dialogConfig.service = this.formatServiceName();
     },
+    // 格式化 tls 配置
+    formatTlsConfig(config) {
+      try {
+        if (!config) {
+          return null;
+        }
+        if (typeof config === 'string') {
+          return JSON.parse(config);
+        }
+        return config;
+      } catch (e) {
+        console.error('TLS配置格式化失败', e);
+      }
+    },
     // 获取方案下的资源池
     async getPreCreatedInstances(isOperate = false) {
       if (isOperate) {
@@ -178,7 +214,11 @@ export default {
           planId: this.data?.uuid,
         });
         this.instances = ret?.pre_created_instances?.map((item) => {
-          return Object.assign(item, { jsonData: JSON.parse(item.credentials) });
+          const tlsConfig = this.formatTlsConfig(item.config?.tls);
+          return Object.assign(item, {
+            jsonData: JSON.parse(item.credentials),
+            tlsConfig,
+          });
         });
         this.$emit('change', this.instances.length);
       } catch (e) {

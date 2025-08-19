@@ -141,6 +141,14 @@ class TencentCLBListener(UuidAuditedModel):
 
     objects = TencentCLBListenerManager()
 
+    def acquire(self):
+        self.is_allocated = True
+        self.save(update_fields=["is_allocated"])
+
+    def release(self):
+        self.is_allocated = False
+        self.save(update_fields=["is_allocated"])
+
     class Meta:
         unique_together = ("vip", "port")
         verbose_name_plural = verbose_name = "腾讯云 CLB 监听器"

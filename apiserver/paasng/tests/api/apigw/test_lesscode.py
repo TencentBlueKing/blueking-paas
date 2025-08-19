@@ -23,6 +23,7 @@ import pytest
 import yaml
 from django.conf import settings
 
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.sourcectl.utils import generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar
@@ -46,7 +47,7 @@ def lesscode_public_params():
     return {
         "type": "default",
         "engine_enabled": True,
-        "engine_params": {"source_origin": 2, "source_init_template": settings.DUMMY_TEMPLATE_NAME},
+        "engine_params": {"source_init_template": settings.DUMMY_TEMPLATE_NAME},
     }
 
 
@@ -65,6 +66,7 @@ class TestApiInAPIGW:
         response = api_client.post("/apigw/api/bkapps/applications/", data=lesscode_public_params)
         assert response.status_code == 201
         assert response.json()["application"]["modules"][0]["source_origin"] == SourceOrigin.BK_LESS_CODE
+        assert response.json()["application"]["type"] == ApplicationType.CLOUD_NATIVE
 
 
 class TestModuleSourcePackageViewSet:

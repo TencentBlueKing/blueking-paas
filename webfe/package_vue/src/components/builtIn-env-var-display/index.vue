@@ -5,10 +5,10 @@
   >
     <bk-alert
       type="info"
-      class="mb16"
+      class="mb-16"
     >
       <span slot="title">
-        {{ $t('增强服务也会写入内置环境变量，详情请查看增强服务页面。更多说明请参考') }}
+        {{ $t('此处展示的内置变量不包含增强服务所写入的环境变量，更多说明请参考') }}
         <a
           class="ml5"
           :href="GLOBAL.DOC.ENV_VAR_INLINE"
@@ -19,36 +19,96 @@
         </a>
       </span>
     </bk-alert>
-    <div class="info-header">
-      <div class="var">{{ $t('变量') }}</div>
-      <div class="description">{{ $t('描述') }}</div>
+    <div class="top-box flex-row align-items-center">
+      <bk-radio-group
+        v-model="envSelected"
+        class="env-select-group-cls"
+      >
+        <bk-radio-button value="stag">{{ $t('预发布环境') }}</bk-radio-button>
+        <bk-radio-button value="prod">{{ $t('生产环境') }}</bk-radio-button>
+      </bk-radio-group>
+      <bk-input
+        v-model="searchKey"
+        class="flex-shrink-0"
+        style="width: 320px"
+        :placeholder="$t('搜索变量名/变量值/描述')"
+        :clearable="true"
+        :right-icon="'bk-icon icon-search'"
+      ></bk-input>
     </div>
-    <EnvVarInfo
-      v-for="(item, index) in builtInEnvVars"
-      v-bind="item"
-      :key="`env-var-${index}`"
-    />
+    <div class="info-header mt-16 flex-row align-items-center flex-shrink-0">
+      <div class="var">{{ $t('变量名') }}</div>
+      <div class="value">{{ $t('变量值') }}</div>
+    </div>
+    <ul class="env-var-list">
+      <template v-if="filteredEnvVars.length > 0">
+        <li
+          v-for="(item, index) in filteredEnvVars"
+          :key="`env-var-${index}`"
+          class="flex-row align-items-center"
+        >
+          <div class="key text-ellipsis">
+            <div class="env-content text-ellipsis">
+              <span
+                style="padding-bottom: 2px"
+                v-bk-tooltips="{ content: getTooltipContent(item), disabled: !item.description }"
+                v-dashed="{ disabled: !item.description }"
+              >
+                {{ item.key }}
+              </span>
+            </div>
+            <i
+              v-copy="item.key"
+              class="paasng-icon paasng-general-copy copy-icon"
+            />
+          </div>
+          <div :class="['value text-ellipsis', { sensitive: !item.is_sensitive }]">
+            <div
+              class="env-content text-ellipsis"
+              v-bk-overflow-tips
+            >
+              <div
+                v-if="item.is_sensitive"
+                class="sensitive-wrapper"
+              >
+                <span
+                  v-for="dot in 6"
+                  class="sensitive-dot"
+                  :key="dot"
+                ></span>
+              </div>
+              <template v-else>
+                {{ item.value || '--' }}
+              </template>
+            </div>
+            <i
+              v-if="!item.is_sensitive"
+              v-copy="item.value"
+              class="paasng-icon paasng-general-copy copy-icon"
+            />
+          </div>
+        </li>
+      </template>
+      <template v-else>
+        <bk-exception
+          class="exception-wrap-item exception-part mt-24"
+          :type="searchKey ? 'search-empty' : 'empty'"
+          scene="part"
+        ></bk-exception>
+      </template>
+    </ul>
   </div>
 </template>
 
 <script>
-import EnvVarInfo from './display-info.vue';
-
-// 定义环境变量类型常量
-const ENV_VAR_TYPES = {
-  BASIC: 'basicInfo',
-  RUNTIME: 'appRuntimeInfo',
-  PLATFORM: 'bkPlatformInfo',
-  OTHER: 'otherBuiltInfo',
-};
-
 export default {
   name: 'EnvVarContent',
-  components: {
-    EnvVarInfo,
-  },
   props: {
     appCode: {
+      type: String,
+      required: true,
+    },
+    moduleId: {
       type: String,
       required: true,
     },
@@ -56,83 +116,57 @@ export default {
   data() {
     return {
       isLoading: false,
-      builtInEnvVarInfo: Object.keys(ENV_VAR_TYPES).reduce((acc, key) => {
-        acc[ENV_VAR_TYPES[key]] = [];
-        return acc;
-      }, {}),
+      envSelected: 'stag',
+      allBuiltInEnvVars: {
+        stag: [],
+        prod: [],
+      },
+      searchKey: '',
     };
   },
+  created() {
+    this.getAllBuiltInEnvVars();
+  },
   computed: {
-    builtInEnvVars() {
-      return [
-        {
-          title: this.$t('应用基本信息'),
-          data: this.builtInEnvVarInfo[ENV_VAR_TYPES.BASIC],
-        },
-        {
-          title: this.$t('应用运行时信息'),
-          data: this.builtInEnvVarInfo[ENV_VAR_TYPES.RUNTIME],
-        },
-        {
-          title: this.$t('蓝鲸体系内平台地址'),
-          data: this.builtInEnvVarInfo[ENV_VAR_TYPES.PLATFORM],
-          type: 'bk',
-        },
-        {
-          title: this.$t('其他'),
-          data: this.builtInEnvVarInfo[ENV_VAR_TYPES.OTHER],
-          type: 'bk',
-          shadow: true,
-        },
-      ];
+    // 根据搜索关键字过滤环境变量
+    filteredEnvVars() {
+      const envVars = this.allBuiltInEnvVars[this.envSelected] || [];
+      if (!this.searchKey?.trim()) {
+        return envVars;
+      }
+      const keyword = this.searchKey.toLowerCase().trim();
+      return envVars.filter(
+        (item) =>
+          item.key?.toLowerCase().includes(keyword) ||
+          item.description?.toLowerCase().includes(keyword) ||
+          (!item.is_sensitive && item.value?.toString().toLowerCase().includes(keyword))
+      );
     },
   },
-  created() {
-    this.loadEnvVariables();
-  },
   methods: {
-    // 加载所有环境变量
-    async loadEnvVariables() {
+    getTooltipContent(item) {
+      if (item.is_sensitive) {
+        return `${item.description}，${this.$t('已脱敏处理')}`;
+      }
+      return item.description;
+    },
+    // 获取全量内置环境变量
+    async getAllBuiltInEnvVars() {
       this.isLoading = true;
       try {
-        await Promise.all([
-          this.fetchEnvData('getBasicInfo', ENV_VAR_TYPES.BASIC),
-          this.fetchEnvData('getAppRuntimeInfo', ENV_VAR_TYPES.RUNTIME),
-          this.fetchEnvData('getBkPlatformInfo', ENV_VAR_TYPES.PLATFORM),
-          this.fetchEnvData('getOtherBuiltInEnvVars', ENV_VAR_TYPES.OTHER),
-        ]);
+        const res = await this.$store.dispatch('envVar/getAllBuiltInEnvVars', {
+          appCode: this.appCode,
+          moduleId: this.moduleId,
+        });
+        this.allBuiltInEnvVars = {
+          stag: res.stag || [],
+          prod: res.prod || [],
+        };
       } catch (e) {
         this.catchErrorHandler(e);
       } finally {
         this.isLoading = false;
       }
-    },
-
-    /**
-     * 通用方法：获取环境变量数据
-     * @param {String} action - store action名称
-     * @param {String} dataKey - 存储数据的key
-     */
-    async fetchEnvData(action, dataKey) {
-      try {
-        const data = await this.$store.dispatch(`envVar/${action}`, { appCode: this.appCode });
-        this.builtInEnvVarInfo[dataKey] = this.formatEnvData(data);
-      } catch (error) {
-        throw error;
-      }
-    },
-
-    /**
-     * 格式化环境变量数据
-     * @param {Object} data - 原始数据
-     * @returns {Array} 格式化后的数组
-     */
-    formatEnvData(data) {
-      return Object.keys(data).map((key) => ({
-        label: key,
-        value: data[key],
-        isTips: true,
-      }));
     },
   },
 };
@@ -140,25 +174,82 @@ export default {
 
 <style lang="scss" scoped>
 .env-var-display-container {
-  .mb16 {
-    margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  .env-select-group-cls {
+    /deep/ .bk-form-radio-button .bk-radio-button-input:checked + .bk-radio-button-text {
+      color: #fff;
+      background-color: #3a84ff;
+      border-color: #3a84ff;
+    }
+  }
+  .env-var-list {
+    overflow-y: auto;
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+      background-color: #fafafa;
+    }
+    &::-webkit-scrollbar-thumb {
+      height: 6px;
+      border-radius: 4px;
+      background-color: #ccc;
+    }
+    li {
+      color: #4d4f56;
+      font-size: 12px;
+      border-bottom: 1px solid #dcdee5;
+      &:hover {
+        background: #f5f7fa;
+        i {
+          display: block !important;
+        }
+      }
+      .key,
+      .value {
+        display: flex;
+        align-items: center;
+        height: 40px;
+        width: 50%;
+        padding: 0 16px;
+        .env-content {
+          flex: 1;
+          span {
+            display: inline-block;
+          }
+        }
+        i {
+          display: none;
+          flex-shrink: 0;
+          color: #3a84ff;
+          cursor: pointer;
+        }
+      }
+      .sensitive-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        .sensitive-dot {
+          width: 6px;
+          height: 6px;
+          display: inline-block;
+          border-radius: 50%;
+          background-color: #4d4f56;
+        }
+      }
+    }
   }
   .info-header {
-    display: flex;
-    align-items: center;
     height: 42px;
-    background: #fafbfd;
     font-size: 12px;
     color: #313238;
+    background: #fafbfd;
+    padding-right: 6px;
     .var,
-    .description {
-      padding-left: 16px;
-    }
-    .var {
-      width: 338px;
-    }
-    .description {
-      flex: 1;
+    .value {
+      width: 50%;
+      padding: 0 16px;
     }
   }
   i.paasng-jump-link {

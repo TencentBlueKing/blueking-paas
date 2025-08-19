@@ -16,11 +16,12 @@
 # to the current version of the project delivered to anyone in the future.
 from typing import TYPE_CHECKING
 
+from blue_krill.models.fields import EncryptField
 from django.db import models
 
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import ConfigVarEnvName
-from paasng.utils.models import AuditedModel, BkUserField, RobustEncryptField, TimestampedModel
+from paasng.utils.models import AuditedModel, BkUserField, TimestampedModel
 
 if TYPE_CHECKING:
     from paasng.platform.modules.models.module import Module
@@ -54,7 +55,7 @@ class ConfigVar(TimestampedModel):
     )
 
     key = models.CharField(max_length=128, null=False)
-    value = RobustEncryptField(null=False)
+    value = EncryptField(null=False)
     is_sensitive = models.BooleanField(default=False, help_text="value 值是否敏感")
     description = models.CharField(max_length=200, null=True)
     # is_builtin 表示该环境变量是否为“系统内置”，目前仅当旧应用从 v2 迁移时，写入一些内置环境变量数据会将该字段设为 True

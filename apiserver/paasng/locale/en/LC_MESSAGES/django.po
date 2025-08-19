@@ -2371,7 +2371,7 @@ msgstr "No valid configuration information is available."
 
 #: paasng/plat_mgt/applications/serializers/application.py:209
 #, python-brace-format
-msgid "于{time}{operation}{status}"
+msgid "于 {time} {operation}{status}"
 msgstr " {operation} {status} at {time}"
 
 #: paasng/plat_mgt/applications/serializers/application.py:252

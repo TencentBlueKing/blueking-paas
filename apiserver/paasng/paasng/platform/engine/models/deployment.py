@@ -74,7 +74,7 @@ class AdvancedOptions:
     build_id: Optional[str] = None
     # 触发消息
     invoke_message: Optional[str] = None
-    # 副本数优先策略. None 表示平台默认, web_form 表示页面配置优先, app_desc 表示描述文件优先
+    # 副本数优先策略. None 表示平台默认, web_form_priority 表示页面配置优先, app_desc_priority 表示描述文件优先
     # 平台默认:
     # - 没有描述文件的应用，页面配置优先
     # - 有描述文件的应用，描述文件优先

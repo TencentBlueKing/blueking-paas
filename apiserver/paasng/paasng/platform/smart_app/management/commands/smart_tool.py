@@ -88,13 +88,13 @@ class Command(BaseCommand):
         )
         parser.add_argument("--app_tenant_id", dest="raw_tenant_id", required=False, type=str, help="租户ID")
         parser.add_argument(
-            "--overwrite",
+            "--reupload",
             action="store_true",
             help="启用此选项后，将强制覆盖已上传的同名包（判断依据为包的 sha256 签名是否一致）。默认情况下，不重复上传。",
         )
 
     @handle_error
-    def handle(self, file_path: str, operator, raw_tenant_mode, raw_tenant_id, *args, **options):
+    def handle(self, file_path: str, operator, raw_tenant_mode, raw_tenant_id, reupload, *args, **options):
         filepath = Path(file_path)
         operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, operator))
 
@@ -102,14 +102,12 @@ class Command(BaseCommand):
         if not stat.version:
             raise error_codes.MISSING_VERSION_INFO
 
-        is_overwrite_mode = options.get("overwrite", False)
-
         if SourcePackage.objects.filter(pkg_sha256_signature=stat.sha256_signature).exists():
-            if not is_overwrite_mode:
-                self.stderr.write("S-Mart package already uploaded, sha256 signature matched, skip！")
+            if not reupload:
+                self.stdout.write("S-Mart package already exists (SHA-256 signature match). Skipping upload！")
                 return
 
-            self.stdout.write("S-Mart package already exists, but force mode enabled, will overwrite！")
+            self.stdout.write("S-Mart package found (SHA-256 signature match), proceeding with re-upload.")
 
         # Step 1. create application, module
         original_app_desc = get_app_description(stat)

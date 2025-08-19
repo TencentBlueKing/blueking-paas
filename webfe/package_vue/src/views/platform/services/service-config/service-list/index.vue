@@ -147,6 +147,9 @@ export default {
     };
   },
   computed: {
+    oldSelectedItem() {
+      return this.$store.state.tenant.selectedServiceItem;
+    },
     groupedServices() {
       const local = [];
       const remote = [];
@@ -189,6 +192,7 @@ export default {
       if (this.selectedItem === item.uuid) return;
       this.selectedItem = item.uuid;
       this.$emit('change', item);
+      this.$store.commit('tenant/updateSelectedServiceItem', item.uuid);
     },
     toggleExpand(group) {
       this.expand[group] = !this.expand[group];
@@ -200,7 +204,13 @@ export default {
         const res = await this.$store.dispatch('tenant/getPlatformServices');
         this.services = res || [];
         this.$nextTick(() => {
-          const activeItem = this.groupedServices?.remote[0] || res[0];
+          let activeItem = null;
+          if (this.oldSelectedItem) {
+            activeItem = res.find((item) => item.uuid === this.oldSelectedItem);
+          }
+          if (!activeItem) {
+            activeItem = this.groupedServices?.remote[0] || res[0];
+          }
           this.handleSelected(activeItem);
         });
         // 无远程服务收起

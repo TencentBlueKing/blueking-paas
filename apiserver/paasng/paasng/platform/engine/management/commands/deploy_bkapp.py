@@ -38,6 +38,7 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.utils.output import Style
+from paasng.platform.engine.utils.query import DeploymentGetter
 from paasng.platform.engine.workflow import DeploymentCoordinator, ServerSendEvent
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
@@ -109,10 +110,26 @@ class Command(BaseCommand):
         parser.add_argument(
             "--force", dest="force", default=False, action="store_true", help="强制部署, 无论上次部署是否还在进行."
         )
+        parser.add_argument(
+            "--redeploy",
+            dest="redeploy",
+            action="store_true",
+            help="启用此选项后，会重新部署。默认情况下，如果相同的版本已经成功部署过，则跳过部署。",
+        )
 
     @handle_error
     def handle(
-        self, operator, app_code, module_name, environment, smart_revision, image_pull_policy, force, *args, **options
+        self,
+        operator,
+        app_code,
+        module_name,
+        environment,
+        smart_revision,
+        image_pull_policy,
+        force,
+        redeploy,
+        *args,
+        **options,
     ):
         operator = get_user_by_user_id(user_id_encoder.encode(settings.USER_TYPE, operator))
 
@@ -132,6 +149,14 @@ class Command(BaseCommand):
         advanced_options = None
         if image_pull_policy:
             advanced_options = {"image_pull_policy": image_pull_policy}
+
+        if not redeploy:
+            latest_deployment = DeploymentGetter(env).get_latest_succeeded()
+            if latest_deployment and latest_deployment.get_version_info() == version_info:
+                self.stdout.write(
+                    f"应用({app_code})模块({module_name})的当前版本({revision})已成功部署过，跳过本次部署!"
+                )
+                return
 
         coordinator = DeploymentCoordinator(env)
         if not coordinator.acquire_lock():

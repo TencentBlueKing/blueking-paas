@@ -58,6 +58,7 @@ from .creation import (
     ApplicationCreateOutputSLZ,
     CloudNativeAppCreateInputSLZ,
     CreationOptionsOutputSLZ,
+    LessCodeAppCreateInputSLZ,
     ThirdPartyAppCreateInputSLZ,
 )
 from .fields import AppIDField, AppIDSMartField, ApplicationField, AppNameField
@@ -73,6 +74,7 @@ __all__ = [
     "CloudNativeAppCreateInputSLZ",
     "CreationOptionsOutputSLZ",
     "ThirdPartyAppCreateInputSLZ",
+    "LessCodeAppCreateInputSLZ",
     # other
     "ApplicationEvaluationIssueCountListResultSLZ",
     "ApplicationFeatureFlagSLZ",

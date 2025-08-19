@@ -23,6 +23,7 @@ from rest_framework.exceptions import ValidationError
 
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.serializers import BkAppSpecSLZ, ModuleSourceConfigSLZ, validate_build_method
 
 from .app import ApplicationSLZ
@@ -86,6 +87,34 @@ class CloudNativeAppCreateInputSLZ(AppBasicInfoMixin):
 
         if not image_credential.get("password") or not image_credential.get("username"):
             raise ValidationError("image credential missing valid username and password")
+
+
+class LessCodeAppCreateInputSLZ(AppBasicInfoMixin):
+    """创建 LessCode 应用"""
+
+    engine_params = ModuleSourceConfigSLZ(required=True)
+
+    def validate_engine_params(self, engine_params):
+        if not engine_params.get("source_init_template"):
+            raise ValidationError("source_init_template is required in engine_params")
+
+        engine_params["source_origin"] = SourceOrigin.BK_LESS_CODE
+        return engine_params
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+
+        data.update(
+            {
+                # 新建的 LessCode 应用都为云原生应用
+                "type": ApplicationType.CLOUD_NATIVE.value,
+                "engine_enabled": True,
+                "is_ai_agent_app": False,
+                "is_plugin_app": False,
+            }
+        )
+
+        return data
 
 
 class AIAgentAppCreateInputSLZ(AppBasicInfoMixin):

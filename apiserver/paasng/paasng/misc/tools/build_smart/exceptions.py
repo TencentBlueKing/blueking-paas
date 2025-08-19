@@ -15,9 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
 
-urlpatterns = [
-    path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.build_smart.urls")),
-]
+class SmartBuildError(Exception):
+    """Raised when smart build process failed."""
+
+
+class SmartBuildStepError(Exception):
+    """Raised when smart build step failed."""
+
+
+class SmartBuildInterruptionFailed(Exception):
+    """Unable to interrupt a s-mart build"""

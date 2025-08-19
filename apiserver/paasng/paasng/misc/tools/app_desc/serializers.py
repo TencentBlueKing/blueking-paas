@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+
 from rest_framework import serializers
 from rest_framework.fields import empty
 
@@ -161,19 +162,9 @@ class AppDescSpec2Serializer(serializers.Serializer):
     modules = serializers.DictField(child=ModuleSerializer(), required=False)
     module = ModuleSerializer(required=False)
 
-    def validate(self, value):
-        if "spec_version" in value and value.get("spec_version") != 2:
+    def validate(self, attrs):
+        if "spec_version" in attrs and attrs.get("spec_version") != 2:
             raise serializers.ValidationError("spec_version must be 2.")
-        if ("modules" not in value and "module" not in value) or ("modules" in value and "module" in value):
+        if ("modules" not in attrs and "module" not in attrs) or ("modules" in attrs and "module" in attrs):
             raise serializers.ValidationError("one of 'modules' or 'module' is required.")
-        return value
-
-
-class ToolPackageStashInputSLZ(serializers.Serializer):
-    """Handle package for S-mart build"""
-
-    package = serializers.FileField(help_text="待构建的应用源码包")
-
-
-class ToolPackageStashOutputSLZ(serializers.Serializer):
-    signature = serializers.CharField(help_text="数字签名")
+        return attrs

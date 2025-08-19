@@ -16,16 +16,16 @@
     />
     <paas-header />
     <div
-      style="min-height: calc(100% - 70px); overflow: auto"
-      :style="{ 'padding-top': `${pluginPaddingTop}px` }"
+      class="view-content-box"
       :class="{
+        'hiden-footer-page': !showPaasFooter,
         'plugin-min-width': isPlugin,
         'sandbox-page': sandboxPage,
       }"
     >
       <router-view />
+      <paas-footer v-if="showPaasFooter" />
     </div>
-    <paas-footer v-if="showPaasFooter" />
   </div>
 </template>
 
@@ -131,6 +131,25 @@ export default {
 @import './assets/css/custom-component-styles.scss';
 @import '~@/assets/css/mixins/dashed.scss';
 @import '~@/assets/css/mixins/ellipsis.scss';
+#app {
+  display: flex;
+  flex-direction: column;
+  .view-content-box {
+    flex: 1;
+    min-height: auto;
+    height: calc(100vh - var(--app-notice-height));
+    &.hiden-footer-page {
+      min-height: 0;
+    }
+    &:not(.hiden-footer-page) {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow-y: auto;
+    }
+  }
+}
+
 .notice-cls {
   position: fixed;
   top: 0px;

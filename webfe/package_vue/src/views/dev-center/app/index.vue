@@ -1,78 +1,74 @@
 <template lang="html">
   <div class="overview-content">
     <template v-if="isAppFound">
-      <div class="wrap">
-        <div class="overview">
-          <div
-            class="overview-main"
-            :style="{ 'min-height': $route.meta.notMinHeight ? 'auto' : `${minHeight}px` }"
-          >
-            <!-- 在这里获取当前应用的迁移状态 -->
-            <div class="overview-fleft">
-              <app-quick-nav :is-migrating="isMigrating" />
-              <paas-cloud-app-nav
-                v-if="type === 'cloud_native'"
-                :is-migration-entry-shown="isMigrationEntryShown"
-                @show-migration-dialog="showMigrationDialog"
-              />
-              <!-- 普通应用 -->
-              <paas-app-nav
-                v-else
-                :is-migration-entry-shown="isMigrationEntryShown"
-                @show-migration-dialog="showMigrationDialog"
-              />
-            </div>
-            <!-- 特殊页面样式无需指定padding-bottom -->
-            <div
-              :class="[
-                'overview-fright',
-                { 'not-min-height': $route.meta.notMinHeight },
-                { 'not-padding-bottom': $route.path.includes('service_inner/') }]"
-            >
-              <router-view
-                v-if="userVisitEnable && appVisitEnable"
-                :app-info="appInfo"
-                @current-app-info-updated="updateAppInfo"
-              />
+      <div class="overview-main">
+        <!-- 在这里获取当前应用的迁移状态 -->
+        <div class="overview-fleft">
+          <app-quick-nav :is-migrating="isMigrating" />
+          <paas-cloud-app-nav
+            v-if="type === 'cloud_native'"
+            :is-migration-entry-shown="isMigrationEntryShown"
+            @show-migration-dialog="showMigrationDialog"
+          />
+          <!-- 普通应用 -->
+          <paas-app-nav
+            v-else
+            :is-migration-entry-shown="isMigrationEntryShown"
+            @show-migration-dialog="showMigrationDialog"
+          />
+        </div>
+        <!-- 特殊页面样式无需指定padding-bottom -->
+        <div
+          :class="[
+            'overview-fright',
+            { 'not-min-height': $route.meta.notMinHeight },
+            { 'not-padding-bottom': $route.path.includes('service_inner/') },
+          ]"
+        >
+          <router-view
+            v-if="userVisitEnable && appVisitEnable"
+            :app-info="appInfo"
+            @current-app-info-updated="updateAppInfo"
+          />
 
-              <div
-                v-else
-                class="paas-loading-content"
+          <div
+            v-else
+            class="paas-loading-content"
+          >
+            <div class="no-permission">
+              <img src="/static/images/permissions.png" />
+              <h2 v-if="errorMessage">
+                {{ errorMessage }}
+              </h2>
+              <h2
+                v-else-if="deniedMessageType === 'default'"
+                class="exception-text"
               >
-                <div class="no-permission">
-                  <img src="/static/images/permissions.png">
-                  <h2 v-if="errorMessage">
-                    {{ errorMessage }}
-                  </h2>
-                  <h2
-                    v-else-if="deniedMessageType === 'default'"
-                    class="exception-text"
+                <template v-if="appPermissionMessage">
+                  {{ appPermissionMessage }}，
+                  {{ $t('如需开启请联系') }}
+                  <a
+                    v-if="GLOBAL.HELPER.href"
+                    :href="GLOBAL.HELPER.href"
                   >
-                    <template v-if="appPermissionMessage">
-                      {{ appPermissionMessage }}，
-                      {{ $t('如需开启请联系') }}
-                      <a
-                        v-if="GLOBAL.HELPER.href"
-                        :href="GLOBAL.HELPER.href"
-                      >{{ GLOBAL.HELPER.name }}</a>
-                      <span v-else> {{ $t('管理员') }} </span>
-                    </template>
-                    <template v-else>
-                      {{ $t('您没有访问当前应用该功能的权限，如需申请，请联系') }}
-                      <router-link
-                        class="toRolePage"
-                        :to="{ name: 'appRoles', params: { id: appCode } }"
-                      >
-                        {{ $t('成员管理') }}
-                      </router-link>
-                      {{ $t('页面的应用管理员') }}
-                    </template>
-                  </h2>
-                  <h2 v-else-if="deniedMessageType === 'noMarketingForBackendApp'">
-                    {{ $t('当前应用为后台应用，无法上线到应用市场') }}
-                  </h2>
-                </div>
-              </div>
+                    {{ GLOBAL.HELPER.name }}
+                  </a>
+                  <span v-else>{{ $t('管理员') }}</span>
+                </template>
+                <template v-else>
+                  {{ $t('您没有访问当前应用该功能的权限，如需申请，请联系') }}
+                  <router-link
+                    class="toRolePage"
+                    :to="{ name: 'appRoles', params: { id: appCode } }"
+                  >
+                    {{ $t('成员管理') }}
+                  </router-link>
+                  {{ $t('页面的应用管理员') }}
+                </template>
+              </h2>
+              <h2 v-else-if="deniedMessageType === 'noMarketingForBackendApp'">
+                {{ $t('当前应用为后台应用，无法上线到应用市场') }}
+              </h2>
             </div>
           </div>
         </div>
@@ -81,10 +77,10 @@
     <template v-else>
       <div
         class="nofound"
-        style="width: 1180px; margin: 0px auto;"
+        style="width: 1180px; margin: 0px auto"
       >
-        <img src="/static/images/404.png">
-        <p> {{ $t('应用找不到了！') }} </p>
+        <img src="/static/images/404.png" />
+        <p>{{ $t('应用找不到了！') }}</p>
       </div>
     </template>
 
@@ -189,8 +185,8 @@ export default {
     },
   },
   /**
-         * 进入当前组件时请求应用信息
-         */
+   * 进入当前组件时请求应用信息
+   */
   async beforeRouteEnter(to, from, next) {
     const appCode = to.params.id;
     const { moduleId } = to.params;
@@ -208,7 +204,7 @@ export default {
       });
       // 如果不带moduleId, 以默认模块作一次重定向
       if (!moduleId) {
-        to.params.moduleId = curAppInfo.application.modules.find(module => module.is_default).name;
+        to.params.moduleId = curAppInfo.application.modules.find((module) => module.is_default).name;
         next({
           name: to.name,
           params: to.params,
@@ -228,8 +224,8 @@ export default {
     }
   },
   /**
-         * 当前组件路由切换时请求应用信息
-         */
+   * 当前组件路由切换时请求应用信息
+   */
   async beforeRouteUpdate(to, from, next) {
     const appCode = to.params.id;
     const { moduleId } = to.params;
@@ -247,7 +243,7 @@ export default {
 
       // 如果不带moduleId, 以默认模块作一次重定向
       if (!moduleId) {
-        to.params.moduleId = curAppInfo.application.modules.find(module => module.is_default).name;
+        to.params.moduleId = curAppInfo.application.modules.find((module) => module.is_default).name;
         next({
           name: to.name,
           params: to.params,
@@ -274,7 +270,7 @@ export default {
       let capture = true;
 
       // undefined 为默认父级路由过滤设置
-      if ((typeof RouterMatchedList[1].meta.capture403Error) !== 'undefined') {
+      if (typeof RouterMatchedList[1].meta.capture403Error !== 'undefined') {
         capture = RouterMatchedList[1].meta.capture403Error;
       }
       if (capture) {
@@ -364,36 +360,45 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-    .no-permission {
-        margin: 100px 30px 0 30px;
-        font-size: 16px;
-        text-align: center;
+.overview-content {
+  height: 100%;
+  .overview-main {
+    height: 100%;
+  }
+  .overview-fright {
+    overflow-y: auto;
+  }
+}
+.no-permission {
+  margin: 100px 30px 0 30px;
+  font-size: 16px;
+  text-align: center;
 
-        h2 {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #666;
-        }
+  h2 {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #666;
+  }
 
-        a {
-            color: #3A84FF;
-        }
-    }
+  a {
+    color: #3a84ff;
+  }
+}
 
-    .nofound {
-        padding-top: 150px;
-        width: 939px;
-        text-align: center;
-        font-size: 20px;
-        color: #979797;
-        line-height: 80px;
-    }
+.nofound {
+  padding-top: 150px;
+  width: 939px;
+  text-align: center;
+  font-size: 20px;
+  color: #979797;
+  line-height: 80px;
+}
 
-    .not-padding-bottom {
-      padding-bottom: 0;
-    }
+.not-padding-bottom {
+  padding-bottom: 0;
+}
 
-    .not-min-height {
-      min-height: auto;
-    }
+.not-min-height {
+  min-height: auto;
+}
 </style>

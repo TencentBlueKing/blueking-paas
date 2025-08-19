@@ -15,7 +15,7 @@
       :offset-top="25"
       class="app-container middle module-container card-style"
     >
-      <section v-if="!isLoading">
+      <section>
         <div class="module-info-item mt15">
           <div class="title">
             {{ $t('基本信息') }}

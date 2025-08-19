@@ -387,9 +387,7 @@ export default {
 
 <style lang="scss" scoped>
 .ps-header {
-  position: fixed;
-  left: 0px;
-  top: var(--app-notice-height);
+  margin-top: var(--app-notice-height);
   width: 100%;
   z-index: 1001;
   transition: all 0.5s;

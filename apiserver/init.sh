@@ -87,9 +87,9 @@ ensure-apigw() {
 ensure-apt-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
-    buildpack_url="$4"
-    vendor_url="$5"
-    buildpack_name="$6"
+    buildpack_url="$3"
+    vendor_url="$4"
+    buildpack_name="$5"
     
     # apt
     apt_buildpack_version=v2
@@ -108,9 +108,9 @@ ensure-apt-buildpack() {
 ensure-python-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
-    buildpack_url="$4"
-    vendor_url="$5"
-    buildpack_name="$6"
+    buildpack_url="$3"
+    vendor_url="$4"
+    buildpack_name="$5"
     
     # 默认使用 bkrepo 源
     pip_index_url="${PAAS_BUILDPACK_PYTHON_PIP_INDEX_URL:-${bkrepo_endpoint}/pypi/${bkrepo_project}/pypi/simple/}"
@@ -138,9 +138,9 @@ ensure-python-buildpack() {
 ensure-nodejs-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
-    buildpack_url="$4"
-    vendor_url="$5"
-    buildpack_name="$6"
+    buildpack_url="$3"
+    vendor_url="$4"
+    buildpack_name="$5"
     
     # 默认使用 bkrepo 源
     npm_registry="${PAAS_BUILDPACK_NODEJS_BLUEKING_NPM_REGISTRY:-${bkrepo_endpoint}/npm/${bkrepo_project}/npm/}"
@@ -165,9 +165,9 @@ ensure-nodejs-buildpack() {
 ensure-golang-buildpack() {
     bkrepo_endpoint="$1"
     bkrepo_project="$2"
-    buildpack_url="$4"
-    vendor_url="$5"
-    buildpack_name="$6"
+    buildpack_url="$3"
+    vendor_url="$4"
+    buildpack_name="$5"
     
     # golang
     go_buildpack_version=v191
@@ -187,10 +187,10 @@ ensure-golang-buildpack() {
 }
 
 ensure-blueking-image() {
-    apt_buildpack_name="$2"
-    python_buildpack_name="$3"
-    nodejs_buildpack_name="$4"
-    golang_buildpack_name="$5"
+    apt_buildpack_name="$1"
+    python_buildpack_name="$2"
+    nodejs_buildpack_name="$3"
+    golang_buildpack_name="$4"
     
     image_name="blueking"
     python manage.py manage_image \
@@ -226,10 +226,10 @@ ensure-blueking-image() {
 }
 
 ensure-legacy-image() {
-    apt_buildpack_name="$2"
-    python_buildpack_name="$3"
-    nodejs_buildpack_name="$4"
-    golang_buildpack_name="$5"
+    apt_buildpack_name="$1"
+    python_buildpack_name="$2"
+    nodejs_buildpack_name="$3"
+    golang_buildpack_name="$4"
     
     legacy_image_name="legacy-blueking"
     python manage.py manage_image \

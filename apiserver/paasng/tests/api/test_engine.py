@@ -26,6 +26,7 @@ from django_dynamic_fixture import G
 
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.utils.query import get_latest_deploy_options
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.models import EnvRoleProtection
@@ -271,7 +272,9 @@ class TestDeployOptionsViewSet:
         resp = api_client.post(url, data={"replicas_policy": "web_form_priority"})
         assert resp.status_code == 200
         assert resp.json() == {"replicas_policy": "web_form_priority"}
-        assert bk_app.deploy_options.order_by("-updated").first().replicas_policy == "web_form_priority"
+        deploy_options = get_latest_deploy_options(bk_app)
+        assert deploy_options
+        assert deploy_options.replicas_policy == "web_form_priority"
 
     def test_update(self, api_client, bk_app, deploy_options):
         assert deploy_options.replicas_policy == "web_form_priority"
@@ -280,7 +283,9 @@ class TestDeployOptionsViewSet:
         resp = api_client.post(url, data={"replicas_policy": "app_desc_priority"})
         assert resp.status_code == 200
         assert resp.json() == {"replicas_policy": "app_desc_priority"}
-        assert bk_app.deploy_options.order_by("-updated").first().replicas_policy == "app_desc_priority"
+        deploy_options = get_latest_deploy_options(bk_app)
+        assert deploy_options
+        assert deploy_options.replicas_policy == "app_desc_priority"
 
     def test_get(self, api_client, bk_app, deploy_options):
         url = reverse("api.deploy_options", kwargs={"code": bk_app.code})

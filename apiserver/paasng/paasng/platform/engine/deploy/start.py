@@ -27,6 +27,7 @@ from paasng.platform.engine.deploy.image_release import release_without_build
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.signals import pre_appenv_deploy
+from paasng.platform.engine.utils.query import get_latest_deploy_options
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
@@ -74,7 +75,7 @@ def initialize_deployment(
         bkapp_revision_id = model_resource.revision.id
 
     # 使用最新的部署选项
-    deploy_options = application.deploy_options.order_by("-updated").first()
+    deploy_options = get_latest_deploy_options(application)
     deployment = Deployment.objects.create(
         operator=operator,
         app_environment=env,

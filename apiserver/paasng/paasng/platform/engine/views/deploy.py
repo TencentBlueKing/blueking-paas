@@ -63,7 +63,7 @@ from paasng.platform.engine.serializers import (
     QueryDeploymentsSLZ,
 )
 from paasng.platform.engine.utils.ansi import strip_ansi
-from paasng.platform.engine.utils.query import DeploymentGetter
+from paasng.platform.engine.utils.query import DeploymentGetter, get_latest_deploy_options
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.engine.workflow.protections import ModuleEnvDeployInspector
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -375,7 +375,7 @@ class DeployOptionsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     @staticmethod
     def _get_replicas_policy(app: Application):
-        deploy_options = app.deploy_options.order_by("-updated").first()
+        deploy_options = get_latest_deploy_options(app)
         if deploy_options and deploy_options.replicas_policy:
             return deploy_options.replicas_policy
         return ReplicasPolicy.APP_DESC_PRIORITY

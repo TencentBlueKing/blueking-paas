@@ -140,67 +140,30 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 // TODO 将本地源码部署的方式与请求传输源码文件的方式进行接口上的拆分
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		envVars := map[string]string{}
-		if raw := c.PostForm("env_vars"); raw != "" {
-			// env_vars 非空，解析自定义环境变量
-			if err := json.Unmarshal([]byte(raw), &envVars); err != nil {
-				c.JSON(
-					http.StatusBadRequest,
-					gin.H{"message": fmt.Sprintf("invalid env_vars format: %s", err.Error())},
-				)
-				return
-			}
+		envVars, err := parseEnvVarsFromBody(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			return
 		}
 
 		var srcFilePath string
+		var cleanup func()
+		defer func() {
+			if cleanup != nil {
+				cleanup()
+			}
+		}()
+
 		switch config.G.SourceCode.FetchMethod {
 		case config.HTTP:
-			// 创建临时文件夹
-			tmpDir, err := os.MkdirTemp("", "source-*")
+			// 处理文件上传
+			tmpSrcFilePath, tmpCleanup, err := processUploadedFile(c, s.env.UploadDir)
 			if err != nil {
-				c.JSON(
-					http.StatusInternalServerError,
-					gin.H{"message": fmt.Sprintf("create tmp dir err: %s", err.Error())},
-				)
+				c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 				return
 			}
-			defer os.RemoveAll(tmpDir)
-
-			file, err := c.FormFile("file")
-			if err != nil {
-				c.JSON(
-					http.StatusInternalServerError,
-					gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())},
-				)
-				return
-			}
-
-			fileName := filepath.Base(file.Filename)
-			dst := path.Join(s.env.UploadDir, fileName)
-			if len(dst) > 0 && dst[len(dst)-1] == '.' {
-				c.JSON(
-					http.StatusBadRequest,
-					gin.H{"message": fmt.Sprintf("invalid file name: %s", file.Filename)},
-				)
-				return
-			}
-
-			if err = c.SaveUploadedFile(file, dst); err != nil {
-				c.JSON(
-					http.StatusInternalServerError,
-					gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())},
-				)
-				return
-			}
-			// 解压文件到临时目录
-			if err = utils.Unzip(dst, tmpDir); err != nil {
-				c.JSON(
-					http.StatusInternalServerError,
-					gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())},
-				)
-				return
-			}
-			srcFilePath = path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+			srcFilePath = tmpSrcFilePath
+			cleanup = tmpCleanup
 		case config.BkRepo:
 			srcFilePath = config.G.SourceCode.Workspace
 		case config.GIT:
@@ -428,3 +391,55 @@ func HealthzHandler() gin.HandlerFunc {
 }
 
 var _ devsandbox.DevWatchServer = (*WebServer)(nil)
+
+// 处理文件上传
+func processUploadedFile(c *gin.Context, uploadDir string) (srcFilePath string, cleanup func(), err error) {
+	// 创建临时文件夹
+	tmpDir, err := os.MkdirTemp("", "source-*")
+	if err != nil {
+		return "", nil, fmt.Errorf("create tmp dir err: %s", err.Error())
+	}
+	cleanup = func() { os.RemoveAll(tmpDir) }
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		return "", cleanup, fmt.Errorf("get form err: %s", err.Error())
+	}
+
+	fileName := filepath.Base(file.Filename)
+	dst := path.Join(uploadDir, fileName)
+	if len(dst) > 0 && dst[len(dst)-1] == '.' {
+		return "", cleanup, fmt.Errorf("invalid file name: %s", fileName)
+	}
+
+	if err = c.SaveUploadedFile(file, dst); err != nil {
+		return "", cleanup, fmt.Errorf("upload file err: %s", err.Error())
+	}
+
+	// 解压文件到临时目录
+	if err = utils.Unzip(dst, tmpDir); err != nil {
+		return "", cleanup, fmt.Errorf("unzip file err: %s", err.Error())
+	}
+
+	// 返回源码目录路径
+	return path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName))), cleanup, nil
+}
+
+// 从 json body 中解析环境变量
+func parseEnvVarsFromBody(c *gin.Context) (map[string]string, error) {
+	envVars := make(map[string]string)
+
+	rawData, err := c.GetRawData()
+	if err != nil {
+		return nil, fmt.Errorf("read body error: %s", err.Error())
+	}
+
+	if len(rawData) == 0 {
+		return envVars, nil
+	}
+
+	if err := json.Unmarshal(rawData, &envVars); err != nil {
+		return nil, fmt.Errorf("invalid env_vars format: %s", err.Error())
+	}
+	return envVars, nil
+}

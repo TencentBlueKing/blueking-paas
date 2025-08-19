@@ -560,16 +560,15 @@ elif REDIS_URL:
     else:
         cache_cfg = Env.cache_url_config(REDIS_URL)
 
-        # 由于 django_redis 使用 pool 来初始化 redisClient，
-        # 且从文档中可知其 ssl 相关配置应该放在 OPTIONS.CONNECTION_POOL_KWARGS 中，
-        # 因此需要将 ssl 相关配置移动到 CONNECTION_POOL_KWARGS 中
+        # django_redis 会使用 pool 初始化 redisClient，分析源码 & 文档可知，
+        # 其 ssl 证书需要放在 OPTIONS.CONNECTION_POOL_KWARGS 中，因此这里做下转换
         # 参考：
         # - https://github.com/jazzband/django-redis/blob/5.4.0/README.rst#ssltls-and-self-signed-certificates
         # - https://github.com/jazzband/django-redis/blob/2a3770f1/django_redis/pool.py#L124
         # - https://github.com/redis/redis-py/blob/2c9f41f4/redis/connection.py#L1089
         # - https://github.com/redis/redis-py/blob/2c9f41f4/redis/connection.py#L1227
         # - https://github.com/redis/redis-py/blob/2c9f41f4/redis/connection.py#L1048
-        # - https://github.com/redis/redis-py/blob/2c9f41/redis/connection.py#L820
+        # - https://github.com/redis/redis-py/blob/2c9f41f4/redis/connection.py#L820
         #
         # 注意：CACHES 暂不配置 REDIS_CONNECTION_OPTIONS，该配置目前仅用于 Redis 作为 Celery 消息队列时
 

@@ -427,19 +427,22 @@ func processUploadedFile(c *gin.Context, uploadDir string) (srcFilePath string, 
 
 // 从 json body 中解析环境变量
 func parseEnvVarsFromBody(c *gin.Context) (map[string]string, error) {
-	envVars := make(map[string]string)
+	var wrapper struct {
+		EnvVars map[string]string `json:"env_vars"`
+	}
 
 	rawData, err := c.GetRawData()
 	if err != nil {
-		return nil, fmt.Errorf("read body error: %s", err.Error())
+		return nil, fmt.Errorf("read json body error: %s", err.Error())
 	}
 
 	if len(rawData) == 0 {
-		return envVars, nil
+		return map[string]string{}, nil
 	}
 
-	if err := json.Unmarshal(rawData, &envVars); err != nil {
+	if err := json.Unmarshal(rawData, &wrapper); err != nil {
 		return nil, fmt.Errorf("invalid env_vars format: %s", err.Error())
 	}
-	return envVars, nil
+
+	return wrapper.EnvVars, nil
 }

@@ -25,6 +25,9 @@ from paasng.utils.structure import NOTSET, NotSetType
 def generate_replica_overrides(m: Module, process_names: list[str]) -> dict[str | tuple[str, str], int | NotSetType]:
     """生成副本字段的覆盖值. 该值覆盖 bkapp entity 中的副本字段后, 通过 entities_syncer 同步到 bkapp model 时, 副本数会以页面数据为准
 
+    示例: 假设 app_desc 中 web 进程的副本数为 2, 而页面的副本数已经扩容成了 5, 则此函数返回 {web: NOTSET}.
+      此时设置 app_desc 中的 web 进程副本数为 NOTSET, 最终同步到 bkapp model 时, 不会更新副本值, 因此还是页面配置的副本数 5
+
     :param m: 应用模块
     :param process_names: 目标进程名列表
     :return: 副本字段的覆盖值. 格式如 {web: 1, (web, prod): 2}

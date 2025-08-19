@@ -49,7 +49,7 @@ from paasng.platform.declarative.serializers import (
     validate_desc,
     validate_procfile_procs,
 )
-from paasng.platform.engine.constants import ReplicasOverridePolicy
+from paasng.platform.engine.constants import ReplicasPolicy
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.structure import NOTSET
@@ -360,7 +360,7 @@ class DefaultDeployDescHandler:
     def handle(self, deployment: Deployment) -> DeployHandleResult:
         desc = self.desc_getter(self.json_data, deployment.app_environment.module.name)
 
-        if deployment.advanced_options.replicas_override_policy == ReplicasOverridePolicy.WEB_FORM:
+        if deployment.advanced_options.replicas_policy == ReplicasPolicy.WEB_FORM_PRIORITY:
             apply_form_replicas_overrides(desc, deployment.app_environment)
 
         procfile_procs = validate_procfile_procs(self.procfile_data) if self.procfile_data else None

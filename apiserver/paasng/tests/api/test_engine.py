@@ -262,28 +262,28 @@ class TestDeploymentViewSet:
 class TestDeployOptionsViewSet:
     @pytest.fixture
     def deploy_options(self, bk_app):
-        return bk_app.deploy_options.create(replicas_override_policy="web_form")
+        return bk_app.deploy_options.create(replicas_policy="web_form_priority")
 
     def test_create(self, api_client, bk_app):
         assert bk_app.deploy_options.exists() is False
 
         url = reverse("api.deploy_options", kwargs={"code": bk_app.code})
-        resp = api_client.post(url, data={"replicas_override_policy": "web_form"})
+        resp = api_client.post(url, data={"replicas_policy": "web_form_priority"})
         assert resp.status_code == 200
-        assert resp.json() == {"replicas_override_policy": "web_form"}
-        assert bk_app.deploy_options.last().replicas_override_policy == "web_form"
+        assert resp.json() == {"replicas_policy": "web_form_priority"}
+        assert bk_app.deploy_options.order_by("-updated").first().replicas_policy == "web_form_priority"
 
     def test_update(self, api_client, bk_app, deploy_options):
-        assert deploy_options.replicas_override_policy == "web_form"
+        assert deploy_options.replicas_policy == "web_form_priority"
 
         url = reverse("api.deploy_options", kwargs={"code": bk_app.code})
-        resp = api_client.post(url, data={"replicas_override_policy": "app_desc"})
+        resp = api_client.post(url, data={"replicas_policy": "app_desc_priority"})
         assert resp.status_code == 200
-        assert resp.json() == {"replicas_override_policy": "app_desc"}
-        assert bk_app.deploy_options.last().replicas_override_policy == "app_desc"
+        assert resp.json() == {"replicas_policy": "app_desc_priority"}
+        assert bk_app.deploy_options.order_by("-updated").first().replicas_policy == "app_desc_priority"
 
     def test_get(self, api_client, bk_app, deploy_options):
         url = reverse("api.deploy_options", kwargs={"code": bk_app.code})
         resp = api_client.get(url)
         assert resp.status_code == 200
-        assert resp.json() == {"replicas_override_policy": deploy_options.replicas_override_policy}
+        assert resp.json() == {"replicas_policy": deploy_options.replicas_policy}

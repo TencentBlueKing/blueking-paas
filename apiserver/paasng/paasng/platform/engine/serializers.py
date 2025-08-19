@@ -37,7 +37,7 @@ from paasng.platform.engine.constants import (
     DeployConditions,
     JobStatus,
     MetricsType,
-    ReplicasOverridePolicy,
+    ReplicasPolicy,
     RuntimeType,
 )
 from paasng.platform.engine.models import DeployPhaseTypes
@@ -779,6 +779,4 @@ class ConflictedKeyOutputSLZ(serializers.Serializer):
 
 
 class DeployOptionsSLZ(serializers.Serializer):
-    replicas_override_policy = serializers.ChoiceField(
-        choices=ReplicasOverridePolicy.get_choices(), help_text="副本数的覆盖策略"
-    )
+    replicas_policy = serializers.ChoiceField(choices=ReplicasPolicy.get_choices(), help_text="副本数的优先策略")

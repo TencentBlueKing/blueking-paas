@@ -39,9 +39,10 @@ from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.engine.constants import ReplicasOverridePolicy, RuntimeType
+from paasng.platform.engine.constants import ReplicasPolicy, RuntimeType
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
@@ -358,26 +359,26 @@ class DeployOptionsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         slz = DeployOptionsSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
 
+        app = self.get_application()
         deploy_options, _ = DeployOptions.objects.update_or_create(
-            application=self.get_application(),
-            defaults={"replicas_override_policy": slz.validated_data["replicas_override_policy"]},
+            application=app,
+            tenant_id=app.tenant_id,
+            defaults={"replicas_policy": slz.validated_data["replicas_policy"]},
         )
 
-        return Response(
-            data=DeployOptionsSLZ({"replicas_override_policy": deploy_options.replicas_override_policy}).data
-        )
+        return Response(data=DeployOptionsSLZ({"replicas_policy": deploy_options.replicas_policy}).data)
 
     @swagger_auto_schema(tags=["部署选项"], responses={"200": DeployOptionsSLZ})
     def get_options(self, request, code):
         app = self.get_application()
+        return Response(data=DeployOptionsSLZ({"replicas_policy": self._get_replicas_policy(app)}).data)
 
-        deploy_options = app.deploy_options.last()
-        if deploy_options and deploy_options.replicas_override_policy:
-            replicas_override_policy = deploy_options.replicas_override_policy
-        else:
-            replicas_override_policy = ReplicasOverridePolicy.APP_DESC
-
-        return Response(data=DeployOptionsSLZ({"replicas_override_policy": replicas_override_policy}).data)
+    @staticmethod
+    def _get_replicas_policy(app: Application):
+        deploy_options = app.deploy_options.order_by("-updated").first()
+        if deploy_options and deploy_options.replicas_policy:
+            return deploy_options.replicas_policy
+        return ReplicasPolicy.APP_DESC_PRIORITY
 
 
 def _get_deployment(module: Module, uuid: str) -> Deployment:

@@ -73,7 +73,8 @@ def initialize_deployment(
         model_resource, _ = AppModelResource.objects.get_or_create_by_module(module)
         bkapp_revision_id = model_resource.revision.id
 
-    deploy_options = application.deploy_options.last()
+    # 使用最新的部署选项
+    deploy_options = application.deploy_options.order_by("-updated").first()
     deployment = Deployment.objects.create(
         operator=operator,
         app_environment=env,
@@ -85,7 +86,7 @@ def initialize_deployment(
         advanced_options=dict(
             **(advanced_options or {}),
             source_dir=get_source_dir(module, operator=operator, version_info=version_info),
-            replicas_override_policy=deploy_options.replicas_override_policy if deploy_options else None,
+            replicas_policy=deploy_options.replicas_policy if deploy_options else None,
         ),
         bkapp_revision_id=bkapp_revision_id,
         tenant_id=module.tenant_id,

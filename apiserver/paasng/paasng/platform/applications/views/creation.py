@@ -46,6 +46,7 @@ from paasng.platform.applications.serializers import (
     ApplicationCreateOutputSLZ,
     CloudNativeAppCreateInputSLZ,
     CreationOptionsOutputSLZ,
+    LessCodeAppCreateInputSLZ,
     ThirdPartyAppCreateInputSLZ,
 )
 from paasng.platform.applications.signals import post_create_application
@@ -264,7 +265,7 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
             }
         }
         """
-        slz = ApplicationCreateInputV2SLZ(data=request.data, context={"user": request.user})
+        slz = LessCodeAppCreateInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         params = slz.validated_data
 

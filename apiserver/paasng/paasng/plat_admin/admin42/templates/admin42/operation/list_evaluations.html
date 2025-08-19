@@ -130,11 +130,6 @@
             <bk-row>
                 <bk-col><label class="m10">最新部署人:</label> $[dialog.form.latest_deployer || '--' ]</bk-col>
                 <bk-col><label class="m10">部署时间:</label> $[dialog.form.latest_deployed_at || '--' ]</bk-col>
-                <bk-col>
-                    <label class="m10">
-                        <a :href="getAppOverviewUrl(dialog.form.app_code)" target="_blank">跳转到应用概览</a>
-                    </label>
-                </bk-col>
             </bk-row>
         </bk-container>
         <h4 class="mt20">模块进程</h4>
@@ -237,7 +232,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 data,
                 pagination,
                 collect_task,
-                appOverviewUrl: '{% url "admin.applications.detail.overview" "app_code" %}',
                 dataExportUrl: '{% url "admin.applications.operation_evaluation.export" %}',
                 SEARCH_PARAM,
                 ISSUE_TYPE_PARAM,
@@ -258,9 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         methods: {
-            getAppOverviewUrl(app_code) {
-                return this.appOverviewUrl.replace("app_code", app_code)
-            },
             handleView(row) {
                 this.dialog.form = row
                 this.dialog.visible = true

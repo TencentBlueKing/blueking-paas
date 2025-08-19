@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>蓝鲸开发者中心 Admin</title>
+    <title>蓝鲸开发者中心后台管理</title>
     {% block header %}
     {% endblock %}
     <style type="text/css">
@@ -159,7 +159,7 @@
 
         .paas-breadcrumb {
             list-style: none;
-            font-size: 24px;
+            font-size: 16px;
             border-radius: 4px;
             padding-left: 4px;
             margin: 2.5px;
@@ -203,6 +203,39 @@
         .bk-tab-section {
             padding: 0 !important;
         }
+        .notice-bar {
+            background: #fff4e2;
+            color: #63656e;
+            padding: 12px 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        .notice-bar:before {
+            content: "!";
+            background: #ff9c01;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-weight: 700;
+        }
+        .notice-bar a {
+            color: #3a84ff;
+            font-weight: 500;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(58, 132, 255, 0.3);
+            margin: 0 4px;
+            transition: all 0.2s;
+        }
+        .notice-bar a:hover {
+            color: #0052cc;
+            border-bottom-color: #0052cc;
+        }
     </style>
     {% render_bundle 'vendors' 'css' %}
     {% render_bundle 'default' 'css' %}
@@ -223,12 +256,13 @@
     <div style="display: flex; flex-direction: column;">
         <nav id="top-nav" class="navbar navbar-inverse" style="border-radius: 0px;">
             <div class="navbar-header">
-                <a class="navbar-brand navbar-brand-light" href="{% url 'admin.front_page' %}">蓝鲸开发者中心 Admin</a>
+                <a class="navbar-brand navbar-brand-light" href="{% url 'admin.front_page' %}">蓝鲸开发者中心后台管理</a>
             </div>
             <p class="navbar-text" style="margin-left: auto;">{{ request.user.username }}</p>
         </nav>
 
         <div class="container-content">
+            <div class="notice-bar">当前页面的功能仅供系统开发者调试使用，如需管理集群、增强服务、应用等，请直接<a href="{{BKPAAS_URL}}/plat-mgt/" target="_blank" rel="noopener noreferrer"> 前往平台管理页面</a></div>
             <div class="main-content">
                 {% block container %}
                 {% endblock %}

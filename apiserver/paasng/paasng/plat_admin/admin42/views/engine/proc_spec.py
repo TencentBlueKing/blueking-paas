@@ -25,7 +25,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from paas_wl.apis.admin.serializers.processes import InstanceSerializer, ProcessSpecPlanSLZ
+from paas_wl.apis.admin.serializers.processes import ProcessSpecPlanSLZ
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.core.region.models import get_all_regions
@@ -33,7 +33,6 @@ from paasng.infras.accounts.permissions.constants import SiteAction
 from paasng.infras.accounts.permissions.global_site import site_perm_class
 from paasng.plat_admin.admin42.utils.filters import ApplicationFilterBackend
 from paasng.plat_admin.admin42.utils.mixins import GenericTemplateView
-from paasng.plat_admin.admin42.views.applications import ApplicationDetailBaseView
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.engine.constants import AppEnvName
@@ -71,58 +70,6 @@ class ProcessSpecPlanManageView(GenericTemplateView):
         ]
         kwargs["process_spec_plan_list"] = self.list(self.request, *self.args, **self.kwargs)
         kwargs["pagination"] = self.get_pagination_context(self.request)
-        return kwargs
-
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
-
-class ProcessSpecManageView(ApplicationDetailBaseView):
-    """应用 ProcessSpec 管理页"""
-
-    name = "进程管理"
-    template_name = "admin42/operation/applications/detail/engine/processes.html"
-
-    def get_context_data(self, **kwargs):
-        kwargs = super().get_context_data(**kwargs)
-        application = self.get_application()
-        envs = ModuleEnvironment.objects.filter(module__in=application.modules.all()).all()
-        processes: List[Dict] = []
-
-        for env in envs:
-            process_manager = ProcessManager(env)
-            process_spec_map = {}
-            for process_spec in process_manager.list_processes_specs():
-                process_spec_map[process_spec["name"]] = process_spec
-
-            process_map = {}
-            for process in process_manager.list_processes():
-                process_spec = process_spec_map[process.type]
-                process_map[process.type] = {
-                    "engine_app": env.engine_app.name,
-                    "type": process.type,
-                    "metadata": {
-                        "module": env.module.name,
-                        "env": env.environment,
-                    },
-                    "desired_replicas": process.replicas,
-                    "command": process.runtime.proc_command,
-                    "available_instance_count": process.available_instance_count,
-                    "instances": InstanceSerializer(process.instances, many=True).data,
-                }
-                if application.type != ApplicationType.CLOUD_NATIVE:
-                    process_map[process.type]["process_spec"] = {
-                        "plan": {
-                            "id": ProcessSpecPlan.objects.get_by_name(process_spec["plan_name"]).pk,
-                            "name": process_spec["plan_name"],
-                            "limits": process_spec["resource_limit"],
-                            "requests": process_spec["resource_requests"],
-                            "max_replicas": process_spec["max_replicas"],
-                        }
-                    }
-            processes.extend(process_map.values())
-
-        kwargs["processes"] = processes
         return kwargs
 
     def get(self, request, *args, **kwargs):

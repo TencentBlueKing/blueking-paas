@@ -175,14 +175,19 @@ func (f ReloadResultFile) WriteStatus(reloadID string, status ReloadStatus) erro
 func (f ReloadResultFile) ReadLog(reloadID string) (string, error) {
 	filePath := path.Join(f.rootDir, reloadID)
 
-	// 检查日志文件是否就绪
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return "", nil
+	// 检查日志文件是否存在
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		} else {
+			return "", errors.Wrap(err, "failed to check log file existence")
+		}
 	}
 
+	// 文件存在，读取内容
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to read log")
+		return "", errors.Wrap(err, "failed to read log content")
 	}
 
 	return string(content), nil

@@ -116,15 +116,12 @@ func (a *AppBuilder) pushArtifact(artifactTGZ string) error {
 		return errors.New("destURL parse error")
 	}
 
-	switch parsedURL.Scheme {
-	case "file":
-		return putter.NewPutter(parsedURL.Scheme, a.logger).Put(artifactTGZ, parsedURL)
-
-	case "http", "https":
-		return putter.NewPutter(parsedURL.Scheme, a.logger).Put(artifactTGZ, parsedURL)
-	default:
+	putterInstance, err := putter.New(parsedURL.Scheme, a.logger)
+	if err != nil {
 		return errors.Errorf("not support dest-url scheme: %s", parsedURL.Scheme)
 	}
+
+	return putterInstance.Put(artifactTGZ, parsedURL)
 }
 
 // BuildExecutor is the interface which execute the build process

@@ -22,19 +22,20 @@ import (
 	"net/url"
 
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 )
 
 type Putter interface {
 	Put(src string, destUrl *url.URL) error
 }
 
-func NewPutter(scheme string, logger logr.Logger) Putter {
+func New(scheme string, logger logr.Logger) (Putter, error) {
 	switch scheme {
 	case "file":
-		return NewFsPutter(logger)
+		return NewFsPutter(logger), nil
 	case "http", "https":
-		return NewHttpPutter(logger)
+		return NewHttpPutter(logger), nil
 	default:
-		return nil
+		return nil, errors.Errorf("unsupported putter scheme: %s", scheme)
 	}
 }

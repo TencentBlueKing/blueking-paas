@@ -1,0 +1,12 @@
+319a320,324
+> fi
+> 
+> # -- Added by blueking builder-stack --
+> if [[ -f "$BUILD_DIR/bin/pre-compile" ]]; then
+> 	source "$BUILD_DIR/bin/pre-compile"
+403a409,413
+> # -- Added by blueking builder-stack --
+> if [[ -f "$BUILD_DIR/bin/post-compile" ]]; then
+> 	source "$BUILD_DIR/bin/post-compile"
+> fi
+> 

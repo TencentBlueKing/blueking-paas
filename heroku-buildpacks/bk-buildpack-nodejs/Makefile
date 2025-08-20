@@ -12,9 +12,21 @@ clean:  ## 清理产物
 	rm -rf ${ROOT}/output
 
 .PHONY: pack
-pack: ${ROOT}/output  ## 打包 buildpack
+pack: ${ROOT}/output patch  ## 打包 buildpack
 	$(eval name ?= bk-buildpack-nodejs-${version}.tar)
 	cd buildpack && tar cvhf ${ROOT}/output/${name} --exclude=test *
+	make unpatch
+
+
+##@ Misc
+.PHONY: patch
+patch:
+	patch buildpack/bin/compile patchs/buildpack/bin/compile.patch
+
+.PHONY: unpatch
+unpatch:
+	patch -R buildpack/bin/compile patchs/buildpack/bin/compile.patch
+
 
 .PHONY: help
 help:  ## 打印帮助信息

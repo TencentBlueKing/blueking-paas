@@ -21,6 +21,7 @@ package webserver
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -426,7 +427,16 @@ func parseEnvVarsFromBody(c *gin.Context) (map[string]string, error) {
 	}
 
 	if err := c.ShouldBindJSON(&wrapper); err != nil {
+		// 处理空请求体
+		if err == io.EOF {
+			return map[string]string{}, nil
+		}
 		return nil, errors.Wrap(err, "failed to parse env vars")
+	}
+
+	// 如果 EnvVars 为 nil，初始化为空 map
+	if wrapper.EnvVars == nil {
+		return map[string]string{}, nil
 	}
 
 	return wrapper.EnvVars, nil

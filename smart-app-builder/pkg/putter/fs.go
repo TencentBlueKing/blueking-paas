@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package uploader
+package putter
 
 import (
 	"net/url"
@@ -27,18 +27,18 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// FsUploader ...
-type FsUploader struct {
+// FsPutter ...
+type FsPutter struct {
 	Logger logr.Logger
 }
 
-// NewFsUploader ...
-func NewFsUploader(log logr.Logger) *FsUploader {
-	return &FsUploader{Logger: log}
+// NewFsPutter ...
+func NewFsPutter(log logr.Logger) *FsPutter {
+	return &FsPutter{Logger: log}
 }
 
-// upload src from local filesystem to destUrl
-func (p *FsUploader) Upload(src string, destUrl *url.URL) error {
+// Put src from local filesystem to destUrl
+func (f *FsPutter) Put(src string, destUrl *url.URL) error {
 	filePath := destUrl.Path
 	fileName := filepath.Base(filePath)
 	if filepath.Ext(fileName) == ".tgz" {

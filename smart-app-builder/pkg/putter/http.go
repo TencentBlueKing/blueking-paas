@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package uploader
+package putter
 
 import (
 	"encoding/base64"
@@ -34,31 +34,30 @@ const (
 	defaultTimeout = 10 * time.Minute
 )
 
-// HttpUploader ...
-type HttpUploader struct {
+// HttpPutter ...
+type HttpPutter struct {
 	Logger  logr.Logger
 	timeout time.Duration
 }
 
-// HttpUploader creates a new Putter with default timeout
-func NewHttpUploader(log logr.Logger) *HttpUploader {
-	return &HttpUploader{
-		Logger:  log,
-		timeout: defaultTimeout,
-	}
+// NewHttpPutter creates a new Putter with default timeout
+func NewHttpPutter(log logr.Logger) *HttpPutter {
+	h := &HttpPutter{Logger: log}
+	h.SetTimeout(defaultTimeout)
+	return h
 }
 
-// SetTimeout sets the timeout for the uploader and returns itself
-func (p *HttpUploader) SetTimeout(timeout time.Duration) *HttpUploader {
-	p.timeout = timeout
-	return p
+// SetTimeout sets the timeout for the putter and returns itself
+func (h *HttpPutter) SetTimeout(timeout time.Duration) *HttpPutter {
+	h.timeout = timeout
+	return h
 }
 
-// Upload will put src blob to destUrl
-func (p *HttpUploader) Upload(src string, destUrl *url.URL) error {
+// Put will put src blob to destUrl
+func (h *HttpPutter) Put(src string, destUrl *url.URL) error {
 	safeUrl := maskURL(destUrl)
 
-	p.Logger.Info("Start uploading file", "src", src, "url", safeUrl)
+	h.Logger.Info("Start uploading file", "src", src, "url", safeUrl)
 
 	file, err := os.Open(src)
 	if err != nil {
@@ -86,9 +85,9 @@ func (p *HttpUploader) Upload(src string, destUrl *url.URL) error {
 		}
 	}
 
-	p.Logger.Info("Uploading file", "src", src, "url", safeUrl)
+	h.Logger.Info("Uploading file", "src", src, "url", safeUrl)
 
-	client := http.Client{Timeout: p.timeout}
+	client := http.Client{Timeout: h.timeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "Failed to upload file")
@@ -98,13 +97,13 @@ func (p *HttpUploader) Upload(src string, destUrl *url.URL) error {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, errRead := io.ReadAll(resp.Body)
 		if errRead != nil {
-			p.Logger.Error(errRead, "Failed to read response body")
+			h.Logger.Error(errRead, "Failed to read response body")
 			return errors.Errorf("Failed to upload file: HTTP %d - unable to read response body", resp.StatusCode)
 		}
 		return errors.Errorf("Failed to upload file: HTTP %d - %s", resp.StatusCode, string(body))
 	}
 
-	p.Logger.Info("Successfully uploaded file", "url", safeUrl, "status", resp.Status)
+	h.Logger.Info("Successfully uploaded file", "url", safeUrl, "status", resp.Status)
 
 	return nil
 }

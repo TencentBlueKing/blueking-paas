@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package uploader_test
+package putter_test
 
 import (
 	"net/url"
@@ -27,7 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/uploader"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/putter"
 )
 
 var _ = Describe("FileSystem", func() {
@@ -35,9 +35,9 @@ var _ = Describe("FileSystem", func() {
 	const basePath = "./testdata"
 
 	var (
-		destDir    string
-		logger     logr.Logger
-		fsUploader *uploader.FsUploader
+		destDir  string
+		logger   logr.Logger
+		fsPutter *putter.FsPutter
 	)
 	BeforeEach(func() {
 		var err error
@@ -46,7 +46,7 @@ var _ = Describe("FileSystem", func() {
 
 		// Discard logger output in tests to avoid cluttering test logs.
 		logger = logr.Discard()
-		fsUploader = uploader.NewFsUploader(logger)
+		fsPutter = putter.NewFsPutter(logger)
 	})
 	AfterEach(func() {
 		os.RemoveAll(destDir)
@@ -58,7 +58,7 @@ var _ = Describe("FileSystem", func() {
 			destPath := filepath.Join(destDir, "artifact.tgz")
 			u := &url.URL{Scheme: "file", Path: destPath}
 
-			err := fsUploader.Upload(srcPath, u)
+			err := fsPutter.Put(srcPath, u)
 			Expect(err).To(BeNil())
 
 			srcContent, err := os.ReadFile(srcPath)
@@ -74,7 +74,7 @@ var _ = Describe("FileSystem", func() {
 			srcPath := filepath.Join(basePath, "project.tgz")
 			u := &url.URL{Scheme: "file", Path: destDir}
 
-			err := fsUploader.Upload(srcPath, u)
+			err := fsPutter.Put(srcPath, u)
 			Expect(err).To(BeNil())
 
 			srcContent, err := os.ReadFile(srcPath)

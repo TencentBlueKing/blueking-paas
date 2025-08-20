@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package uploader
+package putter
 
 import (
 	"net/url"
@@ -24,16 +24,16 @@ import (
 	"github.com/go-logr/logr"
 )
 
-type Uploader interface {
-	Upload(src string, destUrl *url.URL) error
+type Putter interface {
+	Put(src string, destUrl *url.URL) error
 }
 
-func NewUploader(scheme string, logger logr.Logger) Uploader {
+func NewPutter(scheme string, logger logr.Logger) Putter {
 	switch scheme {
 	case "file":
-		return NewFsUploader(logger)
+		return NewFsPutter(logger)
 	case "http", "https":
-		return NewHttpUploader(logger)
+		return NewHttpPutter(logger)
 	default:
 		return nil
 	}

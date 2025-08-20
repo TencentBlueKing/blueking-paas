@@ -16,7 +16,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package uploader_test
+package putter_test
 
 import (
 	"io"
@@ -29,7 +29,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/uploader"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/putter"
 )
 
 var _ = Describe("Http", func() {
@@ -37,15 +37,15 @@ var _ = Describe("Http", func() {
 	const basePath = "./testdata"
 
 	var (
-		logger       logr.Logger
-		server       *httptest.Server
-		httpUploader *uploader.HttpUploader
+		logger     logr.Logger
+		server     *httptest.Server
+		httpPutter *putter.HttpPutter
 	)
 
 	BeforeEach(func() {
 		// Discard logger output in tests to avoid cluttering test logs.
 		logger = logr.Discard()
-		httpUploader = uploader.NewHttpUploader(logger)
+		httpPutter = putter.NewHttpPutter(logger)
 	})
 	AfterEach(func() {
 		if server != nil {
@@ -71,7 +71,7 @@ var _ = Describe("Http", func() {
 			destUrl, err := url.Parse(server.URL)
 			Expect(err).To(BeNil())
 
-			err = httpUploader.Upload(srcPath, destUrl)
+			err = httpPutter.Put(srcPath, destUrl)
 			Expect(err).To(BeNil())
 		})
 	})
@@ -85,7 +85,7 @@ var _ = Describe("Http", func() {
 			srcPath := filepath.Join(basePath, "project.tgz")
 			destUrl, _ := url.Parse(server.URL)
 
-			err := httpUploader.Upload(srcPath, destUrl)
+			err := httpPutter.Put(srcPath, destUrl)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Failed to upload file: HTTP 404"))
 		})
@@ -99,7 +99,7 @@ var _ = Describe("Http", func() {
 			srcPath := filepath.Join(basePath, "project.tgz")
 			destUrl, _ := url.Parse(server.URL)
 
-			err := httpUploader.Upload(srcPath, destUrl)
+			err := httpPutter.Put(srcPath, destUrl)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Failed to upload file: HTTP 500"))
 		})
@@ -108,7 +108,7 @@ var _ = Describe("Http", func() {
 			srcPath := filepath.Join(basePath, "project.tgz")
 			destUrl, _ := url.Parse("http://invalid-url-that-does-not-exist")
 
-			err := httpUploader.Upload(srcPath, destUrl)
+			err := httpPutter.Put(srcPath, destUrl)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -116,7 +116,7 @@ var _ = Describe("Http", func() {
 			srcPath := filepath.Join(basePath, "project.tgz")
 			invalidUrl := &url.URL{Host: "invalid:host:with:colons"}
 
-			err := httpUploader.Upload(srcPath, invalidUrl)
+			err := httpPutter.Put(srcPath, invalidUrl)
 			Expect(err).To(HaveOccurred())
 		})
 	})

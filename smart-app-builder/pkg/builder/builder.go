@@ -31,7 +31,7 @@ import (
 
 	bexec "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/executor"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
-	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/uploader"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/putter"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 )
 
@@ -118,10 +118,10 @@ func (a *AppBuilder) pushArtifact(artifactTGZ string) error {
 
 	switch parsedURL.Scheme {
 	case "file":
-		return uploader.NewUploader(parsedURL.Scheme, a.logger).Upload(artifactTGZ, parsedURL)
+		return putter.NewPutter(parsedURL.Scheme, a.logger).Put(artifactTGZ, parsedURL)
 
 	case "http", "https":
-		return uploader.NewUploader(parsedURL.Scheme, a.logger).Upload(artifactTGZ, parsedURL)
+		return putter.NewPutter(parsedURL.Scheme, a.logger).Put(artifactTGZ, parsedURL)
 	default:
 		return errors.Errorf("not support dest-url scheme: %s", parsedURL.Scheme)
 	}

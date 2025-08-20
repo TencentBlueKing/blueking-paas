@@ -2,7 +2,7 @@ api = "0.4"
 
 [buildpack]
   id = "bk-buildpack-nodejs"
-  version = "v163"
+  version = "v304"
   name = "bk-buildpack-nodejs"
 
 [[stacks]]

@@ -187,7 +187,7 @@ func (f ReloadResultFile) ReadLog(reloadID string) (string, error) {
 	// 文件存在，读取内容
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to read log content")
+		return "", errors.Wrap(err, "failed to read log")
 	}
 
 	return string(content), nil

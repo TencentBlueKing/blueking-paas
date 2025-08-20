@@ -275,6 +275,8 @@ urlpatterns = [
         accountmgr.UserProfilesManageViewSet.as_view({"post": "bulk_create", "put": "update", "delete": "destroy"}),
         name="admin.accountmgr.userprofile.api",
     ),
+    # 添加 admin42 404 页面路由
+    re_path(r"^.*$", views.Admin404View.as_view(), name="admin.404"),
 ]
 
 # 应用详情

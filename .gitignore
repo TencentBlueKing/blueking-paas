@@ -168,3 +168,5 @@ bin
 cover.out
 
 !cnb-builder-shim/rootfs/devsandbox/usr/bin/
+
+!heroku-buildpacks/bk-buildpack-nodejs/patchs/buildpack/bin/

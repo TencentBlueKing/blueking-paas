@@ -21,7 +21,7 @@ from typing import Dict, Optional
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import OperationTypes, RuntimeType
+from paasng.platform.engine.constants import OperationTypes, ReplicasPolicy, RuntimeType
 from paasng.platform.engine.deploy.building import start_build, start_build_error_callback
 from paasng.platform.engine.deploy.image_release import release_without_build
 from paasng.platform.engine.models.deployment import Deployment
@@ -87,7 +87,7 @@ def initialize_deployment(
         advanced_options=dict(
             **(advanced_options or {}),
             source_dir=get_source_dir(module, operator=operator, version_info=version_info),
-            replicas_policy=deploy_options.replicas_policy if deploy_options else None,
+            replicas_policy=deploy_options.replicas_policy if deploy_options else ReplicasPolicy.APP_DESC_PRIORITY,
         ),
         bkapp_revision_id=bkapp_revision_id,
         tenant_id=module.tenant_id,

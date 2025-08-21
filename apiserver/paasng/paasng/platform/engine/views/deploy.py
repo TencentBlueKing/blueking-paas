@@ -39,14 +39,15 @@ from paasng.infras.iam.helpers import fetch_user_roles
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.metrics import DEPLOYMENT_INFO_COUNTER
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
+from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.services import check_replicas_manually_scaled
 from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.engine.constants import RuntimeType
+from paasng.platform.engine.constants import ReplicasPolicy, RuntimeType
 from paasng.platform.engine.deploy.interruptions import interrupt_deployment
 from paasng.platform.engine.deploy.start import DeployTaskRunner, initialize_deployment
 from paasng.platform.engine.exceptions import DeployInterruptionFailed
 from paasng.platform.engine.logs import get_all_logs
-from paasng.platform.engine.models import Deployment
+from paasng.platform.engine.models import Deployment, DeployOptions
 from paasng.platform.engine.phases_steps.phases import DeployPhaseManager
 from paasng.platform.engine.phases_steps.steps import get_sorted_steps
 from paasng.platform.engine.serializers import (
@@ -57,11 +58,12 @@ from paasng.platform.engine.serializers import (
     DeploymentResultQuerySLZ,
     DeploymentResultSLZ,
     DeploymentSLZ,
+    DeployOptionsSLZ,
     DeployPhaseSLZ,
     QueryDeploymentsSLZ,
 )
 from paasng.platform.engine.utils.ansi import strip_ansi
-from paasng.platform.engine.utils.query import DeploymentGetter
+from paasng.platform.engine.utils.query import DeploymentGetter, get_latest_deploy_options
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.engine.workflow.protections import ModuleEnvDeployInspector
 from paasng.platform.environments.constants import EnvRoleOperation
@@ -347,6 +349,36 @@ class DeployPhaseViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         for p in phases:
             p._sorted_steps = get_sorted_steps(p)
         return Response(data=DeployPhaseSLZ(phases, many=True).data)
+
+
+class DeployOptionsViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(tags=["部署选项"], responses={"200": DeployOptionsSLZ})
+    def upsert_options(self, request, code):
+        slz = DeployOptionsSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+
+        app = self.get_application()
+        deploy_options, _ = DeployOptions.objects.update_or_create(
+            application=app,
+            tenant_id=app.tenant_id,
+            defaults={"replicas_policy": slz.validated_data["replicas_policy"]},
+        )
+
+        return Response(data=DeployOptionsSLZ({"replicas_policy": deploy_options.replicas_policy}).data)
+
+    @swagger_auto_schema(tags=["部署选项"], responses={"200": DeployOptionsSLZ})
+    def get_options(self, request, code):
+        app = self.get_application()
+        return Response(data=DeployOptionsSLZ({"replicas_policy": self._get_replicas_policy(app)}).data)
+
+    @staticmethod
+    def _get_replicas_policy(app: Application):
+        deploy_options = get_latest_deploy_options(app)
+        if deploy_options and deploy_options.replicas_policy:
+            return deploy_options.replicas_policy
+        return ReplicasPolicy.APP_DESC_PRIORITY
 
 
 def _get_deployment(module: Module, uuid: str) -> Deployment:

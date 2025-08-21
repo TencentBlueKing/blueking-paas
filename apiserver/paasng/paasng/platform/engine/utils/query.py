@@ -19,8 +19,8 @@ from typing import Optional
 
 from django.conf import settings
 
-from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.models import Deployment, OfflineOperation
+from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.engine.models import Deployment, DeployOptions, OfflineOperation
 from paasng.platform.engine.workflow import DeploymentCoordinator
 
 
@@ -81,3 +81,8 @@ class OfflineOperationGetter:
             return self.env.offlines.get_latest_resumable(max_resumable_seconds=settings.ENGINE_OFFLINE_RESUMABLE_SECS)
         except OfflineOperation.DoesNotExist:
             return None
+
+
+def get_latest_deploy_options(app: Application) -> DeployOptions | None:
+    """获取应用最新的 deploy_options"""
+    return app.deploy_options.order_by("-updated").first()

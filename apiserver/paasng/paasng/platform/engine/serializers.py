@@ -32,7 +32,14 @@ from paasng.accessories.publish.market.serializers import AvailableAddressSLZ
 from paasng.misc.monitoring.metrics.constants import MetricsResourceType, MetricsSeriesType
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import ImagePullPolicy
-from paasng.platform.engine.constants import ConfigVarEnvName, DeployConditions, JobStatus, MetricsType, RuntimeType
+from paasng.platform.engine.constants import (
+    ConfigVarEnvName,
+    DeployConditions,
+    JobStatus,
+    MetricsType,
+    ReplicasPolicy,
+    RuntimeType,
+)
 from paasng.platform.engine.models import DeployPhaseTypes
 from paasng.platform.engine.models.config_var import ENVIRONMENT_ID_FOR_GLOBAL, ENVIRONMENT_NAME_FOR_GLOBAL, ConfigVar
 from paasng.platform.engine.models.deployment import Deployment
@@ -783,3 +790,7 @@ class ConflictedEnvVarInfoOutputSLZ(serializers.Serializer):
         help_text="冲突详情，通常为该环境变量的详细描述，比如 builtin_addons 来源的该字段为增强服务名称"
     )
     override_conflicted = serializers.BooleanField(help_text="冲突发生后，用户定义的 Key 是否生效")
+
+
+class DeployOptionsSLZ(serializers.Serializer):
+    replicas_policy = serializers.ChoiceField(choices=ReplicasPolicy.get_choices(), help_text="副本数的优先策略")

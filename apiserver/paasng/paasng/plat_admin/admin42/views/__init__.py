@@ -27,3 +27,8 @@ class FrontPageView(GenericTemplateView):
 
     template_name = "admin42/front_page.html"
     permission_classes = [IsAuthenticated, site_perm_class(SiteAction.VISIT_ADMIN42)]
+
+
+class Admin404View(GenericTemplateView):
+    template_name = "admin42/404.html"
+    permission_classes = [IsAuthenticated, site_perm_class(SiteAction.VISIT_ADMIN42)]

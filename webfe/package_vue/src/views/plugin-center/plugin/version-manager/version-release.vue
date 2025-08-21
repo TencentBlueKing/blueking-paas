@@ -8,7 +8,7 @@
       :offset-left="20"
       :is-min-height="false"
       :custom-style="customStyle"
-      :class="curStageComponmentType === 'test' ? 'test-phase-container' : ''"
+      :class="['loader-phase-container', { 'test-phase-container': curStageComponmentType === 'test' }]"
     >
       <!-- 部署信息概览 -->
       <div
@@ -41,7 +41,7 @@
           </span>
         </div>
       </div>
-      <section class="content-container">
+      <section class="content-container" :class="{ 'with-footer': isShowButtonGroup && !isPostedSuccessfully }">
         <!-- 只有一个阶段的发布, 不展示发布步骤 -->
         <version-steps
           v-if="!isSingleStage"
@@ -53,6 +53,7 @@
         />
         <!-- 内容 - 默认步骤根据 curStageComponmentType -->
         <component
+          :style="{ marginBottom: isShowButtonGroup && !isPostedSuccessfully ? '48px' : '24px' }"
           :class="{ 'component-card-cls': !excludeCardStyleList.includes(curStageComponmentType) }"
           :is="curStageComponmentType"
           v-if="stageData"
@@ -610,14 +611,21 @@ export default {
     }
 }
 .content-container {
+  flex: 1;
+  overflow-y: auto;
   background: #F5F6FA;
-  height: 100%;
-  margin-bottom: 48px;
+  height: calc(100% - 52px);
   padding: 16px 24px 0;
+  &.with-footer {
+    height: calc(100% - 100px);
+  }
   .steps-warp-cls {
     margin-bottom: 16px;
   }
   .component-card-cls {
+    flex: 1;
+    margin-bottom: 24px;
+    min-height: 0;
     box-shadow: 0 2px 4px 0 #1919290d;
     border-radius: 2px;
     background: #fff;
@@ -757,7 +765,13 @@ export default {
     line-height: 24px;
 }
 .visible-range-release {
+  background: #F5F6FA;
   height: 100%;
+  .loader-phase-container,
+  .content-container {
+    display: flex;
+    flex-direction: column;
+  }
   .app-container {
     margin-top: 0;
     padding-top: 0;

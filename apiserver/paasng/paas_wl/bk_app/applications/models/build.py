@@ -18,7 +18,7 @@
 import logging
 import os
 import shlex
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, cast
 
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
@@ -26,10 +26,6 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from jsonfield import JSONCharField, JSONField
-from moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
-from moby_distribution.registry.exceptions import PermissionDeny, ResourceNotFound, UnSupportMediaType
-from moby_distribution.registry.resources.manifests import ManifestRef, ManifestSchema2
-from moby_distribution.registry.utils import parse_image
 
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.entities import BuildArtifactMetadata
@@ -41,6 +37,10 @@ from paas_wl.utils.models import UuidAuditedModel, make_json_field
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.sourcectl.models import VersionInfo
+from paasng.utils.moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
+from paasng.utils.moby_distribution.registry.exceptions import PermissionDeny, ResourceNotFound, UnSupportMediaType
+from paasng.utils.moby_distribution.registry.resources.manifests import ManifestRef, ManifestSchema2
+from paasng.utils.moby_distribution.registry.utils import parse_image
 
 # Slug runner 默认的 entrypoint, 平台所有 slug runner 镜像都以该值作为入口
 # TODO: 需验证存量所有镜像是否都设置了默认的 entrypoint, 如是, 即可移除所有 DEFAULT_SLUG_RUNNER_ENTRYPOINT
@@ -195,7 +195,7 @@ class Build(UuidAuditedModel):
                 password=image_registry.password,
             )
             image = parse_image(self.image, default_registry=image_registry.host)
-            ref = ManifestRef(repo=image.name, reference=image.tag, client=registry_client)
+            ref = ManifestRef(repo=image.name, reference=cast(str, image.tag), client=registry_client)
 
             metadata = None
             try:

@@ -25,8 +25,6 @@ from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
-from moby_distribution.registry.exceptions import AuthFailed, PermissionDeny, ResourceNotFound
-from moby_distribution.registry.utils import parse_image
 from rest_framework import status
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
@@ -66,6 +64,8 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.modules.models import BuildConfig
 from paasng.platform.sourcectl.controllers.docker import DockerRegistryController
 from paasng.platform.sourcectl.serializers import AlternativeVersionSLZ
+from paasng.utils.moby_distribution.registry.exceptions import AuthFailed, PermissionDeny, ResourceNotFound
+from paasng.utils.moby_distribution.registry.utils import parse_image
 
 logger = logging.getLogger(__name__)
 

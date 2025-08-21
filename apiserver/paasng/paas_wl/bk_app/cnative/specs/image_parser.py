@@ -19,10 +19,10 @@ import logging
 from typing import Optional
 
 from django.utils.translation import gettext_lazy as _
-from moby_distribution.registry.utils import parse_image
 
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paasng.utils.moby_distribution.registry.utils import parse_image
 
 logger = logging.getLogger(__name__)
 

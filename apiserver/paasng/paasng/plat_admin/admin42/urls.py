@@ -26,19 +26,12 @@ from .views import (
     bk_plugins,
     dashboard_templates,
     runtimes,
-    services,
     smart_advisor,
 )
 from .views.engine import (
     certs,
-    config_vars,
-    custom_domain,
     deployments,
-    egress,
-    log_config,
-    package,
     proc_spec,
-    runtime,
 )
 from .views.operation import deploy
 
@@ -261,8 +254,6 @@ urlpatterns = [
         deploy.DevelopersDeployStatisticsView.as_view({"get": "export"}),
         name="admin.operation.statistics.deploy.developers.export",
     ),
-    ## 应用列表
-    re_path(r"^applications/$", applications.ApplicationListView.as_view(), name="admin.applications.list"),
     # 用户管理
     ## 用户列表
     re_path(
@@ -277,180 +268,4 @@ urlpatterns = [
     ),
     # 添加 admin42 404 页面路由
     re_path(r"^.*$", views.Admin404View.as_view(), name="admin.404"),
-]
-
-# 应用详情
-urlpatterns += [
-    # 应用详情-概览页
-    re_path(
-        r"^applications/(?P<code>[^/]+)/overview/$",
-        applications.ApplicationOverviewView.as_view(),
-        name="admin.applications.detail.overview",
-    ),
-    # 应用详情-环境配置管理
-    re_path(
-        f"^applications/(?P<code>[^/]+)/{PART_MODULE_WITH_ENV}/engine/bind_cluster/$",
-        applications.AppEnvConfManageView.as_view({"post": "bind_cluster"}),
-        name="admin.applications.engine.env_conf.bind_cluster",
-    ),
-    # 应用详情-进程管理
-    re_path(
-        r"^applications/(?P<code>[^/]+)/engine/process_specs/$",
-        proc_spec.ProcessSpecManageView.as_view(),
-        name="admin.applications.engine.process_specs",
-    ),
-    # 应用详情-包版本管理
-    re_path(
-        r"^applications/(?P<code>[^/]+)/engine/source_packages/manage/$",
-        package.SourcePackageManageView.as_view(),
-        name="admin.applications.engine.source_packages.manage",
-    ),
-    # 应用详情-包版本管理 API
-    re_path(
-        "^applications/(?P<code>[^/]+)/engine/source_packages/$",
-        package.SourcePackageManageViewSet.as_view(dict(get="list")),
-        name="admin.applications.engine.source_packages.list",
-    ),
-    re_path(
-        f"^applications/(?P<code>[^/]+)/{PART_MODULE}/engine/source_packages/(?P<pk>[^/]+)/$",
-        package.SourcePackageManageViewSet.as_view(dict(get="download")),
-        name="admin.applications.engine.source_packages.detail",
-    ),
-    # 应用详情 - Egress 管理
-    re_path(
-        r"^applications/(?P<code>[^/]+)/engine/egress/manage/$",
-        egress.EgressManageView.as_view(),
-        name="admin.applications.engine.egress.manage",
-    ),
-    # 应用详情 - Egress 管理 API
-    re_path(
-        f"^applications/(?P<code>[^/]+)/{PART_MODULE_WITH_ENV}/engine/egress/$",
-        egress.EgressManageViewSet.as_view(dict(get="get", post="create", delete="destroy")),
-        name="admin.applications.engine.egress.detail",
-    ),
-    re_path(
-        f"^applications/(?P<code>[^/]+)/{PART_MODULE_WITH_ENV}/engine/egress/ips/$",
-        egress.EgressManageViewSet.as_view(dict(get="get_egress_ips")),
-        name="admin.applications.engine.egress.ips",
-    ),
-    # 应用详情-环境变量管理
-    re_path(
-        r"^applications/(?P<code>[^/]+)/engine/config_vars/manage/$",
-        config_vars.ConfigVarManageView.as_view(),
-        name="admin.applications.engine.config_vars.manage",
-    ),
-    # 应用详情-环境变量管理 API
-    re_path(
-        r"^application/(?P<code>[^/]+)/engine/config_vars$",
-        config_vars.ConfigVarViewSet.as_view(dict(get="list")),
-        name="admin.applications.engine.config_vars.list",
-    ),
-    re_path(
-        f"^application/(?P<code>[^/]+)/{PART_MODULE}/engine/config_vars$",
-        config_vars.ConfigVarViewSet.as_view(dict(post="create")),
-        name="admin.applications.engine.config_vars.create",
-    ),
-    re_path(
-        f"^application/(?P<code>[^/]+)/{PART_MODULE}/engine/config_vars/(?P<id>[^/]+)/$",
-        config_vars.ConfigVarViewSet.as_view(dict(put="update", delete="destroy")),
-        name="admin.applications.engine.config_vars.detail",
-    ),
-    # 应用详情-运行时管理
-    re_path(
-        r"^applications/(?P<code>[^/]+)/engine/runtime/manage/$",
-        runtime.RuntimeManageView.as_view(),
-        name="admin.applications.engine.runtime.manage",
-    ),
-    # 应用详情-运行时管理 API
-    re_path(
-        "^applications/(?P<code>[^/]+)/engine/runtime/$",
-        runtime.RuntimeManageViewSet.as_view(dict(get="list")),
-        name="admin.applications.engine.runtime.list",
-    ),
-    re_path(
-        f"^applications/(?P<code>[^/]+)/{PART_MODULE}/engine/runtime$",
-        runtime.RuntimeManageViewSet.as_view(dict(post="bind")),
-        name="admin.applications.engine.runtime.bind",
-    ),
-    # 应用详情-增强服务
-    re_path(
-        r"^applications/(?P<code>[^/]+)/services/$",
-        services.ApplicationServicesView.as_view(),
-        name="admin.applications.services",
-    ),
-    # 应用详情-增强服务 API
-    re_path(
-        r"^api/applications/(?P<code>[^/]+)/services/$",
-        services.ApplicationServicesManageViewSet.as_view({"get": "list"}),
-        name="admin.applications.services.list",
-    ),
-    re_path(
-        r"^api/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/env/(?P<environment>[^/]+)/services/"
-        r"(?P<service_id>[^/]+)/provision/$",
-        services.ApplicationServicesManageViewSet.as_view({"post": "provision_instance"}),
-        name="admin.applications.services.provision",
-    ),
-    re_path(
-        r"^api/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/services/"
-        r"(?P<service_id>[^/]+)/instances/(?P<instance_id>[^/]+)/$",
-        services.ApplicationServicesManageViewSet.as_view({"delete": "recycle_resource"}),
-        name="admin.applications.services.recycle_resource",
-    ),
-    re_path(
-        r"^api/applications/(?P<code>[^/]+)/services/unbound/$",
-        services.ApplicationUnboundServicesManageViewSet.as_view({"get": "list"}),
-        name="admin.applications.services.unbound.list",
-    ),
-    re_path(
-        r"^api/applications/(?P<code>[^/]+)/modules/(?P<module_name>[^/]+)/services/"
-        r"(?P<service_id>[^/]+)/unbound/instances/(?P<instance_id>[^/]+)/$",
-        services.ApplicationUnboundServicesManageViewSet.as_view({"delete": "recycle_resource"}),
-        name="admin.applications.services.unbound.recycle_resource",
-    ),
-    # 应用详情-成员管理
-    re_path(
-        r"^applications/(?P<code>[^/]+)/base_info/memberships/$",
-        applications.ApplicationMembersManageView.as_view(),
-        name="admin.applications.detail.base_info.members",
-    ),
-    # 应用详情-成员管理 API
-    re_path(
-        r"^api/applications/(?P<code>[^/]+)/base_info/memberships/$",
-        applications.ApplicationMembersManageViewSet.as_view({"get": "list", "post": "update"}),
-        name="admin.applications.detail.base_info.members.api",
-    ),
-    re_path(
-        r"^api/applications/(?P<code>[^/]+)/base_info/memberships/(?P<username>[^/]+)/$",
-        applications.ApplicationMembersManageViewSet.as_view({"delete": "destroy"}),
-        name="admin.applications.detail.base_info.members.api",
-    ),
-    re_path(
-        r"^api/applications/(?P<code>[^/]+)/base_info/plugin/memberships/$",
-        bk_plugins.BKPluginMembersManageViewSet.as_view({"post": "update"}),
-        name="admin.applications.detail.base_info.plugin.members.api",
-    ),
-    # 应用详情-特性管理
-    re_path(
-        r"^applications/(?P<code>[^/]+)/base_info/feature_flags/$",
-        applications.ApplicationFeatureFlagsView.as_view(),
-        name="admin.applications.detail.base_info.feature_flags",
-    ),
-    # 应用详情-特性管理 API
-    re_path(
-        r"^api/applications/(?P<code>[^/]+)/base_info/feature_flags/$",
-        applications.ApplicationFeatureFlagsViewset.as_view({"get": "list", "post": "update"}),
-        name="admin.applications.detail.base_info.feature_flags.api",
-    ),
-    # 应用详情-独立域名
-    re_path(
-        r"^applications/(?P<code>[^/]+)/engine/custom_domain/$",
-        custom_domain.CustomDomainManageView.as_view(),
-        name="admin.applications.engine.custom_domain",
-    ),
-    # 应用详情-日志采集管理
-    re_path(
-        r"^applications/(?P<code>[^/]+)/engine/log_config/$",
-        log_config.LogConfigView.as_view(),
-        name="admin.applications.engine.log_config.manage",
-    ),
 ]

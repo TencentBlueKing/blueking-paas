@@ -142,7 +142,7 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var srcFilePath string
-		var envVars map[string]string
+		envVars := map[string]string{}
 
 		switch config.G.SourceCode.FetchMethod {
 		case config.HTTP:

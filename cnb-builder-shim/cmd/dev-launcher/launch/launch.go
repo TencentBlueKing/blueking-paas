@@ -48,7 +48,7 @@ type metaProcesses []launch.Process
 
 // Run launches the given launch.Process list and app desc.
 func Run(mdProcesses metaProcesses, desc appdesc.AppDesc) error {
-	processes, err := symlinkProcessLauncher(mdProcesses)
+	processes, err := SymlinkProcessLauncher(mdProcesses)
 	if err != nil {
 		return errors.Wrap(err, "symlink process launcher")
 	}
@@ -58,14 +58,14 @@ func Run(mdProcesses metaProcesses, desc appdesc.AppDesc) error {
 		}
 	}
 
-	if err = reloadProcesses(processes, desc.GetEnvs()); err != nil {
+	if err = ReloadProcesses(processes, desc.GetEnvs()); err != nil {
 		return errors.Wrap(err, "reload processes")
 	}
 
 	return nil
 }
 
-// symlinkProcessLauncher creates symbolic links for the given launch.Process list.
+// SymlinkProcessLauncher creates symbolic links for the given launch.Process list.
 //
 // It takes in a slice of launch.Process and returns a slice of Process and an error.
 //
@@ -73,7 +73,7 @@ func Run(mdProcesses metaProcesses, desc appdesc.AppDesc) error {
 //
 //	web process will create symlink like "/cnb/process/web -> /cnb/lifecycle/launcher"
 //	worker process will create symlink like "/cnb/process/worker -> /cnb/lifecycle/launcher"
-func symlinkProcessLauncher(mdProcesses metaProcesses) ([]Process, error) {
+func SymlinkProcessLauncher(mdProcesses metaProcesses) ([]Process, error) {
 	processes := []Process{}
 
 	if len(mdProcesses) == 0 {
@@ -119,7 +119,7 @@ func runPreReleaseHook(releaseHook string, runEnvs []appdesc.Env) error {
 	return cmd.Run()
 }
 
-func reloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
+func ReloadProcesses(processes []Process, procEnvs []appdesc.Env) error {
 	procs := []base.Process{}
 	for _, proc := range processes {
 		procs = append(procs,

@@ -58,7 +58,7 @@ class ManifestSchema1(BaseModel):
         return "application/vnd.docker.distribution.manifest.v1+prettyjws"
 
     @validator("schemaVersion")
-    def validate_schema_version(self, v):
+    def validate_schema_version(cls, v):  # noqa: N805
         if v != 1:
             raise ValueError("schema version of ManifestSchema1 MUST be 1")
         return v
@@ -107,7 +107,7 @@ class ManifestSchema2(BaseModel):
         return "application/vnd.docker.distribution.manifest.v2+json"
 
     @validator("schemaVersion")
-    def validate_schema_version(self, v):
+    def validate_schema_version(cls, v):  # noqa: N805
         if v != 2:
             raise ValueError("schema version of ManifestSchema2 MUST be 2")
         return v
@@ -153,7 +153,7 @@ class OCIManifestSchema1(BaseModel):
         return "application/vnd.oci.image.manifest.v1+json"
 
     @validator("schemaVersion")
-    def validate_schema_version(self, v):
+    def validate_schema_version(cls, v):  # noqa: N805
         if v != 2:
             raise ValueError("schema version of OCIManifestSchema1 MUST be 2")
         return v

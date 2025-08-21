@@ -42,7 +42,7 @@ def mock_adapter():
     session = requests.Session()
     adapter = requests_mock.Adapter()
     session.mount("mock://", adapter)
-    with mock.patch("moby_distribution.registry.auth.requests", session):
+    with mock.patch("paasng.utils.moby_distribution.registry.auth.requests", session):
         yield adapter
 
 

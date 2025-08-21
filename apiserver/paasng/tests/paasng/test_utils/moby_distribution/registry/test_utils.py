@@ -45,7 +45,7 @@ def restore_envs():
 
 @pytest.fixture
 def mock_generate_private_key():
-    with mock.patch("moby_distribution.registry.utils.ec_key.generate_private_key") as m:
+    with mock.patch("paasng.utils.moby_distribution.registry.utils.ec_key.generate_private_key") as m:
         m().to_jwk.return_value = None
         yield
 

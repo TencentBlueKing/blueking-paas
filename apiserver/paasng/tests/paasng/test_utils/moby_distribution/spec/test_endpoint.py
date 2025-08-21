@@ -164,6 +164,7 @@ def test_is_secure_repository_timeout(blocking_https_server):
 )
 def test_api_base_url(url, support_https, expected):
     with mock.patch(
-        "moby_distribution.spec.endpoint.APIEndpoint.is_secure_repository", return_value=[support_https, False]
+        "paasng.utils.moby_distribution.spec.endpoint.APIEndpoint.is_secure_repository",
+        return_value=[support_https, False],
     ):
         assert APIEndpoint(url=url).api_base_url == expected

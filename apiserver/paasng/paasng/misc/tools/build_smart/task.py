@@ -151,7 +151,7 @@ class SmartBuildTaskRunner:
         if status == BuildStatus.SUCCESSFUL and self.artifact_url:
             self.smart_build.artifact_url = self.artifact_url
 
-        self.smart_build.status = status.value
+        self.smart_build.status = status
         if status in BuildStatus.get_finished_states():
             self.smart_build.time_spent = int(time.time() - self.start_time)
         self.smart_build.save(update_fields=["status", "time_spent", "artifact_url"])
@@ -167,14 +167,14 @@ class SmartBuildTaskRunner:
                     with self._step_context(step_name):
                         step_fn()
             except SmartBuildInterruptionFailed:
-                self.writer.write_event("phase", {"name": build_phase, "status": "interruption"})
+                self.writer.write_event("phase", {"name": build_phase.name, "status": "interruption"})
                 raise
             except SmartBuildStepError:
                 # step or phase failed -> emit failed and re-raise for outer handler
-                self.writer.write_event("phase", {"name": build_phase, "status": "failed"})
-                raise SmartBuildError(f"Phase '{build_phase}' failed during execution")
+                self.writer.write_event("phase", {"name": build_phase.name, "status": "failed"})
+                raise SmartBuildError(f"Phase '{build_phase.name}' failed during execution")
 
-            self.writer.write_event("phase", {"name": build_phase, "status": "completed"})
+            self.writer.write_event("phase", {"name": build_phase.name, "status": "completed"})
 
     def _check_interrupted(self):
         """Ensure the build process has not been interrupted by user"""
@@ -255,4 +255,4 @@ class SmartBuildTaskRunner:
         final_status = SmartBuildRunner(smart_build=self.smart_build, spec=self.spec).start()
 
         if final_status == PodPhase.FAILED:
-            raise SmartBuildStepError(f"Build failed with Pod status: {final_status.value}")
+            raise SmartBuildStepError(f"Build failed with Pod status: {final_status}")

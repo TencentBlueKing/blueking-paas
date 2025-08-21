@@ -148,7 +148,9 @@ class SmartBuilderViewSet(viewsets.ViewSet):
             smart_build_record = SmartBuildRecord.objects.get(id=build_id)
             interrupt_smart_build(smart_build_record, request.user)
         except SmartBuildRecord.DoesNotExist:
-            raise error_codes.NOT_FOUND_SMART_BUILD_RECORD.f(_(f"没有 id 为 {build_id} s-mart 包构建记录"))
+            raise error_codes.NOT_FOUND_SMART_BUILD_RECORD.f(
+                _("没有 id 为 {build_id} s-mart 包构建记录").format(build_id=build_id)
+            )
         except SmartBuildInterruptionFailed as e:
             raise error_codes.BUILD_INTERRUPTION_FAILED.f(str(e))
         return Response({})

@@ -253,7 +253,7 @@ class SmartBuildRunner:
 
     def _delete_pod(self, namespace: str, pod_name: str):
         """Delete Pod directly, Don't check status at first."""
-        logger.debug(f"trying to clean slug pod<{pod_name}>.")
+        logger.debug(f"trying to clean smart build pod<{pod_name}>.")
         try:
             KPod(self.client).delete(pod_name, namespace=namespace)
             self.writer.write_message(f"Pod {namespace}/{pod_name} deleted successfully")

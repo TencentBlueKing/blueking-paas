@@ -2875,6 +2875,22 @@ files = [
 ]
 
 [[package]]
+name = "py-libtrust"
+version = "2.1.1"
+description = "Yet another docker/libtrust implement by python."
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "py_libtrust-2.1.1-py3-none-any.whl", hash = "sha256:4aa27e068fb3feb01bf344829a6d066ba74788d09146f761872506737f362624"},
+    {file = "py_libtrust-2.1.1.tar.gz", hash = "sha256:b1e29f332965a2fe095e9a650b595d88ec53171f32e8a1f9dd3b5c9fbce083e5"},
+]
+
+[package.dependencies]
+cryptography = ">=37"
+typing-extensions = ">=3.6.5"
+
+[[package]]
 name = "pyasn1"
 version = "0.6.1"
 description = "Pure-Python implementation of ASN.1 types and DER/BER/CER codecs (X.208)"
@@ -4413,4 +4429,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "473cc1c1f2e88d7e2f10e82beeb02e31325690ddacd909bdecf7ec45d3b7f2d8"
+content-hash = "63d39ba64032ca537bdbe26065d06fea69e3e2e53c5b35df4d7bcb3e976bb429"

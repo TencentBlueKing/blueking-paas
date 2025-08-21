@@ -101,6 +101,7 @@ dependencies = [
   'bk-audit (==1.2.3b0)',
   "jsonschema (==4.17.3)",
   "docker (==7.0.0)",
+  "py-libtrust (>=2.0.0)",
 ]
 
 [tool.poetry]

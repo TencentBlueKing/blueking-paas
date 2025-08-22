@@ -5,10 +5,7 @@
   >
     <template v-if="isPluginFound">
       <div class="overview-main">
-        <div
-          class="overview-fleft overview-fleft-plugin"
-          :style="{ top: `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 52 : 52}px` }"
-        >
+        <div class="overview-fleft overview-fleft-plugin">
           <plugin-quick-nav ref="quickNav" />
           <div
             style="height: 100%"

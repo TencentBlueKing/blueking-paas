@@ -671,9 +671,6 @@ export default {
     isEnglishEnv() {
       return this.localLanguage === 'en';
     },
-    isShowNotice() {
-      return this.$store.state.isShowNotice;
-    },
     filterTips() {
       return FILTER_TIP[this.sortValue];
     },

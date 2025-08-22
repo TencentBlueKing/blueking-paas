@@ -111,7 +111,6 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
-      minHeight: 700,
       isAppFound: true,
       appInfo: {
         userType: '',
@@ -148,10 +147,6 @@ export default {
     },
     routeName() {
       return this.$route.name;
-    },
-    // 是否显示通知中心
-    isShowNotice() {
-      return this.$store.state.isShowNotice;
     },
     // 是否正在迁移中
     isMigrating() {
@@ -291,15 +286,6 @@ export default {
     this.initNavInfo();
   },
   mounted() {
-    // 通知中心高度
-    const NOTICE_HEIGHT = this.isShowNotice ? this.GLOBAL.NOTICE_HEIGHT : 0;
-    const HEADER_HEIGHT = 50;
-    const FOOTER_HEIGHT = 0;
-    const winHeight = window.innerHeight;
-    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT - NOTICE_HEIGHT;
-    if (contentHeight > this.minHeight) {
-      this.minHeight = contentHeight;
-    }
     document.body.className = 'ps-app-detail';
   },
   beforeDestroy() {

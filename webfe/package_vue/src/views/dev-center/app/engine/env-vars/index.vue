@@ -1318,8 +1318,7 @@ export default {
 @import '~@/assets/css/mixins/ellipsis.scss';
 .env-container {
   background: #fff;
-  padding-left: 24px;
-  padding-right: 24px;
+  padding: 0 24px 24px;
   margin-top: 16px;
 }
 .variable-instruction {

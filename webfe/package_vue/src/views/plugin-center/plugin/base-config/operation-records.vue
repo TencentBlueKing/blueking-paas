@@ -247,9 +247,6 @@ export default {
 
 <style lang="scss" scoped>
 .operation-records {
-  .app-container {
-    margin: 0 auto !important;
-  }
   .record-main {
     padding: 24px;
     .tools {

@@ -156,4 +156,5 @@ class DevSandboxUserSettings(OwnerTimestampedModel):
     """沙箱用户使用偏好"""
 
     owner = BkUserField(unique=True, help_text="沙箱绑定用户")
+    tenant_id = tenant_id_field_factory()
     code_server_settings = models.JSONField(help_text="用户沙箱 IDE 配置", default=dict)

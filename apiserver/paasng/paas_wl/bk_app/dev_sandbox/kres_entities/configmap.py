@@ -47,11 +47,13 @@ class DevSandboxConfigMap(AppEntity):
 
         try:
             # 从 db 中获取用户偏好配置
-            db_sandbox = DevSandboxModel.objects.get(code=dev_sandbox.code)
-            user_settings = DevSandboxUserSettings.objects.get(owner=db_sandbox.owner).code_server_settings
+            sandbox = DevSandboxModel.objects.get(code=dev_sandbox.code)
+            user_settings = DevSandboxUserSettings.objects.get(owner=sandbox.owner).code_server_settings
         except DevSandboxUserSettings.DoesNotExist:
             user_settings = {}
 
+        # https://code.visualstudio.com/docs/configure/themes#_color-themes
+        # https://code.visualstudio.com/docs/configure/themes#_automatically-switch-based-on-os-color-scheme
         data = {
             "settings.json": json.dumps(
                 {

@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Dict
 
 import requests
 from attr import define, field
+from rest_framework import status
 
 from paas_wl.bk_app.applications.models import WlApp
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
@@ -44,6 +45,7 @@ from paas_wl.bk_app.dev_sandbox.kres_entities import (
 from paas_wl.bk_app.dev_sandbox.names import get_dev_sandbox_ingress_name, get_dev_sandbox_name
 from paas_wl.infras.resources.kube_res.base import AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
+from paasng.accessories.dev_sandbox.exceptions import DevSandboxApiException
 from paasng.accessories.dev_sandbox.models import DevSandboxUserSettings
 from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleName
@@ -117,7 +119,7 @@ class DevSandboxController:
 
     def delete(self):
         """通过直接删除命名空间的方式, 销毁 dev sandbox 服务，销毁沙箱前保存用户的 settings 配置"""
-        self._save_user_settings()
+        # self._save_user_settings()
         ns_handler = NamespacesHandler.new_by_app(self.wl_app)
         ns_handler.delete(namespace=self.wl_app.namespace)
 
@@ -186,20 +188,27 @@ class DevSandboxController:
         raise BuilderDoesNotSupportDevSandbox(f"module {mgr.module.name} does not support dev sandbox")
 
     def _save_user_settings(self):
-        """通过 Ingress 访问沙箱 API"""
+        """保存用户 settings 到 db"""
         dev_sandbox_detail = self.get_detail()
-
-        # 通过沙箱域名访问 API
-        url = f"http://{dev_sandbox_detail.urls.devserver}settings"
         headers = {"Authorization": f"Bearer {self.dev_sandbox.token}"}
 
-        # 调用 devserver API 获取 settings.json
-        response = requests.get(url, headers=headers)
+        # 沙箱相关域名无法确定协议，因此遍历 http 和 https
+        for protocol in ["https", "http"]:
+            url = f"{protocol}://{dev_sandbox_detail.urls.devserver}settings"
+            response = requests.get(url, headers=headers)
 
-        # 保存 settings.json
-        DevSandboxUserSettings.objects.update_or_create(
-            owner=self.dev_sandbox.owner, defaults={"code_server_settings": response.json()}
-        )
+            # 正常响应
+            if response.status_code == status.HTTP_200_OK:
+                # 保存 settings.json
+                DevSandboxUserSettings.objects.update_or_create(
+                    owner=self.dev_sandbox.owner,
+                    tenant_id=self.dev_sandbox.tenant_id,
+                    defaults={"code_server_settings": response.json()},
+                )
+                return
+
+        # 所有协议都失败（API 请求错误）
+        raise DevSandboxApiException("Failed to access dev sandbox settings API via both HTTP and HTTPS protocols")
 
 
 class DevWlAppConstructor:

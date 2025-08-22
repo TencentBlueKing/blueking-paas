@@ -193,7 +193,7 @@ class DevSandboxController:
         headers = {"Authorization": f"Bearer {self.dev_sandbox.token}"}
 
         # 沙箱相关域名无法确定协议，因此遍历 http 和 https
-        for protocol in ["https", "http"]:
+        for protocol in ["http", "https"]:
             url = f"{protocol}://{dev_sandbox_detail.urls.devserver}settings"
             response = requests.get(url, headers=headers)
 

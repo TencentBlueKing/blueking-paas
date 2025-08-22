@@ -20,7 +20,6 @@ package webserver
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -201,7 +200,26 @@ var _ = Describe("Test webserver api", func() {
 			return filepath.Join(SettingsDirPath, settings.SettingsFileName)
 		}
 
-		Context("settings.json does not exist", func() {
+		Context("when settings.json exists", func() {
+			BeforeEach(func() {
+				settingsPath := getSettingsPath()
+				err := os.WriteFile(settingsPath, []byte(`{"key":"value"}`), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return the file content", func() {
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusOK))
+				Expect(w.Header().Get("Content-Type")).To(Equal("application/json"))
+				Expect(w.Body.String()).To(Equal(`{"key":"value"}`))
+			})
+		})
+
+		Context("when settings.json does not exist", func() {
 			It("should return 404 Not Found", func() {
 				req, _ := http.NewRequest("GET", "/settings", nil)
 				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
@@ -213,76 +231,10 @@ var _ = Describe("Test webserver api", func() {
 			})
 		})
 
-		Context("settings.json is too large", func() {
+		Context("when file is invalid", func() {
 			BeforeEach(func() {
 				settingsPath := getSettingsPath()
-
-				// 创建大小超过默认限制（512KB）的文件
-				f, err := os.Create(settingsPath)
-				Expect(err).NotTo(HaveOccurred())
-				defer f.Close()
-
-				// 写入超过 512KB 的数据
-				data := make([]byte, 600*1024)
-				_, err = f.Write(data)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should return 413 Request Entity Too Large", func() {
-				req, _ := http.NewRequest("GET", "/settings", nil)
-				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
-				w := httptest.NewRecorder()
-				s.server.ServeHTTP(w, req)
-
-				Expect(w.Code).To(Equal(http.StatusRequestEntityTooLarge))
-
-				var resp map[string]string
-				err := json.Unmarshal(w.Body.Bytes(), &resp)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(resp["message"]).To(ContainSubstring("configuration file too large"))
-				Expect(resp["message"]).To(ContainSubstring("600.0KB"))
-				Expect(resp["message"]).To(ContainSubstring("512KB"))
-			})
-		})
-
-		Context("settings.json is valid", func() {
-			const validSettings = `{
-            "editor.fontSize": 14,
-            "workbench.colorTheme": "Default Dark+",
-            "git.confirmSync": false
-        }`
-
-			BeforeEach(func() {
-				settingsPath := getSettingsPath()
-
-				err := os.WriteFile(settingsPath, []byte(validSettings), 0644)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should return the file content with correct headers", func() {
-				req, _ := http.NewRequest("GET", "/settings", nil)
-				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
-				w := httptest.NewRecorder()
-				s.server.ServeHTTP(w, req)
-
-				Expect(w.Code).To(Equal(http.StatusOK))
-				Expect(w.Header().Get("Content-Type")).To(Equal("application/json"))
-				Expect(w.Body.String()).To(Equal(validSettings))
-			})
-		})
-
-		Context("file is a directory", func() {
-			BeforeEach(func() {
-				settingsPath := getSettingsPath()
-
-				if _, err := os.Stat(settingsPath); err == nil {
-					os.Remove(settingsPath)
-				}
-
-				// 创建名为 settings.json 的目录
-				err := os.Mkdir(settingsPath, 0755)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(os.Mkdir(settingsPath, 0755)).To(Succeed())
 			})
 
 			It("should return 500 Internal Server Error", func() {

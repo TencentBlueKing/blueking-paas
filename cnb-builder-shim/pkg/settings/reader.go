@@ -19,7 +19,7 @@
 package settings
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -54,17 +54,17 @@ func (r *Reader) Read() ([]byte, error) {
 
 	info, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("configuration file not found")
+		return nil, errors.Errorf("configuration file not found")
 	}
 
 	fileSizeKB := float64(info.Size()) / 1024
 	if info.Size() > maxSizeBytes {
-		return nil, fmt.Errorf("configuration file too large (%.1fKB > %dKB)", fileSizeKB, maxSizeKB)
+		return nil, errors.Errorf("configuration file too large (%.1fKB > %dKB)", fileSizeKB, maxSizeKB)
 	}
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+		return nil, errors.Wrapf(err, "failed to read file %s", filePath)
 	}
 
 	return content, nil

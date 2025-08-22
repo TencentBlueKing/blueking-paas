@@ -208,7 +208,7 @@ var _ = Describe("Test webserver api", func() {
 				s.server.ServeHTTP(w, req)
 
 				Expect(w.Code).To(Equal(http.StatusNotFound))
-				Expect(w.Body.String()).To(ContainSubstring("配置文件不存在"))
+				Expect(w.Body.String()).To(ContainSubstring("Configuration file not found"))
 			})
 		})
 
@@ -239,7 +239,7 @@ var _ = Describe("Test webserver api", func() {
 				err := json.Unmarshal(w.Body.Bytes(), &resp)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(resp["message"]).To(ContainSubstring("配置文件过大"))
+				Expect(resp["message"]).To(ContainSubstring("Configuration file too large"))
 				Expect(resp["message"]).To(ContainSubstring("600.0KB"))
 				Expect(resp["message"]).To(ContainSubstring("512KB"))
 			})
@@ -291,7 +291,7 @@ var _ = Describe("Test webserver api", func() {
 				s.server.ServeHTTP(w, req)
 
 				Expect(w.Code).To(Equal(http.StatusInternalServerError))
-				Expect(w.Body.String()).To(ContainSubstring("读取文件失败"))
+				Expect(w.Body.String()).To(ContainSubstring("Failed to read file"))
 			})
 		})
 	})

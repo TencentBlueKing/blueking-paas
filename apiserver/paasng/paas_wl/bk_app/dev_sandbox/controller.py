@@ -188,7 +188,7 @@ class DevSandboxController:
         raise BuilderDoesNotSupportDevSandbox(f"module {mgr.module.name} does not support dev sandbox")
 
     def _save_user_settings(self):
-        """保存用户 settings 到 db"""
+        """保存用户 settings 配置"""
         dev_sandbox_detail = self.get_detail()
         headers = {"Authorization": f"Bearer {self.dev_sandbox.token}"}
 
@@ -197,7 +197,6 @@ class DevSandboxController:
             url = f"{protocol}://{dev_sandbox_detail.urls.devserver}settings"
             response = requests.get(url, headers=headers)
 
-            # 正常响应
             if response.status_code == status.HTTP_200_OK:
                 # 保存 settings.json
                 DevSandboxUserSettings.objects.update_or_create(
@@ -207,7 +206,6 @@ class DevSandboxController:
                 )
                 return
 
-        # 所有协议都失败（API 请求错误）
         raise DevSandboxApiException("Failed to access dev sandbox settings API via both HTTP and HTTPS protocols")
 
 

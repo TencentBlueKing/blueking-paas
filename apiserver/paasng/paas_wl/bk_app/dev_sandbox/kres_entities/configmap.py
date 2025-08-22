@@ -46,7 +46,7 @@ class DevSandboxConfigMap(AppEntity):
         cfg_mp_name = f"{dev_sandbox.name}-code-editor-config"
 
         try:
-            # 从 db 中获取用户偏好配置
+            # 获取用户偏好配置
             sandbox = DevSandboxModel.objects.get(code=dev_sandbox.code)
             user_settings = DevSandboxUserSettings.objects.get(owner=sandbox.owner).code_server_settings
         except DevSandboxUserSettings.DoesNotExist:

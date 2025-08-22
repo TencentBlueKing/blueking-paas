@@ -40,6 +40,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/settings"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
@@ -431,46 +432,25 @@ func HealthzHandler() gin.HandlerFunc {
 var _ devsandbox.DevWatchServer = (*WebServer)(nil)
 
 var (
-	// DefaultMaxSizeKB 默认最大文件大小限制（KB）
-	DefaultMaxSizeKB = 512
-	SettingsDirPath  = "/coder/code-server/User"
-	SettingsFileName = "settings.json"
-	SizeEnvVar       = "MAX_SETTINGS_SIZE_KB"
+	SettingsDirPath = "/coder/code-server/User"
 )
 
 // SettingsHandler 获取 settings.json
 func SettingsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 通过环境变量获取 settings 最大范围
-		maxSizeKB := DefaultMaxSizeKB
-		if envSize, exists := os.LookupEnv(SizeEnvVar); exists {
-			if parsedSize, err := strconv.Atoi(envSize); err == nil && parsedSize > 0 {
-				maxSizeKB = parsedSize
-			}
-		}
-		maxSizeBytes := int64(maxSizeKB) * 1024
 
-		filePath := filepath.Join(SettingsDirPath, SettingsFileName)
+		reader := settings.NewReader(SettingsDirPath)
+		content, err := reader.Read()
 
-		info, err := os.Stat(filePath)
-		if os.IsNotExist(err) {
-			c.JSON(http.StatusNotFound, gin.H{"message": "Configuration file not found"})
-			return
-		}
-
-		fileSizeKB := float64(info.Size()) / 1024
-		if info.Size() > maxSizeBytes {
-			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-				"message": fmt.Sprintf("Configuration file too large (%.1fKB > %dKB)", fileSizeKB, maxSizeKB),
-			})
-			return
-		}
-
-		content, err := os.ReadFile(filePath)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "Failed to read file: " + err.Error(),
-			})
+			switch {
+			case err.Error() == "configuration file not found":
+				c.JSON(http.StatusNotFound, gin.H{"message": err.Error()})
+			case strings.Contains(err.Error(), "configuration file too large"):
+				c.JSON(http.StatusRequestEntityTooLarge, gin.H{"message": err.Error()})
+			default:
+				c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+			}
 			return
 		}
 

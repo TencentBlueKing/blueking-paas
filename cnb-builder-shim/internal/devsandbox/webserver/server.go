@@ -454,14 +454,14 @@ func SettingsHandler() gin.HandlerFunc {
 
 		info, err := os.Stat(filePath)
 		if os.IsNotExist(err) {
-			c.JSON(http.StatusNotFound, gin.H{"message": "配置文件不存在"})
+			c.JSON(http.StatusNotFound, gin.H{"message": "Configuration file not found"})
 			return
 		}
 
 		fileSizeKB := float64(info.Size()) / 1024
 		if info.Size() > maxSizeBytes {
 			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-				"message": fmt.Sprintf("配置文件过大 (%.1fKB > %dKB)", fileSizeKB, maxSizeKB),
+				"message": fmt.Sprintf("Configuration file too large (%.1fKB > %dKB)", fileSizeKB, maxSizeKB),
 			})
 			return
 		}
@@ -469,7 +469,7 @@ func SettingsHandler() gin.HandlerFunc {
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "读取文件失败: " + err.Error(),
+				"message": "Failed to read file: " + err.Error(),
 			})
 			return
 		}

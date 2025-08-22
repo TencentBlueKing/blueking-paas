@@ -311,7 +311,7 @@ class DeployOptions(AuditedModel):
 
     # 使用外键关联, 以便后续扩展成按照环境/模块, 单独管理部署选项
     application = models.ForeignKey(
-        "applications.Application", on_delete=models.CASCADE, related_name="deploy_options"
+        "applications.Application", on_delete=models.CASCADE, related_name="deploy_options", db_constraint=False
     )
 
     # 枚举值 -> ReplicasPolicy. null 表示未设置

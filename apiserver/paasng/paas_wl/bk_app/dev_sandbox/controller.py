@@ -119,7 +119,7 @@ class DevSandboxController:
 
     def delete(self):
         """通过直接删除命名空间的方式, 销毁 dev sandbox 服务，销毁沙箱前保存用户的 settings 配置"""
-        # self._save_user_settings()
+        self._save_user_settings()
         ns_handler = NamespacesHandler.new_by_app(self.wl_app)
         ns_handler.delete(namespace=self.wl_app.namespace)
 

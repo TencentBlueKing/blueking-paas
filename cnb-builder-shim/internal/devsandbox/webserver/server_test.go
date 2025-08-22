@@ -78,11 +78,6 @@ var _ = Describe("Test webserver api", func() {
 	})
 
 	Describe("deploy", func() {
-		// 这里需要在单测中覆盖包级变量来模拟 settings 路径，因为：
-		// 1. settings API 中的 "/coder/code-server/User" 是写死的，而根目录 "/" 是只读的：'mkdir /coder: read-only file system'
-		// 2. 在单测中普通用户没有权限创建 /coder 这样的顶级目录，因此需要使用临时目录来模拟固定路径
-		// 3. 由于 settings.json 的路径固定，所以需要通过覆盖包级变量来设置 API 读取的路径
-
 		Context("deploy with env_vars", func() {
 			testCases := []struct {
 				name      string
@@ -175,6 +170,11 @@ var _ = Describe("Test webserver api", func() {
 	})
 
 	Describe("get settings.json", func() {
+		// 这里需要在单测中覆盖包级变量来模拟 settings 路径，因为：
+		// 1. settings API 中的 "/coder/code-server/User" 是写死的，而根目录 "/" 是只读的：'mkdir /coder: read-only file system'
+		// 2. 在单测中普通用户没有权限创建 /coder 这样的顶级目录，因此需要使用临时目录来模拟固定路径
+		// 3. 由于 settings.json 的路径固定，所以需要通过覆盖包级变量来设置 API 读取的路径
+
 		var (
 			tmpSettingsDir      string
 			originalSettingsDir string

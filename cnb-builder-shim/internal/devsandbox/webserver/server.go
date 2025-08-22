@@ -438,10 +438,9 @@ var (
 // SettingsHandler 获取 settings.json
 func SettingsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		reader := settings.NewReader(SettingsDirPath)
-		content, err := reader.Read()
 
+		content, err := reader.Read()
 		if err != nil {
 			switch {
 			case err.Error() == "configuration file not found":

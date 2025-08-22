@@ -28,7 +28,7 @@ from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.bkapp_model.entities.proc_env_overlays import ReplicasOverlay
 from paasng.platform.bkapp_model.entities.v1alpha2 import BkAppEnvOverlay
-from paasng.platform.bkapp_model.fieldlock.replicas import generate_locked_replicas_values
+from paasng.platform.bkapp_model.form_overrides.replicas import generate_replica_overrides
 from paasng.platform.declarative.application.constants import APP_CODE_FIELD, CNATIVE_APP_CODE_FIELD
 from paasng.platform.declarative.application.controller import AppDeclarativeController
 from paasng.platform.declarative.application.resources import ApplicationDesc, get_application
@@ -49,6 +49,7 @@ from paasng.platform.declarative.serializers import (
     validate_desc,
     validate_procfile_procs,
 )
+from paasng.platform.engine.constants import ReplicasPolicy
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.utils.structure import NOTSET
@@ -57,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_desc_handler(json_data: Dict) -> "DescriptionHandler":
-    """Get the handler for handling description data, it handle the app
+    """Get the handler for handling description data, it handles the app
     level logics, see `get_deploy_desc_handler` for deployment level handler.
 
     :param json_data: The description data in dict format.
@@ -359,9 +360,8 @@ class DefaultDeployDescHandler:
     def handle(self, deployment: Deployment) -> DeployHandleResult:
         desc = self.desc_getter(self.json_data, deployment.app_environment.module.name)
 
-        # 锁定副本数部署
-        if deployment.advanced_options.lock_replicas:
-            adjust_desc_to_lock_replicas(desc, deployment.app_environment)
+        if deployment.advanced_options.replicas_policy == ReplicasPolicy.WEB_FORM_PRIORITY:
+            apply_form_replicas_overrides(desc, deployment.app_environment)
 
         procfile_procs = validate_procfile_procs(self.procfile_data) if self.procfile_data else None
         return DeploymentDeclarativeController(deployment).perform_action(desc, procfile_procs)
@@ -394,31 +394,31 @@ def deploy_desc_getter_v3(json_data: Dict, module_name: str) -> DeploymentDesc:
     return validate_desc(deploy_spec_v3.DeploymentDescSLZ, desc_data)
 
 
-def adjust_desc_to_lock_replicas(desc: DeploymentDesc, env: ModuleEnvironment):
-    """调整部署描述对象中与 replicas 相关的所有字段. 调整后的描述对象在实际部署时, 不会更新线上副本数
+def apply_form_replicas_overrides(desc: DeploymentDesc, env: ModuleEnvironment):
+    """实施表单副本数覆盖策略，确保部署描述对象在部署时, 以表单配置的副本数为准
 
     :param desc: the deployment desc object which will be adjusted
     :param env: The environment object
     """
-    locked_values = generate_locked_replicas_values(
+    replica_overrides = generate_replica_overrides(
         env.module, process_names=[proc.name for proc in desc.spec.processes]
     )
 
-    if not locked_values:
+    if not replica_overrides:
         return
 
     # 1. 设置 spec.processes[].replicas
     for proc in desc.spec.processes:
-        if proc.name in locked_values:
-            proc.replicas = locked_values[proc.name]
-            locked_values.pop(proc.name)
+        if proc.name in replica_overrides:
+            proc.replicas = replica_overrides[proc.name]
+            replica_overrides.pop(proc.name)
 
     # 2. 设置 spec.env_overlay.replicas
     env_overlay_replicas_maps = {}
     if desc.spec.env_overlay and desc.spec.env_overlay.replicas:  # type: ignore[union-attr]
         env_overlay_replicas_maps = {(r.process, r.env_name): r.count for r in desc.spec.env_overlay.replicas}  # type: ignore[union-attr]
 
-    env_overlay_replicas_maps.update(locked_values)  # type: ignore[arg-type]
+    env_overlay_replicas_maps.update(replica_overrides)  # type: ignore[arg-type]
 
     env_overlay_replicas_maps = {
         (process, env_name): count

@@ -29,14 +29,14 @@ from paasng.platform.applications.constants import AppEnvironment
 from paasng.platform.applications.models import ModuleEnvironment
 from paasng.platform.bkapp_model.constants import ImagePullPolicy
 from paasng.platform.bkapp_model.entities import AutoscalingConfig, ProbeSet
-from paasng.platform.engine.constants import BuildStatus, JobStatus
+from paasng.platform.engine.constants import BuildStatus, JobStatus, ReplicasPolicy
 from paasng.platform.engine.models.base import OperationVersionBase
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
 from paasng.platform.modules.models.deploy_config import HookList
 from paasng.platform.sourcectl.constants import VersionType
 from paasng.platform.sourcectl.models import VersionInfo
-from paasng.utils.models import make_json_field, make_legacy_json_field
+from paasng.utils.models import AuditedModel, make_json_field, make_legacy_json_field
 
 logger = logging.getLogger(__name__)
 
@@ -68,14 +68,14 @@ class AdvancedOptions:
     image_pull_policy: ImagePullPolicy = ImagePullPolicy.IF_NOT_PRESENT
     # 只构建, 不发布
     build_only: bool = False
-    # 是否锁定副本数. 锁定后, 部署时, 不会更改线上副本数
-    lock_replicas: bool = False
     # 构建的镜像 tag, 将覆盖默认规则
     special_tag: Optional[str] = None
     # 直接发布历史 build
     build_id: Optional[str] = None
     # 触发消息
     invoke_message: Optional[str] = None
+    # 副本数优先策略. 默认描述文件优先
+    replicas_policy: ReplicasPolicy = ReplicasPolicy.APP_DESC_PRIORITY
 
 
 @dataclass
@@ -304,3 +304,17 @@ class Deployment(OperationVersionBase):
     def get_procfile(self) -> Dict[str, str]:
         """Procfile is a dict containing a process type and its corresponding command"""
         return {proc.name: proc.command for proc in self.get_processes()}
+
+
+class DeployOptions(AuditedModel):
+    """应用的部署选项"""
+
+    # 使用外键关联, 以便后续扩展成按照环境/模块, 单独管理部署选项
+    application = models.ForeignKey(
+        "applications.Application", on_delete=models.CASCADE, related_name="deploy_options"
+    )
+
+    # 枚举值 -> ReplicasPolicy. null 表示未设置
+    replicas_policy = models.CharField(help_text="副本数的优先策略", max_length=20, null=True)
+
+    tenant_id = tenant_id_field_factory()

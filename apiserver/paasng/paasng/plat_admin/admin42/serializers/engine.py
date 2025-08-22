@@ -15,69 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Optional
-
-from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
-from paas_wl.infras.cluster.shim import EnvClusterService
-from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.models.deployment import Deployment
-from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
-from paasng.platform.engine.serializers import OperationSLZ as BaseModuleEnvironmentOperationsSLZ
-from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
-
-
-class ModuleEnvironmentOperationsSLZ(BaseModuleEnvironmentOperationsSLZ):
-    operator = UserNameField()
-    created_humanized = HumanizeDateTimeField(source="created")
-
-    class Meta:
-        model = ModuleEnvironmentOperations
-        fields = [
-            "id",
-            "status",
-            "operator",
-            "created",
-            "operation_type",
-            "offline_operation",
-            "deployment",
-            "created_humanized",
-        ]
-
-
-class EnvironmentSLZ(serializers.ModelSerializer):
-    latest_operation = serializers.SerializerMethodField()
-    latest_successful_operation = serializers.SerializerMethodField()
-    cluster_name = serializers.SerializerMethodField()
-
-    @staticmethod
-    def get_latest_operation(obj: ModuleEnvironment):
-        try:
-            return ModuleEnvironmentOperationsSLZ(obj.module_operations.latest("created")).data
-        except ModuleEnvironmentOperations.DoesNotExist:
-            return None
-
-    @staticmethod
-    def get_latest_successful_operation(obj: ModuleEnvironment):
-        try:
-            return ModuleEnvironmentOperationsSLZ(
-                obj.module_operations.filter(status=JobStatus.SUCCESSFUL.value).latest("created")
-            ).data
-        except ModuleEnvironmentOperations.DoesNotExist:
-            return None
-
-    @staticmethod
-    def get_cluster_name(env: ModuleEnvironment) -> Optional[str]:
-        try:
-            return EnvClusterService(env).get_cluster_name()
-        except ObjectDoesNotExist:
-            return None
-
-    class Meta:
-        model = ModuleEnvironment
-        fields = "__all__"
 
 
 class DeploymentForListSLZ(serializers.ModelSerializer):

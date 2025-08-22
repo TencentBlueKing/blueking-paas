@@ -19,6 +19,7 @@
 from typing import List, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -203,10 +204,10 @@ class ApplicationEnvironmentSLZ(serializers.Serializer):
         if not last_op:
             return None
         operator = last_op.operator.username
-        updated = last_op.created.strftime("%Y-%m-%d %H:%M:%S")
+        updated = timezone.localtime(last_op.created).strftime("%Y-%m-%d %H:%M:%S")
         operation_type = OperationTypes.get_choice_label(last_op.operation_type)
         status = JobStatus.get_choice_label(last_op.status)
-        message = _("于{time}{operation}{status}").format(time=updated, operation=operation_type, status=status)
+        message = _("于 {time} {operation}{status}").format(time=updated, operation=operation_type, status=status)
 
         return {"operator": operator, "message": message}
 

@@ -19,8 +19,9 @@
 package webserver
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -140,68 +141,26 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 // TODO 将本地源码部署的方式与请求传输源码文件的方式进行接口上的拆分
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		envVars := map[string]string{}
-		if raw := c.PostForm("env_vars"); raw != "" {
-			// env_vars 非空，解析自定义环境变量
-			if err := json.Unmarshal([]byte(raw), &envVars); err != nil {
-				c.JSON(
-					http.StatusBadRequest,
-					gin.H{"message": fmt.Sprintf("invalid env_vars format: %s", err.Error())},
-				)
-				return
-			}
-		}
-
 		var srcFilePath string
+		envVars := map[string]string{}
+
 		switch config.G.SourceCode.FetchMethod {
 		case config.HTTP:
-			// 创建临时文件夹
-			tmpDir, err := os.MkdirTemp("", "source-*")
+			// 处理文件上传
+			tmpSrcFilePath, tmpDir, err := processUploadedFile(c, s.env.UploadDir)
 			if err != nil {
-				c.JSON(
-					http.StatusInternalServerError,
-					gin.H{"message": fmt.Sprintf("create tmp dir err: %s", err.Error())},
-				)
+				c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 				return
 			}
+			srcFilePath = tmpSrcFilePath
 			defer os.RemoveAll(tmpDir)
-
-			file, err := c.FormFile("file")
-			if err != nil {
-				c.JSON(
-					http.StatusInternalServerError,
-					gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())},
-				)
-				return
-			}
-
-			fileName := filepath.Base(file.Filename)
-			dst := path.Join(s.env.UploadDir, fileName)
-			if len(dst) > 0 && dst[len(dst)-1] == '.' {
-				c.JSON(
-					http.StatusBadRequest,
-					gin.H{"message": fmt.Sprintf("invalid file name: %s", file.Filename)},
-				)
-				return
-			}
-
-			if err = c.SaveUploadedFile(file, dst); err != nil {
-				c.JSON(
-					http.StatusInternalServerError,
-					gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())},
-				)
-				return
-			}
-			// 解压文件到临时目录
-			if err = utils.Unzip(dst, tmpDir); err != nil {
-				c.JSON(
-					http.StatusInternalServerError,
-					gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())},
-				)
-				return
-			}
-			srcFilePath = path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
 		case config.BkRepo:
+			var err error
+			envVars, err = parseEnvVarsFromBody(c)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+				return
+			}
 			srcFilePath = config.G.SourceCode.Workspace
 		case config.GIT:
 			fallthrough
@@ -428,3 +387,57 @@ func HealthzHandler() gin.HandlerFunc {
 }
 
 var _ devsandbox.DevWatchServer = (*WebServer)(nil)
+
+// 处理文件上传
+func processUploadedFile(c *gin.Context, uploadDir string) (srcFilePath, tmpDir string, err error) {
+	// 创建临时文件夹
+	tmpDir, err = os.MkdirTemp("", "source-*")
+	if err != nil {
+		return "", "", errors.Wrap(err, "failed to create temporary directory")
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		return "", tmpDir, errors.Wrap(err, "retrieve uploaded file failed")
+	}
+
+	fileName := filepath.Base(file.Filename)
+	dst := path.Join(uploadDir, fileName)
+	if len(dst) > 0 && dst[len(dst)-1] == '.' {
+		return "", tmpDir, errors.Errorf("invalid file name: %s", fileName)
+	}
+
+	if err = c.SaveUploadedFile(file, dst); err != nil {
+		return "", tmpDir, errors.Wrapf(err, "save uploaded file to %s failed", dst)
+	}
+
+	// 解压文件到临时目录
+	if err = utils.Unzip(dst, tmpDir); err != nil {
+		return "", tmpDir, errors.Wrapf(err, "unzip file %s to %s failed", dst, tmpDir)
+	}
+
+	// 返回源码目录路径和临时目录路径
+	return path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName))), tmpDir, nil
+}
+
+// 从 json body 中解析环境变量
+func parseEnvVarsFromBody(c *gin.Context) (map[string]string, error) {
+	var wrapper struct {
+		EnvVars map[string]string `json:"env_vars"`
+	}
+
+	if err := c.ShouldBindJSON(&wrapper); err != nil {
+		// 处理空请求体
+		if err == io.EOF {
+			return map[string]string{}, nil
+		}
+		return nil, errors.Wrap(err, "failed to parse env vars")
+	}
+
+	// 如果 EnvVars 为 nil，初始化为空 map
+	if wrapper.EnvVars == nil {
+		return map[string]string{}, nil
+	}
+
+	return wrapper.EnvVars, nil
+}

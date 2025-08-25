@@ -15,6 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+
+# Moby Distribution upstream repo/version for traceability
+# moby_distribution
+# repo: https://github.com/shabbywu/distribution
+# version: 0.8.2
+
 from paasng.utils.moby_distribution.registry.client import (
     DockerRegistryV2Client,
     default_client,

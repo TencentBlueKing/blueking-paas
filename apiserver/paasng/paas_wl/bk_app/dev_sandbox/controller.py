@@ -210,7 +210,7 @@ class DevSandboxController:
                 )
                 return
 
-        raise DevSandboxApiException("Failed to access dev sandbox settings API via both HTTP and HTTPS protocols")
+        raise DevSandboxApiException("failed to access dev sandbox settings API via both HTTP and HTTPS protocols")
 
 
 class DevWlAppConstructor:

@@ -119,7 +119,11 @@ class DevSandboxController:
 
     def delete(self):
         """通过直接删除命名空间的方式, 销毁 dev sandbox 服务，销毁沙箱前保存用户的 settings 配置"""
-        self._save_user_settings()
+        try:
+            self._save_user_settings()
+        except Exception:
+            logger.exception("failed to save user settings")
+
         ns_handler = NamespacesHandler.new_by_app(self.wl_app)
         ns_handler.delete(namespace=self.wl_app.namespace)
 
@@ -195,7 +199,7 @@ class DevSandboxController:
         # 沙箱相关域名无法确定协议，因此遍历 http 和 https
         for protocol in ["http", "https"]:
             url = f"{protocol}://{dev_sandbox_detail.urls.devserver}settings"
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=5)
 
             if response.status_code == status.HTTP_200_OK:
                 # 保存 settings.json

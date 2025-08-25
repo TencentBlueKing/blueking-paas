@@ -437,9 +437,9 @@ func SettingsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		reader := settings.NewReader(settings.SettingsDir)
 
-		settingsMap, err := reader.Read()
+		userSettings, err := reader.Read()
 		if err == nil {
-			c.JSON(http.StatusOK, settingsMap)
+			c.JSON(http.StatusOK, userSettings)
 			return
 		}
 

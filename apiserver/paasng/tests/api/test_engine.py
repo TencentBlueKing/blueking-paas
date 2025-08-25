@@ -26,6 +26,7 @@ from django_dynamic_fixture import G
 
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.engine.models.deployment import Deployment
+from paasng.platform.engine.utils.query import get_latest_deploy_options
 from paasng.platform.engine.workflow import DeploymentCoordinator
 from paasng.platform.environments.constants import EnvRoleOperation
 from paasng.platform.environments.models import EnvRoleProtection
@@ -257,3 +258,37 @@ class TestDeploymentViewSet:
         )
         assert resp.status_code == 400
         assert resp.json() == {"code": "CANNOT_DEPLOY_APP", "detail": "部署失败: 部署请求异常，请稍候再试"}
+
+
+class TestDeployOptionsViewSet:
+    @pytest.fixture
+    def deploy_options(self, bk_app):
+        return bk_app.deploy_options.create(replicas_policy="web_form_priority")
+
+    def test_create(self, api_client, bk_app):
+        assert bk_app.deploy_options.exists() is False
+
+        url = reverse("api.deploy_options", kwargs={"code": bk_app.code})
+        resp = api_client.post(url, data={"replicas_policy": "web_form_priority"})
+        assert resp.status_code == 200
+        assert resp.json() == {"replicas_policy": "web_form_priority"}
+        deploy_options = get_latest_deploy_options(bk_app)
+        assert deploy_options
+        assert deploy_options.replicas_policy == "web_form_priority"
+
+    def test_update(self, api_client, bk_app, deploy_options):
+        assert deploy_options.replicas_policy == "web_form_priority"
+
+        url = reverse("api.deploy_options", kwargs={"code": bk_app.code})
+        resp = api_client.post(url, data={"replicas_policy": "app_desc_priority"})
+        assert resp.status_code == 200
+        assert resp.json() == {"replicas_policy": "app_desc_priority"}
+        deploy_options = get_latest_deploy_options(bk_app)
+        assert deploy_options
+        assert deploy_options.replicas_policy == "app_desc_priority"
+
+    def test_get(self, api_client, bk_app, deploy_options):
+        url = reverse("api.deploy_options", kwargs={"code": bk_app.code})
+        resp = api_client.get(url)
+        assert resp.status_code == 200
+        assert resp.json() == {"replicas_policy": deploy_options.replicas_policy}

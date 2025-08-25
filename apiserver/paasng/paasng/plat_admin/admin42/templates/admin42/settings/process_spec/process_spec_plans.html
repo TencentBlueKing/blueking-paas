@@ -4,7 +4,7 @@
 
 {% block spec_plan_content %}
 <div id="spec-plan-list" style="width: 100%;" class="p20">
-    <bk-alert class="mb20" title="资源方案仅对“普通应用”生效，对“云原生应用”无效。请注意，调整后将影响所有已绑定的应用"></bk-alert>
+    <bk-alert class="mb20" title="资源方案仅对“普通应用”生效，对“云原生应用”无。请注意，调整后将影响所有已绑定的应用"></bk-alert>
 
     <bk-button :theme="'primary'" :title="'新建方案'" class="mr10" @click="handleCreate">
         新建方案
@@ -37,7 +37,7 @@
                                     >
                                         <template slot-scope="item">
                                             <div style="display: flex;">
-                                                <span style="width: 33%;"><a :href="AppDetailUrl(item.data.app_code)">$[ item.data.app_code ]</a></span>
+                                                <span style="width: 33%;">$[ item.data.app_code ]</span>
                                                 <span style="width: 33%;">$[ item.data.target_replicas ]</span>
                                                 <span style="width: 33%;">$[ item.data.target_status ]</span>
                                             </div>
@@ -213,7 +213,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     row: undefined
                 },
                 ResourceSchema,
-                AppBaseUrl: '{% url "admin.applications.engine.process_specs" "--placeholder--" %}',
                 bindingAppListMap: {
 
                 }

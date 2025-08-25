@@ -9,7 +9,8 @@
 {% endblock %}
 
 {% block main_content %}
-<div class="function-intro-list">
+
+<div>
     <ul id="function-intro-list" class="intro-list"></ul>
 </div>
 {% endblock %}
@@ -27,7 +28,7 @@
                     name: '运行时管理',
                     icon: 'icon-block-shape',
                     url: '{% url "admin.runtimes.buildpack.manage" %}',
-                    desc: '修改和调整应用基础镜像、构建包配置，由平台运维人员操作，大部分时候由平台的安装脚本完成初始化，无需调整；',
+                    desc: '管理应用运行时环境（包括基础镜像、构建工具等），该配置由平台初始化脚本自动维护；',
                     children: [
                         {
                             name: 'BuildPack 管理',
@@ -46,13 +47,13 @@
                 {
                     name: '应用资源方案',
                     icon: 'icon-block-shape',
-                    desc: '用于配置和管理应用的进程资源配额（如 CPU、内存等），支持为不同应用类型分配专属资源方案。通常由平台运维人员维护。',
+                    desc: '仅管理非云原生应用（1.6.0 之前版本创建）的进程资源配额',
                     url: '{% url "admin.process_spec_plan.manage" %}',
                 },
                 {
                     name: '智能顾问',
                     icon: 'icon-block-shape',
-                    desc: '为应用提供智能分析和优化建议，帮助提升运维效率。',
+                    desc: '为应用提供智能分析和优化建议，由平台的安装脚本完成初始化。',
                     url: "{% url 'admin.smart_advisor.documents.manage' %}",
                 },
                 {
@@ -65,7 +66,7 @@
                     {
                         name: '仪表盘模板配置',
                         icon: 'icon-block-shape',
-                        desc: '配置和管理应用仪表盘模板，提升数据可视化能力。',
+                        desc: '配置和管理应用仪表盘模板，该功能依赖监控套餐。',
                         url: "{% url 'admin.settings.dashboard_tmpl.manage' %}",
                     },
                     {
@@ -83,7 +84,7 @@
                 {
                     name: '应用运营评估',
                     icon: 'icon-block-shape',
-                    desc: '统计和分析应用运营数据，辅助决策和优化。',
+                    desc: '统计和分析应用运营数据，该功能依赖监控套餐。',
                     url: "{% url 'admin.applications.operation_evaluation.list' %}",
                 },
                 {
@@ -103,12 +104,6 @@
                     },
                     {% endif %}
                 {% endif %}
-                {
-                    name: '应用列表',
-                    icon: 'icon-block-shape',
-                    desc: '展示平台所有应用，支持快速检索和管理。',
-                    url: "{% url 'admin.applications.list' %}",
-                },
             ],
         },
         {% endif %}
@@ -136,14 +131,6 @@
 
 {% block main_script %}
 <style>
-    .function-intro-list {
-        margin: 32px 0;
-        padding: 24px 32px;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px 0 #e6e9f0;
-        min-width: 600px;
-    }
     .intro-main-title {
         font-size: 26px;
         font-weight: 700;
@@ -170,7 +157,7 @@
     }
     .intro-title {
         font-weight: bold;
-        font-size: 19px;
+        font-size: 16px;
         margin-bottom: 12px;
         color: #3a84ff;
         display: flex;
@@ -191,7 +178,7 @@
         color: #444;
         position: relative;
         padding-left: 22px;
-        font-size: 15px;
+        font-size: 14px;
         border-left: 2px solid #e1ecff;
         transition: background 0.2s;
     }
@@ -200,7 +187,7 @@
         color: #3a84ff;
         position: absolute;
         left: 0;
-        font-size: 13px;
+        font-size: 12px;
         top: 4px;
     }
     .intro-item b {

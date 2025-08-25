@@ -337,6 +337,20 @@ class DockerBuilder(BaseBuilder):
                 self.deployment.update_fields(bkapp_revision_id=bkapp_revision_id)
 
         with self.procedure_force_phase("解析 .dockerignore", phase=preparation_phase):
+            # 此处尝试读取项目 .dockerignore 文件，并将其内容传递到 compress_and_upload -> compress_directory_ext
+            # 函数中，以求在二次打包源码包时，忽略掉 ignore 文件中所定义的文件和目录。但是，这么做的原因并非出于
+            # 功能性——后续由其他组件负责的镜像打包过程（如 kaniko）也会妥善处置 ignore 文件，而是出于压缩包大
+            # 小以及性能方面（具体的优化程度待测试）的考虑。
+            #
+            # 但是，当前整个 .dockerignore 文件的处理逻辑（DockerIgnore / patternmacher.Pattern），实际有着
+            # 比较高的复杂度，其中大部分代码逻辑重写自 moby 的 Go 源码，所以，考虑到收益并不明确/突出的前提
+            # 下，保留目前解析 .dockerignore 和处理的逻辑实际上比较奢侈。
+            #
+            # 综上所述，未来可能：
+            #
+            # 1. 删除：完全删掉 apiserver 中对 .dockerignore 文件的支持和相关代码，不寻求缩小压缩包；
+            # 2. 保留但简化实现：采用 docker-py 库中的相关实现（PatternMatcher），来替代目前实现。
+            #
             dockerignore = get_dockerignore(deployment=self.deployment)
 
         with self.procedure_force_phase("上传仓库代码", phase=preparation_phase):

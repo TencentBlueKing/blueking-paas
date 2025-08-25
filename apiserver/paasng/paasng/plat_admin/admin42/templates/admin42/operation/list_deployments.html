@@ -5,14 +5,8 @@
 {% verbatim %}
 <div id="deployment-list" style="width: 100%;" class="p20">
     <bk-table :data="data">
-        <bk-table-column label="应用">
-            <template slot-scope="{ row }">
-                <a :href="appDetailUrl(row.f_application_id)">
-                    <strong>$[row.f_application_name]</strong>
-                    ($[row.f_application_id])
-                </a>
-            </template>
-        </bk-table-column>
+        <bk-table-column label="应用 ID" prop="f_application_id"></bk-table-column>
+        <bk-table-column label="应用名称" prop="f_application_name"></bk-table-column>
         <bk-table-column label="模块" prop="f_module_name"></bk-table-column>
         <bk-table-column label="环境" prop="f_environment"></bk-table-column>
         <bk-table-column label="状态（build/release）">
@@ -50,13 +44,9 @@
                 return {
                     data,
                     pagination,
-                    appBaseUrl: '{% url "admin.applications.detail.overview" "--placeholder--" %}',
                 }
             },
             methods: {
-                appDetailUrl(code) {
-                    return this.appBaseUrl.replace("--placeholder--", code)
-                },
                 friendlyTime: function (timestamp) {
                     return moment(timestamp).fromNow()
                 },

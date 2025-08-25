@@ -15,9 +15,25 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+
+from paasng.utils.basic import re_path
+
+from . import views
 
 urlpatterns = [
-    path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.build_smart.urls")),
+    re_path(
+        r"^api/tools/s-mart/upload/",
+        views.SmartBuilderViewSet.as_view({"post": "upload"}),
+        name="api.tools.s-mart.upload",
+    ),
+    re_path(
+        r"^api/tools/s-mart/build/",
+        views.SmartBuilderViewSet.as_view({"post": "build_smart"}),
+        name="api.tools.s-mart.build_smart",
+    ),
+    re_path(
+        r"^api/tools/s-mart/build/(?P<build_id>[^/]+)/interruptions/",
+        views.SmartBuilderViewSet.as_view({"post": "user_interrupt"}),
+        name="api.tools.s-mart.user_interrupt",
+    ),
 ]

@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 from django.conf import settings
 
-from paasng.misc.tools.app_desc import (
+from paasng.misc.tools.app_desc.app_desc import (
     transform_app_desc_spec2_to_spec3,
     transform_module_spec,
     transform_modules_section,

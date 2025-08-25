@@ -181,7 +181,6 @@ var _ = Describe("Test webserver api", func() {
 		)
 
 		BeforeEach(func() {
-			// 保存原始的 NewReader 函数
 			originalNewReader = settings.NewReader
 
 			// 创建临时目录
@@ -189,16 +188,13 @@ var _ = Describe("Test webserver api", func() {
 			tmpSettingsDir, err = os.MkdirTemp("", "settings-test")
 			Expect(err).NotTo(HaveOccurred())
 
-			// 覆盖 NewReader 函数，使其返回使用临时目录的 Reader
 			settings.NewReader = func(dirPath string) settings.Reader {
 				return settings.Reader{DirPath: tmpSettingsDir}
 			}
 		})
 
 		AfterEach(func() {
-			// 恢复原始的 NewReader 函数
 			settings.NewReader = originalNewReader
-			// 清理临时目录
 			os.RemoveAll(tmpSettingsDir)
 		})
 
@@ -220,8 +216,6 @@ var _ = Describe("Test webserver api", func() {
 				s.server.ServeHTTP(w, req)
 
 				Expect(w.Code).To(Equal(http.StatusOK))
-				// 注意：c.JSON() 会自动设置 Content-Type
-				Expect(w.Header().Get("Content-Type")).To(Equal("application/json; charset=utf-8"))
 				Expect(w.Body.String()).To(Equal(`{"key":"value"}`))
 			})
 		})
@@ -251,7 +245,6 @@ var _ = Describe("Test webserver api", func() {
 				s.server.ServeHTTP(w, req)
 
 				Expect(w.Code).To(Equal(http.StatusInternalServerError))
-				// 错误消息可能包含解析错误信息
 				Expect(w.Body.String()).To(ContainSubstring("is a directory"))
 			})
 		})

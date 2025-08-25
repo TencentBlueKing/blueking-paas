@@ -21,6 +21,7 @@ package webserver
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"net/http"
 	"os"
 	"path"
@@ -431,28 +432,23 @@ func HealthzHandler() gin.HandlerFunc {
 
 var _ devsandbox.DevWatchServer = (*WebServer)(nil)
 
-var (
-	SettingsDirPath = "/coder/code-server/User"
-)
-
 // SettingsHandler 获取 settings.json
 func SettingsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		reader := settings.NewReader(SettingsDirPath)
+		reader := settings.NewReader(settings.SettingsDir)
 
-		content, err := reader.Read()
-		if err != nil {
-			switch {
-			case err.Error() == "configuration file not found":
-				c.JSON(http.StatusNotFound, gin.H{"message": err.Error()})
-			case strings.Contains(err.Error(), "configuration file too large"):
-				c.JSON(http.StatusRequestEntityTooLarge, gin.H{"message": err.Error()})
-			default:
-				c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
-			}
+		settingsMap, err := reader.Read()
+		if err == nil {
+			c.JSON(http.StatusOK, settingsMap)
 			return
 		}
 
-		c.Data(http.StatusOK, "application/json", content)
+		if errors.Is(err, settings.UserSettingsNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"message": err.Error()})
+		} else if errors.Is(err, settings.UserSettingsTooLarge) {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"message": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		}
 	}
 }

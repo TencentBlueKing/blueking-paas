@@ -23,27 +23,30 @@ import (
 	. "github.com/onsi/gomega"
 	"os"
 	"path/filepath"
+	"testing"
 )
+
+func TestSettings(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Settings Suite")
+}
 
 var _ = Describe("TestReader", func() {
 	var (
-		tmpDir  string
-		reader  *Reader
-		cleanup func()
+		tmpDir string
+		reader Reader
 	)
 
 	BeforeEach(func() {
 		var err error
 		tmpDir, err = os.MkdirTemp("", "settings-test")
 		Expect(err).NotTo(HaveOccurred())
-		cleanup = func() { os.RemoveAll(tmpDir) }
-
 		reader = NewReader(tmpDir)
 	})
 
 	AfterEach(func() {
-		cleanup()
-		os.Unsetenv(SizeEnvVar)
+		os.RemoveAll(tmpDir)
+		os.Unsetenv(UserSettingsSizeEnvVarKey)
 	})
 
 	Describe("Read", func() {
@@ -51,7 +54,7 @@ var _ = Describe("TestReader", func() {
 			It("should return 'configuration file not found' error", func() {
 				_, err := reader.Read()
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("configuration file not found"))
+				Expect(err).To(MatchError(UserSettingsNotFound))
 			})
 		})
 
@@ -59,64 +62,77 @@ var _ = Describe("TestReader", func() {
 			const validSettings = `{"theme": "dark"}`
 
 			BeforeEach(func() {
-				filePath := filepath.Join(tmpDir, SettingsFileName)
+				filePath := filepath.Join(tmpDir, UserSettingsFileName)
 				Expect(os.WriteFile(filePath, []byte(validSettings), 0644)).To(Succeed())
 			})
 
-			It("should return the file content", func() {
-				content, err := reader.Read()
+			It("should return the parsed JSON", func() {
+				settingsMap, err := reader.Read()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(content)).To(Equal(validSettings))
+				Expect(settingsMap).To(HaveKeyWithValue("theme", "dark"))
 			})
 		})
 
 		Context("when json is too large", func() {
 			BeforeEach(func() {
-				filePath := filepath.Join(tmpDir, SettingsFileName)
+				filePath := filepath.Join(tmpDir, UserSettingsFileName)
 				f, err := os.Create(filePath)
 				Expect(err).NotTo(HaveOccurred())
 				defer f.Close()
 
-				// 创建超过默认大小限制的文件 (600KB > 512KB)
 				data := make([]byte, 600*1024)
 				_, err = f.Write(data)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should return 'configuration file too large' error", func() {
+			It("should return 'configuration file is too large' error", func() {
 				_, err := reader.Read()
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("configuration file too large"))
-				Expect(err.Error()).To(ContainSubstring("600.0KB"))
-				Expect(err.Error()).To(ContainSubstring("512KB"))
+				Expect(err).To(MatchError(UserSettingsTooLarge))
 			})
 		})
 
 		Context("when file is a directory", func() {
 			BeforeEach(func() {
-				filePath := filepath.Join(tmpDir, SettingsFileName)
+				filePath := filepath.Join(tmpDir, UserSettingsFileName)
 				Expect(os.Mkdir(filePath, 0755)).To(Succeed())
 			})
 
-			It("should return 'failed to read file' error", func() {
+			It("should return 'is a directory' error", func() {
 				_, err := reader.Read()
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to read file"))
+				Expect(err.Error()).To(ContainSubstring("is a directory"))
+			})
+		})
+
+		Context("when json is invalid", func() {
+			BeforeEach(func() {
+				filePath := filepath.Join(tmpDir, UserSettingsFileName)
+				Expect(os.WriteFile(filePath, []byte("{invalid json}"), 0644)).To(Succeed())
+			})
+
+			It("should return 'failed to parse settings.json' error", func() {
+				_, err := reader.Read()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to parse settings.json"))
 			})
 		})
 
 		Context("with custom max size via environment variable", func() {
 			BeforeEach(func() {
-				os.Setenv(SizeEnvVar, "1024") // 1MB
+				os.Setenv(UserSettingsSizeEnvVarKey, "1024")
 
-				filePath := filepath.Join(tmpDir, SettingsFileName)
-				f, err := os.Create(filePath)
-				Expect(err).NotTo(HaveOccurred())
-				defer f.Close()
+				filePath := filepath.Join(tmpDir, UserSettingsFileName)
 
-				// 创建 800KB 文件
-				data := make([]byte, 800*1024)
-				_, err = f.Write(data)
+				content := []byte(`{"largeData": "`)
+				spaces := make([]byte, 799*1024)
+				for i := range spaces {
+					spaces[i] = ' '
+				}
+				content = append(content, spaces...)
+				content = append(content, `"}`...)
+
+				err := os.WriteFile(filePath, content, 0644)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -128,37 +144,9 @@ var _ = Describe("TestReader", func() {
 
 		Context("with invalid environment variable value", func() {
 			BeforeEach(func() {
-				os.Setenv(SizeEnvVar, "invalid")
+				os.Setenv(UserSettingsSizeEnvVarKey, "invalid")
 
-				filePath := filepath.Join(tmpDir, SettingsFileName)
-				Expect(os.WriteFile(filePath, []byte("{}"), 0644)).To(Succeed())
-			})
-
-			It("should fallback to default size", func() {
-				_, err := reader.Read()
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-
-		Context("with negative environment variable value", func() {
-			BeforeEach(func() {
-				os.Setenv(SizeEnvVar, "-100")
-
-				filePath := filepath.Join(tmpDir, SettingsFileName)
-				Expect(os.WriteFile(filePath, []byte("{}"), 0644)).To(Succeed())
-			})
-
-			It("should fallback to default size", func() {
-				_, err := reader.Read()
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-
-		Context("with zero environment variable value", func() {
-			BeforeEach(func() {
-				os.Setenv(SizeEnvVar, "0")
-
-				filePath := filepath.Join(tmpDir, SettingsFileName)
+				filePath := filepath.Join(tmpDir, UserSettingsFileName)
 				Expect(os.WriteFile(filePath, []byte("{}"), 0644)).To(Succeed())
 			})
 

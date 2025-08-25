@@ -176,28 +176,34 @@ var _ = Describe("Test webserver api", func() {
 		// 3. 由于 settings.json 的路径固定，所以需要通过覆盖包级变量来设置 API 读取的路径
 
 		var (
-			tmpSettingsDir      string
-			originalSettingsDir string
+			tmpSettingsDir    string
+			originalNewReader func(string) settings.Reader
 		)
 
 		BeforeEach(func() {
-			originalSettingsDir = SettingsDirPath
+			// 保存原始的 NewReader 函数
+			originalNewReader = settings.NewReader
 
+			// 创建临时目录
 			var err error
 			tmpSettingsDir, err = os.MkdirTemp("", "settings-test")
 			Expect(err).NotTo(HaveOccurred())
 
-			// 覆盖包级变量
-			SettingsDirPath = tmpSettingsDir
+			// 覆盖 NewReader 函数，使其返回使用临时目录的 Reader
+			settings.NewReader = func(dirPath string) settings.Reader {
+				return settings.Reader{DirPath: tmpSettingsDir}
+			}
 		})
 
 		AfterEach(func() {
-			SettingsDirPath = originalSettingsDir
+			// 恢复原始的 NewReader 函数
+			settings.NewReader = originalNewReader
+			// 清理临时目录
 			os.RemoveAll(tmpSettingsDir)
 		})
 
 		getSettingsPath := func() string {
-			return filepath.Join(SettingsDirPath, settings.SettingsFileName)
+			return filepath.Join(tmpSettingsDir, settings.UserSettingsFileName)
 		}
 
 		Context("when settings.json exists", func() {
@@ -214,7 +220,8 @@ var _ = Describe("Test webserver api", func() {
 				s.server.ServeHTTP(w, req)
 
 				Expect(w.Code).To(Equal(http.StatusOK))
-				Expect(w.Header().Get("Content-Type")).To(Equal("application/json"))
+				// 注意：c.JSON() 会自动设置 Content-Type
+				Expect(w.Header().Get("Content-Type")).To(Equal("application/json; charset=utf-8"))
 				Expect(w.Body.String()).To(Equal(`{"key":"value"}`))
 			})
 		})
@@ -244,7 +251,34 @@ var _ = Describe("Test webserver api", func() {
 				s.server.ServeHTTP(w, req)
 
 				Expect(w.Code).To(Equal(http.StatusInternalServerError))
-				Expect(w.Body.String()).To(ContainSubstring("failed to read file"))
+				// 错误消息可能包含解析错误信息
+				Expect(w.Body.String()).To(ContainSubstring("is a directory"))
+			})
+		})
+
+		Context("when file is too large", func() {
+			BeforeEach(func() {
+				// 设置文件大小限制为 1 KB
+				os.Setenv(settings.UserSettingsSizeEnvVarKey, "1")
+
+				settingsPath := getSettingsPath()
+				content := make([]byte, 2150)
+				err := os.WriteFile(settingsPath, content, 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				os.Unsetenv(settings.UserSettingsSizeEnvVarKey)
+			})
+
+			It("should return 413 Request Entity Too Large", func() {
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusRequestEntityTooLarge))
+				Expect(w.Body.String()).To(ContainSubstring("configuration file is too large"))
 			})
 		})
 	})

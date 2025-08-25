@@ -19,53 +19,70 @@
 package settings
 
 import (
+	"encoding/json"
 	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"strconv"
 )
 
+var (
+	// SettingsDir 用户沙箱 IDE 配置文件所在目录
+	SettingsDir          = "/coder/code-server/User"
+	UserSettingsNotFound = errors.New("configuration file not found")
+	UserSettingsTooLarge = errors.New("configuration file is too large")
+)
+
 const (
-	// DefaultMaxSizeKB 默认最大文件大小限制（KB）
-	DefaultMaxSizeKB = 512
-	SizeEnvVar       = "SETTINGS_MAX_SIZE_KB"
-	SettingsFileName = "settings.json"
+	// UserSettingsMaxSize 用户配置文件限制（单位：KB）
+	UserSettingsMaxSize       = 512
+	UserSettingsSizeEnvVarKey = "SETTINGS_MAX_SIZE_KB"
+	UserSettingsFileName      = "settings.json"
 )
 
 type Reader struct {
 	DirPath string
 }
 
-func NewReader(dirPath string) *Reader {
-	return &Reader{DirPath: dirPath}
+var NewReader = func(dirPath string) Reader {
+	return Reader{DirPath: dirPath}
 }
 
-func (r *Reader) Read() ([]byte, error) {
-	// 获取最大文件大小
-	maxSizeKB := DefaultMaxSizeKB
-	if envSize, exists := os.LookupEnv(SizeEnvVar); exists {
-		if parsedSize, err := strconv.Atoi(envSize); err == nil && parsedSize > 0 {
-			maxSizeKB = parsedSize
-		}
-	}
-	maxSizeBytes := int64(maxSizeKB) * 1024
-
-	filePath := filepath.Join(r.DirPath, SettingsFileName)
+func (r *Reader) Read() (map[string]any, error) {
+	filePath := filepath.Join(r.DirPath, UserSettingsFileName)
 
 	info, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
-		return nil, errors.Errorf("configuration file not found")
+		return nil, UserSettingsNotFound
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	fileSizeKB := float64(info.Size()) / 1024
+	maxSizeBytes := r.getUserSettingsMaxSize()
 	if info.Size() > maxSizeBytes {
-		return nil, errors.Errorf("configuration file too large (%.1fKB > %dKB)", fileSizeKB, maxSizeKB)
+		return nil, UserSettingsTooLarge
 	}
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read file %s", filePath)
+		return nil, err
 	}
 
-	return content, nil
+	var settingsMap map[string]any
+	if err := json.Unmarshal(content, &settingsMap); err != nil {
+		return nil, errors.Wrap(err, "failed to parse settings.json")
+	}
+
+	return settingsMap, nil
+}
+
+func (r *Reader) getUserSettingsMaxSize() int64 {
+	maxSizeKB := UserSettingsMaxSize
+	if envSize, exists := os.LookupEnv(UserSettingsSizeEnvVarKey); exists {
+		if parsedSize, err := strconv.Atoi(envSize); err == nil && parsedSize > 0 {
+			maxSizeKB = parsedSize
+		}
+	}
+	return int64(maxSizeKB) * 1024
 }

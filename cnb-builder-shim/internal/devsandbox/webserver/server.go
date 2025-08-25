@@ -21,6 +21,7 @@ package webserver
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"net/http"
 	"os"
 	"path"
@@ -40,6 +41,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/settings"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
@@ -100,6 +102,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.POST("/processes/:processName", ProcessStartHandler())
 	r.GET("/codes/diffs", CodeDiffsHandler())
 	r.GET("/codes/commit", CodeCommitHandler())
+	r.GET("/settings", SettingsHandler())
 
 	return s, nil
 }
@@ -428,3 +431,24 @@ func HealthzHandler() gin.HandlerFunc {
 }
 
 var _ devsandbox.DevWatchServer = (*WebServer)(nil)
+
+// SettingsHandler 获取 settings.json
+func SettingsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		reader := settings.NewReader(settings.SettingsDir)
+
+		userSettings, err := reader.Read()
+		if err == nil {
+			c.JSON(http.StatusOK, userSettings)
+			return
+		}
+
+		if errors.Is(err, settings.UserSettingsNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"message": err.Error()})
+		} else if errors.Is(err, settings.UserSettingsTooLarge) {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"message": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		}
+	}
+}

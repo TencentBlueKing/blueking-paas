@@ -14,18 +14,20 @@
       :api-url="apiUrl"
       @show-alert-change="showAlertChange"
     />
-    <paas-header />
-    <div
-      style="min-height: calc(100% - 70px); overflow: auto"
-      :style="{ 'padding-top': `${pluginPaddingTop}px` }"
-      :class="{
-        'plugin-min-width': isPlugin,
-        'sandbox-page': sandboxPage,
-      }"
-    >
-      <router-view />
+    <div class="paas-app-main-container flex-row flex-column flex-1">
+      <paas-header />
+      <div
+        class="view-content-box"
+        :class="{
+          'hiden-footer-page': !showPaasFooter,
+          'plugin-min-width': isPlugin,
+          'sandbox-page': sandboxPage,
+        }"
+      >
+        <router-view />
+        <paas-footer v-if="showPaasFooter" />
+      </div>
     </div>
-    <paas-footer v-if="showPaasFooter" />
   </div>
 </template>
 
@@ -46,12 +48,13 @@ export default {
   },
   data() {
     return {
-      userInfo: {},
-      isPlugin: false,
       apiUrl: `${BACKEND_URL}/notice/announcements/`,
     };
   },
   computed: {
+    isPlugin() {
+      return this.$route.path.includes('/plugin-center');
+    },
     isGray() {
       return ['myApplications', 'appLegacyMigration'].includes(this.$route.name);
     },
@@ -60,13 +63,6 @@ export default {
     },
     isShowNotice() {
       return this.$store.state.isShowNotice;
-    },
-    pluginPaddingTop() {
-      const routes = ['plugin', 'createPlugin'];
-      if (this.isPlugin && this.isShowNotice && routes.includes(this.$route.name)) {
-        return this.GLOBAL.NOTICE_HEIGHT;
-      }
-      return 0;
     },
     isDefaultBackgroundColor() {
       return this.$route.meta?.isDefaultBackgroundColor;
@@ -78,22 +74,16 @@ export default {
     sandboxPage() {
       return this.$route.meta?.sandboxPage;
     },
-    paasVersion() {
-      return window.BK_PAAS_VERSION;
-    },
     showPaasFooter() {
       return this.$route.meta?.isFooterShown;
     },
   },
   watch: {
-    $route: {
-      handler(value) {
-        this.isPlugin = value.path.includes('/plugin-center');
+    isPlugin: {
+      handler(isPlugin) {
+        document.body.style.backgroundColor = isPlugin ? '#F5F6FA' : '';
       },
       immediate: true,
-    },
-    isPlugin() {
-      this.setGlobalBodyStyle();
     },
   },
   created() {
@@ -109,10 +99,6 @@ export default {
       // 更新store数据
       const isShowNotice = isShow && this.isBkNotice;
       await this.$store.commit('updataNoticeStatus', isShowNotice);
-    },
-    // 插件开发者中心设置全局底色
-    setGlobalBodyStyle() {
-      document.body.style.backgroundColor = this.isPlugin ? '#F5F6FA' : '';
     },
     // 打开登录窗口
     openLoginWindow() {
@@ -131,6 +117,29 @@ export default {
 @import './assets/css/custom-component-styles.scss';
 @import '~@/assets/css/mixins/dashed.scss';
 @import '~@/assets/css/mixins/ellipsis.scss';
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  .view-content-box {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    &:not(.hiden-footer-page) {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    // 沙箱环境页面
+    &.sandbox-page {
+      height: 100%;
+    } 
+  }
+  .paas-app-main-container {
+    min-height: 0;
+  }
+}
+
 .notice-cls {
   position: fixed;
   top: 0px;
@@ -142,10 +151,6 @@ export default {
 
 .gray-bg {
   background: #fafbfd;
-}
-
-.sandbox-page {
-  height: 100%;
 }
 
 .notice {

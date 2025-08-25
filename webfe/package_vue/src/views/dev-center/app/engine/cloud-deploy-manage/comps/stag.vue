@@ -1,5 +1,5 @@
 <template>
-  <div class="stag-wrapper">
+  <div class="stag-wrapper flex-column">
     <section class="top-operate">
       <div class="left">
         <bk-button

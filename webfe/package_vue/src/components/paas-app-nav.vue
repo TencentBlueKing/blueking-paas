@@ -1,5 +1,5 @@
 <template lang="html">
-  <ul class="app-nav">
+  <ul :class="['app-nav', { 'mt-8': !isMigrationEntryShown }]">
     <div
       v-if="isMigrationEntryShown"
       class="migration-app-btn"
@@ -573,9 +573,7 @@ export default {
 
 <style lang="scss" scoped>
 .app-nav {
-  padding-top: 9px;
   width: 240px;
-  margin-top: 1px;
 
   .migration-app-btn {
     display: flex;

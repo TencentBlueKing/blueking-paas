@@ -1,10 +1,5 @@
 <template>
-  <div
-    class="bk-apps-wrapper sandbox-container"
-    :style="{
-      'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`,
-    }"
-  >
+  <div class="bk-apps-wrapper sandbox-container">
     <section class="top-bar card-style">
       <div class="title">
         <div
@@ -778,7 +773,12 @@ export default {
   margin-left: 8px;
 }
 .sandbox-container {
+  overflow: hidden;
+  height: 100%;
   background: #f5f7fa;
+  .fadeout {
+    height: calc(100% - 52px);
+  }
   .fore {
     color: #313238;
   }
@@ -822,6 +822,9 @@ export default {
     align-items: center;
   }
   .sandbox-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     .top-box {
       display: flex;
       /deep/ .bk-button {
@@ -833,10 +836,8 @@ export default {
       }
     }
     .sandbox-editor {
-      height: calc(100vh - 103px);
-      &.is-alert {
-        height: calc(100vh - 136px);
-      }
+      min-height: 0;
+      flex: 1;
       &.collapse {
         margin-right: 0;
         /deep/ .bk-resize-layout-aside {

@@ -1,6 +1,6 @@
 <template lang="html">
   <div
-    class="paas-content"
+    class="paas-content pb-24"
     data-test-id="create_content_App"
   >
     <div class="big-title">

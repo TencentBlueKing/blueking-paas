@@ -14,7 +14,7 @@
       class="app-container ps-category middle card-style"
     >
       <div class="fadeIn">
-        <section v-show="!loading">
+        <section>
           <div class="middle bnone">
             <h4>{{ $t('已启用的服务') }}</h4>
             <div v-if="!loading">

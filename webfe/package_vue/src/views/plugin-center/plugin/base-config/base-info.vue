@@ -2,7 +2,7 @@
   <div class="right-main plugin-base-info">
     <paas-plugin-title />
     <paas-content-loader
-      class="app-container"
+      class="app-container pb-24"
       :is-loading="isLoading"
       placeholder="plugin-base-info-loading"
     >
@@ -19,7 +19,10 @@
         />
 
         <!-- 更多信息 -->
-        <div class="basic-info-item mt16 card-style" v-if="isMoreInfo && !isCodecc">
+        <div
+          class="basic-info-item mt16 card-style"
+          v-if="isMoreInfo && !isCodecc"
+        >
           <div class="title">
             {{ $t('更多信息') }}
             <span
@@ -30,7 +33,11 @@
               {{ $t('编辑') }}
             </span>
           </div>
-          <more-info ref="moreInfoRef" @show-info="isMoreInfo = $event" @set-schema="setPluginSchema" />
+          <more-info
+            ref="moreInfoRef"
+            @show-info="isMoreInfo = $event"
+            @set-schema="setPluginSchema"
+          />
         </div>
 
         <!-- 市场信息 -->
@@ -43,7 +50,8 @@
         <!-- 插件使用方 -->
         <section
           v-if="pluginFeatureFlags.PLUGIN_DISTRIBUTER"
-          class="plugin-users-info card-style mt16">
+          class="plugin-users-info card-style mt16"
+        >
           <p class="title">{{ $t('插件使用方') }}</p>
           <p class="description">{{ tipsInfo }}</p>
           <ul class="plugin-detail-wrapper">
@@ -108,7 +116,11 @@
                 </div>
                 <div class="explain">
                   <p>
-                    {{ $t('说明: 只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。')}}
+                    {{
+                      $t(
+                        '说明: 只有授权给了某个使用方，后者才能拉取到本地插件的相关信息，并在产品中通过访问插件注册到蓝鲸网关的API来使用插件功能。'
+                      )
+                    }}
                   </p>
                   <p>{{ $t('除了创建时注明的“插件使用方”之外，插件默认不授权给任何其他使用方。') }}</p>
                 </div>
@@ -121,10 +133,16 @@
         <authentication-info v-if="pluginFeatureFlags.APP_SECRETS" />
 
         <!-- 发布者 -->
-        <publisher-info v-if="pluginFeatureFlags.PUBLISHER_INFO" class="mt16" />
+        <publisher-info
+          v-if="pluginFeatureFlags.PUBLISHER_INFO"
+          class="mt16"
+        />
 
         <!-- archivedStatus为 true && can_reactivate 为 true 展示上架 -->
-        <div class="plugin-operation-wrapper" v-if="isArchivedStatus && offlineStatus">
+        <div
+          class="plugin-operation-wrapper"
+          v-if="isArchivedStatus && offlineStatus"
+        >
           <bk-button
             theme="primary"
             @click="handleShowPublishPopup"
@@ -138,7 +156,10 @@
         </div>
 
         <!-- archivedStatus为 true && can_reactivate 为 false 下架操作禁止用 -->
-        <div class="plugin-operation-wrapper" v-else>
+        <div
+          class="plugin-operation-wrapper"
+          v-else
+        >
           <bk-button
             theme="danger"
             :disabled="isArchivedStatus && !offlineStatus"
@@ -150,7 +171,9 @@
           <span
             v-if="isArchivedStatus && !offlineStatus"
             class="offline-tip"
-          >{{ $t('插件已下架') }}</span>
+          >
+            {{ $t('插件已下架') }}
+          </span>
           <div class="info">
             {{ $t('插件下架后，插件市场不再展示该插件信息') }}
           </div>
@@ -265,7 +288,9 @@ export default {
       restoringPluginList: [],
       restoringTargetData: [],
       pluginList: [],
-      tipsInfo: this.$t('如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过 API 网关）调用插件的 API、并将插件能力集成到自己的系统中。'),
+      tipsInfo: this.$t(
+        '如果你将插件授权给某个使用方，对方便能读取到你的插件的基本信息、（通过 API 网关）调用插件的 API、并将插件能力集成到自己的系统中。'
+      ),
       // 插件更多信息数据
       pluginSchema: {},
       isMoreInfo: true,
@@ -511,7 +536,7 @@ export default {
     async getAuthorizedUse() {
       try {
         const res = await this.$store.dispatch('plugin/getAuthorizedUse', { pluginId: this.pluginId });
-        this.targetPluginList = res.map(item => item.code_name);
+        this.targetPluginList = res.map((item) => item.code_name);
         if (this.TargetDataFirst) {
           this.restoringTargetData = this.targetPluginList;
           this.TargetDataFirst = false;
@@ -750,53 +775,53 @@ export default {
     line-height: 20px;
   }
   .plugin-detail-wrapper {
-      border: 1px solid #dcdee5;
-      .item-info {
+    border: 1px solid #dcdee5;
+    .item-info {
+      display: flex;
+      min-height: 42px;
+      border-top: 1px solid #dcdee5;
+      &:first-child {
+        border-top: none;
+      }
+      .describe,
+      .right-content {
         display: flex;
-        min-height: 42px;
-        border-top: 1px solid #dcdee5;
-        &:first-child {
-          border-top: none;
-        }
-        .describe,
-        .right-content {
-          display: flex;
-          align-items: center;
-          font-size: 12px;
-        }
-        .describe {
-          flex-shrink: 0;
-          justify-content: center;
-          width: 180px;
-          color: #313238;
-          line-height: normal;
-          background: #fafbfd;
+        align-items: center;
+        font-size: 12px;
+      }
+      .describe {
+        flex-shrink: 0;
+        justify-content: center;
+        width: 180px;
+        color: #313238;
+        line-height: normal;
+        background: #fafbfd;
 
-          &.regular-stream {
-            display: block;
-            padding-top: 16px;
-            text-align: center;
-          }
-        }
-        .plugin-users {
-          width: 100%;
-          padding: 16px;
-          border-left: 1px solid #dcdee5;
-          &.no-padding-lf {
-            padding-left: 0;
-          }
-        }
-        .right-content {
-          flex-wrap: wrap;
-          line-height: 1.5;
-          word-break: break-all;
-          flex: 1;
-          color: #63656e;
-          padding-left: 16px;
-          border-left: 1px solid #dcdee5;
+        &.regular-stream {
+          display: block;
+          padding-top: 16px;
+          text-align: center;
         }
       }
+      .plugin-users {
+        width: 100%;
+        padding: 16px;
+        border-left: 1px solid #dcdee5;
+        &.no-padding-lf {
+          padding-left: 0;
+        }
+      }
+      .right-content {
+        flex-wrap: wrap;
+        line-height: 1.5;
+        word-break: break-all;
+        flex: 1;
+        color: #63656e;
+        padding-left: 16px;
+        border-left: 1px solid #dcdee5;
+      }
     }
+  }
 }
 
 .plugin-operation-wrapper {
@@ -804,12 +829,12 @@ export default {
   align-items: center;
   margin-top: 24px;
   font-size: 12px;
-  color: #63656E;
+  color: #63656e;
 
   i {
     margin: 0 5px 0 16px;
     font-size: 14px;
-    color: #FF9C01;
+    color: #ff9c01;
   }
 }
 </style>

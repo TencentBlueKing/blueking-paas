@@ -25,7 +25,7 @@
         :is-cloud="isCloudApp"
       />
       <div class="overview-middle">
-        <template v-if="!loading">
+        <template>
           <div class="summary-content">
             <!-- 访问日志，云原生不展示 -->
             <bk-collapse

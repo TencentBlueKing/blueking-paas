@@ -1,6 +1,6 @@
 <template lang="html">
   <div
-    class="paas-content white mt50"
+    class="paas-content white mt50 mb-24"
     :style="{ 'width': '1180px', 'margin': 'auto', 'min-height': `${minHeight}px` }"
   >
     <div class="wrap">

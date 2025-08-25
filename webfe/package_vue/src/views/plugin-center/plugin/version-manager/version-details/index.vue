@@ -18,6 +18,7 @@
       :is-loading="isLoading"
       placeholder="plugin-new-version-loading"
       class="app-container middle"
+      :style="{ paddingBottom: !isFullReleaseSuccessful ? '48px' : '0' }"
     >
       <!-- 未通过 -->
       <bk-alert

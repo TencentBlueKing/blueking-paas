@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="bk-create-plugin-warp"
-    :style="{ paddingTop: `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px` }"
-  >
+  <div class="bk-create-plugin-warp flex-column">
     <paas-content-loader
       :is-loading="isLoading"
       placeholder="create-plugin-loading"

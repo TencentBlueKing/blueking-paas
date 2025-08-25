@@ -246,6 +246,9 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.plugin-container.component-card-cls {
+  flex: revert;
+}
 .release-warp .info-mt {
   padding: 24px;
 }

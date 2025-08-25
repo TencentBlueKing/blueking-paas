@@ -1,6 +1,6 @@
 <template>
   <div :class="['platform-top-bar', { 'has-tab': tabPanels.length }]">
-    <div class="title">
+    <div :class="['title', { 'flex-row': $slots.extra }]">
       <div class="title-area">
         <div>
           <i

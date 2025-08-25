@@ -699,8 +699,7 @@ export default {
 
 <style lang="scss" scoped>
 .deploy-module-content {
-  height: 100%;
-  // min-height: 280px;
+  flex: 1;
   .deploy-module-list.sortable-chosen {
     .main {
       background: #deeff9;

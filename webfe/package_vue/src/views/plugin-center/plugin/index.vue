@@ -1,63 +1,60 @@
 <template lang="html">
-  <div class="overview-content" :style="{ background: customBackground.includes($route.name) ? '#FFF' : '#F5F7FA' }">
+  <div
+    class="overview-content"
+    :style="{ background: customBackground.includes($route.name) ? '#FFF' : '#F5F7FA' }"
+  >
     <template v-if="isPluginFound">
-      <div class="wrap">
-        <div
-          class="overview-main"
-          :style="{ 'min-height': routeNameMap.includes($route.name) ? '0px' : `${minHeight}px` }"
-        >
+      <div class="overview-main">
+        <div class="overview-fleft overview-fleft-plugin">
+          <plugin-quick-nav ref="quickNav" />
           <div
-            class="overview-fleft overview-fleft-plugin"
-            :style="{ 'top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px` }"
-          >
-            <plugin-quick-nav ref="quickNav" />
-            <div
-              style="height: 100%"
-              @click="hideQuickNav"
-            >
-              <paas-plugin-nav />
-            </div>
-          </div>
-          <div
-            :class="['overview-fright-plugin',
-                     { 'hide-pd-bottom': $route.name === 'pluginVersionRelease' },
-                     { 'plugiun-highly-adaptive': $route.name === 'pluginVersionRelease' },
-                     { 'plugiun-test-stage': isTestStage },
-                     { 'plugiun-iframe-summary': isSummaryIframe }]"
+            style="height: 100%"
             @click="hideQuickNav"
           >
-            <router-view
-              v-if="userVisitEnable && pluginVisitEnable"
-              :key="$route.path"
-              class="right-main-plugin"
-              @current-plugin-info-updated="pluginInfoUpdatedCallback"
-            />
+            <paas-plugin-nav />
+          </div>
+        </div>
+        <div
+          :class="[
+            'overview-fright-plugin',
+            { 'hide-pd-bottom': $route.name === 'pluginVersionRelease' },
+            { 'plugiun-highly-adaptive': $route.name === 'pluginVersionRelease' },
+            { 'plugiun-test-stage': isTestStage },
+            { 'plugiun-iframe-summary': isSummaryIframe },
+          ]"
+          @click="hideQuickNav"
+        >
+          <router-view
+            v-if="userVisitEnable && pluginVisitEnable"
+            :key="$route.path"
+            class="right-main-plugin"
+            @current-plugin-info-updated="pluginInfoUpdatedCallback"
+          />
 
-            <div
-              v-else
-              class="paas-loading-content"
-            >
-              <div class="no-permission">
-                <img src="/static/images/permissions.png" />
-                <h2 v-if="errorMessage">
-                  {{ errorMessage }}
-                </h2>
-                <h2
-                  v-else-if="deniedMessageType === 'default'"
-                  class="exception-text"
-                >
-                  <div>
-                    {{ $t('您没有访问当前应用该功能的权限，如需申请，请联系') }}
-                    <router-link
-                      class="toRolePage"
-                      :to="{ name: 'pluginRoles', params: { pluginTypeId: pdId, id: pluginId } }"
-                    >
-                      {{ $t('成员管理') }}
-                    </router-link>
-                    {{ $t('页面的应用管理员') }}
-                  </div>
-                </h2>
-              </div>
+          <div
+            v-else
+            class="paas-loading-content"
+          >
+            <div class="no-permission">
+              <img src="/static/images/permissions.png" />
+              <h2 v-if="errorMessage">
+                {{ errorMessage }}
+              </h2>
+              <h2
+                v-else-if="deniedMessageType === 'default'"
+                class="exception-text"
+              >
+                <div>
+                  {{ $t('您没有访问当前应用该功能的权限，如需申请，请联系') }}
+                  <router-link
+                    class="toRolePage"
+                    :to="{ name: 'pluginRoles', params: { pluginTypeId: pdId, id: pluginId } }"
+                  >
+                    {{ $t('成员管理') }}
+                  </router-link>
+                  {{ $t('页面的应用管理员') }}
+                </div>
+              </h2>
             </div>
           </div>
         </div>
@@ -270,12 +267,11 @@ export default {
 
 <style lang="scss" scoped>
 .overview-content,
-.wrap,
 .overview,
 .overview-main {
   height: 100%;
 }
-.app-container{
+.app-container {
   padding-top: 0;
 }
 
@@ -315,6 +311,7 @@ export default {
   min-width: 0;
 }
 .overview-fright-plugin {
+  overflow: auto;
   /deep/ .bk-form {
     .bk-label {
       font-size: 12px !important;

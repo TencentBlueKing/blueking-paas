@@ -366,7 +366,6 @@ export default {
 <style lang="scss">
     .paas-search-wrapper {
         width: 1180px;
-        padding-top: var(--app-content-pd);
         margin: 0 auto;
         .title {
             font-size: 18px;

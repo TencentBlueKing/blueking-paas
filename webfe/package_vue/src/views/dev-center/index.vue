@@ -1,16 +1,9 @@
 <template lang="html">
-  <div
-    class="bk-apps-wrapper"
-    :style="{
-      'min-height': `${minHeight}px`,
-      'padding-top': `${isShowNotice ? GLOBAL.NOTICE_HEIGHT + 50 : 50}px`,
-    }"
-  >
+  <div class="bk-apps-wrapper">
     <paas-content-loader
       :is-loading="isFirstLoading"
       placeholder="apps-loading"
       offset-top="20"
-      class="wrap"
       :height="700"
     >
       <div class="clearfix paas-application-tit">
@@ -678,9 +671,6 @@ export default {
     isEnglishEnv() {
       return this.localLanguage === 'en';
     },
-    isShowNotice() {
-      return this.$store.state.isShowNotice;
-    },
     filterTips() {
       return FILTER_TIP[this.sortValue];
     },
@@ -1049,6 +1039,13 @@ export default {
 <style lang="scss" scoped>
 $customize-disabled-color: #c4c6cc;
 
+.bk-apps-wrapper {
+  height: 100%;
+  padding: 24px;
+  background-color: #f5f7fa;
+  overflow: auto;
+}
+
 .app-list-search {
   width: 320px;
 }
@@ -1066,10 +1063,6 @@ $customize-disabled-color: #c4c6cc;
   .app-list-search.en {
     width: 220px;
   }
-}
-
-.bk-apps-wrapper {
-  width: calc(100% - 48px);
 }
 
 .app-operation-section {
@@ -1135,7 +1128,7 @@ label {
 }
 
 .paas-application-tit {
-  padding: 24px 0 16px;
+  padding-bottom: 16px;
   color: #666;
   line-height: 36px;
   position: relative;
@@ -1321,10 +1314,6 @@ h2.application-title {
 .ps-btn-visit:disabled .paasng-angle-down,
 .ps-btn-visit[disabled] .paasng-angle-down {
   color: #d7eadf !important;
-}
-.wrap {
-  width: 100%;
-  margin: 0 24px 24px;
 }
 
 .link-btn-cls {

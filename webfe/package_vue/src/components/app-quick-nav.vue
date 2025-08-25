@@ -369,6 +369,10 @@ export default {
 <style lang="scss" scoped>
 @import '../assets/css/components/conf.scss';
 
+.overview-tit {
+  height: 64px;
+}
+
 .entrances-wrapper {
   margin-top: 30px;
   .entrances-adress {

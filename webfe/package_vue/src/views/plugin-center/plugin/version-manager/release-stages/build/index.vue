@@ -1,5 +1,5 @@
 <template>
-  <div :class="['build-stage', { 'build-hide-button-group': !bottomActionBar }]">
+  <div :class="['build-stage', { 'build-hide-button-group': !bottomActionBar }, bottomActionBar]">
     <build-timeline
       :list="timeLineList"
       :disabled="true"
@@ -143,16 +143,20 @@ export default {
 <style lang="scss" scoped>
 // 高度问题
 .build-stage {
-  height: calc(100vh - 216px);
-  // margin-top: 60px;
   display: flex;
   padding: 16px 16px 0;
 
   // 无按钮组
   &.build-hide-button-group {
-    height: calc(100vh - 184px);
+    margin-bottom: 24px;
+    .right-log-wrapper {
+      padding-bottom: 16px;
+    }
   }
   .right-log-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
     padding-top: 40px;
     margin-left: 16px;
     position: relative;
@@ -160,10 +164,10 @@ export default {
     flex: 1;
   }
   .paas-log-box {
+    flex: 1;
     position: relative;
     overflow: hidden;
     padding: 0;
-    height: calc(100vh - 255px);
   }
 }
 .log-header {

@@ -65,7 +65,8 @@ export default {
 
 <style lang="scss" scoped>
 .testing-container {
-  height: calc(100vh - 214px);
+  flex: 1;
+  margin-bottom: 48px;
 
   /* resize and min-height are optional, allows user to resize viewable area */
   -webkit-resize: vertical;
@@ -74,7 +75,7 @@ export default {
   min-height: 317px;
 
   &.hide-button-group {
-    height: calc(100vh - 168px);
+    margin-bottom: 24px;
   }
 }
 

@@ -176,11 +176,16 @@ export default {
 
 <style lang="scss" scoped>
 .dashboards-container {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   .guidelines-cls {
     height: auto;
     line-height: unset;
   }
   .dashboards-content {
+    flex: 1;
     display: flex;
     flex-direction: column;
   }

@@ -493,7 +493,7 @@ export default {
 
 <style lang="scss" scoped>
 .bk-plugin-wrapper {
-  margin-top: 74px;
+  margin: 24px 0;
   width: 100%;
   .paas-plugin-tit {
     padding: 12px 0 16px;

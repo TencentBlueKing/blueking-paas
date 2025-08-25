@@ -1,5 +1,5 @@
 <template>
-  <div class="right-main">
+  <div class="right-main cloud-deploy-management-container">
     <!-- 部署历史 -->
     <div
       class="ps-top-bar"
@@ -113,6 +113,11 @@ export default {
       cursor: pointer;
     }
   }
+}
+.cloud-deploy-management-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 .cloud-deploy-management {
   padding-top: 0px;

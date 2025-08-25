@@ -17,11 +17,10 @@
 
 import logging
 
-from moby_distribution.registry.utils import NamedImage, parse_image
-
 from paasng.platform.modules.models.module import Module
 from paasng.platform.modules.models.runtime import AppSlugRunner
 from paasng.platform.smart_app.conf import bksmart_settings
+from paasng.utils.moby_distribution.registry.utils import NamedImage, parse_image
 
 logger = logging.getLogger(__name__)
 

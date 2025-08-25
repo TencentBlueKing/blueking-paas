@@ -97,6 +97,7 @@ class DftCustomDomainManager:
                 defaults={"https_enabled": https_enabled},
             )
             CustomDomainIngressMgr(domain).sync(default_service_name=service_name)
+        # 未找到 TLS 的证书时, CustomDomainIngressMgr.sync 不会抛出 ValidCertNotFound 异常, 而是按照 https_enabled 为 False 处理
         except ValidCertNotFound:
             raise error_codes.CREATE_CUSTOM_DOMAIN_FAILED.f(_("找不到有效的 TLS 证书"))
         except IntegrityError:
@@ -119,6 +120,8 @@ class DftCustomDomainManager:
         try:
             svc = ReplaceAppDomainService(env, instance.name, instance.path_prefix)
             svc.replace_with(host, path_prefix, https_enabled)
+        # ReplaceAppDomainService.replace_with 间接调用 CustomDomainIngressMgr.sync, 未找到 TLS 的证书时,
+        # 不会抛出 ReplaceAppDomainFailed 异常, 而是按照 https_enabled 为 False 处理
         except ReplaceAppDomainFailed as e:
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f(str(e))
         return instance
@@ -173,6 +176,8 @@ class CNativeCustomDomainManager:
             tenant_id=self.application.tenant_id,
             defaults={"https_enabled": https_enabled},
         )
+        # 由于云原生应用暂不支持配置带 TLS 的自定义域名, 因此无论 domain.https_enabled 的值为 True 还是 False,
+        # 在 DomainGroupMapping 中均会统一按 False 处理.
         try:
             cnative_custom_domain_updated.send(sender=env, env=env)
         except Exception:
@@ -196,6 +201,8 @@ class CNativeCustomDomainManager:
         instance.https_enabled = https_enabled
         instance.save()
 
+        # 由于云原生应用暂不支持配置带 TLS 的自定义域名, 因此无论 domain.https_enabled 的值为 True 还是 False,
+        # 在 DomainGroupMapping 中均会统一按 False 处理.
         try:
             cnative_custom_domain_updated.send(sender=env, env=env)
         except Exception as e:

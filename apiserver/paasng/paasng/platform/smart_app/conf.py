@@ -16,8 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.conf import settings
-from moby_distribution import APIEndpoint, DockerRegistryV2Client
 from pydantic import BaseModel, Field
+
+from paasng.utils.moby_distribution import APIEndpoint, DockerRegistryV2Client
 
 
 class RegistryConf(BaseModel):

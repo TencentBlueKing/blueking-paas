@@ -59,7 +59,7 @@ def _mock_dispatch_smart_app():
 
     with (
         mock.patch("paasng.platform.smart_app.services.dispatch._PARALLEL_PATCHING", new=False),
-        mock.patch("moby_distribution.ImageRef.push") as mock_push,
+        mock.patch("paasng.utils.moby_distribution.ImageRef.push") as mock_push,
     ):
         mock_push().config.digest.replace.return_value = ""
         yield

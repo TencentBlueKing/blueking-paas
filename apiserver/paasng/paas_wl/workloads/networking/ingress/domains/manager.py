@@ -120,7 +120,8 @@ class DftCustomDomainManager:
         try:
             svc = ReplaceAppDomainService(env, instance.name, instance.path_prefix)
             svc.replace_with(host, path_prefix, https_enabled)
-        # 未找到 TLS 的证书时, CustomDomainIngressMgr.sync 不会抛出 ReplaceAppDomainFailed 异常, 而是按照 https_enabled 为 False 处理
+        # ReplaceAppDomainService.replace_with 间接调用 CustomDomainIngressMgr.sync, 未找到 TLS 的证书时,
+        # 不会抛出 ReplaceAppDomainFailed 异常, 而是按照 https_enabled 为 False 处理
         except ReplaceAppDomainFailed as e:
             raise error_codes.UPDATE_CUSTOM_DOMAIN_FAILED.f(str(e))
         return instance

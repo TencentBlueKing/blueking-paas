@@ -15,10 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from moby_distribution.registry.utils import parse_image
-
 from paasng.platform.bkapp_model.entities import AppBuildConfig
 from paasng.platform.modules.models import BuildConfig, Module
+from paasng.utils.moby_distribution.registry.utils import parse_image
 
 
 def sync_build(module: Module, build: AppBuildConfig):

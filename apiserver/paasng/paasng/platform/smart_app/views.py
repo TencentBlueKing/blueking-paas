@@ -29,7 +29,6 @@ from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
-from moby_distribution.registry.exceptions import RequestError as RequestRegistryError
 from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import JSONParser, MultiPartParser
@@ -67,6 +66,7 @@ from paasng.platform.sourcectl.package.downloader import download_package
 from paasng.platform.sourcectl.serializers import SourcePackageSLZ
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 from paasng.utils.error_codes import error_codes
+from paasng.utils.moby_distribution.registry.exceptions import RequestError as RequestRegistryError
 from paasng.utils.views import get_filepath
 
 logger = logging.getLogger(__name__)

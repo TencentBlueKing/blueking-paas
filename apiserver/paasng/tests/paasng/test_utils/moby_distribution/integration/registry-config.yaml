@@ -1,0 +1,14 @@
+version: 0.1
+storage:
+  delete:
+    enabled: true
+  filesystem:
+    rootdirectory: /var/lib/registry
+compatibility:
+  schema1:
+    enabled: true
+log:
+  level: debug
+http:
+    addr: :5000
+    secret: asecretforlocaldevelopment

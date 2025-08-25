@@ -25,7 +25,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_str
-from moby_distribution.registry.utils import parse_image
+
+from paasng.utils.moby_distribution.registry.utils import parse_image
 
 # k8s 广泛使用的命名规范, 仅允许小写字母、数字和连字符, 最大长度 63
 # 参考 https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names

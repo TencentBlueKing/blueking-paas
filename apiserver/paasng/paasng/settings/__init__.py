@@ -210,8 +210,8 @@ INSTALLED_APPS = [
     "paas_wl.infras.resources.generation",
     # 蓝鲸通知中心
     "bk_notice_sdk",
-    # smart build
-    "paasng.misc.tools.build_smart",
+    # s-mart 包构建工具
+    "paasng.misc.tools.smart_app",
 ]
 
 # Allow extending installed apps

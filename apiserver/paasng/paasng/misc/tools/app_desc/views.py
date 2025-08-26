@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
 from collections import OrderedDict
 
 import yaml
@@ -28,11 +27,7 @@ from rest_framework.views import APIView
 from paasng.utils.yaml import IndentDumper
 
 from .app_desc import transform_app_desc_spec2_to_spec3
-from .serializers import (
-    AppDescSpec2Serializer,
-)
-
-logger = logging.getLogger(__name__)
+from .serializers import AppDescSpec2Serializer
 
 
 class AppDescTransformAPIView(APIView):

@@ -15,9 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from django.dispatch import Signal
 
-urlpatterns = [
-    path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.smart_app.urls")),
-]
+# providing_args: [smart_build: SmartBuild]
+pre_build_start = Signal()
+
+# providing_args: [smart_build: SmartBuild]
+post_build_end = Signal()
+
+
+# mainly for SmartBuildPhase & SmartBuildStep
+# providing_args: [phase: SmartBuildPhaseTypes]
+pre_phase_start = Signal()
+
+# providing_args: [status: JobStatus, phase: SmartBuildPhaseTypes]
+post_phase_end = Signal()

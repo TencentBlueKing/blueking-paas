@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -15,25 +14,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
+from typing import TYPE_CHECKING, List
 
-from paasng.utils.basic import re_path
 
-from . import views
+logger = logging.getLogger(__name__)
 
-urlpatterns = [
-    re_path(
-        r"^api/tools/s-mart/upload/",
-        views.SmartBuilderViewSet.as_view({"post": "upload"}),
-        name="api.tools.s-mart.upload",
-    ),
-    re_path(
-        r"^api/tools/s-mart/build/",
-        views.SmartBuilderViewSet.as_view({"post": "build_smart"}),
-        name="api.tools.s-mart.build_smart",
-    ),
-    re_path(
-        r"^api/tools/s-mart/build/(?P<build_id>[^/]+)/interruptions/",
-        views.SmartBuilderViewSet.as_view({"post": "user_interrupt"}),
-        name="api.tools.s-mart.user_interrupt",
-    ),
-]
+class SmartBuildPhaseManager:
+    """Common manager for Smart Build Phases"""

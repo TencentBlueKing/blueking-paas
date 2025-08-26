@@ -25,6 +25,8 @@ from paas_wl.bk_app.dev_sandbox.kres_slzs.configmap import (
 )
 from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity
+from paasng.accessories.dev_sandbox.models import DevSandbox as DevSandboxModel
+from paasng.accessories.dev_sandbox.models import DevSandboxUserSettings
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.dev_sandbox.kres_entities import DevSandbox
@@ -42,6 +44,13 @@ class DevSandboxConfigMap(AppEntity):
     @classmethod
     def create(cls, dev_sandbox: "DevSandbox") -> "DevSandboxConfigMap":
         cfg_mp_name = f"{dev_sandbox.name}-code-editor-config"
+
+        try:
+            # 获取用户偏好配置
+            sandbox = DevSandboxModel.objects.get(code=dev_sandbox.code)
+            user_settings = DevSandboxUserSettings.objects.get(owner=sandbox.owner).code_server_settings
+        except DevSandboxUserSettings.DoesNotExist:
+            user_settings = {}
 
         # https://code.visualstudio.com/docs/configure/themes#_color-themes
         # https://code.visualstudio.com/docs/configure/themes#_automatically-switch-based-on-os-color-scheme
@@ -62,6 +71,8 @@ class DevSandboxConfigMap(AppEntity):
                         }
                     },
                     "terminal.integrated.defaultProfile.linux": "cnb-bash",
+                    # 如果用户配置存在，覆盖默认配置
+                    **user_settings,
                 }
             )
         }

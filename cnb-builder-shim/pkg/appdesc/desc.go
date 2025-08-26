@@ -128,3 +128,54 @@ func TransformToProcfile(descFilePath string) (string, error) {
 
 	return strings.Join(lines, "\n"), nil
 }
+
+// MergeEnvVars 合并环境变量到应用描述对象
+func MergeEnvVars(desc AppDesc, envVars []Env) {
+	switch d := desc.(type) {
+	case *AppDescV2:
+		module := d.GetModule()
+		if module == nil {
+			return
+		}
+
+		existingEnvMap := make(map[string]int)
+		for i, env := range module.ProcEnvs {
+			existingEnvMap[env.Key] = i
+		}
+
+		// 合并新环境变量
+		for _, newEnv := range envVars {
+			if idx, exists := existingEnvMap[newEnv.Name]; exists {
+				module.ProcEnvs[idx].Value = newEnv.Value
+			} else {
+				module.ProcEnvs = append(module.ProcEnvs, EnvV2{
+					Key:   newEnv.Name,
+					Value: newEnv.Value,
+				})
+			}
+		}
+
+	case *AppDescV3:
+		module := d.GetModule()
+		if module == nil {
+			return
+		}
+
+		existingEnvMap := make(map[string]int)
+		for i, env := range module.Spec.Configuration.Env {
+			existingEnvMap[env.Name] = i
+		}
+
+		// 合并新环境变量
+		for _, newEnv := range envVars {
+			if idx, exists := existingEnvMap[newEnv.Name]; exists {
+				module.Spec.Configuration.Env[idx].Value = newEnv.Value
+			} else {
+				module.Spec.Configuration.Env = append(module.Spec.Configuration.Env, EnvV3{
+					Name:  newEnv.Name,
+					Value: newEnv.Value,
+				})
+			}
+		}
+	}
+}

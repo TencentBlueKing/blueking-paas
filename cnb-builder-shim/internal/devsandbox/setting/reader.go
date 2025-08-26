@@ -30,12 +30,12 @@ import (
 const (
 	// UserSettingsDir 用户沙箱 IDE 配置文件所在目录
 	UserSettingsDir = "/coder/code-server/User"
-	// UserSettingsMaxSize 用户配置文件限制（单位：KB）
-	UserSettingsMaxSize = 512
-	// UserSettingsSizeEnvVarKey 用户配置文件大小限制环境变量名
-	UserSettingsSizeEnvVarKey = "CODE_SERVER_USER_SETTINGS_MAX_SIZE"
 	// UserSettingsFileName 用户配置文件名
 	UserSettingsFileName = "settings.json"
+	// DefaultUserSettingsMaxSize 用户配置文件限制（单位：KB）
+	DefaultUserSettingsMaxSize = 512
+	// UserSettingsSizeEnvVarKey 用户配置文件大小限制环境变量键名（如果有提供，可覆盖默认值）
+	UserSettingsSizeEnvVarKey = "CODE_SERVER_USER_SETTINGS_MAX_SIZE"
 )
 
 var (
@@ -95,5 +95,5 @@ func (r *UserSettingsReader) getUserSettingsMaxSize() int64 {
 			return int64(parsedSize) * 1024
 		}
 	}
-	return int64(UserSettingsMaxSize) * 1024
+	return int64(DefaultUserSettingsMaxSize) * 1024
 }

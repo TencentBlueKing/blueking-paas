@@ -19,6 +19,11 @@
 package devsandbox
 
 import (
+	"github.com/BurntSushi/toml"
+	devlaunch "github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	"github.com/buildpacks/lifecycle/launch"
 	"io"
 	"os"
 	"os/exec"
@@ -93,18 +98,33 @@ func (m HotReloadManager) Rebuild(reloadID string) error {
 
 // Relaunch ...
 func (m HotReloadManager) Relaunch(reloadID string, envVars map[string]string) error {
-	cmd := phase.MakeLauncherCmd(reloadSubCommand)
-
-	if len(envVars) > 0 {
-		// 传入的 env_vars 非空，使用传入的自定义环境变量
-		newEnv := make([]string, 0, len(envVars))
-		for key, value := range envVars {
-			newEnv = append(newEnv, key+"="+value)
-		}
-		cmd.Env = newEnv
+	// 将 envVars 转换为 []appdesc.Env
+	procEnvs := make([]appdesc.Env, 0, len(envVars))
+	for key, value := range envVars {
+		procEnvs = append(procEnvs, appdesc.Env{Name: key, Value: value})
 	}
 
-	return m.runCmd(reloadID, cmd)
+	logger := logging.Default()
+
+	var md launch.Metadata
+
+	if _, err := toml.DecodeFile(launch.GetMetadataFilePath("/layers"), &md); err != nil {
+		logger.Error(err, "read metadata")
+		return err
+	}
+
+	mdProcesses := md.Processes
+	processes, err := devlaunch.SymlinkProcessLauncher(mdProcesses)
+	if err != nil {
+		return errors.Wrap(err, "symlink processes launcher")
+	}
+
+	// 重启进程
+	if err = devlaunch.ReloadProcesses(processes, procEnvs); err != nil {
+		return errors.Wrap(err, "reload processes")
+	}
+
+	return nil
 }
 
 func (m HotReloadManager) runCmd(reloadID string, cmd *exec.Cmd) error {
@@ -173,7 +193,7 @@ func (f ReloadResultFile) WriteStatus(reloadID string, status ReloadStatus) erro
 
 // ReadLog is a function that reads a log file based on the given reloadID.
 func (f ReloadResultFile) ReadLog(reloadID string) (string, error) {
-	filePath := path.Join(f.rootDir, reloadID)
+	filePath := path.Join(f.rootLogDir, reloadID)
 
 	// 检查日志文件是否存在
 	if _, err := os.Stat(filePath); err != nil {

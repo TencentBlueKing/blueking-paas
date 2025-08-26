@@ -21,9 +21,6 @@ package supervisor
 import (
 	"fmt"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
-	"net/url"
-
-	//"github.com/docker/docker/daemon/logger"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,14 +102,12 @@ func makeSupervisorConf(processes []base.Process, procEnvs ...appdesc.Env) (*Sup
 	}
 
 	if procEnvs != nil {
-		//if err := validateEnvironment(procEnvs); err != nil {
-		//	return nil, err
-		//}
+		if err := validateEnvironment(procEnvs); err != nil {
+			return nil, err
+		}
 		envs := make([]string, len(procEnvs))
-		for i, env := range procEnvs {
-			// 仅转义 % 和 "
-			escapedValue := escapeForSupervisor(env.Value)
-			envs[i] = fmt.Sprintf(`%s="%s"`, env.Name, escapedValue)
+		for indx, env := range procEnvs {
+			envs[indx] = fmt.Sprintf(`%s="%s"`, env.Name, env.Value)
 		}
 		conf.Environment = strings.Join(envs, ",")
 	}
@@ -195,13 +190,6 @@ func (p *RPCProcessController) Reload(processes []base.Process, procEnvs ...appd
 		return err
 	}
 
-	// 读取 supervisor 配置文件内容
-	if configData, err := os.ReadFile(confFilePath); err == nil {
-		logger.Info("supervisor 配置文件内容", "content", string(configData))
-	} else {
-		logger.Error(err, "读取 supervisor 配置文件失败")
-	}
-
 	//首次运行，没有 supervisor server，直接启动
 	server := rpc.NewServer(confFilePath)
 	if err := server.Start(); err != nil {
@@ -216,52 +204,4 @@ func (p *RPCProcessController) Reload(processes []base.Process, procEnvs ...appd
 func (p *RPCProcessController) StopAllProcesses() error {
 	_, err := p.client.StopAllProcesses(true)
 	return err
-}
-
-// escapeForSupervisor 转义值中的特殊字符
-func escapeForSupervisor(value string) string {
-	// 如果是 URL，使用特殊处理
-	if isURL(value) {
-		return escapeURLForSupervisor(value)
-	}
-
-	// 普通值的转义
-	return escapeBasic(value)
-}
-
-// escapeBasic 基本转义：仅处理 % 和 "
-func escapeBasic(value string) string {
-	escaped := strings.ReplaceAll(value, "%", "%%")
-	escaped = strings.ReplaceAll(escaped, `"`, `\"`)
-	return escaped
-}
-
-// escapeURLForSupervisor 转义 URL 值
-func escapeURLForSupervisor(urlStr string) string {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return escapeBasic(urlStr)
-	}
-
-	// 特别处理查询参数
-	if u.RawQuery != "" {
-		query := u.Query()
-		for key := range query {
-			values := query[key]
-			for i := range values {
-				values[i] = escapeBasic(values[i])
-			}
-			query[key] = values
-		}
-		u.RawQuery = query.Encode()
-	}
-
-	return u.String()
-}
-
-// isURL 检查字符串是否是 URL
-func isURL(s string) bool {
-	return strings.HasPrefix(s, "http://") ||
-		strings.HasPrefix(s, "https://") ||
-		strings.HasPrefix(s, "ftp://")
 }

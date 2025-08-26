@@ -16,24 +16,28 @@
 # to the current version of the project delivered to anyone in the future.
 
 
+from paasng.misc.tools.smart_builder import views
 from paasng.utils.basic import re_path
-
-from . import views
 
 urlpatterns = [
     re_path(
-        r"^api/tools/s-mart/upload/",
+        r"^api/tools/s-mart/upload/$",
         views.SmartBuilderViewSet.as_view({"post": "upload"}),
         name="api.tools.s-mart.upload",
     ),
     re_path(
-        r"^api/tools/s-mart/build/",
+        r"^api/tools/s-mart/build/$",
         views.SmartBuilderViewSet.as_view({"post": "build_smart"}),
         name="api.tools.s-mart.build_smart",
     ),
     re_path(
-        r"^api/tools/s-mart/build/(?P<build_id>[^/]+)/interruptions/",
-        views.SmartBuilderViewSet.as_view({"post": "user_interrupt"}),
-        name="api.tools.s-mart.user_interrupt",
+        r"^api/tools/s-mart/build_phases/$",
+        views.SmartBuildPhaseViewSet.as_view({"get": "get_frame"}),
+        name="api.tools.s-mart.phase",
+    ),
+    re_path(
+        r"^api/tools/s-mart/build_status/(?P<smart_build_id>[0-9a-f-]{32,36})/$",
+        views.SmartBuildPhaseViewSet.as_view({"get": "get_result"}),
+        name="api.tools.s-mart.build_status",
     ),
 ]

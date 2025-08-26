@@ -26,7 +26,19 @@ from rest_framework.response import Response
 
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
-from paasng.misc.tools.build_smart.models import SmartBuildRecord
+from paasng.misc.tools.smart_builder.build import SmartBuildTaskRunner, create_smart_build_record
+from paasng.misc.tools.smart_builder.constants import SmartBuildPhaseType
+from paasng.misc.tools.smart_builder.models import SmartBuild
+from paasng.misc.tools.smart_builder.phases_steps import ALL_STEP_METAS, SmartBuildPhaseManager, get_sorted_steps
+from paasng.misc.tools.smart_builder.serializers import (
+    SmartBuildFramePhaseSLZ,
+    SmartBuildInputSLZ,
+    SmartBuildOutputSLZ,
+    SmartBuildPhaseSLZ,
+    ToolPackageStashInputSLZ,
+    ToolPackageStashOutputSLZ,
+)
+from paasng.misc.tools.smart_builder.utils.flow import SmartBuildCoordinator
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
@@ -36,17 +48,6 @@ from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
 from paasng.platform.sourcectl.utils import generate_temp_dir
 from paasng.utils.error_codes import error_codes
 from paasng.utils.views import get_filepath
-
-from .coordinator import SmartBuildCoordinator
-from .exceptions import SmartBuildInterruptionFailed
-from .interruptions import interrupt_smart_build
-from .serializers import (
-    SmartBuildInputSLZ,
-    SmartBuildOutputSLZ,
-    ToolPackageStashInputSLZ,
-    ToolPackageStashOutputSLZ,
-)
-from .task import SmartBuildTaskRunner, initialize_smart_build_record
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,6 @@ class SmartBuilderViewSet(viewsets.ViewSet):
         app_code = slz.validated_data["app_code"]
         signature = slz.validated_data["signature"]
 
-        # 1. 根据 app_code 找到之前上传的源码包, 将其下载到临时目录
         with generate_temp_dir() as tmp_dir:
             try:
                 package_path = PreparedSourcePackage(
@@ -120,40 +120,29 @@ class SmartBuilderViewSet(viewsets.ViewSet):
                 )
                 raise error_codes.FILE_CORRUPTED_ERROR.f(_("文件签名不一致"))
 
-        # 3. 保证同一时间构建的唯一性
-        # 使用文件的数字签名来决定构建任务的唯一标识
-        coordinator = SmartBuildCoordinator(signature)
+        # 使用 operator 和 app_code 组合构建锁, 避免重复构建
+        coordinator = SmartBuildCoordinator(f"{request.user.pk}:{app_code}")
         if not coordinator.acquire_lock():
             raise error_codes.CANNOT_BUILD_ONGOING_EXISTS.f(_("正在构建 s-mart 包, 请勿重复提交构建"))
 
-        smart_build_id = ""
         with coordinator.release_on_error():
-            smart_build = initialize_smart_build_record(
-                package_path=package_path,
-                signature=signature,
+            store_url, filename = PreparedSourcePackage(
+                request,
+                namespace=self._get_store_namespace(app_code),
+            ).get_stored_info()
+            smart_build = create_smart_build_record(
+                package_name=filename,
+                app_code=app_code,
                 operator=request.user.pk,
             )
-            smart_build_id = smart_build.id
+            build_id = smart_build.uuid
             coordinator.set_smart_build(smart_build)
-            # Start a background s-mart build task
-            SmartBuildTaskRunner(smart_build, package_path).start()
+            # Start a background deploy task
+            SmartBuildTaskRunner(smart_build, store_url, package_path).start()
         return JsonResponse(
-            data={"smart_build_id": smart_build_id, "stream_url": f"/streams/{smart_build_id}"},
+            data={"build_id": build_id, "stream_url": f"/streams/{build_id}"},
             status=status.HTTP_201_CREATED,
         )
-
-    def user_interrupt(self, request, build_id):
-        """由用户手动中断 s-mart 包构建"""
-        try:
-            smart_build_record = SmartBuildRecord.objects.get(id=build_id)
-            interrupt_smart_build(smart_build_record, request.user)
-        except SmartBuildRecord.DoesNotExist:
-            raise error_codes.NOT_FOUND_SMART_BUILD_RECORD.f(
-                _("没有 id 为 {build_id} s-mart 包构建记录").format(build_id=build_id)
-            )
-        except SmartBuildInterruptionFailed as e:
-            raise error_codes.BUILD_INTERRUPTION_FAILED.f(str(e))
-        return Response({})
 
     @staticmethod
     def _validate_app_desc(app_desc: ApplicationDesc):
@@ -164,3 +153,40 @@ class SmartBuilderViewSet(viewsets.ViewSet):
     @staticmethod
     def _get_store_namespace(app_code: str) -> str:
         return f"{app_code}:prepared_build"
+
+
+class SmartBuildPhaseViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(tags=["创建 s-mart 包阶段"], responses={"200": SmartBuildFramePhaseSLZ(many=True)})
+    def get_frame(self):
+        """获取 S-mart 包构建的阶段和步骤信息"""
+        phases = []
+        for phase_type in SmartBuildPhaseType:
+            # 从 ALL_STEP_METAS 过滤出属于当前 phase 的步骤并按 name 排序
+            phase_steps = sorted(
+                (s for s in ALL_STEP_METAS.values() if s.phase == phase_type.value),
+                key=lambda s: s.name,
+            )
+            phases.append({"type": phase_type.value, "_sorted_steps": phase_steps})
+
+        return Response(data=SmartBuildFramePhaseSLZ(phases, many=True).data)
+
+    @swagger_auto_schema(tags=["部署阶段"], responses={"200": SmartBuildPhaseSLZ(many=True)})
+    def get_result(self, request, smart_build_id: str):
+        try:
+            smart_build = SmartBuild.objects.get(pk=smart_build_id)
+        except SmartBuild.DoesNotExist:
+            raise error_codes.NOT_FOUND_SMART_BUILD
+
+        manager = SmartBuildPhaseManager(smart_build)
+        try:
+            phases = [smart_build.phases.get(type=phase_type) for phase_type in manager.list_phase_types()]
+        except Exception:
+            logger.exception("failed to get phase info")
+            raise error_codes.CANNOT_GET_SMART_BUILD_PHASES
+
+        # Set property for rendering by slz
+        for p in phases:
+            p._sorted_steps = get_sorted_steps(p)
+        return Response(data=SmartBuildPhaseSLZ(phases, many=True).data)

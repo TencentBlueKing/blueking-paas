@@ -1,0 +1,139 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+import logging
+from functools import partial
+from os import PathLike
+from typing import TYPE_CHECKING, Dict, Optional
+
+from django.conf import settings
+from django.utils.translation import gettext as _
+
+from paas_wl.infras.resources.base.base import get_all_cluster_names, get_client_by_cluster_name
+from paas_wl.infras.resources.kube_res.base import Schedule
+from paasng.misc.tools.smart_builder.constants import SmartBuildPhaseType
+from paasng.misc.tools.smart_builder.signals import post_phase_end, pre_phase_start
+from paasng.misc.tools.smart_builder.utils.flow import (
+    SmartBuildCoordinator,
+    SmartBuildProcedure,
+    SmartBuildStateMgr,
+)
+from paasng.misc.tools.smart_builder.utils.output import make_channel_stream
+from paasng.platform.declarative.exceptions import DescriptionValidationError
+from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.engine.exceptions import HandleAppDescriptionError
+from paasng.platform.smart_app.services.detector import SourcePackageStatReader
+
+from .handler import ContainerRuntimeSpec, SmartBuilderTemplate, SmartBuildHandler
+from .poller import BuildProcessPoller, BuildProcessResultHandler
+
+if TYPE_CHECKING:
+    from paasng.misc.tools.smart_builder.models import SmartBuild
+    from paasng.misc.tools.smart_builder.utils.output import SmartBuildStream
+
+logger = logging.getLogger(__name__)
+
+
+class SmartAppBuilder:
+    """The main controller for building a s-mart app package"""
+
+    phase_type: Optional[SmartBuildPhaseType] = None
+
+    def __init__(self, smart_build: "SmartBuild", source_package_url: str, package_path: PathLike):
+        self.smart_build = smart_build
+        self.source_package_url = source_package_url
+        self.package_path = package_path
+        self.state_mgr = SmartBuildStateMgr.from_smart_build_id(
+            smart_build_id=smart_build.uuid, phase_type=SmartBuildPhaseType.PREPARATION
+        )
+        self.stream: SmartBuildStream = make_channel_stream(smart_build)
+        self.coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
+
+        self.phase = self.smart_build.phases.get(type=self.phase_type)
+        self.procedure = partial(SmartBuildProcedure, self.stream, self.smart_build, phase=self.phase)
+        self.procedure_force_phase = partial(SmartBuildProcedure, self.stream, self.smart_build)
+
+    def start(self):
+        """Start the s-mart building process"""
+        logger.info(f"Starting smart build process for build id: {self.smart_build.uuid}")
+
+        pre_phase_start.send(self, phase=SmartBuildPhaseType.PREPARATION)
+        preparation_phase = self.smart_build.phases.get(type=SmartBuildPhaseType.PREPARATION)
+
+        with self.procedure_force_phase("校验应用描述文件", phase=preparation_phase):
+            self.validate_app_description()
+
+        # TODO: 添加其他在准备阶段执行的步骤
+
+        post_phase_end.send(self, phase=SmartBuildPhaseType.PREPARATION)
+        with self.procedure("启动构建阶段", phase=SmartBuildPhaseType.BUILD):
+            self.async_start_build_process()
+
+    def validate_app_description(self):
+        """Validate the app description file"""
+        # TODO: 添加 app_desc 的检查逻辑
+        stat = SourcePackageStatReader(self.package_path).read()
+        try:
+            app_desc = get_desc_handler(stat.meta_info).app_desc
+        except DescriptionValidationError as e:
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
+
+        if app_desc.market is None:
+            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败"))
+
+    def async_start_build_process(self):
+        """Start a new s-mart build process and check status periodically"""
+        self.launch_build_process()
+        self.state_mgr.update()
+
+        params = {"smart_build_id": self.smart_build.uuid}
+        BuildProcessPoller.start(params, BuildProcessResultHandler)
+
+    def launch_build_process(self):
+        """Start a new build process for build smart package"""
+        source_get_url = self.source_package_url
+        dest_put_url = "https://user:pass@example.com/generic/bkpaas/test-samrt/test.tgz"
+
+        envs: Dict[str, str] = {
+            "SOURCE_GET_URL": source_get_url,
+            "DEST_PUT_URL": dest_put_url,
+            "BUILDER_SHIM_IMAGE": settings.BUILDER_SHIM_IMAGE,
+        }
+
+        # TODO: Use first useful cluster name as default
+        clusters = get_all_cluster_names()
+        cluster_name = clusters[0]
+
+        runtime = ContainerRuntimeSpec(
+            image=settings.SMART_BUILDER_IMAGE,
+            envs=envs,
+        )
+
+        schedule = Schedule(
+            cluster_name=cluster_name,
+            tolerations=[],
+            node_selector={},
+        )
+
+        builder_template = SmartBuilderTemplate(
+            name=f"smart-builder-{self.smart_build.uuid}",
+            namespace="smart-app-builder",
+            runtime=runtime,
+            schedule=schedule,
+        )
+
+        SmartBuildHandler(get_client_by_cluster_name(cluster_name)).build_pod(template=builder_template)

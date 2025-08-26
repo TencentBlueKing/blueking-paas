@@ -15,30 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from rest_framework import serializers
+from django.dispatch import Signal
 
+# providing_args: [smart_build: SmartBuild]
+pre_build_start = Signal()
 
-class ToolPackageStashInputSLZ(serializers.Serializer):
-    """Handle package for S-mart build"""
+# providing_args: [smart_build: SmartBuild]
+post_build_end = Signal()
 
-    package = serializers.FileField(help_text="待构建的应用源码包")
+# mainly for SmartBuildPhase & SmartBuildStep
+# providing_args: [phase: SmartBuildPhaseTypes]
+pre_phase_start = Signal()
 
-
-class BaseSmartBuildSLZ(serializers.Serializer):
-    app_code = serializers.CharField(help_text="应用 code")
-    signature = serializers.CharField(help_text="数字签名")
-
-
-class ToolPackageStashOutputSLZ(BaseSmartBuildSLZ):
-    """Tool Package Stash Output SLZ"""
-
-
-class SmartBuildInputSLZ(BaseSmartBuildSLZ):
-    """S-mart build request parameters SLZ"""
-
-
-class SmartBuildOutputSLZ(serializers.Serializer):
-    """S-mart build response SLZ"""
-
-    build_id = serializers.CharField(help_text="构建 id")
-    stream_url = serializers.URLField(help_text="获取构建进度的 stream url")
+# providing_args: [status: JobStatus, phase: SmartBuildPhaseTypes]
+post_phase_end = Signal()

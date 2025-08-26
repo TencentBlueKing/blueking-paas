@@ -15,9 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from .phase import SmartBuildPhase
+from .smart_build import SmartBuild, SmartBuildLog, SmartBuildLogLine
+from .step import SmartBuildStep
 
-urlpatterns = [
-    path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.smart_builder.urls")),
+__all__ = [
+    "SmartBuild",
+    "SmartBuildPhase",
+    "SmartBuildStep",
+    "SmartBuildLog",
+    "SmartBuildLogLine",
 ]

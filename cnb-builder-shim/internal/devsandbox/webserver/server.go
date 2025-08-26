@@ -33,10 +33,12 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/setting"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
@@ -100,6 +102,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.POST("/processes/:processName", ProcessStartHandler())
 	r.GET("/codes/diffs", CodeDiffsHandler())
 	r.GET("/codes/commit", CodeCommitHandler())
+	r.GET("/settings", SettingsHandler())
 
 	return s, nil
 }
@@ -115,6 +118,8 @@ func (s *WebServer) Start() error {
 func (s *WebServer) ReadReloadEvent() (devsandbox.AppReloadEvent, error) {
 	return <-s.ch, nil
 }
+
+var _ devsandbox.DevWatchServer = (*WebServer)(nil)
 
 func tokenAuthMiddleware(token string) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -427,4 +432,27 @@ func HealthzHandler() gin.HandlerFunc {
 	}
 }
 
-var _ devsandbox.DevWatchServer = (*WebServer)(nil)
+// SettingsHandler 获取 settings.json
+func SettingsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		reader := setting.NewUserSettingsReader()
+
+		userSettings, err := reader.Read()
+		if err == nil {
+			c.JSON(http.StatusOK, userSettings)
+			return
+		}
+
+		// 根据错误类型设置返回状态码，默认为 500
+		statusCode := http.StatusInternalServerError
+		if errors.Is(err, setting.UserSettingsNotFound) {
+			// 用户配置文件不存在 -> 404
+			statusCode = http.StatusNotFound
+		} else if errors.Is(err, setting.UserSettingsTooLarge) {
+			// 用户配置文件过大 -> 413
+			statusCode = http.StatusRequestEntityTooLarge
+		}
+
+		c.JSON(statusCode, gin.H{"message": err.Error()})
+	}
+}

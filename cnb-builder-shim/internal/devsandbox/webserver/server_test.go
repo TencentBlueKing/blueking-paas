@@ -37,6 +37,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/settings"
 )
 
 var _ = Describe("Test webserver api", func() {
@@ -68,6 +69,7 @@ var _ = Describe("Test webserver api", func() {
 		mgr := &service.FakeDeployManger{}
 		r.POST("/deploys", DeployHandler(s, mgr))
 		r.GET("/deploys/:deployID/results", ResultHandler(mgr))
+		r.GET("/settings", SettingsHandler())
 	})
 
 	AfterEach(func() {
@@ -164,6 +166,113 @@ var _ = Describe("Test webserver api", func() {
 			s.server.ServeHTTP(w, req)
 
 			Expect(w.Code).To(Equal(401))
+		})
+	})
+
+	Describe("get settings.json", func() {
+		// 这里需要在单测中覆盖包级变量来模拟 settings 路径，因为：
+		// 1. settings API 中的 "/coder/code-server/User" 是写死的，而根目录 "/" 是只读的：'mkdir /coder: read-only file system'
+		// 2. 在单测中普通用户没有权限创建 /coder 这样的顶级目录，因此需要使用临时目录来模拟固定路径
+		// 3. 由于 settings.json 的路径固定，所以需要通过覆盖包级变量来设置 API 读取的路径
+
+		var (
+			tmpSettingsDir    string
+			originalNewReader func(string) settings.Reader
+		)
+
+		BeforeEach(func() {
+			originalNewReader = settings.NewReader
+
+			// 创建临时目录
+			var err error
+			tmpSettingsDir, err = os.MkdirTemp("", "settings-test")
+			Expect(err).NotTo(HaveOccurred())
+
+			settings.NewReader = func(dirPath string) settings.Reader {
+				return settings.Reader{DirPath: tmpSettingsDir}
+			}
+		})
+
+		AfterEach(func() {
+			settings.NewReader = originalNewReader
+			os.RemoveAll(tmpSettingsDir)
+		})
+
+		getSettingsPath := func() string {
+			return filepath.Join(tmpSettingsDir, settings.UserSettingsFileName)
+		}
+
+		Context("when settings.json exists", func() {
+			BeforeEach(func() {
+				settingsPath := getSettingsPath()
+				err := os.WriteFile(settingsPath, []byte(`{"key":"value"}`), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return the file content", func() {
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusOK))
+				Expect(w.Body.String()).To(Equal(`{"key":"value"}`))
+			})
+		})
+
+		Context("when settings.json does not exist", func() {
+			It("should return 404 Not Found", func() {
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusNotFound))
+				Expect(w.Body.String()).To(ContainSubstring("configuration file not found"))
+			})
+		})
+
+		Context("when file is invalid", func() {
+			BeforeEach(func() {
+				settingsPath := getSettingsPath()
+				Expect(os.Mkdir(settingsPath, 0755)).To(Succeed())
+			})
+
+			It("should return 500 Internal Server Error", func() {
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusInternalServerError))
+				Expect(w.Body.String()).To(ContainSubstring("is a directory"))
+			})
+		})
+
+		Context("when file is too large", func() {
+			BeforeEach(func() {
+				// 设置文件大小限制为 1 KB
+				os.Setenv(settings.UserSettingsSizeEnvVarKey, "1")
+
+				settingsPath := getSettingsPath()
+				content := make([]byte, 2150)
+				err := os.WriteFile(settingsPath, content, 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				os.Unsetenv(settings.UserSettingsSizeEnvVarKey)
+			})
+
+			It("should return 413 Request Entity Too Large", func() {
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusRequestEntityTooLarge))
+				Expect(w.Body.String()).To(ContainSubstring("configuration file is too large"))
+			})
 		})
 	})
 })

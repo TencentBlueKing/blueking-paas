@@ -25,6 +25,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_403_FORBIDDEN
 
+from paas_wl.bk_app.applications.api import get_latest_build
 from paas_wl.bk_app.processes.processes import ProcessManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paasng.accessories.serializers import DocumentaryLinkSLZ
@@ -86,7 +87,7 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
         slz.is_valid(raise_exception=True)
 
         # 必须调用 get_application() 方法才能触发权限校验
-        _ = self.get_application()
+        app = self.get_application()
         module = self.get_module_via_path()
         env = self.get_env_via_path()
         manager = ProcessManager(env)
@@ -102,7 +103,10 @@ class ApplicationProcessWebConsoleViewSet(viewsets.ViewSet, ApplicationCodeInPat
                 docs = self._get_webconsole_docs_from_advisor()
                 return Response(data=docs, status=HTTP_403_FORBIDDEN)
 
-            is_cnb_runtime = runtime_manager.is_cnb_runtime
+            if app.is_smart_app and (build := get_latest_build(env)):
+                is_cnb_runtime = build.is_build_from_cnb()
+            else:
+                is_cnb_runtime = runtime_manager.is_cnb_runtime
 
         # 进入 WebConsole 的默认命令
         command = self._get_webconsole_command(module, runtime_type, is_cnb_runtime)

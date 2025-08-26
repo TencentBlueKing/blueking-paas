@@ -137,10 +137,7 @@ func (d *AppDescV3) GetEnvs() []Env {
 	}
 	var envs []Env
 	for _, env := range module.Spec.Configuration.Env {
-		envs = append(envs, Env{
-			Name:  env.Name,
-			Value: env.Value,
-		})
+		envs = append(envs, Env(env))
 	}
 	return envs
 }

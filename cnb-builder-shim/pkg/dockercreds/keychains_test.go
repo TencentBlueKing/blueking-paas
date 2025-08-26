@@ -28,9 +28,7 @@ import (
 )
 
 var _ = Describe("TestCase", func() {
-	var (
-		reference = name.MustParseReference("mirrors.tencent.com/foo/bar", name.WeakValidation)
-	)
+	reference := name.MustParseReference("mirrors.tencent.com/foo/bar", name.WeakValidation)
 
 	Describe("Test EnvKeychain", func() {
 		It("env var exists", func() {
@@ -71,5 +69,4 @@ var _ = Describe("TestCase", func() {
 			Expect(err.Error()).To(ContainSubstring("failed to parse CNB_REGISTRY_AUTH value"))
 		})
 	})
-
 })

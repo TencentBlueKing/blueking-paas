@@ -80,7 +80,11 @@ var _ = Describe("Test setupBuildpacks", func() {
 	})
 
 	It("test write order.toml successfully", func() {
-		err := setupBuildpacks(logging.Default(), "oci-image apt https://example.com v;oci-embedded bk-buildpack-python blueking/python v213", cnbDir)
+		err := setupBuildpacks(
+			logging.Default(),
+			"oci-image apt https://example.com v;oci-embedded bk-buildpack-python blueking/python v213",
+			cnbDir,
+		)
 		Expect(err).To(BeNil())
 
 		content, _ := os.ReadFile(filepath.Join(cnbDir, "order.toml"))
@@ -96,7 +100,11 @@ version = 'v213'
 	})
 
 	It("test skip wrong value", func() {
-		err := setupBuildpacks(logging.Default(), "tgz apt;oci-embedded bk-buildpack-python blueking/python v213", cnbDir)
+		err := setupBuildpacks(
+			logging.Default(),
+			"tgz apt;oci-embedded bk-buildpack-python blueking/python v213",
+			cnbDir,
+		)
 		Expect(err).To(BeNil())
 
 		content, _ := os.ReadFile(filepath.Join(cnbDir, "order.toml"))
@@ -106,5 +114,4 @@ id = 'bk-buildpack-python'
 version = 'v213'
 `))
 	})
-
 })

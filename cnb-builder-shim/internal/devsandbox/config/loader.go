@@ -25,6 +25,7 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
+// G is the global config
 var G *Config
 
 // Init 初始化配置

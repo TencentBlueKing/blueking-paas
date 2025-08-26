@@ -21,7 +21,6 @@ package webserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
 	"os"
 	"path"
@@ -34,14 +33,15 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/setting"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/settings"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
@@ -206,7 +206,7 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 			srcFilePath = path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
 		case config.BkRepo:
 			srcFilePath = config.G.SourceCode.Workspace
-		case config.GIT:
+		case config.Git:
 			fallthrough
 		default:
 			errMsg := fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)
@@ -302,7 +302,10 @@ func ProcessListHandler() gin.HandlerFunc {
 		appDescFilePath := path.Join(config.G.SourceCode.Workspace, "app_desc.yaml")
 		appDesc, err := appdesc.UnmarshalToAppDesc(appDescFilePath)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("list process error: %s", err.Error())})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("list process error: %s", err.Error())},
+			)
 			return
 		}
 
@@ -324,7 +327,10 @@ func ProcessStopHandler() gin.HandlerFunc {
 
 		err = processCtl.Stop(processName)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("stop process error: %s", err.Error())})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("stop process error: %s", err.Error())},
+			)
 			return
 		}
 
@@ -346,7 +352,10 @@ func ProcessStartHandler() gin.HandlerFunc {
 
 		err = processCtl.Start(processName)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("start process error: %s", err.Error())})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("start process error: %s", err.Error())},
+			)
 			return
 		}
 
@@ -435,7 +444,7 @@ var _ devsandbox.DevWatchServer = (*WebServer)(nil)
 // SettingsHandler 获取 settings.json
 func SettingsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		reader := settings.NewReader(settings.SettingsDir)
+		reader := setting.NewUserSettingsReader()
 
 		userSettings, err := reader.Read()
 		if err == nil {
@@ -443,12 +452,16 @@ func SettingsHandler() gin.HandlerFunc {
 			return
 		}
 
-		if errors.Is(err, settings.UserSettingsNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"message": err.Error()})
-		} else if errors.Is(err, settings.UserSettingsTooLarge) {
-			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"message": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		// 根据错误类型设置返回状态码，默认为 500
+		statusCode := http.StatusInternalServerError
+		if errors.Is(err, setting.UserSettingsNotFound) {
+			// 用户配置文件不存在 -> 404
+			statusCode = http.StatusNotFound
+		} else if errors.Is(err, setting.UserSettingsTooLarge) {
+			// 用户配置文件过大 -> 413
+			statusCode = http.StatusRequestEntityTooLarge
 		}
+
+		c.JSON(statusCode, gin.H{"message": err.Error()})
 	}
 }

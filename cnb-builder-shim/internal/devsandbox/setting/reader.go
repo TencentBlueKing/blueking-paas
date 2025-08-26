@@ -33,7 +33,7 @@ const (
 	// UserSettingsMaxSize 用户配置文件限制（单位：KB）
 	UserSettingsMaxSize = 512
 	// UserSettingsSizeEnvVarKey 用户配置文件大小限制环境变量名
-	UserSettingsSizeEnvVarKey = "SETTINGS_MAX_SIZE"
+	UserSettingsSizeEnvVarKey = "CODE_SERVER_USER_SETTINGS_MAX_SIZE"
 	// UserSettingsFileName 用户配置文件名
 	UserSettingsFileName = "settings.json"
 )

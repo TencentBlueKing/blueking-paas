@@ -206,7 +206,7 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 			srcFilePath = path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
 		case config.BkRepo:
 			srcFilePath = config.G.SourceCode.Workspace
-		case config.GIT:
+		case config.Git:
 			fallthrough
 		default:
 			errMsg := fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)
@@ -302,7 +302,10 @@ func ProcessListHandler() gin.HandlerFunc {
 		appDescFilePath := path.Join(config.G.SourceCode.Workspace, "app_desc.yaml")
 		appDesc, err := appdesc.UnmarshalToAppDesc(appDescFilePath)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("list process error: %s", err.Error())})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("list process error: %s", err.Error())},
+			)
 			return
 		}
 
@@ -324,7 +327,10 @@ func ProcessStopHandler() gin.HandlerFunc {
 
 		err = processCtl.Stop(processName)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("stop process error: %s", err.Error())})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("stop process error: %s", err.Error())},
+			)
 			return
 		}
 
@@ -346,7 +352,10 @@ func ProcessStartHandler() gin.HandlerFunc {
 
 		err = processCtl.Start(processName)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("start process error: %s", err.Error())})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("start process error: %s", err.Error())},
+			)
 			return
 		}
 

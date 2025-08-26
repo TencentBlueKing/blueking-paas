@@ -1,10 +1,11 @@
 module github.com/TencentBlueking/bkpaas/cnb-builder-shim
 
-go 1.22.8
+go 1.24.6
 
 require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/buildpacks/lifecycle v0.18.3
+	github.com/bytedance/mockey v1.2.14
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/gin-contrib/cors v1.7.2
@@ -28,7 +29,6 @@ require (
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
-	github.com/bytedance/mockey v1.2.14 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect

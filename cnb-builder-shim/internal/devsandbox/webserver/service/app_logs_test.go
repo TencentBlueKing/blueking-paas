@@ -38,9 +38,9 @@ var _ = Describe("Test GetAppLogs", func() {
 		mysqlLogPath = filepath.Join(logPath, "mysql.log")
 		logContent1 := "value1\nvalue2\n"
 		logContent2 := "value3\nvalue4\n"
-		err := os.WriteFile(celeryLogPath, []byte(logContent1), 0644)
+		err := os.WriteFile(celeryLogPath, []byte(logContent1), 0o644)
 		Expect(err).To(BeNil())
-		err = os.WriteFile(mysqlLogPath, []byte(logContent2), 0644)
+		err = os.WriteFile(mysqlLogPath, []byte(logContent2), 0o644)
 		Expect(err).To(BeNil())
 	})
 	AfterEach(func() {

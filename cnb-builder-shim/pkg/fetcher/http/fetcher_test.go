@@ -14,8 +14,7 @@
  *
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
- */
-package http_test
+ */package http_test
 
 import (
 	"fmt"
@@ -40,34 +39,34 @@ var _ = BeforeSuite(func() {
 	handler = http.FileServer(http.Dir("../testdata"))
 	server = httptest.NewServer(handler)
 })
+
 var _ = AfterSuite(func() {
 	server.Close()
 })
 
 var _ = Describe("Http", func() {
-	var (
-		destDir string
-	)
+	var destDir string
 
 	BeforeEach(func() {
 		var err error
 		destDir, err = os.MkdirTemp("", "fetch_test")
 		Expect(err).To(BeNil())
-
 	})
 	AfterEach(func() {
 		os.RemoveAll(destDir)
 	})
 
-	DescribeTable("Download source from server, decompress it to destDir and read Procfile", func(source, expected string) {
-		sourceUrl := fmt.Sprintf("%s/%s", server.URL, source)
-		err := fetcher.NewFetcher(logging.Default()).Fetch(sourceUrl, destDir)
-		Expect(err).To(BeNil())
+	DescribeTable(
+		"Download source from server, decompress it to destDir and read Procfile",
+		func(source, expected string) {
+			sourceUrl := fmt.Sprintf("%s/%s", server.URL, source)
+			err := fetcher.NewFetcher(logging.Default()).Fetch(sourceUrl, destDir)
+			Expect(err).To(BeNil())
 
-		content, err := os.ReadFile(filepath.Join(destDir, "Procfile"))
-		Expect(err).To(BeNil())
-		Expect(string(content)).To(Equal(expected))
-	},
+			content, err := os.ReadFile(filepath.Join(destDir, "Procfile"))
+			Expect(err).To(BeNil())
+			Expect(string(content)).To(Equal(expected))
+		},
 		Entry("tarball", "project.tar", "hello: echo hello ${who:-world}!"),
 		Entry("tarball + gzip", "project.tgz", "hello: echo hello ${who:-world}!"),
 		Entry("tarball + gzip", "project.tar.gz", "hello: echo hello ${who:-world}!"),

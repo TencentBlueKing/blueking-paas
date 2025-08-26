@@ -95,7 +95,7 @@ func makeLifecycleDriverCmd(ctx context.Context) *exec.Cmd {
 func preExit(logger logr.Logger) {
 	duration, err := time.ParseDuration(*exitDelay)
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Sleeping before exit error"))
+		logger.Error(err, "Sleeping before exit error")
 		os.Exit(1)
 	}
 

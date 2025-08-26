@@ -73,7 +73,7 @@ var _ = Describe("TestReader", func() {
 		Context("when json is valid", func() {
 			BeforeEach(func() {
 				filePath := filepath.Join(tmpDir, UserSettingsFileName)
-				Expect(os.WriteFile(filePath, []byte(`{"theme": "dark"}`), 0644)).To(Succeed())
+				Expect(os.WriteFile(filePath, []byte(`{"theme": "dark"}`), 0o644)).To(Succeed())
 			})
 
 			It("should return the parsed JSON", func() {
@@ -86,7 +86,7 @@ var _ = Describe("TestReader", func() {
 		Context("when file is a directory", func() {
 			BeforeEach(func() {
 				filePath := filepath.Join(tmpDir, UserSettingsFileName)
-				Expect(os.Mkdir(filePath, 0755)).To(Succeed())
+				Expect(os.Mkdir(filePath, 0o755)).To(Succeed())
 			})
 
 			It("should return 'is a directory' error", func() {
@@ -99,7 +99,7 @@ var _ = Describe("TestReader", func() {
 		Context("when json is invalid", func() {
 			BeforeEach(func() {
 				filePath := filepath.Join(tmpDir, UserSettingsFileName)
-				Expect(os.WriteFile(filePath, []byte("{invalid json}"), 0644)).To(Succeed())
+				Expect(os.WriteFile(filePath, []byte("{invalid json}"), 0o644)).To(Succeed())
 			})
 
 			It("should return 'parse settings.json' error", func() {
@@ -115,7 +115,7 @@ var _ = Describe("TestReader", func() {
 
 				filePath := filepath.Join(tmpDir, UserSettingsFileName)
 				content := fmt.Sprintf(`{"largeData": "%s"}`, strings.Repeat(" ", 800*1024))
-				err := os.WriteFile(filePath, []byte(content), 0644)
+				err := os.WriteFile(filePath, []byte(content), 0o644)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -130,7 +130,7 @@ var _ = Describe("TestReader", func() {
 				_ = os.Setenv(UserSettingsSizeEnvVarKey, "invalid")
 
 				filePath := filepath.Join(tmpDir, UserSettingsFileName)
-				Expect(os.WriteFile(filePath, []byte("{}"), 0644)).To(Succeed())
+				Expect(os.WriteFile(filePath, []byte("{}"), 0o644)).To(Succeed())
 			})
 
 			It("should fallback to default size", func() {

@@ -24,7 +24,6 @@ import (
 )
 
 var _ = Describe("Test Types", func() {
-
 	Context("Test Files", func() {
 		It("AsTree", func() {
 			files := Files{

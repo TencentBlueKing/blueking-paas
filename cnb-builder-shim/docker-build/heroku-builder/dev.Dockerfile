@@ -2,7 +2,7 @@ ARG BUILDER_IMAGE_NAME=mirrors.tencent.com/bkpaas/builder-heroku-noble
 ARG BUILDER_IMAGE_TAG=latest
 
 # -------------- builder container --------------
-FROM golang:1.23.8-bookworm as binary-builder
+FROM golang:1.24.6-bookworm as binary-builder
 
 WORKDIR /src
 

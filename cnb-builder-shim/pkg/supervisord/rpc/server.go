@@ -21,9 +21,10 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"github.com/pkg/errors"
 	"os/exec"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // Server 是 supervisord 服务端

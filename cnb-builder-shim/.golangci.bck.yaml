@@ -1,0 +1,32 @@
+run:
+  # default concurrency is a available CPU number
+  concurrency: 4
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 2m
+  # exit code when at least one issue was found, default is 1
+  issues-exit-code: 1
+  # include test files or not, default is true
+  tests: true
+  allow-parallel-runners: true
+
+# Enable revive to check comments on exported functions/structs
+linters:
+  enable:
+    - revive
+  exclusions:
+    paths:
+      - ".*/mock/.*.go"
+      - ".*testing.go"
+
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+        arguments:
+          - disableStutteringCheck
+issues:
+  exclude-dirs-use-default: false
+  include:
+    # See: https://pkg.go.dev/github.com/Rodge0/golangci-lint@v1.43.3/pkg/config
+    - EXC0012  # EXC0012 revive
+    - EXC0014  # EXC0014 revive

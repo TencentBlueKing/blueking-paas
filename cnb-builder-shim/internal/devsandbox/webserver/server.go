@@ -21,7 +21,6 @@ package webserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
 	"os"
 	"path"
@@ -34,14 +33,15 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/setting"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/settings"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/utils"
 )
 
@@ -435,7 +435,7 @@ var _ devsandbox.DevWatchServer = (*WebServer)(nil)
 // SettingsHandler 获取 settings.json
 func SettingsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		reader := settings.NewReader(settings.SettingsDir)
+		reader := setting.NewUserSettingsReader()
 
 		userSettings, err := reader.Read()
 		if err == nil {
@@ -443,12 +443,16 @@ func SettingsHandler() gin.HandlerFunc {
 			return
 		}
 
-		if errors.Is(err, settings.UserSettingsNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"message": err.Error()})
-		} else if errors.Is(err, settings.UserSettingsTooLarge) {
-			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"message": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		// 根据错误类型设置返回状态码，默认为 500
+		statusCode := http.StatusInternalServerError
+		if errors.Is(err, setting.UserSettingsNotFound) {
+			// 用户配置文件不存在 -> 404
+			statusCode = http.StatusNotFound
+		} else if errors.Is(err, setting.UserSettingsTooLarge) {
+			// 用户配置文件过大 -> 413
+			statusCode = http.StatusRequestEntityTooLarge
 		}
+
+		c.JSON(statusCode, gin.H{"message": err.Error()})
 	}
 }

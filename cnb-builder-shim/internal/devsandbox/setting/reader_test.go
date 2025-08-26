@@ -16,64 +16,43 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package settings
+package setting
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"fmt"
 	"os"
 	"path/filepath"
-	"testing"
-)
+	"strings"
 
-func TestSettings(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Settings Suite")
-}
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
 
 var _ = Describe("TestReader", func() {
 	var (
 		tmpDir string
-		reader Reader
+		reader *UserSettingsReader
 	)
 
 	BeforeEach(func() {
-		var err error
-		tmpDir, err = os.MkdirTemp("", "settings-test")
-		Expect(err).NotTo(HaveOccurred())
-		reader = NewReader(tmpDir)
+		tmpDir, _ = os.MkdirTemp("", "test-settings")
+		reader = &UserSettingsReader{Dir: tmpDir}
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(tmpDir)
-		os.Unsetenv(UserSettingsSizeEnvVarKey)
+		_ = os.RemoveAll(tmpDir)
+		_ = os.Unsetenv(UserSettingsSizeEnvVarKey)
 	})
 
 	Describe("Read", func() {
-		Context("when json does not exist", func() {
+		Context("when settings file does not exist", func() {
 			It("should return 'configuration file not found' error", func() {
 				_, err := reader.Read()
-				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(UserSettingsNotFound))
 			})
 		})
 
-		Context("when json is valid", func() {
-			const validSettings = `{"theme": "dark"}`
-
-			BeforeEach(func() {
-				filePath := filepath.Join(tmpDir, UserSettingsFileName)
-				Expect(os.WriteFile(filePath, []byte(validSettings), 0644)).To(Succeed())
-			})
-
-			It("should return the parsed JSON", func() {
-				settingsMap, err := reader.Read()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(settingsMap).To(HaveKeyWithValue("theme", "dark"))
-			})
-		})
-
-		Context("when json is too large", func() {
+		Context("when settings file is too large", func() {
 			BeforeEach(func() {
 				filePath := filepath.Join(tmpDir, UserSettingsFileName)
 				f, err := os.Create(filePath)
@@ -87,8 +66,20 @@ var _ = Describe("TestReader", func() {
 
 			It("should return 'configuration file is too large' error", func() {
 				_, err := reader.Read()
-				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(UserSettingsTooLarge))
+			})
+		})
+
+		Context("when json is valid", func() {
+			BeforeEach(func() {
+				filePath := filepath.Join(tmpDir, UserSettingsFileName)
+				Expect(os.WriteFile(filePath, []byte(`{"theme": "dark"}`), 0644)).To(Succeed())
+			})
+
+			It("should return the parsed JSON", func() {
+				settingsMap, err := reader.Read()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(settingsMap).To(HaveKeyWithValue("theme", "dark"))
 			})
 		})
 
@@ -111,28 +102,20 @@ var _ = Describe("TestReader", func() {
 				Expect(os.WriteFile(filePath, []byte("{invalid json}"), 0644)).To(Succeed())
 			})
 
-			It("should return 'failed to parse settings.json' error", func() {
+			It("should return 'parse settings.json' error", func() {
 				_, err := reader.Read()
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to parse settings.json"))
+				Expect(err.Error()).To(ContainSubstring("parse settings.json"))
 			})
 		})
 
 		Context("with custom max size via environment variable", func() {
 			BeforeEach(func() {
-				os.Setenv(UserSettingsSizeEnvVarKey, "1024")
+				_ = os.Setenv(UserSettingsSizeEnvVarKey, "1024")
 
 				filePath := filepath.Join(tmpDir, UserSettingsFileName)
-
-				content := []byte(`{"largeData": "`)
-				spaces := make([]byte, 799*1024)
-				for i := range spaces {
-					spaces[i] = ' '
-				}
-				content = append(content, spaces...)
-				content = append(content, `"}`...)
-
-				err := os.WriteFile(filePath, content, 0644)
+				content := fmt.Sprintf(`{"largeData": "%s"}`, strings.Repeat(" ", 800*1024))
+				err := os.WriteFile(filePath, []byte(content), 0644)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -144,7 +127,7 @@ var _ = Describe("TestReader", func() {
 
 		Context("with invalid environment variable value", func() {
 			BeforeEach(func() {
-				os.Setenv(UserSettingsSizeEnvVarKey, "invalid")
+				_ = os.Setenv(UserSettingsSizeEnvVarKey, "invalid")
 
 				filePath := filepath.Join(tmpDir, UserSettingsFileName)
 				Expect(os.WriteFile(filePath, []byte("{}"), 0644)).To(Succeed())

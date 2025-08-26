@@ -54,7 +54,7 @@ heroku-dev:  ## Build dev sandbox image which is based on `cloudnative-buildpack
 ##@ Test
 .PHONY: test
 test: ## Run unittest
-	go test ./...
+	$(GINKGO) --cover --coverprofile cover.out ./...
 
 
 .PHONY: integration
@@ -63,7 +63,7 @@ integration:  ## Run Integration Test
 
 ##@ Misc
 .PHONY: fmt
-fmt: golines gofumpt ## 执行 golines，gofumpt ...
+fmt: golines gofumpt ## Run golines，gofumpt ...
 	$(GOLINES) ./ -m 119 -w --base-formatter gofmt --no-reformat-tags
 	$(GOFUMPT) -l -w .
 
@@ -76,24 +76,30 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)
 
+GINKGO ?= $(LOCALBIN)/ginkgo
 GOLINES ?= $(LOCALBIN)/golines
 GOFUMPT ?= $(LOCALBIN)/gofumpt
 GOCILINT ?= $(LOCALBIN)/golangci-lint
 
 GOCILINT_VERSION ?= v2.4.0
 
+.PHONY: ginkgo
+ginkgo: $(GINKGO) ## Install ginkgo
+$(GINKGO): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@v2.25.1
+
 .PHONY: golines
-golines: $(GOLINES) ## install golines
+golines: $(GOLINES) ## Install golines
 $(GOLINES): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/segmentio/golines@v0.11.0
 
 .PHONY: gofumpt
-gofumpt: $(GOFUMPT) ## install gofumpt
+gofumpt: $(GOFUMPT) ## Install gofumpt
 $(GOFUMPT): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install mvdan.cc/gofumpt@v0.4.0
 
 .PHONY: golangci-lint
-golangci-lint: $(LOCALBIN) ## install golangci-lint
+golangci-lint: $(LOCALBIN) ## Install golangci-lint
 	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint --version | grep -q $(GOCILINT_VERSION) || \
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOCILINT_VERSION)
 

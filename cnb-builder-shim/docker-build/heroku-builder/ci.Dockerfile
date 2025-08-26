@@ -15,5 +15,6 @@ COPY ./cmd ./cmd
 COPY ./pkg ./pkg
 COPY ./internal ./internal
 COPY ./Makefile ./Makefile
+COPY ./.golangci.yaml ./.golangci.yaml
 
 RUN make ginkgo golines gofumpt golangci-lint

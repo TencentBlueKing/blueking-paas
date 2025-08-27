@@ -31,8 +31,9 @@ def check_model_multi_tenancy_configured(app_configs, **kwargs) -> list[Error]:
     """
     errors = []
     for model in get_first_party_models():
+        doc_string = model.__doc__ or ""
         # Skip the deprecated models first
-        if "[deprecated]" in model.__doc__:
+        if "[deprecated]" in doc_string:
             continue
 
         # Check if `tenant_id` field is configured
@@ -41,13 +42,13 @@ def check_model_multi_tenancy_configured(app_configs, **kwargs) -> list[Error]:
             continue
         # Check the skip marker
         skip_marker = "[multi-tenancy] This model is not tenant-aware."
-        if skip_marker in model.__doc__:
+        if skip_marker in doc_string:
             continue
 
         # Check the TODO marker, if it's found, produce a warning message to ask the
         # developers to fix the issue ASAP.
         todo_marker = "[multi-tenancy] TODO"
-        if todo_marker in model.__doc__:
+        if todo_marker in doc_string:
             errors.append(
                 Warning(
                     f"The model {model._meta.label} has not done multi-tenancy setup.",

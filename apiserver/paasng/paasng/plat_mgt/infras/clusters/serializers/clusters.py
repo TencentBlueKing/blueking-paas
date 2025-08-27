@@ -50,6 +50,12 @@ class ElasticSearchConfigSLZ(serializers.Serializer):
     username = serializers.CharField(help_text="ES 集群用户名")
     password = serializers.CharField(help_text="ES 集群密码")
 
+    # TLS 配置信息
+    verify_certs = serializers.BooleanField(help_text="是否验证证书")
+    ca_certs = serializers.CharField(help_text="ES 集群 CA 证书")
+    client_cert = serializers.CharField(help_text="ES 集群客户端证书")
+    client_key = serializers.CharField(help_text="ES 集群客户端密钥")
+
 
 class ImageRegistrySLZ(serializers.Serializer):
     """镜像仓库信息"""

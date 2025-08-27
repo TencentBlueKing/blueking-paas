@@ -106,6 +106,8 @@ class Release(UuidAuditedModel):
     Software release deployed by the application platform
 
     Releases contain a class`Build` and a class`Config`.
+
+    [multi-tenancy] TODO
     """
 
     owner = models.CharField(max_length=64)

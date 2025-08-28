@@ -284,3 +284,7 @@ DEVELOPER_CENTER_APP_URL_TEMPLATE = "http://your-paas3.0-host/developer-center/a
 # 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
 BK_CRYPTO_TYPE = env.str("BK_CRYPTO_TYPE", default="CLASSIC")
 ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"
+
+# 实例密码参数
+PASSWORD_MIN_LENGTH = 10
+PASSWORD_DICTIONARY_WORDS = []

@@ -17,6 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
+import random
+import string
+
+from django.conf import settings
 from django.db import transaction
 from paas_service.models import ResourceId
 from paas_service.utils import Base36Handler
@@ -55,3 +59,44 @@ def gen_addons_cert_mount_path(provider_name: str, cert_name: str) -> str:
         raise ValueError("cert_name must be one of ca.crt, tls.crt, tls.key")
 
     return f"/opt/blueking/bkapp-addons-certs/{provider_name}/{cert_name}"
+
+
+def generate_strong_password(length=settings.PASSWORD_MIN_LENGTH, dictionary_words=settings.PASSWORD_DICTIONARY_WORDS):
+    """
+    生成符合 mysql validate_password 强密码规则的随机密码
+    默认满足：
+    - 至少10个字符长度
+    - 包含大小写字母、数字和特殊字符
+    - 不包含常见字典词(4个字符以上,通过 django settings 配置)
+    """
+    char_types = [
+        # 小写字母
+        string.ascii_lowercase,
+        # 大写字母
+        string.ascii_uppercase,
+        # 数字
+        string.digits,
+        # 特殊字符
+        string.punctuation,
+    ]
+
+    # 确保每种字符类型至少有一个
+    password = [random.choice(ct) for ct in char_types]
+
+    # 生成剩余字符
+    all_chars = "".join(char_types)
+    remaining = max(length - len(password), 0)
+    password += [random.choice(all_chars) for _ in range(remaining)]
+
+    # 打乱顺序
+    random.shuffle(password)
+    password_str = "".join(password)
+
+    # 检查是否包含字典词(4个字符以上)
+    password_lower = password_str.lower()
+    for word in dictionary_words:
+        if len(word) >= 4 and word.lower() in password_lower:
+            # 如果包含字典词，重新生成
+            return generate_strong_password()
+
+    return password_str

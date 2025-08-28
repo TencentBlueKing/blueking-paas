@@ -279,6 +279,10 @@ class TestCreateCluster:
         assert cluster.elastic_search_config is not None
         assert cluster.elastic_search_config.port == 9300
         assert cluster.elastic_search_config.password == "masked"
+        # ES 未传 TLS 配置时使用默认值
+        assert cluster.elastic_search_config.verify_certs is False
+        assert cluster.elastic_search_config.ca_certs is None
+        assert cluster.elastic_search_config.client_cert is None
 
         assert cluster.app_image_registry is not None
         assert cluster.app_image_registry.host == "hub.bktencent.com"

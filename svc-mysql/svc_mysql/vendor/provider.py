@@ -23,11 +23,11 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 
 from paas_service.base_vendor import BaseProvider, InstanceData
-from paas_service.utils import WRItemList, generate_password
+from paas_service.utils import WRItemList
 
 from svc_mysql.vendor.helper import MySQLAuthorizer, MySQLEngine
 from svc_mysql.vendor.tls import TLSCertificateManager
-from svc_mysql.vendor.utils import gen_addons_cert_mount_path, gen_unique_id
+from svc_mysql.vendor.utils import gen_addons_cert_mount_path, gen_unique_id, generate_strong_password
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ class Provider(BaseProvider):
         uid = gen_unique_id(preferred_name)[:16]
         db_name = uid
         db_user = uid
-        db_password = generate_password()
+        db_password = generate_strong_password()
 
         with TLSCertificateManager(server.tls) as mgr:
             # 1. 授权 Mysql 权限

@@ -74,7 +74,6 @@ func GetAppSpecVersion(data []byte) (AppDescVersion, error) {
 	default:
 		return "", errors.Errorf("invalid spec version: %s", specVersion.SpecVersion)
 	}
-
 }
 
 // CreateAppSpec creates a new AppDesc instance based on the given AppDescVersion

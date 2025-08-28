@@ -33,15 +33,23 @@ type (
 )
 
 const (
-	StateCodeFatal      StateCode = 2  // Supervisor has experienced a serious error.
-	StateCodeRunning    StateCode = 1  // Supervisor is working normally.
-	StateCodeRestarting StateCode = 0  // Supervisor is in the process of restarting.
-	StateCodeShutdown   StateCode = -1 // Supervisor is in the process of shutting down.
+	// StateCodeFatal means supervisor has experienced a serious error.
+	StateCodeFatal StateCode = 2
+	// StateCodeRunning means supervisor is working normally.
+	StateCodeRunning StateCode = 1
+	// StateCodeRestarting means supervisor is in the process of restarting.
+	StateCodeRestarting StateCode = 0
+	// StateCodeShutdown means supervisor is in the process of shutting down.
+	StateCodeShutdown StateCode = -1
 
-	StateNameFatal      StateName = "FATAL"      // Supervisor has experienced a serious error.
-	StateNameRunning    StateName = "RUNNING"    // Supervisor is working normally.
-	StateNameRestarting StateName = "RESTARTING" // Supervisor is in the process of restarting.
-	StateNameShutdown   StateName = "SHUTDOWN"   // Supervisor is in the process of shutting down.
+	// StateNameFatal means supervisor has experienced a serious error.
+	StateNameFatal StateName = "FATAL"
+	// StateNameRunning means supervisor is working normally.
+	StateNameRunning StateName = "RUNNING"
+	// StateNameRestarting means supervisor is in the process of restarting.
+	StateNameRestarting StateName = "RESTARTING"
+	// StateNameShutdown means supervisor is in the process of shutting down.
+	StateNameShutdown StateName = "SHUTDOWN"
 )
 
 // GetState 获取 Supervisor Server

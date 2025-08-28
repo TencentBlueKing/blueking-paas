@@ -16,42 +16,41 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package rpc
+package putter
 
 import (
-	"bytes"
-	"context"
-	"os/exec"
-	"time"
+	"net/url"
+	"os"
+	"path/filepath"
 
-	"github.com/pkg/errors"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
+	"github.com/go-logr/logr"
 )
 
-// Server 是 supervisord 服务端
-type Server struct {
-	config ServerConfig
+// FsPutter ...
+type FsPutter struct {
+	Logger logr.Logger
 }
 
-// ServerConfig 服务端配置
-type ServerConfig struct {
-	ConfigPath string // Supervisord 启动配置路径
+// NewFsPutter ...
+func NewFsPutter(log logr.Logger) *FsPutter {
+	return &FsPutter{Logger: log}
 }
 
-// NewServer 用于创建一个新的 Supervisord Server
-func NewServer(configPath string) *Server {
-	return &Server{config: ServerConfig{ConfigPath: configPath}}
-}
-
-// Start 使用 command 显式启动 Supervisord Server
-func (s *Server) Start() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "supervisord", "-c", s.config.ConfigPath)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return errors.New(stderr.String())
+// Put src from local filesystem to destUrl
+func (f *FsPutter) Put(src string, destUrl *url.URL) error {
+	filePath := destUrl.Path
+	fileName := filepath.Base(filePath)
+	if filepath.Ext(fileName) == ".tgz" {
+		if err := os.MkdirAll(filepath.Dir(filePath), 0o744); err != nil {
+			return err
+		}
+		return utils.CopyFile(src, filePath)
 	}
-	return nil
+
+	// Assume dest is a directory, otherwise an error occurs.
+	if err := os.MkdirAll(filePath, 0o744); err != nil {
+		return err
+	}
+	return utils.CopyFile(src, filepath.Join(filePath, filepath.Base(src)))
 }

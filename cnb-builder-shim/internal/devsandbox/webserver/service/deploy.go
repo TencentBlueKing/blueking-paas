@@ -131,7 +131,7 @@ func (m DeployManager) Result(deployID string, withLog bool) (*DeployResult, err
 
 func (m DeployManager) newDeployID() string {
 	uuidString := uuid.NewString()
-	return strings.Replace(uuidString, "-", "", -1)
+	return strings.ReplaceAll(uuidString, "-", "")
 }
 
 func (m *DeployManager) analyzeAndSyncToAppDir(srcFilePath, appDir string) error {

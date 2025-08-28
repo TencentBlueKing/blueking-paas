@@ -30,7 +30,7 @@ import (
 var _ = Describe("Test VersionController", func() {
 	var tmpDir string
 
-	var initFile = func(dir, filename, content string) error {
+	initFile := func(dir, filename, content string) error {
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 			return err
 		}
@@ -46,8 +46,8 @@ var _ = Describe("Test VersionController", func() {
 		return err
 	}
 
-	var editFile = func(dir, filename, content string) error {
-		file, err := os.OpenFile(path.Join(dir, filename), os.O_WRONLY|os.O_TRUNC, 0644)
+	editFile := func(dir, filename, content string) error {
+		file, err := os.OpenFile(path.Join(dir, filename), os.O_WRONLY|os.O_TRUNC, 0o644)
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ var _ = Describe("Test VersionController", func() {
 		return err
 	}
 
-	var runGitCommand = func(dir string, args ...string) error {
+	runGitCommand := func(dir string, args ...string) error {
 		cmd := exec.Command("git", args...)
 		cmd.Dir = dir
 		return cmd.Run()

@@ -32,13 +32,16 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
 )
 
-var logger = logging.Default()
-var supervisorDir = "/cnb/devsandbox/supervisor"
-var rpcPort = "9001"
-var rpcAddress = "http://127.0.0.1:9001/RPC2"
+var (
+  logger = logging.Default()
+	supervisorDir = "/cnb/devsandbox/supervisor"
+	rpcPort       = "9001"
+	rpcAddress    = "http://127.0.0.1:9001/RPC2"
+)
 
-var confFilePath = filepath.Join(supervisorDir, "dev.conf")
-var confTmpl = `[unix_http_server]
+var (
+	confFilePath = filepath.Join(supervisorDir, "dev.conf")
+	confTmpl     = `[unix_http_server]
 file = {{ .RootDir }}/supervisor.sock
 
 [supervisorctl]
@@ -62,6 +65,7 @@ redirect_stderr = true
 [inet_http_server]
 port=127.0.0.1:{{ .Port }}
 `
+)
 
 // SupervisorConf is a supervisor template conf data
 type SupervisorConf struct {

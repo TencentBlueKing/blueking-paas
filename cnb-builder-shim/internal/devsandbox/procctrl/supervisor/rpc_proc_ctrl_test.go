@@ -79,18 +79,21 @@ var _ = Describe("Test process_ctl", func() {
 		),
 	)
 
-	DescribeTable("Test refreshConf", func(processes []base.Process, procEnv []appdesc.Env, expectedConfContent string) {
-		conf, _ := makeSupervisorConf(processes, procEnv...)
-		Expect(refreshConf(conf)).To(BeNil())
+	DescribeTable(
+		"Test refreshConf",
+		func(processes []base.Process, procEnv []appdesc.Env, expectedConfContent string) {
+			conf, _ := makeSupervisorConf(processes, procEnv...)
+			Expect(refreshConf(conf)).To(BeNil())
 
-		content, _ := os.ReadFile(confFilePath)
-		Expect(string(content)).To(Equal(expectedConfContent))
-	}, Entry("without env_variables",
-		[]base.Process{
-			{ProcType: "web", CommandPath: "/cnb/processes/web"},
-			{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
-		}, []appdesc.Env{},
-		fmt.Sprintf(`[unix_http_server]
+			content, _ := os.ReadFile(confFilePath)
+			Expect(string(content)).To(Equal(expectedConfContent))
+		},
+		Entry("without env_variables",
+			[]base.Process{
+				{ProcType: "web", CommandPath: "/cnb/processes/web"},
+				{ProcType: "worker", CommandPath: "/cnb/processes/worker"},
+			}, []appdesc.Env{},
+			fmt.Sprintf(`[unix_http_server]
 file = %[1]s/supervisor.sock
 
 [supervisorctl]
@@ -150,5 +153,6 @@ redirect_stderr = true
 
 [inet_http_server]
 port=127.0.0.1:%[2]s
-`, supervisorDir, rpcPort)))
+`, supervisorDir, rpcPort)),
+	)
 })

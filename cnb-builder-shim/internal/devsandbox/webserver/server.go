@@ -34,10 +34,12 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/setting"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/vcs"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
@@ -101,6 +103,7 @@ func New(lg *logr.Logger) (*WebServer, error) {
 	r.POST("/processes/:processName", ProcessStartHandler())
 	r.GET("/codes/diffs", CodeDiffsHandler())
 	r.GET("/codes/commit", CodeCommitHandler())
+	r.GET("/settings", SettingsHandler())
 
 	return s, nil
 }
@@ -162,7 +165,7 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 				return
 			}
 			srcFilePath = config.G.SourceCode.Workspace
-		case config.GIT:
+		case config.Git:
 			fallthrough
 		default:
 			errMsg := fmt.Sprintf("unsupported source fetch method: %s", config.G.SourceCode.FetchMethod)
@@ -258,7 +261,10 @@ func ProcessListHandler() gin.HandlerFunc {
 		appDescFilePath := path.Join(config.G.SourceCode.Workspace, "app_desc.yaml")
 		appDesc, err := appdesc.UnmarshalToAppDesc(appDescFilePath)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("list process error: %s", err.Error())})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("list process error: %s", err.Error())},
+			)
 			return
 		}
 
@@ -280,7 +286,10 @@ func ProcessStopHandler() gin.HandlerFunc {
 
 		err = processCtl.Stop(processName)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("stop process error: %s", err.Error())})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("stop process error: %s", err.Error())},
+			)
 			return
 		}
 
@@ -302,7 +311,10 @@ func ProcessStartHandler() gin.HandlerFunc {
 
 		err = processCtl.Start(processName)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("start process error: %s", err.Error())})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": fmt.Sprintf("start process error: %s", err.Error())},
+			)
 			return
 		}
 
@@ -388,56 +400,27 @@ func HealthzHandler() gin.HandlerFunc {
 
 var _ devsandbox.DevWatchServer = (*WebServer)(nil)
 
-// 处理文件上传
-func processUploadedFile(c *gin.Context, uploadDir string) (srcFilePath, tmpDir string, err error) {
-	// 创建临时文件夹
-	tmpDir, err = os.MkdirTemp("", "source-*")
-	if err != nil {
-		return "", "", errors.Wrap(err, "failed to create temporary directory")
-	}
+// SettingsHandler 获取 settings.json
+func SettingsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		reader := setting.NewUserSettingsReader()
 
-	file, err := c.FormFile("file")
-	if err != nil {
-		return "", tmpDir, errors.Wrap(err, "retrieve uploaded file failed")
-	}
-
-	fileName := filepath.Base(file.Filename)
-	dst := path.Join(uploadDir, fileName)
-	if len(dst) > 0 && dst[len(dst)-1] == '.' {
-		return "", tmpDir, errors.Errorf("invalid file name: %s", fileName)
-	}
-
-	if err = c.SaveUploadedFile(file, dst); err != nil {
-		return "", tmpDir, errors.Wrapf(err, "save uploaded file to %s failed", dst)
-	}
-
-	// 解压文件到临时目录
-	if err = utils.Unzip(dst, tmpDir); err != nil {
-		return "", tmpDir, errors.Wrapf(err, "unzip file %s to %s failed", dst, tmpDir)
-	}
-
-	// 返回源码目录路径和临时目录路径
-	return path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName))), tmpDir, nil
-}
-
-// 从 json body 中解析环境变量
-func parseEnvVarsFromBody(c *gin.Context) (map[string]string, error) {
-	var wrapper struct {
-		EnvVars map[string]string `json:"env_vars"`
-	}
-
-	if err := c.ShouldBindJSON(&wrapper); err != nil {
-		// 处理空请求体
-		if err == io.EOF {
-			return map[string]string{}, nil
+		userSettings, err := reader.Read()
+		if err == nil {
+			c.JSON(http.StatusOK, userSettings)
+			return
 		}
-		return nil, errors.Wrap(err, "failed to parse env vars")
-	}
 
-	// 如果 EnvVars 为 nil，初始化为空 map
-	if wrapper.EnvVars == nil {
-		return map[string]string{}, nil
-	}
+		// 根据错误类型设置返回状态码，默认为 500
+		statusCode := http.StatusInternalServerError
+		if errors.Is(err, setting.UserSettingsNotFound) {
+			// 用户配置文件不存在 -> 404
+			statusCode = http.StatusNotFound
+		} else if errors.Is(err, setting.UserSettingsTooLarge) {
+			// 用户配置文件过大 -> 413
+			statusCode = http.StatusRequestEntityTooLarge
+		}
 
-	return wrapper.EnvVars, nil
+		c.JSON(statusCode, gin.H{"message": err.Error()})
+	}
 }

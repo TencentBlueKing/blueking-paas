@@ -28,20 +28,15 @@ import (
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
 
-var (
-	basePath = "../testdata"
-)
+var basePath = "../testdata"
 
 var _ = Describe("FileSystem", func() {
-	var (
-		destDir string
-	)
+	var destDir string
 
 	BeforeEach(func() {
 		var err error
 		destDir, err = os.MkdirTemp("", "fetch_test")
 		Expect(err).To(BeNil())
-
 	})
 	AfterEach(func() {
 		os.RemoveAll(destDir)

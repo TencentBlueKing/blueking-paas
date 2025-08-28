@@ -166,7 +166,7 @@ func initializeSourceCode() error {
 		if err = utils.SetFullPermissions(workspace); err != nil {
 			return errors.Wrap(err, "chmod files")
 		}
-	case config.GIT:
+	case config.Git:
 		return fmt.Errorf("TODO: clone git from revision")
 	}
 
@@ -183,7 +183,7 @@ func ensureWorkspace(workspace string) (err error) {
 	if _, err = os.Stat(workspace); os.IsNotExist(err) {
 		// 文件夹不存在，创建文件夹
 		logger.Info("create workspace directory")
-		if err = os.MkdirAll(workspace, 0750); err != nil {
+		if err = os.MkdirAll(workspace, 0o750); err != nil {
 			return errors.Wrap(err, "create workspace directory")
 		}
 		return nil

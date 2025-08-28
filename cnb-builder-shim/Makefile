@@ -62,21 +62,40 @@ integration:  ## Run Integration Test
 	echo "Not implemented yet..."
 
 ##@ Misc
-.PHONY: lint
-lint: install-golangci-lint ## Run golangci-lint
-	$(GOCILINT) run
+.PHONY: fmt
+fmt: golines gofumpt ## 执行 golines，gofumpt ...
+	$(GOLINES) ./ -m 119 -w --base-formatter gofmt --no-reformat-tags
+	$(GOFUMPT) -l -w .
 
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint
+	$(GOCILINT) run
 
 ## Location to build binary or install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)
 
-
+GOLINES ?= $(LOCALBIN)/golines
+GOFUMPT ?= $(LOCALBIN)/gofumpt
 GOCILINT ?= $(LOCALBIN)/golangci-lint
-.PHONY: install-golangci-lint
-install-golangci-lint: $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3
+
+GOCILINT_VERSION ?= v2.4.0
+
+.PHONY: golines
+golines: $(GOLINES) ## install golines
+$(GOLINES): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install github.com/segmentio/golines@v0.11.0
+
+.PHONY: gofumpt
+gofumpt: $(GOFUMPT) ## install gofumpt
+$(GOFUMPT): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install mvdan.cc/gofumpt@v0.4.0
+
+.PHONY: golangci-lint
+golangci-lint: $(LOCALBIN) ## install golangci-lint
+	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint --version | grep -q $(GOCILINT_VERSION) || \
+	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOCILINT_VERSION)
 
 
 .PHONY: help

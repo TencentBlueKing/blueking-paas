@@ -170,10 +170,7 @@ func MergeEnvVars(desc AppDesc, envVars []Env) {
 			if idx, exists := existingEnvMap[newEnv.Name]; exists {
 				module.Spec.Configuration.Env[idx].Value = newEnv.Value
 			} else {
-				module.Spec.Configuration.Env = append(module.Spec.Configuration.Env, EnvV3{
-					Name:  newEnv.Name,
-					Value: newEnv.Value,
-				})
+				module.Spec.Configuration.Env = append(module.Spec.Configuration.Env, EnvV3(newEnv))
 			}
 		}
 	}

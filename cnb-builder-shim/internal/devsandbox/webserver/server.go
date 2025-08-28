@@ -19,9 +19,8 @@
 package webserver
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"io"
 	"net/http"
 	"os"
 	"path"
@@ -144,26 +143,68 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 // TODO 将本地源码部署的方式与请求传输源码文件的方式进行接口上的拆分
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var srcFilePath string
 		envVars := map[string]string{}
+		if raw := c.PostForm("env_vars"); raw != "" {
+			// env_vars 非空，解析自定义环境变量
+			if err := json.Unmarshal([]byte(raw), &envVars); err != nil {
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"message": fmt.Sprintf("invalid env_vars format: %s", err.Error())},
+				)
+				return
+			}
+		}
 
+		var srcFilePath string
 		switch config.G.SourceCode.FetchMethod {
 		case config.HTTP:
-			// 处理文件上传
-			tmpSrcFilePath, tmpDir, err := processUploadedFile(c, s.env.UploadDir)
+			// 创建临时文件夹
+			tmpDir, err := os.MkdirTemp("", "source-*")
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+				c.JSON(
+					http.StatusInternalServerError,
+					gin.H{"message": fmt.Sprintf("create tmp dir err: %s", err.Error())},
+				)
 				return
 			}
-			srcFilePath = tmpSrcFilePath
 			defer os.RemoveAll(tmpDir)
-		case config.BkRepo:
-			var err error
-			envVars, err = parseEnvVarsFromBody(c)
+
+			file, err := c.FormFile("file")
 			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+				c.JSON(
+					http.StatusInternalServerError,
+					gin.H{"message": fmt.Sprintf("get form err: %s", err.Error())},
+				)
 				return
 			}
+
+			fileName := filepath.Base(file.Filename)
+			dst := path.Join(s.env.UploadDir, fileName)
+			if len(dst) > 0 && dst[len(dst)-1] == '.' {
+				c.JSON(
+					http.StatusBadRequest,
+					gin.H{"message": fmt.Sprintf("invalid file name: %s", file.Filename)},
+				)
+				return
+			}
+
+			if err = c.SaveUploadedFile(file, dst); err != nil {
+				c.JSON(
+					http.StatusInternalServerError,
+					gin.H{"message": fmt.Sprintf("upload file err: %s", err.Error())},
+				)
+				return
+			}
+			// 解压文件到临时目录
+			if err = utils.Unzip(dst, tmpDir); err != nil {
+				c.JSON(
+					http.StatusInternalServerError,
+					gin.H{"message": fmt.Sprintf("unzip file err: %s", err.Error())},
+				)
+				return
+			}
+			srcFilePath = path.Join(tmpDir, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+		case config.BkRepo:
 			srcFilePath = config.G.SourceCode.Workspace
 		case config.Git:
 			fallthrough

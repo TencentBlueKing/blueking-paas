@@ -33,7 +33,7 @@ import (
 )
 
 var (
-  logger = logging.Default()
+	logger        = logging.Default()
 	supervisorDir = "/cnb/devsandbox/supervisor"
 	rpcPort       = "9001"
 	rpcAddress    = "http://127.0.0.1:9001/RPC2"
@@ -174,7 +174,7 @@ func (p *RPCProcessController) Reload(processes []base.Process, procEnvs ...appd
 		return err
 	}
 
-	//首次运行，没有 supervisor server，直接启动
+	// 首次运行，没有 supervisor server，直接启动
 	server := rpc.NewServer(confFilePath)
 	if err := server.Start(); err != nil {
 		logger.Error(err, "failed to start the supervisor server")

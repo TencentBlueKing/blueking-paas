@@ -3070,4 +3070,6 @@ export default {
   '搜索变量名/变量值/描述': 'Search Variable Name/Value/Description',
   变量名: 'Variable Name',
   变量值: 'Variable Value',
+  配置说明: 'Config Description',
+  '开发者中心目前不支持托管自定义访问地址的 HTTPS 证书，请确保已经在外部网关中配置好证书。': 'The Developer Center currently does not support managing HTTPS certificates for custom access addresses. Please ensure that the certificate is configured in the external gateway.',
 };

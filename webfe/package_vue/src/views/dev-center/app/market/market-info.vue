@@ -102,7 +102,7 @@
           {{ curAddress }}
         </div>
         <bk-button
-          :class="{ 'pl24': curAddress }"
+          :class="{ 'ml-16': curAddress || isEditAddress }"
           theme="primary"
           text
           :disabled="isEditDisabled"

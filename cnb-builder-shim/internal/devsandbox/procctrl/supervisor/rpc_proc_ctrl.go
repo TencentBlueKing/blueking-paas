@@ -20,7 +20,6 @@ package supervisor
 
 import (
 	"fmt"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/base"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
 )
 
@@ -71,29 +71,6 @@ type SupervisorConf struct {
 	Environment string
 }
 
-// validateEnvironment validates the environment variables for supervisor conf.
-//
-// see detail environment conf in http://supervisord.org/configuration.html
-// char " and % in environment value will cause supervisord to fail
-func validateEnvironment(procEnvs []appdesc.Env) error {
-	invalidChars := `"%`
-	invalidEnvNames := []string{}
-	for _, env := range procEnvs {
-		if strings.ContainsAny(env.Value, invalidChars) {
-			invalidEnvNames = append(invalidEnvNames, env.Name)
-		}
-	}
-	if len(invalidEnvNames) == 0 {
-		return nil
-	}
-
-	return fmt.Errorf(
-		"environment variables: %s has invalid characters (%s)",
-		strings.Join(invalidEnvNames, ", "),
-		invalidChars,
-	)
-}
-
 // returns a new SupervisorConf
 func makeSupervisorConf(processes []base.Process, procEnvs ...appdesc.Env) (*SupervisorConf, error) {
 	conf := &SupervisorConf{
@@ -102,12 +79,15 @@ func makeSupervisorConf(processes []base.Process, procEnvs ...appdesc.Env) (*Sup
 	}
 
 	if procEnvs != nil {
-		if err := validateEnvironment(procEnvs); err != nil {
-			return nil, err
-		}
 		envs := make([]string, len(procEnvs))
 		for indx, env := range procEnvs {
-			envs[indx] = fmt.Sprintf(`%s="%s"`, env.Name, env.Value)
+			// FIXME: supervisor 目前在 [supervisord] section 中无法正确转义 %，这里先进行过滤
+			// 相关 pr：https://github.com/Supervisor/supervisor/pull/1695 (merged)
+			if strings.Contains(env.Value, "%") {
+				continue
+			}
+			escapedValue := strings.ReplaceAll(env.Value, `"`, `\"`)
+			envs[indx] = fmt.Sprintf(`%s="%s"`, env.Name, escapedValue)
 		}
 		conf.Environment = strings.Join(envs, ",")
 	}
@@ -193,9 +173,8 @@ func (p *RPCProcessController) Reload(processes []base.Process, procEnvs ...appd
 	//首次运行，没有 supervisor server，直接启动
 	server := rpc.NewServer(confFilePath)
 	if err := server.Start(); err != nil {
-		logger.Error(err, "启动 supervisor server 失败")
+		logger.Error(err, "failed to start the supervisor server")
 	}
-	//_ = server.Start()
 	time.Sleep(1 * time.Second)
 	return p.client.Restart()
 }

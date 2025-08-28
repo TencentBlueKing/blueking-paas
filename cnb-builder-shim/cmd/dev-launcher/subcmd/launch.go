@@ -19,10 +19,13 @@
 package subcmd
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/BurntSushi/toml"
 	"github.com/buildpacks/lifecycle/launch"
 	"github.com/spf13/cobra"
-	"path/filepath"
 
 	devlaunch "github.com/TencentBlueking/bkpaas/cnb-builder-shim/cmd/dev-launcher/launch"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
@@ -39,6 +42,18 @@ var reloadCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := logging.Default()
 
+		// 从当前进程中获取用户传入的环境变量
+		envList := make([]appdesc.Env, 0)
+		for _, envStr := range os.Environ() {
+			parts := strings.SplitN(envStr, "=", 2)
+			if len(parts) == 2 {
+				envList = append(envList, appdesc.Env{
+					Name:  parts[0],
+					Value: parts[1],
+				})
+			}
+		}
+
 		var md launch.Metadata
 
 		if _, err := toml.DecodeFile(launch.GetMetadataFilePath("/layers"), &md); err != nil {
@@ -50,6 +65,11 @@ var reloadCmd = &cobra.Command{
 		if err != nil {
 			logger.Error(err, "parse invalid app_desc.yaml")
 			return err
+		}
+
+		// 合并环境变量到 appDesc
+		if len(envList) > 0 {
+			appdesc.MergeEnvVars(appDesc, envList)
 		}
 
 		if err = devlaunch.Run(md.Processes, appDesc); err != nil {

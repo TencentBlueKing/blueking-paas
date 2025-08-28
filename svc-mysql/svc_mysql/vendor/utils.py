@@ -93,9 +93,8 @@ def generate_strong_password(length=settings.PASSWORD_MIN_LENGTH, dictionary_wor
     password_str = "".join(password)
 
     # 检查是否包含字典词(4个字符以上)
-    password_lower = password_str.lower()
     for word in dictionary_words:
-        if len(word) >= 4 and word.lower() in password_lower:
+        if len(word) >= 4 and word in password:
             # 如果包含字典词，重新生成
             return generate_strong_password()
 

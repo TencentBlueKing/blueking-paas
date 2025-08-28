@@ -1682,7 +1682,7 @@ export default {
   API名称: 'API Name',
   将申请: 'Will apply',
   将续期: 'Will be renewed',
-  '请联系网关负责人审批：': 'Please contact the person in charge of the gateway for approval:',
+  '请联系{n}负责人审批：': 'Please contact the {n} person in charge for approval:',
   'API主动上报你的自定义事件数据，具体代码如下：': 'API actively reports your custom event data. The specific code is as follows:',
   '5分钟': '5 minutes',
   设置: 'Settings',

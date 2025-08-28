@@ -40,7 +40,6 @@ def migrate_cluster_to_plan(apps, schema_editor):
                 "admin": cluster.admin,
                 "password": cluster.password,
                 "version": cluster.version,
-                "tls": cluster.extra.get('tls', False)
             })
         plan.config = json.dumps({"clusters": configs})
         plan.save(update_fields=["config"])

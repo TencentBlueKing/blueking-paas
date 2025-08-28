@@ -119,12 +119,23 @@ def create_cnative_app_model_resource(
     }
 
 
+def get_latest_build(env: ModuleEnvironment) -> Optional[Build]:
+    """Get the latest build in the given environment
+
+    :return: `None` if no builds can be found
+    """
+    try:
+        return Build.objects.filter(app=env.wl_app).latest("created")
+    except Build.DoesNotExist:
+        return None
+
+
 def get_latest_build_id(env: ModuleEnvironment) -> Optional[UUID]:
     """Get UUID of the latest build in the given environment
 
     :return: `None` if no builds can be found
     """
-    try:
-        return Build.objects.filter(app=env.wl_app).latest("created").pk
-    except Build.DoesNotExist:
-        return None
+    build = get_latest_build(env)
+    if build:
+        return build.pk
+    return None

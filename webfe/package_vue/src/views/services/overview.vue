@@ -362,7 +362,7 @@ export default {
 
 .services-overview-container {
   background: #fff;
-  padding: 10px 24px;
+  padding: 10px 24px 24px;
   margin: 20px 24px;
 }
 

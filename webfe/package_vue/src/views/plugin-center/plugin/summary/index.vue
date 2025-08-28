@@ -1,5 +1,5 @@
 <template>
-  <div class="plugin-overview">
+  <div class="plugin-overview flex-row flex-column">
     <paas-plugin-title
       :is-plugin-doc="true"
       :doc-url="curSchemas.plugin_type?.docs"
@@ -40,7 +40,7 @@
       :offset-top="20"
       class="app-container overview-middle"
     >
-      <div class="plugin-overview-main">
+      <div class="plugin-overview-main flex-row flex-column">
         <!-- bk-saas 展示 alert -->
         <bk-alert
           v-if="isBkSaas"
@@ -580,6 +580,7 @@ export default {
 @import '~@/assets/css/mixins/ellipsis.scss';
 
 .plugin-overview {
+  height: 100%;
   .desc {
     font-size: 12px;
     color: #979ba5;
@@ -670,6 +671,7 @@ export default {
   }
 }
 .app-container {
+  height: 100%;
   .guidelines-cls {
     height: auto;
     line-height: unset;
@@ -678,11 +680,12 @@ export default {
     margin-bottom: 16px;
   }
   .plugin-overview-main {
-    height: calc(100vh - 150px);
-    min-height: 800px;
+    min-height: 0;
+    height: 100%;
+    min-height: 664px;
     .content {
       display: flex;
-      height: calc(100% - 40px);
+      height: 100%;
     }
   }
   .visual-display {

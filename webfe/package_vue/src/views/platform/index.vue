@@ -58,7 +58,6 @@ export default {
   },
   data() {
     return {
-      minHeight: 700,
       navCategories: [],
       navItems: [],
       groups: [
@@ -92,9 +91,6 @@ export default {
     routeTabActive() {
       return this.$route.query.active;
     },
-    isShowNotice() {
-      return this.$store.state.isShowNotice;
-    },
   },
   watch: {
     $route() {
@@ -120,14 +116,6 @@ export default {
     const { navCategories = [], navItems = [] } = processNavData(platformNavigationData);
     this.navCategories = navCategories;
     this.navItems = navItems;
-    const HEADER_HEIGHT = 52;
-    // 通知中心高度
-    const NOTICE_HEIGHT = this.isShowNotice ? this.GLOBAL.NOTICE_HEIGHT : 0;
-    const winHeight = window.innerHeight;
-    const contentHeight = winHeight - HEADER_HEIGHT - NOTICE_HEIGHT;
-    if (contentHeight > this.minHeight) {
-      this.minHeight = contentHeight;
-    }
   },
   methods: {
     setDefaultTabActive() {
@@ -162,7 +150,6 @@ export default {
 <style lang="scss" scoped>
 .platform-content {
   display: flex;
-  margin-top: var(--app-content-pd);
   height: calc(100vh - var(--app-content-pd));
   .left-navigation {
     flex-shrink: 0;

@@ -989,7 +989,6 @@ export default {
 }
 .biz-create-success {
   .app-container.container {
-    margin: 0 auto !important;
     padding-top: 16px !important;
   }
   .exception-wrap-cls {

@@ -989,7 +989,7 @@ export default {
             <span>
               ${this.$t('开发者中心目前不支持托管自定义访问地址的 HTTPS 证书，请确保已经在外部网关中配置好证书。')}
             </span>
-            <a target="_blank" href="${this.GLOBAL.DOC.HTTPS_CONFIG_GUIDE}">配置说明</a>
+            <a target="_blank" href="${this.GLOBAL.DOC.HTTPS_CONFIG_GUIDE}">${this.$t('配置说明')}</a>
           </div>
         </div>`,
         disabled: (e.editProtocol || 'http') !== 'https',

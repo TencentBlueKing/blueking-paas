@@ -110,6 +110,10 @@ class TestRetrieveCluster:
                 "port": 9200,
                 "username": "blueking",
                 "password": "blueking",
+                "verify_certs": False,
+                "ca_certs": None,
+                "client_cert": None,
+                "client_key": None,
             },
             "app_image_registry": {
                 "host": "hub.bktencent.com",
@@ -177,6 +181,10 @@ class TestRetrieveCluster:
                 "port": 9200,
                 "username": "admin",
                 "password": "admin",
+                "verify_certs": False,
+                "ca_certs": None,
+                "client_cert": None,
+                "client_key": None,
             },
             "app_image_registry": None,
             "available_tenant_ids": ["default"],
@@ -279,6 +287,10 @@ class TestCreateCluster:
         assert cluster.elastic_search_config is not None
         assert cluster.elastic_search_config.port == 9300
         assert cluster.elastic_search_config.password == "masked"
+        # ES 未传 TLS 配置时使用默认值
+        assert cluster.elastic_search_config.verify_certs is False
+        assert cluster.elastic_search_config.ca_certs is None
+        assert cluster.elastic_search_config.client_cert is None
 
         assert cluster.app_image_registry is not None
         assert cluster.app_image_registry.host == "hub.bktencent.com"

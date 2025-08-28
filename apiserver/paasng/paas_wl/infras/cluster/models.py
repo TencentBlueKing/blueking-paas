@@ -246,6 +246,12 @@ class ClusterElasticSearchConfig(UuidAuditedModel):
     username = models.CharField(help_text="ES 集群用户名", max_length=64)
     password = EncryptField(help_text="ES 集群密码")
 
+    # TLS 配置信息
+    verify_certs = models.BooleanField(help_text="是否验证 TLS 证书", default=False)
+    ca_certs = models.TextField(help_text="ES 集群 CA 证书", null=True)
+    client_cert = models.TextField(help_text="ES 集群客户端证书", null=True)
+    client_key = models.TextField(help_text="ES 集群客户端密钥", null=True)
+
     tenant_id = tenant_id_field_factory()
 
 

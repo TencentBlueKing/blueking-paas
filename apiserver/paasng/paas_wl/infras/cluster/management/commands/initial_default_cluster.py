@@ -253,6 +253,12 @@ class Command(BaseCommand):
         username, _, password = conf["http_auth"].partition(":")
         scheme = "https" if conf.get("use_ssl") else "http"
 
+        # ES 集群 TLS 配置
+        verify_certs = conf.get("verify_certs", False)
+        ca_certs = conf.get("ca_certs")
+        client_cert = conf.get("client_cert")
+        client_key = conf.get("client_key")
+
         ClusterElasticSearchConfig.objects.update_or_create(
             cluster=cluster,
             defaults={
@@ -261,6 +267,10 @@ class Command(BaseCommand):
                 "port": port,
                 "username": username,
                 "password": password,
+                "verify_certs": verify_certs,
+                "ca_certs": ca_certs,
+                "client_cert": client_cert,
+                "client_key": client_key,
                 "tenant_id": cluster.tenant_id,
             },
         )

@@ -38,6 +38,12 @@ class ElasticSearchHost(BaseModel):
     http_auth: Optional[str] = Field(None, description="形如 username:password 的凭证对")
     url_prefix: str = ""
     use_ssl: bool = Field(False)
+    # To disable certificate verification use the `verify_certs=False` parameter.
+    # This option should be avoided in production, instead use the other options to verify the clusters' certificate.
+    verify_certs: bool = False
+    ca_certs: str | None = None  # CA 证书路径
+    client_cert: str | None = None  # 客户端证书路径
+    client_key: str | None = None  # 客户端密钥路径
 
 
 @register

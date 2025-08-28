@@ -241,11 +241,11 @@ func fetchSource(logger logr.Logger, appDir string) error {
 // 初始化 build 阶段可使用的环境变量
 // 基于 lifecycle 协议, build 阶段的环境变量需要将环境变量按文件写入到 /platform/env 目录
 func setupPlatformEnv(logger logr.Logger, platformDir string, env []string) error {
-	err := os.MkdirAll(filepath.Join(platformDir, "env"), 0744)
+	err := os.MkdirAll(filepath.Join(platformDir, "env"), 0o744)
 	if err != nil {
 		return errors.Wrap(err, "failed to create env dir")
 	}
-	var ignoredEnvs = map[string]interface{}{
+	ignoredEnvs := map[string]interface{}{
 		dockercreds.EnvRegistryAuth: nil,
 		OutputImageEnvVarKey:        nil,
 		RunImageEnvVarKey:           nil,
@@ -269,7 +269,7 @@ func setupPlatformEnv(logger logr.Logger, platformDir string, env []string) erro
 		if _, ok := ignoredEnvs[key]; ok {
 			logger.V(2).Info(fmt.Sprintf("skip env var %s", key))
 		} else {
-			err := os.WriteFile(filepath.Join(platformDir, "env", key), []byte(val), 0755)
+			err := os.WriteFile(filepath.Join(platformDir, "env", key), []byte(val), 0o755)
 			if err != nil {
 				return errors.Wrapf(err, "failed to write env var %s", key)
 			}
@@ -308,7 +308,7 @@ type GroupElement struct {
 // tgz bk-buildpack-go http://bkrepo.example.com/buildpacks/bk-buildpack-go.tgz v205   ->  远程下载
 // 具体构建包类型说明可查看 buildpack.Type 及其常量定义
 func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error {
-	if err := os.MkdirAll(cnbDir, 0744); err != nil {
+	if err := os.MkdirAll(cnbDir, 0o744); err != nil {
 		return errors.Wrap(err, "failed to create cnb dir")
 	}
 
@@ -359,7 +359,7 @@ func setupBuildpacks(logger logr.Logger, buildpacks string, cnbDir string) error
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal order")
 	}
-	err = os.WriteFile(filepath.Join(cnbDir, "order.toml"), data, 0755)
+	err = os.WriteFile(filepath.Join(cnbDir, "order.toml"), data, 0o755)
 	if err != nil {
 		return errors.Wrap(err, "failed to write order.toml")
 	}

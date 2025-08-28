@@ -22,15 +22,16 @@ package builder
 import (
 	"net/url"
 	"os"
-	"path/filepath"
 
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
-	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
+	ffetcher "github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/fs"
+	hfetcher "github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/fetcher/http"
+
 	bexec "github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/builder/executor"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/plan"
+	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/putter"
 	"github.com/TencentBlueking/bkpaas/smart-app-builder/pkg/utils"
 )
 
@@ -85,7 +86,7 @@ func (a *AppBuilder) fetchSource(destDir string) error {
 		}
 
 		if !fileInfo.IsDir() {
-			if err = fs.NewFetcher(a.logger).Fetch(filePath, destDir); err != nil {
+			if err = ffetcher.NewFetcher(a.logger).Fetch(filePath, destDir); err != nil {
 				return err
 			} else {
 				return nil
@@ -99,7 +100,7 @@ func (a *AppBuilder) fetchSource(destDir string) error {
 		return nil
 
 	case "http", "https":
-		if err := http.NewFetcher(a.logger).Fetch(a.sourceURL, destDir); err != nil {
+		if err := hfetcher.NewFetcher(a.logger).Fetch(a.sourceURL, destDir); err != nil {
 			return err
 		}
 	default:
@@ -112,31 +113,15 @@ func (a *AppBuilder) fetchSource(destDir string) error {
 func (a *AppBuilder) pushArtifact(artifactTGZ string) error {
 	parsedURL, err := url.Parse(a.destURL)
 	if err != nil {
-		return err
+		return errors.New("destURL parse error")
 	}
 
-	switch parsedURL.Scheme {
-	case "file":
-		filePath := parsedURL.Path
-
-		fileName := filepath.Base(filePath)
-		if filepath.Ext(fileName) == ".tgz" {
-			if err = os.MkdirAll(filepath.Dir(filePath), 0o744); err != nil {
-				return err
-			}
-			return utils.CopyFile(artifactTGZ, filePath)
-		}
-
-		// 假定 filePath 是目录处理, 否则出错
-		if err = os.MkdirAll(filePath, 0o744); err != nil {
-			return err
-		}
-		return utils.CopyFile(artifactTGZ, filepath.Join(filePath, filepath.Base(artifactTGZ)))
-
-	default:
-		// TODO push to bkrepo
+	putterInstance, err := putter.New(parsedURL.Scheme, a.logger)
+	if err != nil {
 		return errors.Errorf("not support dest-url scheme: %s", parsedURL.Scheme)
 	}
+
+	return putterInstance.Put(artifactTGZ, parsedURL)
 }
 
 // BuildExecutor is the interface which execute the build process

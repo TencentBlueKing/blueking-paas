@@ -14,7 +14,10 @@
  *
  * We undertake not to change the open source license (MIT license) applicable
  * to the current version of the project delivered to anyone in the future.
- */package main
+ */
+
+// Package main entrypoint
+package main
 
 import (
 	"context"
@@ -95,7 +98,7 @@ func makeLifecycleDriverCmd(ctx context.Context) *exec.Cmd {
 func preExit(logger logr.Logger) {
 	duration, err := time.ParseDuration(*exitDelay)
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Sleeping before exit error"))
+		logger.Error(err, "Sleeping before exit error")
 		os.Exit(1)
 	}
 

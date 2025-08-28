@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bytedance/mockey"
 	"github.com/caarlos0/env/v10"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -35,6 +36,7 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/config"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/setting"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/webserver/service"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 )
@@ -68,6 +70,7 @@ var _ = Describe("Test webserver api", func() {
 		mgr := &service.FakeDeployManger{}
 		r.POST("/deploys", DeployHandler(s, mgr))
 		r.GET("/deploys/:deployID/results", ResultHandler(mgr))
+		r.GET("/settings", SettingsHandler())
 	})
 
 	AfterEach(func() {
@@ -164,6 +167,24 @@ var _ = Describe("Test webserver api", func() {
 			s.server.ServeHTTP(w, req)
 
 			Expect(w.Code).To(Equal(401))
+		})
+	})
+
+	Describe("get settings.json", func() {
+		It("standard test case", func() {
+			mockey.PatchConvey("", GinkgoT(), func() {
+				mockey.Mock((*setting.UserSettingsReader).Read).Return(
+					map[string]any{"foo": "bar"}, nil,
+				).Build()
+
+				req, _ := http.NewRequest("GET", "/settings", nil)
+				req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+				w := httptest.NewRecorder()
+				s.server.ServeHTTP(w, req)
+
+				Expect(w.Code).To(Equal(http.StatusOK))
+				Expect(w.Body.String()).To(Equal(`{"foo":"bar"}`))
+			})
 		})
 	})
 })

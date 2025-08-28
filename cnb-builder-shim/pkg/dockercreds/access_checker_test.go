@@ -35,21 +35,24 @@ var _ = Describe("TestCase", func() {
 		tagName string
 	)
 
-	var _ = BeforeEach(func() {
+	_ = BeforeEach(func() {
 		handler = http.NewServeMux()
 		server = httptest.NewServer(handler)
 		tagName = fmt.Sprintf("%s/some/image:tag", server.URL[7:])
 	})
 
-	var _ = AfterEach(func() {
+	_ = AfterEach(func() {
 		server.Close()
 	})
 
 	When("VerifyWriteAccess", func() {
 		It("does not error when has write access", func() {
-			handler.HandleFunc("/v2/some/image/blobs/uploads/", func(writer http.ResponseWriter, request *http.Request) {
-				writer.WriteHeader(201)
-			})
+			handler.HandleFunc(
+				"/v2/some/image/blobs/uploads/",
+				func(writer http.ResponseWriter, request *http.Request) {
+					writer.WriteHeader(201)
+				},
+			)
 			handler.HandleFunc("/v2/", func(writer http.ResponseWriter, request *http.Request) {
 				writer.WriteHeader(200)
 			})
@@ -59,15 +62,20 @@ var _ = Describe("TestCase", func() {
 		})
 
 		It("does not error when has write access", func() {
-			handler.HandleFunc("/v2/some/image/blobs/uploads/", func(writer http.ResponseWriter, request *http.Request) {
-				writer.WriteHeader(403)
-			})
+			handler.HandleFunc(
+				"/v2/some/image/blobs/uploads/",
+				func(writer http.ResponseWriter, request *http.Request) {
+					writer.WriteHeader(403)
+				},
+			)
 			handler.HandleFunc("/v2/", func(writer http.ResponseWriter, request *http.Request) {
 				writer.WriteHeader(200)
 			})
 
 			err := VerifyWriteAccess(testKeychain{}, tagName)
-			Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("POST %s/v2/some/image/blobs/uploads/: unexpected status code 403 Forbidden", server.URL)))
+			Expect(
+				err.Error(),
+			).To(ContainSubstring(fmt.Sprintf("POST %s/v2/some/image/blobs/uploads/: unexpected status code 403 Forbidden", server.URL)))
 		})
 	})
 
@@ -77,9 +85,12 @@ var _ = Describe("TestCase", func() {
 				writer.WriteHeader(200)
 			})
 
-			handler.HandleFunc("/v2/some/image/manifests/tag", func(writer http.ResponseWriter, request *http.Request) {
-				writer.WriteHeader(200)
-			})
+			handler.HandleFunc(
+				"/v2/some/image/manifests/tag",
+				func(writer http.ResponseWriter, request *http.Request) {
+					writer.WriteHeader(200)
+				},
+			)
 
 			err := VerifyReadAccess(testKeychain{}, tagName)
 			Expect(err).To(BeNil())
@@ -90,9 +101,12 @@ var _ = Describe("TestCase", func() {
 				writer.WriteHeader(200)
 			})
 
-			handler.HandleFunc("/v2/some/image/manifests/tag", func(writer http.ResponseWriter, request *http.Request) {
-				writer.WriteHeader(401)
-			})
+			handler.HandleFunc(
+				"/v2/some/image/manifests/tag",
+				func(writer http.ResponseWriter, request *http.Request) {
+					writer.WriteHeader(401)
+				},
+			)
 
 			err := VerifyReadAccess(testKeychain{}, tagName)
 			Expect(err.Error()).To(Equal("UNAUTHORIZED"))
@@ -104,13 +118,14 @@ var _ = Describe("TestCase", func() {
 			})
 
 			err := VerifyReadAccess(testKeychain{}, tagName)
-			Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("GET %s/v2/: unexpected status code 404 Not Found", server.URL)))
+			Expect(
+				err.Error(),
+			).To(ContainSubstring(fmt.Sprintf("GET %s/v2/: unexpected status code 404 Not Found", server.URL)))
 		})
 	})
 })
 
-type testKeychain struct {
-}
+type testKeychain struct{}
 
 func (t testKeychain) Resolve(authn.Resource) (authn.Authenticator, error) {
 	return &authn.Basic{

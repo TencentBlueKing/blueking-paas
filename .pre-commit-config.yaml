@@ -2,6 +2,18 @@ fail_fast: true
 repos:
   - repo: local
     hooks:
+      # cnb-builder-shim
+      - id: cnb-builder-shim-fmt
+        language: system
+        name: run make fmt for "cnb-builder-shim"
+        entry: bash -c "cd cnb-builder-shim && make fmt"
+        files: '^cnb-builder-shim/'
+      - id: cnb-builder-shim-lint
+        language: system
+        name: run make lint for "cnb-builder-shim"
+        entry: bash -c "cd cnb-builder-shim && make lint"
+        files: '^cnb-builder-shim/'
+      # smart-app-builder
       - id: smart-app-builder-fmt
         language: system
         name: run make fmt for "smart-app-builder"

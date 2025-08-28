@@ -22,9 +22,12 @@ package config
 type FetchMethod string
 
 const (
-	HTTP   FetchMethod = "HTTP"
+	// HTTP 通过 Request.MultipartForm 获取源码包
+	HTTP FetchMethod = "HTTP"
+	// BkRepo 通过蓝盾仓库获取源码包（url 来源于环境变量 SOURCE_FETCH_URL）
 	BkRepo FetchMethod = "BK_REPO"
-	GIT    FetchMethod = "GIT"
+	// Git 源码通过 git clone 获取（暂未支持）
+	Git FetchMethod = "Git"
 )
 
 // SourceCodeConfig 源码配置

@@ -1,0 +1,107 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+from typing import Optional
+from django.utils import timezone
+
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+from rest_framework.serializers import CharField, DateTimeField, Serializer
+
+from paasng.core.tenant.fields import tenant_id_field_factory
+from paasng.misc.tools.smart_app.models import SmartBuild
+from paasng.misc.tools.smart_app.utils.output import SmartBuildStream
+from paasng.platform.engine.constants import JobStatus
+from paasng.utils.models import UuidAuditedModel
+
+
+class SmartBuildPhaseType(StrStructuredEnum):
+    """创建 s-mart 阶段"""
+
+    PREPARATION = EnumField("preparation", label=_("准备阶段"))
+    BUILD = EnumField("build", label=_("构建阶段"))
+
+
+class SmartBuildPhaseEventSLZ(Serializer):
+    """Phase Event"""
+
+    name = CharField(source="type")
+    start_time = DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
+    complete_time = DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
+    status = CharField(allow_null=True)
+
+
+class SmartBuildPhase(UuidAuditedModel):
+    """创建 s-mart 阶段"""
+
+    type = models.CharField(_("创建阶段类型"), choices=SmartBuildPhaseType.get_choices(), max_length=32)
+    smart_build = models.ForeignKey(
+        SmartBuild,
+        on_delete=models.CASCADE,
+        verbose_name=_("关联创建操作"),
+        null=True,
+        related_name='phases'
+    )
+    status = models.CharField(_("状态"), choices=JobStatus.get_choices(), null=True, max_length=32)
+    start_time = models.DateTimeField(_("阶段开始时间"), null=True)
+    complete_time = models.DateTimeField(_("阶段完成时间"), null=True)
+
+    tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        ordering = ["created"]
+        unique_together = (("smart_build", "type"),)
+    
+    @classmethod
+    def get_event_type(cls) -> str:
+        return "phase"
+
+    def to_dict(self):
+        return SmartBuildPhaseEventSLZ(self).data
+
+    def get_unfinished_steps(self):
+        """获取所有未结束的步骤"""
+        return self.steps.filter(status=JobStatus.PENDING.value)
+
+    def mark_procedure_status(self, status: JobStatus):
+        """针对拥有 complete_time 和 start_time 的应用标记其状态"""
+        update_fields = ["status", "updated"]
+        now = timezone.localtime(timezone.now())
+
+        if status in JobStatus.get_finished_states():
+            self.complete_time = now
+            update_fields.append("complete_time")
+
+            # 步骤完成地过于快速，PaaS 来不及判断其开始就已经收到了结束的标志
+            if not self.start_time and not self.status:
+                self.start_time = now
+                update_fields.append("start_time")
+        else:
+            self.start_time = now
+            update_fields.append("start_time")
+
+        self.status = status.value
+        self.save(update_fields=update_fields)
+    
+    def mark_and_write_to_stream(self, stream: SmartBuildStream, status: JobStatus, extra_info: Optional[dict] = None):
+        """标记状态，并写到 stream"""
+        self.mark_procedure_status(status)
+        detail = self.to_dict()
+        detail.update(extra_info or {})
+
+        stream.write_event(self.get_event_type(), detail)

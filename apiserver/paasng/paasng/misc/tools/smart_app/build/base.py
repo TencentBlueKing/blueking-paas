@@ -15,9 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+"""Base functions for s-mart app building steps"""
 
-urlpatterns = [
-    path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.smart_app.urls")),
-]
+import logging
+from typing import Dict, Optional, Type
+from blue_krill.async_utils.poll_task import TaskPoller
+
+from paasng.misc.tools.smart_app.models import SmartBuild
+from paasng.misc.tools.smart_app.workflow import SmartBuildCoordinator
+
+logger = logging.getLogger(__name__)
+
+class SmartBuildPoller(TaskPoller):
+    """BasePoller for querying the status of s-mart build operation, will auto refresh polling time before task start"""
+
+    @classmethod
+    def start(cls, params: Dict, callback_handler_cls: Optional[Type] = None):
+        smart_build = SmartBuild.objects.get(pk=params["smart_build_id"])
+        SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}").update_polling_time()
+        super().start(params, callback_handler_cls)

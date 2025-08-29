@@ -257,6 +257,33 @@ class ApplicationListViewSet(viewsets.ViewSet):
         resp_data = {"collected_at": latest_collected_at, "applications": applications}
         return Response(data=slzs.IdleApplicationListOutputSLZ(resp_data).data)
 
+    @swagger_auto_schema(
+        tags=["应用列表"],
+        operation_description="获取收藏的应用列表",
+        responses={200: slzs.FavoriteApplicationListOutputSLZ(many=True)},
+    )
+    def list_favorite(self, request):
+        """获取收藏的应用列表"""
+        # get marked application ids
+        marked_applications = UserMarkedApplication.objects.filter(owner=request.user.pk)
+        marked_application_ids = set(marked_applications.values_list("application__id", flat=True))
+
+        serializer = slzs.ApplicationListFavoriteSLZ(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        params = serializer.data
+
+        applications = UserApplicationFilter(request.user).filter(
+            is_active=params.get("is_active"),
+            app_tenant_mode=params.get("app_tenant_mode"),
+            # 默认使用最后操作时间排序
+            order_by=["-latest_operated_at"],
+        )
+
+        favorite_applications = applications.filter(id__in=marked_application_ids)
+        serializer = slzs.FavoriteApplicationListOutputSLZ(favorite_applications, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @staticmethod
     def _list_idle_module_envs(report: AppOperationReport, mute_rules: Set[Tuple[str, str, str]]) -> List[Dict]:
         idle_module_envs = []

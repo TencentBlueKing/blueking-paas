@@ -398,6 +398,9 @@ export default {
       border-radius: 2px;
       margin-bottom: 8px;
       border: 1px solid #4d4f56;
+      &:last-child {
+        margin-bottom: 0;
+      }
       i {
         color: #979ba5;
         transform: translateY(1px);

@@ -809,8 +809,6 @@ export default {
 }
 .sandbox-container {
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
   height: 100%;
   background: #f5f7fa;
   .fadeout {

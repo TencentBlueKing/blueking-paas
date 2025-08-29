@@ -188,6 +188,7 @@ INSTALLED_APPS = [
     "paasng.bk_plugins.pluginscenter",
     "paasng.bk_plugins.pluginscenter.iam_adaptor",
     "paasng.platform.mgrlegacy",
+    "paasng.core.tenant",
     "bkpaas_auth",
     "apigw_manager.apigw",
     "paasng.plat_admin.initialization",

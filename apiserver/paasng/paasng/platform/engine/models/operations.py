@@ -37,6 +37,10 @@ class OperationQuerySet(models.QuerySet):
 
 
 class ModuleEnvironmentOperations(TimestampedModel):
+    """
+    [multi-tenancy] TODO
+    """
+
     id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     application = models.ForeignKey(
         "applications.Application", on_delete=models.CASCADE, related_name="module_operations"

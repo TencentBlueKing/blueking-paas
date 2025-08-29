@@ -288,6 +288,7 @@ export default {
 .paas-loading-content {
   position: relative;
   overflow: hidden;
+  height: 100%;
 
   &.loading {
     * {

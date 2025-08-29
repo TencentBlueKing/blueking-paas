@@ -224,6 +224,7 @@ export default {
     flex: 1;
     background: #1a1a1a;
     box-shadow: 0 -2px 4px 0 #1919290d;
+    position: relative;
   }
   .floating-button {
     position: absolute;

@@ -43,11 +43,22 @@
 .paas-custom-input-dark-cls {
   input {
     background: #1a1a1a;
-    border-color: #979BA5;
-    color: #979BA5;
+    border-color: #979ba5;
+    color: #c4c6cc;
   }
   .bk-form-input:focus {
     background: #1a1a1a !important;
+  }
+  .bk-form-input[disabled] {
+    background-color: #6b6b6b !important;
+    background: #2e2e2e !important;
+    color: #6b6b6b;
+  }
+  .bk-form-input::placeholder {
+    color: #979ba5 !important;
+  }
+  .bk-form-input:focus::placeholder {
+    color: #979ba5 !important;
   }
 }
 /*bk-input end*/

@@ -1,6 +1,14 @@
 <template>
   <div class="add-env-popover-content">
-    <div class="popover-title">{{ title }}</div>
+    <div class="popover-title">
+      {{ title }}
+      <div
+        class="popover-subtitle mt-4"
+        v-if="type === 'edit'"
+      >
+        {{ $t('环境变量的修改仅对当前沙箱环境生效，不会影响其他环境') }}
+      </div>
+    </div>
     <div class="popover-body">
       <bk-form
         :model="formData"
@@ -28,6 +36,7 @@
           :error-display-type="'normal'"
         >
           <bk-input
+            ref="valueInput"
             v-model="formData.value"
             ext-cls="paas-custom-input-dark-cls"
           ></bk-input>
@@ -129,7 +138,8 @@ export default {
       }
       this.$nextTick(() => {
         setTimeout(() => {
-          this.$refs.keyInput?.focus();
+          const focusInput = this.type === 'edit' ? this.$refs.valueInput : this.$refs.keyInput;
+          focusInput?.focus();
         }, 100);
       });
     },
@@ -173,8 +183,24 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.add-env-popover-content {
+  .popover-subtitle {
+    font-size: 12px;
+    color: #979ba5;
+  }
+  .popover-body {
+    /deep/ .bk-form-item .bk-label {
+      color: #979ba5;
+    }
+  }
+}
 .cancel-popover-btn {
+  color: #f0f1f5;
   background-color: transparent;
-  color: #b3b3b3;
+  &:hover {
+    color: #dcdee5;
+    background-color: #242424;
+    border: 1px solid #4d4f56;
+  }
 }
 </style>

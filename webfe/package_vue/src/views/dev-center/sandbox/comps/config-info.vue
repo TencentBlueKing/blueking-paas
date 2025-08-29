@@ -1,46 +1,56 @@
 <template>
   <div class="sandbox-config-info-box">
-    <p class="alert mb10">
-      <i class="paasng-icon paasng-info-line"></i>
-      <span>{{ $t('沙箱环境复用 “预发布环境” 的增强服务和环境变量') }}</span>
-    </p>
-    <div class="info">
-      <div class="info-item">
-        <div class="label">{{ $t('代码仓库') }}：</div>
-        <div
-          class="value"
-          v-bk-overflow-tips="{ content: repoUrl, allowHTML: true }"
-        >
-          {{ repoUrl }}
-        </div>
-      </div>
-      <div class="info-item">
-        <div class="label">{{ $t('代码分支') }}：</div>
-        <div class="value">
-          {{ repoBranch }}
-          <a
-            :href="repoBranchUrl"
-            target="_blank"
-          >
-            <i class="paasng-jump-link paasng-icon"></i>
-          </a>
-        </div>
-      </div>
-      <div class="info-item">
-        <div class="label">{{ $t('增强服务') }}：</div>
-        <div
-          class="value"
-          v-bk-overflow-tips
-        >
-          {{ displayServices }}
-        </div>
-      </div>
-      <div class="info-item">
-        <div class="label">{{ $t('环境变量') }}：</div>
-        <div class="value">{{ $t('共 {n} 个', { n: this.sandboxEnvVars?.length ?? 0 }) }}</div>
-      </div>
+    <!-- 折叠 info 功能 -->
+    <div
+      :class="['collapse-box', { collapse: !isCollapse }]"
+      @click="isCollapse = !isCollapse"
+    >
+      <i class="paasng-icon paasng-angle-double-down"></i>
     </div>
-    <div class="flex-row align-center">
+    <!-- 配置信息 -->
+    <template v-if="!isCollapse">
+      <p class="alert mb-12 mt-10">
+        <i class="paasng-icon paasng-info-line"></i>
+        <span>{{ $t('沙箱环境复用 “预发布环境” 的增强服务和环境变量') }}</span>
+      </p>
+      <div class="info">
+        <div class="info-item">
+          <div class="label">{{ $t('代码仓库') }}：</div>
+          <div
+            class="value text-ellipsis"
+            v-bk-overflow-tips="{ content: repoUrl, allowHTML: true }"
+          >
+            {{ repoUrl }}
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="label">{{ $t('代码分支') }}：</div>
+          <div class="value text-ellipsis">
+            {{ repoBranch }}
+            <a
+              :href="repoBranchUrl"
+              target="_blank"
+            >
+              <i class="paasng-jump-link paasng-icon"></i>
+            </a>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="label">{{ $t('增强服务') }}：</div>
+          <div
+            class="value text-ellipsis"
+            v-bk-overflow-tips
+          >
+            {{ displayServices }}
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="label">{{ $t('环境变量') }}：</div>
+          <div class="value">{{ $t('共 {n} 个', { n: this.sandboxEnvVars?.length ?? 0 }) }}</div>
+        </div>
+      </div>
+    </template>
+    <div class="flex-row align-center mt-16">
       <bk-input
         v-model="searchValue"
         :clearable="true"
@@ -67,7 +77,7 @@
     </div>
     <section
       v-bkloading="{ isLoading, color: 'rgba(255, 255, 255, 0.1)', zIndex: 10 }"
-      class="env-variables-box"
+      class="env-variables-box mt-16"
     >
       <!-- 环境变量-空状态 -->
       <table-empty
@@ -81,17 +91,19 @@
           :key="`${item.key}-${index}`"
           class="item"
         >
-          <div
-            class="content"
-            v-bk-overflow-tips="{ content: `${item.key}=${item.value}`, allowHTML: true }"
-          >
-            <!-- 自定义环境变量展示 icon -->
-            <i
-              class="paasng-icon paasng-user-8 mr8"
-              :class="{ hidden: item.source !== 'custom' }"
-              v-bk-tooltips="$t('自定义环境变量')"
-            />
-            <span>{{ `${item.key}=${item.value || '--'}` }}</span>
+          <i
+            class="paasng-icon paasng-user-8 mr8"
+            :class="{ hidden: item.source !== 'custom' }"
+            v-bk-tooltips="$t('自定义环境变量')"
+          />
+          <div class="content flex-row flex-column">
+            <div class="key flex-1 text-ellipsis f12">{{ item.key }}</div>
+            <div
+              class="value flex-1 text-ellipsis f12"
+              v-bk-overflow-tips
+            >
+              {{ item.value || '--' }}
+            </div>
           </div>
           <div class="actions">
             <i
@@ -107,18 +119,10 @@
               @confirm="handleAddEnv"
               @hide="hidePopover"
             />
-            <bk-popconfirm
-              trigger="click"
-              width="288"
-              theme="del-tomato"
-              extCls="sandbox-env-popover-cls"
-              @confirm="handleDeleteEnv(item.key, index)"
-            >
-              <div slot="content">
-                <div class="content-text mb10">{{ $t('确认删除该环境变量？') }}</div>
-              </div>
-              <i class="paasng-icon paasng-delete ml10" />
-            </bk-popconfirm>
+            <i
+              class="paasng-icon paasng-delete ml10"
+              @click="showDeleteInfo(item.key, index)"
+            />
           </div>
         </li>
       </ul>
@@ -153,6 +157,7 @@ export default {
       searchValue: '',
       tooltipInstances: new Map(), // 使用 Map 存储多个 tooltip 实例
       addonsServices: [],
+      isCollapse: false,
     };
   },
   computed: {
@@ -218,7 +223,7 @@ export default {
     baseHtmlConfig(contentSelector, instanceKey) {
       return {
         allowHTML: true,
-        width: 300,
+        width: 400,
         trigger: 'click',
         theme: 'tomato',
         content: contentSelector,
@@ -286,6 +291,15 @@ export default {
       await this.handleEnvAction('sandbox/sandboxDelEnv', { envVarKey }, this.$t('删除成功'));
     },
 
+    showDeleteInfo(envVarKey) {
+      this.$bkInfo({
+        title: this.$t('确认删除该环境变量？'),
+        confirmFn: () => {
+          this.handleDeleteEnv(envVarKey);
+        },
+      });
+    },
+
     // 获取增强服务
     async getSandboxAddonsServices() {
       try {
@@ -308,7 +322,27 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 16px 24px;
+  padding: 16px;
+  .collapse-box {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 50%;
+    height: 12px;
+    line-height: 12px;
+    text-align: center;
+    cursor: pointer;
+    background: #2e2e2e;
+    border-radius: 0 0 2px 2px;
+    i {
+      font-size: 10px;
+      color: #979ba5;
+      transform: translateY(-2px);
+    }
+    &.collapse i {
+      transform: rotate(180deg) translateY(3px);
+    }
+  }
   .alert {
     color: #979ba5;
     font-size: 12px;
@@ -327,25 +361,23 @@ export default {
   .info {
     .info-item {
       display: flex;
-      font-size: 14px;
-      height: 40px;
-      line-height: 40px;
+      font-size: 12px;
+      margin-bottom: 8px;
       .label {
         flex-shrink: 0;
         color: #979ba5;
       }
       .value {
         color: #dcdee5;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
+      }
+      &:last-child {
+        margin-bottom: 0;
       }
     }
   }
   .env-variables-box {
     flex: 1;
     overflow-y: auto;
-    margin-top: 12px;
     color: #63656e;
     &::-webkit-scrollbar {
       width: 4px;
@@ -359,23 +391,30 @@ export default {
     .item {
       display: flex;
       align-items: center;
+      height: 52px;
+      background: #2e2e2e;
       padding: 0 10px;
-      height: 36px;
-      line-height: 36px;
       color: #c4c6cc;
-      &:nth-child(odd) {
-        background: #2e2e2e;
+      border-radius: 2px;
+      margin-bottom: 8px;
+      border: 1px solid #4d4f56;
+      i {
+        color: #979ba5;
+        transform: translateY(1px);
+        &.hidden {
+          visibility: hidden;
+        }
       }
       .content {
         flex: 1;
-        white-space: nowrap;
         overflow: hidden;
-        text-overflow: ellipsis;
-        i {
-          display: inline-block;
-          &.hidden {
-            visibility: hidden;
-          }
+
+        .key,
+        .value {
+          line-height: 20px;
+        }
+        .value {
+          color: #979ba5;
         }
       }
       .actions {
@@ -400,9 +439,7 @@ export default {
     padding: 0 !important;
     background-color: #2e2e2e !important;
     color: #979ba5 !important;
-  }
-  .tippy-tooltip.del-tomato-theme {
-    background-color: #3d3d3d !important;
+    box-shadow: 2px 2px 4px 0 #0000001a, -2px 2px 4px 0 #0000001a, 0 2px 6px 0 #00000021;
   }
   .add-env-popover-content {
     padding-top: 16px;

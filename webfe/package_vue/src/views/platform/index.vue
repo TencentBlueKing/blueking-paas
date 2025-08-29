@@ -123,17 +123,18 @@ export default {
       this.active = this.routeTabActive || defaultActive;
       this.handleTabChange(this.active);
     },
-    checkIfEndsWithAddOrEdit(url) {
-      return url.endsWith('/add') || url.endsWith('/edit');
-    },
     handleTabChange(active) {
-      const { path, query } = this.$route;
+      const { path, query, name } = this.$route;
       let newQuery = {};
-      if (this.checkIfEndsWithAddOrEdit(path)) {
-        newQuery = { ...query };
-      } else {
+      // 集群配置特殊处理
+      if (name === 'platformAppCluster') {
         newQuery = {
           ...(active === 'list' && query),
+          ...(active && { active }),
+        };
+      } else {
+        newQuery = {
+          ...query,
           ...(active && { active }),
         };
       }

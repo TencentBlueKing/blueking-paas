@@ -24,7 +24,6 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.accessories.publish.entrance.exposer import get_exposed_links
 from paasng.core.region.states import get_region
 from paasng.platform.applications.constants import AppLanguage, ApplicationType, AvailabilityLevel
 from paasng.platform.applications.exceptions import IntegrityError
@@ -161,22 +160,6 @@ class IdleApplicationListOutputSLZ(serializers.Serializer):
     applications = serializers.ListField(help_text="应用列表", child=IdleApplicationSLZ())
 
 
-class FavoriteApplicationListOutputSLZ(serializers.Serializer):
-    name = TranslatedCharField()
-    region_name = serializers.CharField(read_only=True, source="get_region_display", help_text="应用版本名称")
-    logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的 Logo 地址")
-    module_count = serializers.SerializerMethodField(help_text="应用模块信息数量")
-    app_tenant_mode = serializers.CharField(required=False)
-    is_active = serializers.BooleanField(required=False, allow_null=True)
-    deploy_info = serializers.SerializerMethodField(help_text="部署状态")
-
-    def get_module_count(self, application: Application) -> int:
-        return application.modules.all().count()
-
-    def get_deploy_info(self, application: Application):
-        return get_exposed_links(application)
-
-
 class ApplicationEvaluationSLZ(serializers.Serializer):
     code = serializers.CharField(source="app.code", help_text="应用 Code")
     name = serializers.CharField(source="app.name", help_text="应用名称")
@@ -275,6 +258,7 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
     order_by = serializers.CharField(default="name")
     prefer_marked = serializers.BooleanField(default=True)
     app_tenant_mode = serializers.CharField(required=False)
+    is_favorite = serializers.BooleanField(default=False)
 
     def validate_order_by(self, value):
         if value.startswith("-"):
@@ -314,11 +298,6 @@ class ApplicationListMinimalSLZ(serializers.Serializer):
     source_origin = serializers.ChoiceField(
         choices=SourceOrigin.get_choices(), default=None, allow_blank=True, allow_null=True
     )
-
-
-class ApplicationListFavoriteSLZ(serializers.Serializer):
-    is_active = serializers.BooleanField(required=False, allow_null=True)
-    app_tenant_mode = serializers.CharField(required=False)
 
 
 class ApplicationGroupFieldSLZ(serializers.Serializer):

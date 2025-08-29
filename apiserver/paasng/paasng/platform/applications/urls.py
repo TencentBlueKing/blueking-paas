@@ -93,11 +93,6 @@ urlpatterns = [
         name="api.applications.lists.idle",
     ),
     re_path(
-        r"^api/bkapps/applications/lists/favorite/$",
-        views.ApplicationListViewSet.as_view({"get": "list_favorite"}),
-        name="api.applications.lists.favorite",
-    ),
-    re_path(
         r"^api/bkapps/applications/(?P<code>[^/]+)/members/$",
         views.ApplicationMembersViewSet.as_view({"get": "list", "post": "create"}),
         name="api.applications.members",

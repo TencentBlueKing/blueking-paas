@@ -19,7 +19,7 @@
             </span>
           </p>
           <p class="dynamic-content">
-            <span v-if="platformFeature.MULTI_TENANT_MODE">
+            <span v-if="isMultiTenantDisplayMode">
               <bk-user-display-name :user-id="item.operator"></bk-user-display-name>
               {{ formattedOperate(item.operate) }}
             </span>
@@ -36,7 +36,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex';
+import { mapGetters } from 'vuex';
 
 export default {
   props: {
@@ -46,7 +46,7 @@ export default {
     },
   },
   computed: {
-    ...mapState(['platformFeature']),
+    ...mapGetters(['isMultiTenantDisplayMode']),
     curAppInfo() {
       return this.$store.state.curAppInfo;
     },

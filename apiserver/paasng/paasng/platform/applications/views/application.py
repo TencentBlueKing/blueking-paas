@@ -109,8 +109,8 @@ class ApplicationListViewSet(viewsets.ViewSet):
         if params.get("exclude_collaborated") is True:
             applications = applications.filter(owner=request.user.pk)
 
-        # 仅查看我收藏的应用
-        if params.get("is_favorite") is True:
+        # 仅查看我标记的应用
+        if params.get("is_marked") is True:
             applications = applications.filter(id__in=marked_application_ids)
 
         paginator = ApplicationListPagination()

@@ -618,7 +618,6 @@ export default {
 <style lang="scss" scoped>
 .plugin-members {
   .app-container.container {
-    margin: 0 auto !important;
     padding-top: 16px !important;
   }
 }

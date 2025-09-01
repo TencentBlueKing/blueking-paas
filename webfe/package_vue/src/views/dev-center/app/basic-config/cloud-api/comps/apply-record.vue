@@ -86,7 +86,7 @@
           >
             <template slot-scope="{ row }">
               <bk-user-display-name
-                v-if="platformFeature.MULTI_TENANT_MODE"
+                v-if="isMultiTenantDisplayMode"
                 :user-id="row.applied_by"
               ></bk-user-display-name>
               <span v-else>{{ row.applied_by }}</span>
@@ -136,7 +136,7 @@
             :show-overflow-tooltip="true"
           >
             <template slot-scope="{ row }">
-              <template v-if="platformFeature.MULTI_TENANT_MODE">
+              <template v-if="isMultiTenantDisplayMode">
                 <span
                   v-for="userId in row.handled_by"
                   :key="userId"
@@ -409,8 +409,8 @@ export default {
     };
   },
   computed: {
-    ...mapState(['localLanguage', 'platformFeature']),
-    ...mapGetters(['tenantId']),
+    ...mapState(['localLanguage']),
+    ...mapGetters(['tenantId', 'isMultiTenantDisplayMode']),
     isComponentApi() {
       return this.typeValue === 'component';
     },
@@ -461,7 +461,7 @@ export default {
       });
     },
     searchSelectData() {
-      const isTenantMode = this.platformFeature.MULTI_TENANT_MODE || false;
+      const isTenantMode = this.isMultiTenantDisplayMode || false;
       const keywordConfig = {
         mcp: {
           name: this.$t('MCP Server 名称'),

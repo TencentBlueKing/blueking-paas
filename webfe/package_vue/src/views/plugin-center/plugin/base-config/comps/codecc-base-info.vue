@@ -1,5 +1,5 @@
 <template>
-  <div class="codecc-base-info-container card-style mt16" v-bkloading="{ isLoading: basicLoading, zIndex: 10 }">
+  <div class="codecc-base-info-container card-style" v-bkloading="{ isLoading: basicLoading, zIndex: 10 }">
     <bk-alert
       type="info"
       :show-icon="false"

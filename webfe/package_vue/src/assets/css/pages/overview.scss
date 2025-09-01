@@ -2,9 +2,6 @@
  * @file 概览
  */
 @import '../components/conf.scss';
-.overview-content {
-    padding-top: var(--app-content-pd);
-}
 
 .overview-tit {
     height: 52px;
@@ -38,23 +35,23 @@
 }
 
 .overview-fleft {
-    width: 240px;
-    background: #fff;
-    border-right: 1px solid rgb(220, 222, 229);
-}
-
-.overview-fleft-plugin {
-    position: fixed;
-    top: 50px;
-    bottom: 0px;
-    z-index: 999;
+    display: flex;
+    flex-direction: column;
     width: 240px;
     background: #fff;
     border-right: 1px solid #dcdee5;
+    .app-nav {
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
 }
 
 .overview-fleft .title {
-    height: 60px;
+    height: 64px;
     border-bottom: 1px solid #e6e9ea;
 }
 
@@ -91,19 +88,13 @@
 }
 
 .overview-fright {
-    min-height: 800px;
-    padding-bottom: 66px;
     position: relative;
     flex: 1;
     background: #F5F7FA;
     // 解决外层flex布局表格无法自适应问题
-    overflow: hidden;
+    // overflow: hidden;
     // border-left: solid 1px rgba(220, 222, 229, 0.6);
     
-    .right-main {
-        padding-bottom: 20px;
-        height: 100%;
-    }
     h2 {
         font-size: 14px;
         font-weight: normal;
@@ -115,16 +106,9 @@
 
 }
 .overview-fright-plugin {
-    min-height: 800px;
-    padding-bottom: 66px;
     position: relative;
     flex: 1;
     // border-left: solid 1px rgba(220, 222, 229, 0.6);
-    
-    .right-main {
-        padding-bottom: 20px;
-        height: 100%;
-    }
 }
 
 .plugiun-highly-adaptive {
@@ -133,10 +117,6 @@
 
 .plugiun-test-stage {
     height: calc(100vh - 50px);
-}
-
-.overview-fright-plugin {
-    margin-left: 240px;
 }
 
 // 嵌入插件iframe样式

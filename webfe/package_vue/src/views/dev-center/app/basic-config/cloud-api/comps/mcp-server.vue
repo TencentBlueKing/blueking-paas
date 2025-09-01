@@ -61,7 +61,16 @@
               v-else
               :class="['dot-icon', 'paasng-icon', row.permission?.status]"
             />
-            {{ $t(MCP_SERVER_STATUS[row.permission?.status]) || '--' }}
+            <span
+              v-bk-tooltips="{
+                content: `${$t('请联系{n}负责人审批：', { n: ' MCP Server ' })} ${row.permission?.handled_by?.join(
+                  '，'
+                )}`,
+                disabled: !row.permission?.handled_by?.length || row.permission?.status !== 'pending',
+              }"
+            >
+              {{ $t(MCP_SERVER_STATUS[row.permission?.status]) || '--' }}
+            </span>
           </span>
           <span v-else-if="['name', 'description'].includes(column.prop)">
             <a

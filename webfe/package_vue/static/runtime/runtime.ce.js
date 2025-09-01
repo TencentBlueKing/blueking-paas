@@ -34,6 +34,7 @@ var BK_PAAS_DOCS_VER = process.env.BK_PAAS_DOCS_VER || ''
 var BK_APIGW_DOCS_VER = process.env.BK_APIGW_DOCS_VER || ''
 var BK_ANALYSIS_SITE_NAME = process.env.BK_ANALYSIS_SITE_NAME || ''
 var BK_API_URL_TMPL = process.env.BK_API_URL_TMPL || ''
+var BK_USER_API_IN_APIGW = process.env.BK_USER_API_IN_APIGW || ''
 
 var BACKEND_URL = `${SITE_URL}/backend` // 后端接口前缀
 var PAAS_DOCS_URL_PREFIX = `${BK_DOCS_URL_PREFIX}/markdown/ZH/PaaS/${BK_PAAS_DOCS_VER}` // PaaS 产品文档前缀

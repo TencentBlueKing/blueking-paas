@@ -1,22 +1,16 @@
 <template lang="html">
   <div class="overview-content">
-    <div class="wrap">
-      <div class="overview">
-        <div
-          class="overview-main"
-          :style="{ 'min-height': $route.meta.notMinHeight ? 'auto' : `${minHeight}px` }"
-        >
-          <div class="overview-fleft">
-            <paasNav
-              :nav-categories="navCategories"
-              :nav-items="navItems"
-              :groups="groups"
-            />
-          </div>
-          <div class="overview-fright">
-            <router-view />
-          </div>
-        </div>
+    <!-- 工具页面 -->
+    <div class="overview-main">
+      <div class="overview-fleft">
+        <paasNav
+          :nav-categories="navCategories"
+          :nav-items="navItems"
+          :groups="groups"
+        />
+      </div>
+      <div class="overview-fright">
+        <router-view />
       </div>
     </div>
   </div>
@@ -41,25 +35,10 @@ export default {
       groups: [{ devTools: this.$t('开发者工具') }, { serve: this.$t('服务') }],
     };
   },
-  computed: {
-    isShowNotice() {
-      return this.$store.state.isShowNotice;
-    },
-  },
   mounted() {
     const result = processNavData(toolsNavigationData);
     this.navCategories = result.navCategories;
     this.navItems = result.navItems;
-
-    const HEADER_HEIGHT = 50;
-    const FOOTER_HEIGHT = 0;
-    // 通知中心高度
-    const NOTICE_HEIGHT = this.isShowNotice ? this.GLOBAL.NOTICE_HEIGHT : 0;
-    const winHeight = window.innerHeight;
-    const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT - NOTICE_HEIGHT;
-    if (contentHeight > this.minHeight) {
-      this.minHeight = contentHeight;
-    }
     document.body.className = 'ps-service-detail';
   },
 
@@ -70,6 +49,20 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.overview-content {
+  height: 100%;
+  .overview-main {
+    height: 100%;
+    min-height: 0;
+    .overview-fright {
+      overflow: auto;
+      .right-main {
+        height: auto;
+      }
+    }
+  }
+}
+
 .service-title {
   line-height: 50px;
 }

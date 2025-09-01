@@ -71,7 +71,7 @@
           <bk-table-column
             :label="`${$t('用户')} ID`"
             :width="160"
-            v-if="platformFeature.MULTI_TENANT_MODE"
+            v-if="isMultiTenantDisplayMode"
           >
             <template #default="{ row }">
               <span>{{ row.user.username }}</span>
@@ -91,7 +91,7 @@
                 </span>
                 <bk-user-display-name
                   :user-id="row.user.username"
-                  v-if="platformFeature.MULTI_TENANT_MODE"
+                  v-if="isMultiTenantDisplayMode"
                 ></bk-user-display-name>
                 <span v-else>{{ row.user.username }}</span>
               </div>
@@ -196,7 +196,7 @@
         &nbsp;
         <bk-user-display-name
           :user-id="selectedMember.name"
-          v-if="platformFeature.MULTI_TENANT_MODE"
+          v-if="isMultiTenantDisplayMode"
         ></bk-user-display-name>
         <span v-else>{{ selectedMember.name }}</span>
       </div>
@@ -204,7 +204,7 @@
         {{ $t('用户') }}
         <bk-user-display-name
           :user-id="selectedMember.name"
-          v-if="platformFeature.MULTI_TENANT_MODE"
+          v-if="isMultiTenantDisplayMode"
         ></bk-user-display-name>
         <span v-else>{{ selectedMember.name }}</span>
         {{ $t('将失去此应用的对应权限，是否确定删除？') }}
@@ -315,7 +315,7 @@ export default {
   },
   computed: {
     ...mapState(['platformFeature']),
-    ...mapGetters(['tenantId']),
+    ...mapGetters(['tenantId', 'isMultiTenantDisplayMode']),
     // 分页数据
     paginatedData() {
       const { pageData } = paginationFun(this.filteredData, this.pagination.current, this.pagination.limit);

@@ -144,8 +144,8 @@ else:
         "default": {
             "ENGINE": "django.db.backends.mysql",
             "NAME": env("MYSQL_NAME", default="svc_mysql"),
-            "USER": env("MYSQL_USER", default="svc_mysql"),
-            "PASSWORD": env("MYSQL_PASSWORD", default="blueking"),
+            "USER": env("MYSQL_USER", default="root"),
+            "PASSWORD": env("MYSQL_PASSWORD", default="czyczy521"),
             "HOST": env("MYSQL_HOST", default="127.0.0.1"),
             "PORT": env("MYSQL_PORT", default="3306"),
             "OPTIONS": env.json("MYSQL_OPTIONS", default={}),
@@ -290,8 +290,8 @@ ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher
 # 密码长度，优先从环境变量获取，默认值为10
 PASSWORD_LENGTH = int(os.environ.get("PASSWORD_LENGTH", 10))
 
-# 密码中不允许包含的常见字典词，优先从环境变量获取，格式为逗号分隔的字符串，默认为空列表
+# 密码中不允许包含的常见字典词(每个字符的长度不能小于4)，优先从环境变量获取，格式为逗号分隔的字符串，默认为空列表
 PASSWORD_DICTIONARY_WORDS: List[str] = []
-dict_words_str = os.environ.get("PASSWORD_DICTIONARY_WORDS", "")
-if dict_words_str:
-    PASSWORD_DICTIONARY_WORDS = [word.strip() for word in dict_words_str.split(",") if word.strip()]
+PASSWORD_DICTIONARY_WORDS_STR = os.environ.get("PASSWORD_DICTIONARY_WORDS", "")
+if PASSWORD_DICTIONARY_WORDS_STR:
+    PASSWORD_DICTIONARY_WORDS = [word.strip() for word in PASSWORD_DICTIONARY_WORDS_STR.split(",") if word.strip()]

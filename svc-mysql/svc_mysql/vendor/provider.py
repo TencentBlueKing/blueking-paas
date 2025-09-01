@@ -22,6 +22,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Dict, List
 
+from django.conf import settings
 from paas_service.base_vendor import BaseProvider, InstanceData
 from paas_service.utils import WRItemList
 
@@ -111,7 +112,7 @@ class Provider(BaseProvider):
         uid = gen_unique_id(preferred_name)[:16]
         db_name = uid
         db_user = uid
-        db_password = generate_strong_password()
+        db_password = generate_strong_password(settings.PASSWORD_LENGTH, settings.PASSWORD_DICTIONARY_WORDS)
 
         with TLSCertificateManager(server.tls) as mgr:
             # 1. 授权 Mysql 权限

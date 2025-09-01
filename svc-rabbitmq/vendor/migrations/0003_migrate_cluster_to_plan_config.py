@@ -16,11 +16,6 @@ def migrate_cluster_to_plan(apps, schema_editor):
     # 获取历史模型（避免直接导入当前模型）
     Cluster = apps.get_model('vendor', 'Cluster')
     Plan = apps.get_model('paas_service', 'Plan')
-    try:
-        plan = Plan.objects.get(name='default')
-    except Plan.DoesNotExist:
-        # 非默认配置，跳过初始化
-        return
 
     clusters = list(Cluster.objects.filter(enable=True))
     if not clusters:
@@ -36,8 +31,7 @@ def migrate_cluster_to_plan(apps, schema_editor):
             "password": cluster.password,
             "version": cluster.version,
         }
-        plan.config = json.dumps(config)
-        plan.save(update_fields=["config"])
+        config = json.dumps(config)
     else:
         configs = []
         for cluster in clusters:
@@ -49,7 +43,11 @@ def migrate_cluster_to_plan(apps, schema_editor):
                 "password": cluster.password,
                 "version": cluster.version,
             })
-        plan.config = json.dumps({"clusters": configs})
+        config = json.dumps({"clusters": configs})
+
+    plans = Plan.objects.filter(name='default')
+    for plan in plans:
+        plan.config = config
         plan.save(update_fields=["config"])
 
 

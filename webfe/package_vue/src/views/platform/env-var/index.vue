@@ -36,7 +36,7 @@
         <template slot-scope="{ row }">
           <span v-if="column.prop === 'key'">{{ `${prefix}${row[column.prop]}` || '--' }}</span>
           <bk-user-display-name
-            v-else-if="column.prop === 'operator' && platformFeature.MULTI_TENANT_MODE"
+            v-else-if="column.prop === 'operator' && isMultiTenantDisplayMode"
             :user-id="row[column.prop]"
           ></bk-user-display-name>
           <span v-else>{{ row[column.prop] || '--' }}</span>
@@ -152,7 +152,7 @@
 
 <script>
 import DeleteDialog from '@/components/delete-dialog';
-import { mapState } from 'vuex';
+import { mapGetters } from 'vuex';
 
 export default {
   name: 'BuiltInEnvVariable',
@@ -249,7 +249,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(['platformFeature']),
+    ...mapGetters(['isMultiTenantDisplayMode']),
     isEditVar() {
       return this.varDialogConfig.type === 'edit';
     },

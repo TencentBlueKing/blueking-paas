@@ -105,6 +105,7 @@ const getters = {
   tenantId: state => state.curUserInfo?.tenantId,
   isShowTenant: state => state.curUserInfo?.tenantId === window.GLOBAL_CONFIG.OP_TYPE_TENANT_ID,
   tenantApiBaseUrl: () => window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod'),
+  isMultiTenantDisplayMode: state => state.platformFeature?.MULTI_TENANT_MODE || window.BK_USER_API_IN_APIGW === 'true',
 };
 
 const mutations = {

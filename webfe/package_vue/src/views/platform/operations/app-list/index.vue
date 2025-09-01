@@ -102,7 +102,7 @@
               </span>
             </div>
             <bk-user-display-name
-              v-else-if="column.userDisplay && platformFeature.MULTI_TENANT_MODE"
+              v-else-if="column.userDisplay && isMultiTenantDisplayMode"
               :user-id="row[column.prop]"
             ></bk-user-display-name>
             <span
@@ -160,7 +160,7 @@
 <script>
 import TenantSelect from '../../services/service-plan/tenant-select';
 import DeleteDialog from '@/components/delete-dialog';
-import { mapState } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -216,7 +216,8 @@ export default {
     };
   },
   computed: {
-    ...mapState(['platformFeature', 'localLanguage']),
+    ...mapState(['localLanguage']),
+    ...mapGetters(['isMultiTenantDisplayMode']),
     tenantSelectList() {
       const tenantList = this.tenants.map((item) => {
         return {

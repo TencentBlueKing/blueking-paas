@@ -19,8 +19,8 @@ to the current version of the project delivered to anyone in the future.
 
 import random
 import string
+from typing import List
 
-from django.conf import settings
 from django.db import transaction
 from paas_service.models import ResourceId
 from paas_service.utils import Base36Handler
@@ -61,14 +61,25 @@ def gen_addons_cert_mount_path(provider_name: str, cert_name: str) -> str:
     return f"/opt/blueking/bkapp-addons-certs/{provider_name}/{cert_name}"
 
 
-def generate_strong_password(length=settings.PASSWORD_MIN_LENGTH, dictionary_words=settings.PASSWORD_DICTIONARY_WORDS):
+def generate_strong_password(length: int, dictionary_words: List[str], max_attempts: int = 8) -> str:
     """
-    生成符合 mysql validate_password 强密码规则的随机密码
-    默认满足：
-    - 至少10个字符长度
-    - 包含大小写字母、数字和特殊字符
-    - 不包含常见字典词(4个字符以上,通过 django settings 配置)
+    生成符合 mysql validate_password 强密码规则的随机密码，密码长度需要大于 8
+    :param length: 密码长度
+    :param dictionary_words: 密码中不允许包含的常见字典词（4个字符以上）
+    :param max_attempts: 最大尝试次数，默认 8 次
     """
+    if length < 8:
+        raise ValueError("密码长度必须大于等于 8")
+
+    # 检查字典词是否符合要求（必须都是4个字符以上）
+    for word in dictionary_words:
+        if len(word) < 4:
+            raise ValueError(f"字典词 '{word}' 长度小于4，不符合要求")
+
+    # 检查是否超过最大尝试次数
+    if max_attempts <= 0:
+        raise RuntimeError("达到最大尝试次数，无法生成符合要求的密码")
+
     char_types = [
         # 小写字母
         string.ascii_lowercase,
@@ -77,7 +88,7 @@ def generate_strong_password(length=settings.PASSWORD_MIN_LENGTH, dictionary_wor
         # 数字
         string.digits,
         # 特殊字符
-        string.punctuation,
+        r"""_+-&=!@#$%^*()""",
     ]
 
     # 确保每种字符类型至少有一个
@@ -96,6 +107,6 @@ def generate_strong_password(length=settings.PASSWORD_MIN_LENGTH, dictionary_wor
     for word in dictionary_words:
         if len(word) >= 4 and word in password:
             # 如果包含字典词，重新生成
-            return generate_strong_password()
+            return generate_strong_password(length, dictionary_words, max_attempts - 1)
 
     return password_str

@@ -5,6 +5,14 @@ from django.db import migrations
 
 
 def migrate_cluster_to_plan(apps, schema_editor):
+    """
+    将 RabbitMQ 集群配置从 CLuster Django Model 迁移到 Plan config
+    背景：
+    系统最初将 RabbitMQ 集群信息独立存储在 vendor.models.Cluster
+    该实现不符合增强服务的设计，即将配置信息存储在 Plan config
+    因此需要将存储在 Cluster Django Model 的集群配置迁移到 Plan config
+    """
+
     # 获取历史模型（避免直接导入当前模型）
     Cluster = apps.get_model('vendor', 'Cluster')
     Plan = apps.get_model('paas_service', 'Plan')

@@ -130,9 +130,9 @@ class SysPluginApiViewSet(viewsets.ViewSet):
         existed_members = {m["username"]: m for m in members_api.fetch_plugin_members(plugin)}
 
         # 需要新增的权限：{角色: [用户名]}
-        need_to_add: Dict[PluginRole, List[str]] = defaultdict(list)  # Dict[role, usernames]
+        need_to_add: Dict[PluginRole, List[str]] = defaultdict(list)
         # 需要回收的权限：{用户名: [角色]}
-        need_to_clean: Dict[str, List[PluginRole]] = defaultdict(list)  # Dict[username, roles]
+        need_to_clean: Dict[str, List[PluginRole]] = defaultdict(list)
 
         # 当前需要保留的用户集合
         current_members = set()

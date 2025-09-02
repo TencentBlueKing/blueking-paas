@@ -356,20 +356,6 @@ class GenericRemoteClient(GenericLocalClient):
             self.filepath.unlink()
 
 
-# TODO: 只保留 GenericRemoteClient
-storage_engine_maps = {
-    "GenericRemoteClient": GenericRemoteClient,
-    # LocalClient are only For Test
-    "GenericLocalClient": GenericLocalClient,
-    "TarClient": TarClient,
-    "ZipClient": ZipClient,
-    # TODO: 确认生产环境数据库中是否有这个值, 如果有, 则进行替换后去除该选项
-    "S3TarClient": GenericRemoteClient,
-    "HTTPTarClient": GenericRemoteClient,
-}
-
-
 def get_client(package: SourcePackage) -> BasePackageClient:
-    """根据源码包存储信息, 获取对应的源码包操作客户端"""
-    client_class = storage_engine_maps[package.storage_engine]
-    return client_class(package.storage_path, relative_path=package.relative_path)
+    """获取源码包操作客户端"""
+    return GenericRemoteClient(package.storage_path, relative_path=package.relative_path)

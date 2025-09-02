@@ -44,8 +44,8 @@ def package_module(bk_module):
 
 class TestPackageRepoController:
     @pytest.mark.parametrize(
-        ("engine", "archive_maker", "archive_client_cls"),
-        [("TarClient", gen_tar, TarClient), ("ZipClient", gen_zip, ZipClient)],
+        ("archive_maker", "archive_client_cls"),
+        [(gen_tar, TarClient), (gen_zip, ZipClient)],
     )
     @pytest.mark.parametrize(
         ("contents", "expected_ctx"),
@@ -93,9 +93,7 @@ class TestPackageRepoController:
             ({"Procfile": "Web: npm run dev\n"}, does_not_raise({"Web": "npm run dev"})),
         ],
     )
-    def test_read_file(
-        self, bk_user, package_module, engine, archive_maker, archive_client_cls, contents, expected_ctx
-    ):
+    def test_read_file(self, bk_user, package_module, archive_maker, archive_client_cls, contents, expected_ctx):
         version_info = VersionInfo(revision="v1", version_type="package", version_name="")
         with generate_temp_file() as file_path:
             archive_maker(file_path, contents)
@@ -103,7 +101,7 @@ class TestPackageRepoController:
             stat.version = version_info.revision
             package = SourcePackage.objects.store(
                 package_module,
-                SPStoragePolicy(engine=engine, path=str(file_path), url="don't care", stat=stat),
+                SPStoragePolicy(path=str(file_path), url="don't care", stat=stat),
                 operator=bk_user,
             )
 
@@ -116,8 +114,8 @@ class TestPackageRepoController:
                     assert controller.get_procfile(version_info) == expected
 
     @pytest.mark.parametrize(
-        ("engine", "archive_maker", "archive_client_cls"),
-        [("TarClient", gen_tar, TarClient), ("ZipClient", gen_zip, ZipClient)],
+        ("archive_maker", "archive_client_cls"),
+        [(gen_tar, TarClient), (gen_zip, ZipClient)],
     )
     @pytest.mark.parametrize(
         "contents",
@@ -125,7 +123,7 @@ class TestPackageRepoController:
             ({"Procfile": "web: npm run dev\n"}),
         ],
     )
-    def test_export(self, bk_user, package_module, engine, archive_maker, archive_client_cls, contents):
+    def test_export(self, bk_user, package_module, archive_maker, archive_client_cls, contents):
         version_info = VersionInfo(revision="v1", version_type="package", version_name="")
         with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
             archive_maker(file_path, contents)
@@ -134,7 +132,7 @@ class TestPackageRepoController:
             stat.version = version_info.revision
             package = SourcePackage.objects.store(
                 package_module,
-                SPStoragePolicy(engine=engine, path=str(file_path), url="don't care", stat=stat),
+                SPStoragePolicy(path=str(file_path), url="don't care", stat=stat),
                 operator=bk_user,
             )
 

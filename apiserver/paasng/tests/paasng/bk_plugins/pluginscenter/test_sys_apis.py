@@ -20,6 +20,7 @@ from unittest import mock
 import pytest
 from rest_framework.reverse import reverse
 
+from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
@@ -120,218 +121,100 @@ def mock_members_api():
         yield mocks
 
 
-class TestSyncMembersBase:
-    """成员同步功能测试基类"""
+class TestSyncMembersApi:
+    """成员同步接口测试"""
 
     @pytest.mark.usefixtures("_mock_shim_apis", "mock_members_api")
-    def _execute_test(
-        self,
-        sys_api_client,
-        pd,
-        plugin,
-        mock_members_api,
-        existing_members,
-        request_data,
-        expected_remove,
-        expected_add,
-        expected_delete,
-    ):
-        """执行测试的公共逻辑"""
+    def test_add_new_members(self, sys_api_client, pd, plugin, mock_members_api):
+        """测试新增用户到空列表"""
         url = reverse(
             "sys.api.plugins_center.bk_plugins.sync_members", kwargs={"pd_id": pd.identifier, "plugin_id": plugin.id}
         )
 
-        # Mock成员API返回
-        mock_members_api["fetch_plugin_members"].return_value = existing_members
+        # 配置mock
+        mock_members_api["fetch_plugin_members"].return_value = []
         remove_mock = mock_members_api["remove_user_all_roles"]
         add_mock = mock_members_api["add_role_members"]
         delete_mock = mock_members_api["delete_role_members"]
 
-        # 发送请求并验证状态码
+        # 发送请求
+        response = sys_api_client.post(url, data=[{"username": "user1", "role": {"id": 2}}])
+        assert response.status_code == 200
+
+        # 验证调用
+        remove_mock.assert_not_called()
+        add_mock.assert_called_once_with(plugin, role=PluginRole.ADMINISTRATOR, usernames=["user1"])
+        delete_mock.assert_not_called()
+
+    @pytest.mark.usefixtures("_mock_shim_apis", "mock_members_api")
+    def test_remove_redundant_members(self, sys_api_client, pd, plugin, mock_members_api):
+        """测试删除冗余用户"""
+        url = reverse(
+            "sys.api.plugins_center.bk_plugins.sync_members", kwargs={"pd_id": pd.identifier, "plugin_id": plugin.id}
+        )
+
+        # 配置mock
+        mock_members_api["fetch_plugin_members"].return_value = [{"username": "old_user", "roles": [2]}]
+        remove_mock = mock_members_api["remove_user_all_roles"]
+        add_mock = mock_members_api["add_role_members"]
+        delete_mock = mock_members_api["delete_role_members"]
+
+        # 发送请求
+        response = sys_api_client.post(url, data=[])
+        assert response.status_code == 200
+
+        # 验证调用
+        remove_mock.assert_called_once_with(plugin, usernames=["old_user"])
+        add_mock.assert_not_called()
+        delete_mock.assert_not_called()
+
+    @pytest.mark.usefixtures("_mock_shim_apis", "mock_members_api")
+    def test_update_roles(self, sys_api_client, pd, plugin, mock_members_api):
+        """测试角色更新场景"""
+        url = reverse(
+            "sys.api.plugins_center.bk_plugins.sync_members", kwargs={"pd_id": pd.identifier, "plugin_id": plugin.id}
+        )
+
+        # 配置mock
+        mock_members_api["fetch_plugin_members"].return_value = [{"username": "user1", "roles": [2, 3]}]
+        remove_mock = mock_members_api["remove_user_all_roles"]
+        add_mock = mock_members_api["add_role_members"]
+        delete_mock = mock_members_api["delete_role_members"]
+
+        # 发送请求
+        response = sys_api_client.post(url, data=[{"username": "user1", "role": {"id": 2}}])
+        assert response.status_code == 200
+
+        # 验证调用
+        remove_mock.assert_not_called()
+        add_mock.assert_called_once_with(plugin, role=PluginRole.ADMINISTRATOR, usernames=["user1"])
+        delete_mock.assert_any_call(plugin, role=PluginRole.DEVELOPER, usernames=["user1"])
+
+    @pytest.mark.usefixtures("_mock_shim_apis", "mock_members_api")
+    def test_mixed_operations(self, sys_api_client, pd, plugin, mock_members_api):
+        """测试混合操作场景"""
+        url = reverse(
+            "sys.api.plugins_center.bk_plugins.sync_members", kwargs={"pd_id": pd.identifier, "plugin_id": plugin.id}
+        )
+
+        # 配置mock
+        mock_members_api["fetch_plugin_members"].return_value = [
+            {"username": "user1", "roles": [2]},
+            {"username": "user2", "roles": [3]},
+        ]
+        remove_mock = mock_members_api["remove_user_all_roles"]
+        add_mock = mock_members_api["add_role_members"]
+        delete_mock = mock_members_api["delete_role_members"]
+
+        # 发送请求
+        request_data = [{"username": "user1", "role": {"id": 2}}, {"username": "user3", "role": {"id": 3}}]
         response = sys_api_client.post(url, data=request_data)
         assert response.status_code == 200
 
-        # 验证删除冗余用户调用
-        if expected_remove:
-            remove_mock.assert_called_once_with(plugin=plugin, usernames=expected_remove)
-        else:
-            remove_mock.assert_not_called()
-
-        # 验证角色添加调用
-        for role, users in expected_add:
-            assert mock.call(plugin, role=role, usernames=users) in add_mock.call_args_list
-
-        # 验证角色删除调用
-        for username, roles in expected_delete:
-            for role in roles:
-                delete_mock.assert_any_call(plugin, role=role, usernames=[username])
-
-
-class TestAddMembers(TestSyncMembersBase):
-    """测试新增用户场景"""
-
-    @pytest.mark.parametrize(
-        ("existing_members", "request_data", "expected_remove", "expected_add", "expected_delete"),
-        [
-            (
-                [],
-                [{"username": "user1", "role": {"id": 2}}],
-                [],
-                [(2, ["user1"])],
-                [],
-            )
-        ],
-    )
-    def test_add_new_members(
-        self,
-        sys_api_client,
-        pd,
-        plugin,
-        mock_members_api,
-        existing_members,
-        request_data,
-        expected_remove,
-        expected_add,
-        expected_delete,
-    ):
-        """测试添加新用户到空列表"""
-        self._execute_test(
-            sys_api_client,
-            pd,
-            plugin,
-            mock_members_api,
-            existing_members,
-            request_data,
-            expected_remove,
-            expected_add,
-            expected_delete,
-        )
-
-
-class TestRemoveMembers(TestSyncMembersBase):
-    """测试删除冗余用户场景"""
-
-    @pytest.mark.parametrize(
-        ("existing_members", "request_data", "expected_remove", "expected_add", "expected_delete"),
-        [
-            (
-                [{"username": "old_user", "roles": [2]}],
-                [],
-                ["old_user"],
-                [],
-                [],
-            )
-        ],
-    )
-    def test_remove_redundant_members(
-        self,
-        sys_api_client,
-        pd,
-        plugin,
-        mock_members_api,
-        existing_members,
-        request_data,
-        expected_remove,
-        expected_add,
-        expected_delete,
-    ):
-        """测试完全清空成员列表"""
-        self._execute_test(
-            sys_api_client,
-            pd,
-            plugin,
-            mock_members_api,
-            existing_members,
-            request_data,
-            expected_remove,
-            expected_add,
-            expected_delete,
-        )
-
-
-class TestUpdateRoles(TestSyncMembersBase):
-    """测试角色更新场景"""
-
-    @pytest.mark.parametrize(
-        ("existing_members", "request_data", "expected_remove", "expected_add", "expected_delete"),
-        [
-            (
-                [{"username": "user1", "roles": [2, 3]}],
-                [{"username": "user1", "role": {"id": 2}}],
-                [],
-                [(2, ["user1"])],
-                [("user1", [3])],
-            )
-        ],
-    )
-    def test_update_user_roles(
-        self,
-        sys_api_client,
-        pd,
-        plugin,
-        mock_members_api,
-        existing_members,
-        request_data,
-        expected_remove,
-        expected_add,
-        expected_delete,
-    ):
-        """测试用户角色更新逻辑"""
-        self._execute_test(
-            sys_api_client,
-            pd,
-            plugin,
-            mock_members_api,
-            existing_members,
-            request_data,
-            expected_remove,
-            expected_add,
-            expected_delete,
-        )
-
-
-class TestMixedOperations(TestSyncMembersBase):
-    """测试混合操作场景"""
-
-    @pytest.mark.parametrize(
-        ("existing_members", "request_data", "expected_remove", "expected_add", "expected_delete"),
-        [
-            (
-                [
-                    {"username": "user1", "roles": [2]},
-                    {"username": "user2", "roles": [3]},
-                ],
-                [
-                    {"username": "user1", "role": {"id": 2}},
-                    {"username": "user3", "role": {"id": 3}},
-                ],
-                ["user2"],
-                [(2, ["user1"]), (3, ["user3"])],
-                [],
-            )
-        ],
-    )
-    def test_mixed_operations(
-        self,
-        sys_api_client,
-        pd,
-        plugin,
-        mock_members_api,
-        existing_members,
-        request_data,
-        expected_remove,
-        expected_add,
-        expected_delete,
-    ):
-        """测试同时存在添加、删除操作的场景"""
-        self._execute_test(
-            sys_api_client,
-            pd,
-            plugin,
-            mock_members_api,
-            existing_members,
-            request_data,
-            expected_remove,
-            expected_add,
-            expected_delete,
-        )
+        # 验证调用
+        remove_mock.assert_called_once_with(plugin, usernames=["user2"])
+        assert add_mock.call_args_list == [
+            mock.call(plugin, role=PluginRole.ADMINISTRATOR, usernames=["user1"]),
+            mock.call(plugin, role=PluginRole.DEVELOPER, usernames=["user3"]),
+        ]
+        delete_mock.assert_not_called()

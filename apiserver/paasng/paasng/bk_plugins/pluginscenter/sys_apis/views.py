@@ -148,7 +148,7 @@ class SysPluginApiViewSet(viewsets.ViewSet):
 
         # 删除用户
         if redundant_users := existed_members.keys() - current_members:
-            members_api.remove_user_all_roles(plugin=plugin, usernames=list(redundant_users))
+            members_api.remove_user_all_roles(plugin, usernames=list(redundant_users))
         # 添加用户权限
         for role, usernames in need_to_add.items():
             members_api.add_role_members(plugin, role=role, usernames=usernames)

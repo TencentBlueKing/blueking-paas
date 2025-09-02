@@ -26,7 +26,7 @@ urlpatterns = [
         name="sys.api.plugins_center.bk_plugins.create",
     ),
     re_path(
-        r"^sys/api/plugins_center/plugin_definitions/(?P<pd_id>[^/]+)/plugins/(?P<plugin_id>[^/]+)/members/$",
+        r"^sys/api/plugins_center/bk_plugins/(?P<pd_id>[^/]+)/plugins/(?P<plugin_id>[^/]+)/members/$",
         views.SysPluginApiViewSet.as_view({"post": "sync_members"}),
         name="sys.api.plugins_center.bk_plugins.sync_members",
     ),

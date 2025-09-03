@@ -6,7 +6,7 @@ from django.db import migrations
 
 def migrate_cluster_to_plan(apps, schema_editor):
     """
-    将 RabbitMQ 集群配置从 CLuster Django Model 迁移到 Plan config
+    将 RabbitMQ 集群配置从 Cluster Django Model 迁移到 Plan config
     背景：
     系统最初将 RabbitMQ 集群信息独立存储在 vendor.models.Cluster
     该实现不符合增强服务的设计，即将配置信息存储在 Plan config
@@ -16,16 +16,12 @@ def migrate_cluster_to_plan(apps, schema_editor):
     # 获取历史模型（避免直接导入当前模型）
     Cluster = apps.get_model('vendor', 'Cluster')
     Plan = apps.get_model('paas_service', 'Plan')
-    try:
-        plan = Plan.objects.get(name='default')
-    except Plan.DoesNotExist:
-        # 非默认配置，跳过初始化
-        return
 
     clusters = list(Cluster.objects.filter(enable=True))
     if not clusters:
         return
 
+    # 将 Cluster 配置转换为 Plan config 格式
     if len(clusters) == 1:
         cluster = clusters[0]
         config = {
@@ -36,8 +32,7 @@ def migrate_cluster_to_plan(apps, schema_editor):
             "password": cluster.password,
             "version": cluster.version,
         }
-        plan.config = json.dumps(config)
-        plan.save(update_fields=["config"])
+        config = json.dumps(config)
     else:
         configs = []
         for cluster in clusters:
@@ -49,7 +44,14 @@ def migrate_cluster_to_plan(apps, schema_editor):
                 "password": cluster.password,
                 "version": cluster.version,
             })
-        plan.config = json.dumps({"clusters": configs})
+        config = json.dumps({"clusters": configs})
+
+    plans = Plan.objects.filter(name='default')
+    for plan in plans:
+        # 若 plan config 已配置，则跳过,避免覆盖用户配置
+        if plan.config:
+            continue
+        plan.config = config
         plan.save(update_fields=["config"])
 
 

@@ -146,7 +146,7 @@ def get_default_cluster_name() -> str:
     return clusters[0]
 
 
-def generate_builder_name(smart_build: SmartBuild) -> str:
+def generate_builder_name(smart_build: "SmartBuild") -> str:
     """Get the s-mart builder name"""
     return f"smart-builder-{smart_build.uuid}"
 

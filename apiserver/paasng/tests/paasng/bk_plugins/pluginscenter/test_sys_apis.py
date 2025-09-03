@@ -21,6 +21,7 @@ import pytest
 from rest_framework.reverse import reverse
 
 from paasng.bk_plugins.pluginscenter.constants import PluginRole
+from paasng.bk_plugins.pluginscenter.iam_adaptor.management.shim import PluginMember, Role
 from tests.utils.helpers import generate_random_string
 
 pytestmark = pytest.mark.django_db
@@ -154,7 +155,9 @@ class TestSyncMembersApi:
         )
 
         # 配置mock
-        mock_members_api["fetch_plugin_members"].return_value = [{"username": "old_user", "roles": [2]}]
+        mock_members_api["fetch_plugin_members"].return_value = [
+            PluginMember(username="old_user", role=Role(id=PluginRole.ADMINISTRATOR, name="管理员"))
+        ]
         remove_mock = mock_members_api["remove_user_all_roles"]
         add_mock = mock_members_api["add_role_members"]
         delete_mock = mock_members_api["delete_role_members"]
@@ -176,7 +179,9 @@ class TestSyncMembersApi:
         )
 
         # 配置mock
-        mock_members_api["fetch_plugin_members"].return_value = [{"username": "user1", "roles": [2, 3]}]
+        mock_members_api["fetch_plugin_members"].return_value = [
+            PluginMember(username="user1", role=Role(id=PluginRole.DEVELOPER, name="开发者"))
+        ]
         remove_mock = mock_members_api["remove_user_all_roles"]
         add_mock = mock_members_api["add_role_members"]
         delete_mock = mock_members_api["delete_role_members"]
@@ -199,22 +204,21 @@ class TestSyncMembersApi:
 
         # 配置mock
         mock_members_api["fetch_plugin_members"].return_value = [
-            {"username": "user1", "roles": [2]},
-            {"username": "user2", "roles": [3]},
+            PluginMember(username="user1", role=Role(id=PluginRole.ADMINISTRATOR, name="管理员")),
+            PluginMember(username="user2", role=Role(id=PluginRole.DEVELOPER, name="开发者")),
         ]
         remove_mock = mock_members_api["remove_user_all_roles"]
         add_mock = mock_members_api["add_role_members"]
         delete_mock = mock_members_api["delete_role_members"]
 
         # 发送请求
-        request_data = [{"username": "user1", "role": {"id": 2}}, {"username": "user3", "role": {"id": 3}}]
+        request_data = [{"username": "user1", "role": {"id": 3}}, {"username": "user3", "role": {"id": 3}}]
         response = sys_api_client.post(url, data=request_data)
         assert response.status_code == 200
 
         # 验证调用
         remove_mock.assert_called_once_with(plugin, usernames=["user2"])
         assert add_mock.call_args_list == [
-            mock.call(plugin, role=PluginRole.ADMINISTRATOR, usernames=["user1"]),
-            mock.call(plugin, role=PluginRole.DEVELOPER, usernames=["user3"]),
+            mock.call(plugin, role=PluginRole.DEVELOPER, usernames=["user1", "user3"]),
         ]
-        delete_mock.assert_not_called()
+        delete_mock.assert_called_once_with(plugin, role=PluginRole.ADMINISTRATOR, usernames=["user1"])

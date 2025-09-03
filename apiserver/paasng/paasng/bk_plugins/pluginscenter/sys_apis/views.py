@@ -127,7 +127,7 @@ class SysPluginApiViewSet(viewsets.ViewSet):
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        existed_members = {m["username"]: m for m in members_api.fetch_plugin_members(plugin)}
+        existed_members = {m.username: m for m in members_api.fetch_plugin_members(plugin)}
 
         # 需要新增的权限：{角色: [用户名]}
         need_to_add: Dict[PluginRole, List[str]] = defaultdict(list)
@@ -141,10 +141,16 @@ class SysPluginApiViewSet(viewsets.ViewSet):
             username = member["username"]
             current_members.add(username)
 
-            # 如果用户已经存在，且角色发生变化，则需要回收多余的权限
-            if username in existed_members and (redundant_roles := set(existed_members[username]["roles"]) - {role}):
-                need_to_clean[username].extend(redundant_roles)
-            need_to_add[role].append(username)
+            # 处理已存在的成员
+            if username in existed_members:
+                original_role = existed_members[username].role.id
+                if original_role != role:
+                    # 角色变更时，需要回收旧角色并添加新角色
+                    need_to_clean[username].append(original_role)
+                    need_to_add[role].append(username)
+            else:
+                # 新增用户直接添加角色
+                need_to_add[role].append(username)
 
         # 删除用户
         if redundant_users := existed_members.keys() - current_members:

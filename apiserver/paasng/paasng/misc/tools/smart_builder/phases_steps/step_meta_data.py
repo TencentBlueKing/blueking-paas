@@ -32,6 +32,8 @@ class StepMetaData:
     def __attrs_post_init__(self):
         if self.name in ALL_STEP_METAS:
             raise ValueError(f"Duplicated step name: {self.name}")
+        # Register this step metadata to the global dictionary
+        ALL_STEP_METAS[self.name] = self
 
 
 ALL_STEP_METAS: Dict[str, StepMetaData] = {}

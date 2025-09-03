@@ -17,6 +17,7 @@
 
 import abc
 import json
+import sys
 from typing import Dict, List, Optional, Protocol
 
 from blue_krill.redis_tools.messaging import StreamChannel
@@ -74,6 +75,45 @@ class RedisChannelStream(SmartBuildStream):
         channel = StreamChannel(smart_build_id, redis_db=get_default_redis())
         channel.initialize()
         return cls(channel)
+
+
+class ConsoleStream(SmartBuildStream):
+    """Stream using console, useful for unit tests"""
+
+    def write_title(self, title):
+        print(f"[TITLE]: {title}")
+
+    def write_message(self, message, stream=StreamType.STDOUT):
+        f = sys.stderr if stream == StreamType.STDERR else sys.stdout
+        print(message, file=f)
+
+    def write_event(self, event_name: str, data: dict):
+        return print(f"[{event_name}: {data}")
+
+    def close(self):
+        pass
+
+    @classmethod
+    def form_smart_build_id(cls, smart_build_id: str):
+        return cls()
+
+
+class NullStream(SmartBuildStream):
+    def write_title(self, title: str):
+        pass
+
+    def write_message(self, message: str, stream: Optional[StreamType] = None):
+        pass
+
+    def write_event(self, event_name: str, data: dict):
+        pass
+
+    def close(self):
+        pass
+
+    @classmethod
+    def form_smart_build_id(cls, smart_build_id: str):
+        return cls()
 
 
 class MessageWriter(Protocol):

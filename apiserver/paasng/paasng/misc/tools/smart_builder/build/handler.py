@@ -117,7 +117,7 @@ class SmartBuildHandler(PodScheduleHandler):
                         "env": env_list,
                         "image": template.runtime.image,
                         "name": pod_name,
-                        "imagePullPolicy": template.runtime.image_pull_policy,
+                        "imagePullPolicy": template.runtime.image_pull_policy.value,
                         "resources": template.runtime.resources,
                         "securityContext": {"privileged": template.runtime.securityContext.privileged},
                     },

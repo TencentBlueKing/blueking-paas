@@ -145,7 +145,7 @@ class SmartBuildStateMgr:
             self.stream.write_message(self._stylize_error(err_detail, status), stream=StreamType.STDERR)
 
         # Update the status of the smart build
-        self.update(status=status.value, err_detail=err_detail)
+        self.update(status=status, err_detail=err_detail)
 
     @staticmethod
     def _stylize_error(error_detail: str, status: JobStatus) -> str:
@@ -201,10 +201,10 @@ class SmartBuildCoordinator:
 
         def execute_release(pipe):
             if expected_smart_build:
-                build_id = pipe.get(self.key_name_build)
-                if build_id and (force_str(build_id) != str(expected_smart_build.pk)):
+                smart_build_id = pipe.get(self.key_name_build)
+                if smart_build_id and (force_str(smart_build_id) != str(expected_smart_build.pk)):
                     raise ValueError(
-                        f"build lock holder mismatch, found: {build_id}, expected: {expected_smart_build.pk}"
+                        f"smart_build lock holder mismatch, found: {smart_build_id}, expected: {expected_smart_build.pk}"
                     )
             pipe.delete(self.key_name_lock)
             # Clean build key

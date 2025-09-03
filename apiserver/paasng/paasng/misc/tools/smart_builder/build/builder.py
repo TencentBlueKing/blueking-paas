@@ -106,6 +106,7 @@ class SmartAppBuilder:
     def launch_build_process(self):
         """Start a new build process for build smart package"""
         source_get_url = self.source_package_url
+        # TODO: 需要指定 bkrepo 的 bucket
         dest_put_url = "https://user:pass@example.com/generic/bkpaas/test-samrt/test.tgz"
 
         envs: Dict[str, str] = {
@@ -114,9 +115,7 @@ class SmartAppBuilder:
             "BUILDER_SHIM_IMAGE": settings.BUILDER_SHIM_IMAGE,
         }
 
-        # TODO: Use first useful cluster name as default
-        clusters = get_all_cluster_names()
-        cluster_name = clusters[0]
+        cluster_name = get_default_cluster_name()
 
         runtime = ContainerRuntimeSpec(
             image=settings.SMART_BUILDER_IMAGE,
@@ -130,10 +129,28 @@ class SmartAppBuilder:
         )
 
         builder_template = SmartBuilderTemplate(
-            name=f"smart-builder-{self.smart_build.uuid}",
-            namespace="smart-app-builder",
+            name=generate_builder_name(self.smart_build),
+            namespace=get_default_builder_namespace(),
             runtime=runtime,
             schedule=schedule,
         )
 
         SmartBuildHandler(get_client_by_cluster_name(cluster_name)).build_pod(template=builder_template)
+
+
+def get_default_cluster_name() -> str:
+    """Get the default cluster name to run smart builder pods"""
+    clusters = get_all_cluster_names()
+    if not clusters:
+        raise RuntimeError("No available cluster to run smart builder pods")
+    return clusters[0]
+
+
+def generate_builder_name(smart_build: SmartBuild) -> str:
+    """Get the s-mart builder name"""
+    return f"smart-builder-{smart_build.uuid}"
+
+
+def get_default_builder_namespace() -> str:
+    """Get the namespace of s-mart builder pod"""
+    return "smart-app-builder"

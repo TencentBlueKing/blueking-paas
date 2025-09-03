@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -15,22 +14,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import pytest
 
-class SmartBuildError(Exception):
-    """Raised when smart build process failed."""
+from .setup_utils import create_fake_smart_build
 
-
-class SmartBuildStepError(Exception):
-    """Raised when smart build step failed."""
+pytestmark = pytest.mark.django_db
 
 
-class SmartBuildShouldAbortError(Exception):
-    """Raise this exception when a smart build procedure should be aborted."""
-
-
-class NoUnlinkedSmartBuildPhaseError(Exception):
-    """Raised when no unlinked SmartBuildPhase is available"""
-
-
-class SmartBuildInterruptionFailed(Exception):
-    """Unable to interrupt a s-mart build"""
+@pytest.fixture()
+def smart_build():
+    """Create a SmartBuild instance for testing"""
+    return create_fake_smart_build()

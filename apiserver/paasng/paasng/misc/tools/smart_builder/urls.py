@@ -28,7 +28,12 @@ urlpatterns = [
     re_path(
         r"^api/tools/s-mart/build/$",
         views.SmartBuilderViewSet.as_view({"post": "build_smart"}),
-        name="api.tools.s-mart.build_smart",
+        name="api.tools.s-mart.build",
+    ),
+    re_path(
+        r"^api/tools/s-mart/build/(?P<smart_build_id>[0-9a-f-]{32,36})/interruption/$",
+        views.SmartBuilderViewSet.as_view({"post": "user_interrupt"}),
+        name="api.tools.s-mart.build.interrupt",
     ),
     re_path(
         r"^api/tools/s-mart/build_phases/$",
@@ -36,8 +41,8 @@ urlpatterns = [
         name="api.tools.s-mart.phase",
     ),
     re_path(
-        r"^api/tools/s-mart/build_status/(?P<smart_build_id>[0-9a-f-]{32,36})/$",
+        r"^api/tools/s-mart/deploy_phases/(?P<smart_build_id>[0-9a-f-]{32,36})/$",
         views.SmartBuildPhaseViewSet.as_view({"get": "get_result"}),
-        name="api.tools.s-mart.build_status",
+        name="api.tools.s-mart.deploy_phases",
     ),
 ]

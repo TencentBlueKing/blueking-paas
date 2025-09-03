@@ -73,7 +73,7 @@ class BuildProcessPoller(TaskPoller):
 
         result = {"smart_build_id": smart_build.uuid, "build_status": build_status}
         logger.info(
-            'The status of s-mart build process [%s] is "%s"',
+            'The status of smart_build process [%s] is "%s"',
             self.params["smart_build_id"],
             build_status,
         )
@@ -95,9 +95,9 @@ class BuildProcessResultHandler(CallbackHandler):
         logger.info("Handling result for s-mart build: %s, status: %s", smart_build_id, build_status)
 
         if build_status == JobStatus.SUCCESSFUL:
-            state_mgr.set_build_result(successful=True)
+            state_mgr.finish(build_status)
             logger.info("S-mart build %s succeeded", smart_build_id)
         else:
             error_message = "Build process failed or timed out"
-            state_mgr.set_build_result(successful=False, err_detail=error_message)
+            state_mgr.finish(status=build_status, err_detail=error_message)
             logger.error("S-mart build %s failed: %s", smart_build_id, error_message)

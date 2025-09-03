@@ -27,7 +27,9 @@ from rest_framework.response import Response
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.tools.smart_builder.build import SmartBuildTaskRunner, create_smart_build_record
+from paasng.misc.tools.smart_builder.build.interruptions import interrupt_smart_build
 from paasng.misc.tools.smart_builder.constants import SmartBuildPhaseType
+from paasng.misc.tools.smart_builder.exceptions import SmartBuildInterruptionFailed
 from paasng.misc.tools.smart_builder.models import SmartBuild
 from paasng.misc.tools.smart_builder.phases_steps import ALL_STEP_METAS, SmartBuildPhaseManager, get_sorted_steps
 from paasng.misc.tools.smart_builder.serializers import (
@@ -143,6 +145,19 @@ class SmartBuilderViewSet(viewsets.ViewSet):
             data={"build_id": build_id, "stream_url": f"/streams/{build_id}"},
             status=status.HTTP_201_CREATED,
         )
+
+    def user_interrupt(self, request, smart_build_id):
+        """由用户手动中断某次 s-mart 包构建操作"""
+        try:
+            smart_build = SmartBuild.objects.get(pk=smart_build_id)
+        except SmartBuild.DoesNotExist:
+            raise error_codes.NOT_FOUND_SMART_BUILD.f(_("没有 id 为 {id} 的部署记录"), id=smart_build_id)
+
+        try:
+            interrupt_smart_build(smart_build, request.user)
+        except SmartBuildInterruptionFailed as e:
+            raise error_codes.SMART_BUILD_INTERRUPTION_FAILED.f(str(e))
+        return Response({})
 
     @staticmethod
     def _validate_app_desc(app_desc: ApplicationDesc):

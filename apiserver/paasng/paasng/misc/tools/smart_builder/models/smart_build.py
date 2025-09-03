@@ -40,6 +40,8 @@ class SmartBuild(UuidAuditedModel):
     stream = models.OneToOneField("SmartBuildLog", on_delete=models.CASCADE, related_name="smart_build")
     err_detail = models.TextField(blank=True, null=True, help_text="构建失败时的错误详情")
 
+    build_interrupted_at = models.DateTimeField(null=True, help_text="用户请求中止构建的时间")
+
     start_time = models.DateTimeField(null=True, help_text="构建任务起始时间")
     end_time = models.DateTimeField(null=True, help_text="构建任务结束时间")
     operator = BkUserField()

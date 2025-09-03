@@ -14,23 +14,34 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import string
+
 import pytest
 
 from paasng.misc.tools.smart_builder.constants import SourceCodeOriginType
 from paasng.misc.tools.smart_builder.models import SmartBuild, SmartBuildLog
 from paasng.platform.engine.constants import JobStatus
+from tests.utils.auth import create_user
+from tests.utils.basic import generate_random_string
 
 pytestmark = pytest.mark.django_db
 
 
 def create_fake_smart_build(
-    package_name="test-package.tar.gz",
-    app_code="test-smart-app",
-    operator="testuser",
+    package_name=None,
+    app_code=None,
+    operator=None,
     status=JobStatus.PENDING.value,
     **kwargs,
 ):
     """Create a fake SmartBuild instance for testing"""
+    if package_name is None:
+        package_name = f"{generate_random_string(8)}.tar.gz"
+    if app_code is None:
+        app_code = generate_random_string(8, string.ascii_lowercase)
+    if operator is None:
+        operator = create_user()
+
     log = SmartBuildLog.objects.create()
 
     return SmartBuild.objects.create(

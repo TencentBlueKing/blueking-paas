@@ -140,7 +140,11 @@ class TestSmartBuildCoordinator:
         coordinator.acquire_lock()
         coordinator.set_smart_build(smart_build)
 
-        new_smart_build = create_fake_smart_build()
+        new_smart_build = create_fake_smart_build(
+            package_name=smart_build.package_name,
+            app_code=smart_build.app_code,
+            operator=smart_build.operator,
+        )
         coordinator = SmartBuildCoordinator(f"{new_smart_build.operator}:{new_smart_build.app_code}")
         with pytest.raises(ValueError, match=r"smart_build lock holder mismatch.*"):
             coordinator.release_lock(new_smart_build)

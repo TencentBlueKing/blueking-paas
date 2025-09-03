@@ -27,6 +27,7 @@ from django.utils.crypto import get_random_string
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource
 from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig
+from paas_wl.utils.models import BkUserField
 from paasng.accessories.dev_sandbox.utils import generate_password
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.modules.models import Module
@@ -149,3 +150,11 @@ class DevSandbox(OwnerTimestampedModel):
 
     class Meta:
         unique_together = ("module", "owner")
+
+
+class DevSandboxUserSettings(OwnerTimestampedModel):
+    """沙箱用户使用偏好"""
+
+    owner = BkUserField(unique=True, help_text="沙箱绑定用户")
+    tenant_id = tenant_id_field_factory()
+    code_server_settings = models.JSONField(help_text="用户沙箱 IDE 配置", default=dict)

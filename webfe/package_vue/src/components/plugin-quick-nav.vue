@@ -1,9 +1,5 @@
 <template>
-  <div
-    :class="['quick-nav', { 'quick-hover-bg': isHover }]"
-    @mouseenter="isHover = true"
-    @mouseleave="isHover = false"
-  >
+  <div class="quick-nav">
     <div class="plugin-info">
       <div
         class="cur-plugin flex-row align-items-center justify-content-between"
@@ -110,7 +106,6 @@ export default {
       searchValue: '',
       pluginList: [],
       viewPluinList: [],
-      isHover: false,
       isLoading: true,
     };
   },
@@ -211,10 +206,14 @@ export default {
 <style lang="scss" scoped>
 @import '~@/assets/css/mixins/ellipsis.scss';
 .quick-nav {
-  height: 60px;
+  flex-shrink: 0;
+  height: 64px;
   border-bottom: 1px solid #e6e9ea;
   cursor: pointer;
   position: relative;
+  &:hover {
+    background: #f5f7fa;
+  }
   .plugin-info {
     height: 100%;
     padding: 6px 16px;
@@ -322,9 +321,6 @@ export default {
       color: #979ba5;
     }
   }
-}
-.quick-hover-bg {
-  background: #f5f7fa;
 }
 .not-data-tips {
   height: 64px;

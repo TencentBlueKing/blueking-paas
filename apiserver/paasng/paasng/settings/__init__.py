@@ -56,7 +56,8 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from dynaconf import LazySettings, Validator
-from moby_distribution.registry.utils import parse_image
+
+from paasng.utils.moby_distribution.registry.utils import parse_image
 
 from .utils import (
     cache_from_redis_sentinel_url,

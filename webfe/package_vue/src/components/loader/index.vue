@@ -226,7 +226,6 @@ export default {
     styleObject() {
       if (this.isMinHeight) {
         return {
-          'min-height': this.localLoading && this.height ? `${this.height}px` : 'calc(100% - 50px)',
           ...this.customStyle,
         };
       }
@@ -289,6 +288,7 @@ export default {
 .paas-loading-content {
   position: relative;
   overflow: hidden;
+  height: 100%;
 
   &.loading {
     * {

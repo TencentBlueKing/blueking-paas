@@ -105,7 +105,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.basic-config-container,
 .router-container {
   height: 100%;
 }

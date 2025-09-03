@@ -1,6 +1,6 @@
 <template lang="html">
   <ul
-    class="app-nav"
+    class="app-nav mt-8"
     @click.stop.prevent="handlerClick()"
   >
     <template v-for="(category, categoryIndex) in navTree">

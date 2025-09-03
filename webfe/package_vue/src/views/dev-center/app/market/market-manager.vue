@@ -83,7 +83,7 @@
               :property="'name'"
             >
               <bk-org-selector
-                v-if="platformFeature.MULTI_TENANT_MODE"
+                v-if="isMultiTenantDisplayMode"
                 v-model="orgMemberSelector"
                 :api-base-url="tenantApiBaseUrl"
                 :tenant-id="tenantId"
@@ -283,7 +283,7 @@
               :icon-offset="380"
             >
               <!-- 多租户展示 -->
-              <template v-if="platformFeature.MULTI_TENANT_MODE && baseInfo.contactArr.length">
+              <template v-if="isMultiTenantDisplayMode && baseInfo.contactArr.length">
                 <div class="form-text">
                   <span
                     v-for="(user, index) in baseInfo.contactArr"
@@ -362,7 +362,7 @@ import BkOrgSelector from '@blueking/bk-org-selector/vue2';
 import visibleRange from './visible-range';
 import { PLATFORM_CONFIG } from '../../../../../static/json/paas_static';
 import { cloneDeep } from 'lodash';
-import { mapGetters, mapState } from 'vuex';
+import { mapGetters } from 'vuex';
 import { normalizeOrgSelectionData } from '@/common/tools';
 
 export default {
@@ -466,8 +466,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(['platformFeature']),
-    ...mapGetters(['tenantId', 'tenantApiBaseUrl']),
+    ...mapGetters(['tenantId', 'tenantApiBaseUrl', 'isMultiTenantDisplayMode']),
     users() {
       return (this.baseInfo.visiable_labels || []).filter((item) => item.type === 'user');
     },

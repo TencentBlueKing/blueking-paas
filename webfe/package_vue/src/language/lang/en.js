@@ -1682,7 +1682,7 @@ export default {
   API名称: 'API Name',
   将申请: 'Will apply',
   将续期: 'Will be renewed',
-  '请联系网关负责人审批：': 'Please contact the person in charge of the gateway for approval:',
+  '请联系{n}负责人审批：': 'Please contact the {n} person in charge for approval:',
   'API主动上报你的自定义事件数据，具体代码如下：': 'API actively reports your custom event data. The specific code is as follows:',
   '5分钟': '5 minutes',
   设置: 'Settings',
@@ -3070,4 +3070,6 @@ export default {
   '搜索变量名/变量值/描述': 'Search Variable Name/Value/Description',
   变量名: 'Variable Name',
   变量值: 'Variable Value',
+  配置说明: 'Config Description',
+  '开发者中心目前不支持托管自定义访问地址的 HTTPS 证书，请确保已经在外部网关中配置好证书。': 'The Developer Center currently does not support managing HTTPS certificates for custom access addresses. Please ensure that the certificate is configured in the external gateway.',
 };

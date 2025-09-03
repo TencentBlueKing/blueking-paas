@@ -21,12 +21,13 @@ from typing import Dict, Optional
 from paas_wl.bk_app.cnative.specs.models import AppModelResource
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.engine.constants import OperationTypes, RuntimeType
+from paasng.platform.engine.constants import OperationTypes, ReplicasPolicy, RuntimeType
 from paasng.platform.engine.deploy.building import start_build, start_build_error_callback
 from paasng.platform.engine.deploy.image_release import release_without_build
 from paasng.platform.engine.models.deployment import Deployment
 from paasng.platform.engine.models.operations import ModuleEnvironmentOperations
 from paasng.platform.engine.signals import pre_appenv_deploy
+from paasng.platform.engine.utils.query import get_latest_deploy_options
 from paasng.platform.engine.utils.source import get_source_dir
 from paasng.platform.modules.constants import SourceOrigin
 from paasng.platform.modules.models import Module
@@ -73,6 +74,8 @@ def initialize_deployment(
         model_resource, _ = AppModelResource.objects.get_or_create_by_module(module)
         bkapp_revision_id = model_resource.revision.id
 
+    # 使用最新的部署选项
+    deploy_options = get_latest_deploy_options(application)
     deployment = Deployment.objects.create(
         operator=operator,
         app_environment=env,
@@ -84,6 +87,7 @@ def initialize_deployment(
         advanced_options=dict(
             **(advanced_options or {}),
             source_dir=get_source_dir(module, operator=operator, version_info=version_info),
+            replicas_policy=deploy_options.replicas_policy if deploy_options else ReplicasPolicy.APP_DESC_PRIORITY,
         ),
         bkapp_revision_id=bkapp_revision_id,
         tenant_id=module.tenant_id,

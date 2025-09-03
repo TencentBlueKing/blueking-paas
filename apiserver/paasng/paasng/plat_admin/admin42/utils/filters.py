@@ -31,7 +31,9 @@ from paasng.platform.applications.models import Application, BaseApplicationFilt
 
 
 class ApplicationFilterBackend(BaseFilterBackend):
-    """Application filter"""
+    """应用过滤器
+    使用场景：应用资源方案（普通应用可以在 Admin42 页面上调整）
+    """
 
     def filter_queryset(self, request, queryset, view):
         if queryset.model != Application:

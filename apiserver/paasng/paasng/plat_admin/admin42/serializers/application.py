@@ -24,79 +24,12 @@ from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.infras.cluster.allocator import ClusterAllocator
-from paas_wl.infras.cluster.entities import AllocationContext
-from paasng.accessories.publish.market.models import MarketConfig
-from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
-from paasng.plat_admin.admin42.serializers.module import ModuleSLZ
-from paasng.platform.applications.constants import ApplicationType
-from paasng.platform.applications.models import Application
 from paasng.platform.evaluation.constants import BatchTaskStatus
 from paasng.platform.evaluation.models import AppOperationReport, AppOperationReportCollectionTask
 from paasng.utils.datetime import humanize_timedelta
 from paasng.utils.models import OrderByField
-from paasng.utils.serializers import HumanizeDateTimeField, UserNameField
 
 logger = logging.getLogger(__name__)
-
-
-class ApplicationSLZ(serializers.ModelSerializer):
-    region_name = serializers.CharField(read_only=True, source="get_region_display", help_text="region对应的中文名称")
-    logo_url = serializers.CharField(read_only=True, source="get_logo_url", help_text="应用的Logo地址")
-    config_info = serializers.DictField(read_only=True, help_text="应用额外状态信息")
-    owner = UserNameField()
-    creator = UserNameField()
-    created_humanized = HumanizeDateTimeField(source="created")
-    updated_humanized = HumanizeDateTimeField(source="updated")
-
-    app_type = serializers.SerializerMethodField(read_only=True)
-    resource_quotas = serializers.SerializerMethodField(read_only=True)
-
-    def get_app_type(self, instance: Application) -> str:
-        return ApplicationType.get_choice_label(instance.type)
-
-    def get_resource_quotas(self, instance: Application) -> dict:
-        default_quotas = {"memory": "--", "cpu": "--"}
-        if app_resource_quotas := self.context.get("app_resource_quotas"):
-            return app_resource_quotas.get(instance.code, default_quotas)
-        return default_quotas
-
-    class Meta:
-        model = Application
-        fields = "__all__"
-
-
-class ApplicationDetailSLZ(ApplicationSLZ):
-    modules = serializers.SerializerMethodField()
-    market_availabled_address = serializers.SerializerMethodField()
-
-    def get_modules(self, obj):
-        # 将 default_module 排在第一位
-        modules = obj.modules.all().order_by("-is_default", "-created")
-        return ModuleSLZ(modules, many=True).data
-
-    def get_market_availabled_address(self, obj):
-        market_config, _ = MarketConfig.objects.get_or_create_by_app(obj)
-        access_entrance = MarketAvailableAddressHelper(market_config).access_entrance
-        if access_entrance:
-            return access_entrance.address
-        else:
-            return None
-
-
-class BindEnvClusterSLZ(serializers.Serializer):
-    """绑定应用部署环境集群配置"""
-
-    cluster_name = serializers.CharField(max_length=32)
-
-    def validate_cluster_name(self, cluster_name: str) -> str:
-        ctx = AllocationContext.from_module_env(self.context["module_env"])
-        ctx.username = self.context["operator"]
-
-        if not ClusterAllocator(ctx).check_available(cluster_name):
-            raise ValidationError("selected cluster cannot use for current module_env")
-
-        return cluster_name
 
 
 class ApplicationFilterSLZ(serializers.Serializer):

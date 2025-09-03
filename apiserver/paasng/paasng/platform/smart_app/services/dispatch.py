@@ -20,9 +20,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Set
-
-from moby_distribution import ImageJSON, ImageRef, LayerRef
+from typing import Callable, List, Set, cast
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
@@ -37,6 +35,7 @@ from paasng.platform.smart_app.services.patcher import patch_smart_tarball
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
+from paasng.utils.moby_distribution import ImageJSON, ImageRef, LayerRef
 from paasng.utils.text import remove_prefix
 
 logger = logging.getLogger(__name__)
@@ -123,7 +122,7 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     client = bksmart_settings.registry.get_client()
     image_ref = ImageRef.from_image(
         from_repo=base_image.name,
-        from_reference=base_image.tag,
+        from_reference=cast(str, base_image.tag),
         to_repo=new_image_info.name,
         to_reference=new_image_info.tag,
         client=client,
@@ -166,7 +165,7 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
         client = bksmart_settings.registry.get_client()
         image_ref = ImageRef.from_image(
             from_repo=base_image.name,
-            from_reference=base_image.tag,
+            from_reference=cast(str, base_image.tag),
             to_repo=new_image_info.name,
             to_reference=new_image_info.tag,
             client=client,

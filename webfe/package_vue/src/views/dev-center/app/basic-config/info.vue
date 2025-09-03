@@ -43,7 +43,7 @@
                   </div>
                 </div>
               </section>
-              <div class="logo-wrapper">
+              <div class="logo-wrapper mt-16">
                 <img :src="localeAppInfo.logo || '/static/images/default_logo.png'" />
               </div>
             </div>
@@ -969,10 +969,10 @@ export default {
 .main {
   .view-mode {
     display: flex;
-    justify-content: space-between;
+    gap: 30px;
     .info-warpper {
+      width: 480px;
       margin-top: 16px;
-      flex: 1;
       .row {
         display: flex;
         .value {
@@ -1000,7 +1000,6 @@ export default {
     }
     .logo-wrapper {
       flex-shrink: 0;
-      margin-right: 78px;
       width: 104px;
       height: 104px;
       img {

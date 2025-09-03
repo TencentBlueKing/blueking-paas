@@ -20,14 +20,14 @@ import os
 import pathlib
 import shutil
 import tempfile
-from typing import Dict
+from typing import Dict, cast
 
 from django.core.management.base import BaseCommand
-from moby_distribution import APIEndpoint, DockerRegistryV2Client, ImageRef
-from moby_distribution.registry.utils import parse_image
 
 from paasng.platform.modules.constants import AppImageType
 from paasng.platform.smart_app.conf import bksmart_settings
+from paasng.utils.moby_distribution import APIEndpoint, DockerRegistryV2Client, ImageRef
+from paasng.utils.moby_distribution.registry.utils import parse_image
 from paasng.utils.validators import str2bool
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class Command(BaseCommand):
         try:
             ref = ImageRef.from_image(
                 from_repo=from_image.name,
-                from_reference=from_image.tag,
+                from_reference=cast(str, from_image.tag),
                 client=DockerRegistryV2Client.from_api_endpoint(APIEndpoint(url=from_image.domain)),
             )
             ref.save(dest=str(image_tarball_path))

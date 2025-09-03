@@ -19,10 +19,9 @@ import datetime
 import logging
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
-from moby_distribution import APIEndpoint, DockerRegistryV2Client, ImageRef, Tags
-
 from paasng.platform.sourcectl.models import AlternativeVersion, RepoBasicAuthHolder, VersionInfo
 from paasng.platform.sourcectl.source_types import docker_registry_config
+from paasng.utils.moby_distribution import APIEndpoint, DockerRegistryV2Client, ImageRef, Tags
 from paasng.utils.text import remove_suffix
 
 if TYPE_CHECKING:
@@ -81,7 +80,7 @@ class DockerRegistryController:
         self.repo = repo
         self._username = username
         self._password = password
-        self._client = None
+        self._client: Optional[DockerRegistryV2Client] = None
 
     def touch(self) -> bool:
         client = self.get_client()

@@ -140,3 +140,10 @@ class RuntimeType(StrStructuredEnum):
     BUILDPACK = EnumField("buildpack", label=_("使用 Buildpacks 构建"))
     DOCKERFILE = EnumField("dockerfile", label=_("使用 Dockerfile 构建"))
     CUSTOM_IMAGE = EnumField("custom_image", label="Custom Image(云原生和旧镜像应用)")
+
+
+class ReplicasPolicy(StrStructuredEnum):
+    """部署时副本数的优先级策略"""
+
+    WEB_FORM_PRIORITY = EnumField("web_form_priority", label=_("页面配置优先"))
+    APP_DESC_PRIORITY = EnumField("app_desc_priority", label=_("描述文件优先"))

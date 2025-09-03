@@ -31,33 +31,48 @@
         <div class="top-bar-title flex-row align-items-center">
           <div>{{ $t('部署管理') }}</div>
           <div class="title-info flex-row align-items-center ml-12 pl-12">
-            <bk-dropdown-menu ref="dropdown">
-              <div
-                slot="dropdown-trigger"
-                class="dropdown-trigger-content"
+            <div class="dropdown-trigger-content">
+              <span>{{ $t('副本数策略') }}：{{ currentReplicasPolicy.label }}</span>
+              <!-- 副本策略弹窗 -->
+              <CustomPopconfirm
+                width="300"
+                trigger="click"
+                placement="bottom-start"
+                ext-cls="replicas-policy-popconfirm-cls"
+                @confirm="changeReplicasPolicy"
               >
-                <span>{{ $t('副本数策略') }}：{{ currentReplicasPolicy.label }}</span>
-                <i class="paasng-icon paasng-edit-2 ml5"></i>
-              </div>
-              <ul
-                class="bk-dropdown-list"
-                slot="dropdown-content"
-              >
-                <li
-                  v-for="(item, index) in smartConfig.options"
-                  :key="index"
-                  v-bk-tooltips.right="{ content: item.tips, width: 300 }"
-                  @click="changeReplicasPolicy(item.value)"
+                <i
+                  class="paasng-icon paasng-edit-2 ml5"
+                  @click="initTempReplicasPolicy"
+                ></i>
+                <div
+                  slot="content"
+                  class="custom-popconfirm-content"
                 >
-                  <a
-                    href="javascript:;"
-                    :class="{ active: smartConfig.replicasPolicy === item.value }"
-                  >
-                    {{ item.label }}
-                  </a>
-                </li>
-              </ul>
-            </bk-dropdown-menu>
+                  <div class="custom-title">{{ $t('副本数策略') }}</div>
+                  <div slot="content">
+                    <bk-radio-group
+                      v-model="tempReplicasPolicy"
+                      class="flex-row flex-column"
+                    >
+                      <div
+                        v-for="(item, index) in smartConfig.options"
+                        :key="item.value"
+                        :class="{ 'mt-8': index > 0 }"
+                      >
+                        <bk-radio
+                          :value="item.value"
+                          class="ml0 f12"
+                          v-bk-tooltips.right="{ content: item.tips, width: 300 }"
+                        >
+                          {{ item.label }}
+                        </bk-radio>
+                      </div>
+                    </bk-radio-group>
+                  </div>
+                </div>
+              </CustomPopconfirm>
+            </div>
             <div
               class="tips ml-12 text-ellipsis"
               v-bk-overflow-tips
@@ -80,11 +95,13 @@
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
 import cloudAppTopBar from '@/components/cloud-app-top-bar.vue';
+import CustomPopconfirm from '@/components/custom-popconfirm';
 
 export default {
   name: 'CloudDeployManagement',
   components: {
     cloudAppTopBar,
+    CustomPopconfirm,
   },
   mixins: [appBaseMixin],
   data() {
@@ -110,6 +127,8 @@ export default {
           },
         ],
       },
+      // 弹窗中临时选择的副本数策略
+      tempReplicasPolicy: '',
     };
   },
   computed: {
@@ -162,11 +181,16 @@ export default {
       });
     },
 
-    changeReplicasPolicy(value) {
-      if (this.smartConfig.replicasPolicy !== value) {
-        this.smartConfig.replicasPolicy = value;
+    changeReplicasPolicy() {
+      if (this.smartConfig.replicasPolicy !== this.tempReplicasPolicy) {
+        this.smartConfig.replicasPolicy = this.tempReplicasPolicy;
         this.updateAppDeployOptions();
       }
+    },
+
+    // 初始化弹窗中的临时选择值
+    initTempReplicasPolicy() {
+      this.tempReplicasPolicy = this.smartConfig.replicasPolicy;
     },
 
     // 获取应用副本数策略
@@ -176,6 +200,7 @@ export default {
           appCode: this.appCode,
         });
         this.smartConfig.replicasPolicy = replicas_policy;
+        this.tempReplicasPolicy = replicas_policy;
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -224,21 +249,12 @@ export default {
       color: #4d4f56;
       border-left: 1px solid #c4c6cc;
       .dropdown-trigger-content {
-        cursor: pointer;
         i {
+          cursor: pointer;
           transform: translateY(0px);
         }
         &:hover i {
           color: #3a84ff;
-        }
-      }
-      .bk-dropdown-list a {
-        &.active {
-          background-color: #f0f1f5;
-          color: #3a84ff;
-        }
-        &:hover {
-          background-color: #eaf3ff !important;
         }
       }
       .tips {
@@ -260,5 +276,13 @@ export default {
 }
 .router-container {
   height: 100%;
+}
+.custom-popconfirm-content {
+  .custom-title {
+    font-size: 16px;
+    color: #313238;
+    line-height: 24px;
+    margin-bottom: 12px;
+  }
 }
 </style>

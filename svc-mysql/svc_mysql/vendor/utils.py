@@ -87,8 +87,8 @@ def generate_strong_password(length: int, dictionary_words: List[str], max_attem
         string.ascii_uppercase,
         # 数字
         string.digits,
-        # 特殊字符
-        r"""_+-&=!@#$%^*()""",
+        # 特殊字符，与腾讯云数据 MySQL 特殊字符定义保持一致
+        r"""_+-,&=!@#$%^*().|""",
     ]
 
     # 确保每种字符类型至少有一个

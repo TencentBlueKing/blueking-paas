@@ -43,7 +43,7 @@ class TestGenerateStrongPassword:
         has_lower = any(c in string.ascii_lowercase for c in password)
         has_upper = any(c in string.ascii_uppercase for c in password)
         has_digit = any(c in string.digits for c in password)
-        has_special = any(c in r"""_+-&=!@#$%^*()""" for c in password)
+        has_special = any(c in r"""_+-,&=!@#$%^*().|""" for c in password)
 
         assert has_lower
         assert has_upper

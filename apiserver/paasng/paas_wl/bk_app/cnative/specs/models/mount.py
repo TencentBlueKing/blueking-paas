@@ -31,7 +31,10 @@ SourceConfigField = make_json_field("SourceConfigField", VolumeSource)
 
 
 class ConfigMapSource(TimestampedModel):
-    """ConfigMap 类型的挂载资源"""
+    """ConfigMap 类型的挂载资源
+
+    [multi-tenancy] TODO
+    """
 
     application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
     module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
@@ -50,7 +53,10 @@ class ConfigMapSource(TimestampedModel):
 
 
 class PersistentStorageSource(TimestampedModel):
-    """持久存储类型的挂载资源"""
+    """持久存储类型的挂载资源
+
+    [multi-tenancy] TODO
+    """
 
     application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
     module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
@@ -70,7 +76,10 @@ class PersistentStorageSource(TimestampedModel):
 
 
 class Mount(TimestampedModel):
-    """挂载配置"""
+    """挂载配置
+
+    [multi-tenancy] TODO
+    """
 
     module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
     module = ModuleAttrFromID()

@@ -49,6 +49,8 @@ class User(AbstractBaseUser):
 
     This class is not supposed to be used directly as "request.user", you must wrap it with
     `bkpaas_auth.DatabaseUser` to make it compatible with "bkpaas_auth" module.
+
+    [multi-tenancy] TODO
     """
 
     username_validator = UnicodeUsernameValidator()
@@ -126,7 +128,10 @@ class UserProfileManager(models.Manager):
 
 
 class UserProfile(TimestampedModel):
-    """Profile field for user"""
+    """Profile field for user
+
+    [multi-tenancy] TODO
+    """
 
     user = BkUserField(unique=True)
     role = models.IntegerField(default=SiteRole.USER.value)
@@ -232,7 +237,10 @@ class Oauth2TokenHolderQS(models.QuerySet):
 
 
 class Oauth2TokenHolder(TimestampedModel):
-    """OAuth2 Token for sourcectl"""
+    """OAuth2 Token for sourcectl
+
+    [multi-tenancy] TODO
+    """
 
     provider = models.CharField(max_length=32)
     access_token = EncryptField(default="")
@@ -277,6 +285,8 @@ class PrivateTokenHolder(AuditedModel):
 
     Despite the name, the "private token" in this model is not related to the "ClientPrivateToken"
     model.
+
+    [multi-tenancy] TODO
     """
 
     provider = models.CharField(max_length=32)
@@ -324,6 +334,8 @@ class AccountFeatureFlagManager(models.Manager):
 class AccountFeatureFlag(TimestampedModel):
     """
     针对用户的特性标记
+
+    [multi-tenancy] TODO
     """
 
     user = BkUserField()

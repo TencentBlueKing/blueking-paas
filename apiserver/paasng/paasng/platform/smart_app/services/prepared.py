@@ -69,10 +69,8 @@ class PreparedSourcePackage:
         :param output_dir: a file path where the uploaded package will be downloaded into
         :return output_path
         """
-        store_url, filename = self.request.session.get(self._package_path_key)
+        store_url, filename = self.get_stored_info()
         output_path = Path(output_dir) / filename
-        if not store_url:
-            raise PreparedPackageNotFound("not prepared package has been uploaded yet")
 
         # TODO: don't use dummy url, replace with the real one.
         download_file_via_url(url=store_url, local_path=output_path)

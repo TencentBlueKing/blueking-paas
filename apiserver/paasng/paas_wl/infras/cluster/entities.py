@@ -196,6 +196,15 @@ class AllocationContext:
         return cls(tenant_id=tenant_id, region=settings.DEFAULT_REGION_NAME, environment=AppEnvName.PROD.value)
 
     @classmethod
+    def create_for_build_app(cls):
+        """Create an allocation context for build smart app pod.
+
+        NOTE: This context is used specifically for allocating cluster to run smart app builder pods.
+        """
+        tenant_id = OP_TYPE_TENANT_ID if settings.ENABLE_MULTI_TENANT_MODE else DEFAULT_TENANT_ID
+        return cls(tenant_id=tenant_id, region=settings.DEFAULT_REGION_NAME, environment=AppEnvName.PROD.value)
+
+    @classmethod
     def from_module_env(cls, module_env: ModuleEnvironment) -> "AllocationContext":
         return cls(
             tenant_id=module_env.application.tenant_id,

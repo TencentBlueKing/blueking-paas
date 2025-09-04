@@ -212,7 +212,7 @@ INSTALLED_APPS = [
     # 蓝鲸通知中心
     "bk_notice_sdk",
     # s-mart 包构建工具
-    "paasng.misc.tools.smart_builder",
+    "paasng.misc.tools.smart_app",
 ]
 
 # Allow extending installed apps
@@ -1282,7 +1282,7 @@ COLORFUL_TERMINAL_OUTPUT = True
 # ---------------------
 
 # CNB 构建工具镜像名
-BUILDER_SHIM_IMAGE = settings.get("BUILDER_SHIM_IMAGE", "")
+SMART_BUILDER_SHIM_IMAGE = settings.get("SMART_BUILDER_SHIM_IMAGE", "")
 
 # S-Mart Builder 镜像名
 SMART_BUILDER_IMAGE = settings.get("SMART_BUILDER_IMAGE", "")

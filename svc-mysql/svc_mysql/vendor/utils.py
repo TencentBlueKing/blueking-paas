@@ -17,6 +17,10 @@ We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
 
+import random
+import string
+from typing import List
+
 from django.db import transaction
 from paas_service.models import ResourceId
 from paas_service.utils import Base36Handler
@@ -55,3 +59,56 @@ def gen_addons_cert_mount_path(provider_name: str, cert_name: str) -> str:
         raise ValueError("cert_name must be one of ca.crt, tls.crt, tls.key")
 
     return f"/opt/blueking/bkapp-addons-certs/{provider_name}/{cert_name}"
+
+
+def generate_mysql_password(length: int, dictionary_words: List[str], max_attempts: int = 8) -> str:
+    """
+    生成符合 mysql validate_password 强密码规则的随机密码，密码长度需要大于 8
+    :param length: 密码长度
+    :param dictionary_words: 密码中不允许包含的常见字典词（4个字符以上）
+    :param max_attempts: 最大尝试次数，默认 8 次
+    """
+    if length < 8:
+        raise ValueError("Password length must be 8 characters or more")
+
+    # 检查字典词是否符合要求（必须都是4个字符以上）
+    for word in dictionary_words:
+        if len(word) < 4:
+            raise ValueError(
+                f"Dictionary word '{word}' is shorter than 4 characters and does not meet the requirement"
+            )
+
+    # 检查是否超过最大尝试次数
+    if max_attempts <= 0:
+        raise RuntimeError("Maximum attempts reached, Failed to generate a compliant password")
+
+    char_types = [
+        # 小写字母
+        string.ascii_lowercase,
+        # 大写字母
+        string.ascii_uppercase,
+        # 数字
+        string.digits,
+        # 特殊字符，与腾讯云数据 MySQL 特殊字符定义保持一致
+        r"""_+-,&=!@#$%^*().|""",
+    ]
+
+    # 确保每种字符类型至少有一个
+    password = [random.choice(ct) for ct in char_types]
+
+    # 生成剩余字符
+    all_chars = "".join(char_types)
+    remaining = max(length - len(password), 0)
+    password += [random.choice(all_chars) for _ in range(remaining)]
+
+    # 打乱顺序
+    random.shuffle(password)
+    password_str = "".join(password)
+
+    # 检查是否包含字典词(4个字符以上)
+    for word in dictionary_words:
+        if len(word) >= 4 and word in password:
+            # 如果包含字典词，重新生成
+            return generate_mysql_password(length, dictionary_words, max_attempts - 1)
+
+    return password_str

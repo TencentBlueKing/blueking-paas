@@ -19,7 +19,6 @@
 package v1alpha2
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"regexp"
@@ -129,8 +128,6 @@ func (r *BkApp) ValidateCreate() error {
 // ValidateUpdate 应用更新时校验
 func (r *BkApp) ValidateUpdate(old runtime.Object) error {
 	appLog.Info("validate update", "name", r.Name)
-	currentJSON, _ := json.MarshalIndent(r, "", "  ")
-	appLog.Info("validate update bkapp", "json", currentJSON)
 	// TODO 更新校验逻辑，限制部分不可变字段（若存在）
 	err := r.validateApp()
 	if err != nil {

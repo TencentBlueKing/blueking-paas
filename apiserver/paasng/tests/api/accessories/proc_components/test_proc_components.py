@@ -36,39 +36,36 @@ class TestProcessComponentViewSet:
         """测试获取进程组件列表"""
         resp = api_client.get("/api/proc_components")
         assert resp.status_code == 200
-        assert sorted(resp.data, key=itemgetter("name")) == sorted(
-            [
-                {
-                    "name": "test_env_overlay",
-                    "version": "v1",
-                    "schema": {
-                        "type": "object",
-                        "required": ["env"],
-                        "properties": {
-                            "env": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "required": ["name", "value"],
-                                    "properties": {
-                                        "name": {"type": "string", "minLength": 1},
-                                        "value": {"type": "string"},
-                                    },
-                                    "additionalProperties": False,
+        assert sorted(resp.data, key=itemgetter("name")) == [
+            {
+                "name": "test_env_overlay",
+                "version": "v1",
+                "schema": {
+                    "type": "object",
+                    "required": ["env"],
+                    "properties": {
+                        "env": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["name", "value"],
+                                "properties": {
+                                    "name": {"type": "string", "minLength": 1},
+                                    "value": {"type": "string"},
                                 },
-                                "minItems": 1,
-                            }
-                        },
-                        "additionalProperties": False,
+                                "additionalProperties": False,
+                            },
+                            "minItems": 1,
+                        }
                     },
-                    "documentation": "test_env_overlay\n",
+                    "additionalProperties": False,
                 },
-                {
-                    "name": "test_sidecar",
-                    "version": "v1",
-                    "schema": {"description": "不需要任何参数", "type": "object", "additionalProperties": False},
-                    "documentation": "test_sidecar\n",
-                },
-            ],
-            key=itemgetter("name"),
-        )
+                "documentation": "test_env_overlay\n",
+            },
+            {
+                "name": "test_sidecar",
+                "version": "v1",
+                "schema": {"description": "不需要任何参数", "type": "object", "additionalProperties": False},
+                "documentation": "test_sidecar\n",
+            },
+        ]

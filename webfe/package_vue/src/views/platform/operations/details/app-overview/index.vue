@@ -64,7 +64,7 @@
             <template v-else-if="['creator'].includes(key)">
               <bk-user-display-name
                 :user-id="baseInfo[key]"
-                v-if="platformFeature.MULTI_TENANT_MODE"
+                v-if="isMultiTenantDisplayMode"
               ></bk-user-display-name>
               <span v-else>{{ baseInfo[key] }}</span>
             </template>
@@ -262,7 +262,7 @@
                   <template v-else-if="key === 'recent_operation'">
                     <template v-if="env[key]">
                       <div
-                        v-if="platformFeature.MULTI_TENANT_MODE"
+                        v-if="isMultiTenantDisplayMode"
                         class="text-ellipsis"
                         v-bk-overflow-tips
                       >
@@ -425,7 +425,7 @@ export default {
   },
   computed: {
     ...mapState(['platformFeature', 'curUserInfo']),
-    ...mapGetters(['tenantId']),
+    ...mapGetters(['tenantId', 'isMultiTenantDisplayMode']),
     appCode() {
       return this.$route.params.code;
     },

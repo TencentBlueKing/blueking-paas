@@ -139,7 +139,7 @@
         >
           <div class="header-user is-left ps-head-last">
             <!-- 多租户展示 -->
-            <span v-if="platformFeature.MULTI_TENANT_MODE">
+            <span v-if="isMultiTenantDisplayMode">
               <bk-user-display-name :user-id="user.username"></bk-user-display-name>
             </span>
             <template v-else>{{ user.chineseName || user.username }}</template>
@@ -207,8 +207,8 @@ export default {
     };
   },
   computed: {
-    ...mapState(['localLanguage', 'userFeature', 'platformConfig', 'platformFeature']),
-    ...mapGetters(['tenantId']),
+    ...mapState(['localLanguage', 'userFeature', 'platformConfig']),
+    ...mapGetters(['tenantId', 'isMultiTenantDisplayMode']),
     displayNavList() {
       const nav = this.headerStaticInfo.list.nav || [];
       return this.transformNavData(nav);
@@ -224,9 +224,6 @@ export default {
     },
     defaultSwitchLanguageUrl() {
       return `${window.BK_COMPONENT_API_URL}/api/c/compapi/v2/usermanage/fe_update_user_language/`;
-    },
-    isMultiTenant() {
-      return this.platformFeature.MULTI_TENANT_MODE;
     },
   },
   watch: {
@@ -329,14 +326,14 @@ export default {
         this.$store.commit('updateLocalLanguage', language);
 
         // 根据环境变量判断是否需要额外请求
-        const needAjaxRequest = this.isMultiTenant ? window.BK_API_URL_TMPL : window.BK_COMPONENT_API_URL;
+        const needAjaxRequest = this.isMultiTenantDisplayMode ? window.BK_API_URL_TMPL : window.BK_COMPONENT_API_URL;
 
         if (!needAjaxRequest) {
           return window.location.reload();
         }
 
         // 处理多租户和非多租户环境请求
-        if (this.isMultiTenant) {
+        if (this.isMultiTenantDisplayMode) {
           await this.$store.dispatch('tenant/tenantLocaleSwitch', {
             tenantId: this.tenantId,
             data: {

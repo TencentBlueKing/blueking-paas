@@ -2,7 +2,7 @@
   <div :class="localValue">
     <!-- 多租户人员选择器 -->
     <bk-user-selector
-      v-if="platformFeature?.MULTI_TENANT_MODE"
+      v-if="isMultiTenantDisplayMode"
       ref="bkUserSelector"
       v-model="localValue"
       v-bind="props"
@@ -36,7 +36,7 @@
 <script>
 import BluekingUserSelector from '@blueking/user-selector';
 import BkUserSelector from '@blueking/bk-user-selector/vue2';
-import { mapGetters, mapState } from 'vuex';
+import { mapGetters } from 'vuex';
 
 export default {
   name: 'CmdbFormObjuser',
@@ -58,12 +58,13 @@ export default {
     },
   },
   computed: {
+    ...mapGetters(['tenantId', 'isMultiTenantDisplayMode']),
     api() {
       return this.GLOBAL.USERS_URL;
     },
     localValue: {
       get() {
-        if (this.platformFeature.MULTI_TENANT_MODE) {
+        if (this.isMultiTenantDisplayMode) {
           // 多租户
           if (this.multiple) {
             return this.value;
@@ -74,7 +75,7 @@ export default {
         return this.value;
       },
       set(val) {
-        if (this.platformFeature.MULTI_TENANT_MODE) {
+        if (this.isMultiTenantDisplayMode) {
           // 处理多租户单选、多选差异
           if (this.multiple) {
             this.$emit('input', val);
@@ -103,10 +104,6 @@ export default {
     curMaxData() {
       return this.multiple ? -1 : 1;
     },
-    ...mapGetters(['tenantId']),
-    ...mapState({
-      platformFeature: (state) => state.platformFeature,
-    }),
     apiBaseUrl() {
       return window.BK_API_URL_TMPL?.replace('{api_name}', 'bk-user-web/prod');
     },

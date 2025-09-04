@@ -44,7 +44,7 @@
                 class="item-content"
                 v-bk-overflow-tips
               >
-                <span v-if="platformFeature.MULTI_TENANT_MODE">
+                <span v-if="isMultiTenantDisplayMode">
                   <bk-user-display-name :user-id="item.operator"></bk-user-display-name>
                   {{ formattedOperate(item.operate) }}
                 </span>
@@ -63,7 +63,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 
 // 操作记录筛选的 localStorage 键名
 const SHOW_ONLY_MY_OPERATIONS_PREFERENCE = 'show_only_my_operations_preference';
@@ -84,7 +84,8 @@ export default {
     };
   },
   computed: {
-    ...mapState(['platformFeature', 'curUserInfo']),
+    ...mapState(['curUserInfo']),
+    ...mapGetters(['isMultiTenantDisplayMode']),
   },
   created() {
     this.getRecentOperationRecords();

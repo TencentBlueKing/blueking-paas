@@ -127,7 +127,7 @@
             <template slot-scope="{ row }">
               <bk-user-display-name
                 :user-id="row.operator"
-                v-if="platformFeature.MULTI_TENANT_MODE"
+                v-if="isMultiTenantDisplayMode"
               ></bk-user-display-name>
               <span v-else>{{ row.operator }}</span>
             </template>
@@ -220,7 +220,7 @@ import diff from './comps/diff.vue';
 import cloudApiDetail from './comps/cloud-api-detail.vue';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import yamljs from 'js-yaml';
-import { mapState } from 'vuex';
+import { mapGetters } from 'vuex';
 
 export default {
   name: 'OperationRecord',
@@ -276,7 +276,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(['platformFeature']),
+    ...mapGetters(['isMultiTenantDisplayMode']),
     appCode() {
       return this.$route.params.id;
     },

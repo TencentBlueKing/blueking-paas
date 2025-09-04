@@ -171,9 +171,41 @@
                         :placeholder="$t('请输入有效域名')"
                         class="url-input-cls"
                       >
-                        <template slot="prepend">
-                          <div class="group-text">http://</div>
-                        </template>
+                        <bk-dropdown-menu
+                          class="group-text"
+                          ref="dropdown"
+                          slot="prepend"
+                          trigger="click"
+                          font-size="normal"
+                          @show="$set(e, 'isDropdownShow', true)"
+                          @hide="$set(e, 'isDropdownShow', false)"
+                        >
+                          <bk-button
+                            class="f12"
+                            type="primary"
+                            slot="dropdown-trigger"
+                            v-bk-tooltips="getProtocolTipConfig(e)"
+                          >
+                            {{ e.editProtocol || 'http' }}://
+                            <i :class="['bk-icon icon-angle-down', { 'icon-flip': e.isDropdownShow }]"></i>
+                          </bk-button>
+                          <ul
+                            class="bk-dropdown-list"
+                            slot="dropdown-content"
+                          >
+                            <li
+                              v-for="protocol in ['http', 'https']"
+                              :key="protocol"
+                            >
+                              <a
+                                href="javascript:;"
+                                @click="handleProtocolChange(protocol, e)"
+                              >
+                                {{ protocol }}://
+                              </a>
+                            </li>
+                          </ul>
+                        </bk-dropdown-menu>
                       </bk-input>
                     </bk-form-item>
                     <bk-form-item
@@ -281,6 +313,7 @@
                     <bk-button
                       text
                       theme="primary"
+                      :loading="isSaveLoading"
                       @click="handleSubmit($index, i, row, item)"
                     >
                       {{ $t('保存') }}
@@ -288,7 +321,7 @@
                     <bk-button
                       text
                       theme="primary"
-                      class="pl20"
+                      class="ml10"
                       @click="handleCancel($index, i, row, item)"
                     >
                       {{ $t('取消') }}
@@ -305,7 +338,7 @@
                     <bk-button
                       text
                       theme="primary"
-                      class="pl20"
+                      class="ml10"
                       @click="showRemoveModal(i, row, item)"
                     >
                       {{ $t('删除') }}
@@ -392,6 +425,7 @@
 import appBaseMixin from '@/mixins/app-base-mixin';
 import { ENV_ENUM } from '@/common/constants';
 import { copy } from '@/common/tools';
+import { mapState } from 'vuex';
 export default {
   mixins: [appBaseMixin],
   props: {
@@ -426,7 +460,6 @@ export default {
       tableIndex: '',
       envIndex: '',
       ipConfigInfo: { frontend_ingress_ip: '' },
-      placeholderText: '',
       rules: {
         url: [
           {
@@ -471,9 +504,7 @@ export default {
     };
   },
   computed: {
-    platformFeature() {
-      return this.$store.state.platformFeature;
-    },
+    ...mapState(['platformFeature', 'localLanguage']),
     configIpTip() {
       let displayIp = this.defaultIp;
       if (!this.isIpConsistent) {
@@ -518,10 +549,6 @@ export default {
         prev.push(textData[v]);
         return prev;
       }, []);
-    },
-
-    localLanguage() {
-      return this.$store.state.localLanguage;
     },
   },
   watch: {
@@ -628,31 +655,6 @@ export default {
       }
     },
 
-    // async updateRootDomain() {
-    //   try {
-    //     await this.$store.dispatch('entryConfig/updateRootDomain', {
-    //       appCode: this.appCode,
-    //       moduleId: this.curModuleId,
-    //       data: {
-    //         preferred_root_domain: this.rootDomainDefault,
-    //       },
-    //     });
-    //     this.$paasMessage({
-    //       theme: 'success',
-    //       message: this.$t('修改成功'),
-    //     });
-    //   } catch (e) {
-    //     this.$paasMessage({
-    //       theme: 'error',
-    //       message: e.detail || e.message || this.$t('接口异常'),
-    //     });
-    //   } finally {
-    //     this.isEdited = false;
-    //     this.domainDialog.visiable = false;
-    //     this.getDefaultDomainInfo();
-    //   }
-    // },
-
     // 设置主模块
     async submitSetModule() {
       this.domainDialog.visiable = false;
@@ -686,8 +688,14 @@ export default {
       if (isEditCancel) {
         this.entryList = this.entryList.map((e, i) => {
           if (index === i) {
-            e.envs[envType][envIndex].isEdit = false;
-            e.envs[envType][envIndex].address.url = `http://${this.hostInfo.hostName}${this.hostInfo.pathName}`; // 拼接地址和路径
+            const envItem = e.envs[envType][envIndex];
+            envItem.isEdit = false;
+            // 恢复原始的完整URL
+            if (envItem.originalUrl) {
+              envItem.address.url = envItem.originalUrl;
+            }
+            // 清理编辑状态的字段
+            this.clearEditFields(envItem);
           }
           return e;
         });
@@ -749,6 +757,8 @@ export default {
         if (index === i) {
           e.envs[envType].push({
             isEdit: true,
+            editProtocol: 'http', // 新增时默认协议
+            isDropdownShow: false, // 下拉框状态
             address: {
               type: 'custom',
               url: '',
@@ -763,6 +773,7 @@ export default {
     // 保存一条数据
     async handleSubmit(index, envIndex, payload, envType) {
       this.curInputIndex = envIndex;
+      const currentProtocol = payload.envs[envType][envIndex].editProtocol || 'http';
       // 需要过滤查看状态的数据才能获取到需要校验输入框的下标
       const readDataLength = (payload?.envs[envType] || []).filter(
         (e, readIndex) => !e.isEdit && readIndex <= envIndex
@@ -775,6 +786,7 @@ export default {
         path_prefix: payload.envs[envType][envIndex].address.pathPrefix,
         module_name: payload.name,
         id: payload.envs[envType][envIndex].address.id || '',
+        https_enabled: currentProtocol === 'https',
       };
       // 接口响应时，防止多次请求
       if (this.isSaveLoading) {
@@ -786,10 +798,7 @@ export default {
           data: curUrlParams,
           appCode: this.appCode,
         };
-        let fetchUrl = 'entryConfig/addDomainInfo';
-        if (curUrlParams.id) {
-          fetchUrl = 'entryConfig/updateDomainInfo';
-        }
+        const fetchUrl = curUrlParams.id ? 'entryConfig/updateDomainInfo' : 'entryConfig/addDomainInfo';
         const res = await this.$store.dispatch(fetchUrl, params);
         // 当前保存的这条数据返回的id
         this.curDataId = res.id;
@@ -799,10 +808,13 @@ export default {
         });
         this.entryList = this.entryList.map((e, i) => {
           if (index === i) {
-            e.envs[envType][envIndex].isEdit = false; // 改变本条数据的状态
-            e.envs[envType][envIndex].is_running = true; // 能保存和编辑这代表已经部署过了
-            e.envs[envType][envIndex].address.url = `http://${curUrlParams.domain_name}${curUrlParams.path_prefix}`; // 拼接地址和路径
-            e.envs[envType][envIndex].address.id = this.curDataId; // 成功添加，将响应id保存
+            const envItem = e.envs[envType][envIndex];
+            envItem.isEdit = false; // 改变本条数据的状态
+            envItem.is_running = true; // 能保存和编辑这代表已经部署过了
+            envItem.address.url = `${currentProtocol}://${curUrlParams.domain_name}${curUrlParams.path_prefix}`;
+            envItem.address.id = this.curDataId; // 成功添加，将响应id保存
+            // 清理编辑状态的字段
+            this.clearEditFields(envItem);
           }
           return e;
         });
@@ -821,9 +833,11 @@ export default {
       this.$bkInfo({
         title: `${this.$t('确定要删除该域名')}?`,
         maskClose: true,
-        confirmFn: () => {
-          this.handleDelete(envIndex, payload, envType);
+        confirmLoading: true,
+        confirmFn: async () => {
+          const result = await this.handleDelete(envIndex, payload, envType);
           delete this.curPathPrefix[envIndex];
+          return result;
         },
       });
     },
@@ -840,29 +854,73 @@ export default {
           theme: 'success',
           message: `${this.$t('删除成功')}`,
         });
+        return true;
       } catch (error) {
-        const errorMsg = error.message;
-
         this.$paasMessage({
           theme: 'error',
-          message: `${this.$t('删除失败')},${errorMsg}`,
+          message: `${this.$t('删除失败')},${error.message}`,
         });
+        return false;
       }
     },
 
     // 编辑
     handleEdit(index, envIndex, payload, envType) {
-      this.entryList = this.entryList.map((e, i) => {
-        if (index === i) {
-          e.envs[envType][envIndex].isEdit = true;
-          const u = e.envs[envType][envIndex].address.url ? new URL(e.envs[envType][envIndex].address.url) : ''; // 格式化地址
-          e.envs[envType][envIndex].address.url = u.hostname;
-          e.envs[envType][envIndex].address.pathPrefix = u.pathname;
-          this.hostInfo.hostName = u.hostname;
-          this.hostInfo.pathName = u.pathname;
-          this.curPathPrefix[envIndex] = e.envs[envType][envIndex].address.pathPrefix;
+      this.entryList = this.entryList.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+
+        const targetEnvItem = item.envs[envType][envIndex];
+        const currentUrl = targetEnvItem.address.url;
+
+        // 进入编辑状态
+        targetEnvItem.isEdit = true;
+
+        // 保存原始URL用于取消时恢复
+        targetEnvItem.originalUrl = currentUrl;
+
+        // 解析URL获取协议和地址信息
+        const { protocol, hostname, port, pathname } = this.parseUrl(currentUrl);
+
+        // 设置编辑状态的协议和下拉框状态
+        this.$set(targetEnvItem, 'editProtocol', protocol);
+        this.$set(targetEnvItem, 'isDropdownShow', false);
+
+        // 更新地址信息
+        targetEnvItem.address.url = hostname + (port ? `:${port}` : '');
+        targetEnvItem.address.pathPrefix = pathname;
+
+        // 更新主机信息和路径前缀缓存
+        this.updateHostInfo(targetEnvItem.address.url, targetEnvItem.address.pathPrefix, envIndex);
+
+        return item;
+      });
+    },
+
+    // 解析URL的辅助方法
+    parseUrl(url) {
+      const urlObj = new URL(url);
+      return {
+        protocol: urlObj.protocol.replace(':', ''),
+        hostname: urlObj.hostname,
+        port: urlObj.port,
+        pathname: urlObj.pathname,
+      };
+    },
+
+    // 更新主机信息的辅助方法
+    updateHostInfo(hostname, pathname, envIndex) {
+      this.hostInfo.hostName = hostname;
+      this.hostInfo.pathName = pathname;
+      this.curPathPrefix[envIndex] = pathname;
+    },
+
+    // 清理编辑状态字段的辅助方法
+    clearEditFields(envItem) {
+      const fieldsToDelete = ['editProtocol', 'isDropdownShow', 'originalUrl'];
+      fieldsToDelete.forEach((field) => {
+        if (envItem.hasOwnProperty(field)) {
+          delete envItem[field];
         }
-        return e;
       });
     },
 
@@ -908,6 +966,34 @@ export default {
     handlePathChange(val, i) {
       this.curPathPrefix[i] = val;
       this.curInputIndex = i;
+    },
+
+    // 协议选择变更
+    handleProtocolChange(protocol, e) {
+      this.$set(e, 'editProtocol', protocol);
+      this.$set(e, 'isDropdownShow', false);
+    },
+
+    // 获取https协议提示配置
+    getProtocolTipConfig(e) {
+      return {
+        width: '570',
+        theme: 'protocol-alert',
+        placements: ['bottom-start'],
+        allowHtml: true,
+        content: this.$t('提示信息'),
+        showOnInit: true,
+        html: `<div class="tooltips-content flex-row">
+          <i class="paasng-icon paasng-remind mt-4 mr-8"></i>
+          <div class="tips-content f12">
+            <span>
+              ${this.$t('开发者中心目前不支持托管自定义访问地址的 HTTPS 证书，请确保已经在外部网关中配置好证书。')}
+            </span>
+            <a target="_blank" href="${this.GLOBAL.DOC.HTTPS_CONFIG_GUIDE}">${this.$t('配置说明')}</a>
+          </div>
+        </div>`,
+        disabled: (e.editProtocol || 'http') !== 'https',
+      };
     },
   },
 };
@@ -1110,6 +1196,11 @@ export default {
   /deep/ .bk-form-input {
     width: 380px;
   }
+  @media (max-width: 1366px) {
+    /deep/ .bk-form-input {
+      width: 280px;
+    }
+  }
 }
 .path-input-cls {
   /deep/ .bk-form-input {
@@ -1161,7 +1252,7 @@ export default {
   text-align: center;
 }
 </style>
-<style>
+<style lang="scss">
 .ip-view-wrapper {
   display: flex;
   justify-content: space-between;
@@ -1175,5 +1266,41 @@ export default {
 /* 组件库table滚动条样式设置为8px */
 .app-entry-config-cls .bk-table.table-cls .bk-table-body-wrapper::-webkit-scrollbar {
   height: 8px;
+}
+/* 自定义 tooltips 样式 */
+.tippy-tooltip.protocol-alert-theme {
+  color: #4d4f56;
+  border-radius: 2px;
+  background: #fdeed8;
+  border: 1px solid #f59500;
+  box-shadow: 0 2px 6px 0 #0000001a;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: inherit;
+  }
+  .tooltips-content i {
+    color: #f59500;
+  }
+  .tippy-content {
+    max-width: unset;
+  }
+  .tippy-arrow {
+    z-index: -2;
+    top: -4px;
+    width: 11px;
+    height: 11px;
+    border: 1px solid #f59500;
+    box-shadow: inherit;
+    background: inherit;
+    transform-origin: center center;
+    transform: rotate(45deg);
+  }
 }
 </style>

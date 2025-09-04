@@ -840,7 +840,7 @@ export default {
         params.is_active = true;
       } else if (this.tableHeaderFilterValue === 'archive') {
         params.is_active = false;
-      } 
+      }
 
       this.isLoading = true;
       for (const key in params) {
@@ -1497,7 +1497,7 @@ section.app-filter-module {
     }
   }
 }
-.bk-apps-wrapper .wrap .app-filter-module .bk-tooltip-ref {
+.bk-apps-wrapper .app-filter-module .bk-tooltip-ref {
   display: block;
 }
 .app-filter-popover-cls {

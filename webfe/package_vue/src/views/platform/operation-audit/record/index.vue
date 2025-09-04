@@ -72,7 +72,7 @@
               {{ envMap[row[column.prop]] || '--' }}
             </span>
             <bk-user-display-name
-              v-else-if="column.prop === 'operator' && platformFeature.MULTI_TENANT_MODE"
+              v-else-if="column.prop === 'operator' && isMultiTenantDisplayMode"
               :user-id="row[column.prop]"
             ></bk-user-display-name>
             <span v-else>{{ row[column.prop] || '--' }}</span>
@@ -171,8 +171,8 @@ export default {
     };
   },
   computed: {
-    ...mapState(['platformFeature', 'localLanguage']),
-    ...mapGetters(['tenantId']),
+    ...mapState(['localLanguage']),
+    ...mapGetters(['tenantId', 'isMultiTenantDisplayMode']),
     isPlatform() {
       return this.type === 'platform';
     },

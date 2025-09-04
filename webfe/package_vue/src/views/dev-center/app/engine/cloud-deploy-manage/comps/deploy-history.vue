@@ -165,7 +165,7 @@
           <template slot-scope="{ row }">
             <bk-user-display-name
               :user-id="row.operator.username"
-              v-if="platformFeature.MULTI_TENANT_MODE"
+              v-if="isMultiTenantDisplayMode"
             ></bk-user-display-name>
             <span v-else>{{ row.operator.username }}</span>
           </template>
@@ -241,7 +241,7 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import { DEPLOY_STATUS } from '@/common/constants';
 import { clearFilter } from '@/common/utils';
 import { cloneDeep } from 'lodash';
-import { mapState } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 
 export default {
   components: {
@@ -282,7 +282,8 @@ export default {
   },
 
   computed: {
-    ...mapState(['localLanguage', 'platformFeature']),
+    ...mapState(['localLanguage']),
+    ...mapGetters(['isMultiTenantDisplayMode']),
     sourceFilters() {
       return [
         { text: this.$t('生产环境'), value: 'prod' },

@@ -60,7 +60,7 @@ func (c *ComponentMutator) patchToDeployment(deployment *appsv1.Deployment) erro
 	if err != nil {
 		return errors.Wrap(err, "strategic merge patch")
 	}
-	appLog.Info("patch deployment", "patchedBytes", string(patchedBytes), "originalBytes", string(originalBytes))
+	appLog.Info("patch deployment", "patchedBytes", string(patchedBytes), "originalBytes", string(originalBytes), "patchJSONBytes", string(patchJSONBytes))
 	if err = json.Unmarshal(patchedBytes, deployment); err != nil {
 		return errors.Wrap(err, "json unmarshal deployment")
 	}

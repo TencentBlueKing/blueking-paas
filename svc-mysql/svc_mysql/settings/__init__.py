@@ -144,8 +144,8 @@ else:
         "default": {
             "ENGINE": "django.db.backends.mysql",
             "NAME": env("MYSQL_NAME", default="svc_mysql"),
-            "USER": env("MYSQL_USER", default="root"),
-            "PASSWORD": env("MYSQL_PASSWORD", default="czyczy521"),
+            "USER": env("MYSQL_USER", default="svc_mysql"),
+            "PASSWORD": env("MYSQL_PASSWORD", default="blueking"),
             "HOST": env("MYSQL_HOST", default="127.0.0.1"),
             "PORT": env("MYSQL_PORT", default="3306"),
             "OPTIONS": env.json("MYSQL_OPTIONS", default={}),

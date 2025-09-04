@@ -69,16 +69,18 @@ def generate_strong_password(length: int, dictionary_words: List[str], max_attem
     :param max_attempts: 最大尝试次数，默认 8 次
     """
     if length < 8:
-        raise ValueError("密码长度必须大于等于 8")
+        raise ValueError("Password length must be 8 characters or more")
 
     # 检查字典词是否符合要求（必须都是4个字符以上）
     for word in dictionary_words:
         if len(word) < 4:
-            raise ValueError(f"字典词 '{word}' 长度小于4，不符合要求")
+            raise ValueError(
+                f"Dictionary word '{word}' is shorter than 4 characters and does not meet the requirement"
+            )
 
     # 检查是否超过最大尝试次数
     if max_attempts <= 0:
-        raise RuntimeError("达到最大尝试次数，无法生成符合要求的密码")
+        raise RuntimeError("Maximum attempts reached, Failed to generate a compliant password")
 
     char_types = [
         # 小写字母

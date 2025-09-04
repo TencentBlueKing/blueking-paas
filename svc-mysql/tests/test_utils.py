@@ -25,12 +25,14 @@ from svc_mysql.vendor.utils import generate_strong_password
 class TestGenerateStrongPassword:
     def test_length_validation(self):
         """测试密码长度校验"""
-        with pytest.raises(ValueError, match="密码长度必须大于等于 8"):
+        with pytest.raises(ValueError, match="Password length must be 8 characters or more"):
             generate_strong_password(7, [])
 
     def test_dictionary_word_validation(self):
         """测试字典词长度校验"""
-        with pytest.raises(ValueError, match="字典词 'abc' 长度小于4，不符合要求"):
+        with pytest.raises(
+            ValueError, match="Dictionary word 'abc' is shorter than 4 characters and does not meet the requirement"
+        ):
             generate_strong_password(8, ["abc"])
 
     @pytest.mark.parametrize("length", [8, 10, 16, 32])

@@ -165,7 +165,7 @@ class ProcComponent(BaseModel):
         if "properties" in data:
             # 由于 properties 字段在 bkapp 模型中是 runtime.RawExtension
             # 需要将其序列化为 JSON 字符串下发
-            data["properties"] = json.dumps(data["properties"]) if data["properties"] else None
+            data["properties"] = json.dumps(data["properties"]) if data["properties"] else {}
         return data
 
 

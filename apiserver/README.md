@@ -354,3 +354,11 @@ UPDATE `bk_paas_ng`.`accounts_userprofile` SET `role` = 4 WHERE `id` = 1;
 ### apiserver 运行起来但无法访问 PaaS Admin 问题
 
 查看控制台，如果提示缺失 APIGW，需要在配置文件中增加 `BKAUTH_USER_INFO_APIGW_URL: ""`
+
+### 执行报错 NoSuchBucket, 找不到 Bucket
+
+结合配置文件, 检查对象存储 (如 Minio) 是否创建好了以下 Bucket:
+
+- BLOBSTORE_BUCKET_APP_SOURCE, 默认为 `bkpaas3-slug-packages`
+- BLOBSTORE_BUCKET_TEMPLATES, 默认为 `bkpaas3-apps-tmpls`
+- BLOBSTORE_BUCKET_AP_PACKAGES, 默认为 `bkpaas3-source-packages`

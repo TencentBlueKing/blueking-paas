@@ -160,11 +160,11 @@ class TestSourceTypes:
     def source_types(self):
         source_type_spec_configs = [
             {
-                "spec_cls": "tests.paasng.platform.sourcectl.test_source_types.DummySourceTypeSpec",
+                "spec_cls": "sourcectl.test_source_types.DummySourceTypeSpec",
                 "attrs": {"name": "my_dummy_1", "label": "Dummy-1"},
             },
             {
-                "spec_cls": "tests.paasng.platform.sourcectl.test_source_types.GitDummySourceTypeSpec",
+                "spec_cls": "sourcectl.test_source_types.GitDummySourceTypeSpec",
                 "attrs": {"name": "my_dummy_2"},
             },
         ]

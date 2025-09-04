@@ -18,7 +18,7 @@
 import string
 
 import pytest
-from svc_mysql.vendor.utils import generate_strong_password
+from svc_mysql.vendor.utils import generate_mysql_password
 
 
 @pytest.mark.django_db
@@ -26,19 +26,19 @@ class TestGenerateStrongPassword:
     def test_length_validation(self):
         """测试密码长度校验"""
         with pytest.raises(ValueError, match="Password length must be 8 characters or more"):
-            generate_strong_password(7, [])
+            generate_mysql_password(7, [])
 
     def test_dictionary_word_validation(self):
         """测试字典词长度校验"""
         with pytest.raises(
             ValueError, match="Dictionary word 'abc' is shorter than 4 characters and does not meet the requirement"
         ):
-            generate_strong_password(8, ["abc"])
+            generate_mysql_password(8, ["abc"])
 
     @pytest.mark.parametrize("length", [8, 10, 16, 32])
     def test_basic_password_structure(self, length):
         """测试密码基本结构是否符合要求"""
-        password = generate_strong_password(length, [])
+        password = generate_mysql_password(length, [])
         assert len(password) == length
 
         # 检查是否包含四种字符类型
@@ -55,7 +55,7 @@ class TestGenerateStrongPassword:
     def test_forbidden_words(self):
         """测试密码不包含禁用字典词"""
         forbidden_words = ["password", "admin123", "testuser"]
-        password = generate_strong_password(12, forbidden_words)
+        password = generate_mysql_password(12, forbidden_words)
 
         for word in forbidden_words:
             assert word not in password

@@ -61,7 +61,7 @@ def gen_addons_cert_mount_path(provider_name: str, cert_name: str) -> str:
     return f"/opt/blueking/bkapp-addons-certs/{provider_name}/{cert_name}"
 
 
-def generate_strong_password(length: int, dictionary_words: List[str], max_attempts: int = 8) -> str:
+def generate_mysql_password(length: int, dictionary_words: List[str], max_attempts: int = 8) -> str:
     """
     生成符合 mysql validate_password 强密码规则的随机密码，密码长度需要大于 8
     :param length: 密码长度
@@ -109,6 +109,6 @@ def generate_strong_password(length: int, dictionary_words: List[str], max_attem
     for word in dictionary_words:
         if len(word) >= 4 and word in password:
             # 如果包含字典词，重新生成
-            return generate_strong_password(length, dictionary_words, max_attempts - 1)
+            return generate_mysql_password(length, dictionary_words, max_attempts - 1)
 
     return password_str

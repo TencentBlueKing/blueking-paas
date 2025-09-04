@@ -129,10 +129,10 @@ func (r *BkApp) ValidateCreate() error {
 // ValidateUpdate 应用更新时校验
 func (r *BkApp) ValidateUpdate(old runtime.Object) error {
 	appLog.Info("validate update", "name", r.Name)
-	currentJSON, err := json.MarshalIndent(r, "", "  ")
+	currentJSON, _ := json.MarshalIndent(r, "", "  ")
 	appLog.Info("validate update bkapp", "json", currentJSON)
 	// TODO 更新校验逻辑，限制部分不可变字段（若存在）
-	err = r.validateApp()
+	err := r.validateApp()
 	if err != nil {
 		sentry.CaptureException(errors.Wrapf(err, "webhook validate bkapp [%s/%s] failed", r.Namespace, r.Name))
 	}

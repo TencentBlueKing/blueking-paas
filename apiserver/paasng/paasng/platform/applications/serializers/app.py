@@ -258,6 +258,7 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
     order_by = serializers.CharField(default="name")
     prefer_marked = serializers.BooleanField(default=True)
     app_tenant_mode = serializers.CharField(required=False)
+    is_marked = serializers.BooleanField(default=False)
 
     def validate_order_by(self, value):
         if value.startswith("-"):

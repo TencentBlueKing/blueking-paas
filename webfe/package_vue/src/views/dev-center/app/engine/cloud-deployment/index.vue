@@ -1,5 +1,5 @@
 <template>
-  <div class="right-main">
+  <div class="right-main module-config-container">
     <module-top-bar
       :key="topBarIndex"
       :app-code="appCode"
@@ -336,6 +336,12 @@ export default {
 <style lang="scss" scoped>
 @import '../../../../../assets/css/components/conf.scss';
 @import './index.scss';
+.module-config-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .enhanced-service-main-cls.cloud-native-app {
   height: 100%;
   display: flex;

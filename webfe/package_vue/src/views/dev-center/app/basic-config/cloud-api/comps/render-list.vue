@@ -224,7 +224,9 @@
                         </a>
                         {{ $t('审批') }}
                       </template>
-                      <template v-else>{{ $t('请联系网关负责人审批：') }} {{ maintainers.join('，') }}</template>
+                      <template v-else>
+                        {{ $t('请联系{n}负责人审批：', { n: $t('网关') }) }} {{ maintainers.join('，') }}
+                      </template>
                     </div>
                   </bk-popover>
                 </template>
@@ -274,7 +276,9 @@
                       </a>
                       {{ $t('审批') }}
                     </template>
-                    <template v-else>{{ $t('请联系网关负责人审批：') }} {{ maintainers.join('，') }}</template>
+                    <template v-else>
+                      {{ $t('请联系{n}负责人审批：', { n: $t('网关') }) }} {{ maintainers.join('，') }}
+                    </template>
                   </div>
                 </bk-popover>
               </template>

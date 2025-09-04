@@ -527,6 +527,11 @@ IS_ALLOW_CREATE_BK_PLUGIN_APP = False
 #   - host: localhost
 #     http_auth: username:pwd
 #     port: 8080
+#     use_ssl: false
+#     verify_certs: true
+#     ca_certs: "/opt/blueking/es/certs/ca.crt"
+#     client_cert: ""
+#     client_key: ""
 
 ## 日志 Index 名称模式
 # ES_K8S_LOG_INDEX_PATTERNS: 'app_log-*'

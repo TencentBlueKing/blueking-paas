@@ -312,7 +312,9 @@ export const PLATFORM_CONFIG = {
         // 应用描述文件文件位置说明
         FILE_LOCATION_DESCRIPTION: DOCS_URL_PREFIX + '/topics/paas/app_desc_cnative#%E5%BA%94%E7%94%A8%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6%E4%BD%8D%E7%BD%AE%E8%AF%B4%E6%98%8E',
 
-        GCS_MySQL_LINK: ''
+        GCS_MySQL_LINK: '',
+
+        HTTPS_CONFIG_GUIDE: DOCS_URL_PREFIX + '/topics/paas/app_entry_intro#https-%E9%85%8D%E7%BD%AE%E6%8C%87%E5%8D%97'
     },
 
     CONFIG: {

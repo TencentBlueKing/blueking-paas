@@ -44,7 +44,7 @@
         >
           <template slot-scope="{ row }">
             <bk-user-display-name
-              v-if="column.prop === 'user' && platformFeature.MULTI_TENANT_MODE"
+              v-if="column.prop === 'user' && isMultiTenantDisplayMode"
               :user-id="row[column.prop]"
             ></bk-user-display-name>
             <bk-switcher
@@ -171,7 +171,7 @@
           <span>{{ $t('确认删除用户') }}</span>
           &nbsp;
           <bk-user-display-name
-            v-if="platformFeature.MULTI_TENANT_MODE"
+            v-if="isMultiTenantDisplayMode"
             :user-id="delDialogConfig.row.user"
           ></bk-user-display-name>
           <span v-else>{{ delDialogConfig.row.user }}</span>
@@ -191,7 +191,7 @@
 <script>
 import paginationMixin from '../pagination-mixin.js';
 import User from '@/components/user';
-import { mapState } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 export default {
   name: 'UserFeature',
   // 分页逻辑使用mixins导入
@@ -228,9 +228,9 @@ export default {
   },
   computed: {
     ...mapState({
-      platformFeature: (state) => state.platformFeature,
       localLanguage: (state) => state.localLanguage,
     }),
+    ...mapGetters(['isMultiTenantDisplayMode']),
     featureMap() {
       return this.featureList.reduce((acc, item) => {
         acc[item.value] = item.label;
@@ -271,8 +271,8 @@ export default {
         },
       ];
 
-      // 如果 MULTI_TENANT_MODE 为 false，过滤掉 'user' 列
-      if (!this.platformFeature.MULTI_TENANT_MODE) {
+      // 如果 isMultiTenantDisplayMode 为 false，过滤掉 'user' 列
+      if (!this.isMultiTenantDisplayMode) {
         return baseColumns.filter((column) => column.label !== this.$t('用户'));
       }
       return baseColumns;

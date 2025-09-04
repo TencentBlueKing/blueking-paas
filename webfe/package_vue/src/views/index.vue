@@ -4,35 +4,33 @@
       v-if="!userHasApp"
       class="paas-banner"
     >
-      <div class="wrap">
-        <div class="paas-text">
-          <img
-            src="/static/images/yahei-5.png"
-            class="appear"
-          />
-        </div>
-        <router-link
-          :to="{ name: 'createApp' }"
-          class="paas-banner-button appear"
-        >
-          {{ homePageStaticInfo.data.banner_btn.text }}
-        </router-link>
-        <router-link
-          v-if="userFeature.MGRLEGACY"
-          :to="{ name: 'appLegacyMigration' }"
-          class="btn-link spacing-h-x2"
-        >
-          {{ $t('迁移旧版应用') }}
-        </router-link>
-        <router-link
-          v-if="isShowOffAppAction"
-          :to="{ name: 'myApplications' }"
-          style="margin-left: 0"
-          class="btn-link spacing-h-x2"
-        >
-          {{ $t('查看已下架应用') }}
-        </router-link>
+      <div class="paas-text">
+        <img
+          src="/static/images/yahei-5.png"
+          class="appear"
+        />
       </div>
+      <router-link
+        :to="{ name: 'createApp' }"
+        class="paas-banner-button appear"
+      >
+        {{ homePageStaticInfo.data.banner_btn.text }}
+      </router-link>
+      <router-link
+        v-if="userFeature.MGRLEGACY"
+        :to="{ name: 'appLegacyMigration' }"
+        class="btn-link spacing-h-x2"
+      >
+        {{ $t('迁移旧版应用') }}
+      </router-link>
+      <router-link
+        v-if="isShowOffAppAction"
+        :to="{ name: 'myApplications' }"
+        style="margin-left: 0"
+        class="btn-link spacing-h-x2"
+      >
+        {{ $t('查看已下架应用') }}
+      </router-link>
     </div>
     <div
       v-if="userHasApp"

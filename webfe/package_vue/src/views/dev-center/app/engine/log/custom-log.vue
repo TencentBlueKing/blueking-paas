@@ -1329,6 +1329,7 @@ export default {
 }
 .table-wrapper {
   width: auto;
+  overflow: auto;
   .search-tips {
     margin: auto;
     display: flex;

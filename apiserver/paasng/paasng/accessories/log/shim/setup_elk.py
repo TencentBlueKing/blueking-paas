@@ -111,7 +111,13 @@ def setup_platform_elk_config(cluster_uuid: str, tenant_id: str):
     cluster_es = ClusterElasticSearchConfig.objects.filter(cluster__uuid=cluster_uuid).first()
     if cluster_es:
         es_host = ElasticSearchHost(
-            host=cluster_es.host, port=cluster_es.port, http_auth=f"{cluster_es.username}:{cluster_es.password}"
+            host=cluster_es.host,
+            port=cluster_es.port,
+            http_auth=f"{cluster_es.username}:{cluster_es.password}",
+            verify_certs=cluster_es.verify_certs,
+            ca_certs=cluster_es.ca_certs,
+            client_cert=cluster_es.client_cert,
+            client_key=cluster_es.client_key,
         )
     else:
         # 集群中未配置则使用 settings 中的配置

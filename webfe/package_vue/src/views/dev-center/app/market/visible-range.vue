@@ -14,7 +14,7 @@
         <div class="top-wrapper">
           <!-- 多租户组织架构选择器 -->
           <bk-org-selector
-            v-if="platformFeature.MULTI_TENANT_MODE"
+            v-if="isMultiTenantDisplayMode"
             v-model="orgMemberSelector"
             :api-base-url="tenantApiBaseUrl"
             :tenant-id="tenantId"
@@ -43,7 +43,7 @@
           </template>
         </div>
         <!-- 组织/用户 -->
-        <template v-if="!platformFeature.MULTI_TENANT_MODE">
+        <template v-if="!isMultiTenantDisplayMode">
           <div
             class="render-member-wrapper"
             v-if="departments.length || users.length"
@@ -107,10 +107,7 @@ export default {
     };
   },
   computed: {
-    ...mapState({
-      platformFeature: (state) => state.platformFeature,
-    }),
-    ...mapGetters(['tenantId', 'tenantApiBaseUrl']),
+    ...mapGetters(['tenantId', 'tenantApiBaseUrl', 'isMultiTenantDisplayMode']),
     appCode() {
       return this.$route.params.id;
     },
@@ -151,7 +148,7 @@ export default {
         await this.$store.dispatch('market/updateMarketInfo', {
           appCode: this.appCode,
           data: {
-            visiable_labels: this.platformFeature.MULTI_TENANT_MODE ? visiableLabels : this.baseInfo.visiable_labels,
+            visiable_labels: this.isMultiTenantDisplayMode ? visiableLabels : this.baseInfo.visiable_labels,
           },
         });
         this.$paasMessage({

@@ -21,6 +21,7 @@ package components
 import (
 	"bytes"
 	"encoding/json"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"text/template"
 
 	"github.com/pkg/errors"
@@ -31,6 +32,9 @@ import (
 	components "bk.tencent.com/paas-app-operator/pkg/components/manager"
 	appsv1 "k8s.io/api/apps/v1"
 )
+
+// log is for logging in this package.
+var appLog = logf.Log.WithName("bkapp-components")
 
 // ComponentMutator inject component to deployment
 type ComponentMutator struct {
@@ -56,6 +60,7 @@ func (c *ComponentMutator) patchToDeployment(deployment *appsv1.Deployment) erro
 	if err != nil {
 		return errors.Wrap(err, "strategic merge patch")
 	}
+	appLog.Info("patch deployment", "patchedBytes", string(patchedBytes), "originalBytes", string(originalBytes))
 	if err = json.Unmarshal(patchedBytes, deployment); err != nil {
 		return errors.Wrap(err, "json unmarshal deployment")
 	}

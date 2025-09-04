@@ -57,6 +57,8 @@ class SmartBuildRecord(UuidAuditedModel):
 
 
 class SmartBuildLog(UuidAuditedModel):
+    tenant_id = tenant_id_field_factory()
+
     def write(self, line, stream="STDOUT"):
         if not line.endswith("\n"):
             line += "\n"
@@ -72,6 +74,8 @@ class SmartBuildLogLine(AuditedModel):
     )
     stream = models.CharField(max_length=16)
     line = models.TextField()
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         ordering = ["created"]

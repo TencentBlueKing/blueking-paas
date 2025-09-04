@@ -3072,4 +3072,10 @@ export default {
   变量值: 'Variable Value',
   配置说明: 'Config Description',
   '开发者中心目前不支持托管自定义访问地址的 HTTPS 证书，请确保已经在外部网关中配置好证书。': 'The Developer Center currently does not support managing HTTPS certificates for custom access addresses. Please ensure that the certificate is configured in the external gateway.',
+  副本数策略: 'Replica Count Strategy',
+  以页面配置为准: 'Based on Page Configuration',
+  以应用描述文件为准: 'Based on Application Descriptor',
+  更新应用副本数策略成功: 'Successfully Updated Application Replica Count Strategy',
+  '重新部署时，忽略 S-mart 包中的副本数，保持当前线上副本数不变。': 'During redeployment, ignore the replica count in the S-mart package and keep the current online replica count unchanged.',
+  '重新部署时，进程副本数恢复为 S-mart 包中定义的数量。如未指定，则使用页面上的副本数。': 'During redeployment, the process replica count will revert to the number defined in the S-mart package. If not specified, the replica count on the page will be used.',
 };

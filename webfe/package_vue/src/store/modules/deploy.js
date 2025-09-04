@@ -638,6 +638,24 @@ const actions = {
     const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/modules/${moduleId}/envs/${env}/idle_notification/mute_rules/`;
     return http.post(url, {}, config);
   },
+
+  /**
+   * 查询应用的副本数策略
+   * @param {Object} params 请求参数：appCode
+   */
+  getAppDeployOptions({}, { appCode }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/deploy_options/`;
+    return http.get(url);
+  },
+
+  /**
+   * 更新应用的副本数策略
+   * @param {Object} params 请求参数：appCode, data
+   */
+  updateAppDeployOptions({}, { appCode, data }) {
+    const url = `${BACKEND_URL}/api/bkapps/applications/${appCode}/deploy_options/`;
+    return http.post(url, data);
+  },
 };
 
 export default {

@@ -1,9 +1,6 @@
 <template>
   <div class="home-main-content">
-    <section
-      class="home-record-tab-cls"
-      v-show="showPanels.length"
-    >
+    <section class="home-record-tab-cls">
       <div class="tab-header">
         <div
           v-for="(panel, index) in showPanels"
@@ -18,68 +15,95 @@
         ref="tabContent"
         class="tab-content"
       >
-        <!--应用闲置看板功能 -->
-        <idle-app-dashboard
+        <IdleAppDashboard
+          v-if="platformFeature.REGION_DISPLAY"
           v-show="active === 'idle'"
           @async-list-length="handlePanelUpdate"
         />
         <!-- 告警记录 -->
-        <template v-if="platformFeature.MONITORING">
-          <alarm-records
-            v-show="active === 'alarm'"
-            @async-list-length="handlePanelUpdate"
-          />
-        </template>
+        <AlarmRecords
+          v-if="platformFeature.REGION_DISPLAY && platformFeature.MONITORING"
+          v-show="active === 'alarm'"
+          @async-list-length="handlePanelUpdate"
+        />
+        <!-- 我收藏的应用 -->
+        <MarkedApps
+          v-show="active === 'marked'"
+          @async-list-length="handlePanelUpdate"
+        />
       </div>
     </section>
-    <div
-      class="no-data card-style"
-      v-show="!showPanels.length"
-    >
-      <!-- 空状态 -->
-      <img src="/static/images/home-empty-state.png" />
-      <p class="empty-text">{{ $t('太棒了！') }}</p>
-      <p
-        class="empty-tips"
-        v-dompurify-html="emptyTips"
-      ></p>
-    </div>
     <!-- 操作记录 -->
     <section class="operation-records">
-      <recent-operation-records :content-height="contentHeight" />
+      <RecentOperationRecords :content-height="contentHeight" />
     </section>
   </div>
 </template>
 
 <script>
-import idleAppDashboard from './idle-app-dashboard.vue';
-import alarmRecords from './alarm-records.vue';
-import recentOperationRecords from './recent-operation-records.vue';
+import IdleAppDashboard from './idle-app-dashboard.vue';
+import AlarmRecords from './alarm-records.vue';
+import RecentOperationRecords from './recent-operation-records.vue';
+import MarkedApps from './marked-apps.vue';
 export default {
   name: 'HomeTab',
   components: {
-    idleAppDashboard,
-    alarmRecords,
-    recentOperationRecords,
+    IdleAppDashboard,
+    AlarmRecords,
+    RecentOperationRecords,
+    MarkedApps,
   },
   data() {
     return {
-      active: 'idle',
-      // 初始无数据，防止网络延迟出现的tab延时情况
-      panels: [],
+      active: '',
+      panelShowStates: {
+        idle: false,
+        alarm: false,
+        marked: true, // 收藏应用始终显示
+      },
       contentHeight: 0,
       resizeObserver: null,
+      userHasManuallySelected: false, // 标记用户是否手动选择过tab
     };
   },
   computed: {
     platformFeature() {
       return this.$store.state.platformFeature;
     },
+    allPanels() {
+      return [
+        {
+          name: 'idle',
+          label: this.$t('闲置应用'),
+        },
+        {
+          name: 'alarm',
+          label: this.$t('告警记录'),
+        },
+        {
+          name: 'marked',
+          label: this.$t('我收藏的应用'),
+        },
+      ];
+    },
+    // 根据平台功能过滤后的面板
+    availablePanels() {
+      return this.allPanels.filter((panel) => {
+        // REGION_DISPLAY 为 false 时过滤掉 idle、alarm
+        if (!this.platformFeature.REGION_DISPLAY && (panel.name === 'idle' || panel.name === 'alarm')) {
+          return false;
+        }
+        // MONITORING 为 false 时过滤掉 alarm
+        if (!this.platformFeature.MONITORING && panel.name === 'alarm') {
+          return false;
+        }
+        return true;
+      });
+    },
     showPanels() {
-      if (this.platformFeature.MONITORING) {
-        return this.panels;
-      }
-      return this.panels.filter((item) => item.name !== 'alarm');
+      return this.availablePanels.filter((panel) => {
+        return this.panelShowStates[panel.name];
+      });
     },
     appChartInfo() {
       return this.$store.state.baseInfo.appChartData;
@@ -91,15 +115,21 @@ export default {
     },
   },
   watch: {
-    showPanels(newPanels) {
-      if (newPanels.length) {
-        this.handleTabClick(newPanels[0]);
-      }
+    showPanels: {
+      handler(newPanels) {
+        if (newPanels.length > 0) {
+          const currentActiveExists = this.active && newPanels.some((p) => p.name === this.active);
+          // 如果没有激活项，或当前激活项不存在，或用户还未手动选择过，则自动选择第一个
+          if (!currentActiveExists || !this.userHasManuallySelected) {
+            this.active = newPanels[0].name;
+          }
+        }
+      },
+      immediate: true,
     },
   },
   mounted() {
     this.updateContainerHeight();
-
     // 创建一个 ResizeObserver 实例
     this.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -123,6 +153,7 @@ export default {
   methods: {
     handleTabClick(data) {
       this.active = data.name;
+      this.userHasManuallySelected = true; // 标记用户已手动选择
       this.$nextTick(() => {
         this.updateContainerHeight();
       });
@@ -131,24 +162,20 @@ export default {
     updateContainerHeight() {
       this.contentHeight = this.$refs.tabContent?.offsetHeight;
     },
-    handlePanelUpdate(data) {
-      const { name, length } = data;
-      if (length === 0) {
-        if (!this.panels.length) return;
-        // 移除对应的 tab 项
-        this.panels = this.panels.filter((panel) => panel.name !== name);
-        this.active = this.panels[0]?.name;
-      } else {
-        // 确保在 length > 0 时，该 tab 存在于 panels 中
-        if (!this.panels.some((panel) => panel.name === name)) {
-          this.isLoading = true;
-          if (name === 'idle') {
-            this.panels.unshift({ name: 'idle', label: this.$t('闲置应用') });
-          } else if (name === 'alarm') {
-            this.panels.push({ name: 'alarm', label: this.$t('告警记录') });
-          }
+    // 设置默认激活的面板
+    setDefaultActivePanel() {
+      if (this.showPanels.length > 0) {
+        const currentActiveExists = this.active && this.showPanels.some((panel) => panel.name === this.active);
+        if (!currentActiveExists) {
+          this.active = this.showPanels[0].name;
         }
       }
+    },
+    handlePanelUpdate({ name, length }) {
+      this.$set(this.panelShowStates, name, length > 0);
+      this.$nextTick(() => {
+        this.setDefaultActivePanel();
+      });
     },
   },
 };
@@ -198,6 +225,7 @@ export default {
   .tab-header {
     display: flex;
     align-items: center;
+    gap: 8px;
   }
   .tab-content {
     min-height: 562px;
@@ -219,9 +247,6 @@ export default {
     &.active {
       background: #fff;
       color: #3a84ff;
-    }
-    &:first-child {
-      margin-right: 8px;
     }
   }
 }

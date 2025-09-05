@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Dict
 
 from django.db import models
 from django.utils import timezone
@@ -70,7 +70,7 @@ class SmartBuildStep(UuidAuditedModel):
         ordering = ["created"]
         unique_together = (("phase", "name"),)
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return SmartBuildStepEventSLZ(self).data
 
     @classmethod
@@ -97,9 +97,7 @@ class SmartBuildStep(UuidAuditedModel):
         self.status = status.value
         self.save(update_fields=update_fields)
 
-    def mark_and_write_to_stream(
-        self, stream: "SmartBuildStream", status: JobStatus, extra_info: Optional[dict] = None
-    ):
+    def mark_and_write_to_stream(self, stream: "SmartBuildStream", status: JobStatus, extra_info: Dict | None = None):
         """标记状态，并写到 stream"""
         self.mark_procedure_status(status)
         detail = self.to_dict()

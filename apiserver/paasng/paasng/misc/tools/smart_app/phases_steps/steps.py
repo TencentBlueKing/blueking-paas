@@ -50,7 +50,4 @@ class SmartBuildStepManager:
         step_metas = [meta for meta in ALL_STEP_METAS.values() if meta.phase == phase_type.value]
 
         for step_meta in step_metas:
-            SmartBuildStep.objects.create(
-                name=step_meta.name,
-                phase=smart_build_phase,
-            )
+            SmartBuildStep.objects.create(name=step_meta.name, phase=smart_build_phase)

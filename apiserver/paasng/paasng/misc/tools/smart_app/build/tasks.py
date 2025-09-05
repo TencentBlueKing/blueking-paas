@@ -17,8 +17,10 @@
 
 import logging
 from os import PathLike
+from typing import Any
 
 from celery import shared_task
+from celery.worker.request import Request
 
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
@@ -45,11 +47,16 @@ def execute_build(smart_build_id: str, source_package_url: str, package_path: Pa
 
 
 @shared_task(base=I18nTask)
-def execute_build_error_callback(*args, **kwargs):
-    context = args[0]
-    exc: Exception = args[1]
+def execute_build_error_callback(context: Request, exc: Exception, traceback: Any, task_id: str):
+    """Callback function for handling build task failure
+
+    :param context: Celery task request context, which contains info related to task execution
+    :param exc: Exception object thrown during the construction process
+    """
     # celery.worker.request.Request own property `args` after celery==4.4.0
     smart_build_id: str = context._payload[0][0]
+
+    logger.error("Smart app build failed for build_id=%s, task_id=%s, error=%s", smart_build_id, task_id, str(exc))
 
     state_mgr = SmartBuildStateMgr.from_smart_build_id(
         smart_build_id=smart_build_id, phase_type=SmartBuildPhaseType.BUILD

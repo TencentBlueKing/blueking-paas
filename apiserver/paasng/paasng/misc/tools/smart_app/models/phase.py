@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Dict
 
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import models
@@ -30,6 +30,7 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
 
 from .smart_build import SmartBuildRecord
+from .step import SmartBuildStep
 
 if TYPE_CHECKING:
     from paasng.misc.tools.smart_app.output import SmartBuildStream
@@ -74,10 +75,10 @@ class SmartBuildPhase(UuidAuditedModel):
     def get_event_type(cls) -> str:
         return "phase"
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return SmartBuildPhaseEventSLZ(self).data
 
-    def get_step_by_name(self, name: str):
+    def get_step_by_name(self, name: str) -> SmartBuildStep:
         """通过步骤名获取步骤实例"""
         try:
             # 同一个 phase 内的 step 原则上不能同名, 可以直接 get
@@ -87,7 +88,7 @@ class SmartBuildPhase(UuidAuditedModel):
         except MultipleObjectsReturned:
             raise DuplicateNameInSamePhaseError(name)
 
-    def get_unfinished_steps(self):
+    def get_unfinished_steps(self) -> models.QuerySet[SmartBuildStep]:
         """获取所有未结束的步骤"""
         return self.steps.filter(status=JobStatus.PENDING.value)
 
@@ -111,9 +112,7 @@ class SmartBuildPhase(UuidAuditedModel):
         self.status = status.value
         self.save(update_fields=update_fields)
 
-    def mark_and_write_to_stream(
-        self, stream: "SmartBuildStream", status: JobStatus, extra_info: Optional[dict] = None
-    ):
+    def mark_and_write_to_stream(self, stream: "SmartBuildStream", status: JobStatus, extra_info: Dict | None = None):
         """标记状态，并写到 stream"""
         self.mark_procedure_status(status)
         detail = self.to_dict()

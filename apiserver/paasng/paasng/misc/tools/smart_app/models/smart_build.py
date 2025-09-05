@@ -38,7 +38,7 @@ class SmartBuildRecord(UuidAuditedModel):
     status = models.CharField(max_length=12, default=JobStatus.PENDING.value, help_text="s-mart 构建任务运行状态")
 
     stream = models.OneToOneField(
-        "SmartBuildLog", on_delete=models.CASCADE, related_name="smart_build", db_constraint=False
+        "SmartBuildLog", on_delete=models.CASCADE, null=True, related_name="smart_build", db_constraint=False
     )
     err_detail = models.TextField(blank=True, null=True, help_text="构建失败时的错误详情")
 

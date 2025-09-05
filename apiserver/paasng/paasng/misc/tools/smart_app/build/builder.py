@@ -29,6 +29,7 @@ from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.output import make_channel_stream
+from paasng.misc.tools.smart_app.phases_steps import SmartBuildPhaseManager
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.engine.constants import JobStatus
@@ -61,24 +62,26 @@ class SmartAppBuilder:
         self.stream: "SmartBuildStream" = make_channel_stream(smart_build)
         self.coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
 
-        self.phase = self.smart_build.phases.get(type=self.phase_type)
-        self.procedure = partial(SmartBuildProcedure, self.stream, self.smart_build, phase=self.phase)
-        self.procedure_force_phase = partial(SmartBuildProcedure, self.stream, self.smart_build)
+        self.procedure = partial(SmartBuildProcedure, self.stream, self.smart_build)
 
     def start(self):
         """Start the s-mart building process"""
         logger.info(f"Starting smart build process for build id: {self.smart_build.uuid}")
 
-        start_phase(self.smart_build, self.stream, SmartBuildPhaseType.PREPARATION)
-        preparation_phase = self.smart_build.phases.get(type=SmartBuildPhaseType.PREPARATION)
+        phase_manager = SmartBuildPhaseManager(self.smart_build)
+        preparation_phase = phase_manager.get_or_create(SmartBuildPhaseType.PREPARATION)
 
-        with self.procedure_force_phase("校验应用描述文件", phase=preparation_phase):
+        # 准备阶段
+        start_phase(self.smart_build, self.stream, SmartBuildPhaseType.PREPARATION)
+        with self.procedure("校验应用描述文件", phase=preparation_phase):
             self.validate_app_description()
 
         # TODO: 添加其他在准备阶段执行的步骤
+        end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.PREPARATION)
 
-        end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, phase=SmartBuildPhaseType.PREPARATION)
-        with self.procedure("启动构建阶段", phase=SmartBuildPhaseType.BUILD):
+        # 构建阶段
+        build_phase = phase_manager.get_or_create(SmartBuildPhaseType.BUILD)
+        with self.procedure("启动构建阶段", phase=build_phase):
             self.async_start_build_process()
 
     def validate_app_description(self):
@@ -110,7 +113,7 @@ class SmartAppBuilder:
         envs: Dict[str, str] = {
             "SOURCE_GET_URL": source_get_url,
             "DEST_PUT_URL": dest_put_url,
-            "BUILDER_SHIM_IMAGE": settings.BUILDER_SHIM_IMAGE,
+            "BUILDER_SHIM_IMAGE": settings.SMART_BUILDER_SHIM_IMAGE,
         }
 
         cluster_name = get_default_cluster_name()

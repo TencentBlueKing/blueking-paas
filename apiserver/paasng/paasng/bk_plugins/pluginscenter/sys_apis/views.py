@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import logging
+from collections import defaultdict
+from typing import Dict, List
 
 from bkpaas_auth.models import user_id_encoder
 from blue_krill.web.std_error import APIError as StdAPIError
@@ -25,7 +27,9 @@ from rest_framework import status, viewsets
 from rest_framework.response import Response
 
 from paasng.bk_plugins.pluginscenter import constants, shim
+from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.exceptions import error_codes
+from paasng.bk_plugins.pluginscenter.iam_adaptor.management import shim as members_api
 from paasng.bk_plugins.pluginscenter.models import (
     OperationRecord,
     PluginDefinition,
@@ -34,7 +38,7 @@ from paasng.bk_plugins.pluginscenter.models import (
     PluginVisibleRange,
 )
 from paasng.bk_plugins.pluginscenter.serializers import PluginInstanceSLZ
-from paasng.bk_plugins.pluginscenter.sys_apis.serializers import make_sys_plugin_slz_class
+from paasng.bk_plugins.pluginscenter.sys_apis.serializers import PluginMemberInputSLZ, make_sys_plugin_slz_class
 from paasng.bk_plugins.pluginscenter.thirdparty.instance import create_instance
 from paasng.infras.sysapi_client.constants import ClientAction
 from paasng.infras.sysapi_client.roles import sysapi_client_perm_class
@@ -111,3 +115,51 @@ class SysPluginApiViewSet(viewsets.ViewSet):
             data=PluginInstanceSLZ(plugin).data,
             status=status.HTTP_201_CREATED,
         )
+
+    def sync_members(self, request, pd_id, plugin_id, **kwargs):
+        """同步插件成员权限
+        :param pd_id: 插件定义 ID
+        :param plugin_id: 插件实例 ID
+        """
+        plugin = get_object_or_404(PluginInstance, pd__identifier=pd_id, id=plugin_id)
+
+        slz = PluginMemberInputSLZ(data=request.data, many=True)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        existed_members = {m.username: m for m in members_api.fetch_plugin_members(plugin)}
+
+        # 需要新增的权限：{角色: [用户名]}
+        need_to_add: Dict[PluginRole, List[str]] = defaultdict(list)
+        # 需要回收的权限：{用户名: [角色]}
+        need_to_clean: Dict[str, List[PluginRole]] = defaultdict(list)
+
+        # 当前需要保留的用户集合
+        current_members = set()
+        for member in data:
+            role = PluginRole(member["role"]["id"])
+            username = member["username"]
+            current_members.add(username)
+
+            # 处理已存在的成员
+            if username in existed_members:
+                original_role = existed_members[username].role.id
+                if original_role != role:
+                    # 角色变更时，需要回收旧角色并添加新角色
+                    need_to_clean[username].append(original_role)
+                    need_to_add[role].append(username)
+            else:
+                # 新增用户直接添加角色
+                need_to_add[role].append(username)
+
+        # 删除用户
+        if redundant_users := existed_members.keys() - current_members:
+            members_api.remove_user_all_roles(plugin, usernames=list(redundant_users))
+        # 添加用户权限
+        for role, usernames in need_to_add.items():
+            members_api.add_role_members(plugin, role=role, usernames=usernames)
+        # 回收用户多余的权限
+        for username, roles in need_to_clean.items():
+            for role in roles:
+                members_api.delete_role_members(plugin, role=role, usernames=[username])
+        return Response(data={})

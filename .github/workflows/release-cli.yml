@@ -36,7 +36,7 @@ jobs:
         uses: wangyoucao577/go-release-action@v1.51
         with:
           github_token: ${{ secrets.REPO_RELEASE_ACCESS_TOKEN }}
-          goversion: "1.22.8"
+          goversion: "1.23.8"
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           project_path: bkpaas-cli

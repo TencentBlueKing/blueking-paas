@@ -165,6 +165,7 @@ class Test__list_mres_by_env:
                 "build": {"image": "nginx:latest"},
                 "processes": [{"name": "web", "replicas": 1, "resQuotaPlan": "default"}],
                 "hooks": {"preRelease": {"command": ["/bin/echo"], "args": ["Hello"]}},
+                "configuration": {},
             },
         }
 

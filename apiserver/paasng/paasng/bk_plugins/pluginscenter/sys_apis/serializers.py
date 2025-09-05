@@ -19,6 +19,7 @@ from typing import Type
 
 from rest_framework import serializers
 
+from paasng.bk_plugins.pluginscenter.constants import PluginRole
 from paasng.bk_plugins.pluginscenter.models import PluginDefinition
 from paasng.bk_plugins.pluginscenter.serializers import make_plugin_slz_class
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
@@ -49,3 +50,13 @@ def make_sys_plugin_slz_class(pd: PluginDefinition, creation: bool = False) -> T
         "Meta": type("Meta", (), meta_attrs),
     }
     return i18n(type("DynamicSysPluginSerializer", (serializers.Serializer,), fields))
+
+
+class PluginRoleInputSLZ(serializers.Serializer):
+    name = serializers.CharField(read_only=True, help_text="角色名称")
+    id = serializers.ChoiceField(help_text="角色ID", choices=PluginRole.get_choices())
+
+
+class PluginMemberInputSLZ(serializers.Serializer):
+    username = serializers.CharField(help_text="用户名")
+    role = PluginRoleInputSLZ(help_text="角色")

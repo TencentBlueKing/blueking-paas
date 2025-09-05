@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import tarfile
+from unittest import mock
 
 import pytest
 import yaml
@@ -26,6 +27,7 @@ from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.sourcectl.controllers.package import PackageController
 from paasng.platform.sourcectl.exceptions import GetProcfileError
 from paasng.platform.sourcectl.models import AlternativeVersion, SourcePackage, SPStoragePolicy, VersionInfo
+from paasng.platform.sourcectl.package.client import TarClient, ZipClient
 from paasng.platform.sourcectl.utils import generate_temp_dir, generate_temp_file
 from tests.paasng.platform.sourcectl.packages.utils import gen_tar, gen_zip
 
@@ -41,7 +43,10 @@ def package_module(bk_module):
 
 
 class TestPackageRepoController:
-    @pytest.mark.parametrize(("engine", "archive_maker"), [("TarClient", gen_tar), ("ZipClient", gen_zip)])
+    @pytest.mark.parametrize(
+        ("archive_maker", "archive_client_cls"),
+        [(gen_tar, TarClient), (gen_zip, ZipClient)],
+    )
     @pytest.mark.parametrize(
         ("contents", "expected_ctx"),
         [
@@ -88,44 +93,55 @@ class TestPackageRepoController:
             ({"Procfile": "Web: npm run dev\n"}, does_not_raise({"Web": "npm run dev"})),
         ],
     )
-    def test_read_file(self, bk_user, package_module, engine, archive_maker, contents, expected_ctx):
+    def test_read_file(self, bk_user, package_module, archive_maker, archive_client_cls, contents, expected_ctx):
         version_info = VersionInfo(revision="v1", version_type="package", version_name="")
         with generate_temp_file() as file_path:
             archive_maker(file_path, contents)
             stat = SourcePackageStatReader(file_path).read()
             stat.version = version_info.revision
-            SourcePackage.objects.store(
+            package = SourcePackage.objects.store(
                 package_module,
-                SPStoragePolicy(engine=engine, path=str(file_path), url="don't care", stat=stat),
+                SPStoragePolicy(path=str(file_path), url="don't care", stat=stat),
                 operator=bk_user,
             )
 
-            controller = get_metadata_reader(package_module)
-            with expected_ctx as expected:
-                assert controller.get_procfile(version_info) == expected
+            with mock.patch(
+                "paasng.platform.engine.configurations.source_file.PackageMetaDataReader.get_client",
+                return_value=archive_client_cls(package.storage_path, relative_path=package.relative_path),
+            ):
+                controller = get_metadata_reader(package_module)
+                with expected_ctx as expected:
+                    assert controller.get_procfile(version_info) == expected
 
-    @pytest.mark.parametrize(("engine", "archive_maker"), [("TarClient", gen_tar), ("ZipClient", gen_zip)])
+    @pytest.mark.parametrize(
+        ("archive_maker", "archive_client_cls"),
+        [(gen_tar, TarClient), (gen_zip, ZipClient)],
+    )
     @pytest.mark.parametrize(
         "contents",
         [
             ({"Procfile": "web: npm run dev\n"}),
         ],
     )
-    def test_export(self, bk_user, package_module, engine, archive_maker, contents):
+    def test_export(self, bk_user, package_module, archive_maker, archive_client_cls, contents):
         version_info = VersionInfo(revision="v1", version_type="package", version_name="")
         with generate_temp_file() as file_path, generate_temp_dir() as working_dir:
             archive_maker(file_path, contents)
             controller = PackageController.init_by_module(package_module)
             stat = SourcePackageStatReader(file_path).read()
             stat.version = version_info.revision
-            SourcePackage.objects.store(
+            package = SourcePackage.objects.store(
                 package_module,
-                SPStoragePolicy(engine=engine, path=str(file_path), url="don't care", stat=stat),
+                SPStoragePolicy(path=str(file_path), url="don't care", stat=stat),
                 operator=bk_user,
             )
 
-            controller.export(working_dir, version_info=version_info)
-            assert {str(child.relative_to(working_dir)) for child in working_dir.iterdir()} == set(contents.keys())
+            with mock.patch(
+                "paasng.platform.sourcectl.controllers.package.PackageController.get_client",
+                return_value=archive_client_cls(package.storage_path, relative_path=package.relative_path),
+            ):
+                controller.export(working_dir, version_info=version_info)
+                assert {str(child.relative_to(working_dir)) for child in working_dir.iterdir()} == set(contents.keys())
 
     @pytest.mark.parametrize(
         ("versions", "expected"),

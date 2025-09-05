@@ -50,7 +50,7 @@ apiserver 为 blueking-paas 项目的主控模块。
 ❯ make init-py-dep
 ```
 
-完成依赖安装后，便可以使用 poetry 启动项目了，常用命令：
+#### poetry 常用命令：
 
 - `poetry env info --path`：获取虚拟环境路径
 - `source $(poetry env info --path)/bin/activate`：手动激活虚拟环境
@@ -97,7 +97,7 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 ❯ make collectstatic
 ```
 
-## 完善本地配置
+### 完善本地配置
 
 本项目使用 dynaconf 加载用户配置, 可参考 [配置模板](./paasng/conf.yaml.tpl) 创建你的本地配置,
 详细的配置说明请阅读 [配置文件](./paasng/paasng/settings/__init__.py)。
@@ -106,7 +106,7 @@ apiserver 项目的管理端（Admin42）使用 Nodejs 进行开发, 如需开�
 1. 在 `apiserver/paasng/` 目录下新建 `settings_local.yaml` 文件，用于配置本地服务（如 MySQL、Redis 等）
 2. 在 `apiserver/paasng/` 目录下新建 `settings_files` 目录，用于存放配置通用资源的文件，具体可以参考 [配置模板](./paasng/conf.yaml.tpl) 和 [配置文件](./paasng/paasng/settings/__init__.py)
 3. `settings_local.yaml` 中配置 MySQL：
-```
+```yaml
 DATABASE_HOST: ''
 DATABASE_NAME: bk_paas_ng
 DATABASE_PASSWORD: ''
@@ -119,6 +119,34 @@ BKKRILL_ENCRYPT_SECRET_KEY: ''
 LOGIN_FULL: ''
 BKAUTH_USER_INFO_APIGW_URL: ''
 ```
+
+### 数据库迁移
+
+```shell
+# 假设你当前在 apiserver 项目的根目录下
+❯ cd paasng
+❯ python manage.py migrate --no-input
+❯ python manage.py migrate --no-input --database workloads
+```
+
+### 启动服务
+
+- 启动 web 服务
+
+```shell
+❯ make server
+```
+
+web 服务启动后需要配置本地 hosts 文件，将 web 的 ip 映射到特定的域名，
+比如 `app.example.com`，之后浏览器访问 `app.example.com:8000/admin42` 
+即可访问到本地蓝鲸 PaaS Admin 控制台
+
+- 启动 celery 后台服务
+
+```shell
+❯ make celery
+```
+
 
 ## 测试
 
@@ -225,33 +253,6 @@ curl -X GET \
 发布到测试环境和正式环境后，可以直接使用 access_token 调用 API 网关上的用户态 API，验证其是否能够正常响应。
 
 
-## 数据库迁移
-
-```shell
-# 假设你当前在 apiserver 项目的根目录下
-❯ cd paasng
-❯ python manage.py migrate --no-input
-❯ python manage.py migrate --no-input --database workloads
-```
-
-## 启动服务
-
-- 启动 web 服务
-
-```shell
-❯ make server
-```
-
-web 服务启动后需要配置本地 hosts 文件，将 web 的 ip 映射到特定的域名，
-比如 `app.example.com`，之后浏览器访问 `app.example.com:8000/admin42` 
-即可访问到本地蓝鲸 PaaS Admin 控制台
-
-- 启动 celery 后台服务
-
-```shell
-❯ make celery
-```
-
 ## 常见开发场景
 
 ### 开发管理端功能
@@ -353,3 +354,11 @@ UPDATE `bk_paas_ng`.`accounts_userprofile` SET `role` = 4 WHERE `id` = 1;
 ### apiserver 运行起来但无法访问 PaaS Admin 问题
 
 查看控制台，如果提示缺失 APIGW，需要在配置文件中增加 `BKAUTH_USER_INFO_APIGW_URL: ""`
+
+### 执行报错 NoSuchBucket, 找不到 Bucket
+
+结合配置文件, 检查对象存储 (如 Minio) 是否创建好了以下 Bucket:
+
+- BLOBSTORE_BUCKET_APP_SOURCE, 默认为 `bkpaas3-slug-packages`
+- BLOBSTORE_BUCKET_TEMPLATES, 默认为 `bkpaas3-apps-tmpls`
+- BLOBSTORE_BUCKET_AP_PACKAGES, 默认为 `bkpaas3-source-packages`

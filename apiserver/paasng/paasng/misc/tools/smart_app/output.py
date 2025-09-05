@@ -24,7 +24,7 @@ from blue_krill.redis_tools.messaging import StreamChannel
 
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.misc.tools.smart_app.models import SmartBuildLog, SmartBuildRecord
-from paasng.platform.engine.utils.output import MessageWriter, ModelStream, StreamType
+from paasng.platform.engine.utils.output import MessageWriter, ModelStream, StreamType, sanitize_message
 
 
 class SmartBuildStream(metaclass=abc.ABCMeta):
@@ -62,6 +62,7 @@ class RedisChannelStream(SmartBuildStream):
         self.channel.publish(event="title", data=json.dumps({"title": title}))
 
     def write_message(self, message: str, stream=StreamType.STDOUT.value):
+        message = sanitize_message(message)
         self.channel.publish_msg(message=json.dumps({"line": message, "stream": stream}))
 
     def write_event(self, event_name: str, data: Dict):

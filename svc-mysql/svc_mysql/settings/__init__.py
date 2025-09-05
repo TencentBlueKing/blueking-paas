@@ -20,6 +20,7 @@ to the current version of the project delivered to anyone in the future.
 import logging
 import os
 from pathlib import Path
+from typing import List
 
 import environ
 import pymysql
@@ -284,3 +285,13 @@ DEVELOPER_CENTER_APP_URL_TEMPLATE = "http://your-paas3.0-host/developer-center/a
 # 选择加密数据库内容的算法，可选择：'SHANGMI' , 'CLASSIC'
 BK_CRYPTO_TYPE = env.str("BK_CRYPTO_TYPE", default="CLASSIC")
 ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher"
+
+# 实例密码参数
+# 密码长度，优先从环境变量获取，默认值为10
+PASSWORD_LENGTH = int(os.environ.get("PASSWORD_LENGTH", 10))
+
+# 密码中不允许包含的常见字典词(每个字符的长度不能小于4)，优先从环境变量获取，格式为逗号分隔的字符串，默认为空列表
+PASSWORD_DICTIONARY_WORDS: List[str] = []
+PASSWORD_DICTIONARY_WORDS_STR = os.environ.get("PASSWORD_DICTIONARY_WORDS", "")
+if PASSWORD_DICTIONARY_WORDS_STR:
+    PASSWORD_DICTIONARY_WORDS = [word.strip() for word in PASSWORD_DICTIONARY_WORDS_STR.split(",") if word.strip()]

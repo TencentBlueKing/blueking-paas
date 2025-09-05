@@ -30,10 +30,11 @@ from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import DuplicateNameInSamePhaseError, StepNotInPresetListError
 
 from .smart_build import SmartBuildRecord
-from .step import SmartBuildStep
 
 if TYPE_CHECKING:
     from paasng.misc.tools.smart_app.output import SmartBuildStream
+
+    from .step import SmartBuildStep
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ class SmartBuildPhase(UuidAuditedModel):
     def to_dict(self) -> Dict[str, Any]:
         return SmartBuildPhaseEventSLZ(self).data
 
-    def get_step_by_name(self, name: str) -> SmartBuildStep:
+    def get_step_by_name(self, name: str) -> "SmartBuildStep":
         """通过步骤名获取步骤实例"""
         try:
             # 同一个 phase 内的 step 原则上不能同名, 可以直接 get
@@ -88,7 +89,7 @@ class SmartBuildPhase(UuidAuditedModel):
         except MultipleObjectsReturned:
             raise DuplicateNameInSamePhaseError(name)
 
-    def get_unfinished_steps(self) -> models.QuerySet[SmartBuildStep]:
+    def get_unfinished_steps(self) -> models.QuerySet["SmartBuildStep"]:
         """获取所有未结束的步骤"""
         return self.steps.filter(status=JobStatus.PENDING.value)
 

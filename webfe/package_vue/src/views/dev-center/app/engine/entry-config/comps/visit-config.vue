@@ -1196,7 +1196,7 @@ export default {
   /deep/ .bk-form-input {
     width: 380px;
   }
-  @media (max-width: 1366px) {
+  @media (max-width: 1440px) {
     /deep/ .bk-form-input {
       width: 280px;
     }

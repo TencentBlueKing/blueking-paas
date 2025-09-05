@@ -1,6 +1,6 @@
 .PHONY: test
 test:
-	DJANGO_SETTINGS_MODULE='paasng.settings' pytest -p -l no:warnings --reuse-db --maxfail=1 tests/
+	DJANGO_SETTINGS_MODULE='paasng.settings' pytest -l -p no:warnings --reuse-db --maxfail=1 tests/
 
 .PHONY: edition
 edition:

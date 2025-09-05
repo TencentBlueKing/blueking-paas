@@ -17,6 +17,7 @@
 
 from os import PathLike
 from pathlib import Path
+from typing import Tuple
 
 from django.http.request import HttpRequest
 from django.utils.text import slugify
@@ -51,16 +52,25 @@ class PreparedSourcePackage:
         # Store the remote path and filename to session for later usage
         self.request.session[self._package_path_key] = [obj_url, Path(filepath).name]
 
+    def get_stored_info(self) -> Tuple[str, str]:
+        """Get the stored package URL and filename without downloading
+
+        :return: A tuple of (store_url, filename)
+        :raises PreparedPackageNotFound: If no package has been stored yet
+        """
+        store_url, filename = self.request.session.get(self._package_path_key)
+        if not store_url:
+            raise PreparedPackageNotFound("not prepared package has been uploaded yet")
+        return store_url, filename
+
     def retrieve(self, output_dir: PathLike) -> PathLike:
         """Retrieve the previously uploaded source package path
 
         :param output_dir: a file path where the uploaded package will be downloaded into
         :return output_path
         """
-        store_url, filename = self.request.session.get(self._package_path_key)
+        store_url, filename = self.get_stored_info()
         output_path = Path(output_dir) / filename
-        if not store_url:
-            raise PreparedPackageNotFound("not prepared package has been uploaded yet")
 
         # TODO: don't use dummy url, replace with the real one.
         download_file_via_url(url=store_url, local_path=output_path)

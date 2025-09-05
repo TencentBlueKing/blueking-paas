@@ -15,9 +15,19 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
+from django.utils.translation import gettext as _
 
-urlpatterns = [
-    path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.smart_app.urls")),
-]
+
+class SourceCodeOriginType(StrStructuredEnum):
+    """源代码来源类型"""
+
+    PACKAGE = EnumField("package", label=_("源码包"))
+    REPO = EnumField("repo", label=_("代码仓库"))
+
+
+class SmartBuildPhaseType(StrStructuredEnum):
+    """创建 s-mart 阶段"""
+
+    PREPARATION = EnumField("preparation", label=_("准备阶段"))
+    BUILD = EnumField("build", label=_("构建阶段"))

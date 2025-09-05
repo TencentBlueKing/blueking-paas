@@ -15,9 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
 
+from paasng.utils.basic import re_path
+
+from . import views
+
+# app_desc transform
 urlpatterns = [
-    path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.smart_app.urls")),
+    re_path(
+        r"^api/tools/app_desc/transform/",
+        views.AppDescTransformAPIView.as_view(),
+        name="api.tools.app_desc.transform",
+    ),
 ]

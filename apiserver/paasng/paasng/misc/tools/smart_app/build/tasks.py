@@ -52,6 +52,8 @@ def execute_build_error_callback(context: Request, exc: Exception, traceback: An
 
     :param context: Celery task request context, which contains info related to task execution
     :param exc: Exception object thrown during the construction process
+    :param traceback: Exception traceback information
+    :param task_id: The unique identifier of the failed task
     """
     # celery.worker.request.Request own property `args` after celery==4.4.0
     smart_build_id: str = context._payload[0][0]

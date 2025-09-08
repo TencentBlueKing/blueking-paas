@@ -148,7 +148,7 @@ def _handle_distributor_operation(
 
 
 def grant_distributor(plugin_app: Application, distributor: BkPluginDistributor):
-    """给当个插件使用方授权
+    """给单个插件使用方授权
 
     :param plugin_app: 插件应用
     :param distributor: 插件使用方

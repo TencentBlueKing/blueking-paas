@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from operator import itemgetter
 from pathlib import Path
 
 import pytest
@@ -35,7 +36,7 @@ class TestProcessComponentViewSet:
         """测试获取进程组件列表"""
         resp = api_client.get("/api/proc_components")
         assert resp.status_code == 200
-        assert resp.data == [
+        assert sorted(resp.data, key=itemgetter("name")) == [
             {
                 "name": "test_env_overlay",
                 "version": "v1",

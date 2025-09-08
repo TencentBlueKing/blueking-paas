@@ -21,6 +21,10 @@ from paas_wl.bk_app.applications.models import UuidAuditedModel
 
 
 class OutputStream(UuidAuditedModel):
+    """
+    [multi-tenancy] TODO
+    """
+
     def write(self, line, stream="STDOUT"):
         if not line.endswith("\n"):
             line += "\n"
@@ -28,6 +32,10 @@ class OutputStream(UuidAuditedModel):
 
 
 class OutputStreamLine(models.Model):
+    """
+    [multi-tenancy] TODO
+    """
+
     output_stream = models.ForeignKey("OutputStream", related_name="lines", on_delete=models.CASCADE)
     stream = models.CharField(max_length=16)
     line = models.TextField()

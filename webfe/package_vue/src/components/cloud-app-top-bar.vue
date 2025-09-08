@@ -1,7 +1,7 @@
 <template>
   <div class="nav-wrapper">
     <div :class="['title', 'pt15', { pb15: !navList.length }, { 'fixed-height': !navList.length }]">
-      {{ title }}
+      <slot name="title">{{ title }}</slot>
       <div
         v-if="isMigrationProgress"
         class="migration-progress"

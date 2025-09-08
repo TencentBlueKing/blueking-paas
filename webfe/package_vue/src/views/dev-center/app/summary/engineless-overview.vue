@@ -28,7 +28,7 @@
           v-if="curFeatureAnalytics"
           class="chart-wrapper card-style"
         >
-          <div class="desc">
+          <div class="desc mb-16">
             {{ $t('网站访问统计') }}
             <bk-button
               text
@@ -38,20 +38,38 @@
               {{ $t('接入指引') }}
             </bk-button>
           </div>
-          <chart
-            :key="renderChartIndex"
-            ref="chart"
-            :options="chartOption"
-            auto-resize
-            style="width: 100%; height: 320px"
-          />
+          <div class="flex-row">
+            <div class="flex-row flex-column pr-16 metrics-wrapper">
+              <MetricsDataItem
+                :value="summaryData.pv"
+                :text="$t('访问数（PV）')"
+              />
+              <MetricsDataItem
+                :value="summaryData.uv"
+                :text="$t('独立访客数（UV）')"
+                :tip="
+                  $t(
+                    '独立访客数目前是按天统计的，如果选择的时间范围跨天的话，同一个用户会被重复计算，故独立访客数会大于真实的用户数。'
+                  )
+                "
+              />
+            </div>
+            <chart
+              :key="renderChartIndex"
+              ref="chart"
+              :options="chartOption"
+              auto-resize
+              style="width: 100%; height: 320px"
+              class="flex-1"
+            />
+          </div>
         </div>
         <!-- 无数据统计模块 -->
         <div
           v-else
           class="not-stats-module"
         >
-          <div class="desc">
+          <div class="desc mb-16">
             {{ $t('已申请权限的 API') }}
           </div>
           <!-- 是否显示 使用骨架屏遮挡 -->
@@ -100,6 +118,7 @@ import 'echarts/lib/chart/line';
 import 'echarts/lib/component/tooltip';
 import moment from 'moment';
 import { formatDate } from '@/common/tools';
+import MetricsDataItem from './comps/metrics-data-item.vue';
 export default {
   components: {
     overviewTopInfo,
@@ -107,6 +126,7 @@ export default {
     chart: ECharts,
     appTopBar,
     RenderSideslider,
+    MetricsDataItem,
   },
   mixins: [appBaseMixin],
   porps: {
@@ -118,7 +138,6 @@ export default {
   data() {
     return {
       loading: true,
-      isChartLoading: false,
       operationsList: [],
       topInfo: {
         type: this.$t('外链应用'),
@@ -856,7 +875,6 @@ a.btn-deploy-panel-action {
 }
 
 .summary-content {
-  padding-top: 20px;
   flex: 1;
   .overview-warp {
     display: flex;
@@ -895,6 +913,12 @@ a.btn-deploy-panel-action {
         height: 32px;
       }
     }
+  }
+  .metrics-wrapper {
+    flex-shrink: 0;
+    gap: 3px;
+    width: 200px;
+    border-right: 1px solid #f5f7fa;
   }
 }
 
@@ -1015,7 +1039,6 @@ a.btn-deploy-panel-action {
   width: 280px;
   min-height: 741px;
   padding: 0px;
-  margin-top: 16px;
 }
 
 .fright-last {

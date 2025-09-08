@@ -53,25 +53,20 @@
       v-bkloading="{ isLoading: isLoading, zIndex: 10 }"
     >
       <!-- 访问数据 -->
-      <div class="flex-row flex-column left-access-data pr-16">
-        <div class="item pv">
-          <p class="f24 font-weight-700">{{ metricsData.pv }}</p>
-          <p class="f12 g-tip">{{ $t('访问次数 (PV)') }}</p>
-        </div>
-        <div class="item uv">
-          <p class="f24 font-weight-700">{{ metricsData.uv }}</p>
-          <p class="f12 g-tip">
-            {{ $t('访问次数 (UV)') }}
-            <i
-              v-bk-tooltips="
-                $t(
-                  '独立访客数目前是按天统计的，如果选择的时间范围跨天的话，同一个用户会被重复计算，故独立访客数会大于真实的用户数。'
-                )
-              "
-              class="paasng-icon paasng-exclamation-circle"
-            />
-          </p>
-        </div>
+      <div class="flex-row flex-column metrics-wrapper pr-16">
+        <MetricsDataItem
+          :value="metricsData.pv"
+          :text="$t('访问数（PV）')"
+        />
+        <MetricsDataItem
+          :value="metricsData.uv"
+          :text="$t('独立访客数（UV）')"
+          :tip="
+            $t(
+              '独立访客数目前是按天统计的，如果选择的时间范围跨天的话，同一个用户会被重复计算，故独立访客数会大于真实的用户数。'
+            )
+          "
+        />
       </div>
       <div class="chart-container">
         <chart
@@ -105,12 +100,14 @@ import 'echarts/lib/component/legend';
 import 'echarts/lib/component/grid';
 import 'echarts/lib/component/axisPointer';
 import defaultChartOptions from '@/json/analysis-chart-option';
+import MetricsDataItem from './metrics-data-item.vue';
 
 export default {
   mixins: [appBaseMixin],
   components: {
     CardItem,
     chart: ECharts,
+    MetricsDataItem,
   },
   inject: ['overviewDateRange'],
   data() {
@@ -351,21 +348,11 @@ export default {
 
 <style lang="scss" scoped>
 .access-statistics-main {
-  .left-access-data {
+  .metrics-wrapper {
     flex-shrink: 0;
-    width: 164px;
+    width: 200px;
     gap: 3px;
     border-right: 1px solid #f5f7fa;
-    .item {
-      flex: 1;
-      background: #f5f7fa;
-      border-radius: 2px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 10px;
-    }
   }
 
   .chart-container {

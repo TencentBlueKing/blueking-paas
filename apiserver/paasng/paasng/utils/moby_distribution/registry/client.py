@@ -20,9 +20,9 @@ from functools import partial
 from math import isinf
 from typing import Optional, Type, cast
 
-import curlify
 import requests
 
+from paasng.utils import masked_curlify as curlify
 from paasng.utils.moby_distribution.registry import exceptions
 from paasng.utils.moby_distribution.registry.auth import (
     AuthorizationProvider,

@@ -102,6 +102,10 @@ def mask_sensitive_data(request):
         masked_form_data = scrub_data(parse_qs(request.body))
         request.body = urlencode(masked_form_data, doseq=True)
 
+    # 对于二进制块/流, 不尝试解析正文，回退为占位符
+    elif request.headers.get("Content-Type") == "application/octet-stream" and request.body:
+        request.body = "<binary data>"
+
     return request
 
 

@@ -174,14 +174,14 @@ class DockerRegistryV2Client:
                 )
                 raise exceptions.RetryAgain
 
-            logger.debug("Requesting %s, but PermissionDeny, Equivalent curl command: %s", url, curl)
+            logger.info("Requesting %s, but PermissionDeny, Equivalent curl command: %s", url, curl)
             raise exceptions.PermissionDeny
 
         if resp.status_code == 403:
             if auto_auth and self._authed is None and self.ping():
                 raise exceptions.RetryAgain
 
-            logger.debug("Requesting %s, but PermissionDeny, Equivalent curl command: %s", url, curl)
+            logger.info("Requesting %s, but PermissionDeny, Equivalent curl command: %s", url, curl)
             raise exceptions.PermissionDeny
 
         if resp.status_code == 404:

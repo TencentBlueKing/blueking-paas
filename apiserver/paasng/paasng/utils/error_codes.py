@@ -170,6 +170,9 @@ class ErrorCodes:
     # 蓝鲸插件（bk_plugin）相关
     APP_IS_NOT_BK_PLUGIN = ErrorCode(_("应用不是“蓝鲸插件”类型"))
     UNABLE_TO_SET_DISTRIBUTORS = ErrorCode(_("无法设置插件使用方，请稍候重试"))
+    DISTRIBUTOR_NOT_FOUND = ErrorCode(_("插件使用方不存在"))
+    UNABLE_TO_GRANT_DISTRIBUTOR = ErrorCode(_("无法授权插件使用方，请稍候重试"))
+    UNABLE_TO_REVOKE_DISTRIBUTOR = ErrorCode(_("无法撤销插件使用方，请稍候重试"))
     # 应用模板相关
     NORMAL_TMPL_NOT_FOUND = ErrorCode(_("指定的应用模板不存在或不可用"))
     UNKNOWN_TEMPLATE = ErrorCode(_("无效的应用模板"))

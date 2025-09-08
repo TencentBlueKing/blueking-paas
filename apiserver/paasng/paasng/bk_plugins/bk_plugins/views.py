@@ -38,7 +38,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 
 from . import serializers
-from .apigw import set_distributors
+from .apigw import grant_distributor, revoke_distributor, set_distributors
 from .logging import PluginLoggingClient
 from .models import (
     BkPlugin,
@@ -163,6 +163,44 @@ class SysBkPluginTagsViewSet(viewsets.ViewSet):
         """View all plugin tags in the system"""
         tags = BkPluginTag.objects.all()
         return Response(serializers.BkPluginTagSLZ(tags, many=True).data)
+
+
+class SysBkPluginDistributorsViewSet(viewsets.ViewSet):
+    """Viewset for querying bk_plugin's distributors"""
+
+    permission_classes = [sysapi_client_perm_class(ClientAction.MANAGE_APPLICATIONS)]
+
+    def grant_permission(self, request, code, distributor_code):
+        """Grant permission to a distributor"""
+        plugin_app = get_object_or_404(BkPluginAppQuerySet().all(), code=code)
+        try:
+            distributor = BkPluginDistributor.objects.get(code=distributor_code)
+        except BkPluginDistributor.DoesNotExist:
+            raise error_codes.DISTRIBUTOR_NOT_FOUND
+
+        try:
+            grant_distributor(plugin_app, distributor)
+        except RuntimeError:
+            logger.exception(f"Unable to grant distributor {distributor_code} to {plugin_app}")
+            raise error_codes.UNABLE_TO_GRANT_DISTRIBUTOR
+
+        return Response(serializers.DistributorSLZ(plugin_app.distributors, many=True).data)
+
+    def revoke_permission(self, request, code, distributor_code):
+        """Revoke permission from a distributor"""
+        plugin_app = get_object_or_404(BkPluginAppQuerySet().all(), code=code)
+        try:
+            distributor = BkPluginDistributor.objects.get(code=distributor_code)
+        except BkPluginDistributor.DoesNotExist:
+            raise error_codes.DISTRIBUTOR_NOT_FOUND
+
+        try:
+            revoke_distributor(plugin_app, distributor)
+        except RuntimeError:
+            logger.exception(f"Unable to revoke distributor {distributor_code} from {plugin_app}")
+            raise error_codes.UNABLE_TO_REVOKE_DISTRIBUTOR
+
+        return Response(serializers.DistributorSLZ(plugin_app.distributors, many=True).data)
 
 
 # User interface ViewSet start

@@ -33,11 +33,11 @@ urlpatterns = [
     re_path(
         r"^api/tools/s-mart/build_phases/$",
         views.SmartBuildPhaseViewSet.as_view({"get": "get_frame"}),
-        name="api.tools.s-mart.phase",
+        name="api.tools.s-mart.build_phases",
     ),
     re_path(
-        r"^api/tools/s-mart/deploy_phases/(?P<smart_build_id>[0-9a-f-]{32,36})/$",
+        r"^api/tools/s-mart/build_phases/(?P<smart_build_id>[0-9a-f-]{32,36})/$",
         views.SmartBuildPhaseViewSet.as_view({"get": "get_result"}),
-        name="api.tools.s-mart.deploy_phases",
+        name="api.tools.s-mart.build_phases",
     ),
 ]

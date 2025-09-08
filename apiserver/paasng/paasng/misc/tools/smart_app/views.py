@@ -96,7 +96,11 @@ class SmartBuilderViewSet(viewsets.ViewSet):
             ).data
         )
 
-    @swagger_auto_schema(request_body=SmartBuildInputSLZ, responses={"201": SmartBuildOutputSLZ()})
+    @swagger_auto_schema(
+        request_body=SmartBuildInputSLZ,
+        responses={"201": SmartBuildOutputSLZ()},
+        tags=["S-Mart 包构建"],
+    )
     def build_smart(self, request):
         """根据暂存的源码包构建 s-mart 包"""
         slz = SmartBuildInputSLZ(data=request.data)
@@ -157,7 +161,7 @@ class SmartBuilderViewSet(viewsets.ViewSet):
 class SmartBuildPhaseViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
-    @swagger_auto_schema(tags=["创建 s-mart 包阶段"], responses={"200": SmartBuildFramePhaseSLZ(many=True)})
+    @swagger_auto_schema(tags=["S-Mart 包构建"], responses={"200": SmartBuildFramePhaseSLZ(many=True)})
     def get_frame(self):
         """获取 S-mart 包构建的阶段和步骤信息"""
         phases = []
@@ -171,7 +175,7 @@ class SmartBuildPhaseViewSet(viewsets.ViewSet):
 
         return Response(data=SmartBuildFramePhaseSLZ(phases, many=True).data)
 
-    @swagger_auto_schema(tags=["部署阶段"], responses={"200": SmartBuildPhaseSLZ(many=True)})
+    @swagger_auto_schema(tags=["S-Mart 包构建"], responses={"200": SmartBuildPhaseSLZ(many=True)})
     def get_result(self, request, smart_build_id: str):
         try:
             smart_build = SmartBuildRecord.objects.get(pk=smart_build_id)

@@ -114,6 +114,7 @@ def setup_platform_elk_config(cluster_uuid: str, tenant_id: str):
             host=cluster_es.host,
             port=cluster_es.port,
             http_auth=f"{cluster_es.username}:{cluster_es.password}",
+            use_ssl=cluster_es.scheme == "https",
             verify_certs=cluster_es.verify_certs,
             ca_certs=cluster_es.ca_certs,
             client_cert=cluster_es.client_cert,

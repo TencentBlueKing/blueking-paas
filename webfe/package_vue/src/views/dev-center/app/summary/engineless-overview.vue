@@ -26,7 +26,7 @@
         <!-- 有数据统计模块 -->
         <div
           v-if="curFeatureAnalytics"
-          class="chart-wrapper"
+          class="chart-wrapper card-style"
         >
           <div class="desc">
             {{ $t('网站访问统计') }}
@@ -620,7 +620,6 @@ export default {
 .chart-wrapper,
 .not-stats-module {
   background: #ffffff;
-  border: 1px solid #dcdee5;
   border-radius: 2px;
   padding: 16px 16px 42px;
 
@@ -645,6 +644,7 @@ export default {
 .overview-middle {
   // max-width: 1180px;
   display: flex;
+  gap: 16px;
   .summary-wrapper,
   .coding {
     flex: 1;
@@ -1015,9 +1015,7 @@ a.btn-deploy-panel-action {
   width: 280px;
   min-height: 741px;
   padding: 0px;
-  margin-left: 24px;
-  margin-top: 20px;
-  // border-left: solid 1px #e6e9ea;
+  margin-top: 16px;
 }
 
 .fright-last {

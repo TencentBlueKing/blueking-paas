@@ -1,5 +1,5 @@
 <template lang="html">
-  <div class="top-info-wrapper">
+  <div class="top-info-wrapper card-style">
     <div class="text-wrapper">
       <h3 class="app-type">{{ $t('应用类型') }}：{{ appInfo.type }}</h3>
       <p>{{ appInfo.description }}</p>
@@ -265,7 +265,6 @@ export default {
   min-height: 100px;
   padding: 16px;
   margin-bottom: 16px;
-  border: 1px solid #dcdee5;
   border-radius: 2px;
   background: #fff;
   font-size: 12px;

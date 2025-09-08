@@ -61,12 +61,18 @@ $spacing-values: 4, 6, 8, 12, 16, 20, 24;
 }
 /* 常用间距工具类 end */
 
-/* 提示文本样式 */
+/* 文本样式 start */
+.g-sub-title {
+  font-size: 14px;
+  color: #313238;
+  font-weight: 700;
+}
 .g-tip {
   font-size: 12px;
   color: #979BA5;
   line-height: 30px;
 }
+/* 提示文本样式 end */
 
 /* dot 状态样式 start */
 .g-dot-default {

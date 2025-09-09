@@ -162,7 +162,7 @@ class SmartBuildPhaseViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
     @swagger_auto_schema(tags=["S-Mart 包构建"], responses={"200": SmartBuildFramePhaseSLZ(many=True)})
-    def get_frame(self):
+    def get_frame(self, request):
         """获取 S-mart 包构建的阶段和步骤信息"""
         phases = []
         for phase_type in SmartBuildPhaseType:

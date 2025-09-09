@@ -15,10 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
 import logging
 import time
 
 from django.db import IntegrityError
+from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs import svc_disc
@@ -75,13 +77,17 @@ class BkAppReleaseMgr(DeployStep):
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
         with self.procedure("部署应用"):
-            bkapp_release_id = release_by_k8s_operator(
-                self.module_environment,
-                revision,
-                operator=self.deployment.operator,
-                build=build,
-                deployment=self.deployment,
-            )
+            try:
+                bkapp_release_id = release_by_k8s_operator(
+                    self.module_environment,
+                    revision,
+                    operator=self.deployment.operator,
+                    build=build,
+                    deployment=self.deployment,
+                )
+            except UnprocessibleEntityError as e:
+                err_msg = json.loads(e.body)["message"]
+                raise DeployShouldAbortError(err_msg) from e
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
         self.state_mgr.update(bkapp_release_id=bkapp_release_id)

@@ -52,7 +52,7 @@ class SmartBuildPhase(UuidAuditedModel):
     """s-mart 构建阶段"""
 
     # 枚举值 -> SmartBuildPhaseType.
-    type = models.CharField(_("创建阶段类型"), max_length=32)
+    type = models.CharField(_("构建阶段类型"), max_length=32)
     smart_build = models.ForeignKey(
         SmartBuildRecord,
         on_delete=models.CASCADE,

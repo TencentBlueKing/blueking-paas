@@ -38,6 +38,6 @@ urlpatterns = [
     re_path(
         r"^api/tools/s-mart/build_phases/(?P<smart_build_id>[0-9a-f-]{32,36})/$",
         views.SmartBuildPhaseViewSet.as_view({"get": "get_result"}),
-        name="api.tools.s-mart.build_phases",
+        name="api.tools.s-mart.build_phases.result",
     ),
 ]

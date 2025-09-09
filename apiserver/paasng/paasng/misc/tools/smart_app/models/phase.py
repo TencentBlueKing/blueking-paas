@@ -49,14 +49,14 @@ class SmartBuildPhaseEventSLZ(Serializer):
 
 
 class SmartBuildPhase(UuidAuditedModel):
-    """创建 s-mart 阶段"""
+    """s-mart 构建阶段"""
 
     # 枚举值 -> SmartBuildPhaseType.
     type = models.CharField(_("创建阶段类型"), max_length=32)
     smart_build = models.ForeignKey(
         SmartBuildRecord,
         on_delete=models.CASCADE,
-        verbose_name=_("关联创建操作"),
+        verbose_name=_("关联的构建记录"),
         null=True,
         related_name="phases",
         db_constraint=False,

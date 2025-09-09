@@ -59,7 +59,7 @@ class Migration(migrations.Migration):
                 ('start_time', models.DateTimeField(null=True, verbose_name='阶段开始时间')),
                 ('complete_time', models.DateTimeField(null=True, verbose_name='阶段完成时间')),
                 ('tenant_id', models.CharField(db_index=True, default='default', help_text='本条数据的所属租户', max_length=32, verbose_name='租户 ID')),
-                ('smart_build', models.ForeignKey(db_constraint=False, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='phases', to='smartapp.smartbuildrecord', verbose_name='关联创建操作')),
+                ('smart_build', models.ForeignKey(db_constraint=False, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='phases', to='smartapp.smartbuildrecord', verbose_name='关联的构建记录')),
             ],
             options={
                 'ordering': ['created'],
@@ -89,10 +89,10 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('name', models.CharField(db_index=True, max_length=32, verbose_name='步骤名称')),
                 ('status', models.CharField(max_length=32, null=True, verbose_name='状态')),
-                ('start_time', models.DateTimeField(null=True, verbose_name='阶段开始时间')),
-                ('complete_time', models.DateTimeField(null=True, verbose_name='阶段完成时间')),
+                ('start_time', models.DateTimeField(null=True, verbose_name='步骤开始时间')),
+                ('complete_time', models.DateTimeField(null=True, verbose_name='步骤完成时间')),
                 ('tenant_id', models.CharField(db_index=True, default='default', help_text='本条数据的所属租户', max_length=32, verbose_name='租户 ID')),
-                ('phase', models.ForeignKey(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='steps', to='smartapp.smartbuildphase', verbose_name='关联阶段')),
+                ('phase', models.ForeignKey(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='steps', to='smartapp.smartbuildphase', verbose_name='关联的构建阶段')),
             ],
             options={
                 'ordering': ['created'],

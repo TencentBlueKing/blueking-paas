@@ -49,20 +49,20 @@ class SmartBuildStepEventSLZ(Serializer):
 
 
 class SmartBuildStep(UuidAuditedModel):
-    """创建 s-mart 步骤"""
+    """s-mart 构建步骤"""
 
     name = models.CharField(_("步骤名称"), db_index=True, max_length=32)
     phase = models.ForeignKey(
         SmartBuildPhase,
         on_delete=models.CASCADE,
-        verbose_name=_("关联阶段"),
+        verbose_name=_("关联的构建阶段"),
         related_name="steps",
         db_constraint=False,
     )
     # 枚举值 -> JobStatus. null 表示未设置
     status = models.CharField(_("状态"), null=True, max_length=32)
-    start_time = models.DateTimeField(_("阶段开始时间"), null=True)
-    complete_time = models.DateTimeField(_("阶段完成时间"), null=True)
+    start_time = models.DateTimeField(_("步骤开始时间"), null=True)
+    complete_time = models.DateTimeField(_("步骤完成时间"), null=True)
 
     tenant_id = tenant_id_field_factory()
 

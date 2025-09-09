@@ -15,9 +15,29 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+
+from paasng.misc.tools.smart_app import views
+from paasng.utils.basic import re_path
 
 urlpatterns = [
-    path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.smart_app.urls")),
+    re_path(
+        r"^api/tools/s-mart/upload/$",
+        views.SmartBuilderViewSet.as_view({"post": "upload"}),
+        name="api.tools.s-mart.upload",
+    ),
+    re_path(
+        r"^api/tools/s-mart/build/$",
+        views.SmartBuilderViewSet.as_view({"post": "build_smart"}),
+        name="api.tools.s-mart.build",
+    ),
+    re_path(
+        r"^api/tools/s-mart/build_phases/$",
+        views.SmartBuildPhaseViewSet.as_view({"get": "get_frame"}),
+        name="api.tools.s-mart.build_phases",
+    ),
+    re_path(
+        r"^api/tools/s-mart/build_phases/(?P<smart_build_id>[0-9a-f-]{32,36})/$",
+        views.SmartBuildPhaseViewSet.as_view({"get": "get_result"}),
+        name="api.tools.s-mart.build_phases.result",
+    ),
 ]

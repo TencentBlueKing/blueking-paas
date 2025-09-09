@@ -212,6 +212,8 @@ INSTALLED_APPS = [
     "paas_wl.infras.resources.generation",
     # 蓝鲸通知中心
     "bk_notice_sdk",
+    # s-mart 包构建工具
+    "paasng.misc.tools.smart_app",
 ]
 
 # Allow extending installed apps
@@ -1274,6 +1276,21 @@ LIVE_AGENT_CONFIG = settings.get("LIVE_AGENT_CONFIG", {"text": "联系客服", "
 
 # 是否开启终端色彩
 COLORFUL_TERMINAL_OUTPUT = True
+
+
+# ---------------------
+# s-mart 包构建工具相关配置
+# ---------------------
+
+# CNB 构建工具镜像名
+SMART_BUILDER_SHIM_IMAGE = settings.get("SMART_BUILDER_SHIM_IMAGE", "")
+
+# S-Mart Builder 镜像名
+SMART_BUILDER_IMAGE = settings.get("SMART_BUILDER_IMAGE", "")
+
+# S-Mart 包构建进程超时
+SMART_BUILD_PROCESS_TIMEOUT = settings.get("SMART_BUILDER_IMAGE", "")
+
 
 # ------------------
 # S-Mart 应用镜像化配置

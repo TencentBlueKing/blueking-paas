@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,10 +13,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from django.urls import include, path
-
-urlpatterns = [
-    path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.smart_app.urls")),
-]

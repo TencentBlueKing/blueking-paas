@@ -15,9 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+from .phases import SmartBuildPhaseManager
+from .step_meta_data import ALL_STEP_METAS
+from .steps import get_sorted_steps
 
-urlpatterns = [
-    path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.smart_app.urls")),
+__all__ = [
+    "SmartBuildPhaseManager",
+    "get_sorted_steps",
+    "ALL_STEP_METAS",
 ]

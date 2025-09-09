@@ -78,6 +78,7 @@ PYTHON_BUILDPACK_PIP_INDEX_URL = settings.get("PYTHON_BUILDPACK_PIP_INDEX_URL")
 # 从源码构建应用时，注入额外环境变量
 BUILD_EXTRA_ENV_VARS = settings.get("BUILD_EXTRA_ENV_VARS", {})
 
+
 # ---------------
 # 服务导出配置
 # ---------------
@@ -157,6 +158,9 @@ MAX_RS_RETAIN = 3
 
 # SLUG 最长存活时间
 MAX_SLUG_SECONDS = 15 * 60
+
+# S-Mart Builder 最长存活时间
+MAX_SMART_BUILDER_SECONDS = 30 * 60
 
 # 部署资源规则映射版本
 GLOBAL_DEFAULT_MAPPER_VERSION = "v1"

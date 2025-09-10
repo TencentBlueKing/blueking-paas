@@ -49,7 +49,7 @@ def migrate_cluster_to_plan(apps, schema_editor):
     plans = Plan.objects.filter(name='default')
     for plan in plans:
         # 若 plan config 已配置，则跳过,避免覆盖用户配置
-        if plan.config:
+        if plan.config != '{}':
             continue
         plan.config = config
         plan.save(update_fields=["config"])

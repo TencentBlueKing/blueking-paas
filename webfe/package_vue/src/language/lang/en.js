@@ -3078,4 +3078,6 @@ export default {
   更新应用副本数策略成功: 'Successfully Updated Application Replica Count Strategy',
   '重新部署时，忽略 S-mart 包中的副本数，保持当前线上副本数不变。': 'During redeployment, ignore the replica count in the S-mart package and keep the current online replica count unchanged.',
   '重新部署时，进程副本数恢复为 S-mart 包中定义的数量。如未指定，则使用页面上的副本数。': 'During redeployment, the process replica count will revert to the number defined in the S-mart package. If not specified, the replica count on the page will be used.',
+  暂无收藏的应用: 'No favorited app',
+  '将鼠标悬浮到应用，点击收藏图标': 'Hover over the application and click the favorite icon',
 };

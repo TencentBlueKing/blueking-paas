@@ -68,3 +68,17 @@ $spacing-values: 4, 6, 8, 12, 16, 20, 24;
   line-height: 30px;
 }
 
+/* dot 状态样式 start */
+.g-dot-default {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f0f1f5;
+  border: 1px solid #c4c6cc;
+  &.success {
+    background: #CBF0DA;
+    border: 1px solid #2CAF5E;
+  }
+}
+/* dot 状态样式 end */

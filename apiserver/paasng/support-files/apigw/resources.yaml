@@ -1635,8 +1635,8 @@ paths:
       tags:
       - 蓝鲸应用插件
       x-bk-apigateway-resource:
-        isPublic: true
-        allowApplyPermission: true
+        isPublic: false
+        allowApplyPermission: false
         matchSubpath: false
         enableWebsocket: false
         backend:

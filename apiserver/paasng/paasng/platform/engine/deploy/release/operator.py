@@ -178,7 +178,7 @@ def release_by_k8s_operator(
         app_model_deploy.save(update_fields=["status", "updated"])
 
         err_msg = json.loads(e.body)["message"]
-        raise DeployShouldAbortError(err_msg) from e
+        raise DeployShouldAbortError(err_msg)
     except Exception:
         app_model_deploy.status = DeployStatus.ERROR
         app_model_deploy.save(update_fields=["status", "updated"])

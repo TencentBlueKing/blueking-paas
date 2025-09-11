@@ -20,9 +20,9 @@ from functools import partial
 from math import isinf
 from typing import Optional, Type, cast
 
-import curlify
 import requests
 
+from paasng.utils import masked_curlify
 from paasng.utils.moby_distribution.registry import exceptions
 from paasng.utils.moby_distribution.registry.auth import (
     AuthorizationProvider,
@@ -161,7 +161,7 @@ class DockerRegistryV2Client:
     def _validate_response(self, resp: requests.Response, auto_auth: bool = True) -> requests.Response:
         url = resp.request.url
         try:
-            curl = curlify.to_curl(resp.request)
+            curl = masked_curlify.to_curl(resp.request)
         except Exception:
             curl = "<unknown>"
 
@@ -174,14 +174,14 @@ class DockerRegistryV2Client:
                 )
                 raise exceptions.RetryAgain
 
-            logger.debug("Requesting %s, but PermissionDeny, Equivalent curl command: %s", url, curl)
+            logger.error("Requesting %s, but PermissionDeny, Equivalent curl command: %s", url, curl)
             raise exceptions.PermissionDeny
 
         if resp.status_code == 403:
             if auto_auth and self._authed is None and self.ping():
                 raise exceptions.RetryAgain
 
-            logger.debug("Requesting %s, but PermissionDeny, Equivalent curl command: %s", url, curl)
+            logger.error("Requesting %s, but PermissionDeny, Equivalent curl command: %s", url, curl)
             raise exceptions.PermissionDeny
 
         if resp.status_code == 404:

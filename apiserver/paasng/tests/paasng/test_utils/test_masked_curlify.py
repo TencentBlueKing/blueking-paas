@@ -43,6 +43,15 @@ class TestToCurlMasked:
         assert json_data["BK_PASSWORD"] == MASKED_CONTENT
         assert json_data["api_key"] == MASKED_CONTENT
 
+    def test_mask_octet_stream_data(self):
+        headers = {"Content-Type": "application/octet-stream"}
+        test_request = Request("POST", "https://example.com/api", data=b"\x00\x01\x02\x03", headers=headers)
+        prepared_request = test_request.prepare()
+
+        curlify.to_curl(prepared_request)
+
+        assert prepared_request.body == "<binary data>"
+
     def test_mask_form_data(self):
         test_request = Request("POST", "https://example.com/api", data={"BK_PASSWORD": "123456", "api_key": "abcdef"})
         prepared_request = test_request.prepare()

@@ -34,7 +34,7 @@ def ensure_builtin_user():
     user_id = user_id_encoder.encode(ProviderType.DATABASE, username)
     # This user only acts as a holder for the sourcectl private token, so no specific
     # role is required.
-    # The tenant_id of this user is set to DEFAULT_TENANT_ID, it does affect the functionality
+    # The tenant_id of this user is set to DEFAULT_TENANT_ID, it doesn't affect the functionality
     # at this moment.
     profile, _ = UserProfile.objects.update_or_create(
         user=user_id, defaults={"role": SiteRole.USER.value, "tenant_id": DEFAULT_TENANT_ID}

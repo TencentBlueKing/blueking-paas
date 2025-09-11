@@ -45,6 +45,7 @@
             v-for="item in enabledServices"
             :data="item"
             :key="item.uuid"
+            @click.native="jumpToServices(item, 'detail')"
           />
         </div>
       </template>
@@ -95,10 +96,18 @@ export default {
     },
   },
   methods: {
-    jumpToServices() {
+    jumpToServices(item, type) {
+      const params = {
+        id: this.appCode,
+        moduleId: this.activeModule,
+      };
+      if (type === 'detail' && item) {
+        // service 跳转详情页需要携带的参数
+        params.service = item.uuid;
+      }
       this.$router.push({
         name: 'appServices',
-        params: { id: this.appCode, moduleId: this.activeModule },
+        params,
       });
     },
     initializeActiveEnv() {
@@ -125,7 +134,10 @@ export default {
 
       // 合并已绑定和共享的服务作为已启用服务
       const boundServices = bound.map((item) => item.service);
-      const sharedServices = shared.map((item) => item.service);
+      const sharedServices = shared.map((item) => ({
+        ...item.service,
+        type: 'shared',
+      }));
       this.enabledServices = [...boundServices, ...sharedServices];
 
       // 未绑定的服务作为未启用服务
@@ -139,7 +151,7 @@ export default {
 .service-items-container {
   .service-items {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(238px, 315px));
     gap: 10px;
   }
 }

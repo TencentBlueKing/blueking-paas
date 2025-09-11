@@ -208,8 +208,6 @@ export default {
     },
   },
   created() {
-    console.log('created');
-
     this.activeModule = this.curAppModuleList[0].name || 'default';
   },
   mounted() {

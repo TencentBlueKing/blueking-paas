@@ -1,18 +1,23 @@
 <template>
   <div
-    class="service-item-container flex-row align-items-center"
+    class="service-item-container flex-row"
     :class="{ disabled: !isEnabled }"
   >
-    <div class="service-img mr-12">
+    <div class="service-img flex-row align-items-center justify-content-center">
       <img :src="data.logo" />
     </div>
     <div class="service-info">
-      <p class="g-sub-title sub-title">{{ data.name }}</p>
+      <div
+        class="g-sub-title sub-title f12 mb-4 text-ellipsis"
+        v-bk-overflow-tips
+      >
+        {{ data.display_name }}
+      </div>
       <p
         class="f12 desc g-tip"
         v-bk-overflow-tips
       >
-        {{ data.display_name }}
+        {{ data.description }}
       </p>
     </div>
   </div>
@@ -37,38 +42,51 @@ export default {
 @import '~@/assets/css/mixins/ellipsis.scss';
 
 .service-item-container {
-  height: 90px;
-  padding: 0 12px;
-  background: #f5f7fa;
+  max-width: 315px;
+  height: 80px;
+  background: #fff;
+  border: 1px solid #dcdee5;
   border-radius: 2px;
-  &.disabled {
-    img {
-      -webkit-filter: grayscale(1);
-      filter: grayscale(1);
-      opacity: 0.6;
+
+  &:not(.disabled):hover {
+    cursor: pointer;
+    border-color: #3a84ff;
+    .sub-title {
+      color: #3a84ff;
     }
-    .sub-title,
+  }
+  &.disabled {
+    &:hover {
+      cursor: not-allowed;
+    }
+    img {
+      filter: grayscale(1);
+      opacity: 0.8;
+    }
     .desc {
       color: #979ba5 !important;
     }
   }
-  .service-img {
+}
+.service-img {
+  width: 66px;
+  height: 100%;
+  background: #fafbfd;
+
+  img {
     width: 42px;
     height: 42px;
-    border-radius: 2px;
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
+    object-fit: contain;
   }
-  .service-info {
-    flex: 1;
-    .desc {
-      line-height: 16px;
-      max-height: 40px;
-      @include multiline-ellipsis;
-    }
+}
+.service-info {
+  flex: 1;
+  padding: 12px;
+  overflow: hidden;
+  .desc {
+    line-height: 16px;
+    max-height: 40px;
+    @include multiline-ellipsis;
   }
 }
 </style>

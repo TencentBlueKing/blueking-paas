@@ -4,10 +4,7 @@ Create a Cloud-Native Application
 ### Request Parameters  
 
 #### 1. Path Parameters:  
-| Parameter Name | Parameter Type | Required | Parameter Description |  
-| ------------ | ------------ | ------ | ---------------- |  
-| app_code | string | Yes | Application ID, e.g., "monitor" |  
-| module | string | Yes | Module name, e.g., "default" |  
+None. 
 
 #### 2. Interface Parameters:  
 | Field | Type | Required | Description |  

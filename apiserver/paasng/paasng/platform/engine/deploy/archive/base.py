@@ -83,6 +83,7 @@ class BaseArchiveManager:
             application=offline_operation.app_environment.application,
             operation_type=OperationTypes.OFFLINE.value,
             object_uid=offline_operation.pk,
+            tenant_id=self.env.tenant_id,
         )
         self.perform_implement(offline_operation, result_handler=ArchiveResultHandler)
         return offline_operation

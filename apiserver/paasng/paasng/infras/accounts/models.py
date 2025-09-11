@@ -50,7 +50,11 @@ class User(AbstractBaseUser):
     This class is not supposed to be used directly as "request.user", you must wrap it with
     `bkpaas_auth.DatabaseUser` to make it compatible with "bkpaas_auth" module.
 
-    [multi-tenancy] TODO
+    This model is LEGACY and should not be used. It previously managed "system clients"
+    that interacted with the DatabaseUser type in bkpaas_auth. These "users" have now been
+    replaced by the SysAPIClient model, which eliminates ambiguity between users and sys clients.
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     username_validator = UnicodeUsernameValidator()
@@ -111,10 +115,6 @@ class UserProfileManager(models.Manager):
 
         try:
             profile = self.model.objects.get(user=user.pk)
-            # 如果 tenant_id 跟当前用户的 tenant-id 不一致的时候更新
-            if profile.tenant_id != current_tenant_id:
-                profile.tenant_id = current_tenant_id
-                profile.save(update_fields=["tenant_id"])
         except self.model.DoesNotExist:
             # 用户首次访问时，自动创建普通用户。否则必须手动将用户添加到 UserProfile 表后，才能访问站点。
             if settings.AUTO_CREATE_REGULAR_USER:
@@ -128,10 +128,7 @@ class UserProfileManager(models.Manager):
 
 
 class UserProfile(TimestampedModel):
-    """Profile field for user
-
-    [multi-tenancy] TODO
-    """
+    """Profile field for user"""
 
     user = BkUserField(unique=True)
     role = models.IntegerField(default=SiteRole.USER.value)
@@ -237,10 +234,7 @@ class Oauth2TokenHolderQS(models.QuerySet):
 
 
 class Oauth2TokenHolder(TimestampedModel):
-    """OAuth2 Token for sourcectl
-
-    [multi-tenancy] TODO
-    """
+    """OAuth2 Token for sourcectl"""
 
     provider = models.CharField(max_length=32)
     access_token = EncryptField(default="")
@@ -249,6 +243,8 @@ class Oauth2TokenHolder(TimestampedModel):
     scope = JSONField(default=["api"])
     expire_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="token_holder")
+
+    tenant_id = tenant_id_field_factory()
 
     objects = Oauth2TokenHolderQS().as_manager()
 
@@ -285,14 +281,14 @@ class PrivateTokenHolder(AuditedModel):
 
     Despite the name, the "private token" in this model is not related to the "ClientPrivateToken"
     model.
-
-    [multi-tenancy] TODO
     """
 
     provider = models.CharField(max_length=32)
     private_token = EncryptField(default="")
     expire_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="private_token_holder")
+
+    tenant_id = tenant_id_field_factory()
 
     objects = Oauth2TokenHolderQS().as_manager()
 
@@ -328,17 +324,19 @@ class AccountFeatureFlagManager(models.Manager):
 
     def set_feature(self, user: User, key: AccountFeatureFlagConst, value: bool):
         """设置 user 某个 feature 状态"""
-        return self.update_or_create(user=user.pk, name=AccountFeatureFlagConst(key).value, defaults={"effect": value})
+        tenant_id = get_tenant(user).id
+        return self.update_or_create(
+            user=user.pk, name=AccountFeatureFlagConst(key).value, defaults={"effect": value, "tenant_id": tenant_id}
+        )
 
 
 class AccountFeatureFlag(TimestampedModel):
-    """
-    针对用户的特性标记
-
-    [multi-tenancy] TODO
-    """
+    """针对用户的特性标记"""
 
     user = BkUserField()
     effect = models.BooleanField("是否允许(value)", default=True)
     name = models.CharField("特性名称(key)", max_length=64)
+
+    tenant_id = tenant_id_field_factory()
+
     objects = AccountFeatureFlagManager()

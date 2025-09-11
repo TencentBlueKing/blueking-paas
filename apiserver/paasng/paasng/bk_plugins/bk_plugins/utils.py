@@ -19,6 +19,7 @@ from bkpaas_auth.core.constants import ProviderType
 from bkpaas_auth.core.encoder import user_id_encoder
 from django.conf import settings
 
+from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import PrivateTokenHolder, User, UserProfile
 
@@ -33,7 +34,11 @@ def ensure_builtin_user():
     user_id = user_id_encoder.encode(ProviderType.DATABASE, username)
     # This user only acts as a holder for the sourcectl private token, so no specific
     # role is required.
-    profile, _ = UserProfile.objects.update_or_create(user=user_id, defaults={"role": SiteRole.USER.value})
+    # The tenant_id of this user is set to DEFAULT_TENANT_ID, it does affect the functionality
+    # at this moment.
+    profile, _ = UserProfile.objects.update_or_create(
+        user=user_id, defaults={"role": SiteRole.USER.value, "tenant_id": DEFAULT_TENANT_ID}
+    )
     profile.refresh_from_db(fields=["role"])
 
     # 关联源码管理的 private_token
@@ -43,5 +48,6 @@ def ensure_builtin_user():
         defaults={
             "private_token": conf["private_token"],
             "expire_at": None,
+            "tenant_id": profile.tenant_id,
         },
     )

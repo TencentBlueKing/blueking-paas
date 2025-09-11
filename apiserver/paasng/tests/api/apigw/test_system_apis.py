@@ -262,6 +262,7 @@ class TestGetContactInfo:
                 application=bk_app,
                 operation_type=OperationTypes.ONLINE.value,
                 object_uid=deployment.pk,
+                tenant_id=bk_app.tenant_id,
             )
             ModuleEnvironmentOperations.objects.filter(pk=obj.pk).update(
                 created=arrow.get().shift(days=-days_delta).datetime

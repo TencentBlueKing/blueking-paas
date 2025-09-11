@@ -71,7 +71,7 @@ class CommandManager(models.Manager):
             app=app,
             version=new_version,
             command=command,
-            output_stream=OutputStream.objects.create(),
+            output_stream=OutputStream.objects.create(tenant_id=app.tenant_id),
             build=build,
             config=cfg,
             tenant_id=app.tenant_id,

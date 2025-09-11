@@ -109,6 +109,76 @@ def set_distributors(plugin_app: Application, distributors: Collection[BkPluginD
     plugin_app.distributors.set(distributors)
 
 
+def _handle_distributor_operation(
+    plugin_app: Application,
+    distributor: BkPluginDistributor,
+    operation: str,
+):
+    """插件使用方授权/取消授权操作
+
+    :param plugin_app: 插件应用
+    :param distributor: 插件使用方
+    :param operation: 操作类型（grant/revoke）
+    :raises: RuntimeError
+    """
+    profile = plugin_app.bk_plugin_profile
+
+    # 需确保已经在 API 网关中创建网关，才能进行授权相关操作
+    if not profile.is_synced:
+        logger.info("Syncing api-gw resource for %s, triggered by %s operation.", plugin_app.code, operation)
+        safe_sync_apigw(plugin_app)
+
+    if not profile.api_gw_id:
+        logger.error(
+            'Unable to set distributor for "%s", no related API Gateway resource can be found', plugin_app.code
+        )
+        raise RuntimeError("no related API Gateway resource")
+
+    gw_service = PluginDefaultAPIGateway(plugin_app)
+    try:
+        logger.info("%sing permissions on distributor: %s, plugin: %s", operation, distributor, plugin_app.code)
+        # 调用 API 网关接口实现授权、取消授权
+        getattr(gw_service, operation)(distributor)
+
+    except PluginApiGatewayServiceError as e:
+        logger.exception("%sing permissions on distributor: %s, plugin: %s", operation, distributor, plugin_app.code)
+        raise RuntimeError(
+            f"{operation} permissions error on {distributor} for plugin({plugin_app.code}), detail: {e}"
+        )
+
+
+def grant_distributor(plugin_app: Application, distributor: BkPluginDistributor):
+    """给单个插件使用方授权
+
+    :param plugin_app: 插件应用
+    :param distributor: 插件使用方
+    :raises: RuntimeError
+    """
+    if distributor in plugin_app.distributors.all():
+        logger.info("Distributor %s already has permissions on plugin %s, skip grant", distributor, plugin_app.code)
+        return
+
+    _handle_distributor_operation(plugin_app, distributor, "grant")
+    # 更新数据库记录
+    plugin_app.distributors.add(distributor)
+
+
+def revoke_distributor(plugin_app: Application, distributor: BkPluginDistributor):
+    """取消单个插件使用方的 API 网关权限
+
+    :param plugin_app: 插件应用
+    :param distributor: 插件使用方
+    :raises: RuntimeError
+    """
+    if distributor not in plugin_app.distributors.all():
+        logger.info("Distributor %s does not have permissions on plugin %s, skip revoke", distributor, plugin_app.code)
+        return
+
+    _handle_distributor_operation(plugin_app, distributor, "revoke")
+    # 更新数据库记录
+    plugin_app.distributors.remove(distributor)
+
+
 class PluginApiGWClient(Protocol):
     """Describes protocols of calling API Gateway management service"""
 

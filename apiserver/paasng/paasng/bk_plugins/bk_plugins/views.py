@@ -16,7 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import List, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
 import cattr
 from django.db.transaction import atomic
@@ -38,7 +38,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 
 from . import serializers
-from .apigw import set_distributors
+from .apigw import grant_distributor, revoke_distributor, set_distributors
 from .logging import PluginLoggingClient
 from .models import (
     BkPlugin,
@@ -49,6 +49,9 @@ from .models import (
     make_bk_plugins,
     plugin_to_detailed,
 )
+
+if TYPE_CHECKING:
+    from paasng.platform.applications.models import Application
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +166,62 @@ class SysBkPluginTagsViewSet(viewsets.ViewSet):
         """View all plugin tags in the system"""
         tags = BkPluginTag.objects.all()
         return Response(serializers.BkPluginTagSLZ(tags, many=True).data)
+
+
+class SysBkPluginDistributorsViewSet(viewsets.ViewSet):
+    """插件使用方授权、取消授权的应用态系统 API
+
+    使用场景：AIdev 平台需要通过 API 将插件的"插件使用方"加上 bkchat 等
+    注意：要调用该 API，除了在 API 网关申请 API 权限外，还需要在给应用添加 “基础管理” 权限
+    """
+
+    permission_classes = [sysapi_client_perm_class(ClientAction.MANAGE_APPLICATIONS)]
+
+    def _get_plugin_app_or_404(self, code: str, is_ai_agent_app: bool) -> "Application":
+        """Get a bk_plugin object by code, raise 404 error when code is invalid
+
+        :param code: plugin code, same with application code
+        :param is_ai_agent_app: 是否是 AI Agent 应用
+        """
+        plugin_set = BkPluginAppQuerySet().all()
+        if is_ai_agent_app:
+            plugin_set = plugin_set.filter(is_ai_agent_app=True)
+        return get_object_or_404((plugin_set), code=code)
+
+    def grant_permission(self, request, code, distributor_code, is_ai_agent_app, **kwargs):
+        """Grant permission to a distributor"""
+        is_ai_agent_app = kwargs.get("is_ai_agent_app", True)
+        plugin_app = self._get_plugin_app_or_404(code, is_ai_agent_app)
+        try:
+            distributor = BkPluginDistributor.objects.get(bk_app_code=distributor_code)
+        except BkPluginDistributor.DoesNotExist:
+            raise error_codes.DISTRIBUTOR_NOT_FOUND
+
+        try:
+            grant_distributor(plugin_app, distributor)
+        except RuntimeError:
+            logger.exception(f"Unable to grant distributor {distributor_code} to {plugin_app}")
+            raise error_codes.UNABLE_TO_GRANT_DISTRIBUTOR
+
+        return Response(serializers.DistributorSLZ(plugin_app.distributors, many=True).data)
+
+    def revoke_permission(self, request, code, distributor_code, **kwargs):
+        """Revoke permission from a distributor"""
+        is_ai_agent_app = kwargs.get("is_ai_agent_app", True)
+        plugin_app = self._get_plugin_app_or_404(code, is_ai_agent_app)
+
+        try:
+            distributor = BkPluginDistributor.objects.get(bk_app_code=distributor_code)
+        except BkPluginDistributor.DoesNotExist:
+            raise error_codes.DISTRIBUTOR_NOT_FOUND
+
+        try:
+            revoke_distributor(plugin_app, distributor)
+        except RuntimeError:
+            logger.exception(f"Unable to revoke distributor {distributor_code} from {plugin_app}")
+            raise error_codes.UNABLE_TO_REVOKE_DISTRIBUTOR
+
+        return Response(serializers.DistributorSLZ(plugin_app.distributors, many=True).data)
 
 
 # User interface ViewSet start

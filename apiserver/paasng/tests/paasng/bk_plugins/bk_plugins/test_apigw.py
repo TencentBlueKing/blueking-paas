@@ -118,6 +118,85 @@ def test_safe_sync_apigw_failed(bk_plugin_app, fake_bad_client):
 
 
 class TestSetDistributors:
+    @pytest.fixture
+    def distributors(self):
+        dis_1 = G(BkPluginDistributor, code_name="sample-dis-1", bk_app_code="sample-dis-1")
+        dis_2 = G(BkPluginDistributor, code_name="sample-dis-2", bk_app_code="sample-dis-2")
+        return dis_1, dis_2
+
+    def test_grant_distributor_success(self, bk_plugin_app, fake_good_client, distributors):
+        """测试授权成功"""
+        dis_1, _ = distributors
+        with patch(
+            "paasng.bk_plugins.bk_plugins.apigw.PluginDefaultAPIGateway._make_api_client",
+            return_value=fake_good_client,
+        ):
+            # 首次授权
+            from paasng.bk_plugins.bk_plugins.apigw import grant_distributor
+
+            grant_distributor(bk_plugin_app, dis_1)
+
+            assert bk_plugin_app.distributors.count() == 1
+            assert fake_good_client.grant_permissions.call_count == 1
+
+    def test_grant_existing_distributor(self, bk_plugin_app, fake_good_client, distributors):
+        """测试重复授权同一插件使用方"""
+        dis_1, _ = distributors
+        with patch(
+            "paasng.bk_plugins.bk_plugins.apigw.PluginDefaultAPIGateway._make_api_client",
+            return_value=fake_good_client,
+        ):
+            from paasng.bk_plugins.bk_plugins.apigw import grant_distributor
+
+            # 两次授权同一分发者
+            grant_distributor(bk_plugin_app, dis_1)
+            grant_distributor(bk_plugin_app, dis_1)
+
+            # 应该只调用一次授权API
+            assert fake_good_client.grant_permissions.call_count == 1
+
+    def test_revoke_distributor_success(self, bk_plugin_app, fake_good_client, distributors):
+        """测试取消授权成功"""
+        dis_1, _ = distributors
+        with patch(
+            "paasng.bk_plugins.bk_plugins.apigw.PluginDefaultAPIGateway._make_api_client",
+            return_value=fake_good_client,
+        ):
+            from paasng.bk_plugins.bk_plugins.apigw import revoke_distributor
+
+            # 先授权再取消
+            bk_plugin_app.distributors.add(dis_1)
+            revoke_distributor(bk_plugin_app, dis_1)
+
+            assert bk_plugin_app.distributors.count() == 0
+            assert fake_good_client.revoke_permissions.call_count == 1
+
+    def test_revoke_non_existing_distributor(self, bk_plugin_app, fake_good_client, distributors):
+        """测试取消未授权的插件使用方"""
+        dis_1, _ = distributors
+        with patch(
+            "paasng.bk_plugins.bk_plugins.apigw.PluginDefaultAPIGateway._make_api_client",
+            return_value=fake_good_client,
+        ):
+            from paasng.bk_plugins.bk_plugins.apigw import revoke_distributor
+
+            revoke_distributor(bk_plugin_app, dis_1)
+
+            # 不应该调用取消授权API
+            assert fake_good_client.revoke_permissions.call_count == 0
+
+    def test_grant_with_api_failure(self, bk_plugin_app, fake_bad_client, distributors):
+        """测试API调用失败时的授权异常"""
+        dis_1, _ = distributors
+        with patch(
+            "paasng.bk_plugins.bk_plugins.apigw.PluginDefaultAPIGateway._make_api_client",
+            return_value=fake_bad_client,
+        ):
+            from paasng.bk_plugins.bk_plugins.apigw import grant_distributor
+
+            with pytest.raises(RuntimeError):
+                grant_distributor(bk_plugin_app, dis_1)
+
     @pytest.mark.usefixtures("_init_tmpls")
     def test_integrated(self, bk_plugin_app, fake_good_client):
         dis_1 = G(BkPluginDistributor, code_name="sample-dis-1", bk_app_code="sample-dis-1")

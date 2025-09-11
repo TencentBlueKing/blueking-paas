@@ -15,10 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
 import logging
 import time
 
 from django.db import IntegrityError
+from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.bk_app.cnative.specs import svc_disc
@@ -171,6 +173,12 @@ def release_by_k8s_operator(
         ensure_bk_log_if_need(env)
         # 同步 ServiceMonitor 配置
         sync_service_monitor(env)
+    except UnprocessibleEntityError as e:
+        app_model_deploy.status = DeployStatus.ERROR
+        app_model_deploy.save(update_fields=["status", "updated"])
+
+        err_msg = json.loads(e.body)["message"]
+        raise DeployShouldAbortError(err_msg)
     except Exception:
         app_model_deploy.status = DeployStatus.ERROR
         app_model_deploy.save(update_fields=["status", "updated"])

@@ -103,7 +103,7 @@ class DeploymentLogStreams:
             raise ValueError(field_name)
 
         if not getattr(deployment, field_name, None):
-            s = OutputStream.objects.create()
+            s = OutputStream.objects.create(tenant_id=deployment.tenant_id)
             setattr(deployment, field_name, s.uuid)
             deployment.save(update_fields=[field_name])
         return OutputStream.objects.get(pk=getattr(deployment, field_name, None))

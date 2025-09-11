@@ -64,7 +64,7 @@ class BaseVolumeSourceController:
         """通过应用 ID 查看对应 model 对象列表"""
         raise NotImplementedError
 
-    def create_by_app(self, application_id: str, environment_name: str, **kwargs) -> Any:
+    def create_by_app(self, application_id: str, environment_name: str, tenant_id: str, **kwargs) -> Any:
         """通过应用 ID 创建对应 model 对象"""
         raise NotImplementedError
 
@@ -79,7 +79,9 @@ class BaseVolumeSourceController:
         """通过模块、环境删除对应 model 对象"""
         raise NotImplementedError
 
-    def create_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> Any:
+    def create_by_env(
+        self, app_id: str, module_id: str, env_name: str, source_name: str, tenant_id: str, **kwargs
+    ) -> Any:
         """通过模块、环境创建/更新对应 model 对象"""
         raise NotImplementedError
 
@@ -106,7 +108,7 @@ class ConfigMapSourceController(BaseVolumeSourceController):
     def list_by_app(self, application_id: str) -> QuerySet[ConfigMapSource]:
         return self.model_class.objects.filter(application_id=application_id)
 
-    def create_by_app(self, application_id: str, environment_name: str, **kwargs) -> None:
+    def create_by_app(self, application_id: str, environment_name: str, tenant_id: str, **kwargs) -> None:
         """configmap 类型属于模块级别,暂不支持应用级别单独创建"""
         raise NotImplementedError
 
@@ -121,7 +123,9 @@ class ConfigMapSourceController(BaseVolumeSourceController):
             name=source_name,
         )
 
-    def create_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
+    def create_by_env(
+        self, app_id: str, module_id: str, env_name: str, source_name: str, tenant_id: str, **kwargs
+    ) -> ConfigMapSource:
         data = kwargs.get("data", {})
 
         return self.model_class.objects.create(
@@ -130,6 +134,7 @@ class ConfigMapSourceController(BaseVolumeSourceController):
             environment_name=env_name,
             name=source_name,
             data=data,
+            tenant_id=tenant_id,
         )
 
     def update_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> ConfigMapSource:
@@ -181,7 +186,9 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
     def list_by_app(self, application_id: str) -> QuerySet[PersistentStorageSource]:
         return self.model_class.objects.filter(application_id=application_id)
 
-    def create_by_app(self, application_id: str, environment_name: str, **kwargs) -> PersistentStorageSource:
+    def create_by_app(
+        self, application_id: str, environment_name: str, tenant_id: str, **kwargs
+    ) -> PersistentStorageSource:
         application = Application.objects.get(id=application_id)
         params = {
             "application_id": application_id,
@@ -189,6 +196,7 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
             "name": generate_source_config_name(app_code=application.code),
             "storage_size": kwargs.get("storage_size"),
             "storage_class_name": settings.DEFAULT_PERSISTENT_STORAGE_CLASS_NAME,
+            "tenant_id": tenant_id,
         }
         if display_name := kwargs.get("display_name"):
             params["display_name"] = display_name
@@ -214,7 +222,9 @@ class PersistentStorageSourceController(BaseVolumeSourceController):
             name=source_name,
         )
 
-    def create_by_env(self, app_id: str, module_id: str, env_name: str, source_name: str, **kwargs) -> None:
+    def create_by_env(
+        self, app_id: str, module_id: str, env_name: str, source_name: str, tenant_id: str, **kwargs
+    ) -> None:
         """persistent storage 类型属于应用级别,暂不支持模块环境级别创建"""
         return
 
@@ -274,6 +284,7 @@ class MountManager:
     @classmethod
     def new(
         cls,
+        tenant_id: str,
         app_code: str,
         module_id: uuid.UUID,
         name: str,
@@ -295,6 +306,7 @@ class MountManager:
             source_type=source_type,
             source_config=source_config,
             sub_paths=sub_paths or [],
+            tenant_id=tenant_id,
         )
 
 

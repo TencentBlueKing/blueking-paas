@@ -23,10 +23,11 @@ from rest_framework import status
 
 from paasng.infras.accounts.constants import AccountFeatureFlag as FeatureFlag
 from paasng.infras.accounts.constants import SiteRole
-from paasng.infras.accounts.models import AccountFeatureFlag, UserProfile
+from paasng.infras.accounts.models import UserProfile
 from paasng.infras.sysapi_client.constants import ClientRole
 from paasng.infras.sysapi_client.models import AuthenticatedAppAsClient, SysAPIClient
 from paasng.platform.applications.models import Application
+from tests.utils.auth import create_user
 from tests.utils.helpers import generate_random_string, override_settings
 
 pytestmark = pytest.mark.django_db
@@ -108,72 +109,68 @@ class TestPlatformManagerViewSet:
 
 
 class TestAccountFeatureFlagManageViewSet:
-    def test_list_feature_flags(self, plat_mgt_api_client):
-        """测试获取用户特性列表"""
-        bulk_url = reverse("plat_mgt.users.account_feature_flags.bulk")
-        rsp = plat_mgt_api_client.get(bulk_url)
-        assert rsp.status_code == status.HTTP_200_OK
-        assert isinstance(rsp.data, list)
-
-    def test_upsert_feature_flags(self, plat_mgt_api_client):
-        """测试创建或更新用户特性"""
-        bulk_url = reverse("plat_mgt.users.account_feature_flags.bulk")
-        user = f"test_user_{generate_random_string(6)}"
-        feature = FeatureFlag.ALLOW_ADVANCED_CREATION_OPTIONS.value
-        data = {"user": user, "feature": feature, "is_effect": "true"}
-
-        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
-        assert rsp.status_code == status.HTTP_201_CREATED
-
-        # 验证已在数据库写入
-        user_id = user_id_encoder.encode(settings.USER_TYPE, user)
-        assert AccountFeatureFlag.objects.filter(user=user_id, name=feature, effect=True).exists()
-
-        # 尝试再次添加同一特性
-        rsp = plat_mgt_api_client.post(bulk_url, data, format="json")
-        assert rsp.status_code == status.HTTP_400_BAD_REQUEST
-        assert rsp.data["code"] == "USER_FEATURE_FLAG_ALREADY_EXISTS"
-
-    def test_destroy_feature_flags(self, plat_mgt_api_client):
-        """测试删除用户特性"""
-        user = f"test_user_{generate_random_string(6)}"
-        feature = FeatureFlag.ALLOW_ADVANCED_CREATION_OPTIONS.value
-
-        # 创建用户特性
-        user_id = user_id_encoder.encode(settings.USER_TYPE, user)
-        AccountFeatureFlag.objects.create(
-            user=user_id,
-            name=feature,
-            effect=True,
-        )
-
-        # 验证已在数据库写入
-        exist_feature_flag = AccountFeatureFlag.objects.filter(user=user_id, name=feature, effect=True).first()
-        assert exist_feature_flag
-
-        # 删除特性
-        delete_url = reverse(
-            "plat_mgt.users.account_feature_flags.delete",
-            kwargs={"id": exist_feature_flag.id},
-        )
-        delete_rsp = plat_mgt_api_client.delete(delete_url)
-        assert delete_rsp.status_code == status.HTTP_204_NO_CONTENT
-
-        # 验证已被删除
-        assert not AccountFeatureFlag.objects.filter(user=user_id, name=feature).exists()
+    @pytest.fixture
+    def user(self):
+        """A random user for testing flags."""
+        user = create_user(f"test_user_{generate_random_string(6)}")
+        # Create the user profile because the feature upsert needs to read the tenant_id field from it.
+        UserProfile.objects.get_profile(user)
+        return user
 
     def test_list_features(self, plat_mgt_api_client):
-        """测试获取用户特性种类列表"""
-        list_url = reverse("plat_mgt.users.account_features.feature_list")
-        rsp = plat_mgt_api_client.get(list_url)
-        assert rsp.status_code == status.HTTP_200_OK
-        assert isinstance(rsp.data, list)
+        resp = plat_mgt_api_client.get(reverse("plat_mgt.users.account_features.feature_list"))
+        assert resp.status_code == status.HTTP_200_OK
+        for item in resp.data:
+            assert all(key in item for key in ["value", "label", "default_flag"])
 
-        # 验证返回的数据格式
-        for item in rsp.data:
-            assert "value" in item
-            assert "label" in item
-            assert "default_flag" in item
+    def test_del_user_flag(self, user, plat_mgt_api_client):
+        feature = FeatureFlag.ALLOW_ADVANCED_CREATION_OPTIONS.value
+
+        # Check initial value
+        old_value = self._get_flag(plat_mgt_api_client, user, feature)
+        assert old_value is None
+
+        # Set the value and check
+        self._set_flag(plat_mgt_api_client, user, feature, True)
+        after_set_value = self._get_flag(plat_mgt_api_client, user, feature)
+        assert after_set_value is not None
+        assert after_set_value["is_effect"] is True
+
+        # Delete the flag and check
+        self._del_flag(plat_mgt_api_client, after_set_value["id"])
+        after_del_value = self._get_flag(plat_mgt_api_client, user, feature)
+        assert after_del_value is None
+
+    def test_add_duplicated_user_flag(self, plat_mgt_api_client, user):
+        feature = FeatureFlag.ALLOW_ADVANCED_CREATION_OPTIONS.value
+
+        # Try to set the same flag twice
+        self._set_flag(plat_mgt_api_client, user, feature, True)
+        resp = self._set_flag(plat_mgt_api_client, user, feature, True)
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "USER_FEATURE_FLAG_ALREADY_EXISTS"
+
+    # Utils functions for managing flags by API
+
+    def _get_flag(self, plat_mgt_api_client, user, feature) -> dict | None:
+        """Get a feature flag by user and feature name."""
+        resp = plat_mgt_api_client.get(reverse("plat_mgt.users.account_feature_flags.bulk"))
+        for item in resp.data:
+            if item["user"] == user.username and item["feature"] == feature:
+                return item
+        return None
+
+    def _set_flag(self, plat_mgt_api_client, user, feature, is_effect):
+        """Set a feature flag."""
+        url = reverse("plat_mgt.users.account_feature_flags.bulk")
+        data = {"user": user.username, "feature": feature, "is_effect": "true" if is_effect else "false"}
+        return plat_mgt_api_client.post(url, data, format="json")
+
+    def _del_flag(self, plat_mgt_api_client, flag_id) -> None:
+        """Delete a feature flag."""
+        delete_url = reverse("plat_mgt.users.account_feature_flags.delete", kwargs={"id": flag_id})
+        return plat_mgt_api_client.delete(delete_url)
 
 
 class TestSystemAPIClientViewSet:

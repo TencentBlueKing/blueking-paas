@@ -89,6 +89,7 @@ class TestApplicationPreReleaseExecutor:
             application=bk_module_full.application,
             operation_type=OperationTypes.ONLINE.value,
             object_uid=deployment.pk,
+            tenant_id=bk_module_full.tenant_id,
         )
 
         deployment.build_int_requested_at = datetime.datetime.now()

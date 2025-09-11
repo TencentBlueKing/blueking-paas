@@ -14,9 +14,9 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
 from operator import attrgetter
 from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import arrow
 import pytest
@@ -30,6 +30,9 @@ from paas_wl.infras.cluster.models import Cluster
 from paasng.accessories.servicehub.constants import Category
 from paasng.accessories.servicehub.manager import ServiceObjNotFound
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
+
+# 添加以下导入
+from paasng.bk_plugins.bk_plugins.models import BkPluginDistributor
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.plat_admin.system.applications import (
     query_default_apps_by_ids,
@@ -361,3 +364,64 @@ class TestClusterNamespaceInfoViewSet:
         assert len(response.data) == 2
         assert response.data[0]["namespace"]
         assert response.data[0]["bcs_cluster_id"] is not None
+
+
+@pytest.fixture()
+def fake_good_client():
+    """Make a fake client which produce successful result"""
+    fake_client = MagicMock()
+    fake_client.sync_api.return_value = {
+        "data": {"id": 1, "name": "foo"},
+        "code": 0,
+        "result": True,
+        "message": "OK",
+    }
+    empty_payload = {"data": None, "code": 0, "result": True, "message": ""}
+    fake_client.grant_permissions.return_value = empty_payload
+    fake_client.revoke_permissions.return_value = empty_payload
+    fake_client.update_gateway_status.return_value = empty_payload
+    return fake_client
+
+
+class TestSysBkPluginAIGrantedDistributors:
+    """Test cases for sys.api.bk_plugins.ai.granted_distributors"""
+
+    @pytest.fixture
+    def ai_plugin_app(self, bk_plugin_app):
+        bk_plugin_app.is_ai_agent_app = True
+        bk_plugin_app.bk_plugin_profile.api_gw_id = 111
+        bk_plugin_app.bk_plugin_profile.save()
+        bk_plugin_app.save()
+        return bk_plugin_app
+
+    @pytest.fixture
+    def distributor(self):
+        return BkPluginDistributor.objects.create(
+            name="test_distributor", code_name="test_distributor", bk_app_code="test_distributor"
+        )
+
+    def test_grant_permission(self, ai_plugin_app, distributor, sys_api_client):
+        url = reverse(
+            "sys.api.bk_plugins.ai.granted_distributors",
+            kwargs={"code": ai_plugin_app.code, "distributor_code": distributor.bk_app_code},
+        )
+
+        with (
+            patch("paasng.bk_plugins.bk_plugins.apigw._handle_distributor_operation"),
+        ):
+            response = sys_api_client.post(url)
+        assert response.status_code == 200
+        assert any(item["code_name"] == distributor.code_name for item in response.json())
+
+    def test_revoke_permission(self, ai_plugin_app, distributor, sys_api_client):
+        url = reverse(
+            "sys.api.bk_plugins.ai.granted_distributors",
+            kwargs={"code": ai_plugin_app.code, "distributor_code": distributor.bk_app_code},
+        )
+
+        with (
+            patch("paasng.bk_plugins.bk_plugins.apigw._handle_distributor_operation"),
+        ):
+            response = sys_api_client.delete(url)
+        assert response.status_code == 200
+        assert not any(item["code"] == distributor.code for item in response.json())

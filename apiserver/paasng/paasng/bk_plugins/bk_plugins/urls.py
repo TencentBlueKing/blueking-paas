@@ -41,11 +41,12 @@ urlpatterns = [
         views.SysBkPluginTagsViewSet.as_view({"get": "list"}),
         name="sys.api.bk_plugin_tags",
     ),
-    # 插件应用给插件使用方授权、取消权限
+    # AI 插件应用给插件使用方授权、取消权限
     re_path(
-        r"^sys/api/bk_plugins/(?P<code>[^/]+)/distributors/(?P<distributor_code>[^/]+)/permissions/$",
+        r"^sys/api/bk_plugins/ai/(?P<code>[^/]+)/granted_distributors/(?P<distributor_code>[^/]+)/$",
         views.SysBkPluginDistributorsViewSet.as_view({"post": "grant_permission", "delete": "revoke_permission"}),
-        name="sys.api.bk_plugins.permissions",
+        kwargs={"is_ai_agent_app": True},
+        name="sys.api.bk_plugins.ai.granted_distributors",
     ),
     # Batch endpoints
     re_path(

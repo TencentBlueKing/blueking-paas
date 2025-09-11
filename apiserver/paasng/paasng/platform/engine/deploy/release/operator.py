@@ -77,17 +77,13 @@ class BkAppReleaseMgr(DeployStep):
         # 优先使用本次部署指定的 revision, 如果未指定, 则使用与构建产物关联 revision(由(源码提供的 bkapp.yaml 创建)
         revision = AppModelRevision.objects.get(pk=self.deployment.bkapp_revision_id or build.bkapp_revision_id)
         with self.procedure("部署应用"):
-            try:
-                bkapp_release_id = release_by_k8s_operator(
-                    self.module_environment,
-                    revision,
-                    operator=self.deployment.operator,
-                    build=build,
-                    deployment=self.deployment,
-                )
-            except UnprocessibleEntityError as e:
-                err_msg = json.loads(e.body)["message"]
-                raise DeployShouldAbortError(err_msg) from e
+            bkapp_release_id = release_by_k8s_operator(
+                self.module_environment,
+                revision,
+                operator=self.deployment.operator,
+                build=build,
+                deployment=self.deployment,
+            )
 
         # 这里只是轮询开始，具体状态更新需要放到轮询组件中完成
         self.state_mgr.update(bkapp_release_id=bkapp_release_id)
@@ -177,6 +173,12 @@ def release_by_k8s_operator(
         ensure_bk_log_if_need(env)
         # 同步 ServiceMonitor 配置
         sync_service_monitor(env)
+    except UnprocessibleEntityError as e:
+        app_model_deploy.status = DeployStatus.ERROR
+        app_model_deploy.save(update_fields=["status", "updated"])
+
+        err_msg = json.loads(e.body)["message"]
+        raise DeployShouldAbortError(err_msg) from e
     except Exception:
         app_model_deploy.status = DeployStatus.ERROR
         app_model_deploy.save(update_fields=["status", "updated"])

@@ -293,6 +293,7 @@ ensure-init-data() {
     python manage.py create_authed_app_user --bk_app_code=bk_log_search --role=50
     python manage.py create_authed_app_user --bk_app_code=bk_monitorv3 --role=50
     # role=60:基础管理，可以调用操作类系统 API
+    python manage.py create_authed_app_user --bk_app_code=bk_aidev --role=60
     python manage.py create_authed_app_user --bk_app_code=bk_apigateway --role=60
     python manage.py create_authed_app_user --bk_app_code=bk_paas3 --role=60
     # role=70:轻应用管理，可以调用轻应用相关系统 API

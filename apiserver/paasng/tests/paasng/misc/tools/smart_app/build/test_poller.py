@@ -17,15 +17,15 @@
 import pytest
 from blue_krill.async_utils.poll_task import CallbackResult, CallbackStatus
 
-from paasng.misc.tools.smart_app.build.poller import BuildProcessResultHandler
+from paasng.misc.tools.smart_app.build.poller import SmartBuildProcessResultHandler
 from paasng.platform.engine.constants import JobStatus
 from tests.utils.mocks.poll_task import FakeTaskPoller
 
 pytestmark = pytest.mark.django_db
 
 
-class TestBuildProcessResultHandler:
-    """Tests for BuildProcessResultHandler"""
+class TestSmartBuildProcessResultHandler:
+    """Tests for SmartBuildProcessResultHandler"""
 
     def test_succeeded(self, smart_build):
         params = {"smart_build_id": smart_build.uuid}
@@ -34,7 +34,7 @@ class TestBuildProcessResultHandler:
             data={"smart_build_id": smart_build.uuid, "build_status": JobStatus.SUCCESSFUL.value},
         )
 
-        BuildProcessResultHandler().handle(result, FakeTaskPoller.create(params))
+        SmartBuildProcessResultHandler().handle(result, FakeTaskPoller.create(params))
         smart_build.refresh_from_db()
         assert smart_build.status == JobStatus.SUCCESSFUL.value
 
@@ -51,6 +51,6 @@ class TestBuildProcessResultHandler:
             status=callback_status, data={"smart_build_id": smart_build.uuid, "build_status": status}
         )
 
-        BuildProcessResultHandler().handle(result, FakeTaskPoller.create(params))
+        SmartBuildProcessResultHandler().handle(result, FakeTaskPoller.create(params))
         smart_build.refresh_from_db()
         assert smart_build.status == status

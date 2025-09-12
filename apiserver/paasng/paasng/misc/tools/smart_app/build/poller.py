@@ -36,9 +36,9 @@ from .flow import SmartBuildCoordinator, SmartBuildStateMgr
 logger = logging.getLogger(__name__)
 
 
-class BuildProcessPoller(TaskPoller):
-    """Poller for querying the status of build process
-    Finish when the building process in engine side was completed
+class SmartBuildProcessPoller(TaskPoller):
+    """Poller for querying the status of S-mart build process
+    Finish when the S-mart building process in engine side was completed
     """
 
     max_retries_on_error = 10
@@ -81,11 +81,11 @@ class BuildProcessPoller(TaskPoller):
         return PollingResult(status=status, data=result)
 
 
-class BuildProcessResultHandler(CallbackHandler):
-    """Result handler for a finished build process"""
+class SmartBuildProcessResultHandler(CallbackHandler):
+    """Result handler for a finished S-mart build process"""
 
     def handle(self, result: CallbackResult, poller: TaskPoller):
-        """Callback for finished build process"""
+        """Callback for finished S-mart build process"""
         smart_build_id = poller.params["smart_build_id"]
         state_mgr = SmartBuildStateMgr.from_smart_build_id(
             smart_build_id=smart_build_id,

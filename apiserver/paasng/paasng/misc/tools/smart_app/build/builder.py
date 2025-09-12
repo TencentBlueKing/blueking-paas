@@ -38,7 +38,7 @@ from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 
 from .flow import SmartBuildCoordinator, SmartBuildProcedure, SmartBuildStateMgr
 from .handler import ContainerRuntimeSpec, SmartBuilderTemplate, SmartBuildHandler
-from .poller import BuildProcessPoller, BuildProcessResultHandler
+from .poller import SmartBuildProcessPoller, SmartBuildProcessResultHandler
 
 if TYPE_CHECKING:
     from paasng.misc.tools.smart_app.models import SmartBuildRecord
@@ -102,7 +102,7 @@ class SmartAppBuilder:
         self.state_mgr.update()
 
         params = {"smart_build_id": self.smart_build.uuid}
-        BuildProcessPoller.start(params, BuildProcessResultHandler)
+        SmartBuildProcessPoller.start(params, SmartBuildProcessResultHandler)
 
     def launch_build_process(self):
         """Start a new build process for build smart package"""

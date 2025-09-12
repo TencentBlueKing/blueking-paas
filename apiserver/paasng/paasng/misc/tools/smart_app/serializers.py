@@ -19,6 +19,7 @@ from rest_framework import serializers
 
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.platform.engine.constants import JobStatus
+from paasng.utils.i18n.serializers import TranslatedCharField
 
 
 class ToolPackageStashInputSLZ(serializers.Serializer):
@@ -48,11 +49,8 @@ class SmartBuildOutputSLZ(serializers.Serializer):
 
 
 class SmartBuildFrameStepSLZ(serializers.Serializer):
-    display_name = serializers.SerializerMethodField()
+    display_name = TranslatedCharField()
     name = serializers.CharField()
-
-    def get_display_name(self, obj) -> str:
-        return obj.display_name or obj.name
 
 
 class SmartBuildFramePhaseSLZ(serializers.Serializer):
@@ -61,7 +59,7 @@ class SmartBuildFramePhaseSLZ(serializers.Serializer):
     steps = SmartBuildFrameStepSLZ(source="_sorted_steps", many=True, help_text="步骤列表")
 
     def get_display_name(self, obj) -> str:
-        return SmartBuildPhaseType.get_choice_label(obj.type)
+        return SmartBuildPhaseType.get_choice_label(obj["type"])
 
 
 class SmartBuildStepSLZ(serializers.Serializer):

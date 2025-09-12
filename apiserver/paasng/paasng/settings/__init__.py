@@ -1288,8 +1288,8 @@ SMART_BUILDER_SHIM_IMAGE = settings.get("SMART_BUILDER_SHIM_IMAGE", "")
 # S-Mart Builder 镜像名
 SMART_BUILDER_IMAGE = settings.get("SMART_BUILDER_IMAGE", "")
 
-# S-Mart 包构建进程超时
-SMART_BUILD_PROCESS_TIMEOUT = settings.get("SMART_BUILDER_IMAGE", "")
+# S-Mart 包构建进程超时, 单位为 秒
+SMART_BUILD_PROCESS_TIMEOUT = int(settings.get("SMART_BUILD_PROCESS_TIMEOUT", 60 * 15))
 
 
 # ------------------

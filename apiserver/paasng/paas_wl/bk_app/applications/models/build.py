@@ -277,7 +277,7 @@ class BuildProcessManager(models.Manager):
             source_tar_path=source_tar_path,
             revision=version_info.revision,
             branch=version_info.version_name,
-            output_stream=OutputStream.objects.create(),
+            output_stream=OutputStream.objects.create(tenant_id=wl_app.tenant_id),
             tenant_id=wl_app.tenant_id,
         )
         return build_process

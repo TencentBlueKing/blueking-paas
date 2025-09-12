@@ -123,6 +123,7 @@ class TestVolumeSourceController:
             environment_name=MountEnvName.GLOBAL,
             name="mount-configmap",
             source_type=VolumeSourceType.ConfigMap.value,
+            tenant_id=bk_app.tenant_id,
         )
         source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
         controller = init_volume_source_controller(mount.source_type)
@@ -131,6 +132,7 @@ class TestVolumeSourceController:
             module_id=mount.module.id,
             env_name=mount.environment_name,
             source_name=mount.get_source_name,
+            tenant_id=bk_app.tenant_id,
             data=source_data,
         )
         return mount
@@ -159,6 +161,7 @@ class TestVolumeSourceController:
             name="mount-pvc",
             source_type=VolumeSourceType.PersistentStorage.value,
             source_name="etcd-pvc",
+            tenant_id=bk_app.tenant_id,
         )
         return mount
 

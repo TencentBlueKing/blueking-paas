@@ -18,12 +18,11 @@
 from django.db import models
 
 from paas_wl.bk_app.applications.models import UuidAuditedModel
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 
 class OutputStream(UuidAuditedModel):
-    """
-    [multi-tenancy] TODO
-    """
+    tenant_id = tenant_id_field_factory()
 
     def write(self, line, stream="STDOUT"):
         if not line.endswith("\n"):
@@ -32,8 +31,9 @@ class OutputStream(UuidAuditedModel):
 
 
 class OutputStreamLine(models.Model):
-    """
-    [multi-tenancy] TODO
+    """日志数据量巨大且数据性质纯粹，和租户关联不大，因此设置为“租户无关”。
+
+    [multi-tenancy] This model is not tenant-aware.
     """
 
     output_stream = models.ForeignKey("OutputStream", related_name="lines", on_delete=models.CASCADE)

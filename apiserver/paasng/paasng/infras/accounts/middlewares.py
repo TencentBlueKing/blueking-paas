@@ -18,16 +18,14 @@
 import json
 import logging
 
-from bkpaas_auth.models import DatabaseUser
 from django.conf import settings
 from django.contrib import auth
-from django.http import HttpRequest, JsonResponse
+from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.translation import gettext as _
 
 from paasng.utils.local import local
 
-from .models import User
 from .permissions.constants import SiteAction
 from .permissions.global_site import user_has_site_action_perm
 
@@ -107,19 +105,3 @@ class WrapUsernameAsUserMiddleware:
                         verified=req_app.verified,
                     )
         return self.get_response(request)
-
-
-def set_database_user(request: HttpRequest, user: User, set_non_cookies: bool = True):
-    """Mark current request authenticated with a user stored in database
-
-    :param user: a `models.User` object
-    :param set_non_cookies: whether set a special attribute to mark current request was NOT authenticated
-        via user cookies.
-    """
-    # Translate the user into module "bkpaas_auth"'s User object to maintain consistency.
-    request.user = DatabaseUser.from_db_obj(user=user)
-    if set_non_cookies:
-        # Reference from bkpaas_auth
-        # Set a special attribute on request to mark this user was not authenticated from
-        # cookie, so we may apply other logics afterwards, such as skipping CSRF checks.
-        setattr(request, "_bkpaas_auth_authenticated_from_non_cookies", True)

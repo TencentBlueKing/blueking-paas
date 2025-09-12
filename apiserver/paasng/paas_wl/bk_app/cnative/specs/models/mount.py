@@ -25,16 +25,14 @@ from paas_wl.bk_app.cnative.specs.constants import (
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import VolumeSource
 from paas_wl.utils.models import TimestampedModel
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import make_json_field
 
 SourceConfigField = make_json_field("SourceConfigField", VolumeSource)
 
 
 class ConfigMapSource(TimestampedModel):
-    """ConfigMap 类型的挂载资源
-
-    [multi-tenancy] TODO
-    """
+    """ConfigMap 类型的挂载资源"""
 
     application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
     module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
@@ -45,6 +43,8 @@ class ConfigMapSource(TimestampedModel):
     data = models.JSONField(default=dict)
     display_name = models.CharField(max_length=63, null=True, help_text=_("挂载资源展示名称"))
 
+    tenant_id = tenant_id_field_factory()
+
     def get_display_name(self):
         return self.display_name or f"ConfigMap-{self.created.strftime('%y%m%d%H%M')}"
 
@@ -53,10 +53,7 @@ class ConfigMapSource(TimestampedModel):
 
 
 class PersistentStorageSource(TimestampedModel):
-    """持久存储类型的挂载资源
-
-    [multi-tenancy] TODO
-    """
+    """持久存储类型的挂载资源"""
 
     application_id = models.UUIDField(verbose_name=_("所属应用"), null=False)
     module_id = models.UUIDField(verbose_name=_("所属模块"), null=True)
@@ -68,6 +65,8 @@ class PersistentStorageSource(TimestampedModel):
     storage_class_name = models.CharField(max_length=63)
     display_name = models.CharField(max_length=63, null=True, help_text=_("挂载资源展示名称"))
 
+    tenant_id = tenant_id_field_factory()
+
     def get_display_name(self):
         return self.display_name or f"PersistentStorage-{self.created.strftime('%y%m%d%H%M')}"
 
@@ -76,10 +75,7 @@ class PersistentStorageSource(TimestampedModel):
 
 
 class Mount(TimestampedModel):
-    """挂载配置
-
-    [multi-tenancy] TODO
-    """
+    """挂载配置"""
 
     module_id = models.UUIDField(verbose_name=_("所属模块"), null=False)
     module = ModuleAttrFromID()
@@ -93,6 +89,8 @@ class Mount(TimestampedModel):
     source_config: VolumeSource = SourceConfigField()
     # https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath
     sub_paths = models.JSONField(default=[], help_text="子路径配置")
+
+    tenant_id = tenant_id_field_factory()
 
     @property
     def get_source_name(self):

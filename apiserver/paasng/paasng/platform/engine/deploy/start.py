@@ -99,6 +99,7 @@ def initialize_deployment(
         application=application,
         operation_type=OperationTypes.ONLINE.value,
         object_uid=deployment.pk,
+        tenant_id=application.tenant_id,
     )
     return deployment
 

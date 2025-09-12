@@ -17,11 +17,11 @@
 
 import logging
 from datetime import datetime, timedelta
-from typing import Iterator, List
+from typing import Dict, Iterator, List
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import Count, Max, Min
+from django.db.models import Case, Count, IntegerField, Max, Min, Sum, When
 from django.utils import timezone
 
 from paas_wl.bk_app.applications.models.misc import OutputStream, OutputStreamLine
@@ -124,40 +124,37 @@ class Command(BaseCommand):
 
     def _get_compressible_streams_in_range_time(self, start_time: datetime, end_time: datetime) -> List[OutputStream]:
         """获取指定时间范围内可以被压缩的记录"""
-        expired_streams = list(
-            OutputStream.objects.filter(created__gte=start_time, created__lte=end_time).order_by("created")
-        )
 
-        if not expired_streams:
-            return []
-
-        stream_uuids = [stream.uuid for stream in expired_streams]
-
-        # 查找已经被压缩的过期记录
-        compressed_ids = set(
-            OutputStreamLine.objects.filter(output_stream_id__in=stream_uuids, stream="SYSTEM").values_list(
-                "output_stream_id", flat=True
+        queryset = (
+            OutputStream.objects.filter(created__gte=start_time, created__lte=end_time)
+            .annotate(
+                total_lines=Count("lines"),
+                obsolete_lines=Sum(
+                    Case(
+                        When(lines__stream="SYSTEM", then=1),
+                        default=0,
+                        output_field=IntegerField(),
+                    )
+                ),
             )
+            .filter(total_lines__gt=1, obsolete_lines=0)
+            .order_by("created")
         )
-
-        # 查找有多条日志行的过期记录
-        multi_line_ids = set(
-            OutputStreamLine.objects.filter(output_stream_id__in=stream_uuids)
-            .values("output_stream_id")
-            .annotate(count=Count("id"))
-            .filter(count__gt=1)
-            .values_list("output_stream_id", flat=True)
-        )
-
-        compressible_ids = multi_line_ids - compressed_ids
-
-        return [stream for stream in expired_streams if stream.uuid in compressible_ids]
+        return list(queryset)
 
     def _preview_batch(self, streams: List[OutputStream]) -> int:
         """预览模式: 统计可以被压缩的 OutputStream 记录数"""
         compressed_count = 0
+        stream_ids = [stream.uuid for stream in streams]
+        line_counts: Dict[str, int] = dict(
+            OutputStreamLine.objects.filter(output_stream_id__in=stream_ids)
+            .values("output_stream_id")
+            .annotate(count=Count("id"))
+            .values_list("output_stream_id", "count")
+        )
+
         for stream in streams:
-            line_count = OutputStreamLine.objects.filter(output_stream=stream).count()
+            line_count = line_counts.get(stream.uuid, 0)
             if line_count > 1:
                 self.stdout.write(
                     f"[预览] OutputStream {stream.uuid}: 将保留第一条记录，删除其余 {line_count - 1} 条记录"

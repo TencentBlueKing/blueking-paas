@@ -15,9 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-
+import logging
 from collections import defaultdict
 
+from celery import shared_task
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -42,6 +44,8 @@ from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
 
+logger = logging.getLogger(__name__)
+
 
 class ApplicationMemberViewSet(viewsets.GenericViewSet):
     """平台管理 - 应用成员管理 API"""
@@ -63,7 +67,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications.members"],
         request_body=slzs.ApplicationMembershipCreateInputSLZ(),
-        responses={status.HTTP_201_CREATED: None},
+        responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request, app_code):
         """添加成员"""
@@ -141,6 +145,45 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications.members"],
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def become_temp_admin(self, request, app_code):
+        """成为应用的临时管理员, 两个小时后过期"""
+
+        username = request.user.username
+        application = get_object_or_404(Application, code=app_code)
+
+        # 多租户环境下不允许添加不同租户的成员成为管理员
+        if settings.ENABLE_MULTI_TENANT_MODE and application.tenant_id != request.user.tenant_id:
+            raise error_codes.MEMBERSHIP_CREATE_FAILED.f("不允许添加不同租户的成员")
+
+        # 若已是管理员，直接返回
+        current_role = fetch_user_main_role(application.code, username)
+        if current_role == ApplicationRole.ADMINISTRATOR:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        try:
+            add_role_members(application.code, ApplicationRole.ADMINISTRATOR, username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
+
+        # 启动一个延时任务, 两个小时之后删除该临时管理员权限
+        # TODO: 测试, 先试一下 两分钟
+        remove_temp_admin.apply_async(
+            args=[application.code, username],
+            countdown=2 * 60,
+        )
+
+        application_member_updated.send(sender=application, application=application)
+        sync_developers_to_sentry.delay(application.id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications.members"],
+        responses={status.HTTP_200_OK: "角色列表"},
+    )
     def get_roles(self, request):
         """查看所有角色列表"""
         return Response({"results": ApplicationRole.get_django_choices()})
@@ -150,3 +193,30 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         administrators = fetch_role_members(app_code, ApplicationRole.ADMINISTRATOR)
         if len(administrators) <= 1 and username in administrators:
             raise error_codes.MEMBERSHIP_DELETE_FAILED
+
+
+@shared_task
+def remove_temp_admin(app_code: str, username: str):
+    """移除临时管理员权限"""
+
+    try:
+        application = Application.objects.get(code=app_code)
+    except Application.DoesNotExist:
+        logger.warning(f"Application with code {app_code} does not exist, skip removing temp admin")
+        return
+
+    # 检查用户是否是唯一管理员
+    administrators = fetch_role_members(app_code, ApplicationRole.ADMINISTRATOR)
+    if len(administrators) <= 1 and username in administrators:
+        raise error_codes.MEMBERSHIP_DELETE_FAILED
+
+    try:
+        remove_user_all_roles(app_code, username)
+    except BKIAMGatewayServiceError as e:
+        raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
+
+    # 将该应用 Code 标记为刚退出，避免出现退出用户组，权限中心权限未同步的情况
+    JustLeaveAppManager(username).add(app_code)
+    sync_developers_to_sentry.delay(application.id)
+    application_member_updated.send(sender=application, application=application)
+    logger.info(f"Successfully removed temporary admin permission for user {username} from app {app_code}")

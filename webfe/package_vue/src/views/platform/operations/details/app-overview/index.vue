@@ -116,9 +116,9 @@
               theme="primary"
               :disabled="isBecomeAdminDisabled"
               :loading="adminConfig.appLoading"
-              @click="becomeAppAdmin"
+              @click="becomeAppTempAdmin"
             >
-              {{ $t('成为管理员') }}
+              {{ $t('成为临时管理员') }}
             </bk-button>
           </span>
           <template v-else>
@@ -637,29 +637,22 @@ export default {
     setAdminLoading(key, loading) {
       this.$set(this.adminConfig, key, loading);
     },
-    // 成为应用应用管理员
-    async becomeAppAdmin() {
+    // 成为应用临时管理员
+    async becomeAppTempAdmin() {
       this.setAdminLoading('appLoading', true);
       try {
-        const params = [
-          {
-            roles: [{ id: 2 }],
-            user: { username: this.curUserInfo.username },
-          },
-        ];
-        await this.$store.dispatch('tenantOperations/addMember', {
+        await this.$store.dispatch('tenantOperations/becomeAppTempAdmin', {
           appCode: this.appCode,
-          postParams: params,
         });
         await this.getAppDetails();
         this.$paasMessage({
           theme: 'success',
-          message: this.$t('您已成功成为应用管理员'),
+          message: this.$t('您已成功成为应用临时管理员'),
         });
       } catch (e) {
         this.$paasMessage({
           theme: 'error',
-          message: `${this.$t('添加用户角色失败：')} ${e.detail}`,
+          message: `${this.$t('成为临时管理员失败：')} ${e.detail}`,
         });
       } finally {
         this.setAdminLoading('appLoading', false);

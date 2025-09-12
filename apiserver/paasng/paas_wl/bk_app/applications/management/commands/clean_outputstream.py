@@ -21,7 +21,7 @@ from typing import Dict, Iterator, List
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import Case, Count, IntegerField, Max, Min, Sum, When
+from django.db.models import Count, Exists, Max, Min, OuterRef
 from django.utils import timezone
 
 from paas_wl.bk_app.applications.models.misc import OutputStream, OutputStreamLine
@@ -125,21 +125,25 @@ class Command(BaseCommand):
     def _get_compressible_streams_in_range_time(self, start_time: datetime, end_time: datetime) -> List[OutputStream]:
         """获取指定时间范围内可以被压缩的记录"""
 
+        # 子查询：检查是否已包含压缩提示信息
+        has_obsolete_message = OutputStreamLine.objects.filter(
+            output_stream=OuterRef("pk"), line=self.OBSOLETE_MESSAGE, stream="SYSTEM"
+        )
+
+        # 子查询：检查是否少于等于一条日志记录
+        has_single_line = (
+            OutputStreamLine.objects.filter(output_stream=OuterRef("pk"))
+            .annotate(line_count=Count("id"))
+            .filter(line_count__lte=1)
+        )
+
         queryset = (
             OutputStream.objects.filter(created__gte=start_time, created__lte=end_time)
-            .annotate(
-                total_lines=Count("lines"),
-                obsolete_lines=Sum(
-                    Case(
-                        When(lines__stream="SYSTEM", then=1),
-                        default=0,
-                        output_field=IntegerField(),
-                    )
-                ),
-            )
-            .filter(total_lines__gt=1, obsolete_lines=0)
+            .exclude(Exists(has_obsolete_message))
+            .exclude(Exists(has_single_line))
             .order_by("created")
         )
+
         return list(queryset)
 
     def _preview_batch(self, streams: List[OutputStream]) -> int:

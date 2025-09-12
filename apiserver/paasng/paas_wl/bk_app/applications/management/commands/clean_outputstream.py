@@ -108,7 +108,7 @@ class Command(BaseCommand):
         while current_time < end_time:
             next_time = min(current_time + time_step, end_time)
 
-            # 获取当前时间端的可压缩记录
+            # 获取当前时间段的可压缩记录
             compressible_streams = self._get_compressible_streams_in_range_time(current_time, next_time)
 
             for stream in compressible_streams:
@@ -130,17 +130,11 @@ class Command(BaseCommand):
             output_stream=OuterRef("pk"), line=self.OBSOLETE_MESSAGE, stream="SYSTEM"
         )
 
-        # 子查询：检查是否少于等于一条日志记录
-        has_single_line = (
-            OutputStreamLine.objects.filter(output_stream=OuterRef("pk"))
-            .annotate(line_count=Count("id"))
-            .filter(line_count__lte=1)
-        )
-
         queryset = (
             OutputStream.objects.filter(created__gte=start_time, created__lte=end_time)
+            .annotate(total_lines=Count("lines"))
+            .filter(total_lines__gt=1)
             .exclude(Exists(has_obsolete_message))
-            .exclude(Exists(has_single_line))
             .order_by("created")
         )
 

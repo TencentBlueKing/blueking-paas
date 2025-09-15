@@ -1422,6 +1422,59 @@ spec:
                       - process
                       type: object
                     type: array
+                  resources:
+                    description: Resources overwrite BkApp's process resources
+                    items:
+                      description: ResourcesOverlay defines the resource overlay configuration
+                        for a process in an environment
+                      properties:
+                        envName:
+                          description: EnvName is app environment name
+                          type: string
+                        process:
+                          description: Process is the name of process
+                          type: string
+                        resources:
+                          description: Plan is used to specify process resource quota
+                          properties:
+                            limits:
+                              description: Limits describes the maximum amount of
+                                compute resources allowed
+                              properties:
+                                cpu:
+                                  description: CPU is the CPU resource
+                                  type: string
+                                memory:
+                                  description: Memory is the memory resource
+                                  type: string
+                              required:
+                              - cpu
+                              - memory
+                              type: object
+                            requests:
+                              description: Requests describes the minimum amount of
+                                compute resources required
+                              properties:
+                                cpu:
+                                  description: CPU is the CPU resource
+                                  type: string
+                                memory:
+                                  description: Memory is the memory resource
+                                  type: string
+                              required:
+                              - cpu
+                              - memory
+                              type: object
+                          required:
+                          - limits
+                          - requests
+                          type: object
+                      required:
+                      - envName
+                      - process
+                      - resources
+                      type: object
+                    type: array
                 type: object
               hooks:
                 description: Hook commands of current BkApp resource

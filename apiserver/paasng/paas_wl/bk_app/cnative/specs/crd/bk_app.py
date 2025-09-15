@@ -283,11 +283,54 @@ class AutoscalingOverlay(BaseModel):
     policy: str = Field(..., min_length=1)
 
 
+class ResourceQuantity(BaseModel):
+    """
+    资源数量模型，用于表示CPU和内存的具体数值及单位
+
+    :param cpu: CPU 资源量，单位为 m
+    :param memory: 内存资源量，单位为 Mi
+    """
+
+    cpu: int
+    memory: int
+
+
+class Resources(BaseModel):
+    """
+    Resources model
+
+    :param limits: 资源限制配置，指定容器可以使用的最大资源量
+    :param requests: 资源请求配置，指定容器需要的最小资源量
+    """
+
+    limits: ResourceQuantity
+    requests: ResourceQuantity
+
+    def dict(self, *args, **kwargs) -> dict:
+        """
+        将资源转换为字典格式，单位统一为 m 和 Mi
+        :return: 包含 limits 和 requests 的字典
+        """
+        result = {"limits": {"cpu": f"{self.limits.cpu}m", "memory": f"{self.limits.memory}Mi"}}
+
+        if self.requests is not None:
+            result["requests"] = {"cpu": f"{self.requests.cpu}m", "memory": f"{self.requests.memory}Mi"}
+
+        return result
+
+
+class ResourcesOverlay(BaseModel):
+    envName: str
+    process: str
+    resources: Resources
+
+
 class EnvOverlay(BaseModel):
     """Defines environment specified configs"""
 
     replicas: List[ReplicasOverlay] | None = None
     resQuotas: List[ResQuotaOverlay] | None = None
+    resources: ResourcesOverlay | None = None
     envVariables: List[EnvVarOverlay] | None = None
     autoscaling: List[AutoscalingOverlay] | None = None
     mounts: List[MountOverlay] | None = None
@@ -300,6 +343,7 @@ class EnvOverlay(BaseModel):
             "envVariables",
             "autoscaling",
             "mounts",
+            "resources",
         }, f"{field_name} invalid"
 
         if getattr(self, field_name) is None:

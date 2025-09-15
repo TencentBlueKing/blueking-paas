@@ -257,6 +257,16 @@ class ProcessesManifestConstructor(ManifestConstructor):
                         ),
                     )
 
+                if item.resources:
+                    overlay.append_item(
+                        "resources",
+                        crd.ResourcesOverlay(
+                            envName=item.environment_name,
+                            process=proc_spec.name,
+                            resources=item.resources,
+                        ),
+                    )
+
         model_res.spec.envOverlay = overlay
 
     @staticmethod

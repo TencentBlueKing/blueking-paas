@@ -45,6 +45,7 @@ from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Component, ProcService
+from paasng.platform.bkapp_model.entities.resources import ResourceQuantity, Resources
 from paasng.platform.bkapp_model.manifest import (
     AddonsManifestConstructor,
     BuiltinAnnotsManifestConstructor,
@@ -125,6 +126,9 @@ def process_web_overlay(process_web) -> ProcessSpecEnvOverlay:
         environment_name="stag",
         target_replicas=10,
         plan_name="Starter",
+        resources=Resources(
+            limits=ResourceQuantity(cpu=500, memory=1000),
+        ),
         autoscaling=True,
         scaling_config={
             "min_replicas": 1,
@@ -332,6 +336,16 @@ class TestProcessesManifestConstructor:
                         "process": "web",
                         # The plan name should have been transformed.
                         "plan": "default",
+                    }
+                ],
+                "resources": [
+                    {
+                        "envName": "stag",
+                        "process": "web",
+                        "resources": {
+                            "limits": {"cpu": "500m", "memory": "1000Mi"},
+                            "requests": {"cpu": "200m", "memory": "250Mi"},
+                        },
                     }
                 ],
             },

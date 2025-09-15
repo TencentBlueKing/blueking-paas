@@ -170,10 +170,9 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
             raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
 
         # 启动一个延时任务, 两个小时之后删除该临时管理员权限
-        # TODO: 测试, 先试一下 两分钟
         remove_temp_admin.apply_async(
             args=[application.code, username],
-            countdown=2 * 60,
+            countdown=2 * 60 * 60,
         )
 
         application_member_updated.send(sender=application, application=application)

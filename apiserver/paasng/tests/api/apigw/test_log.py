@@ -382,7 +382,13 @@ class TestSysBkPluginLogsViewset:
         # 验证 dsl 时间范围及排序
         dsl = json.loads(response.data["dsl"])
 
-        time_filter = dsl["query"]["bool"]["filter"]["range"]["@timestamp"]
+        time_filter = None
+        for filter_item in dsl["query"]["bool"]["filter"]:
+            if "range" in filter_item and "@timestamp" in filter_item["range"]:
+                time_filter = filter_item["range"]["@timestamp"]
+                break
+        assert time_filter is not None
+
         if expected_params["time_range"] == "customized":
             # 自定义时间范围
             assert not time_filter["gte"].startswith("now-")

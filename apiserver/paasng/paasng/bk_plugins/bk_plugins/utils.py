@@ -19,7 +19,7 @@ from bkpaas_auth.core.constants import ProviderType
 from bkpaas_auth.core.encoder import user_id_encoder
 from django.conf import settings
 
-from paasng.core.tenant.user import DEFAULT_TENANT_ID
+from paasng.core.tenant.user import get_init_tenant_id
 from paasng.infras.accounts.constants import SiteRole
 from paasng.infras.accounts.models import PrivateTokenHolder, User, UserProfile
 
@@ -37,7 +37,7 @@ def ensure_builtin_user():
     # The tenant_id of this user is set to DEFAULT_TENANT_ID, it doesn't affect the functionality
     # at this moment.
     profile, _ = UserProfile.objects.update_or_create(
-        user=user_id, defaults={"role": SiteRole.USER.value, "tenant_id": DEFAULT_TENANT_ID}
+        user=user_id, defaults={"role": SiteRole.USER.value, "tenant_id": get_init_tenant_id()}
     )
     profile.refresh_from_db(fields=["role"])
 

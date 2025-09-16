@@ -247,12 +247,15 @@ class AccountFeatureFlagViewSet(viewsets.GenericViewSet):
 
         # 更新或创建用户特性
         if feature_flag:
-            # 更新特性
             feature_flag.effect = is_effect
             feature_flag.save(update_fields=["effect"])
         else:
-            # 创建特性
-            AccountFeatureFlag.objects.update_or_create(user=user_id, name=feature, defaults={"effect": is_effect})
+            profile = UserProfile.objects.get_by_natural_key(user_id)
+            AccountFeatureFlag.objects.update_or_create(
+                user=user_id,
+                name=feature,
+                defaults={"effect": is_effect, "tenant_id": profile.tenant_id},
+            )
 
         # 构建更新后的审计数据
         after_data = [{"user": user, "feature": feature, "is_effect": is_effect}]

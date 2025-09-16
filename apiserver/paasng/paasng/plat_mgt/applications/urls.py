@@ -74,9 +74,9 @@ urlpatterns = [
         name="plat_mgt.applications.members",
     ),
     re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/members/become_temp_admin/$",
-        views.ApplicationMemberViewSet.as_view({"post": "become_temp_admin"}),
-        name="plat_mgt.applications.members.become_temp_admin",
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/members/temp_administrator/$",
+        views.ApplicationMemberViewSet.as_view({"post": "temp_administrator"}),
+        name="plat_mgt.applications.members.temp_administrator",
     ),
     re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/members/(?P<user_id>[0-9a-z]+)/$",

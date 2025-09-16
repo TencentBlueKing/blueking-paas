@@ -18,7 +18,6 @@
 import logging
 from collections import defaultdict
 
-from celery import shared_task
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
@@ -37,6 +36,7 @@ from paasng.infras.iam.helpers import (
     remove_user_all_roles,
 )
 from paasng.plat_mgt.applications import serializers as slzs
+from paasng.plat_mgt.applications.tasks import remove_temp_admin
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application, ApplicationMembership, JustLeaveAppManager
 from paasng.platform.applications.signals import application_member_updated
@@ -149,7 +149,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         tags=["plat_mgt.applications.members"],
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def become_temp_admin(self, request, app_code):
+    def temp_administrator(self, request, app_code):
         """成为应用的临时管理员, 两个小时后过期"""
 
         username = request.user.username
@@ -169,14 +169,14 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         except BKIAMGatewayServiceError as e:
             raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
 
+        application_member_updated.send(sender=application, application=application)
+        sync_developers_to_sentry.delay(application.id)
+
         # 启动一个延时任务, 两个小时之后删除该临时管理员权限
         remove_temp_admin.apply_async(
             args=[application.code, username],
             countdown=2 * 60 * 60,
         )
-
-        application_member_updated.send(sender=application, application=application)
-        sync_developers_to_sentry.delay(application.id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
@@ -192,30 +192,3 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         administrators = fetch_role_members(app_code, ApplicationRole.ADMINISTRATOR)
         if len(administrators) <= 1 and username in administrators:
             raise error_codes.MEMBERSHIP_DELETE_FAILED
-
-
-@shared_task
-def remove_temp_admin(app_code: str, username: str):
-    """移除临时管理员权限"""
-
-    try:
-        application = Application.objects.get(code=app_code)
-    except Application.DoesNotExist:
-        logger.warning(f"Application with code {app_code} does not exist, skip removing temp admin")
-        return
-
-    # 检查用户是否是唯一管理员
-    administrators = fetch_role_members(app_code, ApplicationRole.ADMINISTRATOR)
-    if len(administrators) <= 1 and username in administrators:
-        raise error_codes.MEMBERSHIP_DELETE_FAILED
-
-    try:
-        remove_user_all_roles(app_code, username)
-    except BKIAMGatewayServiceError as e:
-        raise error_codes.DELETE_APP_MEMBERS_ERROR.f(e.message)
-
-    # 将该应用 Code 标记为刚退出，避免出现退出用户组，权限中心权限未同步的情况
-    JustLeaveAppManager(username).add(app_code)
-    sync_developers_to_sentry.delay(application.id)
-    application_member_updated.send(sender=application, application=application)
-    logger.info(f"Successfully removed temporary admin permission for user {username} from app {app_code}")

@@ -375,7 +375,6 @@ class TestSysBkPluginLogsViewset:
             response = sys_api_client.get(url)
 
         assert response.status_code == 200
-        assert response.data == 0
         assert response.data["total"] == 0
         assert response.data["logs"] == []
         assert response.data["scroll_id"] == "scroll_id"

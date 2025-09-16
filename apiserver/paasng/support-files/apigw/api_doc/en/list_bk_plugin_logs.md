@@ -16,7 +16,7 @@ Query the logs of a "BlueKing Plugin" type application for internal system use o
 | time_range | string | No | Time range, options: "5m" "1h" "3h" "6h" "12h" "1d" "3d" "7d" "14d" "customized", default "14d" |
 | start_time | string | No | Start time, required when time_range is "customized", format: YYYY-MM-DD HH:MM:SS |
 | end_time | string | No | End time, required when time_range is "customized", format: YYYY-MM-DD HH:MM:SS |
-| time_order | string | No | Time sorting order, options: asc (ascending), desc (descending, default) |
+| time_order | string | No | Time sorting order, options: asc (ascending, default), desc (descending) |
 
 ### Request Example
 ```bash

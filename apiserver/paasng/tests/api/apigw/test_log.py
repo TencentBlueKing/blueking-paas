@@ -339,15 +339,15 @@ class TestSysBkPluginLogsViewset:
         ("time_range", "time_order", "expected_params"),
         [
             # 测试默认时间范围和排序
-            (None, None, {"time_range": "14d", "time_order": "desc"}),
+            (None, None, {"time_range": "14d", "time_order": "asc"}),
             # 测试自定义时间范围
-            ("1h", None, {"time_range": "1h", "time_order": "desc"}),
+            ("1h", None, {"time_range": "1h", "time_order": "asc"}),
             # 测试自定义排序
-            (None, "asc", {"time_range": "14d", "time_order": "asc"}),
+            (None, "desc", {"time_range": "14d", "time_order": "desc"}),
             # 测试自定义时间范围和排序
-            ("3h", "asc", {"time_range": "3h", "time_order": "asc"}),
+            ("3h", "desc", {"time_range": "3h", "time_order": "desc"}),
             # 测试自定义时间范围（customized）
-            ("customized", "desc", {"time_range": "customized", "time_order": "desc"}),
+            ("customized", "asc", {"time_range": "customized", "time_order": "asc"}),
         ],
     )
     def test_list_with_time_params(self, sys_api_client, bk_plugin_app, time_range, time_order, expected_params):
@@ -391,7 +391,7 @@ class TestSysBkPluginLogsViewset:
 
         if expected_params["time_range"] == "customized":
             # 自定义时间范围
-            assert not time_filter["gte"].startswith("now-")
+            assert not isinstance(time_filter["gte"], str) or not time_filter["gte"].startswith("now-")
         else:
             # 相对时间范围
             assert time_filter["gte"] == f"now-{expected_params['time_range']}"

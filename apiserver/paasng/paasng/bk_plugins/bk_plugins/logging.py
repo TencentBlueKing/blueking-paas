@@ -101,7 +101,7 @@ class PluginLoggingClient:
         trace_id: str,
         scroll_id: Optional[str] = None,
         time_range: Optional[SmartTimeRange] = None,
-        time_order: Literal["asc", "desc"] = "desc",
+        time_order: Literal["asc", "desc"] = "asc",
     ) -> Logs[StructureLogLine]:
         """Query logs
 
@@ -160,7 +160,7 @@ class PluginLoggingClient:
         mappings: dict,
         trace_id: str,
         time_range: Optional[SmartTimeRange] = None,
-        time_order: Literal["asc", "desc"] = "desc",
+        time_order: Literal["asc", "desc"] = "asc",
     ) -> SmartSearch:
         """构造日志查询语句
 
@@ -207,7 +207,7 @@ class PluginLoggingClient:
         time_range: SmartTimeRange,
         limit: int = DEFAULT_LOG_BATCH_SIZE,
         offset: int = 0,
-        time_order: Literal["asc", "desc"] = "desc",
+        time_order: Literal["asc", "desc"] = "asc",
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
         plugin_filter = EnvFilter(env=env, search_params=search_params, mappings=mappings)

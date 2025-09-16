@@ -85,7 +85,7 @@ class ListBkPluginLogsSLZ(serializers.Serializer):
         help_text="结束时间 (format %Y-%m-%d %H:%M:%S)", allow_null=True, required=False
     )
     time_order = serializers.ChoiceField(
-        choices=["asc", "desc"], help_text="时间排序方式", required=False, default="desc"
+        choices=["asc", "desc"], help_text="时间排序方式", required=False, default="asc"
     )
 
     def validate(self, attrs):

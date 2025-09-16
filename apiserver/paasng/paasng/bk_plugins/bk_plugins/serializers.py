@@ -18,6 +18,10 @@
 """Serializers for bk_plugins"""
 
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+from paasng.accessories.log.constants import LogTimeChoices
+from paasng.utils.es_log.time_range import SmartTimeRange
 
 from .models import BkPluginDistributor, BkPluginProfile, BkPluginTag
 
@@ -71,6 +75,30 @@ class DeployedStatusesSLZ(serializers.Serializer):
 class ListBkPluginLogsSLZ(serializers.Serializer):
     trace_id = serializers.CharField(help_text="用于过滤日志的 trace_id 字段值", required=True)
     scroll_id = serializers.CharField(help_text="用于翻页的标志 ID", required=False)
+    time_range = serializers.ChoiceField(
+        choices=LogTimeChoices.get_choices(), help_text="时间范围选择", required=False, default="14d"
+    )
+    start_time = serializers.DateTimeField(
+        help_text="开始时间 (format %Y-%m-%d %H:%M:%S)", allow_null=True, required=False
+    )
+    end_time = serializers.DateTimeField(
+        help_text="结束时间 (format %Y-%m-%d %H:%M:%S)", allow_null=True, required=False
+    )
+    time_order = serializers.ChoiceField(
+        choices=["asc", "desc"], help_text="时间排序方式", required=False, default="desc"
+    )
+
+    def validate(self, attrs):
+        try:
+            smart_time_range = SmartTimeRange(
+                time_range=attrs["time_range"],
+                start_time=attrs.get("start_time"),
+                end_time=attrs.get("end_time"),
+            )
+        except ValueError as e:
+            raise ValidationError({"time_range": str(e)})
+        attrs["smart_time_range"] = smart_time_range
+        return attrs
 
 
 class BkPluginProfileSLZ(serializers.ModelSerializer):

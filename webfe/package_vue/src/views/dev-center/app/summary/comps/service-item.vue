@@ -55,18 +55,6 @@ export default {
       color: #3a84ff;
     }
   }
-  &.disabled {
-    &:hover {
-      cursor: not-allowed;
-    }
-    img {
-      filter: grayscale(1);
-      opacity: 0.8;
-    }
-    .desc {
-      color: #979ba5 !important;
-    }
-  }
 }
 .service-img {
   width: 66px;

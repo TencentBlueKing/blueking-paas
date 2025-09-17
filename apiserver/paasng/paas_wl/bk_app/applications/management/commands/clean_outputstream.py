@@ -29,6 +29,11 @@ from paas_wl.bk_app.applications.models.misc import OutputStream, OutputStreamLi
 logger = logging.getLogger(__name__)
 
 
+OBSOLETE_MESSAGE = (
+    "This deployment log is unavailable, it was removed according to the platform's log retention policy."
+)
+
+
 class Command(BaseCommand):
     """清理过期的 OutputStream 记录的详情记录数据
 
@@ -38,9 +43,6 @@ class Command(BaseCommand):
     """
 
     help = "压缩过期的 OutputStream 记录，默认保留最近两年的记录：删除详细记录并插入提示信息"
-    OBSOLETE_MESSAGE = (
-        "This deployment log is unavailable, it was removed according to the platform's log retention policy."
-    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -119,10 +121,7 @@ class Command(BaseCommand):
         compressed_count = 0
 
         for stream_id in stream_ids:
-            ids_sample = list(
-                OutputStreamLine.objects.filter(output_stream_id=stream_id).values_list("id", flat=True)[:2]
-            )
-            if len(ids_sample) <= 1:
+            if not self._is_compressible(stream_id):
                 self.stdout.write(f"[预览] OutputStream {stream_id}: 没有详细记录或详细记录只有 1 条, 无需压缩")
             else:
                 self.stdout.write(f"[预览] OutputStream {stream_id}: 将删除若干条详细记录, 添加 1 条提示信息")
@@ -135,11 +134,7 @@ class Command(BaseCommand):
         compressed_count = 0
         for stream_id in stream_ids:
             try:
-                # 使用小样本判断是否存在可删除的行, 避免不必要的事务和 COUNT 操作
-                sample_ids = list(
-                    OutputStreamLine.objects.filter(output_stream_id=stream_id).values_list("id", flat=True)[:2]
-                )
-                if len(sample_ids) <= 1:
+                if not self._is_compressible(stream_id):
                     logger.debug(f"OutputStream {stream_id} 没有详细记录或详细记录只有 1 条，跳过")
                     continue
 
@@ -149,7 +144,7 @@ class Command(BaseCommand):
 
                     OutputStreamLine.objects.create(
                         output_stream_id=stream_id,
-                        line=self.OBSOLETE_MESSAGE,
+                        line=OBSOLETE_MESSAGE,
                         stream="STDOUT",
                     )
                     logger.info(f"成功压缩 OutputStream {stream_id}，删除了 {deleted_count} 条详细记录")
@@ -158,3 +153,8 @@ class Command(BaseCommand):
                 logger.exception(f"压缩 OutputStream {stream_id} 失败")
 
         return compressed_count
+
+    def _is_compressible(self, stream_id: str) -> bool:
+        """判断指定的 OutputStream 记录是否可以被压缩"""
+        sample_ids = list(OutputStreamLine.objects.filter(output_stream_id=stream_id).values_list("id", flat=True)[:2])
+        return len(sample_ids) > 1

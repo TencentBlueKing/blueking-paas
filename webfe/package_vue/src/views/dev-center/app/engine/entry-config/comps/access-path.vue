@@ -1,7 +1,7 @@
 <template>
   <div class="right-main">
     <paas-content-loader
-      class="app-container middle path-exempt-wrapper"
+      class="path-exempt-wrapper"
       :is-loading="isPathExemptLoading"
       placeholder="exempt-loading"
     >
@@ -9,8 +9,8 @@
         <div class="header-info mt10">
           <bk-alert
             type="info"
-            :title="$t('路径添加到豁免路径配置中后，访问这些路径时不会再校验用户信息，预发布环境、生产环境同时生效')">
-          </bk-alert>
+            :title="$t('路径添加到豁免路径配置中后，访问这些路径时不会再校验用户信息，预发布环境、生产环境同时生效')"
+          ></bk-alert>
         </div>
         <template v-if="!isPathExemptLoading">
           <div class="ps-table-bar">
@@ -18,10 +18,11 @@
               theme="primary"
               @click="showUserModal"
             >
-              <i class="paasng-icon paasng-plus mr5" /> {{ $t('新增路径前缀') }}
+              <i class="paasng-icon paasng-plus mr5" />
+              {{ $t('新增路径前缀') }}
             </bk-button>
             <bk-button
-              style="margin-left: 6px;"
+              style="margin-left: 6px"
               :disabled="isBatchDisabled"
               @click="batchDelete"
             >
@@ -29,7 +30,7 @@
             </bk-button>
             <bk-input
               v-model="keyword"
-              style="width: 240px; float: right;"
+              style="width: 240px; float: right"
               :placeholder="$t('输入关键字，按Enter搜索')"
               :right-icon="'paasng-icon paasng-search'"
               clearable
@@ -82,7 +83,7 @@
               :render-header="renderHeader"
             >
               <template slot-scope="{ row }">
-                <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
+                <span v-bk-tooltips="row.created">{{ smartTime(row.created, 'fromNow') }}</span>
               </template>
             </bk-table-column>
             <bk-table-column
@@ -96,7 +97,7 @@
                   </div>
                   <div
                     slot="content"
-                    style="white-space: normal;"
+                    style="white-space: normal"
                   >
                     {{ props.row.desc ? props.row.desc : '--' }}
                   </div>
@@ -119,7 +120,7 @@
                   <bk-button
                     theme="primary"
                     text
-                    style="margin-left: 4px;"
+                    style="margin-left: 4px"
                     @click="showRemoveModal(props.row)"
                   >
                     {{ $t('删除') }}
@@ -176,10 +177,8 @@
       @cancel="cancelAddPath"
       @after-leave="afterAddClose"
     >
-      <template
-        v-if="addPathDialog.showForm"
-      >
-        <section style="min-height: 140px;">
+      <template v-if="addPathDialog.showForm">
+        <section style="min-height: 140px">
           <bk-form
             ref="addUserForm"
             :label-width="100"
@@ -210,7 +209,7 @@
                 :maxlength="200"
               />
             </bk-form-item>
-            <p style="margin-top: 10px; font-size: 12px; font-weight: 600;">
+            <p style="margin-top: 10px; font-size: 12px; font-weight: 600">
               {{ $t('注意：路径被豁免后会完全失去白名单保护，请确保已对其进行额外的安全加固，否则可能引起严重后果。') }}
             </p>
           </bk-form>
@@ -220,7 +219,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 export default {
   mixins: [appBaseMixin],
   data() {
@@ -244,7 +244,7 @@ export default {
           {
             // validator: value => /(^\/(.+\/)+)$/.test(value),
             // 避免 ReDOS 风险
-            validator: value => value.startsWith('/') && value.endsWith('/') && value.length > 2,
+            validator: (value) => value.startsWith('/') && value.endsWith('/') && value.length > 2,
             message: this.$t('路径前缀格式错误，以反斜杠(/)开始、结束，如：/api/user/'),
             trigger: 'blur',
           },
@@ -304,7 +304,7 @@ export default {
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
     'pagination.current'(value) {
@@ -363,7 +363,7 @@ export default {
               src: '/static/images/sort-icon.png',
             },
           }),
-        ],
+        ]
       );
     },
 
@@ -450,10 +450,13 @@ export default {
 
     handleUpdate(payload) {
       const { path, desc, id } = payload;
-      this.curPathParams = Object.assign({}, {
-        path,
-        desc,
-      });
+      this.curPathParams = Object.assign(
+        {},
+        {
+          path,
+          desc,
+        }
+      );
       this.addPathDialog.title = this.$t('更新豁免路径前缀');
       this.addPathDialog.action = 'update';
       this.addPathDialog.id = id;
@@ -505,7 +508,7 @@ export default {
           },
           () => {
             this.addPathDialog.isLoading = false;
-          },
+          }
         );
       }, 200);
     },
@@ -575,7 +578,7 @@ export default {
         await this.$store.dispatch('user/batchDeleteExempt', {
           appCode: this.appCode,
           restriction_type: 'user',
-          id: this.currentSelectList.map(item => item.id),
+          id: this.currentSelectList.map((item) => item.id),
         });
         this.pagination.current = 1;
         this.pagination.limit = 10;
@@ -672,55 +675,51 @@ export default {
 };
 </script>
 
-  <style lang="scss" scoped>
-      .bk-table {
-          &.set-border {
-              border-right: 1px solid #dfe0e5;
-              border-bottom: 1px solid #dfe0e5;
-          }
-      }
+<style lang="scss" scoped>
+.bk-table {
+  &.set-border {
+    border-right: 1px solid #dfe0e5;
+    border-bottom: 1px solid #dfe0e5;
+  }
+}
 
-      .path-exempt-wrapper {
-          background: #fff;
-          margin: 15px 0px 0px;
-          padding: 10px 24px 20px;
-          min-height: 300px !important;
-          .header-info {
-              label {
-                  display: block;
-                  color: #313238;
-                  font-weight: bold;
-              }
-              p {
-                  margin-top: 5px;
-                  color: #979ba5;
-                  font-size: 12px;
-              }
-          }
-      }
+.path-exempt-wrapper {
+  background: #fff;
+  min-height: 300px !important;
+  .header-info {
+    label {
+      display: block;
+      color: #313238;
+      font-weight: bold;
+    }
+    p {
+      margin-top: 5px;
+      color: #979ba5;
+      font-size: 12px;
+    }
+  }
+}
 
-      .container {
-          width: 100%;
-          padding: 20px 0;
-          color: #666;
-      }
+.container {
+  width: 100%;
+  padding: 20px 0;
+  color: #666;
+}
 
-      .ps-table-bar {
-          padding: 16px 30px;
-          margin: 0 -30px;
+.ps-table-bar {
+  padding: 16px 0;
+}
 
-      }
+.middle {
+  border-bottom: none;
+}
 
-      .middle {
-          border-bottom: none;
-      }
-
-      .reason {
-          max-width: 150px;
-          white-space: nowrap;
-          word-wrap: break-word;
-          word-break: break-all;
-          overflow: hidden;
-          text-overflow: ellipsis;
-      }
-  </style>
+.reason {
+  max-width: 150px;
+  white-space: nowrap;
+  word-wrap: break-word;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>

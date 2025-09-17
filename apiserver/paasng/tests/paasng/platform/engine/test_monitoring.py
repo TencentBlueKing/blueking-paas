@@ -63,7 +63,7 @@ class TestCountFrozenDeployments:
     )
     def test_different_log_lines(self, bk_deployment, log_lines, cnt):
         # Create the output stream with given log lines
-        s = OutputStream.objects.create()
+        s = OutputStream.objects.create(tenant_id=bk_deployment.tenant_id)
         for obj in log_lines:
             db_obj = OutputStreamLine(output_stream_id=s.uuid, **obj)
             db_obj.save()

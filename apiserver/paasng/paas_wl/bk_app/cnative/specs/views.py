@@ -220,6 +220,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 创建 Mount
         try:
             mount_instance = MountManager.new(
+                tenant_id=application.tenant_id,
                 module_id=module.id,
                 app_code=application.code,
                 name=validated_data["name"],
@@ -242,6 +243,7 @@ class VolumeMountViewSet(GenericViewSet, ApplicationCodeInPathMixin):
                 module_id=mount_instance.module.id,
                 env_name=mount_instance.environment_name,
                 source_name=mount_instance.get_source_name,
+                tenant_id=application.tenant_id,
                 data=data,
             )
 
@@ -392,7 +394,12 @@ class MountSourceViewSet(GenericViewSet, ApplicationCodeInPathMixin):
             or settings.DEFAULT_PERSISTENT_STORAGE_SIZE
         )
 
-        params = {"application_id": app.id, "environment_name": environment_name, "storage_size": storage_size}
+        params = {
+            "application_id": app.id,
+            "environment_name": environment_name,
+            "storage_size": storage_size,
+            "tenant_id": app.tenant_id,
+        }
         if display_name := validated_data.get("display_name"):
             params["display_name"] = display_name
 

@@ -33,4 +33,4 @@ def create_initial_config(app: WlApp):
     try:
         app.config_set.latest()
     except Config.DoesNotExist:
-        Config.objects.create(app=app, owner=app.owner, runtime={})
+        Config.objects.create(app=app, owner=app.owner, runtime={}, tenant_id=app.tenant_id)

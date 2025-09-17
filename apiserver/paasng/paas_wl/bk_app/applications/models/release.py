@@ -22,6 +22,7 @@ from jsonfield import JSONField
 
 from paas_wl.bk_app.applications.models import UuidAuditedModel
 from paas_wl.utils.models import validate_procfile
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 if TYPE_CHECKING:
     from paas_wl.bk_app.applications.models import Build, Config, WlApp
@@ -72,6 +73,7 @@ class ReleaseManager(models.Manager):
             build=build,
             owner=owner,
             procfile=procfile,
+            tenant_id=app.tenant_id,
         )
         return release
 
@@ -106,8 +108,6 @@ class Release(UuidAuditedModel):
     Software release deployed by the application platform
 
     Releases contain a class`Build` and a class`Config`.
-
-    [multi-tenancy] TODO
     """
 
     owner = models.CharField(max_length=64)
@@ -119,6 +119,8 @@ class Release(UuidAuditedModel):
 
     config = models.ForeignKey("Config", on_delete=models.CASCADE)
     build = models.ForeignKey("Build", null=True, on_delete=models.CASCADE)
+
+    tenant_id = tenant_id_field_factory()
 
     objects = ReleaseManager()
 

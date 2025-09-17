@@ -27,9 +27,12 @@
       <div class="overview-middle">
         <template>
           <div class="summary-content">
-            <!-- 访问日志，云原生不展示 -->
+            <!-- 云原生应用：访问统计、增强服务 -->
+            <CloudOverviewMain v-if="isCloudNativeApp" />
+
+            <!-- 普通应用，模块图表 -->
             <bk-collapse
-              v-if="!isCloudNativeApp"
+              v-else
               v-model="activeName"
               :accordion="true"
               class="paas-module-warp"
@@ -169,8 +172,7 @@
               v-if="isResourceMetrics"
               v-model="activeResource"
               :accordion="true"
-              class="paas-module-warp mt20"
-              :class="{ 'resource-usage': isCloudNativeApp }"
+              class="paas-module-warp mt-16"
             >
               <div class="search-chart-wrap">
                 <!-- 进程列表 -->
@@ -224,7 +226,7 @@
               </div>
               <bk-collapse-item
                 :hide-arrow="true"
-                class="paas-module-item"
+                class="paas-module-item card-style"
                 name="1"
               >
                 <div class="header-warp justify-between">
@@ -238,15 +240,13 @@
                 </div>
                 <div
                   slot="content"
-                  class="middle pl10 pr10"
-                  :class="{ pb20: isCloudNativeApp }"
+                  class="pl10 pr10"
                 >
                   <div data-test-id="summary_box_cpuCharts">
                     <!-- 使用v-show是因为需要及时获取ref并调用 -->
                     <div
                       v-show="isProcessDataReady || isChartLoading"
                       class="resource-charts active"
-                      :class="{ 'cloud-resource-charts': isCloudNativeApp }"
                     >
                       <div class="chart-box summary-chart-box">
                         <div class="type-title">
@@ -301,8 +301,7 @@
           </div>
 
           <div
-            class="overview-sub-fright"
-            :class="{ mt20: isCloudNativeApp }"
+            class="overview-sub-fright card-style"
             data-test-id="summary_content_detail"
           >
             <dynamic-state :operations-list="operationsList" />
@@ -326,6 +325,7 @@ import i18n from '@/language/i18n.js';
 import appTopBar from '@/components/paas-app-bar';
 import { formatDate } from '@/common/tools';
 import dynamicState from './comps/dynamic-state';
+import CloudOverviewMain from './cloud-overview-main.vue';
 import { cloneDeep } from 'lodash';
 import { mapState } from 'vuex';
 
@@ -341,12 +341,18 @@ export default {
     chart: ECharts,
     appTopBar,
     dynamicState,
+    CloudOverviewMain,
   },
   mixins: [appBaseMixin],
   props: {
     appInfo: {
       type: Object,
     },
+  },
+  provide() {
+    return {
+      overviewDateRange: this.dateRange,
+    };
   },
   data() {
     return {
@@ -631,50 +637,26 @@ export default {
      * 显示图表加载进度
      */
     showProcessLoading() {
-      const chart = this.$refs.cpuLine;
-      const memChart = this.$refs.memLine;
+      const charts = [this.$refs.cpuLine, this.$refs.memLine];
+      charts.forEach((chart) => {
+        if (!chart) return;
 
-      chart &&
         chart.mergeOptions({
-          xAxis: [
-            {
-              data: [],
-            },
-          ],
+          xAxis: [{ data: [] }],
           series: [],
         });
-      memChart &&
-        memChart.mergeOptions({
-          xAxis: [
-            {
-              data: [],
-            },
-          ],
-          series: [],
-        });
-      if (chart) {
+
+        // 显示加载状态
         chart.showLoading({
           text: this.$t('正在加载'),
           color: '#30d878',
           textColor: '#fff',
           maskColor: '#FCFCFD',
         });
-        // 防止初始渲染图表宽度问题
         setTimeout(() => {
-          chart && chart.resize();
+          chart.resize();
         }, 50);
-      }
-      if (memChart) {
-        memChart.showLoading({
-          text: this.$t('正在加载'),
-          color: '#30d878',
-          textColor: '#fff',
-          maskColor: '#FCFCFD',
-        });
-        setTimeout(() => {
-          memChart && memChart.resize();
-        }, 50);
-      }
+      });
     },
 
     /**
@@ -1205,10 +1187,9 @@ export default {
 
     handleDateChange(date, id) {
       this.changIndex++;
-      this.dateRange = {
-        startTime: date[0],
-        endTime: date[1],
-      };
+      const [startTime, endTime] = date;
+      this.$set(this.dateRange, 'startTime', startTime);
+      this.$set(this.dateRange, 'endTime', endTime);
       this.curTime = this.dateShortCut.find((t) => t.id === id) || {};
       this.resourceUsageRange = timeMap[this.curTime.id];
     },
@@ -1359,7 +1340,6 @@ export default {
 .paas-module-warp {
   .paas-module-item {
     margin-top: 16px;
-    border: solid 1px #e6e9ea;
     background: #fff;
     .icon-angle-right {
       display: none;
@@ -1370,11 +1350,6 @@ export default {
   }
   .search-chart-wrap .bk-select .bk-select-name {
     padding: 0 18px 0 3px;
-  }
-  &.resource-usage {
-    .paas-module-item {
-      height: 741px;
-    }
   }
 }
 </style>

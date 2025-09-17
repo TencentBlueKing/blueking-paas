@@ -119,7 +119,12 @@ class Command(BaseCommand):
         compressed_count = 0
 
         for stream_id in stream_ids:
-            if not self._is_compressible(stream_id):
+            sample = list(
+                OutputStreamLine.objects.filter(output_stream_id=stream_id)
+                .order_by("-created")
+                .values_list("id", flat=True)[:2]
+            )
+            if len(sample) <= 1:
                 self.stdout.write(f"[预览] OutputStream {stream_id}: 没有详细记录或详细记录只有 1 条, 无需压缩")
             else:
                 self.stdout.write(f"[预览] OutputStream {stream_id}: 将删除若干条详细记录, 添加 1 条提示信息")
@@ -132,17 +137,30 @@ class Command(BaseCommand):
         compressed_count = 0
         for stream_id in stream_ids:
             try:
-                if not self._is_compressible(stream_id):
+                sample = list(
+                    OutputStreamLine.objects.filter(output_stream_id=stream_id)
+                    .order_by("-created")
+                    .values_list("id", "created")[:2]
+                )
+                if len(sample) <= 1:
                     logger.debug(f"OutputStream {stream_id} 没有详细记录或详细记录只有 1 条，跳过")
                     continue
 
+                recycle_time = timezone.now()
+                # 最后一条记录的时间
+                last_line_created = sample[0][1]
                 # 单个 OutputStream 单独事务
                 with transaction.atomic():
                     deleted_count, _ = OutputStreamLine.objects.filter(output_stream_id=stream_id).delete()
 
+                    info_message = (
+                        f"{OBSOLETE_MESSAGE} 原日志结束时间: {last_line_created} / "
+                        f"回收日期: {recycle_time} / 原始日志条数: {deleted_count}"
+                    )
+
                     OutputStreamLine.objects.create(
                         output_stream_id=stream_id,
-                        line=OBSOLETE_MESSAGE,
+                        line=info_message,
                         stream="STDOUT",
                     )
                     logger.info(f"成功压缩 OutputStream {stream_id}，删除了 {deleted_count} 条详细记录")
@@ -151,8 +169,3 @@ class Command(BaseCommand):
                 logger.exception(f"压缩 OutputStream {stream_id} 失败")
 
         return compressed_count
-
-    def _is_compressible(self, stream_id: str) -> bool:
-        """判断指定的 OutputStream 记录是否可以被压缩"""
-        sample_ids = list(OutputStreamLine.objects.filter(output_stream_id=stream_id).values_list("id", flat=True)[:2])
-        return len(sample_ids) > 1

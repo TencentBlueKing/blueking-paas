@@ -136,7 +136,7 @@ class Command(BaseCommand):
                 queryset = OutputStreamLine.objects.filter(output_stream_id=stream_id).order_by("-created")
                 count = queryset.count()
                 if count <= 1:
-                    logger.debug(f"OutputStream {stream_id} 没有详细记录或详细记录只有 1 条，跳过")
+                    logger.debug(f"OutputStream {stream_id} 详细记录只有 {count} 条，跳过, 无需压缩")
                     continue
 
                 recycle_time = timezone.now()

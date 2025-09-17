@@ -116,9 +116,13 @@
               theme="primary"
               :disabled="isBecomeAdminDisabled"
               :loading="adminConfig.appLoading"
+              v-bk-tooltips="{
+                content: $t('成为应用的临时管理员，2小时后自动过期'),
+                disabled: isBecomeAdminDisabled,
+              }"
               @click="becomeAppTempAdmin"
             >
-              {{ $t('成为临时管理员') }}
+              {{ $t('成为管理员') }}
             </bk-button>
           </span>
           <template v-else>

@@ -93,7 +93,7 @@ export default {
      * 应用详情-成为应用的临时管理员
      */
     becomeAppTempAdmin({}, { appCode }) {
-      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/temp_administrator/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/temp_admin/`;
       return http.post(url);
     },
     /**

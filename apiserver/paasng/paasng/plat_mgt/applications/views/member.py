@@ -15,11 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
 from collections import defaultdict
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -43,8 +43,6 @@ from paasng.platform.applications.signals import application_member_updated
 from paasng.platform.applications.tasks import sync_developers_to_sentry
 from paasng.utils.basic import get_username_by_bkpaas_user_id
 from paasng.utils.error_codes import error_codes
-
-logger = logging.getLogger(__name__)
 
 
 class ApplicationMemberViewSet(viewsets.GenericViewSet):
@@ -149,15 +147,20 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         tags=["plat_mgt.applications.members"],
         responses={status.HTTP_204_NO_CONTENT: ""},
     )
-    def temp_administrator(self, request, app_code):
-        """成为应用的临时管理员, 两个小时后过期"""
+    def become_temp_admin(self, request, app_code):
+        """成为应用的临时管理员, 两个小时后过期
+
+        使用场景：
+            当平台管理员给应用排查问题时, 需要成为应用的管理员权限,
+            但又不希望永久成为该应用的管理员
+        """
 
         username = request.user.username
         application = get_object_or_404(Application, code=app_code)
 
         # 多租户环境下不允许添加不同租户的成员成为管理员
         if settings.ENABLE_MULTI_TENANT_MODE and application.tenant_id != request.user.tenant_id:
-            raise error_codes.MEMBERSHIP_CREATE_FAILED.f("不允许添加不同租户的成员")
+            raise error_codes.MEMBERSHIP_CREATE_FAILED.f(_("不允许添加不同租户的成员"))
 
         # 若已是管理员，直接返回
         current_role = fetch_user_main_role(application.code, username)

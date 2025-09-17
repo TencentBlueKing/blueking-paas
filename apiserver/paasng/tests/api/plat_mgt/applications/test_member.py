@@ -76,8 +76,8 @@ class TestApplicationMemberViewSet:
         assert ApplicationUserGroup.objects.filter(app_code=bk_app.code, role=2).exists()
         assert self._assert_user_in_role(bk_app, 2, "test_user")
 
-    def test_temp_administrator(self, plat_mgt_api_client, bk_app):
-        url = reverse("plat_mgt.applications.members.temp_administrator", kwargs={"app_code": bk_app.code})
+    def test_become_temp_admin(self, plat_mgt_api_client, bk_app):
+        url = reverse("plat_mgt.applications.members.temp_admin", kwargs={"app_code": bk_app.code})
         username = plat_mgt_api_client.handler._force_user.username
         with mock.patch("paasng.plat_mgt.applications.views.member.remove_temp_admin.apply_async") as mock_apply_async:
             rsp = plat_mgt_api_client.post(url)

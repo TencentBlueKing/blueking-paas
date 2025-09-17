@@ -38,7 +38,7 @@ class Command(BaseCommand):
     2. 插入一条提示信息："The deployment log content is obsolete and cannot be viewed !"
     """
 
-    help = "压缩过期的 OutputStream 记录，默认保留最近两年的记录：保留第一条日志，删除其余并插入提示信息"
+    help = "压缩过期的 OutputStream 记录，默认保留最近两年的记录：删除详细记录并插入提示信息"
     OBSOLETE_MESSAGE = "The deployment log content is obsolete and cannot be viewed !"
 
     def add_arguments(self, parser):

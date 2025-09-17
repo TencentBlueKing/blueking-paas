@@ -122,10 +122,10 @@ class Command(BaseCommand):
             ids_sample = list(
                 OutputStreamLine.objects.filter(output_stream_id=stream_id).values_list("id", flat=True)[:2]
             )
-            if not ids_sample:
-                self.stdout.write(f"[预览] OutputStream {stream_id}: 没有详细记录, 无需压缩")
+            if len(ids_sample) <= 1:
+                self.stdout.write(f"[预览] OutputStream {stream_id}: 没有详细记录或详细记录只有 1 条, 无需压缩")
             else:
-                self.stdout.write(f"[预览] OutputStream {stream_id}: 将删除若干条记录, 添加 1 条提示信息")
+                self.stdout.write(f"[预览] OutputStream {stream_id}: 将删除若干条详细记录, 添加 1 条提示信息")
                 compressed_count += 1
 
         return compressed_count
@@ -139,8 +139,8 @@ class Command(BaseCommand):
                 sample_ids = list(
                     OutputStreamLine.objects.filter(output_stream_id=stream_id).values_list("id", flat=True)[:2]
                 )
-                if not sample_ids:
-                    logger.debug(f"OutputStream {stream_id} 没有详细记录，跳过")
+                if len(sample_ids) <= 1:
+                    logger.debug(f"OutputStream {stream_id} 没有详细记录或详细记录只有 1 条，跳过")
                     continue
 
                 # 单个 OutputStream 单独事务

@@ -265,6 +265,7 @@ class Oauth2BackendsViewSet(viewsets.ViewSet):
 
         token_params = self.pick_useful_params(token_info)
         scope = token_params.pop("scope", None)
+        token_params["tenant_id"] = user_profile.tenant_id
         try:
             Oauth2TokenHolder.objects.update_or_create(
                 provider=backend_name, user=user_profile, scope=scope, defaults=token_params

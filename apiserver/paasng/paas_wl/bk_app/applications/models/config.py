@@ -26,6 +26,7 @@ from jsonfield import JSONField
 from paas_wl.bk_app.applications.models import UuidAuditedModel
 from paas_wl.utils.models import make_json_field
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy, RuntimeType
+from paasng.core.tenant.fields import tenant_id_field_factory
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +54,7 @@ RuntimeConfigField = make_json_field("RuntimeConfigField", py_model=RuntimeConfi
 
 
 class Config(UuidAuditedModel):
-    """App configs, includes env variables and resource limits
-
-    [multi-tenancy] TODO
-    """
+    """App configs, includes env variables and resource limits"""
 
     owner = models.CharField(max_length=64)
     app = models.ForeignKey("App", on_delete=models.CASCADE)
@@ -71,6 +69,8 @@ class Config(UuidAuditedModel):
     metadata = JSONField(null=True, blank=True)
     runtime: RuntimeConfig = RuntimeConfigField(default=RuntimeConfig)
     mount_log_to_host = models.BooleanField(default=True, help_text="Whether mount app logs to host")
+
+    tenant_id = tenant_id_field_factory()
 
     class Meta:
         get_latest_by = "created"

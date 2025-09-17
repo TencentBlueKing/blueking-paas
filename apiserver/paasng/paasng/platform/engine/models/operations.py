@@ -19,6 +19,7 @@ import uuid
 
 from django.db import models
 
+from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import JobStatus, OperationTypes
 from paasng.utils.models import BkUserField, TimestampedModel
 
@@ -37,10 +38,6 @@ class OperationQuerySet(models.QuerySet):
 
 
 class ModuleEnvironmentOperations(TimestampedModel):
-    """
-    [multi-tenancy] TODO
-    """
-
     id = models.UUIDField("UUID", default=uuid.uuid4, primary_key=True, editable=False, auto_created=True, unique=True)
     application = models.ForeignKey(
         "applications.Application", on_delete=models.CASCADE, related_name="module_operations"
@@ -54,6 +51,8 @@ class ModuleEnvironmentOperations(TimestampedModel):
     status = models.CharField(
         "操作状态", choices=JobStatus.get_choices(), max_length=16, default=JobStatus.PENDING.value
     )
+
+    tenant_id = tenant_id_field_factory()
 
     objects = OperationQuerySet().as_manager()
 

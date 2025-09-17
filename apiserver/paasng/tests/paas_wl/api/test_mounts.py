@@ -39,6 +39,7 @@ def mount_configmap(bk_app, bk_module, bk_stag_env, bk_stag_wl_app):
         environment_name=MountEnvName.STAG,
         name="mount-configmap",
         source_type=VolumeSourceType.ConfigMap.value,
+        tenant_id=bk_app.tenant_id,
     )
     source_data = {"configmap_x": "configmap_x_data", "configmap_y": "configmap_y_data"}
     controller = init_volume_source_controller(mount.source_type)
@@ -48,6 +49,7 @@ def mount_configmap(bk_app, bk_module, bk_stag_env, bk_stag_wl_app):
         module_id=mount.module.id,
         env_name=mount.environment_name,
         source_name=mount.get_source_name,
+        tenant_id=bk_app.tenant_id,
         data=source_data,
     )
     return mount
@@ -90,6 +92,7 @@ def mount_pvc(bk_app, bk_module, pvc_source):
         name="mount-pvc",
         source_type=VolumeSourceType.PersistentStorage.value,
         source_name=pvc_source.name,
+        tenant_id=bk_app.tenant_id,
     )
     return mount
 
@@ -107,6 +110,7 @@ def mounts(bk_app, bk_module):
             environment_name=MountEnvName.GLOBAL,
             name=f"mount-configmap-{i}",
             source_type=VolumeSourceType.ConfigMap.value,
+            tenant_id=bk_app.tenant_id,
         )
         source_data = {"configmap_x": f"configmap_x_data_{i}", "configmap_y": f"configmap_y_data_{i}"}
         controller = init_volume_source_controller(mount.source_type)
@@ -115,6 +119,7 @@ def mounts(bk_app, bk_module):
             module_id=mount.module.id,
             env_name=mount.environment_name,
             source_name=mount.get_source_name,
+            tenant_id=bk_app.tenant_id,
             data=source_data,
         )
         mount_list.append(mount)
@@ -446,6 +451,7 @@ class TestMountSourceViewSet:
             name="mount-pvc",
             source_type=VolumeSourceType.PersistentStorage.value,
             source_name="pvc",
+            tenant_id=bk_app.tenant_id,
         )
         response = api_client.delete(url)
         assert response.status_code == 400

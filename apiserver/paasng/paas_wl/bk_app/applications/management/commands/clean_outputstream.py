@@ -42,8 +42,6 @@ class Command(BaseCommand):
     2. 插入一条提示信息, 告知日志已被平台按照保留策略删除
     """
 
-    help = "压缩过期的 OutputStream 记录，默认保留最近两年的记录：删除详细记录并插入提示信息"
-
     def add_arguments(self, parser):
         parser.add_argument(
             "--before_months",
@@ -116,7 +114,7 @@ class Command(BaseCommand):
             yield current_ids
 
     def _preview_uuid_batch(self, stream_ids: List[str]) -> int:
-        """预览模式: 统计可以被压缩的 OutputStream 记录数"""
+        """预览模式"""
 
         compressed_count = 0
 

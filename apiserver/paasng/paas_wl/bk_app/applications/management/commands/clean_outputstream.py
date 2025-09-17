@@ -17,12 +17,11 @@
 
 import logging
 from datetime import datetime
-from typing import Dict, Iterator, List
+from typing import Iterator, List
 
 from dateutil.relativedelta import relativedelta
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import Count
 from django.utils import timezone
 
 from paas_wl.bk_app.applications.models.misc import OutputStream, OutputStreamLine
@@ -35,11 +34,13 @@ class Command(BaseCommand):
 
     对于 2 年前的部署日志数据进行"压缩"处理：
     1. 删除所有日志记录
-    2. 插入一条提示信息："The deployment log content is obsolete and cannot be viewed !"
+    2. 插入一条提示信息, 告知日志已被平台按照保留策略删除
     """
 
     help = "压缩过期的 OutputStream 记录，默认保留最近两年的记录：删除详细记录并插入提示信息"
-    OBSOLETE_MESSAGE = "The deployment log content is obsolete and cannot be viewed !"
+    OBSOLETE_MESSAGE = (
+        "This deployment log is unavailable, it was removed according to the platform's log retention policy."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -75,27 +76,29 @@ class Command(BaseCommand):
         compressed_count = 0
 
         # 批量处理压缩任务
-        worker = self._preview_batch if dry_run else self._compress_streams_batch
+        worker = self._preview_uuid_batch if dry_run else self._compress_uuid_batch
         for batch_streams in self._get_streams_in_batches(cutoff_date, batch_size):
             compressed_count += worker(batch_streams)
             processed_count += len(batch_streams)
             self.stdout.write(f"已处理 {processed_count} 个 OutputStream 记录")
 
         if dry_run:
-            self.stdout.write(self.style.SUCCESS(f"预览完成！共 {compressed_count} 个 OutputStream 记录可以被压缩"))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"[预览完成] 共处理 {processed_count} 个 OutputStream，可压缩 {compressed_count} 个记录"
+                )
+            )
         else:
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"处理完成！共处理 {processed_count} 个 OutputStream ，实际压缩 {compressed_count} 个记录"
+                    f"[处理完成] 共处理 {processed_count} 个 OutputStream，实际压缩 {compressed_count} 个记录"
                 )
             )
 
-    def _get_streams_in_batches(self, cutoff_date: datetime, batch_size: int) -> Iterator[List[OutputStream]]:
-        """获取需要压缩的 OutputStream 记录，按批次返回"""
+    def _get_streams_in_batches(self, cutoff_date: datetime, batch_size: int) -> Iterator[List[str]]:
+        """获取过期的 OutputStream 记录，按批次返回"""
         uuid_qs = (
             OutputStream.objects.filter(created__lt=cutoff_date)
-            .annotate(lines_count=Count("lines"))
-            .filter(lines_count__gt=1)
             .values_list("uuid", flat=True)
             .iterator(chunk_size=1000)
         )
@@ -104,64 +107,54 @@ class Command(BaseCommand):
         for uuid in uuid_qs:
             current_ids.append(uuid)
             if len(current_ids) >= batch_size:
-                yield list(OutputStream.objects.filter(uuid__in=current_ids))
+                yield current_ids
                 current_ids = []
 
         if current_ids:
-            yield list(OutputStream.objects.filter(uuid__in=current_ids))
+            yield current_ids
 
-    def _preview_batch(self, streams: List[OutputStream]) -> int:
+    def _preview_uuid_batch(self, stream_ids: List[str]) -> int:
         """预览模式: 统计可以被压缩的 OutputStream 记录数"""
-        if not streams:
-            return 0
 
         compressed_count = 0
-        stream_ids = [stream.uuid for stream in streams]
-        line_counts: Dict[str, int] = dict(
-            OutputStreamLine.objects.filter(output_stream_id__in=stream_ids)
-            .values("output_stream_id")
-            .annotate(count=Count("id"))
-            .values_list("output_stream_id", "count")
-        )
 
-        for stream in streams:
-            line_count = line_counts[stream.uuid]
-            if line_count > 1:
-                self.stdout.write(f"[预览] OutputStream {stream.uuid}: 将删除 {line_count} 条记录, 添加 1 条提示信息")
+        for stream_id in stream_ids:
+            ids_sample = list(
+                OutputStreamLine.objects.filter(output_stream_id=stream_id).values_list("id", flat=True)[:2]
+            )
+            if not ids_sample:
+                self.stdout.write(f"[预览] OutputStream {stream_id}: 没有详细记录, 无需压缩")
+            else:
+                self.stdout.write(f"[预览] OutputStream {stream_id}: 将删除若干条记录, 添加 1 条提示信息")
                 compressed_count += 1
+
         return compressed_count
 
-    def _compress_streams_batch(self, streams: List[OutputStream]) -> int:
+    def _compress_uuid_batch(self, stream_ids: List[str]) -> int:
         """批量压缩 OutputStream 记录"""
-        if not streams:
-            return 0
-
-        stream_ids = [stream.uuid for stream in streams]
         compressed_count = 0
-        try:
-            with transaction.atomic():
-                deleted_count, _ = OutputStreamLine.objects.filter(output_stream_id__in=stream_ids).delete()
-                logger.info(f"删除了 {deleted_count} 条 OutputStreamLine 记录")
+        for stream_id in stream_ids:
+            try:
+                # 使用小样本判断是否存在可删除的行, 避免不必要的事务和 COUNT 操作
+                sample_ids = list(
+                    OutputStreamLine.objects.filter(output_stream_id=stream_id).values_list("id", flat=True)[:2]
+                )
+                if not sample_ids:
+                    logger.debug(f"OutputStream {stream_id} 没有详细记录，跳过")
+                    continue
 
-                if deleted_count == 0:
-                    return 0
+                # 单个 OutputStream 单独事务
+                with transaction.atomic():
+                    deleted_count, _ = OutputStreamLine.objects.filter(output_stream_id=stream_id).delete()
 
-                now = timezone.now()
-                objs = [
-                    OutputStreamLine(
-                        output_stream_id=sid,
+                    OutputStreamLine.objects.create(
+                        output_stream_id=stream_id,
                         line=self.OBSOLETE_MESSAGE,
-                        stream="SYSTEM",
-                        created=now,
-                        updated=now,
+                        stream="STDOUT",
                     )
-                    for sid in stream_ids
-                ]
-                OutputStreamLine.objects.bulk_create(objs)
-
-                compressed_count = len(objs)
-                logger.info(f"成功压缩 {compressed_count} 条 OutputStream，删除了 {deleted_count} 条详细记录")
-        except Exception:
-            logger.exception("批量压缩 OutputStream 失败")
+                    logger.info(f"成功压缩 OutputStream {stream_id}，删除了 {deleted_count} 条详细记录")
+                    compressed_count += 1
+            except Exception:
+                logger.exception(f"压缩 OutputStream {stream_id} 失败")
 
         return compressed_count

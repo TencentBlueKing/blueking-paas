@@ -147,8 +147,8 @@ class Command(BaseCommand):
                     deleted_count, _ = OutputStreamLine.objects.filter(output_stream_id=stream_id).delete()
 
                     info_message = (
-                        f"{OBSOLETE_MESSAGE} 原日志结束时间: {last_line_created} / "
-                        f"回收日期: {recycle_time} / 原始日志条数: {deleted_count}"
+                        f"{OBSOLETE_MESSAGE} Original log end time: {last_line_created} / "
+                        f"Recycle date: {recycle_time} / Original log count: {deleted_count}"
                     )
 
                     OutputStreamLine.objects.create(

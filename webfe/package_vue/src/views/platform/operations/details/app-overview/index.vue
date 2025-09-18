@@ -117,7 +117,7 @@
               :disabled="isBecomeAdminDisabled"
               :loading="adminConfig.appLoading"
               v-bk-tooltips="{
-                content: $t('成为应用的临时管理员，2小时后自动过期'),
+                content: $t('成为应用的临时管理员，2 小时后自动过期'),
                 disabled: isBecomeAdminDisabled,
               }"
               @click="becomeAppTempAdmin"

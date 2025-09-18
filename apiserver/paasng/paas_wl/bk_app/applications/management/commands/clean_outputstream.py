@@ -139,16 +139,16 @@ class Command(BaseCommand):
                     logger.debug(f"OutputStream {stream_id} 详细记录只有 {count} 条，跳过, 无需压缩")
                     continue
 
-                recycle_time = timezone.now()
+                recycle_time = timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S")
                 # 最后一条记录的时间
-                last_line_created = queryset.first().created
+                last_line_created = timezone.localtime(queryset.first().created).strftime("%Y-%m-%d %H:%M:%S")
                 # 单个 OutputStream 单独事务
                 with transaction.atomic():
                     deleted_count, _ = OutputStreamLine.objects.filter(output_stream_id=stream_id).delete()
 
                     info_message = (
-                        f"{OBSOLETE_MESSAGE} Original log end time: {last_line_created} / "
-                        f"Recycle date: {recycle_time} / Original log count: {deleted_count}"
+                        f"{OBSOLETE_MESSAGE}\n[Original log info] line count: {deleted_count},"
+                        f" created at: {last_line_created}, removed at: {recycle_time}\n\n"
                     )
 
                     OutputStreamLine.objects.create(

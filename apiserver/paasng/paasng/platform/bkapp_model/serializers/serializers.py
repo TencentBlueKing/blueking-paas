@@ -55,11 +55,26 @@ class ScalingConfigSLZ(serializers.Serializer):
     )
 
 
+class ResourcesQuantity(serializers.Serializer):
+    """资源数量"""
+
+    cpu = serializers.IntegerField(help_text="CPU 资源请求量", required=False, allow_null=True)
+    memory = serializers.IntegerField(help_text="内存资源请求量", required=False, allow_null=True)
+
+
+class ResourcesSLZ(serializers.Serializer):
+    """资源配置"""
+
+    limits = ResourcesQuantity(help_text="资源限制", required=False, allow_null=True)
+    requests = ResourcesQuantity(help_text="资源请求", required=False, allow_null=True, read_only=True)
+
+
 class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     """进程配置-单一环境相关配置"""
 
     plan_name = serializers.CharField(help_text="资源配额方案", required=False)
     target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
+    resources = ResourcesSLZ(help_text="资源配置", required=False, allow_null=True)
     autoscaling = serializers.BooleanField(help_text="是否启用自动扩缩容", required=False, default=False)
     scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False, allow_null=True)
 
@@ -209,6 +224,7 @@ class ModuleProcessSpecSLZ(serializers.Serializer):
     port = serializers.IntegerField(
         help_text="[deprecated] 容器端口", min_value=1, max_value=65535, allow_null=True, required=False
     )
+    resources = ResourcesSLZ(help_text="资源配置", required=False, allow_null=True)
     env_overlay = serializers.DictField(child=ProcessSpecEnvOverlaySLZ(), help_text="环境相关配置", required=False)
     probes = ProbeSetSLZ(help_text="容器探针配置", required=False, allow_null=True)
     monitoring = MonitoringSLZ(help_text="可观测性监控配置", required=False, allow_null=True)

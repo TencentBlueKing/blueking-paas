@@ -22,7 +22,6 @@ from .constants import FieldMgrName
 
 Field: TypeAlias = str
 
-
 # Some predefined fields and factories
 F_SVC_DISCOVERY: Field = "spec.svcDiscovery"
 F_DOMAIN_RESOLUTION: Field = "spec.domainResolution"
@@ -51,6 +50,10 @@ def f_overlay_res_quotas(process: str, env_name: str) -> Field:
 
 def f_overlay_mounts(process: str, env_name: str) -> Field:
     return f"spec.envOverlay.mounts[{process}:{env_name}]"
+
+
+def f_overlay_resources(process: str, env_name: str) -> Field:
+    return f"spec.envOverlay.resources[{process}:{env_name}]"
 
 
 @define

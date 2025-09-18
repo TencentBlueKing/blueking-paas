@@ -269,6 +269,15 @@ class TestProcessesManifestConstructor:
         process_web.save()
         return process_web
 
+    @pytest.fixture()
+    def process_web_with_resources(self, process_web) -> ModuleProcessSpec:
+        """ProcessSpec for web, with resources"""
+        process_web.resources = Resources(
+            limits=ResourceQuantity(cpu=500, memory=1000),
+        )
+        process_web.save()
+        return process_web
+
     @pytest.mark.parametrize(
         ("plan_name", "expected"),
         [
@@ -379,6 +388,14 @@ class TestProcessesManifestConstructor:
                 "version": "v1",
             },
         ]
+
+    def test_integrated_resources(self, bk_module, blank_resource, process_web_with_resources):
+        ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
+        data = blank_resource.spec.dict(exclude_none=True, include={"processes"})["processes"][0]
+        assert data["resources"] == {
+            "limits": {"cpu": "500m", "memory": "1000Mi"},
+            "requests": {"cpu": "200m", "memory": "250Mi"},
+        }
 
 
 class TestMountsManifestConstructor:

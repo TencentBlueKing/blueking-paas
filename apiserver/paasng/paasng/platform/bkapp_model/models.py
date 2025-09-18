@@ -92,6 +92,7 @@ class ModuleProcessSpec(TimestampedModel):
     # Global settings
     target_replicas = models.IntegerField("期望副本数", default=1)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32)
+    resources: Optional[Resources] = ResourcesField("资源配置", default=None, null=True)
     autoscaling = models.BooleanField("是否启用自动扩缩容", default=False)
     scaling_config: Optional[AutoscalingConfig] = AutoscalingConfigField("自动扩缩容配置", null=True)
     probes: Optional[ProbeSet] = ProbeSetField("容器探针配置", default=None, null=True)
@@ -140,6 +141,7 @@ class ModuleProcessSpec(TimestampedModel):
     get_plan_name = env_overlay_getter_factory("plan_name")  # type: Callable[[str], str]
     get_autoscaling = env_overlay_getter_factory("autoscaling")  # type: Callable[[str], bool]
     get_scaling_config = env_overlay_getter_factory("scaling_config")  # type: Callable[[str], Optional[AutoscalingConfig]]
+    get_resources = env_overlay_getter_factory("resources")  # type: Callable[[str], Optional[Resources]]
 
 
 class ProcessSpecEnvOverlayManager(models.Manager):
@@ -154,6 +156,7 @@ class ProcessSpecEnvOverlayManager(models.Manager):
         target_replicas: Optional[int] = None,
         autoscaling: bool = False,
         scaling_config: Optional[Dict] = None,
+        resources: Optional[Resources] = None,
     ):
         """Save an overlay data by module and process name.
 
@@ -173,6 +176,7 @@ class ProcessSpecEnvOverlayManager(models.Manager):
             environment_name=env_name,
             defaults={
                 "plan_name": plan_name,
+                "resources": resources,
                 "target_replicas": target_replicas,
                 "autoscaling": autoscaling,
                 "scaling_config": scaling_config_dict,

@@ -36,9 +36,10 @@ from .hooks import HookCmd, Hooks
 from .mounts import ConfigMapSource, Mount, MountOverlay, PersistentStorage, VolumeSource
 from .observability import Metric, Monitoring, Observability
 from .probes import ExecAction, HTTPGetAction, HTTPHeader, Probe, ProbeHandler, ProbeSet, TCPSocketAction
-from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
+from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResourcesOverlay, ResQuotaOverlay
 from .proc_service import ProcService
 from .processes import Process
+from .resources import ResourceQuantity, Resources
 from .scaling_config import AutoscalingConfig
 from .svc_discovery import SvcDiscConfig, SvcDiscEntryBkSaaS
 
@@ -71,6 +72,7 @@ __all__ = [
     "AutoscalingOverlay",
     "ReplicasOverlay",
     "ResQuotaOverlay",
+    "ResourcesOverlay",
     "MountOverlay",
     # proc-service types
     "ProcService",
@@ -80,4 +82,7 @@ __all__ = [
     "Metric",
     # component types
     "Component",
+    # resources types
+    "ResourceQuantity",
+    "Resources",
 ]

@@ -26,7 +26,9 @@ from paasng.accessories.proc_components.exceptions import ComponentNotFound, Com
 from paasng.accessories.proc_components.manager import validate_component_properties
 from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
+    CPUResourceQuantity,
     ImagePullPolicy,
+    MemoryResourceQuantity,
     NetworkProtocol,
     ResQuotaPlan,
     ScalingPolicy,
@@ -99,6 +101,19 @@ class MountInputSLZ(BaseMountFields):
     """MountInputSLZ validate the items in the `mounts` field."""
 
 
+class ResourceQuantitySLZ(serializers.Serializer):
+    """资源数量"""
+
+    cpu = serializers.ChoiceField(choices=CPUResourceQuantity.get_choices())
+    memory = serializers.ChoiceField(choices=MemoryResourceQuantity.get_choices())
+
+
+class ResourcesInputSLZ(serializers.Serializer):
+    """资源配置"""
+
+    limits = ResourceQuantitySLZ(help_text="资源限制")
+
+
 class MountOverlayInputSLZ(BaseMountFields):
     """MountOverlayInputSLZ validate the items in the `envOverlay.mounts` field."""
 
@@ -121,6 +136,14 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
     plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
 
 
+class ResourcesOverlayInputSLZ(serializers.Serializer):
+    """ResQuotaOverlayInputSLZ validate the items in the `envOverlay.resources` field."""
+
+    envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
+    process = serializers.CharField()
+    resources = ResourcesInputSLZ(help_text="资源配置")
+
+
 class AutoscalingSpecInputSLZ(serializers.Serializer):
     """Base fields for validating AutoscalingSpec."""
 
@@ -141,6 +164,7 @@ class EnvOverlayInputSLZ(serializers.Serializer):
 
     replicas = serializers.ListField(child=ReplicasOverlayInputSLZ(), default=NOTSET)
     resQuotas = serializers.ListField(child=ResQuotaOverlayInputSLZ(), default=NOTSET, source="res_quotas")
+    resources = serializers.ListField(child=ResourcesOverlayInputSLZ(), default=NOTSET, source="resources")
     envVariables = serializers.ListField(child=EnvVarOverlayInputSLZ(), default=NOTSET, source="env_variables")
     autoscaling = serializers.ListField(child=AutoscalingOverlayInputSLZ(), default=NOTSET)
     mounts = serializers.ListField(child=MountOverlayInputSLZ(), default=NOTSET)
@@ -262,6 +286,7 @@ class ProcessInputSLZ(serializers.Serializer):
     resQuotaPlan = serializers.ChoiceField(
         choices=ResQuotaPlan.get_choices(), allow_null=True, default=None, source="res_quota_plan"
     )
+    resources = ResourcesInputSLZ(help_text="资源配置", allow_null=True, default=None)
     targetPort = serializers.IntegerField(
         min_value=1,
         max_value=65535,

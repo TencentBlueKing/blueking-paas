@@ -42,24 +42,22 @@ class Resources(BaseModel):
     """
 
     limits: ResourceQuantity
-    requests: ResourceQuantity
+    requests: ResourceQuantity | None = None
 
     def __init__(self, **data):
         # 如果未配置 requests，按照规则自动计算，规则与 Operator 保持一致
         # 目前 Requests 配额策略：CPU 为 min(limits.cpu, 200)，内存按照以下规则计算:
         # 当 Limits 大于等于 2048 Mi 时，值为 Limits 的 1/2; 当 Limits 小于 2048 Mi 时，值为 Limits 的 1/4
-        if "requests" not in data:
-            limits = data.get("limits")
-            if limits:
-                cpu_requests = min(limits.cpu, 200)
-
-                # 内存根据 limits 计算
-                memory_limits = limits.memory
-                if memory_limits >= 2048:
-                    memory_requests = memory_limits // 2
-                else:
-                    memory_requests = memory_limits // 4
-
-                data["requests"] = ResourceQuantity(cpu=cpu_requests, memory=memory_requests)
-
         super().__init__(**data)
+        if self.requests is None:
+            # 获取limits原始数据（可能是字典或ResourceQuantity实例
+            cpu_requests = min(self.limits.cpu, 200)
+
+            # 内存根据 limits 计算
+            memory_limits = self.limits.memory
+            if memory_limits >= 2048:
+                memory_requests = memory_limits // 2
+            else:
+                memory_requests = memory_limits // 4
+
+            self.requests = ResourceQuantity(cpu=cpu_requests, memory=memory_requests)

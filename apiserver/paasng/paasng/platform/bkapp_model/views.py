@@ -144,9 +144,11 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "command": spec.command or [],
                 "args": spec.args or [],
                 "port": spec.port,
+                "resources": spec.resources,
                 "env_overlay": {
                     environment_name.value: {
                         "plan_name": spec.get_plan_name(environment_name),
+                        "resources": spec.get_resources(environment_name),
                         "target_replicas": spec.get_target_replicas(environment_name),
                         "autoscaling": bool(spec.get_autoscaling(environment_name)),
                         "scaling_config": spec.get_scaling_config(environment_name) or default_scaling_config,
@@ -183,6 +185,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 probes=proc_spec.get("probes", None),
                 services=proc_spec.get("services", None),
                 components=proc_spec.get("components", None),
+                resources=proc_spec.get("resources", None),
             )
             for proc_spec in proc_specs
         ]

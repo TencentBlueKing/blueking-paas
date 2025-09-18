@@ -21,8 +21,14 @@ import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
-from paasng.platform.bkapp_model.entities import AutoscalingConfig, Metric, ProcService
-from paasng.platform.bkapp_model.entities.components import Component
+from paasng.platform.bkapp_model.entities import (
+    AutoscalingConfig,
+    Component,
+    Metric,
+    ProcService,
+    ResourceQuantity,
+    Resources,
+)
 from paasng.platform.bkapp_model.models import (
     ModuleProcessSpec,
     ObservabilityConfig,
@@ -56,6 +62,9 @@ class TestModuleProcessSpecViewSet:
             components=[
                 Component(name="env_overlay", version="v2"),
             ],
+            resources=Resources(
+                limits=ResourceQuantity(cpu=1000, memory=1024),
+            ),
         )
 
     @pytest.fixture()
@@ -83,6 +92,10 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["components"] == [
             {"name": "env_overlay", "version": "v2", "properties": {}},
         ]
+        assert proc_specs[0]["resources"] == Resources(
+            limits=ResourceQuantity(cpu=1000, memory=1024),
+            requests=ResourceQuantity(cpu=200, memory=256),
+        )
 
         assert proc_specs[1]["name"] == "worker"
         assert proc_specs[1]["proc_command"] is None
@@ -151,11 +164,28 @@ class TestModuleProcessSpecViewSet:
                 "command": ["python", "-m"],
                 "args": ["http.server"],
                 "port": 5000,
+                "resources": {
+                    "limits": {
+                        "cpu": 500,
+                        "memory": 512,
+                    },
+                },
                 "env_overlay": {
                     "stag": {
                         "plan_name": "default",
                         "target_replicas": 2,
                         "autoscaling": False,
+                        "resources": {
+                            "limits": {
+                                "cpu": 1000,
+                                "memory": 1024,
+                            },
+                            # requests 会被忽略
+                            "requests": {
+                                "cpu": 1000,
+                                "memory": 1024,
+                            },
+                        },
                     }
                 },
                 "probes": probes_cfg,
@@ -204,6 +234,14 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["env_overlay"]["stag"]["target_replicas"] == 2
         assert not proc_specs[0]["env_overlay"]["stag"]["autoscaling"]
         assert proc_specs[0]["probes"] == probes_cfg
+        assert proc_specs[0]["resources"] == {
+            "limits": {"cpu": 500, "memory": 512},
+            "requests": {"cpu": 200, "memory": 128},
+        }
+        assert proc_specs[0]["env_overlay"]["stag"]["resources"] == {
+            "limits": {"cpu": 1000, "memory": 1024},
+            "requests": {"cpu": 200, "memory": 256},
+        }
 
         assert proc_specs[1]["name"] == "beat"
         assert proc_specs[1]["image"] == "example.com/foo"

@@ -1435,7 +1435,7 @@ spec:
                           description: Process is the name of process
                           type: string
                         resources:
-                          description: Plan is used to specify process resource quota
+                          description: Resources is the resource requirements of process
                           properties:
                             limits:
                               description: Limits describes the maximum amount of
@@ -1472,7 +1472,6 @@ spec:
                       required:
                       - envName
                       - process
-                      - resources
                       type: object
                     type: array
                 type: object
@@ -2123,6 +2122,41 @@ spec:
                         ResQuotaPlan is the name of plan which defines how much resources current process
                         can consume.
                       type: string
+                    resources:
+                      description: Resources is the resource requirements of process
+                      properties:
+                        limits:
+                          description: Limits describes the maximum amount of compute
+                            resources allowed
+                          properties:
+                            cpu:
+                              description: CPU is the CPU resource
+                              type: string
+                            memory:
+                              description: Memory is the memory resource
+                              type: string
+                          required:
+                          - cpu
+                          - memory
+                          type: object
+                        requests:
+                          description: Requests describes the minimum amount of compute
+                            resources required
+                          properties:
+                            cpu:
+                              description: CPU is the CPU resource
+                              type: string
+                            memory:
+                              description: Memory is the memory resource
+                              type: string
+                          required:
+                          - cpu
+                          - memory
+                          type: object
+                      required:
+                      - limits
+                      - requests
+                      type: object
                     services:
                       description: Services is a list of ProcService which used to
                         expose process network for access within or outside the cluster.

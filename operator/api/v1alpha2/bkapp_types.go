@@ -194,6 +194,9 @@ type Process struct {
 	// can consume.
 	ResQuotaPlan ResQuotaPlan `json:"resQuotaPlan,omitempty"`
 
+	// Resources is the resource requirements of process
+	Resources *Resources `json:"resources,omitempty"`
+
 	// The containerPort to expose server
 	TargetPort int32 `json:"targetPort,omitempty"`
 
@@ -455,8 +458,8 @@ type ResourcesOverlay struct {
 	EnvName EnvName `json:"envName"`
 	// Process is the name of process
 	Process string `json:"process"`
-	// Plan is used to specify process resource quota
-	Resources Resources `json:"resources"`
+	// Resources is the resource requirements of process
+	Resources *Resources `json:"resources,omitempty"`
 }
 
 // EnvVarOverlay overwrite or add application's environment vars by environment.

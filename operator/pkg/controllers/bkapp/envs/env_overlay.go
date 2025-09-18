@@ -233,9 +233,18 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 	if env := GetEnvName(r.bkapp); !env.IsEmpty() && r.bkapp.Spec.EnvOverlay != nil {
 		for _, q := range r.bkapp.Spec.EnvOverlay.Resources {
 			if q.EnvName == env && q.Process == name {
-				return r.fromResources(q.Resources), nil
+				return r.fromResources(*q.Resources), nil
 			}
 		}
+	}
+
+	// Standard: read the "Resources" field from process
+	procObj := r.bkapp.Spec.FindProcess(name)
+	if procObj == nil {
+		return result, errors.Errorf("process %s not found", name)
+	}
+	if procObj.Resources != nil {
+		return r.fromResources(*procObj.Resources), nil
 	}
 
 	// Overlay: read the "ResQuotaPlan" field from envOverlay
@@ -248,7 +257,7 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 	}
 
 	// Standard: read the "ResQuotaPlan" field from process
-	procObj := r.bkapp.Spec.FindProcess(name)
+	procObj = r.bkapp.Spec.FindProcess(name)
 	if procObj == nil {
 		return result, errors.Errorf("process %s not found", name)
 	}

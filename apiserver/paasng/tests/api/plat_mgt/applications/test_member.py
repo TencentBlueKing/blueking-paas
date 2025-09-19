@@ -76,9 +76,25 @@ class TestApplicationMemberViewSet:
         assert ApplicationUserGroup.objects.filter(app_code=bk_app.code, role=2).exists()
         assert self._assert_user_in_role(bk_app, 2, "test_user")
 
+    def test_become_temp_admin(self, plat_mgt_api_client, bk_app):
+        url = reverse("plat_mgt.applications.members.temp_admin", kwargs={"app_code": bk_app.code})
+        username = plat_mgt_api_client.handler._force_user.username
+        with mock.patch("paasng.plat_mgt.applications.views.member.remove_temp_admin.apply_async") as mock_apply_async:
+            rsp = plat_mgt_api_client.post(url)
+            assert rsp.status_code == 204
+
+            # 检查数据库是否有对应的用户组和成员
+            assert ApplicationUserGroup.objects.filter(app_code=bk_app.code, role=2).exists()
+            assert self._assert_user_in_role(bk_app, 2, username)
+
+            mock_apply_async.assert_called_once_with(
+                args=[bk_app.code, username],
+                countdown=2 * 60 * 60,
+            )
+
     def test_update(self, plat_mgt_api_client, bk_app):
         # 准备测试数据
-        test_user = create_user("test_user")
+        test_user = create_user()
         ApplicationUserGroup.objects.get_or_create(
             app_code=bk_app.code, role=2, defaults={"name": "Developer user group", "readonly": True}
         )
@@ -99,7 +115,7 @@ class TestApplicationMemberViewSet:
 
     def test_destroy(self, plat_mgt_api_client, bk_app):
         # 准备测试数据
-        test_user = create_user("test_user")
+        test_user = create_user()
         ApplicationUserGroup.objects.get_or_create(
             app_code=bk_app.code, role=2, defaults={"name": "Developer user group", "readonly": True}
         )

@@ -320,6 +320,7 @@ class TestProcessesManifestConstructor:
                     "args": ["-m", "http.server"],
                     "targetPort": 8000,
                     "resQuotaPlan": "default",
+                    "resources": None,
                     "autoscaling": None,
                     "probes": None,
                     "services": None,

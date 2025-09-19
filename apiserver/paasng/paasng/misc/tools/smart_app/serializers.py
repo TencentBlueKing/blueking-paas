@@ -99,7 +99,7 @@ class SmartBuildHistoryOutputSLZ(serializers.Serializer):
     package_name = serializers.CharField(help_text="源码包名")
     status = serializers.CharField(help_text="构建状态")
     operator = serializers.CharField(help_text="操作人")
-    operator_time = serializers.DateField(source="start_time", help_text="操作时间")
+    operator_time = serializers.DateTimeField(source="start_time", help_text="操作时间")
     artifact_url = serializers.CharField(help_text="构建产物下载地址")
 
 

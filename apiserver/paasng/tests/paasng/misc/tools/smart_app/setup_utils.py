@@ -34,7 +34,6 @@ def create_fake_smart_build(
     app_code: Optional[str] = None,
     operator: Optional[str] = None,
     status: JobStatus = JobStatus.PENDING,
-    **kwargs,
 ):
     """Create a fake SmartBuild instance for testing"""
     if source_origin is None:

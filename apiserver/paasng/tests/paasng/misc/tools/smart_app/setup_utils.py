@@ -15,6 +15,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import string
+from typing import Optional
 
 import pytest
 
@@ -28,13 +29,16 @@ pytestmark = pytest.mark.django_db
 
 
 def create_fake_smart_build(
-    package_name=None,
-    app_code=None,
-    operator=None,
-    status=JobStatus.PENDING.value,
+    source_origin: Optional[SourceCodeOriginType] = None,
+    package_name: Optional[str] = None,
+    app_code: Optional[str] = None,
+    operator: Optional[str] = None,
+    status: JobStatus = JobStatus.PENDING,
     **kwargs,
 ):
     """Create a fake SmartBuild instance for testing"""
+    if source_origin is None:
+        source_origin = SourceCodeOriginType.PACKAGE
     if package_name is None:
         package_name = f"{generate_random_string(8)}.tar.gz"
     if app_code is None:
@@ -45,12 +49,10 @@ def create_fake_smart_build(
     log = SmartBuildLog.objects.create()
 
     return SmartBuildRecord.objects.create(
-        source_origin=SourceCodeOriginType.PACKAGE.value,
+        source_origin=source_origin,
         package_name=package_name,
         app_code=app_code,
         status=status,
         operator=operator,
         stream=log,
-        tenant_id="default",
-        **kwargs,
     )

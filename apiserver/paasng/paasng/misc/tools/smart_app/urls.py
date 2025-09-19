@@ -31,6 +31,21 @@ urlpatterns = [
         name="api.tools.s-mart.build",
     ),
     re_path(
+        r"^api/tools/s-mart/build_history/$",
+        views.SmartBuildHistoryViewSet.as_view({"get": "list_history"}),
+        name="api.tools.s-mart.build_history",
+    ),
+    re_path(
+        r"^api/tools/s-mart/build_history/(?P<uuid>[0-9a-f-]{32,36})/logs/$",
+        views.SmartBuildHistoryViewSet.as_view({"get": "get_history_logs"}),
+        name="api.tools.s-mart.build_history.logs",
+    ),
+    re_path(
+        r"^api/tools/s-mart/build_history/(?P<uuid>[0-9a-f-]{32,36})/logs/download$",
+        views.SmartBuildHistoryViewSet.as_view({"get": "download_history_logs"}),
+        name="api.tools.s-mart.build_history.logs.download",
+    ),
+    re_path(
         r"^api/tools/s-mart/build_phases/$",
         views.SmartBuildPhaseViewSet.as_view({"get": "get_frame"}),
         name="api.tools.s-mart.build_phases",

@@ -27,6 +27,7 @@ from paasng.utils.structure import NOTSET, AllowNotsetModel, NotSetType
 from .components import Component
 from .probes import ProbeSet
 from .proc_service import ProcService
+from .resources import Resources
 from .scaling_config import AutoscalingConfig
 
 
@@ -42,6 +43,7 @@ class Process(AllowNotsetModel):
     :param target_port: [deprecated] 监听端口. 由 services[].target_port 替代
     :param replicas: 进程副本数. `None` value means the replicas is not specified.
     :param res_quota_plan: 资源配额套餐名
+    :param resources: 资源申请, 优先级大于 res_quota_plan
     :param autoscaling: 自动扩缩容配置
     :param probes: 健康检查配置
     :param components: 进程组件
@@ -58,6 +60,8 @@ class Process(AllowNotsetModel):
 
     replicas: int | NotSetType | None = NOTSET
     res_quota_plan: Optional[ResQuotaPlan] = None
+    resources: Optional[Resources] = None
+
     autoscaling: AutoscalingConfig | NotSetType | None = NOTSET
 
     probes: Optional[ProbeSet] = None

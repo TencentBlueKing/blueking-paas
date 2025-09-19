@@ -25,7 +25,7 @@ from django_dynamic_fixture import G
 from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.entities import Component
+from paasng.platform.bkapp_model.entities import Component, ResourceQuantity, Resources
 from paasng.platform.bkapp_model.entities import DomainResolution as DomainResolutionEntity
 from paasng.platform.bkapp_model.entities.hooks import HookCmd, Hooks
 from paasng.platform.bkapp_model.entities.svc_discovery import SvcDiscEntryBkSaaS
@@ -93,6 +93,17 @@ class TestProcessesField:
                                 },
                             },
                         ],
+                        "resources": {
+                            "limits": {
+                                "cpu": 1000,
+                                "memory": 1024,
+                            },
+                            # requests 被忽略
+                            "requests": {
+                                "cpu": 1000,
+                                "memory": 1024,
+                            },
+                        },
                     }
                 ]
             },
@@ -117,6 +128,9 @@ class TestProcessesField:
                 properties={"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]},
             ),
         ]
+        assert web.resources == Resources(
+            limits=ResourceQuantity(cpu=1000, memory=1024), requests=ResourceQuantity(cpu=200, memory=256)
+        )
 
     def test_proc_component_not_exists(self, bk_module, bk_deployment):
         json_data = builder.make_module(

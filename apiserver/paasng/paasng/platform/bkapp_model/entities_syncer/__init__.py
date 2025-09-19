@@ -37,6 +37,7 @@ from .proc_env_overlays import (
     sync_env_overlays_autoscalings,
     sync_env_overlays_replicas,
     sync_env_overlays_res_quotas,
+    sync_env_overlays_resources,
 )
 from .processes import sync_processes
 from .svc_discovery import sync_svc_discovery
@@ -54,5 +55,6 @@ __all__ = [
     "sync_env_overlays_autoscalings",
     "sync_env_overlays_replicas",
     "sync_env_overlays_res_quotas",
+    "sync_env_overlays_resources",
     "clean_empty_overlays",
 ]

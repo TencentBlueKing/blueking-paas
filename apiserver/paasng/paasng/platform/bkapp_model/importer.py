@@ -29,6 +29,7 @@ from paasng.platform.bkapp_model.entities_syncer import (
     sync_env_overlays_autoscalings,
     sync_env_overlays_replicas,
     sync_env_overlays_res_quotas,
+    sync_env_overlays_resources,
     sync_env_vars,
     sync_hooks,
     sync_mounts,
@@ -86,6 +87,7 @@ def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppS
     overlay_env_vars: NotSetType | list = NOTSET
     overlay_autoscaling: NotSetType | list = NOTSET
     overlay_mounts: NotSetType | list = NOTSET
+    overlay_resources: NotSetType | list = NOTSET
     if not isinstance(spec_entity.env_overlay, NotSetType):
         eo = spec_entity.env_overlay
         if eo:
@@ -95,6 +97,7 @@ def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppS
             overlay_env_vars = [] if eo.env_variables is None else eo.env_variables
             overlay_autoscaling = [] if eo.autoscaling is None else eo.autoscaling
             overlay_mounts = [] if eo.mounts is None else eo.mounts
+            overlay_resources = [] if eo.resources is None else eo.resources
 
     # Run sync functions
     sync_processes(module, processes=spec_entity.processes, manager=manager)
@@ -120,6 +123,7 @@ def import_bkapp_spec_entity(module: Module, spec_entity: v1alpha2_entity.BkAppS
     sync_env_overlays_replicas(module, overlay_replicas, manager, spec_entity.processes)
     sync_env_overlays_res_quotas(module, overlay_res_quotas, manager, spec_entity.processes)
     sync_env_overlays_autoscalings(module, overlay_autoscaling, manager, spec_entity.processes)
+    sync_env_overlays_resources(module, overlay_resources, manager, spec_entity.processes)
 
     clean_empty_overlays(module)
 

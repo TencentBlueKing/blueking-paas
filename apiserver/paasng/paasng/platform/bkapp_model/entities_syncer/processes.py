@@ -59,6 +59,7 @@ def sync_processes(
             "proc_command": process.proc_command,
             "port": process.target_port,
             "plan_name": process.res_quota_plan or ResQuotaPlan.P_DEFAULT,
+            "resources": process.resources,
             "probes": process.probes,
             "services": process.services,
             "tenant_id": module.tenant_id,

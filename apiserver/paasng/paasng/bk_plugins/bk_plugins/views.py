@@ -144,7 +144,12 @@ class SysBkPluginLogsViewset(viewsets.ViewSet):
         data = serializer.validated_data
 
         client = PluginLoggingClient(get_plugin_or_404(code))
-        logs = client.query(data["trace_id"], data.get("scroll_id"))
+        logs = client.query(
+            trace_id=data["trace_id"],
+            scroll_id=data.get("scroll_id"),
+            time_range=data.get("smart_time_range"),
+            time_order=data.get("time_order"),
+        )
         return Response(data=cattr.unstructure(logs))
 
 

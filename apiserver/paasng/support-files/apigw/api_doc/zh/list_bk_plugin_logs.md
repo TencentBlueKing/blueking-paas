@@ -13,6 +13,10 @@
 | ------ | ------ | ------ | ------ |
 | scroll_id | string | 否 | 用于滚动翻页的标识字段 |
 | trace_id | string | 是 | 用于过滤日志的 `trace_id` 标识符 |
+| time_range | string | 否 | 时间范围，可选值："5m" "1h" "3h" "6h" "12h" "1d" "3d" "7d" "14d" "customized"，默认"14d" |
+| start_time | string | 否 | 开始时间，time_range为"customized"时需要填写，格式: YYYY-MM-DD HH:MM:SS |
+| end_time | string | 否 | 结束时间，time_range为"customized"时需要填写，格式: YYYY-MM-DD HH:MM:SS |
+| time_order | string | 否 | 时间排序方式，可选值：asc（升序，默认）、desc（降序） |
 
 ### 请求示例
 ```bash

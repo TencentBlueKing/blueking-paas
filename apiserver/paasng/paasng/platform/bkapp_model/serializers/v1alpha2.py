@@ -164,7 +164,7 @@ class EnvOverlayInputSLZ(serializers.Serializer):
 
     replicas = serializers.ListField(child=ReplicasOverlayInputSLZ(), default=NOTSET)
     resQuotas = serializers.ListField(child=ResQuotaOverlayInputSLZ(), default=NOTSET, source="res_quotas")
-    resources = serializers.ListField(child=ResourcesOverlayInputSLZ(), default=NOTSET, source="resources")
+    resources = serializers.ListField(child=ResourcesOverlayInputSLZ(), default=NOTSET)
     envVariables = serializers.ListField(child=EnvVarOverlayInputSLZ(), default=NOTSET, source="env_variables")
     autoscaling = serializers.ListField(child=AutoscalingOverlayInputSLZ(), default=NOTSET)
     mounts = serializers.ListField(child=MountOverlayInputSLZ(), default=NOTSET)

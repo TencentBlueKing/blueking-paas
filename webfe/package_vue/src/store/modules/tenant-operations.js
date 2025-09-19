@@ -90,6 +90,13 @@ export default {
       return http.post(url, data);
     },
     /**
+     * 应用详情-成为应用的临时管理员
+     */
+    becomeAppTempAdmin({}, { appCode }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/members/temp_admin/`;
+      return http.post(url);
+    },
+    /**
      * 应用详情-更新部署集群
      */
     updateDeployCluster({}, { appCode, moduleId, env, data }) {

@@ -15,10 +15,11 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-
 from collections import defaultdict
 
+from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -35,6 +36,7 @@ from paasng.infras.iam.helpers import (
     remove_user_all_roles,
 )
 from paasng.plat_mgt.applications import serializers as slzs
+from paasng.plat_mgt.applications.tasks import remove_temp_admin
 from paasng.platform.applications.constants import ApplicationRole
 from paasng.platform.applications.models import Application, ApplicationMembership, JustLeaveAppManager
 from paasng.platform.applications.signals import application_member_updated
@@ -63,7 +65,7 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.applications.members"],
         request_body=slzs.ApplicationMembershipCreateInputSLZ(),
-        responses={status.HTTP_201_CREATED: None},
+        responses={status.HTTP_201_CREATED: ""},
     )
     def create(self, request, app_code):
         """添加成员"""
@@ -141,6 +143,49 @@ class ApplicationMemberViewSet(viewsets.GenericViewSet):
         application_member_updated.send(sender=application, application=application)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications.members"],
+        responses={status.HTTP_204_NO_CONTENT: ""},
+    )
+    def become_temp_admin(self, request, app_code):
+        """成为应用的临时管理员, 两个小时后过期
+
+        使用场景：
+            当平台管理员给应用排查问题时, 需要成为应用的管理员权限,
+            但又不希望永久成为该应用的管理员
+        """
+
+        username = request.user.username
+        application = get_object_or_404(Application, code=app_code)
+
+        # 多租户环境下不允许添加不同租户的成员成为管理员
+        if settings.ENABLE_MULTI_TENANT_MODE and application.tenant_id != request.user.tenant_id:
+            raise error_codes.MEMBERSHIP_CREATE_FAILED.f(_("不允许添加不同租户的成员"))
+
+        # 若已是管理员，直接返回
+        current_role = fetch_user_main_role(application.code, username)
+        if current_role == ApplicationRole.ADMINISTRATOR:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        try:
+            add_role_members(application.code, ApplicationRole.ADMINISTRATOR, username)
+        except BKIAMGatewayServiceError as e:
+            raise error_codes.CREATE_APP_MEMBERS_ERROR.f(e.message)
+
+        application_member_updated.send(sender=application, application=application)
+        sync_developers_to_sentry.delay(application.id)
+
+        # 启动一个延时任务, 两个小时之后删除该临时管理员权限
+        remove_temp_admin.apply_async(
+            args=[application.code, username],
+            countdown=2 * 60 * 60,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        tags=["plat_mgt.applications.members"],
+        responses={status.HTTP_200_OK: "角色列表"},
+    )
     def get_roles(self, request):
         """查看所有角色列表"""
         return Response({"results": ApplicationRole.get_django_choices()})

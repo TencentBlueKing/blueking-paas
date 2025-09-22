@@ -521,6 +521,44 @@ class TestCreateCloudNativeApp:
         assert process_spec.get_target_replicas("stag") == 1
         assert process_spec.get_target_replicas("prod") == 2
 
+    def test_create_with_image_invalid_source_origin(self, api_client):
+        """托管方式：仅镜像，但使用了错误的源码来源"""
+        random_suffix = generate_random_string(length=6)
+        image_credential_name = generate_random_string(length=6)
+        image_repository = "strm/helloworld-http"
+        response = api_client.post(
+            "/api/bkapps/cloud-native/",
+            data={
+                "code": f"uta-{random_suffix}",
+                "name": f"uta-{random_suffix}",
+                "bkapp_spec": {
+                    "build_config": {
+                        "build_method": "custom_image",
+                        "image_repository": image_repository,
+                        "image_credential": {"name": image_credential_name, "password": "123456", "username": "test"},
+                    },
+                    "processes": [
+                        {
+                            "name": "web",
+                            "command": ["bash", "/app/start_web.sh"],
+                            "env_overlay": {
+                                "stag": {"environment_name": "stag", "target_replicas": 1, "plan_name": "2C1G"},
+                            },
+                        }
+                    ],
+                },
+                # 使用非法的源码来源
+                "source_config": {
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": image_repository,
+                },
+            },
+        )
+        assert response.status_code == 400
+        data = response.json()
+        assert data.get("code") == "VALIDATION_ERROR"
+        assert "invalid build_method" in data.get("detail")
+
     @pytest.mark.usefixtures("_init_tmpls")
     @mock.patch("paasng.platform.applications.views.creation.create_repo_with_user_account")
     @mock.patch("paasng.platform.engine.configurations.building.ModuleRuntimeManager")

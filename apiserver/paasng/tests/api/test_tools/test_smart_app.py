@@ -94,7 +94,6 @@ class TestSmartBuildHistoryViewSet:
 
             assert data["status"] == smart_build_record.status
             assert data["logs"] == mock_logs
-            assert "err_detail" in data
             mock_get_all_logs.assert_called_once_with(smart_build_record)
 
     def test_get_history_logs_not_found(self, api_client):

@@ -34,6 +34,7 @@ from paasng.misc.tools.smart_app.build import (
     create_smart_build_record,
 )
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
+from paasng.misc.tools.smart_app.filters import SmartBuildRecordFilterBackend
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
 from paasng.misc.tools.smart_app.output import get_all_logs
 from paasng.misc.tools.smart_app.phases_steps import ALL_STEP_METAS, SmartBuildPhaseManager, get_sorted_steps
@@ -47,7 +48,6 @@ from paasng.misc.tools.smart_app.serializers import (
     ToolPackageStashInputSLZ,
     ToolPackageStashOutputSLZ,
 )
-from paasng.misc.tools.smart_app.utils.filters import SmartBuildRecordFilterBackend
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
@@ -199,7 +199,6 @@ class SmartBuildHistoryViewSet(viewsets.GenericViewSet):
         result = {
             "status": smart_build_record.status,
             "logs": logs,
-            "err_detail": smart_build_record.err_detail,
         }
         return JsonResponse(result)
 
@@ -207,7 +206,7 @@ class SmartBuildHistoryViewSet(viewsets.GenericViewSet):
         """下载构建日志"""
         smart_build_record = get_object_or_404(SmartBuildRecord, uuid=uuid)
         logs = get_all_logs(smart_build_record)
-        filename = f"{smart_build_record.package_name}-{uuid}_logs.txt"
+        filename = f"{smart_build_record.package_name}-{uuid}.log"
 
         response = HttpResponse(logs, content_type="text/plain")
         response["Content-Disposition"] = f'attachment; filename="{filename}"'

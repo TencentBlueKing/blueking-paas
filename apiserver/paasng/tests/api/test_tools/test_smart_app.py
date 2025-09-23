@@ -38,7 +38,7 @@ class TestSmartBuildHistoryViewSet:
 
     def test_list_history(self, api_client, smart_build_record):
         """Test listing build history"""
-        url = reverse("api.tools.s-mart.build_history")
+        url = reverse("api.tools.s-mart.build_records")
         response = api_client.get(url)
 
         assert response.status_code == 200
@@ -72,7 +72,7 @@ class TestSmartBuildHistoryViewSet:
             status=JobStatus.SUCCESSFUL,
         )
 
-        url = reverse("api.tools.s-mart.build_history")
+        url = reverse("api.tools.s-mart.build_records")
         response = api_client.get(url, filter_params)
 
         assert response.status_code == 200
@@ -86,7 +86,7 @@ class TestSmartBuildHistoryViewSet:
             mock_logs = "This is a test log\nLine 2\nLine 3"
             mock_get_all_logs.return_value = mock_logs
 
-            url = reverse("api.tools.s-mart.build_history.logs", args=[smart_build_record.uuid])
+            url = reverse("api.tools.s-mart.build_records.logs", args=[smart_build_record.uuid])
             response = api_client.get(url)
 
             assert response.status_code == 200
@@ -101,7 +101,7 @@ class TestSmartBuildHistoryViewSet:
         """Test retrieving build logs for a non-existent build record"""
 
         fake_uuid = uuid.uuid4()
-        url = reverse("api.tools.s-mart.build_history.logs", kwargs={"uuid": fake_uuid})
+        url = reverse("api.tools.s-mart.build_records.logs", kwargs={"uuid": fake_uuid})
         response = api_client.get(url)
 
         assert response.status_code == 404
@@ -113,14 +113,14 @@ class TestSmartBuildHistoryViewSet:
             mock_logs = "This is a test log\nLine 2\nLine 3"
             mock_get_all_logs.return_value = mock_logs
 
-            url = reverse("api.tools.s-mart.build_history.logs.download", args=[smart_build_record.uuid])
+            url = reverse("api.tools.s-mart.build_records.logs.download", args=[smart_build_record.uuid])
             response = api_client.get(url, {"download": "true"})
 
             assert response.status_code == 200
             assert response["Content-Type"] == "text/plain"
             assert (
                 response["Content-Disposition"]
-                == f'attachment; filename="{smart_build_record.package_name}-{smart_build_record.uuid}_logs.txt"'
+                == f'attachment; filename="{smart_build_record.package_name}-{smart_build_record.uuid}.log"'
             )
             assert response.content.decode() == mock_logs
             mock_get_all_logs.assert_called_once_with(smart_build_record)
@@ -128,7 +128,7 @@ class TestSmartBuildHistoryViewSet:
     def test_download_history_logs_not_found(self, api_client):
         """Test downloading build logs for a non-existent build record"""
         fake_uuid = uuid.uuid4()
-        url = reverse("api.tools.s-mart.build_history.logs.download", kwargs={"uuid": fake_uuid})
+        url = reverse("api.tools.s-mart.build_records.logs.download", kwargs={"uuid": fake_uuid})
         response = api_client.get(url)
 
         assert response.status_code == 404

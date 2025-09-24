@@ -15,7 +15,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import string
-from typing import Optional
 
 import pytest
 
@@ -29,10 +28,10 @@ pytestmark = pytest.mark.django_db
 
 
 def create_fake_smart_build(
-    source_origin: Optional[SourceCodeOriginType] = None,
-    package_name: Optional[str] = None,
-    app_code: Optional[str] = None,
-    operator: Optional[str] = None,
+    source_origin: SourceCodeOriginType | None = None,
+    package_name: str | None = None,
+    app_code: str | None = None,
+    operator: str | None = None,
     status: JobStatus = JobStatus.PENDING,
 ):
     """Create a fake SmartBuild instance for testing"""

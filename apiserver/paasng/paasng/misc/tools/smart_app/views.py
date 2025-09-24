@@ -194,13 +194,10 @@ class SmartBuildHistoryViewSet(viewsets.GenericViewSet):
     )
     def get_history_logs(self, request, uuid: str):
         """获取指定构建记录的日志"""
-        smart_build_record = get_object_or_404(SmartBuildRecord, uuid=uuid)
-        logs = get_all_logs(smart_build_record)
-        result = {
-            "status": smart_build_record.status,
-            "logs": logs,
-        }
-        return JsonResponse(result)
+        record = get_object_or_404(SmartBuildRecord, uuid=uuid)
+        logs = get_all_logs(record)
+        result = {"status": record.status, "logs": logs}
+        return JsonResponse(SmartBuildHistoryLogsOutputSLZ(result).data)
 
     def download_history_logs(self, request, uuid: str):
         """下载构建日志"""

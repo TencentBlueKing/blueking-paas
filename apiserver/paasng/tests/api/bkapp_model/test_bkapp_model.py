@@ -264,6 +264,31 @@ class TestModuleProcessSpecViewSet:
         assert spec_obj.probes == {"liveness": None, "readiness": None, "startup": None}
         assert spec_obj.probes.liveness is None
 
+    def test_retrieve_recommend_resources(self, api_client):
+        url = "/api/bkapps/processes/recommend_resources/"
+        resp = api_client.get(url)
+        data = resp.json()
+        assert data == {
+            "cpu": [
+                {"limit": {"label": "0.1 核", "value": 100}, "request": {"label": "0.1 核", "value": 100}},
+                {"limit": {"label": "0.2 核", "value": 200}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "0.5 核", "value": 500}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "1 核", "value": 1000}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "2 核", "value": 2000}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "4 核", "value": 4000}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "8 核", "value": 8000}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "16 核", "value": 16000}, "request": {"label": "0.2 核", "value": 200}},
+            ],
+            "memory": [
+                {"limit": {"label": "256 M", "value": 256}, "request": {"label": "64 M", "value": 64}},
+                {"limit": {"label": "512 M", "value": 512}, "request": {"label": "128 M", "value": 128}},
+                {"limit": {"label": "1 G", "value": 1024}, "request": {"label": "256 M", "value": 256}},
+                {"limit": {"label": "2 G", "value": 2048}, "request": {"label": "1 G", "value": 1024}},
+                {"limit": {"label": "4 G", "value": 4096}, "request": {"label": "2 G", "value": 2048}},
+                {"limit": {"label": "8 G", "value": 8192}, "request": {"label": "4 G", "value": 4096}},
+            ],
+        }
+
 
 class TestModuleProcessSpecWithProcServicesViewSet:
     @pytest.fixture()

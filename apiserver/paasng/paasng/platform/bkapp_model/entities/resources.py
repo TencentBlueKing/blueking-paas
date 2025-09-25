@@ -17,6 +17,7 @@
 
 from pydantic import BaseModel
 
+from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
 from paasng.utils.structure import prepare_json_field
 
 
@@ -50,14 +51,62 @@ class Resources(BaseModel):
         # 当 Limits 大于等于 2048 Mi 时，值为 Limits 的 1/2; 当 Limits 小于 2048 Mi 时，值为 Limits 的 1/4
         super().__init__(**data)
         if self.requests is None:
-            # 获取limits原始数据（可能是字典或ResourceQuantity实例
-            cpu_requests = min(self.limits.cpu, 200)
-
-            # 内存根据 limits 计算
-            memory_limits = self.limits.memory
-            if memory_limits >= 2048:
-                memory_requests = memory_limits // 2
-            else:
-                memory_requests = memory_limits // 4
-
+            # 调用静态方法计算CPU和内存请求值
+            cpu_requests = calculate_cpu_request(self.limits.cpu)
+            memory_requests = calculate_memory_request(self.limits.memory)
             self.requests = ResourceQuantity(cpu=cpu_requests, memory=memory_requests)
+
+
+def calculate_cpu_request(cpu_limit: int) -> int:
+    """
+    根据CPU限制值计算请求值
+
+    :param cpu_limit: CPU 限制值（原始数值）
+    :return: 计算后的 CPU 请求值
+    """
+    # 规则：CPU请求为 min(limits.cpu, 200)
+    return min(cpu_limit, 200)
+
+
+def calculate_memory_request(memory_limit: int) -> int:
+    """
+    根据内存限制值计算请求值
+
+    :param memory_limit: 内存限制值（原始数值，单位：Mi）
+    :return: 计算后的内存请求值
+    """
+    # 规则：当 Limits >= 2048 Mi 时，值为 Limits 的 1/2；否则为 Limits 的 1/4
+    if memory_limit >= 2048:
+        return memory_limit // 2
+    return memory_limit // 4
+
+
+def get_cpu_recommend_resources() -> list:
+    """获取 CPU 推荐资源配置"""
+    cpu_list = []
+    for item in CPUResourceQuantity.get_choices():
+        value = item[0]
+        label = item[1]
+        request_value = calculate_cpu_request(value)
+        request_label = f"{request_value / 1000} 核"
+        cpu_list.append(
+            {"limit": {"value": value, "label": label}, "request": {"value": request_value, "label": request_label}}
+        )
+    return cpu_list
+
+
+def get_memory_recommend_resources() -> list:
+    """获取内存推荐资源配置"""
+    memory_list = []
+    for item in MemoryResourceQuantity.get_choices():
+        value = item[0]
+        label = item[1]
+        request_value = calculate_memory_request(value)
+        if request_value >= 1024:
+            request_label = f"{request_value // 1024} G"
+        else:
+            request_label = f"{request_value} M"
+        memory_list.append(
+            {"limit": {"value": value, "label": label}, "request": {"value": request_value, "label": request_label}}
+        )
+    return memory_list

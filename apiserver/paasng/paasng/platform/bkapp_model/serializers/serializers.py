@@ -27,7 +27,13 @@ from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
 from paasng.accessories.proc_components.manager import validate_component_properties
-from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
+from paasng.platform.bkapp_model.constants import (
+    PORT_PLACEHOLDER,
+    CPUResourceQuantity,
+    ExposedTypeName,
+    MemoryResourceQuantity,
+    NetworkProtocol,
+)
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
@@ -58,8 +64,8 @@ class ScalingConfigSLZ(serializers.Serializer):
 class ResourcesQuantity(serializers.Serializer):
     """资源数量"""
 
-    cpu = serializers.IntegerField(help_text="CPU 资源请求量", required=False, allow_null=True)
-    memory = serializers.IntegerField(help_text="内存资源请求量", required=False, allow_null=True)
+    cpu = serializers.ChoiceField(choices=CPUResourceQuantity.get_choices())
+    memory = serializers.ChoiceField(choices=MemoryResourceQuantity.get_choices())
 
 
 class ResourcesSLZ(serializers.Serializer):
@@ -397,3 +403,18 @@ class DomainResolutionSLZ(serializers.Serializer):
 
 class BkAppModelSLZ(serializers.Serializer):
     manifest = serializers.JSONField(label=_("BkApp 配置信息"))
+
+
+class ResourceItemSLZ(serializers.Serializer):
+    value = serializers.IntegerField(help_text="资源值")
+    label = serializers.CharField(help_text="资源名称")
+
+
+class ResourcePairSLZ(serializers.Serializer):
+    limit = ResourceItemSLZ(help_text="资源限制")
+    request = ResourceItemSLZ(help_text="资源请求")
+
+
+class RecommendResourceListSLZ(serializers.Serializer):
+    cpu = ResourcePairSLZ(many=True)
+    memory = ResourcePairSLZ(many=True)

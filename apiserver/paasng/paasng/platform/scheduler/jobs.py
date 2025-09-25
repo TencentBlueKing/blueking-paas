@@ -24,13 +24,14 @@ from django.db import transaction
 from django.utils.timezone import now
 
 from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
-from paasng.accessories.servicehub.manager import get_db_properties, mixed_service_mgr
+from paasng.accessories.servicehub.manager import get_db_properties
 from paasng.accessories.servicehub.models import (
     DefaultPolicyCreationRecord,
     ServiceBindingPolicy,
     ServiceBindingPrecedencePolicy,
 )
 from paasng.accessories.servicehub.remote.collector import fetch_all_remote_services
+from paasng.accessories.servicehub.remote.manager import RemoteServiceMgr
 from paasng.accessories.servicehub.remote.store import get_remote_store
 from paasng.core.core.storages.redisdb import get_default_redis
 from paasng.core.tenant.user import get_init_tenant_id
@@ -152,7 +153,8 @@ def init_service_default_policy_job():
         logger.info("Starting service policy initialization process.")
 
         default_tenant_id = get_init_tenant_id()
-        for service in mixed_service_mgr.list():
+        remote_service_mgr = RemoteServiceMgr(get_remote_store())
+        for service in remote_service_mgr.list():
             _handel_single_service_default_policy(service, default_tenant_id)
 
         logger.info("Service policy initialization completed.")

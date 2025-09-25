@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import time
 from datetime import datetime
 from typing import Iterator, List
 
@@ -41,6 +42,10 @@ class Command(BaseCommand):
     1. 删除所有日志记录
     2. 插入一条提示信息, 告知日志已被平台按照保留策略删除
     """
+
+    # 限流参数, 每执行 1000 条记录休眠 1 秒
+    throttle_count = 1
+    throttle_sleep = 1
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -74,13 +79,21 @@ class Command(BaseCommand):
 
         processed_count = 0
         compressed_count = 0
+        since_last_throttle = 0
 
         # 批量处理压缩任务
         worker = self._preview_uuid_batch if dry_run else self._compress_uuid_batch
         for batch_streams in self._get_streams_in_batches(cutoff_date, batch_size):
             compressed_count += worker(batch_streams)
             processed_count += len(batch_streams)
+            since_last_throttle += len(batch_streams)
             self.stdout.write(f"已处理 {processed_count} 个 OutputStream 记录")
+
+            # 限流
+            if since_last_throttle >= self.throttle_count:
+                self.stdout.write(f"休眠 {self.throttle_sleep} 秒，防止数据库压力过大")
+                time.sleep(self.throttle_sleep)
+                since_last_throttle = 0
 
         if dry_run:
             self.stdout.write(

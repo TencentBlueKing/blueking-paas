@@ -44,7 +44,7 @@ class Command(BaseCommand):
     """
 
     # 限流参数, 每执行 1000 条记录休眠 1 秒
-    throttle_count = 1
+    throttle_count = 1000
     throttle_sleep = 1
 
     def add_arguments(self, parser):
@@ -90,7 +90,7 @@ class Command(BaseCommand):
             self.stdout.write(f"已处理 {processed_count} 个 OutputStream 记录")
 
             # 限流
-            if since_last_throttle >= self.throttle_count:
+            if (not dry_run) and since_last_throttle >= self.throttle_count:
                 self.stdout.write(f"休眠 {self.throttle_sleep} 秒，防止数据库压力过大")
                 time.sleep(self.throttle_sleep)
                 since_last_throttle = 0

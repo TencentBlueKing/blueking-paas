@@ -21,6 +21,7 @@ from unittest import mock
 import pytest
 from django.conf import settings
 from django.test.utils import override_settings
+from django.urls import reverse
 
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
@@ -167,7 +168,7 @@ class TestCreateCloudNativeModule:
         random_suffix = generate_random_string(length=6)
         image_repository = "strm/helloworld-http"
         response = api_client.post(
-            f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",
+            reverse("module.create.cloud_native", kwargs={"code": bk_cnative_app.code}),
             data={
                 "name": f"uta-{random_suffix}",
                 "source_config": {

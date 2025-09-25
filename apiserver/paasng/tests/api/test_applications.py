@@ -527,7 +527,7 @@ class TestCreateCloudNativeApp:
         image_credential_name = generate_random_string(length=6)
         image_repository = "strm/helloworld-http"
         response = api_client.post(
-            "/api/bkapps/cloud-native/",
+            reverse("api.applications.create.cloud_native"),
             data={
                 "code": f"uta-{random_suffix}",
                 "name": f"uta-{random_suffix}",

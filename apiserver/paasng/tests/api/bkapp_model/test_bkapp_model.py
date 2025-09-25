@@ -21,8 +21,14 @@ import pytest
 from django.conf import settings
 from django_dynamic_fixture import G
 
-from paasng.platform.bkapp_model.entities import AutoscalingConfig, Metric, ProcService
-from paasng.platform.bkapp_model.entities.components import Component
+from paasng.platform.bkapp_model.entities import (
+    AutoscalingConfig,
+    Component,
+    Metric,
+    ProcService,
+    ResourceQuantity,
+    Resources,
+)
 from paasng.platform.bkapp_model.models import (
     ModuleProcessSpec,
     ObservabilityConfig,
@@ -56,6 +62,9 @@ class TestModuleProcessSpecViewSet:
             components=[
                 Component(name="env_overlay", version="v2"),
             ],
+            resources=Resources(
+                limits=ResourceQuantity(cpu=1000, memory=1024),
+            ),
         )
 
     @pytest.fixture()
@@ -83,6 +92,10 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["components"] == [
             {"name": "env_overlay", "version": "v2", "properties": {}},
         ]
+        assert proc_specs[0]["resources"] == Resources(
+            limits=ResourceQuantity(cpu=1000, memory=1024),
+            requests=ResourceQuantity(cpu=200, memory=256),
+        )
 
         assert proc_specs[1]["name"] == "worker"
         assert proc_specs[1]["proc_command"] is None
@@ -151,11 +164,28 @@ class TestModuleProcessSpecViewSet:
                 "command": ["python", "-m"],
                 "args": ["http.server"],
                 "port": 5000,
+                "resources": {
+                    "limits": {
+                        "cpu": 500,
+                        "memory": 512,
+                    },
+                },
                 "env_overlay": {
                     "stag": {
                         "plan_name": "default",
                         "target_replicas": 2,
                         "autoscaling": False,
+                        "resources": {
+                            "limits": {
+                                "cpu": 1000,
+                                "memory": 1024,
+                            },
+                            # requests 会被忽略
+                            "requests": {
+                                "cpu": 1000,
+                                "memory": 1024,
+                            },
+                        },
                     }
                 },
                 "probes": probes_cfg,
@@ -204,6 +234,14 @@ class TestModuleProcessSpecViewSet:
         assert proc_specs[0]["env_overlay"]["stag"]["target_replicas"] == 2
         assert not proc_specs[0]["env_overlay"]["stag"]["autoscaling"]
         assert proc_specs[0]["probes"] == probes_cfg
+        assert proc_specs[0]["resources"] == {
+            "limits": {"cpu": 500, "memory": 512},
+            "requests": {"cpu": 200, "memory": 128},
+        }
+        assert proc_specs[0]["env_overlay"]["stag"]["resources"] == {
+            "limits": {"cpu": 1000, "memory": 1024},
+            "requests": {"cpu": 200, "memory": 256},
+        }
 
         assert proc_specs[1]["name"] == "beat"
         assert proc_specs[1]["image"] == "example.com/foo"
@@ -225,6 +263,31 @@ class TestModuleProcessSpecViewSet:
         )
         assert spec_obj.probes == {"liveness": None, "readiness": None, "startup": None}
         assert spec_obj.probes.liveness is None
+
+    def test_retrieve_recommend_resources(self, api_client):
+        url = "/api/bkapps/processes/recommend_resources/"
+        resp = api_client.get(url)
+        data = resp.json()
+        assert data == {
+            "cpu": [
+                {"limit": {"label": "0.1 核", "value": 100}, "request": {"label": "0.1 核", "value": 100}},
+                {"limit": {"label": "0.2 核", "value": 200}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "0.5 核", "value": 500}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "1 核", "value": 1000}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "2 核", "value": 2000}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "4 核", "value": 4000}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "8 核", "value": 8000}, "request": {"label": "0.2 核", "value": 200}},
+                {"limit": {"label": "16 核", "value": 16000}, "request": {"label": "0.2 核", "value": 200}},
+            ],
+            "memory": [
+                {"limit": {"label": "256 M", "value": 256}, "request": {"label": "64 M", "value": 64}},
+                {"limit": {"label": "512 M", "value": 512}, "request": {"label": "128 M", "value": 128}},
+                {"limit": {"label": "1 G", "value": 1024}, "request": {"label": "256 M", "value": 256}},
+                {"limit": {"label": "2 G", "value": 2048}, "request": {"label": "1 G", "value": 1024}},
+                {"limit": {"label": "4 G", "value": 4096}, "request": {"label": "2 G", "value": 2048}},
+                {"limit": {"label": "8 G", "value": 8192}, "request": {"label": "4 G", "value": 4096}},
+            ],
+        }
 
 
 class TestModuleProcessSpecWithProcServicesViewSet:

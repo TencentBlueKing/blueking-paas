@@ -17,10 +17,12 @@
 
 import logging
 
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -32,10 +34,14 @@ from paasng.misc.tools.smart_app.build import (
     create_smart_build_record,
 )
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
+from paasng.misc.tools.smart_app.filters import SmartBuildRecordFilterBackend
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
+from paasng.misc.tools.smart_app.output import get_all_logs
 from paasng.misc.tools.smart_app.phases_steps import ALL_STEP_METAS, SmartBuildPhaseManager, get_sorted_steps
 from paasng.misc.tools.smart_app.serializers import (
     SmartBuildFramePhaseSLZ,
+    SmartBuildHistoryLogsOutputSLZ,
+    SmartBuildHistoryOutputSLZ,
     SmartBuildInputSLZ,
     SmartBuildOutputSLZ,
     SmartBuildPhaseSLZ,
@@ -156,6 +162,53 @@ class SmartBuilderViewSet(viewsets.ViewSet):
     @staticmethod
     def _get_store_namespace(app_code: str) -> str:
         return f"{app_code}:prepared_build"
+
+
+class SmartBuildHistoryViewSet(viewsets.GenericViewSet):
+    """SmartBuild record history viewset"""
+
+    queryset = SmartBuildRecord.objects.all()
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    filter_backends = [SmartBuildRecordFilterBackend]
+    pagination_class = LimitOffsetPagination
+
+    @swagger_auto_schema(
+        tags=["S-Mart 包构建"],
+        operation_description="获取构建历史",
+        responses={status.HTTP_200_OK: SmartBuildHistoryOutputSLZ(many=True)},
+    )
+    def list_history(self, request):
+        """列出构建历史"""
+        queryset = self.get_queryset()
+        filter_queryset = self.filter_queryset(queryset)
+
+        page = self.paginate_queryset(filter_queryset)
+
+        slz = SmartBuildHistoryOutputSLZ(page, many=True)
+        return self.get_paginated_response(slz.data)
+
+    @swagger_auto_schema(
+        tags=["S-Mart 包构建"],
+        operation_description="获取构建日志",
+        responses={status.HTTP_200_OK: SmartBuildHistoryLogsOutputSLZ()},
+    )
+    def get_history_logs(self, request, uuid: str):
+        """获取指定构建记录的日志"""
+        record = get_object_or_404(SmartBuildRecord, uuid=uuid)
+        logs = get_all_logs(record)
+        result = {"status": record.status, "logs": logs}
+        return JsonResponse(SmartBuildHistoryLogsOutputSLZ(result).data)
+
+    def download_history_logs(self, request, uuid: str):
+        """下载构建日志"""
+        smart_build_record = get_object_or_404(SmartBuildRecord, uuid=uuid)
+        logs = get_all_logs(smart_build_record)
+        filename = f"{smart_build_record.package_name}-{uuid}.log"
+
+        response = HttpResponse(logs, content_type="text/plain")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        return response
 
 
 class SmartBuildPhaseViewSet(viewsets.ViewSet):

@@ -334,3 +334,68 @@ class TestSysBkPluginLogsViewset:
                 "ts": "1970-01-01 08:00:01",
             }
         ]
+
+    @pytest.mark.parametrize(
+        ("time_range", "time_order", "expected_params"),
+        [
+            # 测试默认时间范围和排序
+            (None, None, {"time_range": "14d", "time_order": "asc"}),
+            # 测试自定义时间范围
+            ("1h", None, {"time_range": "1h", "time_order": "asc"}),
+            # 测试自定义排序
+            (None, "desc", {"time_range": "14d", "time_order": "desc"}),
+            # 测试自定义时间范围和排序
+            ("3h", "desc", {"time_range": "3h", "time_order": "desc"}),
+            # 测试自定义时间范围（customized）
+            ("customized", "asc", {"time_range": "customized", "time_order": "asc"}),
+        ],
+    )
+    def test_list_with_time_params(self, sys_api_client, bk_plugin_app, time_range, time_order, expected_params):
+        """测试时间范围和排序参数的传递"""
+        # 构建 URL 参数
+        url = f"/sys/api/bk_plugins/{bk_plugin_app.code}/logs/?trace_id=form&scroll_id=bar"
+        if time_range:
+            url += f"&time_range={time_range}"
+        if time_order:
+            url += f"&time_order={time_order}"
+        if time_range == "customized":
+            url += "&start_time=2023-01-01 00:00:00&end_time=2023-01-01 23:59:59"
+
+        with mock.patch("paasng.bk_plugins.bk_plugins.logging.instantiate_log_client") as client_factory:
+            client_factory().execute_scroll_search.return_value = (
+                Response(
+                    Search(),
+                    {
+                        "hits": {"hits": []},
+                        "_scroll_id": "scroll_id",
+                    },
+                ),
+                0,
+            )
+            response = sys_api_client.get(url)
+
+        assert response.status_code == 200
+        assert response.data["total"] == 0
+        assert response.data["logs"] == []
+        assert response.data["scroll_id"] == "scroll_id"
+
+        # 验证 dsl 时间范围及排序
+        dsl = json.loads(response.data["dsl"])
+
+        time_filter = None
+        for filter_item in dsl["query"]["bool"]["filter"]:
+            if "range" in filter_item and "@timestamp" in filter_item["range"]:
+                time_filter = filter_item["range"]["@timestamp"]
+                break
+        assert time_filter is not None
+
+        if expected_params["time_range"] == "customized":
+            # 自定义时间范围
+            assert not isinstance(time_filter["gte"], str) or not time_filter["gte"].startswith("now-")
+        else:
+            # 相对时间范围
+            assert time_filter["gte"] == f"now-{expected_params['time_range']}"
+            assert time_filter["lte"] == "now"
+
+        sort_order = dsl["sort"][0]["@timestamp"]["order"]
+        assert sort_order == expected_params["time_order"]

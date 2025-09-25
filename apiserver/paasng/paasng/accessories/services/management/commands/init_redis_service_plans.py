@@ -79,7 +79,8 @@ class Command(BaseCommand):
                     },
                 )
                 self.stdout.write(
-                    f"Set 0shared as default plan for redis service (tenant_id: {tenant_id})", self.style.SUCCESS
+                    f"Set {self.PLAN_CONFIGS[0]['name']} as default plan for redis service (tenant_id: {tenant_id})",
+                    self.style.SUCCESS,
                 )
 
             except Exception as e:

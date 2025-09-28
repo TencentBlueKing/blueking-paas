@@ -17,6 +17,26 @@
           <i class="paasng-icon paasng-jump-link"></i>
         </a>
       </div>
+      <bk-alert
+        class="mt10"
+        type="warning"
+        :show-icon="false"
+        closable
+      >
+        <div
+          slot="title"
+          class="risk-tips flex-row"
+        >
+          <i class="paasng-icon paasng-remind mr10"></i>
+          <div>
+            <p>{{ $t('应用密钥是云 API 调用的身份凭证，可访问所有已授权的云 API。') }}</p>
+            <p>{{ $t('为确保安全，请妥善保管并定期更换您的密钥，推荐通过环境变量或加密存储进行保存。') }}</p>
+            <p>
+              {{ $t('切勿将密钥暴露在客户端代码、日志文件或版本控制系统中。如发现密钥泄露，请立即在开发者中心更换。') }}
+            </p>
+          </div>
+        </div>
+      </bk-alert>
       <!-- 新增密钥 -->
       <div class="add-secret">
         <bk-popconfirm
@@ -948,9 +968,16 @@ export default {
       font-size: 14px;
     }
   }
+  .risk-tips {
+    line-height: 22px;
+    i {
+      font-size: 14px;
+      color: #ff9800;
+      transform: translateY(3px);
+    }
+  }
   .add-secret {
-    margin-top: 12px;
-    margin-bottom: 16px;
+    margin: 16px 0;
   }
   .content {
     margin-top: 16px;

@@ -3080,4 +3080,7 @@ export default {
   '重新部署时，进程副本数恢复为 S-mart 包中定义的数量。如未指定，则使用页面上的副本数。': 'During redeployment, the process replica count will revert to the number defined in the S-mart package. If not specified, the replica count on the page will be used.',
   暂无收藏的应用: 'No favorited app',
   '将鼠标悬浮到应用，点击收藏图标': 'Hover over the application and click the favorite icon',
+  '应用密钥是云 API 调用的身份凭证，可访问所有已授权的云 API。': 'Application keys are credentials for calling cloud APIs, providing access to all authorized cloud APIs.',
+  '为确保安全，请妥善保管并定期更换您的密钥，推荐通过环境变量或加密存储进行保存。': 'To ensure security, keep your keys safe and change them regularly. It is recommended to save them via environment variables or encrypted storage.',
+  '切勿将密钥暴露在客户端代码、日志文件或版本控制系统中。如发现密钥泄露，请立即在开发者中心更换。': 'Never expose keys in client code, log files, or version control systems. If a key is compromised, immediately replace it in the developer center.',
 };

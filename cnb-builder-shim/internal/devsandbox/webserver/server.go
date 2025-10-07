@@ -19,7 +19,6 @@
 package webserver
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -143,16 +142,11 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 // TODO 将本地源码部署的方式与请求传输源码文件的方式进行接口上的拆分
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		envVars := map[string]string{}
-		if raw := c.PostForm("env_vars"); raw != "" {
-			// env_vars 非空，解析自定义环境变量
-			if err := json.Unmarshal([]byte(raw), &envVars); err != nil {
-				c.JSON(
-					http.StatusBadRequest,
-					gin.H{"message": fmt.Sprintf("invalid env_vars format: %s", err.Error())},
-				)
-				return
-			}
+		var params DeployParams
+		if err := c.ShouldBindJSON(&params); err != nil {
+			errMsg := fmt.Sprintf("invalid request params: %s", err.Error())
+			c.JSON(http.StatusBadRequest, gin.H{"message": errMsg})
+			return
 		}
 
 		var srcFilePath string
@@ -225,7 +219,7 @@ func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFu
 			ID:       status.DeployID,
 			Rebuild:  status.StepOpts.Rebuild,
 			Relaunch: status.StepOpts.Relaunch,
-			EnvVars:  envVars,
+			EnvVars:  params.EnvVars,
 		}:
 			c.JSON(http.StatusOK, gin.H{"deployID": status.DeployID})
 		default:

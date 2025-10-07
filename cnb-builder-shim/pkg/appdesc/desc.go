@@ -130,47 +130,45 @@ func TransformToProcfile(descFilePath string) (string, error) {
 
 // MergeEnvVars 合并环境变量到 appDesc
 func MergeEnvVars(desc AppDesc, envVars []Env) {
-	switch d := desc.(type) {
+	switch appDesc := desc.(type) {
 	case *AppDescV2:
-		module := d.GetModule()
+		module := appDesc.GetModule()
 		if module == nil {
 			return
 		}
 
-		existingEnvMap := make(map[string]int)
-		for i, env := range module.ProcEnvs {
-			existingEnvMap[env.Key] = i
+		envIndexMap := make(map[string]int)
+		for idx, env := range module.ProcEnvs {
+			envIndexMap[env.Key] = idx
 		}
 
-		// 合并新环境变量
-		for _, newEnv := range envVars {
-			if idx, exists := existingEnvMap[newEnv.Name]; exists {
-				module.ProcEnvs[idx].Value = newEnv.Value
+		for _, env := range envVars {
+			if idx, exists := envIndexMap[env.Name]; exists {
+				module.ProcEnvs[idx].Value = env.Value
 			} else {
 				module.ProcEnvs = append(module.ProcEnvs, EnvV2{
-					Key:   newEnv.Name,
-					Value: newEnv.Value,
+					Key:   env.Name,
+					Value: env.Value,
 				})
 			}
 		}
 
 	case *AppDescV3:
-		module := d.GetModule()
+		module := appDesc.GetModule()
 		if module == nil {
 			return
 		}
 
-		existingEnvMap := make(map[string]int)
-		for i, env := range module.Spec.Configuration.Env {
-			existingEnvMap[env.Name] = i
+		envIndexMap := make(map[string]int)
+		for idx, env := range module.Spec.Configuration.Env {
+			envIndexMap[env.Name] = idx
 		}
 
-		// 合并新环境变量
-		for _, newEnv := range envVars {
-			if idx, exists := existingEnvMap[newEnv.Name]; exists {
-				module.Spec.Configuration.Env[idx].Value = newEnv.Value
+		for _, env := range envVars {
+			if idx, exists := envIndexMap[env.Name]; exists {
+				module.Spec.Configuration.Env[idx].Value = env.Value
 			} else {
-				module.Spec.Configuration.Env = append(module.Spec.Configuration.Env, EnvV3(newEnv))
+				module.Spec.Configuration.Env = append(module.Spec.Configuration.Env, EnvV3(env))
 			}
 		}
 	}

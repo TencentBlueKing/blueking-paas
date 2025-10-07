@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -81,9 +82,9 @@ func (m HotReloadManager) Rebuild(reloadID string) error {
 		return errors.Wrap(err, "rebuild")
 	}
 	// 若能获取进程列表，且进程列表不为空，则停止所有进程
-	if processes, err := processCtl.Status(); err == nil && len(processes) > 0 {
-		err = processCtl.StopAllProcesses()
-		if err != nil {
+	processes, err := processCtl.Status()
+	if err == nil && len(processes) > 0 {
+		if err = processCtl.StopAllProcesses(); err != nil {
 			return errors.Wrap(err, "rebuild")
 		}
 	}
@@ -96,12 +97,22 @@ func (m HotReloadManager) Relaunch(reloadID string, envVars map[string]string) e
 	cmd := phase.MakeLauncherCmd(reloadSubCommand)
 
 	if len(envVars) > 0 {
-		// 传入的 env_vars 非空，使用传入的自定义环境变量
-		newEnv := make([]string, 0, len(envVars))
-		for key, value := range envVars {
-			newEnv = append(newEnv, key+"="+value)
+		mergedEnvs := map[string]string{}
+		// 容器环境变量
+		for _, env := range os.Environ() {
+			key, val, _ := strings.Cut(env, "=")
+			mergedEnvs[key] = val
 		}
-		cmd.Env = newEnv
+		// 部署时候传入的变量有更高的优先级
+		for key, val := range envVars {
+			mergedEnvs[key] = val
+		}
+
+		cmdEnv := []string{}
+		for key, val := range mergedEnvs {
+			cmdEnv = append(cmdEnv, key+"="+val)
+		}
+		cmd.Env = cmdEnv
 	}
 
 	return m.runCmd(reloadID, cmd)

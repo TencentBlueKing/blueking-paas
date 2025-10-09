@@ -142,6 +142,11 @@ def init_service_default_policy_job():
     功能特性：
     - 使用分布式锁确保集群环境下的单实例执行
     - 自动适配多租户模式配置
+    - 仅处理远程增强服务（本地增强服务通过专用命令初始化）
+
+    设计说明：
+    1. 本地增强服务（如 redis）应该通过专有的管理命令初始化
+    2. 远程增强服务通过本定时任务初始化
     """
     # 使用分布式锁确保只有一个进程执行初始化
     lock_key = "lock:init_service_default_policy"
@@ -150,11 +155,11 @@ def init_service_default_policy_job():
             logger.info("Another instance is handling service policy initialization, skip.")
             return
 
-        logger.info("Starting service policy initialization process.")
+        logger.info("Starting remote service policy initialization process.")
 
         default_tenant_id = get_init_tenant_id()
         remote_service_mgr = RemoteServiceMgr(get_remote_store())
         for service in remote_service_mgr.list():
             _handel_single_service_default_policy(service, default_tenant_id)
 
-        logger.info("Service policy initialization completed.")
+        logger.info("Remote service policy initialization completed.")

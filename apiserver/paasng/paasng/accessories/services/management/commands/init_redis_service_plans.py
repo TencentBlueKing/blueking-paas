@@ -3,12 +3,11 @@ from typing import List
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.utils import timezone
 
 from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
-from paasng.accessories.servicehub.constants import ServiceType
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.models import DefaultPolicyCreationRecord
+from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.services.models import Plan, Service
 from paasng.core.tenant.user import get_init_tenant_id
 
@@ -36,8 +35,9 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("redis service not exists, skip init plan"))
             return
 
+        service_obj = mixed_service_mgr.get(svc.uuid)
         success_count = 0
-        plans: List[str] = []
+        plan_uuids: List[str] = []
         try:
             for config in self.PLAN_CONFIGS:
                 plan, created = Plan.objects.get_or_create(
@@ -50,7 +50,7 @@ class Command(BaseCommand):
                         "description": config["description"],
                     },
                 )
-                plans.append(str(plan.uuid))
+                plan_uuids.append(str(plan.uuid))
                 if created:
                     self.stdout.write(
                         f'Init  Plan: {config["name"]} ({config["spec_type"]}) success', self.style.SUCCESS
@@ -64,24 +64,23 @@ class Command(BaseCommand):
         except Exception as e:
             self.stderr.write(self.style.ERROR(f"Init plans for redis service failed: {str(e)}"))
 
-        self._init_redis_service_binding_policy(svc, plans, tenant_id)
+        self._init_redis_service_binding_policy(service_obj, plan_uuids, tenant_id)
 
-    def _init_redis_service_binding_policy(self, svc: Service, plans: List[str], tenant_id: str):
+    def _init_redis_service_binding_policy(self, service_obj: ServiceObj, plan_uuids: List[str], tenant_id: str):
         with transaction.atomic():
             try:
-                service_obj = mixed_service_mgr.get(svc.uuid)
-                SvcBindingPolicyManager(service_obj, tenant_id).set_uniform(plans=plans)
-                DefaultPolicyCreationRecord.objects.update_or_create(
-                    service_id=service_obj.uuid,
-                    defaults={
-                        "service_type": ServiceType.LOCAL,
-                        "finished_at": timezone.now(),
-                    },
-                )
+                SvcBindingPolicyManager(service_obj, tenant_id).set_uniform(plans=plan_uuids)
+                DefaultPolicyCreationRecord.objects.mark_finished(service_obj)
+
+                plan_names = [config["name"] for config in self.PLAN_CONFIGS]
+                default_plan_name = self.PLAN_CONFIGS[0]["name"]
+
                 self.stdout.write(
-                    f"Set {self.PLAN_CONFIGS[0]['name']} as default plan for redis service (tenant_id: {tenant_id})",
+                    f"Initialized binding policy for redis service (tenant_id: {tenant_id}): "
+                    f"plans=[{', '.join(plan_names)}], default_plan='{default_plan_name}'",
                     self.style.SUCCESS,
                 )
 
             except Exception as e:
-                self.stdout.write(f"Failed to set default plan: {str(e)}", self.style.ERROR)
+                self.stderr.write(f"Failed to set binding policy: {str(e)}", self.style.ERROR)
+                raise

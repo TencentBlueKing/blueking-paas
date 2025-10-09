@@ -213,6 +213,7 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.isLoading = false;
+        bus.$emit('on-close-loading');
       }
     },
     statusRenderHeader(h) {

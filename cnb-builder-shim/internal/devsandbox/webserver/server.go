@@ -139,14 +139,16 @@ func tokenAuthMiddleware(token string) gin.HandlerFunc {
 }
 
 // DeployHandler handles the deployment of a file to the web server.
-// TODO 将本地源码部署的方式与请求传输源码文件的方式进行接口上的拆分
+// FIXME 将本地源码部署的方式与请求传输源码文件的方式进行接口上的拆分
 func DeployHandler(s *WebServer, svc service.DeployServiceHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var params DeployParams
-		if err := c.ShouldBindJSON(&params); err != nil {
-			errMsg := fmt.Sprintf("invalid request params: %s", err.Error())
-			c.JSON(http.StatusBadRequest, gin.H{"message": errMsg})
-			return
+		// FIXME 只有 contentType 是 application/json 才解析参数，需要等后续做接口分离才能去除该判断逻辑
+		if c.ContentType() == "application/json" {
+			if err := c.ShouldBindJSON(&params); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+				return
+			}
 		}
 
 		var srcFilePath string

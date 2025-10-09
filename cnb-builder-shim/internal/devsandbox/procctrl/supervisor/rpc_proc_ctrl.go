@@ -83,8 +83,8 @@ func makeSupervisorConf(processes []base.Process, procEnvs ...appdesc.Env) (*Sup
 	}
 
 	if procEnvs != nil {
-		envs := make([]string, len(procEnvs))
-		for idx, env := range procEnvs {
+		var envs []string
+		for _, env := range procEnvs {
 			quotes := `"`
 			// FIXME: supervisor 目前在 [supervisord] section 中无法正确转义 %，这里先进行过滤
 			// 相关 pr：https://github.com/Supervisor/supervisor/pull/1695 (merged)
@@ -102,7 +102,7 @@ func makeSupervisorConf(processes []base.Process, procEnvs ...appdesc.Env) (*Sup
 				}
 				quotes = `'`
 			}
-			envs[idx] = fmt.Sprintf(`%s=%s%s%s`, env.Name, quotes, env.Value, quotes)
+			envs = append(envs, fmt.Sprintf(`%s=%s%s%s`, env.Name, quotes, env.Value, quotes))
 		}
 		conf.Environment = strings.Join(envs, ",")
 	}

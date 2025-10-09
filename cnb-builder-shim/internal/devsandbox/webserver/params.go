@@ -27,5 +27,5 @@ type LogQueryParams struct {
 
 // DeployParams is the params of deploy
 type DeployParams struct {
-	EnvVars map[string]string `json:"env_vars"`
+	EnvVars map[string]string `json:"env_vars" binding:"omitempty"`
 }

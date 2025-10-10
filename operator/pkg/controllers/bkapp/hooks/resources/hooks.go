@@ -174,15 +174,14 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 		Status: status,
 	}
 
-	mounterMap, err := volumes.GetAllVolumeMounterMap(bkapp)
+	volMounters, err := volumes.GetAllVolumeMounters(bkapp)
 	if err != nil {
 		log.Error(err, "Failed to get volume mounter map for pre-release-hook", "bkappName", bkapp.Name)
 		return hook
 	}
 
-	for _, mounter := range mounterMap {
-		err = mounter.ApplyToPod(bkapp, hook.Pod)
-		if err != nil {
+	for _, mounter := range volMounters {
+		if err = mounter.ApplyToPod(bkapp, hook.Pod); err != nil {
 			log.Error(err, "Failed to inject mounts info to pre-release-hook")
 		}
 	}

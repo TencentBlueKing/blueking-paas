@@ -21,6 +21,7 @@ package volumes
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,11 +70,12 @@ var _ = Describe("Get VolumeMounterMap", func() {
 	})
 
 	It("mounts without overlay", func() {
-		volMountMap := GetGenericVolumeMountMap(bkapp)
+		volMounts := GetGenericVolumeMounters(bkapp)
 
-		Expect(len(volMountMap)).To(Equal(2))
-		Expect(volMountMap[nginxMountName].GetMountPath()).To(Equal(nginxPath))
-		Expect(volMountMap[redisMountName].GetMountPath()).To(Equal(redisPath))
+		Expect(len(volMounts)).To(Equal(2))
+		resultMap := lo.SliceToMap(volMounts, func(m VolumeMounter) (string, VolumeMounter) { return m.GetName(), m })
+		Expect(resultMap[nginxMountName].GetMountPath()).To(Equal(nginxPath))
+		Expect(resultMap[redisMountName].GetMountPath()).To(Equal(redisPath))
 	})
 
 	It("mounts with overlay", func() {
@@ -117,18 +119,18 @@ var _ = Describe("Get VolumeMounterMap", func() {
 			},
 		}
 
-		volMountMap := GetGenericVolumeMountMap(bkapp)
+		volMounts := GetGenericVolumeMounters(bkapp)
 
-		Expect(len(volMountMap)).To(Equal(3))
-
-		Expect(volMountMap[nginxMountName].GetMountPath()).To(Equal(overlayPath))
-		Expect(volMountMap[etcdName].GetMountPath()).To(Equal(etcdPath))
+		Expect(len(volMounts)).To(Equal(3))
+		resultMap := lo.SliceToMap(volMounts, func(m VolumeMounter) (string, VolumeMounter) { return m.GetName(), m })
+		Expect(resultMap[nginxMountName].GetMountPath()).To(Equal(overlayPath))
+		Expect(resultMap[etcdName].GetMountPath()).To(Equal(etcdPath))
 	})
 
 	It("no mounts", func() {
 		bkapp.Spec.Mounts = []paasv1alpha2.Mount{}
-		volMountMap, _ := GetAllVolumeMounterMap(bkapp)
-		Expect(len(volMountMap)).To(Equal(0))
+		volMounters, _ := GetAllVolumeMounters(bkapp)
+		Expect(len(volMounters)).To(Equal(0))
 	})
 })
 

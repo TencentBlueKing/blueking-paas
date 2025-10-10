@@ -1,0 +1,48 @@
+# -*- coding: utf-8 -*-
+# TencentBlueKing is pleased to support the open source community by making
+# 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
+# Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
+# Licensed under the MIT License (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+#     http://opensource.org/licenses/MIT
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We undertake not to change the open source license (MIT license) applicable
+# to the current version of the project delivered to anyone in the future.
+
+from django.db.models import Q
+from rest_framework.filters import BaseFilterBackend
+
+from paasng.misc.tools.smart_app.models import SmartBuildRecord
+from paasng.misc.tools.smart_app.serializers import SmartBuildRecordFilterInputSLZ
+
+
+class SmartBuildRecordFilterBackend(BaseFilterBackend):
+    """SmartBuild record filter backend"""
+
+    def filter_queryset(self, request, queryset, view):
+        if queryset.model != SmartBuildRecord:
+            raise ValueError("SmartBuildRecordFilterBackend only support to filter SmartBuildRecord")
+
+        slz = SmartBuildRecordFilterInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+
+        source_origin = params.get("source_origin")
+        if source_origin:
+            queryset = queryset.filter(source_origin=source_origin)
+
+        search = params.get("search")
+        if search:
+            queryset = queryset.filter(Q(package_name__icontains=search) | Q(operator__icontains=search))
+
+        status = params.get("status")
+        if status:
+            queryset = queryset.filter(status=status)
+
+        return queryset.order_by("-created")

@@ -28,13 +28,15 @@ pytestmark = pytest.mark.django_db
 
 
 def create_fake_smart_build(
-    package_name=None,
-    app_code=None,
-    operator=None,
-    status=JobStatus.PENDING.value,
-    **kwargs,
+    source_origin: SourceCodeOriginType | None = None,
+    package_name: str | None = None,
+    app_code: str | None = None,
+    operator: str | None = None,
+    status: JobStatus = JobStatus.PENDING,
 ):
     """Create a fake SmartBuild instance for testing"""
+    if source_origin is None:
+        source_origin = SourceCodeOriginType.PACKAGE
     if package_name is None:
         package_name = f"{generate_random_string(8)}.tar.gz"
     if app_code is None:
@@ -45,12 +47,10 @@ def create_fake_smart_build(
     log = SmartBuildLog.objects.create()
 
     return SmartBuildRecord.objects.create(
-        source_origin=SourceCodeOriginType.PACKAGE.value,
+        source_origin=source_origin,
         package_name=package_name,
         app_code=app_code,
         status=status,
         operator=operator,
         stream=log,
-        tenant_id="default",
-        **kwargs,
     )

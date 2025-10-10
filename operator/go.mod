@@ -15,8 +15,9 @@ require (
 	github.com/onsi/gomega v1.36.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.4
-	github.com/samber/lo v1.47.0
+	github.com/samber/lo v1.52.0
 	github.com/tidwall/sjson v1.2.5
+	github.com/xeipuuv/gojsonschema v1.2.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/time v0.10.0
 	gopkg.in/inf.v0 v0.9.1
@@ -24,6 +25,7 @@ require (
 	k8s.io/apimachinery v0.24.17
 	k8s.io/client-go v0.24.17
 	sigs.k8s.io/controller-runtime v0.12.3
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -71,7 +73,6 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
-	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
@@ -92,5 +93,4 @@ require (
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )

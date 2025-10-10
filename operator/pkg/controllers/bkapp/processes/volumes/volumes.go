@@ -25,6 +25,8 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -211,9 +213,13 @@ func ShouldApplyBuiltinLogsVolume(bkapp *paasv1alpha2.BkApp) bool {
 // VolumeMounterMap is a map of VolumeMounter, which key is the Volume name
 type VolumeMounterMap map[string]VolumeMounter
 
-// GetGenericVolumeMountMap 结合 mounts 和 envoverlay.mounts, 生成只含有 GenericVolumeMount 的 VolumeMounterMap
-func GetGenericVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMounterMap {
-	mounterMap := make(VolumeMounterMap)
+// GetGenericVolumeMounters 读取并结合 mounts 和 envOverlay.mounts, 生成 Mounter 配置
+func GetGenericVolumeMounters(bkapp *paasv1alpha2.BkApp) []VolumeMounter {
+	// Use a map to deduplicate mounts with the same name
+	mounterMap := make(map[string]VolumeMounter)
+	// Remember the order of the mounter names
+	orderedNames := make([]string, 0)
+
 	for _, mount := range bkapp.Spec.Mounts {
 		mounterMap[mount.Name] = &GenericVolumeMount{
 			Volume: Volume{
@@ -223,26 +229,31 @@ func GetGenericVolumeMountMap(bkapp *paasv1alpha2.BkApp) VolumeMounterMap {
 			MountPath: mount.MountPath,
 			SubPaths:  mount.SubPaths,
 		}
+		orderedNames = append(orderedNames, mount.Name)
 	}
 
-	if bkapp.Spec.EnvOverlay == nil {
-		return mounterMap
-	}
-
-	runEnv := envs.GetEnvName(bkapp)
-	for _, mount := range bkapp.Spec.EnvOverlay.Mounts {
-		if mount.EnvName == runEnv {
-			mounterMap[mount.Mount.Name] = &GenericVolumeMount{
-				Volume: Volume{
-					Name:   mount.Name,
-					Source: mount.Source,
-				},
-				MountPath: mount.Mount.MountPath,
-				SubPaths:  mount.SubPaths,
+	if bkapp.Spec.EnvOverlay != nil {
+		// Append the volumes defined in envOverlay.mounts
+		runEnv := envs.GetEnvName(bkapp)
+		for _, mount := range bkapp.Spec.EnvOverlay.Mounts {
+			if mount.EnvName == runEnv {
+				mounterMap[mount.Mount.Name] = &GenericVolumeMount{
+					Volume: Volume{
+						Name:   mount.Name,
+						Source: mount.Source,
+					},
+					MountPath: mount.Mount.MountPath,
+					SubPaths:  mount.SubPaths,
+				}
+				orderedNames = append(orderedNames, mount.Name)
 			}
 		}
 	}
-	return mounterMap
+
+	// Return mounts in the order of their first appearance
+	return lo.Map(lo.Uniq(orderedNames), func(name string, _ int) VolumeMounter {
+		return mounterMap[name]
+	})
 }
 
 // GetBuiltinLogsVolumeMounts ...
@@ -275,23 +286,33 @@ func GetBuiltinLogsVolumeMounts(bkapp *paasv1alpha2.BkApp) ([]BuiltinLogsVolumeM
 	}, nil
 }
 
-// GetAllVolumeMounterMap 返回属于 bkapp 的所有 VolumeMounter, 包括:
+// GetAllVolumeMounters 返回属于 bkapp 的所有 VolumeMounter, 包括:
 // - GenericVolumeMount
-// - BuiltinLogsVolumeMount(优先级更高)
-func GetAllVolumeMounterMap(bkapp *paasv1alpha2.BkApp) (VolumeMounterMap, error) {
-	mounterMap := GetGenericVolumeMountMap(bkapp)
+// - BuiltinLogsVolumeMount(如果名字和 Generic 出现冲突时报错)
+func GetAllVolumeMounters(bkapp *paasv1alpha2.BkApp) ([]VolumeMounter, error) {
+	genericMounters := GetGenericVolumeMounters(bkapp)
+	genericNames := lo.SliceToMap(
+		genericMounters,
+		func(m VolumeMounter) (string, struct{}) { return m.GetName(), struct{}{} },
+	)
 
+	// Initialize the results with generic mounts
+	results := append([]VolumeMounter{}, genericMounters...)
 	if ShouldApplyBuiltinLogsVolume(bkapp) {
-		volumes, err := GetBuiltinLogsVolumeMounts(bkapp)
+		builtinVols, err := GetBuiltinLogsVolumeMounts(bkapp)
 		if err != nil {
 			return nil, err
 		}
-		for idx, volume := range volumes {
-			if _, existed := mounterMap[volume.GetName()]; existed {
+		for _, volume := range builtinVols {
+			// Exit when a conflict is found
+			if _, existed := genericNames[volume.GetName()]; existed {
 				return nil, errors.New("user defined volume mount is conflicted with builtin log volume mount")
 			}
-			mounterMap[volume.GetName()] = &volumes[idx]
+
+			// Append the volume to the results
+			vol := volume
+			results = append(results, &vol)
 		}
 	}
-	return mounterMap, nil
+	return results, nil
 }

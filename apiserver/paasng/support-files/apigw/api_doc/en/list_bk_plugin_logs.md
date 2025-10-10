@@ -13,13 +13,17 @@ Query the logs of a "BlueKing Plugin" type application for internal system use o
 | --------- | ------ | -------- | -------------------------------------------- |
 | scroll_id | string | No       | Identifier field for scroll pagination       |
 | trace_id  | string | Yes      | `trace_id` identifier for filtering logs     |
+| time_range | string | No | Time range, options: "5m" "1h" "3h" "6h" "12h" "1d" "3d" "7d" "14d" "customized", default "14d" |
+| start_time | string | No | Start time, required when time_range is "customized", format: YYYY-MM-DD HH:MM:SS |
+| end_time | string | No | End time, required when time_range is "customized", format: YYYY-MM-DD HH:MM:SS |
+| time_order | string | No | Time sorting order, options: asc (ascending, default), desc (descending) |
 
 ### Request Example
 ```bash
 curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "bk_apigw_test", "bk_app_secret": "***"}' --insecure 'https://bkapi.example.com/api/bkpaas3/prod/system/bk_plugins/appid1/logs/?trace_id=1111'
 ```
 
-### Response Result 
+### Response Result
 #### Success Response
 ```javascript
 {

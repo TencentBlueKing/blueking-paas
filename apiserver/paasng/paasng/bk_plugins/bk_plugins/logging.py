@@ -19,7 +19,7 @@ import logging
 
 """Logging facilities for bk-plugins"""
 import json
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Literal, Optional, Tuple
 
 import cattr
 from attrs import converters, define, field
@@ -96,20 +96,34 @@ class PluginLoggingClient:
         """
         self.application = bk_plugin.get_application()
 
-    def query(self, trace_id: str, scroll_id: Optional[str] = None) -> Logs[StructureLogLine]:
+    def query(
+        self,
+        trace_id: str,
+        scroll_id: Optional[str] = None,
+        time_range: Optional[SmartTimeRange] = None,
+        time_order: Literal["asc", "desc"] = "asc",
+    ) -> Logs[StructureLogLine]:
         """Query logs
 
         :param trace_id: "trace_id" is an identifier for filtering logs
         :param scroll_id: id for scrolling logs
+        :param time_range: time range for querying logs
+        :param time_order: time order for querying logs, "asc" or "desc"
         """
+        # 使用传入的时间范围，如果没有传入则使用默认值
+        if time_range is None:
+            time_range = SmartTimeRange(time_range=self._default_time_range)
+
         log_client, log_config = self.instantiate_log_client()
         search = self.make_search(
             mappings=log_client.get_mappings(
                 index=log_config.search_params.indexPattern,
-                time_range=SmartTimeRange(time_range=self._default_time_range),
+                time_range=time_range,
                 timeout=settings.DEFAULT_ES_SEARCH_TIMEOUT,
             ),
             trace_id=trace_id,
+            time_range=time_range,
+            time_order=time_order,
         )
 
         response, total = log_client.execute_scroll_search(
@@ -141,18 +155,33 @@ class PluginLoggingClient:
             log_config=log_config, tenant_id=self.application.tenant_id, bk_username="blueking"
         ), log_config
 
-    def make_search(self, mappings: dict, trace_id: str) -> SmartSearch:
+    def make_search(
+        self,
+        mappings: dict,
+        trace_id: str,
+        time_range: Optional[SmartTimeRange] = None,
+        time_order: Literal["asc", "desc"] = "asc",
+    ) -> SmartSearch:
         """构造日志查询语句
 
         :param trace_id: "trace_id" is an identifier for filtering logs
+        :param time_range: time range for querying logs
+        :param time_order: time order for querying logs, "asc" or "desc"
         """
         module = self.application.get_module(module_name=self._module_name)
         # 插件应用只部署 prod 环境
         env = module.get_envs(environment="prod")
-        smart_time_range = SmartTimeRange(time_range=self._default_time_range)
+
+        if time_range is None:
+            time_range = SmartTimeRange(time_range=self._default_time_range)
+
         query_config = ProcessLogQueryConfig.objects.select_process_irrelevant(env).json
         search = self._make_base_search(
-            env=env, search_params=query_config.search_params, mappings=mappings, time_range=smart_time_range
+            env=env,
+            search_params=query_config.search_params,
+            mappings=mappings,
+            time_range=time_range,
+            time_order=time_order,
         )
 
         if get_log_collector_type(env) == LogCollectorType.BK_LOG:
@@ -160,9 +189,9 @@ class PluginLoggingClient:
             query_term = "__ext_json.trace_id"
             search = search.sort(
                 {
-                    "dtEventTimeStamp": {"order": "asc"},
-                    "gseIndex": {"order": "asc"},
-                    "iterationIndex": {"order": "asc"},
+                    "dtEventTimeStamp": {"order": time_order},
+                    "gseIndex": {"order": time_order},
+                    "iterationIndex": {"order": time_order},
                 }
             )
         else:
@@ -178,11 +207,12 @@ class PluginLoggingClient:
         time_range: SmartTimeRange,
         limit: int = DEFAULT_LOG_BATCH_SIZE,
         offset: int = 0,
+        time_order: Literal["asc", "desc"] = "asc",
     ) -> SmartSearch:
         """构造基础的搜索语句, 包括过滤应用信息、时间范围、分页等"""
         plugin_filter = EnvFilter(env=env, search_params=search_params, mappings=mappings)
         # UPDATE: Use ascend order for querying plugin logs
-        search = SmartSearch(time_field=search_params.timeField, time_range=time_range, time_order="asc")
+        search = SmartSearch(time_field=search_params.timeField, time_range=time_range, time_order=time_order)
         search = plugin_filter.filter_by_env(search)
         search = plugin_filter.filter_by_builtin_filters(search)
         search = plugin_filter.filter_by_builtin_excludes(search)

@@ -21,6 +21,7 @@ from unittest import mock
 import pytest
 from django.conf import settings
 from django.test.utils import override_settings
+from django.urls import reverse
 
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
@@ -162,6 +163,46 @@ class TestCreateCloudNativeModule:
         assert deploy_hook.command == ["/bin/bash"]
         assert deploy_hook.args == ["-c", "echo 'hello world'"]
 
+    def test_create_with_image_invalid_source_origin(self, bk_cnative_app, api_client):
+        """托管方式：仅镜像, 但使用了错误的源码来源"""
+        random_suffix = generate_random_string(length=6)
+        image_repository = "strm/helloworld-http"
+        response = api_client.post(
+            reverse("module.create.cloud_native", kwargs={"code": bk_cnative_app.code}),
+            data={
+                "name": f"uta-{random_suffix}",
+                "source_config": {
+                    # 使用非法的源码来源
+                    "source_origin": SourceOrigin.AUTHORIZED_VCS,
+                    "source_repo_url": "strm/helloworld-http",
+                },
+                "bkapp_spec": {
+                    "build_config": {"build_method": "custom_image", "image_repository": image_repository},
+                    "processes": [
+                        {
+                            "name": "web",
+                            "command": ["bash", "/app/start_web.sh"],
+                            "env_overlay": {
+                                "stag": {"environment_name": "stag", "target_replicas": 1, "plan_name": "2C1G"},
+                                "prod": {"environment_name": "prod", "target_replicas": 2, "plan_name": "2C1G"},
+                            },
+                            "port": 30000,
+                        }
+                    ],
+                    "hook": {
+                        "type": "pre-release-hook",
+                        "enabled": True,
+                        "command": ["/bin/bash"],
+                        "args": ["-c", "echo 'hello world'"],
+                    },
+                },
+            },
+        )
+        assert response.status_code == 400
+        data = response.json()
+        assert data.get("code") == "VALIDATION_ERROR"
+        assert "invalid build_method" in data.get("detail")
+
     @pytest.mark.usefixtures("_init_tmpls")
     @mock.patch("paasng.platform.modules.views.create_repo_with_user_account")
     @mock.patch("paasng.platform.modules.helpers.ModuleRuntimeBinder")
@@ -199,8 +240,11 @@ class TestCreateCloudNativeModule:
 
         source_repo_url = "" if auto_create_repo else "https://git.example.com/helloWorld.git"
         if init_error:
-            with pytest.raises(RuntimeError, match="forced error"), mock.patch(
-                "paasng.platform.modules.views.init_module_in_view", side_effect=RuntimeError("forced error")
+            with (
+                pytest.raises(RuntimeError, match="forced error"),
+                mock.patch(
+                    "paasng.platform.modules.views.init_module_in_view", side_effect=RuntimeError("forced error")
+                ),
             ):
                 api_client.post(
                     f"/api/bkapps/cloud-native/{bk_cnative_app.code}/modules/",

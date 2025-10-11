@@ -57,13 +57,15 @@ var reloadCmd = &cobra.Command{
 		}
 
 		// 从当前进程中获取用户传入的环境变量
-		envs := []appdesc.Env{}
+		var envs []appdesc.Env
 		for _, env := range os.Environ() {
 			name, value, _ := strings.Cut(env, "=")
 			envs = append(envs, appdesc.Env{Name: name, Value: value})
 		}
 		// 合并环境变量到 appDesc
-		appdesc.MergeEnvVars(appDesc, envs)
+		if len(envs) > 0 {
+			appdesc.MergeEnvVars(appDesc, envs)
+		}
 
 		if err = devlaunch.Run(md.Processes, appDesc); err != nil {
 			logger.Error(err, "failed to hot launch")

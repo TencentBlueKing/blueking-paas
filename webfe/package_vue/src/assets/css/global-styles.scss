@@ -17,7 +17,7 @@
 /* tag 样式 end */
 
 /* 常用间距工具类 start */
-$spacing-values: 4, 6, 8, 12, 16, 20, 24;
+$spacing-values: 4, 6, 8, 10, 12, 16, 20, 24;
 @each $size in $spacing-values {
   /* ===== Margins ===== */
   // 单向

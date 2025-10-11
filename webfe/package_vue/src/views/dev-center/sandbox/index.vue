@@ -158,6 +158,12 @@ export default {
     RunSandboxDialog,
     SubmitCodeDialog,
   },
+  provide() {
+    return {
+      envData: this.envData,
+      getSandboxEnvVars: this.getSandboxEnvVars,
+    };
+  },
   data() {
     return {
       isDialogVisible: false,
@@ -194,6 +200,10 @@ export default {
       isShowTopAlert: true,
       // 是否处于引导中
       isInGuidance: false,
+      envData: {
+        sandboxEnvVars: [],
+        isEnvLoading: false,
+      },
     };
   },
   computed: {
@@ -240,7 +250,7 @@ export default {
     },
   },
   created() {
-    Promise.all([this.getSandboxData(), this.getEnhancedServices()]).finally(() => {
+    Promise.all([this.getSandboxData(), this.getEnhancedServices(), this.getSandboxEnvVars()]).finally(() => {
       setTimeout(() => {
         this.isLoading = false;
       }, 1000);
@@ -442,6 +452,25 @@ export default {
         this.processData = [];
       }
     },
+    // 获取沙箱环境变量
+    async getSandboxEnvVars() {
+      this.$set(this.envData, 'isEnvLoading', true);
+      try {
+        const res = await this.$store.dispatch('sandbox/getSandboxEnvVars', {
+          appCode: this.code,
+          moduleId: this.module,
+          devSandboxCode: this.devSandboxCode,
+        });
+        // 对环境变量进行排序，确保自定义变量排在前面
+        this.envData.sandboxEnvVars = (res || []).sort((a, b) => {
+          return b.source === 'custom' ? 1 : a.source === 'custom' ? -1 : 0;
+        });
+      } catch (e) {
+        this.catchErrorHandler(e);
+      } finally {
+        this.$set(this.envData, 'isEnvLoading', false);
+      }
+    },
     // 切换至日志tab
     switchLogTab() {
       this.$refs.rightTabRef.handleTabChange({ name: 'log', label: this.$t('日志') });
@@ -459,8 +488,14 @@ export default {
       this.buildStatus = '';
       try {
         this.switchLogTab();
+        const data = {
+          env_vars: this.envData.sandboxEnvVars.reduce((acc, item) => {
+            acc[item.key] = item.value;
+            return acc;
+          }, {}),
+        };
         const url = this.ensureHttpProtocol(`${this.sandboxData.devserver_url}deploys`);
-        const res = await this.executeRequest(url, 'post');
+        const res = await this.executeRequest(url, 'post', data);
         this.deployId = res.deployID;
         // 如果tab为折叠状态时，运行需打开
         if (!this.isCollapse) {
@@ -840,6 +875,7 @@ export default {
       flex: 1;
       &.collapse {
         margin-right: 0;
+        overflow-x: hidden;
         /deep/ .bk-resize-layout-aside {
           width: 0 !important;
         }

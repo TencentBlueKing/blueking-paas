@@ -46,36 +46,37 @@ var _ = Describe("Test process_ctl", func() {
 
 	DescribeTable(
 		"Test MakeSupervisorConf with invalid environment variables",
-		func(processes []base.Process, procEnv []appdesc.Env, expectedErrorStr string) {
-			_, err := makeSupervisorConf(processes, procEnv...)
-			Expect(err.Error()).To(Equal(expectedErrorStr))
+		func(processes []base.Process, procEnv []appdesc.Env, expectedEnvStr string) {
+			cfg, err := makeSupervisorConf(processes, procEnv...)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.Environment).To(Equal(expectedEnvStr))
 		}, Entry(
-			"invalid with (%)",
+			"has % which must skip",
 			[]base.Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
 			[]appdesc.Env{
 				{Name: "FOO", Value: `%abc`},
 				{Name: "BAR", Value: `ab%c`},
+				{Name: "BAZ", Value: `abc`},
 			},
-			`environment variables: FOO, BAR has invalid characters ("%)`,
+			`BAZ="abc"`,
 		),
 		Entry(
-			"invalid with (%)",
+			"has \" which must quote with '",
 			[]base.Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
 			[]appdesc.Env{
-				{Name: "FOO", Value: `%abc`},
+				{Name: "FOO", Value: `a"bc`},
 				{Name: "BAR", Value: `abc`},
 			},
-			`environment variables: FOO has invalid characters ("%)`,
+			`FOO='a"bc',BAR="abc"`,
 		),
 		Entry(
-			`invalid with ("%)`,
+			"standard case",
 			[]base.Process{{ProcType: "web", CommandPath: "/cnb/processes/web"}},
 			[]appdesc.Env{
-				{Name: "FOO_TEST", Value: `http://abc.com/cc`},
-				{Name: "FOO", Value: `%abc`},
-				{Name: "BAR", Value: `ab"c`},
+				{Name: "FOO", Value: `abcd`},
+				{Name: "BAR", Value: `ef'gh`},
 			},
-			`environment variables: FOO, BAR has invalid characters ("%)`,
+			`FOO="abcd",BAR="ef'gh"`,
 		),
 	)
 

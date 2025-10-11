@@ -28,15 +28,20 @@ import (
 
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/internal/devsandbox/procctrl/base"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/appdesc"
+	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/logging"
 	"github.com/TencentBlueking/bkpaas/cnb-builder-shim/pkg/supervisord/rpc"
 )
 
-var supervisorDir = "/cnb/devsandbox/supervisor"
-var rpcPort = "9001"
-var rpcAddress = "http://127.0.0.1:9001/RPC2"
+var (
+	logger        = logging.Default()
+	supervisorDir = "/cnb/devsandbox/supervisor"
+	rpcPort       = "9001"
+	rpcAddress    = "http://127.0.0.1:9001/RPC2"
+)
 
-var confFilePath = filepath.Join(supervisorDir, "dev.conf")
-var confTmpl = `[unix_http_server]
+var (
+	confFilePath = filepath.Join(supervisorDir, "dev.conf")
+	confTmpl     = `[unix_http_server]
 file = {{ .RootDir }}/supervisor.sock
 
 [supervisorctl]
@@ -60,6 +65,7 @@ redirect_stderr = true
 [inet_http_server]
 port=127.0.0.1:{{ .Port }}
 `
+)
 
 // SupervisorConf is a supervisor template conf data
 type SupervisorConf struct {
@@ -67,29 +73,6 @@ type SupervisorConf struct {
 	Port        string
 	Processes   []base.ProcessConf
 	Environment string
-}
-
-// validateEnvironment validates the environment variables for supervisor conf.
-//
-// see detail environment conf in http://supervisord.org/configuration.html
-// char " and % in environment value will cause supervisord to fail
-func validateEnvironment(procEnvs []appdesc.Env) error {
-	invalidChars := `"%`
-	invalidEnvNames := []string{}
-	for _, env := range procEnvs {
-		if strings.ContainsAny(env.Value, invalidChars) {
-			invalidEnvNames = append(invalidEnvNames, env.Name)
-		}
-	}
-	if len(invalidEnvNames) == 0 {
-		return nil
-	}
-
-	return fmt.Errorf(
-		"environment variables: %s has invalid characters (%s)",
-		strings.Join(invalidEnvNames, ", "),
-		invalidChars,
-	)
 }
 
 // returns a new SupervisorConf
@@ -100,12 +83,27 @@ func makeSupervisorConf(processes []base.Process, procEnvs ...appdesc.Env) (*Sup
 	}
 
 	if procEnvs != nil {
-		if err := validateEnvironment(procEnvs); err != nil {
-			return nil, err
-		}
-		envs := make([]string, len(procEnvs))
-		for indx, env := range procEnvs {
-			envs[indx] = fmt.Sprintf(`%s="%s"`, env.Name, env.Value)
+		var envs []string
+		for _, env := range procEnvs {
+			quotes := `"`
+			// FIXME: supervisor 目前在 [supervisord] section 中无法正确转义 %，这里先进行过滤
+			// 相关 pr：https://github.com/Supervisor/supervisor/pull/1695 (merged)
+			if strings.Contains(env.Value, "%") {
+				logger.Info("[warning] skipping env which value contains %", "name", env.Name)
+				continue
+			}
+
+			// FIXME：supervisor 目前无法处理类似于 A="foo\"bar",B="bar" 这种情况
+			// 这里的处理方式是，环境变量值中有双引号时，如果不包含单引号，则用单引号包裹，否则跳过该变量
+			// 相关 commit：https://github.com/Supervisor/supervisor/commit/18c4f6b1
+			if strings.Contains(env.Value, `"`) {
+				if strings.Contains(env.Value, `'`) {
+					logger.Info("[warning] skipping env which value contains both \" and '", "name", env.Name)
+					continue
+				}
+				quotes = `'`
+			}
+			envs = append(envs, fmt.Sprintf(`%s=%s%s%s`, env.Name, quotes, env.Value, quotes))
 		}
 		conf.Environment = strings.Join(envs, ",")
 	}
@@ -142,10 +140,10 @@ func RefreshConf(processes []base.Process, procEnvs ...appdesc.Env) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(conf.RootDir, "log"), 0o755); err != nil {
+	if err = os.MkdirAll(filepath.Join(conf.RootDir, "log"), 0o755); err != nil {
 		return err
 	}
-	if err := refreshConf(conf); err != nil {
+	if err = refreshConf(conf); err != nil {
 		return err
 	}
 	return nil

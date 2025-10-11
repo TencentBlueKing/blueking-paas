@@ -128,3 +128,49 @@ func TransformToProcfile(descFilePath string) (string, error) {
 
 	return strings.Join(lines, "\n"), nil
 }
+
+// MergeEnvVars 合并环境变量到 appDesc
+func MergeEnvVars(desc AppDesc, envVars []Env) {
+	switch appDesc := desc.(type) {
+	case *AppDescV2:
+		module := appDesc.GetModule()
+		if module == nil {
+			return
+		}
+
+		envIndexMap := make(map[string]int)
+		for idx, env := range module.ProcEnvs {
+			envIndexMap[env.Key] = idx
+		}
+
+		for _, env := range envVars {
+			if idx, exists := envIndexMap[env.Name]; exists {
+				module.ProcEnvs[idx].Value = env.Value
+			} else {
+				module.ProcEnvs = append(module.ProcEnvs, EnvV2{
+					Key:   env.Name,
+					Value: env.Value,
+				})
+			}
+		}
+
+	case *AppDescV3:
+		module := appDesc.GetModule()
+		if module == nil {
+			return
+		}
+
+		envIndexMap := make(map[string]int)
+		for idx, env := range module.Spec.Configuration.Env {
+			envIndexMap[env.Name] = idx
+		}
+
+		for _, env := range envVars {
+			if idx, exists := envIndexMap[env.Name]; exists {
+				module.Spec.Configuration.Env[idx].Value = env.Value
+			} else {
+				module.Spec.Configuration.Env = append(module.Spec.Configuration.Env, EnvV3(env))
+			}
+		}
+	}
+}

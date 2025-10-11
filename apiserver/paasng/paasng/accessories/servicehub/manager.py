@@ -23,6 +23,7 @@ from typing import Callable, Dict, Generator, Iterable, Iterator, List, NamedTup
 
 from attrs import define
 from django.http import Http404
+from django.utils import timezone
 
 from paasng.accessories.servicehub.constants import ServiceBindingType, ServiceType
 from paasng.accessories.servicehub.exceptions import (
@@ -33,6 +34,7 @@ from paasng.accessories.servicehub.exceptions import (
 )
 from paasng.accessories.servicehub.local.manager import LocalPlanMgr, LocalServiceMgr, LocalServiceObj
 from paasng.accessories.servicehub.models import (
+    DefaultPolicyCreationRecord,
     LocalServiceDBProperties,
     RemoteServiceDBProperties,
     ServiceDBProperties,
@@ -288,6 +290,21 @@ class MixedServiceMgr:
         raise UnboundSvcAttachmentDoesNotExist(
             f"service<{service}> has no attachment with service_instance_id<{service_instance_id}>"
         )
+
+
+def mark_default_policy_creation_finished(service_obj: ServiceObj):
+    """Mark the default policy creation as finished."""
+
+    db_properties = get_db_properties(service_obj)
+    service_type = db_properties.col_service_type
+
+    DefaultPolicyCreationRecord.objects.update_or_create(
+        service_uuid=service_obj.uuid,
+        defaults={
+            "service_type": service_type,
+            "created_at": timezone.now(),
+        },
+    )
 
 
 class MixedPlanMgr:

@@ -20,7 +20,6 @@ import logging
 from typing import Collection, Dict
 
 from django.db import models
-from django.utils import timezone
 
 from paasng.accessories.servicehub.constants import ServiceAllocationPolicyType, ServiceType
 from paasng.accessories.servicehub.services import ServiceObj
@@ -358,22 +357,6 @@ class ServiceBindingPrecedencePolicy(AuditedModel):
         unique_together = ("tenant_id", "service_id", "priority")
 
 
-class DefaultPolicyCreationRecordManager(models.Manager):
-    def mark_finished(self, service_obj: ServiceObj):
-        """标记服务的默认策略创建完成"""
-        from paasng.accessories.servicehub.manager import get_db_properties
-
-        db_properties = get_db_properties(service_obj)
-        service_type = db_properties.col_service_type
-        self.update_or_create(
-            service_id=service_obj.uuid,
-            defaults={
-                "service_type": service_type,
-                "finished_at": timezone.now(),
-            },
-        )
-
-
 class DefaultPolicyCreationRecord(AuditedModel):
     """[multi-tenancy] This model is not tenant-aware.
     默认租户下增强服务默认绑定策略创建记录
@@ -388,5 +371,3 @@ class DefaultPolicyCreationRecord(AuditedModel):
     # See `ServiceType` in constants
     service_type = models.CharField(verbose_name="增强服务类型", max_length=16, help_text="远程或本地")
     finished_at = models.DateTimeField(verbose_name="完成时间", null=True, blank=True)
-
-    objects = DefaultPolicyCreationRecordManager()

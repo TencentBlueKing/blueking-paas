@@ -5,8 +5,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
-from paasng.accessories.servicehub.manager import mixed_service_mgr
-from paasng.accessories.servicehub.models import DefaultPolicyCreationRecord
+from paasng.accessories.servicehub.manager import mark_default_policy_creation_finished, mixed_service_mgr
 from paasng.accessories.servicehub.services import ServiceObj
 from paasng.accessories.services.models import Plan, Service
 from paasng.core.tenant.user import get_init_tenant_id
@@ -70,7 +69,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             try:
                 SvcBindingPolicyManager(service_obj, tenant_id).set_uniform(plans=plan_uuids)
-                DefaultPolicyCreationRecord.objects.mark_finished(service_obj)
+                mark_default_policy_creation_finished(service_obj)
 
                 plan_names = [config["name"] for config in self.PLAN_CONFIGS]
                 default_plan_name = self.PLAN_CONFIGS[0]["name"]

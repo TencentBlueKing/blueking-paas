@@ -119,7 +119,7 @@ const replicaCountRule = [
   {
     validator: (val) => {
       const num = Number(val);
-      return num >= 1 && num <= 5 && Number.isInteger(num)
+      return num >= 1 && num <= 5 && Number.isInteger(num);
     },
     message: i18n.t('输入值应该在 %s 到 %s 之间', [1, 5]),
     trigger: 'blur',
@@ -387,7 +387,6 @@ export default {
         color: #4d4f56;
         line-height: 20px;
         display: -webkit-box;
-        line-clamp: 2;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
         overflow: hidden;

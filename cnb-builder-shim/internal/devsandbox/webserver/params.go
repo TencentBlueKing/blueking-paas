@@ -24,3 +24,8 @@ package webserver
 type LogQueryParams struct {
 	Lines int `form:"lines,default=100" binding:"omitempty,gte=1,lte=200"`
 }
+
+// DeployParams is the params of deploy
+type DeployParams struct {
+	EnvVars map[string]string `json:"env_vars" binding:"omitempty"`
+}

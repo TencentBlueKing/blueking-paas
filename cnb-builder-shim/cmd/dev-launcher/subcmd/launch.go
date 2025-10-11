@@ -19,7 +19,9 @@
 package subcmd
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/buildpacks/lifecycle/launch"
@@ -51,6 +53,17 @@ var reloadCmd = &cobra.Command{
 		if err != nil {
 			logger.Error(err, "parse invalid app_desc.yaml")
 			return err
+		}
+
+		// 从当前进程中获取用户传入的环境变量
+		var envs []appdesc.Env
+		for _, env := range os.Environ() {
+			name, value, _ := strings.Cut(env, "=")
+			envs = append(envs, appdesc.Env{Name: name, Value: value})
+		}
+		// 合并环境变量到 appDesc
+		if len(envs) > 0 {
+			appdesc.MergeEnvVars(appDesc, envs)
 		}
 
 		if err = devlaunch.Run(md.Processes, appDesc); err != nil {

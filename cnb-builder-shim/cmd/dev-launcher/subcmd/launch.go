@@ -43,18 +43,6 @@ var reloadCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := logging.Default()
 
-		// 从当前进程中获取用户传入的环境变量
-		envList := make([]appdesc.Env, 0)
-		for _, envStr := range os.Environ() {
-			parts := strings.SplitN(envStr, "=", 2)
-			if len(parts) == 2 {
-				envList = append(envList, appdesc.Env{
-					Name:  parts[0],
-					Value: parts[1],
-				})
-			}
-		}
-
 		var md launch.Metadata
 
 		if _, err := toml.DecodeFile(launch.GetMetadataFilePath("/layers"), &md); err != nil {
@@ -68,9 +56,15 @@ var reloadCmd = &cobra.Command{
 			return err
 		}
 
+		// 从当前进程中获取用户传入的环境变量
+		var envs []appdesc.Env
+		for _, env := range os.Environ() {
+			name, value, _ := strings.Cut(env, "=")
+			envs = append(envs, appdesc.Env{Name: name, Value: value})
+		}
 		// 合并环境变量到 appDesc
-		if len(envList) > 0 {
-			appdesc.MergeEnvVars(appDesc, envList)
+		if len(envs) > 0 {
+			appdesc.MergeEnvVars(appDesc, envs)
 		}
 
 		if err = devlaunch.Run(md.Processes, appDesc); err != nil {

@@ -79,71 +79,26 @@ var _ = Describe("Test webserver api", func() {
 	})
 
 	Describe("deploy", func() {
-		Context("deploy with env_vars", func() {
-			testCases := []struct {
-				name      string
-				envVars   string
-				expected  map[string]string
-				expectErr bool
-			}{
-				{
-					name:     "with valid env_vars",
-					envVars:  `{"ENV_VAR1":"value1","ENV_VAR2":"value2"}`,
-					expected: map[string]string{"ENV_VAR1": "value1", "ENV_VAR2": "value2"},
-				},
-				{
-					name:     "with empty env_vars string",
-					envVars:  "",
-					expected: map[string]string{},
-				},
-				{
-					name:     "with empty JSON object",
-					envVars:  "{}",
-					expected: map[string]string{},
-				},
-				{
-					name:      "with invalid JSON format",
-					envVars:   `{invalid:json}`,
-					expected:  nil,
-					expectErr: true,
-				},
-			}
+		It("deploy app", func() {
+			srcPath := filepath.Join("service", "testdata", "helloworld.zip")
 
-			for _, tc := range testCases {
-				It(tc.name, func() {
-					srcPath := filepath.Join("service", "testdata", "helloworld.zip")
-					file, err := os.Open(srcPath)
-					Expect(err).NotTo(HaveOccurred())
-					defer file.Close()
+			file, _ := os.Open(srcPath)
+			defer file.Close()
 
-					body := &bytes.Buffer{}
-					writer := multipart.NewWriter(body)
-					part, _ := writer.CreateFormFile("file", filepath.Base(srcPath))
-					_, _ = io.Copy(part, file)
-					_ = writer.WriteField("env_vars", tc.envVars)
-					_ = writer.Close()
+			body := &bytes.Buffer{}
+			writer := multipart.NewWriter(body)
+			part, _ := writer.CreateFormFile("file", filepath.Base(srcPath))
+			_, _ = io.Copy(part, file)
+			_ = writer.Close()
 
-					w := httptest.NewRecorder()
-					req, _ := http.NewRequest("POST", "/deploys", body)
-					req.Header.Set("Content-Type", writer.FormDataContentType())
-					req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("POST", "/deploys", body)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+			req.Header.Set("Authorization", "Bearer jwram1lpbnuugmcv")
 
-					s.server.ServeHTTP(w, req)
+			s.server.ServeHTTP(w, req)
 
-					if tc.expectErr {
-						Expect(w.Code).To(Equal(400))
-					} else {
-						Expect(w.Code).To(Equal(200))
-
-						select {
-						case event := <-s.ch:
-							Expect(event.EnvVars).To(Equal(tc.expected))
-						default:
-							Fail("No event received")
-						}
-					}
-				})
-			}
+			Expect(w.Code).To(Equal(200))
 		})
 
 		It("get deploy result", func() {

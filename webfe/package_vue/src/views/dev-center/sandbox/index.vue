@@ -15,14 +15,6 @@
           <div>{{ $t('模块') }}：{{ this.module }}</div>
         </div>
       </div>
-      <bk-button
-        v-if="isSandboxReady"
-        id="tour-stpe1"
-        :theme="'primary'"
-        @click="showRequestDialog"
-      >
-        {{ $t('获取沙箱环境密码') }}
-      </bk-button>
     </section>
     <paas-content-loader
       :is-loading="isLoading"
@@ -74,8 +66,6 @@
               slot="main"
               class="iframe-box"
             >
-              <!-- 密码输入框引导占位 -->
-              <div id="tour-stpe2"></div>
               <iframe
                 v-if="isSandboxReady"
                 ref="iframeRef"
@@ -118,11 +108,6 @@
         </section>
       </div>
     </paas-content-loader>
-    <!-- 密码获取 -->
-    <password-request-dialog
-      :show.sync="isDialogVisible"
-      :password="sandboxData.code_editor_password"
-    />
     <!-- 立即运行二次确认 -->
     <run-sandbox-dialog
       :show.sync="isRunSandboxVisible"
@@ -141,19 +126,15 @@
 </template>
 
 <script>
-import PasswordRequestDialog from './comps/password-request-dialog.vue';
 import RightTab from './comps/right-tab.vue';
 import { bus } from '@/common/bus';
 import axios from 'axios';
 import RunSandboxDialog from './comps/run-sandbox-dialog.vue';
 import SubmitCodeDialog from './comps/submit-code-dialog.vue';
-import Driver from 'driver.js';
-import 'driver.js/dist/driver.css';
 
 export default {
   name: 'Sandbox',
   components: {
-    PasswordRequestDialog,
     RightTab,
     RunSandboxDialog,
     SubmitCodeDialog,
@@ -166,7 +147,6 @@ export default {
   },
   data() {
     return {
-      isDialogVisible: false,
       sandboxData: {},
       sandboxAccessible: false,
       isLoading: true,
@@ -198,12 +178,11 @@ export default {
         tree: {},
       },
       isShowTopAlert: true,
-      // 是否处于引导中
-      isInGuidance: false,
       envData: {
         sandboxEnvVars: [],
         isEnvLoading: false,
       },
+      isVerifyPassword: false,
     };
   },
   computed: {
@@ -225,7 +204,7 @@ export default {
     },
     // 沙箱加载完成（除状态 Ready 外，还需要检查是否可访问，即网络已通）
     isSandboxReady() {
-      return this.sandboxData.status === 'ready' && this.sandboxAccessible;
+      return this.sandboxData.status === 'ready' && this.sandboxAccessible && this.isVerifyPassword;
     },
     // 构建成功
     isBuildSuccess() {
@@ -238,15 +217,6 @@ export default {
     // 是否显示运行状态
     isShowRunningStatus() {
       return !!(this.buildStatus && ['Failed', 'Success'].includes(this.buildStatus));
-    },
-  },
-  watch: {
-    isSandboxReady(newVal) {
-      if (newVal) {
-        setTimeout(() => {
-          this.ensureUserGuidance();
-        }, 1500);
-      }
     },
   },
   created() {
@@ -289,15 +259,8 @@ export default {
     },
     // 沙箱删除处理
     sandboxDeletionHandled() {
-      // 沙箱已经被删除
-      this.isDialogVisible = false;
       clearInterval(this.sandboxIntervalId);
       this.back();
-    },
-    showRequestDialog() {
-      // 引导中不允许操作
-      if (this.isInGuidance) return;
-      this.isDialogVisible = true;
     },
     rightTabChange(name) {
       this.curTabActive = name;
@@ -363,6 +326,7 @@ export default {
 
         // 检查到沙箱网络可达后，再获取沙箱中服务进程状态
         if (this.sandboxAccessible) {
+          this.verifyPassword();
           this.getDevServerProcessesStatus();
         }
       } catch (e) {
@@ -477,7 +441,6 @@ export default {
     },
     // 运行沙箱环境二次确认弹窗
     showRunSandboxDialog() {
-      if (this.isInGuidance) return;
       this.isRunSandboxVisible = true;
       this.getDevServerProcesses();
     },
@@ -648,127 +611,30 @@ export default {
     alertClose() {
       this.isShowTopAlert = false;
     },
-    ensureUserGuidance() {
-      const guideFlagKey = 'bkSandboxGuide';
-      // 检查 localStorage 中是否有引导标志
-      const hasGuided = localStorage.getItem(guideFlagKey);
-      if (!hasGuided) {
-        // 引导
-        this.startTour();
-        localStorage.setItem(guideFlagKey, 'true');
-      } else {
-        this.isInGuidance = false;
+    // 完成密码验证
+    async verifyPassword() {
+      try {
+        const url = this.ensureHttpProtocol(`${this.sandboxData.code_editor_url}login?folder=/data/workspace&to=`);
+        const formData = new URLSearchParams({
+          base: '.',
+          href: url,
+          password: this.sandboxData.code_editor_password,
+        });
+
+        await axios.post(url, formData.toString(), {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          timeout: 1000,
+          withCredentials: true,
+        });
+      } catch (e) {
+        console.error('Password verification failed!', e);
+      } finally {
+        this.isVerifyPassword = true;
       }
-    },
-    // 开始引导
-    startTour() {
-      this.isInGuidance = true;
-      const driverObj = Driver.driver({
-        popoverClass: 'sandbox-driverjs-cls',
-        nextBtnText: this.$t('下一步'),
-        doneBtnText: this.$t('完成'),
-        prevBtnText: '',
-        showButtons: ['next'],
-        allowClose: true,
-        progressText: '{{current}}/{{total}}',
-        onPopoverRender: (popover, { config, state }) => {
-          const isLastStep = state.activeIndex === config.steps.length - 1;
-          const firstButton = document.createElement('button');
-          if (isLastStep) {
-            firstButton.className = 'hide';
-          }
-          firstButton.innerText = this.$t('跳过');
-          const nextButton = popover.footerButtons.querySelector('.driver-popover-next-btn');
-          if (nextButton) {
-            popover.footerButtons.insertBefore(firstButton, nextButton);
-          } else {
-            popover.footerButtons.appendChild(firstButton);
-          }
-          firstButton.addEventListener('click', () => {
-            driverObj.destroy();
-          });
-          // 动态更新标题中的步骤信息
-          const stepInfo = `${state.activeIndex + 1}/${config.steps.length}`;
-          const originalTitle = popover.title.innerText;
-          popover.title.innerText = `${originalTitle} (${stepInfo})`;
-        },
-        onDestroyed: () => {
-          // 当引导结束
-          this.isInGuidance = false;
-        },
-        steps: [
-          {
-            element: '#tour-stpe1',
-            popover: {
-              title: this.$t('获取沙箱密码'),
-              description: this.$t('获取密码用于进入在线 IDE。'),
-              side: 'bottom',
-              align: 'start',
-            },
-          },
-          {
-            element: '#tour-stpe2',
-            popover: {
-              title: this.$t('输入密码'),
-              description: this.$t('输入密码后进入在线 IDE，可在线修改代码。'),
-              side: 'bottom',
-              align: 'start',
-            },
-          },
-          {
-            element: '#tour-stpe3',
-            popover: {
-              title: this.$t('立即运行'),
-              description: this.$t('在线修改代码后，点击立即运行即可通过浏览器访问。'),
-              side: 'bottom',
-              align: 'start',
-            },
-          },
-        ],
-      });
-      driverObj.drive();
     },
   },
 };
 </script>
-<style lang="scss">
-.sandbox-driverjs-cls {
-  .driver-popover-title {
-    font-weight: 700;
-    font-size: 12px;
-    color: #313238;
-  }
-  .driver-popover-description {
-    font-size: 12px;
-    color: #313238;
-  }
-  .driver-popover-footer {
-    margin-top: 12px;
-    .driver-popover-navigation-btns {
-      button {
-        color: #3a84ff;
-        font-size: 12px;
-        text-shadow: none;
-        border: none;
-        background-color: #fff;
-        &:hover {
-          background-color: #fff;
-        }
-      }
-      .driver-popover-next-btn {
-        font-size: 12px;
-        color: #ffffff;
-        background: #3a84ff;
-        border-radius: 2px;
-        text-shadow: none;
-        &:hover {
-          background-color: #3a84ff;
-        }
-      }
-    }
-  }
-}
-</style>
 <style lang="scss" scoped>
 .footer-tools-box {
   position: relative;
@@ -901,14 +767,6 @@ export default {
           -moz-resize: none;
           resize: none;
           z-index: 9;
-        }
-        #tour-stpe2 {
-          position: absolute;
-          width: 650px;
-          height: 250px;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
         }
       }
       .iframe-loading {

@@ -25,7 +25,6 @@
       </template>
       <template v-else>
         <bk-button
-          id="tour-stpe3"
           theme="primary"
           :loading="btnLoading"
           bk-trace="{id: 'sandbox', action: 'run', category: '云原生应用'}"

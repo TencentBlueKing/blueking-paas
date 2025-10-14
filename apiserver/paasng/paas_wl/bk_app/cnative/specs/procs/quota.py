@@ -100,8 +100,8 @@ class ResQuotaReader:
                 results[quotas.process] = (
                     {
                         "plan": quotas.plan,
-                        "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[ResQuotaPlan(plan)]),
-                        "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[ResQuotaPlan(plan)]),
+                        "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[ResQuotaPlan(quotas.plan)]),
+                        "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[ResQuotaPlan(quotas.plan)]),
                     },
                     True,
                 )

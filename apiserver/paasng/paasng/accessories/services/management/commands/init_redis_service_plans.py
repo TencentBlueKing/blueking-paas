@@ -14,6 +14,7 @@ from paasng.core.tenant.user import get_init_tenant_id
 class Command(BaseCommand):
     help = "初始化本地 redis 增强服务的 Plan，在私有化版本初始化的时候执行"
 
+    # Note: PLAN_CONFIGS 中第一个方案是默认方案，不能轻易修改顺序
     PLAN_CONFIGS = [
         {"name": "0shared", "spec_type": "共享实例", "description": "共享实例"},
         {"name": "1exclusive", "spec_type": "独占实例", "description": "独占实例"},

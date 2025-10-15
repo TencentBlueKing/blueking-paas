@@ -87,7 +87,7 @@ class TestRetrieveClusterComponent:
         assert resp_data["values"] == {
             "image": {"registry": "hub.bktencent.com"},
             "hostNetwork": False,
-            "replicaCount": 2,
+            "replicaCount": 1,
             "service": {"nodePorts": {"http": 30180, "https": 30543}},
             "nodeSelector": {},
             "resources": CLUSTER_COMPONENT_DEFAULT_QUOTA,

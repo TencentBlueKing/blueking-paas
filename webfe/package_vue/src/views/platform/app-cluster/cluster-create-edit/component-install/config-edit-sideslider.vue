@@ -112,6 +112,20 @@ const requiredRule = [
     trigger: 'blur',
   },
 ];
+
+// 副本数量校验规则
+const replicaCountRule = [
+  ...requiredRule,
+  {
+    validator: (val) => {
+      const num = Number(val);
+      return num >= 1 && num <= 5 && Number.isInteger(num);
+    },
+    message: i18n.t('输入值应该在 %s 到 %s 之间', [1, 5]),
+    trigger: 'blur',
+  },
+];
+
 export default {
   name: 'ComponentConfigEdit',
   components: {
@@ -142,8 +156,18 @@ export default {
         http: '',
         https: '',
         hostNetwork: false,
+        replicaCount: '',
       },
       // 使用组件详情进行更新
+      replicaCountOptions: [
+        {
+          label: '副本数量',
+          type: 'input',
+          property: 'replicaCount',
+          required: true,
+          rules: [...replicaCountRule],
+        },
+      ],
       nodePortOptions: [
         {
           label: `HTTP ${this.$t('端口')}`,
@@ -202,30 +226,33 @@ export default {
       return this.formData.hostNetwork;
     },
     pageFormOptions() {
-      if (this.isHostNetwork) {
-        return this.hostNetworkOptions;
-      }
-      return this.nodePortOptions;
+      const options = this.isHostNetwork ? this.hostNetworkOptions : this.nodePortOptions;
+      return [...this.replicaCountOptions, ...options];
     },
   },
   methods: {
     init() {
-      const { hostNetwork = false, service } = this.values;
-      if (hostNetwork) {
-        this.handleSwitch(this.accessMethod[1]);
-      }
+      const { hostNetwork = false, service, replicaCount } = this.values;
       this.formData = {
         http: service?.nodePorts?.http || '',
         https: service?.nodePorts?.https || '',
         hostNetwork,
+        replicaCount: replicaCount ?? '',
       };
+      if (hostNetwork) {
+        this.handleSwitch(this.accessMethod[1]);
+      } else {
+        this.isTagVisible = false;
+      }
     },
     reset() {
       this.formData = {
         http: '',
         https: '',
         hostNetwork: false,
+        replicaCount: '',
       };
+      this.isTagVisible = false;
     },
     closeSideslider() {
       this.sidesliderVisible = false;
@@ -248,6 +275,8 @@ export default {
           }
           this.isTagVisible = !!nodes?.length;
         });
+      } else {
+        this.isTagVisible = false;
       }
     },
     handleAdd() {
@@ -264,6 +293,7 @@ export default {
           const { hostNetwork, http, https } = this.formData;
           let data = cloneDeep(this.values);
           data.hostNetwork = hostNetwork;
+          data.replicaCount = Number(this.formData.replicaCount);
           if (this.isHostNetwork) {
             data.nodeSelector = this.isTagVisible ? this.$refs.keyValueInput[0]?.getData() : {};
             data.service = {

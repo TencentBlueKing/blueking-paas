@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.urls import reverse
@@ -87,6 +87,7 @@ class TestRetrieveClusterComponent:
         assert resp_data["values"] == {
             "image": {"registry": "hub.bktencent.com"},
             "hostNetwork": False,
+            "replicaCount": 1,
             "service": {"nodePorts": {"http": 30180, "https": 30543}},
             "nodeSelector": {},
             "resources": CLUSTER_COMPONENT_DEFAULT_QUOTA,
@@ -148,22 +149,32 @@ class TestUpsertClusterComponent:
             yield
 
     def test_upsert_bk_ingress_nginx(self, plat_mgt_api_client, init_default_cluster):
-        resp = plat_mgt_api_client.post(
-            reverse(
-                "plat_mgt.infras.cluster.component.upsert_retrieve",
-                kwargs={"cluster_name": init_default_cluster.name, "component_name": "bk-ingress-nginx"},
-            ),
-            data={
-                "values": {
-                    "hostNetwork": False,
-                    "service": {"nodePorts": {"http": 31180, "https": 31543}},
-                    "nodeSelector": {
-                        "kubernetes.io/os": "linux",
-                    },
-                }
-            },
-        )
-        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        with patch("paasng.plat_mgt.infras.clusters.views.components.BCSUserClient") as mock_bcs_client:
+            inst = mock_bcs_client.return_value
+            inst.upgrade_release = MagicMock()
+
+            resp = plat_mgt_api_client.post(
+                reverse(
+                    "plat_mgt.infras.cluster.component.upsert_retrieve",
+                    kwargs={"cluster_name": init_default_cluster.name, "component_name": "bk-ingress-nginx"},
+                ),
+                data={
+                    "values": {
+                        "hostNetwork": False,
+                        "replicaCount": 3,
+                        "service": {"nodePorts": {"http": 31180, "https": 31543}},
+                        "nodeSelector": {
+                            "kubernetes.io/os": "linux",
+                        },
+                    }
+                },
+            )
+            assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+            assert inst.upgrade_release.called
+            called_args = inst.upgrade_release.call_args[0]
+            sent_values = called_args[-1]
+            assert sent_values["replicaCount"] == 3
 
     def test_upsert_bkapp_log_collection(self, plat_mgt_api_client, init_default_cluster):
         resp = plat_mgt_api_client.post(

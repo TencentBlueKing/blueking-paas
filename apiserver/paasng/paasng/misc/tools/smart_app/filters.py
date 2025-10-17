@@ -48,4 +48,7 @@ class SmartBuildRecordFilterBackend(BaseFilterBackend):
         if status := params.get("status"):
             queryset = queryset.filter(status=status)
 
-        return queryset.order_by("-created")
+        if order_by := params.get("order_by"):
+            queryset = queryset.order_by(*order_by)
+
+        return queryset

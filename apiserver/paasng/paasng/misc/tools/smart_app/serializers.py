@@ -15,13 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType, SourceCodeOriginType
 from paasng.platform.engine.constants import JobStatus
 from paasng.utils.i18n.serializers import TranslatedCharField
+from paasng.utils.models import OrderByField
+from paasng.utils.serializers import StringArrayField
 
 if TYPE_CHECKING:
     from paasng.misc.tools.smart_app.models import SmartBuildRecord
@@ -76,11 +79,23 @@ class SmartBuildFramePhaseSLZ(serializers.Serializer):
 class SmartBuildRecordFilterInputSLZ(serializers.Serializer):
     """SmartBuild record filter SLZ"""
 
+    valid_order_by_fields = ["created"]
+
     source_origin = serializers.ChoiceField(
         required=False, choices=SourceCodeOriginType.get_choices(), help_text="源码来源"
     )
     search = serializers.CharField(required=False, help_text="关键字搜索")
     status = serializers.ChoiceField(required=False, choices=JobStatus.get_choices(), help_text="构建状态")
+    order_by = StringArrayField(required=False, default=["-created"], help_text="排序字段")
+
+    def validate_order_by(self, fields: List[str]) -> List[str]:
+        """校验排序字段"""
+        for field in fields:
+            f = OrderByField.from_string(field)
+            if f.name not in self.valid_order_by_fields:
+                raise ValidationError(f"Invalid order_by field: {field}")
+
+        return fields
 
 
 class SmartBuildHistoryOutputSLZ(serializers.Serializer):

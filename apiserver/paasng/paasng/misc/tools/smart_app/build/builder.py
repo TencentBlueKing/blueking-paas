@@ -71,6 +71,8 @@ class SmartAppBuilder:
             err_msg = str(e)
             final_status = JobStatus.FAILED
         finally:
+            self.stream.write_message(f"source_get_url: {self.source_get_url}")
+            self.stream.write_message(f"dest_put_url: {self.dest_put_url}")
             self._finalize_stream(final_status)
             self.state_mgr.finish(final_status, err_msg)
 

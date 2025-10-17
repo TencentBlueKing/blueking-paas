@@ -25,6 +25,7 @@ from django.utils.encoding import force_str
 from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
+from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paasng.misc.tools.smart_app.build_phase import get_phase
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
@@ -61,15 +62,17 @@ class SmartAppBuilder:
     def start(self):
         """Start the s-mart building process"""
         final_status = JobStatus.PENDING
+        err_msg = ""
         try:
             self._run_preparation_phase()
             self._run_build_phase()
             final_status = JobStatus.SUCCESSFUL
-        except Exception:
+        except Exception as e:
+            err_msg = str(e)
             final_status = JobStatus.FAILED
         finally:
             self._finalize_stream(final_status)
-            self.state_mgr.finish(final_status)
+            self.state_mgr.finish(final_status, err_msg)
 
     def _run_preparation_phase(self):
         """执行准备阶段"""
@@ -140,6 +143,8 @@ class SmartAppBuilder:
         namespace = get_default_builder_namespace()
         pod_name = generate_builder_name(self.smart_build)
 
+        ensure_namespace(cluster_name, namespace)
+
         builder_template = SmartBuilderTemplate(
             name=pod_name,
             namespace=namespace,
@@ -180,3 +185,20 @@ def generate_builder_name(smart_build: "SmartBuildRecord") -> str:
 def get_default_builder_namespace() -> str:
     """Get the namespace of s-mart builder pod"""
     return "smart-app-builder"
+
+
+def ensure_namespace(cluster_name: str, namespace: str, max_wait_seconds: int = 15) -> bool:
+    """Ensure the namespace exists in the cluster, if not, create it.
+
+    :param cluster_name: The name of the cluster
+    :param namespace: The namespace to ensure
+    :param max_wait_seconds: The maximum wait time for the namespace to be ready
+    :return: whether an namespace was created.
+    """
+
+    with get_client_by_cluster_name(cluster_name) as client:
+        namespace_client = KNamespace(client)
+        _, created = namespace_client.get_or_create(namespace)
+        if created:
+            namespace_client.wait_for_default_sa(namespace, timeout=max_wait_seconds)
+        return created

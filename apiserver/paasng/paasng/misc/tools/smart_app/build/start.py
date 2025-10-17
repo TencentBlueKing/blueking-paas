@@ -82,5 +82,5 @@ class SmartBuildTaskRunner:
         parsed = parse_url(source_url)
         key = f"default/artifact_{uuid.uuid4()}.tar.gz"
         return make_blob_store(parsed.bucket).generate_presigned_url(
-            key, expires_in=3600, SignatureType=SignatureType.UPLOAD
+            key, expires_in=3600, signature_type=SignatureType.UPLOAD
         )

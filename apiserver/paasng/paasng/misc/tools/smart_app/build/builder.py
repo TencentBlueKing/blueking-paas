@@ -25,7 +25,6 @@ from django.utils.encoding import force_str
 from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
-from paas_wl.infras.resources.base.exceptions import PodNotSucceededError
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paasng.misc.tools.smart_app.build_phase import get_phase
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
@@ -127,11 +126,7 @@ class SmartAppBuilder:
         ):
             self.stream.write_message(force_str(raw_line))
 
-        try:
-            build_handler.wait_for_succeeded(namespace=namespace, name=builder_name, timeout=60)
-        except PodNotSucceededError as e:
-            self.state_mgr.finish(JobStatus.FAILED, str(e))
-            raise
+        build_handler.wait_for_succeeded(namespace=namespace, name=builder_name, timeout=60)
 
     def launch_build_process(self) -> str:
         """launch the build Pod"""

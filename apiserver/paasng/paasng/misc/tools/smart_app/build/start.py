@@ -15,16 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-from os import PathLike
+import uuid
 
+from blue_krill.storages.blobstore.base import SignatureType
+
+from paas_wl.utils.blobstore import make_blob_store
+from paasng.misc.tools.smart_app.build_phase import initialize_build_phases
 from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
 from paasng.platform.engine.constants import JobStatus
+from paasng.platform.sourcectl.package.utils import parse_url
 
 from .tasks import execute_build, execute_build_error_callback
-
-logger = logging.getLogger(__name__)
 
 
 def create_smart_build_record(package_name: str, app_code: str, operator: str) -> SmartBuildRecord:
@@ -35,6 +37,7 @@ def create_smart_build_record(package_name: str, app_code: str, operator: str) -
     :param operator: The username who triggers this build
     :return: The created SmartBuildRecord instance
     """
+
     # TODO: 添加对源码仓库的支持
     source_origin = SourceCodeOriginType.PACKAGE
 
@@ -46,21 +49,38 @@ def create_smart_build_record(package_name: str, app_code: str, operator: str) -
         operator=operator,
     )
     record.refresh_from_db()
+
+    # 初始化所有阶段和步骤
+    initialize_build_phases(record)
+
     return record
 
 
 class SmartBuildTaskRunner:
-    """The task runner to execute smart app build steps"""
+    """S-Mart builds a task executor"""
 
-    def __init__(self, smart_build: SmartBuildRecord, source_url: str, package_path: PathLike):
-        self.smart_build = smart_build
-        self.source_url = source_url
-        self.package_path = package_path
+    def __init__(self, smart_build_id: uuid.UUID, source_url: str):
+        self.smart_build_id = str(smart_build_id)
+        self.source_get_url = self._get_source_get_url(source_url)
+        self.dest_put_url = self._get_dest_put_url(source_url)
 
     def start(self):
-        smart_build_id = self.smart_build.uuid
-        logger.debug("Starting new smart build task", extra={"smart_build_id": smart_build_id})
+        """Start build task"""
         execute_build.apply_async(
-            args=(smart_build_id, self.source_url, self.package_path),
+            args=(self.smart_build_id, self.source_get_url, self.dest_put_url),
             link_error=execute_build_error_callback.s(),
+        )
+
+    def _get_source_get_url(self, source_url: str) -> str:
+        """获取源码包下载 URL"""
+        parsed = parse_url(source_url)
+        return make_blob_store(parsed.bucket).generate_presigned_url(parsed.key, expires_in=3600)
+
+    def _get_dest_put_url(self, source_url: str) -> str:
+        """获取构建产物上传 URL"""
+        # TODO: 目前直接使用 prepared_packages 作为存储位置，后续可考虑单独创建一个存储桶
+        parsed = parse_url(source_url)
+        key = f"default/artifact_{uuid.uuid4()}.tar.gz"
+        return make_blob_store(parsed.bucket).generate_presigned_url(
+            key, expires_in=3600, SignatureType=SignatureType.UPLOAD
         )

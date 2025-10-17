@@ -18,6 +18,7 @@ import string
 
 import pytest
 
+from paasng.misc.tools.smart_app.build_phase import initialize_build_phases
 from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
 from paasng.misc.tools.smart_app.models import SmartBuildLog, SmartBuildRecord
 from paasng.platform.engine.constants import JobStatus
@@ -46,7 +47,7 @@ def create_fake_smart_build(
 
     log = SmartBuildLog.objects.create()
 
-    return SmartBuildRecord.objects.create(
+    record = SmartBuildRecord.objects.create(
         source_origin=source_origin,
         package_name=package_name,
         app_code=app_code,
@@ -54,3 +55,8 @@ def create_fake_smart_build(
         operator=operator,
         stream=log,
     )
+
+    # 初始化阶段和步骤
+    initialize_build_phases(record)
+
+    return record

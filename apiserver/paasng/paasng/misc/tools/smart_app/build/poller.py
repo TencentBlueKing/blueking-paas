@@ -37,9 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 class SmartBuildProcessPoller(TaskPoller):
-    """Poller for querying the status of S-mart build process
-    Finish when the S-mart building process in engine side was completed
-    """
+    """S-Mart build process status poller"""
 
     max_retries_on_error = 10
     overall_timeout_seconds = settings.SMART_BUILD_PROCESS_TIMEOUT
@@ -53,52 +51,40 @@ class SmartBuildProcessPoller(TaskPoller):
 
     def query(self) -> PollingResult:
         smart_build = SmartBuildRecord.objects.get(pk=self.params["smart_build_id"])
-
         build_status = smart_build.status
-
         status = PollingStatus.DOING
+
         if build_status in JobStatus.get_finished_states():
             status = PollingStatus.DONE
         else:
             coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
-            # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
             if coordinator.is_status_polling_timeout:
-                logger.warning(
-                    "Polling status of smart_build [%s] timed out, consider it failed",
-                    self.params["smart_build_id"],
-                )
+                logger.warning("Build [%s] poll timed out, failed.", self.params["smart_build_id"])
                 build_status = JobStatus.FAILED
                 status = PollingStatus.DONE
             else:
                 coordinator.update_polling_time()
 
-        result = {"smart_build_id": smart_build.uuid, "build_status": build_status}
-        logger.info(
-            'The status of smart_build process [%s] is "%s"',
-            self.params["smart_build_id"],
-            build_status,
-        )
-        return PollingResult(status=status, data=result)
+        logger.info("Build process [%s] status: %s", self.params["smart_build_id"], build_status)
+        return PollingResult(status=status, data={"smart_build_id": smart_build.uuid, "build_status": build_status})
 
 
 class SmartBuildProcessResultHandler(CallbackHandler):
-    """Result handler for a finished S-mart build process"""
+    """S-Mart build process result processor"""
 
     def handle(self, result: CallbackResult, poller: TaskPoller):
-        """Callback for finished S-mart build process"""
+        """Handle the callback of construction completion"""
         smart_build_id = poller.params["smart_build_id"]
-        state_mgr = SmartBuildStateMgr.from_smart_build_id(
-            smart_build_id=smart_build_id,
-            phase_type=SmartBuildPhaseType.BUILD,
-        )
-
+        dest_put_url = poller.params["dest_put_url"]
+        state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build_id, SmartBuildPhaseType.BUILD)
         build_status = result.data["build_status"]
-        logger.info("Handling result for s-mart build: %s, status: %s", smart_build_id, build_status)
+        smart_build = state_mgr.smart_build
 
         if build_status == JobStatus.SUCCESSFUL:
+            smart_build.artifact_url = dest_put_url
+            smart_build.save()
             state_mgr.finish(build_status)
-            logger.info("S-mart build %s succeeded", smart_build_id)
         else:
-            error_message = "Build process failed or timed out"
-            state_mgr.finish(status=build_status, err_detail=error_message)
-            logger.error("S-mart build %s failed: %s", smart_build_id, error_message)
+            state_mgr.finish(build_status, err_detail="Build process failed or timed out")
+
+        SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}").release_lock(smart_build)

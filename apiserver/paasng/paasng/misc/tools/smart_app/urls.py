@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-
 from paasng.misc.tools.smart_app import views
 from paasng.utils.basic import re_path
 
@@ -32,27 +31,22 @@ urlpatterns = [
     ),
     re_path(
         r"^api/tools/s-mart/build_records/$",
-        views.SmartBuildHistoryViewSet.as_view({"get": "list_history"}),
+        views.SmartBuilderViewSet.as_view({"get": "list_history"}),
         name="api.tools.s-mart.build_records",
     ),
     re_path(
         r"^api/tools/s-mart/build_records/(?P<uuid>[0-9a-f-]{36})/logs/$",
-        views.SmartBuildHistoryViewSet.as_view({"get": "get_history_logs"}),
+        views.SmartBuilderViewSet.as_view({"get": "get_history_logs"}),
         name="api.tools.s-mart.build_records.logs",
     ),
     re_path(
         r"^api/tools/s-mart/build_records/(?P<uuid>[0-9a-f-]{36})/logs/download/$",
-        views.SmartBuildHistoryViewSet.as_view({"get": "download_history_logs"}),
+        views.SmartBuilderViewSet.as_view({"get": "download_history_logs"}),
         name="api.tools.s-mart.build_records.logs.download",
     ),
     re_path(
         r"^api/tools/s-mart/build_phases/$",
-        views.SmartBuildPhaseViewSet.as_view({"get": "get_frame"}),
+        views.SmartBuilderViewSet.as_view({"get": "get_phases"}),
         name="api.tools.s-mart.build_phases",
-    ),
-    re_path(
-        r"^api/tools/s-mart/build_phases/(?P<smart_build_id>[0-9a-f-]{36})/$",
-        views.SmartBuildPhaseViewSet.as_view({"get": "get_result"}),
-        name="api.tools.s-mart.build_phases.result",
     ),
 ]

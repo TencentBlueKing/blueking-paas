@@ -23,12 +23,14 @@ from tests.utils.mocks.poll_task import FakeTaskPoller
 
 pytestmark = pytest.mark.django_db
 
+DEST_PUT_URL = "http://example.com/artifact.tar.gz"
+
 
 class TestSmartBuildProcessResultHandler:
     """Tests for SmartBuildProcessResultHandler"""
 
     def test_succeeded(self, smart_build):
-        params = {"smart_build_id": smart_build.uuid}
+        params = {"smart_build_id": smart_build.uuid, "dest_put_url": DEST_PUT_URL}
         result = CallbackResult(
             status=CallbackStatus.NORMAL,
             data={"smart_build_id": smart_build.uuid, "build_status": JobStatus.SUCCESSFUL.value},
@@ -46,7 +48,7 @@ class TestSmartBuildProcessResultHandler:
         ],
     )
     def test_failed(self, callback_status, status, smart_build):
-        params = {"smart_build_id": smart_build.uuid}
+        params = {"smart_build_id": smart_build.uuid, "dest_put_url": DEST_PUT_URL}
         result = CallbackResult(
             status=callback_status, data={"smart_build_id": smart_build.uuid, "build_status": status}
         )

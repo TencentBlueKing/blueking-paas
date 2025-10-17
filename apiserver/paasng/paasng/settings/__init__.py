@@ -1283,10 +1283,12 @@ COLORFUL_TERMINAL_OUTPUT = True
 # ---------------------
 
 # CNB 构建工具镜像名
-SMART_BUILDER_SHIM_IMAGE = settings.get("SMART_BUILDER_SHIM_IMAGE", "")
+SMART_BUILDER_SHIM_IMAGE = settings.get(
+    "SMART_BUILDER_SHIM_IMAGE", "mirrors.tencent.com/bkpaas/bk-builder-heroku-bionic:v1.2.0"
+)
 
 # S-Mart Builder 镜像名
-SMART_BUILDER_IMAGE = settings.get("SMART_BUILDER_IMAGE", "")
+SMART_BUILDER_IMAGE = settings.get("SMART_BUILDER_IMAGE", "mirrors.tencent.com/bkpaas/smart-app-builder:dind")
 
 # S-Mart 包构建进程超时, 单位为 秒
 SMART_BUILD_PROCESS_TIMEOUT = int(settings.get("SMART_BUILD_PROCESS_TIMEOUT", 60 * 15))

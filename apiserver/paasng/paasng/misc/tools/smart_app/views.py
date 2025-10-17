@@ -33,18 +33,16 @@ from paasng.misc.tools.smart_app.build import (
     SmartBuildTaskRunner,
     create_smart_build_record,
 )
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
+from paasng.misc.tools.smart_app.build_phase import BUILD_PHASES
 from paasng.misc.tools.smart_app.filters import SmartBuildRecordFilterBackend
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
 from paasng.misc.tools.smart_app.output import get_all_logs
-from paasng.misc.tools.smart_app.phases_steps import ALL_STEP_METAS, SmartBuildPhaseManager, get_sorted_steps
 from paasng.misc.tools.smart_app.serializers import (
     SmartBuildFramePhaseSLZ,
     SmartBuildHistoryLogsOutputSLZ,
     SmartBuildHistoryOutputSLZ,
     SmartBuildInputSLZ,
     SmartBuildOutputSLZ,
-    SmartBuildPhaseSLZ,
     ToolPackageStashInputSLZ,
     ToolPackageStashOutputSLZ,
 )
@@ -61,8 +59,11 @@ from paasng.utils.views import get_filepath
 logger = logging.getLogger(__name__)
 
 
-class SmartBuilderViewSet(viewsets.ViewSet):
+class SmartBuilderViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    queryset = SmartBuildRecord.objects.all()
+    filter_backends = [SmartBuildRecordFilterBackend]
+    pagination_class = LimitOffsetPagination
 
     @swagger_auto_schema(
         request_body=ToolPackageStashInputSLZ,
@@ -97,9 +98,7 @@ class SmartBuilderViewSet(viewsets.ViewSet):
             PreparedSourcePackage(request, namespace=self._get_store_namespace(app_desc.code)).store(filepath)
 
         return Response(
-            ToolPackageStashOutputSLZ(
-                {"app_code": app_desc.code, "signature": stat.sha256_signature},
-            ).data
+            ToolPackageStashOutputSLZ({"app_code": app_desc.code, "signature": stat.sha256_signature}).data
         )
 
     @swagger_auto_schema(
@@ -108,7 +107,7 @@ class SmartBuilderViewSet(viewsets.ViewSet):
         tags=["S-Mart 包构建"],
     )
     def build_smart(self, request):
-        """根据暂存的源码包构建 s-mart 包"""
+        """启动构建任务"""
         slz = SmartBuildInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         app_code = slz.validated_data["app_code"]
@@ -116,61 +115,31 @@ class SmartBuilderViewSet(viewsets.ViewSet):
 
         prepared_package = PreparedSourcePackage(request, namespace=self._get_store_namespace(app_code))
 
+        # 校验源码包
         with generate_temp_dir() as tmp_dir:
             try:
                 package_path = prepared_package.retrieve(tmp_dir)
             except PreparedPackageNotFound:
-                logger.exception(f"Failed to retrieve prepared package for app: {app_code}")
                 raise error_codes.PACKAGE_NOT_FOUND.f(_("源码包不存在或已过期"))
 
-            # 2. 校验下载文件的 signature
             stat = SourcePackageStatReader(package_path).read()
             if stat.sha256_signature != signature:
-                logger.error(
-                    "the provided digital signature is inconsistent with "
-                    "the digital signature of the actually saved source code package."
-                )
                 raise error_codes.FILE_CORRUPTED_ERROR.f(_("文件签名不一致"))
 
-        # 使用 operator 和 app_code 组合构建锁, 避免重复构建
+        # 获取构建锁
         coordinator = SmartBuildCoordinator(f"{request.user.pk}:{app_code}")
         if not coordinator.acquire_lock():
-            raise error_codes.CANNOT_BUILD_ONGOING_EXISTS.f(_("正在构建 s-mart 包, 请勿重复提交构建"))
+            raise error_codes.CANNOT_BUILD_ONGOING_EXISTS.f(_("正在构建中，请勿重复提交"))
 
         with coordinator.release_on_error():
             store_url, filename = prepared_package.get_stored_info()
-            smart_build = create_smart_build_record(
-                package_name=filename,
-                app_code=app_code,
-                operator=request.user.pk,
-            )
-            build_id = smart_build.uuid
+            smart_build = create_smart_build_record(package_name=filename, app_code=app_code, operator=request.user.pk)
             coordinator.set_smart_build(smart_build)
-            # Start a background deploy task
-            SmartBuildTaskRunner(smart_build, store_url, package_path).start()
-        return JsonResponse(
-            data={"build_id": build_id, "stream_url": f"/streams/{build_id}"},
-            status=status.HTTP_201_CREATED,
-        )
+            SmartBuildTaskRunner(smart_build.uuid, store_url).start()
 
-    @staticmethod
-    def _validate_app_desc(app_desc: ApplicationDesc):
-        # TODO 增加一些前置校验, 确保 app_desc 符合构建要求
-        if app_desc.market is None:
-            raise DescriptionValidationError({"market": "内容不能为空"})
+        data = {"smart_build_id": str(smart_build.uuid), "stream_url": f"/streams/{smart_build.uuid}"}
 
-    @staticmethod
-    def _get_store_namespace(app_code: str) -> str:
-        return f"{app_code}:prepared_build"
-
-
-class SmartBuildHistoryViewSet(viewsets.GenericViewSet):
-    """SmartBuild record history viewset"""
-
-    queryset = SmartBuildRecord.objects.all()
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
-    filter_backends = [SmartBuildRecordFilterBackend]
-    pagination_class = LimitOffsetPagination
+        return JsonResponse(SmartBuildOutputSLZ(data).data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
         tags=["S-Mart 包构建"],
@@ -178,12 +147,9 @@ class SmartBuildHistoryViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: SmartBuildHistoryOutputSLZ(many=True)},
     )
     def list_history(self, request):
-        """列出构建历史"""
-        queryset = self.get_queryset()
-        filter_queryset = self.filter_queryset(queryset)
-
-        page = self.paginate_queryset(filter_queryset)
-
+        """获取构建历史列表"""
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
         slz = SmartBuildHistoryOutputSLZ(page, many=True)
         return self.get_paginated_response(slz.data)
 
@@ -193,11 +159,11 @@ class SmartBuildHistoryViewSet(viewsets.GenericViewSet):
         responses={status.HTTP_200_OK: SmartBuildHistoryLogsOutputSLZ()},
     )
     def get_history_logs(self, request, uuid: str):
-        """获取指定构建记录的日志"""
+        """获取构建日志"""
         record = get_object_or_404(SmartBuildRecord, uuid=uuid)
-        logs = get_all_logs(record)
-        result = {"status": record.status, "logs": logs}
-        return JsonResponse(SmartBuildHistoryLogsOutputSLZ(result).data)
+        return JsonResponse(
+            SmartBuildHistoryLogsOutputSLZ({"status": record.status, "logs": get_all_logs(record)}).data
+        )
 
     def download_history_logs(self, request, uuid: str):
         """下载构建日志"""
@@ -210,39 +176,21 @@ class SmartBuildHistoryViewSet(viewsets.GenericViewSet):
 
         return response
 
+    @swagger_auto_schema(
+        tags=["S-Mart 包构建"],
+        responses={"200": SmartBuildFramePhaseSLZ(many=True)},
+    )
+    def get_phases(self, request):
+        """获取构建阶段和步骤配置"""
+        phases = [{"type": phase.type.value, "_sorted_steps": phase.steps} for phase in BUILD_PHASES]
+        return Response(SmartBuildFramePhaseSLZ(phases, many=True).data)
 
-class SmartBuildPhaseViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+    @staticmethod
+    def _validate_app_desc(app_desc: ApplicationDesc):
+        """校验应用描述文件"""
+        if not app_desc.market:
+            raise DescriptionValidationError({"market": "内容不能为空"})
 
-    @swagger_auto_schema(tags=["S-Mart 包构建"], responses={"200": SmartBuildFramePhaseSLZ(many=True)})
-    def get_frame(self, request):
-        """获取 S-mart 包构建的阶段和步骤信息"""
-        phases = []
-        for phase_type in SmartBuildPhaseType:
-            # 从 ALL_STEP_METAS 过滤出属于当前 phase 的步骤并按 name 排序
-            phase_steps = sorted(
-                (s for s in ALL_STEP_METAS.values() if s.phase == phase_type.value),
-                key=lambda s: s.name,
-            )
-            phases.append({"type": phase_type.value, "_sorted_steps": phase_steps})
-
-        return Response(data=SmartBuildFramePhaseSLZ(phases, many=True).data)
-
-    @swagger_auto_schema(tags=["S-Mart 包构建"], responses={"200": SmartBuildPhaseSLZ(many=True)})
-    def get_result(self, request, smart_build_id: str):
-        try:
-            smart_build = SmartBuildRecord.objects.get(pk=smart_build_id)
-        except SmartBuildRecord.DoesNotExist:
-            raise error_codes.NOT_FOUND_SMART_BUILD
-
-        manager = SmartBuildPhaseManager(smart_build)
-        try:
-            phases = [smart_build.phases.get(type=phase_type) for phase_type in manager.list_phase_types()]
-        except Exception:
-            logger.exception("failed to get phase info")
-            raise error_codes.CANNOT_GET_SMART_BUILD_PHASES
-
-        # Set property for rendering by slz
-        for p in phases:
-            p._sorted_steps = get_sorted_steps(p)
-        return Response(data=SmartBuildPhaseSLZ(phases, many=True).data)
+    @staticmethod
+    def _get_store_namespace(app_code: str) -> str:
+        return f"{app_code}:prepared_build"

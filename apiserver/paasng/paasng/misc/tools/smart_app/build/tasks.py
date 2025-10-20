@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from celery import shared_task
+from celery.app.task import Context
 
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
@@ -40,10 +41,13 @@ def execute_build(smart_build_id: str, source_get_url: str, dest_put_url: str, *
 
 
 @shared_task(base=I18nTask)
-def execute_build_error_callback(*args, **kwargs):
-    """Build task error callback"""
+def execute_build_error_callback(context: Context, exc: Exception, *args, **kwargs):
+    """Build task error callback
 
-    context, exc = args[0], args[1]
+    :param context: Task context containing the original task request
+    :param exc: The exception that was raised
+    """
+
     smart_build_id = context.args[0]
     state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build_id, SmartBuildPhaseType.BUILD)
     state_mgr.finish(JobStatus.FAILED, str(exc), write_to_stream=False)

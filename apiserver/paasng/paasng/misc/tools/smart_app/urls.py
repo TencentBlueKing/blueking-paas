@@ -53,7 +53,7 @@ urlpatterns = [
     ),
     re_path(
         r"^api/tools/s-mart/build_phases/$",
-        SmartBuilderViewSet.as_view({"get": "get_frame"}),
+        SmartBuilderViewSet.as_view({"get": "get_phases"}),
         name="api.tools.s-mart.build_phases",
     ),
 ]

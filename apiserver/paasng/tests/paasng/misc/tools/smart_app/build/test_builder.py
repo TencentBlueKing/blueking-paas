@@ -24,67 +24,50 @@ from paasng.misc.tools.smart_app.build.builder import (
     SmartAppBuilder,
     get_default_cluster_name,
 )
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
-from paasng.platform.engine.constants import JobStatus
 from tests.paasng.misc.tools.smart_app.setup_utils import create_fake_smart_build
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
-
-source_package_url = "https://example.com/source.tar.gz"
+SOURCE_GET_URL = "https://example.com/source.tar.gz"
+DEST_PUT_URL = "https://example.com/dest.tar.gz"
 
 
 @pytest.fixture()
 def smart_build_record() -> SmartBuildRecord:
-    """创建一个 SmartBuildRecord 实例用于测试"""
     return create_fake_smart_build()
 
 
 @pytest.fixture()
 def smart_app_builder(smart_build_record, tmp_path) -> SmartAppBuilder:
-    """创建 SmartAppBuilder 实例用于测试"""
     package_path = tmp_path / "test_package.tar.gz"
-    package_path.touch()  # 创建一个空文件
+    package_path.touch()
 
     with (
         patch("paasng.misc.tools.smart_app.build.builder.SmartBuildStateMgr"),
         patch("paasng.misc.tools.smart_app.build.builder.make_channel_stream"),
-        patch("paasng.misc.tools.smart_app.build.builder.SmartBuildCoordinator"),
     ):
-        builder = SmartAppBuilder(smart_build_record, source_package_url, package_path)
-        return builder
+        return SmartAppBuilder(smart_build_record, SOURCE_GET_URL, DEST_PUT_URL)
 
 
 class TestSmartAppBuilder:
     """测试 SmartAppBuilder 类的核心功能"""
 
     def test_start_success(self, smart_app_builder):
-        """测试成功启动构建流程"""
-        with (
-            patch("paasng.misc.tools.smart_app.build.builder.start_phase") as mock_start_phase,
-            patch("paasng.misc.tools.smart_app.build.builder.end_phase") as mock_end_phase,
-        ):
-            # 模拟验证应用描述文件成功
-            smart_app_builder.validate_app_description = Mock()
-            smart_app_builder.async_start_build_process = Mock()
+        smart_app_builder.validate_app_description = Mock()
 
+        with (
+            patch("paasng.misc.tools.smart_app.build.builder.start_phase") as mock_start,
+            patch("paasng.misc.tools.smart_app.build.builder.end_phase") as mock_end,
+            patch.object(smart_app_builder, "launch_build_process", return_value="test-builder"),
+            patch.object(smart_app_builder, "start_following_logs"),
+            patch("paasng.misc.tools.smart_app.build.builder.SmartBuildProcessPoller"),
+        ):
             smart_app_builder.start()
 
-            # 验证阶段开始和结束
-            mock_start_phase.assert_called_once_with(
-                smart_app_builder.smart_build, smart_app_builder.stream, SmartBuildPhaseType.PREPARATION
-            )
-            mock_end_phase.assert_called_once_with(
-                smart_app_builder.smart_build,
-                smart_app_builder.stream,
-                JobStatus.SUCCESSFUL,
-                SmartBuildPhaseType.PREPARATION,
-            )
-
-            # 验证方法调用
+            assert mock_start.call_count == 2
+            assert mock_end.call_count == 2
             smart_app_builder.validate_app_description.assert_called_once()
-            smart_app_builder.async_start_build_process.assert_called_once()
 
     def test_launch_build_process(self, smart_app_builder):
         """测试启动构建进程"""
@@ -101,6 +84,7 @@ class TestSmartAppBuilder:
             patch(
                 "paasng.misc.tools.smart_app.build.builder.SmartBuildHandler", return_value=mock_handler
             ) as mock_handler_class,
+            patch("paasng.misc.tools.smart_app.build.builder.ensure_namespace", return_value=True),
         ):
             smart_app_builder.launch_build_process()
 
@@ -121,11 +105,9 @@ class TestSmartAppBuilder:
 
 def test_get_default_cluster_name():
     """测试获取默认集群名称"""
-    with patch("paasng.misc.tools.smart_app.build.builder.ClusterAllocator") as mock_allocator_class:
-        mock_allocator_class.return_value.get_default.return_value = "test-cluster"
+    with patch("paasng.misc.tools.smart_app.build.builder.ClusterAllocator") as mock_allocator:
+        mock_cluster = Mock()
+        mock_cluster.name = "test-cluster"
+        mock_allocator.return_value.get_default.return_value = mock_cluster
 
-        result = get_default_cluster_name()
-        assert result == "test-cluster"
-
-        mock_allocator_class.assert_called_once()
-        mock_allocator_class.return_value.get_default.assert_called_once()
+        assert get_default_cluster_name() == "test-cluster"

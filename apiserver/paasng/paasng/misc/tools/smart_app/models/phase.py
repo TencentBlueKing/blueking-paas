@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
 from typing import TYPE_CHECKING, Any, Dict
 
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
@@ -36,15 +35,13 @@ if TYPE_CHECKING:
 
     from .step import SmartBuildStep
 
-logger = logging.getLogger(__name__)
-
 
 class SmartBuildPhaseEventSLZ(Serializer):
-    """Phase Event"""
+    """Phase Event SLZ"""
 
     name = CharField(source="type")
-    start_time = DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
-    complete_time = DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
+    start_time = DateTimeField(format="iso-8601", allow_null=True)
+    complete_time = DateTimeField(format="iso-8601", allow_null=True)
     status = CharField(allow_null=True)
 
 
@@ -82,7 +79,6 @@ class SmartBuildPhase(UuidAuditedModel):
     def get_step_by_name(self, name: str) -> "SmartBuildStep":
         """通过步骤名获取步骤实例"""
         try:
-            # 同一个 phase 内的 step 原则上不能同名, 可以直接 get
             return self.steps.get(name=name)
         except ObjectDoesNotExist:
             raise StepNotInPresetListError(name)
@@ -94,29 +90,26 @@ class SmartBuildPhase(UuidAuditedModel):
         return self.steps.filter(status=JobStatus.PENDING.value)
 
     def mark_procedure_status(self, status: JobStatus):
-        """针对拥有 complete_time 和 start_time 的应用标记其状态"""
+        """标记阶段状态"""
+        now = timezone.now()
+        self.status = status.value
         update_fields = ["status", "updated"]
-        now = timezone.localtime(timezone.now())
 
         if status in JobStatus.get_finished_states():
             self.complete_time = now
             update_fields.append("complete_time")
-
-            # 步骤完成地过于快速，PaaS 来不及判断其开始就已经收到了结束的标志
-            if not self.start_time and not self.status:
+            # 如果步骤完成过快，补充开始时间
+            if not self.start_time:
                 self.start_time = now
                 update_fields.append("start_time")
         else:
             self.start_time = now
             update_fields.append("start_time")
 
-        self.status = status.value
         self.save(update_fields=update_fields)
 
     def mark_and_write_to_stream(self, stream: "SmartBuildStream", status: JobStatus, extra_info: Dict | None = None):
-        """标记状态，并写到 stream"""
+        """标记状态并写入流"""
         self.mark_procedure_status(status)
-        detail = self.to_dict()
-        detail.update(extra_info or {})
-
+        detail = {**self.to_dict(), **(extra_info or {})}
         stream.write_event(self.get_event_type(), detail)

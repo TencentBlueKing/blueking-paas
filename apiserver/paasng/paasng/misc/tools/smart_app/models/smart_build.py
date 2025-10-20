@@ -15,16 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-
 from django.db import models
 
 from paas_wl.utils.models import AuditedModel, UuidAuditedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.engine.constants import JobStatus
 from paasng.utils.models import BkUserField
-
-logger = logging.getLogger(__name__)
 
 
 class SmartBuildRecord(UuidAuditedModel):
@@ -49,8 +45,6 @@ class SmartBuildRecord(UuidAuditedModel):
     tenant_id = tenant_id_field_factory()
 
     def update_fields(self, **u_fields):
-        logger.info("update_fields, smart_build_id: %s, fields: %s", self.uuid, u_fields)
-
         for key, value in u_fields.items():
             setattr(self, key, value)
         self.save()
@@ -59,9 +53,8 @@ class SmartBuildRecord(UuidAuditedModel):
 class SmartBuildLog(UuidAuditedModel):
     tenant_id = tenant_id_field_factory()
 
-    def write(self, line, stream="STDOUT"):
-        if not line.endswith("\n"):
-            line += "\n"
+    def write(self, line: str, stream: str = "STDOUT"):
+        line = line if line.endswith("\n") else f"{line}\n"
         SmartBuildLogLine.objects.create(smart_build_log=self, line=line, stream=stream)
 
 
@@ -81,4 +74,4 @@ class SmartBuildLogLine(AuditedModel):
         ordering = ["created"]
 
     def __str__(self):
-        return "%s-%s" % (self.id, self.line)
+        return f"{self.id}-{self.line}"

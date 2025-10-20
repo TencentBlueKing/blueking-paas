@@ -22,10 +22,10 @@ from typing import TYPE_CHECKING, Dict, Optional
 from django.conf import settings
 from django.utils.encoding import force_str
 
+from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
-from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paasng.misc.tools.smart_app.build_phase import get_phase
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
@@ -149,7 +149,9 @@ class SmartAppBuilder:
         namespace = get_default_builder_namespace()
         pod_name = generate_builder_name(self.smart_build)
 
-        ensure_namespace(cluster_name, namespace)
+        client = get_client_by_cluster_name(cluster_name)
+
+        NamespacesHandler(client).ensure_namespace(namespace)
 
         builder_template = SmartBuilderTemplate(
             name=pod_name,
@@ -158,7 +160,7 @@ class SmartAppBuilder:
             schedule=Schedule(cluster_name=cluster_name, tolerations=[], node_selector={}),
         )
 
-        smart_build_handler = SmartBuildHandler(get_client_by_cluster_name(cluster_name))
+        smart_build_handler = SmartBuildHandler(client)
         return smart_build_handler.build_pod(template=builder_template)
 
 
@@ -196,20 +198,3 @@ def get_default_builder_namespace() -> str:
     """Get the namespace of s-mart builder pod"""
 
     return "smart-app-builder"
-
-
-def ensure_namespace(cluster_name: str, namespace: str, max_wait_seconds: int = 15) -> bool:
-    """Ensure the namespace exists in the cluster, if not, create it.
-
-    :param cluster_name: The name of the cluster
-    :param namespace: The namespace to ensure
-    :param max_wait_seconds: The maximum wait time for the namespace to be ready
-    :return: whether an namespace was created.
-    """
-
-    with get_client_by_cluster_name(cluster_name) as client:
-        namespace_client = KNamespace(client)
-        _, created = namespace_client.get_or_create(namespace)
-        if created:
-            namespace_client.wait_for_default_sa(namespace, timeout=max_wait_seconds)
-        return created

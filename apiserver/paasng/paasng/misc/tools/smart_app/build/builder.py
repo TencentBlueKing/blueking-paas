@@ -17,31 +17,27 @@
 
 import logging
 from functools import partial
-from os import PathLike
 from typing import TYPE_CHECKING, Dict, Optional
 
 from django.conf import settings
-from django.utils.translation import gettext as _
+from django.utils.encoding import force_str
 
 from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
+from paas_wl.infras.resources.base.kres import KNamespace
 from paas_wl.infras.resources.kube_res.base import Schedule
+from paasng.misc.tools.smart_app.build_phase import get_phase
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.output import make_channel_stream
-from paasng.misc.tools.smart_app.phases_steps import SmartBuildPhaseManager
-from paasng.platform.declarative.exceptions import DescriptionValidationError
-from paasng.platform.declarative.handlers import get_desc_handler
 from paasng.platform.engine.constants import JobStatus
-from paasng.platform.engine.exceptions import HandleAppDescriptionError
-from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 
-from .flow import SmartBuildCoordinator, SmartBuildProcedure, SmartBuildStateMgr
+from .flow import SmartBuildProcedure, SmartBuildStateMgr
 from .handler import ContainerRuntimeSpec, SmartBuilderTemplate, SmartBuildHandler
 from .poller import SmartBuildProcessPoller, SmartBuildProcessResultHandler
 
 if TYPE_CHECKING:
-    from paasng.misc.tools.smart_app.models import SmartBuildRecord
+    from paasng.misc.tools.smart_app.models import SmartBuildPhase, SmartBuildRecord
     from paasng.misc.tools.smart_app.output import SmartBuildStream
 
 logger = logging.getLogger(__name__)
@@ -52,96 +48,123 @@ class SmartAppBuilder:
 
     phase_type: Optional[SmartBuildPhaseType] = None
 
-    def __init__(self, smart_build: "SmartBuildRecord", source_package_url: str, package_path: PathLike):
+    def __init__(self, smart_build: "SmartBuildRecord", source_get_url: str, dest_put_url: str):
         self.smart_build = smart_build
-        self.source_package_url = source_package_url
-        self.package_path = package_path
+        self.source_get_url = source_get_url
+        self.dest_put_url = dest_put_url
+
         self.state_mgr = SmartBuildStateMgr.from_smart_build_id(
             smart_build_id=smart_build.uuid, phase_type=SmartBuildPhaseType.PREPARATION
         )
         self.stream: "SmartBuildStream" = make_channel_stream(smart_build)
-        self.coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
-
         self.procedure = partial(SmartBuildProcedure, self.stream, self.smart_build)
 
     def start(self):
         """Start the s-mart building process"""
-        logger.info(f"Starting smart build process for build id: {self.smart_build.uuid}")
 
-        phase_manager = SmartBuildPhaseManager(self.smart_build)
-        preparation_phase = phase_manager.get_or_create(SmartBuildPhaseType.PREPARATION)
+        final_status = JobStatus.PENDING
+        err_msg = ""
+        try:
+            self._run_preparation_phase()
+            self._run_build_phase()
+            final_status = JobStatus.SUCCESSFUL
+        except Exception as e:
+            err_msg = str(e)
+            final_status = JobStatus.FAILED
+        finally:
+            self._finalize_stream(final_status)
+            self.state_mgr.finish(final_status, err_msg)
 
-        # 准备阶段
+    def _run_preparation_phase(self):
+        """执行准备阶段"""
+
+        preparation_phase = get_phase(self.smart_build, SmartBuildPhaseType.PREPARATION)
         start_phase(self.smart_build, self.stream, SmartBuildPhaseType.PREPARATION)
-        with self.procedure("校验应用描述文件", phase=preparation_phase):
-            self.validate_app_description()
 
-        # TODO: 添加其他在准备阶段执行的步骤
-        end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.PREPARATION)
+        try:
+            with self.procedure("校验应用描述文件", phase=preparation_phase):
+                self.validate_app_description()
+            end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.PREPARATION)
+        except Exception:
+            end_phase(self.smart_build, self.stream, JobStatus.FAILED, SmartBuildPhaseType.PREPARATION)
+            raise
 
-        # 构建阶段
-        build_phase = phase_manager.get_or_create(SmartBuildPhaseType.BUILD)
-        with self.procedure("启动构建阶段", phase=build_phase):
-            self.async_start_build_process()
+    def _run_build_phase(self):
+        """执行构建阶段"""
+
+        build_phase = get_phase(self.smart_build, SmartBuildPhaseType.BUILD)
+        start_phase(self.smart_build, self.stream, SmartBuildPhaseType.BUILD)
+
+        try:
+            with self.procedure("构建 S-Mart 包", phase=build_phase):
+                builder_name = self.launch_build_process()
+
+            self.start_following_logs(builder_name)
+
+            params = {"smart_build_id": self.smart_build.uuid, "dest_put_url": self.dest_put_url}
+            SmartBuildProcessPoller.start(params, SmartBuildProcessResultHandler)
+            end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.BUILD)
+        except Exception:
+            end_phase(self.smart_build, self.stream, JobStatus.FAILED, SmartBuildPhaseType.BUILD)
+            raise
+
+    def _finalize_stream(self, final_status: JobStatus):
+        """发送 EOF 事件并关闭 stream"""
+
+        self.stream.write_event("EOF", {"build_id": str(self.smart_build.uuid), "final_status": final_status.value})
+        self.stream.close()
 
     def validate_app_description(self):
         """Validate the app description file"""
-        # TODO: 添加 app_desc 的检查逻辑
-        stat = SourcePackageStatReader(self.package_path).read()
-        try:
-            app_desc = get_desc_handler(stat.meta_info).app_desc
-        except DescriptionValidationError as e:
-            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败：{}".format(e)))
+        # TODO: 添加对应用描述文件的实际验证逻辑
 
-        if app_desc.market is None:
-            raise HandleAppDescriptionError(reason=_("处理应用描述文件失败"))
+    def start_following_logs(self, builder_name: str):
+        """获取并流式输出构建日志,并检查 Pod 执行状态"""
 
-    def async_start_build_process(self):
-        """Start a new s-mart build process and check status periodically"""
-        self.launch_build_process()
-        self.state_mgr.update()
+        namespace = get_default_builder_namespace()
+        cluster_name = get_default_cluster_name()
+        build_handler = SmartBuildHandler(get_client_by_cluster_name(cluster_name))
 
-        params = {"smart_build_id": self.smart_build.uuid}
-        SmartBuildProcessPoller.start(params, SmartBuildProcessResultHandler)
+        build_handler.wait_for_logs_readiness(
+            namespace=namespace, name=builder_name, timeout=settings.SMART_BUILD_PROCESS_TIMEOUT
+        )
 
-    def launch_build_process(self):
-        """Start a new build process for build smart package"""
-        source_get_url = self.source_package_url
-        # TODO: 需要指定 bkrepo 的 bucket
-        dest_put_url = "https://user:pass@example.com/generic/bkpaas/test-samrt/test.tgz"
+        for raw_line in build_handler.get_build_log(
+            namespace=namespace, name=builder_name, follow=True, timeout=settings.SMART_BUILD_PROCESS_TIMEOUT
+        ):
+            self.stream.write_message(force_str(raw_line))
+
+        build_handler.wait_for_succeeded(namespace=namespace, name=builder_name, timeout=60)
+
+    def launch_build_process(self) -> str:
+        """launch the build Pod"""
 
         envs: Dict[str, str] = {
-            "SOURCE_GET_URL": source_get_url,
-            "DEST_PUT_URL": dest_put_url,
+            "SOURCE_GET_URL": self.source_get_url,
+            "DEST_PUT_URL": self.dest_put_url,
             "BUILDER_SHIM_IMAGE": settings.SMART_BUILDER_SHIM_IMAGE,
         }
 
         cluster_name = get_default_cluster_name()
+        namespace = get_default_builder_namespace()
+        pod_name = generate_builder_name(self.smart_build)
 
-        runtime = ContainerRuntimeSpec(
-            image=settings.SMART_BUILDER_IMAGE,
-            envs=envs,
-        )
-
-        schedule = Schedule(
-            cluster_name=cluster_name,
-            tolerations=[],
-            node_selector={},
-        )
+        ensure_namespace(cluster_name, namespace)
 
         builder_template = SmartBuilderTemplate(
-            name=generate_builder_name(self.smart_build),
-            namespace=get_default_builder_namespace(),
-            runtime=runtime,
-            schedule=schedule,
+            name=pod_name,
+            namespace=namespace,
+            runtime=ContainerRuntimeSpec(image=settings.SMART_BUILDER_IMAGE, envs=envs),
+            schedule=Schedule(cluster_name=cluster_name, tolerations=[], node_selector={}),
         )
 
-        SmartBuildHandler(get_client_by_cluster_name(cluster_name)).build_pod(template=builder_template)
+        smart_build_handler = SmartBuildHandler(get_client_by_cluster_name(cluster_name))
+        return smart_build_handler.build_pod(template=builder_template)
 
 
 def start_phase(smart_build: "SmartBuildRecord", stream: "SmartBuildStream", phase: SmartBuildPhaseType):
     """开始阶段"""
-    phase_obj = smart_build.phases.get(type=phase)
+    phase_obj: "SmartBuildPhase" = smart_build.phases.get(type=phase.value)
     phase_obj.mark_and_write_to_stream(stream, JobStatus.PENDING)
 
 
@@ -149,7 +172,7 @@ def end_phase(
     smart_build: "SmartBuildRecord", stream: "SmartBuildStream", status: JobStatus, phase: SmartBuildPhaseType
 ):
     """结束阶段"""
-    phase_obj = smart_build.phases.get(type=phase)
+    phase_obj: "SmartBuildPhase" = smart_build.phases.get(type=phase.value)
     phase_obj.mark_and_write_to_stream(stream, status)
 
     for step in phase_obj.get_unfinished_steps():
@@ -158,14 +181,35 @@ def end_phase(
 
 def get_default_cluster_name() -> str:
     """Get the default cluster name to run smart builder pods"""
-    return ClusterAllocator(AllocationContext.create_for_build_app()).get_default()
+
+    cluster = ClusterAllocator(AllocationContext.create_for_build_app()).get_default()
+    return cluster.name
 
 
 def generate_builder_name(smart_build: "SmartBuildRecord") -> str:
     """Get the s-mart builder name"""
+
     return f"builder-{smart_build.app_code.replace('_', '0us0')}-{smart_build.operator}"
 
 
 def get_default_builder_namespace() -> str:
     """Get the namespace of s-mart builder pod"""
+
     return "smart-app-builder"
+
+
+def ensure_namespace(cluster_name: str, namespace: str, max_wait_seconds: int = 15) -> bool:
+    """Ensure the namespace exists in the cluster, if not, create it.
+
+    :param cluster_name: The name of the cluster
+    :param namespace: The namespace to ensure
+    :param max_wait_seconds: The maximum wait time for the namespace to be ready
+    :return: whether an namespace was created.
+    """
+
+    with get_client_by_cluster_name(cluster_name) as client:
+        namespace_client = KNamespace(client)
+        _, created = namespace_client.get_or_create(namespace)
+        if created:
+            namespace_client.wait_for_default_sa(namespace, timeout=max_wait_seconds)
+        return created

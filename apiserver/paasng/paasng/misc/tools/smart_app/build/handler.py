@@ -39,27 +39,19 @@ class SecurityContext:
 
 @dataclass
 class ContainerRuntimeSpec:
-    """The runtime specification of a container which contains image and other info."""
+    """Container runtime specifications"""
 
     image: str
     envs: Dict[str, str] = field(default_factory=dict)
     securityContext: SecurityContext = field(default_factory=SecurityContext)
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.IF_NOT_PRESENT)
     image_pull_secrets: List[Dict[str, str]] = field(default_factory=list)
-    # The resources required by the container
-    # e.g. {"limits": {"cpu": "1", "memory": "1Gi"}, "requests": {"cpu": "1", "memory": "1Gi"}}
     resources: Dict[str, Dict[str, str]] = field(default_factory=dict)
 
 
 @dataclass
 class SmartBuilderTemplate:
-    """The template to run the smart-app-builder Pod
-
-    :param name: the name of the Pod
-    :param namespace: the namespace of the Pod
-    :param containers: Container Info of the Pod, including image, securityContext and so on.
-    :param schedule: Schedule Rule of the Pod, including tolerations and node_selector.
-    """
+    """S-Mart Builder Pod Template"""
 
     name: str
     namespace: str
@@ -68,23 +60,18 @@ class SmartBuilderTemplate:
 
 
 class SmartBuildHandler(PodScheduleHandler):
-    """Handler for s-mart app builder pod."""
+    """S-Mart Builder Handler"""
 
     def build_pod(self, template: SmartBuilderTemplate) -> str:
-        """Start a Pod for Build s-mart package
-
-        :param template: the template to run builder
-        :returns: The name of smart build pod
-        """
+        """Create build Pod"""
         pod_name = self.normalize_builder_name(template.name)
         try:
             smart_builder_pod = KPod(self.client).get(pod_name, namespace=template.namespace)
         except ResourceMissing:
             logger.info(
-                "build smart builder <%s/%s> does not exist, will create one", template.namespace, template.name
+                "build smart build pod <%s/%s> does not exist, will create one", template.namespace, template.name
             )
         else:
-            # ignore the other pods
             if smart_builder_pod.status.phase == PodPhase.RUNNING:
                 # 重复构建时 上一次构建 pod 执行超时将尝试删除并重新构建, 否则取消本次构建
                 if not self.check_pod_timeout(smart_builder_pod):
@@ -93,65 +80,51 @@ class SmartBuildHandler(PodScheduleHandler):
                     )
 
                 logger.info(
-                    "%s has been running more than %s seconds, delete it and re-create one",
-                    pod_name,
-                    settings.MAX_SMART_BUILDER_SECONDS,
+                    "Pod %s timed out after %s seconds, recreating", pod_name, settings.MAX_SMART_BUILDER_SECONDS
+                )
+            else:
+                # Pod 处于其他状态，直接删除
+                logger.info(
+                    "Pod %s is in %s state, delete it and re-create one", pod_name, smart_builder_pod.status.phase
                 )
 
-                self._delete_pod(namespace=template.namespace, pod_name=pod_name, grace_period_seconds=0).wait()
+            self._delete_pod(template.namespace, pod_name, grace_period_seconds=0).wait()
 
-        smart_builder_pod_body = self._construct_pod_body(pod_name, template)
-
-        pod_info, _ = KPod(self.client).create_or_update(
-            name=pod_name, namespace=template.namespace, body=smart_builder_pod_body
-        )
+        pod_body = self._construct_pod_body(pod_name, template)
+        pod_info, _ = KPod(self.client).create_or_update(pod_name, template.namespace, body=pod_body)
         return pod_info.metadata.name
 
     def delete_builder(self, namespace: str, name: str):
-        """Force delete a slug builder pod unless it's in "running" phase."""
+        """Deleting the builder Pod"""
+
         pod_name = self.normalize_builder_name(name)
-        return self._delete_finished_pod(namespace=namespace, pod_name=pod_name, force=False)
+        return self._delete_finished_pod(namespace, pod_name, force=False)
 
     def wait_for_succeeded(
         self, namespace: str, name: str, timeout: Optional[float] = None, check_period: float = 0.5
     ):
-        """Calling this function will blocks until the pod's status has become Succeeded
+        """Wait for the Pod to complete successfully"""
 
-        :param name: the builder pod name
-        :param timeout: maximum time to wait in seconds, or None to wait indefinitely
-        :param check_period: time to wait between each status check
-        :raises: PodNotSucceededError when Pod does not succeed in given timeout seconds
-        """
         pod_name = self.normalize_builder_name(name)
-        return self._wait_pod_succeeded(
-            namespace=namespace, pod_name=pod_name, timeout=timeout, check_period=check_period
-        )
+        return self._wait_pod_succeeded(namespace, pod_name, timeout=timeout, check_period=check_period)
 
     def wait_for_logs_readiness(self, namespace: str, name: str, timeout: int):
-        """Waits for slugbuilder Pod to become ready for retrieving logs
+        """Wait for Pod logs readiness"""
 
-        :param name: the builder pod name
-        :param timeout: max timeout
-        """
         pod_name = self.normalize_builder_name(name)
         log_available_statuses = {PodPhase.RUNNING, PodPhase.SUCCEEDED, PodPhase.FAILED}
-        KPod(self.client).wait_for_status(
-            name=pod_name, namespace=namespace, target_statuses=log_available_statuses, timeout=timeout
-        )
+        KPod(self.client).wait_for_status(pod_name, log_available_statuses, namespace, timeout)
 
     def get_build_log(self, namespace: str, name: str, timeout: int, **kwargs):
-        """Get logs of building process
+        """Get build log"""
 
-        :param name: the builder pod name
-        """
         pod_name = self.normalize_builder_name(name)
-        return super()._get_pod_logs(namespace=namespace, pod_name=pod_name, timeout=timeout, **kwargs)
+        return super()._get_pod_logs(namespace, pod_name, timeout=timeout, **kwargs)
 
     def _construct_pod_body(self, pod_name: str, template: SmartBuilderTemplate) -> Dict[str, Any]:
-        """Construct the pod body for smart builder pod"""
-        env_list = []
-        for key, value in template.runtime.envs.items():
-            env_list.append(dict(name=str(key), value=str(value)))
+        """Constructing Pod Configuration"""
+
+        env_list = [{"name": str(k), "value": str(v)} for k, v in template.runtime.envs.items()]
 
         pod_body: Dict = {
             "metadata": {
@@ -185,10 +158,7 @@ class SmartBuildHandler(PodScheduleHandler):
 
     @staticmethod
     def normalize_builder_name(name: str) -> str:
-        """Get A k8s friendly pod name.
+        """Normalize builder names"""
 
-        Although we return as is now, we reserve the ability to normalize/modify this name
-
-        :param name: builder name of engine app
-        """
+        # TODO: 暂时直接返回 name, 后面需要添加对 name 的校验
         return name

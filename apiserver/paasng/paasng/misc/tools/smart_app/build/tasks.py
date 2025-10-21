@@ -28,16 +28,26 @@ from .flow import SmartBuildStateMgr
 
 
 @shared_task(base=I18nTask)
-def execute_build(smart_build_id: str, source_get_url: str, dest_put_url: str, *args, **kwargs):
+def execute_build(
+    smart_build_id: str,
+    source_get_url: str,
+    dest_put_url: str,
+    artifact_bucket: str,
+    artifact_key: str,
+    *args,
+    **kwargs,
+):
     """Execute smart app build task in worker
 
     :param smart_build_id: Id of smart build object
     :param source_get_url: The source URL to get source code package
     :param dest_put_url: The destination URL to put built artifact
+    :param artifact_bucket: The bucket name where artifact is stored
+    :param artifact_key: The key of the artifact in the bucket
     """
 
     smart_build = SmartBuildRecord.objects.get(pk=smart_build_id)
-    SmartAppBuilder(smart_build, source_get_url, dest_put_url).start()
+    SmartAppBuilder(smart_build, source_get_url, dest_put_url, artifact_bucket, artifact_key).start()
 
 
 @shared_task(base=I18nTask)

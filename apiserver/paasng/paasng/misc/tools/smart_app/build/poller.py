@@ -27,6 +27,7 @@ from blue_krill.async_utils.poll_task import (
 )
 from django.conf import settings
 
+from paas_wl.utils.blobstore import make_blob_store
 from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
 from paasng.platform.engine.constants import JobStatus
@@ -76,13 +77,18 @@ class SmartBuildProcessResultHandler(CallbackHandler):
         """Handle the callback of construction completion"""
 
         smart_build_id = poller.params["smart_build_id"]
-        dest_put_url = poller.params["dest_put_url"]
+        artifact_bucket = poller.params["artifact_bucket"]
+        artifact_key = poller.params["artifact_key"]
         state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build_id, SmartBuildPhaseType.BUILD)
         build_status = result.data["build_status"]
         smart_build = state_mgr.smart_build
 
         if build_status == JobStatus.SUCCESSFUL:
-            smart_build.artifact_url = dest_put_url
+            # 生成一个长期有效的下载 URL(7天),用于保存到数据库
+            artifact_download_url = make_blob_store(artifact_bucket).generate_presigned_url(
+                artifact_key, expires_in=7 * 24 * 3600
+            )
+            smart_build.artifact_url = artifact_download_url
             smart_build.save()
             state_mgr.finish(build_status)
         else:

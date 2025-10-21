@@ -48,10 +48,19 @@ class SmartAppBuilder:
 
     phase_type: Optional[SmartBuildPhaseType] = None
 
-    def __init__(self, smart_build: "SmartBuildRecord", source_get_url: str, dest_put_url: str):
+    def __init__(
+        self,
+        smart_build: "SmartBuildRecord",
+        source_get_url: str,
+        dest_put_url: str,
+        artifact_bucket: str,
+        artifact_key: str,
+    ):
         self.smart_build = smart_build
         self.source_get_url = source_get_url
         self.dest_put_url = dest_put_url
+        self.artifact_bucket = artifact_bucket
+        self.artifact_key = artifact_key
 
         self.state_mgr = SmartBuildStateMgr.from_smart_build_id(
             smart_build_id=smart_build.uuid, phase_type=SmartBuildPhaseType.PREPARATION
@@ -101,7 +110,12 @@ class SmartAppBuilder:
 
             self.start_following_logs(builder_name)
 
-            params = {"smart_build_id": self.smart_build.uuid, "dest_put_url": self.dest_put_url}
+            params = {
+                "smart_build_id": self.smart_build.uuid,
+                "dest_put_url": self.dest_put_url,
+                "artifact_bucket": self.artifact_bucket,
+                "artifact_key": self.artifact_key,
+            }
             SmartBuildProcessPoller.start(params, SmartBuildProcessResultHandler)
             end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.BUILD)
         except Exception:

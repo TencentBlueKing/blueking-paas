@@ -62,13 +62,24 @@ class SmartBuildTaskRunner:
     def __init__(self, smart_build_id: uuid.UUID, source_url: str):
         self.smart_build_id = str(smart_build_id)
         self.source_get_url = self._get_source_get_url(source_url)
-        self.dest_put_url = self._get_dest_put_url(source_url)
+
+        # 生成构建产物的存储信息
+        parsed = parse_url(source_url)
+        self.artifact_bucket = parsed.bucket
+        self.artifact_key = f"default/artifact_{uuid.uuid4()}.tar.gz"
+        self.dest_put_url = self._generate_artifact_put_url()
 
     def start(self):
         """Start build task"""
 
         execute_build.apply_async(
-            args=(self.smart_build_id, self.source_get_url, self.dest_put_url),
+            args=(
+                self.smart_build_id,
+                self.source_get_url,
+                self.dest_put_url,
+                self.artifact_bucket,
+                self.artifact_key,
+            ),
             link_error=execute_build_error_callback.s(),
         )
 
@@ -78,12 +89,10 @@ class SmartBuildTaskRunner:
         parsed = parse_url(source_url)
         return make_blob_store(parsed.bucket).generate_presigned_url(parsed.key, expires_in=3600)
 
-    def _get_dest_put_url(self, source_url: str) -> str:
+    def _generate_artifact_put_url(self) -> str:
         """获取构建产物上传 URL"""
 
-        # TODO: 目前直接使用 prepared_packages 作为存储位置，后续可考虑单独创建一个存储桶
-        parsed = parse_url(source_url)
-        key = f"default/artifact_{uuid.uuid4()}.tar.gz"
-        return make_blob_store(parsed.bucket).generate_presigned_url(
-            key, expires_in=3600, signature_type=SignatureType.UPLOAD
+        # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
+        return make_blob_store(self.artifact_bucket).generate_presigned_url(
+            self.artifact_key, expires_in=3600, signature_type=SignatureType.UPLOAD
         )

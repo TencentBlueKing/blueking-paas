@@ -31,6 +31,8 @@ pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 SOURCE_GET_URL = "https://example.com/source.tar.gz"
 DEST_PUT_URL = "https://example.com/dest.tar.gz"
+ARTIFACT_BUCKET = "test-bucket"
+ARTIFACT_KEY = "default/artifact_test.tar.gz"
 
 
 @pytest.fixture()
@@ -47,7 +49,7 @@ def smart_app_builder(smart_build_record, tmp_path) -> SmartAppBuilder:
         patch("paasng.misc.tools.smart_app.build.builder.SmartBuildStateMgr"),
         patch("paasng.misc.tools.smart_app.build.builder.make_channel_stream"),
     ):
-        return SmartAppBuilder(smart_build_record, SOURCE_GET_URL, DEST_PUT_URL)
+        return SmartAppBuilder(smart_build_record, SOURCE_GET_URL, DEST_PUT_URL, ARTIFACT_BUCKET, ARTIFACT_KEY)
 
 
 class TestSmartAppBuilder:

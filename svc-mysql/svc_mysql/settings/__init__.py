@@ -288,10 +288,10 @@ ENCRYPT_CIPHER_TYPE = "SM4CTR" if BK_CRYPTO_TYPE == "SHANGMI" else "FernetCipher
 
 # 实例密码参数
 # 密码长度，优先从环境变量获取，默认值为10
-PASSWORD_LENGTH = int(os.environ.get("PASSWORD_LENGTH", 10))
+PASSWORD_LENGTH = env.int("PASSWORD_LENGTH", default=10)
 
 # 密码中不允许包含的常见字典词(每个字符的长度不能小于4)，优先从环境变量获取，格式为逗号分隔的字符串，默认为空列表
 PASSWORD_DICTIONARY_WORDS: List[str] = []
-PASSWORD_DICTIONARY_WORDS_STR = os.environ.get("PASSWORD_DICTIONARY_WORDS", "")
+PASSWORD_DICTIONARY_WORDS_STR = env.str("PASSWORD_DICTIONARY_WORDS", default="")
 if PASSWORD_DICTIONARY_WORDS_STR:
     PASSWORD_DICTIONARY_WORDS = [word.strip() for word in PASSWORD_DICTIONARY_WORDS_STR.split(",") if word.strip()]

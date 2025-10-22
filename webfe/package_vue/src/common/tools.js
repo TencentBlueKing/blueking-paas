@@ -637,6 +637,21 @@ export function normalizeOrgSelectionData(data, options = {}) {
 }
 
 /**
+ * 过滤掉对象中值为 undefined 的属性
+ * @param {Object} originalObject - 原始对象
+ * @returns {Object} 过滤后的对象
+ */
+export function filterUndefinedProperties(originalObject) {
+  const filteredObject = {};
+  Object.entries(originalObject).forEach(([key, value]) => {
+    if (value !== undefined) {
+      filteredObject[key] = value;
+    }
+  });
+  return filteredObject;
+}
+
+/**
  * 初始化一个 EventSource，以连接到服务器发送事件（SSE）流。
  * @param {string} url - 服务器端 SSE 流的 URL。
  * @param {Object} options - 事件流的配置选项。
@@ -664,6 +679,8 @@ export function createSSE(url, options = {}) {
   let retryCount = 0;
   let isManuallyClosed = false;
   let reconnectTimer;
+  // 存储自定义事件监听器
+  const customEventListeners = new Map();
 
   const connect = () => {
     if (isManuallyClosed) return;
@@ -703,6 +720,13 @@ export function createSSE(url, options = {}) {
       onEOF();
       close();
     });
+
+    // 添加自定义事件监听器
+    customEventListeners.forEach((listeners, eventType) => {
+      listeners.forEach(listener => {
+        eventSource.addEventListener(eventType, listener);
+      });
+    });
   };
 
   // 开始连接
@@ -726,6 +750,29 @@ export function createSSE(url, options = {}) {
   return {
     close,
     reconnect,
+    addEventListener: (type, listener) => {
+      if (!customEventListeners.has(type)) {
+        customEventListeners.set(type, []);
+      }
+      customEventListeners.get(type).push(listener);
+      // 如果 EventSource 已存在，立即添加监听器
+      if (eventSource) {
+        eventSource.addEventListener(type, listener);
+      }
+    },
+    removeEventListener: (type, listener) => {
+      if (customEventListeners.has(type)) {
+        const listeners = customEventListeners.get(type);
+        const index = listeners.indexOf(listener);
+        if (index > -1) {
+          listeners.splice(index, 1);
+        }
+      }
+      // 从 EventSource 中移除
+      if (eventSource) {
+        eventSource.removeEventListener(type, listener);
+      }
+    }
   };
 };
 

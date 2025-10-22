@@ -314,7 +314,9 @@ export const PLATFORM_CONFIG = {
 
         GCS_MySQL_LINK: '',
 
-        HTTPS_CONFIG_GUIDE: DOCS_URL_PREFIX + '/topics/paas/app_entry_intro#https-%E9%85%8D%E7%BD%AE%E6%8C%87%E5%8D%97'
+        HTTPS_CONFIG_GUIDE: DOCS_URL_PREFIX + '/topics/paas/app_entry_intro#https-%E9%85%8D%E7%BD%AE%E6%8C%87%E5%8D%97',
+
+        SMART_APP_FEATURES: DOCS_URL_PREFIX +  '/topics/paas/smart_intro'
     },
 
     CONFIG: {

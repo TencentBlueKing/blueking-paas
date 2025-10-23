@@ -32,7 +32,9 @@ from tests.paasng.misc.tools.smart_app.setup_utils import create_fake_smart_buil
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-source_package_url = "https://example.com/source.tar.gz"
+source_get_url = "https://example.com/source.tar.gz"
+dest_put_url = "https://example.com/destination.tar.gz"
+artifact_download_url = "https://example.com/artifact.tar.gz"
 
 
 @pytest.fixture()
@@ -44,16 +46,13 @@ def smart_build_record() -> SmartBuildRecord:
 @pytest.fixture()
 def smart_app_builder(smart_build_record, tmp_path) -> SmartAppBuilder:
     """创建 SmartAppBuilder 实例用于测试"""
-    package_path = tmp_path / "test_package.tar.gz"
-    package_path.touch()  # 创建一个空文件
 
     with (
         patch("paasng.misc.tools.smart_app.build.builder.SmartBuildStateMgr"),
         patch("paasng.misc.tools.smart_app.build.builder.make_channel_stream"),
         patch("paasng.misc.tools.smart_app.build.builder.SmartBuildCoordinator"),
     ):
-        builder = SmartAppBuilder(smart_build_record, source_package_url, package_path)
-        return builder
+        return SmartAppBuilder(smart_build_record, source_get_url, dest_put_url, artifact_download_url)
 
 
 class TestSmartAppBuilder:

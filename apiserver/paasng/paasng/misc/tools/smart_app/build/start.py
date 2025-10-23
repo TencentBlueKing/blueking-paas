@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from blue_krill.storages.blobstore.base import SignatureType
+from django.utils.timezone import now
 
 from paas_wl.utils.blobstore import make_blob_store
 from paasng.misc.tools.smart_app.build_phase import ALL_SMART_BUILD_PHASES
@@ -44,6 +45,7 @@ def create_smart_build_record(package_name: str, app_code: str, operator: str) -
         package_name=package_name,
         app_code=app_code,
         status=JobStatus.PENDING,
+        start_time=now(),
         operator=operator,
     )
     record.refresh_from_db()

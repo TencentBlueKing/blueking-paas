@@ -21,13 +21,18 @@ from contextlib import contextmanager
 
 import redis
 from django.utils.encoding import force_str
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 
 from paasng.core.core.storages.redisdb import get_default_redis
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.exceptions import SmartBuildShouldAbortError
 from paasng.misc.tools.smart_app.models import SmartBuildPhase, SmartBuildRecord, SmartBuildStep
-from paasng.misc.tools.smart_app.output import SmartBuildStream, StreamType, get_default_stream
+from paasng.misc.tools.smart_app.output import (
+    SmartBuildStream,
+    StreamType,
+    get_default_stream,
+    make_channel_stream,
+)
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.engine.exceptions import HandleAppDescriptionError, StepNotInPresetListError
 from paasng.platform.engine.utils.output import Style
@@ -105,18 +110,17 @@ class SmartBuildStateMgr:
     def __init__(
         self,
         smart_build: SmartBuildRecord,
-        phase_type: SmartBuildPhaseType,
         stream: SmartBuildStream | None = None,
     ):
         self.smart_build = smart_build
         self.stream = stream or get_default_stream(smart_build)
-        self.phase_type = phase_type
         self.coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
 
     @classmethod
-    def from_smart_build_id(cls, smart_build_id: str, phase_type: "SmartBuildPhaseType"):
+    def from_smart_build_id(cls, smart_build_id: str, stream: SmartBuildStream | None = None):
         record = SmartBuildRecord.objects.get(pk=smart_build_id)
-        return cls(record, phase_type)
+        stream = stream or make_channel_stream(record)
+        return cls(record, stream)
 
     def update(self, **fields):
         return self.smart_build.update_fields(**fields)
@@ -129,7 +133,7 @@ class SmartBuildStateMgr:
         if write_to_stream and err_detail:
             self.stream.write_message(self._stylize_error(err_detail, status), stream=StreamType.STDERR)
 
-        self.update(status=status, err_detail=err_detail)
+        self.update(status=status, end_time=now(), err_detail=err_detail)
 
     @staticmethod
     def _stylize_error(error_detail: str, status: JobStatus) -> str:

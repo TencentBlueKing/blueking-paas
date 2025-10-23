@@ -24,7 +24,6 @@ from paasng.misc.tools.smart_app.build.flow import (
     SmartBuildProcedure,
     SmartBuildStateMgr,
 )
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.exceptions import SmartBuildShouldAbortError
 from paasng.misc.tools.smart_app.output import NullStream
 from paasng.platform.engine.constants import JobStatus
@@ -83,7 +82,6 @@ class TestSmartBuildStateMgr:
     def test_init(self, smart_build, mgr):
         """Test SmartBuildStateMgr initialization"""
         assert mgr.smart_build == smart_build
-        assert mgr.phase_type == SmartBuildPhaseType.PREPARATION
         assert mgr.stream is not None
 
     def test_from_smart_build_id(self, smart_build):

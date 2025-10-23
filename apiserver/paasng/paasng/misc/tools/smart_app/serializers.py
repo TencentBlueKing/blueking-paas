@@ -134,7 +134,7 @@ class SmartBuildHistoryOutputSLZ(serializers.Serializer):
     def get_spent_time(self, obj: "SmartBuildRecord") -> int:
         if not (obj.start_time and obj.end_time):
             return 0
-        return int((obj.end_time - obj.start_time).total_seconds())
+        return max(0, int((obj.end_time - obj.start_time).total_seconds()))
 
 
 class SmartBuildHistoryLogsOutputSLZ(serializers.Serializer):

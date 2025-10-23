@@ -34,6 +34,7 @@ from rest_framework.response import Response
 from paasng.accessories.publish.market.constant import ProductSourceUrlType
 from paasng.bk_plugins.bk_plugins import api_serializers, serializers
 from paasng.bk_plugins.bk_plugins.apigw import safe_update_gateway_status
+from paasng.bk_plugins.bk_plugins.constants import AI_AGENT_TEMPLATE_PREFIX
 from paasng.bk_plugins.bk_plugins.models import BkPluginTag, make_bk_plugin
 from paasng.bk_plugins.bk_plugins.tasks import archive_prod_env
 from paasng.bk_plugins.bk_plugins.views import logger
@@ -90,6 +91,8 @@ class PluginInstanceViewSet(viewsets.ViewSet):
         encoded_operator = user_id_encoder.encode(
             getattr(ProviderType, settings.BKAUTH_DEFAULT_PROVIDER_TYPE), data["operator"]
         )
+        # AI Agent 插件应用的模板 ID 以 bk-ai 开头
+        is_ai_agent_app = data["template"]["id"].startswith(AI_AGENT_TEMPLATE_PREFIX)
 
         application = create_application(
             code=data["id"],
@@ -98,6 +101,7 @@ class PluginInstanceViewSet(viewsets.ViewSet):
             app_type=ApplicationType.CLOUD_NATIVE,
             operator=encoded_operator,
             is_plugin_app=True,
+            is_ai_agent_app=is_ai_agent_app,
             app_tenant_mode=AppTenantMode(data["plugin_tenant_mode"]),
             app_tenant_id=data["plugin_tenant_id"],
             tenant_id=data["tenant_id"],

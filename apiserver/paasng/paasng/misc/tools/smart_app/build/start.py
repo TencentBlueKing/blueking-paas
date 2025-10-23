@@ -18,9 +18,9 @@
 from blue_krill.storages.blobstore.base import SignatureType
 
 from paas_wl.utils.blobstore import make_blob_store
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType, SourceCodeOriginType
-from paasng.misc.tools.smart_app.models import SmartBuildRecord
-from paasng.misc.tools.smart_app.phases_steps.phases import SmartBuildPhaseManager
+from paasng.misc.tools.smart_app.build_phase import ALL_SMART_BUILD_PHASES
+from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
+from paasng.misc.tools.smart_app.models import SmartBuildPhase, SmartBuildRecord, SmartBuildStep
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.sourcectl.package.utils import parse_url
 
@@ -48,10 +48,22 @@ def create_smart_build_record(package_name: str, app_code: str, operator: str) -
     )
     record.refresh_from_db()
 
-    # TODO: 因为流程步骤固定, 考虑在这里直接创建阶段步骤记录
-    # 暂时先如此做, 后续固定流程后可优化
-    SmartBuildPhaseManager(record).get_or_create(SmartBuildPhaseType.PREPARATION)
-    SmartBuildPhaseManager(record).get_or_create(SmartBuildPhaseType.BUILD)
+    # 初始化所有阶段和步骤
+    for phase_config in ALL_SMART_BUILD_PHASES:
+        phase = SmartBuildPhase.objects.create(
+            smart_build=record,
+            type=phase_config.type.value,
+        )
+
+        SmartBuildStep.objects.bulk_create(
+            [
+                SmartBuildStep(
+                    phase=phase,
+                    name=step.name,
+                )
+                for step in phase_config.steps
+            ]
+        )
 
     return record
 

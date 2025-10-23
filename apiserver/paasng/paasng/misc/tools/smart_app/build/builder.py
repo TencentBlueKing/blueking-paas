@@ -100,7 +100,6 @@ class SmartAppBuilder:
 
             params = {
                 "smart_build_id": self.smart_build.uuid,
-                "dest_put_url": self.dest_put_url,
                 "artifact_download_url": self.artifact_download_url,
             }
 

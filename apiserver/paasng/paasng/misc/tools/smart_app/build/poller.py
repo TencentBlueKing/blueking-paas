@@ -94,7 +94,7 @@ class SmartBuildProcessResultHandler(CallbackHandler):
         # Update the build record status
         err_detail = ""
         if build_status == JobStatus.SUCCESSFUL:
-            artifact_download_url = result.data["artifact_download_url"]
+            artifact_download_url = result.data.get("artifact_download_url")
             if artifact_download_url:
                 record.artifact_url = artifact_download_url
                 record.save(update_fields=["artifact_url"])

@@ -42,7 +42,13 @@ logger = logging.getLogger(__name__)
 
 
 class SmartBuildProcedure:
-    """Build step context managers"""
+    """Build step context managers
+
+    :param stream: stream for writing title and messages
+    :param smart_build: current smart build record
+    :param title: title of current step
+    :param phase: current build phase
+    """
 
     TITLE_PREFIX: str = "正在"
 
@@ -71,6 +77,9 @@ class SmartBuildProcedure:
                 self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.SUCCESSFUL)
             return False
 
+        # Only some types of exception should be output directly into the stream,
+        # others have to be masked as "Unknown error" in order to provide better
+        # user experiences.
         is_known_exc = exc_type in [SmartBuildShouldAbortError, HandleAppDescriptionError]
         if is_known_exc:
             msg = _("步骤 [{title}] 出错了，原因：{reason}。").format(
@@ -83,6 +92,7 @@ class SmartBuildProcedure:
         if coded_message:
             msg += coded_message
 
+        # Only log exception when it's an unknown exception
         if not is_known_exc:
             logger.exception(msg)
 
@@ -126,7 +136,12 @@ class SmartBuildStateMgr:
         return self.smart_build.update_fields(**fields)
 
     def finish(self, status: JobStatus, err_detail: str = "", write_to_stream: bool = True):
-        """Finish a s-mart build process"""
+        """Finish a s-mart build process
+
+        :param status: the final status of smart build
+        :param err_detail: only useful when status is "FAILED"
+        :param when_to_stream: write the raw error detail message to stream, default ot True
+        """
 
         if status not in JobStatus.get_finished_states():
             raise ValueError(f"{status} is not a valid finished status")
@@ -148,7 +163,10 @@ class SmartBuildStateMgr:
 
 
 class SmartBuildCoordinator:
-    """Build coordinator: manage build status and prevent duplicate builds"""
+    """Coordinate the tasks of building s-smart packages
+
+    Including managing build status and preventing duplicate builds
+    """
 
     # The lock will be released anyway after {DEFAULT_LOCK_TIMEOUT} seconds
     DEFAULT_LOCK_TIMEOUT = 15 * 60
@@ -178,7 +196,12 @@ class SmartBuildCoordinator:
         return False
 
     def release_lock(self, expected_smart_build: SmartBuildRecord | None = None):
-        """Release build lock"""
+        """Finish a s-mart build process, release the s-mart build lock
+
+        :param expected_smart_build: if given, will raise ValueError when the ongoing build is
+            not identical with given build
+        :raises: ValueError when build not matched
+        """
 
         def execute_release(pipe):
             if expected_smart_build:
@@ -200,6 +223,7 @@ class SmartBuildCoordinator:
             and current_build_record.pk == expected_smart_build.pk
         ):
             try:
+                # Release build lock
                 self.release_lock(expected_smart_build=expected_smart_build)
             except ValueError as e:
                 logger.warning("Failed to release the build lock: %s", e)
@@ -225,7 +249,10 @@ class SmartBuildCoordinator:
 
     @property
     def is_status_polling_timeout(self) -> bool:
-        """Check if status polling timed out"""
+        """Check if the reporting time has timed out
+
+        Currently used for controlling build and hook processes
+        """
 
         latest_polling_time = self.redis.get(self.key_name_latest_polling_time)
         # If there is no last report status time, it is considered not timed out,

@@ -56,6 +56,7 @@ class SmartBuildProcessPoller(TaskPoller):
         if build_status in JobStatus.get_finished_states():
             status = PollingStatus.DONE
         else:
+            # 若判断任务状态超时，则认为任务失败，否则更新上报状态时间
             coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
             if coordinator.is_status_polling_timeout:
                 logger.warning("Build [%s] poll timed out, failed.", self.params["smart_build_id"])

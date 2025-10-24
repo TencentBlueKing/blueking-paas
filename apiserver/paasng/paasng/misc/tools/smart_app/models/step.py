@@ -84,7 +84,7 @@ class SmartBuildStep(UuidAuditedModel):
         if status in JobStatus.get_finished_states():
             self.complete_time = now
             update_fields.append("complete_time")
-            # 如果步骤完成过快，补充开始时间
+            # 步骤完成地过于快速，PaaS 来不及判断其开始就已经收到了结束的标志
             if not self.start_time:
                 self.start_time = now
                 update_fields.append("start_time")
@@ -95,7 +95,7 @@ class SmartBuildStep(UuidAuditedModel):
         self.save(update_fields=update_fields)
 
     def mark_and_write_to_stream(self, stream: "SmartBuildStream", status: JobStatus, extra_info: Dict | None = None):
-        """标记状态并写入流"""
+        """标记状态，并写到 stream"""
 
         self.mark_procedure_status(status)
         detail = {**self.to_dict(), **(extra_info or {})}

@@ -113,7 +113,11 @@ class NullStream(SmartBuildStream):
 
 
 class RedisWithModelStream(RedisChannelStream):
-    """Streams that write to both the database and Redis channels"""
+    """Streams that write to both the database and Redis channels
+
+    :param model: A model which has output_stream field
+    :param steam_channel: A redis channel stream
+    """
 
     def __init__(self, model: MessageWriter, stream_channel: StreamChannel):
         self.model_stream = ModelStream(model)
@@ -136,7 +140,12 @@ def get_default_stream(smart_build: SmartBuildRecord):
 
 
 def make_channel_stream(smart_build: SmartBuildRecord, stream_channel_id: str | None = None):
-    """Create a stream object that writes to both the database and Redis channels"""
+    """Create a stream object that writes to both the database and Redis channels
+
+    :param smart_build: The build record instance
+    :param stream_channel_id: If provided, will use this value instead of `smart_build.id`
+    :return: The created stream object
+    """
 
     if not getattr(smart_build, "stream", None):
         smart_build.stream = SmartBuildLog.objects.create()

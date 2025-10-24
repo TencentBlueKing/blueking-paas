@@ -46,6 +46,8 @@ class ContainerRuntimeSpec:
     securityContext: SecurityContext = field(default_factory=SecurityContext)
     image_pull_policy: ImagePullPolicy = field(default=ImagePullPolicy.IF_NOT_PRESENT)
     image_pull_secrets: List[Dict[str, str]] = field(default_factory=list)
+    # The resources required by the container
+    # e.g. {"limits": {"cpu": "1", "memory": "1Gi"}, "requests": {"cpu": "1", "memory": "1Gi"}}
     resources: Dict[str, Dict[str, str]] = field(default_factory=dict)
 
 
@@ -63,7 +65,11 @@ class SmartBuildHandler(PodScheduleHandler):
     """S-Mart Builder Handler"""
 
     def build_pod(self, template: SmartBuilderTemplate) -> str:
-        """Create build Pod"""
+        """Create build Pod
+
+        :param template: the template to run builder
+        :return: Pod name
+        """
 
         pod_name = self.normalize_builder_name(template.name)
         try:

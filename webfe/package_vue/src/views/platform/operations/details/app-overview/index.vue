@@ -100,32 +100,37 @@
         :align="'flex-start'"
         class="mb10"
       >
-        <div slot="value">
+        <div
+          slot="value"
+          class="flex-row"
+        >
           {{ isAppAdmin ? $t('你已经是该应用的管理员') : $t('你不具备管理员权限') }}
           <!-- 非管理员 -->
-          <span
+          <MoreOperations
             v-if="!isAppAdmin"
-            class="btn-wrapper ml10"
-            v-bk-tooltips="{
-              content: $t('应用所属租户为：{a}，您不是该租户下的用户，无法添加为管理员', { a: appTenantId }),
-              disabled: !isBecomeAdminDisabled,
-            }"
+            :loading="adminConfig.appTempAdminLoading"
+            :disabled="isBecomeAdminDisabled"
+            @dropdown-item-change="becomeAppTemporaryAdmin"
           >
-            <!-- 跨租户不能操作 -->
-            <bk-button
-              theme="primary"
-              :disabled="isBecomeAdminDisabled"
-              :loading="adminConfig.appLoading"
+            <span
+              class="btn-wrapper ml10"
               v-bk-tooltips="{
-                content: $t('成为应用的临时管理员，2 小时后自动过期'),
-                disabled: isBecomeAdminDisabled,
+                content: $t('应用所属租户为：{a}，您不是该租户下的用户，无法添加为管理员', { a: appTenantId }),
+                disabled: !isBecomeAdminDisabled,
               }"
-              @click="becomeAppTempAdmin"
             >
-              {{ $t('成为管理员') }}
-            </bk-button>
-          </span>
-          <template v-else>
+              <!-- 跨租户不能操作 -->
+              <bk-button
+                theme="primary"
+                :disabled="isBecomeAdminDisabled"
+                :loading="adminConfig.appLoading"
+                @click="becomeAppAdmin"
+              >
+                {{ $t('成为管理员') }}
+              </bk-button>
+            </span>
+          </MoreOperations>
+          <div v-else>
             <bk-button
               class="ml10"
               theme="danger"
@@ -142,7 +147,7 @@
               <i class="paasng-icon paasng-jump-link"></i>
               {{ $t('访问应用') }}
             </bk-button>
-          </template>
+          </div>
         </div>
       </DetailsRow>
       <DetailsRow
@@ -370,11 +375,13 @@
 import DetailsRow from '@/components/details-row';
 import { mapState, mapGetters } from 'vuex';
 import { PAAS_APP_TYPE } from '@/common/constants';
+import MoreOperations from './more-operations.vue';
 
 export default {
   name: 'appOverview',
   components: {
     DetailsRow,
+    MoreOperations,
   },
   data() {
     return {
@@ -424,6 +431,7 @@ export default {
       adminConfig: {
         appLoading: false,
         pluginLoading: false,
+        appTempAdminLoading: false,
       },
     };
   },
@@ -642,8 +650,8 @@ export default {
       this.$set(this.adminConfig, key, loading);
     },
     // 成为应用临时管理员
-    async becomeAppTempAdmin() {
-      this.setAdminLoading('appLoading', true);
+    async becomeAppTemporaryAdmin() {
+      this.setAdminLoading('appTempAdminLoading', true);
       try {
         await this.$store.dispatch('tenantOperations/becomeAppTempAdmin', {
           appCode: this.appCode,
@@ -659,7 +667,7 @@ export default {
           message: `${this.$t('成为临时管理员失败：')} ${e.detail}`,
         });
       } finally {
-        this.setAdminLoading('appLoading', false);
+        this.setAdminLoading('appTempAdminLoading', false);
       }
     },
     // 退出应用
@@ -711,6 +719,25 @@ export default {
         this.catchErrorHandler(e);
       } finally {
         this.setAdminLoading('pluginLoading', false);
+      }
+    },
+    // 应用应用管理员
+    async becomeAppAdmin() {
+      this.setAdminLoading('appLoading', true);
+      try {
+        await this.$store.dispatch('tenantOperations/addMember', {
+          appCode: this.appCode,
+          postParams: [{ roles: [{ id: 2 }], user: { username: this.curUserInfo?.username } }],
+        });
+        await this.getAppDetails();
+        this.$paasMessage({
+          theme: 'success',
+          message: this.$t('您已成功成为应用管理员'),
+        });
+      } catch (err) {
+        this.catchErrorHandler(err);
+      } finally {
+        this.setAdminLoading('appLoading', false);
       }
     },
   },

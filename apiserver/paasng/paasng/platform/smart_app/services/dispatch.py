@@ -230,11 +230,13 @@ def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SM
     smart_app_extra.set_use_cnb_flag(True)
 
     artifact_json_file = workplace / "artifact.json"
-    if artifact_json_file.exists():
-        artifact_json = json.loads(artifact_json_file.read_text())
-        for module_name in artifact_json:
-            smart_app_extra.set_proc_entrypoints(module_name, artifact_json[module_name]["proc_entrypoints"])
-            smart_app_extra.set_image_tar(module_name, artifact_json[module_name]["image_tar"])
+    if not artifact_json_file.exists():
+        return smart_app_extra
+
+    artifact_json = json.loads(artifact_json_file.read_text())
+    for module_name in artifact_json:
+        smart_app_extra.set_proc_entrypoints(module_name, artifact_json[module_name]["proc_entrypoints"])
+        smart_app_extra.set_image_tar(module_name, artifact_json[module_name]["image_tar"])
 
     return smart_app_extra
 

@@ -147,7 +147,7 @@ class SmartBuilderViewSet(viewsets.ViewSet):
             build_id = smart_build.uuid
             coordinator.set_smart_build(smart_build)
             # Start a background deploy task
-            SmartBuildTaskRunner(smart_build, store_url, package_path).start()
+            SmartBuildTaskRunner(smart_build.uuid, store_url).start()
         return JsonResponse(
             data={"build_id": build_id, "stream_url": f"/streams/{build_id}"},
             status=status.HTTP_201_CREATED,

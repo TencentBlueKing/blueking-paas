@@ -18,8 +18,9 @@ import string
 
 import pytest
 
-from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
+from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType, SourceCodeOriginType
 from paasng.misc.tools.smart_app.models import SmartBuildLog, SmartBuildRecord
+from paasng.misc.tools.smart_app.phases_steps.phases import SmartBuildPhaseManager
 from paasng.platform.engine.constants import JobStatus
 from tests.utils.auth import create_user
 from tests.utils.basic import generate_random_string
@@ -35,6 +36,7 @@ def create_fake_smart_build(
     status: JobStatus = JobStatus.PENDING,
 ):
     """Create a fake SmartBuild instance for testing"""
+
     if source_origin is None:
         source_origin = SourceCodeOriginType.PACKAGE
     if package_name is None:
@@ -46,7 +48,7 @@ def create_fake_smart_build(
 
     log = SmartBuildLog.objects.create()
 
-    return SmartBuildRecord.objects.create(
+    record = SmartBuildRecord.objects.create(
         source_origin=source_origin,
         package_name=package_name,
         app_code=app_code,
@@ -54,3 +56,8 @@ def create_fake_smart_build(
         operator=operator,
         stream=log,
     )
+
+    SmartBuildPhaseManager(record).get_or_create(SmartBuildPhaseType.PREPARATION)
+    SmartBuildPhaseManager(record).get_or_create(SmartBuildPhaseType.BUILD)
+
+    return record

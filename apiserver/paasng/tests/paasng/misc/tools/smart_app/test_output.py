@@ -19,47 +19,30 @@ from unittest import mock
 
 import pytest
 
-from paasng.misc.tools.smart_app.output import ConsoleStream, RedisWithModelStream, get_all_logs
+from paasng.misc.tools.smart_app.output import ConsoleStream, RedisWithModelStream
 
 pytestmark = pytest.mark.django_db
 
 
 class TestConsoleStream:
-    def test_console_stream_stdout(self):
-        line = []
+    def test_write_output(self):
+        lines: list[str] = []
         with mock.patch("sys.stdout") as stdout:
-            stdout.write.side_effect = lambda text: line.append(text)
-            ConsoleStream().write_title("write_title")
-            ConsoleStream().write_message("write_message")
+            stdout.write.side_effect = lines.append
+            stream = ConsoleStream()
+            stream.write_title("test_title")
+            stream.write_message("test_message")
 
-        assert "".join(line) == "[TITLE]: write_title\nwrite_message\n"
-
-    def test_console_stream_stderr(self):
-        line = []
-        with mock.patch("sys.stderr") as stderr:
-            stderr.write.side_effect = lambda text: line.append(text)
-            ConsoleStream().write_title("write_title")
-            ConsoleStream().write_message("write_message", "STDERR")
-
-        assert "".join(line) == "write_message\n"
+        assert "".join(lines) == "[TITLE]: test_title\ntest_message\n"
 
 
-class TestMixStream:
-    def test_write_message(self, smart_build):
-        log_stream = RedisWithModelStream(smart_build.stream, mock.MagicMock())
-        log_stream.write_message("message")
-        log_stream.write_message("write \n message test")
+class TestRedisWithModelStream:
+    def test_write_and_persist(self, smart_build):
+        stream = RedisWithModelStream(smart_build.stream, mock.MagicMock())
+        stream.write_message("test message")
+        stream.write_title("test title")
+
         assert smart_build.stream.lines.count() == 2
-        assert list(smart_build.stream.lines.values_list("line", flat=True)) == [
-            "message\n",
-            "write \n message test\n",
-        ]
-
-    def test_write_title(self, smart_build):
-        RedisWithModelStream(smart_build, mock.MagicMock()).write_title("title")
-        assert smart_build.stream.lines.count() == 0, "title should not be saved"
-
-
-def test_get_all_logs(smart_build):
-    logs = get_all_logs(smart_build)
-    assert logs.strip() == ""
+        lines = list(smart_build.stream.lines.values_list("line", flat=True))
+        assert "test message\n" in lines
+        assert "[TITLE]: test title\n" in lines

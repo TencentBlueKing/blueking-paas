@@ -57,14 +57,14 @@ class TestSmartAppBuilder:
         with (
             mock.patch.object(smart_app_builder, "validate_app_description") as mock_validate,
             mock.patch.object(smart_app_builder, "_start_build_process") as mock_start_build,
-            mock.patch.object(smart_app_builder, "_final_builder") as mock_final_builder,
+            mock.patch.object(smart_app_builder, "_finish_builder") as mock_finish_builder,
             mock.patch("paasng.misc.tools.smart_app.build.builder.SmartBuildProcessPoller"),
         ):
             smart_app_builder.start()
 
             mock_validate.assert_called_once()
             mock_start_build.assert_called_once()
-            mock_final_builder.assert_called_once()
+            mock_finish_builder.assert_called_once()
             assert mock_start.call_count == 2
             assert mock_end.call_count == 2
 

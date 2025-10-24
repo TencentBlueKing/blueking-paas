@@ -87,7 +87,7 @@ class SmartAppBuilder:
         # 结束构建阶段
         end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.BUILD)
 
-        self._final_builder()
+        self._finish_builder()
 
     def _start_build_process(self, build_phase: "SmartBuildPhase"):
         """启动构建流程"""
@@ -105,10 +105,9 @@ class SmartAppBuilder:
 
         SmartBuildProcessPoller.start(params, SmartBuildProcessResultHandler)
 
-    def _final_builder(self):
+    def _finish_builder(self):
         """结束整体的构建流程"""
 
-        self.stream.write_event("EOF", {"build_id": str(self.smart_build.uuid)})
         self.stream.close()
 
         self.state_mgr.coordinator.release_lock(self.smart_build)

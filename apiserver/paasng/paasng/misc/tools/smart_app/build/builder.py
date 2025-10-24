@@ -135,8 +135,8 @@ class SmartAppBuilder:
 
         self.smart_build.update_fields(status=JobStatus.SUCCESSFUL)
 
-    def launch_build_process(self):
-        """launch the build Pod"""
+    def launch_build_process(self) -> str:
+        """launch the build Pod and return the Pod name"""
 
         envs: Dict[str, str] = {
             "SOURCE_GET_URL": self.source_get_url,

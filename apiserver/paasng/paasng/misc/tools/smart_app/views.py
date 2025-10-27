@@ -168,7 +168,7 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
     )
     def get_phases_result(self, request, uuid: str):
         """获取构建阶段结果"""
-        record = get_object_or_404(SmartBuildRecord, uuid=uuid)
+        record = get_object_or_404(SmartBuildRecord, uuid=uuid, operator=request.user)
         phases = record.phases.all().order_by("created")
 
         # Set property for rendering by slz
@@ -183,14 +183,14 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
     )
     def get_history_logs(self, request, uuid: str):
         """获取构建日志"""
-        record = get_object_or_404(SmartBuildRecord, uuid=uuid)
+        record = get_object_or_404(SmartBuildRecord, uuid=uuid, operator=request.user)
         logs = get_all_logs(record)
         result = {"status": record.status, "logs": logs}
         return JsonResponse(SmartBuildHistoryLogsOutputSLZ(result).data)
 
     def download_history_logs(self, request, uuid: str):
         """下载构建日志"""
-        smart_build_record = get_object_or_404(SmartBuildRecord, uuid=uuid)
+        smart_build_record = get_object_or_404(SmartBuildRecord, uuid=uuid, operator=request.user)
         logs = get_all_logs(smart_build_record)
         filename = f"{smart_build_record.package_name}-{uuid}.log"
 

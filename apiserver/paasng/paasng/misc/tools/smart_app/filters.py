@@ -17,8 +17,6 @@
 
 from typing import Any, Dict
 
-from bkpaas_auth.models import user_id_encoder
-from django.conf import settings
 from django.db.models import Q, QuerySet
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.request import Request
@@ -41,12 +39,14 @@ class SmartBuildRecordFilterBackend(BaseFilterBackend):
         slz.is_valid(raise_exception=True)
         params: Dict[str, Any] = slz.validated_data
 
+        # 用户只能看到自己操作的数据
+        queryset = queryset.filter(operator=request.user)
+
         if source_origin := params.get("source_origin"):
             queryset = queryset.filter(source_origin=source_origin)
 
         if search := params.get("search"):
-            encoded_operator = user_id_encoder.encode(settings.USER_TYPE, search)
-            queryset = queryset.filter(Q(package_name__icontains=search) | Q(operator=encoded_operator))
+            queryset = queryset.filter(Q(package_name__icontains=search))
 
         if status := params.get("status"):
             queryset = queryset.filter(status=status)

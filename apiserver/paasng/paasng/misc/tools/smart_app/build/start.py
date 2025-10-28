@@ -28,11 +28,17 @@ from paasng.platform.sourcectl.package.utils import parse_url
 from .tasks import execute_build, execute_build_error_callback
 
 
-def create_smart_build_record(package_name: str, app_code: str, operator: str) -> SmartBuildRecord:
+def create_smart_build_record(
+    package_name: str,
+    app_code: str,
+    app_version: str,
+    operator: str,
+) -> SmartBuildRecord:
     """Initialize s-smart package build record
 
     :param package_name: The name of the source package file
     :param app_code: The code of the application
+    :param app_version: The version from app_desc.yaml
     :param operator: The username who triggers this build
     :return: The created SmartBuildRecord instance
     """
@@ -44,6 +50,7 @@ def create_smart_build_record(package_name: str, app_code: str, operator: str) -
         source_origin=source_origin,
         package_name=package_name,
         app_code=app_code,
+        app_version=app_version,
         status=JobStatus.PENDING,
         start_time=now(),
         operator=operator,

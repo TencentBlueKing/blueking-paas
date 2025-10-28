@@ -23,7 +23,7 @@ from rest_framework.exceptions import ValidationError
 from paasng.platform.engine.constants import JobStatus
 from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.models import OrderByField
-from paasng.utils.serializers import StringArrayField, UserNameField
+from paasng.utils.serializers import StringArrayField
 
 from .constants import SmartBuildPhaseType, SourceCodeOriginType
 
@@ -123,11 +123,12 @@ class SmartBuildHistoryOutputSLZ(serializers.Serializer):
     """SmartBuild history output SLZ"""
 
     uuid = serializers.CharField(help_text="构建 ID")
+    app_code = serializers.CharField(help_text="应用 code")
+    app_version = serializers.CharField(help_text="应用版本号")
     source_origin = serializers.CharField(help_text="源码来源")
     package_name = serializers.CharField(help_text="源码包名")
     status = serializers.CharField(help_text="构建状态")
     spent_time = serializers.SerializerMethodField(help_text="耗时(秒)")
-    operator = UserNameField(read_only=True, help_text="操作人")
     created = serializers.DateTimeField(help_text="创建时间")
     artifact_url = serializers.CharField(help_text="产物下载地址")
 

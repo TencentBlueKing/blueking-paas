@@ -136,6 +136,7 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
             smart_build = create_smart_build_record(
                 package_name=filename,
                 app_code=app_code,
+                app_version=stat.version,
                 operator=request.user.pk,
             )
             coordinator.set_smart_build(smart_build)

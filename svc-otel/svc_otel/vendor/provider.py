@@ -25,7 +25,7 @@ from django.conf import settings
 from paas_service.base_vendor import BaseProvider, InstanceData  # noqa
 from paas_service.utils import gen_unique_id
 
-from svc_otel.bkmonitorv3.client import make_bk_monitor_client
+from svc_otel.bk_monitor.client import make_bk_monitor_client
 from svc_otel.vendor.models import ApmData
 
 logger = logging.getLogger(__name__)

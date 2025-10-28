@@ -16,39 +16,67 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from bkapi_client_core.esb import ESBClient, Operation, OperationGroup, bind_property
-from bkapi_client_core.esb import generic_type_partial as _partial
-from bkapi_client_core.esb.django_helper import get_client_by_username as _get_client_by_username
+
+from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
 
-class MonitorV3Group(OperationGroup):
+class Group(OperationGroup):
+    # 创建APM应用
+    # TODO: 需要等待网关接口修改之后更改此处的path
+    create_apm_application = bind_property(
+        Operation,
+        name="create_apm_application",
+        method="POST",
+        path="/create_apm_application/",
+    )
+
     # 快速创建APM应用
     apm_create_application = bind_property(
         Operation,
         name="apm_create_application",
         method="POST",
-        path="/api/c/compapi/v2/monitor_v3/apm/create_application/",
+        path="/app/apm/create_application/",
     )
+
     # 创建空间
+    # TODO: 需要等待网关接口修改之后更改此处的path
     metadata_create_space = bind_property(
         Operation,
         name="metadata_create_space",
         method="POST",
-        path="/api/c/compapi/v2/monitor_v3/metadata_create_space/",
+        path="/metadata_create_space/",
     )
+
+    # 更新空间
+    # TODO: 需要等待网关接口修改之后更改此处的path
+    metadata_update_space = bind_property(
+        Operation,
+        name="metadata_update_space",
+        method="POST",
+        path="/metadata_update_space/",
+    )
+
     # 查询空间实例详情
+    # TODO: 需要等待网关接口修改之后更改此处的path
     metadata_get_space_detail = bind_property(
         Operation,
-        name="metadata_create_space",
+        name="metadata_get_space_detail",
         method="GET",
-        path="/api/c/compapi/v2/monitor_v3/metadata_get_space_detail/",
+        path="/metadata_get_space_detail/",
+    )
+
+    # 查询告警记录
+    search_alert = bind_property(
+        Operation,
+        name="search_alert",
+        method="POST",
+        path="/app/alert/search/",
     )
 
 
-class Client(ESBClient):
-    """ESB Components"""
+class Client(APIGatewayClient):
+    """bk-monitor API Gateway Client"""
 
-    monitor_v3 = bind_property(MonitorV3Group, name="monitor_v3")
+    _api_name = "bk-monitor"
 
-
-get_client_by_username = _partial(Client, _get_client_by_username)
+    api = bind_property(Group, name="api")

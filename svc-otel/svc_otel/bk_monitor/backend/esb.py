@@ -16,64 +16,40 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
-from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
+
+from bkapi_client_core.esb import ESBClient, Operation, OperationGroup, bind_property
+from bkapi_client_core.esb import generic_type_partial as _partial
+from bkapi_client_core.esb.django_helper import get_client_by_username as _get_client_by_username
 
 
-class Group(OperationGroup):
-    # 创建APM应用
-    create_apm_application = bind_property(
-        Operation,
-        name="create_apm_application",
-        method="POST",
-        path="/create_apm_application/",
-    )
-
+class MonitorV3Group(OperationGroup):
     # 快速创建APM应用
     apm_create_application = bind_property(
         Operation,
         name="apm_create_application",
         method="POST",
-        path="/apm/create_application/",
+        path="/api/c/compapi/v2/monitor_v3/apm/create_application/",
     )
-
     # 创建空间
     metadata_create_space = bind_property(
         Operation,
         name="metadata_create_space",
         method="POST",
-        path="/metadata_create_space/",
+        path="/api/c/compapi/v2/monitor_v3/metadata_create_space/",
     )
-
-    # 更新空间
-    metadata_update_space = bind_property(
-        Operation,
-        name="metadata_update_space",
-        method="POST",
-        path="/metadata_update_space/",
-    )
-
     # 查询空间实例详情
     metadata_get_space_detail = bind_property(
         Operation,
-        name="metadata_get_space_detail",
+        name="metadata_create_space",
         method="GET",
-        path="/metadata_get_space_detail/",
-    )
-
-    # 查询告警
-    search_alert = bind_property(
-        Operation,
-        name="search_alert",
-        method="POST",
-        path="/search_alert/",
+        path="/api/c/compapi/v2/monitor_v3/metadata_get_space_detail/",
     )
 
 
-class Client(APIGatewayClient):
-    """bkmonitorv3
-    监控平台v3上云版本
-    """
+class Client(ESBClient):
+    """ESB Components"""
 
-    _api_name = "bkmonitorv3"
+    monitor_v3 = bind_property(MonitorV3Group, name="monitor_v3")
 
-    api = bind_property(Group, name="api")
+
+get_client_by_username = _partial(Client, _get_client_by_username)

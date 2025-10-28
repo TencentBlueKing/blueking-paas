@@ -21,8 +21,13 @@ from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationG
 
 
 class Group(OperationGroup):
+    # TODO: 等待网关接口稳定, 调整以下接口的 path
+    # - create_apm_application
+    # - metadata_create_space
+    # - metadata_update_space
+    # - metadata_get_space_detail
+
     # 创建APM应用
-    # TODO: 需要等待网关接口修改之后更改此处的path
     create_apm_application = bind_property(
         Operation,
         name="create_apm_application",
@@ -39,7 +44,6 @@ class Group(OperationGroup):
     )
 
     # 创建空间
-    # TODO: 需要等待网关接口修改之后更改此处的path
     metadata_create_space = bind_property(
         Operation,
         name="metadata_create_space",
@@ -48,7 +52,6 @@ class Group(OperationGroup):
     )
 
     # 更新空间
-    # TODO: 需要等待网关接口修改之后更改此处的path
     metadata_update_space = bind_property(
         Operation,
         name="metadata_update_space",
@@ -57,7 +60,6 @@ class Group(OperationGroup):
     )
 
     # 查询空间实例详情
-    # TODO: 需要等待网关接口修改之后更改此处的path
     metadata_get_space_detail = bind_property(
         Operation,
         name="metadata_get_space_detail",

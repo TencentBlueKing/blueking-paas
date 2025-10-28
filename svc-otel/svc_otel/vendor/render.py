@@ -35,7 +35,7 @@ def render_instance_data(request: HttpRequest, instance: ServiceInstance) -> Dic
         # NOTE: 签发管理页面的访问链接, 如果不提供管理入口, 去掉 `admin_url` 即可
         # 没有空间 ID 则不显示详情页面
         admin_url = "{}/?space_uid={}#/apm/application?filter-app_name={}".format(
-            settings.BK_MONITOR_URL, bk_monitor_space_id, config["app_name"]
+            settings.BK_MONITORV3_URL, bk_monitor_space_id, config["app_name"]
         )
         config["admin_url"] = admin_url
 

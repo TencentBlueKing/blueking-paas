@@ -78,7 +78,7 @@ class BkMonitorClient:
 
         if not resp["result"]:
             logger.error(
-                f"Failed to create APM on BK Monitor, resp:{resp}, apm_name: {apm_name}, space_uid:{bk_monitor_space_id}"
+                f"Failed to create APM on BK Monitor, resp: {resp}, apm_name: {apm_name}, space_uid: {bk_monitor_space_id}"
             )
             raise BkMonitorApiError(resp["message"])
         return resp["data"]

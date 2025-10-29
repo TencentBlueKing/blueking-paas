@@ -23,8 +23,6 @@ from tests.utils.mocks.poll_task import FakeTaskPoller
 
 pytestmark = pytest.mark.django_db
 
-artifact_download_url = "http://example.com/artifact.tar.gz"
-
 
 class TestSmartBuildProcessResultHandler:
     """Tests for SmartBuildProcessResultHandler"""
@@ -33,21 +31,18 @@ class TestSmartBuildProcessResultHandler:
         params = {
             "smart_build_id": smart_build.uuid,
             "build_status": JobStatus.SUCCESSFUL.value,
-            "artifact_download_url": artifact_download_url,
         }
         result = CallbackResult(
             status=CallbackStatus.NORMAL,
             data={
                 "smart_build_id": smart_build.uuid,
                 "build_status": JobStatus.SUCCESSFUL.value,
-                "artifact_download_url": artifact_download_url,
             },
         )
 
         SmartBuildProcessResultHandler().handle(result, FakeTaskPoller.create(params))
         smart_build.refresh_from_db()
         assert smart_build.status == JobStatus.SUCCESSFUL.value
-        assert smart_build.artifact_url == artifact_download_url
 
     @pytest.mark.parametrize(
         ("callback_status", "status"),
@@ -60,14 +55,12 @@ class TestSmartBuildProcessResultHandler:
         params = {
             "smart_build_id": smart_build.uuid,
             "build_status": JobStatus.SUCCESSFUL.value,
-            "artifact_download_url": artifact_download_url,
         }
         result = CallbackResult(
             status=callback_status,
             data={
                 "smart_build_id": smart_build.uuid,
                 "build_status": status,
-                "artifact_download_url": artifact_download_url,
             },
         )
 

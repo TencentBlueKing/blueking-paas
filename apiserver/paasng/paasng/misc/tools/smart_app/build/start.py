@@ -68,7 +68,6 @@ class SmartBuildTaskRunner:
         self.artifact_bucket = parse_url(source_url).bucket
         self.artifact_key = f"smart_builder/artifact_{self.smart_build_id}.tar.gz"
         self.dest_put_url = self._generate_artifact_put_url()
-        self.artifact_download_url = self._generate_artifact_download_url()
 
     def start(self):
         """Start build task"""
@@ -78,7 +77,6 @@ class SmartBuildTaskRunner:
                 self.smart_build_id,
                 self.source_get_url,
                 self.dest_put_url,
-                self.artifact_download_url,
             ),
             link_error=execute_build_error_callback.s(),
         )
@@ -95,12 +93,4 @@ class SmartBuildTaskRunner:
         # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
         return make_blob_store(self.artifact_bucket).generate_presigned_url(
             self.artifact_key, expires_in=3600, signature_type=SignatureType.UPLOAD
-        )
-
-    def _generate_artifact_download_url(self) -> str:
-        """获取构建产物下载 URL, 构建成功之后才会存入数据库"""
-
-        # TODO: 目前是直接存储下载链接, 考虑在下载时创建一个临时下载链接
-        return make_blob_store(self.artifact_bucket).generate_presigned_url(
-            self.artifact_key, expires_in=7 * 24 * 3600, signature_type=SignatureType.DOWNLOAD
         )

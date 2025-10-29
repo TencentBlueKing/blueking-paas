@@ -72,7 +72,6 @@ class SmartBuildProcessPoller(TaskPoller):
             data={
                 "smart_build_id": smart_build.uuid,
                 "build_status": build_status,
-                "artifact_download_url": self.params["artifact_download_url"],
             },
         )
 
@@ -90,15 +89,10 @@ class SmartBuildProcessResultHandler(CallbackHandler):
         )
 
         build_status = result.data["build_status"]
-        record = state_mgr.smart_build
 
         # Update the build record status
-        err_detail = ""
         if build_status == JobStatus.SUCCESSFUL:
-            artifact_download_url = result.data.get("artifact_download_url")
-            if artifact_download_url:
-                record.artifact_url = artifact_download_url
-                record.save(update_fields=["artifact_url"])
+            err_detail = ""
         else:
             err_detail = "Build process failed or timed out"
 

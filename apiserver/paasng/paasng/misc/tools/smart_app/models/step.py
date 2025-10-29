@@ -37,8 +37,8 @@ class SmartBuildStepEventSLZ(Serializer):
 
     phase = SerializerMethodField()
     name = CharField()
-    start_time = DateTimeField(format="iso-8601", allow_null=True)
-    complete_time = DateTimeField(format="iso-8601", allow_null=True)
+    start_time = DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
+    complete_time = DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
     status = CharField(allow_null=True)
 
     def get_phase(self, obj) -> str:

@@ -65,7 +65,7 @@ class BKLogClient:
         self.config = config
         bk_log_stage = config.bkLogApiStage
         self.client = make_client(
-            PluginBackendAPIResource(apiName="log-search", path="esquery_dsl/", method="POST", stage=bk_log_stage),
+            PluginBackendAPIResource(apiName="log-log-search", path="esquery_dsl/", method="POST", stage=bk_log_stage),
             bk_username=bk_username,
         )
 

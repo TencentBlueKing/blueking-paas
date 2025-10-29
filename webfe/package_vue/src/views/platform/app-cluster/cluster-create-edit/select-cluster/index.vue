@@ -543,8 +543,6 @@ export default {
         ...this.infoFormData,
         ...data,
         bk_biz_id: data.bk_biz_id || '', // 业务
-        // bcs apiserver
-        api_servers: data.api_servers.length ? data.api_servers.join() : '',
       };
       // ElasticSearch 集群信息
       this.elasticSearchFormData = {
@@ -562,6 +560,10 @@ export default {
         this.$refs.apiServices[0]?.setData(apiServers);
         if (this.infoFormData.api_address_type === 'custom') {
           this.$refs.clusterServices[0]?.setData(apiServers);
+        }
+        // bcs apiserver
+        if (this.infoFormData.api_address_type === 'bcs_gateway') {
+          this.infoFormData.api_servers = data.api_servers.length ? data.api_servers.join() : '';
         }
       });
       // 镜像仓库数据回填

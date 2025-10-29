@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class BkMonitorBackend(Protocol):
     """Describes protocols of calling API service"""
 
-    def create_apm_application(self, *args, **kwargs) -> Dict: ...
+    def apm_create_application(self, *args, **kwargs) -> Dict: ...
 
 
 class BkMonitorClient:
@@ -72,7 +72,7 @@ class BkMonitorClient:
         # 在指定的命名空间下创建 APM 应用
         data = {"app_name": apm_name, "space_uid": bk_monitor_space_id}
         try:
-            resp = self.client.create_apm_application(data=data)
+            resp = self.client.apm_create_application(data=data)
         except APIGatewayResponseError as e:
             raise BkMonitorGatewayServiceError("Failed to create APM on BK Monitor") from e
 

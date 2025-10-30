@@ -17,7 +17,7 @@
 
 import logging
 
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -217,7 +217,7 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         store = make_blob_store(bucket)
         download_url = store.generate_presigned_url(key=key, expires_in=3600)
 
-        return HttpResponseRedirect(download_url)
+        return Response(data={"download_url": download_url})
 
     @swagger_auto_schema(
         tags=["S-Mart 包构建"],

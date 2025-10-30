@@ -52,9 +52,9 @@ class ElasticSearchConfigSLZ(serializers.Serializer):
 
     # TLS 配置信息
     verify_certs = serializers.BooleanField(help_text="是否验证证书", required=False)
-    ca_certs = serializers.CharField(help_text="ES 集群 CA 证书", required=False)
-    client_cert = serializers.CharField(help_text="ES 集群客户端证书", required=False)
-    client_key = serializers.CharField(help_text="ES 集群客户端密钥", required=False)
+    ca_certs = serializers.CharField(help_text="ES 集群 CA 证书", required=False, allow_null=True)
+    client_cert = serializers.CharField(help_text="ES 集群客户端证书", required=False, allow_null=True)
+    client_key = serializers.CharField(help_text="ES 集群客户端密钥", required=False, allow_null=True)
 
 
 class ImageRegistrySLZ(serializers.Serializer):

@@ -87,7 +87,7 @@ class SmartBuildTaskRunner:
         # 构建产物存储信息
         # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
         self.artifact_bucket = parse_url(source_url).bucket
-        self.artifact_key = f"smart_builder/artifact_{self.smart_build_id}.tar.gz"
+        self.artifact_key = f"smart_builder/s-mart_artifact_{self.smart_build_id}.tar.gz"
         self.dest_put_url = self._generate_artifact_put_url()
 
         # 将产物信息保存到构建记录中

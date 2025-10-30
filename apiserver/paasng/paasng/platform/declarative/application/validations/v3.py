@@ -110,15 +110,6 @@ class ModuleDescriptionSLZ(serializers.Serializer):
         )
 
 
-class ModulesListField(serializers.ListField):
-    """自定义 modules 字段，提供友好的错误提示"""
-
-    def to_internal_value(self, data):
-        if not isinstance(data, list):
-            raise serializers.ValidationError(_(f"期望的类型是 list，但获得的类型是 {type(data).__name__}。"))
-        return super().to_internal_value(data)
-
-
 class AppDescriptionSLZ(serializers.Serializer):
     # S-mart 专用字段(region, bkAppCode, bkAppName)
     region = serializers.ChoiceField(required=False, allow_null=True, choices=get_region().get_choices())
@@ -126,7 +117,10 @@ class AppDescriptionSLZ(serializers.Serializer):
     bkAppName = AppNameField(source="name_zh_cn")
     bkAppNameEn = AppNameField(source="name_en", required=False)
     market = MarketSLZ(required=False, default=None)
-    modules = ModulesListField(child=ModuleDescriptionSLZ())
+    modules = serializers.ListField(
+        child=ModuleDescriptionSLZ(),
+        error_messages={"not_a_list": _("模块格式不正确, 期望类型: list")},
+    )
 
     def _validate_default_module(self, modules: Dict[str, ModuleDesc]):
         """校验默认模块"""

@@ -52,6 +52,11 @@ urlpatterns = [
         name="api.tools.s-mart.build_records.logs.download",
     ),
     re_path(
+        r"^api/tools/s-mart/build_records/(?P<uuid>[0-9a-f-]{36})/artifact/download/$",
+        SmartBuilderViewSet.as_view({"get": "download_artifact"}),
+        name="api.tools.s-mart.build_records.artifact.download",
+    ),
+    re_path(
         r"^api/tools/s-mart/build_phases/$",
         SmartBuilderViewSet.as_view({"get": "get_phases"}),
         name="api.tools.s-mart.build_phases",

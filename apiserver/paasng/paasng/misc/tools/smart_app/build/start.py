@@ -90,6 +90,9 @@ class SmartBuildTaskRunner:
         self.artifact_key = f"smart_builder/artifact_{self.smart_build_id}.tar.gz"
         self.dest_put_url = self._generate_artifact_put_url()
 
+        # 将产物信息保存到构建记录中
+        self._save_artifact_info()
+
     def start(self):
         """Start build task"""
 
@@ -115,3 +118,11 @@ class SmartBuildTaskRunner:
         return make_blob_store(self.artifact_bucket).generate_presigned_url(
             self.artifact_key, expires_in=3600, signature_type=SignatureType.UPLOAD
         )
+
+    def _save_artifact_info(self):
+        """保存构建产物存储信息到构建记录中"""
+
+        smart_build = SmartBuildRecord.objects.get(uuid=self.smart_build_id)
+        # 使用 blobstore:// 协议格式存储
+        smart_build.artifact_url = f"blobstore://{self.artifact_bucket}/{self.artifact_key}"
+        smart_build.save(update_fields=["artifact_url"])

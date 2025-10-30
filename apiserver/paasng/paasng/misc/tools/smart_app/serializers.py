@@ -130,7 +130,6 @@ class SmartBuildHistoryOutputSLZ(serializers.Serializer):
     status = serializers.CharField(help_text="构建状态")
     spent_time = serializers.SerializerMethodField(help_text="耗时(秒)")
     created = serializers.DateTimeField(help_text="创建时间")
-    artifact_url = serializers.CharField(help_text="产物下载地址")
 
     def get_spent_time(self, obj: "SmartBuildRecord") -> int:
         if not (obj.start_time and obj.end_time):

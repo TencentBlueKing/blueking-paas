@@ -17,7 +17,7 @@
 
 import logging
 
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
@@ -26,11 +26,13 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from paas_wl.utils.blobstore import make_blob_store
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.platform.declarative.application.resources import ApplicationDesc
 from paasng.platform.declarative.exceptions import DescriptionValidationError
 from paasng.platform.declarative.handlers import get_desc_handler
+from paasng.platform.engine.constants import JobStatus
 from paasng.platform.smart_app.exceptions import PreparedPackageNotFound
 from paasng.platform.smart_app.services.detector import SourcePackageStatReader
 from paasng.platform.smart_app.services.prepared import PreparedSourcePackage
@@ -199,6 +201,27 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
         return response
+
+    def download_artifact(self, request, uuid: str):
+        """下载构建产物"""
+        record = get_object_or_404(SmartBuildRecord, uuid=uuid, operator=request.user)
+
+        if record.status != JobStatus.SUCCESSFUL:
+            raise error_codes.ARTIFACT_NOT_AVAILABLE.f(_("构建未成功，无法下载构建产物"))
+
+        artifact_url = record.artifact_url
+        if not artifact_url or not artifact_url.startswith("blobstore://"):
+            raise error_codes.ARTIFACT_NOT_FOUND.f("构建产物不存在")
+
+        # 移除 blobstore:// 前缀并解析
+        artifact_path = record.artifact_url.replace("blobstore://", "")
+        bucket, key = artifact_path.split("/", 1)
+
+        # 生成临时下载链接
+        store = make_blob_store(bucket)
+        download_url = store.generate_presigned_url(key=key, expires_in=3600)
+
+        return HttpResponseRedirect(download_url)
 
     @swagger_auto_schema(
         tags=["S-Mart 包构建"],

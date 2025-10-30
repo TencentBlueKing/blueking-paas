@@ -77,9 +77,9 @@ class SmartBuildStep(UuidAuditedModel):
     def mark_procedure_status(self, status: JobStatus):
         """标记步骤状态"""
 
-        now = timezone.now()
         self.status = status.value
         update_fields = ["status", "updated"]
+        now = timezone.localtime(timezone.now())
 
         if status in JobStatus.get_finished_states():
             self.complete_time = now

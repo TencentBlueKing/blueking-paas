@@ -144,13 +144,9 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
             coordinator.set_smart_build(smart_build)
             # Start a background deploy task
             SmartBuildTaskRunner(smart_build.uuid, store_url).start()
-        return JsonResponse(
-            data={
-                "smart_build_id": str(smart_build.uuid),
-                "stream_url": f"/streams/{smart_build.uuid}",
-            },
-            status=status.HTTP_201_CREATED,
-        )
+
+        data = {"build_id": str(smart_build.uuid), "stream_url": f"/streams/{smart_build.uuid}"}
+        return JsonResponse(data=SmartBuildOutputSLZ(data).data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
         tags=["S-Mart 包构建"],
@@ -207,11 +203,11 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         record = get_object_or_404(SmartBuildRecord, uuid=uuid, operator=request.user)
 
         if record.status != JobStatus.SUCCESSFUL:
-            raise error_codes.ARTIFACT_NOT_AVAILABLE.f(_("构建未成功，无法下载构建产物"))
+            raise error_codes.ARTIFACT_NOT_FOUND.f(_("构建未成功，无法下载构建产物"))
 
         artifact_url = record.artifact_url
         if not artifact_url or not artifact_url.startswith("blobstore://"):
-            raise error_codes.ARTIFACT_NOT_FOUND.f("构建产物不存在")
+            raise error_codes.ARTIFACT_NOT_FOUND.f("制品不存在")
 
         # 移除 blobstore:// 前缀并解析
         artifact_path = record.artifact_url.replace("blobstore://", "")

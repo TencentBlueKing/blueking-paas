@@ -55,7 +55,7 @@ class SmartBuildInputSLZ(BaseSmartBuildSLZ):
 class SmartBuildOutputSLZ(serializers.Serializer):
     """Output SLZ for Smart Build API"""
 
-    smart_build_id = serializers.CharField(help_text="构建 ID")
+    build_id = serializers.CharField(help_text="构建 ID")
     stream_url = serializers.URLField(help_text="构建进度 Stream URL")
 
 
@@ -101,8 +101,6 @@ class SmartBuildPhaseSLZ(serializers.Serializer):
 class SmartBuildRecordFilterInputSLZ(serializers.Serializer):
     """SmartBuild record filter SLZ"""
 
-    valid_order_by_fields = ["created"]
-
     source_origin = serializers.ChoiceField(
         required=False, choices=SourceCodeOriginType.get_choices(), help_text="源码来源"
     )
@@ -112,9 +110,10 @@ class SmartBuildRecordFilterInputSLZ(serializers.Serializer):
 
     def validate_order_by(self, fields: List[str]) -> List[str]:
         """校验排序字段"""
+        valid_order_by_fields = ["created"]
         for field in fields:
             f = OrderByField.from_string(field)
-            if f.name not in self.valid_order_by_fields:
+            if f.name not in valid_order_by_fields:
                 raise ValidationError(f"Invalid order_by field: {field}")
         return fields
 
@@ -131,9 +130,9 @@ class SmartBuildHistoryOutputSLZ(serializers.Serializer):
     spent_time = serializers.SerializerMethodField(help_text="耗时(秒)")
     created = serializers.DateTimeField(help_text="创建时间")
 
-    def get_spent_time(self, obj: "SmartBuildRecord") -> int:
+    def get_spent_time(self, obj: "SmartBuildRecord") -> int | None:
         if not (obj.start_time and obj.end_time):
-            return 0
+            return None
         return max(0, int((obj.end_time - obj.start_time).total_seconds()))
 
 

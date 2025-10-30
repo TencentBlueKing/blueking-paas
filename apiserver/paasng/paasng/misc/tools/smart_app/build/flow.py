@@ -148,8 +148,7 @@ class SmartBuildStateMgr:
         if write_to_stream and err_detail:
             self.stream.write_message(self._stylize_error(err_detail, status), stream=StreamType.STDERR)
 
-        now = timezone.localtime(timezone.now())
-        self.update(status=status, end_time=now, err_detail=err_detail)
+        self.update(status=status, end_time=timezone.now(), err_detail=err_detail)
 
     @staticmethod
     def _stylize_error(error_detail: str, status: JobStatus) -> str:

@@ -20,8 +20,8 @@ import time
 from contextlib import contextmanager
 
 import redis
+from django.utils import timezone
 from django.utils.encoding import force_str
-from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 
 from paasng.core.core.storages.redisdb import get_default_redis
@@ -148,7 +148,8 @@ class SmartBuildStateMgr:
         if write_to_stream and err_detail:
             self.stream.write_message(self._stylize_error(err_detail, status), stream=StreamType.STDERR)
 
-        self.update(status=status, end_time=now(), err_detail=err_detail)
+        now = timezone.localtime(timezone.now())
+        self.update(status=status, end_time=now, err_detail=err_detail)
 
     @staticmethod
     def _stylize_error(error_detail: str, status: JobStatus) -> str:

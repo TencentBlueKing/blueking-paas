@@ -52,12 +52,10 @@ class SmartAppBuilder:
         smart_build: "SmartBuildRecord",
         source_get_url: str,
         dest_put_url: str,
-        artifact_download_url: str,
     ):
         self.smart_build = smart_build
         self.source_get_url = source_get_url
         self.dest_put_url = dest_put_url
-        self.artifact_download_url = artifact_download_url
 
         self.stream: "SmartBuildStream" = make_channel_stream(smart_build)
         self.state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build.uuid, self.stream)
@@ -96,10 +94,7 @@ class SmartAppBuilder:
         with self.procedure("构建 S-Mart 包", phase=build_phase):
             self.start_following_logs(builder_name)
 
-            params = {
-                "smart_build_id": self.smart_build.uuid,
-                "artifact_download_url": self.artifact_download_url,
-            }
+            params = {"smart_build_id": self.smart_build.uuid}
 
         SmartBuildProcessPoller.start(params, SmartBuildProcessResultHandler)
 

@@ -36,21 +36,15 @@
           </bk-select>
         </div>
       </div>
-      <bk-badge
+      <bk-button
         v-if="platformFeature.DEV_SANDBOX"
-        :theme="'danger'"
-        val="new"
-        position="top-left"
+        bk-trace="{id: 'sandbox', action: 'view', category: '云原生应用'}"
+        class="sandbox-btn"
+        :loading="isSandboxLoading"
+        @click="handleSandboxDev"
       >
-        <bk-button
-          bk-trace="{id: 'sandbox', action: 'view', category: '云原生应用'}"
-          class="sandbox-btn"
-          :loading="isSandboxLoading"
-          @click="handleSandboxDev"
-        >
-          {{ $t('沙箱开发') }}
-        </bk-button>
-      </bk-badge>
+        {{ $t('沙箱开发') }}
+      </bk-button>
     </section>
     <!-- 根据模块渲染 -->
     <deploy-module-list

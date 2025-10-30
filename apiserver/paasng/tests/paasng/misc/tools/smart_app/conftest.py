@@ -14,8 +14,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, Optional
-
 import pytest
 
 from .setup_utils import create_fake_smart_build
@@ -27,19 +25,3 @@ pytestmark = pytest.mark.django_db
 def smart_build():
     """Create a SmartBuild instance for testing"""
     return create_fake_smart_build()
-
-
-def construct_foo_pod(name: str, labels: Optional[Dict] = None, restart_policy: str = "Always") -> Dict:
-    return {
-        "apiVersion": "v1",
-        "kind": "Pod",
-        "metadata": {"name": name, "labels": labels or {}},
-        "spec": {
-            # Set "schedulerName", so the pod won't be processed by the default
-            # scheduler.
-            "schedulerName": "no-running-scheduler",
-            "containers": [{"name": "main", "image": "busybox:latest", "imagePullPolicy": "IfNotPresent"}],
-            "restartPolicy": restart_policy,
-            "automountServiceAccountToken": False,
-        },
-    }

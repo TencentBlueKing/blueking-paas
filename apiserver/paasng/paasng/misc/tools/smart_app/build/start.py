@@ -15,16 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-from os import PathLike
+from blue_krill.storages.blobstore.base import SignatureType
 
-from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
+from paas_wl.utils.blobstore import make_blob_store
+from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType, SourceCodeOriginType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
+from paasng.misc.tools.smart_app.phases_steps.phases import SmartBuildPhaseManager
 from paasng.platform.engine.constants import JobStatus
+from paasng.platform.sourcectl.package.utils import parse_url
 
 from .tasks import execute_build, execute_build_error_callback
-
-logger = logging.getLogger(__name__)
 
 
 def create_smart_build_record(package_name: str, app_code: str, operator: str) -> SmartBuildRecord:
@@ -35,6 +35,7 @@ def create_smart_build_record(package_name: str, app_code: str, operator: str) -
     :param operator: The username who triggers this build
     :return: The created SmartBuildRecord instance
     """
+
     # TODO: 添加对源码仓库的支持
     source_origin = SourceCodeOriginType.PACKAGE
 
@@ -46,21 +47,50 @@ def create_smart_build_record(package_name: str, app_code: str, operator: str) -
         operator=operator,
     )
     record.refresh_from_db()
+
+    # TODO: 因为流程步骤固定, 考虑在这里直接创建阶段步骤记录
+    # 暂时先如此做, 后续固定流程后可优化
+    SmartBuildPhaseManager(record).get_or_create(SmartBuildPhaseType.PREPARATION)
+    SmartBuildPhaseManager(record).get_or_create(SmartBuildPhaseType.BUILD)
+
     return record
 
 
 class SmartBuildTaskRunner:
-    """The task runner to execute smart app build steps"""
+    """S-Mart builds a task executor"""
 
-    def __init__(self, smart_build: SmartBuildRecord, source_url: str, package_path: PathLike):
-        self.smart_build = smart_build
-        self.source_url = source_url
-        self.package_path = package_path
+    def __init__(self, smart_build_id: str, source_url: str):
+        self.smart_build_id = smart_build_id
+        self.source_get_url = self._get_source_get_url(source_url)
+
+        # 构建产物存储信息
+        # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
+        self.artifact_bucket = parse_url(source_url).bucket
+        self.artifact_key = f"smart_builder/artifact_{self.smart_build_id}.tar.gz"
+        self.dest_put_url = self._generate_artifact_put_url()
 
     def start(self):
-        smart_build_id = self.smart_build.uuid
-        logger.debug("Starting new smart build task", extra={"smart_build_id": smart_build_id})
+        """Start build task"""
+
         execute_build.apply_async(
-            args=(smart_build_id, self.source_url, self.package_path),
+            args=(
+                self.smart_build_id,
+                self.source_get_url,
+                self.dest_put_url,
+            ),
             link_error=execute_build_error_callback.s(),
+        )
+
+    def _get_source_get_url(self, source_url: str) -> str:
+        """获取源码包下载 URL"""
+
+        parsed = parse_url(source_url)
+        return make_blob_store(parsed.bucket).generate_presigned_url(parsed.key, expires_in=3600)
+
+    def _generate_artifact_put_url(self) -> str:
+        """获取构建产物上传 URL"""
+
+        # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
+        return make_blob_store(self.artifact_bucket).generate_presigned_url(
+            self.artifact_key, expires_in=3600, signature_type=SignatureType.UPLOAD
         )

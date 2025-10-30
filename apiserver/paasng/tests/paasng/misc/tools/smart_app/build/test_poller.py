@@ -28,10 +28,16 @@ class TestSmartBuildProcessResultHandler:
     """Tests for SmartBuildProcessResultHandler"""
 
     def test_succeeded(self, smart_build):
-        params = {"smart_build_id": smart_build.uuid}
+        params = {
+            "smart_build_id": smart_build.uuid,
+            "build_status": JobStatus.SUCCESSFUL.value,
+        }
         result = CallbackResult(
             status=CallbackStatus.NORMAL,
-            data={"smart_build_id": smart_build.uuid, "build_status": JobStatus.SUCCESSFUL.value},
+            data={
+                "smart_build_id": smart_build.uuid,
+                "build_status": JobStatus.SUCCESSFUL.value,
+            },
         )
 
         SmartBuildProcessResultHandler().handle(result, FakeTaskPoller.create(params))
@@ -46,11 +52,19 @@ class TestSmartBuildProcessResultHandler:
         ],
     )
     def test_failed(self, callback_status, status, smart_build):
-        params = {"smart_build_id": smart_build.uuid}
+        params = {
+            "smart_build_id": smart_build.uuid,
+            "build_status": JobStatus.SUCCESSFUL.value,
+        }
         result = CallbackResult(
-            status=callback_status, data={"smart_build_id": smart_build.uuid, "build_status": status}
+            status=callback_status,
+            data={
+                "smart_build_id": smart_build.uuid,
+                "build_status": status,
+            },
         )
 
         SmartBuildProcessResultHandler().handle(result, FakeTaskPoller.create(params))
         smart_build.refresh_from_db()
         assert smart_build.status == status
+        assert smart_build.artifact_url == ""

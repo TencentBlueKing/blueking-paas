@@ -90,6 +90,20 @@
                 {{ $t('将文件拖到此处或') }}
                 <span style="color: #3a84ff">{{ $t('点击上传') }}</span>
               </p>
+              <div
+                slot="custom-error"
+                class="error-links"
+                slot-scope="{ file }"
+              >
+                <a
+                  class="f12"
+                  target="_blank"
+                  :href="GLOBAL.DOC.APP_DESC_DOC"
+                >
+                  {{ $t('应用描述文件') }}
+                  <i class="paasng-icon paasng-jump-link" />
+                </a>
+              </div>
             </Uploader>
             <p
               slot="tip"
@@ -296,6 +310,10 @@ export default {
     padding: 16px 40px;
     &.execution-details {
       padding: 16px 24px 0;
+    }
+    .error-links {
+      position: relative;
+      z-index: 999;
     }
     .btn-cls {
       min-width: 88px;

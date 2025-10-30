@@ -12,12 +12,12 @@
       class="flex-row mt-16 flex-1"
       style="min-height: 0"
     >
-      <div class="timeline-wrapper">
+      <!-- <div class="timeline-wrapper">
         <DeployTimeline
           ref="deployTimelineRef"
           :list="timeLineList"
         />
-      </div>
+      </div> -->
       <!-- 步骤构建日志 -->
       <BuildLog
         ref="buildLogRef"
@@ -34,12 +34,15 @@
 <script>
 import BuildLog from './comps/build-log.vue';
 import StatusBar from './comps/status-bar.vue';
-import DeployTimeline from '@/views/dev-center/app/engine/cloud-deploy-manage/comps/deploy-timeline';
+// import DeployTimeline from '@/views/dev-center/app/engine/cloud-deploy-manage/comps/deploy-timeline';
 import { calculateTimeDiff, calculateDeployTime, mapPhaseStatus } from './utils/time-formatter';
 import dayjs from 'dayjs';
 
 export default {
-  components: { StatusBar, BuildLog, DeployTimeline },
+  components: {
+    StatusBar,
+    BuildLog,
+  },
   props: {
     streamUrl: {
       type: String,
@@ -74,12 +77,15 @@ export default {
     };
   },
   async created() {
-    await this.getSmartBuildPhases();
+    // await this.getSmartBuildPhases();
     this.initBuildStatus();
 
     // 历史执行详情 & 非pending 状态，直接获取日志、阶段状态
     if (this.isDetailView && this.rowData.status !== 'pending') {
-      await this.getSmartBuildPhaseStatus();
+      // 第一版，先去掉步骤信息
+      // await this.getSmartBuildPhaseStatus();
+      const finalStatus = this.mapRowStatusToBuildStatus(this.rowData.status);
+      this.updateBuildStatus(finalStatus);
       await this.handleLogData();
     }
 
@@ -241,7 +247,7 @@ export default {
       this.clearCurrentLogs();
       // 重新初始化构建状态
       this.initBuildStatus();
-      await this.getSmartBuildPhases();
+      // await this.getSmartBuildPhases();
     },
 
     // 清空当前日志数据
@@ -303,6 +309,18 @@ export default {
             this.calculateTotalTime();
           }
           break;
+      }
+    },
+
+    // 将 rowData.status 映射为构建状态
+    mapRowStatusToBuildStatus(rowStatus) {
+      switch (rowStatus) {
+        case 'successful':
+          return 'success';
+        case 'failed':
+          return 'failed';
+        default:
+          return 'running';
       }
     },
 

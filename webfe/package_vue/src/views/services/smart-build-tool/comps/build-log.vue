@@ -240,18 +240,32 @@ export default {
     // 展开指定日志
     async openLog(plugin) {
       const phaseId = plugin.id; // 'preparation' 或 'build'
-      const phaseLogs = this.phaseLogData[phaseId] || [];
+      let phaseLogs = this.phaseLogData[phaseId] || [];
+
+      if (phaseId === 'preparation' && phaseLogs.length === 0) {
+        phaseLogs = [
+          {
+            message: '暂无日志',
+            stream: 'INFO',
+            timestamp: new Date().toISOString(),
+          },
+        ];
+      }
 
       // 标记该阶段为已展开
       this.expandedPhases.add(phaseId);
 
       // 先清空该阶段的日志数据，避免重复添加
       if (this.$refs.multipleLog) {
-        await this.$refs.multipleLog.worker.postMessage({
-          type: 'resetData',
-          id: phaseId,
-        });
-        this.$refs.multipleLog.addLogData(phaseLogs, phaseId);
+        try {
+          await this.$refs.multipleLog.worker.postMessage({
+            type: 'resetData',
+            id: phaseId,
+          });
+          this.$refs.multipleLog.addLogData(phaseLogs, phaseId);
+        } catch (error) {
+          console.warn(`Failed to load logs for phase ${phaseId}:`, error);
+        }
       }
     },
 

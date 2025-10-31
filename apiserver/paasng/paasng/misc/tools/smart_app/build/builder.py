@@ -58,9 +58,7 @@ class SmartAppBuilder:
         self.dest_put_url = dest_put_url
 
         self.stream: "SmartBuildStream" = make_channel_stream(smart_build)
-        self.state_mgr = SmartBuildStateMgr.from_smart_build_id(
-            smart_build_id=smart_build.uuid, phase_type=SmartBuildPhaseType.PREPARATION
-        )
+        self.state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build.uuid, self.stream)
         self.procedure = partial(SmartBuildProcedure, self.stream, self.smart_build)
 
     def start(self):
@@ -124,7 +122,7 @@ class SmartAppBuilder:
         for raw_line in handler.get_build_log(
             namespace=namespace, name=builder_name, follow=True, timeout=settings.SMART_BUILD_PROCESS_TIMEOUT
         ):
-            self.state_mgr.stream.write_message(force_str(raw_line))
+            self.stream.write_message(force_str(raw_line))
 
         handler.wait_for_succeeded(namespace=namespace, name=builder_name, timeout=60)
 

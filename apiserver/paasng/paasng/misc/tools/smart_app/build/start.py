@@ -16,22 +16,29 @@
 # to the current version of the project delivered to anyone in the future.
 
 from blue_krill.storages.blobstore.base import SignatureType
+from django.utils.timezone import now
 
 from paas_wl.utils.blobstore import make_blob_store
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType, SourceCodeOriginType
-from paasng.misc.tools.smart_app.models import SmartBuildRecord
-from paasng.misc.tools.smart_app.phases_steps.phases import SmartBuildPhaseManager
+from paasng.misc.tools.smart_app.build_phase import ALL_SMART_BUILD_PHASES
+from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
+from paasng.misc.tools.smart_app.models import SmartBuildPhase, SmartBuildRecord, SmartBuildStep
 from paasng.platform.engine.constants import JobStatus
 from paasng.platform.sourcectl.package.utils import parse_url
 
 from .tasks import execute_build, execute_build_error_callback
 
 
-def create_smart_build_record(package_name: str, app_code: str, operator: str) -> SmartBuildRecord:
+def create_smart_build_record(
+    package_name: str,
+    app_code: str,
+    app_version: str,
+    operator: str,
+) -> SmartBuildRecord:
     """Initialize s-smart package build record
 
     :param package_name: The name of the source package file
     :param app_code: The code of the application
+    :param app_version: The version from app_desc.yaml
     :param operator: The username who triggers this build
     :return: The created SmartBuildRecord instance
     """
@@ -43,15 +50,29 @@ def create_smart_build_record(package_name: str, app_code: str, operator: str) -
         source_origin=source_origin,
         package_name=package_name,
         app_code=app_code,
+        app_version=app_version,
         status=JobStatus.PENDING,
+        start_time=now(),
         operator=operator,
     )
     record.refresh_from_db()
 
-    # TODO: 因为流程步骤固定, 考虑在这里直接创建阶段步骤记录
-    # 暂时先如此做, 后续固定流程后可优化
-    SmartBuildPhaseManager(record).get_or_create(SmartBuildPhaseType.PREPARATION)
-    SmartBuildPhaseManager(record).get_or_create(SmartBuildPhaseType.BUILD)
+    # 初始化所有阶段和步骤
+    for phase_config in ALL_SMART_BUILD_PHASES:
+        phase = SmartBuildPhase.objects.create(
+            smart_build=record,
+            type=phase_config.type.value,
+        )
+
+        SmartBuildStep.objects.bulk_create(
+            [
+                SmartBuildStep(
+                    phase=phase,
+                    name=step.name,
+                )
+                for step in phase_config.steps
+            ]
+        )
 
     return record
 
@@ -66,8 +87,11 @@ class SmartBuildTaskRunner:
         # 构建产物存储信息
         # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
         self.artifact_bucket = parse_url(source_url).bucket
-        self.artifact_key = f"smart_builder/artifact_{self.smart_build_id}.tar.gz"
+        self.artifact_key = f"smart_builder/s-mart_artifact_{self.smart_build_id}.tar.gz"
         self.dest_put_url = self._generate_artifact_put_url()
+
+        # 将产物信息保存到构建记录中
+        self._save_artifact_info()
 
     def start(self):
         """Start build task"""
@@ -94,3 +118,11 @@ class SmartBuildTaskRunner:
         return make_blob_store(self.artifact_bucket).generate_presigned_url(
             self.artifact_key, expires_in=3600, signature_type=SignatureType.UPLOAD
         )
+
+    def _save_artifact_info(self):
+        """保存构建产物存储信息到构建记录中"""
+
+        smart_build = SmartBuildRecord.objects.get(uuid=self.smart_build_id)
+        # 使用 blobstore:// 协议格式存储
+        smart_build.artifact_url = f"blobstore://{self.artifact_bucket}/{self.artifact_key}"
+        smart_build.save(update_fields=["artifact_url"])

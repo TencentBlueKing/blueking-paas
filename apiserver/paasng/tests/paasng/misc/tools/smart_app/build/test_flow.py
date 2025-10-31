@@ -24,7 +24,6 @@ from paasng.misc.tools.smart_app.build.flow import (
     SmartBuildProcedure,
     SmartBuildStateMgr,
 )
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.exceptions import SmartBuildShouldAbortError
 from paasng.misc.tools.smart_app.output import NullStream
 from paasng.platform.engine.constants import JobStatus
@@ -78,19 +77,17 @@ class TestSmartBuildStateMgr:
     @pytest.fixture()
     def mgr(self, smart_build):
         """Create a SmartBuildStateMgr instance for testing"""
-        return SmartBuildStateMgr(smart_build, SmartBuildPhaseType.PREPARATION)
+        return SmartBuildStateMgr(smart_build)
 
     def test_init(self, smart_build, mgr):
         """Test SmartBuildStateMgr initialization"""
         assert mgr.smart_build == smart_build
-        assert mgr.phase_type == SmartBuildPhaseType.PREPARATION
         assert mgr.stream is not None
 
     def test_from_smart_build_id(self, smart_build):
         """Test creating SmartBuildStateMgr from smart_build_id"""
-        mgr = SmartBuildStateMgr.from_smart_build_id(str(smart_build.pk), SmartBuildPhaseType.BUILD)
+        mgr = SmartBuildStateMgr.from_smart_build_id(str(smart_build.pk))
         assert mgr.smart_build.pk == smart_build.pk
-        assert mgr.phase_type == SmartBuildPhaseType.BUILD
 
     def test_update(self, smart_build, mgr):
         """Test updating smart_build fields"""
@@ -122,7 +119,7 @@ class TestSmartBuildStateMgr:
         """Test finishing without writing error to stream"""
         stream = NullStream()
 
-        mgr = SmartBuildStateMgr(smart_build, SmartBuildPhaseType.PREPARATION, stream=stream)
+        mgr = SmartBuildStateMgr(smart_build, stream=stream)
         mgr.finish(JobStatus.FAILED, err_detail="Error occurred", write_to_stream=False)
 
         smart_build.refresh_from_db()

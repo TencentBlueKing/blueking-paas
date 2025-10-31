@@ -15,34 +15,43 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.db.models import Q
-from rest_framework.filters import BaseFilterBackend
+from typing import Any, Dict
 
-from paasng.misc.tools.smart_app.models import SmartBuildRecord
-from paasng.misc.tools.smart_app.serializers import SmartBuildRecordFilterInputSLZ
+from django.db.models import Q, QuerySet
+from rest_framework.filters import BaseFilterBackend
+from rest_framework.request import Request
+from rest_framework.views import APIView
+
+from .models import SmartBuildRecord
+from .serializers import SmartBuildRecordFilterInputSLZ
 
 
 class SmartBuildRecordFilterBackend(BaseFilterBackend):
     """SmartBuild record filter backend"""
 
-    def filter_queryset(self, request, queryset, view):
-        if queryset.model != SmartBuildRecord:
-            raise ValueError("SmartBuildRecordFilterBackend only support to filter SmartBuildRecord")
-
+    def filter_queryset(
+        self,
+        request: Request,
+        queryset: QuerySet[SmartBuildRecord],
+        view: APIView,
+    ) -> QuerySet[SmartBuildRecord]:
         slz = SmartBuildRecordFilterInputSLZ(data=request.query_params)
         slz.is_valid(raise_exception=True)
-        params = slz.validated_data
+        params: Dict[str, Any] = slz.validated_data
 
-        source_origin = params.get("source_origin")
-        if source_origin:
+        # 用户只能看到自己操作的数据
+        queryset = queryset.filter(operator=request.user)
+
+        if source_origin := params.get("source_origin"):
             queryset = queryset.filter(source_origin=source_origin)
 
-        search = params.get("search")
-        if search:
-            queryset = queryset.filter(Q(package_name__icontains=search) | Q(operator__icontains=search))
+        if search := params.get("search"):
+            queryset = queryset.filter(Q(package_name__icontains=search))
 
-        status = params.get("status")
-        if status:
+        if status := params.get("status"):
             queryset = queryset.filter(status=status)
 
-        return queryset.order_by("-created")
+        if order_by := params.get("order_by"):
+            queryset = queryset.order_by(*order_by)
+
+        return queryset

@@ -29,6 +29,7 @@ class SmartBuildRecord(UuidAuditedModel):
     source_origin = models.CharField(max_length=32, help_text="源码来源类型，如：源码包、代码仓库")
     package_name = models.CharField(max_length=128, blank=True, default="", help_text="源码包名称")
     app_code = models.CharField(max_length=64, help_text="应用的唯一标识")
+    app_version = models.CharField(max_length=32, blank=True, help_text="应用版本号")
 
     artifact_url = models.URLField(max_length=2048, blank=True, default="", help_text="s-mart 构建产物地址")
     status = models.CharField(max_length=12, default=JobStatus.PENDING.value, help_text="s-mart 构建任务运行状态")

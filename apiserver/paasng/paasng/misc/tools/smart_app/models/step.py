@@ -79,7 +79,7 @@ class SmartBuildStep(UuidAuditedModel):
 
         self.status = status.value
         update_fields = ["status", "updated"]
-        now = timezone.localtime(timezone.now())
+        now = timezone.now()
 
         if status in JobStatus.get_finished_states():
             self.complete_time = now

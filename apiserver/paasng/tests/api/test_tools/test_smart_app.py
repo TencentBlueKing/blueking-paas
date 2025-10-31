@@ -23,6 +23,7 @@ from django.urls import reverse
 
 from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
 from paasng.platform.engine.constants import JobStatus
+from tests.conftest import create_user
 from tests.paasng.misc.tools.smart_app.setup_utils import create_fake_smart_build
 
 pytestmark = pytest.mark.django_db
@@ -32,9 +33,9 @@ class TestSmartBuildHistoryViewSet:
     """Test suite for `SmartBuildHistoryViewSet`"""
 
     @pytest.fixture
-    def smart_build_record(self):
+    def smart_build_record(self, bk_user):
         """Create SmartBuild Record instance"""
-        return create_fake_smart_build()
+        return create_fake_smart_build(operator=bk_user)
 
     def test_list_history(self, api_client, smart_build_record):
         """Test listing build history"""
@@ -45,6 +46,22 @@ class TestSmartBuildHistoryViewSet:
         data = response.json()
         assert any(item["uuid"] == str(smart_build_record.uuid) for item in data["results"])
 
+    def test_list_history_by_user(self, api_client, smart_build_record):
+        """Test listing build history filtered by operator"""
+
+        # Create a record by a different user
+        other_user = create_user()
+        other_build = create_fake_smart_build(operator=other_user)
+
+        api_client.force_authenticate(user=other_user)
+        url = reverse("api.tools.s-mart.build_records")
+        response = api_client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["results"]) == 1
+        assert data["results"][0]["uuid"] == str(other_build.uuid)
+
     @pytest.mark.parametrize(
         ("filter_params", "expected_count"),
         [
@@ -53,23 +70,26 @@ class TestSmartBuildHistoryViewSet:
             ({"search": "v2"}, 1),
         ],
     )
-    def test_list_history_with_filters(self, filter_params, expected_count, api_client):
+    def test_list_history_with_filters(self, filter_params, expected_count, api_client, bk_user):
         """Test listing build history with filters"""
         # Create multiple records with different attributes
         create_fake_smart_build(
             source_origin=SourceCodeOriginType.PACKAGE,
             package_name="app_v1.tar.gz",
             status=JobStatus.SUCCESSFUL,
+            operator=bk_user,
         )
         create_fake_smart_build(
             source_origin=SourceCodeOriginType.REPO,
             package_name="app_v2.tar.gz",
             status=JobStatus.FAILED,
+            operator=bk_user,
         )
         create_fake_smart_build(
             source_origin=SourceCodeOriginType.PACKAGE,
             package_name="test_app.tar.gz",
             status=JobStatus.SUCCESSFUL,
+            operator=bk_user,
         )
 
         url = reverse("api.tools.s-mart.build_records")

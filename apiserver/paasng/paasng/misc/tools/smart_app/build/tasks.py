@@ -18,7 +18,6 @@
 from celery import shared_task
 from celery.app.task import Context
 
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
 from paasng.platform.engine.constants import JobStatus
 from paasng.utils.i18n.celery import I18nTask
@@ -55,5 +54,5 @@ def execute_build_error_callback(context: Context, exc: Exception, *args, **kwar
     """
 
     smart_build_id = context.args[0]
-    state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build_id, SmartBuildPhaseType.BUILD)
+    state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build_id)
     state_mgr.finish(JobStatus.FAILED, str(exc), write_to_stream=False)

@@ -27,7 +27,6 @@ from blue_krill.async_utils.poll_task import (
 )
 from django.conf import settings
 
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
 from paasng.platform.engine.constants import JobStatus
 
@@ -83,10 +82,7 @@ class SmartBuildProcessResultHandler(CallbackHandler):
         """Handle the callback of construction completion"""
 
         smart_build_id = poller.params["smart_build_id"]
-        state_mgr = SmartBuildStateMgr.from_smart_build_id(
-            smart_build_id=smart_build_id,
-            phase_type=SmartBuildPhaseType.BUILD,
-        )
+        state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build_id)
 
         build_status = result.data["build_status"]
 

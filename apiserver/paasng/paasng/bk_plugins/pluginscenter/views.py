@@ -36,6 +36,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
+from paasng.bk_plugins.bk_plugins.constants import AI_AGENT_TEMPLATE_PREFIX
 from paasng.bk_plugins.pluginscenter import constants, openapi_docs, serializers, shim
 from paasng.bk_plugins.pluginscenter import log as log_api
 from paasng.bk_plugins.pluginscenter.bk_devops.client import BkDevopsClient
@@ -262,7 +263,7 @@ class PluginInstanceViewSet(PluginInstanceMixin, mixins.ListModelMixin, GenericV
         )
 
         extra_fields = validated_data.pop("extra_fields", {})
-        is_ai_plugin = validated_data["template"].id.startswith("bk-ai")
+        is_ai_plugin = validated_data["template"].id.startswith(AI_AGENT_TEMPLATE_PREFIX)
         if is_ai_plugin:
             # 对于 AI 插件，直接从原始数据中获取 extra_fields
             # 因为蓝鲸应用的插件中并未定义 extraFields 的数据结构，前端针对 AI 插件的模板单独传的 ai_extra_fields 字段

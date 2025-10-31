@@ -96,18 +96,15 @@ export default {
       this.clearAllLogs();
 
       // 按行分割日志内容
-      const logLines = logContent.split('\n');
+      const logLines = logContent.split('\n').map(line => line.replace(/\r/g, '').trim()).filter(line => line !== '');
       logLines.forEach((line) => {
-        const trimmedLine = line.trim();
-        if (trimmedLine) {
-          const logItem = {
-            message: line,
-            stream: 'STDOUT',
-            timestamp: new Date().toISOString(),
-          };
-          // 将所有日志归到构建阶段
-          this.addLogToPhase('build', logItem);
-        }
+        const logItem = {
+          message: line,
+          stream: 'STDOUT',
+          timestamp: new Date().toISOString(),
+        };
+        // 将所有日志归到构建阶段
+        this.addLogToPhase('build', logItem);
       });
 
       this.$nextTick(() => {
@@ -138,8 +135,7 @@ export default {
         },
       });
 
-      // 监听阶段切换事件
-      this.streamLogEvent.addEventListener('phase', (event) => {
+      this.phaseEventHandler = (event) => {
         const data = JSON.parse(event.data);
 
         // 更新当前活动阶段
@@ -164,10 +160,9 @@ export default {
           content, // 耗时信息
           data,
         });
-      });
+      };
 
-      // 监听到步骤变化
-      this.streamLogEvent.addEventListener('step', (event) => {
+      this.stepEventHandler = (event) => {
         const data = JSON.parse(event.data);
 
         // 更新当前活动阶段
@@ -185,13 +180,19 @@ export default {
           content, // 耗时信息
           data,
         });
-      });
+      };
 
-      // 监听消息事件
-      this.streamLogEvent.addEventListener('message', (event) => {
+      this.messageEventHandler = (event) => {
         const data = JSON.parse(event.data);
+        if (!data.line) return;
+        
+        const cleanedLine = data.line.replace(/[\r\n]+/g, '').trim();
+        
+        // 如果清理后的内容为空，则跳过
+        if (cleanedLine === '') return;
+        
         const item = {
-          message: data.line,
+          message: cleanedLine,
           stream: data.stream, // STDOUT 或 STDERR
         };
 
@@ -202,10 +203,9 @@ export default {
         this.$nextTick(() => {
           this.autoExpandPhaseLog(this.currentPhase);
         });
-      });
+      };
 
-      // 监听EOF事件，用于更新最终状态
-      this.streamLogEvent.addEventListener('EOF', (event) => {
+      this.eofEventHandler = (event) => {
         try {
           const data = JSON.parse(event.data);
           if (data.final_status) {
@@ -220,12 +220,37 @@ export default {
         } catch (e) {
           this.$emit('eof', null);
         }
-      });
+      };
+
+      // 监听阶段切换事件
+      this.streamLogEvent.addEventListener('phase', this.phaseEventHandler);
+
+      // 监听到步骤变化
+      this.streamLogEvent.addEventListener('step', this.stepEventHandler);
+
+      // 监听消息事件
+      this.streamLogEvent.addEventListener('message', this.messageEventHandler);
+
+      // 监听EOF事件，用于更新最终状态
+      this.streamLogEvent.addEventListener('EOF', this.eofEventHandler);
     },
 
     // 关闭事件源
     closeStreamLogEvent() {
       if (this.streamLogEvent) {
+        if (this.phaseEventHandler) {
+          this.streamLogEvent.removeEventListener('phase', this.phaseEventHandler);
+        }
+        if (this.stepEventHandler) {
+          this.streamLogEvent.removeEventListener('step', this.stepEventHandler);
+        }
+        if (this.messageEventHandler) {
+          this.streamLogEvent.removeEventListener('message', this.messageEventHandler);
+        }
+        if (this.eofEventHandler) {
+          this.streamLogEvent.removeEventListener('EOF', this.eofEventHandler);
+        }
+        
         this.streamLogEvent.close();
         this.streamLogEvent = null; // 清空引用，避免重复使用
       }
@@ -240,6 +265,9 @@ export default {
     // 展开指定日志
     async openLog(plugin) {
       const phaseId = plugin.id; // 'preparation' 或 'build'
+      // 如果已经展开过，不需要重复处理
+      if (this.expandedPhases.has(phaseId)) return;
+      
       let phaseLogs = this.phaseLogData[phaseId] || [];
 
       if (phaseId === 'preparation' && phaseLogs.length === 0) {
@@ -292,8 +320,10 @@ export default {
     addLogToCurrentPhase(logItem) {
       this.addLogToPhase(this.currentPhase, logItem);
 
-      // 如果当前阶段的日志节点已展开，实时更新日志内容
-      this.updateExpandedPhaseLog(this.currentPhase, logItem);
+      // 如果当前阶段的日志节点已展开，实时更新日志内容，避免重复
+      if (this.expandedPhases.has(this.currentPhase)) {
+        this.updateExpandedPhaseLog(this.currentPhase, logItem);
+      }
     },
 
     /**
@@ -343,7 +373,6 @@ export default {
       const targetLog = this.logList.find((log) => log.id === phaseName);
       if (!targetLog) return;
       this.$refs.multipleLog?.expendLog(targetLog);
-      this.expandedPhases.add(phaseName);
     },
 
     /**

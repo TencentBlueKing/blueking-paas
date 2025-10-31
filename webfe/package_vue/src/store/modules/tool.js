@@ -74,5 +74,12 @@ export default {
       const url = `${BACKEND_URL}/api/tools/s-mart/build_records/${id}/phases_result/`;
       return http.get(url);
     },
+    /**
+     * 获取 s-mart 包下载链接
+     */
+    getSmartDownload({}, { id }) {
+      const url = `${BACKEND_URL}/api/tools/s-mart/build_records/${id}/artifact/download/`;
+      return http.get(url);
+    },
   },
 };

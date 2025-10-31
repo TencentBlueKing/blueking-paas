@@ -34,7 +34,7 @@
           <div class="g-sub-title">{{ $t('打包历史') }}</div>
           <bk-input
             v-model="searchValue"
-            :placeholder="$t('请输入分支 / 包名 / 操作人')"
+            :placeholder="$t('请输入分支 / 包名')"
             :right-icon="'bk-icon icon-search'"
             style="width: 480px"
             clearable
@@ -92,14 +92,10 @@
                 ></span>
                 {{ statusMap[row[column.prop]] || row[column.prop] || '--' }}
               </template>
-              <bk-user-display-name
-                v-else-if="column.prop === 'operator' && isMultiTenantDisplayMode"
-                :user-id="row[column.prop]"
-              ></bk-user-display-name>
               <template v-else-if="column.prop === 'source_origin'">
                 <span>{{ sourceTypeMap[row[column.prop]] || '--' }}</span>
               </template>
-              <span v-else>{{ row[column.prop] ?? '--' }}</span>
+              <span v-else>{{ row[column.prop] || '--' }}</span>
             </template>
           </bk-table-column>
           <bk-table-column
@@ -111,7 +107,8 @@
                 theme="primary"
                 text
                 class="mr10"
-                :disabled="!row.artifact_url"
+                :loading="downloadLoadingMap[row.uuid]"
+                :disabled="row.status !== 'successful'"
                 @click="downloadBuildLog(row)"
               >
                 {{ $t('下载') }}
@@ -143,7 +140,6 @@
 import SmartSideslider from './smart-sideslider.vue';
 import { filterUndefinedProperties } from '@/common/tools';
 import { fileDownload } from '@/common/utils';
-import { mapGetters } from 'vuex';
 
 export default {
   name: 'SmartBuildTool',
@@ -176,10 +172,10 @@ export default {
         isDetail: false,
         row: {},
       },
+      downloadLoadingMap: {},
     };
   },
   computed: {
-    ...mapGetters(['isMultiTenantDisplayMode']),
     // 状态映射配置
     statusMap() {
       return {
@@ -199,13 +195,17 @@ export default {
     columns() {
       return [
         {
-          label: `${this.$t('构建')} ID`,
-          prop: 'uuid',
+          label: `${this.$t('应用')} ID`,
+          prop: 'app_code',
           'min-width': 140,
         },
         {
           label: this.$t('源码来源'),
           prop: 'source_origin',
+        },
+        {
+          label: this.$t('版本号'),
+          prop: 'app_version',
         },
         {
           label: this.$t('源码包 / 代码分支'),
@@ -217,10 +217,6 @@ export default {
           filters: this.statusFilters,
           'filter-multiple': false,
           'column-key': 'status',
-        },
-        {
-          label: this.$t('操作人'),
-          prop: 'operator',
         },
         {
           label: this.$t('执行时间'),
@@ -244,14 +240,20 @@ export default {
   },
   methods: {
     // 下载构建日志
-    downloadBuildLog(row) {
+    async downloadBuildLog(row) {
+      this.$set(this.downloadLoadingMap, row.uuid, true);
       try {
-        fileDownload(row.artifact_url, `smart-build-${row.uuid}`);
-      } catch (error) {
+        const ret = await this.$store.dispatch('tool/getSmartDownload', { id: row.uuid })
+        fileDownload(ret.download_url, `s-mart_artifact_${row.uuid}`);
+      } catch {
         this.$bkMessage({
           message: this.$t('下载文件失败'),
           theme: 'error',
         });
+      } finally {
+        setTimeout(() => {
+          this.$set(this.downloadLoadingMap, row.uuid, false);
+        }, 500);
       }
     },
     // 处理列表请求参数

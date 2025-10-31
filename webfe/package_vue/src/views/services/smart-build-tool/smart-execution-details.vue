@@ -87,6 +87,7 @@ export default {
       const finalStatus = this.mapRowStatusToBuildStatus(this.rowData.status);
       this.updateBuildStatus(finalStatus);
       await this.handleLogData();
+      return;
     }
 
     this.$nextTick(() => {

@@ -17,10 +17,11 @@
       <SmartExecutionDetails
         v-if="isExecutionDetails"
         :stream-url="getStreamUrl()"
-        :build-id="buildData?.smart_build_id"
+        :build-id="buildData?.build_id"
         :is-detail-view="isDetail"
         :log-data="logData"
         :row-data="rowData"
+        :key="smartKey"
         @rebuild="handleRebuild"
       />
       <template v-else>
@@ -181,8 +182,7 @@ export default {
       isExecutionDetails: false,
       buildData: null,
       buildLoading: false,
-      // 标记是否执行过重新构建
-      hasRebuilt: false,
+      smartKey: Date.now(),
     };
   },
   computed: {
@@ -228,10 +228,12 @@ export default {
       this.isExecutionDetails = this.isDetail;
     },
     hidden() {
-      if ((this.isExecutionDetails && !this.isDetail) || this.hasRebuilt) {
+      if ((this.isExecutionDetails && !this.isDetail) || this.rowData.status === 'pending') {
         this.$emit('refresh-list');
       }
-      this.hasRebuilt = false;
+      this.smartKey = Date.now();
+      this.packageData = null;
+      this.buildData = null;
     },
     handleSuccess(res) {
       this.packageData = res;
@@ -250,10 +252,6 @@ export default {
     },
     // 上传源码包
     async buildSmartPackage() {
-      // 1、上传源码包
-      // 2、开始构建：获取stream_url、smart_build_id
-      // 3、与日志stream_url建立sse连接，获取日志、状态等
-      // 4、获取构建步骤
       this.buildLoading = true;
       try {
         const ret = await this.$store.dispatch('tool/smartBuild', {
@@ -286,8 +284,6 @@ export default {
           data: this.packageData,
         });
         this.buildData = ret;
-        // 标记已执行重新构建
-        this.hasRebuilt = true;
       } catch (err) {
         this.catchErrorHandler(err);
         this.buildData = oldBuildData;

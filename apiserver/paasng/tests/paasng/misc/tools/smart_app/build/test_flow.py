@@ -21,56 +21,13 @@ import pytest
 
 from paasng.misc.tools.smart_app.build.flow import (
     SmartBuildCoordinator,
-    SmartBuildProcedure,
     SmartBuildStateMgr,
 )
-from paasng.misc.tools.smart_app.exceptions import SmartBuildShouldAbortError
 from paasng.misc.tools.smart_app.output import NullStream
 from paasng.platform.engine.constants import JobStatus
 from tests.paasng.misc.tools.smart_app.setup_utils import create_fake_smart_build
 
 pytestmark = pytest.mark.django_db
-
-
-class TestSmartBuildProcedure:
-    @pytest.fixture()
-    def phases(self, smart_build):
-        return list(smart_build.phases.all())
-
-    @pytest.fixture()
-    def stream(self):
-        return NullStream()
-
-    def test_normal(self, phases, stream):
-        with SmartBuildProcedure(stream, None, "doing nothing", phases[0]):
-            pass
-
-    def test_with_expected_error(self, phases, stream):
-        with (
-            pytest.raises(SmartBuildShouldAbortError),
-            SmartBuildProcedure(stream, None, "doing nothing", phases[0]),
-        ):
-            raise SmartBuildShouldAbortError("oops")
-
-    def test_with_unexpected_error(self, phases, stream):
-        with (
-            pytest.raises(ValueError, match="oops"),
-            SmartBuildProcedure(stream, None, "doing nothing", phases[0]),
-        ):
-            raise ValueError("oops")
-
-    def test_with_smart_build(self, smart_build, phases, stream):
-        # Manually mark the start of this stage, but the title is unknown
-        with SmartBuildProcedure(stream, smart_build, "doing nothing", phases[0]) as d:
-            assert not d.step_obj
-
-        # title is known, but phase does not match
-        with SmartBuildProcedure(stream, smart_build, "构建 S-Mart 包", phases[0]) as d:
-            assert not d.step_obj
-
-        # normal
-        with SmartBuildProcedure(stream, smart_build, "校验应用描述文件", phases[0]) as d:
-            assert d.step_obj
 
 
 class TestSmartBuildStateMgr:
@@ -120,7 +77,7 @@ class TestSmartBuildStateMgr:
         stream = NullStream()
 
         mgr = SmartBuildStateMgr(smart_build, stream=stream)
-        mgr.finish(JobStatus.FAILED, err_detail="Error occurred", write_to_stream=False)
+        mgr.finish(JobStatus.FAILED, err_detail="Error occurred")
 
         smart_build.refresh_from_db()
         assert smart_build.status == JobStatus.FAILED

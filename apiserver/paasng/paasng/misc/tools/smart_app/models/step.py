@@ -46,7 +46,9 @@ class SmartBuildStepEventSLZ(Serializer):
 
 
 class SmartBuildStep(UuidAuditedModel):
-    """s-mart 构建步骤"""
+    """[Deprecated] s-mart 构建步骤
+    步骤固定, 且直接将流程下放到 k8s 中执行, 包的校验在上传时进行
+    """
 
     name = models.CharField(_("步骤名称"), db_index=True, max_length=32)
     phase = models.ForeignKey(

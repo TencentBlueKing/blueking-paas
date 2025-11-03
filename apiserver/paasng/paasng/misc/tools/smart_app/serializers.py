@@ -25,7 +25,7 @@ from paasng.utils.i18n.serializers import TranslatedCharField
 from paasng.utils.models import OrderByField
 from paasng.utils.serializers import StringArrayField
 
-from .constants import SmartBuildPhaseType, SourceCodeOriginType
+from .constants import SourceCodeOriginType
 
 if TYPE_CHECKING:
     from paasng.misc.tools.smart_app.models import SmartBuildRecord
@@ -64,38 +64,6 @@ class SmartBuildFrameStepSLZ(serializers.Serializer):
 
     display_name = TranslatedCharField()
     name = serializers.CharField()
-
-
-class SmartBuildFramePhaseSLZ(serializers.Serializer):
-    """Phase SLZ for Smart Build Frame"""
-
-    display_name = serializers.SerializerMethodField(help_text="阶段展示名称")
-    type = serializers.CharField(help_text="阶段类型")
-    steps = SmartBuildFrameStepSLZ(source="_sorted_steps", many=True, help_text="步骤列表")
-
-    def get_display_name(self, obj) -> str:
-        return SmartBuildPhaseType.get_choice_label(obj["type"])
-
-
-class SmartBuildStepSLZ(serializers.Serializer):
-    """Step 执行结果"""
-
-    uuid = serializers.CharField()
-    name = serializers.CharField()
-    status = serializers.ChoiceField(choices=JobStatus.get_choices(), required=False)
-    start_time = serializers.DateTimeField(required=False)
-    complete_time = serializers.DateTimeField(required=False)
-
-
-class SmartBuildPhaseSLZ(serializers.Serializer):
-    """Phase 执行结果"""
-
-    uuid = serializers.CharField()
-    name = serializers.CharField(source="type")
-    status = serializers.ChoiceField(choices=JobStatus.get_choices(), required=False)
-    start_time = serializers.DateTimeField(required=False)
-    complete_time = serializers.DateTimeField(required=False)
-    steps = SmartBuildStepSLZ(source="_sorted_steps", many=True)
 
 
 class SmartBuildRecordFilterInputSLZ(serializers.Serializer):

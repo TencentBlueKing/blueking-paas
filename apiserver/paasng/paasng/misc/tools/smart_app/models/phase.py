@@ -46,7 +46,9 @@ class SmartBuildPhaseEventSLZ(Serializer):
 
 
 class SmartBuildPhase(UuidAuditedModel):
-    """s-mart 构建阶段"""
+    """[Deprecated] s-mart 构建阶段
+    步骤固定, 且直接将流程下放到 k8s 中执行, 包的校验在上传时进行
+    """
 
     # 枚举值 -> SmartBuildPhaseType.
     type = models.CharField(_("构建阶段类型"), max_length=32)

@@ -41,17 +41,14 @@ from paasng.utils.error_codes import error_codes
 from paasng.utils.views import get_filepath
 
 from .build import SmartBuildCoordinator, SmartBuildTaskRunner, create_smart_build_record
-from .build_phase import ALL_SMART_BUILD_PHASES
 from .filters import SmartBuildRecordFilterBackend
 from .models import SmartBuildRecord
 from .output import get_all_logs
 from .serializers import (
-    SmartBuildFramePhaseSLZ,
     SmartBuildHistoryLogsOutputSLZ,
     SmartBuildHistoryOutputSLZ,
     SmartBuildInputSLZ,
     SmartBuildOutputSLZ,
-    SmartBuildPhaseSLZ,
     ToolPackageStashInputSLZ,
     ToolPackageStashOutputSLZ,
 )
@@ -162,21 +159,6 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
 
     @swagger_auto_schema(
         tags=["S-Mart 包构建"],
-        operation_description="获取构建阶段结果",
-        responses={status.HTTP_200_OK: SmartBuildPhaseSLZ(many=True)},
-    )
-    def get_phases_result(self, request, uuid: str):
-        """获取构建阶段结果"""
-        record = get_object_or_404(SmartBuildRecord, uuid=uuid, operator=request.user)
-        phases = record.phases.all().order_by("created")
-
-        # Set property for rendering by slz
-        for p in phases:
-            p._sorted_steps = p.steps.all().order_by("created")
-        return Response(data=SmartBuildPhaseSLZ(phases, many=True).data)
-
-    @swagger_auto_schema(
-        tags=["S-Mart 包构建"],
         operation_description="获取构建日志",
         responses={status.HTTP_200_OK: SmartBuildHistoryLogsOutputSLZ()},
     )
@@ -218,15 +200,6 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         download_url = store.generate_presigned_url(key=key, expires_in=3600)
 
         return Response(data={"download_url": download_url})
-
-    @swagger_auto_schema(
-        tags=["S-Mart 包构建"],
-        responses={status.HTTP_200_OK: SmartBuildFramePhaseSLZ(many=True)},
-    )
-    def get_phases(self, request):
-        """获取 S-mart 包构建的阶段和步骤信息"""
-        phases = [{"type": phase.type.value, "_sorted_steps": phase.steps} for phase in ALL_SMART_BUILD_PHASES]
-        return Response(SmartBuildFramePhaseSLZ(phases, many=True).data)
 
     @staticmethod
     def _validate_app_desc(app_desc: ApplicationDesc):

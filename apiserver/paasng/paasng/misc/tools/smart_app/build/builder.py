@@ -64,26 +64,28 @@ class SmartAppBuilder:
     def start(self):
         """Start the s-mart building process"""
 
-        # 开始准备阶段
-        start_phase(self.smart_build, self.stream, SmartBuildPhaseType.PREPARATION)
-        preparation_phase = self.smart_build.phases.get(type=SmartBuildPhaseType.PREPARATION)
+        try:
+            # 开始准备阶段
+            start_phase(self.smart_build, self.stream, SmartBuildPhaseType.PREPARATION)
+            preparation_phase = self.smart_build.phases.get(type=SmartBuildPhaseType.PREPARATION)
 
-        with self.procedure("校验应用描述文件", phase=preparation_phase):
-            self.validate_app_description()
+            with self.procedure("校验应用描述文件", phase=preparation_phase):
+                self.validate_app_description()
 
-        # 结束准备阶段
-        end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.PREPARATION)
+            # 结束准备阶段
+            end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.PREPARATION)
 
-        # 开始构建阶段
-        start_phase(self.smart_build, self.stream, SmartBuildPhaseType.BUILD)
-        build_phase = self.smart_build.phases.get(type=SmartBuildPhaseType.BUILD)
+            # 开始构建阶段
+            start_phase(self.smart_build, self.stream, SmartBuildPhaseType.BUILD)
+            build_phase = self.smart_build.phases.get(type=SmartBuildPhaseType.BUILD)
 
-        self._start_build_process(build_phase)
+            self._start_build_process(build_phase)
 
-        # 结束构建阶段
-        end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.BUILD)
+            # 结束构建阶段
+            end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.BUILD)
 
-        self._finish_builder()
+        finally:
+            self._finish_builder()
 
     def _start_build_process(self, build_phase: "SmartBuildPhase"):
         """启动构建流程"""

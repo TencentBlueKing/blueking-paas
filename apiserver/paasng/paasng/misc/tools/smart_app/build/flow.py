@@ -94,6 +94,9 @@ class SmartBuildStateMgr:
         )
         self.update(status=status, end_time=end_time, err_detail=err_detail)
 
+        self.stream.close()
+        self.coordinator.release_lock(expected_smart_build=self.smart_build)
+
     @staticmethod
     def _stylize_error(error_detail: str, status: JobStatus) -> str:
         """Format error messages"""

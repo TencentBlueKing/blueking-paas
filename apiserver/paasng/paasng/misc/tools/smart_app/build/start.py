@@ -116,6 +116,7 @@ class SmartBuildTaskRunner:
     :param smart_build_id: The ID of the smart build record
     :param source_url: The source package URL
     :param app_code: The code of the application
+    :param app_version: The version of the application
     :param sha256_signature: The sha256 signature of the source package
     """
 

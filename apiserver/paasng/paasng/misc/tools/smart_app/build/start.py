@@ -19,6 +19,7 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.utils import timezone
 
 from paas_wl.utils.blobstore import make_blob_store
+from paasng.misc.tools.smart_app.build.flow import SmartBuildStateMgr
 from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
 from paasng.platform.sourcectl.package.utils import parse_url
@@ -58,6 +59,57 @@ def create_smart_build_record(
     return record
 
 
+class SmartBuildArtifactCache:
+    """S-Mart build artifact cache manager"""
+
+    def __init__(self, bucket: str):
+        self.bucket = bucket
+        self.blob_store = make_blob_store(bucket)
+
+    def exists(self, key: str) -> bool:
+        """Check if the artifact exists in the blob store"""
+        try:
+            return self.blob_store.get_file_metadata(key) is not None
+        except Exception:
+            return False
+
+    @staticmethod
+    def generate_artifact_key(app_code: str, app_version: str, sha256_signature: str) -> str:
+        """Generate standardized build artifact key"""
+        return f"{app_code}-{app_version}_paas3_{sha256_signature[:7]}.tar.gz"
+
+
+class SmartBuildContext:
+    """S-Mart Build Context"""
+
+    def __init__(
+        self,
+        smart_build: SmartBuildRecord,
+        source_url: str,
+        artifact_key: str,
+    ):
+        self.smart_build = smart_build
+        self.source_url = source_url
+        self.artifact_key = artifact_key
+        self.artifact_bucket = parse_url(source_url).bucket
+
+    def get_source_get_url(self) -> str:
+        """获取源码包下载 URL"""
+        parsed = parse_url(self.source_url)
+        return make_blob_store(parsed.bucket).generate_presigned_url(parsed.key, expires_in=3600)
+
+    def get_artifact_put_url(self) -> str:
+        """获取构建产物上传 URL"""
+        # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
+        return make_blob_store(self.artifact_bucket).generate_presigned_url(
+            self.artifact_key, expires_in=3600, signature_type=SignatureType.UPLOAD
+        )
+
+    def get_artifact_url(self) -> str:
+        """存储于数据库中的 URL, 用于后续创建临时下载链接"""
+        return f"blobstore://{self.artifact_bucket}/{self.artifact_key}"
+
+
 class SmartBuildTaskRunner:
     """S-Mart builds a task executor
 
@@ -75,48 +127,33 @@ class SmartBuildTaskRunner:
         app_version: str,
         sha256_signature: str,
     ):
-        self.smart_build_id = smart_build_id
-        self.source_get_url = self._get_source_get_url(source_url)
-
-        # 构建产物存储信息
-        # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
-        self.artifact_bucket = parse_url(source_url).bucket
-        self.artifact_key = f"{app_code}-{app_version}_paas3_{sha256_signature[:7]}.tar.gz"
-        self.dest_put_url = self._generate_artifact_put_url()
-
-        # 将产物信息保存到构建记录中
-        self._save_artifact_info()
+        self.smart_build = SmartBuildRecord.objects.get(uuid=smart_build_id)
+        artifact_key = SmartBuildArtifactCache.generate_artifact_key(app_code, app_version, sha256_signature)
+        self._context = SmartBuildContext(self.smart_build, source_url, artifact_key)
 
     def start(self):
         """Start build task"""
 
+        self.prepare()
+
+        # 如果构建结果已经缓存, 直接完成构建
+        cache_manager = SmartBuildArtifactCache(self._context.artifact_bucket)
+        if cache_manager.exists(self._context.artifact_key):
+            state_mgr = SmartBuildStateMgr(self.smart_build)
+            state_mgr.complete_with_cache()
+            return
+
         execute_build.apply_async(
             args=(
-                self.smart_build_id,
-                self.source_get_url,
-                self.dest_put_url,
+                self.smart_build.uuid,
+                self._context.get_source_get_url(),
+                self._context.get_artifact_put_url(),
             ),
             link_error=execute_build_error_callback.s(),
         )
 
-    def _get_source_get_url(self, source_url: str) -> str:
-        """获取源码包下载 URL"""
-
-        parsed = parse_url(source_url)
-        return make_blob_store(parsed.bucket).generate_presigned_url(parsed.key, expires_in=3600)
-
-    def _generate_artifact_put_url(self) -> str:
-        """获取构建产物上传 URL"""
-
-        # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
-        return make_blob_store(self.artifact_bucket).generate_presigned_url(
-            self.artifact_key, expires_in=3600, signature_type=SignatureType.UPLOAD
-        )
-
-    def _save_artifact_info(self):
-        """保存构建产物存储信息到构建记录中"""
-
-        smart_build = SmartBuildRecord.objects.get(uuid=self.smart_build_id)
-        # 使用 blobstore:// 协议格式存储
-        smart_build.artifact_url = f"blobstore://{self.artifact_bucket}/{self.artifact_key}"
+    def prepare(self):
+        """Prepare the build environment and save the build artifact information."""
+        smart_build = self.smart_build
+        smart_build.artifact_url = self._context.get_artifact_url()
         smart_build.save(update_fields=["artifact_url"])

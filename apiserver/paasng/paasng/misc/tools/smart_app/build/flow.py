@@ -97,6 +97,16 @@ class SmartBuildStateMgr:
         self.stream.close()
         self.coordinator.release_lock(expected_smart_build=self.smart_build)
 
+    def complete_with_cache(self):
+        """Complete the build process directly using cached files"""
+
+        self.start()
+        self.stream.write_message(
+            Style.Title("对象存储中已存在相同文件签名的源码包构建的 smart 制品，直接使用缓存文件")
+        )
+        self.stream.write_message(Style.Title("构建任务已完成（使用缓存）。"))
+        self.finish(JobStatus.SUCCESSFUL)
+
     @staticmethod
     def _stylize_error(error_detail: str, status: JobStatus) -> str:
         """Format error messages"""

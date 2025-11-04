@@ -37,11 +37,6 @@ urlpatterns = [
         name="api.tools.s-mart.build_records",
     ),
     re_path(
-        r"^api/tools/s-mart/build_records/(?P<uuid>[0-9a-f-]{36})/phases_result/$",
-        SmartBuilderViewSet.as_view({"get": "get_phases_result"}),
-        name="api.tools.s-mart.build_records.phases_result",
-    ),
-    re_path(
         r"^api/tools/s-mart/build_records/(?P<uuid>[0-9a-f-]{36})/logs/$",
         SmartBuilderViewSet.as_view({"get": "get_history_logs"}),
         name="api.tools.s-mart.build_records.logs",
@@ -55,10 +50,5 @@ urlpatterns = [
         r"^api/tools/s-mart/build_records/(?P<uuid>[0-9a-f-]{36})/artifact/download/$",
         SmartBuilderViewSet.as_view({"get": "download_artifact"}),
         name="api.tools.s-mart.build_records.artifact.download",
-    ),
-    re_path(
-        r"^api/tools/s-mart/build_phases/$",
-        SmartBuilderViewSet.as_view({"get": "get_phases"}),
-        name="api.tools.s-mart.build_phases",
     ),
 ]

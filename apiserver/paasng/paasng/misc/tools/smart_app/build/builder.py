@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from functools import partial
 from typing import TYPE_CHECKING, Dict
 
 from django.conf import settings
@@ -27,16 +26,14 @@ from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.kube_res.base import Schedule
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.output import make_channel_stream
 from paasng.platform.engine.constants import JobStatus
 
-from .flow import SmartBuildProcedure, SmartBuildStateMgr
+from .flow import SmartBuildStateMgr
 from .handler import ContainerRuntimeSpec, SmartBuilderTemplate, SmartBuildHandler
-from .poller import SmartBuildProcessPoller, SmartBuildProcessResultHandler
 
 if TYPE_CHECKING:
-    from paasng.misc.tools.smart_app.models import SmartBuildPhase, SmartBuildRecord
+    from paasng.misc.tools.smart_app.models import SmartBuildRecord
     from paasng.misc.tools.smart_app.output import SmartBuildStream
 
 logger = logging.getLogger(__name__)
@@ -44,8 +41,6 @@ logger = logging.getLogger(__name__)
 
 class SmartAppBuilder:
     """The main controller for building a s-mart app package"""
-
-    phase_type: SmartBuildPhaseType | None = None
 
     def __init__(
         self,
@@ -59,61 +54,28 @@ class SmartAppBuilder:
 
         self.stream: "SmartBuildStream" = make_channel_stream(smart_build)
         self.state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build.uuid, self.stream)
-        self.procedure = partial(SmartBuildProcedure, self.stream, self.smart_build)
 
     def start(self):
         """Start the s-mart building process"""
 
         try:
-            # 开始准备阶段
-            start_phase(self.smart_build, self.stream, SmartBuildPhaseType.PREPARATION)
-            preparation_phase = self.smart_build.phases.get(type=SmartBuildPhaseType.PREPARATION)
+            self.state_mgr.start()
 
-            with self.procedure("校验应用描述文件", phase=preparation_phase):
-                self.validate_app_description()
-
-            # 结束准备阶段
-            end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.PREPARATION)
-
-            # 开始构建阶段
-            start_phase(self.smart_build, self.stream, SmartBuildPhaseType.BUILD)
-            build_phase = self.smart_build.phases.get(type=SmartBuildPhaseType.BUILD)
-
-            self._start_build_process(build_phase)
-
-            # 结束构建阶段
-            end_phase(self.smart_build, self.stream, JobStatus.SUCCESSFUL, SmartBuildPhaseType.BUILD)
-
-        finally:
-            self._finish_builder()
-
-    def _start_build_process(self, build_phase: "SmartBuildPhase"):
-        """启动构建流程"""
-
-        with self.procedure("准备构建环境", phase=build_phase):
+            # 启动构建进程
             builder_name = self.launch_build_process()
 
-        with self.procedure("构建 S-Mart 包", phase=build_phase):
+            # 同步阻塞获取构建日志
             self.start_following_logs(builder_name)
 
-            params = {"smart_build_id": self.smart_build.uuid}
+            self.state_mgr.finish(JobStatus.SUCCESSFUL)
 
-        SmartBuildProcessPoller.start(params, SmartBuildProcessResultHandler)
+        finally:
+            self.stream.close()
 
-    def _finish_builder(self):
-        """结束整体的构建流程"""
-
-        self.stream.close()
-
-        self.state_mgr.coordinator.release_lock(self.smart_build)
-
-    def validate_app_description(self):
-        """Validate the app description file"""
-
-        # TODO: 添加 app_desc 的检查逻辑
+            self.state_mgr.coordinator.release_lock(self.smart_build)
 
     def start_following_logs(self, builder_name: str):
-        """获取并流式输出构建日志,并检查 Pod 执行状态"""
+        """Retrieve the build logs, and check the Pod execution status."""
 
         namespace = get_default_builder_namespace()
         cluster_name = get_default_cluster_name()
@@ -127,8 +89,6 @@ class SmartAppBuilder:
             self.stream.write_message(force_str(raw_line))
 
         handler.wait_for_succeeded(namespace=namespace, name=builder_name, timeout=60)
-
-        self.smart_build.update_fields(status=JobStatus.SUCCESSFUL)
 
     def launch_build_process(self) -> str:
         """launch the build Pod and return the Pod name"""
@@ -167,25 +127,6 @@ class SmartAppBuilder:
 
         smart_build_handler = SmartBuildHandler(client)
         return smart_build_handler.build_pod(template=builder_template)
-
-
-def start_phase(smart_build: "SmartBuildRecord", stream: "SmartBuildStream", phase: SmartBuildPhaseType):
-    """开始阶段"""
-
-    phase_obj: "SmartBuildPhase" = smart_build.phases.get(type=phase)
-    phase_obj.mark_and_write_to_stream(stream, JobStatus.PENDING)
-
-
-def end_phase(
-    smart_build: "SmartBuildRecord", stream: "SmartBuildStream", status: JobStatus, phase: SmartBuildPhaseType
-):
-    """结束阶段"""
-
-    phase_obj: "SmartBuildPhase" = smart_build.phases.get(type=phase)
-    phase_obj.mark_and_write_to_stream(stream, status)
-
-    for step in phase_obj.get_unfinished_steps():
-        step.mark_and_write_to_stream(stream, status)
 
 
 def get_default_cluster_name() -> str:

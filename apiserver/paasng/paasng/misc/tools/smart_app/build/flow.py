@@ -22,11 +22,9 @@ from contextlib import contextmanager
 import redis
 from django.utils import timezone
 from django.utils.encoding import force_str
-from django.utils.translation import gettext_lazy as _
 
 from paasng.core.core.storages.redisdb import get_default_redis
-from paasng.misc.tools.smart_app.exceptions import SmartBuildShouldAbortError
-from paasng.misc.tools.smart_app.models import SmartBuildPhase, SmartBuildRecord, SmartBuildStep
+from paasng.misc.tools.smart_app.models import SmartBuildRecord
 from paasng.misc.tools.smart_app.output import (
     SmartBuildStream,
     StreamType,
@@ -34,84 +32,9 @@ from paasng.misc.tools.smart_app.output import (
     make_channel_stream,
 )
 from paasng.platform.engine.constants import JobStatus
-from paasng.platform.engine.exceptions import HandleAppDescriptionError, StepNotInPresetListError
 from paasng.platform.engine.utils.output import Style
-from paasng.utils.error_message import find_coded_error_message
 
 logger = logging.getLogger(__name__)
-
-
-class SmartBuildProcedure:
-    """Build step context managers
-
-    :param stream: stream for writing title and messages
-    :param smart_build: current smart build record
-    :param title: title of current step
-    :param phase: current build phase
-    """
-
-    TITLE_PREFIX: str = "正在"
-
-    def __init__(
-        self,
-        stream: SmartBuildStream,
-        smart_build: SmartBuildRecord | None,
-        title: str,
-        phase: SmartBuildPhase,
-    ):
-        self.stream = stream
-        self.smart_build = smart_build
-        self.phase = phase
-        self.step_obj = self._get_step_obj(title)
-        self.title = _(title)
-
-    def __enter__(self):
-        self.stream.write_title(f"{self.TITLE_PREFIX}{self.title}")
-        if self.step_obj:
-            self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.PENDING)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is None:
-            if self.step_obj:
-                self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.SUCCESSFUL)
-            return False
-
-        # Only some types of exception should be output directly into the stream,
-        # others have to be masked as "Unknown error" in order to provide better
-        # user experiences.
-        is_known_exc = exc_type in [SmartBuildShouldAbortError, HandleAppDescriptionError]
-        if is_known_exc:
-            msg = _("步骤 [{title}] 出错了，原因：{reason}。").format(
-                title=Style.Title(self.title), reason=Style.Warning(exc_val)
-            )
-        else:
-            msg = _("步骤 [{title}] 出错了，请稍候重试。").format(title=Style.Title(self.title))
-
-        coded_message = find_coded_error_message(exc_val)
-        if coded_message:
-            msg += coded_message
-
-        # Only log exception when it's an unknown exception
-        if not is_known_exc:
-            logger.exception(msg)
-
-        self.stream.write_message(msg, StreamType.STDERR)
-        if self.step_obj:
-            self.step_obj.mark_and_write_to_stream(self.stream, JobStatus.FAILED)
-        if self.phase:
-            self.phase.mark_and_write_to_stream(self.stream, JobStatus.FAILED)
-        return False
-
-    def _get_step_obj(self, title: str) -> SmartBuildStep | None:
-        if not self.smart_build:
-            return None
-
-        try:
-            return self.phase.get_step_by_name(title)
-        except StepNotInPresetListError as e:
-            logger.info("%s, skip", e.message)
-            return None
 
 
 class SmartBuildStateMgr:
@@ -135,20 +58,41 @@ class SmartBuildStateMgr:
     def update(self, **fields):
         return self.smart_build.update_fields(**fields)
 
-    def finish(self, status: JobStatus, err_detail: str = "", write_to_stream: bool = True):
+    def start(self):
+        """Start a s-mart build process"""
+        start_time = timezone.now()
+        self.stream.write_event(
+            "Builder Process",
+            {
+                "status": JobStatus.PENDING,
+                "start_time": timezone.localtime(start_time).isoformat(),
+            },
+        )
+        self.update(status=JobStatus.PENDING.value, start_time=start_time)
+
+    def finish(self, status: JobStatus, err_detail: str = ""):
         """Finish a s-mart build process
 
         :param status: the final status of smart build
         :param err_detail: only useful when status is "FAILED"
-        :param when_to_stream: write the raw error detail message to stream, default ot True
         """
 
         if status not in JobStatus.get_finished_states():
             raise ValueError(f"{status} is not a valid finished status")
-        if write_to_stream and err_detail:
+
+        if err_detail:
             self.stream.write_message(self._stylize_error(err_detail, status), stream=StreamType.STDERR)
 
-        self.update(status=status, end_time=timezone.now(), err_detail=err_detail)
+        start_time, end_time = self.smart_build.start_time, timezone.now()
+        self.stream.write_event(
+            "Builder Process",
+            {
+                "status": status,
+                "start_time": timezone.localtime(start_time).isoformat(),
+                "end_time": timezone.localtime(end_time).isoformat(),
+            },
+        )
+        self.update(status=status, end_time=end_time, err_detail=err_detail)
 
     @staticmethod
     def _stylize_error(error_detail: str, status: JobStatus) -> str:

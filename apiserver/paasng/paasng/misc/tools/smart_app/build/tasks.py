@@ -55,4 +55,4 @@ def execute_build_error_callback(context: Context, exc: Exception, *args, **kwar
 
     smart_build_id = context.args[0]
     state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build_id)
-    state_mgr.finish(JobStatus.FAILED, str(exc), write_to_stream=False)
+    state_mgr.finish(JobStatus.FAILED, str(exc))

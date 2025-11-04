@@ -20,10 +20,11 @@ from unittest import mock
 import pytest
 
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
+from paas_wl.infras.resources.base.exceptions import PodTimeoutError
 from paasng.misc.tools.smart_app.build.builder import SmartAppBuilder
 from paasng.misc.tools.smart_app.build.handler import SmartBuildHandler
-from paasng.misc.tools.smart_app.build.poller import SmartBuildProcessPoller
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
+from paasng.platform.engine.constants import JobStatus
 from tests.paasng.misc.tools.smart_app.setup_utils import create_fake_smart_build
 from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
 
@@ -40,44 +41,80 @@ def smart_build_record() -> SmartBuildRecord:
 
 @pytest.fixture()
 def smart_app_builder(smart_build_record) -> SmartAppBuilder:
-    with (
-        mock.patch("paasng.misc.tools.smart_app.build.flow.SmartBuildStateMgr"),
-        mock.patch("paasng.misc.tools.smart_app.output.make_channel_stream"),
-    ):
-        return SmartAppBuilder(smart_build_record, SOURCE_GET_URL, DEST_PUT_URL)
+    """Create a SmartAppBuilder instance for testing"""
+    return SmartAppBuilder(smart_build_record, SOURCE_GET_URL, DEST_PUT_URL)
 
 
 class TestSmartAppBuilder:
     """Tests for SmartAppBuilder"""
 
-    @mock.patch("paasng.misc.tools.smart_app.build.builder.start_phase")
-    @mock.patch("paasng.misc.tools.smart_app.build.builder.end_phase")
-    def test_start_success(self, mock_start, mock_end, smart_app_builder):
+    def test_start_success(self, smart_app_builder, smart_build_record):
         with (
-            mock.patch.object(smart_app_builder, "validate_app_description") as mock_validate,
-            mock.patch.object(smart_app_builder, "_start_build_process") as mock_start_build,
-            mock.patch.object(smart_app_builder, "_finish_builder") as mock_finish_builder,
-            mock.patch("paasng.misc.tools.smart_app.build.builder.SmartBuildProcessPoller"),
+            mock.patch.object(smart_app_builder, "launch_build_process", return_value="test-builder-pod"),
+            mock.patch.object(smart_app_builder, "start_following_logs") as mock_logs,
+            mock.patch.object(smart_app_builder.stream, "close") as mock_close,
+            mock.patch.object(smart_app_builder.state_mgr.coordinator, "release_lock") as mock_release,
         ):
             smart_app_builder.start()
 
-            mock_validate.assert_called_once()
-            mock_start_build.assert_called_once()
-            mock_finish_builder.assert_called_once()
-            assert mock_start.call_count == 2
-            assert mock_end.call_count == 2
-
-    @mock.patch.object(SmartBuildProcessPoller, "start")
-    def test_start_build_process(self, mock_start, smart_app_builder):
-        with (
-            mock.patch.object(smart_app_builder, "launch_build_process") as mock_launch,
-            mock.patch.object(smart_app_builder, "start_following_logs") as mock_logs,
-        ):
-            smart_app_builder._start_build_process(mock.Mock())
-
-            mock_launch.assert_called_once()
             mock_logs.assert_called_once()
-            mock_start.assert_called_once()
+            mock_close.assert_called_once()
+            mock_release.assert_called_once_with(smart_build_record)
+
+    def test_start_with_exception_in_launch(self, smart_app_builder, smart_build_record):
+        """Test that resources are cleaned up when launch_build_process raises exception"""
+        with (
+            mock.patch.object(smart_app_builder, "launch_build_process", side_effect=Exception("Launch failed")),
+            mock.patch.object(smart_app_builder.stream, "close") as mock_close,
+            mock.patch.object(smart_app_builder.state_mgr.coordinator, "release_lock") as mock_release,
+        ):
+            with pytest.raises(Exception, match="Launch failed"):
+                smart_app_builder.start()
+
+            # Verify cleanup happens even with exception
+            mock_close.assert_called_once()
+            mock_release.assert_called_once_with(smart_build_record)
+
+    def test_start_with_exception_in_following_logs(self, smart_app_builder, smart_build_record):
+        """Test that resources are cleaned up when start_following_logs raises exception"""
+        with (
+            mock.patch.object(smart_app_builder, "launch_build_process", return_value="test-builder-pod"),
+            mock.patch.object(smart_app_builder, "start_following_logs", side_effect=PodTimeoutError("Timeout")),
+            mock.patch.object(smart_app_builder.stream, "close") as mock_close,
+            mock.patch.object(smart_app_builder.state_mgr.coordinator, "release_lock") as mock_release,
+        ):
+            with pytest.raises(PodTimeoutError):
+                smart_app_builder.start()
+
+            # Verify cleanup happens
+            mock_close.assert_called_once()
+            mock_release.assert_called_once_with(smart_build_record)
+
+    def test_start_following_logs(self, smart_app_builder, smart_build_record):
+        """Test log following and pod completion"""
+        fake_logs = [b"Building...\n", b"Build complete\n"]
+
+        with (
+            mock.patch(
+                "paasng.misc.tools.smart_app.build.builder.get_default_cluster_name",
+                return_value=CLUSTER_NAME_FOR_TESTING,
+            ),
+            mock.patch("paasng.misc.tools.smart_app.build.builder.get_client_by_cluster_name"),
+            mock.patch.object(SmartBuildHandler, "wait_for_logs_readiness"),
+            mock.patch.object(SmartBuildHandler, "get_build_log", return_value=iter(fake_logs)),
+            mock.patch.object(SmartBuildHandler, "wait_for_succeeded"),
+            mock.patch.object(smart_app_builder.stream, "write_message") as mock_write,
+        ):
+            smart_app_builder.start_following_logs("test-builder-pod")
+
+            # Verify logs were written
+            assert mock_write.call_count == len(fake_logs)
+            mock_write.assert_any_call("Building...\n")
+            mock_write.assert_any_call("Build complete\n")
+
+            # Verify status was updated to successful
+            smart_build_record.refresh_from_db()
+            assert smart_build_record.status == JobStatus.SUCCESSFUL.value
 
     def test_launch_build_process(self, smart_app_builder):
         with (

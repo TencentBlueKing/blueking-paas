@@ -25,10 +25,7 @@ from .smart_build import SmartBuildRecord
 
 
 class SmartBuildPhase(UuidAuditedModel):
-    """[Deprecated] s-mart 构建阶段
-
-    源码包的校验放在文件上传时进行, 构建 smart 包不再需要阶段和步骤
-    """
+    """[暂未使用, 后续有需求将启用] s-mart 构建阶段"""
 
     # 枚举值 -> SmartBuildPhaseType.
     type = models.CharField(_("构建阶段类型"), max_length=32)

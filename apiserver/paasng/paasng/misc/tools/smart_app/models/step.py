@@ -25,10 +25,7 @@ from .phase import SmartBuildPhase
 
 
 class SmartBuildStep(UuidAuditedModel):
-    """[Deprecated] s-mart 构建步骤
-
-    源码包的校验放在文件上传时进行, 构建 smart 包不再需要阶段和步骤
-    """
+    """[暂未使用, 后续有需求将启用] s-mart 构建步骤"""
 
     name = models.CharField(_("步骤名称"), db_index=True, max_length=32)
     phase = models.ForeignKey(

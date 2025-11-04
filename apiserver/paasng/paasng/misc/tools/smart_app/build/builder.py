@@ -67,7 +67,7 @@ class SmartAppBuilder:
             # 同步阻塞获取构建日志
             self.start_following_logs(builder_name)
 
-            self.state_mgr.finish(JobStatus.SUCCESSFUL.value)
+            self.state_mgr.finish(JobStatus.SUCCESSFUL)
 
         finally:
             self.stream.close()

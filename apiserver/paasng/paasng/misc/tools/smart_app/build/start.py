@@ -30,6 +30,7 @@ def create_smart_build_record(
     package_name: str,
     app_code: str,
     app_version: str,
+    sha256_signature: str,
     operator: str,
 ) -> SmartBuildRecord:
     """Initialize s-smart package build record
@@ -49,6 +50,7 @@ def create_smart_build_record(
         package_name=package_name,
         app_code=app_code,
         app_version=app_version,
+        sha256_signature=sha256_signature,
         start_time=timezone.now(),
         operator=operator,
     )
@@ -57,16 +59,29 @@ def create_smart_build_record(
 
 
 class SmartBuildTaskRunner:
-    """S-Mart builds a task executor"""
+    """S-Mart builds a task executor
 
-    def __init__(self, smart_build_id: str, source_url: str):
+    :param smart_build_id: The ID of the smart build record
+    :param source_url: The source package URL
+    :param app_code: The code of the application
+    :param sha256_signature: The sha256 signature of the source package
+    """
+
+    def __init__(
+        self,
+        smart_build_id: str,
+        source_url: str,
+        app_code: str,
+        app_version: str,
+        sha256_signature: str,
+    ):
         self.smart_build_id = smart_build_id
         self.source_get_url = self._get_source_get_url(source_url)
 
         # 构建产物存储信息
         # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
         self.artifact_bucket = parse_url(source_url).bucket
-        self.artifact_key = f"smart_builder/s-mart_artifact_{self.smart_build_id}.tar.gz"
+        self.artifact_key = f"{app_code}-{app_version}_paas3_{sha256_signature[:7]}.tar.gz"
         self.dest_put_url = self._generate_artifact_put_url()
 
         # 将产物信息保存到构建记录中

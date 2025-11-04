@@ -136,11 +136,18 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
                 package_name=filename,
                 app_code=app_code,
                 app_version=stat.version,
+                sha256_signature=stat.sha256_signature,
                 operator=request.user.pk,
             )
             coordinator.set_smart_build(smart_build)
             # Start a background deploy task
-            SmartBuildTaskRunner(smart_build.uuid, store_url).start()
+            SmartBuildTaskRunner(
+                smart_build_id=smart_build.uuid,
+                source_url=store_url,
+                app_code=app_code,
+                app_version=stat.version,
+                sha256_signature=stat.sha256_signature,
+            ).start()
 
         data = {"build_id": str(smart_build.uuid), "stream_url": f"/streams/{smart_build.uuid}"}
         return JsonResponse(data=SmartBuildOutputSLZ(data).data, status=status.HTTP_201_CREATED)

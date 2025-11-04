@@ -173,7 +173,12 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         """获取构建日志"""
         record = get_object_or_404(SmartBuildRecord, uuid=uuid, operator=request.user)
         logs = get_all_logs(record)
-        result = {"status": record.status, "logs": logs}
+        result = {
+            "status": record.status,
+            "start_time": record.start_time,
+            "end_time": record.end_time,
+            "logs": logs,
+        }
         return JsonResponse(SmartBuildHistoryLogsOutputSLZ(result).data)
 
     def download_history_logs(self, request, uuid: str):

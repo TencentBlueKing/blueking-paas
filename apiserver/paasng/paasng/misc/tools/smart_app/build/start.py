@@ -22,6 +22,7 @@ from paas_wl.utils.blobstore import make_blob_store
 from paasng.misc.tools.smart_app.build.flow import SmartBuildStateMgr
 from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
+from paasng.misc.tools.smart_app.output import make_channel_stream
 from paasng.platform.sourcectl.package.utils import parse_url
 
 from .tasks import execute_build, execute_build_error_callback
@@ -140,7 +141,8 @@ class SmartBuildTaskRunner:
         # 如果构建结果已经缓存, 直接完成构建
         cache_manager = SmartBuildArtifactCache(self._context.artifact_bucket)
         if cache_manager.exists(self._context.artifact_key):
-            state_mgr = SmartBuildStateMgr(self.smart_build)
+            stream = make_channel_stream(self.smart_build)
+            state_mgr = SmartBuildStateMgr(self.smart_build, stream)
             state_mgr.complete_with_cache()
             return
 

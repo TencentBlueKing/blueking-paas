@@ -24,10 +24,3 @@ class SourceCodeOriginType(StrStructuredEnum):
 
     PACKAGE = EnumField("package", label=_("源码包"))
     REPO = EnumField("repo", label=_("代码仓库"))
-
-
-class SmartBuildPhaseType(StrStructuredEnum):
-    """创建 s-mart 阶段"""
-
-    PREPARATION = EnumField("preparation", label=_("准备阶段"))
-    BUILD = EnumField("build", label=_("构建阶段"))

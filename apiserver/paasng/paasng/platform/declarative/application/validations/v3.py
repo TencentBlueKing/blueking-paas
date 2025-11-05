@@ -117,7 +117,10 @@ class AppDescriptionSLZ(serializers.Serializer):
     bkAppName = AppNameField(source="name_zh_cn")
     bkAppNameEn = AppNameField(source="name_en", required=False)
     market = MarketSLZ(required=False, default=None)
-    modules = serializers.ListField(child=ModuleDescriptionSLZ())
+    modules = serializers.ListField(
+        child=ModuleDescriptionSLZ(),
+        error_messages={"not_a_list": _("模块格式不正确, 期望类型: list")},
+    )
 
     def _validate_default_module(self, modules: Dict[str, ModuleDesc]):
         """校验默认模块"""

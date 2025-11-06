@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
 from typing import TYPE_CHECKING, Dict
 
 from django.conf import settings
@@ -25,11 +24,6 @@ from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
 from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
-from paas_wl.infras.resources.base.exceptions import (
-    PodNotSucceededError,
-    ReadTargetStatusTimeout,
-    ResourceDuplicate,
-)
 from paas_wl.infras.resources.kube_res.base import Schedule
 from paasng.misc.tools.smart_app.output import make_channel_stream
 from paasng.platform.engine.constants import JobStatus
@@ -40,8 +34,6 @@ from .handler import ContainerRuntimeSpec, SmartBuilderTemplate, SmartBuildHandl
 if TYPE_CHECKING:
     from paasng.misc.tools.smart_app.models import SmartBuildRecord
     from paasng.misc.tools.smart_app.output import SmartBuildStream
-
-logger = logging.getLogger(__name__)
 
 
 class SmartAppBuilder:
@@ -70,15 +62,11 @@ class SmartAppBuilder:
             # 同步阻塞获取构建日志
             self.start_following_logs(builder_name)
             self.state_mgr.finish(JobStatus.SUCCESSFUL)
-        except ReadTargetStatusTimeout as e:
-            logger.debug("Smart build pod status read timeout")
+        except Exception as e:
             self.state_mgr.finish(JobStatus.FAILED, str(e))
-        except ResourceDuplicate as e:
-            logger.debug("Smart build pod already exists")
-            self.state_mgr.finish(JobStatus.FAILED, str(e))
-        except PodNotSucceededError as e:
-            logger.debug("Smart build pod did not succeed")
-            self.state_mgr.finish(JobStatus.FAILED, str(e))
+        finally:
+            self.stream.close()
+            self.state_mgr.coordinator.release_lock(self.smart_build)
 
     def start_following_logs(self, builder_name: str):
         """Retrieve the build logs, and check the Pod execution status."""

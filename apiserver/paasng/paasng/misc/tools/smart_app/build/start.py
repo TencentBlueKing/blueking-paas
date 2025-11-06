@@ -19,10 +19,8 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.utils import timezone
 
 from paas_wl.utils.blobstore import make_blob_store
-from paasng.misc.tools.smart_app.build.flow import SmartBuildStateMgr
 from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
-from paasng.misc.tools.smart_app.output import make_channel_stream
 from paasng.platform.sourcectl.package.utils import parse_url
 
 from .tasks import execute_build, execute_build_error_callback
@@ -60,26 +58,6 @@ def create_smart_build_record(
     return record
 
 
-class SmartBuildArtifactCache:
-    """S-Mart build artifact cache manager"""
-
-    def __init__(self, bucket: str):
-        self.bucket = bucket
-        self.blob_store = make_blob_store(bucket)
-
-    def exists(self, key: str) -> bool:
-        """Check if the artifact exists in the blob store"""
-        try:
-            return self.blob_store.get_file_metadata(key) is not None
-        except Exception:
-            return False
-
-    @staticmethod
-    def generate_artifact_key(app_code: str, app_version: str, sha256_signature: str) -> str:
-        """Generate standardized build artifact key"""
-        return f"{app_code}-{app_version}_paas3_{sha256_signature[:7]}.tar.gz"
-
-
 class SmartBuildContext:
     """S-Mart Build Context"""
 
@@ -110,6 +88,11 @@ class SmartBuildContext:
         """存储于数据库中的 URL, 用于后续创建临时下载链接"""
         return f"blobstore://{self.artifact_bucket}/{self.artifact_key}"
 
+    @staticmethod
+    def generate_artifact_key(app_code: str, app_version: str, sha256_signature: str) -> str:
+        """Generate standardized build artifact key"""
+        return f"{app_code}-{app_version}_paas3_{sha256_signature[:7]}.tar.gz"
+
 
 class SmartBuildTaskRunner:
     """S-Mart builds a task executor
@@ -130,21 +113,13 @@ class SmartBuildTaskRunner:
         sha256_signature: str,
     ):
         self.smart_build = SmartBuildRecord.objects.get(uuid=smart_build_id)
-        artifact_key = SmartBuildArtifactCache.generate_artifact_key(app_code, app_version, sha256_signature)
+        artifact_key = SmartBuildContext.generate_artifact_key(app_code, app_version, sha256_signature)
         self._context = SmartBuildContext(self.smart_build, source_url, artifact_key)
 
     def start(self):
         """Start build task"""
 
         self.prepare()
-
-        # 如果构建结果已经缓存, 直接完成构建
-        cache_manager = SmartBuildArtifactCache(self._context.artifact_bucket)
-        if cache_manager.exists(self._context.artifact_key):
-            stream = make_channel_stream(self.smart_build)
-            state_mgr = SmartBuildStateMgr(self.smart_build, stream)
-            state_mgr.complete_with_cache()
-            return
 
         execute_build.apply_async(
             args=(

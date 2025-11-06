@@ -19,8 +19,11 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.utils import timezone
 
 from paas_wl.utils.blobstore import make_blob_store
+from paasng.misc.tools.smart_app.build.flow import SmartBuildStateMgr
 from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
+from paasng.misc.tools.smart_app.output import make_channel_stream
+from paasng.platform.engine.constants import JobStatus
 from paasng.platform.sourcectl.package.utils import parse_url
 
 from .tasks import execute_build, execute_build_error_callback
@@ -30,6 +33,7 @@ def create_smart_build_record(
     package_name: str,
     app_code: str,
     app_version: str,
+    sha256_signature: str,
     operator: str,
 ) -> SmartBuildRecord:
     """Initialize s-smart package build record
@@ -49,6 +53,7 @@ def create_smart_build_record(
         package_name=package_name,
         app_code=app_code,
         app_version=app_version,
+        sha256_signature=sha256_signature,
         start_time=timezone.now(),
         operator=operator,
     )
@@ -56,52 +61,107 @@ def create_smart_build_record(
     return record
 
 
-class SmartBuildTaskRunner:
-    """S-Mart builds a task executor"""
+class SmartBuildContext:
+    """S-Mart Build Context"""
 
-    def __init__(self, smart_build_id: str, source_url: str):
-        self.smart_build_id = smart_build_id
-        self.source_get_url = self._get_source_get_url(source_url)
+    def __init__(
+        self,
+        smart_build: SmartBuildRecord,
+        source_url: str,
+        artifact_key: str,
+    ):
+        self.smart_build = smart_build
+        self.source_url = source_url
+        self.artifact_key = artifact_key
 
-        # 构建产物存储信息
-        # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
+        # TODO: 目前直接使用 prepared_packages 作为存储位置, 后续可考虑单独创建一个存储桶
         self.artifact_bucket = parse_url(source_url).bucket
-        self.artifact_key = f"smart_builder/s-mart_artifact_{self.smart_build_id}.tar.gz"
-        self.dest_put_url = self._generate_artifact_put_url()
 
-        # 将产物信息保存到构建记录中
-        self._save_artifact_info()
+    def get_source_get_url(self) -> str:
+        """获取源码包下载 URL"""
+        parsed = parse_url(self.source_url)
+        return make_blob_store(parsed.bucket).generate_presigned_url(parsed.key, expires_in=600)
+
+    def get_artifact_put_url(self) -> str:
+        """获取构建产物上传 URL"""
+        return make_blob_store(self.artifact_bucket).generate_presigned_url(
+            self.artifact_key, expires_in=600, signature_type=SignatureType.UPLOAD
+        )
+
+    def get_artifact_url(self) -> str:
+        """存储于数据库中的 URL, 用于后续创建临时下载链接"""
+        return f"blobstore://{self.artifact_bucket}/{self.artifact_key}"
+
+    @staticmethod
+    def generate_artifact_key(app_code: str, app_version: str, sha256_signature: str) -> str:
+        """Generate standardized build artifact key"""
+        return f"{app_code}-{app_version}_paas3_{sha256_signature[:7]}.tar.gz"
+
+
+class SmartBuildTaskRunner:
+    """S-Mart builds a task executor
+
+    :param smart_build_id: The ID of the smart build record
+    :param source_url: The source package URL
+    :param app_code: The code of the application
+    :param app_version: The version of the application
+    :param sha256_signature: The sha256 signature of the source package
+    """
+
+    def __init__(
+        self,
+        smart_build_id: str,
+        source_url: str,
+        app_code: str,
+        app_version: str,
+        sha256_signature: str,
+    ):
+        self.smart_build = SmartBuildRecord.objects.get(uuid=smart_build_id)
+        artifact_key = SmartBuildContext.generate_artifact_key(app_code, app_version, sha256_signature)
+        self._context = SmartBuildContext(self.smart_build, source_url, artifact_key)
 
     def start(self):
         """Start build task"""
 
+        self.prepare()
+
+        # NOTE: artifact_key 是格式化命名的, 其中包含源码包的 sha256 签名前 7 位,
+        # 可能存在不同源码包内容但 sha256 签名前 7 位相同的情况, 导致制品命中误判
+        if self._artifact_exists(self._context.artifact_key):
+            self._skip_build_with_cached_artifact()
+            return
+
         execute_build.apply_async(
             args=(
-                self.smart_build_id,
-                self.source_get_url,
-                self.dest_put_url,
+                self.smart_build.uuid,
+                self._context.get_source_get_url(),
+                self._context.get_artifact_put_url(),
             ),
             link_error=execute_build_error_callback.s(),
         )
 
-    def _get_source_get_url(self, source_url: str) -> str:
-        """获取源码包下载 URL"""
-
-        parsed = parse_url(source_url)
-        return make_blob_store(parsed.bucket).generate_presigned_url(parsed.key, expires_in=3600)
-
-    def _generate_artifact_put_url(self) -> str:
-        """获取构建产物上传 URL"""
-
-        # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
-        return make_blob_store(self.artifact_bucket).generate_presigned_url(
-            self.artifact_key, expires_in=3600, signature_type=SignatureType.UPLOAD
-        )
-
-    def _save_artifact_info(self):
-        """保存构建产物存储信息到构建记录中"""
-
-        smart_build = SmartBuildRecord.objects.get(uuid=self.smart_build_id)
-        # 使用 blobstore:// 协议格式存储
-        smart_build.artifact_url = f"blobstore://{self.artifact_bucket}/{self.artifact_key}"
+    def prepare(self):
+        """Prepare the build environment and save the build artifact information."""
+        smart_build = self.smart_build
+        smart_build.artifact_url = self._context.get_artifact_url()
         smart_build.save(update_fields=["artifact_url"])
+
+    def _artifact_exists(self, artifact_key: str):
+        """检查对象存储中制品是否存在"""
+        blob_store = make_blob_store(self._context.artifact_bucket)
+        try:
+            return blob_store.get_file_metadata(artifact_key) is not None
+        except Exception:
+            return False
+
+    def _skip_build_with_cached_artifact(self):
+        """使用缓存制品直接标记构建成功，跳过实际构建过程"""
+        stream = make_channel_stream(self.smart_build)
+        state_mgr = SmartBuildStateMgr.from_smart_build_id(self.smart_build.uuid, stream)
+
+        state_mgr.start()
+        stream.write_message("Build artifact cache hit, skip building process.")
+        state_mgr.finish(JobStatus.SUCCESSFUL)
+
+        stream.close()
+        state_mgr.coordinator.release_lock(self.smart_build)

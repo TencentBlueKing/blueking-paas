@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
 from typing import TYPE_CHECKING, Dict
 
 from django.conf import settings
@@ -35,8 +34,6 @@ from .handler import ContainerRuntimeSpec, SmartBuilderTemplate, SmartBuildHandl
 if TYPE_CHECKING:
     from paasng.misc.tools.smart_app.models import SmartBuildRecord
     from paasng.misc.tools.smart_app.output import SmartBuildStream
-
-logger = logging.getLogger(__name__)
 
 
 class SmartAppBuilder:
@@ -60,18 +57,15 @@ class SmartAppBuilder:
 
         try:
             self.state_mgr.start()
-
             # 启动构建进程
             builder_name = self.launch_build_process()
-
             # 同步阻塞获取构建日志
             self.start_following_logs(builder_name)
-
             self.state_mgr.finish(JobStatus.SUCCESSFUL)
-
+        except Exception as e:
+            self.state_mgr.finish(JobStatus.FAILED, str(e))
         finally:
             self.stream.close()
-
             self.state_mgr.coordinator.release_lock(self.smart_build)
 
     def start_following_logs(self, builder_name: str):

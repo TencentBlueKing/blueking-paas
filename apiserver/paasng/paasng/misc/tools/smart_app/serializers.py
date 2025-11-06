@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import TYPE_CHECKING, List
+from typing import List
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -26,9 +26,6 @@ from paasng.utils.models import OrderByField
 from paasng.utils.serializers import StringArrayField
 
 from .constants import SourceCodeOriginType
-
-if TYPE_CHECKING:
-    from paasng.misc.tools.smart_app.models import SmartBuildRecord
 
 
 class ToolPackageStashInputSLZ(serializers.Serializer):
@@ -94,18 +91,17 @@ class SmartBuildHistoryOutputSLZ(serializers.Serializer):
     app_version = serializers.CharField(help_text="应用版本号")
     source_origin = serializers.CharField(help_text="源码来源")
     package_name = serializers.CharField(help_text="源码包名")
+    sha256_signature = serializers.CharField(help_text="源码包 sha256 签名")
     status = serializers.CharField(help_text="构建状态")
-    spent_time = serializers.SerializerMethodField(help_text="耗时(秒)")
+    start_time = serializers.DateTimeField(help_text="开始时间", allow_null=True)
+    end_time = serializers.DateTimeField(help_text="结束时间", allow_null=True)
     created = serializers.DateTimeField(help_text="创建时间")
-
-    def get_spent_time(self, obj: "SmartBuildRecord") -> int | None:
-        if not (obj.start_time and obj.end_time):
-            return None
-        return max(0, int((obj.end_time - obj.start_time).total_seconds()))
 
 
 class SmartBuildHistoryLogsOutputSLZ(serializers.Serializer):
     """SmartBuild history logs output SLZ"""
 
     status = serializers.ChoiceField(JobStatus.get_choices(), help_text="构建状态")
+    start_time = serializers.DateTimeField(help_text="开始时间", allow_null=True)
+    end_time = serializers.DateTimeField(help_text="结束时间", allow_null=True)
     logs = serializers.CharField(help_text="构建日志")

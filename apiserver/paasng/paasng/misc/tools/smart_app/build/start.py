@@ -75,13 +75,13 @@ class SmartBuildContext:
     def get_source_get_url(self) -> str:
         """获取源码包下载 URL"""
         parsed = parse_url(self.source_url)
-        return make_blob_store(parsed.bucket).generate_presigned_url(parsed.key, expires_in=3600)
+        return make_blob_store(parsed.bucket).generate_presigned_url(parsed.key, expires_in=600)
 
     def get_artifact_put_url(self) -> str:
         """获取构建产物上传 URL"""
-        # TODO: 目前直接使用 prepared_packages 作为存储位置,后续可考虑单独创建一个存储桶
+        # TODO: 目前直接使用 prepared_packages 作为存储位置, 后续可考虑单独创建一个存储桶
         return make_blob_store(self.artifact_bucket).generate_presigned_url(
-            self.artifact_key, expires_in=3600, signature_type=SignatureType.UPLOAD
+            self.artifact_key, expires_in=600, signature_type=SignatureType.UPLOAD
         )
 
     def get_artifact_url(self) -> str:

@@ -561,8 +561,8 @@ var _ = Describe("test webhook.Validator", func() {
 				"C2G",       // Missing CPU
 				"4C",        // Missing memory
 				"4C2GExtra", // Extra characters
-				"5C1G",      // CPU exceeds max (assuming maxCPU=4)
-				"1C5G",      // Memory exceeds max (assuming maxMemory=4Gi)
+				"5C1G",      // Intentionally exceeds max CPU to test rejection
+				"1C5G",      // Intentionally exceeds max memory to test rejection
 			}
 			for _, plan := range invalidPlans {
 				Expect(paasv1alpha2.IsAvailableResQuotaPlan(plan)).To(BeFalse(), "Plan %s should be invalid", plan)

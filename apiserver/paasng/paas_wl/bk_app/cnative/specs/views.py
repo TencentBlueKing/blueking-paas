@@ -74,7 +74,7 @@ class ResQuotaPlanOptionsView(APIView):
     """资源配额方案 选项视图"""
 
     @swagger_auto_schema(
-        request_body=ResourceQuotaInputSLZ(),
+        query_serializer=ResourceQuotaInputSLZ,
         response_serializer=ResQuotaPlanSLZ(),
     )
     def get(self, request):

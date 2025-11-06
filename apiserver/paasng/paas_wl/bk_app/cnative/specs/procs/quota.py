@@ -78,7 +78,7 @@ def parse_plan_to_limit_quota(plan: str) -> ResourceQuota:
     """
     try:
         return PLAN_TO_LIMIT_QUOTA_MAP[ResQuotaPlan(plan)]
-    except Exception:
+    except (ValueError, KeyError):
         logger.debug("'%s' is not a predefined quota plan, checking custom format", plan)
 
     match = re.match(CUSTOM_RESOURCE_QUOTA_PLAN_REGEX, plan, re.IGNORECASE)
@@ -102,7 +102,7 @@ def parse_plan_to_request_quota(plan: str) -> ResourceQuota:
     """
     try:
         return PLAN_TO_REQUEST_QUOTA_MAP[ResQuotaPlan(plan)]
-    except Exception:
+    except (ValueError, KeyError):
         logger.debug("'%s' is not a predefined quota plan, checking custom format", plan)
 
     match = re.match(CUSTOM_RESOURCE_QUOTA_PLAN_REGEX, plan, re.IGNORECASE)

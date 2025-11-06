@@ -217,7 +217,7 @@
               :property="'spaceId'"
               :rules="requiredRules"
             >
-              <bk-select v-model="bkAiSpaces.spaceId">
+              <bk-select v-model="bkAiSpaces.spaceId" searchable>
                 <bk-option
                   v-for="option in bkAiSpaces.spacesList"
                   :key="option.space_id"

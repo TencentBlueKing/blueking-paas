@@ -20,3 +20,7 @@ from blue_krill.data_types.enum import EnumField, IntStructuredEnum
 
 class PluginTagIdType(IntStructuredEnum):
     UNTAGGED = EnumField(-1, label="未分类")
+
+
+# AI Agent 插件应用的模板 ID 以 bk-ai 开头
+AI_AGENT_TEMPLATE_PREFIX = "bk-ai"

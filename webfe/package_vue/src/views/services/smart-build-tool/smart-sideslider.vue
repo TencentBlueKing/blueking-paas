@@ -2,7 +2,7 @@
   <bk-sideslider
     :is-show.sync="sidesliderVisible"
     :quick-close="true"
-    :title="$t('生成 S-mart 包')"
+    :title="$t('构建 S-mart 包')"
     show-mask
     width="960"
     ext-cls="smart-sideslider-cls"
@@ -22,29 +22,9 @@
         :log-data="logData"
         :row-data="rowData"
         :key="smartKey"
-        @rebuild="handleRebuild"
+        @close-sideslider="close"
       />
       <template v-else>
-        <bk-alert
-          type="info"
-          class="mb-16"
-        >
-          <div slot="title">
-            {{
-              $t(
-                'S-mart 应用包是一种便捷的应用打包与交付方式，每个 S-mart 应用包可以直接部署到其他环境中。本工具支持将源代码打包为 S-mart 应用包。'
-              )
-            }}
-            <a
-              class="ml5"
-              :href="GLOBAL.DOC.SMART_APP_FEATURES"
-              target="_blank"
-            >
-              {{ $t('S-mart 应用特性说明') }}
-            </a>
-          </div>
-        </bk-alert>
-        <div class="g-sub-title mb-16">{{ $t('S-mart 应用源码') }}</div>
         <bk-form
           :model="formData"
           :label-width="100"
@@ -61,9 +41,9 @@
                 disabled
                 v-bk-tooltips="$t('暂不支持该类型')"
               >
-                {{ $t('代码仓库') }}
+                {{ $t('从代码仓库克隆') }}
               </bk-radio>
-              <bk-radio value="source">{{ $t('源码包') }}</bk-radio>
+              <bk-radio value="source">{{ $t('上传源码包') }}</bk-radio>
             </bk-radio-group>
           </bk-form-item>
           <bk-form-item
@@ -71,47 +51,58 @@
             label=""
             :property="'type'"
           >
-            <!-- 文件上传 -->
-            <Uploader
-              :action="uploadUrl"
-              :validate-name="/^[a-zA-Z0-9-_. ]+$/"
-              :with-credentials="true"
-              :name="'package'"
-              :max-size="500"
-              :other-params="formData"
-              :headers="uploadHeader"
-              :on-upload-success="handleSuccess"
-              :on-upload-error="handleError"
-              @file-change="handleFileChange"
-            >
+            <template v-if="!packageData">
+              <!-- 文件上传 -->
+              <Uploader
+                :action="uploadUrl"
+                :validate-name="/^[a-zA-Z0-9-_. ]+$/"
+                :with-credentials="true"
+                :name="'package'"
+                :max-size="500"
+                :other-params="formData"
+                :headers="uploadHeader"
+                :on-upload-success="handleSuccess"
+                :on-upload-error="handleError"
+                @file-change="handleFileChange"
+              >
+                <p
+                  slot="tip"
+                  class="uploader-tip f12 mt10"
+                >
+                  {{ $t('将文件拖到此处或') }}
+                  <span style="color: #3a84ff">{{ $t('点击上传') }}</span>
+                </p>
+                <div
+                  slot="custom-error"
+                  class="error-links"
+                  slot-scope="{ file }"
+                >
+                  <a
+                    class="f12"
+                    target="_blank"
+                    :href="GLOBAL.DOC.APP_DESC_DOC + '_cnative'"
+                  >
+                    {{ $t('应用描述文件') }}
+                    <i class="paasng-icon paasng-jump-link" />
+                  </a>
+                </div>
+              </Uploader>
               <p
                 slot="tip"
-                class="uploader-tip f12 mt10"
+                class="f12 mt-4"
               >
-                {{ $t('将文件拖到此处或') }}
-                <span style="color: #3a84ff">{{ $t('点击上传') }}</span>
+                {{ $t('支持的文件格式包括：.tgz 和 .tar.gz，并确保 app_desc.yaml 文件在根目录') }}
               </p>
-              <div
-                slot="custom-error"
-                class="error-links"
-                slot-scope="{ file }"
-              >
-                <a
-                  class="f12"
-                  target="_blank"
-                  :href="GLOBAL.DOC.APP_DESC_DOC"
-                >
-                  {{ $t('应用描述文件') }}
-                  <i class="paasng-icon paasng-jump-link" />
-                </a>
-              </div>
-            </Uploader>
-            <p
-              slot="tip"
-              class="f12 mt-4"
-            >
-              {{ $t('支持的文件格式包括：.tgz 和 .tar.gz，并确保 app_desc.yaml 文件在根目录') }}
-            </p>
+            </template>
+            <!-- 文件上传成功展示 -->
+            <SmartFilePreview
+              v-if="packageData"
+              :file="fileInfo"
+              :status="'success'"
+              :status-text="'上传成功'"
+              is-closable
+              @close="handleClearFile"
+            />
           </bk-form-item>
           <!-- 示例目录 -->
           <ExampleDirectory v-if="formData.type === 'source'" />
@@ -125,7 +116,7 @@
             :disabled="!packageData"
             @click="buildSmartPackage"
           >
-            {{ $t('生成') }}
+            {{ $t('构建') }}
           </bk-button>
           <bk-button
             ext-cls="btn-cls"
@@ -144,6 +135,7 @@
 import Uploader from '@/components/uploader';
 import SmartExecutionDetails from './smart-execution-details.vue';
 import ExampleDirectory from './comps/example-directory.vue';
+import SmartFilePreview from '@/views/dev-center/create-app/comps/smart-file-preview.vue';
 
 export default {
   name: 'SmartSideslider',
@@ -151,6 +143,7 @@ export default {
     Uploader,
     SmartExecutionDetails,
     ExampleDirectory,
+    SmartFilePreview,
   },
   props: {
     show: {
@@ -221,6 +214,7 @@ export default {
       return '';
     },
     close() {
+      this.$emit('close-sideslider');
       this.packageData = null;
       this.sidesliderVisible = false;
     },
@@ -237,6 +231,10 @@ export default {
     },
     handleSuccess(res) {
       this.packageData = res;
+      this.$bkMessage({
+        theme: 'success',
+        message: '文件上传成功',
+      });
     },
     // 上传失败
     handleError() {
@@ -265,29 +263,10 @@ export default {
         this.buildLoading = false;
       }
     },
-
-    /**
-     * 处理重新构建事件
-     */
-    async handleRebuild() {
-      if (!this.packageData) {
-        this.$bkMessage({
-          theme: 'error',
-          message: '请重新上传源码包',
-        });
-        return;
-      }
-      const oldBuildData = this.buildData;
-      try {
-        this.buildData = null;
-        const ret = await this.$store.dispatch('tool/smartBuild', {
-          data: this.packageData,
-        });
-        this.buildData = ret;
-      } catch (err) {
-        this.catchErrorHandler(err);
-        this.buildData = oldBuildData;
-      }
+    // 清除已上传文件
+    handleClearFile() {
+      this.packageData = null;
+      this.fileInfo = {};
     },
   },
 };

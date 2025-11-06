@@ -1,13 +1,13 @@
 <template>
   <div :class="['status-indicator', `status-indicator--${status}`]">
     <div class="status-indicator-icon">
-      <template v-if="status === 'running'">
+      <template v-if="['running', 'pending'].includes(status)">
         <round-loading />
       </template>
-      <template v-else-if="status === 'success'">
+      <template v-else-if="['success', 'successful'].includes(status)">
         <i class="paasng-icon paasng-circle-correct-filled"></i>
       </template>
-      <template v-else-if="status === 'failed'">
+      <template v-else>
         <i class="paasng-icon paasng-close-circle-shape"></i>
       </template>
     </div>
@@ -21,25 +21,19 @@
     <div class="status-indicator__details">
       <span v-if="timeTaken">{{ `${$t('耗时')}：${timeTaken}` }}</span>
     </div>
-    <div
-      class="status-indicator__action"
-      v-if="showAction && actionText"
-    >
+    <div v-if="status === 'successful'">
       <bk-button
         text
-        @click="handleAction"
+        @click="handleAction('download')"
       >
-        <i
-          class="paasng-icon paasng-stop-2"
-          v-if="status === 'running'"
-        ></i>
-        <span
-          class="retry-icon"
-          v-else-if="status === 'failed'"
-        >
-          <i class="paasng-icon paasng-back2"></i>
-        </span>
-        <span class="ml5">{{ actionText }}</span>
+        {{ $t('下载') }}
+      </bk-button>
+      <bk-button
+        text
+        class="ml10"
+        @click="handleAction('back')"
+      >
+        {{ $t('返回') }}
       </bk-button>
     </div>
   </div>
@@ -58,10 +52,6 @@ export default {
       type: String,
       default: '',
     },
-    actionText: {
-      type: String,
-      default: '',
-    },
     showAction: {
       type: Boolean,
       default: true,
@@ -71,8 +61,10 @@ export default {
     statusText() {
       switch (this.status) {
         case 'running':
+        case 'pending':
           return '执行中';
         case 'success':
+        case 'successful':
           return '执行成功';
         case 'failed':
           return '执行失败';
@@ -82,8 +74,8 @@ export default {
     },
   },
   methods: {
-    handleAction() {
-      this.$emit('action');
+    handleAction(type) {
+      this.$emit('action', type);
     },
   },
 };
@@ -119,11 +111,13 @@ export default {
     }
   }
 
-  &--running {
+  &--running,
+  &--pending {
     background-color: #e1ecff;
   }
 
-  &--success {
+  &--success,
+  &--successful {
     background-color: #daf6e5;
 
     .status-indicator-icon {
@@ -132,7 +126,8 @@ export default {
     }
   }
 
-  &--failed {
+  &--failed,
+  &--interrupted {
     background-color: #ffebeb;
 
     .status-indicator-icon {
@@ -150,15 +145,6 @@ export default {
     span {
       margin-right: 24px;
       white-space: nowrap;
-    }
-  }
-
-  &__action {
-    margin-left: auto;
-    /deep/ .bk-button-text:hover {
-      .retry-icon {
-        background-color: #699df4;
-      }
     }
   }
 }

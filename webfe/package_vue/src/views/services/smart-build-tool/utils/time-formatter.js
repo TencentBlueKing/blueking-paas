@@ -45,7 +45,7 @@ export function formatDuration(totalSeconds) {
 }
 
 /**
- * 计算两个时间点之间的时间差（使用dayjs优化，保留一位小数）
+ * 计算两个时间点之间的时间差
  * @param {string|Date|dayjs} startTime - 开始时间
  * @param {string|Date|dayjs} endTime - 结束时间 (可选，默认为当前时间)
  * @returns {string} 格式化后的时间差字符串
@@ -66,7 +66,7 @@ export function calculateTimeDiff(startTime, endTime = null) {
     }
 
     // 计算时间差（秒）
-    const diffInSeconds = end.diff(start, 'second', true); // true 表示保留小数
+    const diffInSeconds = Math.ceil(end.diff(start, 'second', true));
 
     if (diffInSeconds <= 0) {
       return '< 1秒';
@@ -78,34 +78,7 @@ export function calculateTimeDiff(startTime, endTime = null) {
   }
 }
 
-/**
- * 根据时间字符串格式计算时间差
- * @param {string} startTime - 开始时间 (格式: "2025-10-16 17:38:54")
- * @param {string} endTime - 结束时间 (格式: "2025-10-16 17:38:54")
- * @returns {string} 格式化后的时间差字符串
- */
-export function calculateDeployTime(startTime, endTime) {
-  return calculateTimeDiff(startTime, endTime);
-}
-
-/**
- * 映射API状态到组件状态
- * @param {string} apiStatus - API返回的状态 (successful, failed, pending, interrupted)
- * @returns {string} 组件状态 (successful, failed, pending, skip, default)
- */
-export function mapPhaseStatus(apiStatus) {
-  const statusMap = {
-    successful: 'successful',
-    failed: 'failed',
-    pending: 'pending',
-    interrupted: 'skip',
-  };
-  return statusMap[apiStatus] || 'default';
-}
-
 export default {
   formatDuration,
   calculateTimeDiff,
-  calculateDeployTime,
-  mapPhaseStatus,
 };

@@ -1,28 +1,21 @@
 <template>
   <section class="smart-logs-container flex-1">
-    <section class="log-title">{{ $t('生成 smart 包') }}</section>
-    <bk-multiple-log
-      ref="multipleLog"
-      search-id="multipleLog"
+    <section class="log-title">{{ $t('构建 S-mart 包') }}</section>
+    <bk-log
+      ref="bkLog"
       class="bk-log"
-      :log-list="logList"
-      @open-log="openLog"
-    >
-      <template slot-scope="log">
-        {{ log.data.name }}
-      </template>
-    </bk-multiple-log>
+      @mousewheel.native="handleUserScroll"
+    />
   </section>
 </template>
 <script>
-import { bkMultipleLog } from '@blueking/log';
+import { bkLog } from '@blueking/log';
 import { createSSE } from '@/common/tools';
-import { calculateDeployTime, mapPhaseStatus } from '../utils/time-formatter';
 
 export default {
   name: 'BuildLog',
   components: {
-    bkMultipleLog,
+    bkLog,
   },
   props: {
     streamUrl: {
@@ -36,26 +29,18 @@ export default {
     },
   },
   // 自定义事件
-  emits: ['phase-update', 'step-update', 'title-update', 'message-update'],
+  emits: ['eof', 'build-status-update'],
   data() {
     return {
       streamLogEvent: null,
-      // 当前活动的阶段
-      currentPhase: 'preparation',
-      // smart 构建日志数据
-      phaseLogData: {
-        // 准备阶段日志
-        preparation: [],
-        // 构建阶段日志
-        build: [],
-      },
-      // 日志节点列表
-      logList: [
-        { name: '准备阶段', id: 'preparation' },
-        { name: '构建阶段', id: 'build' },
-      ],
-      // 跟踪已展开的阶段日志节点
-      expandedPhases: new Set(),
+      buildLogs: [],
+      totalLogCount: 0, // 总日志行数
+      logBuffer: [], // 日志缓冲区
+      batchSize: 10, // 批量大小
+      autoScroll: true, // 是否自动滚动
+      userScrollTimer: null, // 用户滚动定时器
+      flushTimer: null, // 缓冲区刷新定时器
+      scrollCheckTimer: null, // 滚动位置检查定时器
     };
   },
   watch: {
@@ -83,6 +68,9 @@ export default {
   },
   beforeDestroy() {
     this.closeStreamLogEvent();
+    clearTimeout(this.flushTimer);
+    clearTimeout(this.userScrollTimer);
+    clearTimeout(this.scrollCheckTimer);
   },
   methods: {
     /**
@@ -96,19 +84,91 @@ export default {
       this.clearAllLogs();
 
       // 按行分割日志内容
-      const logLines = logContent.split('\n').map(line => line.replace(/\r/g, '').trim()).filter(line => line !== '');
-      logLines.forEach((line) => {
-        const logItem = {
+      const logLines = logContent
+        .split('\n')
+        .map((line) => line.replace(/\r/g, '').trim())
+        .filter((line) => line !== '');
+
+      const logs = logLines.map((line) => {
+        return {
           message: line,
           stream: 'STDOUT',
-          timestamp: new Date().toISOString(),
         };
-        // 将所有日志归到构建阶段
-        this.addLogToPhase('build', logItem);
       });
+      this.$refs.bkLog.addLogData(logs);
+
+      // 更新总数量
+      this.totalLogCount = logs.length;
+      this.$nextTick(() => {
+        this.scrollToBottom();
+      });
+    },
+
+    handleUserScroll(event) {
+      const deltaY = event.deltaY;
+
+      if (deltaY < 0) {
+        // 用户向上滚动，立即停止自动滚动
+        this.autoScroll = false;
+        clearTimeout(this.userScrollTimer);
+        clearTimeout(this.scrollCheckTimer);
+      } else if (deltaY > 0) {
+        // 用户向下滚动，检查是否到达底部
+        clearTimeout(this.scrollCheckTimer);
+        this.scrollCheckTimer = setTimeout(() => {
+          this.checkIfAtBottom();
+        }, 200);
+      }
+    },
+
+    scrollToBottom() {
+      this.$refs.bkLog?.scrollPageByIndex(9999);
+    },
+
+    // 获取滚动容器元素
+    getScrollContainer() {
+      const bkLogEl = this.$refs.bkLog?.$el;
+      const scrollContainer =
+        bkLogEl.querySelector('.log-scroll-container') ||
+        bkLogEl.querySelector('[style*="overflow"]') ||
+        bkLogEl.querySelector('.bk-log-virtual-scroll') ||
+        bkLogEl;
+      return scrollContainer;
+    },
+
+    /**
+     * 检查是否在底部
+     */
+    checkIfAtBottom() {
+      const container = this.getScrollContainer();
+      if (!container) return;
+
+      // 获取滚动信息
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // 计算距离底部的距离
+      const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+      // 恢复自动滚动
+      if (distanceToBottom <= 5) {
+        this.autoScroll = true;
+      }
+    },
+
+    // 刷新日志缓冲区
+    flushLogBuffer() {
+      if (this.logBuffer.length === 0) return;
+
+      // 批量添加日志
+      this.$refs.bkLog?.addLogData([...this.logBuffer]);
+
+      // 更新总数量
+      this.totalLogCount += this.logBuffer.length;
+
+      this.logBuffer = [];
 
       this.$nextTick(() => {
-        this.autoExpandPhaseLog('build');
+        if (this.autoScroll) {
+          this.scrollToBottom();
+        }
       });
     },
 
@@ -124,205 +184,61 @@ export default {
       // 初始化事件流
       this.streamLogEvent = createSSE(url, {
         withCredentials: true,
+        onMessage: (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            const cleanedLine = data.line?.replace(/[\r\n]+/g, '').trim();
+            if (cleanedLine === '') return;
+
+            this.buildLogs.push({ message: cleanedLine, stream: 'STDOUT' });
+
+            // 添加到缓冲区
+            this.logBuffer.push({ message: cleanedLine, stream: 'STDOUT' });
+
+            // 达到批量大小或者延迟后批量添加
+            if (this.logBuffer.length >= this.batchSize) {
+              this.flushLogBuffer();
+            } else {
+              // 防抖：100ms 内没有新日志则立即添加
+              clearTimeout(this.flushTimer);
+              this.flushTimer = setTimeout(() => {
+                this.flushLogBuffer();
+              }, 100);
+            }
+          } catch (e) {
+            console.error('消息解析错误:', e);
+          }
+        },
         onError: () => {
-          // 服务异常重新连接
-          this.addLogToCurrentPhase({ message: '正在尝试重新连接...' });
+          const errorLog = { message: '正在尝试重新连接...' };
+          this.$refs.bkLog?.addLogData([errorLog]);
+          this.totalLogCount += 1;
         },
         onEOF: () => {
+          // 确保剩余日志也被添加
+          this.flushLogBuffer();
+          this.$emit('eof', null);
           this.closeStreamLogEvent();
-          // 流式日志结束，发送EOF事件通知父组件
-          this.$emit('eof');
         },
       });
 
-      this.phaseEventHandler = (event) => {
+      this.builderProcessEventHandler = (event) => {
         const data = JSON.parse(event.data);
-
-        // 更新当前活动阶段
-        if (data.status === 'pending') {
-          this.currentPhase = data.name;
-          if (!this.phaseLogData[data.name]) {
-            this.phaseLogData[data.name] = [];
-          }
-
-          // 当阶段开始时，自动展开对应的日志节点
-          this.$nextTick(() => {
-            this.autoExpandPhaseLog(data.name);
-          });
-        }
-
-        const content = data.complete_time ? calculateDeployTime(data.start_time, data.complete_time) : '';
-
-        // 向父组件发送阶段更新事件
-        this.$emit('phase-update', {
-          name: data.name, // 阶段名称 (preparation, build 等)
-          status: mapPhaseStatus(data.status),
-          content, // 耗时信息
-          data,
-        });
+        this.$emit('build-status-update', data);
       };
 
-      this.stepEventHandler = (event) => {
-        const data = JSON.parse(event.data);
-
-        // 更新当前活动阶段
-        if (data.phase && data.status === 'pending') {
-          this.currentPhase = data.phase;
-        }
-
-        const content = data.complete_time ? calculateDeployTime(data.start_time, data.complete_time) : '';
-
-        // 向父组件发送步骤更新事件
-        this.$emit('step-update', {
-          name: data.name, // 步骤名称 (如: "校验应用描述文件")
-          phase: data.phase, // 所属阶段 (preparation, build 等)
-          status: mapPhaseStatus(data.status),
-          content, // 耗时信息
-          data,
-        });
-      };
-
-      this.messageEventHandler = (event) => {
-        const data = JSON.parse(event.data);
-        if (!data.line) return;
-        
-        const cleanedLine = data.line.replace(/[\r\n]+/g, '').trim();
-        
-        // 如果清理后的内容为空，则跳过
-        if (cleanedLine === '') return;
-        
-        const item = {
-          message: cleanedLine,
-          stream: data.stream, // STDOUT 或 STDERR
-        };
-
-        // 添加到当前活动阶段的日志中
-        this.addLogToCurrentPhase(item);
-
-        // 确保当前阶段的日志节点已展开
-        this.$nextTick(() => {
-          this.autoExpandPhaseLog(this.currentPhase);
-        });
-      };
-
-      this.eofEventHandler = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.final_status) {
-            this.$emit('phase-update', {
-              name: 'build',
-              status: mapPhaseStatus(data.final_status),
-              content: '', // 耗时信息
-              data: { name: 'build', status: data.final_status },
-            });
-          }
-          this.$emit('eof', data);
-        } catch (e) {
-          this.$emit('eof', null);
-        }
-      };
-
-      // 监听阶段切换事件
-      this.streamLogEvent.addEventListener('phase', this.phaseEventHandler);
-
-      // 监听到步骤变化
-      this.streamLogEvent.addEventListener('step', this.stepEventHandler);
-
-      // 监听消息事件
-      this.streamLogEvent.addEventListener('message', this.messageEventHandler);
-
-      // 监听EOF事件，用于更新最终状态
-      this.streamLogEvent.addEventListener('EOF', this.eofEventHandler);
+      // 监听Builder Process事件，用于更新构建状态
+      this.streamLogEvent.addEventListener('Builder Process', this.builderProcessEventHandler);
     },
 
     // 关闭事件源
     closeStreamLogEvent() {
       if (this.streamLogEvent) {
-        if (this.phaseEventHandler) {
-          this.streamLogEvent.removeEventListener('phase', this.phaseEventHandler);
+        if (this.builderProcessEventHandler) {
+          this.streamLogEvent.removeEventListener('Builder Process', this.builderProcessEventHandler);
         }
-        if (this.stepEventHandler) {
-          this.streamLogEvent.removeEventListener('step', this.stepEventHandler);
-        }
-        if (this.messageEventHandler) {
-          this.streamLogEvent.removeEventListener('message', this.messageEventHandler);
-        }
-        if (this.eofEventHandler) {
-          this.streamLogEvent.removeEventListener('EOF', this.eofEventHandler);
-        }
-        
         this.streamLogEvent.close();
         this.streamLogEvent = null; // 清空引用，避免重复使用
-      }
-    },
-
-    expendAllLog() {
-      this.logList.forEach((log) => {
-        this.$refs.multipleLog?.expendLog(log);
-      });
-    },
-
-    // 展开指定日志
-    async openLog(plugin) {
-      const phaseId = plugin.id; // 'preparation' 或 'build'
-      // 如果已经展开过，不需要重复处理
-      if (this.expandedPhases.has(phaseId)) return;
-      
-      let phaseLogs = this.phaseLogData[phaseId] || [];
-
-      if (phaseId === 'preparation' && phaseLogs.length === 0) {
-        phaseLogs = [
-          {
-            message: '暂无日志',
-            stream: 'INFO',
-            timestamp: new Date().toISOString(),
-          },
-        ];
-      }
-
-      // 标记该阶段为已展开
-      this.expandedPhases.add(phaseId);
-
-      // 先清空该阶段的日志数据，避免重复添加
-      if (this.$refs.multipleLog) {
-        try {
-          await this.$refs.multipleLog.worker.postMessage({
-            type: 'resetData',
-            id: phaseId,
-          });
-          this.$refs.multipleLog.addLogData(phaseLogs, phaseId);
-        } catch (error) {
-          console.warn(`Failed to load logs for phase ${phaseId}:`, error);
-        }
-      }
-    },
-
-    /**
-     * 将日志添加到指定阶段
-     * @param {string} phase - 阶段名称
-     * @param {Object} logItem - 日志项
-     */
-    addLogToPhase(phase, logItem) {
-      if (!phase || !logItem) return;
-
-      if (!this.phaseLogData[phase]) {
-        this.phaseLogData[phase] = [];
-      }
-
-      // 添加到指定阶段
-      this.phaseLogData[phase].push(logItem);
-    },
-
-    /**
-     * 将日志添加到当前活动阶段
-     * @param {Object} logItem - 日志项
-     */
-    addLogToCurrentPhase(logItem) {
-      this.addLogToPhase(this.currentPhase, logItem);
-
-      // 如果当前阶段的日志节点已展开，实时更新日志内容，避免重复
-      if (this.expandedPhases.has(this.currentPhase)) {
-        this.updateExpandedPhaseLog(this.currentPhase, logItem);
       }
     },
 
@@ -330,25 +246,13 @@ export default {
      * 清空所有日志数据
      */
     clearAllLogs() {
-      // 清空阶段日志数据
-      this.phaseLogData = {
-        preparation: [],
-        build: [],
-      };
-      this.currentPhase = 'preparation';
-      // 重置展开状态
-      this.expandedPhases.clear();
-
-      // 清空多日志组件的数据
-      if (this.$refs.multipleLog) {
-        this.logList.forEach((log) => {
-          this.$refs.multipleLog.worker.postMessage({
-            type: 'resetData',
-            id: log.id,
-          });
-        });
-        this.$refs.multipleLog.foldAllPlugin();
-      }
+      this.$refs.bkLog?.changeExecute();
+      this.totalLogCount = 0;
+      this.logBuffer = [];
+      this.autoScroll = true;
+      clearTimeout(this.flushTimer);
+      clearTimeout(this.userScrollTimer);
+      clearTimeout(this.scrollCheckTimer);
     },
 
     // 重新建立SSE连接
@@ -359,42 +263,6 @@ export default {
         this.getLogs();
       }, 150);
     },
-
-    /**
-     * 自动展开指定阶段的日志节点
-     * @param {string} phaseName - 阶段名称 (preparation, build 等)
-     */
-    autoExpandPhaseLog(phaseName) {
-      if (!phaseName || !this.$refs.multipleLog) return;
-
-      if (this.expandedPhases.has(phaseName)) return;
-
-      // 查找对应的日志节点
-      const targetLog = this.logList.find((log) => log.id === phaseName);
-      if (!targetLog) return;
-      this.$refs.multipleLog?.expendLog(targetLog);
-    },
-
-    /**
-     * 更新已展开阶段的日志内容
-     * @param {string} phaseName - 阶段名称
-     * @param {Object} newLogItem - 新的日志项
-     */
-    updateExpandedPhaseLog(phaseName, newLogItem) {
-      if (!phaseName || !newLogItem || !this.$refs.multipleLog) return;
-
-      if (!this.expandedPhases.has(phaseName)) return;
-
-      try {
-        // 检查该阶段的日志节点是否已展开
-        const targetLog = this.logList.find((log) => log.id === phaseName);
-        if (!targetLog) return;
-        // 将新的日志项添加到已展开的日志节点中
-        this.$refs.multipleLog.addLogData([newLogItem], phaseName);
-      } catch (error) {
-        console.warn(`Failed to update expanded log for phase ${phaseName}:`, error);
-      }
-    },
   },
 };
 </script>
@@ -403,6 +271,9 @@ export default {
 .smart-logs-container {
   display: flex;
   flex-direction: column;
+  background-color: #1e1e1e;
+  position: relative;
+
   .log-title {
     height: 40px;
     line-height: 40px;
@@ -412,34 +283,11 @@ export default {
     background: #2e2e2e;
     border-radius: 2px 2px 0 0;
   }
+
   .bk-log {
     flex: 1;
     min-height: 0;
     margin-top: 0 !important;
-    /deep/ .job-plugin-list-log {
-      /* 自定义滚动条样式 - Webkit 浏览器 */
-      &::-webkit-scrollbar {
-        width: 8px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-
-        &:hover {
-          background: rgba(255, 255, 255, 0.5);
-        }
-      }
-
-      /* Firefox 滚动条样式 */
-      scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
-    }
   }
 }
 </style>

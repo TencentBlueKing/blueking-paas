@@ -27,7 +27,7 @@
         :theme="'primary'"
         @click="handleShowSidebar"
       >
-        {{ $t('生成 S-mart 包') }}
+        {{ $t('构建 S-mart 包') }}
       </bk-button>
       <div class="tool-table-container card-style mt-16">
         <div class="top-bar mb-8 flex-row justify-content-between align-items-center">
@@ -69,7 +69,7 @@
               theme="primary"
               @click="handleShowSidebar"
             >
-              {{ $t('去生成 S-mart 包') }}
+              {{ $t('构建 S-mart 包') }}
             </bk-button>
           </div>
           <bk-table-column
@@ -78,7 +78,7 @@
             :label="column.label"
             :prop="column.prop"
             :key="column.label"
-            show-overflow-tooltip
+            :show-overflow-tooltip="column.prop !== 'sha256_signature'"
           >
             <template slot-scope="{ row }">
               <template v-if="column.prop === 'status'">
@@ -95,12 +95,17 @@
               <template v-else-if="column.prop === 'source_origin'">
                 <span>{{ sourceTypeMap[row[column.prop]] || '--' }}</span>
               </template>
+              <template v-else-if="column.prop === 'sha256_signature'">
+                <span v-bk-tooltips="{ content: row[column.prop] || '', disabled: !row[column.prop] }">
+                  {{ row[column.prop] ? row[column.prop]?.substring(0, 8) : '--' }}
+                </span>
+              </template>
               <span v-else>{{ row[column.prop] || '--' }}</span>
             </template>
           </bk-table-column>
           <bk-table-column
             :label="$t('操作')"
-            :width="140"
+            :width="localLanguage === 'en' ? 200 : 140"
           >
             <template slot-scope="{ row }">
               <bk-button
@@ -126,12 +131,13 @@
       </div>
     </div>
 
-    <!-- 生成 S-mart 包侧边栏 -->
+    <!-- 构建 S-mart 包侧边栏 -->
     <SmartSideslider
       :show.sync="smartSideConfig.visible"
       :isDetail="smartSideConfig.isDetail"
       :row-data="smartSideConfig.row"
       @refresh-list="getBuildRecords"
+      @close-sideslider="smartSideConfig.visible = false"
     />
   </div>
 </template>
@@ -140,6 +146,8 @@
 import SmartSideslider from './smart-sideslider.vue';
 import { filterUndefinedProperties } from '@/common/tools';
 import { fileDownload } from '@/common/utils';
+import { calculateTimeDiff } from './utils/time-formatter';
+import { mapState } from 'vuex';
 
 export default {
   name: 'SmartBuildTool',
@@ -176,13 +184,13 @@ export default {
     };
   },
   computed: {
+    ...mapState(['localLanguage']),
     // 状态映射配置
     statusMap() {
       return {
         successful: this.$t('成功'),
         failed: this.$t('失败'),
-        pending: this.$t('等待'),
-        interrupted: this.$t('已中断'),
+        pending: this.$t('执行中'),
       };
     },
     // 状态过滤器配置
@@ -212,6 +220,10 @@ export default {
           prop: 'package_name',
         },
         {
+          label: this.$t('摘要'),
+          prop: 'sha256_signature',
+        },
+        {
           label: this.$t('状态'),
           prop: 'status',
           filters: this.statusFilters,
@@ -219,7 +231,11 @@ export default {
           'column-key': 'status',
         },
         {
-          label: this.$t('执行时间'),
+          label: this.$t('耗时'),
+          prop: 'timeConsuming',
+        },
+        {
+          label: this.$t('操作时间'),
           prop: 'created',
           sortable: 'created',
           'column-key': 'created',
@@ -243,8 +259,12 @@ export default {
     async downloadBuildLog(row) {
       this.$set(this.downloadLoadingMap, row.uuid, true);
       try {
-        const ret = await this.$store.dispatch('tool/getSmartDownload', { id: row.uuid })
-        fileDownload(ret.download_url, `s-mart_artifact_${row.uuid}`);
+        const ret = await this.$store.dispatch('tool/getSmartDownload', { id: row.uuid });
+        fileDownload(
+          ret?.download_url,
+          `xxxxx
+        ${row.app_code}-${row.app_version}_paas3_${row.uuid?.slice(0, 8)}`
+        );
       } catch {
         this.$bkMessage({
           message: this.$t('下载文件失败'),
@@ -277,7 +297,10 @@ export default {
       try {
         const params = this.constructQueryParams();
         const res = await this.$store.dispatch('tool/getSmartBuildRecords', { params });
-        this.tableList = res.results || [];
+        this.tableList = res.results.map((item) => ({
+          ...item,
+          timeConsuming: calculateTimeDiff(item.start_time, item.end_time),
+        }));
         this.pagination.count = res.count;
         this.updateTableEmptyConfig();
         this.tableEmptyConf.isAbnormal = false;

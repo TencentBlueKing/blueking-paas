@@ -1,13 +1,14 @@
 <template>
   <div class="example-directory-wrapper">
     <p class="mb-8">{{ $t('示例目录') }}</p>
-    <div class="tree-text-wrapper">
-      <div class="single-module flex-1 flex-column">
-        <span class="f12 mb-8">{{ $t('单模块应用') }}：</span>
-        <pre
-          class="directory-tree"
-          ref="singleModuleTree"
-        >
+    <div>
+      <div class="tree-text-wrapper">
+        <div class="single-module flex-1 flex-column">
+          <span class="f12 mb-8">{{ $t('单模块应用') }}：</span>
+          <pre
+            class="directory-tree"
+            ref="singleModuleTree"
+          >
                   <i 
                     class="paasng-icon paasng-general-copy"
                     @click="copyDirectoryTree('singleModuleTree')"
@@ -16,13 +17,13 @@
 ├── urls.py
 └── requirements.txt
                 </pre>
-      </div>
-      <div class="multi-module flex-1 flex-column">
-        <span class="f12 mb-8">{{ $t('多模块应用') }}：</span>
-        <pre
-          class="directory-tree"
-          ref="multiModuleTree"
-        >
+        </div>
+        <div class="multi-module flex-1 flex-column">
+          <span class="f12 mb-8">{{ $t('多模块应用') }}：</span>
+          <pre
+            class="directory-tree"
+            ref="multiModuleTree"
+          >
                   <i 
                     class="paasng-icon paasng-general-copy"
                     @click="copyDirectoryTree('multiModuleTree')"
@@ -34,7 +35,10 @@
     └── frontend
         └── package.json
                 </pre>
+        </div>
       </div>
+      <p class="f12 mt-12 mb-8">{{ $t('可在根目录下执行如下命令生成源码包') }}：</p>
+      <pre>tar czvf xxx.tgz .</pre>
     </div>
   </div>
 </template>
@@ -69,17 +73,19 @@ export default {
     display: flex;
     gap: 16px;
   }
+  pre {
+    font-size: 12px;
+    white-space: pre;
+    color: #4d4f56;
+    line-height: 1.5;
+    font-family: monospace, 'Monaco';
+  }
   .directory-tree {
     position: relative;
     height: 100%;
     margin: 0;
     padding: 8px 12px;
-    font-size: 12px;
-    white-space: pre;
-    color: #4d4f56;
     background-color: #fff;
-    line-height: 1.5;
-    font-family: monospace, 'Monaco';
     i.paasng-general-copy {
       position: absolute;
       top: 8px;

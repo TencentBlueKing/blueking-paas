@@ -54,24 +54,10 @@ export default {
       return http.post(url, data);
     },
     /**
-     * 获取 s-mart 包构建步骤
-     */
-    getSmartBuildPhases() {
-      const url = `${BACKEND_URL}/api/tools/s-mart/build_phases/`;
-      return http.get(url);
-    },
-    /**
      * 获取 s-mart 包构建日志
      */
     getSmartBuildLogs({}, { id }) {
       const url = `${BACKEND_URL}/api/tools/s-mart/build_records/${id}/logs/`;
-      return http.get(url);
-    },
-    /**
-     * 获取 s-mart 已构建阶段状态
-     */
-    getSmartBuildPhaseStatus({}, { id }) {
-      const url = `${BACKEND_URL}/api/tools/s-mart/build_records/${id}/phases_result/`;
       return http.get(url);
     },
     /**

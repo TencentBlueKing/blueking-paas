@@ -53,6 +53,8 @@ var (
 	AppNameRegex = regexp.MustCompile("^[a-z0-9-]{1,39}$")
 	// ProcNameRegex 进程名称格式
 	ProcNameRegex = regexp.MustCompile("^[a-z0-9]([-a-z0-9]){1,11}$")
+	// ResQuotaPlanRegex 自定义资源配额格式
+	ResQuotaPlanRegex = regexp.MustCompile(`^(\d+(?:\.\d+)?)C(\d+(?:\.\d+)?)G$`)
 )
 
 // MaxDNSNameservers is the max number of nameservers in DomainResolution
@@ -392,9 +394,11 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 	}
 
 	// 3. 检查资源方案是否是受支持的
-	if !lo.Contains(AllowedResQuotaPlans, proc.ResQuotaPlan) {
-		return field.NotSupported(
-			pField.Child("resQuotaPlan"), proc.ResQuotaPlan, stringx.ToStrArray(AllowedResQuotaPlans),
+	if !IsAvailableResQuotaPlan(proc.ResQuotaPlan) {
+		return field.Invalid(
+			pField.Child("resQuotaPlan"),
+			proc.ResQuotaPlan,
+			"invalid resource quota plan format.",
 		)
 	}
 
@@ -744,9 +748,11 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		if !lo.Contains(r.getProcNames(), q.Process) {
 			return field.Invalid(resQuotaField.Child("process"), q.Process, "process name is invalid")
 		}
-		if !lo.Contains(AllowedResQuotaPlans, q.Plan) {
-			return field.NotSupported(
-				resQuotaField.Child("plan"), q.Plan, stringx.ToStrArray(AllowedResQuotaPlans),
+		if !IsAvailableResQuotaPlan(q.Plan) {
+			return field.Invalid(
+				resQuotaField.Child("plan"),
+				q.Plan,
+				"invalid resource quota plan format.",
 			)
 		}
 	}
@@ -807,4 +813,30 @@ func (r *BkApp) validateComponents() *field.Error {
 		}
 	}
 	return nil
+}
+
+// IsAvailableResQuotaPlan checks whether the given resource quota plan is supported.
+func IsAvailableResQuotaPlan(plan ResQuotaPlan) bool {
+	if lo.Contains(AllowedResQuotaPlans, plan) {
+		return true
+	}
+
+	matches := ResQuotaPlanRegex.FindStringSubmatch(string(plan))
+	if len(matches) != 3 {
+		return false
+	}
+
+	cpuStr, memStr := matches[1], matches[2]
+
+	if _, err := quota.NewQuantity(cpuStr, quota.CPU); err != nil {
+		return false
+	}
+
+	// The "G" in the plan corresponds to the "Gi" in k8s.
+	memoryStr := fmt.Sprintf("%sGi", memStr)
+	if _, err := quota.NewQuantity(memoryStr, quota.Memory); err != nil {
+		return false
+	}
+
+	return true
 }

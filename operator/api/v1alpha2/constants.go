@@ -150,7 +150,8 @@ const (
 // AllowedScalingPolicies 允许使用的扩缩容策略
 var AllowedScalingPolicies = []ScalingPolicy{ScalingPolicyDefault}
 
-// AllowedResQuotaPlans 允许使用的资源配额方案
+// AllowedResQuotaPlans 允许使用的资源配额方案（预定义方案）
+// NOTE: 自定义方案格式不在此列出，允许使用的自定义方案格式为 "{CPU}C{Memory}G"
 var AllowedResQuotaPlans = []ResQuotaPlan{
 	ResQuotaPlanDefault,
 	ResQuotaPlan4C1G,

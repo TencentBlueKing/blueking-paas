@@ -35,7 +35,7 @@ import (
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/components/manager"
+	components "bk.tencent.com/paas-app-operator/pkg/components/manager"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
@@ -243,10 +243,16 @@ var _ = Describe("test webhook.Validator", func() {
 			).To(ContainSubstring(fmt.Sprintf("at most support %d replicas", config.Global.GetProcMaxReplicas())))
 		})
 
+		It("custom resource quota plan", func() {
+			bkapp.Spec.Processes[0].ResQuotaPlan = "2C2G"
+			err := bkapp.ValidateCreate()
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
 		It("resource quota plan unsupported", func() {
 			bkapp.Spec.Processes[0].ResQuotaPlan = "fake"
 			err := bkapp.ValidateCreate()
-			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"4C1G\""))
+			Expect(err.Error()).To(ContainSubstring("invalid resource quota plan format"))
 		})
 	})
 
@@ -533,6 +539,51 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 	})
 
+	Context("Test custom ResQuotaPlan validation", func() {
+		It("should accept valid custom plans", func() {
+			validPlans := []paasv1alpha2.ResQuotaPlan{
+				"4C2G",
+				"0.5C1.5G",
+				"2C0.5G",
+				"1C1G",
+				"0.1C0.25G",
+			}
+			for _, plan := range validPlans {
+				Expect(paasv1alpha2.IsAvailableResQuotaPlan(plan)).To(BeTrue(), "Plan %s should be valid", plan)
+			}
+		})
+
+		It("should reject invalid custom plans", func() {
+			invalidPlans := []paasv1alpha2.ResQuotaPlan{
+				"1C1X",      // Invalid unit
+				"invalid",   // Does not match regex
+				"4C2",       // Missing unit
+				"C2G",       // Missing CPU
+				"4C",        // Missing memory
+				"4C2GExtra", // Extra characters
+				"5C1G",      // CPU exceeds max (assuming maxCPU=4)
+				"1C5G",      // Memory exceeds max (assuming maxMemory=4Gi)
+			}
+			for _, plan := range invalidPlans {
+				Expect(paasv1alpha2.IsAvailableResQuotaPlan(plan)).To(BeFalse(), "Plan %s should be invalid", plan)
+			}
+		})
+
+		It("should accept predefined plans", func() {
+			predefinedPlans := []paasv1alpha2.ResQuotaPlan{
+				paasv1alpha2.ResQuotaPlanDefault,
+				paasv1alpha2.ResQuotaPlan4C1G,
+				paasv1alpha2.ResQuotaPlan4C2G,
+				paasv1alpha2.ResQuotaPlan4C4G,
+			}
+			for _, plan := range predefinedPlans {
+				Expect(
+					paasv1alpha2.IsAvailableResQuotaPlan(plan),
+				).To(BeTrue(), "Predefined plan %s should be valid", plan)
+			}
+		})
+	})
+
 	Context("Test mounts", func() {
 		It("Normal", func() {
 			bkapp.Spec.Mounts = []paasv1alpha2.Mount{
@@ -787,7 +838,7 @@ var _ = Describe("test webhook.Validator", func() {
 				{EnvName: "stag", Process: "web", Plan: "invalid-plan"},
 			}
 			err := bkapp.ValidateCreate()
-			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"4C1G\""))
+			Expect(err.Error()).To(ContainSubstring("invalid resource quota plan format"))
 		})
 		It("[envVariables] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.EnvVariables = []paasv1alpha2.EnvVarOverlay{

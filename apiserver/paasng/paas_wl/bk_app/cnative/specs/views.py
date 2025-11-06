@@ -32,7 +32,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount
 from paas_wl.bk_app.cnative.specs.mounts import (
@@ -41,7 +40,7 @@ from paas_wl.bk_app.cnative.specs.mounts import (
     check_storage_class_exists,
     init_volume_source_controller,
 )
-from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
+from paas_wl.bk_app.cnative.specs.procs.quota import parse_plan_to_limit_quota, parse_plan_to_request_quota
 from paas_wl.bk_app.cnative.specs.serializers import (
     AppModelRevisionSerializer,
     CreateMountSourceSLZ,
@@ -50,6 +49,7 @@ from paas_wl.bk_app.cnative.specs.serializers import (
     MountSourceSLZ,
     QueryMountSourcesSLZ,
     QueryMountsSLZ,
+    ResourceQuotaInputSLZ,
     ResQuotaPlanSLZ,
     UpdateMountSourceSLZ,
     UpsertMountSLZ,
@@ -73,20 +73,24 @@ logger = logging.getLogger(__name__)
 class ResQuotaPlanOptionsView(APIView):
     """资源配额方案 选项视图"""
 
-    @swagger_auto_schema(response_serializer=ResQuotaPlanSLZ(many=True))
+    @swagger_auto_schema(
+        request_body=ResourceQuotaInputSLZ(),
+        response_serializer=ResQuotaPlanSLZ(),
+    )
     def get(self, request):
+        slz = ResourceQuotaInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        params = slz.validated_data
+        plan = params["plan"]
+
         return Response(
             data=ResQuotaPlanSLZ(
-                [
-                    {
-                        "name": ResQuotaPlan.get_choice_label(plan),
-                        "value": str(plan),
-                        "limit": PLAN_TO_LIMIT_QUOTA_MAP[plan],
-                        "request": PLAN_TO_REQUEST_QUOTA_MAP[plan],
-                    }
-                    for plan in ResQuotaPlan.get_values()
-                ],
-                many=True,
+                {
+                    "name": plan,
+                    "value": plan,
+                    "limit": parse_plan_to_limit_quota(plan),
+                    "request": parse_plan_to_request_quota(plan),
+                }
             ).data
         )
 

@@ -20,7 +20,6 @@ from typing import List, Optional
 
 from pydantic import Field
 
-from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import NOTSET, AllowNotsetModel, NotSetType
 
@@ -41,7 +40,7 @@ class Process(AllowNotsetModel):
     :param services: 暴露进程网路服务的 service 列表
     :param target_port: [deprecated] 监听端口. 由 services[].target_port 替代
     :param replicas: 进程副本数. `None` value means the replicas is not specified.
-    :param res_quota_plan: 资源配额套餐名
+    :param res_quota_plan: 资源配额套餐名, 支持自定义
     :param autoscaling: 自动扩缩容配置
     :param probes: 健康检查配置
     :param components: 进程组件
@@ -57,7 +56,7 @@ class Process(AllowNotsetModel):
     target_port: Optional[int] = None
 
     replicas: int | NotSetType | None = NOTSET
-    res_quota_plan: Optional[ResQuotaPlan] = None
+    res_quota_plan: Optional[str] = None
     autoscaling: AutoscalingConfig | NotSetType | None = NOTSET
 
     probes: Optional[ProbeSet] = None

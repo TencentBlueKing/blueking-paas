@@ -49,7 +49,7 @@ from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SecretSource, VolumeSource
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
-from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
+from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, is_available_res_quota_plan
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding
@@ -260,14 +260,11 @@ class ProcessesManifestConstructor(ManifestConstructor):
         model_res.spec.envOverlay = overlay
 
     @staticmethod
-    def get_quota_plan(spec_plan_name: str) -> ResQuotaPlan:
-        """Get ProcessSpecPlan by name and transform it to ResQuotaPlan"""
-        try:
-            return ResQuotaPlan(spec_plan_name)
-        except ValueError:
-            logger.debug(
-                "unknown ResQuotaPlan value `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name
-            )
+    def get_quota_plan(spec_plan_name: str) -> str:
+        """Get ProcessSpecPlan by name and transform it to ResQuotaPlan value."""
+
+        if is_available_res_quota_plan(spec_plan_name):
+            return spec_plan_name
 
         try:
             spec_plan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
@@ -283,9 +280,9 @@ class ProcessesManifestConstructor(ManifestConstructor):
         )
         for limit_memory, quota_plan in quota_plan_memory:
             if limit_memory >= expected_limit_memory:
-                return ResQuotaPlan(quota_plan)
+                return ResQuotaPlan(quota_plan).value
         # quota_plan_memory[-1][1] 是内存最大 plan
-        return ResQuotaPlan(quota_plan_memory[-1][1])
+        return ResQuotaPlan(quota_plan_memory[-1][1]).value
 
     def get_command_and_args(self, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
         """Get the command and args from the process_spec object.

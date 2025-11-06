@@ -19,10 +19,12 @@ import logging
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, PersistentStorageSize, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
 from paas_wl.bk_app.cnative.specs.mounts import init_volume_source_controller
+from paas_wl.bk_app.cnative.specs.procs.quota import is_available_res_quota_plan
 
 from .models import AppModelRevision, ConfigMapSource, Mount, PersistentStorageSource
 
@@ -35,6 +37,15 @@ class AppModelRevisionSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppModelRevision
         exclude = ("module_id", "yaml_value")
+
+
+class ResourceQuotaInputSLZ(serializers.Serializer):
+    plan = serializers.CharField(help_text="资源配额计划")
+
+    def validate_plan(self, data):
+        if not is_available_res_quota_plan(data):
+            raise ValidationError(_("无效的资源配额方案"))
+        return data
 
 
 class ResourceQuotaSLZ(serializers.Serializer):

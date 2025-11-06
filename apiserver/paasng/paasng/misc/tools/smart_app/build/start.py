@@ -19,8 +19,11 @@ from blue_krill.storages.blobstore.base import SignatureType
 from django.utils import timezone
 
 from paas_wl.utils.blobstore import make_blob_store
+from paasng.misc.tools.smart_app.build.flow import SmartBuildStateMgr
 from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
+from paasng.misc.tools.smart_app.output import make_channel_stream
+from paasng.platform.engine.constants import JobStatus
 from paasng.platform.sourcectl.package.utils import parse_url
 
 from .tasks import execute_build, execute_build_error_callback
@@ -70,6 +73,8 @@ class SmartBuildContext:
         self.smart_build = smart_build
         self.source_url = source_url
         self.artifact_key = artifact_key
+
+        # TODO: 目前直接使用 prepared_packages 作为存储位置, 后续可考虑单独创建一个存储桶
         self.artifact_bucket = parse_url(source_url).bucket
 
     def get_source_get_url(self) -> str:
@@ -79,7 +84,6 @@ class SmartBuildContext:
 
     def get_artifact_put_url(self) -> str:
         """获取构建产物上传 URL"""
-        # TODO: 目前直接使用 prepared_packages 作为存储位置, 后续可考虑单独创建一个存储桶
         return make_blob_store(self.artifact_bucket).generate_presigned_url(
             self.artifact_key, expires_in=600, signature_type=SignatureType.UPLOAD
         )
@@ -121,6 +125,12 @@ class SmartBuildTaskRunner:
 
         self.prepare()
 
+        # NOTE: artifact_key 是格式化命名的, 其中包含源码包的 sha256 签名前 7 位,
+        # 可能存在不同源码包内容但 sha256 签名前 7 位相同的情况, 导致制品命中误判
+        if self._artifact_exists(self._context.artifact_key):
+            self._skip_build_with_cached_artifact()
+            return
+
         execute_build.apply_async(
             args=(
                 self.smart_build.uuid,
@@ -135,3 +145,23 @@ class SmartBuildTaskRunner:
         smart_build = self.smart_build
         smart_build.artifact_url = self._context.get_artifact_url()
         smart_build.save(update_fields=["artifact_url"])
+
+    def _artifact_exists(self, artifact_key: str):
+        """检查对象存储中制品是否存在"""
+        blob_store = make_blob_store(self._context.artifact_bucket)
+        try:
+            return blob_store.get_file_metadata(artifact_key) is not None
+        except Exception:
+            return False
+
+    def _skip_build_with_cached_artifact(self):
+        """使用缓存制品直接标记构建成功，跳过实际构建过程"""
+        stream = make_channel_stream(self.smart_build)
+        state_mgr = SmartBuildStateMgr.from_smart_build_id(self.smart_build.uuid, stream)
+
+        state_mgr.start()
+        stream.write_message("Build artifact cache hit, skip building process.")
+        state_mgr.finish(JobStatus.SUCCESSFUL)
+
+        stream.close()
+        state_mgr.coordinator.release_lock(self.smart_build)

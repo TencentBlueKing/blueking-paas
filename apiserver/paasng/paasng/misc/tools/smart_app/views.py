@@ -136,11 +136,18 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
                 package_name=filename,
                 app_code=app_code,
                 app_version=stat.version,
+                sha256_signature=stat.sha256_signature,
                 operator=request.user.pk,
             )
             coordinator.set_smart_build(smart_build)
             # Start a background deploy task
-            SmartBuildTaskRunner(smart_build.uuid, store_url).start()
+            SmartBuildTaskRunner(
+                smart_build_id=smart_build.uuid,
+                source_url=store_url,
+                app_code=app_code,
+                app_version=stat.version,
+                sha256_signature=stat.sha256_signature,
+            ).start()
 
         data = {"build_id": str(smart_build.uuid), "stream_url": f"/streams/{smart_build.uuid}"}
         return JsonResponse(data=SmartBuildOutputSLZ(data).data, status=status.HTTP_201_CREATED)
@@ -166,7 +173,12 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         """获取构建日志"""
         record = get_object_or_404(SmartBuildRecord, uuid=uuid, operator=request.user)
         logs = get_all_logs(record)
-        result = {"status": record.status, "logs": logs}
+        result = {
+            "status": record.status,
+            "start_time": record.start_time,
+            "end_time": record.end_time,
+            "logs": logs,
+        }
         return JsonResponse(SmartBuildHistoryLogsOutputSLZ(result).data)
 
     def download_history_logs(self, request, uuid: str):

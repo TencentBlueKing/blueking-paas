@@ -286,6 +286,10 @@ const descriptionFileConversion = () => import(/* webpackChunkName: 'services' *
   window.showDeployTip(error);
 });
 
+const smartBuildTool = () => import(/* webpackChunkName: 'services' */'@/views/services/smart-build-tool').then(module => module).catch((error) => {
+  window.showDeployTip(error);
+});
+
 const srvV3Services = () => import(/* webpackChunkName: 'services' */'@/views/services/v3-services').then(module => module).catch((error) => {
   window.showDeployTip(error);
 });
@@ -1011,6 +1015,14 @@ const router = new Router({
           path: 'file-conversion',
           component: descriptionFileConversion,
           name: 'descriptionFileConversion',
+          meta: {
+            notMinHeight: true,
+          },
+        },
+        {
+          path: 'smart-build-tool',
+          component: smartBuildTool,
+          name: 'smartBuildTool',
           meta: {
             notMinHeight: true,
           },

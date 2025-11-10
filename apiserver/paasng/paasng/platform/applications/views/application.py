@@ -375,11 +375,12 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         product = application.get_product()
 
         web_config = application.config_info
+        application._deploy_info = get_exposed_links(application)
         # We may not reuse this structure, so I will not make it a serializer
         return Response(
             {
                 "role": slzs.RoleField().to_representation(main_role),
-                "application": slzs.ApplicationSLZ(application).data,
+                "application": slzs.ApplicationWithDeployInfoSLZ(application).data,
                 "product": slzs.ProductSLZ(product).data if product else None,
                 "marked": UserMarkedApplication.objects.filter(
                     application=application, owner=request.user.pk

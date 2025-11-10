@@ -44,6 +44,17 @@ export default [
     sublist: [],
   },
   {
+    groupId: 'devTools',
+    name: 'smartBuildTool',
+    label: i18n.t('S-mart 打包工具'),
+    iconfontName: 'storehouse',
+    matchRouters: ['smartBuildTool'],
+    destRoute: {
+      name: 'smartBuildTool',
+    },
+    sublist: [],
+  },
+  {
     groupId: 'serve',
     name: 'serviceAPIGateway',
     label: i18n.t('API 网关'),

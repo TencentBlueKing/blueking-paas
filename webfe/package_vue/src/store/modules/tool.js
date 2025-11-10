@@ -39,5 +39,33 @@ export default {
       const url = `${BACKEND_URL}/api/services/name/${name}/application-attachments/?${json2Query(params)}`;
       return http.get(url);
     },
+    /**
+     * 获取 s-mart 打包历史
+     */
+    getSmartBuildRecords({}, { params }) {
+      const url = `${BACKEND_URL}/api/tools/s-mart/build_records/?${json2Query(params)}`;
+      return http.get(url);
+    },
+    /**
+     * s-mart 包构建
+     */
+    smartBuild({}, { data }) {
+      const url = `${BACKEND_URL}/api/tools/s-mart/build/`;
+      return http.post(url, data);
+    },
+    /**
+     * 获取 s-mart 包构建日志
+     */
+    getSmartBuildLogs({}, { id }) {
+      const url = `${BACKEND_URL}/api/tools/s-mart/build_records/${id}/logs/`;
+      return http.get(url);
+    },
+    /**
+     * 获取 s-mart 包下载链接
+     */
+    getSmartDownload({}, { id }) {
+      const url = `${BACKEND_URL}/api/tools/s-mart/build_records/${id}/artifact/download/`;
+      return http.get(url);
+    },
   },
 };

@@ -82,9 +82,14 @@ $spacing-values: 4, 6, 8, 10, 12, 16, 20, 24;
   border-radius: 50%;
   background: #f0f1f5;
   border: 1px solid #c4c6cc;
-  &.success {
+  &.success,
+  &.successful {
     background: #CBF0DA;
     border: 1px solid #2CAF5E;
+  }
+  &.failed {
+    background: #FFDDDD;
+    border: 1px solid #EA3636;
   }
 }
 /* dot 状态样式 end */

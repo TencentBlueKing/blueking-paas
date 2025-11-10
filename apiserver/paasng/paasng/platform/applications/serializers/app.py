@@ -234,7 +234,9 @@ class ApplicationSLZ(serializers.ModelSerializer):
 
 class ApplicationWithDeployInfoSLZ(ApplicationSLZ):
     deploy_info = serializers.JSONField(read_only=True, source="_deploy_info", help_text="部署状态")
-    preferred_prod_url = serializers.SerializerMethodField(help_text="首选的生产环境访问地址")
+    preferred_prod_url = serializers.SerializerMethodField(
+        help_text="首选的生产环境访问地址，没有返回值时依然从 deploy_info 获取生产环境访问地址"
+    )
 
     def get_preferred_prod_url(self, obj: Application) -> str | None:
         """获取首选的生产环境访问地址"""

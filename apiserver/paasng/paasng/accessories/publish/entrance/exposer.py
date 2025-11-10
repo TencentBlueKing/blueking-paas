@@ -24,7 +24,6 @@ from paas_wl.core.env import env_is_running
 from paas_wl.workloads.networking.entrance.addrs import EnvExposedURL
 from paas_wl.workloads.networking.entrance.handlers import refresh_module_domains
 from paas_wl.workloads.networking.entrance.shim import get_builtin_addr_preferred
-from paasng.accessories.publish.market.models import MarketConfig
 from paasng.platform.applications.models import Application, ModuleEnvironment
 from paasng.platform.modules.constants import ExposedURLType
 from paasng.platform.modules.models import Module
@@ -55,21 +54,8 @@ def get_module_exposed_links(module: Module) -> Dict[str, Dict]:
 
 
 def get_exposed_links(application: Application) -> Dict:
-    """Return exposed links for default module
-
-    - If Market Config is enabled, the prod environment link will use market configured domain
-    """
-    from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
-
-    exposed_links = get_module_exposed_links(application.get_default_module())
-    market_config: MarketConfig = MarketConfig.objects.get_or_create_by_app(application)[0]
-    if market_config.enabled:
-        helper = MarketAvailableAddressHelper(market_config)
-        access_entrance = helper.access_entrance
-        if access_entrance:
-            exposed_links["prod"]["url"] = access_entrance.address
-
-    return exposed_links
+    """Return exposed links for default module"""
+    return get_module_exposed_links(application.get_default_module())
 
 
 def get_exposed_url(module_env: ModuleEnvironment) -> Optional[EnvExposedURL]:

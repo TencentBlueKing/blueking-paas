@@ -346,7 +346,7 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if module.get_source_origin() == SourceOrigin.IMAGE_REGISTRY:
             return self._modify_image(request, code, module_name)
 
-        if module.source_origin == SourceOrigin.AI_AGENT:
+        if module.get_source_origin() == SourceOrigin.AI_AGENT:
             # AI agent 应用切换源码仓库后，需要将该应用来源更改为 Authorized VCS
             # 切换到源码部署模式之后, 不可再切换为包部署模式
             module.source_origin = SourceOrigin.AUTHORIZED_VCS

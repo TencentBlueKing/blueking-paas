@@ -57,7 +57,7 @@ def get_module_exposed_links(module: Module) -> Dict[str, Dict]:
 def get_exposed_links(application: Application) -> Dict:
     """Return exposed links for default module
 
-    - If Market Config is enabled, the prod environment link will be use market configured domain
+    - If Market Config is enabled, the prod environment link will use market configured domain
     """
     from paasng.accessories.publish.market.utils import MarketAvailableAddressHelper
 

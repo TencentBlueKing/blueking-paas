@@ -89,9 +89,9 @@ class StorageConfig:
     """
 
     storage_cluster_id: int
-    retention: int = 14
-    es_shards: int = 1
-    storage_replies: int = 1
+    retention: int
+    es_shards: int
+    storage_replies: int
     allocation_min_days: int = 0
 
 

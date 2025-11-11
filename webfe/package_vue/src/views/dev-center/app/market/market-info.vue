@@ -635,7 +635,6 @@ export default {
         if (res.enabled) {
           this.marketAddress = res.market_address;
         }
-        bus.$emit('market_switch');
         this.$store.commit('updateCurAppMarketPublished', res.enabled);
       } catch (e) {
         this.$paasMessage({

@@ -68,16 +68,16 @@
           <template v-if="appDeployed">
             <div class="link">
               <a
-                v-if="appLinks.stag"
-                :href="appLinks.stag"
+                v-if="stagLink"
+                :href="stagLink"
                 target="_blank"
                 class="blue"
               >
                 {{ $t('预发布环境') }}
               </a>
               <a
-                v-if="appLinks.prod"
-                :href="appLinks.prod"
+                v-if="prodLink"
+                :href="prodLink"
                 target="_blank"
                 class="blue"
               >
@@ -186,10 +186,6 @@ export default {
       isFocused: false,
       filterKey: '',
       appList: [],
-      appLinks: {
-        stag: '',
-        prod: '',
-      },
       customDomainEntrances: {},
       isDropdownShow: false,
     };
@@ -203,7 +199,7 @@ export default {
       };
     },
     appDeployed() {
-      return this.appLinks.stag || this.appLinks.prod;
+      return this.stagLink || this.prodLink;
     },
     engineAbled() {
       return this.appInfo.web_config && this.appInfo.web_config.engine_enabled;
@@ -213,6 +209,12 @@ export default {
     },
     platformFeature() {
       return this.$store.state.platformFeature;
+    },
+    stagLink() {
+      return this.appInfo?.deploy_info?.stag?.url;
+    },
+    prodLink() {
+      return this.appInfo?.preferred_prod_url || this.appInfo?.deploy_info?.prod?.url;
     },
   },
   watch: {
@@ -225,7 +227,6 @@ export default {
       }
     },
     appCode() {
-      this.getAppLinks();
       this.fetchAppCustomDomainEntrance();
     },
     isDropdownShow() {
@@ -233,13 +234,9 @@ export default {
     },
   },
   created() {
-    this.getAppLinks();
     this.fetchAppCustomDomainEntrance();
   },
   mounted() {
-    bus.$on('market_switch', () => {
-      this.getAppLinks();
-    });
     bus.$on('update_entrance', () => {
       this.fetchAppCustomDomainEntrance();
     });
@@ -282,21 +279,6 @@ export default {
     },
     focusInput(isFocus) {
       this.isFocused = isFocus;
-    },
-    // update appLinks when dropdown
-    getAppLinks() {
-      if (this.curAppInfo.web_config.engine_enabled) {
-        ['stag', 'prod'].forEach((env) => {
-          this.$store
-            .dispatch('fetchAppExposedLinkUrl', {
-              appCode: this.appCode,
-              env,
-            })
-            .then((link) => {
-              this.appLinks[env] = link;
-            });
-        });
-      }
     },
     // 切换APP后的回调方法
     selectAppCallback() {

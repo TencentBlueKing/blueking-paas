@@ -216,7 +216,7 @@ export default {
           prop: 'app_version',
         },
         {
-          label: this.$t('源码包 / 代码分支'),
+          label: this.$t('源码包'),
           prop: 'package_name',
         },
         {

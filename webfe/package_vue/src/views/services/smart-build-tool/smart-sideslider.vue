@@ -231,10 +231,6 @@ export default {
     },
     handleSuccess(res) {
       this.packageData = res;
-      this.$bkMessage({
-        theme: 'success',
-        message: '文件上传成功',
-      });
     },
     // 上传失败
     handleError() {

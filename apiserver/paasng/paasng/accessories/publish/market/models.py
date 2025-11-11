@@ -279,7 +279,7 @@ class MarketConfigManager(models.Manager):
         Only returns URLs when MarketConfig is enabled and source_url_type is CUSTOM_DOMAIN.
 
         :param applications: List of Application objects
-        :return: Dict[app_id: str, url: str | None
+        :return: Dict[app_id: str, url: str | None]
         """
         if not applications:
             return {}

@@ -11,11 +11,10 @@
           v-if="!isPermissionChecking"
           class="perm-action"
         >
-          <div :class="['perm-icon', { 'active': isUseUserPermission }]">
+          <div :class="['perm-icon', { active: isUseUserPermission }]">
             <span
-              :class="['paasng-icon',
-                       { 'paasng-lock': !isUseUserPermission, 'paasng-unlock': isUseUserPermission }]">
-            </span>
+              :class="['paasng-icon', { 'paasng-lock': !isUseUserPermission, 'paasng-unlock': isUseUserPermission }]"
+            ></span>
           </div>
           <div class="perm-title flex-row align-items-center">
             {{ $t('用户限制') }}
@@ -23,23 +22,24 @@
               class="ps-switcher-wrapper"
               @click="togglePermission"
             >
-              <bk-switcher
-                v-model="isUseUserPermission"
-              />
+              <bk-switcher v-model="isUseUserPermission" />
             </div>
-            <div class="perm-status" :class="isUseUserPermission ? 'perm-status-open' : 'perm-status-close'">
+            <div
+              class="perm-status"
+              :class="isUseUserPermission ? 'perm-status-open' : 'perm-status-close'"
+            >
               {{ isUseUserPermission ? $t('已开启') : $t('未开启') }}
             </div>
           </div>
           <p class="perm-tip">
-            {{ isUseUserPermission ?
-              $t('开启用户限制后，仅白名单中的用户才能访问应用，预发布环境、生产环境同时生效')
-              : $t('开启用户限制后，仅白名单中的用户才能访问应用，预发布环境、生产环境同时生效') }}
+            {{ $t('启用用户限制后，仅白名单用户可访问应用主模块，预发布和生产环境同时生效。') }}
             <a
               class="a-link"
               :href="GLOBAL.DOC.ACCESS_CONTROL"
               target="_blank"
-            > {{ $t('功能说明') }} </a>
+            >
+              {{ $t('功能说明') }}
+            </a>
           </p>
         </div>
         <template v-if="!isPermissionChecking && isUseUserPermission">
@@ -48,16 +48,22 @@
               v-for="(panel, index) in userPanels"
               :key="index"
               @click="active = panel.name"
-              :class="active === panel.name ? 'is-selected' : ''">
-              {{ panel.label }}</bk-button>
+              :class="active === panel.name ? 'is-selected' : ''"
+            >
+              {{ panel.label }}
+            </bk-button>
           </div>
-          <section class="table-container mt15" v-if="active === 'whiteList'">
+          <section
+            class="table-container mt15"
+            v-if="active === 'whiteList'"
+          >
             <div class="ps-table-bar">
               <bk-button
                 theme="primary"
                 @click="showUserModal"
               >
-                <i class="paasng-icon paasng-plus mr5" /> {{ $t('添加白名单') }}
+                <i class="paasng-icon paasng-plus mr5" />
+                {{ $t('添加白名单') }}
               </bk-button>
               <bk-dropdown-menu
                 ref="largeDropdown"
@@ -77,21 +83,25 @@
                   <li>
                     <a
                       href="javascript:;"
-                      style="margin: 0;"
+                      style="margin: 0"
                       @click="handleExport('file')"
-                    > {{ $t('从文件导入') }} </a>
+                    >
+                      {{ $t('从文件导入') }}
+                    </a>
                   </li>
                   <li>
                     <a
                       href="javascript:;"
-                      style="margin: 0;"
+                      style="margin: 0"
                       @click="handleExport('batch')"
-                    > {{ $t('批量导出') }} </a>
+                    >
+                      {{ $t('批量导出') }}
+                    </a>
                   </li>
                 </ul>
               </bk-dropdown-menu>
               <bk-button
-                style="margin-left: 6px;"
+                style="margin-left: 6px"
                 :disabled="isBatchDisabled"
                 @click="batchDelete"
               >
@@ -99,7 +109,7 @@
               </bk-button>
               <bk-input
                 v-model="keyword"
-                style="width: 240px; float: right;"
+                style="width: 240px; float: right"
                 :placeholder="$t('输入关键字，按Enter搜索')"
                 :right-icon="'paasng-icon paasng-search'"
                 clearable
@@ -150,7 +160,7 @@
                 :show-overflow-tooltip="false"
               >
                 <template slot-scope="{ row }">
-                  <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
+                  <span v-bk-tooltips="row.created">{{ smartTime(row.created, 'fromNow') }}</span>
                 </template>
               </bk-table-column>
               <bk-table-column
@@ -159,7 +169,7 @@
                 :show-overflow-tooltip="false"
               >
                 <template slot-scope="{ row }">
-                  <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
+                  <span v-bk-tooltips="row.updated">{{ smartTime(row.updated, 'fromNow') }}</span>
                 </template>
               </bk-table-column>
               <bk-table-column
@@ -177,11 +187,11 @@
               >
                 <template slot-scope="{ row }">
                   <template v-if="row.is_expired">
-                    <span v-bk-tooltips="row.expires_at"> {{ $t('已过期') }} </span>
+                    <span v-bk-tooltips="row.expires_at">{{ $t('已过期') }}</span>
                   </template>
                   <template v-else>
                     <template v-if="row.expires_at">
-                      <span v-bk-tooltips="row.expires_at">{{ smartTime(row.expires_at,'fromNow') }}</span>
+                      <span v-bk-tooltips="row.expires_at">{{ smartTime(row.expires_at, 'fromNow') }}</span>
                     </template>
                     <template v-else>
                       {{ $t('永不') }}
@@ -205,7 +215,7 @@
                     <bk-button
                       theme="primary"
                       text
-                      style="margin-left: 6px;"
+                      style="margin-left: 6px"
                       @click="handleEdit(props.row)"
                     >
                       {{ $t('编辑') }}
@@ -213,7 +223,7 @@
                     <bk-button
                       theme="primary"
                       text
-                      style="margin-left: 6px;"
+                      style="margin-left: 6px"
                       @click="showRemoveModal(props.row)"
                     >
                       {{ $t('删除') }}
@@ -242,8 +252,11 @@
       @cancel="closePermission"
     >
       <div class="tl">
-        {{ isUseUserPermission ?
-          $t('停用后【预发布】和【生产】环境的用户限制将立即失效，所有用户都可访问') : $t('开启后【预发布】和【生产】环境的用户限制都将立即生效，仅白名单内用户可访问') }}
+        {{
+          isUseUserPermission
+            ? $t('功能停用后，主模块的预发布和生产环境的用户限制将立即取消，所有用户均可访问。')
+            : $t('功能开启后，预发布和生产环境的用户限制将立即生效，仅限白名单用户访问，且该限制仅适用于主模块。')
+        }}
       </div>
     </bk-dialog>
 
@@ -258,9 +271,7 @@
       @confirm="removeUser"
       @after-leave="afterCloseRemove"
     >
-      <div class="tl">
-        {{ curUserParams.content }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
-      </div>
+      <div class="tl">{{ curUserParams.content }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}</div>
     </bk-dialog>
 
     <bk-dialog
@@ -297,7 +308,7 @@
             class="bk-form-input custom-time"
             placeholder="1"
             @input="authDetailTimeHandler"
-          >
+          />
           <div class="unit">
             {{ $t('天') }}
           </div>
@@ -335,7 +346,7 @@
     >
       <section
         v-if="addUserDialog.showForm"
-        style="min-height: 140px;"
+        style="min-height: 140px"
       >
         <bk-form
           ref="addUserForm"
@@ -409,7 +420,7 @@
                 class="bk-form-input custom-time"
                 placeholder="1"
                 @input="authDetailTimeHandler"
-              >
+              />
               <div class="unit">
                 {{ $t('天') }}
               </div>
@@ -444,7 +455,7 @@
             text
             theme="primary"
             size="small"
-            style="line-height: 40px;"
+            style="line-height: 40px"
             @click="handleDownloadTemplate"
           >
             {{ $t('下载模板') }}
@@ -479,9 +490,9 @@
         <input
           ref="upload"
           type="file"
-          style="position: absolute; width: 0; height: 0;"
+          style="position: absolute; width: 0; height: 0"
           @change="handleStartUpload"
-        >
+        />
       </div>
       <div slot="footer">
         <bk-button
@@ -500,7 +511,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import user from '@/components/user';
 import accessPath from './access-path.vue';
 
@@ -633,14 +645,14 @@ export default {
       return this.curAppInfo.application.region === 'tencent';
     },
     curModule() {
-      return this.curAppModuleList.find(item => item.is_default);
+      return this.curAppModuleList.find((item) => item.is_default);
     },
     localLanguage() {
       return this.$store.state.localLanguage;
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
     'pagination.current'(value) {
@@ -656,9 +668,10 @@ export default {
         }
       }
     },
-    'curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE': {    // 是否可以开启豁免路径
+    'curAppInfo.feature.ACCESS_CONTROL_EXEMPT_MODE': {
+      // 是否可以开启豁免路径
       handler(value) {
-        const hasExemptPathTag = this.userPanels.find(e => e.name === 'exemptPath');
+        const hasExemptPathTag = this.userPanels.find((e) => e.name === 'exemptPath');
         if (value) {
           if (!hasExemptPathTag) {
             this.userPanels.push({ name: 'exemptPath', label: this.$t('豁免路径') });
@@ -727,59 +740,72 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/access_control/restriction_type/user/strategy/import/`;
       const params = new FormData();
       params.append('file', this.curFile);
-      this.$http.post(url, params).then((response) => {
-        const createNum = response.create_num;
-        const overwritedNum = response.overwrited_num;
-        const ignoreNum = response.ignore_num;
-        this.isEdited = createNum > 0 || overwritedNum > 0;
-        const message = (
-          () => {
-            const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
-            let messageText = '';
-            switch (numStr) {
-              case '111':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，更新')} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个白名单')}`;
-                break;
-              case '110':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，更新')} ${overwritedNum} ${this.$t('个IP白名单')}`;
-                break;
-              case '100':
-                messageText = `${this.$t('导入成功')}，${this.$t('新增')} ${createNum} ${this.$t('个IP白名单')}`;
-                break;
-              case '101':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个IP白名单')}`;
-                break;
-              case '011':
-                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个IP白名单')}`;
-                break;
-              case '010':
-                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个IP白名单')}`;
-                break;
-              case '001':
-                messageText = this.$t('所有IP白名单都已在当前模块中，已全部忽略');
-                break;
-              default:
-                messageText = `${this.$t('导入成功')}`;
+      this.$http
+        .post(url, params)
+        .then(
+          (response) => {
+            const createNum = response.create_num;
+            const overwritedNum = response.overwrited_num;
+            const ignoreNum = response.ignore_num;
+            this.isEdited = createNum > 0 || overwritedNum > 0;
+            const message = (() => {
+              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(
+                Boolean(ignoreNum)
+              )}`;
+              let messageText = '';
+              switch (numStr) {
+                case '111':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                    '个IP白名单，更新'
+                  )} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个白名单')}`;
+                  break;
+                case '110':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                    '个IP白名单，更新'
+                  )} ${overwritedNum} ${this.$t('个IP白名单')}`;
+                  break;
+                case '100':
+                  messageText = `${this.$t('导入成功')}，${this.$t('新增')} ${createNum} ${this.$t('个IP白名单')}`;
+                  break;
+                case '101':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                    '个IP白名单，忽略'
+                  )} ${ignoreNum} ${this.$t('个IP白名单')}`;
+                  break;
+                case '011':
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t(
+                    '个IP白名单，忽略'
+                  )} ${ignoreNum} ${this.$t('个IP白名单')}`;
+                  break;
+                case '010':
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个IP白名单')}`;
+                  break;
+                case '001':
+                  messageText = this.$t('所有IP白名单都已在当前模块中，已全部忽略');
+                  break;
+                default:
+                  messageText = `${this.$t('导入成功')}`;
+              }
+              return messageText;
+            })();
+            this.$paasMessage({
+              theme: 'success',
+              message,
+            });
+            this.pagination.current = 1;
+            this.pagination.limit = 10;
+            this.fetchUserPermissionList(true);
+          },
+          (errRes) => {
+            if (errRes.status === 400) {
+              const errorMsg = errRes.detail;
+              this.$paasMessage({
+                theme: 'error',
+                message: `${this.$t('从文件导入IP白名单失败')}，${errorMsg}`,
+              });
             }
-            return messageText;
           }
-        )();
-        this.$paasMessage({
-          theme: 'success',
-          message,
-        });
-        this.pagination.current = 1;
-        this.pagination.limit = 10;
-        this.fetchUserPermissionList(true);
-      }, (errRes) => {
-        if (errRes.status === 400) {
-          const errorMsg = errRes.detail;
-          this.$paasMessage({
-            theme: 'error',
-            message: `${this.$t('从文件导入IP白名单失败')}，${errorMsg}`,
-          });
-        }
-      })
+        )
         .finally(() => {
           this.exportFileDialog.loading = false;
           this.exportFileDialog.visiable = false;
@@ -799,17 +825,22 @@ export default {
       const orderBy = this.is_up ? '-created' : 'created';
       this.exportLoading = true;
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/access_control/restriction_type/user/strategy/export/?order_by=${orderBy}`;
-      this.$http.get(url).then((response) => {
-        this.downloadYaml(response, 'export');
-      }, (errRes) => {
-        if (errRes.status === 400) {
-          const errorMsg = errRes.detail;
-          this.$paasMessage({
-            theme: 'error',
-            message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
-          });
-        }
-      })
+      this.$http
+        .get(url)
+        .then(
+          (response) => {
+            this.downloadYaml(response, 'export');
+          },
+          (errRes) => {
+            if (errRes.status === 400) {
+              const errorMsg = errRes.detail;
+              this.$paasMessage({
+                theme: 'error',
+                message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+              });
+            }
+          }
+        )
         .finally(() => {
           this.exportLoading = false;
         });
@@ -834,17 +865,20 @@ export default {
 
     handleDownloadTemplate() {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/access_control/restriction_type/user/strategy/export/template/`;
-      this.$http.get(url).then((response) => {
-        this.downloadYaml(response);
-      }, (errRes) => {
-        if (errRes.status === 400) {
-          const errorMsg = errRes.detail;
-          this.$paasMessage({
-            theme: 'error',
-            message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
-          });
+      this.$http.get(url).then(
+        (response) => {
+          this.downloadYaml(response);
+        },
+        (errRes) => {
+          if (errRes.status === 400) {
+            const errorMsg = errRes.detail;
+            this.$paasMessage({
+              theme: 'error',
+              message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
+            });
+          }
         }
-      });
+      );
     },
 
     timestampToTime(timestamp) {
@@ -856,10 +890,10 @@ export default {
       }
       const Y = `${time.getFullYear()}-`;
       const M = `${time.getMonth() + 1 < 10 ? `0${time.getMonth() + 1}` : time.getMonth() + 1}-`;
-      const D = (time.getDate() < 10 ? `0${time.getDate()}` : time.getDate());
+      const D = time.getDate() < 10 ? `0${time.getDate()}` : time.getDate();
       const h = `${time.getHours() < 10 ? `0${time.getHours()}` : time.getHours()}:`;
       const m = `${time.getMinutes() < 10 ? `0${time.getMinutes()}` : time.getMinutes()}:`;
-      const s = (time.getSeconds() < 10 ? `0${time.getSeconds()}` : time.getSeconds());
+      const s = time.getSeconds() < 10 ? `0${time.getSeconds()}` : time.getSeconds();
       return `${Y + M + D} ${h}${m}${s}`;
     },
 
@@ -994,7 +1028,7 @@ export default {
               src: '/static/images/sort-icon.png',
             },
           }),
-        ],
+        ]
       );
     },
 
@@ -1083,11 +1117,14 @@ export default {
 
     handleEdit(row) {
       const { content, desc, expires_at, id } = row;
-      this.curUserParams = Object.assign({}, {
-        content,
-        desc,
-        expires_at,
-      });
+      this.curUserParams = Object.assign(
+        {},
+        {
+          content,
+          desc,
+          expires_at,
+        }
+      );
       if (this.userType === 'rtx') {
         this.rtxList = content.split(';');
       }
@@ -1212,8 +1249,10 @@ export default {
       }
 
       if (userType === 'qq') {
-        const checkList = params.content.trim().split(';')
-          .filter(item => item !== '');
+        const checkList = params.content
+          .trim()
+          .split(';')
+          .filter((item) => item !== '');
         for (const item of checkList) {
           if (!qqRegexp.test(item)) {
             this.$paasMessage({
@@ -1251,7 +1290,7 @@ export default {
           },
           () => {
             this.addUserDialog.isLoading = false;
-          },
+          }
         );
       }, 200);
     },
@@ -1266,8 +1305,10 @@ export default {
 
     async handleAddUser() {
       const params = JSON.parse(JSON.stringify(this.curUserParams));
-      params.content = params.content.trim().split(';')
-        .filter(item => item !== '')
+      params.content = params.content
+        .trim()
+        .split(';')
+        .filter((item) => item !== '')
         .join(';');
       this.addUserDialog.isLoading = true;
       try {
@@ -1281,7 +1322,11 @@ export default {
         const { added, ignored } = res;
         let message = '';
         if (added.length && ignored.length) {
-          message = res.ignored.length ? `${this.$t('用户')}(${ignored.join('，')})${this.$t('已经存在，其余')} ${added.length} ${this.$t('个用户已添加成功')}` : '';
+          message = res.ignored.length
+            ? `${this.$t('用户')}(${ignored.join('，')})${this.$t('已经存在，其余')} ${added.length} ${this.$t(
+                '个用户已添加成功'
+              )}`
+            : '';
         } else if (!added.length && ignored.length) {
           message = this.$t('用户都已经在白名单中，请勿重复添加');
         } else {
@@ -1359,7 +1404,7 @@ export default {
       try {
         await this.$store.dispatch('user/deleteUserPermission', {
           appCode: this.appCode,
-          ids: this.currentSelectList.map(item => item.id),
+          ids: this.currentSelectList.map((item) => item.id),
         });
         this.pagination.current = 1;
         this.pagination.limit = 10;
@@ -1409,11 +1454,13 @@ export default {
     },
 
     afterCloseRemove() {
-      this.curUserParams = JSON.parse(JSON.stringify({
-        content: '',
-        desc: '',
-        expires_at: null,
-      }));
+      this.curUserParams = JSON.parse(
+        JSON.stringify({
+          content: '',
+          desc: '',
+          expires_at: null,
+        })
+      );
       this.removeUserDialog.id = 0;
     },
 
@@ -1422,15 +1469,18 @@ export default {
     },
 
     setTimeFilters() {
-      this.timeFilters = Object.assign({}, {
-        month: this.$t('1个月'),
-        month3: this.$t('3个月'),
-        month6: this.$t('6个月'),
-        month12: this.$t('12个月'),
-        forever: this.$t('永久'),
-        custom: this.$t('自定义'),
-        cur: 'forever',
-      });
+      this.timeFilters = Object.assign(
+        {},
+        {
+          month: this.$t('1个月'),
+          month3: this.$t('3个月'),
+          month6: this.$t('6个月'),
+          month12: this.$t('12个月'),
+          forever: this.$t('永久'),
+          custom: this.$t('自定义'),
+          cur: 'forever',
+        }
+      );
       if (this.isExternal) {
         this.$delete(this.timeFilters, 'forever');
         this.timeFilters.cur = 'month6';
@@ -1456,223 +1506,219 @@ export default {
 };
 </script>
 
-  <style lang="scss" scoped>
-      .access-user{
-        min-height: calc(100% - 50px);
-        padding: 20px 24px;
+<style lang="scss" scoped>
+.access-user {
+  min-height: calc(100% - 50px);
+  padding: 20px 24px;
+}
+.bk-table {
+  &.set-border {
+    border-right: 1px solid #dfe0e5;
+    border-bottom: 1px solid #dfe0e5;
+  }
+}
+
+.perm-action {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+
+  .perm-icon {
+    float: left;
+    width: 42px;
+    height: 42px;
+    background: rgba(195, 205, 215, 1);
+    border-radius: 2px;
+    color: #fff;
+    margin-right: 12px;
+    line-height: 40px;
+    font-size: 22px;
+    text-align: center;
+
+    &.active {
+      background-color: rgba(48, 216, 120, 1);
+    }
+  }
+
+  .perm-title {
+    font-size: 14px;
+    color: #313238;
+    margin-bottom: 5px;
+    line-height: 1;
+    font-weight: 700;
+    .perm-status {
+      border-radius: 2px;
+      height: 22px;
+      text-align: center;
+      line-height: 22px;
+      margin-left: 15px;
+      font-size: 12px;
+      padding: 0 5px;
+    }
+    .perm-status-open {
+      color: #14a568;
+      background: #e4faf0;
+    }
+    .perm-status-close {
+      color: #fff;
+      background-color: #dcdee5;
+    }
+  }
+
+  .perm-tip {
+    font-size: 12px;
+    line-height: 1;
+    font-size: 12px;
+    color: #979ba5;
+    .a-link {
+      margin-left: 5px;
+      &:hover {
+        color: #699df4;
       }
-      .bk-table {
-          &.set-border {
-              border-right: 1px solid #dfe0e5;
-              border-bottom: 1px solid #dfe0e5;
-          }
+    }
+  }
+}
+
+.container {
+  width: 100%;
+  padding: 20px 0;
+  color: #666;
+}
+
+.table-container {
+  background: #fff;
+  padding: 0px 0px 20px;
+  .ps-table-bar {
+    position: relative;
+    padding: 16px 0;
+    border-top: 1px solid #e6e9ea;
+    .path-exempt {
+      position: absolute;
+      top: 20px;
+      left: 336px;
+      &.en-path {
+        left: 382px;
       }
+    }
+  }
+}
 
-      .perm-action {
-          position: relative;
-          overflow: hidden;
-          background: #fff;
+.middle {
+  border-bottom: none;
+  padding-top: 10px;
+}
 
-          .perm-icon {
-              float: left;
-              width: 42px;
-              height: 42px;
-              background: rgba(195, 205, 215, 1);
-              border-radius: 2px;
-              color: #fff;
-              margin-right: 12px;
-              line-height: 40px;
-              font-size: 22px;
-              text-align: center;
+.reason {
+  max-width: 150px;
+  white-space: nowrap;
+  word-wrap: break-word;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.time-button-groups {
+  vertical-align: bottom;
+  font-size: 0;
+  button {
+    width: 90px;
+    &:hover {
+      color: #3a84ff;
+    }
+    &.reset-width {
+      width: 106px;
+    }
+  }
+}
+.custom-time-select {
+  display: inline-block;
+  margin-left: -5px;
+  width: 68px;
+  height: 32px;
+  font-size: 0;
+  vertical-align: bottom;
+  input.custom-time {
+    width: 67px;
+    height: 32px;
+    border-radius: 0;
+    border: 1px solid #c3cdd7;
+  }
+  .unit {
+    position: relative;
+    top: -32px;
+    right: -38px;
+    width: 40px;
+    height: 32px;
+    line-height: 32px;
+    text-align: center;
+    border: 1px solid #c3cdd7;
+    float: right;
+    font-size: 12px;
+  }
+  input.custom-time:focus {
+    border-color: #c3cdd7 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
 
-              &.active {
-                  background-color: rgba(48, 216, 120, 1);
-              }
-          }
+.by-user-export-wrapper {
+  height: auto !important;
+  margin-left: 6px;
+  vertical-align: bottom;
+}
 
-          .perm-title {
-              font-size: 14px;
-              color: #313238;
-              margin-bottom: 5px;
-              line-height: 1;
-              font-weight: 700;
-              .perm-status{
-                border-radius: 2px;
-                height: 22px;
-                text-align: center;
-                line-height: 22px;
-                margin-left: 15px;
-                font-size: 12px;
-                padding: 0 5px;
-              }
-              .perm-status-open{
-                color: #14A568;
-                background: #E4FAF0;
-              }
-              .perm-status-close{
-                color: #fff;
-                background-color: #dcdee5;
-              }
-          }
+.paas-env-var-upload-dialog {
+  .header {
+    font-size: 24px;
+    color: #313238;
+  }
+  .title {
+    max-width: 150px;
+    margin: 0;
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+  .download-tips {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    line-height: 40px;
+    background: #fefaf2;
+    font-size: 12px;
+    color: #ffb400;
+  }
+}
 
-          .perm-tip {
-              font-size: 12px;
-              line-height: 1;
-              font-size: 12px;
-              color: #979BA5;
-              .a-link {
-                  margin-left: 5px;
-                  &:hover {
-                      color: #699df4;
-                  }
-              }
-          }
-      }
+.upload-content {
+  margin-top: 15px;
+  text-align: center;
+  .file-icon {
+    font-size: 40px;
+    color: #dae1e8;
+  }
+  .cur-upload-file {
+    display: inline-block;
+    line-height: 1;
+    font-size: 12px;
+    color: #3a84ff;
+    border-bottom: 1px solid #3a84ff;
+  }
+  .file-error-tips {
+    display: inline-block;
+    line-height: 1;
+    font-size: 12px;
+    color: #ff4d4d;
+  }
+}
 
-      .container {
-          width: 100%;
-          padding: 20px 0;
-          color: #666;
-      }
-
-      .table-container{
-        background: #fff;
-        padding: 0px 0px 20px;
-        .ps-table-bar {
-            position: relative;
-            padding: 16px 0;
-            border-top: 1px solid #e6e9ea;
-            .path-exempt {
-                position: absolute;
-                top: 20px;
-                left: 336px;
-                &.en-path {
-                    left: 382px;
-                }
-            }
-
-        }
-      }
-
-
-      .middle {
-          border-bottom: none;
-          padding-top: 10px;
-      }
-
-      .reason {
-          max-width: 150px;
-          white-space: nowrap;
-          word-wrap: break-word;
-          word-break: break-all;
-          overflow: hidden;
-          text-overflow: ellipsis;
-      }
-      .time-button-groups {
-          vertical-align: bottom;
-          font-size: 0;
-          button {
-              width: 90px;
-              &:hover {
-                  color: #3a84ff;
-              }
-              &.reset-width {
-                  width: 106px;
-              }
-          }
-      }
-      .custom-time-select {
-          display: inline-block;
-          margin-left: -5px;
-          width: 68px;
-          height: 32px;
-          font-size: 0;
-          vertical-align: bottom;
-          input.custom-time {
-              width: 67px;
-              height: 32px;
-              border-radius: 0;
-              border: 1px solid #c3cdd7;
-          }
-          .unit {
-              position: relative;
-              top: -32px;
-              right: -38px;
-              width: 40px;
-              height: 32px;
-              line-height: 32px;
-              text-align: center;
-              border: 1px solid #c3cdd7;
-              float: right;
-              font-size: 12px;
-          }
-          input.custom-time:focus {
-              border-color: #c3cdd7 !important;
-              outline: none !important;
-              box-shadow: none !important;
-          }
-      }
-
-      .by-user-export-wrapper {
-          height: auto !important;
-          margin-left: 6px;
-          vertical-align: bottom;
-      }
-
-      .paas-env-var-upload-dialog {
-          .header {
-              font-size: 24px;
-              color: #313238;
-          }
-          .title {
-              max-width: 150px;
-              margin: 0;
-              display: inline-block;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              vertical-align: bottom;
-          }
-          .download-tips {
-              display: flex;
-              justify-content: space-between;
-              padding: 0 10px;
-              line-height: 40px;
-              background: #fefaf2;
-              font-size: 12px;
-              color: #ffb400;
-          }
-      }
-
-      .upload-content {
-          margin-top: 15px;
-          text-align: center;
-          .file-icon {
-              font-size: 40px;
-              color: #dae1e8;
-          }
-          .cur-upload-file {
-              display: inline-block;
-              line-height: 1;
-              font-size: 12px;
-              color: #3a84ff;
-              border-bottom: 1px solid #3a84ff;
-          }
-          .file-error-tips {
-              display: inline-block;
-              line-height: 1;
-              font-size: 12px;
-              color: #ff4d4d;
-          }
-      }
-
-      .user-tab-cls{
-        background: #fff;
-        margin-top: 10px;
-        /deep/ .bk-tab-section {
-            padding: 0 !important;
-        }
-      }
-
-  </style>
-
+.user-tab-cls {
+  background: #fff;
+  margin-top: 10px;
+  /deep/ .bk-tab-section {
+    padding: 0 !important;
+  }
+}
+</style>

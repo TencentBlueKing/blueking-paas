@@ -278,7 +278,12 @@ export default {
     },
     // 访问对应环境
     visitLink(data, env) {
-      window.open(data.application.deploy_info[env].url);
+      // 当 preferred_prod_url 有值时，生产环境的访问链接指向 preferred_prod_url
+      let url = data.application.deploy_info[env].url;
+      if (env === 'prod' && data.application.preferred_prod_url) {
+        url = data.application.preferred_prod_url;
+      }
+      window.open(url);
     },
   },
 };

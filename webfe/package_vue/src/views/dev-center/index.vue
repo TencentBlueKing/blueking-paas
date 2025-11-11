@@ -870,7 +870,12 @@ export default {
     },
 
     visitLink(data, env) {
-      window.open(data.application.deploy_info[env].url);
+      // 当 preferred_prod_url 有值时，生产环境的访问链接指向 preferred_prod_url
+      let url = data.application.deploy_info[env].url;
+      if (env === 'prod' && data.application.preferred_prod_url) {
+        url = data.application.preferred_prod_url;
+      }
+      window.open(url);
     },
 
     // 标记应用，标记后的应用会被放在列表最前端

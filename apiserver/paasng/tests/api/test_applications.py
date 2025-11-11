@@ -29,7 +29,8 @@ from rest_framework.test import APIClient
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType, ClusterFeatureFlag
 from paas_wl.infras.cluster.entities import AllocationPolicy
 from paas_wl.infras.cluster.models import Cluster, ClusterAllocationPolicy
-from paasng.accessories.publish.market.models import Tag
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.accessories.publish.market.models import MarketConfig, Tag
 from paasng.accessories.publish.sync_market.handlers import (
     on_change_application_name,
     prepare_change_application_name,
@@ -275,6 +276,36 @@ class TestApplicationCreateWithoutEngine:
         )
         assert response.status_code == 201
         assert response.json()["application"]["type"] == "engineless_app"
+
+
+class TestApplicationRetrieve:
+    """Test retrieve application API"""
+
+    def test_normal(self, api_client, bk_app):
+        url = reverse("api.applications.detail", kwargs=dict(code=bk_app.code))
+
+        with mock.patch("paasng.platform.applications.views.application.get_exposed_links", return_value={}):
+            response = api_client.get(url)
+
+        assert response.status_code == 200
+        app_data = response.data["application"]
+        assert app_data["code"] == bk_app.code
+        assert app_data["preferred_prod_url"] is None
+
+        # Enable market config with custom domain
+        mc: MarketConfig = bk_app.market_config
+        mc.enabled = True
+        mc.source_url_type = ProductSourceUrlType.CUSTOM_DOMAIN
+        mc.custom_domain_url = "https://custom.domain.example.com"
+        mc.save()
+
+        with mock.patch("paasng.platform.applications.views.application.get_exposed_links", return_value={}):
+            response = api_client.get(url)
+
+        assert response.status_code == 200
+        app_data = response.data["application"]
+        assert app_data["code"] == bk_app.code
+        assert app_data["preferred_prod_url"] == "https://custom.domain.example.com"
 
 
 class TestApplicationUpdate:
@@ -1167,3 +1198,29 @@ class TestApplicationList:
             )
             assert single_response.data["count"] == 1
             assert single_response.data["results"][0]["application"]["app_tenant_mode"] == AppTenantMode.SINGLE
+
+    def test_list_detailed_with_market_config_enable(self, api_client, bk_app):
+        # Patch get_exposed_links and the manager method get_or_create_by_app to ensure it's not called
+        with mock.patch("paasng.platform.applications.views.application.get_exposed_links", return_value={}):
+            response = api_client.get(reverse("api.applications.lists.detailed"))
+
+        assert response.status_code == 200
+        app_data = response.data["results"][0]["application"]
+        assert app_data["code"] == bk_app.code
+        assert app_data["preferred_prod_url"] is None
+
+        # Enable market config with custom domain
+        mc: MarketConfig = bk_app.market_config
+        mc.enabled = True
+        mc.source_url_type = ProductSourceUrlType.CUSTOM_DOMAIN
+        mc.custom_domain_url = "https://custom.domain.example.com"
+        mc.save()
+
+        # Patch get_exposed_links and the manager method get_or_create_by_app to ensure it's not called
+        with mock.patch("paasng.platform.applications.views.application.get_exposed_links", return_value={}):
+            response = api_client.get(reverse("api.applications.lists.detailed"))
+
+        assert response.status_code == 200
+        app_data = response.data["results"][0]["application"]
+        assert app_data["code"] == bk_app.code
+        assert app_data["preferred_prod_url"] == "https://custom.domain.example.com"

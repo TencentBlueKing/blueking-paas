@@ -79,7 +79,7 @@ class ApplicationsSearchViewset(ViewSet):
         # Set exposed links property, to be used by the serializer later
         for app in paged_applications:
             app._deploy_info = get_exposed_links(app)
-            app._preferred_prod_url = preferred_urls.get(app.id)
+            app._preferred_prod_url = preferred_urls[app.id]
 
         return Response(AppSearchResultSLZ({"results": paged_applications, "count": applications.count()}).data)
 

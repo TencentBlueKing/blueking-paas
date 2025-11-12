@@ -272,6 +272,18 @@ class MarketConfigManager(models.Manager):
             )
             return obj, True
 
+    def get_preferred_prod_url_by_app(self, application: Application) -> str | None:
+        """Get the preferred production URL for a single application.
+
+        Returns the preferred prod URL if MarketConfig is enabled and source_url_type is CUSTOM_DOMAIN,
+        otherwise returns None.
+
+        :param application: Application object
+        :return: Preferred prod URL (or None)
+        """
+        urls = self.get_preferred_prod_urls_by_apps([application])
+        return urls.get(application.id)
+
     def get_preferred_prod_urls_by_apps(self, applications: list) -> Dict[str, str | None]:
         """Batch query preferred production URLs for multiple applications.
 

@@ -388,7 +388,7 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.MODIFY,
-            target=OperationTarget.BUILD_CONFIG,
+            target=OperationTarget.MODULE,
             module_name=module_name,
             data_before=data_before,
             data_after=DataDetail(

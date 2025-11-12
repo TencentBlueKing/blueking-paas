@@ -136,7 +136,8 @@ class TestRepoBackendControlViewSet:
         }
 
         # Mock bind 方法以避免实际的仓库连接
-        with mock.patch.object(get_repo_connector("github", bk_module).__class__, "bind") as mock_bind:
+        repo_connector = get_repo_connector("github", bk_module)
+        with mock.patch.object(type(repo_connector), "bind") as mock_bind:
             response = api_client.post(url, data=data)
 
         mock_bind.assert_called_once()
@@ -162,7 +163,8 @@ class TestRepoBackendControlViewSet:
         }
 
         # Mock bind 方法
-        with mock.patch.object(get_repo_connector("github", bk_module).__class__, "bind") as mock_bind:
+        repo_connector = get_repo_connector("github", bk_module)
+        with mock.patch.object(type(repo_connector), "bind") as mock_bind:
             response = api_client.post(url, data=data)
 
         mock_bind.assert_called_once()

@@ -194,6 +194,9 @@ type Process struct {
 	// can consume.
 	ResQuotaPlan ResQuotaPlan `json:"resQuotaPlan,omitempty"`
 
+	// Resources is the resource requirements of process
+	Resources *Resources `json:"resources,omitempty"`
+
 	// The containerPort to expose server
 	TargetPort int32 `json:"targetPort,omitempty"`
 
@@ -376,6 +379,10 @@ type AppEnvOverlay struct {
 	// +optional
 	ResQuotas []ResQuotaOverlay `json:"resQuotas,omitempty"`
 
+	// Resources overwrite BkApp's process resources
+	// +optional
+	Resources []ResourcesOverlay `json:"resources,omitempty"`
+
 	// EnvVariables overwrite BkApp's environment vars
 	// +optional
 	EnvVariables []EnvVarOverlay `json:"envVariables,omitempty"`
@@ -427,6 +434,32 @@ type ResQuotaOverlay struct {
 	Process string `json:"process"`
 	// Plan is used to specify process resource quota
 	Plan ResQuotaPlan `json:"plan"`
+}
+
+// ResourceQuantity defines the amount of CPU and memory resources
+type ResourceQuantity struct {
+	// CPU is the CPU resource
+	CPU string `json:"cpu"`
+	// Memory is the memory resource
+	Memory string `json:"memory"`
+}
+
+// Resources defines the resource limits and requests
+type Resources struct {
+	// Limits describes the maximum amount of compute resources allowed
+	Limits ResourceQuantity `json:"limits"`
+	// Requests describes the minimum amount of compute resources required
+	Requests ResourceQuantity `json:"requests"`
+}
+
+// ResourcesOverlay defines the resource overlay configuration for a process in an environment
+type ResourcesOverlay struct {
+	// EnvName is app environment name
+	EnvName EnvName `json:"envName"`
+	// Process is the name of process
+	Process string `json:"process"`
+	// Resources is the resource requirements of process
+	Resources *Resources `json:"resources,omitempty"`
 }
 
 // EnvVarOverlay overwrite or add application's environment vars by environment.

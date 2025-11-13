@@ -21,6 +21,7 @@ package envs
 import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
@@ -216,6 +217,13 @@ func (r *ProcResourcesGetter) Default() corev1.ResourceRequirements {
 
 // GetByProc return the container resources by process name
 //
+// Priority order (highest to lowest):
+// 1. Legacy annotation: paas.bk.tencent.com/legacy-proc-resources
+// 2. EnvOverlay.Resources
+// 3. Process.Resources
+// 4. EnvOverlay.ResQuotas
+// 5. Process.ResQuotaPlan
+//
 // - name: process name
 // - return: <resources requirements>, <error>
 func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequirements, err error) {
@@ -228,6 +236,24 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 		return r.calculateResources(cfg["cpu"], cfg["memory"]), nil
 	}
 
+	// Overlay: read the "Resources" field from envOverlay
+	if env := GetEnvName(r.bkapp); !env.IsEmpty() && r.bkapp.Spec.EnvOverlay != nil {
+		for _, q := range r.bkapp.Spec.EnvOverlay.Resources {
+			if q.EnvName == env && q.Process == name {
+				return r.fromResources(*q.Resources), nil
+			}
+		}
+	}
+
+	// Standard: read the "Resources" field from process
+	procObj := r.bkapp.Spec.FindProcess(name)
+	if procObj == nil {
+		return result, errors.Errorf("process %s not found", name)
+	}
+	if procObj.Resources != nil {
+		return r.fromResources(*procObj.Resources), nil
+	}
+
 	// Overlay: read the "ResQuotaPlan" field from envOverlay
 	if env := GetEnvName(r.bkapp); !env.IsEmpty() && r.bkapp.Spec.EnvOverlay != nil {
 		for _, q := range r.bkapp.Spec.EnvOverlay.ResQuotas {
@@ -238,7 +264,7 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 	}
 
 	// Standard: read the "ResQuotaPlan" field from process
-	procObj := r.bkapp.Spec.FindProcess(name)
+	procObj = r.bkapp.Spec.FindProcess(name)
 	if procObj == nil {
 		return result, errors.Errorf("process %s not found", name)
 	}
@@ -309,4 +335,42 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 			corev1.ResourceMemory: *memQuota,
 		},
 	}
+}
+
+// fromResources try to get resource requirements by resources
+func (r *ProcResourcesGetter) fromResources(resources paasv1alpha2.Resources) corev1.ResourceRequirements {
+	reqs := corev1.ResourceRequirements{
+		Limits:   make(corev1.ResourceList),
+		Requests: make(corev1.ResourceList),
+	}
+
+	// Parse CPU limits
+	if cpuLimit, err := resource.ParseQuantity(resources.Limits.CPU); err == nil {
+		reqs.Limits[corev1.ResourceCPU] = cpuLimit
+	} else {
+		log.Error(err, "Failed to parse CPU limit", "CPU", resources.Limits.CPU)
+	}
+
+	// Parse CPU requests
+	if cpuRequest, err := resource.ParseQuantity(resources.Requests.CPU); err == nil {
+		reqs.Requests[corev1.ResourceCPU] = cpuRequest
+	} else {
+		log.Error(err, "Failed to parse CPU request", "CPU", resources.Requests.CPU)
+	}
+
+	// Parse Memory limits
+	if memLimit, err := resource.ParseQuantity(resources.Limits.Memory); err == nil {
+		reqs.Limits[corev1.ResourceMemory] = memLimit
+	} else {
+		log.Error(err, "Failed to parse Memory limit", "Memory", resources.Limits.Memory)
+	}
+
+	// Parse Memory requests
+	if memRequest, err := resource.ParseQuantity(resources.Requests.Memory); err == nil {
+		reqs.Requests[corev1.ResourceMemory] = memRequest
+	} else {
+		log.Error(err, "Failed to parse Memory request", "Memory", resources.Requests.Memory)
+	}
+
+	return reqs
 }

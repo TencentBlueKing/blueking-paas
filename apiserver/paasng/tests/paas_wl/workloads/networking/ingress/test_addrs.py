@@ -59,6 +59,40 @@ class TestEnvAddresses:
         assert len(subdomain) > 1
         assert len(subdomain[0].url) < len(subdomain[1].url)
 
+    def test_pre_allocated_with_reserved(self, bk_stag_env, patch_ingress_config):
+        patch_ingress_config(
+            app_root_domains=[
+                ClusterDomain(name="foo-p0.example.com", reserved=True),
+                ClusterDomain(name="foo-p10.example.com", reserved=False),
+            ],
+            sub_path_domains=[
+                ClusterDomain(name="foo-p0.example.com", https_enabled=True, reserved=True),
+                ClusterDomain(name="foo-p20.example.com", https_enabled=False),
+            ],
+            port_map=PortMap(http=8080, https=443),
+        )
+
+        # 非保留的域名在前
+        subdomains = PreAllocatedEnvAddresses(bk_stag_env).list_subdomain()
+        assert len(subdomains) == 4
+        assert len(subdomains[0].url) > len(subdomains[2].url)
+
+        assert "foo-p10" in subdomains[0].url
+        assert subdomains[0].is_sys_reserved is False
+
+        assert "foo-p0" in subdomains[2].url
+        assert subdomains[2].is_sys_reserved is True
+
+        subpaths = PreAllocatedEnvAddresses(bk_stag_env).list_subpath()
+        assert len(subpaths) == 6
+        assert len(subpaths[0].url) > len(subpaths[3].url)
+
+        assert "foo-p20" in subpaths[0].url
+        assert subpaths[0].is_sys_reserved is False
+
+        assert "foo-p0" in subpaths[3].url
+        assert subpaths[3].is_sys_reserved is True
+
     def test_integrated(self, bk_user, bk_stag_env, patch_ingress_config):
         """Integrated test with multiple subpath domains and customized ports"""
         patch_ingress_config(

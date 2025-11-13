@@ -248,8 +248,8 @@ ensure-legacy-image() {
 }
 
 ensure-smart-image() {
-    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --type legacy --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
-    python manage.py push_smart_image --image "${PAAS_HEROKU_RUNNER_IMAGE}" --type cnb --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
+    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --type legacy --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}" --skip-verify "${PAAS_PUSH_SMART_SKIP_SSL_VERIFY:-False}"
+    python manage.py push_smart_image --image "${PAAS_HEROKU_RUNNER_IMAGE}" --type cnb --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}" --skip-verify "${PAAS_PUSH_SMART_SKIP_SSL_VERIFY:-False}"
 }
 
 ensure-runtimes() {

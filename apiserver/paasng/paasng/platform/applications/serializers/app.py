@@ -24,8 +24,6 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paasng.accessories.publish.market.constant import ProductSourceUrlType
-from paasng.accessories.publish.market.models import MarketConfig
 from paasng.core.region.states import get_region
 from paasng.platform.applications.constants import AppLanguage, ApplicationType, AvailabilityLevel
 from paasng.platform.applications.exceptions import IntegrityError
@@ -234,16 +232,11 @@ class ApplicationSLZ(serializers.ModelSerializer):
 
 class ApplicationWithDeployInfoSLZ(ApplicationSLZ):
     deploy_info = serializers.JSONField(read_only=True, source="_deploy_info", help_text="部署状态")
-    preferred_prod_url = serializers.SerializerMethodField(
-        help_text="首选的生产环境访问地址，没有返回值时依然从 deploy_info 获取生产环境访问地址"
+    preferred_prod_url = serializers.CharField(
+        read_only=True,
+        source="_preferred_prod_url",
+        help_text="首选的生产环境访问地址，没有返回值时依然从 deploy_info 获取生产环境访问地址",
     )
-
-    def get_preferred_prod_url(self, obj: Application) -> str | None:
-        """获取首选的生产环境访问地址"""
-        market_config: MarketConfig = MarketConfig.objects.get_or_create_by_app(obj)[0]
-        if not market_config.enabled or market_config.source_url_type != ProductSourceUrlType.CUSTOM_DOMAIN:
-            return None
-        return market_config.custom_domain_url
 
 
 class ApplicationRelationSLZ(serializers.Serializer):

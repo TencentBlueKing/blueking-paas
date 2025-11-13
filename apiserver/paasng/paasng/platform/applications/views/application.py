@@ -125,9 +125,14 @@ class ApplicationListViewSet(viewsets.ViewSet):
         else:
             page_applications = paginator.paginate_queryset(applications, self.request, view=self)
 
+        # Batch query preferred prod URLs to avoid N+1 queries
+        preferred_urls = MarketConfig.objects.get_preferred_prod_urls_by_apps(page_applications)
+
         # Set exposed links property, to be used by the serializer later
         for app in page_applications:
             app._deploy_info = get_exposed_links(app)
+            app._preferred_prod_url = preferred_urls[app.id]
+
         data = [
             {
                 "application": application,
@@ -376,6 +381,9 @@ class ApplicationViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         web_config = application.config_info
         application._deploy_info = get_exposed_links(application)
+
+        application._preferred_prod_url = MarketConfig.objects.get_preferred_prod_url_by_app(application)
+
         # We may not reuse this structure, so I will not make it a serializer
         return Response(
             {

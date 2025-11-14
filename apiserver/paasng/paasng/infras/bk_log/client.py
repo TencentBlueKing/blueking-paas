@@ -146,7 +146,8 @@ class BkLogManagementClient:
                     "storage_cluster_id": config.storage_config.storage_cluster_id,
                     "retention": config.storage_config.retention,
                     "es_shards": config.storage_config.es_shards,
-                    "storage_replies": config.storage_config.storage_replies,
+                    # TODO: 后端接口参数拼写错误，先沿用
+                    "storage_replies": config.storage_config.storage_replicas,
                     "allocation_min_days": config.storage_config.allocation_min_days,
                 }
             )
@@ -188,7 +189,8 @@ class BkLogManagementClient:
                     "storage_cluster_id": config.storage_config.storage_cluster_id,
                     "retention": config.storage_config.retention,
                     "es_shards": config.storage_config.es_shards,
-                    "storage_replies": config.storage_config.storage_replies,
+                    # TODO: 后端接口参数拼写错误，先沿用
+                    "storage_replies": config.storage_config.storage_replicas,
                     "allocation_min_days": config.storage_config.allocation_min_days,
                 }
             )

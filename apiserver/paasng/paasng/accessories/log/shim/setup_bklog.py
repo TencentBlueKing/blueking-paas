@@ -77,9 +77,9 @@ class BKLogConfigProvider:
         return settings.BKLOG_CONFIG["ES_SHARDS"]
 
     @property
-    def storage_replies(self) -> int:
+    def storage_replicas(self) -> int:
         """获取存储副本数"""
-        return settings.BKLOG_CONFIG["STORAGE_REPLIES"]
+        return settings.BKLOG_CONFIG["STORAGE_REPLICAS"]
 
 
 def _add_wildcard_suffix(path: str) -> str:
@@ -343,7 +343,7 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
             storage_cluster_id=bklog_provider.storage_cluster_id,
             retention=bklog_provider.retention,
             es_shards=bklog_provider.es_shards,
-            storage_replies=bklog_provider.storage_replies,
+            storage_replicas=bklog_provider.storage_replicas,
         ),
     )
     # fill persistence fields from db

@@ -685,12 +685,12 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # Elasticsearch 索引分片数，默认值 1
 # BKLOG_ES_SHARDS: 1
 # 存储副本数，默认值 1
-# BKLOG_STORAGE_REPLIES: 1
+# BKLOG_STORAGE_REPLICAS: 1
 # 蓝鲸日志平台相关的配置项 （当设置此项时，上述单独的 BKLOG_* 配置项将被覆盖）
 # BKLOG_CONFIG:
 #   RETENTION: 14
 #   ES_SHARDS: 1
-#   STORAGE_REPLIES: 1
+#   STORAGE_REPLICAS: 1
 
 
 ## ------------------------------------ 蓝鲸通知中心配置 ------------------------------------

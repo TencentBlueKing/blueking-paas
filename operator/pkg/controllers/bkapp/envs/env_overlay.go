@@ -239,7 +239,7 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 	// Overlay: read the "Resources" field from envOverlay
 	if env := GetEnvName(r.bkapp); !env.IsEmpty() && r.bkapp.Spec.EnvOverlay != nil {
 		for _, q := range r.bkapp.Spec.EnvOverlay.Resources {
-			if q.EnvName == env && q.Process == name {
+			if q.EnvName == env && q.Process == name && q.Resources != nil {
 				return r.fromResources(*q.Resources), nil
 			}
 		}

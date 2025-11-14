@@ -207,7 +207,7 @@ class ApplicationEnvironmentSLZ(serializers.Serializer):
         updated = timezone.localtime(last_op.created).strftime("%Y-%m-%d %H:%M:%S")
         operation_type = OperationTypes.get_choice_label(last_op.operation_type)
         status = JobStatus.get_choice_label(last_op.status)
-        message = _("于 {time} {operation}{status}").format(time=updated, operation=operation_type, status=status)
+        message = _(" 在 {time} {operation}{status}").format(time=updated, operation=operation_type, status=status)
 
         return {"operator": operator, "message": message}
 

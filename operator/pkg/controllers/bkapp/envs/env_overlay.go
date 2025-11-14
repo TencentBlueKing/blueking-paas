@@ -264,10 +264,6 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 	}
 
 	// Standard: read the "ResQuotaPlan" field from process
-	procObj = r.bkapp.Spec.FindProcess(name)
-	if procObj == nil {
-		return result, errors.Errorf("process %s not found", name)
-	}
 	return r.fromQuotaPlan(procObj.ResQuotaPlan), nil
 }
 

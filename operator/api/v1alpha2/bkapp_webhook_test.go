@@ -35,7 +35,7 @@ import (
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/components/manager"
+	components "bk.tencent.com/paas-app-operator/pkg/components/manager"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
@@ -247,6 +247,39 @@ var _ = Describe("test webhook.Validator", func() {
 			bkapp.Spec.Processes[0].ResQuotaPlan = "fake"
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"4C1G\""))
+		})
+	})
+
+	Context("Test process resources", func() {
+		It("Invalid CPU format", func() {
+			bkapp.Spec.Processes[0].Resources = &paasv1alpha2.Resources{
+				Limits: paasv1alpha2.ResourceQuantity{
+					CPU:    "invalid-cpu",
+					Memory: "512Mi",
+				},
+				Requests: paasv1alpha2.ResourceQuantity{
+					CPU:    "200m",
+					Memory: "256Mi",
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid CPU"))
+		})
+		It("Invalid Memory format", func() {
+			bkapp.Spec.Processes[0].Resources = &paasv1alpha2.Resources{
+				Limits: paasv1alpha2.ResourceQuantity{
+					CPU:    "4000m",
+					Memory: "invalid-memory",
+				},
+				Requests: paasv1alpha2.ResourceQuantity{
+					CPU:    "200m",
+					Memory: "256Mi",
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid memory"))
 		})
 	})
 
@@ -788,6 +821,82 @@ var _ = Describe("test webhook.Validator", func() {
 			}
 			err := bkapp.ValidateCreate()
 			Expect(err.Error()).To(ContainSubstring("supported values: \"default\", \"4C1G\""))
+		})
+		It("[resources] invalid envName", func() {
+			bkapp.Spec.EnvOverlay.Resources = []paasv1alpha2.ResourcesOverlay{
+				{EnvName: "invalid-env", Process: "web", Resources: nil},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("envName is invalid"))
+		})
+		It("[resources] invalid process name", func() {
+			bkapp.Spec.EnvOverlay.Resources = []paasv1alpha2.ResourcesOverlay{
+				{EnvName: "stag", Process: "invalid-proc", Resources: nil},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err.Error()).To(ContainSubstring("process name is invalid"))
+		})
+		It("[resources] valid CPU and Memory limits", func() {
+			bkapp.Spec.EnvOverlay.Resources = []paasv1alpha2.ResourcesOverlay{
+				{
+					EnvName: "stag",
+					Process: "web",
+					Resources: &paasv1alpha2.Resources{
+						Limits: paasv1alpha2.ResourceQuantity{
+							CPU:    "4000m",
+							Memory: "2Gi",
+						},
+						Requests: paasv1alpha2.ResourceQuantity{
+							CPU:    "200m",
+							Memory: "512Mi",
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+		It("[resources] invalid CPU format", func() {
+			bkapp.Spec.EnvOverlay.Resources = []paasv1alpha2.ResourcesOverlay{
+				{
+					EnvName: "stag",
+					Process: "web",
+					Resources: &paasv1alpha2.Resources{
+						Limits: paasv1alpha2.ResourceQuantity{
+							CPU:    "invalid-cpu",
+							Memory: "2Gi",
+						},
+						Requests: paasv1alpha2.ResourceQuantity{
+							CPU:    "200m",
+							Memory: "512Mi",
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid CPU"))
+		})
+		It("[resources] invalid Memory format", func() {
+			bkapp.Spec.EnvOverlay.Resources = []paasv1alpha2.ResourcesOverlay{
+				{
+					EnvName: "stag",
+					Process: "web",
+					Resources: &paasv1alpha2.Resources{
+						Limits: paasv1alpha2.ResourceQuantity{
+							CPU:    "4000m",
+							Memory: "invalid-memory",
+						},
+						Requests: paasv1alpha2.ResourceQuantity{
+							CPU:    "200m",
+							Memory: "512Mi",
+						},
+					},
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid memory"))
 		})
 		It("[envVariables] invalid envName", func() {
 			bkapp.Spec.EnvOverlay.EnvVariables = []paasv1alpha2.EnvVarOverlay{

@@ -305,5 +305,59 @@ var _ = Describe("Environment overlay related functions", func() {
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
 			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
 		})
+
+		It("Get from resources", func() {
+			bkapp.Spec.Processes[1].Resources = &paasv1alpha2.Resources{
+				Limits: paasv1alpha2.ResourceQuantity{
+					CPU:    "4",
+					Memory: "1024Mi",
+				},
+				Requests: paasv1alpha2.ResourceQuantity{
+					CPU:    "200m",
+					Memory: "256Mi",
+				},
+			}
+			getter := NewProcResourcesGetter(bkapp)
+
+			resReq, _ := getter.GetByProc("web")
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
+
+			resReq, _ = getter.GetByProc("worker")
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
+		})
+
+		It("Get from resources overlay", func() {
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
+					{EnvName: "stag", Process: "web", Plan: paasv1alpha2.ResQuotaPlan4C1G},
+				},
+				Resources: []paasv1alpha2.ResourcesOverlay{
+					{EnvName: "stag", Process: "web", Resources: &paasv1alpha2.Resources{
+						Limits: paasv1alpha2.ResourceQuantity{
+							CPU:    "500m",
+							Memory: "1024Mi",
+						},
+						Requests: paasv1alpha2.ResourceQuantity{
+							CPU:    "200m",
+							Memory: "256Mi",
+						},
+					}},
+				},
+			}
+
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("500m"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
+		})
 	})
 })

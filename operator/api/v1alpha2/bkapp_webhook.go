@@ -398,14 +398,21 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 		)
 	}
 
-	// 4. 如果启用扩缩容，需要符合规范
+	// 4. 如果配置了 Resources 字段, 校验器有效性
+	if proc.Resources != nil {
+		if err := validateResources(pField.Child("resources"), proc.Resources); err != nil {
+			return err
+		}
+	}
+
+	// 5. 如果启用扩缩容，需要符合规范
 	if proc.Autoscaling != nil {
 		if err := r.validateAutoscaling(pField.Child("autoscaling"), *proc.Autoscaling); err != nil {
 			return err
 		}
 	}
 
-	// 5. 如果启用探针，需要符合规范
+	// 6. 如果启用探针，需要符合规范
 	if proc.Probes != nil {
 		if err := r.validateProbes(pField.Child("probe"), *proc.Probes); err != nil {
 			return err
@@ -751,6 +758,23 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		}
 	}
 
+	// validate "ResourcesOverlay": envName, process and resources
+	for i, res := range r.Spec.EnvOverlay.Resources {
+		resourceField := f.Child("resources").Index(i)
+		if !res.EnvName.IsValid() {
+			return field.Invalid(resourceField.Child("envName"), res.EnvName, "envName is invalid")
+		}
+		if !lo.Contains(r.getProcNames(), res.Process) {
+			return field.Invalid(resourceField.Child("process"), res.Process, "process name is invalid")
+		}
+
+		if res.Resources != nil {
+			if err := validateResources(resourceField.Child("resources"), res.Resources); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Validate "autoscaling": envName, process and policy
 	for i, scaling := range r.Spec.EnvOverlay.Autoscaling {
 		pField := f.Child("autoscaling").Index(i)
@@ -806,5 +830,46 @@ func (r *BkApp) validateComponents() *field.Error {
 			}
 		}
 	}
+	return nil
+}
+
+// validateResources validates the Resources configuration
+func validateResources(pField *field.Path, resources *Resources) *field.Error {
+	// 验证 CPU limits
+	if _, err := quota.NewQuantity(resources.Limits.CPU, quota.CPU); err != nil {
+		return field.Invalid(
+			pField.Child("limits").Child("cpu"),
+			resources.Limits.CPU,
+			fmt.Sprintf("invalid CPU limit: %s", err.Error()),
+		)
+	}
+
+	// 验证 Memory limits
+	if _, err := quota.NewQuantity(resources.Limits.Memory, quota.Memory); err != nil {
+		return field.Invalid(
+			pField.Child("limits").Child("memory"),
+			resources.Limits.Memory,
+			fmt.Sprintf("invalid memory limit: %s", err.Error()),
+		)
+	}
+
+	// 验证 CPU requests
+	if _, err := quota.NewQuantity(resources.Requests.CPU, quota.CPU); err != nil {
+		return field.Invalid(
+			pField.Child("requests").Child("cpu"),
+			resources.Requests.CPU,
+			fmt.Sprintf("invalid CPU request: %s", err.Error()),
+		)
+	}
+
+	// 验证 Memory requests
+	if _, err := quota.NewQuantity(resources.Requests.Memory, quota.Memory); err != nil {
+		return field.Invalid(
+			pField.Child("requests").Child("memory"),
+			resources.Requests.Memory,
+			fmt.Sprintf("invalid memory request: %s", err.Error()),
+		)
+	}
+
 	return nil
 }

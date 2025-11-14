@@ -93,6 +93,12 @@ urlpatterns = [
         views.ApplicationMemberViewSet.as_view({"get": "get_roles"}),
         name="plat_mgt.applications.members.get_roles",
     ),
+    # 平台管理-进程管理
+    re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/process_specs/$",
+        views.ApplicationProcessViewSet.as_view({"get": "retrieve", "post": "batch_update"}),
+        name="plat_mgt.applications.process_specs",
+    ),
     # 平台管理 - 增强服务
     re_path(
         r"^api/plat_mgt/applications/(?P<code>[^/]+)/services/bound_attachments/$",

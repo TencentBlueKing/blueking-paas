@@ -66,6 +66,21 @@ class BKLogConfigProvider:
     def storage_cluster_id(self) -> int:
         return settings.BKLOG_CONFIG["STORAGE_CLUSTER_ID"]
 
+    @property
+    def retention(self) -> int:
+        """获取日志存储时间(天)"""
+        return settings.BKLOG_CONFIG["RETENTION"]
+
+    @property
+    def es_shards(self) -> int:
+        """获取ES索引分片数"""
+        return settings.BKLOG_CONFIG["ES_SHARDS"]
+
+    @property
+    def storage_replicas(self) -> int:
+        """获取存储副本数"""
+        return settings.BKLOG_CONFIG["STORAGE_REPLICAS"]
+
 
 def _add_wildcard_suffix(path: str) -> str:
     """add '/*' suffix to path
@@ -319,12 +334,16 @@ def to_custom_collector_config(module: Module, collector_config: AppLogCollector
         logger.debug("CustomCollectorConfig does not exits, skip fill persistence fields")
         name = build_custom_collector_config_name(module, type=collector_config.log_type)
 
+    bklog_provider = BKLogConfigProvider(module)
     cfg = CustomCollectorConfig(
         name_en=name,
         name_zh_cn=name,
         etl_config=etl_config,
         storage_config=StorageConfig(
-            storage_cluster_id=BKLogConfigProvider(module).storage_cluster_id,
+            storage_cluster_id=bklog_provider.storage_cluster_id,
+            retention=bklog_provider.retention,
+            es_shards=bklog_provider.es_shards,
+            storage_replicas=bklog_provider.storage_replicas,
         ),
     )
     # fill persistence fields from db

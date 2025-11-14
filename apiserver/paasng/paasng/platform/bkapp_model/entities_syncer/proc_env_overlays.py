@@ -20,7 +20,13 @@ import logging
 from typing import Dict, Iterable, List, Set, Tuple, Union
 
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.entities import AutoscalingOverlay, Process, ReplicasOverlay, ResQuotaOverlay
+from paasng.platform.bkapp_model.entities import (
+    AutoscalingOverlay,
+    Process,
+    ReplicasOverlay,
+    ResourcesOverlay,
+    ResQuotaOverlay,
+)
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.modules.models import Module
 from paasng.utils.structure import NotSetType
@@ -75,9 +81,30 @@ def sync_env_overlays_autoscalings(
     return syncer.sync(module, overlay_autoscalings, manager, proc_value_is_set)
 
 
+def sync_env_overlays_resources(
+    module: Module,
+    overlay_resources: List[ResQuotaOverlay] | NotSetType,
+    manager: fieldmgr.FieldMgrName,
+    processes: List[Process] | None = None,
+) -> CommonSyncResult:
+    """Sync res_quota overlay data to db."""
+    syncer = OverlayDataSyncer(algo=ResourcesSyncerFieldAlgo())
+    if processes is None:
+        proc_value_is_set = None
+    else:
+        proc_value_is_set = {p.name: not isinstance(p.res_quota_plan, NotSetType) for p in processes}
+    return syncer.sync(module, overlay_resources, manager, proc_value_is_set)
+
+
 def clean_empty_overlays(module):
     """Clean up overlay records that contains empty data."""
-    empty_values = {"autoscaling": None, "scaling_config": None, "target_replicas": None, "plan_name": None}
+    empty_values = {
+        "autoscaling": None,
+        "scaling_config": None,
+        "target_replicas": None,
+        "plan_name": None,
+        "resources": None,
+    }
 
     # If new fields were added to the module, the clean up process should abort to avoid data loss.
     fields = {f.name for f in ProcessSpecEnvOverlay._meta.fields}
@@ -110,7 +137,7 @@ class OverlayDataSyncer:
     def sync(
         self,
         module: Module,
-        items: Iterable[Union[ReplicasOverlay, ResQuotaOverlay, AutoscalingOverlay]] | NotSetType,
+        items: Iterable[Union[ReplicasOverlay, ResQuotaOverlay, ResourcesOverlay, AutoscalingOverlay]] | NotSetType,
         manager: fieldmgr.FieldMgrName,
         proc_value_is_set: dict[str, bool] | None,
     ) -> CommonSyncResult:
@@ -292,3 +319,14 @@ class AutoscalingSyncerFieldAlgo(SyncerFieldAlgo):
 
     def get_field_mgr_key(self, process: str, env: str) -> str:
         return fieldmgr.f_overlay_autoscaling(process, env)
+
+
+class ResourcesSyncerFieldAlgo(SyncerFieldAlgo):
+    def get_empty_values(self) -> Dict:
+        return {"resources": None}
+
+    def get_values(self, input_p) -> Dict:
+        return {"resources": input_p.resources}
+
+    def get_field_mgr_key(self, process: str, env: str) -> str:
+        return fieldmgr.f_overlay_resources(process, env)

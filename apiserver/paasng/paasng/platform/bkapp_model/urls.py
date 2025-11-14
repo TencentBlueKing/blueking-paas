@@ -31,6 +31,12 @@ urlpatterns = [
         views.ModuleProcessSpecViewSet.as_view({"get": "retrieve", "post": "batch_upsert"}),
         name="api.bkapp_model.process_specs",
     ),
+    # 推荐资源配置
+    re_path(
+        r"api/bkapps/processes/recommend_resources/$",
+        views.ModuleProcessSpecViewSet.as_view({"get": "get_recommend_resources"}),
+        name="api.processes.recommend_resources",
+    ),
     # 钩子命令
     re_path(
         make_app_pattern(r"/bkapp_model/deploy_hooks/$", include_envs=False),

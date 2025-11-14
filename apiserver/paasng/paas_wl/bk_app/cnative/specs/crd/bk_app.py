@@ -169,6 +169,42 @@ class ProcComponent(BaseModel):
         return data
 
 
+class ResourceQuantity(BaseModel):
+    """
+    资源数量模型，用于表示CPU和内存的具体数值及单位
+
+    :param cpu: CPU 资源量，单位为 m
+    :param memory: 内存资源量，单位为 Mi
+    """
+
+    cpu: str
+    memory: str
+
+
+class Resources(BaseModel):
+    """
+    Resources model
+
+    :param limits: 资源限制配置，指定容器可以使用的最大资源量
+    :param requests: 资源请求配置，指定容器需要的最小资源量
+    """
+
+    limits: ResourceQuantity
+    requests: ResourceQuantity
+
+    def dict(self, *args, **kwargs) -> dict:
+        """
+        将资源转换为字典格式，单位统一为 m 和 Mi
+        :return: 包含 limits 和 requests 的字典
+        """
+        result = {"limits": {"cpu": f"{self.limits.cpu}m", "memory": f"{self.limits.memory}Mi"}}
+
+        if self.requests is not None:
+            result["requests"] = {"cpu": f"{self.requests.cpu}m", "memory": f"{self.requests.memory}Mi"}
+
+        return result
+
+
 class BkAppProcess(BaseModel):
     """Process resource"""
 
@@ -180,6 +216,7 @@ class BkAppProcess(BaseModel):
     # FIXME: deprecated targetPort, will be removed in the future
     targetPort: int | None = None
     resQuotaPlan: ResQuotaPlan | None = None
+    resources: Resources | None = None
     autoscaling: AutoscalingSpec | None = None
     probes: ProbeSet | None = None
     services: List[ProcService] | None = None
@@ -265,6 +302,12 @@ class ResQuotaOverlay(BaseModel):
     plan: str
 
 
+class ResourcesOverlay(BaseModel):
+    envName: str
+    process: str
+    resources: Resources
+
+
 class EnvVarOverlay(BaseModel):
     """Overwrite or add application's environment vars by environment"""
 
@@ -288,6 +331,7 @@ class EnvOverlay(BaseModel):
 
     replicas: List[ReplicasOverlay] | None = None
     resQuotas: List[ResQuotaOverlay] | None = None
+    resources: List[ResourcesOverlay] | None = None
     envVariables: List[EnvVarOverlay] | None = None
     autoscaling: List[AutoscalingOverlay] | None = None
     mounts: List[MountOverlay] | None = None
@@ -297,6 +341,7 @@ class EnvOverlay(BaseModel):
         assert field_name in {
             "replicas",
             "resQuotas",
+            "resources",
             "envVariables",
             "autoscaling",
             "mounts",

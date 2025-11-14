@@ -202,6 +202,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 target_port=process_spec.port,
                 # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
                 res_quota_plan=self.get_quota_plan(process_spec.plan_name),
+                resources=process_spec.resources,
                 autoscaling=process_spec.scaling_config,
                 probes=process_spec.probes.render_port() if process_spec.probes else None,
                 services=([svc.render_port() for svc in process_spec.services] if process_spec.services else None),
@@ -254,6 +255,15 @@ class ProcessesManifestConstructor(ManifestConstructor):
                             envName=item.environment_name,
                             process=proc_spec.name,
                             plan=self.get_quota_plan(item.plan_name),
+                        ),
+                    )
+                if item.resources:
+                    overlay.append_item(
+                        "resources",
+                        crd.ResourcesOverlay(
+                            envName=item.environment_name,
+                            process=proc_spec.name,
+                            resources=item.resources,
                         ),
                     )
 

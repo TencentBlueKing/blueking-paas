@@ -29,6 +29,7 @@ from .fields import (
     f_overlay_mounts,
     f_overlay_replicas,
     f_overlay_res_quotas,
+    f_overlay_resources,
     f_proc_autoscaling,
     f_proc_replicas,
 )
@@ -44,6 +45,7 @@ __all__ = [
     "f_overlay_autoscaling",
     "f_overlay_mounts",
     "f_overlay_replicas",
+    "f_overlay_resources",
     "f_overlay_res_quotas",
     "f_proc_autoscaling",
     "f_proc_replicas",

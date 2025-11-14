@@ -37,6 +37,7 @@ from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model import fieldmgr
 from paasng.platform.bkapp_model.entities import Monitoring, Process
+from paasng.platform.bkapp_model.entities.resources import get_cpu_recommend_resources, get_memory_recommend_resources
 from paasng.platform.bkapp_model.entities_syncer import sync_processes
 from paasng.platform.bkapp_model.fieldmgr.constants import FieldMgrName
 from paasng.platform.bkapp_model.importer import import_manifest
@@ -55,6 +56,7 @@ from paasng.platform.bkapp_model.serializers import (
     ModuleDeployHookSLZ,
     ModuleProcessSpecsInputSLZ,
     ModuleProcessSpecsOutputSLZ,
+    RecommendResourceListSLZ,
     SvcDiscConfigSLZ,
 )
 from paasng.platform.engine.constants import AppEnvName, RuntimeType
@@ -147,6 +149,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                 "env_overlay": {
                     environment_name.value: {
                         "plan_name": spec.get_plan_name(environment_name),
+                        "resources": spec.get_resources(environment_name),
                         "target_replicas": spec.get_target_replicas(environment_name),
                         "autoscaling": bool(spec.get_autoscaling(environment_name)),
                         "scaling_config": spec.get_scaling_config(environment_name) or default_scaling_config,
@@ -204,6 +207,13 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         ObservabilityConfig.objects.upsert_by_module(module, monitoring)
 
         return self.retrieve(request, code, module_name)
+
+    @swagger_auto_schema(response_serializer=RecommendResourceListSLZ)
+    def get_recommend_resources(self, request):
+        """获取进程的推荐资源配置列表"""
+        data = {"cpu": get_cpu_recommend_resources(), "memory": get_memory_recommend_resources()}
+        serializer = RecommendResourceListSLZ(data)
+        return Response(serializer.data)
 
 
 class ModuleDeployHookViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):

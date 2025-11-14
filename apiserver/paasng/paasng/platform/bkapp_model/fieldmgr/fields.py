@@ -49,6 +49,10 @@ def f_overlay_res_quotas(process: str, env_name: str) -> Field:
     return f"spec.envOverlay.resQuotas[{process}:{env_name}]"
 
 
+def f_overlay_resources(process: str, env_name: str) -> Field:
+    return f"spec.envOverlay.resources[{process}:{env_name}]"
+
+
 def f_overlay_mounts(process: str, env_name: str) -> Field:
     return f"spec.envOverlay.mounts[{process}:{env_name}]"
 

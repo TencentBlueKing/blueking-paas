@@ -29,7 +29,7 @@ from .env_vars import EnvVar, EnvVarOverlay
 from .hooks import Hooks
 from .mounts import Mount, MountOverlay
 from .observability import Observability
-from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
+from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResourcesOverlay, ResQuotaOverlay
 from .processes import Process
 from .svc_discovery import SvcDiscConfig
 
@@ -46,6 +46,7 @@ class BkAppEnvOverlay(AllowNotsetModel):
     # TODO: Should we stop support `None` as a possible value?
     replicas: List[ReplicasOverlay] | NotSetType | None = NOTSET
     res_quotas: List[ResQuotaOverlay] | NotSetType | None = NOTSET
+    resources: List[ResourcesOverlay] | NotSetType | None = NOTSET
     env_variables: List[EnvVarOverlay] | NotSetType | None = NOTSET
     autoscaling: List[AutoscalingOverlay] | NotSetType | None = NOTSET
     mounts: Optional[List[MountOverlay]] | NotSetType | None = NOTSET

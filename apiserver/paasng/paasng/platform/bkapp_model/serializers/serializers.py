@@ -27,7 +27,13 @@ from paas_wl.bk_app.processes.serializers import MetricSpecSLZ
 from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
 from paasng.accessories.proc_components.manager import validate_component_properties
-from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
+from paasng.platform.bkapp_model.constants import (
+    PORT_PLACEHOLDER,
+    CPUResourceQuantity,
+    ExposedTypeName,
+    MemoryResourceQuantity,
+    NetworkProtocol,
+)
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
@@ -55,11 +61,26 @@ class ScalingConfigSLZ(serializers.Serializer):
     )
 
 
+class ResourcesQuantity(serializers.Serializer):
+    """资源数量"""
+
+    cpu = serializers.ChoiceField(choices=CPUResourceQuantity.get_choices())
+    memory = serializers.ChoiceField(choices=MemoryResourceQuantity.get_choices())
+
+
+class ResourcesSLZ(serializers.Serializer):
+    """资源配置"""
+
+    limits = ResourcesQuantity(help_text="资源限制", required=False, allow_null=True)
+    requests = ResourcesQuantity(help_text="资源请求", required=False, allow_null=True)
+
+
 class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     """进程配置-单一环境相关配置"""
 
     plan_name = serializers.CharField(help_text="资源配额方案", required=False)
     target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
+    resources = ResourcesSLZ(help_text="资源配置", required=False, allow_null=True, read_only=True)
     autoscaling = serializers.BooleanField(help_text="是否启用自动扩缩容", required=False, default=False)
     scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False, allow_null=True)
 
@@ -381,3 +402,18 @@ class DomainResolutionSLZ(serializers.Serializer):
 
 class BkAppModelSLZ(serializers.Serializer):
     manifest = serializers.JSONField(label=_("BkApp 配置信息"))
+
+
+class ResourceItemSLZ(serializers.Serializer):
+    value = serializers.IntegerField(help_text="资源值")
+    label = serializers.CharField(help_text="资源名称")
+
+
+class ResourcePairSLZ(serializers.Serializer):
+    limit = ResourceItemSLZ(help_text="资源限制")
+    request = ResourceItemSLZ(help_text="资源请求")
+
+
+class RecommendResourceListSLZ(serializers.Serializer):
+    cpu = ResourcePairSLZ(many=True)
+    memory = ResourcePairSLZ(many=True)

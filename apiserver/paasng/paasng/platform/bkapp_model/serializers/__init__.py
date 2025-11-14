@@ -24,6 +24,7 @@ from .serializers import (
     ModuleProcessSpecSLZ,
     ModuleProcessSpecsOutputSLZ,
     ProbeSetSLZ,
+    RecommendResourceListSLZ,
     SvcDiscConfigSLZ,
 )
 
@@ -37,4 +38,5 @@ __all__ = [
     "ProbeSetSLZ",
     "SvcDiscConfigSLZ",
     "ModuleProcessSpecsInputSLZ",
+    "RecommendResourceListSLZ",
 ]

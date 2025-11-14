@@ -19,6 +19,7 @@ import logging
 
 from pydantic import BaseModel
 
+from .resources import Resources
 from .scaling_config import AutoscalingConfig
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,20 @@ class ResQuotaOverlay(BaseModel):
     env_name: str
     process: str
     plan: str
+
+
+class ResourcesOverlay(BaseModel):
+    """
+    资源申请 Overlay
+
+    :param env_name: 生效环境名
+    :param process: 进程名称
+    :param resources: 资源申请
+    """
+
+    env_name: str
+    process: str
+    resources: Resources
 
 
 class ReplicasOverlay(BaseModel):

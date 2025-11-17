@@ -236,7 +236,7 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 	if env := GetEnvName(r.bkapp); !env.IsEmpty() {
 		if procCfg, ok := adminConfig[name]; ok {
 			if cfg, ok := procCfg[string(env)]; ok {
-				return r.calculateResourcesExplicit(cfg), nil
+				return r.calculateResourcesExplicit(cfg)
 			}
 		}
 	}
@@ -272,6 +272,67 @@ func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) core
 		cpuRaw, memRaw = config.Global.GetProcDefaultCpuLimit(), config.Global.GetProcDefaultMemLimit()
 	}
 	return r.calculateResources(cpuRaw, memRaw)
+}
+
+// calculateResourcesExplicit builds resource requirements from explicit limits and/or requests
+func (r *ProcResourcesGetter) calculateResourcesExplicit(
+	spec paasv1alpha2.AdminProcResourceSpec,
+) (corev1.ResourceRequirements, error) {
+	// Limits must be specified for admin resource spec
+	if spec.Limits == nil {
+		return corev1.ResourceRequirements{}, errors.New("limits must be specified in admin resource spec")
+	}
+
+	limits, err := r.parseResourceList(spec.Limits)
+	if err != nil {
+		log.Error(err, "Fail to parse limits", "spec", spec.Limits)
+		return corev1.ResourceRequirements{}, errors.Wrap(err, "fail to parse limits")
+	}
+	requests, err := r.parseResourceList(spec.Requests)
+	if err != nil {
+		log.Error(err, "Fail to parse requests", "spec", spec.Requests)
+		return corev1.ResourceRequirements{}, errors.Wrap(err, "fail to parse requests")
+	}
+
+	// If requests are not specified but limits are, derive requests from limits
+	if spec.Requests == nil {
+		requests = r.calculateResources(spec.Limits.CPU, spec.Limits.Memory).Requests
+	}
+
+	// requests 必须小于等于 limits
+	if requests.Cpu().Cmp(*limits.Cpu()) == 1 || requests.Memory().Cmp(*limits.Memory()) == 1 {
+		return corev1.ResourceRequirements{}, errors.New("requests must be less than or equal to limits")
+	}
+
+	return corev1.ResourceRequirements{
+		Limits:   limits,
+		Requests: requests,
+	}, nil
+}
+
+func (r *ProcResourcesGetter) parseResourceList(res *paasv1alpha2.AdminResource) (corev1.ResourceList, error) {
+	resources := make(corev1.ResourceList)
+	if res == nil {
+		return resources, nil
+	}
+
+	// Parse CPU
+	cpu, err := quota.NewQuantity(res.CPU, quota.CPU)
+	if err != nil {
+		log.Error(err, "Fail to parse cpu", "cpu", res.CPU)
+		return nil, errors.Wrapf(err, "invalid cpu value %q", res.CPU)
+	}
+	resources[corev1.ResourceCPU] = *cpu
+
+	// Parse Memory
+	memory, err := quota.NewQuantity(res.Memory, quota.Memory)
+	if err != nil {
+		log.Error(err, "Fail to parse memory", "memory", res.Memory)
+		return nil, errors.Wrapf(err, "invalid memory value %q", res.Memory)
+	}
+	resources[corev1.ResourceMemory] = *memory
+
+	return resources, nil
 }
 
 // calculateResources build the resource requirements from raw string
@@ -322,43 +383,4 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 			corev1.ResourceMemory: *memQuota,
 		},
 	}
-}
-
-// calculateResourcesExplicit builds resource requirements from explicit limits and/or requests
-func (r *ProcResourcesGetter) calculateResourcesExplicit(
-	spec paasv1alpha2.AdminProcResourceSpec,
-) corev1.ResourceRequirements {
-	limits := r.parseResourceList(spec.Limits)
-	requests := r.parseResourceList(spec.Requests)
-
-	// If requests are not specified but limits are, derive requests from limits
-	if spec.Requests == nil && spec.Limits != nil {
-		requests = r.calculateResources(spec.Limits.CPU, spec.Limits.Memory).Requests
-	}
-
-	return corev1.ResourceRequirements{
-		Limits:   limits,
-		Requests: requests,
-	}
-}
-
-func (r *ProcResourcesGetter) parseResourceList(res *paasv1alpha2.AdminResource) corev1.ResourceList {
-	resources := make(corev1.ResourceList)
-	if res == nil {
-		return resources
-	}
-
-	if cpu, err := quota.NewQuantity(res.CPU, quota.CPU); err != nil {
-		log.Error(err, "Fail to parse cpu", "cpu", res.CPU)
-	} else {
-		resources[corev1.ResourceCPU] = *cpu
-	}
-
-	if memory, err := quota.NewQuantity(res.Memory, quota.Memory); err != nil {
-		log.Error(err, "Fail to parse memory", "memory", res.Memory)
-	} else {
-		resources[corev1.ResourceMemory] = *memory
-	}
-
-	return resources
 }

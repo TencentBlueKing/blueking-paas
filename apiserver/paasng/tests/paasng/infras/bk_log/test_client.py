@@ -74,7 +74,7 @@ class TestBkLogClient:
                     "storage_cluster_id": 1008611,
                     "retention": 14,
                     "es_shards": 1,
-                    # 后端接口参数拼写错误，先沿用
+                    # log-search API 参数为 storage_replies
                     "storage_replies": 1,
                     "allocation_min_days": 0,
                 },
@@ -228,7 +228,7 @@ class TestBkLogClient:
                     "storage_cluster_id": 1008611,
                     "retention": 14,
                     "es_shards": 1,
-                    # 后端接口参数拼写错误，先沿用
+                    # log-search API 参数为 storage_replies
                     "storage_replies": 1,
                     "allocation_min_days": 0,
                 },

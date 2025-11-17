@@ -1171,11 +1171,11 @@ BKLOG_TIME_ZONE = settings.get("BKLOG_TIME_ZONE")
 ## 日志平台存储集群 ID
 BKLOG_STORAGE_CLUSTER_ID = settings.get("BKLOG_STORAGE_CLUSTER_ID")
 ## 日志保存时间（天数），默认值 14
-BKLOG_RETENTION = settings.get("BKLOG_RETENTION", 14)
+BKLOG_RETENTION = int(settings.get("BKLOG_RETENTION", 14))
 ## Elasticsearch 索引分片数，默认值 1
-BKLOG_ES_SHARDS = settings.get("BKLOG_ES_SHARDS", 1)
+BKLOG_ES_SHARDS = int(settings.get("BKLOG_ES_SHARDS", 1))
 ## 存储副本数，默认值 1
-BKLOG_STORAGE_REPLICAS = settings.get("BKLOG_STORAGE_REPLICAS", 1)
+BKLOG_STORAGE_REPLICAS = int(settings.get("BKLOG_STORAGE_REPLICAS", 1))
 BKLOG_CONFIG = settings.get(
     "BKLOG_CONFIG",
     {

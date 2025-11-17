@@ -228,6 +228,19 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 		return r.calculateResources(cfg["cpu"], cfg["memory"]), nil
 	}
 
+	// Admin annotation: ...
+	adminConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.AdminProcResConfig](
+		r.bkapp,
+		paasv1alpha2.AdminProcResAnnoKey,
+	)
+	if env := GetEnvName(r.bkapp); !env.IsEmpty() {
+		if procCfg, ok := adminConfig[name]; ok {
+			if cfg, ok := procCfg[string(env)]; ok {
+				return r.calculateResourcesExplicit(cfg), nil
+			}
+		}
+	}
+
 	// Overlay: read the "ResQuotaPlan" field from envOverlay
 	if env := GetEnvName(r.bkapp); !env.IsEmpty() && r.bkapp.Spec.EnvOverlay != nil {
 		for _, q := range r.bkapp.Spec.EnvOverlay.ResQuotas {
@@ -309,4 +322,43 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 			corev1.ResourceMemory: *memQuota,
 		},
 	}
+}
+
+// calculateResourcesExplicit builds resource requirements from explicit limits and/or requests
+func (r *ProcResourcesGetter) calculateResourcesExplicit(
+	spec paasv1alpha2.AdminProcResourceSpec,
+) corev1.ResourceRequirements {
+	limits := r.parseResourceList(spec.Limits)
+	requests := r.parseResourceList(spec.Requests)
+
+	// If requests are not specified but limits are, derive requests from limits
+	if spec.Requests == nil && spec.Limits != nil {
+		requests = r.calculateResources(spec.Limits.CPU, spec.Limits.Memory).Requests
+	}
+
+	return corev1.ResourceRequirements{
+		Limits:   limits,
+		Requests: requests,
+	}
+}
+
+func (r *ProcResourcesGetter) parseResourceList(res *paasv1alpha2.AdminResource) corev1.ResourceList {
+	resources := make(corev1.ResourceList)
+	if res == nil {
+		return resources
+	}
+
+	if cpu, err := quota.NewQuantity(res.CPU, quota.CPU); err != nil {
+		log.Error(err, "Fail to parse cpu", "cpu", res.CPU)
+	} else {
+		resources[corev1.ResourceCPU] = *cpu
+	}
+
+	if memory, err := quota.NewQuantity(res.Memory, quota.Memory); err != nil {
+		log.Error(err, "Fail to parse memory", "memory", res.Memory)
+	} else {
+		resources[corev1.ResourceMemory] = *memory
+	}
+
+	return resources
 }

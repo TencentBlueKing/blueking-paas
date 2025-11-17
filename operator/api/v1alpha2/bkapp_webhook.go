@@ -323,6 +323,7 @@ func validateAdminResourceValues(res AdminResource) error {
 
 // validateRequestsNotExceedsLimits 验证 requests 不超过 limits
 func validateRequestsNotExceedsLimits(requests, limits AdminResource) error {
+	// 因为之前已经验证过 limits 和 requests 的合法性，这里不会失败, 所以忽略错误处理
 	limCPU, _ := quota.NewQuantity(limits.CPU, quota.CPU)
 	reqCPU, _ := quota.NewQuantity(requests.CPU, quota.CPU)
 	if reqCPU.Cmp(*limCPU) > 0 {

@@ -680,8 +680,18 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # ENABLE_BK_LOG_APIGW: True
 # 蓝鲸日志平台网关的环境，仅在 ENABLE_BK_LOG_APIGW=True 时生效
 # BK_LOG_APIGW_SERVICE_STAGE: stag
-# 蓝鲸日志平台相关的配置项
-# BKLOG_CONFIG = {}
+# 日志保存时间（天数），默认值 14
+# BKLOG_RETENTION: 14
+# Elasticsearch 索引分片数，默认值 1
+# BKLOG_ES_SHARDS: 1
+# 存储副本数，默认值 1
+# BKLOG_STORAGE_REPLICAS: 1
+# 蓝鲸日志平台相关的配置项 （当设置此项时，上述单独的 BKLOG_* 配置项将被覆盖）
+# BKLOG_CONFIG:
+#   RETENTION: 14
+#   ES_SHARDS: 1
+#   STORAGE_REPLICAS: 1
+
 
 ## ------------------------------------ 蓝鲸通知中心配置 ------------------------------------
 # 通知中心的功能可通过配置开启

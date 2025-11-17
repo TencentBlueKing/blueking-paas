@@ -146,7 +146,8 @@ class BkLogManagementClient:
                     "storage_cluster_id": config.storage_config.storage_cluster_id,
                     "retention": config.storage_config.retention,
                     "es_shards": config.storage_config.es_shards,
-                    "storage_replies": config.storage_config.storage_replies,
+                    # log-search API 参数为 storage_replies
+                    "storage_replies": config.storage_config.storage_replicas,
                     "allocation_min_days": config.storage_config.allocation_min_days,
                 }
             )
@@ -188,7 +189,8 @@ class BkLogManagementClient:
                     "storage_cluster_id": config.storage_config.storage_cluster_id,
                     "retention": config.storage_config.retention,
                     "es_shards": config.storage_config.es_shards,
-                    "storage_replies": config.storage_config.storage_replies,
+                    # log-search API 参数为 storage_replies
+                    "storage_replies": config.storage_config.storage_replicas,
                     "allocation_min_days": config.storage_config.allocation_min_days,
                 }
             )

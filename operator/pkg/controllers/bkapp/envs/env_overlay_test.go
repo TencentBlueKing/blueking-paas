@@ -305,5 +305,41 @@ var _ = Describe("Environment overlay related functions", func() {
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
 			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
 		})
+
+		It("Get Admin Annotation explicit values override everything", func() {
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: string(paasv1alpha2.StagEnv)})
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, paasv1alpha2.AdminProcResConfig{
+				"web": {
+					string(paasv1alpha2.StagEnv): paasv1alpha2.AdminProcResourceSpec{
+						Limits:   &paasv1alpha2.AdminResource{CPU: "2", Memory: "2Gi"},
+						Requests: &paasv1alpha2.AdminResource{CPU: "500m", Memory: "1Gi"},
+					},
+				},
+			})
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("500m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+		})
+
+		It("Get Admin Annotation limited values only and derive requests", func() {
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: string(paasv1alpha2.StagEnv)})
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, paasv1alpha2.AdminProcResConfig{
+				"web": {
+					string(paasv1alpha2.StagEnv): paasv1alpha2.AdminProcResourceSpec{
+						Limits: &paasv1alpha2.AdminResource{CPU: "2", Memory: "2Gi"},
+					},
+				},
+			})
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
+			// Expect limits are set, requests derived (cpu default 200m, mem default divisor 2 -> 1Gi)
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+		})
 	})
 })

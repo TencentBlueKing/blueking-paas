@@ -232,68 +232,42 @@ func (r *BkApp) validateAnnotations() *field.Error {
 	}
 
 	// 验证管理员设置的进程资源配额注解是否合法
+	// Format: {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {"cpu": "100m", "memory": "256Mi"}}
 	adminProcResConfig, err := kubeutil.GetJsonAnnotation[AdminProcResConfig](
 		r, AdminProcResAnnoKey,
 	)
 	// 获取进程中的资源配额注解成功，才需要进行检查
 	if err == nil {
-		procNames := r.getProcNames()
-		for procName, envResMap := range adminProcResConfig {
-			// 验证 procName 是否有效
-			if !lo.Contains(procNames, procName) {
-				return field.Invalid(
-					annosPath.Child(AdminProcResAnnoKey),
-					annotations[AdminProcResAnnoKey],
-					fmt.Sprintf("process '%s' not found in spec.processes", procName),
-				)
-			}
-			// 验证每个环境中资源配额值是否合法
-			for envName, resSpec := range envResMap {
-				env := EnvName(envName)
-				if !env.IsValid() {
-					return field.Invalid(
-						annosPath.Child(AdminProcResAnnoKey),
-						annotations[AdminProcResAnnoKey],
-						fmt.Sprintf("invalid environment '%s', must be one of: prod, stag", envName),
-					)
-				}
-
-				if err := validateAdminResourceSpec(resSpec); err != nil {
-					return field.Invalid(
-						annosPath.Child(AdminProcResAnnoKey),
-						annotations[AdminProcResAnnoKey],
-						fmt.Sprintf(
-							"invalid resource spec for process '%s' in environment '%s': %s",
-							procName,
-							envName,
-							err.Error(),
-						),
-					)
-				}
-			}
+		if err := validateAdminResourceConfig(adminProcResConfig); err != nil {
+			return field.Invalid(
+				annosPath.Child(AdminProcResAnnoKey),
+				annotations[AdminProcResAnnoKey],
+				err.Error(),
+			)
 		}
 	}
 
 	return nil
 }
 
-func validateAdminResourceSpec(resSpec AdminProcResourceSpec) error {
+func validateAdminResourceConfig(resConfig AdminProcResConfig) error {
 	// 验证 Limits 配置（必须指定）
-	if resSpec.Limits == nil {
+	limitsMap, hasLimits := resConfig["limits"]
+	if !hasLimits || limitsMap == nil {
 		return errors.New("limits must be specified")
 	}
-	if err := validateAdminResourceValues(*resSpec.Limits); err != nil {
+	if err := validateAdminResourceMap(limitsMap, "limits"); err != nil {
 		return errors.Wrapf(err, "limits validation failed")
 	}
 
 	// 验证 Requests 配置（可选）
-	if resSpec.Requests != nil {
-		if err := validateAdminResourceValues(*resSpec.Requests); err != nil {
+	if requestsMap, hasRequests := resConfig["requests"]; hasRequests && requestsMap != nil {
+		if err := validateAdminResourceMap(requestsMap, "requests"); err != nil {
 			return errors.Wrapf(err, "requests validation failed")
 		}
 
 		// 验证 requests 不得超过 limits
-		if err := validateRequestsNotExceedsLimits(*resSpec.Requests, *resSpec.Limits); err != nil {
+		if err := validateRequestsNotExceedsLimits(requestsMap, limitsMap); err != nil {
 			return err
 		}
 	}
@@ -301,39 +275,41 @@ func validateAdminResourceSpec(resSpec AdminProcResourceSpec) error {
 	return nil
 }
 
-func validateAdminResourceValues(res AdminResource) error {
+func validateAdminResourceMap(resMap map[string]string, resType string) error {
 	// 验证 CPU 配置
-	if res.CPU == "" {
-		return errors.Errorf("cpu must be specified")
+	cpuStr, hasCPU := resMap["cpu"]
+	if !hasCPU || cpuStr == "" {
+		return errors.Errorf("%s.cpu must be specified", resType)
 	}
-	if _, err := quota.NewQuantity(res.CPU, quota.CPU); err != nil {
-		return errors.Wrapf(err, "invalid cpu value '%s'", res.CPU)
+	if _, err := quota.NewQuantity(cpuStr, quota.CPU); err != nil {
+		return errors.Wrapf(err, "invalid %s.cpu value '%s'", resType, cpuStr)
 	}
 
 	// 验证 Memory 配置
-	if res.Memory == "" {
-		return errors.Errorf("memory must be specified")
+	memStr, hasMem := resMap["memory"]
+	if !hasMem || memStr == "" {
+		return errors.Errorf("%s.memory must be specified", resType)
 	}
-	if _, err := quota.NewQuantity(res.Memory, quota.Memory); err != nil {
-		return errors.Wrapf(err, "invalid memory value '%s'", res.Memory)
+	if _, err := quota.NewQuantity(memStr, quota.Memory); err != nil {
+		return errors.Wrapf(err, "invalid %s.memory value '%s'", resType, memStr)
 	}
 
 	return nil
 }
 
 // validateRequestsNotExceedsLimits 验证 requests 不超过 limits
-func validateRequestsNotExceedsLimits(requests, limits AdminResource) error {
+func validateRequestsNotExceedsLimits(requests, limits map[string]string) error {
 	// 因为之前已经验证过 limits 和 requests 的合法性，这里不会失败, 所以忽略错误处理
-	limCPU, _ := quota.NewQuantity(limits.CPU, quota.CPU)
-	reqCPU, _ := quota.NewQuantity(requests.CPU, quota.CPU)
+	limCPU, _ := quota.NewQuantity(limits["cpu"], quota.CPU)
+	reqCPU, _ := quota.NewQuantity(requests["cpu"], quota.CPU)
 	if reqCPU.Cmp(*limCPU) > 0 {
-		return errors.Errorf("cpu requests '%s' must not exceed limits '%s'", requests.CPU, limits.CPU)
+		return errors.Errorf("cpu requests '%s' must not exceed limits '%s'", requests["cpu"], limits["cpu"])
 	}
 
-	limMem, _ := quota.NewQuantity(limits.Memory, quota.Memory)
-	reqMem, _ := quota.NewQuantity(requests.Memory, quota.Memory)
+	limMem, _ := quota.NewQuantity(limits["memory"], quota.Memory)
+	reqMem, _ := quota.NewQuantity(requests["memory"], quota.Memory)
 	if reqMem.Cmp(*limMem) > 0 {
-		return errors.Errorf("memory requests '%s' must not exceed limits '%s'", requests.Memory, limits.Memory)
+		return errors.Errorf("memory requests '%s' must not exceed limits '%s'", requests["memory"], limits["memory"])
 	}
 	return nil
 }

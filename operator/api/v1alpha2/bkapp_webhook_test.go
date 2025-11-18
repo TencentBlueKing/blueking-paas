@@ -1083,13 +1083,9 @@ var _ = Describe("test webhook.Validator", func() {
 	Context("Test annotations validation - Admin Process Resource Config", func() {
 		It("valid admin proc res config - limits only", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"web": {
-					"prod": paasv1alpha2.AdminProcResourceSpec{
-						Limits: &paasv1alpha2.AdminResource{
-							CPU:    "2",
-							Memory: "2G",
-						},
-					},
+				"limits": {
+					"cpu":    "2",
+					"memory": "2G",
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
@@ -1100,17 +1096,13 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("valid admin proc res config - limits and requests", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"web": {
-					"prod": paasv1alpha2.AdminProcResourceSpec{
-						Limits: &paasv1alpha2.AdminResource{
-							CPU:    "2",
-							Memory: "2G",
-						},
-						Requests: &paasv1alpha2.AdminResource{
-							CPU:    "1",
-							Memory: "1G",
-						},
-					},
+				"limits": {
+					"cpu":    "2",
+					"memory": "2G",
+				},
+				"requests": {
+					"cpu":    "1",
+					"memory": "1G",
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
@@ -1119,48 +1111,11 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(err).To(BeNil())
 		})
 
-		It("invalid admin proc res config - process not found", func() {
-			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"nonexistent": {
-					"prod": paasv1alpha2.AdminProcResourceSpec{
-						Limits: &paasv1alpha2.AdminResource{
-							CPU:    "1",
-							Memory: "1G",
-						},
-					},
-				},
-			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
-
-			err := bkapp.ValidateCreate()
-			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(ContainSubstring("process 'nonexistent' not found in spec.processes"))
-		})
-
-		It("invalid admin proc res config - invalid environment name", func() {
-			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"web": {
-					"invalid-env": paasv1alpha2.AdminProcResourceSpec{
-						Limits: &paasv1alpha2.AdminResource{
-							CPU:    "1",
-							Memory: "1G",
-						},
-					},
-				},
-			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
-
-			err := bkapp.ValidateCreate()
-			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(ContainSubstring("invalid environment 'invalid-env', must be one of: prod, stag"))
-		})
-
 		It("invalid admin proc res config - missing limits", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"web": {
-					"prod": paasv1alpha2.AdminProcResourceSpec{
-						Limits: nil,
-					},
+				"requests": {
+					"cpu":    "1",
+					"memory": "1G",
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
@@ -1172,53 +1127,43 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("invalid admin proc res config - invalid cpu in limits", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"web": {
-					"prod": paasv1alpha2.AdminProcResourceSpec{
-						Limits: &paasv1alpha2.AdminResource{
-							CPU:    "invalid-cpu",
-							Memory: "1G",
-						},
-					},
+				"limits": {
+					"cpu":    "invalid-cpu",
+					"memory": "1G",
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(ContainSubstring("invalid cpu value"))
+			Expect(err.Error()).To(ContainSubstring("invalid"))
+			Expect(err.Error()).To(ContainSubstring("cpu"))
 		})
 
 		It("invalid admin proc res config - invalid memory in limits", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"web": {
-					"prod": paasv1alpha2.AdminProcResourceSpec{
-						Limits: &paasv1alpha2.AdminResource{
-							CPU:    "1",
-							Memory: "invalid-memory",
-						},
-					},
+				"limits": {
+					"cpu":    "1",
+					"memory": "invalid-memory",
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(ContainSubstring("invalid memory value"))
+			Expect(err.Error()).To(ContainSubstring("invalid"))
+			Expect(err.Error()).To(ContainSubstring("memory"))
 		})
 
 		It("invalid admin proc res config - requests exceed limits", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"web": {
-					"prod": paasv1alpha2.AdminProcResourceSpec{
-						Limits: &paasv1alpha2.AdminResource{
-							CPU:    "1",
-							Memory: "1G",
-						},
-						Requests: &paasv1alpha2.AdminResource{
-							CPU:    "2",
-							Memory: "1G",
-						},
-					},
+				"limits": {
+					"cpu":    "1",
+					"memory": "1G",
+				},
+				"requests": {
+					"cpu":    "2",
+					"memory": "1G",
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)

@@ -228,17 +228,14 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 		return r.calculateResources(cfg["cpu"], cfg["memory"]), nil
 	}
 
-	// Admin annotation: ...
+	// Admin annotation: try to read resources configs from admin annotation
+	// Format: {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {...}}
 	adminConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.AdminProcResConfig](
 		r.bkapp,
 		paasv1alpha2.AdminProcResAnnoKey,
 	)
-	if env := GetEnvName(r.bkapp); !env.IsEmpty() {
-		if procCfg, ok := adminConfig[name]; ok {
-			if cfg, ok := procCfg[string(env)]; ok {
-				return r.calculateResourcesExplicit(cfg)
-			}
-		}
+	if adminConfig != nil {
+		return r.calculateResourcesExplicit(adminConfig)
 	}
 
 	// Overlay: read the "ResQuotaPlan" field from envOverlay
@@ -274,34 +271,47 @@ func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) core
 	return r.calculateResources(cpuRaw, memRaw)
 }
 
-// calculateResourcesExplicit builds resource requirements from explicit limits and/or requests
+// calculateResourcesExplicit builds resource requirements from admin config map
+// resConfig format: {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {"cpu": "100m", "memory": "256Mi"}}
 func (r *ProcResourcesGetter) calculateResourcesExplicit(
-	spec paasv1alpha2.AdminProcResourceSpec,
+	resConfig map[string]map[string]string,
 ) (corev1.ResourceRequirements, error) {
-	// Limits must be specified for admin resource spec
-	if spec.Limits == nil {
-		return corev1.ResourceRequirements{}, errors.New("limits must be specified in admin resource spec")
+	// Limits must be specified
+	limitsMap, hasLimits := resConfig["limits"]
+	if !hasLimits || limitsMap == nil {
+		return corev1.ResourceRequirements{}, errors.New("limits must be specified in admin resource config")
 	}
 
-	limits, err := r.parseResourceList(spec.Limits)
+	// Parse limits
+	limits, err := r.parseResourceMap(limitsMap, "limits")
 	if err != nil {
-		log.Error(err, "Fail to parse limits", "spec", spec.Limits)
 		return corev1.ResourceRequirements{}, errors.Wrap(err, "fail to parse limits")
 	}
-	requests, err := r.parseResourceList(spec.Requests)
-	if err != nil {
-		log.Error(err, "Fail to parse requests", "spec", spec.Requests)
-		return corev1.ResourceRequirements{}, errors.Wrap(err, "fail to parse requests")
-	}
 
-	// If requests are not specified but limits are, derive requests from limits
-	if spec.Requests == nil {
-		requests = r.calculateResources(spec.Limits.CPU, spec.Limits.Memory).Requests
-	}
+	// Parse requests (optional)
+	var requests corev1.ResourceList
+	if requestsMap, hasRequests := resConfig["requests"]; hasRequests && requestsMap != nil {
+		requests, err = r.parseResourceMap(requestsMap, "requests")
+		if err != nil {
+			return corev1.ResourceRequirements{}, errors.Wrap(err, "fail to parse requests")
+		}
 
-	// requests 必须小于等于 limits
-	if requests.Cpu().Cmp(*limits.Cpu()) == 1 || requests.Memory().Cmp(*limits.Memory()) == 1 {
-		return corev1.ResourceRequirements{}, errors.New("requests must be less than or equal to limits")
+		// Validate requests <= limits
+		if requests.Cpu().Cmp(*limits.Cpu()) == 1 {
+			return corev1.ResourceRequirements{}, errors.Errorf(
+				"cpu requests %s must not exceed limits %s",
+				requestsMap["cpu"], limitsMap["cpu"],
+			)
+		}
+		if requests.Memory().Cmp(*limits.Memory()) == 1 {
+			return corev1.ResourceRequirements{}, errors.Errorf(
+				"memory requests %s must not exceed limits %s",
+				requestsMap["memory"], limitsMap["memory"],
+			)
+		}
+	} else {
+		// If requests are not specified, derive from limits
+		requests = r.calculateResources(limitsMap["cpu"], limitsMap["memory"]).Requests
 	}
 
 	return corev1.ResourceRequirements{
@@ -310,25 +320,34 @@ func (r *ProcResourcesGetter) calculateResourcesExplicit(
 	}, nil
 }
 
-func (r *ProcResourcesGetter) parseResourceList(res *paasv1alpha2.AdminResource) (corev1.ResourceList, error) {
+// parseResourceMap parses a resource map (cpu and memory values) into ResourceList
+func (r *ProcResourcesGetter) parseResourceMap(
+	resMap map[string]string,
+	resType string,
+) (corev1.ResourceList, error) {
 	resources := make(corev1.ResourceList)
-	if res == nil {
-		return resources, nil
-	}
 
 	// Parse CPU
-	cpu, err := quota.NewQuantity(res.CPU, quota.CPU)
+	cpuStr, hasCPU := resMap["cpu"]
+	if !hasCPU || cpuStr == "" {
+		return nil, errors.Errorf("%s.cpu must be specified", resType)
+	}
+	cpu, err := quota.NewQuantity(cpuStr, quota.CPU)
 	if err != nil {
-		log.Error(err, "Fail to parse cpu", "cpu", res.CPU)
-		return nil, errors.Wrapf(err, "invalid cpu value %q", res.CPU)
+		log.Error(err, "Fail to parse cpu", "type", resType, "cpu", cpuStr)
+		return nil, errors.Wrapf(err, "invalid %s.cpu value %q", resType, cpuStr)
 	}
 	resources[corev1.ResourceCPU] = *cpu
 
 	// Parse Memory
-	memory, err := quota.NewQuantity(res.Memory, quota.Memory)
+	memStr, hasMem := resMap["memory"]
+	if !hasMem || memStr == "" {
+		return nil, errors.Errorf("%s.memory must be specified", resType)
+	}
+	memory, err := quota.NewQuantity(memStr, quota.Memory)
 	if err != nil {
-		log.Error(err, "Fail to parse memory", "memory", res.Memory)
-		return nil, errors.Wrapf(err, "invalid memory value %q", res.Memory)
+		log.Error(err, "Fail to parse memory", "type", resType, "memory", memStr)
+		return nil, errors.Wrapf(err, "invalid %s.memory value %q", resType, memStr)
 	}
 	resources[corev1.ResourceMemory] = *memory
 

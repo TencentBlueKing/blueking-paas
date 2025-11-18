@@ -93,21 +93,9 @@ type BkAppList struct {
 // such as "image" and "resource" configs. Structure: {<procName>: {<configKey>: <configValue>}
 type LegacyProcConfig map[string]map[string]string
 
-// AdminResource represents CPU and Memory values for resource specifications
-type AdminResource struct {
-	CPU    string `json:"cpu"`
-	Memory string `json:"memory"`
-}
-
-// AdminProcResourceSpec defines administrator-specified resource limits and requests for a process
-type AdminProcResourceSpec struct {
-	Limits   *AdminResource `json:"limits"`
-	Requests *AdminResource `json:"requests,omitempty"`
-}
-
-// AdminProcResConfig maps process name -> environment -> resource specification
-// Format: {\"<processName>\": {\"<envName>\": {\"limits\": {...}, \"requests\": {...}}}}
-type AdminProcResConfig map[string]map[string]AdminProcResourceSpec
+// AdminProcResConfig maps resource specification
+// Format: {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {"cpu": "100m", "memory": "256Mi"}}
+type AdminProcResConfig map[string]map[string]string
 
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {

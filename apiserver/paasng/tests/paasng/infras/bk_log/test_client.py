@@ -57,7 +57,12 @@ class TestBkLogClient:
                     name_en="foo",
                     name_zh_cn="foo",
                     description="bar" * 10,
-                    storage_config=StorageConfig(storage_cluster_id=1008611),
+                    storage_config=StorageConfig(
+                        storage_cluster_id=1008611,
+                        retention=14,
+                        es_shards=1,
+                        storage_replicas=1,
+                    ),
                 ),
                 {
                     "bk_biz_id": 1,
@@ -69,6 +74,7 @@ class TestBkLogClient:
                     "storage_cluster_id": 1008611,
                     "retention": 14,
                     "es_shards": 1,
+                    # log-search API 参数为 storage_replies
                     "storage_replies": 1,
                     "allocation_min_days": 0,
                 },
@@ -207,7 +213,12 @@ class TestBkLogClient:
                     name_en="foo",
                     name_zh_cn="foo",
                     description="bar" * 10,
-                    storage_config=StorageConfig(storage_cluster_id=1008611),
+                    storage_config=StorageConfig(
+                        storage_cluster_id=1008611,
+                        retention=14,
+                        es_shards=1,
+                        storage_replicas=1,
+                    ),
                 ),
                 {
                     "collector_config_name": "foo",
@@ -217,6 +228,7 @@ class TestBkLogClient:
                     "storage_cluster_id": 1008611,
                     "retention": 14,
                     "es_shards": 1,
+                    # log-search API 参数为 storage_replies
                     "storage_replies": 1,
                     "allocation_min_days": 0,
                 },

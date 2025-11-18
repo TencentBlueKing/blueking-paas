@@ -115,17 +115,17 @@ ensure-python-buildpack() {
     # 默认使用 bkrepo 源
     pip_index_url="${PAAS_BUILDPACK_PYTHON_PIP_INDEX_URL:-${bkrepo_endpoint}/pypi/${bkrepo_project}/pypi/simple/}"
     pip_index_host="$(echo "${bkrepo_endpoint}" | awk -F/ '{print $3}') ${PAAS_PIP_INDEX_HOST:-}"
-    python_buildpack_version=v213
+    python_buildpack_version="${PAAS_PYTHON_BUILDPACK_VERSION:-v213}"
     
     python manage.py manage_buildpack \
     --name "${buildpack_name}" \
     --display_name_zh_cn "Python" \
     --display_name_en "Python" \
-    --description_zh_cn "默认 Python 版本为3.10.5" \
-    --description_en "The default Python version is 3.10.5" \
+    --description_zh_cn "${PAAS_PYTHON_BUILDPACK_DESC_ZH_CN:-"默认 Python 版本为3.10.5"}" \
+    --description_en "${PAAS_PYTHON_BUILDPACK_DESC_EN:-"The default Python version is 3.10.5"}" \
     --tag "${python_buildpack_version}" \
     --language Python \
-    --type tar \
+    --type "${PAAS_PYTHON_BUILDPACK_TYPE:-tar}" \
     --address "${buildpack_url}/${buildpack_name}-${python_buildpack_version}.tar" \
     --environment \
     "BUILDPACK_S3_BASE_URL=${vendor_url}/runtimes/python" \
@@ -144,17 +144,17 @@ ensure-nodejs-buildpack() {
     
     # 默认使用 bkrepo 源
     npm_registry="${PAAS_BUILDPACK_NODEJS_BLUEKING_NPM_REGISTRY:-${bkrepo_endpoint}/npm/${bkrepo_project}/npm/}"
-    nodejs_buildpack_version=v163
+    nodejs_buildpack_version="${PAAS_NODEJS_BUILDPACK_VERSION:-v163}"
     
     python manage.py manage_buildpack \
     --name "${buildpack_name}" \
     --display_name_zh_cn "NodeJS" \
     --display_name_en "NodeJS" \
-    --description_zh_cn "默认 Node 版本为10.10.0; 支持 npm run build 及缓存加速功能" \
-    --description_en "Default Node version is 10.10.0; supports npm run build and cache acceleration" \
+    --description_zh_cn "${PAAS_NODEJS_BUILDPACK_DESC_ZH_CN:-"默认 Node 版本为10.10.0; 支持 npm run build 及缓存加速功能"}" \
+    --description_en "${PAAS_NODEJS_BUILDPACK_DESC_EN:-"Default Node version is 10.10.0; supports npm run build and cache acceleration"}" \
     --tag "${nodejs_buildpack_version}" \
     --language NodeJS \
-    --type tar \
+    --type "${PAAS_NODEJS_BUILDPACK_TYPE:-tar}" \
     --address "${buildpack_url}/${buildpack_name}-${nodejs_buildpack_version}.tar" \
     --environment \
     "STDLIB_FILE_URL=${vendor_url}/common/buildpack-stdlib/v7/stdlib.sh" \
@@ -170,16 +170,16 @@ ensure-golang-buildpack() {
     buildpack_name="$5"
     
     # golang
-    go_buildpack_version=v191
+    go_buildpack_version="${PAAS_GO_BUILDPACK_VERSION:-v191}"
     python manage.py manage_buildpack \
     --name "${buildpack_name}" \
     --display_name_zh_cn "Golang" \
     --display_name_en "Golang" \
-    --description_zh_cn "默认 Go 版本为1.20.14，最大支持版本1.22.3" \
-    --description_en "Default Go Version: 1.20.14, Highest supported version: 1.22.3" \
+    --description_zh_cn "${PAAS_GO_BUILDPACK_DESC_ZH_CN:-"默认 Go 版本为1.20.14，最大支持版本1.22.3"}" \
+    --description_en "${PAAS_GO_BUILDPACK_DESC_EN:-"Default Go Version: 1.20.14, Highest supported version: 1.22.3"}" \
     --tag "${go_buildpack_version}" \
     --language Go \
-    --type tar \
+    --type "${PAAS_GO_BUILDPACK_TYPE:-tar}" \
     --address "${buildpack_url}/${buildpack_name}-${go_buildpack_version}.tar" \
     --environment \
     "GO_BUCKET_URL=${vendor_url}/runtimes/golang" \
@@ -215,8 +215,8 @@ ensure-blueking-image() {
     --name "${cnb_image_name}" \
     --display_name_zh_cn "蓝鲸基础镜像" \
     --display_name_en "Blueking Basic Image" \
-    --description_zh_cn "基于 Ubuntu，支持多构建工具组合构建" \
-    --description_en "Ubuntu-based, multi-buildpack combination build support" \
+    --description_zh_cn "${PAAS_CNB_IMAGE_DESC_ZH_CN:-"基于 Ubuntu，支持多构建工具组合构建"}" \
+    --description_en "${PAAS_CNB_IMAGE_DESC_EN:-"Ubuntu-based, multi-buildpack combination build support"}" \
     --environment "CNB_PLATFORM_API=0.11" "CNB_RUN_IMAGE=${PAAS_HEROKU_RUNNER_IMAGE}" "CNB_SKIP_TLS_VERIFY=${PAAS_APP_DOCKER_REGISTRY_SKIP_TLS_VERIFY:-false}" \
     --label secureEncrypted=1 supportHttp=1 isCloudNativeBuilder=1 cnative_app=1
     python manage.py bind_buildpacks --image "${cnb_image_name}" --buildpack-name "${apt_buildpack_name}"

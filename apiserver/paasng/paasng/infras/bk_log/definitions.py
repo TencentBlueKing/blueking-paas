@@ -84,14 +84,14 @@ class StorageConfig:
     :param storage_cluster_id: 存储ES集群，默认会选择一个公共集群作为存储，如果需要指定存储，则填写为日志平台注册后的集群ID
     :param retention: 存储时间
     :param es_shards: 索引分片数
-    :param storage_replies: 存储副本数
+    :param storage_replicas: 存储副本数
     :param allocation_min_days: n天后的数据，转到冷节点，只在集群开启了冷热时生效
     """
 
     storage_cluster_id: int
-    retention: int = 14
-    es_shards: int = 1
-    storage_replies: int = 1
+    retention: int
+    es_shards: int
+    storage_replicas: int
     allocation_min_days: int = 0
 
 

@@ -22,12 +22,19 @@ from django.urls import reverse
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.modules.constants import SourceOrigin
 
 pytestmark = pytest.mark.django_db
 
 
 class TestApplicationProcessViewSet:
     """测试平台管理 - 应用进程资源管理 API"""
+
+    @pytest.fixture(autouse=True)
+    def setup_module_source_origin(self, bk_module):
+        """设置模块 source_origin 为允许修改的类型"""
+        bk_module.source_origin = SourceOrigin.S_MART.value
+        bk_module.save(update_fields=["source_origin"])
 
     @pytest.fixture()
     def url(self, bk_app):
@@ -84,6 +91,45 @@ class TestApplicationProcessViewSet:
             "requests": {"cpu": "100m", "memory": "256Mi"},
         }
 
+    def test_update_resource_source_origin_forbidden(self, plat_mgt_api_client, bk_app: Application, bk_module, url):
+        """测试更新进程资源限制时,source_origin 不支持修改的场景"""
+        # 设置为不支持的 source_origin
+        bk_module.source_origin = SourceOrigin.AUTHORIZED_VCS.value
+        bk_module.save(update_fields=["source_origin"])
+
+        proc_spec = ModuleProcessSpec.objects.create(
+            module=bk_module, name="web", plan_name="default", tenant_id="default"
+        )
+        ProcessSpecEnvOverlay.objects.create(
+            proc_spec=proc_spec,
+            environment_name=AppEnvName.STAG,
+            plan_name="default",
+            tenant_id="default",
+        )
+
+        # 更新请求
+        data = {
+            "module_name": bk_module.name,
+            "source_origin": bk_module.source_origin,
+            "processes": [
+                {
+                    "name": "web",
+                    "env_overlays": {
+                        "stag": {
+                            "plan_name": "custom",
+                            "resources": {
+                                "limits": {"cpu": "2000m", "memory": "1024Mi"},
+                                "requests": {"cpu": "200m", "memory": "256Mi"},
+                            },
+                        }
+                    },
+                }
+            ],
+        }
+
+        response = plat_mgt_api_client.put(url, data=data)
+        assert response.status_code == 400
+
     def test_update_resource_success(self, plat_mgt_api_client, bk_app: Application, bk_module, url):
         """测试成功更新进程资源限制"""
         # 创建进程规格
@@ -100,6 +146,7 @@ class TestApplicationProcessViewSet:
         # 更新请求
         data = {
             "module_name": bk_module.name,
+            "source_origin": bk_module.source_origin,
             "processes": [
                 {
                     "name": "web",
@@ -108,7 +155,7 @@ class TestApplicationProcessViewSet:
                             "plan_name": "custom",
                             "resources": {
                                 "limits": {"cpu": "2000m", "memory": "1024Mi"},
-                                "requests": {"cpu": "100m", "memory": "256Mi"},
+                                "requests": {"cpu": "200m", "memory": "256Mi"},
                             },
                         }
                     },
@@ -124,7 +171,7 @@ class TestApplicationProcessViewSet:
         assert overlay.plan_name is None
         assert overlay.admin_res_config == {
             "limits": {"cpu": "2000m", "memory": "1024Mi"},
-            "requests": {"cpu": "100m", "memory": "256Mi"},
+            "requests": {"cpu": "200m", "memory": "256Mi"},
         }
 
     def test_update_resource_multiple_processes(self, plat_mgt_api_client, bk_app: Application, bk_module, url):
@@ -147,6 +194,7 @@ class TestApplicationProcessViewSet:
         # 批量更新
         data = {
             "module_name": bk_module.name,
+            "source_origin": bk_module.source_origin,
             "processes": [
                 {
                     "name": "web",
@@ -211,6 +259,7 @@ class TestApplicationProcessViewSet:
         # 更新为预设方案
         data = {
             "module_name": bk_module.name,
+            "source_origin": bk_module.source_origin,
             "processes": [{"name": "web", "env_overlays": {"stag": {"plan_name": "default", "resources": None}}}],
         }
 
@@ -229,6 +278,7 @@ class TestApplicationProcessViewSet:
 
         data = {
             "module_name": bk_module.name,
+            "source_origin": bk_module.source_origin,
             "processes": [
                 {
                     "name": "web",
@@ -257,6 +307,7 @@ class TestApplicationProcessViewSet:
         """测试更新不存在的进程"""
         data = {
             "module_name": bk_module.name,
+            "source_origin": bk_module.source_origin,
             "processes": [
                 {"name": "nonexistent", "env_overlays": {"stag": {"plan_name": "default", "resources": None}}}
             ],

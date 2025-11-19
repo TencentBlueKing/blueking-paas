@@ -204,12 +204,20 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             attribute=", ".join(process_names),
             data_before=DataDetail(
                 data=ModuleProcessSpecOutputSLZ(
-                    {"module_name": module_name, "processes": all_before_processes},
+                    {
+                        "module_name": module_name,
+                        "source_origin": module.source_origin,
+                        "processes": all_before_processes,
+                    },
                 ).data
             ),
             data_after=DataDetail(
                 data=ModuleProcessSpecOutputSLZ(
-                    {"module_name": module_name, "processes": all_after_processes},
+                    {
+                        "module_name": module_name,
+                        "source_origin": module.source_origin,
+                        "processes": all_after_processes,
+                    },
                 ).data
             ),
         )

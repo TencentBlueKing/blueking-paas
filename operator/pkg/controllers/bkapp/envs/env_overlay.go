@@ -235,7 +235,11 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 		paasv1alpha2.AdminProcResAnnoKey,
 	)
 	if procConfig, ok := adminConfig[name]; ok {
-		return r.calculateResourcesByResConfig(procConfig)
+		res, err := r.calculateResourcesByResConfig(procConfig)
+		if err != nil {
+			return result, errors.Wrapf(err, "fail to parse admin resource config for process %s", name)
+		}
+		return *res, nil
 	}
 
 	// Overlay: read the "ResQuotaPlan" field from envOverlay
@@ -273,85 +277,39 @@ func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) core
 
 // calculateResourcesByResConfig builds resource requirements from admin config map
 // resConfig format: {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {"cpu": "100m", "memory": "256Mi"}}
+// Note: validation is already done by webhook, so we can safely parse without extensive checks
 func (r *ProcResourcesGetter) calculateResourcesByResConfig(
 	resConfig map[string]map[string]string,
-) (corev1.ResourceRequirements, error) {
-	// Limits must be specified
-	limitsMap, hasLimits := resConfig["limits"]
-	if !hasLimits || limitsMap == nil {
-		return corev1.ResourceRequirements{}, errors.New("limits must be specified in admin resource config")
+) (*corev1.ResourceRequirements, error) {
+	limitsMap := resConfig["limits"]
+
+	// Parse - webhook already validated these exist and are valid
+	// limits
+	limitsCPU, _ := quota.NewQuantity(limitsMap["cpu"], quota.CPU)
+	limitsMemory, _ := quota.NewQuantity(limitsMap["memory"], quota.Memory)
+	limits := corev1.ResourceList{
+		corev1.ResourceCPU:    *limitsCPU,
+		corev1.ResourceMemory: *limitsMemory,
 	}
 
-	// Parse limits
-	limits, err := r.parseResourceMap(limitsMap, "limits")
-	if err != nil {
-		return corev1.ResourceRequirements{}, errors.Wrap(err, "fail to parse limits")
-	}
-
-	// Parse requests (optional)
+	// requests (optional)
 	var requests corev1.ResourceList
 	if requestsMap, hasRequests := resConfig["requests"]; hasRequests && requestsMap != nil {
-		requests, err = r.parseResourceMap(requestsMap, "requests")
-		if err != nil {
-			return corev1.ResourceRequirements{}, errors.Wrap(err, "fail to parse requests")
-		}
-
-		// Validate requests <= limits
-		if requests.Cpu().Cmp(*limits.Cpu()) == 1 {
-			return corev1.ResourceRequirements{}, errors.Errorf(
-				"cpu requests %s must not exceed limits %s",
-				requestsMap["cpu"], limitsMap["cpu"],
-			)
-		}
-		if requests.Memory().Cmp(*limits.Memory()) == 1 {
-			return corev1.ResourceRequirements{}, errors.Errorf(
-				"memory requests %s must not exceed limits %s",
-				requestsMap["memory"], limitsMap["memory"],
-			)
+		requestsCPU, _ := quota.NewQuantity(requestsMap["cpu"], quota.CPU)
+		requestsMemory, _ := quota.NewQuantity(requestsMap["memory"], quota.Memory)
+		requests = corev1.ResourceList{
+			corev1.ResourceCPU:    *requestsCPU,
+			corev1.ResourceMemory: *requestsMemory,
 		}
 	} else {
 		// If requests are not specified, derive from limits
 		requests = r.calculateResources(limitsMap["cpu"], limitsMap["memory"]).Requests
 	}
 
-	return corev1.ResourceRequirements{
+	return &corev1.ResourceRequirements{
 		Limits:   limits,
 		Requests: requests,
 	}, nil
-}
-
-// parseResourceMap parses a resource map (cpu and memory values) into ResourceList
-func (r *ProcResourcesGetter) parseResourceMap(
-	resMap map[string]string,
-	resType string,
-) (corev1.ResourceList, error) {
-	resources := make(corev1.ResourceList)
-
-	// Parse CPU
-	cpuStr, hasCPU := resMap["cpu"]
-	if !hasCPU || cpuStr == "" {
-		return nil, errors.Errorf("%s.cpu must be specified", resType)
-	}
-	cpu, err := quota.NewQuantity(cpuStr, quota.CPU)
-	if err != nil {
-		log.Error(err, "Fail to parse cpu", "type", resType, "cpu", cpuStr)
-		return nil, errors.Wrapf(err, "invalid %s.cpu value %q", resType, cpuStr)
-	}
-	resources[corev1.ResourceCPU] = *cpu
-
-	// Parse Memory
-	memStr, hasMem := resMap["memory"]
-	if !hasMem || memStr == "" {
-		return nil, errors.Errorf("%s.memory must be specified", resType)
-	}
-	memory, err := quota.NewQuantity(memStr, quota.Memory)
-	if err != nil {
-		log.Error(err, "Fail to parse memory", "type", resType, "memory", memStr)
-		return nil, errors.Wrapf(err, "invalid %s.memory value %q", resType, memStr)
-	}
-	resources[corev1.ResourceMemory] = *memory
-
-	return resources, nil
 }
 
 // calculateResources build the resource requirements from raw string

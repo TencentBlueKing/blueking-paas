@@ -96,6 +96,7 @@ class ModuleProcessSpecOutputSLZ(serializers.Serializer):
     """模块进程规格输出序列化器"""
 
     module_name = serializers.CharField(help_text="模块名称")
+    source_origin = serializers.IntegerField(help_text="源码来源")
     processes = serializers.ListField(child=ProcessEnvOverlayOutputSLZ(), help_text="进程规格列表")
 
 
@@ -103,4 +104,5 @@ class ModuleProcessSpecInputSLZ(serializers.Serializer):
     """模块进程规格更新序列化器"""
 
     module_name = serializers.CharField(help_text="模块名称")
+    source_origin = serializers.IntegerField(help_text="源码来源")
     processes = serializers.ListField(child=ProcessEnvOverlayInputSLZ(), help_text="进程规格列表")

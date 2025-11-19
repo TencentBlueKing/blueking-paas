@@ -18,6 +18,7 @@
 
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -32,6 +33,7 @@ from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import AppEnvName
+from paasng.platform.modules.constants import SourceOrigin
 
 
 class ApplicationProcessViewSet(viewsets.GenericViewSet):
@@ -59,8 +61,13 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         modules_map = {}
         for spec in proc_specs:
             module_name = spec.module.name
+            source_origin = spec.module.source_origin
             if module_name not in modules_map:
-                modules_map[module_name] = {"module_name": module_name, "processes": []}
+                modules_map[module_name] = {
+                    "module_name": module_name,
+                    "source_origin": source_origin,
+                    "processes": [],
+                }
 
             # 构建环境覆盖配置
             overlays_map = {o.environment_name: o for o in spec.env_overlays.all()}
@@ -103,7 +110,19 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         processes_data = data["processes"]
         process_names = [p["name"] for p in processes_data]
 
-        # 批量查询所有相关的进程规格和环境覆盖,避免 N+1 问题
+        # 校验 module 的 source_origin 是否可以修改
+        module = get_object_or_404(application.modules, name=module_name)
+        if module.source_origin not in [
+            SourceOrigin.CNATIVE_IMAGE.value,
+            SourceOrigin.S_MART.value,
+            SourceOrigin.AI_AGENT.value,
+        ]:
+            return Response(
+                {"detail": _("该模块的源码来源不支持修改进程资源配置")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 批量查询所有相关的进程规格和环境覆盖
         proc_specs = ModuleProcessSpec.objects.filter(
             module__application=application, module__name=module_name, name__in=process_names
         ).prefetch_related("env_overlays")

@@ -110,7 +110,6 @@ class TestApplicationProcessViewSet:
         # 更新请求
         data = {
             "module_name": bk_module.name,
-            "source_origin": bk_module.source_origin,
             "processes": [
                 {
                     "name": "web",
@@ -146,7 +145,6 @@ class TestApplicationProcessViewSet:
         # 更新请求
         data = {
             "module_name": bk_module.name,
-            "source_origin": bk_module.source_origin,
             "processes": [
                 {
                     "name": "web",
@@ -194,7 +192,6 @@ class TestApplicationProcessViewSet:
         # 批量更新
         data = {
             "module_name": bk_module.name,
-            "source_origin": bk_module.source_origin,
             "processes": [
                 {
                     "name": "web",
@@ -259,10 +256,8 @@ class TestApplicationProcessViewSet:
         # 更新为预设方案
         data = {
             "module_name": bk_module.name,
-            "source_origin": bk_module.source_origin,
             "processes": [{"name": "web", "env_overlays": {"stag": {"plan_name": "default", "resources": None}}}],
         }
-
         response = plat_mgt_api_client.put(url, data=data)
         assert response.status_code == 204
 
@@ -278,7 +273,6 @@ class TestApplicationProcessViewSet:
 
         data = {
             "module_name": bk_module.name,
-            "source_origin": bk_module.source_origin,
             "processes": [
                 {
                     "name": "web",
@@ -307,7 +301,6 @@ class TestApplicationProcessViewSet:
         """测试更新不存在的进程"""
         data = {
             "module_name": bk_module.name,
-            "source_origin": bk_module.source_origin,
             "processes": [
                 {"name": "nonexistent", "env_overlays": {"stag": {"plan_name": "default", "resources": None}}}
             ],

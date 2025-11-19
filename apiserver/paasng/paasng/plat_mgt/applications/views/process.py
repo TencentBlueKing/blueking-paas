@@ -81,7 +81,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 else:
                     env_overlays[env_name] = {
                         "plan_name": spec.get_plan_name(env_name),
-                        "resources": overlay.admin_res_config if overlay else None,
+                        "resources": None,
                     }
 
             modules_map[module_name]["processes"].append(

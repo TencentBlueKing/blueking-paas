@@ -104,15 +104,26 @@ func (in AdminProcResConfig) DeepCopyInto(out *AdminProcResConfig) {
 		in := &in
 		*out = make(AdminProcResConfig, len(*in))
 		for key, val := range *in {
-			var outVal map[string]string
+			var outVal map[string]map[string]string
 			if val == nil {
 				(*out)[key] = nil
 			} else {
 				inVal := (*in)[key]
 				in, out := &inVal, &outVal
-				*out = make(map[string]string, len(*in))
+				*out = make(map[string]map[string]string, len(*in))
 				for key, val := range *in {
-					(*out)[key] = val
+					var outVal map[string]string
+					if val == nil {
+						(*out)[key] = nil
+					} else {
+						inVal := (*in)[key]
+						in, out := &inVal, &outVal
+						*out = make(map[string]string, len(*in))
+						for key, val := range *in {
+							(*out)[key] = val
+						}
+					}
+					(*out)[key] = outVal
 				}
 			}
 			(*out)[key] = outVal

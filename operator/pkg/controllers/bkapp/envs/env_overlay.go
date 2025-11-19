@@ -229,13 +229,13 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 	}
 
 	// Admin annotation: try to read resources configs from admin annotation
-	// Format: {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {...}}
+	// Format: {"{procName}": {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {...}}}
 	adminConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.AdminProcResConfig](
 		r.bkapp,
 		paasv1alpha2.AdminProcResAnnoKey,
 	)
-	if adminConfig != nil {
-		return r.calculateResourcesExplicit(adminConfig)
+	if procConfig, ok := adminConfig[name]; ok {
+		return r.calculateResourcesByResConfig(procConfig)
 	}
 
 	// Overlay: read the "ResQuotaPlan" field from envOverlay
@@ -271,9 +271,9 @@ func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) core
 	return r.calculateResources(cpuRaw, memRaw)
 }
 
-// calculateResourcesExplicit builds resource requirements from admin config map
+// calculateResourcesByResConfig builds resource requirements from admin config map
 // resConfig format: {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {"cpu": "100m", "memory": "256Mi"}}
-func (r *ProcResourcesGetter) calculateResourcesExplicit(
+func (r *ProcResourcesGetter) calculateResourcesByResConfig(
 	resConfig map[string]map[string]string,
 ) (corev1.ResourceRequirements, error) {
 	// Limits must be specified

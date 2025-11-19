@@ -78,7 +78,7 @@ const (
 
 	// AdminProcResAnnoKey 注解中存储管理员设置的进程资源配额配置的键名
 	// 优先级最高，将覆盖开发者设置的 resQuotaPlan 和环境变量覆盖
-	// JSON 结构: {\"processName\": {\"envName\": {\"limits\": {\"cpu\": \"X\", \"memory\": \"X\"}, \"requests\": {...}}}}
+	// JSON 结构: {"processName": {"limits": {"cpu": "X", "memory": "X"}, "requests": {...}}}
 	AdminProcResAnnoKey = "bkapp.paas.bk.tencent.com/admin-proc-res-config"
 
 	// EgressClusterStateNameAnnoKey 注解中存储 Egress 相关配置的键名

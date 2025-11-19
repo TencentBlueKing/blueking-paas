@@ -1083,9 +1083,11 @@ var _ = Describe("test webhook.Validator", func() {
 	Context("Test annotations validation - Admin Process Resource Config", func() {
 		It("valid admin proc res config - limits only", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"limits": {
-					"cpu":    "2",
-					"memory": "2G",
+				"web": {
+					"limits": {
+						"cpu":    "2",
+						"memory": "2G",
+					},
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
@@ -1096,13 +1098,15 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("valid admin proc res config - limits and requests", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"limits": {
-					"cpu":    "2",
-					"memory": "2G",
-				},
-				"requests": {
-					"cpu":    "1",
-					"memory": "1G",
+				"web": {
+					"limits": {
+						"cpu":    "2",
+						"memory": "2G",
+					},
+					"requests": {
+						"cpu":    "1",
+						"memory": "1G",
+					},
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
@@ -1113,9 +1117,11 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("invalid admin proc res config - missing limits", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"requests": {
-					"cpu":    "1",
-					"memory": "1G",
+				"web": {
+					"requests": {
+						"cpu":    "1",
+						"memory": "1G",
+					},
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
@@ -1127,9 +1133,11 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("invalid admin proc res config - invalid cpu in limits", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"limits": {
-					"cpu":    "invalid-cpu",
-					"memory": "1G",
+				"web": {
+					"limits": {
+						"cpu":    "invalid-cpu",
+						"memory": "1G",
+					},
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
@@ -1142,9 +1150,11 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("invalid admin proc res config - invalid memory in limits", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"limits": {
-					"cpu":    "1",
-					"memory": "invalid-memory",
+				"web": {
+					"limits": {
+						"cpu":    "1",
+						"memory": "invalid-memory",
+					},
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
@@ -1157,13 +1167,15 @@ var _ = Describe("test webhook.Validator", func() {
 
 		It("invalid admin proc res config - requests exceed limits", func() {
 			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
-				"limits": {
-					"cpu":    "1",
-					"memory": "1G",
-				},
-				"requests": {
-					"cpu":    "2",
-					"memory": "1G",
+				"web": {
+					"limits": {
+						"cpu":    "1",
+						"memory": "1G",
+					},
+					"requests": {
+						"cpu":    "2",
+						"memory": "1G",
+					},
 				},
 			}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)

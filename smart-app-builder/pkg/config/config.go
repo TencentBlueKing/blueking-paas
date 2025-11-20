@@ -53,6 +53,11 @@ var G = struct {
 	CacheRegistry string
 	// RegistryAuth is the cache registry auth. e.g., '{"mirrors.tencent.com": "Basic xxx"}'
 	RegistryAuth string
+
+	// PackagingVersion is the version of the packaging scheme. Supported values: v1 (legacy), v2 (default)
+	// v1: Each module has its own image tar and Procfile
+	// v2: Modules with the same build configuration share the same image tar, unified proc entrypoints
+	PackagingVersion string
 }{Viper: viper.New()}
 
 // SetGlobalConfig set global config
@@ -103,4 +108,7 @@ func SetGlobalConfig() {
 
 	G.CacheRegistry = G.GetString("CACHE_REGISTRY")
 	G.RegistryAuth = G.GetString("REGISTRY_AUTH")
+
+	G.SetDefault("PACKAGING_VERSION", "v2")
+	G.PackagingVersion = G.GetString("PACKAGING_VERSION")
 }

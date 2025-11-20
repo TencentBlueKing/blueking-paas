@@ -233,26 +233,26 @@ func (r *BkApp) validateAnnotations() *field.Error {
 
 	// 验证管理员设置的进程资源配额注解是否合法
 	// Format: {"web": {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {"cpu": "100m", "memory": "256Mi"}}}
-	adminProcResConfig, err := kubeutil.GetJsonAnnotation[AdminProcResConfig](
-		r, AdminProcResAnnoKey,
+	overrideProcResConfig, err := kubeutil.GetJsonAnnotation[OverrideProcResConfig](
+		r, OverrideProcResAnnoKey,
 	)
 	// 获取进程中的资源配额注解成功，才需要进行检查
 	if err == nil {
 		procNames := r.getProcNames()
-		for procName, resConf := range adminProcResConfig {
+		for procName, resConf := range overrideProcResConfig {
 			// 检查 procName 是否存在
 			if !lo.Contains(procNames, procName) {
 				return field.Invalid(
-					annosPath.Child(AdminProcResAnnoKey),
-					annotations[AdminProcResAnnoKey],
+					annosPath.Child(OverrideProcResAnnoKey),
+					annotations[OverrideProcResAnnoKey],
 					fmt.Sprintf("process %s not defined in spec.processes", procName),
 				)
 			}
 
 			if err := validateAdminResourceConfig(resConf); err != nil {
 				return field.Invalid(
-					annosPath.Child(AdminProcResAnnoKey),
-					annotations[AdminProcResAnnoKey],
+					annosPath.Child(OverrideProcResAnnoKey),
+					annotations[OverrideProcResAnnoKey],
 					fmt.Sprintf("invalid resource config for process '%s': %s", procName, err.Error()),
 				)
 			}

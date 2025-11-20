@@ -93,9 +93,9 @@ type BkAppList struct {
 // such as "image" and "resource" configs. Structure: {<procName>: {<configKey>: <configValue>}
 type LegacyProcConfig map[string]map[string]string
 
-// AdminProcResConfig maps process to resource specification
+// OverrideProcResConfig maps process to resource specification
 // Format:  {"processName": {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {"cpu": "100m", "memory": "256Mi"}}}
-type AdminProcResConfig map[string]map[string]map[string]string
+type OverrideProcResConfig map[string]map[string]map[string]string
 
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {

@@ -1080,9 +1080,9 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 	})
 
-	Context("Test annotations validation - Admin Process Resource Config", func() {
-		It("valid admin proc res config - limits only", func() {
-			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
+	Context("Test annotations validation - Override Process Resource Config", func() {
+		It("valid override proc res config - limits only", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
 					"limits": {
 						"cpu":    "2",
@@ -1090,14 +1090,14 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
 		})
 
-		It("valid admin proc res config - limits and requests", func() {
-			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
+		It("valid override proc res config - limits and requests", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
 					"limits": {
 						"cpu":    "2",
@@ -1109,14 +1109,14 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
 		})
 
-		It("invalid admin proc res config - missing limits", func() {
-			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
+		It("invalid override proc res config - missing limits", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
 					"requests": {
 						"cpu":    "1",
@@ -1124,15 +1124,15 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
 			Expect(err.Error()).To(ContainSubstring("limits must be specified"))
 		})
 
-		It("invalid admin proc res config - invalid cpu in limits", func() {
-			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
+		It("invalid override proc res config - invalid cpu in limits", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
 					"limits": {
 						"cpu":    "invalid-cpu",
@@ -1140,7 +1140,7 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
@@ -1148,8 +1148,8 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(err.Error()).To(ContainSubstring("cpu"))
 		})
 
-		It("invalid admin proc res config - invalid memory in limits", func() {
-			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
+		It("invalid override proc res config - invalid memory in limits", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
 					"limits": {
 						"cpu":    "1",
@@ -1157,7 +1157,7 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
@@ -1165,8 +1165,8 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(err.Error()).To(ContainSubstring("memory"))
 		})
 
-		It("invalid admin proc res config - requests exceed limits", func() {
-			adminProcResConfig := paasv1alpha2.AdminProcResConfig{
+		It("invalid override proc res config - requests exceed limits", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
 					"limits": {
 						"cpu":    "1",
@@ -1178,7 +1178,7 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, adminProcResConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())

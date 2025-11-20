@@ -76,10 +76,10 @@ const (
 	// legacy resource configs in annotations to maintain backward compatibility.
 	LegacyProcResAnnoKey = "bkapp.paas.bk.tencent.com/legacy-proc-res-config"
 
-	// AdminProcResAnnoKey 注解中存储管理员设置的进程资源配额配置的键名
+	// OverrideProcResAnnoKey 注解中存储覆盖的进程资源配额配置的键名
 	// 优先级最高，将覆盖开发者设置的 resQuotaPlan 和 envOverlay.resQuotas
 	// JSON 结构: {"processName": {"limits": {"cpu": "X", "memory": "X"}, "requests": {...}}}
-	AdminProcResAnnoKey = "bkapp.paas.bk.tencent.com/admin-proc-res-config"
+	OverrideProcResAnnoKey = "bkapp.paas.bk.tencent.com/proc-res-override"
 
 	// EgressClusterStateNameAnnoKey 注解中存储 Egress 相关配置的键名
 	// 在集群中，作为出口 ip 的节点被打上了 {EgressClusterStateNameAnnoKey:"1"} 的标签

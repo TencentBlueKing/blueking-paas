@@ -230,14 +230,14 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 
 	// Admin annotation: try to read resources configs from admin annotation
 	// Format: {"{procName}": {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {...}}}
-	adminConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.AdminProcResConfig](
+	overrideConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.OverrideProcResConfig](
 		r.bkapp,
-		paasv1alpha2.AdminProcResAnnoKey,
+		paasv1alpha2.OverrideProcResAnnoKey,
 	)
-	if procConfig, ok := adminConfig[name]; ok {
+	if procConfig, ok := overrideConfig[name]; ok {
 		res, err := r.calculateResourcesByResConfig(procConfig)
 		if err != nil {
-			return result, errors.Wrapf(err, "fail to parse admin resource config for process %s", name)
+			return result, errors.Wrapf(err, "fail to parse override resource config for process %s", name)
 		}
 		return *res, nil
 	}

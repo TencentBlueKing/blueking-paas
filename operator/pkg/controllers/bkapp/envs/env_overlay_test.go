@@ -308,12 +308,16 @@ var _ = Describe("Environment overlay related functions", func() {
 
 		It("Get Admin Annotation explicit values override everything", func() {
 			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: string(paasv1alpha2.StagEnv)})
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, paasv1alpha2.AdminProcResConfig{
-				"web": {
-					"limits":   {"cpu": "2", "memory": "2Gi"},
-					"requests": {"cpu": "500m", "memory": "1Gi"},
+			_ = kubeutil.SetJsonAnnotation(
+				bkapp,
+				paasv1alpha2.OverrideProcResAnnoKey,
+				paasv1alpha2.OverrideProcResConfig{
+					"web": {
+						"limits":   {"cpu": "2", "memory": "2Gi"},
+						"requests": {"cpu": "500m", "memory": "1Gi"},
+					},
 				},
-			})
+			)
 			getter := NewProcResourcesGetter(bkapp)
 			resReq, _ := getter.GetByProc("web")
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())
@@ -324,11 +328,15 @@ var _ = Describe("Environment overlay related functions", func() {
 
 		It("Get Admin Annotation limited values only and derive requests", func() {
 			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: string(paasv1alpha2.StagEnv)})
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.AdminProcResAnnoKey, paasv1alpha2.AdminProcResConfig{
-				"web": {
-					"limits": {"cpu": "2", "memory": "2Gi"},
+			_ = kubeutil.SetJsonAnnotation(
+				bkapp,
+				paasv1alpha2.OverrideProcResAnnoKey,
+				paasv1alpha2.OverrideProcResConfig{
+					"web": {
+						"limits": {"cpu": "2", "memory": "2Gi"},
+					},
 				},
-			})
+			)
 			getter := NewProcResourcesGetter(bkapp)
 			resReq, _ := getter.GetByProc("web")
 			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2"))).To(BeTrue())

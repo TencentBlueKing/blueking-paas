@@ -275,35 +275,31 @@ func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) core
 	return r.calculateResources(cpuRaw, memRaw)
 }
 
-// calculateResourcesByResConfig builds resource requirements from admin config map
-// resConfig format: {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {"cpu": "100m", "memory": "256Mi"}}
+// calculateResourcesByResConfig builds resource requirements from override config
 // Note: validation is already done by webhook, so we can safely parse without extensive checks
 func (r *ProcResourcesGetter) calculateResourcesByResConfig(
-	resConfig map[string]map[string]string,
+	resConfig paasv1alpha2.ProcResOverride,
 ) (*corev1.ResourceRequirements, error) {
-	limitsMap := resConfig["limits"]
-
-	// Parse - webhook already validated these exist and are valid
-	// limits
-	limitsCPU, _ := quota.NewQuantity(limitsMap["cpu"], quota.CPU)
-	limitsMemory, _ := quota.NewQuantity(limitsMap["memory"], quota.Memory)
+	// Parse limits - webhook already validated these exist and are valid
+	limitsCPU, _ := quota.NewQuantity(resConfig.Limits.CPU, quota.CPU)
+	limitsMemory, _ := quota.NewQuantity(resConfig.Limits.Memory, quota.Memory)
 	limits := corev1.ResourceList{
 		corev1.ResourceCPU:    *limitsCPU,
 		corev1.ResourceMemory: *limitsMemory,
 	}
 
-	// requests (optional)
+	// Parse requests (optional)
 	var requests corev1.ResourceList
-	if requestsMap, hasRequests := resConfig["requests"]; hasRequests && requestsMap != nil {
-		requestsCPU, _ := quota.NewQuantity(requestsMap["cpu"], quota.CPU)
-		requestsMemory, _ := quota.NewQuantity(requestsMap["memory"], quota.Memory)
+	if resConfig.Requests != nil {
+		requestsCPU, _ := quota.NewQuantity(resConfig.Requests.CPU, quota.CPU)
+		requestsMemory, _ := quota.NewQuantity(resConfig.Requests.Memory, quota.Memory)
 		requests = corev1.ResourceList{
 			corev1.ResourceCPU:    *requestsCPU,
 			corev1.ResourceMemory: *requestsMemory,
 		}
 	} else {
 		// If requests are not specified, derive from limits
-		requests = r.calculateResources(limitsMap["cpu"], limitsMap["memory"]).Requests
+		requests = r.calculateResources(resConfig.Limits.CPU, resConfig.Limits.Memory).Requests
 	}
 
 	return &corev1.ResourceRequirements{

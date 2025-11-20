@@ -1084,9 +1084,9 @@ var _ = Describe("test webhook.Validator", func() {
 		It("valid override proc res config - limits only", func() {
 			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
-					"limits": {
-						"cpu":    "2",
-						"memory": "2G",
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "2",
+						Memory: "2G",
 					},
 				},
 			}
@@ -1099,13 +1099,13 @@ var _ = Describe("test webhook.Validator", func() {
 		It("valid override proc res config - limits and requests", func() {
 			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
-					"limits": {
-						"cpu":    "2",
-						"memory": "2G",
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "2",
+						Memory: "2G",
 					},
-					"requests": {
-						"cpu":    "1",
-						"memory": "1G",
+					Requests: &paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "1G",
 					},
 				},
 			}
@@ -1118,9 +1118,9 @@ var _ = Describe("test webhook.Validator", func() {
 		It("invalid override proc res config - missing limits", func() {
 			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
-					"requests": {
-						"cpu":    "1",
-						"memory": "1G",
+					Requests: &paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "1G",
 					},
 				},
 			}
@@ -1134,9 +1134,9 @@ var _ = Describe("test webhook.Validator", func() {
 		It("invalid override proc res config - invalid cpu in limits", func() {
 			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
-					"limits": {
-						"cpu":    "invalid-cpu",
-						"memory": "1G",
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "invalid-cpu",
+						Memory: "1G",
 					},
 				},
 			}
@@ -1151,9 +1151,9 @@ var _ = Describe("test webhook.Validator", func() {
 		It("invalid override proc res config - invalid memory in limits", func() {
 			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
-					"limits": {
-						"cpu":    "1",
-						"memory": "invalid-memory",
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "invalid-memory",
 					},
 				},
 			}
@@ -1168,13 +1168,13 @@ var _ = Describe("test webhook.Validator", func() {
 		It("invalid override proc res config - requests exceed limits", func() {
 			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
 				"web": {
-					"limits": {
-						"cpu":    "1",
-						"memory": "1G",
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "1G",
 					},
-					"requests": {
-						"cpu":    "2",
-						"memory": "1G",
+					Requests: &paasv1alpha2.ResourceSpec{
+						CPU:    "2",
+						Memory: "1G",
 					},
 				},
 			}

@@ -313,8 +313,14 @@ var _ = Describe("Environment overlay related functions", func() {
 				paasv1alpha2.OverrideProcResAnnoKey,
 				paasv1alpha2.OverrideProcResConfig{
 					"web": {
-						"limits":   {"cpu": "2", "memory": "2Gi"},
-						"requests": {"cpu": "500m", "memory": "1Gi"},
+						Limits: paasv1alpha2.ResourceSpec{
+							CPU:    "2",
+							Memory: "2Gi",
+						},
+						Requests: &paasv1alpha2.ResourceSpec{
+							CPU:    "500m",
+							Memory: "1Gi",
+						},
 					},
 				},
 			)
@@ -333,7 +339,10 @@ var _ = Describe("Environment overlay related functions", func() {
 				paasv1alpha2.OverrideProcResAnnoKey,
 				paasv1alpha2.OverrideProcResConfig{
 					"web": {
-						"limits": {"cpu": "2", "memory": "2Gi"},
+						Limits: paasv1alpha2.ResourceSpec{
+							CPU:    "2",
+							Memory: "2Gi",
+						},
 					},
 				},
 			)

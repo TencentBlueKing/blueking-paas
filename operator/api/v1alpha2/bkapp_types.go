@@ -93,9 +93,32 @@ type BkAppList struct {
 // such as "image" and "resource" configs. Structure: {<procName>: {<configKey>: <configValue>}
 type LegacyProcConfig map[string]map[string]string
 
-// OverrideProcResConfig maps process to resource specification
-// Format:  {"processName": {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {"cpu": "100m", "memory": "256Mi"}}}
-type OverrideProcResConfig map[string]map[string]map[string]string
+// ResourceSpec defines CPU and memory resource specifications
+type ResourceSpec struct {
+	// CPU resource quantity, e.g. "200m", "1", "2000m"
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^([0-9]+m?|[0-9]+\.[0-9]+)$`
+	CPU string `json:"cpu"`
+
+	// Memory resource quantity, e.g. "128Mi", "1Gi", "512Mi"
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^[0-9]+(Mi|Gi|M|G|Ki|K)?$`
+	Memory string `json:"memory"`
+}
+
+// ProcResOverride defines resource override for a process
+type ProcResOverride struct {
+	// Limits describes the maximum amount of compute resources allowed
+	// +kubebuilder:validation:Required
+	Limits ResourceSpec `json:"limits"`
+
+	// Requests describes the minimum amount of compute resources required
+	// +optional
+	Requests *ResourceSpec `json:"requests,omitempty"`
+}
+
+// OverrideProcResConfig maps process name to its resource override configuration
+type OverrideProcResConfig map[string]ProcResOverride
 
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {

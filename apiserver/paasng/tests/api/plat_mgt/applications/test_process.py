@@ -64,7 +64,7 @@ class TestApplicationProcessViewSet:
         ProcessSpecEnvOverlay.objects.create(
             proc_spec=proc_spec,
             environment_name=AppEnvName.PROD,
-            admin_res_config={
+            override_proc_res={
                 "limits": {"cpu": "2000m", "memory": "1024Mi"},
                 "requests": {"cpu": "100m", "memory": "256Mi"},
             },
@@ -167,7 +167,7 @@ class TestApplicationProcessViewSet:
         # 验证数据库更新
         overlay = ProcessSpecEnvOverlay.objects.get(proc_spec=proc_spec, environment_name=AppEnvName.STAG)
         assert overlay.plan_name is None
-        assert overlay.admin_res_config == {
+        assert overlay.override_proc_res == {
             "limits": {"cpu": "2000m", "memory": "1024Mi"},
             "requests": {"cpu": "200m", "memory": "256Mi"},
         }
@@ -225,14 +225,14 @@ class TestApplicationProcessViewSet:
 
         # 验证 web 进程
         web_overlay = ProcessSpecEnvOverlay.objects.get(proc_spec=web_spec, environment_name=AppEnvName.STAG)
-        assert web_overlay.admin_res_config == {
+        assert web_overlay.override_proc_res == {
             "limits": {"cpu": "2000m", "memory": "1024Mi"},
             "requests": {"cpu": "200m", "memory": "256Mi"},
         }
 
         # 验证 worker 进程
         worker_overlay = ProcessSpecEnvOverlay.objects.get(proc_spec=worker_spec, environment_name=AppEnvName.STAG)
-        assert worker_overlay.admin_res_config == {
+        assert worker_overlay.override_proc_res == {
             "limits": {"cpu": "1000m", "memory": "512Mi"},
             "requests": {"cpu": "200m", "memory": "256Mi"},
         }
@@ -246,7 +246,7 @@ class TestApplicationProcessViewSet:
         ProcessSpecEnvOverlay.objects.create(
             proc_spec=proc_spec,
             environment_name=AppEnvName.STAG,
-            admin_res_config={
+            override_proc_res={
                 "limits": {"cpu": "2000m", "memory": "1024Mi"},
                 "requests": {"cpu": "200m", "memory": "256Mi"},
             },
@@ -261,10 +261,10 @@ class TestApplicationProcessViewSet:
         response = plat_mgt_api_client.put(url, data=data)
         assert response.status_code == 204
 
-        # 验证 admin_res_config 被清空
+        # 验证 override_proc_res 被清空
         overlay = ProcessSpecEnvOverlay.objects.get(proc_spec=proc_spec, environment_name=AppEnvName.STAG)
         assert overlay.plan_name == "default"
-        assert overlay.admin_res_config is None
+        assert overlay.override_proc_res is None
 
     def test_update_resource_create_overlay(self, plat_mgt_api_client, bk_app: Application, bk_module, url):
         """测试自动创建环境覆盖"""

@@ -76,8 +76,8 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             for env_name in AppEnvName.get_values():
                 overlay = overlays_map.get(env_name)
 
-                if overlay and overlay.admin_res_config:
-                    env_overlays[env_name] = {"plan_name": "custom", "resources": overlay.admin_res_config}
+                if overlay and overlay.override_proc_res:
+                    env_overlays[env_name] = {"plan_name": "custom", "resources": overlay.override_proc_res}
                 else:
                     env_overlays[env_name] = {
                         "plan_name": spec.get_plan_name(env_name),
@@ -159,7 +159,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 if env_overlay:
                     before_env_overlays[env_name] = {
                         "plan_name": env_overlay.plan_name or proc_spec.plan_name,
-                        "resources": env_overlay.admin_res_config,
+                        "resources": env_overlay.override_proc_res,
                     }
                 else:
                     # 创建新的环境覆盖
@@ -172,11 +172,11 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
 
                 # 更新配置
                 if overlay_data["plan_name"] == "custom":
-                    env_overlay.admin_res_config = overlay_data["resources"]
+                    env_overlay.override_proc_res = overlay_data["resources"]
                     env_overlay.plan_name = None
                 else:
                     env_overlay.plan_name = overlay_data["plan_name"]
-                    env_overlay.admin_res_config = None
+                    env_overlay.override_proc_res = None
 
                 env_overlay.updated = timezone.now()
                 if env_overlay.pk:
@@ -191,7 +191,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
 
         if overlays_to_update:
             ProcessSpecEnvOverlay.objects.bulk_update(
-                overlays_to_update, fields=["plan_name", "admin_res_config", "updated"]
+                overlays_to_update, fields=["plan_name", "override_proc_res", "updated"]
             )
 
         # 记录审计日志

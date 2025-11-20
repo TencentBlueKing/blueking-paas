@@ -29,7 +29,6 @@ from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.applications.models.build import Build as WlBuild
 from paas_wl.bk_app.cnative.specs.constants import (
     ACCESS_CONTROL_ANNO_KEY,
-    ADMIN_PROC_RES_CONFIG_ANNO_KEY,
     BKAPP_CODE_ANNO_KEY,
     BKAPP_NAME_ANNO_KEY,
     BKAPP_REGION_ANNO_KEY,
@@ -41,6 +40,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     LAST_DEPLOY_STATUS_ANNO_KEY,
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
+    OVERRIDE_PROC_RES_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
     TENANT_GUARD_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
@@ -539,7 +539,7 @@ def get_bkapp_resource_for_deploy(
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
 
     # 设置管理员在管理端设置的资源限制注解, 没有则不设置
-    model_res.metadata.annotations[ADMIN_PROC_RES_CONFIG_ANNO_KEY] = _get_admin_proc_res_config(env)
+    model_res.metadata.annotations[OVERRIDE_PROC_RES_ANNO_KEY] = _get_override_proc_res_config(env)
 
     # 设置上一次部署的状态
     model_res.metadata.annotations[LAST_DEPLOY_STATUS_ANNO_KEY] = _get_last_deploy_status(env, deployment)
@@ -660,7 +660,7 @@ def _get_last_deploy_status(env: ModuleEnvironment, deployment: Deployment) -> s
         return latest_dp.status
 
 
-def _get_admin_proc_res_config(env: ModuleEnvironment) -> str:
+def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
     """获取管理员在管理端设置的资源限制配置"""
     result = {}
     queryset = ProcessSpecEnvOverlay.objects.filter(
@@ -668,7 +668,7 @@ def _get_admin_proc_res_config(env: ModuleEnvironment) -> str:
         environment_name=env.environment,
     )
     for overlay in queryset:
-        if overlay and overlay.admin_res_config:
-            result[overlay.proc_spec.name] = overlay.admin_res_config
+        if overlay and overlay.override_proc_res:
+            result[overlay.proc_spec.name] = overlay.override_proc_res
 
     return json.dumps(result)

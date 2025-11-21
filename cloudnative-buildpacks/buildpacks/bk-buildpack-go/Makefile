@@ -1,7 +1,7 @@
 .DEFAULT_GOAL:=help
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 NAME := bk-buildpack-go
-VERSION ?= v206
+VERSION ?= v216
 
 ##@ Build
 .PHONY: package

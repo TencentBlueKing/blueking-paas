@@ -20,6 +20,8 @@
 package config
 
 import (
+	"log"
+
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -111,4 +113,7 @@ func SetGlobalConfig() {
 
 	G.SetDefault("PACKAGING_VERSION", "v2")
 	G.PackagingVersion = G.GetString("PACKAGING_VERSION")
+	if G.PackagingVersion != "v1" && G.PackagingVersion != "v2" {
+		log.Fatalf("Invalid PACKAGING_VERSION: %q, must be either \"v1\" or \"v2\"", G.PackagingVersion)
+	}
 }

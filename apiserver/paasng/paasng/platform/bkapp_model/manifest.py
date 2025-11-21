@@ -539,7 +539,9 @@ def get_bkapp_resource_for_deploy(
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
 
     # 设置管理员在管理端设置的资源限制注解, 没有则不设置
-    model_res.metadata.annotations[OVERRIDE_PROC_RES_ANNO_KEY] = _get_override_proc_res_config(env)
+    override_proc_res_config = _get_override_proc_res_config(env)
+    if override_proc_res_config:
+        model_res.metadata.annotations[OVERRIDE_PROC_RES_ANNO_KEY] = override_proc_res_config
 
     # 设置上一次部署的状态
     model_res.metadata.annotations[LAST_DEPLOY_STATUS_ANNO_KEY] = _get_last_deploy_status(env, deployment)
@@ -661,7 +663,7 @@ def _get_last_deploy_status(env: ModuleEnvironment, deployment: Deployment) -> s
 
 
 def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
-    """获取管理员在管理端设置的资源限制配置"""
+    """获取管理员在管理端设置的资源限制配置，返回 JSON 字符串或空字符串"""
     result = {}
     queryset = ProcessSpecEnvOverlay.objects.filter(
         proc_spec__module=env.module,
@@ -671,4 +673,4 @@ def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
         if overlay and overlay.override_proc_res:
             result[overlay.proc_spec.name] = overlay.override_proc_res
 
-    return json.dumps(result)
+    return json.dumps(result) if result else ""

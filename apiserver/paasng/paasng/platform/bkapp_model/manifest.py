@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
 import logging
 import shlex
 from abc import ABC, abstractmethod
@@ -39,6 +40,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     LAST_DEPLOY_STATUS_ANNO_KEY,
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
+    OVERRIDE_PROC_RES_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
     TENANT_GUARD_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
@@ -536,6 +538,11 @@ def get_bkapp_resource_for_deploy(
     # such as: if log collector type is set to "ELK", the operator should mount app logs to host path
     model_res.metadata.annotations[LOG_COLLECTOR_TYPE_ANNO_KEY] = get_log_collector_type(env)
 
+    # 设置管理员在管理端设置的资源限制注解, 没有则不设置
+    override_proc_res_config = _get_override_proc_res_config(env)
+    if override_proc_res_config:
+        model_res.metadata.annotations[OVERRIDE_PROC_RES_ANNO_KEY] = override_proc_res_config
+
     # 设置上一次部署的状态
     model_res.metadata.annotations[LAST_DEPLOY_STATUS_ANNO_KEY] = _get_last_deploy_status(env, deployment)
 
@@ -653,3 +660,17 @@ def _get_last_deploy_status(env: ModuleEnvironment, deployment: Deployment) -> s
         return ""
     else:
         return latest_dp.status
+
+
+def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
+    """获取管理员在管理端设置的资源限制配置，返回 JSON 字符串或空字符串"""
+    result = {}
+    queryset = ProcessSpecEnvOverlay.objects.filter(
+        proc_spec__module=env.module,
+        environment_name=env.environment,
+    )
+    for overlay in queryset:
+        if overlay and overlay.override_proc_res:
+            result[overlay.proc_spec.name] = overlay.override_proc_res
+
+    return json.dumps(result) if result else ""

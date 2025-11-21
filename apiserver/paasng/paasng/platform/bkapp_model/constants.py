@@ -67,3 +67,23 @@ class ScalingPolicy(StrStructuredEnum):
 
     # the default autoscaling policy (cpu utilization 85%)
     DEFAULT = EnumField("default")
+
+
+class CPUResourceQuantity(StrStructuredEnum):
+    QUOTA_0_1_CORE = EnumField("100m", label="0.1 核")
+    QUOTA_0_2_CORE = EnumField("200m", label="0.2 核")
+    QUOTA_0_5_CORE = EnumField("500m", label="0.5 核")
+    QUOTA_1_CORE = EnumField("1000m", label="1 核")
+    QUOTA_2_CORE = EnumField("2000m", label="2 核")
+    QUOTA_4_CORE = EnumField("4000m", label="4 核")
+    QUOTA_8_CORE = EnumField("8000m", label="8 核")
+    QUOTA_16_CORE = EnumField("16000m", label="16 核")
+
+
+class MemoryResourceQuantity(StrStructuredEnum):
+    QUOTA_256_M = EnumField("256Mi", label="256 M")
+    QUOTA_512_M = EnumField("512Mi", label="512 M")
+    QUOTA_1_G = EnumField("1024Mi", label="1 G")
+    QUOTA_2_G = EnumField("2048Mi", label="2 G")
+    QUOTA_4_G = EnumField("4096Mi", label="4 G")
+    QUOTA_8_G = EnumField("8192Mi", label="8 G")

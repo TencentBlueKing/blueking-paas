@@ -88,6 +88,7 @@ def clean_empty_overlays(module):
         "updated",
         "environment_name",
         "created",
+        "override_proc_res",
         "tenant_id",
     }:
         raise RuntimeError("unexpected fields found on ProcessSpecEnvOverlay")

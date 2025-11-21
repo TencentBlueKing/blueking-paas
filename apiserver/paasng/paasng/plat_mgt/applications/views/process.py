@@ -226,8 +226,8 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_custom_resources(self, request):
-        """获取应用的自定义资源配置"""
+    def get_resource_quantity_options(self, request):
+        """获取自定义资源配置的可选项列表（CPU 和内存的预设值）"""
 
         cpu_resource_quantity = [
             {"value": value, "label": label} for value, label in CPUResourceQuantity.get_choices()

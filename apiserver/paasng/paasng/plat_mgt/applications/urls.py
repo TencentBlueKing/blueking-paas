@@ -69,9 +69,9 @@ urlpatterns = [
     ),
     # 平台管理 - 应用进程
     re_path(
-        r"^api/plat_mgt/custom_resources/$",
-        views.ApplicationProcessViewSet.as_view({"get": "get_custom_resources"}),
-        name="plat_mgt.applications.processes.custom_resources",
+        r"^api/plat_mgt/process_resources/quantity_options/$",
+        views.ApplicationProcessViewSet.as_view({"get": "get_resource_quantity_options"}),
+        name="plat_mgt.applications.processes.resource_quantity_options",
     ),
     re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/processes/$",

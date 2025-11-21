@@ -56,6 +56,55 @@ class TestApplicationProcessViewSet:
 
         return _make_url
 
+    def _create_process_with_overlay(self, bk_module, process_name="web", plan_name="default"):
+        """创建进程规格和环境覆盖的辅助方法"""
+        proc_spec = ModuleProcessSpec.objects.create(
+            module=bk_module, name=process_name, plan_name=plan_name, tenant_id="default"
+        )
+        ProcessSpecEnvOverlay.objects.create(
+            proc_spec=proc_spec,
+            environment_name=AppEnvName.STAG,
+            plan_name=plan_name,
+            tenant_id="default",
+        )
+        return proc_spec
+
+    def _create_process_with_custom_resources(self, bk_module, process_name="web"):
+        """创建带自定义资源配置的进程规格"""
+        proc_spec = ModuleProcessSpec.objects.create(
+            module=bk_module, name=process_name, plan_name="default", tenant_id="default"
+        )
+        ProcessSpecEnvOverlay.objects.create(
+            proc_spec=proc_spec,
+            environment_name=AppEnvName.STAG,
+            override_proc_res={
+                "limits": {"cpu": "2000m", "memory": "1024Mi"},
+                "requests": {"cpu": "200m", "memory": "256Mi"},
+            },
+            tenant_id="default",
+        )
+        return proc_spec
+
+    @staticmethod
+    def _make_custom_resources_data(env_name="stag"):
+        """生成自定义资源配置的请求数据"""
+        return {
+            "env_overlays": {
+                env_name: {
+                    "plan_name": None,
+                    "resources": {
+                        "limits": {"cpu": "2000m", "memory": "1024Mi"},
+                        "requests": {"cpu": "200m", "memory": "256Mi"},
+                    },
+                }
+            },
+        }
+
+    @staticmethod
+    def _make_plan_name_data(plan_name="default", env_name="stag"):
+        """生成预设方案的请求数据"""
+        return {"env_overlays": {env_name: {"plan_name": plan_name}}}
+
     def test_list_resource_with_not_deploy(self, plat_mgt_api_client, list_url):
         """测试列出模块进程资源, 没有部署过的模块"""
         response = plat_mgt_api_client.get(list_url)
@@ -74,7 +123,6 @@ class TestApplicationProcessViewSet:
             proc_spec=proc_spec,
             environment_name=AppEnvName.STAG,
             plan_name="default",
-            tenant_id="default",
         )
         ProcessSpecEnvOverlay.objects.create(
             proc_spec=proc_spec,
@@ -83,7 +131,6 @@ class TestApplicationProcessViewSet:
                 "limits": {"cpu": "2000m", "memory": "1024Mi"},
                 "requests": {"cpu": "100m", "memory": "256Mi"},
             },
-            tenant_id="default",
         )
 
         response = plat_mgt_api_client.get(list_url)
@@ -111,124 +158,66 @@ class TestApplicationProcessViewSet:
         bk_module.source_origin = SourceOrigin.AUTHORIZED_VCS.value
         bk_module.save(update_fields=["source_origin"])
 
-        proc_spec = ModuleProcessSpec.objects.create(
-            module=bk_module, name="web", plan_name="default", tenant_id="default"
-        )
-        ProcessSpecEnvOverlay.objects.create(
-            proc_spec=proc_spec,
-            environment_name=AppEnvName.STAG,
-            plan_name="default",
-            tenant_id="default",
-        )
+        self._create_process_with_overlay(bk_module)
 
-        # 更新请求
-        data = {
-            "env_overlays": {
-                "stag": {
-                    "plan_name": None,
-                    "resources": {
-                        "limits": {"cpu": "2000m", "memory": "1024Mi"},
-                        "requests": {"cpu": "200m", "memory": "256Mi"},
-                    },
-                }
-            },
-        }
-
-        response = plat_mgt_api_client.put(update_url("web"), data=data)
+        response = plat_mgt_api_client.put(update_url("web"), data=self._make_custom_resources_data())
         assert response.status_code == 400
 
-    def test_update_resource_success(self, plat_mgt_api_client, bk_app: Application, bk_module, update_url):
+    def test_update_resource_success(self, plat_mgt_api_client, bk_app: Application, bk_module, update_url, list_url):
         """测试成功更新进程资源限制"""
-        # 创建进程规格
-        proc_spec = ModuleProcessSpec.objects.create(
-            module=bk_module, name="web", plan_name="default", tenant_id="default"
-        )
-        ProcessSpecEnvOverlay.objects.create(
-            proc_spec=proc_spec,
-            environment_name=AppEnvName.STAG,
-            plan_name="default",
-            tenant_id="default",
-        )
+        self._create_process_with_overlay(bk_module)
 
-        # 更新请求
-        data = {
-            "env_overlays": {
-                "stag": {
-                    "plan_name": None,
-                    "resources": {
-                        "limits": {"cpu": "2000m", "memory": "1024Mi"},
-                        "requests": {"cpu": "200m", "memory": "256Mi"},
-                    },
-                }
-            },
-        }
-
-        response = plat_mgt_api_client.put(update_url("web"), data=data)
+        response = plat_mgt_api_client.put(update_url("web"), data=self._make_custom_resources_data())
         assert response.status_code == 204
 
-        # 验证数据库更新
-        overlay = ProcessSpecEnvOverlay.objects.get(proc_spec=proc_spec, environment_name=AppEnvName.STAG)
-        assert overlay.plan_name is None
-        assert overlay.override_proc_res == {
+        # 通过 API 验证更新结果
+        response = plat_mgt_api_client.get(list_url)
+        assert response.status_code == 200
+
+        process_data = response.data["processes"][0]
+        assert process_data["name"] == "web"
+        assert process_data["env_overlays"]["stag"]["plan_name"] is None
+        assert process_data["env_overlays"]["stag"]["resources"] == {
             "limits": {"cpu": "2000m", "memory": "1024Mi"},
             "requests": {"cpu": "200m", "memory": "256Mi"},
         }
 
-    def test_update_resource_with_plan_name(self, plat_mgt_api_client, bk_app: Application, bk_module, update_url):
+    def test_update_resource_with_plan_name(
+        self, plat_mgt_api_client, bk_app: Application, bk_module, update_url, list_url
+    ):
         """测试更新为预设方案"""
-        # 创建进程规格并设置自定义资源配置
-        proc_spec = ModuleProcessSpec.objects.create(
-            module=bk_module, name="web", plan_name="default", tenant_id="default"
-        )
-        ProcessSpecEnvOverlay.objects.create(
-            proc_spec=proc_spec,
-            environment_name=AppEnvName.STAG,
-            override_proc_res={
-                "limits": {"cpu": "2000m", "memory": "1024Mi"},
-                "requests": {"cpu": "200m", "memory": "256Mi"},
-            },
-            tenant_id="default",
-        )
+        self._create_process_with_custom_resources(bk_module)
 
-        # 更新为预设方案
-        data = {"env_overlays": {"stag": {"plan_name": "default"}}}
-        response = plat_mgt_api_client.put(update_url("web"), data=data)
+        response = plat_mgt_api_client.put(update_url("web"), data=self._make_plan_name_data())
         assert response.status_code == 204
 
-        # 验证 override_proc_res 被清空
-        overlay = ProcessSpecEnvOverlay.objects.get(proc_spec=proc_spec, environment_name=AppEnvName.STAG)
-        assert overlay.plan_name == "default"
-        assert overlay.override_proc_res is None
+        # 通过 API 验证 override_proc_res 被清空
+        response = plat_mgt_api_client.get(list_url)
+        assert response.status_code == 200
 
-    def test_update_resource_create_overlay(self, plat_mgt_api_client, bk_app: Application, bk_module, update_url):
+        process_data = response.data["processes"][0]
+        assert process_data["env_overlays"]["stag"]["plan_name"] == "default"
+        assert process_data["env_overlays"]["stag"]["resources"] is None
+
+    def test_update_resource_create_overlay(
+        self, plat_mgt_api_client, bk_app: Application, bk_module, update_url, list_url
+    ):
         """测试自动创建环境覆盖"""
-        # 创建进程规格但不创建环境覆盖
         ModuleProcessSpec.objects.create(module=bk_module, name="web", plan_name="default", tenant_id="default")
 
-        data = {
-            "env_overlays": {
-                "stag": {
-                    "plan_name": None,
-                    "resources": {
-                        "limits": {"cpu": "2000m", "memory": "1024Mi"},
-                        "requests": {"cpu": "200m", "memory": "256Mi"},
-                    },
-                }
-            },
-        }
-
-        response = plat_mgt_api_client.put(update_url("web"), data=data)
+        response = plat_mgt_api_client.put(update_url("web"), data=self._make_custom_resources_data())
         assert response.status_code == 204
 
-        # 验证自动创建了环境覆盖
-        assert ProcessSpecEnvOverlay.objects.filter(
-            proc_spec__module=bk_module, proc_spec__name="web", environment_name=AppEnvName.STAG
-        ).exists()
+        # 通过 API 验证环境覆盖已创建
+        response = plat_mgt_api_client.get(list_url)
+        assert response.status_code == 200
+
+        process_data = response.data["processes"][0]
+        assert process_data["env_overlays"]["stag"]["plan_name"] is None
+        assert process_data["env_overlays"]["stag"]["resources"] is not None
 
     def test_update_resource_process_not_found(self, plat_mgt_api_client, bk_app: Application, bk_module, update_url):
         """测试更新不存在的进程"""
-        data = {"env_overlays": {"stag": {"plan_name": "default"}}}
-
-        response = plat_mgt_api_client.put(update_url("nonexistent"), data=data)
+        response = plat_mgt_api_client.put(update_url("nonexistent"), data=self._make_plan_name_data())
         assert response.status_code == 404
         assert "nonexistent" in response.data["detail"]

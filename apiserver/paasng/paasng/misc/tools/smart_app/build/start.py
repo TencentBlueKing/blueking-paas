@@ -115,10 +115,12 @@ class SmartBuildTaskRunner:
         app_code: str,
         app_version: str,
         sha256_signature: str,
+        use_old_cnb: bool = False,
     ):
         self.smart_build = SmartBuildRecord.objects.get(uuid=smart_build_id)
         artifact_key = SmartBuildContext.generate_artifact_key(app_code, app_version, sha256_signature)
         self._context = SmartBuildContext(self.smart_build, source_url, artifact_key)
+        self.use_old_cnb = use_old_cnb
 
     def start(self):
         """Start build task"""
@@ -136,6 +138,7 @@ class SmartBuildTaskRunner:
                 self.smart_build.uuid,
                 self._context.get_source_get_url(),
                 self._context.get_artifact_put_url(),
+                self.use_old_cnb,
             ),
             link_error=execute_build_error_callback.s(),
         )

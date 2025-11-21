@@ -112,6 +112,7 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         app_code = slz.validated_data["app_code"]
         signature = slz.validated_data["signature"]
+        use_old_cnb = slz.validated_data["use_old_cnb"]
 
         prepared_package = PreparedSourcePackage(request, namespace=self._get_store_namespace(app_code))
 
@@ -147,6 +148,7 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
                 app_code=app_code,
                 app_version=stat.version,
                 sha256_signature=stat.sha256_signature,
+                use_old_cnb=use_old_cnb,
             ).start()
 
         data = {"build_id": str(smart_build.uuid), "stream_url": f"/streams/{smart_build.uuid}"}

@@ -3101,5 +3101,7 @@ export default {
   可在根目录下执行如下命令生成源码包: 'Execute the following command in the root directory to generate a source package',
   '支持的文件格式包括：.tgz 和 .tar.gz，并确保 app_desc.yaml 文件在根目录': 'Supported file formats include: .tgz and .tar.gz, and ensure the app_desc.yaml file is in the root directory',
   'S-mart 应用包是一种便捷的应用打包与交付方式，每个 S-mart 应用包可以直接部署到其他环境中。本工具支持将源代码打包为 S-mart 应用包。': 'S-mart application packages are a convenient way to package and deliver applications, with each S-mart package deployable to different environments. This tool supports packaging source code into S-mart application packages.',
-
+  切换为代码仓库: 'Switch to Code Repository',
+  是否切换为代码仓库: 'Switch to Code Repository?',
+  '一旦修改为代码仓库部署后，不能再改回源码包部署。': 'Once changed to code repository deployment, it cannot be reverted to source package deployment.',
 };

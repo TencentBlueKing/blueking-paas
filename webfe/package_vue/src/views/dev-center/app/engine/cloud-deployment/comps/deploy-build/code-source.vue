@@ -778,6 +778,7 @@ export default {
     handleCancel() {
       this.resetSourceType();
       this.isCodeSourceEdit = false;
+      this.$emit('cancel');
     },
 
     handleToggleSideslider() {

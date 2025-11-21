@@ -11,7 +11,15 @@
       class="title"
       v-else
     >
-      {{ isSmartApp ? $t('包版本管理') : $t('源码信息') }}
+      <span>{{ isSmartApp ? $t('包版本管理') : $t('源码信息') }}</span>
+      <bk-button
+        v-if="curAppInfo.application?.is_ai_agent_app"
+        text
+        class="f12 ml10"
+        @click="switchToCodeRepository"
+      >
+        {{ $t('切换为代码仓库') }}
+      </bk-button>
     </div>
     <paas-content-loader
       :is-loading="isPageLoading"
@@ -489,6 +497,19 @@ export default {
       }
       this.$bkMessage({ theme: 'warning', message: this.$t(this.lessCodeData.tips), delay: 2000, dismissable: false });
     },
+
+    // 切换到代码仓库
+    switchToCodeRepository() {
+      this.$bkInfo({
+        width: 400,
+        title: this.$t('是否切换为代码仓库'),
+        subTitle: this.$t('一旦修改为代码仓库部署后，不能再改回源码包部署。'),
+        extCls: 'switch-repo-info-cls',
+        confirmFn: () => {
+          this.$emit('switch-repo');
+        },
+      });
+    },
   },
 };
 </script>
@@ -618,6 +639,14 @@ export default {
     font-weight: 700;
     font-size: 14px;
     color: #313238;
+    .bk-button-text {
+      font-weight: normal;
+    }
   }
+}
+</style>
+<style lang="scss">
+.switch-repo-info-cls .bk-dialog-sub-header .bk-dialog-header-inner {
+  font-size: 12px !important;
 }
 </style>

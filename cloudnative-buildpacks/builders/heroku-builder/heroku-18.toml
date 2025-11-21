@@ -21,7 +21,7 @@ description = "Ubuntu bionic base image with buildpacks for Apt, Go, Python and 
 [[buildpacks]]
   uri = "../../buildpacks/bk-buildpack-go/cnb-buildpack"
   id = "bk-buildpack-go"
-  version = "v205"
+  version = "v216"
 
 
 [[buildpacks]]
@@ -55,7 +55,7 @@ description = "Ubuntu bionic base image with buildpacks for Apt, Go, Python and 
 [[order]]
   [[order.group]]
     id = "bk-buildpack-go"
-    version = "v205"
+    version = "v216"
 
 
 [[order]]

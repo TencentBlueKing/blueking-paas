@@ -76,9 +76,14 @@ func archiveArtifactTarball(buildPlan *plan.BuildPlan, artifactDir string) (stri
 		return "", errors.Wrap(err, "writing builder flag .Version")
 	}
 
-	// 2. 生成 artifact.json, 写入 artifactDir
-	if err := writeArtifactJsonFile(buildPlan, artifactDir); err != nil {
-		return "", errors.Wrap(err, "writing artifact.json")
+	// 2. 生成并写入 `artifact.json` 到 artifactDir。
+	//    说明：
+	//      - v2（新方案，默认）：生成并写入该文件
+	//      - v1（旧方案）：不生成该文件
+	if buildPlan.PackagingVersion != "v1" {
+		if err := writeArtifactJsonFile(buildPlan, artifactDir); err != nil {
+			return "", errors.Wrap(err, "writing artifact.json")
+		}
 	}
 
 	// 3. 打包成 {app_code}.tgz

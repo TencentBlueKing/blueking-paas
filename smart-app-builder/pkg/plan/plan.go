@@ -53,6 +53,8 @@ type BuildPlan struct {
 	ProcessCommands map[string]map[string]string
 	// BuildGroups 模块构建组列表
 	BuildGroups []*ModuleBuildGroup
+	// PackagingVersion 打包方案版本 (v1: 旧方案, v2: 新方案)
+	PackagingVersion string
 }
 
 // GenerateProcfile 生成 Procfile. Procfile 是进程与启动命令的映射关系, 格式: {"模块名-进程名":"启动命令"}
@@ -62,6 +64,21 @@ func (b *BuildPlan) GenerateProcfile() map[string]string {
 	for moduleName, procInfo := range b.ProcessCommands {
 		for processName, procCommand := range procInfo {
 			procfile[GenerateProcType(moduleName, processName)] = procCommand
+		}
+	}
+
+	return procfile
+}
+
+// GenerateProcfileForModule 为特定模块生成 Procfile (用于 v1 旧方案)
+// v1 方案中, Procfile 只包含模块自己的进程, 格式: {"进程名":"启动命令"}
+func (b *BuildPlan) GenerateProcfileForModule(moduleName string) map[string]string {
+	procfile := make(map[string]string)
+
+	if procInfo, ok := b.ProcessCommands[moduleName]; ok {
+		for processName, procCommand := range procInfo {
+			// v1 方案: 直接使用进程名, 不加模块名前缀
+			procfile[processName] = procCommand
 		}
 	}
 
@@ -113,11 +130,12 @@ func PrepareBuildPlan(sourceDir string) (*BuildPlan, error) {
 	}
 
 	plan := &BuildPlan{
-		AppCode:         desc.GetAppCode(),
-		AppDescPath:     filepath.Join(sourceDir, AppDescFileName),
-		LogoFilePath:    detectLogoFile(sourceDir),
-		ProcessCommands: procCommands,
-		BuildGroups:     groups,
+		AppCode:          desc.GetAppCode(),
+		AppDescPath:      filepath.Join(sourceDir, AppDescFileName),
+		LogoFilePath:     detectLogoFile(sourceDir),
+		ProcessCommands:  procCommands,
+		BuildGroups:      groups,
+		PackagingVersion: config.G.PackagingVersion,
 	}
 
 	return plan, nil
@@ -158,8 +176,19 @@ func buildModuleBuildGroups(sourceDir string, desc appdesc.AppDesc) ([]*ModuleBu
 			return nil, err
 		}
 
-		// 合并采用相同构建方案的模块
-		k := fmt.Sprintf("%s%s", cfg.SourceDir, rBuildpacks)
+		// v1 (旧方案): 每个模块独立构建，不共享镜像，镜像文件使用 .tgz 后缀
+		// v2 (新方案): 合并采用相同构建方案的模块，镜像文件使用 .tar 后缀
+		var k, imageTarExt string
+		if config.G.PackagingVersion == "v1" {
+			// v1: 每个模块独立，使用模块名作为 key
+			k = cfg.ModuleName
+			imageTarExt = ".tgz"
+		} else {
+			// v2: 相同构建方案的模块共享
+			k = fmt.Sprintf("%s%s", cfg.SourceDir, rBuildpacks)
+			imageTarExt = ".tar"
+		}
+
 		if v, ok := groupMap[k]; !ok {
 			groupMap[k] = &ModuleBuildGroup{
 				SourceDir:          cfg.SourceDir,
@@ -169,7 +198,7 @@ func buildModuleBuildGroups(sourceDir string, desc appdesc.AppDesc) ([]*ModuleBu
 				BuildModuleName:    cfg.ModuleName,
 				Envs:               cfg.Envs,
 				OutputImage:        fmt.Sprintf("docker.io/local/%s:latest", cfg.ModuleName),
-				OutputImageTarName: fmt.Sprintf("%s.tar", cfg.ModuleName),
+				OutputImageTarName: fmt.Sprintf("%s%s", cfg.ModuleName, imageTarExt),
 			}
 		} else {
 			v.ModuleNames = append(v.ModuleNames, cfg.ModuleName)

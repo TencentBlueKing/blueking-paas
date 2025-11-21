@@ -48,7 +48,7 @@ class ToolPackageStashOutputSLZ(BaseSmartBuildSLZ):
 class SmartBuildInputSLZ(BaseSmartBuildSLZ):
     """Input SLZ for Smart Build API"""
 
-    use_old_cnb = serializers.BooleanField(default=True, help_text="是否使用旧版构建方案")
+    use_old_cnb = serializers.BooleanField(default=False, help_text="是否使用旧版构建方案")
 
 
 class SmartBuildOutputSLZ(serializers.Serializer):

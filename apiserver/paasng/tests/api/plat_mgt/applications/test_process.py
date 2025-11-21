@@ -85,7 +85,7 @@ class TestApplicationProcessViewSet:
 
         # 验证环境覆盖
         assert process_data["env_overlays"]["stag"]["plan_name"] == "default"
-        assert process_data["env_overlays"]["prod"]["plan_name"] == "custom"
+        assert process_data["env_overlays"]["prod"]["plan_name"] is None
         assert process_data["env_overlays"]["prod"]["resources"] == {
             "limits": {"cpu": "2000m", "memory": "1024Mi"},
             "requests": {"cpu": "100m", "memory": "256Mi"},
@@ -115,7 +115,7 @@ class TestApplicationProcessViewSet:
                     "name": "web",
                     "env_overlays": {
                         "stag": {
-                            "plan_name": "custom",
+                            "plan_name": None,
                             "resources": {
                                 "limits": {"cpu": "2000m", "memory": "1024Mi"},
                                 "requests": {"cpu": "200m", "memory": "256Mi"},
@@ -150,7 +150,7 @@ class TestApplicationProcessViewSet:
                     "name": "web",
                     "env_overlays": {
                         "stag": {
-                            "plan_name": "custom",
+                            "plan_name": None,
                             "resources": {
                                 "limits": {"cpu": "2000m", "memory": "1024Mi"},
                                 "requests": {"cpu": "200m", "memory": "256Mi"},
@@ -197,7 +197,7 @@ class TestApplicationProcessViewSet:
                     "name": "web",
                     "env_overlays": {
                         "stag": {
-                            "plan_name": "custom",
+                            "plan_name": None,
                             "resources": {
                                 "limits": {"cpu": "2000m", "memory": "1024Mi"},
                                 "requests": {"cpu": "200m", "memory": "256Mi"},
@@ -209,7 +209,7 @@ class TestApplicationProcessViewSet:
                     "name": "worker",
                     "env_overlays": {
                         "stag": {
-                            "plan_name": "custom",
+                            "plan_name": None,
                             "resources": {
                                 "limits": {"cpu": "1000m", "memory": "512Mi"},
                                 "requests": {"cpu": "200m", "memory": "256Mi"},
@@ -256,7 +256,7 @@ class TestApplicationProcessViewSet:
         # 更新为预设方案
         data = {
             "module_name": bk_module.name,
-            "processes": [{"name": "web", "env_overlays": {"stag": {"plan_name": "default", "resources": None}}}],
+            "processes": [{"name": "web", "env_overlays": {"stag": {"plan_name": "default"}}}],
         }
         response = plat_mgt_api_client.put(url, data=data)
         assert response.status_code == 204
@@ -278,7 +278,7 @@ class TestApplicationProcessViewSet:
                     "name": "web",
                     "env_overlays": {
                         "stag": {
-                            "plan_name": "custom",
+                            "plan_name": None,
                             "resources": {
                                 "limits": {"cpu": "2000m", "memory": "1024Mi"},
                                 "requests": {"cpu": "200m", "memory": "256Mi"},

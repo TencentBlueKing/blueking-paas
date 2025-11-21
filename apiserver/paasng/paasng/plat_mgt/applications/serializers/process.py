@@ -39,14 +39,8 @@ class ResourcesSLZ(serializers.Serializer):
 class EnvOverlayOutputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖序列化器"""
 
-    plan_name = serializers.SerializerMethodField(help_text="资源配额方案")
+    plan_name = serializers.CharField(help_text="资源配额方案", allow_null=True)
     resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
-
-    def get_plan_name(self, obj):
-        """当 resources 不为 None 时返回 custom"""
-        if obj["resources"] is not None:
-            return "custom"
-        return obj["plan_name"]
 
 
 class EnvOverlayInputSLZ(serializers.Serializer):
@@ -54,22 +48,24 @@ class EnvOverlayInputSLZ(serializers.Serializer):
 
     plan_name = serializers.ChoiceField(
         help_text="资源配额方案",
-        choices=ResQuotaPlan.get_choices() + [("custom", "custom")],
+        choices=ResQuotaPlan.get_choices(),
+        allow_null=True,
+        required=False,
     )
-    resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
+    resources = ResourcesSLZ(help_text="资源配置", allow_null=True, required=False)
 
     def validate(self, attrs):
-        """验证: 只有当 plan_name 为 custom 时才接受 resources"""
-        plan_name = attrs["plan_name"]
-        resources = attrs["resources"]
+        """验证: plan_name 和 resources 互斥，必须提供其中一个"""
+        plan_name = attrs.get("plan_name")
+        resources = attrs.get("resources")
 
-        # 如果提供了 resources, 则 plan_name 必须为 custom
-        if resources is not None and plan_name != "custom":
-            raise serializers.ValidationError({"plan_name": _("当指定自定义资源配置时, plan_name 必须为 'custom'")})
+        # 两者都没有提供
+        if plan_name is None and resources is None:
+            raise serializers.ValidationError(_("必须提供 plan_name 或 resources 其中之一"))
 
-        # 如果 plan_name 为 custom, 则必须提供 resources
-        if plan_name == "custom" and resources is None:
-            raise serializers.ValidationError({"resources": _("当 plan_name 为 'custom' 时, 必须提供资源配置")})
+        # 两者都提供了
+        if plan_name is not None and resources is not None:
+            raise serializers.ValidationError(_("plan_name 和 resources 不能同时指定，请选择其一"))
 
         return attrs
 

@@ -77,7 +77,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 overlay = overlays_map.get(env_name)
 
                 if overlay and overlay.override_proc_res:
-                    env_overlays[env_name] = {"plan_name": "custom", "resources": overlay.override_proc_res}
+                    env_overlays[env_name] = {"plan_name": None, "resources": overlay.override_proc_res}
                 else:
                     env_overlays[env_name] = {
                         "plan_name": spec.get_plan_name(env_name),
@@ -171,11 +171,13 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                     env_overlays_map[env_name] = env_overlay
 
                 # 更新配置
-                if overlay_data["plan_name"] == "custom":
+                if overlay_data.get("resources") is not None:
+                    # 使用自定义资源配置
                     env_overlay.override_proc_res = overlay_data["resources"]
                     env_overlay.plan_name = None
                 else:
-                    env_overlay.plan_name = overlay_data["plan_name"]
+                    # 使用预设方案
+                    env_overlay.plan_name = overlay_data.get("plan_name")
                     env_overlay.override_proc_res = None
 
                 env_overlay.updated = timezone.now()

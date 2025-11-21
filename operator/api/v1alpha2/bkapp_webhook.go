@@ -262,63 +262,36 @@ func (r *BkApp) validateAnnotations() *field.Error {
 }
 
 func validateOverrideResourceConfig(resConf ProcResOverride) error {
-	// 验证 Limits 必须指定
-	if resConf.Limits.CPU == "" && resConf.Limits.Memory == "" {
-		return errors.New("limits must be specified")
-	}
-	if err := validateResourceSpec(resConf.Limits, "limits"); err != nil {
-		return errors.Wrapf(err, "limits validation failed")
+	// 解析并验证 Limits
+	limCPU, limMem, err := quota.ParseResourceSpec(resConf.Limits.CPU, resConf.Limits.Memory)
+	if err != nil {
+		return errors.Wrap(err, "invalid limits resource spec")
 	}
 
-	// 验证 Requests（可选）
-	if resConf.Requests != nil && (resConf.Requests.CPU != "" || resConf.Requests.Memory != "") {
-		if err := validateResourceSpec(*resConf.Requests, "requests"); err != nil {
-			return errors.Wrapf(err, "requests validation failed")
+	// 验证并解析 Requests（可选）
+	if resConf.Requests != nil {
+		reqCPU, reqMem, err := quota.ParseResourceSpec(resConf.Requests.CPU, resConf.Requests.Memory)
+		if err != nil {
+			return errors.Wrap(err, "invalid requests resource spec")
 		}
 
 		// 验证 requests 不得超过 limits
-		if err := validateRequestsNotExceedsLimits(*resConf.Requests, resConf.Limits); err != nil {
-			return err
+		if reqCPU.Cmp(*limCPU) > 0 {
+			return errors.Errorf(
+				"cpu requests '%s' must not exceed limits '%s'",
+				resConf.Requests.CPU,
+				resConf.Limits.CPU,
+			)
+		}
+		if reqMem.Cmp(*limMem) > 0 {
+			return errors.Errorf(
+				"memory requests '%s' must not exceed limits '%s'",
+				resConf.Requests.Memory,
+				resConf.Limits.Memory,
+			)
 		}
 	}
 
-	return nil
-}
-
-func validateResourceSpec(spec ResourceSpec, resType string) error {
-	// 验证 CPU
-	if spec.CPU == "" {
-		return errors.Errorf("%s.cpu must be specified", resType)
-	}
-	if _, err := quota.NewQuantity(spec.CPU, quota.CPU); err != nil {
-		return errors.Wrapf(err, "invalid %s.cpu value '%s'", resType, spec.CPU)
-	}
-
-	// 验证 Memory
-	if spec.Memory == "" {
-		return errors.Errorf("%s.memory must be specified", resType)
-	}
-	if _, err := quota.NewQuantity(spec.Memory, quota.Memory); err != nil {
-		return errors.Wrapf(err, "invalid %s.memory value '%s'", resType, spec.Memory)
-	}
-
-	return nil
-}
-
-// validateRequestsNotExceedsLimits 验证 requests 不超过 limits
-func validateRequestsNotExceedsLimits(requests, limits ResourceSpec) error {
-	// 因为之前已经验证过 limits 和 requests 的合法性，这里不会失败, 所以忽略错误处理
-	limCPU, _ := quota.NewQuantity(limits.CPU, quota.CPU)
-	reqCPU, _ := quota.NewQuantity(requests.CPU, quota.CPU)
-	if reqCPU.Cmp(*limCPU) > 0 {
-		return errors.Errorf("cpu requests '%s' must not exceed limits '%s'", requests.CPU, limits.CPU)
-	}
-
-	limMem, _ := quota.NewQuantity(limits.Memory, quota.Memory)
-	reqMem, _ := quota.NewQuantity(requests.Memory, quota.Memory)
-	if reqMem.Cmp(*limMem) > 0 {
-		return errors.Errorf("memory requests '%s' must not exceed limits '%s'", requests.Memory, limits.Memory)
-	}
 	return nil
 }
 

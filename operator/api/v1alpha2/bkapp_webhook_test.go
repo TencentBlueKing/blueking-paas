@@ -1128,7 +1128,7 @@ var _ = Describe("test webhook.Validator", func() {
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(ContainSubstring("limits must be specified"))
+			Expect(err.Error()).To(ContainSubstring("invalid limits resource spec"))
 		})
 
 		It("invalid override proc res config - invalid cpu in limits", func() {

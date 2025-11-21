@@ -101,4 +101,56 @@ var _ = Describe("TestQuota", func() {
 		Expect(errors.Is(err, ErrExceedLimit)).To(BeTrue())
 		Expect(err.Error()).To(Equal("exceed memory max limit 4Gi: exceed limit"))
 	})
+
+	Describe("ParseResourceSpec", func() {
+		It("should parse valid CPU and Memory", func() {
+			cpu, mem, err := ParseResourceSpec("200m", "512Mi")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cpu.Cmp(resource.MustParse("200m"))).To(Equal(0))
+			Expect(mem.Cmp(resource.MustParse("512Mi"))).To(Equal(0))
+		})
+
+		It("should parse valid CPU and Memory with different units", func() {
+			cpu, mem, err := ParseResourceSpec("2", "2Gi")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cpu.Cmp(resource.MustParse("2"))).To(Equal(0))
+			Expect(mem.Cmp(resource.MustParse("2Gi"))).To(Equal(0))
+		})
+
+		It("should fail with invalid CPU", func() {
+			_, _, err := ParseResourceSpec("invalid-cpu", "512Mi")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid cpu value"))
+		})
+
+		It("should fail with invalid Memory", func() {
+			_, _, err := ParseResourceSpec("200m", "invalid-memory")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid memory value"))
+		})
+
+		It("should fail with empty CPU", func() {
+			_, _, err := ParseResourceSpec("", "512Mi")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid cpu value"))
+		})
+
+		It("should fail with empty Memory", func() {
+			_, _, err := ParseResourceSpec("200m", "")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid memory value"))
+		})
+
+		It("should enforce CPU limit", func() {
+			_, _, err := ParseResourceSpec("10", "512Mi")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("exceed cpu max limit"))
+		})
+
+		It("should enforce Memory limit", func() {
+			_, _, err := ParseResourceSpec("200m", "10Gi")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("exceed memory max limit"))
+		})
+	})
 })

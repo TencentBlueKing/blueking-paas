@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import time
 from typing import Dict
 
 import cattrs
@@ -129,29 +130,47 @@ class PipelineController(BaseBkDevopsClient):
         data = resp["data"]
         return cattrs.structure(data, definitions.PipelineBuild)
 
-    def retrieve_build_detail(self, build: definitions.PipelineBuild) -> definitions.PipelineBuildDetail:
-        """查询构建详情
+    def retrieve_build_detail(
+        self, build: definitions.PipelineBuild, max_retries: int = 3, retry_delay: float = 1.0
+    ) -> definitions.PipelineBuildDetail:
+        """查询构建详情，当返回的数据格式不符合 PipelineBuildDetail 时会自动重试
 
         :param build: 流水线构建对象
+        :param max_retries: 最大重试次数，默认为 3 次
+        :param retry_delay: 重试延迟时间（秒），默认为 1.0 秒
+        :raises BkDevopsApiError: 当构建详情获取失败或数据结构化失败时
         """
         path_params = {"projectId": build.projectId}
         query_params = {"pipelineId": build.pipelineId, "buildId": build.buildId}
-        try:
-            resp = self.client.v4_app_build_detail(path_params=path_params, params=query_params)
-        except (APIGatewayResponseError, ResponseError) as e:
-            raise BkDevopsGatewayServiceError(
-                "retrieve build({build}) detail error, detail: {detail}".format(
-                    build=build,
-                    detail=e,
+
+        for attempt in range(max(1, max_retries)):
+            try:
+                resp = self.client.v4_app_build_detail(path_params=path_params, params=query_params)
+            except (APIGatewayResponseError, ResponseError) as e:
+                raise BkDevopsGatewayServiceError(
+                    "retrieve build({build}) detail error, detail: {detail}".format(
+                        build=build,
+                        detail=e,
+                    )
                 )
-            )
 
-        if resp.get("status") != 0:
-            logger.error("retrieve build(%(build)s) detail error, resp: %(resp)s", {"build": build, "resp": resp})
-            raise BkDevopsApiError(resp["message"])
+            if resp.get("status") != 0:
+                logger.error("retrieve build(%(build)s) detail error, resp: %(resp)s", {"build": build, "resp": resp})
+                raise BkDevopsApiError(resp["message"])
 
-        data = resp["data"]
-        return cattrs.structure(data, definitions.PipelineBuildDetail)
+            data = resp["data"]
+            try:
+                return cattrs.structure(data, definitions.PipelineBuildDetail)
+            except Exception:
+                logger.exception(
+                    "retrieve build(%(build)s) detail structure error on attempt %(attempt)d/%(max_retries)d",
+                    {"build": build, "attempt": attempt + 1, "max_retries": max_retries},
+                )
+                if attempt < max(1, max_retries) - 1:
+                    time.sleep(retry_delay)
+
+        # linter 无法静态分析出循环一定会通过 return 或 raise 退出，所以把 raise 放到 for 循环外面
+        raise BkDevopsApiError("retrieve build detail error")
 
     def retrieve_build_status(self, build: definitions.PipelineBuild) -> definitions.PipelineBuildStatus:
         """查询构建状态信息

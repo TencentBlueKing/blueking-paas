@@ -65,7 +65,6 @@ class TestApplicationProcessViewSet:
             proc_spec=proc_spec,
             environment_name=AppEnvName.STAG,
             plan_name=plan_name,
-            tenant_id="default",
         )
         return proc_spec
 
@@ -81,7 +80,6 @@ class TestApplicationProcessViewSet:
                 "limits": {"cpu": "2000m", "memory": "1024Mi"},
                 "requests": {"cpu": "200m", "memory": "256Mi"},
             },
-            tenant_id="default",
         )
         return proc_spec
 
@@ -113,17 +111,10 @@ class TestApplicationProcessViewSet:
 
     def test_list_resource(self, plat_mgt_api_client, bk_app: Application, bk_module, list_url):
         """测试列出模块进程资源"""
-        # 创建进程规格
-        proc_spec = ModuleProcessSpec.objects.create(
-            module=bk_module, name="web", plan_name="default", tenant_id="default"
-        )
+        # 创建进程规格及 stag 环境覆盖
+        proc_spec = self._create_process_with_overlay(bk_module, process_name="web", plan_name="default")
 
-        # 创建环境覆盖
-        ProcessSpecEnvOverlay.objects.create(
-            proc_spec=proc_spec,
-            environment_name=AppEnvName.STAG,
-            plan_name="default",
-        )
+        # 创建 prod 环境覆盖
         ProcessSpecEnvOverlay.objects.create(
             proc_spec=proc_spec,
             environment_name=AppEnvName.PROD,

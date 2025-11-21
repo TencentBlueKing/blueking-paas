@@ -74,9 +74,14 @@ urlpatterns = [
         name="plat_mgt.applications.processes.resource_quantity_options",
     ),
     re_path(
-        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/processes/$",
-        views.ApplicationProcessViewSet.as_view({"get": "list_resource", "put": "update_resource"}),
-        name="plat_mgt.applications.processes.resource",
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/processes/$",
+        views.ApplicationProcessViewSet.as_view({"get": "list_resource"}),
+        name="plat_mgt.applications.processes.list",
+    ),
+    re_path(
+        r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/processes/(?P<process_name>[^/]+)/$",
+        views.ApplicationProcessViewSet.as_view({"put": "update_resource"}),
+        name="plat_mgt.applications.processes.update",
     ),
     # 平台管理 - 应用成员
     re_path(

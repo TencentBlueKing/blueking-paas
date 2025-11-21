@@ -1,5 +1,16 @@
 # ChangeLog
 
+## v2.2.0
+
+- 更新：升级 bk-buildpack-go 到 v216
+
+## v2.1.0
+
+- 更新：paketo-buildpacks 镜像地址
+- 更新：固定 gcr.io/kaniko-project/executor 镜像 TAG 为 v1.24.0
+- 重构：开发沙箱（容器合并、支持注入自定义环境变量等）
+- 更新：bk-buildpack-nodejs 到 v304
+
 ## v2.0.0
 
 - 新增：heroku-noble (ubuntu-24, buildpack: py-v287, go-v206)

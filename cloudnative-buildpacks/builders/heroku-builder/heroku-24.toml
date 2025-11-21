@@ -34,7 +34,7 @@ version = "v304"
 [[buildpacks]]
 uri = "../../buildpacks/bk-buildpack-go/cnb-buildpack"
 id = "bk-buildpack-go"
-version = "v206"
+version = "v216"
 
 [[buildpacks]]
 uri = "../../buildpacks/bk-buildpack-apt/cnb-buildpack"
@@ -69,7 +69,7 @@ version = "v304"
 [[order]]
 [[order.group]]
 id = "bk-buildpack-go"
-version = "v206"
+version = "v216"
 
 [[order]]
 [[order.group]]

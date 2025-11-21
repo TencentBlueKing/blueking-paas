@@ -36,11 +36,34 @@ class ResourcesSLZ(serializers.Serializer):
     requests = ResourcesQuantity(help_text="资源请求", required=False, allow_null=True)
 
 
+# ============= Output Serializers =============
+
+
 class EnvOverlayOutputSLZ(serializers.Serializer):
-    """进程规格环境配置覆盖序列化器"""
+    """进程规格环境配置覆盖输出序列化器"""
 
     plan_name = serializers.CharField(help_text="资源配额方案", allow_null=True)
     resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
+
+
+class ProcessSpecOutputSLZ(serializers.Serializer):
+    """单个进程规格输出序列化器"""
+
+    name = serializers.CharField(help_text="进程名称")
+    env_overlays = serializers.DictField(
+        child=EnvOverlayOutputSLZ(), help_text="环境配置覆盖, key 为环境名称", required=False
+    )
+
+
+class ModuleProcessSpecOutputSLZ(serializers.Serializer):
+    """模块进程规格输出序列化器"""
+
+    module_name = serializers.CharField(help_text="模块名称")
+    source_origin = serializers.IntegerField(help_text="源码来源")
+    processes = serializers.ListField(child=ProcessSpecOutputSLZ(), help_text="进程规格列表")
+
+
+# ============= Input Serializers =============
 
 
 class EnvOverlayInputSLZ(serializers.Serializer):
@@ -70,26 +93,9 @@ class EnvOverlayInputSLZ(serializers.Serializer):
         return attrs
 
 
-class ProcessSpecOutputSLZ(serializers.Serializer):
-    """单个进程规格输出序列化器"""
-
-    name = serializers.CharField(help_text="进程名称")
-    env_overlays = serializers.DictField(
-        child=EnvOverlayOutputSLZ(), help_text="环境配置覆盖, key 为环境名称", required=False
-    )
-
-
 class ProcessSpecInputSLZ(serializers.Serializer):
     """单个进程规格更新序列化器"""
 
     env_overlays = serializers.DictField(
         child=EnvOverlayInputSLZ(), help_text="环境配置覆盖, key 为环境名称", required=True
     )
-
-
-class ModuleProcessSpecOutputSLZ(serializers.Serializer):
-    """模块进程规格输出序列化器"""
-
-    module_name = serializers.CharField(help_text="模块名称")
-    source_origin = serializers.IntegerField(help_text="源码来源")
-    processes = serializers.ListField(child=ProcessSpecOutputSLZ(), help_text="进程规格列表")

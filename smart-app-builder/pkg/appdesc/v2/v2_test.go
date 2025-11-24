@@ -84,7 +84,7 @@ modules:
 				Envs: map[string]string{
 					"key1": "value1",
 				},
-				Buildpacks: []buildconfig.Buildpack{{Name: "bk-buildpack-go", Version: "v205"}},
+				Buildpacks: []buildconfig.Buildpack{{Name: "bk-buildpack-go", Version: "v216"}},
 			}
 
 			slices.SortFunc(buildConfig, func(a, b buildconfig.ModuleBuildConfig) int {

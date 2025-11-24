@@ -251,6 +251,8 @@ MIDDLEWARE = [
     "apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware",  # JWT 透传的用户信息
     # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
     "paasng.infras.sysapi_client.middlewares.AuthenticatedAppAsClientMiddleware",
+    # 激活用户时区（需要在所有认证中间件之后）
+    "paasng.infras.accounts.middlewares.UserTimezoneMiddleware",
     # Other utilities middlewares
     "paasng.utils.middlewares.AutoDisableCSRFMiddleware",
     "paasng.utils.middlewares.APILanguageMiddleware",

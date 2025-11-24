@@ -17,10 +17,12 @@
 
 import json
 import logging
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib import auth
 from django.http import JsonResponse
+from django.utils import timezone as dj_timezone
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.translation import gettext as _
 
@@ -105,3 +107,51 @@ class WrapUsernameAsUserMiddleware:
                         verified=req_app.verified,
                     )
         return self.get_response(request)
+
+
+class UserTimezoneMiddleware(MiddlewareMixin):
+    """按用户的时区属性激活 Django 时区。
+
+    该中间件从用户管理系统获取用户时区信息并激活，使所有时间相关的序列化输出
+    都使用用户所在时区的偏移量。
+
+    执行逻辑:
+    1. 未登录用户跳过处理
+    2. 从 request.user 读取 time_zone 属性
+    3. 若时区字段缺失或非法，回退到默认时区 settings.TIME_ZONE
+    4. 在响应返回时重置时区，避免线程复用导致的时区污染
+
+    Note: 必须放在所有用户认证中间件之后
+    """
+
+    SESSION_TIMEZONE_KEY = "_user_timezone"
+
+    def process_request(self, request):
+        # Ignore anonymous user
+        if not request.user.is_authenticated:
+            return
+
+        user = request.user
+        tz_name = getattr(user, "time_zone", None)
+
+        # Try to activate user's timezone
+        if tz_name:
+            try:
+                user_tz = ZoneInfo(tz_name)
+                dj_timezone.activate(user_tz)
+                logger.debug("Activated timezone '%s' for user '%s'", tz_name, user.username)
+            except Exception as e:
+                logger.warning(
+                    "Invalid time_zone '%s' for user '%s', fallback to default. Error: %s",
+                    tz_name,
+                    user.username,
+                    str(e),
+                )
+        else:
+            # Fallback to default timezone
+            dj_timezone.activate(dj_timezone.get_default_timezone())
+
+    def process_response(self, request, response):
+        """重置时区"""
+        dj_timezone.deactivate()
+        return response

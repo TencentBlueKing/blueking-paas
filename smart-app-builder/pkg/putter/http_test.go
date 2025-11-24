@@ -93,7 +93,7 @@ var _ = Describe("Http", func() {
 		It("should return error when server returns 500", func() {
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Internal server error"))
+				_, _ = w.Write([]byte("Internal server error"))
 			}))
 
 			srcPath := filepath.Join(basePath, "project.tgz")

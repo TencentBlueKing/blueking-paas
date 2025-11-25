@@ -140,10 +140,11 @@ class PipelineController(BaseBkDevopsClient):
         :param retry_delay: 重试延迟时间（秒），默认为 1.0 秒
         :raises BkDevopsApiError: 当构建详情获取失败或数据结构化失败时
         """
+        max_retries = max(1, max_retries)  # 确保至少执行 1 次
         path_params = {"projectId": build.projectId}
         query_params = {"pipelineId": build.pipelineId, "buildId": build.buildId}
 
-        for attempt in range(max(1, max_retries)):
+        for attempt in range(max_retries):
             try:
                 resp = self.client.v4_app_build_detail(path_params=path_params, params=query_params)
             except (APIGatewayResponseError, ResponseError) as e:
@@ -166,7 +167,7 @@ class PipelineController(BaseBkDevopsClient):
                     "retrieve build(%(build)s) detail structure error on attempt %(attempt)d/%(max_retries)d",
                     {"build": build, "attempt": attempt + 1, "max_retries": max_retries},
                 )
-                if attempt < max(1, max_retries) - 1:
+                if attempt < max_retries - 1:
                     time.sleep(retry_delay)
 
         # linter 无法静态分析出循环一定会通过 return 或 raise 退出，所以把 raise 放到 for 循环外面

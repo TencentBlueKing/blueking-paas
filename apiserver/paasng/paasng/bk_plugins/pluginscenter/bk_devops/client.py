@@ -140,7 +140,8 @@ class PipelineController(BaseBkDevopsClient):
         :param retry_delay: 重试延迟时间（秒），默认为 1.0 秒
         :raises BkDevopsApiError: 当构建详情获取失败或数据结构化失败时
         """
-        max_retries = max(1, max_retries)  # 确保至少执行 1 次
+        # 确保至少执行 1 次
+        max_retries = max(1, max_retries)
         path_params = {"projectId": build.projectId}
         query_params = {"pipelineId": build.pipelineId, "buildId": build.buildId}
 

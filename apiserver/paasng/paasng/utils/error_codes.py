@@ -154,6 +154,7 @@ class ErrorCodes:
     CANNOT_BUILD_ONGOING_EXISTS = ErrorCode(_("构建失败，已有构建任务进行中，请刷新查看"))
     NOT_FOUND_SMART_BUILD = ErrorCode(_("找不到指定的 S-Mart 包构建记录"))
     SMART_BUILD_INTERRUPTION_FAILED = ErrorCode(_("中止构建失败"))
+    ARTIFACT_NOT_FOUND = ErrorCode(_("制品不存在"))
     CANNOT_GET_SMART_BUILD_PHASES = ErrorCode(_("无法获取 S-Mart 构建的阶段信息"))
     # 对外接口异常
     CANNOT_GET_BK_USER_CREDENTIAL = ErrorCode(_("无法获取用户凭证"))

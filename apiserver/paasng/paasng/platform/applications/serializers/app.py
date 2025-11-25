@@ -232,6 +232,11 @@ class ApplicationSLZ(serializers.ModelSerializer):
 
 class ApplicationWithDeployInfoSLZ(ApplicationSLZ):
     deploy_info = serializers.JSONField(read_only=True, source="_deploy_info", help_text="部署状态")
+    preferred_prod_url = serializers.CharField(
+        read_only=True,
+        source="_preferred_prod_url",
+        help_text="首选的生产环境访问地址，没有返回值时依然从 deploy_info 获取生产环境访问地址",
+    )
 
 
 class ApplicationRelationSLZ(serializers.Serializer):

@@ -15,14 +15,9 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-from os import PathLike
-from typing import Any
-
 from celery import shared_task
-from celery.worker.request import Request
+from celery.app.task import Context
 
-from paasng.misc.tools.smart_app.constants import SmartBuildPhaseType
 from paasng.misc.tools.smart_app.models import SmartBuildRecord
 from paasng.platform.engine.constants import JobStatus
 from paasng.utils.i18n.celery import I18nTask
@@ -30,37 +25,34 @@ from paasng.utils.i18n.celery import I18nTask
 from .builder import SmartAppBuilder
 from .flow import SmartBuildStateMgr
 
-logger = logging.getLogger(__name__)
-
 
 @shared_task(base=I18nTask)
-def execute_build(smart_build_id: str, source_package_url: str, package_path: PathLike, *args, **kwargs):
+def execute_build(
+    smart_build_id: str,
+    source_get_url: str,
+    dest_put_url: str,
+    *args,
+    **kwargs,
+):
     """Execute smart app build task in worker
 
     :param smart_build_id: Id of smart build object
-    :param source_package_url: The source code repository URL
-    :param package_path: The local path of source package file
+    :param source_get_url: The source URL to get source code package
+    :param dest_put_url: The destination URL to put built artifact
     """
+
     smart_build = SmartBuildRecord.objects.get(pk=smart_build_id)
-    builder = SmartAppBuilder(smart_build, source_package_url, package_path)
-    builder.start()
+    SmartAppBuilder(smart_build, source_get_url, dest_put_url).start()
 
 
 @shared_task(base=I18nTask)
-def execute_build_error_callback(context: Request, exc: Exception, traceback: Any, task_id: str):
-    """Callback function for handling build task failure
+def execute_build_error_callback(context: Context, exc: Exception, *args, **kwargs):
+    """Build task error callback
 
-    :param context: Celery task request context, which contains info related to task execution
-    :param exc: Exception object thrown during the construction process
-    :param traceback: Exception traceback information
-    :param task_id: The unique identifier of the failed task
+    :param context: Task context containing the original task request
+    :param exc: The exception that was raised
     """
-    # celery.worker.request.Request own property `args` after celery==4.4.0
-    smart_build_id: str = context._payload[0][0]
 
-    logger.error("Smart app build failed for build_id=%s, task_id=%s, error=%s", smart_build_id, task_id, str(exc))
-
-    state_mgr = SmartBuildStateMgr.from_smart_build_id(
-        smart_build_id=smart_build_id, phase_type=SmartBuildPhaseType.BUILD
-    )
-    state_mgr.finish(JobStatus.FAILED, str(exc), write_to_stream=False)
+    smart_build_id = context.args[0]
+    state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build_id)
+    state_mgr.finish(JobStatus.FAILED, str(exc))

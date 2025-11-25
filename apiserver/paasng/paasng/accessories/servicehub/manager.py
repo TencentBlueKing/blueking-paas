@@ -299,10 +299,10 @@ def mark_default_policy_creation_finished(service_obj: ServiceObj):
     service_type = db_properties.col_service_type
 
     DefaultPolicyCreationRecord.objects.update_or_create(
-        service_uuid=service_obj.uuid,
+        service_id=service_obj.uuid,
         defaults={
             "service_type": service_type,
-            "created_at": timezone.now(),
+            "finished_at": timezone.now(),
         },
     )
 

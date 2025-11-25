@@ -10,7 +10,14 @@
         </p>
       </div>
     </div>
-    <div class="size">{{ file.size }}M</div>
+    <div :class="['size', { mr10: isClosable }]">{{ file.size }}M</div>
+    <div
+      v-if="isClosable"
+      class="close-icon"
+      @click="$emit('close')"
+    >
+      <i class="paasng-icon paasng-bold-close"></i>
+    </div>
   </div>
 </template>
 
@@ -31,12 +38,17 @@ export default {
       type: String,
       default: '上传成功',
     },
+    isClosable: {
+      type: Boolean,
+      default: false,
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .file-preview {
+  position: relative;
   font-size: 12px;
   height: 60px;
   background: #ffffff;
@@ -46,6 +58,21 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  .close-icon {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+    cursor: pointer;
+    text-align: center;
+    line-height: 24px;
+    color: #c4c6cc;
+    &:hover {
+      color: #63656e;
+    }
+  }
   .left-info {
     display: flex;
     align-items: center;

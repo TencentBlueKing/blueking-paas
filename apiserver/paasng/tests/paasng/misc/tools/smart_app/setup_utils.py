@@ -35,6 +35,7 @@ def create_fake_smart_build(
     status: JobStatus = JobStatus.PENDING,
 ):
     """Create a fake SmartBuild instance for testing"""
+
     if source_origin is None:
         source_origin = SourceCodeOriginType.PACKAGE
     if package_name is None:
@@ -46,7 +47,7 @@ def create_fake_smart_build(
 
     log = SmartBuildLog.objects.create()
 
-    return SmartBuildRecord.objects.create(
+    record = SmartBuildRecord.objects.create(
         source_origin=source_origin,
         package_name=package_name,
         app_code=app_code,
@@ -54,3 +55,5 @@ def create_fake_smart_build(
         operator=operator,
         stream=log,
     )
+
+    return record

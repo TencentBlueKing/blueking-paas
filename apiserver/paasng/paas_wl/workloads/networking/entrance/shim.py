@@ -149,13 +149,33 @@ class PreAllocatedEnvAddresses(BaseEnvAddresses):
 
     def list_subdomain(self) -> List[Address]:
         """list all subdomain addresses which should be allocated to the given environment"""
-        subdomains = ModuleEnvDomains(self.env).all()
-        return self._sort([Address(type=AddressType.SUBDOMAIN, url=d.as_url().as_address()) for d in subdomains])
+        addrs = []
+        for d in ModuleEnvDomains(self.env).all():
+            root_domain = self.ingress_cfg.find_app_root_domain(d.host)
+            is_sys_reserved = root_domain.reserved if root_domain else False
+            addrs.append(
+                Address(
+                    type=AddressType.SUBDOMAIN,
+                    url=d.as_url().as_address(),
+                    is_sys_reserved=is_sys_reserved,
+                )
+            )
+
+        return self._sort(addrs)
 
     def list_subpath(self) -> List[Address]:
         """list all subpath addresses which should be allocated to the given environment"""
-        subpaths = ModuleEnvSubpaths(self.env).all()
-        return self._sort([Address(type=AddressType.SUBPATH, url=p.as_url().as_address()) for p in subpaths])
+        domain_reserved_map = {cfg.name: cfg.reserved for cfg in self.ingress_cfg.sub_path_domains}
+        return self._sort(
+            [
+                Address(
+                    type=AddressType.SUBPATH,
+                    url=p.as_url().as_address(),
+                    is_sys_reserved=domain_reserved_map.get(p.host, False),
+                )
+                for p in ModuleEnvSubpaths(self.env).all()
+            ]
+        )
 
 
 def get_builtin_addr_preferred(env: ModuleEnvironment) -> Tuple[bool, Optional[Address]]:

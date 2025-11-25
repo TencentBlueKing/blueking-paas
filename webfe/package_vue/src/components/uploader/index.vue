@@ -52,6 +52,11 @@
           >
             {{ fileStatusMap[file.status] || file.errorMsg }}
           </span>
+          <slot
+            v-if="file.hasError"
+            name="custom-error"
+            v-bind="{ file }"
+          ></slot>
         </div>
       </slot>
     </section>

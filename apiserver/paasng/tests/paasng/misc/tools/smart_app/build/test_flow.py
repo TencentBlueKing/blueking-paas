@@ -16,127 +16,140 @@
 # to the current version of the project delivered to anyone in the future.
 
 import time
-from unittest import mock
 
 import pytest
 
-from paasng.misc.tools.smart_app.build.flow import SmartBuildCoordinator, SmartBuildProcedure
-from paasng.misc.tools.smart_app.exceptions import SmartBuildShouldAbortError
-from paasng.misc.tools.smart_app.output import ConsoleStream
-from paasng.misc.tools.smart_app.phases_steps import SmartBuildPhaseManager
+from paasng.misc.tools.smart_app.build.flow import (
+    SmartBuildCoordinator,
+    SmartBuildStateMgr,
+)
+from paasng.misc.tools.smart_app.output import NullStream
+from paasng.platform.engine.constants import JobStatus
 from tests.paasng.misc.tools.smart_app.setup_utils import create_fake_smart_build
 
 pytestmark = pytest.mark.django_db
 
 
-class TestSmartBuildProcedure:
+class TestSmartBuildStateMgr:
     @pytest.fixture()
-    def phases(self, smart_build):
-        manager = SmartBuildPhaseManager(smart_build)
-        phases = []
-        for phase_type in manager.list_phase_types():
-            phase = manager.get_or_create(phase_type)
-            phases.append(phase)
-        return phases
+    def mgr(self, smart_build):
+        """Create a SmartBuildStateMgr instance for testing"""
+        return SmartBuildStateMgr(smart_build)
 
-    def test_normal(self, phases):
-        stream = ConsoleStream()
-        stream.write_title = mock.Mock()  # type: ignore
+    def test_init(self, smart_build, mgr):
+        """Test SmartBuildStateMgr initialization"""
+        assert mgr.smart_build == smart_build
+        assert mgr.stream is not None
 
-        with SmartBuildProcedure(stream, None, "doing nothing", phases[0]):
-            pass
+    def test_from_smart_build_id(self, smart_build):
+        """Test creating SmartBuildStateMgr from smart_build_id"""
+        mgr = SmartBuildStateMgr.from_smart_build_id(str(smart_build.pk))
+        assert mgr.smart_build.pk == smart_build.pk
 
-        assert stream.write_title.call_count == 1
-        assert stream.write_title.call_args == ((SmartBuildProcedure.TITLE_PREFIX + "doing nothing",),)
+    def test_update(self, smart_build, mgr):
+        """Test updating smart_build fields"""
+        mgr.update(status=JobStatus.SUCCESSFUL)
+        smart_build.refresh_from_db()
+        assert smart_build.status == JobStatus.SUCCESSFUL
 
-    def test_with_expected_error(self, phases):
-        stream = ConsoleStream()
-        stream.write_message = mock.Mock()  # type: ignore
+    @pytest.mark.parametrize(
+        ("status", "err_detail"),
+        [
+            (JobStatus.SUCCESSFUL, ""),
+            (JobStatus.FAILED, "Build failed due to invalid configuration"),
+            (JobStatus.INTERRUPTED, "Build was interrupted"),
+        ],
+    )
+    def test_finish_with_various_statuses(self, smart_build, mgr, status, err_detail):
+        """Test finishing with various statuses"""
+        mgr.finish(status, err_detail=err_detail)
+        smart_build.refresh_from_db()
+        assert smart_build.status == status
+        assert smart_build.err_detail == err_detail
 
-        try:
-            with SmartBuildProcedure(stream, None, "doing nothing", phases[0]):
-                raise SmartBuildShouldAbortError("oops")  # noqa: TRY301
-        except SmartBuildShouldAbortError:
-            pass
+    def test_finish_with_invalid_status(self, mgr):
+        """Test finishing with invalid status raises ValueError"""
+        with pytest.raises(ValueError, match="is not a valid finished status"):
+            mgr.finish(JobStatus.PENDING)
 
-        assert stream.write_message.call_count == 1
-        assert "oops" in stream.write_message.call_args[0][0]
+    def test_finish_without_writing_to_stream(self, smart_build):
+        """Test finishing without writing error to stream"""
+        stream = NullStream()
 
-    def test_with_unexpected_error(self, phases):
-        stream = ConsoleStream()
-        stream.write_message = mock.Mock()  # type: ignore
+        mgr = SmartBuildStateMgr(smart_build, stream=stream)
+        mgr.finish(JobStatus.FAILED, err_detail="Error occurred")
 
-        try:
-            with SmartBuildProcedure(stream, None, "doing nothing", phases[0]):
-                raise ValueError("oops")  # noqa: TRY301
-        except ValueError:
-            pass
+        smart_build.refresh_from_db()
+        assert smart_build.status == JobStatus.FAILED
+        assert smart_build.err_detail == "Error occurred"
 
-        assert stream.write_message.call_count == 1
-        # The error message should not contains the original exception message
-        assert "oops" not in stream.write_message.call_args[0][0]
+    @pytest.mark.parametrize(
+        ("status", "should_stylize"),
+        [
+            (JobStatus.INTERRUPTED, True),
+            (JobStatus.FAILED, True),
+            (JobStatus.SUCCESSFUL, False),
+        ],
+    )
+    def test_stylize_error(self, status, should_stylize):
+        """Test error message stylization"""
+        error_msg = "Test error message"
+        styled = SmartBuildStateMgr._stylize_error(error_msg, status)
 
-    def test_with_smart_build(self, smart_build, phases):
-        stream = ConsoleStream()
-        stream.write_message = mock.Mock()  # type: ignore
-
-        # 手动标记该阶段的开启, 但 title 未知
-        with SmartBuildProcedure(stream, smart_build, "doing nothing", phases[0]) as d:
-            assert not d.step_obj
-
-        # title 已知，但是阶段不匹配
-        with SmartBuildProcedure(stream, smart_build, "构建 S-Mart 包", phases[0]) as d:
-            assert not d.step_obj
-
-        # 正常
-        with SmartBuildProcedure(stream, smart_build, "校验应用描述文件", phases[0]) as d:
-            assert d.step_obj
+        if should_stylize:
+            assert error_msg in styled
+        else:
+            assert styled == error_msg
 
 
 class TestSmartBuildCoordinator:
-    def test_normal(self, smart_build):
-        coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
-        assert coordinator.acquire_lock() is True
-        assert coordinator.acquire_lock() is False
+    @pytest.fixture()
+    def lock_key(self, smart_build):
+        """Create a lock key for the smart build"""
+
+        return f"{smart_build.operator}:{smart_build.app_code}"
+
+    def test_normal(self, lock_key):
+        coordinator = SmartBuildCoordinator(lock_key)
+        assert coordinator.acquire_lock()
+        assert not coordinator.acquire_lock()
         coordinator.release_lock()
 
         # Re-initialize a new object
-        smart_build = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
-        assert coordinator.acquire_lock() is True
+        coordinator = SmartBuildCoordinator(lock_key)
+        assert coordinator.acquire_lock()
         coordinator.release_lock()
 
-    def test_lock_timeout(self, smart_build):
-        coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}", timeout=0.1)
-        assert coordinator.acquire_lock() is True
-        assert coordinator.acquire_lock() is False
+    def test_lock_timeout(self, lock_key):
+        coordinator = SmartBuildCoordinator(lock_key, timeout=0.1)
+        assert coordinator.acquire_lock()
+        assert not coordinator.acquire_lock()
 
         # wait for lock timeout
         time.sleep(0.2)
-        assert coordinator.acquire_lock() is True
+        assert coordinator.acquire_lock()
         coordinator.release_lock()
 
-    def test_release_without_smart_build(self, smart_build):
-        coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
+    def test_release_without_smart_build(self, smart_build, lock_key):
+        coordinator = SmartBuildCoordinator(lock_key)
         coordinator.acquire_lock()
         coordinator.set_smart_build(smart_build)
 
-        # Get ongoing smart build
-        coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
         assert coordinator.get_current_smart_build() == smart_build
         coordinator.release_lock()
         assert coordinator.get_current_smart_build() is None
 
-    def test_release_with_smart_build(self, smart_build):
-        coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
+    def test_release_with_smart_build(self, smart_build, lock_key):
+        coordinator = SmartBuildCoordinator(lock_key)
         coordinator.acquire_lock()
         coordinator.set_smart_build(smart_build)
 
-        coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
+        coordinator = SmartBuildCoordinator(lock_key)
         coordinator.release_lock(smart_build)
         assert coordinator.get_current_smart_build() is None
 
-    def test_release_with_wrong_smart_build(self, smart_build):
-        coordinator = SmartBuildCoordinator(f"{smart_build.operator}:{smart_build.app_code}")
+    def test_release_with_wrong_smart_build(self, smart_build, lock_key):
+        coordinator = SmartBuildCoordinator(lock_key)
         coordinator.acquire_lock()
         coordinator.set_smart_build(smart_build)
 
@@ -145,11 +158,9 @@ class TestSmartBuildCoordinator:
             app_code=smart_build.app_code,
             operator=smart_build.operator,
         )
-        coordinator = SmartBuildCoordinator(f"{new_smart_build.operator}:{new_smart_build.app_code}")
+        coordinator = SmartBuildCoordinator(lock_key)
         with pytest.raises(ValueError, match=r"smart_build lock holder mismatch.*"):
             coordinator.release_lock(new_smart_build)
 
         assert coordinator.get_current_smart_build() == smart_build
-
-        # 清除 smart_build 的 coordinator
         coordinator.release_lock(smart_build)

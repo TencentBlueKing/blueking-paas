@@ -139,7 +139,7 @@ smart-app-builder 支持通过环境变量设置 buildpacks , 可在启动容器
 
 #### bk-buildpack-go
 
-- `GO_BUILDPACK_VERSION`: bk-buildpack-go 的版本。默认值 v205
+- `GO_BUILDPACK_VERSION`: bk-buildpack-go 的版本。默认值 v216
 - `GO_BUCKET_URL`: go 运行时版本的下载地址。默认值 https://bkpaas-runtimes-1252002024.file.myqcloud.com/golang
 
 #### bk-buildpack-apt

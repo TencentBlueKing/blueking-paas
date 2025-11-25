@@ -102,7 +102,7 @@ func SetGlobalConfig() {
 	G.SetDefault("NPM_REGISTRY", "https://mirrors.tencent.com/npm/")
 
 	// set bk-buildpack-go env
-	G.SetDefault("GO_BUILDPACK_VERSION", "v205")
+	G.SetDefault("GO_BUILDPACK_VERSION", "v216")
 	G.SetDefault("GO_BUCKET_URL", "https://bkpaas-runtimes-1252002024.file.myqcloud.com/golang")
 
 	// set bk-buildpack-apt env

@@ -36,11 +36,13 @@ import (
 
 const AppDescFileName = "app_desc.yaml"
 
-// BuildPlan 定义了应用的构建方案，包含所有模块的构建配置分组。
-// 采用相同构建方案的模块会合并到同一构建组，复用同一份构建制品。
-// 相同构建方案判定标准：
-//   - 代码目录相同
-//   - 构建语言或 buildpacks 相同
+// BuildPlan 定义了应用的构建方案, 包含所有模块的构建配置分组.
+// 注意：BuildPlan 同时支持两种打包方案(由 `PackagingVersion` 控制):
+//   - v2(新方案，默认): 采用“构建组”概念. 采用相同构建方案的模块会合并到同一构建组, 复用同一份构建产物(image tar)
+//     相同构建方案判定标准：
+//     1. 代码目录相同
+//     2. 构建语言或 buildpacks 相同
+//   - v1(旧方案): 不做模块合并, 每个模块单独构建并输出其各自的 artifact (每个模块视为独立的构建组/单元)
 type BuildPlan struct {
 	// AppCode 应用 code
 	AppCode string
@@ -58,9 +60,26 @@ type BuildPlan struct {
 }
 
 // GenerateProcfile 生成 Procfile. Procfile 是进程与启动命令的映射关系, 格式: {"模块名-进程名":"启动命令"}
-func (b *BuildPlan) GenerateProcfile() map[string]string {
+// 当打包方案为 v2(默认)时, Procfile 的 key 格式为 "模块名-进程名", 返回整个应用的统一 Procfile;
+// 当打包方案为 v1 时, 函数期望传入模块名(可选参数), 并返回该模块的 Procfile (key 为进程名, 不含模块名前缀)
+func (b *BuildPlan) GenerateProcfile(moduleName ...string) map[string]string {
 	procfile := make(map[string]string)
 
+	// v1: 返回指定模块的 Procfile(moduleName 必须提供)
+	if b.PackagingVersion == "v1" {
+		if len(moduleName) == 0 {
+			return procfile
+		}
+		m := moduleName[0]
+		if procInfo, ok := b.ProcessCommands[m]; ok {
+			for processName, procCommand := range procInfo {
+				procfile[processName] = procCommand
+			}
+		}
+		return procfile
+	}
+
+	// v2: 返回整个应用的统一 Procfile, key 为 "模块名-进程名"
 	for moduleName, procInfo := range b.ProcessCommands {
 		for processName, procCommand := range procInfo {
 			procfile[GenerateProcType(moduleName, processName)] = procCommand
@@ -70,22 +89,9 @@ func (b *BuildPlan) GenerateProcfile() map[string]string {
 	return procfile
 }
 
-// GenerateProcfileForModule 为特定模块生成 Procfile (用于 v1 旧方案)
-// v1 方案中, Procfile 只包含模块自己的进程, 格式: {"进程名":"启动命令"}
-func (b *BuildPlan) GenerateProcfileForModule(moduleName string) map[string]string {
-	procfile := make(map[string]string)
-
-	if procInfo, ok := b.ProcessCommands[moduleName]; ok {
-		for processName, procCommand := range procInfo {
-			// v1 方案: 直接使用进程名, 不加模块名前缀
-			procfile[processName] = procCommand
-		}
-	}
-
-	return procfile
-}
-
-// ModuleBuildGroup 是共享相同构建配置的模块分组，组内所有模块复用同一个构建流程(仅构建一次)和输出镜像
+// ModuleBuildGroup 是共享相同构建配置的模块分组, 组内所有模块复用同一个构建流程(仅构建一次)和输出镜像
+// 在 v2 方案中, 这是真正的"合并"单位;
+// 在 v1 方案中, 每个 ModuleBuildGroup 仅包含单个模块(等价于每模块独立构建)
 type ModuleBuildGroup struct {
 	// SourceDir 是 app_desc.yaml 中模块的代码路径(相对路径)
 	SourceDir string
@@ -176,11 +182,11 @@ func buildModuleBuildGroups(sourceDir string, desc appdesc.AppDesc) ([]*ModuleBu
 			return nil, err
 		}
 
-		// v1 (旧方案): 每个模块独立构建，不共享镜像，镜像文件使用 .tgz 后缀
-		// v2 (新方案): 合并采用相同构建方案的模块，镜像文件使用 .tar 后缀
+		// v1 (旧方案): 每个模块独立构建, 不共享镜像, 镜像文件使用 .tgz 后缀
+		// v2 (新方案): 合并采用相同构建方案的模块, 镜像文件使用 .tar 后缀
 		var k, imageTarExt string
 		if config.G.PackagingVersion == "v1" {
-			// v1: 每个模块独立，使用模块名作为 key
+			// v1: 每个模块独立, 使用模块名作为 key
 			k = cfg.ModuleName
 			imageTarExt = ".tgz"
 		} else {

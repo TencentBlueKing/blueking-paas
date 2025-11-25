@@ -18,12 +18,14 @@ smart-app-builder 提供了两种构建环境，一种是 PIND(podman-in-docker)
 smart-app-builder 支持两种 CNB 打包方案:
 
 **v2 (新方案，默认)**
+- v2 版本支持在 apiserver 1.7.x 及其之后的版本部署
 - 镜像共享机制: 采用相同构建方案的模块会共用同一个镜像 tar 文件
 - 进程 entrypoint 规则: 模块进程的 entrypoint 有单独的生成规则，格式为 `模块名-进程名`
 - artifact.json 包含 `image_tar` 和 `proc_entrypoints` 字段
 
 **v1 (旧方案)**
-- 镜像独立机制: 每个模块都有独立的镜像 tar 文件
+- v1 版本支持在 apiserver 1.5.x 及其之后的版本部署
+- 镜像独立机制: 每个模块都有独立的镜像 tgz 文件
 - Procfile 规则: 每个模块的 Procfile 直接使用进程名，不包含模块名前缀
 - v1 不生成 artifact.json 文件
 

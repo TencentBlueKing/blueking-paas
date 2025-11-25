@@ -55,9 +55,11 @@ func archiveSourceTarball(sourceDir, destTGZ string, procfile map[string]string)
 	return nil
 }
 
-// archiveArtifactTarball 将 app_desc.yaml, logo, .Version 以及 artifact.json 写入 artifactDir,
-// 并将 artifactDir 打包成 {app_code}.tgz 文件, 返回 {app_code}.tgz 的路径.
-// 其中, artifact.json 描述应用模块与镜像 tar 的对应关系
+// archiveArtifactTarball 将 app_desc.yaml、logo、.Version 以及 artifact.json (optional) 写入 artifactDir,
+// 再将目录打包成 {app_code}.tgz 并返回其路径. artifact.json 描述模块与镜像 tar, 以及进程 entrypoints 的映射关系
+// 注意：是否生成 artifact.json 由 buildPlan.PackagingVersion 决定:
+//   - v2(新方案，默认): 生成并写入 artifact.json;
+//   - v1(旧方案): 不生成 artifact.json
 func archiveArtifactTarball(buildPlan *plan.BuildPlan, artifactDir string) (string, error) {
 	// 1. 将 app_desc.yaml, logo, .Version 写入 artifactDir
 	appDescName := filepath.Base(buildPlan.AppDescPath)
@@ -76,14 +78,10 @@ func archiveArtifactTarball(buildPlan *plan.BuildPlan, artifactDir string) (stri
 		return "", errors.Wrap(err, "writing builder flag .Version")
 	}
 
-	// 2. 生成并写入 `artifact.json` 到 artifactDir。
-	//    说明：
-	//      - v2（新方案，默认）：生成并写入该文件
-	//      - v1（旧方案）：不生成该文件
-	if buildPlan.PackagingVersion != "v1" {
-		if err := writeArtifactJsonFile(buildPlan, artifactDir); err != nil {
-			return "", errors.Wrap(err, "writing artifact.json")
-		}
+	// 2. 生成并写入 `artifact.json` 到 artifactDir
+	//    说明：writeArtifactJsonFile 会根据 buildPlan.PackagingVersion 决定是否生成该文件
+	if err := writeArtifactJsonFile(buildPlan, artifactDir); err != nil {
+		return "", errors.Wrap(err, "writing artifact.json")
 	}
 
 	// 3. 打包成 {app_code}.tgz
@@ -144,14 +142,21 @@ func makeRunArgs(appCode string, group *plan.ModuleBuildGroup, moduleSrcTGZ stri
 	return args
 }
 
-// writeArtifactJsonFile 根据 buildPlan, 在目录 artifactDir 写入 artifact.json.
-// artifact.json 描述应用模块与镜像 tar 的对应关系以及进程 entrypoints, 格式如下:
+// writeArtifactJsonFile 根据 buildPlan 在 artifactDir 写入 artifact.json (如果需要)
+// 行为说明：
+//   - v2(新方案，默认): 生成 artifact.json, 内容包含每个模块对应的镜像 tar 名称和 proc_entrypoints;
+//   - v1(旧方案): 不生成 artifact.json (函数将直接返回 nil)
 //
-//	 {
-//	  "module1": {"image_tar": "module1.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}},
-//	  "module2": {"image_tar": "module2.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}}
+// 输出的 artifact.json 格式示例:
+//
+//	{
+//	  "module1": {"image_tar": "module1.tar", "proc_entrypoints": {"web": ["module1-web"]}},
+//	  "module2": {"image_tar": "module2.tar", "proc_entrypoints": {"api": ["module2-api"]}}
 //	}
 func writeArtifactJsonFile(buildPlan *plan.BuildPlan, artifactDir string) error {
+	if buildPlan.PackagingVersion == "v1" {
+		return nil
+	}
 	moduleArtifact := make(map[string]map[string]any)
 	for _, group := range buildPlan.BuildGroups {
 		for _, name := range group.ModuleNames {

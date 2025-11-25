@@ -96,4 +96,20 @@ var _ = Describe("writeArtifactJsonFile", func() {
 		Expect(gjson.GetBytes(fileContent, "module2.image_tar").String()).To(Equal("module1.tar"))
 		Expect(gjson.GetBytes(fileContent, "module3.image_tar").String()).To(Equal("module3.tar"))
 	})
+
+	It("when packaging v1, do not write artifact.json", func() {
+		buildPlan := plan.BuildPlan{BuildGroups: []*plan.ModuleBuildGroup{
+			{
+				ModuleNames:        []string{"module1"},
+				OutputImageTarName: "module1.tar",
+			},
+		}, PackagingVersion: "v1"}
+
+		// v1 means writeArtifactJsonFile will do nothing and return nil
+		Expect(writeArtifactJsonFile(&buildPlan, artifactJsonDir)).To(BeNil())
+
+		// artifact.json should not exist
+		_, err := os.Stat(filepath.Join(artifactJsonDir, "artifact.json"))
+		Expect(os.IsNotExist(err)).To(BeTrue())
+	})
 })

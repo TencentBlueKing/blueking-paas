@@ -70,7 +70,7 @@ func (b *BuildPlan) GenerateProcfile(moduleName string) map[string]string {
 	// v1: 返回指定模块的 Procfile(moduleName 必须提供)
 	if b.PackagingVersion == "v1" {
 		if moduleName == "" {
-			return procfile
+			panic("moduleName must be provided in v1 packaging version")
 		}
 		if procInfo, ok := b.ProcessCommands[moduleName]; ok {
 			for processName, procCommand := range procInfo {

@@ -84,7 +84,7 @@ modules:
 		Expect(buildPlan.AppDescPath).To(Equal(filepath.Join(sourceDir, "app_desc.yaml")))
 		Expect(buildPlan.LogoFilePath).To(Equal(""))
 
-		procfile := buildPlan.GenerateProcfile()
+		procfile := buildPlan.GenerateProcfile("")
 		Expect(procfile["api-api-process"]).To(Equal("go run main.go"))
 		Expect(procfile["worker-celery"]).To(Equal("celery worker"))
 		Expect(procfile["web-web-process"]).To(Equal("python main.py"))
@@ -114,7 +114,7 @@ modules:
 		}
 
 		// when packaging v1, GenerateProcfile without moduleName returns empty
-		procfileAll := buildPlan.GenerateProcfile()
+		procfileAll := buildPlan.GenerateProcfile("")
 		Expect(procfileAll).To(HaveLen(0))
 
 		// but for a module it should return the module's own procfile

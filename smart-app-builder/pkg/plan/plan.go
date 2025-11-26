@@ -59,19 +59,20 @@ type BuildPlan struct {
 	PackagingVersion string
 }
 
-// GenerateProcfile 生成 Procfile. Procfile 是进程与启动命令的映射关系, 格式: {"模块名-进程名":"启动命令"}
-// 当打包方案为 v2(默认)时, Procfile 的 key 格式为 "模块名-进程名", 返回整个应用的统一 Procfile;
-// 当打包方案为 v1 时, 函数期望传入模块名(可选参数), 并返回该模块的 Procfile (key 为进程名, 不含模块名前缀)
-func (b *BuildPlan) GenerateProcfile(moduleName ...string) map[string]string {
+// GenerateProcfile 生成 Procfile (进程名 -> 启动命令) 的映射关系
+// 返回值示例: "web-web-process": "python main.py" (v2) 或 "web": "python main.py" (v1)
+// 使用说明:
+//   - v2 (默认): 返回应用范围的统一 Procfile, key 为 "模块名-进程名"; 函数的 moduleName 参数将被忽略
+//   - v1 (旧方案): 返回指定模块 (moduleName) 的 Procfile, key 为进程名; 如果 moduleName 为空或指定模块不存在, 则返回空 map
+func (b *BuildPlan) GenerateProcfile(moduleName string) map[string]string {
 	procfile := make(map[string]string)
 
 	// v1: 返回指定模块的 Procfile(moduleName 必须提供)
 	if b.PackagingVersion == "v1" {
-		if len(moduleName) == 0 {
+		if moduleName == "" {
 			return procfile
 		}
-		m := moduleName[0]
-		if procInfo, ok := b.ProcessCommands[m]; ok {
+		if procInfo, ok := b.ProcessCommands[moduleName]; ok {
 			for processName, procCommand := range procInfo {
 				procfile[processName] = procCommand
 			}
@@ -79,7 +80,7 @@ func (b *BuildPlan) GenerateProcfile(moduleName ...string) map[string]string {
 		return procfile
 	}
 
-	// v2: 返回整个应用的统一 Procfile, key 为 "模块名-进程名"
+	// v2: 与模块无关, 返回整个应用的统一 Procfile, key 为 "模块名-进程名"
 	for moduleName, procInfo := range b.ProcessCommands {
 		for processName, procCommand := range procInfo {
 			procfile[GenerateProcType(moduleName, processName)] = procCommand

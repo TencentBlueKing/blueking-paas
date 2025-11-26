@@ -19,6 +19,7 @@
 from .application import ApplicationDetailViewSet, ApplicationListViewSet, DeletedApplicationViewSet
 from .feature import ApplicationFeatureViewSet
 from .member import ApplicationMemberViewSet
+from .process import ApplicationProcessViewSet
 from .services import ApplicationServicesViewSet
 
 __all__ = [
@@ -34,4 +35,6 @@ __all__ = [
     "ApplicationServicesViewSet",
     # deleted application
     "DeletedApplicationViewSet",
+    # application process
+    "ApplicationProcessViewSet",
 ]

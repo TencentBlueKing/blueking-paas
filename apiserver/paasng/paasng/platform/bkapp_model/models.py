@@ -188,6 +188,13 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=AppEnvName.get_choices(), null=False, max_length=16
     )
+    # proc-res-override 只能通过后台/API修改
+    override_proc_res: Optional[Dict[str, Dict[str, str]]] = models.JSONField(
+        "管理员配置的资源限制",
+        null=True,
+        blank=True,
+        help_text='格式: {"limits": {"cpu": "2", "memory": "2Gi"}, "requests": {"cpu": "1", "memory": "1Gi"} }',
+    )
 
     target_replicas = models.IntegerField("期望副本数", null=True)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)

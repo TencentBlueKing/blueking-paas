@@ -84,7 +84,8 @@ modules:
 		Expect(buildPlan.AppDescPath).To(Equal(filepath.Join(sourceDir, "app_desc.yaml")))
 		Expect(buildPlan.LogoFilePath).To(Equal(""))
 
-		procfile := buildPlan.GenerateProcfile("")
+		// procfile keys are "moduleName-processName" in v2 scheme and moduleName parameter is ignored
+		procfile := buildPlan.GenerateProcfile("dummy")
 		Expect(procfile["api-api-process"]).To(Equal("go run main.go"))
 		Expect(procfile["worker-celery"]).To(Equal("celery worker"))
 		Expect(procfile["web-web-process"]).To(Equal("python main.py"))
@@ -113,9 +114,8 @@ modules:
 			PackagingVersion: "v1",
 		}
 
-		// when packaging v1, GenerateProcfile without moduleName returns empty
-		procfileAll := buildPlan.GenerateProcfile("")
-		Expect(procfileAll).To(HaveLen(0))
+		// when packaging v1, GenerateProcfile with empty moduleName will panic
+		Expect(func() { buildPlan.GenerateProcfile("") }).To(Panic())
 
 		// but for a module it should return the module's own procfile
 		webProcfile := buildPlan.GenerateProcfile("web")

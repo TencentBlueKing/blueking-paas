@@ -36,6 +36,10 @@ from .member import (
     ApplicationMembershipListOutputSLZ,
     ApplicationMembershipUpdateInputSLZ,
 )
+from .process import (
+    ModuleProcessSpecOutputSLZ,
+    ProcessSpecInputSLZ,
+)
 from .services import (
     ServiceListOutputSLZ,
     UnboundServiceInstanceSLZ,
@@ -60,6 +64,9 @@ __all__ = [
     "ApplicationMembershipCreateInputSLZ",
     "ApplicationMembershipListOutputSLZ",
     "ApplicationMembershipUpdateInputSLZ",
+    # process
+    "ProcessSpecInputSLZ",
+    "ModuleProcessSpecOutputSLZ",
     # services
     "UnboundServiceInstanceSLZ",
     "ServiceListOutputSLZ",

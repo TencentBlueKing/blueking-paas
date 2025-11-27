@@ -48,6 +48,8 @@ class ToolPackageStashOutputSLZ(BaseSmartBuildSLZ):
 class SmartBuildInputSLZ(BaseSmartBuildSLZ):
     """Input SLZ for Smart Build API"""
 
+    packaging_version = serializers.ChoiceField(choices=["v1", "v2"], default="v2", help_text="打包版本")
+
 
 class SmartBuildOutputSLZ(serializers.Serializer):
     """Output SLZ for Smart Build API"""

@@ -112,6 +112,7 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
         slz.is_valid(raise_exception=True)
         app_code = slz.validated_data["app_code"]
         signature = slz.validated_data["signature"]
+        packaging_version = slz.validated_data["packaging_version"]
 
         prepared_package = PreparedSourcePackage(request, namespace=self._get_store_namespace(app_code))
 
@@ -137,6 +138,7 @@ class SmartBuilderViewSet(viewsets.GenericViewSet):
                 app_code=app_code,
                 app_version=stat.version,
                 sha256_signature=stat.sha256_signature,
+                packaging_version=packaging_version,
                 operator=request.user.pk,
             )
             coordinator.set_smart_build(smart_build)

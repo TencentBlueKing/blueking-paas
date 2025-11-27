@@ -63,15 +63,17 @@ type BuildPlan struct {
 // 返回值示例: "web-web-process": "python main.py" (v2) 或 "web": "python main.py" (v1)
 // 使用说明:
 //   - v2 (默认): 返回应用范围的统一 Procfile, key 为 "模块名-进程名"; 函数的 moduleName 参数将被忽略
-//   - v1 (旧方案): 返回指定模块 (moduleName) 的 Procfile, key 为进程名; 如果 moduleName 为空或指定模块不存在, 则返回空 map
+//   - v1 (旧方案): 返回指定模块 (moduleName) 的 Procfile, key 为进程名; 如果指定模块不存在, 则返回空 map
 func (b *BuildPlan) GenerateProcfile(moduleName string) map[string]string {
+	// 兜底操作, moduleName 不可为空串
+	if moduleName == "" {
+		panic("moduleName must be provided.")
+	}
+
 	procfile := make(map[string]string)
 
 	// v1: 返回指定模块的 Procfile(moduleName 必须提供)
 	if b.PackagingVersion == "v1" {
-		if moduleName == "" {
-			panic("moduleName must be provided in v1 packaging version")
-		}
 		if procInfo, ok := b.ProcessCommands[moduleName]; ok {
 			for processName, procCommand := range procInfo {
 				procfile[processName] = procCommand

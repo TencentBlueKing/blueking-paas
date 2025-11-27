@@ -326,7 +326,7 @@ def test_dispatch_cnb_image_to_registry(
         stat = SourcePackageStatReader(tarball_path).read()
         workplace.mkdir()
         uncompress_directory(tarball_path, workplace)
-        dispatch_cnb_image_to_registry(module=bk_module, workplace=workplace, stat=stat, operator=bk_user)
+        dispatch_cnb_image_to_registry(bk_module, workplace, stat, bk_user, smart_app_extra)
 
     # expected request url history
     expected_request_url_history = [

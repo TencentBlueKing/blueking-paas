@@ -44,12 +44,10 @@ class SmartAppBuilder:
         smart_build: "SmartBuildRecord",
         source_get_url: str,
         dest_put_url: str,
-        use_old_cnb: bool = False,
     ):
         self.smart_build = smart_build
         self.source_get_url = source_get_url
         self.dest_put_url = dest_put_url
-        self.use_old_cnb = use_old_cnb
 
         self.stream: "SmartBuildStream" = make_channel_stream(smart_build)
         self.state_mgr = SmartBuildStateMgr.from_smart_build_id(smart_build.uuid, self.stream)
@@ -93,7 +91,7 @@ class SmartAppBuilder:
             "SOURCE_GET_URL": self.source_get_url,
             "DEST_PUT_URL": self.dest_put_url,
             "BUILDER_SHIM_IMAGE": settings.SMART_BUILDER_SHIM_IMAGE,
-            "PackagingVersion": "v1" if self.use_old_cnb else "v2",
+            "PackagingVersion": self.smart_build.packaging_version,
         }
 
         cluster_name = get_default_cluster_name()

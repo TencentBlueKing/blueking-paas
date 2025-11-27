@@ -31,7 +31,6 @@ def execute_build(
     smart_build_id: str,
     source_get_url: str,
     dest_put_url: str,
-    use_old_cnb: bool = False,
     *args,
     **kwargs,
 ):
@@ -40,11 +39,10 @@ def execute_build(
     :param smart_build_id: Id of smart build object
     :param source_get_url: The source URL to get source code package
     :param dest_put_url: The destination URL to put built artifact
-    :param use_old_cnb: Whether to use the old build scheme
     """
 
     smart_build = SmartBuildRecord.objects.get(pk=smart_build_id)
-    SmartAppBuilder(smart_build, source_get_url, dest_put_url, use_old_cnb).start()
+    SmartAppBuilder(smart_build, source_get_url, dest_put_url).start()
 
 
 @shared_task(base=I18nTask)

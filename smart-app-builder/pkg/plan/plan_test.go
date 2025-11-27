@@ -41,7 +41,7 @@ var _ = Describe("PrepareBuildPlan", func() {
 		sourceDir, _ = os.MkdirTemp("", "tmp")
 	})
 	AfterEach(func() {
-		os.RemoveAll(sourceDir)
+		os.RemoveAll(sourceDir) // nolint: errcheck
 	})
 
 	It("prepare build plan", func() {
@@ -84,7 +84,8 @@ modules:
 		Expect(buildPlan.AppDescPath).To(Equal(filepath.Join(sourceDir, "app_desc.yaml")))
 		Expect(buildPlan.LogoFilePath).To(Equal(""))
 
-		procfile := buildPlan.GenerateProcfile()
+		// procfile keys are "moduleName-processName" in v2 scheme and moduleName parameter is ignored
+		procfile := buildPlan.GenerateProcfile("dummy")
 		Expect(procfile["api-api-process"]).To(Equal("go run main.go"))
 		Expect(procfile["worker-celery"]).To(Equal("celery worker"))
 		Expect(procfile["web-web-process"]).To(Equal("python main.py"))
@@ -102,5 +103,25 @@ modules:
 		Expect(buildPlan.BuildGroups[1].ModuleNames).To(Equal([]string{"web", "worker"}))
 		Expect(buildPlan.BuildGroups[1].RequiredBuildpacks).To(Equal("oci-embedded bk-buildpack-python ... v213"))
 		Expect(buildPlan.BuildGroups[1].OutputImageTarName).To(Equal("web.tar"))
+	})
+
+	It("generate procfile for v1 per-module scheme", func() {
+		buildPlan := plan.BuildPlan{
+			ProcessCommands: map[string]map[string]string{
+				"web":    {"web": "python main.py"},
+				"worker": {"celery": "celery worker"},
+			},
+			PackagingVersion: "v1",
+		}
+
+		// when packaging v1, GenerateProcfile with empty moduleName will panic
+		Expect(func() { buildPlan.GenerateProcfile("") }).To(Panic())
+
+		// but for a module it should return the module's own procfile
+		webProcfile := buildPlan.GenerateProcfile("web")
+		Expect(webProcfile["web"]).To(Equal("python main.py"))
+
+		workerProcfile := buildPlan.GenerateProcfile("worker")
+		Expect(workerProcfile["celery"]).To(Equal("celery worker"))
 	})
 })

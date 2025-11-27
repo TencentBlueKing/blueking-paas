@@ -128,7 +128,11 @@ func (c *containerExecutor) runBuilder(buildPlan *plan.BuildPlan, runImage strin
 		// 1. 制作 source.tgz 模块源码包
 		moduleSrcDir := filepath.Join(c.sourceDir, group.SourceDir)
 		moduleSrcTGZ := filepath.Join(c.tmpDir, group.BuildModuleName, "source.tgz")
-		if err := archiveSourceTarball(moduleSrcDir, moduleSrcTGZ, buildPlan.GenerateProcfile()); err != nil {
+
+		// 根据打包方案生成 procfile. GenerateProcfile 会根据 v1/v2 内部处理逻辑生成对应的 Procfile
+		procfile := buildPlan.GenerateProcfile(group.BuildModuleName)
+
+		if err := archiveSourceTarball(moduleSrcDir, moduleSrcTGZ, procfile); err != nil {
 			return err
 		}
 

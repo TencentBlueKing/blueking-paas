@@ -13,6 +13,22 @@ smart-app-builder 是基于 cnb 方案， 专为蓝鲸 SaaS 设计的 S-Mart 包
 
 smart-app-builder 提供了两种构建环境，一种是 PIND(podman-in-docker)，另一种是 DIND(docker-in-docker)。
 
+#### 打包方案说明
+
+smart-app-builder 支持两种 CNB 打包方案:
+
+**v2 (新方案，默认)**
+- v2 版本支持在 apiserver 1.7.x 及其之后的版本部署
+- 镜像共享机制: 采用相同构建方案的模块会共用同一个镜像 tar 文件
+- 进程 entrypoint 规则: 模块进程的 entrypoint 有单独的生成规则，格式为 `模块名-进程名`
+- artifact.json 包含 `image_tar` 和 `proc_entrypoints` 字段
+
+**v1 (旧方案)**
+- v1 版本支持在 apiserver 1.5.x 及其之后的版本部署
+- 镜像独立机制: 每个模块都有独立的镜像 tgz 文件
+- Procfile 规则: 每个模块的 Procfile 直接使用进程名，不包含模块名前缀
+- v1 不生成 artifact.json 文件
+
 #### 2.1 基于 PIND 构建
 
 执行以下命令，生成 `smart-app-builder:pind` 镜像
@@ -33,6 +49,7 @@ docker run -it --rm --privileged \
     -e SOURCE_GET_URL=file:///podman/source \
     -e DEST_PUT_URL=file:///podman/dest \
     -e BUILDER_SHIM_IMAGE=bk-builder-heroku-bionic:v1.0.2 \
+    -e PACKAGING_VERSION=v2 \
     -e CACHE_REGISTRY='mirrors.example.com/foo' \
     -e REGISTRY_AUTH='{"mirrors.example.com": "Basic xxx"}' \
     -v $APP_PATH:/podman/source \
@@ -53,6 +70,7 @@ docker run -it --rm --privileged \
   构建工具镜像。镜像的制作方法可以参考 [cnb-builder-shim]([blueking-paas/cnb-builder-shim/README.md at builder-stack · TencentBlueKing/blueking-paas · GitHub](https://github.com/TencentBlueKing/blueking-paas/blob/builder-stack/cnb-builder-shim/README.md))。
 - `CACHE_REGISTRY`: (可选) 用于缓存的镜像仓库。设置后, 构建过程会启用缓存功能, 否则不启用。
 - `REGISTRY_AUTH`: (可选) 镜像仓库凭证。如果镜像仓库需要鉴权, 则必须设置此参数。
+- `PACKAGING_VERSION`: (可选) 打包方案版本。支持值: `v1` (旧方案), `v2` (新方案，默认)。详见上文说明。
 
 #### 2.2 基于 DIND 构建
 
@@ -74,6 +92,7 @@ docker run -it --rm --privileged \
     -e SOURCE_GET_URL=file:///tmp/source \
     -e DEST_PUT_URL=file:///tmp/dest \
     -e BUILDER_SHIM_IMAGE=bk-builder-heroku-bionic:v1.0.2 \
+    -e PACKAGING_VERSION=v2 \
     -e CACHE_REGISTRY='mirrors.example.com/foo' \
     -e REGISTRY_AUTH='{"mirrors.example.com": "Basic xxx"}' \
     -v $APP_PATH:/tmp/source \
@@ -92,6 +111,7 @@ docker run -it --rm --privileged \
   构建工具镜像。镜像的制作方法可以参考 [cnb-builder-shim]([blueking-paas/cnb-builder-shim/README.md at builder-stack · TencentBlueKing/blueking-paas · GitHub](https://github.com/TencentBlueKing/blueking-paas/blob/builder-stack/cnb-builder-shim/README.md))。
 - `CACHE_REGISTRY`: (可选) 用于缓存的镜像仓库。设置后, 构建过程会启用缓存功能, 否则不启用。
 - `REGISTRY_AUTH`: (可选) 镜像仓库凭证。如果镜像仓库需要鉴权, 则必须设置此参数。
+- `PACKAGING_VERSION`: (可选) 打包方案版本。支持值: `v1` (旧方案), `v2` (新方案，默认)。详见上文说明。
 
 #### 2.3 PIND vs DIND
 

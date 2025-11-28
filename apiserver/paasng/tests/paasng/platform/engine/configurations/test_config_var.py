@@ -202,9 +202,9 @@ class TestBuiltInEnvVars:
         }.issubset(config_vars.keys())
 
     def test_param_include_custom_builtin_config_vars(self, bk_stag_env):
-        BuiltinConfigVar.objects.create(key="FOO", value="bar")
+        BuiltinConfigVar.objects.create(key="BKPAAS_FOO", value="bar")
         # test overwrite
-        BuiltinConfigVar.objects.create(key="LOGIN_URL", value="bar")
+        BuiltinConfigVar.objects.create(key="BKPAAS_LOGIN_URL", value="bar")
         env_vars = get_env_variables(bk_stag_env)
         assert env_vars["BKPAAS_LOGIN_URL"] == "bar"
         assert env_vars["BKPAAS_FOO"] == "bar"

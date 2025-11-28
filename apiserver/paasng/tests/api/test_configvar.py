@@ -40,9 +40,8 @@ class TestConfigVarBuiltinViewSet:
     def test_get_builtin_envs_with_custom_vars(self, api_client, bk_app, bk_module):
         """测试平台管理自定义内置环境变量覆盖原有内置环境变量"""
         # 测试 BKPAAS_MULTI_TENANT_MODE, 原有内置环境值为 False
-        # 因为 BKPAAS_ 前缀默认添加, 在数据库中不存储该前缀
-        BuiltinConfigVar.objects.create(key="MULTI_TENANT_MODE", value="value1", description="自定义内置变量1")
-        BuiltinConfigVar.objects.create(key="CUSTOM_VAR_2", value="value2", description="自定义内置变量2")
+        BuiltinConfigVar.objects.create(key="BKPAAS_MULTI_TENANT_MODE", value="value1", description="自定义内置变量1")
+        BuiltinConfigVar.objects.create(key="BKPAAS_CUSTOM_VAR_2", value="value2", description="自定义内置变量2")
 
         url = f"/api/bkapps/applications/{bk_app.code}/modules/{bk_module.name}/config_vars/builtin/"
         response = api_client.get(url)

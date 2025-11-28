@@ -438,4 +438,5 @@ def get_preset_env_variables(env: ModuleEnvironment) -> Dict[str, str]:
 def get_custom_builtin_config_vars() -> EnvVariableList:
     """Get the custom builtin config vars."""
     items = BuiltinConfigVar.objects.values_list("key", "value", "description")
-    return EnvVariableList(sys_var(key, value, description) for key, value, description in items)
+    # custom builtin config vars have prefixes and do not need to add prefixes again
+    return EnvVariableList(EnvVariableObj(key, value, description) for key, value, description in items)

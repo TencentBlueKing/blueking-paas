@@ -158,9 +158,10 @@ class SysUniApplicationViewSet(viewsets.ViewSet):
         data = serializer.validated_data
 
         username = data["username"]
+        include_inactive_apps = data["include_inactive_apps"]
         # 获取请求头中的租户信息
         tenant_id = validate_tenant_id_header(request)
-        uni_apps = query_uni_apps_by_username(username, tenant_id)
+        uni_apps = query_uni_apps_by_username(username, include_inactive_apps, tenant_id)
         return Response(UniversalAppSLZ(uni_apps, many=True).data)
 
     @swagger_auto_schema(

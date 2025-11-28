@@ -179,7 +179,7 @@ def query_legacy_apps_by_ids(
     with legacy_db.session_scope() as session:
         apps = query_concrete_apps(session, LApplication).filter(LApplication.code.in_(ids))
         if not include_inactive_apps:
-            apps.filter(LApplication.state > 1)
+            apps = apps.filter(LApplication.state > 1)
         for app in apps:
             simple_app = UniSimpleApp.from_legacy_app(app, include_developers_info)
             if simple_app is not None:
@@ -187,29 +187,33 @@ def query_legacy_apps_by_ids(
     return results
 
 
-def query_uni_apps_by_username(username: str, tenant_id: str) -> List[UniSimpleApp]:
+def query_uni_apps_by_username(username: str, include_inactive_apps: bool, tenant_id: str) -> List[UniSimpleApp]:
     """
     Query universal applications by username, it will combine the results of both default and legacy platforms
 
     :param username: User ID.
+    :param include_inactive_apps: whether to include inactive apps.
     :param tenant_id: Tenant ID of the app
     """
-    default_apps = query_default_apps_by_username(username, tenant_id)
-    legacy_apps = query_legacy_apps_by_username(username)
+    default_apps = query_default_apps_by_username(username, include_inactive_apps, tenant_id)
+    legacy_apps = query_legacy_apps_by_username(username, include_inactive_apps)
     return default_apps + legacy_apps
 
 
-def query_default_apps_by_username(username: str, tenant_id: str) -> List[UniSimpleApp]:
+def query_default_apps_by_username(username: str, include_inactive_apps: bool, tenant_id: str) -> List[UniSimpleApp]:
     """
     Query applications by username, returning only PaaS 3.0 applications.
 
     :param username: User ID.
+    :param include_inactive_apps: whether to include inactive apps.
     :param tenant_id: Tenant ID of the app;
     """
     user = BasicUser(settings.USER_TYPE, username)
     user.tenant_id = tenant_id
     applications = UserApplicationFilter(user).filter()
     applications = applications.filter(tenant_id=tenant_id)
+    if not include_inactive_apps:
+        applications = applications.filter(is_active=True)
 
     results = []
     for app in applications:
@@ -217,10 +221,12 @@ def query_default_apps_by_username(username: str, tenant_id: str) -> List[UniSim
     return results
 
 
-def query_legacy_apps_by_username(username: str) -> List[UniSimpleApp]:
+def query_legacy_apps_by_username(username: str, include_inactive_apps: bool) -> List[UniSimpleApp]:
     results = []
     with legacy_db.session_scope() as session:
         apps = AppDeveloperManger(session).get_apps_by_developer(username)
+        if not include_inactive_apps:
+            apps = [app for app in apps if app.state > 1]
 
         for app in apps:
             uni_simle_app = UniSimpleApp.from_legacy_app(app, include_developers_info=False)

@@ -10,6 +10,7 @@ None
 | Parameter Name | Type | Required | Description |
 | -------------- | ---- | -------- | ----------- |
 | username       | string | Yes | Username |
+| include_inactive_apps | boolean | No | Whether to query inactive applications, the default value is False |
 
 ### Request Example
 ```bash
@@ -45,5 +46,3 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 | developers     | list | Developer List |
 | creator        | string | Creator     |
 | created        | string | Creation Time |
-
-**Note: Applications that have been removed from the shelves will not be returned**

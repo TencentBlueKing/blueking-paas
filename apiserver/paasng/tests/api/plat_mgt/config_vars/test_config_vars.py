@@ -31,7 +31,7 @@ class TestBuiltinConfigVarViewSet:
     def create_builtin_config_var(self, bk_user):
         """创建一个内建环境变量"""
         config_var = BuiltinConfigVar.objects.create(
-            key="BUILTIN_TEST_VAR",
+            key="BKPAAS_BUILTIN_TEST_VAR",
             value="test_value",
             description="Test variable",
             operator=bk_user,
@@ -48,7 +48,7 @@ class TestBuiltinConfigVarViewSet:
     def test_create(self, plat_mgt_api_client, plat_manager_user):
         """测试创建内建环境变量"""
         data = {
-            "key": "TEST_VAR",
+            "key": "BKPAAS_TEST_VAR",
             "value": "test_value",
             "description": "Test variable",
         }

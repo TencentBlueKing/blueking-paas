@@ -17,7 +17,7 @@
 
 import json
 import logging
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.conf import settings
 from django.contrib import auth
@@ -124,8 +124,6 @@ class UserTimezoneMiddleware(MiddlewareMixin):
     Note: 必须放在所有用户认证中间件之后
     """
 
-    SESSION_TIMEZONE_KEY = "_user_timezone"
-
     def process_request(self, request):
         # Ignore anonymous user
         if not request.user.is_authenticated:
@@ -134,22 +132,24 @@ class UserTimezoneMiddleware(MiddlewareMixin):
         user = request.user
         tz_name = getattr(user, "time_zone", None)
 
-        # Try to activate user's timezone
-        if tz_name:
+        # Try to activate user's timezone if it's a non-empty string
+        if tz_name and isinstance(tz_name, str):
             try:
                 user_tz = ZoneInfo(tz_name)
                 dj_timezone.activate(user_tz)
-                logger.debug("Activated timezone '%s' for user '%s'", tz_name, user.username)
-            except Exception as e:
+            except ZoneInfoNotFoundError as e:
                 logger.warning(
                     "Invalid time_zone '%s' for user '%s', fallback to default. Error: %s",
                     tz_name,
                     user.username,
                     str(e),
                 )
-        else:
-            # Fallback to default timezone
-            dj_timezone.activate(dj_timezone.get_default_timezone())
+            else:
+                logger.debug("Activated timezone '%s' for user '%s'", tz_name, user.username)
+                return
+
+        # Fallback to default timezone when time_zone is empty or invalid
+        dj_timezone.activate(dj_timezone.get_default_timezone())
 
     def process_response(self, request, response):
         """重置时区"""

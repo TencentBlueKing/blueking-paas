@@ -12,15 +12,15 @@ start with BKPAAS_, skipping any row that would conflict with an existing key.
 
 from django.db import migrations
 
+from paasng.plat_mgt.config_vars.constants import CustomBuiltinConfigVarPrefix
+
 
 def add_bkpaas_prefix(apps, schema_editor):
     BuiltinConfigVar = apps.get_model("engine", "BuiltinConfigVar")
-    allowed_prefixes = ("BK_", "BKAPP_", "BKPAAS_")
+    allowed_prefixes = CustomBuiltinConfigVarPrefix.get_values()
 
     for obj in BuiltinConfigVar.objects.all():
-        key = (obj.key or "").strip()
-        if not key:
-            continue
+        key = obj.key
 
         if any(key.startswith(p) for p in allowed_prefixes):
             # already has one of allowed prefixes

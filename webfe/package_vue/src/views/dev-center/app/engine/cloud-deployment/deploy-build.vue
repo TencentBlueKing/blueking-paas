@@ -23,12 +23,17 @@
         />
       </template>
       <template v-else>
-        <!-- lesscode/smart应用 源码信息 -->
-        <packages-view v-if="isLesscodeApp || isSmartApp || isAidevPlugin" />
+        <!-- lesscode/smart应用 源码信息，is_ai_agent_app 可切换为源码信息 -->
+        <packages-view
+          v-if="(isLesscodeApp || isSmartApp || isAidevPlugin) && !showCodeSource"
+          @switch-repo="handleSwitchRepo"
+        />
         <!-- 代码源 -->
         <code-source
           v-else
+          ref="codeSourceRef"
           :build-method="buildMethod"
+          @cancel="showCodeSource = false"
         />
         <!-- 镜像信息 -->
         <mirror
@@ -63,6 +68,7 @@ export default {
       isLoading: true,
       buildMethod: '',
       credentialList: [],
+      showCodeSource: false, // 控制是否显示代码源组件
     };
   },
   computed: {
@@ -105,6 +111,14 @@ export default {
       } finally {
         this.closeContentLoader();
       }
+    },
+
+    // 切换为源码信息
+    handleSwitchRepo() {
+      this.showCodeSource = true;
+      this.$nextTick(() => {
+        this.$refs.codeSourceRef?.handleEdit();
+      });
     },
   },
 };

@@ -16,13 +16,13 @@
         class="tab-content"
       >
         <IdleAppDashboard
-          v-if="platformFeature.REGION_DISPLAY"
+          v-if="platformFeature.MONITORING"
           v-show="active === 'idle'"
           @async-list-length="handlePanelUpdate"
         />
         <!-- 告警记录 -->
         <AlarmRecords
-          v-if="platformFeature.REGION_DISPLAY && platformFeature.MONITORING"
+          v-if="platformFeature.MONITORING"
           v-show="active === 'alarm'"
           @async-list-length="handlePanelUpdate"
         />
@@ -89,12 +89,12 @@ export default {
     // 根据平台功能过滤后的面板
     availablePanels() {
       return this.allPanels.filter((panel) => {
-        // REGION_DISPLAY 为 false 时过滤掉 idle、alarm
-        if (!this.platformFeature.REGION_DISPLAY && (panel.name === 'idle' || panel.name === 'alarm')) {
-          return false;
+        const isMonitoringRelatedPanel = panel.name === 'idle' || panel.name === 'alarm';
+        if (panel.name === 'marked') {
+          return true;
         }
-        // MONITORING 为 false 时过滤掉 alarm
-        if (!this.platformFeature.MONITORING && panel.name === 'alarm') {
+        // 监控功能关闭时，不显示闲置应用和告警记录
+        if (!this.platformFeature.MONITORING && isMonitoringRelatedPanel) {
           return false;
         }
         return true;

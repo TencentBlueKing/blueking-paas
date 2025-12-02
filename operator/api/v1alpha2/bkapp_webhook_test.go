@@ -35,7 +35,7 @@ import (
 
 	paasv1alpha1 "bk.tencent.com/paas-app-operator/api/v1alpha1"
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
-	"bk.tencent.com/paas-app-operator/pkg/components/manager"
+	components "bk.tencent.com/paas-app-operator/pkg/components/manager"
 	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/kubeutil"
 	"bk.tencent.com/paas-app-operator/pkg/utils/stringx"
@@ -1077,6 +1077,118 @@ var _ = Describe("test webhook.Validator", func() {
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
+		})
+	})
+
+	Context("Test annotations validation - Override Process Resource Config", func() {
+		It("valid override proc res config - limits only", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
+				"web": {
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "2",
+						Memory: "2G",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("valid override proc res config - limits and requests", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
+				"web": {
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "2",
+						Memory: "2G",
+					},
+					Requests: &paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "1G",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("invalid override proc res config - missing limits", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
+				"web": {
+					Requests: &paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "1G",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("invalid limits resource spec"))
+		})
+
+		It("invalid override proc res config - invalid cpu in limits", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
+				"web": {
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "invalid-cpu",
+						Memory: "1G",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("invalid"))
+			Expect(err.Error()).To(ContainSubstring("cpu"))
+		})
+
+		It("invalid override proc res config - invalid memory in limits", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
+				"web": {
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "invalid-memory",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("invalid"))
+			Expect(err.Error()).To(ContainSubstring("memory"))
+		})
+
+		It("invalid override proc res config - requests exceed limits", func() {
+			overrideProcResConfig := paasv1alpha2.OverrideProcResConfig{
+				"web": {
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "1G",
+					},
+					Requests: &paasv1alpha2.ResourceSpec{
+						CPU:    "2",
+						Memory: "1G",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.OverrideProcResAnnoKey, overrideProcResConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("must not exceed limits"))
+		})
+
+		It("no admin proc res config annotation - should pass", func() {
+			// Do not set AdminProcResAnnoKey, should pass
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
 		})
 	})
 })

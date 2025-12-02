@@ -231,6 +231,67 @@ func (r *BkApp) validateAnnotations() *field.Error {
 		}
 	}
 
+	// 验证覆盖的进程资源配额注解是否合法
+	overrideProcResConfig, err := kubeutil.GetJsonAnnotation[OverrideProcResConfig](
+		r, OverrideProcResAnnoKey,
+	)
+	// 获取进程中的资源配额注解成功，才需要进行检查
+	if err == nil {
+		procNames := r.getProcNames()
+		for procName, resConf := range overrideProcResConfig {
+			// 检查 procName 是否存在
+			if !lo.Contains(procNames, procName) {
+				return field.Invalid(
+					annosPath.Child(OverrideProcResAnnoKey),
+					annotations[OverrideProcResAnnoKey],
+					fmt.Sprintf("process %s not defined in spec.processes", procName),
+				)
+			}
+
+			if err := validateOverrideResourceConfig(resConf); err != nil {
+				return field.Invalid(
+					annosPath.Child(OverrideProcResAnnoKey),
+					annotations[OverrideProcResAnnoKey],
+					fmt.Sprintf("invalid resource config for process '%s': %s", procName, err.Error()),
+				)
+			}
+		}
+	}
+
+	return nil
+}
+
+func validateOverrideResourceConfig(resConf ProcResOverride) error {
+	// 解析并验证 Limits
+	limCPU, limMem, err := quota.ParseResourceSpec(resConf.Limits.CPU, resConf.Limits.Memory)
+	if err != nil {
+		return errors.Wrap(err, "invalid limits resource spec")
+	}
+
+	// 验证并解析 Requests（可选）
+	if resConf.Requests != nil {
+		reqCPU, reqMem, err := quota.ParseResourceSpec(resConf.Requests.CPU, resConf.Requests.Memory)
+		if err != nil {
+			return errors.Wrap(err, "invalid requests resource spec")
+		}
+
+		// 验证 requests 不得超过 limits
+		if reqCPU.Cmp(*limCPU) > 0 {
+			return errors.Errorf(
+				"cpu requests '%s' must not exceed limits '%s'",
+				resConf.Requests.CPU,
+				resConf.Limits.CPU,
+			)
+		}
+		if reqMem.Cmp(*limMem) > 0 {
+			return errors.Errorf(
+				"memory requests '%s' must not exceed limits '%s'",
+				resConf.Requests.Memory,
+				resConf.Limits.Memory,
+			)
+		}
+	}
+
 	return nil
 }
 

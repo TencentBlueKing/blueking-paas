@@ -228,6 +228,20 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 		return r.calculateResources(cfg["cpu"], cfg["memory"]), nil
 	}
 
+	// Override resource annotation: try to read resources configs from override resource annotation
+	// Format: {"{procName}": {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {...}}}
+	overrideConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.OverrideProcResConfig](
+		r.bkapp,
+		paasv1alpha2.OverrideProcResAnnoKey,
+	)
+	if procConfig, ok := overrideConfig[name]; ok {
+		res, err := r.calculateResourcesByResConfig(procConfig)
+		if err != nil {
+			return result, errors.Wrapf(err, "fail to parse override resource config for process %s", name)
+		}
+		return *res, nil
+	}
+
 	// Overlay: read the "ResQuotaPlan" field from envOverlay
 	if env := GetEnvName(r.bkapp); !env.IsEmpty() && r.bkapp.Spec.EnvOverlay != nil {
 		for _, q := range r.bkapp.Spec.EnvOverlay.ResQuotas {
@@ -259,6 +273,43 @@ func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) core
 		cpuRaw, memRaw = config.Global.GetProcDefaultCpuLimit(), config.Global.GetProcDefaultMemLimit()
 	}
 	return r.calculateResources(cpuRaw, memRaw)
+}
+
+// calculateResourcesByResConfig builds resource requirements from override config
+// Note: validation is already done by webhook, but we still check errors for robustness
+func (r *ProcResourcesGetter) calculateResourcesByResConfig(
+	resConfig paasv1alpha2.ProcResOverride,
+) (*corev1.ResourceRequirements, error) {
+	// Parse limits using unified utility function
+	limitsCPU, limitsMemory, err := quota.ParseResourceSpec(resConfig.Limits.CPU, resConfig.Limits.Memory)
+	if err != nil {
+		return nil, errors.Wrap(err, "fail to parse limits")
+	}
+	limits := corev1.ResourceList{
+		corev1.ResourceCPU:    *limitsCPU,
+		corev1.ResourceMemory: *limitsMemory,
+	}
+
+	// Parse requests (optional)
+	var requests corev1.ResourceList
+	if resConfig.Requests != nil {
+		requestsCPU, requestsMemory, err := quota.ParseResourceSpec(resConfig.Requests.CPU, resConfig.Requests.Memory)
+		if err != nil {
+			return nil, errors.Wrap(err, "fail to parse requests")
+		}
+		requests = corev1.ResourceList{
+			corev1.ResourceCPU:    *requestsCPU,
+			corev1.ResourceMemory: *requestsMemory,
+		}
+	} else {
+		// If requests are not specified, derive from limits
+		requests = r.calculateResources(resConfig.Limits.CPU, resConfig.Limits.Memory).Requests
+	}
+
+	return &corev1.ResourceRequirements{
+		Limits:   limits,
+		Requests: requests,
+	}, nil
 }
 
 // calculateResources build the resource requirements from raw string

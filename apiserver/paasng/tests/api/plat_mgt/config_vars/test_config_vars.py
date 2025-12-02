@@ -45,10 +45,11 @@ class TestBuiltinConfigVarViewSet:
         assert resp.status_code == 200
         assert len(resp.data) == 1
 
-    def test_create(self, plat_mgt_api_client, plat_manager_user):
-        """测试创建内建环境变量"""
+    @pytest.mark.parametrize("prefix", ["BKPAAS_", "BK_", "BKAPP_"])
+    def test_create_with_valid_prefix(self, plat_mgt_api_client, plat_manager_user, prefix):
+        """测试创建内建环境变量时使用有效前缀"""
         data = {
-            "key": "BKPAAS_TEST_VAR",
+            "key": f"{prefix}TEST_VAR",
             "value": "test_value",
             "description": "Test variable",
         }
@@ -60,6 +61,18 @@ class TestBuiltinConfigVarViewSet:
         created_var = BuiltinConfigVar.objects.get(key=data["key"])
         assert created_var.value == data["value"]
         assert created_var.operator == plat_manager_user.pk
+
+    def test_create_with_invalid_prefix(self, plat_mgt_api_client):
+        """测试创建内建环境变量时使用无效前缀"""
+        data = {
+            "key": "INVALID_PREFIX_TEST_VAR",
+            "value": "test_value",
+            "description": "Test variable",
+        }
+        url = reverse("plat_mgt.builtin_config_vars.bulk")
+        resp = plat_mgt_api_client.post(url, data=data)
+        assert resp.status_code == 400
+        assert resp.data["code"] == "VALIDATION_ERROR"
 
     def test_update(self, plat_mgt_api_client, create_builtin_config_var):
         """测试更新内建环境变量"""

@@ -99,7 +99,7 @@ class SmartBuildContext:
     @staticmethod
     def generate_artifact_key(app_code: str, app_version: str, sha256_signature: str, packaging_version: str) -> str:
         """Generate standardized build artifact key"""
-        return f"{app_code}-{app_version}_paas3_{sha256_signature[:7]}_{packaging_version}.tar.gz"
+        return f"{app_code}-{app_version}_paas3_{packaging_version}_{sha256_signature[:7]}.tar.gz"
 
 
 class SmartBuildTaskRunner:

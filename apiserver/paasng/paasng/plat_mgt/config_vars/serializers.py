@@ -69,14 +69,3 @@ class BuiltinConfigVarUpdateInputSLZ(serializers.Serializer):
 
     value = serializers.CharField(max_length=512, required=True, help_text="环境变量值")
     description = serializers.CharField(max_length=512, required=True, help_text="环境变量描述")
-
-    def validate_key(self, key: str) -> str:
-        # validate key prefix
-        valid_prefixes = CustomBuiltinConfigVarPrefix.get_values()
-        if not any(key.startswith(prefix) for prefix in valid_prefixes):
-            raise ValidationError(
-                _("内置环境变量 {key} 必须以以下前缀之一开头：{prefixes}").format(
-                    key=key, prefixes=", ".join(valid_prefixes)
-                )
-            )
-        return key

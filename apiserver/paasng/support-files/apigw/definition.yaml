@@ -3,7 +3,7 @@ apigateway:
   description_en: PaaS 3.0 Developer Center API Gateway, including APP information retrieval, APP deployment, Add-ons, Mini-App , and other APIs.
   is_public: true
   # 标记网关为官方网关，默认网关名需以 `bk-` 开头
-  # bkpaas3 网关设置官方网关需要依赖 API 网关版本: 1.17.0 及以上
+  # bkpaas3 网关设置官方网关需要依赖 API 网关版本: 1.16.0 及以上
   api_type: 1
   maintainers:
     - "admin"

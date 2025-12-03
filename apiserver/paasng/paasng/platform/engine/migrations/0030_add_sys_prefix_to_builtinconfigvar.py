@@ -24,9 +24,12 @@ def add_sys_prefix(apps, schema_editor):
         new_key = settings.CONFIGVAR_SYSTEM_PREFIX + obj.key
         # Avoid unique constraint violation: if target exists, skip
         if BuiltinConfigVar.objects.filter(key=new_key).exists():
-            # Use print so migration output shows in logs
-            print(f"[migration] skip BuiltinConfigVar id={obj.pk} key={obj.key}: {new_key} already exists")
-            continue
+            # Duplicate target key found: abort migration to avoid hiding data issues.
+            # Fail-fast so operators can fix duplicate data before applying migration.
+            raise RuntimeError(
+                f"[migration] duplicate BuiltinConfigVar detected id={obj.pk} key={obj.key}: target key {new_key} already exists. "
+                "Please resolve duplicates before running this migration."
+            )
 
         obj.key = new_key
         obj.save(update_fields=["key"])

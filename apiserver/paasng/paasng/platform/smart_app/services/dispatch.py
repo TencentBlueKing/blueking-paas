@@ -20,7 +20,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Optional, Set, Tuple, cast
+from typing import Callable, List, Set, Tuple, cast
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
@@ -54,12 +54,12 @@ def dispatch_package_to_modules(
         uncompress_directory(source_path=tarball_filepath, target_path=workplace)
 
         handler: Callable[[Module, Path, SPStat, User, SMartAppExtraInfo | None], SourcePackage]
-        tasks: List[Tuple[Module, Path, SPStat, User, Optional[SMartAppExtraInfo]]]
+        tasks: List[Tuple[Module, Path, SPStat, User, SMartAppExtraInfo | None]]
         builder_flag = workplace / ".Version"
         if builder_flag.exists():
             version = builder_flag.read_text().strip()
             # prepare optional smart_app_extra for CNB-built packages
-            smart_app_extra: Optional[SMartAppExtraInfo] = None
+            smart_app_extra: SMartAppExtraInfo | None = None
             if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
                 smart_app_extra = parse_and_save_cnb_metadata(application, workplace)
                 handler = dispatch_cnb_image_to_registry
@@ -167,7 +167,7 @@ def dispatch_cnb_image_to_registry(
     workplace: Path,
     stat: SPStat,
     operator: User,
-    smart_app_extra: Optional[SMartAppExtraInfo],
+    smart_app_extra: SMartAppExtraInfo | None = None,
 ) -> SourcePackage:
     """Merge image layer to base image, then push the new image to registry"""
     logger.debug("dispatching cnb-image for module '%s', working at '%s'", module.name, workplace)

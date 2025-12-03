@@ -165,3 +165,26 @@ class PersistentStorageSize(StrStructuredEnum):
     P_1G = EnumField("1Gi")
     P_2G = EnumField("2Gi")
     P_4G = EnumField("4Gi")
+
+    @classmethod
+    def get_preset_values(cls) -> list:
+        """获取所有预设容量选项值"""
+        return [member.value for member in cls]
+
+    @classmethod
+    def is_valid_storage_size(cls, size: str) -> bool:
+        """验证存储大小格式是否有效，如 '5Gi'"""
+        import re
+
+        pattern = r"^(\d+)Gi$"
+        return bool(re.match(pattern, size))
+
+    @classmethod
+    def parse_size_value(cls, size: str) -> int:
+        """解析存储大小，返回数值（单位：Gi）"""
+        import re
+
+        match = re.match(r"^(\d+)Gi$", size)
+        if match:
+            return int(match.group(1))
+        raise ValueError(f"Invalid storage size format: {size}")

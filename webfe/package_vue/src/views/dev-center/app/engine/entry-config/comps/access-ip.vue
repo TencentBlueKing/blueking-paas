@@ -11,7 +11,7 @@
           v-if="!isPermissionChecking"
           class="perm-action"
         >
-          <div :class="['perm-icon', { 'active': isUseIPPermission }]">
+          <div :class="['perm-icon', { active: isUseIPPermission }]">
             <span :class="['paasng-icon', { 'paasng-lock': !isUseIPPermission, 'paasng-unlock': isUseIPPermission }]" />
           </div>
           <div class="perm-title flex-row align-items-center">
@@ -20,17 +20,17 @@
               class="ps-switcher-wrapper"
               @click="togglePermission"
             >
-              <bk-switcher
-                v-model="isUseIPPermission"
-              />
+              <bk-switcher v-model="isUseIPPermission" />
             </div>
-            <div class="perm-status" :class="isUseIPPermission ? 'perm-status-open' : 'perm-status-close'">
+            <div
+              class="perm-status"
+              :class="isUseIPPermission ? 'perm-status-open' : 'perm-status-close'"
+            >
               {{ isUseIPPermission ? $t('已开启') : $t('未开启') }}
             </div>
           </div>
           <p class="perm-tip">
-            {{ isUseIPPermission ? $t('开启 IP 限制后，仅白名单中的 IP 才能访问应用，预发布环境、生产环境同时生效')
-              : $t('开启 IP 限制后，仅白名单中的 IP 才能访问应用，预发布环境、生产环境同时生效') }}
+            {{ $t('启用 IP 限制后，仅白名单中的 IP 可访问应用主模块，预发布和生产环境同时生效。') }}
           </p>
         </div>
         <template v-if="!isPermissionChecking && isUseIPPermission">
@@ -40,7 +40,8 @@
                 theme="primary"
                 @click="showIPModal"
               >
-                <i class="paasng-icon paasng-plus mr5" /> {{ $t('添加白名单') }}
+                <i class="paasng-icon paasng-plus mr5" />
+                {{ $t('添加白名单') }}
               </bk-button>
               <bk-dropdown-menu
                 ref="largeDropdown"
@@ -60,21 +61,25 @@
                   <li>
                     <a
                       href="javascript:;"
-                      style="margin: 0;"
+                      style="margin: 0"
                       @click="handleExport('file')"
-                    > {{ $t('从文件导入') }} </a>
+                    >
+                      {{ $t('从文件导入') }}
+                    </a>
                   </li>
                   <li>
                     <a
                       href="javascript:;"
-                      style="margin: 0;"
+                      style="margin: 0"
                       @click="handleExport('batch')"
-                    > {{ $t('批量导出') }} </a>
+                    >
+                      {{ $t('批量导出') }}
+                    </a>
                   </li>
                 </ul>
               </bk-dropdown-menu>
               <bk-button
-                style="margin-left: 6px;"
+                style="margin-left: 6px"
                 :disabled="isBatchDisabled"
                 @click="batchDelete"
               >
@@ -82,7 +87,7 @@
               </bk-button>
               <bk-input
                 v-model="keyword"
-                style="width: 240px; float: right;"
+                style="width: 240px; float: right"
                 :placeholder="$t('输入关键字，按Enter搜索')"
                 :right-icon="'paasng-icon paasng-search'"
                 clearable
@@ -137,7 +142,7 @@
                 :render-header="renderHeader"
               >
                 <template slot-scope="{ row }">
-                  <span v-bk-tooltips="row.created">{{ smartTime(row.created,'fromNow') }}</span>
+                  <span v-bk-tooltips="row.created">{{ smartTime(row.created, 'fromNow') }}</span>
                 </template>
               </bk-table-column>
               <bk-table-column
@@ -145,7 +150,7 @@
                 :render-header="$renderHeader"
               >
                 <template slot-scope="{ row }">
-                  <span v-bk-tooltips="row.updated">{{ smartTime(row.updated,'fromNow') }}</span>
+                  <span v-bk-tooltips="row.updated">{{ smartTime(row.updated, 'fromNow') }}</span>
                 </template>
               </bk-table-column>
               <bk-table-column
@@ -159,7 +164,7 @@
                     </div>
                     <div
                       slot="content"
-                      style="white-space: normal;"
+                      style="white-space: normal"
                     >
                       {{ props.row.desc ? props.row.desc : '--' }}
                     </div>
@@ -173,11 +178,11 @@
               >
                 <template slot-scope="{ row }">
                   <template v-if="row.is_expired">
-                    <span v-bk-tooltips="row.expires_at"> {{ $t('已过期') }} </span>
+                    <span v-bk-tooltips="row.expires_at">{{ $t('已过期') }}</span>
                   </template>
                   <template v-else>
                     <template v-if="row.expires_at">
-                      <span v-bk-tooltips="row.expires_at">{{ smartTime(row.expires_at,'fromNow') }}</span>
+                      <span v-bk-tooltips="row.expires_at">{{ smartTime(row.expires_at, 'fromNow') }}</span>
                     </template>
                     <template v-else>
                       {{ $t('永不') }}
@@ -201,7 +206,7 @@
                     <bk-button
                       theme="primary"
                       text
-                      style="margin-left: 6px;"
+                      style="margin-left: 6px"
                       @click="handleEdit(props.row)"
                     >
                       {{ $t('编辑') }}
@@ -209,7 +214,7 @@
                     <bk-button
                       theme="primary"
                       text
-                      style="margin-left: 6px;"
+                      style="margin-left: 6px"
                       @click="showRemoveModal(props.row)"
                     >
                       {{ $t('删除') }}
@@ -229,13 +234,16 @@
       :title="`${isUseIPPermission ? $t('是否停用 IP 限制') : $t('是否开启 IP 限制')}?`"
       :theme="'primary'"
       :mask-close="false"
+      :header-position="'left'"
       :loading="IPPermissionDialog.isLoading"
       @confirm="setIPPermission"
       @cancel="closePermission"
     >
-      <div class="tc">
-        {{ isUseIPPermission ? $t('停用后【预发布】和【生产】环境的 IP 限制都将立即失效，所有 IP 都可访问') : $t('开启后【预发布】和【生产】环境的 IP 限制都将立即生效，仅白名单内 IP 可访问') }}
-      </div>
+      {{
+        isUseIPPermission
+          ? $t('功能停用后，主模块的预发布和生产环境的 IP 限制将立即取消，所有 IP 均可访问。')
+          : $t('功能开启后，预发布和生产环境的 IP 限制将立即生效，仅限白名单内 IP 可访问，且该限制仅适用于主模块。')
+      }}
     </bk-dialog>
 
     <bk-dialog
@@ -249,9 +257,7 @@
       @cancel="cancelRemoveIP"
       @after-leave="afterDeleteClose"
     >
-      <div class="tc">
-        {{ curIPParams.content }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}
-      </div>
+      <div class="tc">{{ curIPParams.content }} {{ $t('将失去此应用的对应权限，是否确定删除？') }}</div>
     </bk-dialog>
 
     <bk-dialog
@@ -302,10 +308,8 @@
             class="bk-form-input custom-time"
             placeholder="1"
             @input="authDetailTimeHandler"
-          >
-          <div class="unit">
-            天
-          </div>
+          />
+          <div class="unit">天</div>
         </div>
       </div>
     </bk-dialog>
@@ -325,7 +329,7 @@
     >
       <div
         v-if="isShowAddForm"
-        style="min-height: 140px;"
+        style="min-height: 140px"
       >
         <bk-form
           ref="addIPForm"
@@ -408,10 +412,8 @@
                 class="bk-form-input custom-time"
                 placeholder="1"
                 @input="authDetailTimeHandler"
-              >
-              <div class="unit">
-                天
-              </div>
+              />
+              <div class="unit">天</div>
             </div>
           </bk-form-item>
         </bk-form>
@@ -443,7 +445,7 @@
             text
             theme="primary"
             size="small"
-            style="line-height: 40px;"
+            style="line-height: 40px"
             @click="handleDownloadTemplate"
           >
             {{ $t('下载模板') }}
@@ -478,9 +480,9 @@
         <input
           ref="upload"
           type="file"
-          style="position: absolute; width: 0; height: 0;"
+          style="position: absolute; width: 0; height: 0"
           @change="handleStartUpload"
-        >
+        />
       </div>
       <div slot="footer">
         <bk-button
@@ -499,10 +501,10 @@
   </div>
 </template>
 
-<script>import appBaseInfoMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseInfoMixin from '@/mixins/app-base-mixin';
 export default {
-  components: {
-  },
+  components: {},
   mixins: [appBaseInfoMixin],
   data() {
     return {
@@ -553,7 +555,8 @@ export default {
             trigger: 'blur',
           },
           {
-            validator: value => /([0,1]?\d{1,2}|2([0-4][0-9]|5[0-5]))(\.([0,1]?\d{1,2}|2([0-4][0-9]|5[0-5]))){3}/.test(value),
+            validator: (value) =>
+              /([0,1]?\d{1,2}|2([0-4][0-9]|5[0-5]))(\.([0,1]?\d{1,2}|2([0-4][0-9]|5[0-5]))){3}/.test(value),
             trigger: 'blur',
             message: this.$t('IP/IP段格式不正确'),
           },
@@ -657,11 +660,11 @@ export default {
       return this.timeFilters.cur === 'custom';
     },
     curModule() {
-      return this.curAppModuleList.find(item => item.is_default);
+      return this.curAppModuleList.find((item) => item.is_default);
     },
   },
   watch: {
-    '$route'() {
+    $route() {
       this.init();
     },
     'pagination.current'(value) {
@@ -713,57 +716,70 @@ export default {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/access_control/restriction_type/ip/strategy/import/`;
       const params = new FormData();
       params.append('file', this.curFile);
-      this.$http.post(url, params).then((response) => {
-        const createNum = response.create_num;
-        const overwritedNum = response.overwrited_num;
-        const ignoreNum = response.ignore_num;
-        this.isEdited = createNum > 0 || overwritedNum > 0;
-        const message = (
-          () => {
-            const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(Boolean(ignoreNum))}`;
-            let messageText = '';
-            switch (numStr) {
-              case '111':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，更新')} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个白名单')}`;
-                break;
-              case '110':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，更新')} ${overwritedNum} ${this.$t('个IP白名单')}`;
-                break;
-              case '100':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单')}`;
-                break;
-              case '101':
-                messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个IP白名单')}`;
-                break;
-              case '011':
-                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个IP白名单')}`;
-                break;
-              case '010':
-                messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个IP白名单')}`;
-                break;
-              case '001':
-                messageText = this.$t('所有IP白名单都已在当前模块中，已全部忽略');
-                break;
-              default:
-                messageText = `${this.$t('导入成功')}`;
-            }
-            return messageText;
+      this.$http
+        .post(url, params)
+        .then(
+          (response) => {
+            const createNum = response.create_num;
+            const overwritedNum = response.overwrited_num;
+            const ignoreNum = response.ignore_num;
+            this.isEdited = createNum > 0 || overwritedNum > 0;
+            const message = (() => {
+              const numStr = `${Number(Boolean(createNum))}${Number(Boolean(overwritedNum))}${Number(
+                Boolean(ignoreNum)
+              )}`;
+              let messageText = '';
+              switch (numStr) {
+                case '111':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                    '个IP白名单，更新'
+                  )} ${overwritedNum} ${this.$t('个IP白名单，忽略')} ${ignoreNum} ${this.$t('个白名单')}`;
+                  break;
+                case '110':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                    '个IP白名单，更新'
+                  )} ${overwritedNum} ${this.$t('个IP白名单')}`;
+                  break;
+                case '100':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t('个IP白名单')}`;
+                  break;
+                case '101':
+                  messageText = `${this.$t('导入成功，新增')} ${createNum} ${this.$t(
+                    '个IP白名单，忽略'
+                  )} ${ignoreNum} ${this.$t('个IP白名单')}`;
+                  break;
+                case '011':
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t(
+                    '个IP白名单，忽略'
+                  )} ${ignoreNum} ${this.$t('个IP白名单')}`;
+                  break;
+                case '010':
+                  messageText = `${this.$t('导入成功，更新')} ${overwritedNum} ${this.$t('个IP白名单')}`;
+                  break;
+                case '001':
+                  messageText = this.$t('所有IP白名单都已在当前模块中，已全部忽略');
+                  break;
+                default:
+                  messageText = `${this.$t('导入成功')}`;
+              }
+              return messageText;
+            })();
+            this.$paasMessage({
+              theme: 'success',
+              message,
+            });
+            this.pagination.current = 1;
+            this.pagination.limit = 10;
+            this.fetchIpList(true);
+          },
+          (errRes) => {
+            const errorMsg = errRes.detail;
+            this.$paasMessage({
+              theme: 'error',
+              message: `${this.$t('从文件导入IP白名单失败')}，${errorMsg}`,
+            });
           }
-        )();
-        this.$paasMessage({
-          theme: 'success',
-          message,
-        });
-        this.pagination.current = 1;
-        this.pagination.limit = 10;
-        this.fetchIpList(true);
-      }, (errRes) => {
-        const errorMsg = errRes.detail;
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('从文件导入IP白名单失败')}，${errorMsg}`,
-        });
-      })
+        )
         .finally(() => {
           this.exportFileDialog.loading = false;
           this.exportFileDialog.visiable = false;
@@ -783,15 +799,20 @@ export default {
       const orderBy = this.is_up ? '-created' : 'created';
       this.exportLoading = true;
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/access_control/restriction_type/ip/strategy/export/?order_by=${orderBy}`;
-      this.$http.get(url).then((response) => {
-        this.downloadYaml(response.body, 'export');
-      }, (errRes) => {
-        const errorMsg = errRes.detail;
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
-        });
-      })
+      this.$http
+        .get(url)
+        .then(
+          (response) => {
+            this.downloadYaml(response.body, 'export');
+          },
+          (errRes) => {
+            const errorMsg = errRes.detail;
+            this.$paasMessage({
+              theme: 'error',
+              message: `${this.$t('获取环境变量失败')}，${errorMsg}`,
+            });
+          }
+        )
         .finally(() => {
           this.exportLoading = false;
         });
@@ -816,15 +837,18 @@ export default {
 
     handleDownloadTemplate() {
       const url = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/access_control/restriction_type/ip/strategy/export/template/`;
-      this.$http.get(url).then((response) => {
-        this.downloadYaml(response.body);
-      }, (errRes) => {
-        const errorMsg = errRes.message;
-        this.$paasMessage({
-          theme: 'error',
-          message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
-        });
-      });
+      this.$http.get(url).then(
+        (response) => {
+          this.downloadYaml(response.body);
+        },
+        (errRes) => {
+          const errorMsg = errRes.message;
+          this.$paasMessage({
+            theme: 'error',
+            message: `${this.$t('获取yaml模板失败')}，${errorMsg}`,
+          });
+        }
+      );
     },
 
     async handleRenewalDialog() {
@@ -861,15 +885,18 @@ export default {
       this.curIPParams.expires_at = null;
       this.renewalParams.expires_at = null;
       this.renewalParams.expires = '';
-      this.timeFilters = Object.assign({}, {
-        month: this.$t('1个月'),
-        month3: this.$t('3个月'),
-        month6: this.$t('6个月'),
-        month12: this.$t('12个月'),
-        forever: this.$t('永久'),
-        custom: this.$t('自定义'),
-        cur: 'forever',
-      });
+      this.timeFilters = Object.assign(
+        {},
+        {
+          month: this.$t('1个月'),
+          month3: this.$t('3个月'),
+          month6: this.$t('6个月'),
+          month12: this.$t('12个月'),
+          forever: this.$t('永久'),
+          custom: this.$t('自定义'),
+          cur: 'forever',
+        }
+      );
       this.customTime = 1;
     },
 
@@ -904,10 +931,10 @@ export default {
       }
       const Y = `${time.getFullYear()}-`;
       const M = `${time.getMonth() + 1 < 10 ? `0${time.getMonth() + 1}` : time.getMonth() + 1}-`;
-      const D = (time.getDate() < 10 ? `0${time.getDate()}` : time.getDate());
+      const D = time.getDate() < 10 ? `0${time.getDate()}` : time.getDate();
       const h = `${time.getHours() < 10 ? `0${time.getHours()}` : time.getHours()}:`;
       const m = `${time.getMinutes() < 10 ? `0${time.getMinutes()}` : time.getMinutes()}:`;
-      const s = (time.getSeconds() < 10 ? `0${time.getSeconds()}` : time.getSeconds());
+      const s = time.getSeconds() < 10 ? `0${time.getSeconds()}` : time.getSeconds();
       return `${Y + M + D} ${h}${m}${s}`;
     },
 
@@ -1030,7 +1057,7 @@ export default {
       try {
         await this.$store.dispatch('ip/deleteIp', {
           appCode: this.appCode,
-          ids: this.currentSelectList.map(item => item.id),
+          ids: this.currentSelectList.map((item) => item.id),
         });
         this.pagination.current = 1;
         this.pagination.limit = 10;
@@ -1088,7 +1115,7 @@ export default {
               src: '/static/images/sort-icon.png',
             },
           }),
-        ],
+        ]
       );
     },
 
@@ -1103,10 +1130,10 @@ export default {
     },
 
     /**
-               * 分页页码 chang 回调
-               *
-               * @param {Number} page 页码
-               */
+     * 分页页码 chang 回调
+     *
+     * @param {Number} page 页码
+     */
     pageChange(page) {
       if (this.currentBackup === page) {
         return;
@@ -1272,8 +1299,10 @@ export default {
         return false;
       }
 
-      const checkList = params.content.trim().split(';')
-        .filter(item => item !== '');
+      const checkList = params.content
+        .trim()
+        .split(';')
+        .filter((item) => item !== '');
       for (const item of checkList) {
         if (!contentReg.test(item)) {
           this.$paasMessage({
@@ -1331,7 +1360,7 @@ export default {
           },
           () => {
             this.addIPDialog.isLoading = false;
-          },
+          }
         );
       }, 200);
     },
@@ -1347,8 +1376,10 @@ export default {
     async handleAddIp(payload = {}) {
       this.addIPDialog.isLoading = true;
       const params = JSON.parse(JSON.stringify(payload));
-      params.content = params.content.trim().split(';')
-        .filter(item => item !== '')
+      params.content = params.content
+        .trim()
+        .split(';')
+        .filter((item) => item !== '')
         .join(';');
       try {
         await this.$store.dispatch('ip/addIp', {
@@ -1427,12 +1458,14 @@ export default {
     },
 
     afterDeleteClose() {
-      this.curIPParams = JSON.parse(JSON.stringify({
-        content: '',
-        path: '',
-        desc: '',
-        expires_at: null,
-      }));
+      this.curIPParams = JSON.parse(
+        JSON.stringify({
+          content: '',
+          path: '',
+          desc: '',
+          expires_at: null,
+        })
+      );
       this.removeIPDialog.id = 0;
     },
 
@@ -1452,15 +1485,18 @@ export default {
       this.addIPDialog.isEdit = false;
       this.clearInputStatus(0);
       this.isShowAddForm = false;
-      this.timeFilters = Object.assign({}, {
-        month: this.$t('1个月'),
-        month3: this.$t('3个月'),
-        month6: this.$t('6个月'),
-        month12: this.$t('12个月'),
-        forever: this.$t('永久'),
-        custom: this.$t('自定义'),
-        cur: 'forever',
-      });
+      this.timeFilters = Object.assign(
+        {},
+        {
+          month: this.$t('1个月'),
+          month3: this.$t('3个月'),
+          month6: this.$t('6个月'),
+          month12: this.$t('12个月'),
+          forever: this.$t('永久'),
+          custom: this.$t('自定义'),
+          cur: 'forever',
+        }
+      );
       this.customTime = 1;
     },
 
@@ -1485,217 +1521,215 @@ export default {
 };
 </script>
 
-  <style lang="scss" scoped>
-      .bk-table {
-          &.set-border {
-              border-right: 1px solid #dfe0e5;
-              border-bottom: 1px solid #dfe0e5;
-          }
+<style lang="scss" scoped>
+.bk-table {
+  &.set-border {
+    border-right: 1px solid #dfe0e5;
+    border-bottom: 1px solid #dfe0e5;
+  }
+}
+
+.perm-action {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  padding: 20px 24px;
+
+  .perm-icon {
+    float: left;
+    width: 42px;
+    height: 42px;
+    margin-right: 12px;
+    background: rgba(195, 205, 215, 1);
+    border-radius: 2px;
+    color: #fff;
+    line-height: 40px;
+    font-size: 22px;
+    text-align: center;
+
+    &.active {
+      background-color: rgba(48, 216, 120, 1);
+    }
+  }
+
+  .perm-title {
+    font-size: 14px;
+    color: #313238;
+    margin-bottom: 5px;
+    line-height: 1;
+    font-weight: 700;
+    .perm-status {
+      border-radius: 2px;
+      width: 52px;
+      height: 22px;
+      text-align: center;
+      line-height: 22px;
+      margin-left: 15px;
+      font-size: 12px;
+    }
+    .perm-status-open {
+      color: #14a568;
+      background: #e4faf0;
+    }
+    .perm-status-close {
+      color: #fff;
+      background-color: #dcdee5;
+    }
+  }
+
+  .perm-tip {
+    line-height: 1;
+    font-size: 12px;
+    color: #979ba5;
+  }
+}
+
+.table-container {
+  background: #fff;
+  padding: 0px 24px 20px;
+  .ps-table-bar {
+    position: relative;
+    padding: 16px 0;
+    border-top: 1px solid #e6e9ea;
+    .path-exempt {
+      position: absolute;
+      top: 20px;
+      left: 336px;
+      &.en-path {
+        left: 382px;
       }
+    }
+  }
+}
 
-      .perm-action {
-          position: relative;
-          overflow: hidden;
-          background: #fff;
-          padding: 20px 24px;
+.container {
+  width: 100%;
+  padding: 20px 0;
+  color: #666;
+}
 
-          .perm-icon {
-              float: left;
-              width: 42px;
-              height: 42px;
-              margin-right: 12px;
-              background: rgba(195, 205, 215, 1);
-              border-radius: 2px;
-              color: #fff;
-              line-height: 40px;
-              font-size: 22px;
-              text-align: center;
+.ps-table-bar {
+  padding: 16px 0;
+  border-top: 1px solid #e6e9ea;
+}
 
-              &.active {
-                  background-color: rgba(48, 216, 120, 1);
-              }
-          }
+.ps-search-input {
+  float: right;
+  margin-top: -2px;
 
-          .perm-title {
-              font-size: 14px;
-              color: #313238;
-              margin-bottom: 5px;
-              line-height: 1;
-              font-weight: 700;
-              .perm-status{
-                border-radius: 2px;
-                width: 52px;
-                height: 22px;
-                text-align: center;
-                line-height: 22px;
-                margin-left: 15px;
-                font-size: 12px;
-              }
-              .perm-status-open{
-                color: #14A568;
-                background: #E4FAF0;
-              }
-              .perm-status-close{
-                color: #fff;
-                background-color: #dcdee5;
-              }
-          }
+  .paasng-close {
+    font-size: 12px;
+    cursor: pointer;
+  }
+}
 
-          .perm-tip {
-              line-height: 1;
-              font-size: 12px;
-              color: #979BA5;
-          }
-      }
+.middle {
+  border-bottom: none;
+}
 
-      .table-container{
-        background: #fff;
-        padding: 0px 24px 20px;
-        .ps-table-bar {
-            position: relative;
-            padding: 16px 0;
-            border-top: 1px solid #e6e9ea;
-            .path-exempt {
-                position: absolute;
-                top: 20px;
-                left: 336px;
-                &.en-path {
-                    left: 382px;
-                }
-            }
+.reason {
+  max-width: 130px;
+  white-space: nowrap;
+  word-wrap: break-word;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-        }
-      }
+.time-button-groups {
+  vertical-align: bottom;
+  font-size: 0;
+  button {
+    width: 90px;
+    &:hover {
+      color: #3a84ff;
+    }
+    &.reset-width {
+      width: 106px;
+    }
+  }
+}
+.custom-time-select {
+  display: inline-block;
+  margin-left: -5px;
+  width: 68px;
+  height: 32px;
+  font-size: 0;
+  vertical-align: bottom;
+  input.custom-time {
+    width: 67px;
+    height: 32px;
+    border-radius: 0;
+    border: 1px solid #c3cdd7;
+  }
+  .unit {
+    position: relative;
+    top: -32px;
+    right: -38px;
+    width: 40px;
+    height: 32px;
+    line-height: 32px;
+    text-align: center;
+    border: 1px solid #c3cdd7;
+    float: right;
+    font-size: 12px;
+  }
+  input.custom-time:focus {
+    border-color: #c3cdd7 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
 
-      .container {
-          width: 100%;
-          padding: 20px 0;
-          color: #666;
-      }
+.by-ip-export-wrapper {
+  margin-left: 6px;
+  vertical-align: bottom;
+}
 
-      .ps-table-bar {
-          padding: 16px 0;
-          border-top: 1px solid #e6e9ea;
+.paas-env-var-upload-dialog {
+  .header {
+    font-size: 24px;
+    color: #313238;
+  }
+  .title {
+    max-width: 150px;
+    margin: 0;
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+  .download-tips {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    line-height: 40px;
+    background: #fefaf2;
+    font-size: 12px;
+    color: #ffb400;
+  }
+}
 
-      }
-
-      .ps-search-input {
-          float: right;
-          margin-top: -2px;
-
-          .paasng-close {
-              font-size: 12px;
-              cursor: pointer;
-          }
-      }
-
-      .middle {
-          border-bottom: none;
-      }
-
-      .reason {
-          max-width: 130px;
-          white-space: nowrap;
-          word-wrap: break-word;
-          word-break: break-all;
-          overflow: hidden;
-          text-overflow: ellipsis;
-      }
-
-      .time-button-groups {
-          vertical-align: bottom;
-          font-size: 0;
-          button {
-              width: 90px;
-              &:hover {
-                  color: #3a84ff;
-              }
-              &.reset-width {
-                  width: 106px;
-              }
-          }
-      }
-      .custom-time-select {
-          display: inline-block;
-          margin-left: -5px;
-          width: 68px;
-          height: 32px;
-          font-size: 0;
-          vertical-align: bottom;
-          input.custom-time {
-              width: 67px;
-              height: 32px;
-              border-radius: 0;
-              border: 1px solid #c3cdd7;
-          }
-          .unit {
-              position: relative;
-              top: -32px;
-              right: -38px;
-              width: 40px;
-              height: 32px;
-              line-height: 32px;
-              text-align: center;
-              border: 1px solid #c3cdd7;
-              float: right;
-              font-size: 12px;
-          }
-          input.custom-time:focus {
-              border-color: #c3cdd7 !important;
-              outline: none !important;
-              box-shadow: none !important;
-          }
-      }
-
-      .by-ip-export-wrapper {
-          margin-left: 6px;
-          vertical-align: bottom;
-      }
-
-      .paas-env-var-upload-dialog {
-          .header {
-              font-size: 24px;
-              color: #313238;
-          }
-          .title {
-              max-width: 150px;
-              margin: 0;
-              display: inline-block;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              vertical-align: bottom;
-          }
-          .download-tips {
-              display: flex;
-              justify-content: space-between;
-              padding: 0 10px;
-              line-height: 40px;
-              background: #fefaf2;
-              font-size: 12px;
-              color: #ffb400;
-          }
-      }
-
-      .upload-content {
-          margin-top: 15px;
-          text-align: center;
-          .file-icon {
-              font-size: 40px;
-              color: #dae1e8;
-          }
-          .cur-upload-file {
-              display: inline-block;
-              line-height: 1;
-              font-size: 12px;
-              color: #3a84ff;
-              border-bottom: 1px solid #3a84ff;
-          }
-          .file-error-tips {
-              display: inline-block;
-              line-height: 1;
-              font-size: 12px;
-              color: #ff4d4d;
-          }
-      }
-  </style>
+.upload-content {
+  margin-top: 15px;
+  text-align: center;
+  .file-icon {
+    font-size: 40px;
+    color: #dae1e8;
+  }
+  .cur-upload-file {
+    display: inline-block;
+    line-height: 1;
+    font-size: 12px;
+    color: #3a84ff;
+    border-bottom: 1px solid #3a84ff;
+  }
+  .file-error-tips {
+    display: inline-block;
+    line-height: 1;
+    font-size: 12px;
+    color: #ff4d4d;
+  }
+}
+</style>

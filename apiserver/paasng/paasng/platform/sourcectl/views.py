@@ -346,6 +346,12 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         if module.get_source_origin() == SourceOrigin.IMAGE_REGISTRY:
             return self._modify_image(request, code, module_name)
 
+        if module.get_source_origin() == SourceOrigin.AI_AGENT:
+            # AI agent 应用切换源码仓库后，需要将该应用来源更改为 Authorized VCS
+            # 切换到源码部署模式之后, 不可再切换为包部署模式
+            module.source_origin = SourceOrigin.AUTHORIZED_VCS
+            module.save(update_fields=["source_origin"])
+
         slz = slzs.RepoBackendModifySLZ(data=self.request.data, context={"is_image_repo": False})
         slz.is_valid(raise_exception=True)
         data = slz.data
@@ -382,7 +388,7 @@ class RepoBackendControlViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
             user=request.user.pk,
             action_id=AppAction.BASIC_DEVELOP,
             operation=OperationEnum.MODIFY,
-            target=OperationTarget.APP_DOMAIN,
+            target=OperationTarget.MODULE,
             module_name=module_name,
             data_before=data_before,
             data_after=DataDetail(

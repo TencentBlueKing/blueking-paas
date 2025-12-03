@@ -15,184 +15,156 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from collections import namedtuple
-from unittest.mock import Mock, patch
+from unittest import mock
 
 import pytest
-from blue_krill.contextlib import nullcontext as does_not_raise
-from django.conf import settings
-from django.utils import timezone
-from kubernetes.dynamic.resource import ResourceInstance
 
-from paas_wl.infras.resources.base.base import get_client_by_cluster_name
-from paas_wl.infras.resources.base.exceptions import (
-    PodAbsentError,
-    PodNotSucceededError,
-    PodTimeoutError,
-    ResourceDuplicate,
-    ResourceMissing,
-)
-from paas_wl.infras.resources.base.kres import KPod, PatchType
 from paas_wl.infras.resources.kube_res.base import Schedule
-from paas_wl.utils.kubestatus import parse_pod
-from paasng.misc.tools.smart_app.build.handler import ContainerRuntimeSpec, SmartBuilderTemplate, SmartBuildHandler
-from tests.paas_wl.bk_app.deploy.app_res.conftest import construct_foo_pod
-from tests.utils.cluster import build_default_cluster
-
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
-DummyObjectList = namedtuple("DummyObjectList", "items metadata")
-
-# Make a shortcut name
-RG = settings.DEFAULT_REGION_NAME
-
-# 获取默认测试集群
-cluster, _ = build_default_cluster()
+from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paasng.misc.tools.smart_app.build.handler import (
+    ContainerRuntimeSpec,
+    SecurityContext,
+    SmartBuilderTemplate,
+    SmartBuildHandler,
+)
 
 
-@pytest.fixture()
-def smart_build_handler() -> SmartBuildHandler:
-    return SmartBuildHandler(get_client_by_cluster_name(cluster.name))
+@pytest.fixture
+def mock_client():
+    """Mock Kubernetes client"""
+
+    return mock.Mock()
+
+
+@pytest.fixture
+def smart_build_handler(mock_client):
+    """SmartBuildHandler instance"""
+
+    return SmartBuildHandler(mock_client)
+
+
+@pytest.fixture
+def basic_runtime_spec():
+    """Basic container runtime specification"""
+
+    return ContainerRuntimeSpec(
+        image="blueking/test:latest",
+        envs={"FOO": "bar", "BAZ": "qux"},
+        image_pull_policy=ImagePullPolicy.IF_NOT_PRESENT,
+        resources={"limits": {"cpu": "1", "memory": "1Gi"}},
+    )
+
+
+@pytest.fixture
+def basic_template(basic_runtime_spec):
+    """Basic SmartBuilderTemplate instance"""
+
+    return SmartBuilderTemplate(
+        name="test_builder",
+        namespace="smart-app-builder",
+        runtime=basic_runtime_spec,
+        schedule=Schedule(cluster_name="test-cluster", tolerations=[], node_selector={}),
+    )
 
 
 class TestSmartBuildHandler:
-    @pytest.fixture()
-    def pod_template(self):
-        return SmartBuilderTemplate(
+    """Test SmartBuildHandler core logic"""
+
+    def test_construct_pod_body_basic(self, smart_build_handler, basic_template):
+        """Test _construct_pod_body with basic configuration"""
+
+        pod_body = smart_build_handler._construct_pod_body("test-pod", basic_template)
+
+        # Verify basic structure
+        assert pod_body["apiVersion"] == "v1"
+        assert pod_body["kind"] == "Pod"
+
+        # Verify metadata
+        metadata = pod_body["metadata"]
+        assert metadata["name"] == "test-pod"
+        assert metadata["namespace"] == "smart-app-builder"
+        assert metadata["labels"]["pod_selector"] == "test-pod"
+        assert metadata["labels"]["category"] == "smart-app-builder"
+
+        # Verify spec
+        spec = pod_body["spec"]
+        assert spec["restartPolicy"] == "Never"
+        assert spec["nodeSelector"] == {}
+        assert spec["imagePullSecrets"] == []
+
+        # Verify container
+        container = spec["containers"][0]
+        assert container["name"] == "test-pod"
+        assert container["image"] == "blueking/test:latest"
+        assert container["imagePullPolicy"] == "IfNotPresent"
+        assert container["resources"] == {"limits": {"cpu": "1", "memory": "1Gi"}}
+        assert container["securityContext"]["privileged"] is True
+
+        # Verify environment variables
+        env_list = container["env"]
+        assert len(env_list) == 2
+        env_dict = {e["name"]: e["value"] for e in env_list}
+        assert env_dict == {"FOO": "bar", "BAZ": "qux"}
+
+    def test_construct_pod_body_with_tolerations(self, smart_build_handler):
+        """Test _construct_pod_body with tolerations"""
+
+        template = SmartBuilderTemplate(
+            name="test_builder",
+            namespace="smart-app-builder",
+            runtime=ContainerRuntimeSpec(image="blueking/test:latest"),
+            schedule=Schedule(
+                cluster_name="test-cluster",
+                tolerations=[
+                    {"key": "test", "operator": "Equal", "value": "value"},
+                    {"key": "dedicated", "operator": "Exists"},
+                ],
+                node_selector={"node-type": "builder", "zone": "az1"},
+            ),
+        )
+
+        pod_body = smart_build_handler._construct_pod_body("test-pod", template)
+
+        assert "tolerations" in pod_body["spec"]
+        assert len(pod_body["spec"]["tolerations"]) == 2
+        assert pod_body["spec"]["tolerations"][0] == {"key": "test", "operator": "Equal", "value": "value"}
+        assert pod_body["spec"]["nodeSelector"] == {"node-type": "builder", "zone": "az1"}
+
+    def test_construct_pod_body_without_tolerations(self, smart_build_handler, basic_template):
+        """Test _construct_pod_body without tolerations"""
+
+        pod_body = smart_build_handler._construct_pod_body("test-pod", basic_template)
+
+        # When tolerations is empty, the key should not exist in pod_body
+        assert "tolerations" not in pod_body["spec"]
+
+    def test_construct_pod_body_with_empty_envs(self, smart_build_handler):
+        """Test _construct_pod_body with empty environment variables"""
+
+        template = SmartBuilderTemplate(
+            name="test_builder",
+            namespace="smart-app-builder",
+            runtime=ContainerRuntimeSpec(image="blueking/test:latest", envs={}),
+            schedule=Schedule(cluster_name="test-cluster", tolerations=[], node_selector={}),
+        )
+
+        pod_body = smart_build_handler._construct_pod_body("test-pod", template)
+
+        assert pod_body["spec"]["containers"][0]["env"] == []
+
+    def test_construct_pod_body_with_security_context(self, smart_build_handler):
+        """Test _construct_pod_body with custom security context"""
+
+        template = SmartBuilderTemplate(
             name="test_builder",
             namespace="smart-app-builder",
             runtime=ContainerRuntimeSpec(
-                image="blueking-fake.com/bkpaas/smart-builder:latest",
-                envs={"test": "bar"},
+                image="blueking/test:latest",
+                securityContext=SecurityContext(privileged=False),
             ),
-            schedule=Schedule(
-                cluster_name=cluster.name,
-                node_selector={},
-                tolerations=[],
-            ),
+            schedule=Schedule(cluster_name="test-cluster", tolerations=[], node_selector={}),
         )
 
-    def test_build_pod(self, smart_build_handler, pod_template):
-        namespace_create = Mock(return_value=None)
-        namespace_check = Mock(return_value=True)
+        pod_body = smart_build_handler._construct_pod_body("test-pod", template)
 
-        pod_body = parse_pod(ResourceInstance(None, {"kind": "Pod", "status": {"phase": "Completed"}}))
-        kpod_get = Mock(return_value=pod_body)
-
-        create_pod_body = parse_pod(ResourceInstance(None, {"kind": "Pod", "metadata": {"name": "smart-builder-pod"}}))
-        kpod_create_or_update = Mock(return_value=(create_pod_body, True))
-
-        with (
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", namespace_create),
-            patch("paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa", namespace_check),
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.create_or_update", kpod_create_or_update),
-            patch("paas_wl.bk_app.deploy.app_res.controllers.WaitPodDelete.wait"),
-        ):
-            smart_build_handler.build_pod(pod_template)
-            assert kpod_get.called
-            assert kpod_create_or_update.called
-
-            args, kwargs = kpod_create_or_update.call_args_list[0]
-            body = kwargs.get("body")
-            assert body["metadata"]["name"] == "smart-builder"
-            assert body["spec"]["containers"][0]["env"][0]["value"] == "bar"
-
-    def test_build_pod_exist(self, smart_build_handler, pod_template):
-        namespace_create = Mock(return_value=None)
-        namespace_check = Mock(return_value=True)
-
-        pod_body = ResourceInstance(
-            None,
-            {
-                "kind": "Pod",
-                "metadata": {"name": "foo"},
-                "status": {"phase": "Running", "startTime": timezone.now().isoformat()},
-            },
-        )
-        kpod_get = Mock(return_value=pod_body)
-
-        with (
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get_or_create", namespace_create),
-            patch("paas_wl.infras.resources.base.kres.KNamespace.wait_for_default_sa", namespace_check),
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
-            pytest.raises(ResourceDuplicate),
-        ):
-            smart_build_handler.build_pod(pod_template)
-
-    def test_delete_builder_pod(self, smart_build_handler):
-        pod_body = ResourceInstance(None, {"kind": "Pod", "status": {"phase": "Completed"}})
-        kpod_get = Mock(return_value=pod_body)
-        kpod_delete = Mock(return_value=None)
-
-        with (
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete),
-        ):
-            smart_build_handler.delete_builder(namespace="bkapp-foo-stag", name="test_builder")
-
-            assert kpod_get.called
-            assert kpod_delete.called
-            args, kwargs = kpod_delete.call_args_list[0]
-            assert args[0] == "smart-builder"
-            assert kwargs.get("namespace") == "smart-app-builder"
-
-    def test_delete_builder_pod_missing(self, smart_build_handler):
-        kpod_get = Mock(side_effect=ResourceMissing("bkapp-foo-stag-slug-pod", "bkapp-foo-stag"))
-        kpod_delete = Mock(return_value=None)
-
-        with (
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete),
-        ):
-            smart_build_handler.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
-
-            assert kpod_get.called
-            assert not kpod_delete.called
-
-    def test_delete_builder_pod_running(self, smart_build_handler):
-        pod_body = ResourceInstance(None, {"kind": "Pod", "status": {"phase": "Running"}})
-        kpod_get = Mock(return_value=pod_body)
-        kpod_delete = Mock(return_value=None)
-
-        with (
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.get", kpod_get),
-            patch("paas_wl.infras.resources.base.kres.NameBasedOperations.delete", kpod_delete),
-        ):
-            smart_build_handler.delete_builder(namespace="bkapp-foo-stag", name="bkapp-foo-stag")
-
-            assert kpod_get.called
-            assert not kpod_delete.called
-
-
-@pytest.mark.auto_create_ns
-class TestSmartBuilderHandlerWithNS:
-    """New test case using pytest"""
-
-    def test_wait_for_succeeded_no_pod(self, smart_build_handler):
-        with pytest.raises(PodAbsentError):
-            smart_build_handler.wait_for_succeeded("smart-app-builder", "dummy-pod-name", timeout=1)
-
-    @pytest.mark.parametrize(
-        ("phase", "exc_context"),
-        [
-            ("Pending", pytest.raises(PodTimeoutError)),
-            ("Running", pytest.raises(PodTimeoutError)),
-            ("Failed", pytest.raises(PodNotSucceededError)),
-            ("Unknown", pytest.raises(PodNotSucceededError)),
-            ("Succeeded", does_not_raise()),
-        ],
-    )
-    def test_wait_for_succeeded(self, phase, exc_context, smart_build_handler, k8s_client):
-        pod_name = smart_build_handler.normalize_builder_name("test_builder")
-        body = construct_foo_pod(pod_name, restart_policy="Never")
-
-        KPod(k8s_client).create_or_update(pod_name, namespace="smart-app-builder", body=body)
-
-        body = {"status": {"phase": phase, "conditions": []}}
-        KPod(k8s_client).patch_subres(
-            "status", pod_name, namespace="smart-app-builder", body=body, ptype=PatchType.MERGE
-        )
-
-        with exc_context:
-            smart_build_handler.wait_for_succeeded("smart-app-builder", pod_name, timeout=1)
+        assert pod_body["spec"]["containers"][0]["securityContext"]["privileged"] is False

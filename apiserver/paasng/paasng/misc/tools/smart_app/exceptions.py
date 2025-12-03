@@ -24,9 +24,5 @@ class SmartBuildStepError(Exception):
     """Raised when smart build step failed."""
 
 
-class SmartBuildShouldAbortError(Exception):
-    """Raise this exception when a smart build procedure should be aborted."""
-
-
 class NoUnlinkedSmartBuildPhaseError(Exception):
     """Raised when no unlinked SmartBuildPhase is available"""

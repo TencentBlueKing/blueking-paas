@@ -20,7 +20,7 @@ import os
 import time
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -271,6 +271,44 @@ class MarketConfigManager(models.Manager):
                 tenant_id=application.tenant_id,
             )
             return obj, True
+
+    def get_preferred_prod_url_by_app(self, application: Application) -> str | None:
+        """Get the preferred production URL for a single application.
+
+        Returns the preferred prod URL if MarketConfig is enabled and source_url_type is CUSTOM_DOMAIN,
+        otherwise returns None.
+
+        :param application: Application object
+        :return: Preferred prod URL (or None)
+        """
+        urls = self.get_preferred_prod_urls_by_apps([application])
+        return urls.get(application.id)
+
+    def get_preferred_prod_urls_by_apps(self, applications: list) -> Dict[str, str | None]:
+        """Batch query preferred production URLs for multiple applications.
+
+        Returns a dict mapping application ID to preferred prod URL (or None).
+        Only returns URLs when MarketConfig is enabled and source_url_type is CUSTOM_DOMAIN.
+
+        :param applications: List of Application objects
+        :return: Dict[app_id: str, url: str | None]
+        """
+        if not applications:
+            return {}
+
+        app_ids = [app.id for app in applications]
+        # Query all MarketConfigs for given apps in one go
+        configs = self.filter(
+            application_id__in=app_ids,
+            enabled=True,
+            source_url_type=constant.ProductSourceUrlType.CUSTOM_DOMAIN.value,
+        ).values("application_id", "custom_domain_url")
+
+        # Build map: app_id -> custom_domain_url
+        url_map = {cfg["application_id"]: cfg["custom_domain_url"] for cfg in configs}
+
+        # Ensure all apps are in result (missing ones get None)
+        return {app.id: url_map.get(app.id) for app in applications}
 
     def update_enabled(self, application: Application, status: bool) -> "MarketConfig":
         obj, _ = self.get_or_create_by_app(application)

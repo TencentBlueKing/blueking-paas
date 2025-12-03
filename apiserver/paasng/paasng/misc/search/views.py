@@ -22,6 +22,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from paasng.accessories.publish.entrance.exposer import get_exposed_links
+from paasng.accessories.publish.market.models import MarketConfig
 from paasng.platform.applications.models import UserApplicationFilter
 
 from .backends import BKDocumentSearcher, MixSearcher
@@ -71,9 +72,15 @@ class ApplicationsSearchViewset(ViewSet):
 
         applications = UserApplicationFilter(request.user).filter(order_by=["name"], search_term=slz.data["keyword"])
         paged_applications = self.paginator.paginate_queryset(applications, self.request, view=self)
+
+        # Batch query preferred prod URLs to avoid N+1 queries
+        preferred_urls = MarketConfig.objects.get_preferred_prod_urls_by_apps(paged_applications)
+
         # Set exposed links property, to be used by the serializer later
         for app in paged_applications:
             app._deploy_info = get_exposed_links(app)
+            app._preferred_prod_url = preferred_urls[app.id]
+
         return Response(AppSearchResultSLZ({"results": paged_applications, "count": applications.count()}).data)
 
 

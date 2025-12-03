@@ -59,9 +59,9 @@ class FrontendFeatureViewSet(ViewSet):
         volume_settings = {
             # 是否允许用户自定义持久存储大小
             "VOLUME_ALLOW_CUSTOM_SIZE": settings.VOLUME_ALLOW_CUSTOM_SIZE,
-            # 自定义容量的最小值（单位：Gi）
+            # 自定义容量的最小值 (单位: Gi)
             "VOLUME_CUSTOM_SIZE_MIN": settings.VOLUME_CUSTOM_SIZE_MIN,
-            # 自定义容量的最大值（单位：Gi）
+            # 自定义容量的最大值 (单位: Gi)
             "VOLUME_CUSTOM_SIZE_MAX": settings.VOLUME_CUSTOM_SIZE_MAX,
         }
         # 部分前端的特性复用了后端的配置

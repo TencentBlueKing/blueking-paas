@@ -77,6 +77,9 @@ class PersistentStorageSLZ(serializers.Serializer):
     def validate_storage_size(self, value: str) -> str:
         """验证存储大小"""
 
+        if value is None:
+            return value
+
         # 检查是否为预设容量
         preset_values = PersistentStorageSize.get_preset_values()
         if value in preset_values:
@@ -88,18 +91,15 @@ class PersistentStorageSLZ(serializers.Serializer):
 
         # 验证自定义容量格式
         if not PersistentStorageSize.is_valid_storage_size(value):
-            raise serializers.ValidationError(_("自定义容量格式无效，应为如 '5Gi' 的格式"))
+            raise serializers.ValidationError(_("自定义容量格式无效, 应为如 '5Gi' 的格式"))
 
         # 验证自定义容量范围
-        try:
-            size_value = PersistentStorageSize.parse_size_value(value)
-            min_size = getattr(settings, "VOLUME_CUSTOM_SIZE_MIN", 1)
-            max_size = getattr(settings, "VOLUME_CUSTOM_SIZE_MAX", 100)
+        size_value = PersistentStorageSize.parse_size_value(value)
+        min_size = settings.VOLUME_CUSTOM_SIZE_MIN
+        max_size = settings.VOLUME_CUSTOM_SIZE_MAX
 
-            if size_value < min_size or size_value > max_size:
-                raise serializers.ValidationError(_("自定义容量必须在 {}Gi 到 {}Gi 之间").format(min_size, max_size))
-        except ValueError as e:
-            raise serializers.ValidationError(str(e))
+        if size_value < min_size or size_value > max_size:
+            raise serializers.ValidationError(_("自定义容量必须在 {}Gi 到 {}Gi 之间").format(min_size, max_size))
 
         return value
 

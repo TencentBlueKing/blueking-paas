@@ -424,11 +424,15 @@ class TestMountSourceViewSet:
         ("storage_size", "expected_status"),
         [
             # Valid custom size within range
+            pytest.param("1Gi", 201, id="min_allowed"),
             pytest.param("5Gi", 201, id="valid_custom_size"),
+            pytest.param("10Gi", 201, id="max_allowed"),
             # Size exceeds maximum (10Gi)
             pytest.param("50Gi", 400, id="size_exceeds_max"),
             # Invalid format (should be Gi, not GB)
             pytest.param("5GB", 400, id="invalid_format"),
+            # Below minimum
+            pytest.param("0Gi", 400, id="below_minimum"),
         ],
     )
     def test_create_with_custom_storage_size(self, api_client, bk_app, storage_size, expected_status):

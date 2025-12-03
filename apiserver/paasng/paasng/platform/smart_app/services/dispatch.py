@@ -20,7 +20,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from os import PathLike
 from pathlib import Path
-from typing import Any, Callable, List, Sequence, Set, cast
+from typing import Callable, List, Optional, Set, Tuple, cast
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
@@ -53,45 +53,49 @@ def dispatch_package_to_modules(
     with generate_temp_dir() as workplace:
         uncompress_directory(source_path=tarball_filepath, target_path=workplace)
 
+        handler: Callable[[Module, Path, SPStat, User, SMartAppExtraInfo | None], SourcePackage]
+        tasks: List[Tuple[Module, Path, SPStat, User, Optional[SMartAppExtraInfo]]]
         builder_flag = workplace / ".Version"
         if builder_flag.exists():
             version = builder_flag.read_text().strip()
+            # prepare optional smart_app_extra for CNB-built packages
+            smart_app_extra: Optional[SMartAppExtraInfo] = None
             if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
                 smart_app_extra = parse_and_save_cnb_metadata(application, workplace)
-                tasks = [
-                    [module, workplace, stat, operator, smart_app_extra]
-                    for module in application.modules.filter(name__in=modules)
-                ]
-                return _execute_tasks(dispatch_cnb_image_to_registry, tasks)
+                handler = dispatch_cnb_image_to_registry
             else:
-                tasks = [
-                    [module, workplace, stat, operator] for module in application.modules.filter(name__in=modules)
-                ]
-                return _execute_tasks(dispatch_slug_image_to_registry, tasks)
-        else:
+                handler = dispatch_slug_image_to_registry
+
             tasks = [
-                [module, Path(tarball_filepath), stat, operator]
+                (module, workplace, stat, operator, smart_app_extra)
                 for module in application.modules.filter(name__in=modules)
             ]
-            return _execute_tasks(patch_and_store_package, tasks)
+        else:
+            tasks = [
+                (module, Path(tarball_filepath), stat, operator, None)
+                for module in application.modules.filter(name__in=modules)
+            ]
+            handler = patch_and_store_package
+
+        if _PARALLEL_PATCHING:
+            with ThreadPoolExecutor() as executor:
+                results = executor.map(handler, *zip(*tasks))
+            return list(results)
+        else:
+            # Execute Sequentially
+            packages = []
+            for task in tasks:
+                packages.append(handler(*task))
+            return packages
 
 
-def _execute_tasks(handler: Callable, tasks: Sequence[list[Any]]) -> List[SourcePackage]:
-    """Execute tasks in parallel or sequentially based on _PARALLEL_PATCHING flag"""
-
-    if _PARALLEL_PATCHING:
-        with ThreadPoolExecutor() as executor:
-            results = executor.map(handler, *zip(*tasks))
-        return list(results)
-    else:
-        # Execute Sequentially
-        packages = []
-        for task in tasks:
-            packages.append(handler(*task))
-        return packages
-
-
-def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat, operator: User) -> SourcePackage:
+def patch_and_store_package(
+    module: Module,
+    tarball_filepath: Path,
+    stat: SPStat,
+    operator: User,
+    smart_app_extra: SMartAppExtraInfo | None = None,
+) -> SourcePackage:
     """Patch an uncompressed package and upload compressed tarball one blobstore,
     then bind the package to provided module.
 
@@ -112,7 +116,9 @@ def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat
         return source_package
 
 
-def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User) -> SourcePackage:
+def dispatch_slug_image_to_registry(
+    module: Module, workplace: Path, stat: SPStat, operator: User, smart_app_extra: SMartAppExtraInfo | None = None
+) -> SourcePackage:
     """Merge image layer to base image, then push the new image to registry
 
     [deprecated] `dispatch_slug_image_to_registry` is a handler for s-mart which is built with slug-pilot.
@@ -157,7 +163,11 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
 
 
 def dispatch_cnb_image_to_registry(
-    module: Module, workplace: Path, stat: SPStat, operator: User, smart_app_extra: SMartAppExtraInfo
+    module: Module,
+    workplace: Path,
+    stat: SPStat,
+    operator: User,
+    smart_app_extra: Optional[SMartAppExtraInfo],
 ) -> SourcePackage:
     """Merge image layer to base image, then push the new image to registry"""
     logger.debug("dispatching cnb-image for module '%s', working at '%s'", module.name, workplace)
@@ -165,6 +175,9 @@ def dispatch_cnb_image_to_registry(
     mgr = SMartImageManager(module)
     base_image = mgr.get_cnb_runner_image_info()
     new_image_info = mgr.get_image_info(tag=stat.version)
+
+    if smart_app_extra is None:
+        raise RuntimeError("CNB image handler requires smart_app_extra")
 
     image_tar = smart_app_extra.get_image_tar(module.name)
 

@@ -95,3 +95,19 @@ func Div(q *resource.Quantity, d int64) *resource.Quantity {
 	n := inf.NewDec(0, 0).QuoRound(q.AsDec(), inf.NewDec(d, 0), defaultScale, inf.RoundHalfEven)
 	return resource.NewDecimalQuantity(*n, q.Format)
 }
+
+// ParseResourceSpec parses CPU and Memory from string values and returns resource.Quantity
+// This is a utility function to convert resource specifications to Kubernetes resource.Quantity
+func ParseResourceSpec(cpu, memory string) (cpuQuantity, memoryQuantity *resource.Quantity, err error) {
+	cpuQuantity, err = NewQuantity(cpu, CPU)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "invalid cpu value %q", cpu)
+	}
+
+	memoryQuantity, err = NewQuantity(memory, Memory)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "invalid memory value %q", memory)
+	}
+
+	return cpuQuantity, memoryQuantity, nil
+}

@@ -39,15 +39,13 @@ def create_smart_build_record(
 ) -> SmartBuildRecord:
     """Initialize s-smart package build record
 
-    # packaging_version notes:
-    # v1 vs v2 document: https://github.com/TencentBlueKing/blueking-paas/tree/builder-stack/smart-app-builder#2-%E6%9E%84%E5%BB%BA-s-mart-%E5%8C%85
-
     :param package_name: The name of the source package file
     :param app_code: The code of the application
     :param app_version: The version from app_desc.yaml
     :param operator: The username who triggers this build
     :param sha256_signature: The sha256 signature of the source package
-    :param packaging_version: The packaging version, e.g., "v1", "v2"
+    :param packaging_version: The packaging version, e.g., "v1", "v2".
+        See details: https://github.com/TencentBlueKing/blueking-paas/tree/builder-stack/smart-app-builder#2-%E6%9E%84%E5%BB%BA-s-mart-%E5%8C%85
     :return: The created SmartBuildRecord instance
     """
 

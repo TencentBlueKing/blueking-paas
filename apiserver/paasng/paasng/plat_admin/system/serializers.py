@@ -56,7 +56,7 @@ class QueryUniApplicationsByUserName(serializers.Serializer):
     """Serializer for query universal applications by username"""
 
     username = serializers.CharField(help_text="用户名")
-    include_inactive_apps = serializers.BooleanField(help_text="是否查询已下架的应用", default=False)
+    include_inactive_apps = serializers.BooleanField(help_text="是否包含已下架应用", default=True)
 
 
 class UniversalAppSLZ(serializers.Serializer):

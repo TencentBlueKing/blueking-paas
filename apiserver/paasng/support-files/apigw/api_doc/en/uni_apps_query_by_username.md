@@ -10,7 +10,7 @@ None
 | Parameter Name | Type | Required | Description |
 | -------------- | ---- | -------- | ----------- |
 | username       | string | Yes | Username |
-| include_inactive_apps | boolean | No | Whether to query inactive applications, the default value is False |
+| include_inactive_apps | boolean | No | Whether to query inactive applications, the default value is True |
 
 ### Request Example
 ```bash

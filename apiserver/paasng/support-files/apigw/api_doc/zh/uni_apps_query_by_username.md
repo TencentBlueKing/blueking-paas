@@ -10,7 +10,7 @@
 | 参数名称 | 类型 | 是否必填 | 描述 |
 | -------- | ---- | -------- | ---- |
 | username | string | 是 | 用户名 |
-| include_inactive_apps | boolean | 否 | 是否查询已下架应用，默认值为 False |
+| include_inactive_apps | boolean | 否 | 是否包含已下架应用，默认值为 True |
 
 ### 请求示例
 ```bash

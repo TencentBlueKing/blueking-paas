@@ -9,15 +9,19 @@ For example, if key="VAR", the actual env var is "BKPAAS_VAR".
 If key="BKPAAS_VAR", the actual env var is "BKPAAS_BKPAAS_VAR".
 """
 
-from django.db import migrations
+import logging
 
 from django.conf import settings
+from django.db import migrations
+
+logger = logging.getLogger(__name__)
 
 
 def add_sys_prefix(apps, schema_editor):
     BuiltinConfigVar = apps.get_model("engine", "BuiltinConfigVar")
 
     for obj in BuiltinConfigVar.objects.all():
+        old_key = obj.key
         new_key = settings.CONFIGVAR_SYSTEM_PREFIX + obj.key
         if BuiltinConfigVar.objects.filter(key=new_key).exists():
             raise RuntimeError(
@@ -27,6 +31,7 @@ def add_sys_prefix(apps, schema_editor):
 
         obj.key = new_key
         obj.save(update_fields=["key"])
+        logger.info(f"[migration] BuiltinConfigVar id={obj.pk} key updated: {old_key} -> {new_key}")
 
 
 class Migration(migrations.Migration):

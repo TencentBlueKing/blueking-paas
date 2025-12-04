@@ -55,7 +55,7 @@ class BuiltinConfigVarCreateInputSLZ(serializers.Serializer):
 
         # validate key prefix
         valid_prefixes = CustomBuiltinConfigVarPrefix.get_values()
-        if not any(key.startswith(prefix) for prefix in valid_prefixes):
+        if not key.startswith(tuple(valid_prefixes)):
             raise ValidationError(
                 _("内置环境变量 {key} 必须以以下前缀之一开头：{prefixes}").format(
                     key=key, prefixes=", ".join(valid_prefixes)

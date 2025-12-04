@@ -264,7 +264,7 @@
           :theme="'default'"
           type="submit"
           class="ml-8"
-          @click="isEdit = false"
+          @click="handleCancel"
         >
           {{ $t('取消') }}
         </bk-button>
@@ -344,6 +344,8 @@ export default {
         'prod.resources.requests.memory': requiredRule,
       },
       isEdit: false,
+      // 备份原始数据
+      originalFormData: null,
     };
   },
   computed: {
@@ -432,14 +434,25 @@ export default {
       });
     },
     handleEdit() {
+      // 备份当前数据
+      this.originalFormData = JSON.parse(JSON.stringify(this.formData));
       this.isEdit = true;
+    },
+    // 取消编辑
+    handleCancel() {
+      if (this.originalFormData) {
+        // 还原备份的数据
+        this.formData = JSON.parse(JSON.stringify(this.originalFormData));
+        this.originalFormData = null;
+      }
+      this.isEdit = false;
     },
     // 获取资源配额方案
     async fetchPlanList() {
       try {
         const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
         this.planList = res;
-        this.planList.push({ name: '自定义', value: 'custom' });
+        this.planList.push({ name: this.$t('自定义'), value: 'custom' });
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -527,7 +540,8 @@ export default {
           theme: 'success',
           message: this.$t('保存成功'),
         });
-        // 保存成功后关闭编辑模式
+        // 保存成功后清空备份并关闭编辑模式
+        this.originalFormData = null;
         this.isEdit = false;
       } catch (e) {
         this.catchErrorHandler(e);

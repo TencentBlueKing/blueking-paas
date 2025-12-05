@@ -313,7 +313,7 @@ export default {
       ...requiredRule,
       {
         validator: (value) => this.validateCpuRequest(value, env),
-        message: this.$t('Request 不能大于 Limit'),
+        message: this.$t('Requests 不能大于 Limits'),
         trigger: 'change',
       },
     ];
@@ -323,7 +323,7 @@ export default {
       ...requiredRule,
       {
         validator: (value) => this.validateMemoryRequest(value, env),
-        message: this.$t('Request 不能大于 Limit'),
+        message: this.$t('Requests 不能大于 Limits'),
         trigger: 'change',
       },
     ];
@@ -408,7 +408,7 @@ export default {
     this.init();
   },
   methods: {
-    // 校验 CPU Request 是否小于等于 Limit
+    // 校验 CPU Requests 是否小于等于 Limits
     validateCpuRequest(value, env) {
       const limitValue = this.formData[env].resources.limits.cpu;
       if (!value || !limitValue) return true;
@@ -417,7 +417,7 @@ export default {
       const limitNum = parseFloat(limitValue.replace('m', ''));
       return requestNum <= limitNum;
     },
-    // 校验内存 Request 是否小于等于 Limit
+    // 校验内存 Requests 是否小于等于 Limits
     validateMemoryRequest(value, env) {
       const limitValue = this.formData[env].resources.limits.memory;
       if (!value || !limitValue) return true;

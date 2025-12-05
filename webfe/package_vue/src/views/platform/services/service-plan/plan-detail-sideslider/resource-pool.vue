@@ -20,51 +20,29 @@
         :label="$t('实例凭证')"
         prop="conditions"
       >
-        <div
-          class="json-pretty-wrapper"
-          slot-scope="{ row }"
-        >
-          <!-- JSON格式预览 -->
-          <vue-json-pretty
-            class="paas-vue-json-pretty-cls"
+        <template slot-scope="{ row }">
+          <MaskedTextViewer
             :data="row.jsonData"
             :deep="Object.keys(row.jsonData)?.length ? 1 : 0"
-            :show-length="true"
-            :highlight-mouseover-node="true"
+            :plaintext.sync="plaintextStatusMap[`${row.uuid}-credentials`]"
           />
-          <i
-            v-bk-tooltips="$t('复制')"
-            class="paasng-icon paasng-general-copy"
-            v-copy="handleCopy(row.jsonData)"
-          ></i>
-        </div>
+        </template>
       </bk-table-column>
       <bk-table-column :label="`TLS ${$t('配置')}`">
-        <div
-          class="json-pretty-wrapper"
-          slot-scope="{ row }"
-        >
+        <template slot-scope="{ row }">
           <template v-if="!row.tlsConfig">--</template>
-          <template v-else>
-            <vue-json-pretty
-              class="paas-vue-json-pretty-cls"
-              :data="row.tlsConfig"
-              :deep="Object.keys(row.tlsConfig)?.length ? 1 : 0"
-              :show-length="true"
-              :highlight-mouseover-node="true"
-            />
-            <i
-              v-bk-tooltips="$t('复制')"
-              class="paasng-icon paasng-general-copy"
-              v-copy="handleCopy(row.tlsConfig)"
-            ></i>
-          </template>
-        </div>
+          <MaskedTextViewer
+            v-else
+            :data="row.tlsConfig"
+            :deep="Object.keys(row.tlsConfig)?.length ? 1 : 0"
+            :plaintext.sync="plaintextStatusMap[`${row.uuid}-tls`]"
+          />
+        </template>
       </bk-table-column>
       <bk-table-column
         :label="$t('已分配')"
         prop="name"
-        :width="100"
+        :width="80"
         show-overflow-tooltip
       >
         <template slot-scope="{ row }">
@@ -141,8 +119,8 @@
 
 <script>
 import EditAddDialog from './edit-add-dialog.vue';
-import VueJsonPretty from 'vue-json-pretty';
-import 'vue-json-pretty/lib/styles.css';
+import MaskedTextViewer from '@/components/masked-text-viewer';
+
 export default {
   props: {
     data: {
@@ -155,7 +133,7 @@ export default {
     },
   },
   components: {
-    VueJsonPretty,
+    MaskedTextViewer,
     EditAddDialog,
   },
   data() {
@@ -170,6 +148,8 @@ export default {
       },
       // 当前方案下的资源池
       instances: [],
+      // 每行的明文/密文状态 { 'rowId-credentials': true/false, 'rowId-tls': true/false }
+      plaintextStatusMap: {},
     };
   },
   created() {
@@ -254,16 +234,6 @@ export default {
         this.catchErrorHandler(e);
       }
     },
-    handleCopy(data) {
-      try {
-        return JSON.stringify(data, null, 2);
-      } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: this.$t('JSON格式化失败', e),
-        });
-      }
-    },
     // 克隆
     handleClone(row) {
       this.dialogConfig.planId = row?.plan_id;
@@ -284,24 +254,8 @@ export default {
   .resource-pool-cls {
     margin-top: 16px;
     /deep/ .bk-table-row.hover-row {
-      i.paasng-general-copy {
+      .masked-text-viewer i.paasng-icon {
         display: block !important;
-      }
-    }
-    .json-pretty-wrapper {
-      display: flex;
-      .paas-vue-json-pretty-cls {
-        flex: 1;
-        margin-right: 16px;
-      }
-      i.paasng-general-copy {
-        display: none;
-        position: absolute;
-        top: 50%;
-        right: 0;
-        color: #3a84ff;
-        cursor: pointer;
-        transform: translateY(-50%);
       }
     }
   }

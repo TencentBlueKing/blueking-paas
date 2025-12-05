@@ -361,3 +361,15 @@ export function fileDownload(url, filename = '') {
   a.click();
   a.remove();
 }
+
+/**
+ * 将文本内容转换为密文（星号）
+ * 保留换行符，其他字符全部替换为星号
+ * @param {String} content - 需要转换的文本内容
+ * @return {String} 转换后的密文内容
+ */
+export function convertToMaskedText(content) {
+  if (!content) return '';
+  // 保留换行符，其他字符替换为星号
+  return content.replace(/[^\n]/g, '*');
+}

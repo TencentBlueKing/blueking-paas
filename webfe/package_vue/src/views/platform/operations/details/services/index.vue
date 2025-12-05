@@ -205,6 +205,7 @@
       :sub-title="subTitle"
       :value="valuesJson"
       :read-only="true"
+      :show-plaintext="false"
     >
       <!-- 共享模块 alert 提示 -->
       <div

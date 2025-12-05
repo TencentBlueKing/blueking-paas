@@ -4,13 +4,13 @@
       <div class="title g-sub-title flex-shrink-0">{{ $t('资源配额') }}</div>
       <bk-button
         v-show="!isEdit"
-        class="flex-shrink-0"
+        class="flex-shrink-0 f12"
         :text="true"
         title="primary"
         @click="handleEdit"
       >
-        {{ $t('编辑资源配额') }}
-        <i class="paasng-icon paasng-edit-2"></i>
+        <i class="paasng-icon paasng-edit-2 f12"></i>
+        {{ $t('编辑') }}
       </bk-button>
     </div>
     <!-- 查看态 -->
@@ -33,19 +33,19 @@
             />
             <DetailsRow
               label="CPU Limit："
-              :value="formData[env.key].resources.limits.cpu || '--'"
+              :value="getCpuLabel(formData[env.key].resources.limits.cpu)"
             />
             <DetailsRow
               label="CPU Request："
-              :value="formData[env.key].resources.requests.cpu || '--'"
+              :value="getCpuLabel(formData[env.key].resources.requests.cpu)"
             />
             <DetailsRow
               :label="`${$t('内存')} Limit：`"
-              :value="formData[env.key].resources.limits.memory || '--'"
+              :value="getMemoryLabel(formData[env.key].resources.limits.memory)"
             />
             <DetailsRow
               :label="`${$t('内存')} Request：`"
-              :value="formData[env.key].resources.requests.memory || '--'"
+              :value="getMemoryLabel(formData[env.key].resources.requests.memory)"
             />
           </div>
         </div>
@@ -70,7 +70,7 @@
               :label="$t('资源配额方案')"
               :required="true"
               :property="'stag.plan_name'"
-              :error-display-type="'normal'"
+              style="width: fit-content"
             >
               <bk-select
                 v-model="formData.stag.plan_name"
@@ -92,7 +92,6 @@
                 label="CPU"
                 :required="true"
                 :property="'stag.resources.limits.cpu'"
-                :error-display-type="'normal'"
               >
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
@@ -107,7 +106,6 @@
                 label=""
                 :required="true"
                 :property="'stag.resources.requests.cpu'"
-                :error-display-type="'normal'"
               >
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
@@ -125,7 +123,6 @@
                 :label="$t('内存')"
                 :required="true"
                 :property="'stag.resources.limits.memory'"
-                :error-display-type="'normal'"
               >
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
@@ -140,7 +137,6 @@
                 label=""
                 :required="true"
                 :property="'stag.resources.requests.memory'"
-                :error-display-type="'normal'"
               >
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
@@ -170,7 +166,7 @@
               :label="$t('资源配额方案')"
               :required="true"
               :property="'prod.plan_name'"
-              :error-display-type="'normal'"
+              style="width: fit-content"
             >
               <bk-select
                 v-model="formData.prod.plan_name"
@@ -191,7 +187,6 @@
                 label="CPU"
                 :required="true"
                 :property="'prod.resources.limits.cpu'"
-                :error-display-type="'normal'"
               >
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
@@ -206,7 +201,6 @@
                 label=""
                 :required="true"
                 :property="'prod.resources.requests.cpu'"
-                :error-display-type="'normal'"
               >
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
@@ -223,7 +217,6 @@
                 :label="$t('内存')"
                 :required="true"
                 :property="'prod.resources.limits.memory'"
-                :error-display-type="'normal'"
               >
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
@@ -238,7 +231,6 @@
                 label=""
                 :required="true"
                 :property="'prod.resources.requests.memory'"
-                :error-display-type="'normal'"
               >
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
@@ -387,6 +379,18 @@ export default {
       const plan = this.planList.find((item) => item.value === this.formData[env].plan_name);
       return plan?.name || this.formData[env].plan_name || '--';
     },
+    // 获取 CPU 对应的 label
+    getCpuLabel(value) {
+      if (!value) return '--';
+      const option = this.cpuList.find((item) => item.value === value);
+      return option?.label || value;
+    },
+    // 获取内存对应的 label
+    getMemoryLabel(value) {
+      if (!value) return '--';
+      const option = this.memoryList.find((item) => item.value === value);
+      return option?.label || value;
+    },
     // 创建空的 resources 结构
     createEmptyResources() {
       return {
@@ -409,7 +413,7 @@ export default {
     },
     // 初始化表单数据
     initFormData() {
-      if (!this.processData.env_overlays) return;
+      if (!this.processData?.env_overlays) return;
 
       const { prod, stag } = this.processData.env_overlays;
       [
@@ -555,7 +559,7 @@ export default {
 .resource-quota-container {
   padding: 24px 0;
   .top-section {
-    height: 32px;
+    height: 22px;
     .title {
       width: 104px;
       padding-right: 24px;

@@ -17,7 +17,7 @@
           class="value"
           v-if="value"
         >
-          {{ value }}
+          {{ currentLabel }}
         </div>
         <div
           class="placeholder"
@@ -63,6 +63,13 @@ export default {
     disabled: {
       type: Boolean,
       default: false,
+    },
+  },
+  computed: {
+    currentLabel() {
+      if (!this.value) return '';
+      const option = this.options.find((item) => item.value === this.value);
+      return option?.label || this.value;
     },
   },
   methods: {

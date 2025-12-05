@@ -8,6 +8,7 @@
       <bk-select
         v-model="currentModule"
         style="width: 180px"
+        :clearable="false"
         searchable
         ext-cls="module-select-cls"
         @change="handleModuleChange"
@@ -20,30 +21,32 @@
         ></bk-option>
       </bk-select>
     </div>
-    <div class="line"></div>
-    <div
-      class="process-section flex-row align-items-center"
-      v-bkloading="{ isLoading: loading, zIndex: 10 }"
-    >
-      <div class="process-label">
-        <img
-          class="image-icon"
-          src="/static/images/deploy-4.svg"
-        />
-        <span>{{ $t('进程') }}</span>
-      </div>
-      <div class="process-tabs">
-        <div
-          v-for="process in processList"
-          :key="process.name"
-          class="process-tab"
-          :class="{ active: currentProcess === process.name }"
-          @click="handleProcessClick(process.name)"
-        >
-          <span class="process-name">{{ process.name }}</span>
+    <template v-if="processList.length">
+      <div class="line"></div>
+      <div
+        class="process-section flex-row align-items-center"
+        v-bkloading="{ isLoading: loading, zIndex: 10 }"
+      >
+        <div class="process-label">
+          <img
+            class="image-icon"
+            src="/static/images/deploy-4.svg"
+          />
+          <span>{{ $t('进程') }}</span>
+        </div>
+        <div class="process-tabs">
+          <div
+            v-for="process in processList"
+            :key="process.name"
+            class="process-tab"
+            :class="{ active: currentProcess === process.name }"
+            @click="handleProcessClick(process.name)"
+          >
+            <span class="process-name">{{ process.name }}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 

@@ -3,42 +3,41 @@
     class="process-container"
     v-bkloading="{ isLoading, zIndex: 10 }"
   >
+    <bk-alert
+      class="mb-16"
+      type="warning"
+      :title="
+        $t(
+          '在 S-mart 应用中，您在配置页面设置的资源配额将覆盖源码包中的应用描述文件（app_desc.yaml）所定义的配额。修改后，重新部署即可立即生效。'
+        )
+      "
+    ></bk-alert>
+    <!-- 模块、进程选择 -->
+    <ProcessFilter
+      :module-list="moduleList"
+      :process-list="processList"
+      :cur-module.sync="curModule"
+      :cur-process.sync="curProcess"
+      :loading="isProcessLoading"
+      @module-change="handleModuleChange"
+      @process-change="handleProcessChange"
+    />
     <!-- 未部署 -->
     <section
-      v-if="!processList.length"
+      v-if="!processList.length && !isLoading"
       class="empty-process card-style"
     >
       <bk-exception type="empty">
         <span class="title">{{ $t('当前模块未部署，无法获取进程列表') }}</span>
       </bk-exception>
     </section>
-    <template v-else>
-      <bk-alert
-        class="mb-16"
-        type="warning"
-        :title="
-          $t(
-            '在 S-mart 应用中，您在配置页面设置的资源配额将覆盖源码包中的应用描述文件（app_desc.yaml）所定义的配额。修改后，重新部署即可立即生效。'
-          )
-        "
-      ></bk-alert>
-      <!-- 模块、进程选择 -->
-      <ProcessFilter
-        :module-list="moduleList"
-        :process-list="processList"
-        :cur-module.sync="curModule"
-        :cur-process.sync="curProcess"
-        :loading="isProcessLoading"
-        @module-change="handleModuleChange"
-        @process-change="handleProcessChange"
-      />
-      <!-- 资源配额 -->
-      <ResourceQuota
-        :module-id="curModule"
-        :process-data="curProcessData"
-        @update="fetchProcessList"
-      />
-    </template>
+    <!-- 资源配额 -->
+    <ResourceQuota
+      v-else
+      :module-id="curModule"
+      :process-data="curProcessData"
+      @update="fetchProcessList"
+    />
   </div>
 </template>
 

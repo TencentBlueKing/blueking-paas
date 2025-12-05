@@ -29,23 +29,22 @@
           <div class="env-form">
             <DetailsRow
               :label="`${$t('资源配额方案')}：`"
+              :label-width="150"
               :value="getPlanName(env.key)"
             />
             <DetailsRow
-              label="CPU Limit："
-              :value="getCpuLabel(formData[env.key].resources.limits.cpu)"
+              label="CPU Limits / Requests："
+              :label-width="150"
+              :value="`${getCpuLabel(formData[env.key].resources.limits.cpu)} / ${getCpuLabel(
+                formData[env.key].resources.requests.cpu
+              )}`"
             />
             <DetailsRow
-              label="CPU Request："
-              :value="getCpuLabel(formData[env.key].resources.requests.cpu)"
-            />
-            <DetailsRow
-              :label="`${$t('内存')} Limit：`"
-              :value="getMemoryLabel(formData[env.key].resources.limits.memory)"
-            />
-            <DetailsRow
-              :label="`${$t('内存')} Request：`"
-              :value="getMemoryLabel(formData[env.key].resources.requests.memory)"
+              :label="`${$t('内存')} Limits / Requests：`"
+              :label-width="150"
+              :value="`${getMemoryLabel(formData[env.key].resources.limits.memory)} / ${getMemoryLabel(
+                formData[env.key].resources.requests.memory
+              )}`"
             />
           </div>
         </div>
@@ -72,19 +71,26 @@
               :property="'stag.plan_name'"
               style="width: fit-content"
             >
-              <bk-select
-                v-model="formData.stag.plan_name"
-                style="width: 300px"
-                ext-cls="plan-select-cls"
-                @change="(value) => handlePlanChange(value, 'stag')"
-              >
-                <bk-option
-                  v-for="option in planList"
-                  :key="option.value"
-                  :id="option.value"
-                  :name="option.name"
-                ></bk-option>
-              </bk-select>
+              <div class="flex-row align-items-center gap-16">
+                <bk-select
+                  v-model="formData.stag.plan_name"
+                  style="width: 300px"
+                  ext-cls="plan-select-cls"
+                  @change="(value) => handlePlanChange(value, 'stag')"
+                >
+                  <bk-option
+                    v-for="option in planList"
+                    :key="option.value"
+                    :id="option.value"
+                    :name="option.name"
+                  ></bk-option>
+                </bk-select>
+                <i
+                  v-if="isStagCustom"
+                  class="paasng-icon paasng-info-line"
+                  v-bk-tooltips="$t('支持任何组合配置 CPU 和内存')"
+                ></i>
+              </div>
             </bk-form-item>
             <!-- CPU -->
             <div class="c-form-item-row flex-row align-items-center gap-16">
@@ -96,7 +102,7 @@
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
                     v-model="formData.stag.resources.limits.cpu"
-                    prefix="Limit"
+                    prefix="Limits"
                     :options="cpuList"
                     :disabled="!isStagCustom"
                   />
@@ -110,7 +116,7 @@
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
                     v-model="formData.stag.resources.requests.cpu"
-                    prefix="Request"
+                    prefix="Requests"
                     :options="cpuList"
                     :disabled="!isStagCustom"
                   />
@@ -127,7 +133,7 @@
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
                     v-model="formData.stag.resources.limits.memory"
-                    prefix="Limit"
+                    prefix="Limits"
                     :options="memoryList"
                     :disabled="!isStagCustom"
                   />
@@ -141,7 +147,7 @@
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
                     v-model="formData.stag.resources.requests.memory"
-                    prefix="Request"
+                    prefix="Requests"
                     :options="memoryList"
                     :disabled="!isStagCustom"
                   />
@@ -168,19 +174,26 @@
               :property="'prod.plan_name'"
               style="width: fit-content"
             >
-              <bk-select
-                v-model="formData.prod.plan_name"
-                style="width: 300px"
-                ext-cls="plan-select-cls"
-                @change="(value) => handlePlanChange(value, 'prod')"
-              >
-                <bk-option
-                  v-for="option in planList"
-                  :key="option.value"
-                  :id="option.value"
-                  :name="option.name"
-                ></bk-option>
-              </bk-select>
+              <div class="flex-row align-items-center gap-16">
+                <bk-select
+                  v-model="formData.prod.plan_name"
+                  style="width: 300px"
+                  ext-cls="plan-select-cls"
+                  @change="(value) => handlePlanChange(value, 'prod')"
+                >
+                  <bk-option
+                    v-for="option in planList"
+                    :key="option.value"
+                    :id="option.value"
+                    :name="option.name"
+                  ></bk-option>
+                </bk-select>
+                <i
+                  v-if="isProdCustom"
+                  class="paasng-icon paasng-info-line"
+                  v-bk-tooltips="$t('支持任何组合配置 CPU 和内存')"
+                ></i>
+              </div>
             </bk-form-item>
             <div class="c-form-item-row flex-row align-items-center gap-16">
               <bk-form-item
@@ -191,7 +204,7 @@
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
                     v-model="formData.prod.resources.limits.cpu"
-                    prefix="Limit"
+                    prefix="Limits"
                     :options="cpuList"
                     :disabled="!isProdCustom"
                   />
@@ -205,7 +218,7 @@
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
                     v-model="formData.prod.resources.requests.cpu"
-                    prefix="Request"
+                    prefix="Requests"
                     :options="cpuList"
                     :disabled="!isProdCustom"
                   />
@@ -221,7 +234,7 @@
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
                     v-model="formData.prod.resources.limits.memory"
-                    prefix="Limit"
+                    prefix="Limits"
                     :options="memoryList"
                     :disabled="!isProdCustom"
                   />
@@ -235,7 +248,7 @@
                 <div class="flex-row align-items-center gap-16">
                   <PrefixSelect
                     v-model="formData.prod.resources.requests.memory"
-                    prefix="Request"
+                    prefix="Requests"
                     :options="memoryList"
                     :disabled="!isProdCustom"
                   />
@@ -386,6 +399,10 @@ export default {
       deep: true,
       immediate: true,
     },
+    // 监听模块切换，恢复查看态
+    moduleId() {
+      this.resetToViewMode();
+    },
   },
   created() {
     this.init();
@@ -482,6 +499,10 @@ export default {
     },
     // 取消编辑
     handleCancel() {
+      this.resetToViewMode();
+    },
+    // 恢复到查看态
+    resetToViewMode() {
       if (this.originalFormData) {
         // 还原备份的数据
         this.formData = JSON.parse(JSON.stringify(this.originalFormData));
@@ -642,6 +663,9 @@ export default {
     .env-form {
       padding: 24px;
       background-color: #f5f7fa;
+      i.paasng-info-line {
+        color: #979ba5;
+      }
       /deep/ .bk-form-item.is-error .PrefixSelect-cls {
         position: relative;
         z-index: 99;

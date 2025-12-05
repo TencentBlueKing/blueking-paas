@@ -404,4 +404,5 @@ export default {
   示例: 'Example',
   '当前模块未部署，无法获取进程列表': 'The current module is not deployed, unable to retrieve the process list',
   '在 S-mart 应用中，您在配置页面设置的资源配额将覆盖源码包中的应用描述文件（app_desc.yaml）所定义的配额。修改后，重新部署即可立即生效。': 'In S-mart applications, the resource quotas set on the configuration page will override those defined in the application description file (app_desc.yaml) of the source package. After modification, redeploy to take effect immediately.',
+  'Request 不能大于 Limit': 'Request cannot exceed Limit',
 };

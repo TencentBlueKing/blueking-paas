@@ -295,6 +295,26 @@ export default {
       },
     ];
 
+    // CPU Request 校验规则生成函数
+    const createCpuRequestRule = (env) => [
+      ...requiredRule,
+      {
+        validator: (value) => this.validateCpuRequest(value, env),
+        message: this.$t('Request 不能大于 Limit'),
+        trigger: 'change',
+      },
+    ];
+
+    // 内存 Request 校验规则生成函数
+    const createMemoryRequestRule = (env) => [
+      ...requiredRule,
+      {
+        validator: (value) => this.validateMemoryRequest(value, env),
+        message: this.$t('Request 不能大于 Limit'),
+        trigger: 'change',
+      },
+    ];
+
     // 创建空的 resources 结构
     const createEmptyResources = () => ({
       limits: {
@@ -326,14 +346,14 @@ export default {
       formRules: {
         'stag.plan_name': requiredRule,
         'stag.resources.limits.cpu': requiredRule,
-        'stag.resources.requests.cpu': requiredRule,
+        'stag.resources.requests.cpu': createCpuRequestRule('stag'),
         'stag.resources.limits.memory': requiredRule,
-        'stag.resources.requests.memory': requiredRule,
+        'stag.resources.requests.memory': createMemoryRequestRule('stag'),
         'prod.plan_name': requiredRule,
         'prod.resources.limits.cpu': requiredRule,
-        'prod.resources.requests.cpu': requiredRule,
+        'prod.resources.requests.cpu': createCpuRequestRule('prod'),
         'prod.resources.limits.memory': requiredRule,
-        'prod.resources.requests.memory': requiredRule,
+        'prod.resources.requests.memory': createMemoryRequestRule('prod'),
       },
       isEdit: false,
       // 备份原始数据
@@ -371,6 +391,24 @@ export default {
     this.init();
   },
   methods: {
+    // 校验 CPU Request 是否小于等于 Limit
+    validateCpuRequest(value, env) {
+      const limitValue = this.formData[env].resources.limits.cpu;
+      if (!value || !limitValue) return true;
+      // 将 CPU 值转换为数值进行比较（去除 'm' 单位）
+      const requestNum = parseFloat(value.replace('m', ''));
+      const limitNum = parseFloat(limitValue.replace('m', ''));
+      return requestNum <= limitNum;
+    },
+    // 校验内存 Request 是否小于等于 Limit
+    validateMemoryRequest(value, env) {
+      const limitValue = this.formData[env].resources.limits.memory;
+      if (!value || !limitValue) return true;
+      // 将内存值转换为字节数进行比较
+      const requestBytes = this.convertMemoryToBytes(value);
+      const limitBytes = this.convertMemoryToBytes(limitValue);
+      return requestBytes <= limitBytes;
+    },
     // 获取资源配额方案名称
     getPlanName(env) {
       if (this.formData[env].plan_name === 'custom') {
@@ -470,6 +508,23 @@ export default {
       } catch (e) {
         this.catchErrorHandler(e);
       }
+    },
+    // 将内存值转换为字节数用于比较
+    convertMemoryToBytes(value) {
+      if (!value) return 0;
+      const units = {
+        Ki: 1024,
+        Mi: 1024 * 1024,
+        Gi: 1024 * 1024 * 1024,
+        Ti: 1024 * 1024 * 1024 * 1024,
+      };
+      const match = value.match(/^(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti)$/);
+      if (match) {
+        const num = parseFloat(match[1]);
+        const unit = match[2];
+        return num * units[unit];
+      }
+      return 0;
     },
     // 处理资源配额方案切换
     handlePlanChange(value, env) {

@@ -1741,3 +1741,27 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn:
+  /bkapps/applications/{app_code}/modules/{module}/services/{service_id}/:
+    get:
+      operationId: get_service_instance_by_module
+      description: 查看应用模块与增强服务的绑定关系详情
+      tags:
+      - 增强服务
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: get
+          path: /backend/api/bkapps/applications/{app_code}/modules/{module}/services/{service_id}/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true

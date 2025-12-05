@@ -715,7 +715,7 @@ class SMartAppExtraInfo(models.Model):
         self.artifact_metadata.module_proc_entrypoints[module_name] = proc_entrypoints
         self.save(update_fields=["artifact_metadata"])
 
-    def get_image_tar(self, module_name: str) -> str | None:
+    def get_image_tar(self, module_name: str) -> str:
         """获取模块使用的镜像 tar 包名
 
         :param module_name: 模块名

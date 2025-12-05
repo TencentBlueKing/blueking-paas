@@ -16,24 +16,25 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationGroup, bind_property
 
 
 class Group(OperationGroup):
-    # 创建APM应用
+    # 创建 APM 应用
     create_apm_application = bind_property(
         Operation,
         name="create_apm_application",
         method="POST",
-        path="/create_apm_application/",
+        path="/app/apm/create_apm_application/",
     )
 
-    # 快速创建APM应用
+    # 快速创建 APM 应用
     apm_create_application = bind_property(
         Operation,
         name="apm_create_application",
         method="POST",
-        path="/apm/create_application/",
+        path="/app/apm/create_application/",
     )
 
     # 创建空间
@@ -41,7 +42,7 @@ class Group(OperationGroup):
         Operation,
         name="metadata_create_space",
         method="POST",
-        path="/metadata_create_space/",
+        path="/app/metadata/create_space/",
     )
 
     # 更新空间
@@ -49,7 +50,7 @@ class Group(OperationGroup):
         Operation,
         name="metadata_update_space",
         method="POST",
-        path="/metadata_update_space/",
+        path="/app/metadata/update_space/",
     )
 
     # 查询空间实例详情
@@ -57,23 +58,21 @@ class Group(OperationGroup):
         Operation,
         name="metadata_get_space_detail",
         method="GET",
-        path="/metadata_get_space_detail/",
+        path="/app/metadata/get_space_detail/",
     )
 
-    # 查询告警
+    # 查询告警记录
     search_alert = bind_property(
         Operation,
         name="search_alert",
         method="POST",
-        path="/search_alert/",
+        path="/app/alert/search/",
     )
 
 
 class Client(APIGatewayClient):
-    """bkmonitorv3
-    监控平台v3上云版本
-    """
+    """bk-monitor API Gateway Client"""
 
-    _api_name = "bkmonitorv3"
+    _api_name = "bk-monitor"
 
     api = bind_property(Group, name="api")

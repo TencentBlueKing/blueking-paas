@@ -20,7 +20,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from os import PathLike
 from pathlib import Path
-from typing import Callable, List, Set, cast
+from typing import Callable, List, Set, Tuple, cast
 
 from paasng.infras.accounts.models import User
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
@@ -53,23 +53,31 @@ def dispatch_package_to_modules(
     with generate_temp_dir() as workplace:
         uncompress_directory(source_path=tarball_filepath, target_path=workplace)
 
-        handler: Callable[[Module, Path, SPStat, User], SourcePackage]
+        handler: Callable[[Module, Path, SPStat, User, SMartAppExtraInfo | None], SourcePackage]
+        tasks: List[Tuple[Module, Path, SPStat, User, SMartAppExtraInfo | None]]
         builder_flag = workplace / ".Version"
         if builder_flag.exists():
             version = builder_flag.read_text().strip()
+            # prepare optional smart_app_extra for CNB-built packages
+            smart_app_extra: SMartAppExtraInfo | None = None
             if version == SMartPackageBuilderVersionFlag.CNB_IMAGE_LAYERS:
-                parse_and_save_cnb_metadata(application, workplace)
+                smart_app_extra = parse_and_save_cnb_metadata(application, workplace)
                 handler = dispatch_cnb_image_to_registry
             else:
                 handler = dispatch_slug_image_to_registry
-            tasks = [(module, workplace, stat, operator) for module in application.modules.filter(name__in=modules)]
+
+            tasks = [
+                (module, workplace, stat, operator, smart_app_extra)
+                for module in application.modules.filter(name__in=modules)
+            ]
         else:
             tasks = [
-                (module, Path(tarball_filepath), stat, operator)
+                (module, Path(tarball_filepath), stat, operator, None)
                 for module in application.modules.filter(name__in=modules)
             ]
             handler = patch_and_store_package
 
+        # WARNING: with atomic() 内，子线程无法读取到父事务中的未提交数据
         if _PARALLEL_PATCHING:
             with ThreadPoolExecutor() as executor:
                 results = executor.map(handler, *zip(*tasks))
@@ -82,7 +90,13 @@ def dispatch_package_to_modules(
             return packages
 
 
-def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat, operator: User) -> SourcePackage:
+def patch_and_store_package(
+    module: Module,
+    tarball_filepath: Path,
+    stat: SPStat,
+    operator: User,
+    smart_app_extra: SMartAppExtraInfo | None = None,
+) -> SourcePackage:
     """Patch an uncompressed package and upload compressed tarball one blobstore,
     then bind the package to provided module.
 
@@ -103,7 +117,9 @@ def patch_and_store_package(module: Module, tarball_filepath: Path, stat: SPStat
         return source_package
 
 
-def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User) -> SourcePackage:
+def dispatch_slug_image_to_registry(
+    module: Module, workplace: Path, stat: SPStat, operator: User, smart_app_extra: SMartAppExtraInfo | None = None
+) -> SourcePackage:
     """Merge image layer to base image, then push the new image to registry
 
     [deprecated] `dispatch_slug_image_to_registry` is a handler for s-mart which is built with slug-pilot.
@@ -147,7 +163,13 @@ def dispatch_slug_image_to_registry(module: Module, workplace: Path, stat: SPSta
     return source_package
 
 
-def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat, operator: User) -> SourcePackage:
+def dispatch_cnb_image_to_registry(
+    module: Module,
+    workplace: Path,
+    stat: SPStat,
+    operator: User,
+    smart_app_extra: SMartAppExtraInfo | None = None,
+) -> SourcePackage:
     """Merge image layer to base image, then push the new image to registry"""
     logger.debug("dispatching cnb-image for module '%s', working at '%s'", module.name, workplace)
 
@@ -155,7 +177,9 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
     base_image = mgr.get_cnb_runner_image_info()
     new_image_info = mgr.get_image_info(tag=stat.version)
 
-    smart_app_extra = SMartAppExtraInfo.objects.get(app=module.application)
+    if smart_app_extra is None:
+        raise RuntimeError("CNB image handler requires smart_app_extra")
+
     image_tar = smart_app_extra.get_image_tar(module.name)
 
     image_tarball = workplace / image_tar
@@ -202,7 +226,7 @@ def dispatch_cnb_image_to_registry(module: Module, workplace: Path, stat: SPStat
     return source_package
 
 
-def parse_and_save_cnb_metadata(application: Application, workplace: Path):
+def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SMartAppExtraInfo:
     """解析 cnb 制品的元数据, 并将相关构建元数据写入 SMartAppExtraInfo
 
     构建元数据包括:
@@ -221,12 +245,14 @@ def parse_and_save_cnb_metadata(application: Application, workplace: Path):
 
     artifact_json_file = workplace / "artifact.json"
     if not artifact_json_file.exists():
-        return
+        return smart_app_extra
 
     artifact_json = json.loads(artifact_json_file.read_text())
     for module_name in artifact_json:
         smart_app_extra.set_proc_entrypoints(module_name, artifact_json[module_name]["proc_entrypoints"])
         smart_app_extra.set_image_tar(module_name, artifact_json[module_name]["image_tar"])
+
+    return smart_app_extra
 
 
 def _construct_exported_image_manifest(image_tmp_folder: Path) -> DockerExportedImageManifest:

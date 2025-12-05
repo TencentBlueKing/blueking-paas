@@ -15,13 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.platform.engine.models.config_var import BuiltinConfigVar
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
+
+from .constants import CustomBuiltinConfigVarPrefix
 
 
 class BuiltinConfigVarOutputSLZ(serializers.Serializer):
@@ -50,7 +51,16 @@ class BuiltinConfigVarCreateInputSLZ(serializers.Serializer):
 
     def validate_key(self, key: str) -> str:
         if BuiltinConfigVar.objects.filter(key=key).exists():
-            raise ValidationError(_("内置环境变量 {key} 已存在").format(key=settings.CONFIGVAR_SYSTEM_PREFIX + key))
+            raise ValidationError(_("内置环境变量 {key} 已存在").format(key=key))
+
+        # validate key prefix
+        valid_prefixes = CustomBuiltinConfigVarPrefix.get_values()
+        if not key.startswith(tuple(valid_prefixes)):
+            raise ValidationError(
+                _("内置环境变量 {key} 必须以以下前缀之一开头：{prefixes}").format(
+                    key=key, prefixes=", ".join(valid_prefixes)
+                )
+            )
         return key
 
 

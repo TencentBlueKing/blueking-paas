@@ -1,0 +1,40 @@
+"""
+Add BKPAAS_ prefix to all existing BuiltinConfigVar.key values.
+
+This is a data migration: at the time of this migration, all existing BuiltinConfigVar
+records were created without any prefix in the `key` field, but the actual environment
+variable name used by applications has BKPAAS_ prefix added by the code.
+
+For example, if key="VAR", the actual env var is "BKPAAS_VAR".
+If key="BKPAAS_VAR", the actual env var is "BKPAAS_BKPAAS_VAR".
+"""
+
+import logging
+
+from django.conf import settings
+from django.db import migrations
+
+logger = logging.getLogger(__name__)
+
+
+def add_sys_prefix(apps, schema_editor):
+    BuiltinConfigVar = apps.get_model("engine", "BuiltinConfigVar")
+
+    for obj in BuiltinConfigVar.objects.all():
+        old_key = obj.key
+        new_key = settings.CONFIGVAR_SYSTEM_PREFIX + obj.key
+        if BuiltinConfigVar.objects.filter(key=new_key).exists():
+            raise RuntimeError(
+                f"[migration] duplicate BuiltinConfigVar detected id={obj.pk} key={obj.key}: target key {new_key} already exists. "
+                "Please resolve duplicates before running this migration."
+            )
+
+        obj.key = new_key
+        obj.save(update_fields=["key"])
+        logger.info(f"[migration] BuiltinConfigVar id={obj.pk} key updated: {old_key} -> {new_key}")
+
+
+class Migration(migrations.Migration):
+    dependencies = [("engine", "0029_moduleenvironmentoperations_tenant_id")]
+
+    operations = [migrations.RunPython(add_sys_prefix)]

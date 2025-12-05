@@ -34,9 +34,8 @@
         show-overflow-tooltip
       >
         <template slot-scope="{ row }">
-          <span v-if="column.prop === 'key'">{{ `${prefix}${row[column.prop]}` || '--' }}</span>
           <bk-user-display-name
-            v-else-if="column.prop === 'operator' && isMultiTenantDisplayMode"
+            v-if="column.prop === 'operator' && isMultiTenantDisplayMode"
             :user-id="row[column.prop]"
           ></bk-user-display-name>
           <span v-else>{{ row[column.prop] || '--' }}</span>
@@ -96,12 +95,19 @@
             :disabled="isEditVar"
           >
             <template slot="prepend">
-              <div
-                class="group-text"
-                style="line-height: 32px"
+              <bk-select
+                v-model="dialogFormData.prefix"
+                :clearable="false"
+                :disabled="isEditVar"
+                ext-cls="prefix-select-cls"
               >
-                {{ prefix }}
-              </div>
+                <bk-option
+                  v-for="item in prefixOptions"
+                  :key="item.id"
+                  :id="item.id"
+                  :name="item.name"
+                ></bk-option>
+              </bk-select>
             </template>
           </bk-input>
         </bk-form-item>
@@ -163,7 +169,11 @@ export default {
     return {
       varList: [],
       isTableLoading: false,
-      prefix: 'BKPAAS_',
+      prefixOptions: [
+        { id: 'BKPAAS_', name: 'BKPAAS_' },
+        { id: 'BK_', name: 'BK_' },
+        { id: 'BKAPP_', name: 'BKAPP_' },
+      ],
       columns: [
         {
           label: 'key',
@@ -199,6 +209,7 @@ export default {
         row: {},
       },
       dialogFormData: {
+        prefix: 'BKPAAS_',
         key: '',
         value: '',
         description: '',
@@ -254,7 +265,7 @@ export default {
       return this.varDialogConfig.type === 'edit';
     },
     deletedKey() {
-      return `${this.prefix}${this.deleteDialogConfig.row.key}`;
+      return this.deleteDialogConfig.row.key;
     },
   },
   created() {
@@ -278,8 +289,13 @@ export default {
       try {
         const dispatchName = this.isEditVar ? 'updateBuiltinConfigVars' : 'addBuiltinConfigVars';
         const successMessage = this.isEditVar ? this.$t('修改环境变量成功') : this.$t('添加环境变量成功');
+        const fullKey = `${this.dialogFormData.prefix}${this.dialogFormData.key}`;
         const payload = {
-          params: this.dialogFormData,
+          params: {
+            key: fullKey,
+            value: this.dialogFormData.value,
+            description: this.dialogFormData.description,
+          },
           ...(this.isEditVar && { id: this.varDialogConfig.row.id }),
         };
         await this.$store.dispatch(`tenantConfig/${dispatchName}`, payload);
@@ -324,6 +340,7 @@ export default {
     reset() {
       this.$refs.addForm?.clearError();
       this.dialogFormData = {
+        prefix: 'BKPAAS_',
         key: '',
         value: '',
         description: '',
@@ -350,8 +367,17 @@ export default {
       this.toggleVarDialog(true);
       this.varDialogConfig.type = 'edit';
       this.varDialogConfig.row = row;
+      // 从完整的 key 中提取 prefix
+      let prefix = 'BKPAAS_';
+      const fullKey = row.key;
+      this.prefixOptions.forEach((option) => {
+        if (fullKey.startsWith(option.id)) {
+          prefix = option.id;
+        }
+      });
       this.dialogFormData = {
-        key: row.key,
+        prefix,
+        key: fullKey.replace(prefix, ''),
         value: row.value,
         description: row.description,
       };
@@ -371,5 +397,10 @@ export default {
   .top-box {
     margin: 16px 0;
   }
+}
+.prefix-select-cls {
+  width: 100px;
+  height: 100%;
+  border: none;
 }
 </style>

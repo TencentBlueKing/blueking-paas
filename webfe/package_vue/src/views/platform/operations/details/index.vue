@@ -9,6 +9,7 @@
 import AppOverview from './app-overview';
 import Feature from './feature';
 import Services from './services';
+import Process from './process';
 import Member from './member';
 
 // 组件映射表
@@ -16,6 +17,7 @@ const componentMap = {
   overview: AppOverview,
   feature: Feature,
   services: Services,
+  process: Process,
   member: Member,
 };
 

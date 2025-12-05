@@ -220,6 +220,7 @@ export const platformRouters = [
             { name: 'overview', label: i18n.t('概览') },
             { name: 'feature', label: i18n.t('特性管理') },
             { name: 'services', label: i18n.t('增强服务') },
+            { name: 'process', label: i18n.t('进程管理') },
             { name: 'member', label: i18n.t('成员管理') },
           ],
           backRoute: {

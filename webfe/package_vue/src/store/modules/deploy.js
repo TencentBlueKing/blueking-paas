@@ -492,7 +492,6 @@ const actions = {
 
   /**
    * 获取进程资源配额方案
-   * @param {Object} params 请求参数：appCode, moduleId, env
    */
   fetchQuotaPlans({}, {}, config = {}) {
     const url = `${BACKEND_URL}/api/mres/quota_plans/`;

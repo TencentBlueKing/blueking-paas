@@ -21,6 +21,9 @@ from rest_framework import serializers
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
 
+CPU_QUANTITY_ORDER = list(CPUResourceQuantity)
+MEMORY_QUANTITY_ORDER = list(MemoryResourceQuantity)
+
 
 class ResourcesQuantity(serializers.Serializer):
     """资源数量"""
@@ -34,6 +37,28 @@ class ResourcesSLZ(serializers.Serializer):
 
     limits = ResourcesQuantity(help_text="资源限制", required=False, allow_null=True)
     requests = ResourcesQuantity(help_text="资源请求", required=False, allow_null=True)
+
+    def validate(self, attrs):
+        """Validate that requests does not exceed limits"""
+        limits = attrs.get("limits")
+        requests = attrs.get("requests")
+
+        if not limits or not requests:
+            return attrs
+
+        # Validate CPU: requests should not exceed limits
+        requests_cpu_idx = CPU_QUANTITY_ORDER.index(CPUResourceQuantity(requests["cpu"]))
+        limits_cpu_idx = CPU_QUANTITY_ORDER.index(CPUResourceQuantity(limits["cpu"]))
+        if requests_cpu_idx > limits_cpu_idx:
+            raise serializers.ValidationError(_("CPU requests 不能大于 limits"))
+
+        # Validate Memory: requests should not exceed limits
+        requests_memory_idx = MEMORY_QUANTITY_ORDER.index(MemoryResourceQuantity(requests["memory"]))
+        limits_memory_idx = MEMORY_QUANTITY_ORDER.index(MemoryResourceQuantity(limits["memory"]))
+        if requests_memory_idx > limits_memory_idx:
+            raise serializers.ValidationError(_("Memory requests 不能大于 limits"))
+
+        return attrs
 
 
 # ============= Output Serializers =============

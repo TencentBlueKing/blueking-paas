@@ -43,6 +43,14 @@ class MockUser:
     is_authenticated: bool = True
 
 
+@dataclass
+class MockUserWithoutTimezone:
+    """Mock user without timezone object for testing"""
+
+    username: str
+    is_authenticated: bool = True
+
+
 class TestUserTimezoneMiddleware:
     """Test cases for UserTimezoneMiddleware"""
 
@@ -83,14 +91,8 @@ class TestUserTimezoneMiddleware:
 
     def test_user_without_timezone_attr(self):
         """Test fallback when user has no time_zone attribute"""
-
-        @dataclass
-        class UserWithoutTimezone:
-            username: str
-            is_authenticated: bool = True
-
         request = request_factory.get("/")
-        request.user = UserWithoutTimezone(username="testuser")
+        request.user = MockUserWithoutTimezone(username="testuser")
 
         middleware = UserTimezoneMiddleware(get_response)
         middleware.process_request(request)

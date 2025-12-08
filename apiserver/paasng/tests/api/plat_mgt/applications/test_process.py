@@ -84,15 +84,15 @@ class TestApplicationProcessViewSet:
         return proc_spec
 
     @staticmethod
-    def _make_custom_resources_data(env_name="stag"):
+    def _make_custom_resources_data(env_name="stag", limits=None, requests=None):
         """生成自定义资源配置的请求数据"""
         return {
             "env_overlays": {
                 env_name: {
                     "plan_name": None,
                     "resources": {
-                        "limits": {"cpu": "2000m", "memory": "1024Mi"},
-                        "requests": {"cpu": "200m", "memory": "256Mi"},
+                        "limits": limits or {"cpu": "2000m", "memory": "1024Mi"},
+                        "requests": requests or {"cpu": "200m", "memory": "256Mi"},
                     },
                 }
             },
@@ -212,3 +212,43 @@ class TestApplicationProcessViewSet:
         response = plat_mgt_api_client.put(update_url("nonexistent"), data=self._make_plan_name_data())
         assert response.status_code == 404
         assert "nonexistent" in response.data["detail"]
+
+    def test_update_resource_with_invalid_env(self, plat_mgt_api_client, bk_app: Application, bk_module, update_url):
+        """测试更新时指定了无效的环境名称"""
+        self._create_process_with_overlay(bk_module)
+
+        data = self._make_custom_resources_data(env_name="invalid_env")
+        response = plat_mgt_api_client.put(update_url("web"), data=data)
+        assert response.status_code == 400
+        assert response.data["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.parametrize(
+        ("limits", "requests", "expected_status"),
+        [
+            # limits 和 requests 完全一致 - 成功
+            ({"cpu": "1000m", "memory": "512Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 204),
+            # limits 大于 requests - 成功
+            ({"cpu": "2000m", "memory": "1024Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 204),
+            # CPU limits 小于 requests - 失败
+            ({"cpu": "1000m", "memory": "1024Mi"}, {"cpu": "2000m", "memory": "256Mi"}, 400),
+            # Memory limits 小于 requests - 失败
+            ({"cpu": "2000m", "memory": "256Mi"}, {"cpu": "2000m", "memory": "512Mi"}, 400),
+        ],
+    )
+    def test_update_resource_limits_validation(
+        self, plat_mgt_api_client, bk_module, update_url, list_url, limits, requests, expected_status
+    ):
+        """测试 limits 与 requests 的校验: limits 必须大于等于 requests"""
+        self._create_process_with_overlay(bk_module)
+
+        data = self._make_custom_resources_data(limits=limits, requests=requests)
+        response = plat_mgt_api_client.put(update_url("web"), data=data)
+        assert response.status_code == expected_status
+
+        if expected_status == 204:
+            response = plat_mgt_api_client.get(list_url)
+            process_data = response.data["processes"][0]
+            assert process_data["env_overlays"]["stag"]["resources"]["limits"] == limits
+            assert process_data["env_overlays"]["stag"]["resources"]["requests"] == requests
+        else:
+            assert response.data["code"] == "VALIDATION_ERROR"

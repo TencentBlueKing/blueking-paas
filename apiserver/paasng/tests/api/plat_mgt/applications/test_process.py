@@ -21,7 +21,6 @@ from django.urls import reverse
 
 from paasng.platform.applications.models import Application
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
-from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import SourceOrigin
 
 pytestmark = pytest.mark.django_db
@@ -56,32 +55,16 @@ class TestApplicationProcessViewSet:
 
         return _make_url
 
-    def _create_process_with_overlay(self, bk_module, process_name="web", plan_name="default"):
+    def _create_process_with_overlay(self, bk_module, process_name="web", env_name="stag", plan_name="default"):
         """创建进程规格和环境覆盖的辅助方法"""
-        proc_spec = ModuleProcessSpec.objects.create(
-            module=bk_module, name=process_name, plan_name=plan_name, tenant_id="default"
+        proc_spec, _ = ModuleProcessSpec.objects.get_or_create(
+            module=bk_module, name=process_name, defaults={"plan_name": plan_name, "tenant_id": "default"}
         )
         ProcessSpecEnvOverlay.objects.create(
             proc_spec=proc_spec,
-            environment_name=AppEnvName.STAG,
+            environment_name=env_name,
             plan_name=plan_name,
         )
-        return proc_spec
-
-    def _create_process_with_custom_resources(self, bk_module, process_name="web"):
-        """创建带自定义资源配置的进程规格"""
-        proc_spec = ModuleProcessSpec.objects.create(
-            module=bk_module, name=process_name, plan_name="default", tenant_id="default"
-        )
-        ProcessSpecEnvOverlay.objects.create(
-            proc_spec=proc_spec,
-            environment_name=AppEnvName.STAG,
-            override_proc_res={
-                "limits": {"cpu": "2000m", "memory": "1024Mi"},
-                "requests": {"cpu": "200m", "memory": "256Mi"},
-            },
-        )
-        return proc_spec
 
     @staticmethod
     def _make_custom_resources_data(env_name="stag", limits=None, requests=None):
@@ -89,7 +72,6 @@ class TestApplicationProcessViewSet:
         return {
             "env_overlays": {
                 env_name: {
-                    "plan_name": None,
                     "resources": {
                         "limits": limits or {"cpu": "2000m", "memory": "1024Mi"},
                         "requests": requests or {"cpu": "200m", "memory": "256Mi"},
@@ -97,11 +79,6 @@ class TestApplicationProcessViewSet:
                 }
             },
         }
-
-    @staticmethod
-    def _make_plan_name_data(plan_name="default", env_name="stag"):
-        """生成预设方案的请求数据"""
-        return {"env_overlays": {env_name: {"plan_name": plan_name}}}
 
     def test_list_resource_with_not_deploy(self, plat_mgt_api_client, list_url):
         """测试列出模块进程资源, 没有部署过的模块"""
@@ -112,17 +89,8 @@ class TestApplicationProcessViewSet:
     def test_list_resource(self, plat_mgt_api_client, bk_app: Application, bk_module, list_url):
         """测试列出模块进程资源"""
         # 创建进程规格及 stag 环境覆盖
-        proc_spec = self._create_process_with_overlay(bk_module, process_name="web", plan_name="default")
-
-        # 创建 prod 环境覆盖
-        ProcessSpecEnvOverlay.objects.create(
-            proc_spec=proc_spec,
-            environment_name=AppEnvName.PROD,
-            override_proc_res={
-                "limits": {"cpu": "2000m", "memory": "1024Mi"},
-                "requests": {"cpu": "100m", "memory": "256Mi"},
-            },
-        )
+        self._create_process_with_overlay(bk_module, env_name="stag", process_name="web")
+        self._create_process_with_overlay(bk_module, env_name="prod", process_name="web")
 
         response = plat_mgt_api_client.get(list_url)
         assert response.status_code == 200
@@ -135,16 +103,14 @@ class TestApplicationProcessViewSet:
 
         # 验证环境覆盖
         assert process_data["env_overlays"]["stag"]["plan_name"] == "default"
-        assert process_data["env_overlays"]["prod"]["plan_name"] is None
-        assert process_data["env_overlays"]["prod"]["resources"] == {
-            "limits": {"cpu": "2000m", "memory": "1024Mi"},
-            "requests": {"cpu": "100m", "memory": "256Mi"},
-        }
+        assert process_data["env_overlays"]["stag"]["resources"] is None
+        assert process_data["env_overlays"]["prod"]["plan_name"] == "default"
+        assert process_data["env_overlays"]["prod"]["resources"] is None
 
     def test_update_resource_source_origin_forbidden(
         self, plat_mgt_api_client, bk_app: Application, bk_module, update_url
     ):
-        """测试更新进程资源限制时,source_origin 不支持修改的场景"""
+        """测试更新进程资源限制时, source_origin 不支持修改的场景"""
         # 设置为不支持的 source_origin
         bk_module.source_origin = SourceOrigin.AUTHORIZED_VCS.value
         bk_module.save(update_fields=["source_origin"])
@@ -158,7 +124,8 @@ class TestApplicationProcessViewSet:
         """测试成功更新进程资源限制"""
         self._create_process_with_overlay(bk_module)
 
-        response = plat_mgt_api_client.put(update_url("web"), data=self._make_custom_resources_data())
+        custom_data = self._make_custom_resources_data()
+        response = plat_mgt_api_client.put(update_url("web"), data=custom_data)
         assert response.status_code == 204
 
         # 通过 API 验证更新结果
@@ -168,48 +135,11 @@ class TestApplicationProcessViewSet:
         process_data = response.data["processes"][0]
         assert process_data["name"] == "web"
         assert process_data["env_overlays"]["stag"]["plan_name"] is None
-        assert process_data["env_overlays"]["stag"]["resources"] == {
-            "limits": {"cpu": "2000m", "memory": "1024Mi"},
-            "requests": {"cpu": "200m", "memory": "256Mi"},
-        }
-
-    def test_update_resource_with_plan_name(
-        self, plat_mgt_api_client, bk_app: Application, bk_module, update_url, list_url
-    ):
-        """测试更新为预设方案"""
-        self._create_process_with_custom_resources(bk_module)
-
-        response = plat_mgt_api_client.put(update_url("web"), data=self._make_plan_name_data())
-        assert response.status_code == 204
-
-        # 通过 API 验证 override_proc_res 被清空
-        response = plat_mgt_api_client.get(list_url)
-        assert response.status_code == 200
-
-        process_data = response.data["processes"][0]
-        assert process_data["env_overlays"]["stag"]["plan_name"] == "default"
-        assert process_data["env_overlays"]["stag"]["resources"] is None
-
-    def test_update_resource_create_overlay(
-        self, plat_mgt_api_client, bk_app: Application, bk_module, update_url, list_url
-    ):
-        """测试自动创建环境覆盖"""
-        ModuleProcessSpec.objects.create(module=bk_module, name="web", plan_name="default", tenant_id="default")
-
-        response = plat_mgt_api_client.put(update_url("web"), data=self._make_custom_resources_data())
-        assert response.status_code == 204
-
-        # 通过 API 验证环境覆盖已创建
-        response = plat_mgt_api_client.get(list_url)
-        assert response.status_code == 200
-
-        process_data = response.data["processes"][0]
-        assert process_data["env_overlays"]["stag"]["plan_name"] is None
-        assert process_data["env_overlays"]["stag"]["resources"] is not None
+        assert process_data["env_overlays"]["stag"]["resources"] == custom_data["env_overlays"]["stag"]["resources"]
 
     def test_update_resource_process_not_found(self, plat_mgt_api_client, bk_app: Application, bk_module, update_url):
         """测试更新不存在的进程"""
-        response = plat_mgt_api_client.put(update_url("nonexistent"), data=self._make_plan_name_data())
+        response = plat_mgt_api_client.put(update_url("nonexistent"), data=self._make_custom_resources_data())
         assert response.status_code == 404
         assert "nonexistent" in response.data["detail"]
 

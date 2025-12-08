@@ -68,10 +68,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 overlay = overlays_map.get(env_name)
 
                 if overlay and overlay.override_proc_res:
-                    env_overlays[env_name] = {
-                        "plan_name": None,
-                        "resources": overlay.override_proc_res,
-                    }
+                    env_overlays[env_name] = {"plan_name": None, "resources": overlay.override_proc_res}
                 else:
                     env_overlays[env_name] = {
                         "plan_name": spec.get_plan_name(env_name),
@@ -133,21 +130,30 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         # 记录更新前状态
         before_env_overlays = {}
         for env_name in requested_overlays:
-            env_overlay = env_overlays_map.get(env_name)
-            if env_overlay:
+            overlay = env_overlays_map.get(env_name)
+            if overlay:
                 before_env_overlays[env_name] = {
-                    "plan_name": env_overlay.plan_name,
-                    "resources": env_overlay.override_proc_res,
+                    "plan_name": overlay.plan_name,
+                    "resources": overlay.override_proc_res,
                 }
             else:
                 before_env_overlays[env_name] = {"plan_name": proc_spec.plan_name, "resources": None}
 
         # 批量更新
         overlays_to_update = []
+        overlays_to_create = []
 
         for env_name, overlay_data in requested_overlays.items():
-            env_overlay = env_overlays_map[env_name]
+            env_overlay = env_overlays_map.get(env_name)
 
+            if not env_overlay:
+                # 创建新的环境覆盖
+                env_overlay = ProcessSpecEnvOverlay(
+                    proc_spec=proc_spec, environment_name=env_name, tenant_id=proc_spec.tenant_id
+                )
+                overlays_to_create.append(env_overlay)
+
+            # 更新配置
             if overlay_data.get("resources") is not None:
                 # 使用自定义资源配置，保持原有 plan_name 不变
                 env_overlay.override_proc_res = overlay_data["resources"]
@@ -157,11 +163,17 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 env_overlay.override_proc_res = None
 
             env_overlay.updated = timezone.now()
-            overlays_to_update.append(env_overlay)
+            if env_overlay.pk:
+                overlays_to_update.append(env_overlay)
 
-        ProcessSpecEnvOverlay.objects.bulk_update(
-            overlays_to_update, fields=["plan_name", "override_proc_res", "updated"]
-        )
+        # 批量创建和更新
+        if overlays_to_create:
+            ProcessSpecEnvOverlay.objects.bulk_create(overlays_to_create)
+
+        if overlays_to_update:
+            ProcessSpecEnvOverlay.objects.bulk_update(
+                overlays_to_update, fields=["plan_name", "override_proc_res", "updated"]
+            )
 
         # 记录审计日志
         add_plat_mgt_audit_record(

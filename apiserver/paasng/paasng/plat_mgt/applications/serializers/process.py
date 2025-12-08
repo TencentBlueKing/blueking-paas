@@ -20,6 +20,7 @@ from rest_framework import serializers
 
 from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
+from paasng.platform.engine.constants import AppEnvName
 
 CPU_QUANTITY_ORDER = list(CPUResourceQuantity)
 MEMORY_QUANTITY_ORDER = list(MemoryResourceQuantity)
@@ -124,3 +125,18 @@ class ProcessSpecInputSLZ(serializers.Serializer):
     env_overlays = serializers.DictField(
         child=EnvOverlayInputSLZ(), help_text="环境配置覆盖, key 为环境名称", required=True
     )
+
+    def validate_env_overlays(self, value):
+        """验证 env_overlays 的 key 必须是有效的环境名称"""
+        valid_env_names = AppEnvName.get_values()
+        invalid_keys = [key for key in value if key not in valid_env_names]
+
+        if invalid_keys:
+            raise serializers.ValidationError(
+                _("无效的环境名称: {invalid_keys}, 有效值为: {valid_keys}").format(
+                    invalid_keys=", ".join(invalid_keys),
+                    valid_keys=", ".join(valid_env_names),
+                )
+            )
+
+        return value

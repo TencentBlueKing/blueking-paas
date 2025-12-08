@@ -48,6 +48,8 @@ class ToolPackageStashOutputSLZ(BaseSmartBuildSLZ):
 class SmartBuildInputSLZ(BaseSmartBuildSLZ):
     """Input SLZ for Smart Build API"""
 
+    packaging_version = serializers.ChoiceField(choices=["v1", "v2"], default="v2", help_text="打包版本")
+
 
 class SmartBuildOutputSLZ(serializers.Serializer):
     """Output SLZ for Smart Build API"""
@@ -89,9 +91,9 @@ class SmartBuildHistoryOutputSLZ(serializers.Serializer):
     uuid = serializers.CharField(help_text="构建 ID")
     app_code = serializers.CharField(help_text="应用 code")
     app_version = serializers.CharField(help_text="应用版本号")
-    source_origin = serializers.CharField(help_text="源码来源")
     package_name = serializers.CharField(help_text="源码包名")
     sha256_signature = serializers.CharField(help_text="源码包 sha256 签名")
+    packaging_version = serializers.CharField(help_text="包版本")
     status = serializers.CharField(help_text="构建状态")
     start_time = serializers.DateTimeField(help_text="开始时间", allow_null=True)
     end_time = serializers.DateTimeField(help_text="结束时间", allow_null=True)

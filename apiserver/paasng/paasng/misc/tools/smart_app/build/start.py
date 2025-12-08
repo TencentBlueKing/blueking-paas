@@ -34,6 +34,7 @@ def create_smart_build_record(
     app_code: str,
     app_version: str,
     sha256_signature: str,
+    packaging_version: str,
     operator: str,
 ) -> SmartBuildRecord:
     """Initialize s-smart package build record
@@ -42,6 +43,9 @@ def create_smart_build_record(
     :param app_code: The code of the application
     :param app_version: The version from app_desc.yaml
     :param operator: The username who triggers this build
+    :param sha256_signature: The sha256 signature of the source package
+    :param packaging_version: The packaging version, e.g., "v1", "v2".
+        See details: https://github.com/TencentBlueKing/blueking-paas/tree/builder-stack/smart-app-builder#2-%E6%9E%84%E5%BB%BA-s-mart-%E5%8C%85
     :return: The created SmartBuildRecord instance
     """
 
@@ -54,6 +58,7 @@ def create_smart_build_record(
         app_code=app_code,
         app_version=app_version,
         sha256_signature=sha256_signature,
+        packaging_version=packaging_version,
         start_time=timezone.now(),
         operator=operator,
     )
@@ -93,9 +98,9 @@ class SmartBuildContext:
         return f"blobstore://{self.artifact_bucket}/{self.artifact_key}"
 
     @staticmethod
-    def generate_artifact_key(app_code: str, app_version: str, sha256_signature: str) -> str:
+    def generate_artifact_key(app_code: str, app_version: str, sha256_signature: str, packaging_version: str) -> str:
         """Generate standardized build artifact key"""
-        return f"{app_code}-{app_version}_paas3_{sha256_signature[:7]}.tar.gz"
+        return f"{app_code}-{app_version}_paas3_{packaging_version}_{sha256_signature[:7]}.tar.gz"
 
 
 class SmartBuildTaskRunner:
@@ -117,7 +122,12 @@ class SmartBuildTaskRunner:
         sha256_signature: str,
     ):
         self.smart_build = SmartBuildRecord.objects.get(uuid=smart_build_id)
-        artifact_key = SmartBuildContext.generate_artifact_key(app_code, app_version, sha256_signature)
+        artifact_key = SmartBuildContext.generate_artifact_key(
+            app_code,
+            app_version,
+            sha256_signature,
+            self.smart_build.packaging_version,
+        )
         self._context = SmartBuildContext(self.smart_build, source_url, artifact_key)
 
     def start(self):

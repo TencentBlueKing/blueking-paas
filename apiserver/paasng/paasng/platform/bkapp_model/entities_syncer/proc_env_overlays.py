@@ -77,7 +77,13 @@ def sync_env_overlays_autoscalings(
 
 def clean_empty_overlays(module):
     """Clean up overlay records that contains empty data."""
-    empty_values = {"autoscaling": None, "scaling_config": None, "target_replicas": None, "plan_name": None}
+    empty_values = {
+        "autoscaling": None,
+        "scaling_config": None,
+        "target_replicas": None,
+        "plan_name": None,
+        "override_proc_res": None,
+    }
 
     # If new fields were added to the module, the clean up process should abort to avoid data loss.
     fields = {f.name for f in ProcessSpecEnvOverlay._meta.fields}
@@ -88,7 +94,6 @@ def clean_empty_overlays(module):
         "updated",
         "environment_name",
         "created",
-        "override_proc_res",
         "tenant_id",
     }:
         raise RuntimeError("unexpected fields found on ProcessSpecEnvOverlay")

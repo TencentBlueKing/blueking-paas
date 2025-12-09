@@ -18,8 +18,8 @@
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
+from paasng.platform.engine.constants import AppEnvName
 
 
 class ResourcesQuantity(serializers.Serializer):
@@ -34,6 +34,24 @@ class ResourcesSLZ(serializers.Serializer):
 
     limits = ResourcesQuantity(help_text="资源限制", required=False, allow_null=True)
     requests = ResourcesQuantity(help_text="资源请求", required=False, allow_null=True)
+
+    def validate(self, attrs):
+        """Validate that requests does not exceed limits"""
+        limits = attrs.get("limits")
+        requests = attrs.get("requests")
+
+        if not limits or not requests:
+            return attrs
+
+        # Validate CPU: requests should not exceed limits
+        if CPUResourceQuantity(requests["cpu"]).greater_than(CPUResourceQuantity(limits["cpu"])):
+            raise serializers.ValidationError(_("CPU requests 不能大于 limits"))
+
+        # Validate Memory: requests should not exceed limits
+        if MemoryResourceQuantity(requests["memory"]).greater_than(MemoryResourceQuantity(limits["memory"])):
+            raise serializers.ValidationError(_("Memory requests 不能大于 limits"))
+
+        return attrs
 
 
 # ============= Output Serializers =============
@@ -69,28 +87,7 @@ class ModuleProcessSpecOutputSLZ(serializers.Serializer):
 class EnvOverlayInputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输入序列化器"""
 
-    plan_name = serializers.ChoiceField(
-        help_text="资源配额方案",
-        choices=ResQuotaPlan.get_choices(),
-        allow_null=True,
-        required=False,
-    )
-    resources = ResourcesSLZ(help_text="资源配置", allow_null=True, required=False)
-
-    def validate(self, attrs):
-        """验证: plan_name 和 resources 互斥，必须提供其中一个"""
-        plan_name = attrs.get("plan_name")
-        resources = attrs.get("resources")
-
-        # 两者都没有提供
-        if plan_name is None and resources is None:
-            raise serializers.ValidationError(_("必须提供 plan_name 或 resources 其中之一"))
-
-        # 两者都提供了
-        if plan_name is not None and resources is not None:
-            raise serializers.ValidationError(_("plan_name 和 resources 不能同时指定，请选择其一"))
-
-        return attrs
+    resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
 
 
 class ProcessSpecInputSLZ(serializers.Serializer):
@@ -99,3 +96,18 @@ class ProcessSpecInputSLZ(serializers.Serializer):
     env_overlays = serializers.DictField(
         child=EnvOverlayInputSLZ(), help_text="环境配置覆盖, key 为环境名称", required=True
     )
+
+    def validate_env_overlays(self, value):
+        """验证 env_overlays 的 key 必须是有效的环境名称"""
+        valid_env_names = AppEnvName.get_values()
+        invalid_keys = [key for key in value if key not in valid_env_names]
+
+        if invalid_keys:
+            raise serializers.ValidationError(
+                _("无效的环境名称: {invalid_keys}, 有效值为: {valid_keys}").format(
+                    invalid_keys=", ".join(invalid_keys),
+                    valid_keys=", ".join(valid_env_names),
+                )
+            )
+
+        return value

@@ -97,6 +97,29 @@ export default {
       return http.post(url);
     },
     /**
+     * 应用详情-获取进程列表
+     * @param {Object} params 请求参数：appCode, moduleId
+     */
+    getProcesses({}, { appCode, moduleId }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/processes/`;
+      return http.get(url);
+    },
+    /**
+     * 获取进程资源配额方案
+     */
+    fetchQuantityOptions() {
+      const url = `${BACKEND_URL}/api/plat_mgt/process_resources/quantity_options/`;
+      return http.get(url);
+    },
+    /**
+     * 更新单各进程的资源限制
+     * @param {Object} params 请求参数：appCode, moduleId, processName, data
+     */
+    updateProcessQuantity({}, { appCode, moduleId, processName, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/applications/${appCode}/modules/${moduleId}/processes/${processName}/`;
+      return http.put(url, data);
+    },
+    /**
      * 应用详情-更新部署集群
      */
     updateDeployCluster({}, { appCode, moduleId, env, data }) {

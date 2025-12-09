@@ -79,7 +79,7 @@ class CPUResourceQuantity(StrStructuredEnum):
     QUOTA_8_CORE = EnumField("8000m", label="8 核")
     QUOTA_16_CORE = EnumField("16000m", label="16 核")
 
-    def greater_than(self, other: "CPUResourceQuantity") -> bool:
+    def exceeds(self, other: "CPUResourceQuantity") -> bool:
         """检查当前资源值是否大于另一个资源值"""
         # 枚举值的顺序即为资源大小的顺序
         order = list(CPUResourceQuantity)
@@ -94,7 +94,7 @@ class MemoryResourceQuantity(StrStructuredEnum):
     QUOTA_4_G = EnumField("4096Mi", label="4 G")
     QUOTA_8_G = EnumField("8192Mi", label="8 G")
 
-    def greater_than(self, other: "MemoryResourceQuantity") -> bool:
+    def exceeds(self, other: "MemoryResourceQuantity") -> bool:
         """检查当前资源值是否大于另一个资源值"""
         # 枚举值的顺序即为资源大小的顺序
         order = list(MemoryResourceQuantity)

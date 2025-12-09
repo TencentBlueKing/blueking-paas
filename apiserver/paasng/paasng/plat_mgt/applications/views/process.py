@@ -121,7 +121,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 module=module, name=process_name
             )
         except ModuleProcessSpec.DoesNotExist:
-            return Response({"detail": f"进程 {process_name} 不存在"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": _(f"进程 {process_name} 不存在")}, status=status.HTTP_404_NOT_FOUND)
 
         # 构建环境覆盖映射
         env_overlays_map = {o.environment_name: o for o in proc_spec.env_overlays.all()}
@@ -133,11 +133,10 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             overlay = env_overlays_map.get(env_name)
             if overlay:
                 before_env_overlays[env_name] = {
-                    "plan_name": overlay.plan_name or proc_spec.plan_name,
                     "resources": overlay.override_proc_res,
                 }
             else:
-                before_env_overlays[env_name] = {"plan_name": proc_spec.plan_name, "resources": None}
+                before_env_overlays[env_name] = {"resources": None}
 
         # 批量更新
         overlays_to_update = []
@@ -152,16 +151,13 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                     proc_spec=proc_spec, environment_name=env_name, tenant_id=proc_spec.tenant_id
                 )
                 overlays_to_create.append(env_overlay)
-                env_overlays_map[env_name] = env_overlay
 
             # 更新配置
-            if overlay_data.get("resources") is not None:
+            if overlay_data["resources"] is not None:
                 # 使用自定义资源配置
                 env_overlay.override_proc_res = overlay_data["resources"]
-                env_overlay.plan_name = None
             else:
-                # 使用预设方案
-                env_overlay.plan_name = overlay_data.get("plan_name")
+                # 清空自定义资源配置
                 env_overlay.override_proc_res = None
 
             env_overlay.updated = timezone.now()
@@ -173,9 +169,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             ProcessSpecEnvOverlay.objects.bulk_create(overlays_to_create)
 
         if overlays_to_update:
-            ProcessSpecEnvOverlay.objects.bulk_update(
-                overlays_to_update, fields=["plan_name", "override_proc_res", "updated"]
-            )
+            ProcessSpecEnvOverlay.objects.bulk_update(overlays_to_update, fields=["override_proc_res", "updated"])
 
         # 记录审计日志
         add_plat_mgt_audit_record(

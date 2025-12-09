@@ -71,6 +71,7 @@
 import { PAAS_STATIC_CONFIG as staticData } from '../../static/json/paas_static.js';
 import { traceIds } from '@/common/trace-ids';
 import { cloneDeep } from 'lodash';
+import { mapState } from 'vuex';
 
 export default {
   props: {
@@ -252,21 +253,13 @@ export default {
     };
   },
   computed: {
-    curAppInfo() {
-      return this.$store.state.curAppInfo;
-    },
+    ...mapState(['userFeature', 'platformFeature', 'curAppInfo', 'curAppModule']),
     curRouteName() {
       return this.$route.name;
-    },
-    curAppModule() {
-      return this.$store.state.curAppModule;
     },
     // 是否展示迁移信息
     isMigrationInfoShown() {
       return this.curAppInfo.migration_status && this.curAppInfo.migration_status.status === 'migration_succeeded';
-    },
-    userFeature() {
-      return this.$store.state.userFeature;
     },
   },
   watch: {
@@ -412,6 +405,10 @@ export default {
             // 如果有相应key，根据key来处理是否启用
             if (key && Object.prototype.hasOwnProperty.call(this.curAppInfo.feature, key)) {
               return this.curAppInfo.feature[key];
+            }
+            // 仪表盘根据 platformFeature.REGION_DISPLAY 判断
+            if (sub.destRoute.name === 'dashboards') {
+              return this.platformFeature.REGION_DISPLAY;
             }
             return true;
           });

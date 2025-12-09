@@ -188,6 +188,7 @@
     market_ready: True
     preset_services_config:
       mysql: {}
+      otel: {}
     blob_url: ''
     required_buildpacks: []
     processes: {}

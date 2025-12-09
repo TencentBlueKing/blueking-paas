@@ -40,6 +40,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
 
+import base64
 import copy
 import os
 import ssl
@@ -1305,6 +1306,22 @@ SMART_BUILDER_IMAGE = settings.get("SMART_BUILDER_IMAGE", "")
 # S-Mart 包构建进程超时, 单位为 秒
 SMART_BUILD_PROCESS_TIMEOUT = int(settings.get("SMART_BUILD_PROCESS_TIMEOUT", 60 * 15))
 
+# S-Mart 构建缓存配置
+# 用于缓存的镜像仓库，设置后构建过程会启用缓存功能，否则不启用
+SMART_CACHE_REGISTRY = settings.get("SMART_CACHE_REGISTRY", "")
+
+_SMART_CACHE_REGISTRY_USERNAME = settings.get("SMART_CACHE_REGISTRY_USERNAME", "")
+_SMART_CACHE_REGISTRY_PASSWORD = settings.get("SMART_CACHE_REGISTRY_PASSWORD", "")
+
+# 镜像仓库凭证，如果镜像仓库需要鉴权，则必须设置此参数
+# 格式: {"registry": "Basic xxx"}
+if SMART_CACHE_REGISTRY and _SMART_CACHE_REGISTRY_USERNAME and _SMART_CACHE_REGISTRY_PASSWORD:
+    _SMART_REGISTRY_AUTH_STR = base64.b64encode(
+        f"{_SMART_CACHE_REGISTRY_USERNAME}:{_SMART_CACHE_REGISTRY_PASSWORD}".encode()
+    ).decode()
+    SMART_REGISTRY_AUTH = f'{{"{SMART_CACHE_REGISTRY}": "Basic {_SMART_REGISTRY_AUTH_STR}"}}'
+else:
+    SMART_REGISTRY_AUTH = ""
 
 # ------------------
 # S-Mart 应用镜像化配置

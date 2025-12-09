@@ -169,9 +169,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             ProcessSpecEnvOverlay.objects.bulk_create(overlays_to_create)
 
         if overlays_to_update:
-            ProcessSpecEnvOverlay.objects.bulk_update(
-                overlays_to_update, fields=["plan_name", "override_proc_res", "updated"]
-            )
+            ProcessSpecEnvOverlay.objects.bulk_update(overlays_to_update, fields=["override_proc_res", "updated"])
 
         # 记录审计日志
         add_plat_mgt_audit_record(

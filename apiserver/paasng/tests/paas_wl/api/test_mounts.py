@@ -419,7 +419,7 @@ class TestMountSourceViewSet:
             assert response.status_code == 400
 
     @pytest.mark.usefixtures("_mount_sources")
-    @override_settings(VOLUME_ALLOW_CUSTOM_SIZE=True, VOLUME_CUSTOM_SIZE_MIN=1, VOLUME_CUSTOM_SIZE_MAX=10)
+    @override_settings(PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM=True, PERSISTENT_STORAGE_SIZE_MAX=10)
     @pytest.mark.parametrize(
         ("storage_size", "expected_status"),
         [
@@ -451,7 +451,7 @@ class TestMountSourceViewSet:
                 assert response.data["storage_size"] == storage_size
 
     @pytest.mark.usefixtures("_mount_sources")
-    @override_settings(VOLUME_ALLOW_CUSTOM_SIZE=False)
+    @override_settings(PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM=False)
     def test_create_with_custom_storage_size_not_allowed(self, api_client, bk_app):
         """Test creating mount source with custom storage size when not allowed"""
         url = f"/api/bkapps/applications/{bk_app.code}/mres/mount_sources/"

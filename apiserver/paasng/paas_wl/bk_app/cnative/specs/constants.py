@@ -178,7 +178,12 @@ class PersistentStorageSize(StrStructuredEnum):
     @classmethod
     def is_valid_storage_size(cls, size: str) -> bool:
         """验证存储大小格式是否有效, 如 '5Gi'"""
-        return bool(re.match(cls._STORAGE_SIZE_PATTERN, size))
+        try:
+            cls.parse_size_value(size)
+        except ValueError:
+            return False
+        else:
+            return True
 
     @classmethod
     def parse_size_value(cls, size: str) -> int:

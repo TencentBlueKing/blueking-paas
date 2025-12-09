@@ -56,13 +56,11 @@ class FrontendFeatureViewSet(ViewSet):
             "MCP_SERVER_API": settings.FE_FEATURE_SETTINGS_MCP_SERVER_API,
         }
         # 持久存储相关配置
-        volume_settings = {
+        persistent_storage_settings = {
             # 是否允许用户自定义持久存储大小
-            "VOLUME_ALLOW_CUSTOM_SIZE": settings.VOLUME_ALLOW_CUSTOM_SIZE,
-            # 自定义容量的最小值 (单位: Gi)
-            "VOLUME_CUSTOM_SIZE_MIN": settings.VOLUME_CUSTOM_SIZE_MIN,
+            "PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM": settings.PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM,
             # 自定义容量的最大值 (单位: Gi)
-            "VOLUME_CUSTOM_SIZE_MAX": settings.VOLUME_CUSTOM_SIZE_MAX,
+            "PERSISTENT_STORAGE_SIZE_MAX": settings.PERSISTENT_STORAGE_SIZE_MAX,
         }
         # 部分前端的特性复用了后端的配置
         features_reuses_backend_settings = {
@@ -91,4 +89,4 @@ class FrontendFeatureViewSet(ViewSet):
             # 是否使用蓝鲸日志平台方案
             "BK_LOG": BK_LOG_DEFAULT_ENABLED,
         }
-        return Response(data={**features_reuses_backend_settings, **fronted_features, **volume_settings})
+        return Response(data={**features_reuses_backend_settings, **fronted_features, **persistent_storage_settings})

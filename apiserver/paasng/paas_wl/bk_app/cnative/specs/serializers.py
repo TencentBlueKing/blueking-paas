@@ -86,7 +86,7 @@ class PersistentStorageSLZ(serializers.Serializer):
             return value
 
         # 如果不是预设容量，检查是否允许自定义
-        if not getattr(settings, "VOLUME_ALLOW_CUSTOM_SIZE", False):
+        if not getattr(settings, "PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM", False):
             raise serializers.ValidationError(_("容量必须是以下选项之一: {}").format(", ".join(preset_values)))
 
         # 验证自定义容量格式
@@ -95,11 +95,11 @@ class PersistentStorageSLZ(serializers.Serializer):
 
         # 验证自定义容量范围
         size_value = PersistentStorageSize.parse_size_value(value)
-        min_size = settings.VOLUME_CUSTOM_SIZE_MIN
-        max_size = settings.VOLUME_CUSTOM_SIZE_MAX
+        max_size = settings.PERSISTENT_STORAGE_SIZE_MAX
 
-        if size_value < min_size or size_value > max_size:
-            raise serializers.ValidationError(_("自定义容量必须在 {}Gi 到 {}Gi 之间").format(min_size, max_size))
+        # Note: 当前只支持 GB 单位, size 大小不可小于 1 GB
+        if size_value < 1 or size_value > max_size:
+            raise serializers.ValidationError(_("自定义容量必须在 1Gi 到 {}Gi 之间").format(max_size))
 
         return value
 

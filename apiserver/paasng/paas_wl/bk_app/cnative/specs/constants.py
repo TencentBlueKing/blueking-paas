@@ -15,8 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import re
-
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
@@ -167,34 +165,3 @@ class PersistentStorageSize(StrStructuredEnum):
     P_1G = EnumField("1Gi")
     P_2G = EnumField("2Gi")
     P_4G = EnumField("4Gi")
-
-    _STORAGE_SIZE_PATTERN = r"^(\d+)Gi$"
-
-    @classmethod
-    def get_preset_values(cls) -> list:
-        """获取所有预设容量选项值"""
-        return [member.value for member in cls]
-
-    @classmethod
-    def is_valid_storage_size(cls, size: str) -> bool:
-        """验证存储大小格式是否有效, 如 '5Gi'"""
-        try:
-            cls.parse_size_value(size)
-        except ValueError:
-            return False
-        else:
-            return True
-
-    @classmethod
-    def parse_size_value(cls, size: str) -> int:
-        """解析存储大小, 返回数值 (单位: Gi)
-
-        :param size: 存储大小字符串，格式为 '数字Gi', 如 '5Gi'
-        :returns: 解析后的数值, 单位为 Gi
-        :raises ValueError: 当格式无效时抛出异常
-        """
-
-        match = re.match(cls._STORAGE_SIZE_PATTERN, size)
-        if match:
-            return int(match.group(1))
-        raise ValueError(f"Invalid storage size format: {size}")

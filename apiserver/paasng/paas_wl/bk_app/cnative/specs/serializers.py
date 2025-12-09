@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+import re
 
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -28,6 +29,9 @@ from paas_wl.bk_app.cnative.specs.mounts import init_volume_source_controller
 from .models import AppModelRevision, ConfigMapSource, Mount, PersistentStorageSource
 
 logger = logging.getLogger(__name__)
+
+# Storage size utilities
+_STORAGE_SIZE_PATTERN = re.compile(r"^(\d+)Gi$")
 
 
 class AppModelRevisionSerializer(serializers.ModelSerializer):
@@ -81,7 +85,7 @@ class PersistentStorageSLZ(serializers.Serializer):
             return value
 
         # 检查是否为预设容量
-        preset_values = PersistentStorageSize.get_preset_values()
+        preset_values = PersistentStorageSize.get_values()
         if value in preset_values:
             return value
 
@@ -89,12 +93,12 @@ class PersistentStorageSLZ(serializers.Serializer):
         if not getattr(settings, "PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM", False):
             raise serializers.ValidationError(_("容量必须是以下选项之一: {}").format(", ".join(preset_values)))
 
-        # 验证自定义容量格式
-        if not PersistentStorageSize.is_valid_storage_size(value):
+        # 验证自定义容量
+        try:
+            size_value = self._parse_storage_size(value)
+        except ValueError:
             raise serializers.ValidationError(_("自定义容量格式无效, 应为如 '5Gi' 的格式"))
 
-        # 验证自定义容量范围
-        size_value = PersistentStorageSize.parse_size_value(value)
         max_size = settings.PERSISTENT_STORAGE_SIZE_MAX
 
         # Note: 当前只支持 GB 单位, size 大小不可小于 1 GB
@@ -102,6 +106,18 @@ class PersistentStorageSLZ(serializers.Serializer):
             raise serializers.ValidationError(_("自定义容量必须在 1Gi 到 {}Gi 之间").format(max_size))
 
         return value
+
+    def _parse_storage_size(self, size: str) -> int:
+        """Parse storage size string, return value in Gi
+
+        :param size: Storage size string, format: '<number>Gi', e.g. '5Gi'
+        :returns: Parsed value in Gi
+        :raises ValueError: When format is invalid
+        """
+        match = _STORAGE_SIZE_PATTERN.match(size)
+        if match:
+            return int(match.group(1))
+        raise ValueError(f"Invalid storage size format: {size}")
 
 
 class UpsertMountSLZ(serializers.Serializer):

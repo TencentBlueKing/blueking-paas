@@ -586,24 +586,14 @@ export default {
     },
     // 更新单个进程的资源限制
     async updateProcessResources() {
-      // 构建接口数据格式
+      // 构建接口数据格式，统一只传 resources
       const envOverlays = {};
 
       ['stag', 'prod'].forEach((env) => {
         const envData = this.formData[env];
-        if (envData.plan_name === 'custom' || envData.plan_name === null) {
-          // 自定义方案：plan_name 为 null，resources 有值
-          envOverlays[env] = {
-            plan_name: null,
-            resources: envData.resources,
-          };
-        } else {
-          // 预设方案：plan_name 有值，resources 为 null
-          envOverlays[env] = {
-            plan_name: envData.plan_name,
-            resources: null,
-          };
-        }
+        envOverlays[env] = {
+          resources: envData.resources,
+        };
       });
 
       try {

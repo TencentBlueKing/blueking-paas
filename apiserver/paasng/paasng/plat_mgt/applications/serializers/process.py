@@ -44,11 +44,11 @@ class ResourcesSLZ(serializers.Serializer):
             return attrs
 
         # Validate CPU: requests should not exceed limits
-        if CPUResourceQuantity(requests["cpu"]).greater_than(CPUResourceQuantity(limits["cpu"])):
+        if CPUResourceQuantity(requests["cpu"]).exceeds(CPUResourceQuantity(limits["cpu"])):
             raise serializers.ValidationError(_("CPU requests 不能大于 limits"))
 
         # Validate Memory: requests should not exceed limits
-        if MemoryResourceQuantity(requests["memory"]).greater_than(MemoryResourceQuantity(limits["memory"])):
+        if MemoryResourceQuantity(requests["memory"]).exceeds(MemoryResourceQuantity(limits["memory"])):
             raise serializers.ValidationError(_("Memory requests 不能大于 limits"))
 
         return attrs

@@ -35,10 +35,10 @@ const (
 )
 
 const (
-	// cpu 最大资源配额（4核）
-	maxCPU = "4"
-	// 内存最大资源配额（4096Mi）
-	maxMemory = "4Gi"
+	// cpu 最大资源配额（48核）
+	maxCPU = "48"
+	// 内存最大资源配额（65536Mi）
+	maxMemory = "64Gi"
 )
 
 var (
@@ -50,9 +50,9 @@ var (
 )
 
 var (
-	// cpu 最大资源配额（4核）
+	// cpu 最大资源配额（48核）
 	maxCPUQuantity = resource.MustParse(maxCPU)
-	// 内存最大资源配额（4096Mi）
+	// 内存最大资源配额（65536Mi）
 	maxMemoryQuantity = resource.MustParse(maxMemory)
 	// 零值
 	zero = resource.Quantity{}

@@ -19,20 +19,20 @@ from bkapi_client_core.apigateway import APIGatewayClient, Operation, OperationG
 
 
 class Group(OperationGroup):
-    # 创建APM应用
+    # 创建 APM 应用
     create_apm_application = bind_property(
         Operation,
         name="create_apm_application",
         method="POST",
-        path="/create_apm_application/",
+        path="/app/apm/create_apm_application/",
     )
 
-    # 快速创建APM应用
+    # 快速创建 APM 应用
     apm_create_application = bind_property(
         Operation,
         name="apm_create_application",
         method="POST",
-        path="/apm/create_application/",
+        path="/app/apm/create_application/",
     )
 
     # 创建空间
@@ -40,7 +40,7 @@ class Group(OperationGroup):
         Operation,
         name="metadata_create_space",
         method="POST",
-        path="/metadata_create_space/",
+        path="/app/metadata/create_space/",
     )
 
     # 更新空间
@@ -48,7 +48,7 @@ class Group(OperationGroup):
         Operation,
         name="metadata_update_space",
         method="POST",
-        path="/metadata_update_space/",
+        path="/app/metadata/update_space/",
     )
 
     # 查询空间实例详情
@@ -56,23 +56,23 @@ class Group(OperationGroup):
         Operation,
         name="metadata_get_space_detail",
         method="GET",
-        path="/metadata_get_space_detail/",
+        path="/app/metadata/get_space_detail/",
     )
 
-    # 查询告警
+    # 查询告警记录
     search_alert = bind_property(
         Operation,
         name="search_alert",
         method="POST",
-        path="/search_alert/",
+        path="/app/alert/search/",
     )
 
-    # 查询告警策略
+    # 查询告警策略 (迁移)
     search_alarm_strategy_v3 = bind_property(
         Operation,
         name="search_alarm_strategy_v3",
         method="POST",
-        path="/search_alarm_strategy_v3/",
+        path="/app/alarm_strategy/search/v3/",
     )
 
     # 统一查询时序数据
@@ -80,15 +80,15 @@ class Group(OperationGroup):
         Operation,
         name="promql_query",
         method="POST",
-        path="/promql_query/",
+        path="/app/data_query/graph_promql_query/",
     )
 
-    # 下发告警规则
+    # 导入 AsCode 配置
     as_code_import_config = bind_property(
         Operation,
         name="as_code_import_config",
         method="POST",
-        path="/as_code_import_config/",
+        path="/app/as_code/import_config/",
     )
 
     # 快捷应用内置仪表盘
@@ -96,15 +96,13 @@ class Group(OperationGroup):
         Operation,
         name="quick_import_dashboard",
         method="POST",
-        path="/quick_import_dashboard/",
+        path="/app/dashboard/quick_import_dashboard/",
     )
 
 
 class Client(APIGatewayClient):
-    """bkmonitorv3
-    监控平台v3上云版本
-    """
+    """bk-monitor API 网关客户端"""
 
-    _api_name = "bkmonitorv3"
+    _api_name = "bk-monitor"
 
     api = bind_property(Group, name="api")

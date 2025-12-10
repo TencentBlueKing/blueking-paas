@@ -2,15 +2,18 @@ apigateway:
   description: PaaS3.0 开发者中心 API 网关，包含应用信息查询、应用部署、增强服务、轻应用等 API。
   description_en: PaaS 3.0 Developer Center API Gateway, including APP information retrieval, APP deployment, Add-ons, Mini-App , and other APIs.
   is_public: true
+  # 标记网关为官方网关，默认网关名需以 `bk-` 开头
+  # bkpaas3 网关设置官方网关需要依赖 API 网关版本: 1.16.0 及以上
+  api_type: 1
   maintainers:
     - "admin"
 
 
 # 更新了 resource.yaml 后必须修改 title
 release:
-  version: 1.4.1
-  title: "feat: corrected some document return results."
-  comment: "feat: corrected some document return results."
+  version: 1.4.2
+  title: "Set as the official gateway, and add the get_service_instance_by_module API."
+  comment: "Set as the official gateway, and add the get_service_instance_by_module API."
 
 
 stage:

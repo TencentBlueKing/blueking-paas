@@ -10,6 +10,7 @@
 | 参数名称 | 类型 | 是否必填 | 描述 |
 | -------- | ---- | -------- | ---- |
 | username | string | 是 | 用户名 |
+| include_inactive_apps | boolean | 否 | 是否包含已下架应用，默认值为 True |
 
 ### 请求示例
 ```bash
@@ -45,5 +46,3 @@ curl -X GET -H 'X-Bkapi-Authorization: {"bk_app_code": "apigw-api-test", "bk_app
 | developers | list | 开发者列表 |
 | creator | string | 创建者 |
 | created | string | 创建时间 |
-
-**注意：已下架的应用不返回**

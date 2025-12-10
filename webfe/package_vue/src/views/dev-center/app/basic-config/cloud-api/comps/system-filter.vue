@@ -19,41 +19,47 @@
       </section>
       <div class="system-list">
         <template v-if="curList.length > 0">
-          <div
-            v-for="(item, index) in curList"
-            :key="index"
-            :class="['item', { active: curSelect === item.id }]"
-            @click="handleSelectSys(item)"
+          <bk-virtual-scroll
+            ref="systemRef"
+            class="virtual-scroll-cls"
+            :item-height="52"
           >
-            <p
-              v-bk-overflow-tips
-              class="name"
-            >
-              <span v-dompurify-html="highlight(item)" />
-              <PaasTag
-                v-if="!isGateway && item.tag !== ''"
-                size="small"
-                :class="[
-                  { inner: [$t('内部版'), $t('互娱外部版')].includes(item.tag) },
-                  { clound: [$t('上云版'), $t('互娱外部上云版')].includes(item.tag) },
-                ]"
+            <template slot-scope="{ data }">
+              <div
+                :class="['item', { active: curSelect === data.id }]"
+                @click="handleSelectSys(data)"
               >
-                {{ item.tag }}
-              </PaasTag>
-              <PaasTag
-                v-if="isGateway && item.tenant_mode === 'global'"
-                theme="warning"
-                size="small"
-              >
-                {{ $t('全租户') }}
-              </PaasTag>
-            </p>
-            <p
-              v-bk-overflow-tips
-              class="desc"
-              v-dompurify-html="highlightDesc(item)"
-            />
-          </div>
+                <p
+                  v-bk-overflow-tips
+                  class="name"
+                >
+                  <span v-dompurify-html="highlight(data)" />
+                  <PaasTag
+                    v-if="!isGateway && data.tag !== ''"
+                    size="small"
+                    :class="[
+                      { inner: [$t('内部版'), $t('互娱外部版')].includes(data.tag) },
+                      { clound: [$t('上云版'), $t('互娱外部上云版')].includes(data.tag) },
+                    ]"
+                  >
+                    {{ data.tag }}
+                  </PaasTag>
+                  <PaasTag
+                    v-if="isGateway && data.tenant_mode === 'global'"
+                    theme="warning"
+                    size="small"
+                  >
+                    {{ $t('全租户') }}
+                  </PaasTag>
+                </p>
+                <p
+                  v-bk-overflow-tips
+                  class="desc"
+                  v-dompurify-html="highlightDesc(data)"
+                />
+              </div>
+            </template>
+          </bk-virtual-scroll>
         </template>
         <template v-else>
           <div class="empty-wrapper">
@@ -114,10 +120,11 @@ export default {
   watch: {
     list: {
       handler(value) {
-        this.curList = [...value];
+        this.curList = value;
         if (this.curList.length > 0) {
           this.curSelect = this.curList[0].id;
         }
+        this.updateVirtualScrollData();
         this.querySelect();
       },
       immediate: true,
@@ -125,7 +132,8 @@ export default {
     searchValue(newVal, oldVal) {
       if (newVal === '' && oldVal !== '' && this.isFilter) {
         this.isFilter = false;
-        this.curList = [...this.list];
+        this.curList = this.list;
+        this.updateVirtualScrollData();
       }
     },
   },
@@ -140,6 +148,13 @@ export default {
     });
   },
   methods: {
+    // 更新虚拟滚动列表数据
+    updateVirtualScrollData() {
+      this.$nextTick(() => {
+        this.$refs.systemRef?.setListData(this.curList);
+      });
+    },
+
     handleSearch(payload) {
       if (payload === '') {
         return;
@@ -149,6 +164,7 @@ export default {
         const regex = new RegExp('(' + payload + ')', 'gi');
         return (item.name && !!item.name.match(regex)) || (item.description && !!item.description.match(regex));
       });
+      this.updateVirtualScrollData();
       this.updateTableEmptyConfig();
     },
 
@@ -161,8 +177,11 @@ export default {
       this.searchValue = query.apiName;
       this.handleSearch(this.searchValue);
       if (this.curList.length) {
-        this.handleSelectSys(this.curList[0]);
-        this.$emit('on-refresh', true);
+        // 等待虚拟滚动组件数据更新后再选择
+        this.$nextTick(() => {
+          this.handleSelectSys(this.curList[0]);
+          this.$emit('on-refresh', true);
+        });
       }
     },
 
@@ -221,6 +240,9 @@ export default {
 
     clearFilter() {
       this.searchValue = '';
+      this.isFilter = false;
+      this.curList = this.list;
+      this.updateVirtualScrollData();
     },
 
     updateTableEmptyConfig() {
@@ -257,7 +279,16 @@ export default {
     position: relative;
     margin-top: 10px;
     height: 560px;
-    overflow-y: auto;
+    overflow: hidden;
+    .virtual-scroll-cls {
+      height: 100%;
+      /deep/ .bk-min-nav {
+        background-color: #fafafa;
+      }
+      /deep/ .bk-nav-show {
+        border-radius: 8px;
+      }
+    }
     .item {
       position: relative;
       display: flex;

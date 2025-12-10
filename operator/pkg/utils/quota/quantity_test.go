@@ -64,8 +64,8 @@ var _ = Describe("TestQuota", func() {
 		Entry("mem unit Gi", Memory, "2Gi", "1024Mi"),
 		Entry("after convert unit", CPU, "1", "500m"),
 		// test case: If the maximum value is exceeded, the maximum value will be returned
-		Entry("Memory max limit(bigger than 4096Mi)", Memory, "8192Mi", "2048Mi"),
-		Entry("CPU max limit(bigger than 4000m)", CPU, "8000m", "2000m"),
+		Entry("Memory max limit(bigger than 65536Mi)", Memory, "140000Mi", "32768Mi"),
+		Entry("CPU max limit(bigger than 48000m)", CPU, "100000m", "24000m"),
 	)
 
 	DescribeTable(
@@ -93,13 +93,13 @@ var _ = Describe("TestQuota", func() {
 	})
 
 	It("exceed limit case", func() {
-		_, err := NewQuantity("6", CPU)
+		_, err := NewQuantity("64", CPU)
 		Expect(errors.Is(err, ErrExceedLimit)).To(BeTrue())
-		Expect(err.Error()).To(Equal("exceed cpu max limit 4: exceed limit"))
+		Expect(err.Error()).To(Equal("exceed cpu max limit 48: exceed limit"))
 
-		_, err = NewQuantity("5000Mi", Memory)
+		_, err = NewQuantity("70000Mi", Memory)
 		Expect(errors.Is(err, ErrExceedLimit)).To(BeTrue())
-		Expect(err.Error()).To(Equal("exceed memory max limit 4Gi: exceed limit"))
+		Expect(err.Error()).To(Equal("exceed memory max limit 64Gi: exceed limit"))
 	})
 
 	Describe("ParseResourceSpec", func() {
@@ -142,13 +142,13 @@ var _ = Describe("TestQuota", func() {
 		})
 
 		It("should enforce CPU limit", func() {
-			_, _, err := ParseResourceSpec("10", "512Mi")
+			_, _, err := ParseResourceSpec("64", "512Mi")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("exceed cpu max limit"))
 		})
 
 		It("should enforce Memory limit", func() {
-			_, _, err := ParseResourceSpec("200m", "10Gi")
+			_, _, err := ParseResourceSpec("200m", "128Gi")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("exceed memory max limit"))
 		})

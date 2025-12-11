@@ -30,7 +30,7 @@
         <!-- 构建历史 -->
         <div
           class="deploy-history flex-row align-items-center"
-          :class="{ 'disabled': isCustomImage }"
+          :class="{ disabled: isCustomImage }"
           v-bk-tooltips="{
             content: $t('当前模块直接提供镜像部署，无构建历史'),
             disabled: !isCustomImage,
@@ -102,10 +102,8 @@
                   </bk-form-item>
                 </bk-form>
               </section>
-              <div
-                class="fright-middle fright-last"
-              >
-                <h3> {{ $t('部署记录') }} </h3>
+              <div class="fright-middle fright-last">
+                <h3>{{ $t('部署记录') }}</h3>
                 <ul class="dynamic-list">
                   <template v-if="row.detail.deploy_records?.length">
                     <li
@@ -113,7 +111,8 @@
                       :key="itemIndex"
                     >
                       <p class="dynamic-content">
-                        {{ item.operator }} {{ $t('部署到') }}{{item.environment === 'stag' ? $t('预发布环境') : $t('生产环境')}}
+                        {{ item.operator }} {{ $t('部署到')
+                        }}{{ item.environment === 'stag' ? $t('预发布环境') : $t('生产环境') }}
                         <span class="dynamic-time">{{ item.at }}</span>
                       </p>
                     </li>
@@ -138,7 +137,7 @@
           sortable
         />
         <bk-table-column
-          width="160"
+          width="180"
           :label="$t('更新时间')"
           prop="updated"
           :show-overflow-tooltip="true"
@@ -153,7 +152,8 @@
   </div>
 </template>
 
-<script>import appBaseMixin from '@/mixins/app-base-mixin';
+<script>
+import appBaseMixin from '@/mixins/app-base-mixin';
 import humanize from 'humanize';
 export default {
   name: 'ClundImageList',
@@ -177,7 +177,7 @@ export default {
   },
   computed: {
     isCustomImage() {
-      const curModule = this.curAppModuleList.find(module => module.name === this.moduleName);
+      const curModule = this.curAppModuleList.find((module) => module.name === this.moduleName);
       return curModule?.web_config?.runtime_type === 'custom_image';
     },
   },
@@ -222,7 +222,7 @@ export default {
             search_term: this.searchValue,
           },
         });
-        this.imageList = res.results.map(image => ({
+        this.imageList = res.results.map((image) => ({
           isLoading: false,
           detail: {
             build_records: [],
@@ -387,15 +387,15 @@ export default {
     padding: 0;
   }
 
-  .fright-last{
+  .fright-last {
     padding: 16px;
     background: #fafcfe;
-    border: 1px solid #DCDEE5;
+    border: 1px solid #dcdee5;
     min-width: 254px;
     h3 {
       font-weight: 700;
       font-size: 12px;
-      color: #63656E;
+      color: #63656e;
       height: 32px;
       line-height: 32px;
     }
@@ -407,7 +407,7 @@ export default {
   }
   .dynamic-list li:before {
     position: absolute;
-    content: "";
+    content: '';
     width: 10px;
     height: 10px;
     top: 3px;
@@ -417,20 +417,20 @@ export default {
   }
   .dynamic-list li:after {
     position: absolute;
-    content: "";
+    content: '';
     width: 1px;
     height: 40px;
     top: 15px;
     left: 6px;
   }
   .dynamic-list li:before {
-    border: solid 2px #D8D8D8;
+    border: solid 2px #d8d8d8;
   }
   .dynamic-list li:after {
-    background: #D8D8D8;
+    background: #d8d8d8;
   }
   .dynamic-list li:last-child:before {
-    border: solid 2px #D8D8D8;
+    border: solid 2px #d8d8d8;
   }
   .dynamic-list li:last-child:after {
     background: transparent;
@@ -438,7 +438,7 @@ export default {
   .dynamic-time {
     line-height: 18px;
     font-size: 12px;
-    color: #979BA5;
+    color: #979ba5;
     cursor: default;
     margin-top: 5px;
   }

@@ -97,7 +97,7 @@
       <bk-table-column
         :label="$t('告警开始时间')"
         :prop="isBkMonitor ? 'start_time' : 'start'"
-        width="160"
+        width="170"
         :render-header="renderTypeHeader"
       />
       <bk-table-column

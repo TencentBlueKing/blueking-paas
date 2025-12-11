@@ -1064,7 +1064,7 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 		It("Invalid exceed cpu max limit", func() {
 			legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
-			legacyProcResConfig["web"] = map[string]string{"cpu": "6", "memory": "2G"}
+			legacyProcResConfig["web"] = map[string]string{"cpu": "64", "memory": "2G"}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
 
 			err := bkapp.ValidateCreate()
@@ -1072,7 +1072,7 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 		It("Invalid exceed memory max limit", func() {
 			legacyProcResConfig := make(paasv1alpha2.LegacyProcConfig)
-			legacyProcResConfig["web"] = map[string]string{"cpu": "2", "memory": "8G"}
+			legacyProcResConfig["web"] = map[string]string{"cpu": "2", "memory": "128G"}
 			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.LegacyProcResAnnoKey, legacyProcResConfig)
 
 			err := bkapp.ValidateCreate()

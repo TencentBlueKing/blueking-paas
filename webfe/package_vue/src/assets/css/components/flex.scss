@@ -1,4 +1,4 @@
-.flex-row {
+  .flex-row {
     display: flex;
   }
   
@@ -155,5 +155,18 @@
   .flex-shrink-1 {
   
     flex-shrink: 1;
+  }
+  
+  // Gap utilities (4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28)
+  @each $size in 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28 {
+    .gap-#{$size} {
+      gap: #{$size}px;
+    }
+    .gap-x-#{$size} {
+      column-gap: #{$size}px;
+    }
+    .gap-y-#{$size} {
+      row-gap: #{$size}px;
+    }
   }
   

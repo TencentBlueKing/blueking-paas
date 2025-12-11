@@ -38,4 +38,7 @@ COPY --from=StaticBuilding /package_vue/dist/ /var/www/
 RUN printf '#!/bin/bash\nmv /var/www/index.html{,.template} && envsubst </var/www/index.html.template >/var/www/index.html\nexec nginx -g "daemon off;"' > /init && \
     chmod +x /init
 
+# Expose the ports for nginx
+EXPOSE 80
+
 CMD ["/init"]

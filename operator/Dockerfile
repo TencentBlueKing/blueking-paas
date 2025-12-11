@@ -25,11 +25,11 @@ ARG LDFLAGS
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags "$LDFLAGS" -o manager ./main.go
 
 # -------------- runner container --------------
-FROM alpine:3.20 AS runner
+FROM tencentos/tencentos4-minimal AS runner
 
 LABEL maintainer="Tencent BlueKing"
 
-RUN apk --update --no-cache add bash ca-certificates
+RUN yum -y install ca-certificates procps bind-utils && yum clean all && rm -rf /var/cache/yum
 
 WORKDIR /
 

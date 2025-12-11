@@ -54,9 +54,6 @@ class FrontendFeatureViewSet(ViewSet):
             "APP_AVAILABILITY_LEVEL": settings.FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL,
             # 是否展示 MCP Server 云 API 权限
             "MCP_SERVER_API": settings.FE_FEATURE_SETTINGS_MCP_SERVER_API,
-        }
-        # 持久存储相关配置
-        persistent_storage_settings = {
             # 是否允许用户自定义持久存储大小
             "PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM": settings.PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM,
         }
@@ -87,4 +84,4 @@ class FrontendFeatureViewSet(ViewSet):
             # 是否使用蓝鲸日志平台方案
             "BK_LOG": BK_LOG_DEFAULT_ENABLED,
         }
-        return Response(data={**features_reuses_backend_settings, **fronted_features, **persistent_storage_settings})
+        return Response(data={**features_reuses_backend_settings, **fronted_features})

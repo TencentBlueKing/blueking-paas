@@ -31,8 +31,10 @@ ENV BKPAAS_BUILD_VERSION=${BKPAAS_BUILD_VERSION}
 
 # cp nginx files
 COPY custom-configs/default /etc/nginx/conf.d/default.conf
+# cp built webfe files
 COPY --from=StaticBuilding /package_vue/dist/ /var/www/
 
+# generate index.html by rendering index.html.template via environment variables
 RUN printf '#!/bin/bash\nmv /var/www/index.html{,.template} && envsubst </var/www/index.html.template >/var/www/index.html\nexec nginx -g "daemon off;"' > /init && \
     chmod +x /init
 

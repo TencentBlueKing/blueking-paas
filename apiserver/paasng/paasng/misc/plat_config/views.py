@@ -59,8 +59,6 @@ class FrontendFeatureViewSet(ViewSet):
         persistent_storage_settings = {
             # 是否允许用户自定义持久存储大小
             "PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM": settings.PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM,
-            # 自定义容量的最大值 (单位: Gi)
-            "PERSISTENT_STORAGE_SIZE_MAX": settings.PERSISTENT_STORAGE_SIZE_MAX,
         }
         # 部分前端的特性复用了后端的配置
         features_reuses_backend_settings = {

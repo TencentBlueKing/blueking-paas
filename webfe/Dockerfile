@@ -18,11 +18,13 @@ RUN npm run build
 ######### Nginx + webfe part #########
 FROM tencentos/tencentos4-minimal AS PageServing
 
-RUN yum install -y nginx gettext && \
+RUN yum install -y nginx gettext procps bind-utils && \
     yum clean all && \
     rm -rf /var/cache/yum && \
     ln -sf /dev/stdout /var/log/nginx/access.log && \
     ln -sf /dev/stderr /var/log/nginx/error.log
+
+RUN sed -i 's/worker_processes auto/worker_processes 1/g' /etc/nginx/nginx.conf
 
 ARG BKPAAS_BUILD_VERSION="tag: null, commitID: ^HEAD, buildID: null, buildTime: null"
 ENV BKPAAS_BUILD_VERSION=${BKPAAS_BUILD_VERSION}

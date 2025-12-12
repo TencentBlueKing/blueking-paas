@@ -1528,6 +1528,12 @@ DEFAULT_PERSISTENT_STORAGE_CLASS_NAME = settings.get("DEFAULT_PERSISTENT_STORAGE
 # 持久存储默认存储大小
 DEFAULT_PERSISTENT_STORAGE_SIZE = settings.get("DEFAULT_PERSISTENT_STORAGE_SIZE", "1Gi")
 
+# 是否允许用户自定义持久存储大小 (默认不允许, 可通过 helm values 配置开启)
+PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM: bool = settings.get("PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM", False)
+
+# 自定义容量的最大值 (单位: Gi)
+PERSISTENT_STORAGE_SIZE_MAX: int = settings.get("PERSISTENT_STORAGE_SIZE_MAX", 100)
+
 # ---------------------------------------------
 #  前端特性配置
 # ---------------------------------------------

@@ -16,7 +16,7 @@ COPY ./package_vue/ /package_vue/
 RUN npm run build
 
 ######### Nginx + webfe part #########
-FROM tencentos/tencentos4-minimal AS PageServing
+FROM tencentos/tencentos4-minimal:4.4-v20251120 AS PageServing
 
 RUN yum install -y nginx gettext procps bind-utils && \
     yum clean all && \

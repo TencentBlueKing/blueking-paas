@@ -25,7 +25,7 @@ ARG LDFLAGS
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags "$LDFLAGS" -o manager ./main.go
 
 # -------------- runner container --------------
-FROM tencentos/tencentos4-minimal AS runner
+FROM tencentos/tencentos4-minimal:4.4-v20251120 AS runner
 
 LABEL maintainer="Tencent BlueKing"
 

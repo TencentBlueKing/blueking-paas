@@ -251,6 +251,8 @@ MIDDLEWARE = [
     "apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware",  # JWT 透传的用户信息
     # Must placed below `ApiGatewayJWTAppMiddleware` because it depends on `request.app`
     "paasng.infras.sysapi_client.middlewares.AuthenticatedAppAsClientMiddleware",
+    # 激活用户时区（需要在所有认证中间件之后）
+    "paasng.infras.accounts.middlewares.UserTimezoneMiddleware",
     # Other utilities middlewares
     "paasng.utils.middlewares.AutoDisableCSRFMiddleware",
     "paasng.utils.middlewares.APILanguageMiddleware",
@@ -372,7 +374,8 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 100,
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework.authentication.SessionAuthentication",),
-    "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",
+    # Custom datetime format with timezone offset: "2025-10-28 07:58:00 +0800"
+    "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S %z",
     # TIPS: 覆盖 SearchFilter、OrderingFilter 的过滤参数，与应用列表保持用同样的搜索、排序字段
     "SEARCH_PARAM": "search_term",
     "ORDERING_PARAM": "order_by",

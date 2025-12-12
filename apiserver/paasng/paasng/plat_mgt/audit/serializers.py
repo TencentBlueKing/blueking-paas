@@ -27,7 +27,7 @@ class BaseOperationAuditSLZ(serializers.Serializer):
     operation = serializers.CharField(help_text="操作类型")
     status = serializers.CharField(source="result_code", help_text="状态")
     operator = serializers.CharField(source="user.username", help_text="操作人")
-    operated_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", source="created", help_text="操作时间")
+    operated_at = serializers.DateTimeField(source="created", help_text="操作时间 format %Y-%m-%d %H:%M:%S %z")
 
 
 class ApplicationOperationAuditOutputSLZ(BaseOperationAuditSLZ):

@@ -966,7 +966,7 @@ class TestListEvaluation:
             "uv": report.uv,
             "issue_type": report.issue_type,
             "latest_operated_at": report.latest_operated_at.astimezone(timezone.get_current_timezone()).strftime(
-                "%Y-%m-%d %H:%M:%S"
+                "%Y-%m-%d %H:%M:%S %z"
             ),
         }
 

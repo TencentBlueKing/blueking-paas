@@ -69,24 +69,13 @@
           prop="conditions"
           :min-width="200"
         >
-          <div
-            class="json-pretty-wrapper"
-            slot-scope="{ row }"
-          >
-            <!-- JSON格式预览 -->
-            <vue-json-pretty
-              class="paas-vue-json-pretty-cls"
+          <template slot-scope="{ row }">
+            <MaskedTextViewer
               :data="row.config"
               :deep="Object.keys(row.config)?.length ? 1 : 0"
-              :show-length="true"
-              :highlight-mouseover-node="true"
+              :plaintext.sync="plaintextStatusMap[row.uuid]"
             />
-            <i
-              v-bk-tooltips="$t('复制')"
-              class="paasng-icon paasng-general-copy"
-              v-copy="JSON.stringify(row.config, null, 2)"
-            ></i>
-          </div>
+          </template>
         </bk-table-column>
         <bk-table-column
           :label="$t('所属服务')"
@@ -173,16 +162,16 @@
 </template>
 
 <script>
-import VueJsonPretty from 'vue-json-pretty';
-import 'vue-json-pretty/lib/styles.css';
+import MaskedTextViewer from '@/components/masked-text-viewer';
 import PlanSideslider from './plan-sideslider.vue';
 import PlanDetailSideslider from './plan-detail-sideslider';
 import ServiceList from '../service-config/service-list';
 import TenantSelect from './tenant-select';
+
 export default {
   name: 'ServicePlan',
   components: {
-    VueJsonPretty,
+    MaskedTextViewer,
     PlanSideslider,
     PlanDetailSideslider,
     ServiceList,
@@ -221,6 +210,8 @@ export default {
       activeServiceId: '',
       activeService: {},
       tenantPlanCountMap: {},
+      // 每行的明文/密文状态 { rowId: true/false }
+      plaintextStatusMap: {},
     };
   },
   created() {
@@ -373,24 +364,8 @@ export default {
     .plan-table-cls {
       margin-top: 12px;
       /deep/ .bk-table-row.hover-row {
-        i.paasng-general-copy {
+        .masked-text-viewer i.paasng-icon {
           display: block !important;
-        }
-      }
-      .json-pretty-wrapper {
-        display: flex;
-        .paas-vue-json-pretty-cls {
-          flex: 1;
-          margin-right: 16px;
-        }
-        i.paasng-general-copy {
-          display: none;
-          position: absolute;
-          top: 50%;
-          right: 0;
-          color: #3a84ff;
-          cursor: pointer;
-          transform: translateY(-50%);
         }
       }
     }

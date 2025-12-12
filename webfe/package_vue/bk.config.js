@@ -12,10 +12,12 @@ const RELEASE_VERSION = [now.getFullYear(), '-', (now.getMonth() + 1), '-', now.
 module.exports = {
   host: process.env.BK_APP_HOST,  // bk-local中配置
   port: 6060, // 端口号
-  publicPath: '/',
+  publicPath: process.env.BK_STATIC_URL || '/',
   cache: true,
   open: true,
-  replaceStatic: true,
+  replaceStatic: {
+    key: process.env.BK_STATIC_URL || '/',
+  },
 
   // webpack config 配置
   configureWebpack(context) {

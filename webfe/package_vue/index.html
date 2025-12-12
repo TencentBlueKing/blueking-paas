@@ -7,6 +7,10 @@
   <body>
     <div id="app"></div>
     <script>
+      // 部署时会替换为实际路径，开发环境默认为 '/'
+      window.BK_SITE_PATH = '<%= process.env.BK_SITE_PATH %>' || '/';
+      window.BK_STATIC_URL = '<%= process.env.BK_STATIC_URL %>' || '/';
+
       function getLanguage() {
         try {
           return typeof document !== 'undefined' && /(^|;\s*)blueking_language=(en[^;]*)/i.test(document.cookie) ? 'EN' : 'ZH';

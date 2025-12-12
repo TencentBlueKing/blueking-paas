@@ -17,6 +17,10 @@
  * to the current version of the project delivered to anyone in the future.
  */
 /* global global */
+
+// 用于动态设置 webpack publicPath
+import '../static/webpack_public_path';
+
 import Vue from 'vue';
 import App from './App';
 import router from '@/router';

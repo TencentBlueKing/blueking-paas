@@ -94,6 +94,12 @@ class SmartAppBuilder:
             "PackagingVersion": self.smart_build.packaging_version,
         }
 
+        # 添加缓存配置
+        if settings.SMART_CACHE_REGISTRY:
+            envs["CACHE_REGISTRY"] = settings.SMART_CACHE_REGISTRY
+            if settings.SMART_REGISTRY_AUTH:
+                envs["REGISTRY_AUTH"] = settings.SMART_REGISTRY_AUTH
+
         cluster_name = get_default_cluster_name()
 
         runtime = ContainerRuntimeSpec(

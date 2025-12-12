@@ -15,11 +15,13 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
 from unittest import mock
 
 import pytest
 from kubernetes.dynamic import ResourceInstance
 
+from paas_wl.bk_app.cnative.specs.constants import OVERRIDE_PROC_RES_ANNO_KEY
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paas_wl.bk_app.processes.entities import (
     ExecAction as WLExecAction,
@@ -112,15 +114,38 @@ def testlist_gen_cnative_process_specs():
 
 
 @pytest.mark.usefixtures("bk_stag_wl_app")
-def test_list_cnative_module_processes_specs(bk_cnative_app):
+@pytest.mark.parametrize(
+    ("override_config", "expected_resource_limit", "expected_resource_limit_quota", "expected_resource_requests"),
+    [
+        # No override: use default resource quota from resQuotaPlan
+        (
+            None,
+            {"cpu": "4000m", "memory": "4096Mi"},
+            {"cpu": 4000, "memory": 4096},
+            {"cpu": "200m", "memory": "2048Mi"},
+        ),
+        # With override: use overridden resource limits/requests
+        (
+            {"web": {"limits": {"cpu": "8000m", "memory": "8192Mi"}, "requests": {"cpu": "400m", "memory": "4096Mi"}}},
+            {"cpu": "8000m", "memory": "8192Mi"},
+            {"cpu": 8000, "memory": 8192},
+            {"cpu": "400m", "memory": "4096Mi"},
+        ),
+    ],
+)
+def test_list_cnative_module_processes_specs(
+    bk_cnative_app, override_config, expected_resource_limit, expected_resource_limit_quota, expected_resource_requests
+):
+    """Test list_cnative_module_processes_specs with and without override_proc_res annotation"""
+    annotations = {"bkapp.paas.bk.tencent.com/module-name": "default"}
+    if override_config:
+        annotations[OVERRIDE_PROC_RES_ANNO_KEY] = json.dumps(override_config)
+
     with mock.patch(
         "paas_wl.bk_app.processes.processes.list_mres_by_env",
         return_value=[
             BkAppResource(
-                metadata={
-                    "name": f"{bk_cnative_app.code}",
-                    "annotations": {"bkapp.paas.bk.tencent.com/module-name": "default"},
-                },
+                metadata={"name": f"{bk_cnative_app.code}", "annotations": annotations},
                 spec={"processes": [{"name": "web", "replicas": 1, "resQuotaPlan": "4C4G"}]},
             ),
             BkAppResource(
@@ -142,9 +167,9 @@ def test_list_cnative_module_processes_specs(bk_cnative_app):
                 "autoscaling": False,
                 "scaling_config": None,
                 "target_status": "start",
-                "resource_limit": {"cpu": "4000m", "memory": "4096Mi"},
-                "resource_limit_quota": {"cpu": 4000, "memory": 4096},
-                "resource_requests": {"cpu": "200m", "memory": "2048Mi"},
+                "resource_limit": expected_resource_limit,
+                "resource_limit_quota": expected_resource_limit_quota,
+                "resource_requests": expected_resource_requests,
             }
         ]
 
@@ -206,7 +231,10 @@ class TestProcessManager:
     def test_list_cnative_processes_specs(self, bk_cnative_app, bk_stag_env):
         with mock.patch(
             "paas_wl.bk_app.processes.processes.get_mres_from_cluster",
-            return_value=BkAppResource(metadata={"name": bk_cnative_app.code}, spec={"processes": [{"name": "foo"}]}),
+            return_value=BkAppResource(
+                metadata={"name": bk_cnative_app.code, "annotations": {}},
+                spec={"processes": [{"name": "foo"}]},
+            ),
         ):
             specs = ProcessManager(bk_stag_env).list_processes_specs()
             assert specs[0] == {
@@ -220,6 +248,39 @@ class TestProcessManager:
                 "resource_limit": {"cpu": "4000m", "memory": "1024Mi"},
                 "resource_limit_quota": {"cpu": 4000, "memory": 1024},
                 "resource_requests": {"cpu": "200m", "memory": "256Mi"},
+            }
+
+    @pytest.mark.usefixtures("bk_stag_wl_app")
+    def test_list_cnative_processes_specs_with_override(self, bk_cnative_app, bk_stag_env):
+        """Test that override_proc_res annotation overrides resource limits/requests in ProcessManager"""
+        override_config = {
+            "foo": {
+                "limits": {"cpu": "16000m", "memory": "16384Mi"},
+                "requests": {"cpu": "800m", "memory": "8192Mi"},
+            }
+        }
+        with mock.patch(
+            "paas_wl.bk_app.processes.processes.get_mres_from_cluster",
+            return_value=BkAppResource(
+                metadata={
+                    "name": bk_cnative_app.code,
+                    "annotations": {OVERRIDE_PROC_RES_ANNO_KEY: json.dumps(override_config)},
+                },
+                spec={"processes": [{"name": "foo"}]},
+            ),
+        ):
+            specs = ProcessManager(bk_stag_env).list_processes_specs()
+            assert specs[0] == {
+                "name": "foo",
+                "max_replicas": 10,
+                "target_replicas": 1,
+                "plan_name": "default",
+                "autoscaling": False,
+                "scaling_config": None,
+                "target_status": "start",
+                "resource_limit": {"cpu": "16000m", "memory": "16384Mi"},
+                "resource_limit_quota": {"cpu": 16000, "memory": 16384},
+                "resource_requests": {"cpu": "800m", "memory": "8192Mi"},
             }
 
 

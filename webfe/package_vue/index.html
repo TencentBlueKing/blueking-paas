@@ -2,7 +2,6 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <link rel="stylesheet" type="text/css" href="/static/css/base.css">
   </head>
   <body>
     <div id="app"></div>
@@ -10,6 +9,15 @@
       // 部署时会替换为实际路径，开发环境默认为 '/'
       window.BK_SITE_PATH = '<%= process.env.BK_SITE_PATH %>' || '/';
       window.BK_STATIC_URL = '<%= process.env.BK_STATIC_URL %>' || '/';
+
+      // 避免被 Webpack 的 HtmlWebpackPlugin 处理路径
+      (function() {
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = window.BK_STATIC_URL + 'static/css/base.css';
+        document.head.appendChild(link);
+      })();
 
       function getLanguage() {
         try {

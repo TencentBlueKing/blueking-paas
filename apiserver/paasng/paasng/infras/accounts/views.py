@@ -71,6 +71,8 @@ class UserInfoViewSet(APIView):
             "display_name": getattr(user, "display_name", None),
             "chinese_name": user.chinese_name,
             "avatar_url": user.avatar_url if user.avatar_url else user_logo,
+            # 从用户管理 API (bk-login/bk-user) 透传的时区字段, 若不存在则使用默认时区
+            "time_zone": getattr(user, "time_zone", settings.TIME_ZONE),
         }
         return Response(data)
 

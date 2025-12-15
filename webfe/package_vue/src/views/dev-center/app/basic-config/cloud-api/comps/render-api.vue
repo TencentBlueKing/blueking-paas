@@ -6,7 +6,7 @@
     :height="300"
   >
     <bk-alert
-      style="margin-bottom: 16px;"
+      class="mb-16"
       type="info"
       :title="$t('若有效期限不足180天，但应用仍在访问 API，有效期限将自动延长至 180 天（不限次数）。')"
     />
@@ -31,99 +31,99 @@
   </paas-content-loader>
 </template>
 <script>
-    import Layout from './render-layout';
-    import SystemFilter from './system-filter';
-    import RenderList from './render-list';
-    export default {
-        name: '',
-        components: {
-            Layout,
-            SystemFilter,
-            RenderList
-        },
-        props: {
-            apiType: {
-                type: String,
-                default: 'gateway'
-            },
-            appCode: {
-                type: String,
-                required: true
-            }
-        },
-        data () {
-            return {
-                requestQueue: ['filter', 'list'],
-                filterList: [],
-                curId: '',
-                curName: '',
-                maintainers: [],
-                loading: true,
-                isRefresh: false
-            };
-        },
-        computed: {
-            isGateway () {
-                return this.apiType === 'gateway';
-            }
-        },
-        watch: {
-            '$route' () {
-                this.requestQueue = ['filter', 'list'];
-                this.init();
-            },
-            requestQueue (value) {
-                if (value.length < 1) {
-                    this.loading = false;
-                    this.$emit('data-ready');
-                }
-            }
-        },
-        created () {
-            this.init();
-        },
-        methods: {
-            init () {
-                this.fetchFilterList();
-            },
-
-            handleSelect ({ id, maintainers, name }) {
-                this.curId = id;
-                this.curName = name;
-                this.maintainers = maintainers;
-            },
-
-            handleRefresh (data) {
-                this.isRefresh = data;
-            },
-
-            handlerDataReady () {
-                if (this.requestQueue.length > 0) {
-                    this.requestQueue.shift();
-                }
-            },
-
-            async fetchFilterList () {
-                const method = this.isGateway ? 'getApis' : 'getSystems';
-                try {
-                    const res = await this.$store.dispatch(`cloudApi/${method}`, {
-                        appCode: this.appCode
-                    });
-                    this.filterList = Object.freeze(res.data);
-                    if (this.filterList.length > 0) {
-                        this.curId = this.filterList[0].id;
-                        this.curName = this.filterList[0].name;
-                        this.maintainers = this.filterList[0].maintainers;
-                    }
-                } catch (e) {
-                    this.$paasMessage({
-                        theme: 'error',
-                        message: e.detail || e.message || this.$t('服务暂不可用，请稍后再试')
-                    });
-                } finally {
-                    this.requestQueue.shift();
-                }
-            }
-        }
+import Layout from './render-layout';
+import SystemFilter from './system-filter';
+import RenderList from './render-list';
+export default {
+  name: '',
+  components: {
+    Layout,
+    SystemFilter,
+    RenderList,
+  },
+  props: {
+    apiType: {
+      type: String,
+      default: 'gateway',
+    },
+    appCode: {
+      type: String,
+      required: true,
+    },
+  },
+  data() {
+    return {
+      requestQueue: ['filter', 'list'],
+      filterList: [],
+      curId: '',
+      curName: '',
+      maintainers: [],
+      loading: true,
+      isRefresh: false,
     };
+  },
+  computed: {
+    isGateway() {
+      return this.apiType === 'gateway';
+    },
+  },
+  watch: {
+    $route() {
+      this.requestQueue = ['filter', 'list'];
+      this.init();
+    },
+    requestQueue(value) {
+      if (value.length < 1) {
+        this.loading = false;
+        this.$emit('data-ready');
+      }
+    },
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.fetchFilterList();
+    },
+
+    handleSelect({ id, maintainers, name }) {
+      this.curId = id;
+      this.curName = name;
+      this.maintainers = maintainers;
+    },
+
+    handleRefresh(data) {
+      this.isRefresh = data;
+    },
+
+    handlerDataReady() {
+      if (this.requestQueue.length > 0) {
+        this.requestQueue.shift();
+      }
+    },
+
+    async fetchFilterList() {
+      const method = this.isGateway ? 'getApis' : 'getSystems';
+      try {
+        const res = await this.$store.dispatch(`cloudApi/${method}`, {
+          appCode: this.appCode,
+        });
+        this.filterList = Object.freeze(res.data);
+        if (this.filterList.length > 0) {
+          this.curId = this.filterList[0].id;
+          this.curName = this.filterList[0].name;
+          this.maintainers = this.filterList[0].maintainers;
+        }
+      } catch (e) {
+        this.$paasMessage({
+          theme: 'error',
+          message: e.detail || e.message || this.$t('服务暂不可用，请稍后再试'),
+        });
+      } finally {
+        this.requestQueue.shift();
+      }
+    },
+  },
+};
 </script>

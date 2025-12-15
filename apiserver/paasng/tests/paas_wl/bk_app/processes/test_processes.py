@@ -158,12 +158,14 @@ def test_list_cnative_module_processes_specs(
         ],
     ):
         specs = list_cnative_module_processes_specs(bk_cnative_app, "stag")
+        # When override_config is set, plan_name becomes "customized"
+        expected_plan_name = "customized" if override_config else "4C4G"
         assert specs["default"] == [
             {
                 "name": "web",
                 "max_replicas": 10,
                 "target_replicas": 1,
-                "plan_name": "4C4G",
+                "plan_name": expected_plan_name,
                 "autoscaling": False,
                 "scaling_config": None,
                 "target_status": "start",
@@ -274,7 +276,7 @@ class TestProcessManager:
                 "name": "foo",
                 "max_replicas": 10,
                 "target_replicas": 1,
-                "plan_name": "default",
+                "plan_name": "customized",
                 "autoscaling": False,
                 "scaling_config": None,
                 "target_status": "start",

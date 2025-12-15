@@ -257,7 +257,6 @@
                       :href="appItem.legacy_url"
                       class="ps-table-app"
                     >
-                      <!-- <img :src="appItem.logo" class="fleft applogo"> -->
                       <fallback-image
                         :url="appItem.logo"
                         :url-fallback="defaultLogo"
@@ -431,7 +430,6 @@
                       :href="appItem.legacy_url"
                       class="ps-table-app"
                     >
-                      <!-- <img :src="appItem.logo" class="fleft applogo"> -->
                       <fallback-image
                         :url="appItem.logo"
                         :url-fallback="defaultLogo"

@@ -81,7 +81,7 @@ export default {
       isLoading: false,
       appList: [],
       curDisplayedAppList: [],
-      btnLoadingGif,
+      btnLoadingGif: require('@static/images/btn_loading.gif'),
     };
   },
   watch: {

@@ -1,31 +1,29 @@
-const webpack = require("webpack");
-const path = require("path");
-const fs = require("fs");
-const dotenv = require("dotenv");
-const dotenv_expand = require("dotenv-expand");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
+const webpack = require('webpack');
+const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-const PreTaskPlugin = require("./pre-task-plugin");
+const PreTaskPlugin = require('./pre-task-plugin');
+const FixCssUrlPlugin = require('./fix-css-url-plugin');
 
 const now = new Date();
 const RELEASE_VERSION = [
   now.getFullYear(),
-  "-",
+  '-',
   now.getMonth() + 1,
-  "-",
+  '-',
   now.getDate(),
-  "_",
+  '_',
   now.getHours(),
-  ":",
+  ':',
   now.getMinutes(),
-  ":",
+  ':',
   now.getSeconds(),
-].join(""); // 版本号，eg: 2019-2-25_9:12:52
+].join(''); // 版本号，eg: 2019-2-25_9:12:52
 
 module.exports = {
   host: process.env.BK_APP_HOST, // bk-local中配置
   port: 6060, // 端口号
-  publicPath: "/",
+  publicPath: '/',
   cache: true,
   open: true,
 
@@ -33,55 +31,58 @@ module.exports = {
   configureWebpack(context) {
     // bk-cli-service-webpack 在执行 build 命令时强制指定了 mode="production" 会导致开启太多代码优化, 无法很好排查问题(混淆了代码)
     // 因此需要设置另外的环境变量来覆盖这个行为
-    if (process.env.BK_NODE_ENV === "staging") {
+    if (process.env.BK_NODE_ENV === 'staging') {
       process.env.NODE_ENV = process.env.BK_NODE_ENV;
       // 由于目前是先读取 dotenv 再加载 bk.config.js, 因此执行 npm run build 时加载的仍然是 .bk.production.env 的变量
-      context.mode = "development";
+      context.mode = 'development';
     }
 
     // 读取并校验 BK_HTTPS 环境变量的值
-    let enableHTTPS = (process.env.BK_HTTPS || "false").toLowerCase();
-    if (!["true", "false"].includes(enableHTTPS)) {
+    let enableHTTPS = (process.env.BK_HTTPS || 'false').toLowerCase();
+    if (!['true', 'false'].includes(enableHTTPS)) {
       throw new Error('BK_HTTPS must be "true" or "false"');
     }
     return {
       // dev配置项
       devServer: {
-        https: enableHTTPS === "true",
+        https: enableHTTPS === 'true',
       },
     };
   },
 
   chainWebpack(config) {
-    const isProduction = config.toConfig().mode === "production";
+    const isProduction = config.toConfig().mode === 'production';
 
-    // 添加 alias 配置
     // 添加 alias 配置
     config.resolve.alias
       .set('@', path.resolve(__dirname, 'src'))
       .set('@static', path.resolve(__dirname, 'static'));
 
     // plugin
-    config.plugin("providePlugin").use(webpack.ProvidePlugin, [
+    config.plugin('providePlugin').use(webpack.ProvidePlugin, [
       {
-        $: "jquery",
+        $: 'jquery',
       },
     ]);
-    config.plugin("html").use(webpack.DefinePlugin, [
+    config.plugin('html').use(webpack.DefinePlugin, [
       {
         RELEASE_VERSION: JSON.stringify(RELEASE_VERSION),
       },
     ]);
-    config.plugin("preTaskPlugin").use(new PreTaskPlugin());
-    config.plugin("html-main").use(HtmlWebpackPlugin, [
+    config.plugin('preTaskPlugin').use(new PreTaskPlugin());
+    // 修复 CSS 中的静态资源路径，支持动态 BK_STATIC_URL
+    config.plugin('fixCssUrlPlugin').use(new FixCssUrlPlugin({
+      debug: process.env.NODE_ENV === 'development',
+    }));
+    config.plugin('html-main').use(HtmlWebpackPlugin, [
       {
-        template: isProduction ? "index.html" : "index.dev.html",
+        template: isProduction ? 'index.html' : 'index.dev.html',
         inject: isProduction ? false : true,
       },
     ]);
 
-    if (process.env.NODE_ENV === "staging") {
-      config.devtool("inline-source-map");
+    if (process.env.NODE_ENV === 'staging') {
+      config.devtool('inline-source-map');
     }
     return config;
   },

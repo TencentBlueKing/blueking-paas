@@ -187,9 +187,9 @@ def gen_cnative_process_specs(res: BkAppResource, environment: str) -> list[CNat
     all_res_quotas = ResQuotaReader(res).read_all(AppEnvName(environment))
 
     for proc in res.spec.processes:
-        res_quota = all_res_quotas[proc.name][0]
+        res_quota = all_res_quotas[proc.name]
 
-        target_replicas = all_replicas[proc.name][0]
+        target_replicas = all_replicas[proc.name]
         if target_replicas is None:
             target_replicas = 1
 
@@ -199,7 +199,7 @@ def gen_cnative_process_specs(res: BkAppResource, environment: str) -> list[CNat
             plan_name=res_quota["plan"],
             resource_limit=res_quota["limits"],
             resource_requests=res_quota["requests"],
-            scaling_config=all_scaling_configs[proc.name][0],
+            scaling_config=all_scaling_configs[proc.name],
         )
         specs.append(spec)
     return specs

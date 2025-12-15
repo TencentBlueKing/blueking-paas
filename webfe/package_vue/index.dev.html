@@ -161,6 +161,7 @@
     </script>
     <script>
       loadStyle("/static/css/base.css");
+      loadStyle("/static/iconfont/style.css");
       <% for (var chunk of htmlWebpackPlugin.files.js) { %>
         loadScript("<%= chunk %>");
       <% } %>

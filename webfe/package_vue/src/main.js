@@ -66,8 +66,6 @@ import tableEmpty from '@/components/ui/table-empty';
 import emptyDark from '@/components/ui/empty-dark';
 
 import i18n from '@/language/i18n';
-// 全量引入自定义图标
-import './assets/iconfont/style.css';
 
 // 平台配置
 import { PLATFORM_CONFIG } from '../static/json/paas_static.js';

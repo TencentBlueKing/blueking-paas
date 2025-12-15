@@ -18,6 +18,7 @@
 from unittest import mock
 
 import pytest
+from django.test.utils import override_settings
 
 from paas_wl.bk_app.cnative.specs.constants import MountEnvName, VolumeSourceType
 from paas_wl.bk_app.cnative.specs.models import ConfigMapSource, Mount, PersistentStorageSource
@@ -411,6 +412,53 @@ class TestMountSourceViewSet:
             "environment_name": "stag",
             "source_type": "PersistentStorage",
             "persistent_storage_source": {"storage_size": "2Gi"},
+        }
+        with mock.patch("paas_wl.bk_app.cnative.specs.mounts.check_storage_class_exists", return_value=True):
+            ApplicationFeatureFlag.objects.set_feature(AppFeatureFlag.ENABLE_PERSISTENT_STORAGE, True, bk_app)
+            response = api_client.post(url, request_body)
+            assert response.status_code == 400
+
+    @pytest.mark.usefixtures("_mount_sources")
+    @override_settings(PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM=True, PERSISTENT_STORAGE_SIZE_MAX=10)
+    @pytest.mark.parametrize(
+        ("storage_size", "expected_status"),
+        [
+            # Valid custom size within range
+            pytest.param("1Gi", 201, id="min_allowed"),
+            pytest.param("5Gi", 201, id="valid_custom_size"),
+            pytest.param("10Gi", 201, id="max_allowed"),
+            # Size exceeds maximum (10Gi)
+            pytest.param("50Gi", 400, id="size_exceeds_max"),
+            # Invalid format (should be Gi, not GB)
+            pytest.param("5GB", 400, id="invalid_format"),
+            # Below minimum
+            pytest.param("0Gi", 400, id="below_minimum"),
+        ],
+    )
+    def test_create_with_custom_storage_size(self, api_client, bk_app, storage_size, expected_status):
+        """Test creating mount source with various custom storage size scenarios"""
+        url = f"/api/bkapps/applications/{bk_app.code}/mres/mount_sources/"
+        request_body = {
+            "environment_name": "prod",
+            "source_type": "PersistentStorage",
+            "persistent_storage_source": {"storage_size": storage_size},
+        }
+        with mock.patch("paas_wl.bk_app.cnative.specs.mounts.check_storage_class_exists", return_value=True):
+            ApplicationFeatureFlag.objects.set_feature(AppFeatureFlag.ENABLE_PERSISTENT_STORAGE, True, bk_app)
+            response = api_client.post(url, request_body)
+            assert response.status_code == expected_status
+            if expected_status == 201:
+                assert response.data["storage_size"] == storage_size
+
+    @pytest.mark.usefixtures("_mount_sources")
+    @override_settings(PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM=False)
+    def test_create_with_custom_storage_size_not_allowed(self, api_client, bk_app):
+        """Test creating mount source with custom storage size when not allowed"""
+        url = f"/api/bkapps/applications/{bk_app.code}/mres/mount_sources/"
+        request_body = {
+            "environment_name": "prod",
+            "source_type": "PersistentStorage",
+            "persistent_storage_source": {"storage_size": "5Gi"},
         }
         with mock.patch("paas_wl.bk_app.cnative.specs.mounts.check_storage_class_exists", return_value=True):
             ApplicationFeatureFlag.objects.set_feature(AppFeatureFlag.ENABLE_PERSISTENT_STORAGE, True, bk_app)

@@ -297,14 +297,14 @@ bkapi-client-core = ">=1.1.0,<2.0.0"
 
 [[package]]
 name = "bkpaas-auth"
-version = "3.1.2"
+version = "3.1.3"
 description = "User authentication django app for blueking internal projects"
 optional = false
-python-versions = "<4.0,>=3.8"
+python-versions = "<4.0,>=3.9"
 groups = ["main"]
 files = [
-    {file = "bkpaas_auth-3.1.2-py3-none-any.whl", hash = "sha256:4bb5614d38679144f7c1ec82d54529f956e5fa2e778b6d14e420d40f14164d13"},
-    {file = "bkpaas_auth-3.1.2.tar.gz", hash = "sha256:20595bcfbce7ea6f7fd0cd21cd7136cdb1452752cf5ebbc3c610dd5658f6950e"},
+    {file = "bkpaas_auth-3.1.3-py3-none-any.whl", hash = "sha256:175365f72388c66bec597467374396fd85ab1ad835a0e6c9732062e6f4e4a5a2"},
+    {file = "bkpaas_auth-3.1.3.tar.gz", hash = "sha256:e415096458beadb0edd051dd67aeaf56544b717f16c89a71f00671a2c340dd1f"},
 ]
 
 [package.dependencies]
@@ -4429,4 +4429,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "63d39ba64032ca537bdbe26065d06fea69e3e2e53c5b35df4d7bcb3e976bb429"
+content-hash = "930360e3c1e1b4a112d35428fc037d4579274292db9c29ab6dbb7e96ceaef0a0"

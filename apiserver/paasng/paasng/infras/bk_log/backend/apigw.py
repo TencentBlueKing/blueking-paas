@@ -51,6 +51,6 @@ class Group(OperationGroup):
 class Client(APIGatewayClient):
     """bk-log日志平台 API"""
 
-    _api_name = "log-search"
+    _api_name = "bk-log-search"
 
     api = bind_property(Group, name="api")

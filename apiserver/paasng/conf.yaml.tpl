@@ -632,14 +632,6 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # SMART_IMAGE_TAG: v0.0.1-smart
 # SMART_CNB_IMAGE_TAG: v0.0.1-smart
 
-## S-Mart 构建缓存配置
-## 用于缓存的镜像仓库，设置后构建过程会启用缓存功能，否则不启用
-# SMART_CACHE_REGISTRY: mirrors.example.com/bkapps
-
-## 镜像仓库凭证，如果镜像仓库需要鉴权，则必须设置这两个参数
-# SMART_CACHE_REGISTRY_USERNAME: ''
-# SMART_CACHE_REGISTRY_PASSWORD: ''
-
 
 ## ------------------------------------ 插件开发中心配置 ------------------------------------
 

@@ -15,7 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import TYPE_CHECKING, Dict
+import base64
+from typing import TYPE_CHECKING, Dict, Tuple
 
 from django.conf import settings
 from django.utils.encoding import force_str
@@ -95,10 +96,9 @@ class SmartAppBuilder:
         }
 
         # 添加缓存配置
-        if settings.SMART_CACHE_REGISTRY:
-            envs["CACHE_REGISTRY"] = settings.SMART_CACHE_REGISTRY
-            if settings.SMART_REGISTRY_AUTH:
-                envs["REGISTRY_AUTH"] = settings.SMART_REGISTRY_AUTH
+        cache_config = get_smart_cache_registry_config()
+        envs["CACHE_REGISTRY"] = cache_config[0]
+        envs["CACHE_REGISTRY_AUTH"] = cache_config[1]
 
         cluster_name = get_default_cluster_name()
 
@@ -128,6 +128,21 @@ class SmartAppBuilder:
 
         smart_build_handler = SmartBuildHandler(client)
         return smart_build_handler.build_pod(template=builder_template)
+
+
+def get_smart_cache_registry_config() -> Tuple[str, str]:
+    """Get the registry config for smart builder to cache images.
+
+    :return: A tuple of (cache_registry, cache_registry_auth).
+    """
+
+    cache_registry = f"{settings.SMART_DOCKER_REGISTRY_HOST}/{settings.SMART_DOCKER_REGISTRY_NAMESPACE}"
+    auth_str = f"{settings.SMART_DOCKER_REGISTRY_USERNAME}:{settings.SMART_DOCKER_REGISTRY_PASSWORD}"
+    cache_registry_auth = (
+        f'{{"{settings.SMART_DOCKER_REGISTRY_HOST}": "Basic {base64.b64encode(auth_str.encode()).decode()}"}}'
+    )
+
+    return cache_registry, cache_registry_auth
 
 
 def get_default_cluster_name() -> str:

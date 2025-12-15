@@ -577,7 +577,7 @@ export default {
       userHasApp: true,
       minHeight: 550,
       appList: [],
-      defaultImg: '/static/images/default_logo.png',
+      defaultImg: require('@static/images/default_logo.png'),
       // 搜索条件筛选
       appFilter: {
         // 显示已下架应用
@@ -1279,12 +1279,12 @@ h2.application-title {
   width: 20px;
   height: 24px;
   vertical-align: middle;
-  background: url(~@/../static/images/save-icon.png) center center no-repeat;
+  background: url(~@static/images/save-icon.png) center center no-repeat;
 }
 
 .save.on,
 .save:hover {
-  background: url(~@/../static/images/save-icon2.png) center center no-repeat;
+  background: url(~@static/images/save-icon2.png) center center no-repeat;
 }
 
 .save:hover {

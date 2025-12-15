@@ -44,16 +44,13 @@
 </template>
 
 <script>
-import servicePic2 from '@/../static/images/service-pic2.png';
-import servicePic3 from '@/../static/images/service-pic3.png';
-import servicePic4 from '@/../static/images/service-pic4.png';
 
 export default {
   data() {
     return {
-      servicePic2,
-      servicePic3,
-      servicePic4,
+      servicePic2: require('@static/images/service-pic2.png'),
+      servicePic3: require('@static/images/service-pic3.png'),
+      servicePic4: require('@static/images/service-pic4.png'),
     };
   },
 };

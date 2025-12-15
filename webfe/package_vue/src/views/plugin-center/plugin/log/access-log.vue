@@ -184,7 +184,6 @@ import xss from 'xss';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import logFilter from '@/views/dev-center/app/engine/log/comps/log-filter.vue';
 import { formatDate } from '@/common/tools';
-import chartDefaultSvg from '@/../static/images/chart-default.svg';
 
 const xssOptions = {
   whiteList: {
@@ -215,7 +214,7 @@ export default {
       isShowDate: true,
       lastScrollId: '',
       initDateTimeRange: [initStartDate, initEndDate],
-      chartDefaultSvg,
+      chartDefaultSvg: require('@static/images/chart-default.svg'),
       pagination: {
         current: 1,
         count: 0,
@@ -825,7 +824,7 @@ export default {
         width: 227px;
         padding: 0 30px 0 10px;
         cursor: pointer;
-        background: url(~@/../static/images/query-date-icon.png) 270px center no-repeat;
+        background: url(~@static/images/query-date-icon.png) 270px center no-repeat;
         font-size: 13px;
     }
 

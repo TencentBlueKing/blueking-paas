@@ -26,21 +26,29 @@ export const APP_TYPES = {
   nodejs_express_hello_world: 'backend',
 };
 export const APP_LANGUAGES_IMAGE = {
-  Python: {
-    normal: '/static/images/python-1.png',
-    hover: '/static/images/python.png',
+  get Python() {
+    return {
+      normal: require('@static/images/python-1.png'),
+      hover: require('@static/images/python.png'),
+    };
   },
-  PHP: {
-    normal: '/static/images/php.png',
-    hover: '/static/images/php-1.png',
+  get PHP() {
+    return {
+      normal: require('@static/images/php.png'),
+      hover: require('@static/images/php-1.png'),
+    };
   },
-  Go: {
-    normal: '/static/images/golang.png',
-    hover: '/static/images/golang-1.png',
+  get Go() {
+    return {
+      normal: require('@static/images/golang.png'),
+      hover: require('@static/images/golang-1.png'),
+    };
   },
-  NodeJS: {
-    normal: '/static/images/nodejs.png',
-    hover: '/static/images/nodejs-1.png',
+  get NodeJS() {
+    return {
+      normal: require('@static/images/nodejs.png'),
+      hover: require('@static/images/nodejs-1.png'),
+    };
   },
 };
 

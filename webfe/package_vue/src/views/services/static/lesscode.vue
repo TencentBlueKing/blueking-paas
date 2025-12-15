@@ -15,7 +15,7 @@
                     hasLink: true,
                     link: this.GLOBAL.LINK.LESSCODE_INDEX,
                     apititle: this.$t('运维开发工具'),
-                    image: '/static/images/service-pic8.png',
+                    image: require('@static/images/service-pic8.png'),
                     apiexplain: this.$t('蓝鲸智云运维开发平台提供了前端页面在线可视化拖拽组装、配置编辑、源码生成、二次开发等能力。旨在帮助用户通过尽量少的手写代码的方式快速设计和开发 SaaS'),
                     apiList: [
                         {

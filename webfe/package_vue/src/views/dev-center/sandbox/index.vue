@@ -131,7 +131,6 @@ import { bus } from '@/common/bus';
 import axios from 'axios';
 import RunSandboxDialog from './comps/run-sandbox-dialog.vue';
 import SubmitCodeDialog from './comps/submit-code-dialog.vue';
-import loadingGif from '@/../static/images/loading.gif';
 
 export default {
   name: 'Sandbox',
@@ -152,6 +151,7 @@ export default {
       sandboxAccessible: false,
       isLoading: true,
       deployId: '',
+      loadingGif: require('@static/images/loading.gif'),
       buildLog: '',
       runLog: '',
       isRunNowLoading: false,

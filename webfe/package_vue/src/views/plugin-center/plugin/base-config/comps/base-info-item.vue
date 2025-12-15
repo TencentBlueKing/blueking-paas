@@ -90,7 +90,6 @@
 
 <script>
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
-import defaultLogo from '@/../static/images/default_logo.png';
 export default {
   mixins: [pluginBaseMixin],
   props: {
@@ -104,7 +103,7 @@ export default {
       pluginName: '',
       isEdit: false,
       isLoading: false,
-      defaultLogo,
+      defaultLogo: require('@static/images/default_logo.png'),
     };
   },
   computed: {

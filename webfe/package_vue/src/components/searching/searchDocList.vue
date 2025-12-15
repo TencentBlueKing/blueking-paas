@@ -36,7 +36,6 @@
 <script>
 import selectEventMixin from '@/components/searching/selectEventMixin';
 import _ from 'lodash';
-import btnLoadingGif from '@/../static/images/btn_loading.gif';
 
 export default {
   mixins: [selectEventMixin],
@@ -55,7 +54,7 @@ export default {
     return {
       isLoading: false,
       docList: [],
-      btnLoadingGif,
+      btnLoadingGif: require('@static/images/btn_loading.gif'),
     };
   },
   watch: {

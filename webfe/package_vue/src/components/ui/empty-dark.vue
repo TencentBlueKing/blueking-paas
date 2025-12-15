@@ -41,16 +41,13 @@
 
 <script>
 import i18n from '@/language/i18n';
-import abnormalSvg from '@/../static/images/abnormal.svg';
-import emptyDarkImg from '@/../static/images/empty-dark.png';
-import searchEmptyImg from '@/../static/images/search-empty.png';
 
 export default {
   data() {
     return {
-      abnormalSvg,
-      emptyDarkImg,
-      searchEmptyImg,
+      abnormalSvg: require('@static/images/abnormal.svg'),
+      emptyDarkImg: require('@static/images/empty-dark.png'),
+      searchEmptyImg: require('@static/images/search-empty.png'),
     };
   },
   props: {

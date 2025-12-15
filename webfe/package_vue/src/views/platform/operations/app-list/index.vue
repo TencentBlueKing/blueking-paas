@@ -164,7 +164,6 @@ import { mapState, mapGetters } from 'vuex';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
-import defaultLogo from '@/../static/images/default_logo.png';
 
 export default {
   name: 'PlatformAppList',
@@ -185,7 +184,7 @@ export default {
       searchValue: '',
       appList: [],
       isTableLoading: false,
-      defaultLogo,
+      defaultLogo: require('@static/images/default_logo.png'),
       pagination: {
         current: 1,
         count: 0,

@@ -83,15 +83,13 @@
 
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
-import devopsImg from '@/../static/images/devops.png';
-import devopsInnerImg from '@/../static/images/devops-inner.png';
 export default {
   mixins: [appBaseMixin],
   data() {
     return {
       loading: false,
-      devopsImg,
-      devopsInnerImg,
+      devopsImg: require('@static/images/devops.png'),
+      devopsInnerImg: require('@static/images/devops-inner.png'),
       oauth2Backends: [
         {
           name: 'tc_git',

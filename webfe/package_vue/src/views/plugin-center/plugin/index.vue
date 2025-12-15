@@ -78,8 +78,6 @@ import pluginQuickNav from '@/components/plugin-quick-nav';
 import { bus } from '@/common/bus';
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
 import store from '@/store';
-import permissionsImg from '@/../static/images/permissions.png';
-import notFoundImg from '@/../static/images/404.png';
 
 // 当前路由页面不需要指定的min-height
 const ROUTE_NAME = ['pluginVersionRelease'];
@@ -103,8 +101,8 @@ export default {
       errorMessage: '',
       deniedMessageType: 'default',
       showMarketMenus: true,
-      permissionsImg,
-      notFoundImg,
+      permissionsImg: require('@static/images/permissions.png'),
+      notFoundImg: require('@static/images/404.png'),
       // 非应用引擎 应用 时所要显示的父级导航
       parentNavIds: [8, 10],
       // 非应用引擎 应用 时所要显示的子级导航

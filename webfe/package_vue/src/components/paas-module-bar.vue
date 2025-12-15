@@ -139,8 +139,9 @@ import router from '@/router';
 import { bkMessage } from 'bk-magic-vue';
 import { bus } from '@/common/bus';
 import i18n from '@/language/i18n';
-import mainPng from '@/../static/images/main.png';
-import mainEnPng from '@/../static/images/main_en.png';
+
+const mainPng = require('@static/images/main.png');
+const mainEnPng = require('@static/images/main_en.png');
 
 export default defineComponent({
   name: 'EditorStatus',

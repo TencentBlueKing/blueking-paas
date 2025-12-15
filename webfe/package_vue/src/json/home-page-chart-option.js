@@ -23,7 +23,10 @@
 export default function (data, color) {
   // 判断是否为空
   const allZero = data.every((d) => d.value === 0);
-  const legendIcons = ['image:///static/images/circle-home1.svg', 'image:///static/images/circle-home2.svg'];
+  const legendIcons = [
+    `image://${require('@static/images/circle-home1.svg')}`,
+    `image://${require('@static/images/circle-home2.svg')}`,
+  ];
   return {
     tooltip: {
       trigger: 'item',

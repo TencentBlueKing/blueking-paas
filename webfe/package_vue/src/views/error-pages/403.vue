@@ -38,12 +38,11 @@
 </template>
 
 <script>
-import permissionsImg from '@/../static/images/permissions.png';
 
 export default {
   data() {
     return {
-      permissionsImg,
+      permissionsImg: require('@static/images/permissions.png'),
     };
   },
   computed: {

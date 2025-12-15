@@ -183,6 +183,7 @@ export default {
   },
   data() {
     return {
+      defaultLogoImg: require('@static/images/default_logo.png'),
       isFocused: false,
       filterKey: '',
       appList: [],
@@ -194,7 +195,7 @@ export default {
     appInfo() {
       const { application = {} } = this.curAppInfo;
       return {
-        logo_url: application.logo_url || '/static/images/default_logo.png',
+        logo_url: application.logo_url || this.defaultLogoImg,
         ...application,
       };
     },

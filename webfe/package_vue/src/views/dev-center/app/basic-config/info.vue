@@ -97,7 +97,7 @@
                     <div class="flex-row">
                       <img
                         class="lightening-icon"
-                        src="/static/images/lightening.svg"
+                        :src="lightening"
                         @click="handleExpand(row)"
                       />
                       {{ $t('快速标记为 “测试” 分类') }}
@@ -333,7 +333,6 @@ import authenticationInfo from '@/components/authentication-info.vue';
 import pluginInfo from './plugin-info.vue';
 import { APP_TENANT_MODE } from '@/common/constants';
 import { mapState, mapGetters } from 'vuex';
-import defaultLogo from '@/../static/images/default_logo.png';
 
 export default {
   components: {
@@ -343,8 +342,9 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
+      lightening: require('@static/images/lightening.svg'),
       isLoading: true,
-      defaultLogo,
+      defaultLogo: require('@static/images/default_logo.png'),
       formRemoveConfirmCode: '',
       localeAppInfo: {
         name: '',
@@ -929,7 +929,7 @@ export default {
     left: 147px;
     width: 16px;
     height: 10px;
-    background: url(~@/../static/images/user-icon2.png) no-repeat;
+    background: url(~@static/images/user-icon2.png) no-repeat;
   }
 
   .immediately {

@@ -524,6 +524,7 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
+      sortIcon: require('@static/images/sort-icon.png'),
       isLoading: false,
       userPermissionList: [],
       isUseUserPermission: true,
@@ -1025,7 +1026,7 @@ export default {
               transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)',
             },
             attrs: {
-              src: '/static/images/sort-icon.png',
+              src: this.sortIcon,
             },
           }),
         ]

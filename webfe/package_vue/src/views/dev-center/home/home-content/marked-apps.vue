@@ -128,7 +128,6 @@
 import tebleHeaderFilters from '@/components/teble-header-filters';
 import { mapGetters } from 'vuex';
 import { APP_TENANT_MODE } from '@/common/constants';
-import homeMarkedEmptyImg from '@/../static/images/home-marked-empty.png';
 
 export default {
   data() {
@@ -145,7 +144,7 @@ export default {
       ],
       tableHeaderFilterValue: 'all',
       currentTenantFilters: [], // 当前租户模式过滤条件
-      homeMarkedEmptyImg,
+      homeMarkedEmptyImg: require('@static/images/home-marked-empty.png'),
     };
   },
   computed: {

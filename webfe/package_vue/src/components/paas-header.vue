@@ -171,10 +171,9 @@ import auth from '@/auth';
 import { bus } from '@/common/bus';
 import selectEventMixin from '@/components/searching/selectEventMixin';
 import { psHeaderInfo } from '@/mixins/ps-static-mixin';
-import defaultUserLogo from '../../static/images/default-user.png';
 import logVersion from './log-version.vue';
 import { ajaxRequest, uuid } from '@/common/utils';
-import logoSvg from '/static/images/logo.svg';
+import logoSvg from '@static/images/logo.svg';
 import globalInput from './global-search/search-input.vue';
 import { mapState, mapGetters } from 'vuex';
 
@@ -189,7 +188,7 @@ export default {
     const user = auth.getAnonymousUser();
     return {
       userInitialized: false,
-      avatars: defaultUserLogo,
+      avatars: require('@static/images/default-user.png'),
       curActiveName: '',
       isStatic: false, // 头部导航背景色块控制
       user,
@@ -547,12 +546,12 @@ export default {
   display: inline-block;
   margin: 6px 0 0 8px;
   position: relative;
-  background: url(~@/../static/images/news-icon.png) no-repeat;
+  background: url(~@static/images/news-icon.png) no-repeat;
   transition: all 0.5s;
 }
 
 .ps-head-right .notice-button:hover {
-  background: url(~@/../static/images/news-icon2.png) no-repeat;
+  background: url(~@static/images/news-icon2.png) no-repeat;
 }
 
 .ps-head-right .notice-button-icon {
@@ -680,7 +679,7 @@ export default {
   right: 36px;
   width: 16px;
   height: 10px;
-  background: url(~@/../static/images/user-icon2.png) no-repeat;
+  background: url(~@static/images/user-icon2.png) no-repeat;
 }
 
 .contact:after {

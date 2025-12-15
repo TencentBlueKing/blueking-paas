@@ -77,7 +77,7 @@
               class="dot-status mr10"
               :class="item.status"
               v-bk-tooltips="{ content: item.errorMsg, disabled: item.status !== 'failed' }">
-              <img src="/static/images/not-executed-icon.png" v-if="item.status === 'not-executed'">
+              <img :src="notExecutedIcon" v-if="item.status === 'not-executed'">
               <i :class="['paasng-icon', item.icon]" v-else></i>
             </div>
             <span class="title">{{ item.title }}</span>
@@ -131,7 +131,7 @@
           </bk-exception>
           <!-- 迁移中 -->
           <div class="migrating" v-else>
-            <img src="/static/images/migrating.png">
+            <img :src="migrating">
             <p>{{ $t('云原生应用迁移中') }}…</p>
           </div>
         </section>
@@ -214,6 +214,8 @@ export default {
   },
   data() {
     return {
+      notExecutedIcon: require('@static/images/not-executed-icon.png'),
+      migrating: require('@static/images/migrating.png'),
       visible: false,
       currentStep: 1,
       // 单选框数据结构

@@ -15,7 +15,7 @@
                     apititle: this.$t('蓝鲸数据可视化服务'),
                     hasLink: true,
                     link: this.GLOBAL.LINK.DATA_INDEX,
-                    image: '/static/images/widget.png',
+                    image: require('@static/images/widget.png'),
                     apiexplain: this.$t('蓝鲸数据可视化服务'),
                     apiList: [
                         {

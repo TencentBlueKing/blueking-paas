@@ -426,10 +426,6 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import { ENV_ENUM } from '@/common/constants';
 import { copy } from '@/common/tools';
 import { mapState } from 'vuex';
-import mainPng from '@/../static/images/main.png';
-import mainEnPng from '@/../static/images/main_en.png';
-import customPng from '@/../static/images/custom.png';
-import customEnPng from '@/../static/images/custom_en.png';
 export default {
   mixins: [appBaseMixin],
   props: {
@@ -462,10 +458,10 @@ export default {
       entryEnv: ENV_ENUM,
       rowIndex: '',
       tableIndex: '',
-      mainPng,
-      mainEnPng,
-      customPng,
-      customEnPng,
+      mainPng: require('@static/images/main.png'),
+      mainEnPng: require('@static/images/main_en.png'),
+      customPng: require('@static/images/custom.png'),
+      customEnPng: require('@static/images/custom_en.png'),
       envIndex: '',
       ipConfigInfo: { frontend_ingress_ip: '' },
       rules: {

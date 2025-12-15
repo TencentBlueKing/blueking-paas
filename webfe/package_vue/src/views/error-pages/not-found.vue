@@ -16,12 +16,11 @@
 </template>
 
 <script>
-import notFoundImg from '@/../static/images/404.png';
 
 export default {
   data() {
     return {
-      notFoundImg,
+      notFoundImg: require('@static/images/404.png'),
     };
   },
 };

@@ -695,12 +695,12 @@ import { fileDownload } from '@/common/utils';
 
 // 导入所有代码源图片
 const sourceImages = {
-  bk_gitlab: require('@/../static/images/bk_gitlab.png'),
-  bk_svn: require('@/../static/images/bk_svn.png'),
-  bare_git: require('@/../static/images/bare_git.png'),
-  tc_git: require('@/../static/images/tc_git.png'),
-  github: require('@/../static/images/github.png'),
-  gitee: require('@/../static/images/gitee.png'),
+  bk_gitlab: require('@static/images/bk_gitlab.png'),
+  bk_svn: require('@static/images/bk_svn.png'),
+  bare_git: require('@static/images/bare_git.png'),
+  tc_git: require('@static/images/tc_git.png'),
+  github: require('@static/images/github.png'),
+  gitee: require('@static/images/gitee.png'),
 };
 
 export default {

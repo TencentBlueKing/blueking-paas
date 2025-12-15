@@ -4,7 +4,6 @@
       v-if="isEmpty"
       class="empty-box"
     >
-      <!-- <img src="/static/images/empty-dark.png" /> -->
       <table-empty
         empty
         :empty-title="$t('暂无日志')"
@@ -44,9 +43,6 @@ export default {
       type: String | Object,
       required: true,
     },
-  },
-  data() {
-    return {};
   },
   computed: {
     isEmpty() {

@@ -22,13 +22,12 @@
 </template>
 
 <script>
-import basicInfoFileImg from '@/../static/images/basic-info-file.png';
 
 export default {
   name: 'SmartFilePreview',
   data() {
     return {
-      basicInfoFileImg,
+      basicInfoFileImg: require('@static/images/basic-info-file.png'),
     };
   },
   props: {

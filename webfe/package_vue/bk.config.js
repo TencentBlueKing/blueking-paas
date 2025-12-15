@@ -55,6 +55,12 @@ module.exports = {
   chainWebpack(config) {
     const isProduction = config.toConfig().mode === "production";
 
+    // 添加 alias 配置
+    // 添加 alias 配置
+    config.resolve.alias
+      .set('@', path.resolve(__dirname, 'src'))
+      .set('@static', path.resolve(__dirname, 'static'));
+
     // plugin
     config.plugin("providePlugin").use(webpack.ProvidePlugin, [
       {

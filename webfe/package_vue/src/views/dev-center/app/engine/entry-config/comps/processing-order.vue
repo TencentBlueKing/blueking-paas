@@ -171,6 +171,7 @@
 
 <script>import appBaseInfoMixin from '@/mixins/app-base-mixin';
 import { bus } from '@/common/bus';
+import sortIcon from '@/../static/images/sort-icon.png';
 export default {
   mixins: [appBaseInfoMixin],
   data() {
@@ -243,7 +244,7 @@ export default {
               transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)',
             },
             attrs: {
-              src: '/static/images/sort-icon.png',
+              src: sortIcon,
             },
           }),
         ],

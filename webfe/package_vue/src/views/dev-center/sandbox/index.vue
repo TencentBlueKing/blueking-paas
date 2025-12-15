@@ -78,7 +78,7 @@
                 v-else
                 class="iframe-loading"
               >
-                <img src="/static/images/loading.gif" />
+                <img :src="loadingGif" />
                 <p>{{ $t('沙箱环境正在启动，预计需要约 30 秒，请稍候。') }}</p>
               </div>
             </div>
@@ -131,6 +131,7 @@ import { bus } from '@/common/bus';
 import axios from 'axios';
 import RunSandboxDialog from './comps/run-sandbox-dialog.vue';
 import SubmitCodeDialog from './comps/submit-code-dialog.vue';
+import loadingGif from '@/../static/images/loading.gif';
 
 export default {
   name: 'Sandbox',
@@ -155,6 +156,7 @@ export default {
       runLog: '',
       isRunNowLoading: false,
       serviceName: '',
+      loadingGif,
       refreshTime: {
         build: 5,
         run: 5,

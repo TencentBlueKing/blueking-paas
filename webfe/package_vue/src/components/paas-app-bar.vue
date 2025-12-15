@@ -395,7 +395,7 @@ export default {
             display: inline-block;
             padding: 0 22px 0 0px;
             margin-right: 15px;
-            background: url(/static/images/expert-icon.svg) 100% center no-repeat;
+            background: url(~@/../static/images/expert-icon.svg) 100% center no-repeat;
             background-size: auto 15px;
             > a,
             > span {

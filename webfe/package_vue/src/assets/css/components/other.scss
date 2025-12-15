@@ -70,7 +70,7 @@
     top: 1px;
     width: 14px;
     height: 7px;
-    background: url(/static/images/user-icon2.png) no-repeat;
+    background: url(~@/../static/images/user-icon2.png) no-repeat;
     background-size: cover;
 }
 
@@ -168,7 +168,7 @@
                 position: absolute;
                 top: 14px;
                 right: 10px;
-                background: url(/static/images/query-icon.png) no-repeat;
+                background: url(~@/../static/images/query-icon.png) no-repeat;
             }
         }
     }

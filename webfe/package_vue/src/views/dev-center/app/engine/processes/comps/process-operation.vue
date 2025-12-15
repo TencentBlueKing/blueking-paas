@@ -2719,7 +2719,7 @@ export default {
   overflow: hidden;
   width: 10px;
   height: 12px;
-  background: url('/static/images/instance-icon2.png') no-repeat;
+  background: url('~@/../static/images/instance-icon2.png') no-repeat;
 }
 
 .operate-process-icon i {

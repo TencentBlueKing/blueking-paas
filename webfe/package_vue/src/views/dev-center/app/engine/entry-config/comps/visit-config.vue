@@ -54,7 +54,7 @@
                 <img
                   :class="['module-default', 'ml10', { en: localLanguage === 'en' }]"
                   v-if="row.is_default"
-                  :src="`/static/images/${localLanguage === 'en' ? 'main_en.png' : 'main.png'}`"
+                  :src="localLanguage === 'en' ? mainEnPng : mainPng"
                 />
               </div>
               <bk-button
@@ -242,7 +242,7 @@
                     <img
                       class="custom-image ml10"
                       v-if="e.address.type === 'custom'"
-                      :src="`/static/images/${localLanguage === 'en' ? 'custom_en.png' : 'custom.png'}`"
+                      :src="localLanguage === 'en' ? customEnPng : customPng"
                     />
                   </div>
                 </section>
@@ -426,6 +426,10 @@ import appBaseMixin from '@/mixins/app-base-mixin';
 import { ENV_ENUM } from '@/common/constants';
 import { copy } from '@/common/tools';
 import { mapState } from 'vuex';
+import mainPng from '@/../static/images/main.png';
+import mainEnPng from '@/../static/images/main_en.png';
+import customPng from '@/../static/images/custom.png';
+import customEnPng from '@/../static/images/custom_en.png';
 export default {
   mixins: [appBaseMixin],
   props: {
@@ -458,6 +462,10 @@ export default {
       entryEnv: ENV_ENUM,
       rowIndex: '',
       tableIndex: '',
+      mainPng,
+      mainEnPng,
+      customPng,
+      customEnPng,
       envIndex: '',
       ipConfigInfo: { frontend_ingress_ip: '' },
       rules: {

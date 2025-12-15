@@ -44,7 +44,7 @@
                 </div>
               </section>
               <div class="logo-wrapper mt-16">
-                <img :src="localeAppInfo.logo || '/static/images/default_logo.png'" />
+                <img :src="localeAppInfo.logo || defaultLogo" />
               </div>
             </div>
             <!-- 编辑态 -->
@@ -333,6 +333,7 @@ import authenticationInfo from '@/components/authentication-info.vue';
 import pluginInfo from './plugin-info.vue';
 import { APP_TENANT_MODE } from '@/common/constants';
 import { mapState, mapGetters } from 'vuex';
+import defaultLogo from '@/../static/images/default_logo.png';
 
 export default {
   components: {
@@ -343,6 +344,7 @@ export default {
   data() {
     return {
       isLoading: true,
+      defaultLogo,
       formRemoveConfirmCode: '',
       localeAppInfo: {
         name: '',
@@ -927,7 +929,7 @@ export default {
     left: 147px;
     width: 16px;
     height: 10px;
-    background: url(/static/images/user-icon2.png) no-repeat;
+    background: url(~@/../static/images/user-icon2.png) no-repeat;
   }
 
   .immediately {

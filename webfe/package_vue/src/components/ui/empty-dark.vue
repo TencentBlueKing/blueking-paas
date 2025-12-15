@@ -4,11 +4,11 @@
       <!-- 异常 -->
       <img
         v-if="abnormal"
-        src="/static/images/abnormal.svg"
+        :src="abnormalSvg"
       />
       <img
         v-else
-        src="/static/images/empty-dark.png"
+        :src="emptyDarkImg"
       />
       <p class="empty-tips">
         {{ emptyTitle }}
@@ -22,7 +22,7 @@
       </span>
     </template>
     <template v-else>
-      <img src="/static/images/search-empty.png" />
+      <img :src="searchEmptyImg" />
       <div class="empty-tips">
         <p>{{ $t('搜索结果为空') }}</p>
         <div class="search-empty-tips">
@@ -39,8 +39,20 @@
   </div>
 </template>
 
-<script>import i18n from '@/language/i18n';
+<script>
+import i18n from '@/language/i18n';
+import abnormalSvg from '@/../static/images/abnormal.svg';
+import emptyDarkImg from '@/../static/images/empty-dark.png';
+import searchEmptyImg from '@/../static/images/search-empty.png';
+
 export default {
+  data() {
+    return {
+      abnormalSvg,
+      emptyDarkImg,
+      searchEmptyImg,
+    };
+  },
   props: {
     keyword: {
       type: String,

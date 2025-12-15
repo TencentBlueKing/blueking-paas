@@ -1,7 +1,7 @@
 <template>
   <div class="file-preview">
     <div class="left-info">
-      <img src="/static/images/basic-info-file.png" />
+      <img :src="basicInfoFileImg" />
       <div class="file-info">
         <p>{{ file.name }}</p>
         <p :class="['status', status]">
@@ -22,8 +22,15 @@
 </template>
 
 <script>
+import basicInfoFileImg from '@/../static/images/basic-info-file.png';
+
 export default {
   name: 'SmartFilePreview',
+  data() {
+    return {
+      basicInfoFileImg,
+    };
+  },
   props: {
     file: {
       type: Object,

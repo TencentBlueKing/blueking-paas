@@ -1279,12 +1279,12 @@ h2.application-title {
   width: 20px;
   height: 24px;
   vertical-align: middle;
-  background: url(/static/images/save-icon.png) center center no-repeat;
+  background: url(~@/../static/images/save-icon.png) center center no-repeat;
 }
 
 .save.on,
 .save:hover {
-  background: url(/static/images/save-icon2.png) center center no-repeat;
+  background: url(~@/../static/images/save-icon2.png) center center no-repeat;
 }
 
 .save:hover {

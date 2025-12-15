@@ -6,7 +6,7 @@
     >
       <div class="paas-text">
         <img
-          src="/static/images/yahei-5.png"
+          :src="yaheiImg"
           class="appear"
         />
       </div>
@@ -120,6 +120,7 @@ import { bus } from '@/common/bus';
 import homeContent from '@/views/dev-center/home/home-content/index.vue';
 import appOverview from '@/views/dev-center/home/app-overview/index.vue';
 import { psIndexInfo, psHeaderInfo } from '@/mixins/ps-static-mixin';
+import yaheiImg from '@/../static/images/yahei-5.png';
 
 export default {
   components: {
@@ -133,6 +134,7 @@ export default {
       flag: false,
       isShowOffAppAction: false,
       isLoading: true,
+      yaheiImg,
     };
   },
   computed: {
@@ -208,7 +210,7 @@ export default {
 .paas-banner {
   width: 100%;
   height: 420px;
-  background: url(/static/images/banner.jpg) top center no-repeat;
+  background: url(~@/../static/images/banner.jpg) top center no-repeat;
   text-align: center;
   background-color: #191828;
 
@@ -612,7 +614,7 @@ export default {
         height: 45px;
         display: inline-block;
         margin: 16px auto 0;
-        background: url(/static/images/service-icon3.png) no-repeat;
+        background: url(~@/../static/images/service-icon3.png) no-repeat;
 
         &.icon1 {
           width: 67px;

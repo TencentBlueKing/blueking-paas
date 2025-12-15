@@ -547,12 +547,12 @@ export default {
   display: inline-block;
   margin: 6px 0 0 8px;
   position: relative;
-  background: url(/static/images/news-icon.png) no-repeat;
+  background: url(~@/../static/images/news-icon.png) no-repeat;
   transition: all 0.5s;
 }
 
 .ps-head-right .notice-button:hover {
-  background: url(/static/images/news-icon2.png) no-repeat;
+  background: url(~@/../static/images/news-icon2.png) no-repeat;
 }
 
 .ps-head-right .notice-button-icon {
@@ -680,7 +680,7 @@ export default {
   right: 36px;
   width: 16px;
   height: 10px;
-  background: url(/static/images/user-icon2.png) no-repeat;
+  background: url(~@/../static/images/user-icon2.png) no-repeat;
 }
 
 .contact:after {

@@ -11,7 +11,7 @@
           <div class="content">
             <div class="logo-uploader item-logn-content">
               <div class="preview">
-                <img :src="curPluginInfo.logo || '/static/images/default_logo.png'" />
+                <img :src="curPluginInfo.logo || defaultLogo" />
               </div>
               <div
                 v-if="isChangePluginLogo"
@@ -90,6 +90,7 @@
 
 <script>
 import pluginBaseMixin from '@/mixins/plugin-base-mixin';
+import defaultLogo from '@/../static/images/default_logo.png';
 export default {
   mixins: [pluginBaseMixin],
   props: {
@@ -103,6 +104,7 @@ export default {
       pluginName: '',
       isEdit: false,
       isLoading: false,
+      defaultLogo,
     };
   },
   computed: {

@@ -21,7 +21,7 @@
         class="nofound"
         style="width: 1180px; margin: 0 auto"
       >
-        <img src="/static/images/permissions.png" />
+        <img :src="permissionsImg" />
         <p>{{ $t('您没有访问当前应用该功能的权限') }}</p>
         <bk-button
           v-if="applyUrl"
@@ -38,7 +38,14 @@
 </template>
 
 <script>
+import permissionsImg from '@/../static/images/permissions.png';
+
 export default {
+  data() {
+    return {
+      permissionsImg,
+    };
+  },
   computed: {
     isPlugin() {
       return this.$route.meta.plugin;

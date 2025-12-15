@@ -1314,7 +1314,7 @@ export default {
     left: 147px;
     width: 16px;
     height: 10px;
-    background: url(/static/images/user-icon2.png) no-repeat;
+    background: url(~@/../static/images/user-icon2.png) no-repeat;
   }
 
   .immediately {

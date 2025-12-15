@@ -157,7 +157,7 @@
                 :class="['code-depot-item mr10', { 'on': item.value === selectedSourceControlType }, { 'disabled': sourceControlDisabled && item.value === 'bk_svn' }]"
                 @click="changeSelectedSourceControl(item.value)"
               >
-                <img :src="'/static/images/' + item.imgSrc + '.png'">
+                <img :src="getSourceImage(item.imgSrc)">
                 <p
                   class="sourceControlTypeInfo"
                   :title="item.name"
@@ -693,6 +693,16 @@ import appTopBar from '@/components/paas-app-bar';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import { fileDownload } from '@/common/utils';
 
+// 导入所有代码源图片
+const sourceImages = {
+  bk_gitlab: require('@/../static/images/bk_gitlab.png'),
+  bk_svn: require('@/../static/images/bk_svn.png'),
+  bare_git: require('@/../static/images/bare_git.png'),
+  tc_git: require('@/../static/images/tc_git.png'),
+  github: require('@/../static/images/github.png'),
+  gitee: require('@/../static/images/gitee.png'),
+};
+
 export default {
   components: {
     gitExtend,
@@ -891,6 +901,10 @@ export default {
     },
     formRemoveValidated() {
       return this.curAppModule.name === this.formRemoveConfirmCode;
+    },
+    // 获取代码源图片
+    getSourceImage() {
+      return (imgSrc) => sourceImages[imgSrc] || sourceImages.bk_gitlab;
     },
     sourceControlDisabled() {
       return this.curAppModule.repo && this.curAppModule.repo.type !== 'bk_svn';

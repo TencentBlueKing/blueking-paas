@@ -67,7 +67,7 @@
               class="flex-row align-items-center flex-nowrap"
             >
               <img
-                :src="row.logo ? row.logo : '/static/images/default_logo.png'"
+                :src="row.logo ? row.logo : defaultLogo"
                 class="app-logo"
               />
               <div class="flex-column app-infos text-ellipsis">
@@ -164,6 +164,7 @@ import { mapState, mapGetters } from 'vuex';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
+import defaultLogo from '@/../static/images/default_logo.png';
 
 export default {
   name: 'PlatformAppList',
@@ -184,6 +185,7 @@ export default {
       searchValue: '',
       appList: [],
       isTableLoading: false,
+      defaultLogo,
       pagination: {
         current: 1,
         count: 0,

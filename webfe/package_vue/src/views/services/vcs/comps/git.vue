@@ -36,13 +36,13 @@
                     <img
                       v-else-if="oauth.name === 'github'"
                       style="width: 47px; height: 47px;"
-                      src="/static/images/github-logo.svg"
+                      :src="githubLogo"
                       alt=""
                     >
                     <img
                       v-else-if="oauth.name === 'gitee'"
                       style="width: 47px; height: 44px;"
-                      src="/static/images/gitee-logo.svg"
+                      :src="giteeLogo"
                       alt=""
                     >
                     <span
@@ -95,13 +95,13 @@
                     <img
                       v-else-if="oauth.name === 'github'"
                       style="width: 47px; height: 47px;"
-                      src="/static/images/github-logo.svg"
+                      :src="githubLogo"
                       alt=""
                     >
                     <img
                       v-else-if="oauth.name === 'gitee'"
                       style="width: 47px; height: 44px;"
-                      src="/static/images/gitee-logo.svg"
+                      :src="giteeLogo"
                       alt=""
                     >
                     <span
@@ -141,11 +141,16 @@
 </template>
 
 <script>
-    export default {
+import githubLogo from '@/../static/images/github-logo.svg';
+import giteeLogo from '@/../static/images/gitee-logo.svg';
+
+export default {
         data () {
             return {
                 loading: false,
                 oauth2Backends: [],
+                githubLogo,
+                giteeLogo,
                 titleInfo: {
                     'tc_git': this.$t('工蜂 Git 授权'),
                     'bk_gitlab': this.$t('蓝鲸内部 GitLab 授权'),

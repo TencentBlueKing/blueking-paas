@@ -137,10 +137,8 @@ def get_smart_cache_registry_config() -> Tuple[str, str]:
     """
 
     cache_registry = f"{settings.SMART_DOCKER_REGISTRY_HOST}/{settings.SMART_DOCKER_REGISTRY_NAMESPACE}"
-    auth_str = f"{settings.SMART_DOCKER_REGISTRY_USERNAME}:{settings.SMART_DOCKER_REGISTRY_PASSWORD}"
-    cache_registry_auth = (
-        f'{{"{settings.SMART_DOCKER_REGISTRY_HOST}": "Basic {base64.b64encode(auth_str.encode()).decode()}"}}'
-    )
+    username, password = settings.SMART_DOCKER_REGISTRY_USERNAME, settings.SMART_DOCKER_REGISTRY_PASSWORD
+    cache_registry_auth = f'{{"{settings.SMART_DOCKER_REGISTRY_HOST}": "Basic {base64.b64encode(f"{username}:{password}".encode()).decode()}"}}'
 
     return cache_registry, cache_registry_auth
 

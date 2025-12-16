@@ -1,3 +1,5 @@
+spec_version: 1
+
 apigateway:
   description: PaaS3.0 开发者中心 API 网关，包含应用信息查询、应用部署、增强服务、轻应用等 API。
   description_en: PaaS 3.0 Developer Center API Gateway, including APP information retrieval, APP deployment, Add-ons, Mini-App , and other APIs.
@@ -18,13 +20,14 @@ release:
 
 stage:
   name: "prod"
-  vars: {}
+  vars:
+    BKPAAS_SUB_PATH: "{{ environ.PAAS_BKPAAS_SUB_PATH }}"
   proxy_http:
     timeout: 30
     upstreams:
       loadbalance: "roundrobin"
       hosts:
-        - host: "{{ settings.BKPAAS_URL }}"
+        - host: "{{ environ.PAAS_BKPAAS_HOST }}"
           weight: 100
 
 grant_permissions:

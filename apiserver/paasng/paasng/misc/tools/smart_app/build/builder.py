@@ -98,7 +98,7 @@ class SmartAppBuilder:
         # 添加缓存配置
         cache_config = get_smart_cache_registry_config()
         envs["CACHE_REGISTRY"] = cache_config[0]
-        envs["CACHE_REGISTRY_AUTH"] = cache_config[1]
+        envs["REGISTRY_AUTH"] = cache_config[1]
 
         cluster_name = get_default_cluster_name()
 
@@ -138,9 +138,9 @@ def get_smart_cache_registry_config() -> Tuple[str, str]:
 
     cache_registry = f"{settings.SMART_DOCKER_REGISTRY_HOST}/{settings.SMART_DOCKER_REGISTRY_NAMESPACE}"
     username, password = settings.SMART_DOCKER_REGISTRY_USERNAME, settings.SMART_DOCKER_REGISTRY_PASSWORD
-    cache_registry_auth = f'{{"{settings.SMART_DOCKER_REGISTRY_HOST}": "Basic {b64encode(f"{username}:{password}")}"}}'
+    registry_auth = f'{{"{settings.SMART_DOCKER_REGISTRY_HOST}": "Basic {b64encode(f"{username}:{password}")}"}}'
 
-    return cache_registry, cache_registry_auth
+    return cache_registry, registry_auth
 
 
 def get_default_cluster_name() -> str:

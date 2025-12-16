@@ -67,7 +67,7 @@
               class="flex-row align-items-center flex-nowrap"
             >
               <img
-                :src="row.logo ? row.logo : '/static/images/default_logo.png'"
+                :src="row.logo ? row.logo : defaultLogo"
                 class="app-logo"
               />
               <div class="flex-column app-infos text-ellipsis">
@@ -184,6 +184,7 @@ export default {
       searchValue: '',
       appList: [],
       isTableLoading: false,
+      defaultLogo: require('@static/images/default_logo.png'),
       pagination: {
         current: 1,
         count: 0,

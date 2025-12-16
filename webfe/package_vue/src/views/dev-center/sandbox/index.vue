@@ -78,7 +78,7 @@
                 v-else
                 class="iframe-loading"
               >
-                <img src="/static/images/loading.gif" />
+                <img :src="loadingGif" />
                 <p>{{ $t('沙箱环境正在启动，预计需要约 30 秒，请稍候。') }}</p>
               </div>
             </div>
@@ -151,10 +151,12 @@ export default {
       sandboxAccessible: false,
       isLoading: true,
       deployId: '',
+      loadingGif: require('@static/images/loading.gif'),
       buildLog: '',
       runLog: '',
       isRunNowLoading: false,
       serviceName: '',
+      loadingGif,
       refreshTime: {
         build: 5,
         run: 5,

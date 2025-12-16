@@ -6,7 +6,7 @@
       :class="['code-source-item', { on: getIsSelected(item, index) }]"
       @click="handleItemClick(item, index)"
     >
-      <img :src="'/static/images/' + item.imgSrc + '.png'" />
+      <img :src="getSourceImage(item.imgSrc)" />
       <p
         class="text-ellipsis"
         style="line-height: 1"
@@ -18,6 +18,16 @@
 </template>
 
 <script>
+// 导入所有代码源图片
+const sourceImages = {
+  bk_gitlab: require('@static/images/bk_gitlab.png'),
+  bk_svn: require('@static/images/bk_svn.png'),
+  bare_git: require('@static/images/bare_git.png'),
+  tc_git: require('@static/images/tc_git.png'),
+  github: require('@static/images/github.png'),
+  gitee: require('@static/images/gitee.png'),
+};
+
 export default {
   name: 'CodeSourceSelector',
   props: {
@@ -53,6 +63,10 @@ export default {
         return this.value;
       }
       return this.items.findIndex((item) => item.value === this.value);
+    },
+    // 获取代码源图片
+    getSourceImage() {
+      return (imgSrc) => sourceImages[imgSrc] || sourceImages.bk_gitlab;
     },
   },
   mounted() {

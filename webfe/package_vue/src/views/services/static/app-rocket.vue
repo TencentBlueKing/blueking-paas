@@ -15,7 +15,7 @@
                     apititle: 'AppRocket',
                     hasLink: true,
                     link: this.GLOBAL.LINK.APP_ROCKET,
-                    image: '/static/images/AppRocket.png',
+                    image: require('@static/images/AppRocket.png'),
                     apiexplain: this.$t('蓝鲸Model在线生成器服务，基于Django框架，支持在线配置Django Model模型，一键生成对应Python代码'),
                     apiList: [
                         {

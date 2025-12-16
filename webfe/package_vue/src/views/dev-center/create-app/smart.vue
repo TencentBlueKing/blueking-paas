@@ -185,7 +185,7 @@
       v-if="isDataLoading"
       class="data-loading"
     >
-      <img src="/static/images/create-app-loading.svg" />
+      <img :src="loadingImg" />
       <p>{{ $t('应用创建中，请稍候') }}</p>
     </div>
     <div
@@ -246,6 +246,7 @@ export default {
   },
   data() {
     return {
+      loadingImg: require('@static/images/create-app-loading.svg'),
       isDataLoading: false,
       packageData: null,
       renderUploaderIndex: 0,

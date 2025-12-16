@@ -395,6 +395,7 @@ export default {
       ];
     }
     return {
+      defaultLogoImg: require('@static/images/default_logo.png'),
       isDataLoading: true,
       isInfoSaving: false,
       baseInfo: {
@@ -586,7 +587,7 @@ export default {
           this.appStatus = 'reg';
           this.baseInfo = Object.assign(this.baseInfo, {
             introduction: '',
-            logo: '/static/images/default_logo.png',
+            logo: this.defaultLogoImg,
             description: '',
             is_win_maximize: 0,
             type: 1,

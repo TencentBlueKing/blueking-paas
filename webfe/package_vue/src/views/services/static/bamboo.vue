@@ -13,7 +13,7 @@ export default {
       apiData: {
         name: this.$t('流程引擎'),
         apititle: this.$t('流程引擎'),
-        image: '/static/images/ModBpm.png',
+        image: require('@static/images/ModBpm.png'),
         apiexplain: this.$t('标准运维V3使用的分布式的流程定义、管理、调度引擎。'),
         hasLink: true,
         link: this.GLOBAL.LINK.BAMBOO_CODE,

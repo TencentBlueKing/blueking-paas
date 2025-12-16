@@ -30,7 +30,7 @@
         <div class="process-label">
           <img
             class="image-icon"
-            src="/static/images/deploy-4.svg"
+            :src="deployIcon"
           />
           <span>{{ $t('进程') }}</span>
         </div>
@@ -53,6 +53,11 @@
 <script>
 export default {
   name: 'ProcessFilter',
+  data() {
+    return {
+      deployIcon: require('@static/images/deploy-4.svg'),
+    };
+  },
   props: {
     loading: {
       type: Boolean,

@@ -11,7 +11,7 @@
           <div class="content">
             <div class="logo-uploader item-logn-content">
               <div class="preview">
-                <img :src="curPluginInfo.logo || '/static/images/default_logo.png'" />
+                <img :src="curPluginInfo.logo || defaultLogo" />
               </div>
               <div
                 v-if="isChangePluginLogo"
@@ -103,6 +103,7 @@ export default {
       pluginName: '',
       isEdit: false,
       isLoading: false,
+      defaultLogo: require('@static/images/default_logo.png'),
     };
   },
   computed: {

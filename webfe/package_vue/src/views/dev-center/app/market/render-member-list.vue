@@ -15,7 +15,7 @@
           <img
             v-else
             class="folder-icon"
-            src="/static/images/file-close.svg"
+            :src="fileCloseIcon"
             alt=""
           />
         </span>
@@ -29,6 +29,11 @@
 <script>
 export default {
   name: 'RenderMemberList',
+  data() {
+    return {
+      fileCloseIcon: require('@static/images/file-close.svg'),
+    };
+  },
   props: {
     data: {
       type: Array,

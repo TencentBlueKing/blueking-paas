@@ -76,7 +76,7 @@
               >
                 <span v-if="!process.autoscaling">
                   <img
-                    src="/static/images/btn_loading.gif"
+                    :src="btnLoadingGif"
                     class="loading"
                   />
                   <span>
@@ -128,7 +128,7 @@
                         <div class="square-icon" />
                         <!-- <i></i> -->
                         <img
-                          src="/static/images/btn_loading.gif"
+                          :src="btnLoadingGif"
                           class="loading"
                           style="margin-right: 0"
                         />
@@ -146,7 +146,7 @@
                   >
                     <i />
                     <img
-                      src="/static/images/btn_loading.gif"
+                      :src="btnLoadingGif"
                       class="loading"
                       style="margin-right: 0"
                     />
@@ -818,6 +818,7 @@ export default {
       });
     }
     return {
+      btnLoadingGif: require('@static/images/btn_loading.gif'),
       processConfigDialog: {
         isLoading: false,
         visiable: false,
@@ -2719,7 +2720,7 @@ export default {
   overflow: hidden;
   width: 10px;
   height: 12px;
-  background: url('/static/images/instance-icon2.png') no-repeat;
+  background: url('~@static/images/instance-icon2.png') no-repeat;
 }
 
 .operate-process-icon i {

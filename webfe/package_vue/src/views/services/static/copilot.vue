@@ -15,7 +15,7 @@ export default {
         hasLink: true,
         link: window.BK_TCGIT_COPILOT_URL,
         apititle: this.$t('工蜂 Copilot'),
-        image: '/static/images/tc_git.png',
+        image: require('@static/images/tc_git.png'),
         apiexplain: this.$t('工蜂 Copilot 是由工蜂智能化团队推出的一款 AI 代码助手工具。采用腾讯混元代码领域大模型，同时结合开源模型、以及工蜂领域数据进行业务精调。'),
         apiList: [
           {

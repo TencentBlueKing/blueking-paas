@@ -42,7 +42,7 @@
                     <div class="flex-row align-items-center guide-item">
                       <img
                         :src="option.plugin_type.logo"
-                        onerror="this.src='/static/images/plugin-default.svg'"
+                        :onerror="`this.src='${pluginDefaultImg}'`"
                       />
                       <div class="guide-right pl10">
                         <div class="guide-plugin-name">
@@ -287,6 +287,7 @@ export default {
   },
   data() {
     return {
+      pluginDefaultImg: require('@static/images/plugin-default.svg'),
       form: {
         pd_id: '',
         plugin_id: '',

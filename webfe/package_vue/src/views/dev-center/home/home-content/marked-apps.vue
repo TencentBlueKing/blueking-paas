@@ -9,7 +9,7 @@
       class="not-marked-apps"
     >
       <div class="empty-image">
-        <img src="/static/images/home-marked-empty.png" />
+        <img :src="homeMarkedEmptyImg" />
       </div>
       <p class="empty-sub-title mt-24">{{ $t('暂无收藏的应用') }}</p>
       <p class="empty-text mt-8">{{ $t('将鼠标悬浮到应用，点击收藏图标') }}</p>
@@ -144,6 +144,7 @@ export default {
       ],
       tableHeaderFilterValue: 'all',
       currentTenantFilters: [], // 当前租户模式过滤条件
+      homeMarkedEmptyImg: require('@static/images/home-marked-empty.png'),
     };
   },
   computed: {

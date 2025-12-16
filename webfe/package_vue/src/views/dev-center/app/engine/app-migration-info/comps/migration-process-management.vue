@@ -119,7 +119,7 @@
                 class="flex-row align-items-center mr10"
               >
                 <img
-                  src="/static/images/btn_loading.gif"
+                  :src="btnLoading"
                   class="loading"
                 />
                 <span
@@ -212,6 +212,7 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
+      btnLoading: require('@static/images/btn_loading.gif'),
       curEnvValue: 'stag',
       curModuleValue: 'default',
       allProcesses: [],

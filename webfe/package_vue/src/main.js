@@ -17,6 +17,10 @@
  * to the current version of the project delivered to anyone in the future.
  */
 /* global global */
+
+// 用于动态设置 webpack publicPath
+import '../static/webpack_public_path';
+
 import Vue from 'vue';
 import App from './App';
 import router from '@/router';
@@ -62,8 +66,6 @@ import tableEmpty from '@/components/ui/table-empty';
 import emptyDark from '@/components/ui/empty-dark';
 
 import i18n from '@/language/i18n';
-// 全量引入自定义图标
-import './assets/iconfont/style.css';
 
 // 平台配置
 import { PLATFORM_CONFIG } from '../static/json/paas_static.js';

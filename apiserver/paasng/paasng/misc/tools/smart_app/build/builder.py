@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import base64
 from typing import TYPE_CHECKING, Dict, Tuple
 
 from django.conf import settings
@@ -26,6 +25,7 @@ from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.kube_res.base import Schedule
+from paas_wl.utils.text import b64encode
 from paasng.misc.tools.smart_app.output import make_channel_stream
 from paasng.platform.engine.constants import JobStatus
 
@@ -138,7 +138,7 @@ def get_smart_cache_registry_config() -> Tuple[str, str]:
 
     cache_registry = f"{settings.SMART_DOCKER_REGISTRY_HOST}/{settings.SMART_DOCKER_REGISTRY_NAMESPACE}"
     username, password = settings.SMART_DOCKER_REGISTRY_USERNAME, settings.SMART_DOCKER_REGISTRY_PASSWORD
-    cache_registry_auth = f'{{"{settings.SMART_DOCKER_REGISTRY_HOST}": "Basic {base64.b64encode(f"{username}:{password}".encode()).decode()}"}}'
+    cache_registry_auth = f'{{"{settings.SMART_DOCKER_REGISTRY_HOST}": "Basic {b64encode(f"{username}:{password}")}"}}'
 
     return cache_registry, cache_registry_auth
 

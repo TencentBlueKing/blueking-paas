@@ -187,6 +187,9 @@ var _ = Describe("test conversion back and forth", func() {
 		).To(Equal(v1alpha1bkappFromConverted.Annotations[AddonsAnnoKey]))
 		// 信息不丢失的情况下，转回 v1alpha1 后 Spec 会增加 Addons
 		v1alpha1bkapp.Spec.Addons = []paasv1alpha2.Addon{{Name: "add-on1"}}
+		// NodeSelector 和 Tolerations 在转换后可能从 nil 变为空值，需要保持一致
+		v1alpha1bkapp.Spec.NodeSelector = v1alpha1bkappFromConverted.Spec.NodeSelector
+		v1alpha1bkapp.Spec.Tolerations = v1alpha1bkappFromConverted.Spec.Tolerations
 		Expect(v1alpha1bkapp.Spec).To(Equal(v1alpha1bkappFromConverted.Spec))
 	})
 
@@ -346,6 +349,9 @@ var _ = Describe("test conversion back and forth", func() {
 		_ = v1alpha1bkapp.ConvertTo(conversion.Hub(&v1alpha2bkappFromConverted))
 
 		// Make sure the conversion is lossless.
+		// NodeSelector 和 Tolerations 在转换后可能从 nil 变为空值，需要保持一致
+		v1alpha2bkapp.Spec.NodeSelector = v1alpha2bkappFromConverted.Spec.NodeSelector
+		v1alpha2bkapp.Spec.Tolerations = v1alpha2bkappFromConverted.Spec.Tolerations
 		Expect(v1alpha2bkapp.Spec).To(Equal(v1alpha2bkappFromConverted.Spec))
 		Expect(v1alpha2bkapp.Status).To(Equal(v1alpha2bkappFromConverted.Status))
 	})

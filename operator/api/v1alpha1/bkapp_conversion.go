@@ -135,6 +135,18 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 		)
 	}
 
+	// Copy NodeSelector and Tolerations
+	_ = copier.CopyWithOption(
+		&dst.Spec.NodeSelector,
+		&src.Spec.NodeSelector,
+		copier.Option{IgnoreEmpty: true, DeepCopy: true},
+	)
+	_ = copier.CopyWithOption(
+		&dst.Spec.Tolerations,
+		&src.Spec.Tolerations,
+		copier.Option{IgnoreEmpty: true, DeepCopy: true},
+	)
+
 	// Copy Status field
 	_ = copier.CopyWithOption(
 		&dst.Status, &src.Status, copier.Option{IgnoreEmpty: true, DeepCopy: true},
@@ -248,6 +260,18 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 			copier.Option{IgnoreEmpty: true, DeepCopy: true},
 		)
 	}
+
+	// Copy NodeSelector and Tolerations
+	_ = copier.CopyWithOption(
+		&dst.Spec.NodeSelector,
+		&src.Spec.NodeSelector,
+		copier.Option{IgnoreEmpty: true, DeepCopy: true},
+	)
+	_ = copier.CopyWithOption(
+		&dst.Spec.Tolerations,
+		&src.Spec.Tolerations,
+		copier.Option{IgnoreEmpty: true, DeepCopy: true},
+	)
 
 	// Copy Status field
 	_ = copier.CopyWithOption(

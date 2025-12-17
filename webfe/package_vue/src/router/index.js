@@ -378,6 +378,8 @@ Vue.use(Router);
 
 const router = new Router({
   mode: 'history',
+  // web url path
+  base: window.BK_SITE_PATH || '/',
   // 页面刷新时回到顶部
   scrollBehavior() {
     return { x: 0, y: 0 };

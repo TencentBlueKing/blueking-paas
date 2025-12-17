@@ -63,7 +63,7 @@
             >
               <img
                 :src="row.logo"
-                onerror="this.src='/static/images/plugin-default.svg'"
+                :onerror="`this.src='${pluginDefaultImg}'`"
                 class="plugin-logo-cls"
               />
               {{ row.id || '--' }}
@@ -210,6 +210,7 @@ export default {
       filterKey: '',
       pluginList: [],
       pluginStatus: PLUGIN_STATUS,
+      pluginDefaultImg: require('@static/images/plugin-default.svg'),
       isDataLoading: true,
       pagination: {
         current: 1,

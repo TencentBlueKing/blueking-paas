@@ -54,7 +54,7 @@
                 <img
                   :class="['module-default', 'ml10', { en: localLanguage === 'en' }]"
                   v-if="row.is_default"
-                  :src="`/static/images/${localLanguage === 'en' ? 'main_en.png' : 'main.png'}`"
+                  :src="localLanguage === 'en' ? mainEnPng : mainPng"
                 />
               </div>
               <bk-button
@@ -242,7 +242,7 @@
                     <img
                       class="custom-image ml10"
                       v-if="e.address.type === 'custom'"
-                      :src="`/static/images/${localLanguage === 'en' ? 'custom_en.png' : 'custom.png'}`"
+                      :src="localLanguage === 'en' ? customEnPng : customPng"
                     />
                   </div>
                 </section>
@@ -458,6 +458,10 @@ export default {
       entryEnv: ENV_ENUM,
       rowIndex: '',
       tableIndex: '',
+      mainPng: require('@static/images/main.png'),
+      mainEnPng: require('@static/images/main_en.png'),
+      customPng: require('@static/images/custom.png'),
+      customEnPng: require('@static/images/custom_en.png'),
       envIndex: '',
       ipConfigInfo: { frontend_ingress_ip: '' },
       rules: {

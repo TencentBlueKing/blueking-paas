@@ -44,13 +44,13 @@
                   v-if="row.isExpand"
                   class="image-icon"
                   @click="handleExpand(row)"
-                  src="/static/images/tableminus.svg"
+                  :src="tableminusSvg"
                 />
                 <img
                   v-else
                   class="image-icon"
                   @click="handleExpand(row)"
-                  src="/static/images/tableplus.svg"
+                  :src="tableplusSvg"
                 />
               </div>
             </div>
@@ -257,7 +257,7 @@
                 class="flex-row align-items-center mr10"
               >
                 <img
-                  src="/static/images/btn_loading.gif"
+                  :src="btnLoadingGif"
                   class="loading"
                 />
                 <span
@@ -657,6 +657,9 @@ export default {
       },
     ];
     return {
+      tableminusSvg: require('@static/images/tableminus.svg'),
+      tableplusSvg: require('@static/images/tableplus.svg'),
+      btnLoadingGif: require('@static/images/btn_loading.gif'),
       deployData: {},
       allProcesses: [],
       chartSlider: {

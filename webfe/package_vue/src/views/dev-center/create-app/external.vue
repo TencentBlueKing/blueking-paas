@@ -104,7 +104,7 @@
       v-if="createLoading"
       class="form-loading"
     >
-      <img src="/static/images/create-app-loading.svg" />
+      <img :src="loadingImg" />
       <p>{{ $t('应用创建中，请稍候') }}</p>
     </div>
     <div
@@ -139,6 +139,7 @@ export default {
   mixins: [sidebarDiffMixin],
   data() {
     return {
+      loadingImg: require('@static/images/create-app-loading.svg'),
       createLoading: false,
       // 基本信息
       formData: {

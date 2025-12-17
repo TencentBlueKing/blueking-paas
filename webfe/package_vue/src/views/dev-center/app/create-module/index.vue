@@ -249,7 +249,7 @@
                 :class="['code-depot-item mr10', { 'on': item.value === sourceControlType }]"
                 @click="changeSourceControl(item)"
               >
-                <img :src="'/static/images/' + item.imgSrc + '.png'">
+                <img :src="getSourceImage(item.imgSrc)">
                 <p class="sourceControlTypeInfo">
                   {{ item.name }}
                 </p>
@@ -321,7 +321,7 @@
             v-if="formLoading"
             class="form-loading"
           >
-            <img src="/static/images/create-app-loading.svg">
+            <img :src="createAppLoading">
             <p> {{ $t('模块创建中，请稍候') }} </p>
           </div>
           <div
@@ -374,6 +374,16 @@ import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import appPreloadMixin from '@/mixins/app-preload';
 
+// 导入所有代码源图片
+const sourceImages = {
+  bk_gitlab: require('@static/images/bk_gitlab.png'),
+  bk_svn: require('@static/images/bk_svn.png'),
+  bare_git: require('@static/images/bare_git.png'),
+  tc_git: require('@static/images/tc_git.png'),
+  github: require('@static/images/github.png'),
+  gitee: require('@static/images/gitee.png'),
+};
+
 export default {
   components: {
     gitExtend,
@@ -382,6 +392,7 @@ export default {
   mixins: [appPreloadMixin],
   data() {
     return {
+      createAppLoading: require('@static/images/create-app-loading.svg'),
       formLoading: false,
       globalErrorMessage: '',
       language: 'Python',
@@ -484,6 +495,10 @@ export default {
     },
     isShowRegionsService() {
       return Object.keys(this.regionsServices).length > 0;
+    },
+    // 获取代码源图片
+    getSourceImage() {
+      return (imgSrc) => sourceImages[imgSrc] || sourceImages.bk_gitlab;
     },
     establishStyle() {
       if (this.curLanguages && this.language && this.curLanguages[this.language]) {

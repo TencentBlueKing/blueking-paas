@@ -44,7 +44,7 @@
                 </div>
               </section>
               <div class="logo-wrapper mt-16">
-                <img :src="localeAppInfo.logo || '/static/images/default_logo.png'" />
+                <img :src="localeAppInfo.logo || defaultLogo" />
               </div>
             </div>
             <!-- 编辑态 -->
@@ -97,7 +97,7 @@
                     <div class="flex-row">
                       <img
                         class="lightening-icon"
-                        src="/static/images/lightening.svg"
+                        :src="lightening"
                         @click="handleExpand(row)"
                       />
                       {{ $t('快速标记为 “测试” 分类') }}
@@ -342,7 +342,9 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
+      lightening: require('@static/images/lightening.svg'),
       isLoading: true,
+      defaultLogo: require('@static/images/default_logo.png'),
       formRemoveConfirmCode: '',
       localeAppInfo: {
         name: '',
@@ -927,7 +929,7 @@ export default {
     left: 147px;
     width: 16px;
     height: 10px;
-    background: url(/static/images/user-icon2.png) no-repeat;
+    background: url(~@static/images/user-icon2.png) no-repeat;
   }
 
   .immediately {

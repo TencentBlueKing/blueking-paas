@@ -153,7 +153,8 @@ export default {
       orderBy: 'created',
       is_up: true,
       loading: true,
-      defaultImg: '/static/images/default_logo.png',
+      defaultImg: require('@static/images/default_logo.png'),
+      sortIcon: require('@static/images/sort-icon.png'),
       isTableLoading: false,
       pageConf: {
         current: 1,
@@ -198,7 +199,7 @@ export default {
             transform: this.is_up ? 'rotate(0)' : 'rotate(180deg)',
           },
           attrs: {
-            src: '/static/images/sort-icon.png',
+            src: this.sortIcon,
           },
           on: {
             click: this.sortTab,

@@ -632,6 +632,7 @@ BK_CI_CLIENT_USERNAME = "blueking"
 # SMART_IMAGE_TAG: v0.0.1-smart
 # SMART_CNB_IMAGE_TAG: v0.0.1-smart
 
+
 ## ------------------------------------ 插件开发中心配置 ------------------------------------
 
 ## 插件中心「源码仓库」相关配置

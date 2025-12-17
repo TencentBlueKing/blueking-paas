@@ -383,6 +383,7 @@ export default {
     ];
 
     return {
+      sortIcon: require('@static/images/sort-icon.png'),
       alarmRecordList: [],
       tableLoading: false,
       isShowDetailSlider: false,
@@ -951,7 +952,7 @@ export default {
               transform: this.isTypeSort ? 'rotate(0)' : 'rotate(180deg)',
             },
             attrs: {
-              src: '/static/images/sort-icon.png',
+              src: this.sortIcon,
             },
           }),
         ],

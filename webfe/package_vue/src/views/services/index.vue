@@ -10,7 +10,7 @@
           <li>
             <router-link to="/developer-center/service/mySQL">
               <img
-                src="/static/images/service-pic2.png"
+                :src="servicePic2"
                 class="service-list-img"
               >
               <span class="service-list-tit">MySQL</span>
@@ -20,7 +20,7 @@
           <li>
             <router-link to="/developer-center/service/Redis">
               <img
-                src="/static/images/service-pic3.png"
+                :src="servicePic3"
                 class="service-list-img"
               >
               <span class="service-list-tit">Redis</span>
@@ -30,7 +30,7 @@
           <li>
             <router-link to="/developer-center/service/RabbitMQ">
               <img
-                src="/static/images/service-pic4.png"
+                :src="servicePic4"
                 class="service-list-img"
               >
               <span class="service-list-tit">RabbitMQ</span>
@@ -42,3 +42,16 @@
     </div>
   </div>
 </template>
+
+<script>
+
+export default {
+  data() {
+    return {
+      servicePic2: require('@static/images/service-pic2.png'),
+      servicePic3: require('@static/images/service-pic3.png'),
+      servicePic4: require('@static/images/service-pic4.png'),
+    };
+  },
+};
+</script>

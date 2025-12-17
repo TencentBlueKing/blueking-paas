@@ -106,7 +106,7 @@
               ]"
               @click="changeSourceControl(item.value)"
             >
-              <img :src="'/static/images/' + item.imgSrc + '.png'" />
+              <img :src="getSourceImage(item.imgSrc)" />
               <p
                 class="source-control-title"
                 :title="item.name"
@@ -264,6 +264,16 @@ import { fileDownload } from '@/common/utils';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import dayjs from 'dayjs';
 
+// 导入所有代码源图片
+const sourceImages = {
+  bk_gitlab: require('@static/images/bk_gitlab.png'),
+  bk_svn: require('@static/images/bk_svn.png'),
+  bare_git: require('@static/images/bare_git.png'),
+  tc_git: require('@static/images/tc_git.png'),
+  github: require('@static/images/github.png'),
+  gitee: require('@static/images/gitee.png'),
+};
+
 export default {
   components: {
     codeInspection,
@@ -386,6 +396,10 @@ export default {
     curSourceControl() {
       const match = this.sourceControlTypes.find((item) => item.value === this.sourceControlType);
       return match;
+    },
+    // 获取代码源图片
+    getSourceImage() {
+      return (imgSrc) => sourceImages[imgSrc] || sourceImages.bk_gitlab;
     },
     // 部署目录校验
     isSourceDirInvalid() {

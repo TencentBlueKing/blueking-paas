@@ -15,7 +15,7 @@ export default {
         apititle: 'MagicBox',
         hasLink: true,
         link: this.GLOBAL.LINK.MAGICBOX_INDEX,
-        image: '/static/images/service-pic8.png',
+        image: require('@static/images/service-pic8.png'),
         apiexplain: this.$t('蓝鲸MagicBox提供丰富的PC端、移动端前端UI组件，更有样例套餐助您快速搭建前端页面。同时蓝鲸MagicBox提供可视化开发服务，支持在线拖拽页面，所见即所得。'),
         apiList: [
           {

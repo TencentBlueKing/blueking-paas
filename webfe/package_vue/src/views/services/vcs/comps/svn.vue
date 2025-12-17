@@ -471,7 +471,7 @@ export default {
         right: 27px;
         width: 12px;
         height: 7px;
-        background: url(/static/images/user-icon2.png) no-repeat;
+        background: url(~@static/images/user-icon2.png) no-repeat;
     }
     .get-width {
         display: inline-block;

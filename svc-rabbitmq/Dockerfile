@@ -17,6 +17,8 @@ RUN pip install poetry==2.1.1
 RUN sed -i '/oid_section/a openssl_conf = default_conf' /etc/pki/tls/openssl.cnf && \
     printf "[default_conf]\nssl_conf=ssl_sect\n[ssl_sect]\nsystem_default=system_default_sect\n[system_default_sect]\nMinProtocol=TLSv1.2\nCipherString=DEFAULT@SECLEVEL=0" >> /etc/pki/tls/openssl.cnf
 
+WORKDIR /app
+
 # Install dependencies first
 ADD ./pyproject.toml .
 ADD ./poetry.lock .

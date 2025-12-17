@@ -79,8 +79,8 @@
           <img
             v-if="panel.is_default"
             :class="['module-default', 'ml10', { en: localLanguage === 'en' }]"
-            :src="`/static/images/${localLanguage === 'en' ? 'main_en.png' : 'main.png' }`"
-          >
+            :src="getMainImage"
+          />
         </div>
         <i
           v-if="index === moduleItemIndex && !panel.is_default"
@@ -132,12 +132,16 @@
     </bk-dialog>
   </div>
 </template>
-<script>import { defineComponent, reactive, ref, computed, getCurrentInstance } from 'vue';
+<script>
+import { defineComponent, reactive, ref, computed, getCurrentInstance } from 'vue';
 import store from '@/store';
 import router from '@/router';
 import { bkMessage } from 'bk-magic-vue';
 import { bus } from '@/common/bus';
 import i18n from '@/language/i18n';
+
+const mainPng = require('@static/images/main.png');
+const mainEnPng = require('@static/images/main_en.png');
 
 export default defineComponent({
   name: 'EditorStatus',
@@ -180,6 +184,7 @@ export default defineComponent({
     const moduleItemIndex = ref('');
     const formRemoveConfirmCode = ref('');
     const curAppModuleName = ref('');
+    const getMainImage = computed(() => (localLanguage.value === 'en' ? mainEnPng : mainPng));
     const dialog = reactive({
       title: '模块管理',
       visiable: false,
@@ -209,11 +214,13 @@ export default defineComponent({
     const isSmartApp = computed(() => curAppModule.source_origin === vm.proxy.GLOBAL.APP_TYPES.SMART_APP);
 
     // 新建模块禁用提示
-    const disableTips = computed(() => (isSmartApp.value ? i18n.t('S-mart 应用不允许在页面上新建模块') : i18n.t('当前应用不允许创建其他模块')));
+    const disableTips = computed(() =>
+      isSmartApp.value ? i18n.t('S-mart 应用不允许在页面上新建模块') : i18n.t('当前应用不允许创建其他模块')
+    );
 
     // 切换tab
     const handleTabChange = async () => {
-      const curModule = (props.moduleList || []).find(e => e.name === active.value);
+      const curModule = (props.moduleList || []).find((e) => e.name === active.value);
       await store.commit('updateCurAppModule', curModule);
       emit('tab-change');
       const name = props.activeRouteName || props.firstModuleName;
@@ -275,13 +282,13 @@ export default defineComponent({
         });
         await store.dispatch('getAppInfo', {
           appCode: props.appCode,
-          moduleId: props.moduleList.find(item => item.is_default).name,
+          moduleId: props.moduleList.find((item) => item.is_default).name,
         });
         router.push({
           name: props.firstModuleName || route.name,
           params: {
             id: props.appCode,
-            moduleId: props.moduleList.find(item => item.is_default).name,
+            moduleId: props.moduleList.find((item) => item.is_default).name,
           },
         });
         store.dispatch('getAppInfo', { appCode: props.appCode, moduleId: curAppModuleName.value });
@@ -319,6 +326,7 @@ export default defineComponent({
       localLanguage,
       isCreatedModule,
       disableTips,
+      getMainImage,
     };
   },
 });
@@ -365,7 +373,7 @@ export default defineComponent({
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #F0F5FF;
+    background: #f0f5ff;
     border-radius: 2px;
     cursor: pointer;
     i {
@@ -375,11 +383,11 @@ export default defineComponent({
       font-weight: 700;
       font-size: 12px;
     }
-    &.disabled  {
-      background: #F5F7FA;
+    &.disabled {
+      background: #f5f7fa;
       cursor: not-allowed;
       i {
-        color: #DCDEE5;
+        color: #dcdee5;
       }
     }
   }
@@ -391,8 +399,8 @@ export default defineComponent({
 .module-item {
   width: 592px;
   height: 40px;
-  background: #FAFBFD;
-  border: 1px solid #DCDEE5;
+  background: #fafbfd;
+  border: 1px solid #dcdee5;
   border-radius: 2px;
   padding: 0 20px;
   margin-top: 12px;
@@ -408,7 +416,7 @@ export default defineComponent({
 .module-name {
   display: flex;
   align-items: center;
-  .module-default{
+  .module-default {
     transform: translateY(0);
     height: 22px;
     width: 38px;

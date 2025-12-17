@@ -41,7 +41,7 @@
                 <img
                   class="module-default ml10"
                   v-if="row.is_default"
-                  src="/static/images/main.png"
+                  :src="main"
                 />
               </div>
               <bk-button
@@ -190,7 +190,7 @@
                     <img
                       class="custom-image ml10"
                       v-if="e.address.type === 'custom'"
-                      src="/static/images/custom.png"
+                      :src="custom"
                     />
                   </div>
                 </section>
@@ -337,6 +337,8 @@ export default {
   mixins: [appBaseMixin],
   data() {
     return {
+      main: require('@static/images/main.png'),
+      custom: require('@static/images/custom.png'),
       type: '',
       example: '',
       canUpdateSubDomain: false,

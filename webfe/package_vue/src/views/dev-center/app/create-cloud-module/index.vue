@@ -587,7 +587,7 @@
             v-if="formLoading"
             class="form-loading"
           >
-            <img src="/static/images/create-app-loading.svg" />
+            <img :src="createAppLoading" />
             <p>{{ $t('模块创建中，请稍候') }}</p>
           </div>
           <div
@@ -671,6 +671,7 @@ export default {
   mixins: [appPreloadMixin],
   data() {
     return {
+      createAppLoading: require('@static/images/create-app-loading.svg'),
       formLoading: false,
       globalErrorMessage: '',
       language: 'Python',

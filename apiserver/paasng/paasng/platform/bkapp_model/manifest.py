@@ -54,6 +54,7 @@ from paas_wl.bk_app.cnative.specs.models import Mount
 from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding
 from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
@@ -556,6 +557,9 @@ def get_bkapp_resource_for_deploy(
     # 将出口集群信息注入到 model_res 中
     apply_egress_annotations(model_res, env)
 
+    # 将集群默认的调度配置注入到 model_res 中
+    apply_cluster_scheduling_config(model_res, env)
+
     # 如果模块是通过 buildpack 构建的，则需要更新 hooks 和 processes 中的 command/args
     mgr = ModuleRuntimeManager(env.module)
     if mgr.build_config.build_method == RuntimeType.BUILDPACK:
@@ -637,6 +641,32 @@ def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironmen
         pass
     else:
         model_res.metadata.annotations[EGRESS_CLUSTER_STATE_NAME_ANNO_KEY] = binding.state.name
+
+
+def apply_cluster_scheduling_config(model_res: crd.BkAppResource, env: ModuleEnvironment):
+    """Apply cluster's default scheduling config (nodeSelector and tolerations) to the resource object.
+
+    :param model_res: The model resource object, it will be modified in-place.
+    :param env: The environment object.
+    """
+    cluster = EnvClusterService(env).get_cluster()
+
+    # Apply cluster's default nodeSelector
+    if cluster.default_node_selector:
+        model_res.spec.nodeSelector = cluster.default_node_selector
+
+    # Apply cluster's default tolerations
+    if cluster.default_tolerations:
+        model_res.spec.tolerations = [
+            crd.Toleration(
+                key=t.get("key"),
+                operator=t.get("operator"),
+                value=t.get("value"),
+                effect=t.get("effect"),
+                tolerationSeconds=t.get("tolerationSeconds"),
+            )
+            for t in cluster.default_tolerations
+        ]
 
 
 def _update_cmd_args_from_wl_build(model_res: crd.BkAppResource, wl_build: WlBuild):

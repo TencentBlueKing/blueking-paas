@@ -390,6 +390,23 @@ class Observability(BaseModel):
     monitoring: Monitoring | None = None
 
 
+class Toleration(BaseModel):
+    """Kubernetes Toleration for pod scheduling
+
+    :param key: The taint key that the toleration applies to.
+    :param operator: The operator (Equal or Exists).
+    :param value: The taint value the toleration matches to.
+    :param effect: The taint effect to match (NoSchedule, PreferNoSchedule, NoExecute).
+    :param tolerationSeconds: The period of time the toleration tolerates the taint.
+    """
+
+    key: str | None = None
+    operator: str | None = None
+    value: str | None = None
+    effect: str | None = None
+    tolerationSeconds: int | None = None
+
+
 class BkAppSpec(BaseModel):
     """Spec of BkApp resource"""
 
@@ -403,6 +420,9 @@ class BkAppSpec(BaseModel):
     svcDiscovery: SvcDiscConfig | None = None
     envOverlay: EnvOverlay | None = None
     observability: Observability | None = None
+    # Pod scheduling config
+    nodeSelector: Dict[str, str] | None = None
+    tolerations: List[Toleration] | None = None
 
 
 class BkAppStatus(BaseModel):

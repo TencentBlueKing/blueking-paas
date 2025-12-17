@@ -107,10 +107,12 @@ class ResQuotaReader:
                 }
 
         override_config_str = self.res.metadata.annotations.get(OVERRIDE_PROC_RES_ANNO_KEY, "")
-        override_map = json.loads(override_config_str) if override_config_str else {}
+        if not override_config_str:
+            return results
+
+        override_map = json.loads(override_config_str)
         for proc_name, config in results.items():
             if override_res := override_map.get(proc_name):
-                config["plan"] = "customized"
                 if "limits" in override_res:
                     config["limits"] = override_res["limits"]
                 if "requests" in override_res:

@@ -76,7 +76,13 @@ class Command(BaseCommand):
             help="s-mart 应用包的路径",
         )
         parser.add_argument(
-            "-u", "--operator", dest="operator", required=False, type=str, default="admin", help="当前操作人"
+            "-u",
+            "--operator",
+            dest="operator",
+            required=False,
+            type=str,
+            default=settings.ADMIN_USERNAME,
+            help="当前操作人",
         )
         parser.add_argument(
             "--app_tenant_mode",

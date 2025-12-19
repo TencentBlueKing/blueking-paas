@@ -65,7 +65,7 @@ class Simple3rdAppDesc:
     introduction_en: str
     source_tp_url: str
     region: str = "default"
-    creator: str = "admin"
+    creator: str = settings.ADMIN_USERNAME
 
 
 class Command(BaseCommand):

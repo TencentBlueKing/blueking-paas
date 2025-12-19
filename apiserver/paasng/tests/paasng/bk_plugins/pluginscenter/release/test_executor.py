@@ -31,7 +31,7 @@ from paasng.bk_plugins.pluginscenter.releases.executor import PluginReleaseExecu
 pytestmark = pytest.mark.django_db
 
 
-class FakeTaskPoller(TaskPoller):
+class FakePluginTaskPoller(TaskPoller):
     """A task poller for testing"""
 
     def query(self) -> PollingResult:
@@ -61,7 +61,7 @@ def build_stage_controller(
             self.stage.update_status(target_status)
             metadata = PollingMetadata(retries=0, query_started_at=time.time(), queried_count=0)
             params = {"stage": self.stage, "target_status": target_status, "post_command_result": post_command_result}
-            FakeTaskPoller(params, metadata).query()
+            FakePluginTaskPoller(params, metadata).query()
 
         def execute_pre_command(self, operator: str):
             return pre_command_result

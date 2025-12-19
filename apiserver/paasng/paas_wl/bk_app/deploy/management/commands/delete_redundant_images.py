@@ -68,6 +68,7 @@ class Command(BaseCommand):
             artifact_type=ArtifactType.IMAGE,
             artifact_deleted=False,
             image__isnull=False,
+            module_id__isnull=False,
         ).order_by("-created")
 
         builds_dict: dict[str, list[Build]] = defaultdict(list)

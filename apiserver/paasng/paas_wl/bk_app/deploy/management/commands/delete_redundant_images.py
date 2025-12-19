@@ -19,7 +19,7 @@ import logging
 from collections import defaultdict
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from paas_wl.bk_app.applications.constants import ArtifactType
@@ -49,7 +49,7 @@ class Command(BaseCommand):
             dest="max_reserved_num",
             type=int,
             default=settings.MAX_RESERVED_IMAGES_PER_MODULE,
-            help="每个模块最多保留多少个镜像, 默认10个",
+            help="每个模块最多保留多少个镜像, 默认10个, 最小值0",
         )
         parser.add_argument(
             "--dry-run",
@@ -59,7 +59,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, max_reserved_num, dry_run, *args, **options):
-        assert max_reserved_num >= 0, "max_reserved_num 必须大于等于0"
+        if max_reserved_num < 0:
+            raise CommandError("max_reserved_num 不能小于0")
 
         # 查询镜像类型的构建记录
         queryset = Build.objects.filter(

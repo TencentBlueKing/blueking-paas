@@ -82,9 +82,20 @@ class Command(BaseCommand):
             need_delete = builds[max_reserved_num:]
             success_delete_builds = []
 
+            if need_delete == []:
+                continue
+            image_registry = get_image_registry_by_app(builds[0].app)
+            docker_client = DockerRegistryV2Client.from_api_endpoint(
+                api_endpoint=APIEndpoint(url=image_registry.host),
+                username=image_registry.username,
+                password=image_registry.password,
+            )
+
             for build in need_delete:
                 try:
-                    success = delete_image_by_build(build, raise_error=True, dry_run=dry_run)
+                    success = delete_image_by_build(
+                        build, docker_client=docker_client, raise_error=True, dry_run=dry_run
+                    )
                 except ResourceNotFound:
                     # 镜像找不到， 也视为删除成功
                     success = True
@@ -119,6 +130,7 @@ def delete_image_by_build(
     build: Build,
     raise_error: bool = True,
     dry_run: bool = False,
+    docker_client: DockerRegistryV2Client | None = None,
 ) -> bool:
     image_info = parse_image(build.image)
 
@@ -130,12 +142,14 @@ def delete_image_by_build(
         logger.error(f"镜像 {build.image} 不包含 tag 信息，无法删除")
         return False
 
-    image_registry = get_image_registry_by_app(build.app)
-    docker_client = DockerRegistryV2Client.from_api_endpoint(
-        api_endpoint=APIEndpoint(url=image_registry.host),
-        username=image_registry.username,
-        password=image_registry.password,
-    )
+    if docker_client is None:
+        image_registry = get_image_registry_by_app(build.app)
+        docker_client = DockerRegistryV2Client.from_api_endpoint(
+            api_endpoint=APIEndpoint(url=image_registry.host),
+            username=image_registry.username,
+            password=image_registry.password,
+        )
+
     manifest_ref = ManifestRef(
         repo=image_info.name,
         reference=image_info.tag,

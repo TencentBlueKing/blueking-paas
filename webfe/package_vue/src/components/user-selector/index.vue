@@ -7,11 +7,19 @@
     draggable
     header-position="left"
     ext-cls="bk-add-member-dialog"
-    @after-leave="handleAfterLeave">
-    <div slot="header" class="title">
+    @after-leave="handleAfterLeave"
+  >
+    <div
+      slot="header"
+      class="title"
+    >
       {{ $t(title) }}
     </div>
-    <div class="add-member-content-wrapper" v-bkloading="{ isLoading, opacity: 1 }" :style="style">
+    <div
+      class="add-member-content-wrapper"
+      v-bkloading="{ isLoading, opacity: 1 }"
+      :style="style"
+    >
       <div v-show="!isLoading">
         <div class="left">
           <div class="search-input">
@@ -19,39 +27,41 @@
               v-model="searchConditionValue"
               :clearable="false"
               :popover-width="150"
-              style="flex: 0 0 130px;"
-              @selected="handleConditionSelcted">
+              style="flex: 0 0 130px"
+              @selected="handleConditionSelcted"
+            >
               <bk-option
                 v-for="option in searchConditionList"
                 :key="option.id"
                 :id="option.id"
-                :name="option.name">
-              </bk-option>
+                :name="option.name"
+              ></bk-option>
             </bk-select>
             <bk-input
               v-model="keyword"
               :placeholder="$t(placeholder)"
               maxlength="64"
               :clearable="true"
-              style="position: relative; left: -1px;"
+              style="position: relative; left: -1px"
               @keyup.enter.native="handleSearch"
               @keyup.up.native="handleKeyup"
-              @keyup.down.native="handleKeydown">
-            </bk-input>
+              @keyup.down.native="handleKeydown"
+            ></bk-input>
           </div>
           <div
             class="member-tree-wrapper"
-            v-bkloading="{ isLoading: treeLoading, opacity: 1 }">
+            v-bkloading="{ isLoading: treeLoading, opacity: 1 }"
+          >
             <template v-if="isShowMemberTree">
               <div class="tree">
                 <tree
                   ref="userTreeRef"
                   :all-data="treeList"
-                  style="height: 341px;"
+                  style="height: 341px"
                   :key="infiniteTreeKey"
                   @async-load-nodes="handleRemoteLoadNode"
-                  @on-select="handleOnSelected">
-                </tree>
+                  @on-select="handleOnSelected"
+                ></tree>
               </div>
             </template>
             <template v-if="isShowSearchResult">
@@ -61,14 +71,17 @@
                     ref="searchedResultsRef"
                     :all-data="searchedResult"
                     :focus-index.sync="focusItemIndex"
-                    style="height: 341px;"
-                    @on-checked="handleSearchResultSelected">
-                  </list>
+                    style="height: 341px"
+                    @on-checked="handleSearchResultSelected"
+                  ></list>
                 </template>
                 <template v-if="isSeachResultEmpty">
                   <div class="search-empty-wrapper">
-                    <img src="./images/empty-display.svg" alt="" />
-                    <p class="empty-tips"> {{ $t('搜索无结果') }} </p>
+                    <img
+                      src="./images/empty-display.svg"
+                      alt=""
+                    />
+                    <p class="empty-tips">{{ $t('搜索无结果') }}</p>
                   </div>
                 </template>
               </div>
@@ -77,14 +90,19 @@
         </div>
         <div class="right">
           <div class="header">
-            <div class="has-selected"> {{ $t('已选择') }} <template v-if="isShowSelectedText">
-              <span class="organization-count">
-                {{ hasSelectedDepartments.length }}
-              </span> {{ $t('个组织') }}<span v-if="isUsingDefaultRule">，</span>
-              <template v-if="isUsingDefaultRule">
-                <span class="user-count">{{ hasSelectedUsers.length }}</span> {{ $t('个用户') }}
+            <div class="has-selected">
+              {{ $t('已选择') }}
+              <template v-if="isShowSelectedText">
+                <span class="organization-count">
+                  {{ hasSelectedDepartments.length }}
+                </span>
+                {{ $t('个组织') }}
+                <span v-if="isUsingDefaultRule">，</span>
+                <template v-if="isUsingDefaultRule">
+                  <span class="user-count">{{ hasSelectedUsers.length }}</span>
+                  {{ $t('个用户') }}
+                </template>
               </template>
-            </template>
               <template v-else>
                 <span class="user-count">0</span>
               </template>
@@ -94,15 +112,32 @@
               theme="primary"
               text
               :disabled="clearable || !isShowSelectedText"
-              @click="handleDeleteAll">
+              @click="handleDeleteAll"
+            >
               {{ $t('清空') }}
             </bk-button>
           </div>
           <div class="content">
-            <div class="organization-content" v-if="isDepartSelectedEmpty">
-              <div class="organization-item" v-for="item in hasSelectedDepartments" :key="item.id">
-                <img class="folder-icon" src="./images/file-close.svg" alt="">
-                <span class="organization-name" :title="item.name">{{ item.name }}</span>
+            <div
+              class="organization-content"
+              v-if="isDepartSelectedEmpty"
+            >
+              <div
+                class="organization-item"
+                v-for="item in hasSelectedDepartments"
+                :key="item.id"
+              >
+                <img
+                  class="folder-icon"
+                  src="./images/file-close.svg"
+                  alt=""
+                />
+                <span
+                  class="organization-name"
+                  :title="item.name"
+                >
+                  {{ item.name }}
+                </span>
                 <!-- 禁用删除icon -->
                 <i
                   v-if="organizeDisableIconFn(item.id)"
@@ -117,20 +152,43 @@
                 />
               </div>
             </div>
-            <div class="user-content" v-if="isUserSelectedEmpty">
-              <div class="user-item" v-for="item in hasSelectedUsers" :key="item.id">
-                <img :src="userDefaultAvatar" class="user-icon" alt="">
-                <span class="user-name" :title="item.username !== '' ? `${item.display_name}(${item.username})` : item.display_name">
+            <div
+              class="user-content"
+              v-if="isUserSelectedEmpty"
+            >
+              <div
+                class="user-item"
+                v-for="item in hasSelectedUsers"
+                :key="item.id"
+              >
+                <img
+                  :src="userDefaultAvatar"
+                  class="user-icon"
+                  alt=""
+                />
+                <span
+                  class="user-name"
+                  :title="item.username !== '' ? `${item.display_name}(${item.username})` : item.display_name"
+                >
                   {{ item.display_name }}
-                  <template v-if="item.username !== ''">
-                    ({{ item.username }})
-                  </template>
+                  <template v-if="item.username !== ''">({{ item.username }})</template>
                 </span>
-                <img class="delete-icon" src="./images/delete-fill.svg" alt="" @click="handleDelete(item, 'user')">
+                <img
+                  class="delete-icon"
+                  src="./images/delete-fill.svg"
+                  alt=""
+                  @click="handleDelete(item, 'user')"
+                />
               </div>
             </div>
-            <div class="selected-empty-wrapper" v-if="isSelectedEmpty">
-              <img src="./images/empty-display.svg" alt="" />
+            <div
+              class="selected-empty-wrapper"
+              v-if="isSelectedEmpty"
+            >
+              <img
+                src="./images/empty-display.svg"
+                alt=""
+              />
             </div>
           </div>
         </div>
@@ -141,12 +199,14 @@
         theme="primary"
         :disabled="isDisabled"
         :loading="isConfirmLoading"
-        @click="handleSave">
+        @click="handleSave"
+      >
         {{ $t('确定') }}
       </bk-button>
       <bk-button
-        style="margin-left: 10px;"
-        @click="handleCancel">
+        style="margin-left: 10px"
+        @click="handleCancel"
+      >
         {{ $t('取消') }}
       </bk-button>
     </div>
@@ -310,7 +370,7 @@ export default {
         this.isShowDialog = !!value;
         if (this.isShowDialog) {
           this.infiniteTreeKey = new Date().getTime();
-          const templateList = this.users.map(item => ({
+          const templateList = this.users.map((item) => ({
             username: item.name,
             id: item.id,
             display_name: item.display_name,
@@ -393,7 +453,7 @@ export default {
           item.$id = `${item.id}&department`;
 
           if (this.hasSelectedDepartments.length > 0) {
-            item.is_selected = this.hasSelectedDepartments.map(v => v.id).includes(item.id);
+            item.is_selected = this.hasSelectedDepartments.map((v) => v.id).includes(item.id);
           } else {
             item.is_selected = false;
           }
@@ -419,9 +479,7 @@ export default {
       }
       const len = this.$refs.searchedResultsRef.renderData.length;
       this.focusItemIndex++;
-      this.focusItemIndex = this.focusItemIndex > len - 1
-        ? len
-        : this.focusItemIndex;
+      this.focusItemIndex = this.focusItemIndex > len - 1 ? len : this.focusItemIndex;
       if (this.focusItemIndex === len) {
         this.focusItemIndex = 0;
       }
@@ -436,9 +494,9 @@ export default {
         }
       } else {
         if (node.type === 'user') {
-          this.hasSelectedUsers = [...this.hasSelectedUsers.filter(item => item.id !== node.id)];
+          this.hasSelectedUsers = [...this.hasSelectedUsers.filter((item) => item.id !== node.id)];
         } else {
-          this.hasSelectedDepartments = [...this.hasSelectedDepartments.filter(item => item.id !== node.id)];
+          this.hasSelectedDepartments = [...this.hasSelectedDepartments.filter((item) => item.id !== node.id)];
         }
       }
     },
@@ -479,8 +537,8 @@ export default {
       this.searchedResult.splice(0, this.searchedResult.length, ...[]);
       this.searchedDepartment.splice(0, this.searchedDepartment.length, ...[]);
       this.searchedUsers.splice(0, this.searchedUsers.length, ...[]);
-      const departIds = [...this.hasSelectedDepartments.map(item => item.id)];
-      const userIds = [...this.hasSelectedUsers.map(item => item.id)];
+      const departIds = [...this.hasSelectedDepartments.map((item) => item.id)];
+      const userIds = [...this.hasSelectedUsers.map((item) => item.id)];
       const params = {
         app_code: 'bk-magicbox',
         no_page: true,
@@ -505,7 +563,8 @@ export default {
       try {
         // 组织
         const fetchList = [this.fetchDepartment(requestDepartParams)];
-        if (this.isUsingDefaultRule) { // 用户
+        if (this.isUsingDefaultRule) {
+          // 用户
           fetchList.push(this.fetchSearchUser(requestUserParams));
         }
         const res = await Promise.all(fetchList);
@@ -543,7 +602,11 @@ export default {
           }
         });
         this.searchedUsers.splice(0, this.searchedUsers.length, ...users);
-        this.searchedResult.splice(0, this.searchedResult.length, ...this.searchedDepartment.concat(this.searchedUsers));
+        this.searchedResult.splice(
+          0,
+          this.searchedResult.length,
+          ...this.searchedDepartment.concat(this.searchedUsers)
+        );
       } catch (error) {
         console.error(error);
         throw new Error(error);
@@ -571,13 +634,14 @@ export default {
       try {
         // 组织
         const fetchList = [this.fetchDepartment(requestDepartParams)];
-        if (this.isUsingDefaultRule) { // 用户
+        if (this.isUsingDefaultRule) {
+          // 用户
           fetchList.push(this.fetchUser(requestUserParams));
         }
         const res = await Promise.all(fetchList);
         const categories = unique(res[0], 'id');
         const members = unique(res[1], 'id');
-        const curIndex = this.treeList.findIndex(item => item.id === payload.id);
+        const curIndex = this.treeList.findIndex((item) => item.id === payload.id);
         if (curIndex === -1) {
           return;
         }
@@ -595,7 +659,7 @@ export default {
           child.$id = `${child.id}&department`;
 
           if (this.hasSelectedDepartments.length > 0) {
-            child.is_selected = this.hasSelectedDepartments.map(item => item.id).includes(child.id);
+            child.is_selected = this.hasSelectedDepartments.map((item) => item.id).includes(child.id);
           } else {
             child.is_selected = false;
           }
@@ -619,11 +683,13 @@ export default {
           child.$id = `${child.id}&user`;
 
           if (this.hasSelectedUsers.length > 0) {
-            child.is_selected = this.hasSelectedUsers.map(item => item.id).includes(child.id);
+            child.is_selected = this.hasSelectedUsers.map((item) => item.id).includes(child.id);
           } else {
             child.is_selected = false;
           }
-          const existSelectedNode = this.treeList.find(item => item.is_selected && item.id === child.id && item.type === 'user');
+          const existSelectedNode = this.treeList.find(
+            (item) => item.is_selected && item.id === child.id && item.type === 'user'
+          );
           if (existSelectedNode) {
             child.is_selected = true;
             child.disabled = true;
@@ -672,9 +738,9 @@ export default {
         this.$refs.userTreeRef.setSingleSelectedStatus(item.id, false);
       }
       if (type === 'user') {
-        this.hasSelectedUsers = [...this.hasSelectedUsers.filter(user => user.id !== item.id)];
+        this.hasSelectedUsers = [...this.hasSelectedUsers.filter((user) => user.id !== item.id)];
       } else {
-        this.hasSelectedDepartments = [...this.hasSelectedDepartments.filter(organ => organ.id !== item.id)];
+        this.hasSelectedDepartments = [...this.hasSelectedDepartments.filter((organ) => organ.id !== item.id)];
       }
     },
 
@@ -685,7 +751,7 @@ export default {
         if (newVal) {
           this.hasSelectedDepartments.push(item);
         } else {
-          this.hasSelectedDepartments = this.hasSelectedDepartments.filter(organ => organ.id !== item.id);
+          this.hasSelectedDepartments = this.hasSelectedDepartments.filter((organ) => organ.id !== item.id);
         }
       }
     },
@@ -694,7 +760,7 @@ export default {
       if (newVal) {
         this.hasSelectedUsers.push(item);
       } else {
-        this.hasSelectedUsers = this.hasSelectedUsers.filter(user => user.id !== item.id);
+        this.hasSelectedUsers = this.hasSelectedUsers.filter((user) => user.id !== item.id);
       }
     },
 
@@ -737,7 +803,7 @@ export default {
           id: item.id,
           type: 'department',
           // 兼容插件
-          ...(this.departmentsType === 'tc' && { tof_id: item.extras?.code || '' }),
+          ...(this.departmentsType === 'tc' && { tof_id: item.extras?.tof_id || '' }),
         });
       });
       if (!this.customClose) {
@@ -752,6 +818,6 @@ export default {
   },
 };
 </script>
-<style lang='scss'>
-    @import './index.scss';
+<style lang="scss">
+@import './index.scss';
 </style>

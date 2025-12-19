@@ -52,6 +52,7 @@ class Command(BaseCommand):
             help="每个模块最多保留多少个镜像, 默认10个, 最小值0",
         )
         parser.add_argument(
+            "-d",
             "--dry-run",
             dest="dry_run",
             action="store_true",

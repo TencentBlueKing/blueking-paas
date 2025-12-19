@@ -124,6 +124,10 @@ def delete_image_by_build(
         logger.info(f"[DRY-RUN] 将删除: {build.image} (ID: {build.uuid})")
         return True
 
+    if not image_info.tag:
+        logger.error(f"镜像 {build.image} 不包含 tag 信息，无法删除")
+        return False
+
     image_registry = get_image_registry_by_app(build.app)
     docker_client = DockerRegistryV2Client.from_api_endpoint(
         api_endpoint=APIEndpoint(url=image_registry.host),
@@ -132,7 +136,7 @@ def delete_image_by_build(
     )
     manifest_ref = ManifestRef(
         repo=image_info.name,
-        reference=image_info.tag or "latest",
+        reference=image_info.tag,
         client=docker_client,
     )
 

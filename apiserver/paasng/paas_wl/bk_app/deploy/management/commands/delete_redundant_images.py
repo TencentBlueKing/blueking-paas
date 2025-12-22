@@ -37,19 +37,20 @@ class Command(BaseCommand):
             dest="max_reserved_num",
             type=int,
             default=settings.MAX_RESERVED_IMAGES_PER_MODULE,
-            help="每个模块最多保留多少个镜像, 默认10个, 最小值0",
+            help="The maximum number of images to be reserved for each module. Default is same to settings.MAX_RESERVED_IMAGES_PER_MODULE = %d"
+            % settings.MAX_RESERVED_IMAGES_PER_MODULE,
         )
         parser.add_argument(
             "-d",
             "--dry-run",
             dest="dry_run",
             action="store_true",
-            help="仅显示会删除什么, 不实际删除",
+            help="Just show how many images would be deleted; don't actually delete them.",
         )
 
     def handle(self, max_reserved_num, dry_run, *args, **options):
         if max_reserved_num < 0:
-            raise CommandError("max_reserved_num 不能小于0")
+            raise CommandError("max_reserved_num must be non-negative")
 
         module_ids = (
             Build.objects.filter(
@@ -83,8 +84,7 @@ class Command(BaseCommand):
                 failed_count += res.failed
 
         if dry_run:
-            self.stdout.write(self.style.WARNING("本次为 DRY-RUN 模式, 不会实际删除任何镜像"))
-            self.stdout.write(self.style.WARNING(f"预计删除 {deleted_count} 个镜像"))
+            self.stdout.write(self.style.WARNING(f"[DRY-RUN] 预计删除 {deleted_count} 个镜像"))
         else:
             self.stdout.write(
                 self.style.SUCCESS(f"镜像清理完成, 共删除 {deleted_count} 个镜像, 失败 {failed_count} 个镜像")

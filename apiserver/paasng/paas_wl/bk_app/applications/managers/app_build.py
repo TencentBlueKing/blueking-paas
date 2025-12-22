@@ -52,15 +52,14 @@ def delete_image(
     raise_error: bool = True,
     docker_client: Optional[DockerRegistryV2Client] = None,
 ) -> bool:
-    """删除指定 Build 对应的镜像
+    """delete image associated with the given build. if raise_error is True, exceptions will be raised when deletion fails, otherwise False will be returned
 
-    Args:
-        build: Build 实例
-        raise_error: 是否在删除失败时抛出异常
-        docker_client: 可选的 DockerRegistryV2Client 实例, 如果未提供则会自动创建
-
-    Returns:
-        删除是否成功
+    :param build: Build instance
+    :param raise_error: whether to raise an exception if deletion fails
+    :param docker_client: optional DockerRegistryV2Client instance, if not provided it will be created automatically
+    :raise PermissionDeny: when registry deny the deletion
+    :raise ResourceNotFound: when image not found in registry
+    :raise ValueError: when image tag is missing
     """
     image_info = parse_image(build.image)
 
@@ -96,14 +95,10 @@ def delete_redundant_images(
     module_id: int,
     max_reserved_num: int,
 ) -> DeletionResult:
-    """删除模块多余镜像, 并同步更新 Build.artifact_deleted 字段
+    """delete redundant images for a given module, the result was returned as DeletionResult namedtuple
 
-    Args:
-        module_id: 模块ID
-        max_reserved_num: 最多保留的镜像数量
-
-    Returns:
-        DeletionResult(deleted=成功删除数, failed=失败数)
+    :param module_id: id of the module
+    :param max_reserved_num: maximum number of images to be reserved
     """
     builds = Build.objects.filter(
         module_id=module_id,

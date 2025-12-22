@@ -49,8 +49,8 @@ def mark_as_latest_artifact(build: "Build"):
 
 def delete_image(
     build: Build,
-    raise_error: bool = True,
     docker_client: Optional[DockerRegistryV2Client] = None,
+    raise_error: bool = True,
 ) -> bool:
     """delete image associated with the given build. if raise_error is True, exceptions will be raised when deletion fails, otherwise False will be returned
 
@@ -125,7 +125,7 @@ def delete_redundant_images(
     for b in builds:
         success = False
         try:
-            delete_image(b, raise_error=True, docker_client=docker_client)
+            delete_image(b, docker_client=docker_client, raise_error=True)
             success = True
         except PermissionDeny:
             logger.warning("权限不足, 无法删除镜像 %s", b.image)

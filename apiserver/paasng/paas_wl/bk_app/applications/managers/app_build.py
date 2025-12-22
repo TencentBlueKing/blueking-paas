@@ -15,8 +15,26 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
+from typing import NamedTuple, Optional
+
+from django.utils import timezone
+
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.models import Build
+from paas_wl.infras.cluster.utils import get_image_registry_by_app
+from paasng.utils.moby_distribution.registry.client import (
+    APIEndpoint,
+    DockerRegistryV2Client,
+)
+from paasng.utils.moby_distribution.registry.exceptions import (
+    PermissionDeny,
+    ResourceNotFound,
+)
+from paasng.utils.moby_distribution.registry.resources.manifests import ManifestRef
+from paasng.utils.moby_distribution.registry.utils import parse_image
+
+logger = logging.getLogger(__name__)
 
 
 def mark_as_latest_artifact(build: "Build"):
@@ -27,3 +45,116 @@ def mark_as_latest_artifact(build: "Build"):
     qs = Build.objects.filter(module_id=build.module_id, image=build.image).exclude(uuid=build.uuid)
     qs.update(artifact_deleted=True)
     return
+
+
+def delete_image(
+    build: Build,
+    raise_error: bool = True,
+    docker_client: Optional[DockerRegistryV2Client] = None,
+) -> bool:
+    """删除指定 Build 对应的镜像
+
+    Args:
+        build: Build 实例
+        raise_error: 是否在删除失败时抛出异常
+        docker_client: 可选的 DockerRegistryV2Client 实例, 如果未提供则会自动创建
+
+    Returns:
+        删除是否成功
+    """
+    image_info = parse_image(build.image)
+
+    if not image_info.tag:
+        logger.error(f"镜像 {build.image} 不包含 tag 信息，无法删除")
+        if raise_error:
+            raise ValueError("Image tag is required for deletion")
+        else:
+            return False
+
+    if docker_client is None:
+        image_registry = get_image_registry_by_app(build.app)
+        docker_client = DockerRegistryV2Client.from_api_endpoint(
+            api_endpoint=APIEndpoint(url=image_registry.host),
+            username=image_registry.username,
+            password=image_registry.password,
+        )
+
+    manifest_ref = ManifestRef(
+        repo=image_info.name,
+        reference=image_info.tag,
+        client=docker_client,
+    )
+    return manifest_ref.delete(raise_not_found=raise_error)
+
+
+class DeletionResult(NamedTuple):
+    deleted: int
+    failed: int
+
+
+def delete_redundant_images(
+    module_id: int,
+    max_reserved_num: int,
+) -> DeletionResult:
+    """删除模块多余镜像, 并同步更新 Build.artifact_deleted 字段
+
+    Args:
+        module_id: 模块ID
+        max_reserved_num: 最多保留的镜像数量
+
+    Returns:
+        DeletionResult(deleted=成功删除数, failed=失败数)
+    """
+    builds = Build.objects.filter(
+        module_id=module_id,
+        artifact_type=ArtifactType.IMAGE,
+        artifact_deleted=False,
+        image__isnull=False,
+    ).order_by("-created")[max_reserved_num:]
+
+    if not builds:
+        logger.info("模块 %s 镜像数量未超过限制, 无需清理", module_id)
+        return DeletionResult(deleted=0, failed=0)
+
+    deleted_count = 0
+    failed_count = 0
+    success_delete_builds = []
+
+    image_registry = get_image_registry_by_app(builds[0].app)
+    docker_client = DockerRegistryV2Client.from_api_endpoint(
+        api_endpoint=APIEndpoint(url=image_registry.host),
+        username=image_registry.username,
+        password=image_registry.password,
+    )
+
+    for b in builds:
+        success = False
+        try:
+            delete_image(b, raise_error=True, docker_client=docker_client)
+            success = True
+        except PermissionDeny:
+            logger.warning("权限不足, 无法删除镜像 %s", b.image)
+        except ResourceNotFound:
+            # 镜像已不存在，也标记为已删除
+            success = True
+        except Exception:
+            logger.exception("删除镜像 %s 失败", b.image)
+
+        if success:
+            deleted_count += 1
+            b.artifact_deleted = True
+            b.updated = timezone.now()
+            success_delete_builds.append(b)
+        else:
+            failed_count += 1
+
+    Build.objects.bulk_update(success_delete_builds, ["artifact_deleted", "updated"])
+
+    logger.info(
+        "模块 %s 镜像清理完成: 总共 %d 个, 成功 %d 个, 失败 %d 个",
+        module_id,
+        deleted_count + failed_count,
+        deleted_count,
+        failed_count,
+    )
+    return DeletionResult(deleted=deleted_count, failed=failed_count)

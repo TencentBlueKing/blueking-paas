@@ -16,25 +16,13 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from collections import defaultdict
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 
 from paas_wl.bk_app.applications.constants import ArtifactType
+from paas_wl.bk_app.applications.managers.app_build import delete_redundant_images
 from paas_wl.bk_app.applications.models.build import Build
-from paas_wl.infras.cluster.utils import get_image_registry_by_app
-from paasng.utils.moby_distribution.registry.client import (
-    APIEndpoint,
-    DockerRegistryV2Client,
-)
-from paasng.utils.moby_distribution.registry.exceptions import (
-    PermissionDeny,
-    ResourceNotFound,
-)
-from paasng.utils.moby_distribution.registry.resources.manifests import ManifestRef
-from paasng.utils.moby_distribution.registry.utils import parse_image
 
 logger = logging.getLogger(__name__)
 
@@ -63,98 +51,41 @@ class Command(BaseCommand):
         if max_reserved_num < 0:
             raise CommandError("max_reserved_num 不能小于0")
 
-        # 查询镜像类型的构建记录
-        queryset = Build.objects.filter(
-            artifact_type=ArtifactType.IMAGE,
-            artifact_deleted=False,
-            image__isnull=False,
-            module_id__isnull=False,
-        ).order_by("-created")
+        module_ids = (
+            Build.objects.filter(
+                artifact_type=ArtifactType.IMAGE,
+                artifact_deleted=False,
+                image__isnull=False,
+                module_id__isnull=False,
+            )
+            .values_list("module_id", flat=True)
+            .distinct()
+        )
 
-        builds_dict: dict[str, list[Build]] = defaultdict(list)
         deleted_count = failed_count = 0
 
-        for build in queryset:
-            builds_dict[build.module_id].append(build)
+        for module_id in module_ids:
+            if dry_run:
+                need_delete = Build.objects.filter(
+                    module_id=module_id,
+                    artifact_type=ArtifactType.IMAGE,
+                    artifact_deleted=False,
+                    image__isnull=False,
+                ).order_by("-created")[max_reserved_num:]
+                deleted_count += len(need_delete)
 
-        for builds in builds_dict.values():
-            # 对于每个模块，保留最新构建的 max_reserved_num 个镜像
-            # Build 按照 created 倒序排列
-            need_delete = builds[max_reserved_num:]
-            success_delete_builds = []
+            else:
+                res = delete_redundant_images(
+                    module_id=module_id,
+                    max_reserved_num=max_reserved_num,
+                )
+                deleted_count += res.deleted
+                failed_count += res.failed
 
-            if need_delete == []:
-                continue
-            image_registry = get_image_registry_by_app(builds[0].app)
-            docker_client = DockerRegistryV2Client.from_api_endpoint(
-                api_endpoint=APIEndpoint(url=image_registry.host),
-                username=image_registry.username,
-                password=image_registry.password,
+        if dry_run:
+            self.stdout.write(self.style.WARNING("本次为 DRY-RUN 模式, 不会实际删除任何镜像"))
+            self.stdout.write(self.style.WARNING(f"预计删除 {deleted_count} 个镜像"))
+        else:
+            self.stdout.write(
+                self.style.SUCCESS(f"镜像清理完成, 共删除 {deleted_count} 个镜像, 失败 {failed_count} 个镜像")
             )
-
-            for build in need_delete:
-                try:
-                    success = delete_image_by_build(
-                        build, docker_client=docker_client, raise_error=True, dry_run=dry_run
-                    )
-                except ResourceNotFound:
-                    # 镜像找不到， 也视为删除成功
-                    success = True
-                except PermissionDeny as e:
-                    success = False
-                    self.stdout.write(self.style.ERROR(f"权限不足，无法删除镜像: {build.image}, error: {str(e)}"))
-                except Exception as e:
-                    success = False
-                    self.stdout.write(self.style.ERROR(f"删除镜像失败: {build.image}, error: {str(e)}"))
-
-                if success:
-                    build.artifact_deleted = True
-                    # bulk_update 不会触发 auto_now 的自动更新, 故手动更新
-                    build.updated = timezone.now()
-                    success_delete_builds.append(build)
-
-            if not dry_run:
-                Build.objects.bulk_update(success_delete_builds, ["artifact_deleted", "updated"])
-
-            deleted_count += len(success_delete_builds)
-            failed_count += len(need_delete) - len(success_delete_builds)
-
-        self.stdout.write(
-            self.style.SUCCESS(
-                ("[DRY-RUN] " if dry_run else "")
-                + f"镜像清理完成, 共删除 {deleted_count} 个镜像, 失败 {failed_count} 个镜像"
-            )
-        )
-
-
-def delete_image_by_build(
-    build: Build,
-    raise_error: bool = True,
-    dry_run: bool = False,
-    docker_client: DockerRegistryV2Client | None = None,
-) -> bool:
-    image_info = parse_image(build.image)
-
-    if dry_run:
-        logger.info(f"[DRY-RUN] 将删除: {build.image} (ID: {build.uuid})")
-        return True
-
-    if not image_info.tag:
-        logger.error(f"镜像 {build.image} 不包含 tag 信息，无法删除")
-        return False
-
-    if docker_client is None:
-        image_registry = get_image_registry_by_app(build.app)
-        docker_client = DockerRegistryV2Client.from_api_endpoint(
-            api_endpoint=APIEndpoint(url=image_registry.host),
-            username=image_registry.username,
-            password=image_registry.password,
-        )
-
-    manifest_ref = ManifestRef(
-        repo=image_info.name,
-        reference=image_info.tag,
-        client=docker_client,
-    )
-
-    return manifest_ref.delete(raise_not_found=raise_error)

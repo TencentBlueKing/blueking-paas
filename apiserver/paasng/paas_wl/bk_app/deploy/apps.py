@@ -22,4 +22,8 @@ class DeployAppConfig(AppConfig):
 
     def ready(self):
         # Register controllers
-        from . import processes  # noqa: F401
+        # Register signal handlers
+        from . import (
+            handlers,  # noqa: F401
+            processes,  # noqa: F401
+        )

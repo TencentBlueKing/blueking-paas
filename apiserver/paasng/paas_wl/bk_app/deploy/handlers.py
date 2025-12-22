@@ -43,7 +43,7 @@ def handle_post_deploy(sender, deployment: "Deployment", **kwargs):
     try:
         build = Build.objects.get(uuid=build_id)
     except Build.DoesNotExist:
-        logger.info("Build %s 不存在, 跳过清理多余镜像", build_id)
+        logger.info("Deployment<%s> Build<%s> 不存在, 跳过清理多余镜像", deployment.uuid, build_id)
         return
 
     module_id = build.module_id

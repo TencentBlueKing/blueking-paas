@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 @receiver(post_appenv_deploy)
 def delete_redundant_images_after_deploy(sender, deployment: "Deployment", **kwargs):
-    """部署成功后清理模块的多余镜像"""
+    """部署成功后清理模块的冗余镜像"""
     max_reserved_images_num = settings.MAX_RESERVED_IMAGES_PER_MODULE
 
     build_id = deployment.build_id

@@ -103,7 +103,7 @@ def delete_redundant_images(
             b.artifact_deleted = True
             # https://stackoverflow.com/questions/64116500/update-auto-now-field-in-bulk-update
             # https://docs.djangoproject.com/en/6.0/ref/models/querysets/#bulk-update
-            # bulk_update will not call save method, so auto_now will not work here, manually update
+            # bulk_update not call save method, so auto_now will not work here, manually update
             b.updated = timezone.now()
             success_delete_builds.append(b)
         else:

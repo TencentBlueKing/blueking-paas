@@ -32,24 +32,26 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_appenv_deploy)
-def handle_post_deploy(sender, deployment: "Deployment", **kwargs):
+def delete_redundant_images_after_deploy(sender, deployment: "Deployment", **kwargs):
     """部署成功后清理模块的多余镜像"""
     max_reserved_images_num = settings.MAX_RESERVED_IMAGES_PER_MODULE
 
     build_id = deployment.build_id
     if deployment.status != JobStatus.SUCCESSFUL.value or not build_id:
+        logger.info(
+            f"deployment<{deployment.id}> is not successful or has no build_id, skip deleting redundant images"
+        )
         return
 
     try:
         build = Build.objects.get(uuid=build_id)
     except Build.DoesNotExist:
-        logger.info("Deployment<%s> Build<%s> 不存在, 跳过清理多余镜像", deployment.uuid, build_id)
+        logger.info(f"Build<{build_id}> does not exist, skip deleting redundant images")
         return
 
     module_id = build.module_id
-    res = delete_redundant_images(
-        module_id=module_id,
-        max_reserved_num=max_reserved_images_num,
-    )
+    res = delete_redundant_images(module_id=module_id, max_reserved_num=max_reserved_images_num)
 
-    logger.info("部署后清理多余镜像完成, module_id=%s, deleted=%s, failed=%s", module_id, res.deleted, res.failed)
+    logger.info(
+        f"Module<{module_id}> delete redundant images completed after deployment, deleted: {res.deleted}, failed: {res.failed}"
+    )

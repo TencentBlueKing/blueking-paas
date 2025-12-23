@@ -39,7 +39,8 @@ class Command(BaseCommand):
             dest="max_reserved_num",
             type=int,
             default=settings.MAX_RESERVED_IMAGES_PER_MODULE,
-            help=f"The maximum number of images to be reserved for each module. Default is same to settings.MAX_RESERVED_IMAGES_PER_MODULE = {settings.MAX_RESERVED_IMAGES_PER_MODULE}",
+            help=f"The maximum number of images to be reserved for each module.\
+            Default is same to settings.MAX_RESERVED_IMAGES_PER_MODULE = {settings.MAX_RESERVED_IMAGES_PER_MODULE}",
         )
         parser.add_argument(
             "-d",

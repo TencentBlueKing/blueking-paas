@@ -51,7 +51,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SecretSource, VolumeSource
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
-from paas_wl.bk_app.cnative.specs.models import DEFAULT_RES_QUOTA_PLAN_NAME, Mount, ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.models import DEFAULT_RES_QUOTA_PLAN_NAME, Mount, get_active_quota_plans
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding
@@ -264,7 +264,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
     @staticmethod
     def get_quota_plan(spec_plan_name: str) -> str:
         """Get ProcessSpecPlan by name"""
-        active_plans = {plan.plan_name: plan for plan in ResQuotaPlan.objects.filter(is_active=True)}
+        active_plans = {plan.plan_name: plan for plan in get_active_quota_plans().values()}
         if spec_plan_name in active_plans:
             return spec_plan_name
 

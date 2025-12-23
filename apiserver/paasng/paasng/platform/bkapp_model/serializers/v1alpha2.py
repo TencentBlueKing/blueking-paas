@@ -21,7 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from paas_wl.bk_app.cnative.specs.models import ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.models import get_active_quota_plans
 from paas_wl.utils.camel_converter import camel_to_snake_case
 from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
 from paasng.accessories.proc_components.manager import validate_component_properties
@@ -125,7 +125,7 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
         if value is None:
             return value
 
-        if not ResQuotaPlan.objects.filter(plan_name=value, is_active=True).exists():
+        if not get_active_quota_plans().get(value):
             raise ValidationError(_("资源配额方案 {} 不存在或未启用").format(value))
         return value
 
@@ -290,7 +290,7 @@ class ProcessInputSLZ(serializers.Serializer):
         if value is None:
             return value
 
-        if not ResQuotaPlan.objects.filter(plan_name=value, is_active=True).exists():
+        if not get_active_quota_plans().get(value):
             raise ValidationError(_("资源配额方案 {} 不存在或未启用").format(value))
         return value
 

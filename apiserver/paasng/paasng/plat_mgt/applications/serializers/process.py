@@ -18,7 +18,7 @@
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from paas_wl.bk_app.cnative.specs.models import ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.models import get_active_quota_plans
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
 from paasng.platform.engine.constants import AppEnvName
 
@@ -93,7 +93,7 @@ class EnvOverlayInputSLZ(serializers.Serializer):
 
     def validate_plan_name(self, value):
         """验证 plan_name 是否存在且激活"""
-        if value and not ResQuotaPlan.objects.filter(plan_name=value, is_active=True).exists():
+        if value and not get_active_quota_plans().get(value):
             raise serializers.ValidationError(_("资源配额方案 '{plan_name}' 不存在或未启用").format(plan_name=value))
         return value
 

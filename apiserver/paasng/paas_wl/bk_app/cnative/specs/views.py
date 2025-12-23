@@ -34,7 +34,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
-from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount, ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount, get_active_quota_plans
 from paas_wl.bk_app.cnative.specs.mounts import (
     MountManager,
     check_persistent_storage_enabled,
@@ -84,7 +84,7 @@ class ResQuotaPlanOptionsView(APIView):
                         "limit": asdict(ResourceQuota(cpu=plan_obj.cpu_limit, memory=plan_obj.memory_limit)),
                         "request": asdict(ResourceQuota(cpu=plan_obj.cpu_request, memory=plan_obj.memory_request)),
                     }
-                    for plan_obj in ResQuotaPlan.objects.filter(is_active=True)
+                    for plan_obj in get_active_quota_plans().values()
                 ],
                 many=True,
             ).data

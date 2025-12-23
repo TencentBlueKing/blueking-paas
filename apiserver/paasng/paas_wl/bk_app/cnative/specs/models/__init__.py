@@ -17,4 +17,5 @@
 
 from .app_resource import *
 from .mount import *
+from .quota_cache import *
 from .res_quota_plan import *

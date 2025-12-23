@@ -24,7 +24,7 @@ from jsonfield import JSONField
 
 from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.managers import get_metadata
-from paas_wl.bk_app.cnative.specs.models import DEFAULT_RES_QUOTA_PLAN_NAME, ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.models import DEFAULT_RES_QUOTA_PLAN_NAME, get_active_quota_plans
 from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.utils.models import TimestampedModel
@@ -291,15 +291,15 @@ def initialize_default_proc_spec_plans():
             ProcessSpecPlan.objects.create(name=name, **config)
 
     # Read cloud-native resource quota plans from database and sync to ProcessSpecPlan
-    for quota_plan in ResQuotaPlan.objects.filter(is_active=True):
+    for plan_obj in get_active_quota_plans().values():
         try:
-            ProcessSpecPlan.objects.get_by_name(name=quota_plan.plan_name)
-            logger.debug(f"Plan: {quota_plan.plan_name} already exists, skip initialization.")
+            ProcessSpecPlan.objects.get_by_name(name=plan_obj.plan_name)
+            logger.debug(f"Plan: {plan_obj.plan_name} already exists, skip initialization.")
         except ProcessSpecPlan.DoesNotExist:
-            logger.info(f"Creating default plan: {quota_plan.plan_name}...")
+            logger.info(f"Creating default plan: {plan_obj.plan_name}...")
             ProcessSpecPlan.objects.create(
-                name=quota_plan.plan_name,
+                name=plan_obj.plan_name,
                 max_replicas=DEFAULT_CNATIVE_MAX_REPLICAS,
-                limits={"cpu": quota_plan.cpu_limit, "memory": quota_plan.memory_limit},
-                requests={"cpu": quota_plan.cpu_request, "memory": quota_plan.memory_request},
+                limits={"cpu": plan_obj.cpu_limit, "memory": plan_obj.memory_limit},
+                requests={"cpu": plan_obj.cpu_request, "memory": plan_obj.memory_request},
             )

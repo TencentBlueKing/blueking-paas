@@ -22,7 +22,7 @@ from typing import Any
 from blue_krill.cubing_case import shortcuts
 from kubernetes.utils import parse_quantity
 
-from paas_wl.bk_app.cnative.specs.models import DEFAULT_RES_QUOTA_PLAN_NAME, ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.models import DEFAULT_RES_QUOTA_PLAN_NAME, get_active_quota_plans
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def get_quota_plan(spec_plan_name: str) -> str:
     # TODO: fix circular import
     from paas_wl.bk_app.processes.models import ProcessSpecPlan
 
-    active_plans = {plan.plan_name: plan for plan in ResQuotaPlan.objects.filter(is_active=True)}
+    active_plans = get_active_quota_plans()
     if spec_plan_name in active_plans:
         return spec_plan_name
 

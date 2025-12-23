@@ -96,7 +96,13 @@ class Command(BaseCommand):
         parser.add_argument("--module", dest="module_name", required=True, help="模块名称")
         parser.add_argument("--env", dest="environment", required=True, help="部署环境", choices=["stag", "prod"])
         parser.add_argument(
-            "-u", "--operator", dest="operator", required=False, type=str, default="admin", help="当前操作人"
+            "-u",
+            "--operator",
+            dest="operator",
+            required=False,
+            type=str,
+            default=settings.ADMIN_USERNAME,
+            help="当前操作人",
         )
         parser.add_argument("--revision", dest="smart_revision", required=True, type=str, help=REVISION_HELP_TEXT)
         parser.add_argument(

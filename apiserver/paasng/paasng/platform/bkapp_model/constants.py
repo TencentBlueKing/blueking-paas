@@ -49,17 +49,6 @@ class ImagePullPolicy(StrStructuredEnum):
     NEVER = EnumField("Never")
 
 
-class ResQuotaPlan(StrStructuredEnum):
-    """duplicated from paas_wl.bk_app.cnative.specs.constants.ResQuotaPlan to decouple dependencies
-    TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
-    """
-
-    P_DEFAULT = EnumField("default", label="default")
-    P_4C1G = EnumField("4C1G", label="4C1G")
-    P_4C2G = EnumField("4C2G", label="4C2G")
-    P_4C4G = EnumField("4C4G", label="4C4G")
-
-
 class ScalingPolicy(StrStructuredEnum):
     """duplicated from paas_wl.bk_app.cnative.specs.constants.ScalingPolicy to decouple dependencies
     TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?

@@ -21,6 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from paas_wl.bk_app.cnative.specs.models import ResQuotaPlan
 from paas_wl.utils.camel_converter import camel_to_snake_case
 from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
 from paasng.accessories.proc_components.manager import validate_component_properties
@@ -28,7 +29,6 @@ from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
     ImagePullPolicy,
     NetworkProtocol,
-    ResQuotaPlan,
     ScalingPolicy,
 )
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
@@ -118,7 +118,16 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
-    plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
+    plan = serializers.CharField(allow_null=True, default=None)
+
+    def validate_plan(self, value):
+        """validate whether plan is a valid ResQuotaPlan"""
+        if value is None:
+            return value
+
+        if not ResQuotaPlan.objects.filter(plan_name=value, is_active=True).exists():
+            raise ValidationError(_("资源配额方案 {} 不存在或未启用").format(value))
+        return value
 
 
 class AutoscalingSpecInputSLZ(serializers.Serializer):
@@ -259,9 +268,7 @@ class ProcessInputSLZ(serializers.Serializer):
 
     name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     replicas = serializers.IntegerField(min_value=0, allow_null=True, default=NOTSET)
-    resQuotaPlan = serializers.ChoiceField(
-        choices=ResQuotaPlan.get_choices(), allow_null=True, default=None, source="res_quota_plan"
-    )
+    resQuotaPlan = serializers.CharField(allow_null=True, default=None, source="res_quota_plan")
     targetPort = serializers.IntegerField(
         min_value=1,
         max_value=65535,
@@ -277,6 +284,15 @@ class ProcessInputSLZ(serializers.Serializer):
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
     services = serializers.ListField(child=ProcServiceInputSLZ(), allow_null=True, default=None)
     components = serializers.ListField(child=ComponentInputSLZ(), allow_null=True, default=None)
+
+    def validate_res_quota_plan(self, value):
+        """validate whether plan is a valid ResQuotaPlan"""
+        if value is None:
+            return value
+
+        if not ResQuotaPlan.objects.filter(plan_name=value, is_active=True).exists():
+            raise ValidationError(_("资源配额方案 {} 不存在或未启用").format(value))
+        return value
 
 
 class HooksInputSLZ(serializers.Serializer):

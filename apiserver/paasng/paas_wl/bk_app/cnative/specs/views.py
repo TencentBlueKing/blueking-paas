@@ -20,6 +20,7 @@ from contextlib import suppress
 from urllib.parse import quote
 
 import requests
+from attrs import asdict
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
@@ -32,16 +33,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
-from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount
+from paas_wl.bk_app.cnative.specs.models import AppModelRevision, Mount, ResQuotaPlan
 from paas_wl.bk_app.cnative.specs.mounts import (
     MountManager,
     check_persistent_storage_enabled,
     check_storage_class_exists,
     init_volume_source_controller,
 )
-from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
+from paas_wl.bk_app.cnative.specs.procs.quota import ResourceQuota
 from paas_wl.bk_app.cnative.specs.serializers import (
     AppModelRevisionSerializer,
     CreateMountSourceSLZ,
@@ -79,12 +79,12 @@ class ResQuotaPlanOptionsView(APIView):
             data=ResQuotaPlanSLZ(
                 [
                     {
-                        "name": ResQuotaPlan.get_choice_label(plan),
-                        "value": str(plan),
-                        "limit": PLAN_TO_LIMIT_QUOTA_MAP[plan],
-                        "request": PLAN_TO_REQUEST_QUOTA_MAP[plan],
+                        "name": plan_obj.plan_name,
+                        "value": plan_obj.plan_name,
+                        "limit": asdict(ResourceQuota(cpu=plan_obj.cpu_limit, memory=plan_obj.memory_limit)),
+                        "request": asdict(ResourceQuota(cpu=plan_obj.cpu_request, memory=plan_obj.memory_request)),
                     }
-                    for plan in ResQuotaPlan.get_values()
+                    for plan_obj in ResQuotaPlan.objects.filter(is_active=True)
                 ],
                 many=True,
             ).data

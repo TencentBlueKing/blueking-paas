@@ -46,10 +46,7 @@ class DeletionResult(NamedTuple):
     failed: int
 
 
-def delete_redundant_images(
-    module_id: int,
-    max_reserved_num: int,
-) -> DeletionResult:
+def delete_redundant_images(module_id: int, max_reserved_num: int) -> DeletionResult:
     """delete redundant images by module id, the result was returned as DeletionResult namedtuple
 
     :param module_id: id of the module

@@ -33,7 +33,6 @@ from paasng.plat_mgt.applications.serializers import (
     ProcessSpecInputSLZ,
 )
 from paasng.platform.applications.models import Application
-from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import SourceOrigin
@@ -184,20 +183,3 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def get_resource_quantity_options(self, request):
-        """获取自定义资源配置的可选项列表（CPU 和内存的预设值）"""
-
-        cpu_resource_quantity = [
-            {"value": value, "label": label} for value, label in CPUResourceQuantity.get_choices()
-        ]
-        memory_resource_quantity = [
-            {"value": value, "label": label} for value, label in MemoryResourceQuantity.get_choices()
-        ]
-
-        result = {
-            "cpu_resource_quantity": cpu_resource_quantity,
-            "memory_resource_quantity": memory_resource_quantity,
-        }
-
-        return Response(result, status=status.HTTP_200_OK)

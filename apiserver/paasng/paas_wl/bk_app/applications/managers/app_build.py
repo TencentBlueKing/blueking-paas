@@ -108,5 +108,7 @@ def delete_redundant_images(module_id: int, max_reserved_num: int) -> DeletionRe
 
     Build.objects.bulk_update(success_delete_builds, ["artifact_deleted", "updated"])
 
-    logger.info(f"module {module_id} image cleanup completed, deleted: {deleted_count}, failed: {failed_count}")
+    logger.info(
+        f"module {module_id} delete redundant images completed, deleted: {deleted_count}, failed: {failed_count}"
+    )
     return DeletionResult(deleted=deleted_count, failed=failed_count)

@@ -19,16 +19,18 @@ import logging
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Count
 
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.managers.app_build import delete_redundant_images
 from paas_wl.bk_app.applications.models.build import Build
+from paasng.platform.modules.models import Module
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "清理多余的镜像, 保留每个模块最新的 N 个镜像"
+    help = "Delete redundant images for modules, reserve latest N images per module."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -37,8 +39,7 @@ class Command(BaseCommand):
             dest="max_reserved_num",
             type=int,
             default=settings.MAX_RESERVED_IMAGES_PER_MODULE,
-            help="The maximum number of images to be reserved for each module. Default is same to settings.MAX_RESERVED_IMAGES_PER_MODULE = %d"
-            % settings.MAX_RESERVED_IMAGES_PER_MODULE,
+            help=f"The maximum number of images to be reserved for each module. Default is same to settings.MAX_RESERVED_IMAGES_PER_MODULE = {settings.MAX_RESERVED_IMAGES_PER_MODULE}",
         )
         parser.add_argument(
             "-d",
@@ -47,21 +48,35 @@ class Command(BaseCommand):
             action="store_true",
             help="Just show how many images would be deleted; don't actually delete them.",
         )
+        parser.add_argument(
+            "--app-codes",
+            "--codes",
+            dest="app_codes",
+            nargs="+",
+            help="One or more app_code. e.g. --app-codes app1 app2",
+        )
 
-    def handle(self, max_reserved_num, dry_run, *args, **options):
+    def handle(self, max_reserved_num: int, dry_run, app_codes: list[str], *args, **options):
         if max_reserved_num < 0:
             raise CommandError("max_reserved_num must be non-negative")
 
-        module_ids = (
-            Build.objects.filter(
-                artifact_type=ArtifactType.IMAGE,
-                artifact_deleted=False,
-                image__isnull=False,
-                module_id__isnull=False,
+        if app_codes:
+            module_ids = Module.objects.filter(
+                application__code__in=app_codes,
+            ).values_list("id", flat=True)
+        else:
+            module_ids = (
+                Build.objects.filter(
+                    artifact_type=ArtifactType.IMAGE,
+                    artifact_deleted=False,
+                    image__isnull=False,
+                    module_id__isnull=False,
+                )
+                .values("module_id")
+                .annotate(cnt=Count("uuid"))
+                .filter(cnt__gt=max_reserved_num)
+                .values_list("module_id", flat=True)
             )
-            .values_list("module_id", flat=True)
-            .distinct()
-        )
 
         deleted_count = failed_count = 0
 
@@ -84,8 +99,12 @@ class Command(BaseCommand):
                 failed_count += res.failed
 
         if dry_run:
-            self.stdout.write(self.style.WARNING(f"[DRY-RUN] 预计删除 {deleted_count} 个镜像"))
+            self.stdout.write(
+                self.style.SUCCESS(f"[DRY-RUN] will delete {deleted_count} images for {len(module_ids)} modules")
+            )
         else:
             self.stdout.write(
-                self.style.SUCCESS(f"镜像清理完成, 共删除 {deleted_count} 个镜像, 失败 {failed_count} 个镜像")
+                self.style.SUCCESS(
+                    f"deleted {deleted_count} images for {len(module_ids)} modules, failed: {failed_count}"
+                )
             )

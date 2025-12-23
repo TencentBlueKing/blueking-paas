@@ -72,6 +72,7 @@ class TestApplicationProcessViewSet:
         return {
             "env_overlays": {
                 env_name: {
+                    "plan_name": None,
                     "resources": {
                         "limits": limits or {"cpu": "2000m", "memory": "1024Mi"},
                         "requests": requests or {"cpu": "200m", "memory": "256Mi"},
@@ -120,7 +121,9 @@ class TestApplicationProcessViewSet:
         response = plat_mgt_api_client.put(update_url("web"), data=self._make_custom_resources_data())
         assert response.status_code == 400
 
-    def test_update_resource_success(self, plat_mgt_api_client, bk_app: Application, bk_module, update_url, list_url):
+    def test_update_resource_success_with_custom_resources(
+        self, plat_mgt_api_client, bk_app: Application, bk_module, update_url, list_url
+    ):
         """测试成功更新进程资源限制"""
         self._create_process_with_overlay(bk_module)
 
@@ -136,6 +139,32 @@ class TestApplicationProcessViewSet:
         assert process_data["name"] == "web"
         assert process_data["env_overlays"]["stag"]["plan_name"] is None
         assert process_data["env_overlays"]["stag"]["resources"] == custom_data["env_overlays"]["stag"]["resources"]
+
+    def test_update_resource_success_with_plan_name(
+        self, plat_mgt_api_client, bk_app: Application, bk_module, update_url, list_url
+    ):
+        """测试成功更新进程资源限制为指定资源配额方案"""
+        self._create_process_with_overlay(bk_module)
+
+        data = {
+            "env_overlays": {
+                "stag": {
+                    "plan_name": "4C4G",
+                    "resources": None,
+                }
+            },
+        }
+        response = plat_mgt_api_client.put(update_url("web"), data=data)
+        assert response.status_code == 204
+
+        # 通过 API 验证更新结果
+        response = plat_mgt_api_client.get(list_url)
+        assert response.status_code == 200
+
+        process_data = response.data["processes"][0]
+        assert process_data["name"] == "web"
+        assert process_data["env_overlays"]["stag"]["plan_name"] == "4C4G"
+        assert process_data["env_overlays"]["stag"]["resources"] is None
 
     def test_update_resource_process_not_found(self, plat_mgt_api_client, bk_app: Application, bk_module, update_url):
         """测试更新不存在的进程"""

@@ -195,6 +195,9 @@ class ProcessSpecEnvOverlay(TimestampedModel):
         blank=True,
         help_text='格式: {"limits": {"cpu": "2", "memory": "2Gi"}, "requests": {"cpu": "1", "memory": "1Gi"} }',
     )
+    override_plan_name: Optional[str] = models.CharField(
+        "管理员配置的资源配额方案名称", max_length=32, null=True, blank=True
+    )
 
     target_replicas = models.IntegerField("期望副本数", null=True)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)

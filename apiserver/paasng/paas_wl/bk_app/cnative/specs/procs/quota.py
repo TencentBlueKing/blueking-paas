@@ -21,7 +21,7 @@ from attrs import asdict, define
 
 from paas_wl.bk_app.cnative.specs.constants import OVERRIDE_PROC_RES_ANNO_KEY
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.bk_app.cnative.specs.models import ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.models import DEFAULT_RES_QUOTA_PLAN_NAME, ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName
 
 
@@ -53,8 +53,14 @@ class ResQuotaReader:
         """
         results: dict[str, dict] = {}
         active_plans = {plan_obj.plan_name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
+
+        # 确保 default 方案存在
+        default_plan = active_plans.get(DEFAULT_RES_QUOTA_PLAN_NAME)
+        if not default_plan:
+            raise ValueError(f"Required resource quota plan '{DEFAULT_RES_QUOTA_PLAN_NAME}' is not active")
+
         for p in self.res.spec.processes:
-            plan_obj: ResQuotaPlan = active_plans.get(p.resQuotaPlan, active_plans["default"])
+            plan_obj: ResQuotaPlan = active_plans.get(p.resQuotaPlan, default_plan)
             results[p.name] = {
                 "plan": plan_obj.plan_name,
                 "limits": asdict(ResourceQuota(cpu=plan_obj.cpu_limit, memory=plan_obj.memory_limit)),

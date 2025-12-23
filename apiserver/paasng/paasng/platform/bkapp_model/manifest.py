@@ -41,6 +41,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     LOG_COLLECTOR_TYPE_ANNO_KEY,
     MODULE_NAME_ANNO_KEY,
     OVERRIDE_PROC_RES_ANNO_KEY,
+    OVERRIDE_RES_QUOTA_PLAN_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
     TENANT_GUARD_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
@@ -540,6 +541,11 @@ def get_bkapp_resource_for_deploy(
     if override_proc_res_config:
         model_res.metadata.annotations[OVERRIDE_PROC_RES_ANNO_KEY] = override_proc_res_config
 
+    # 设置管理员在管理端设置的资源限制方案注解, 没有则不设置
+    override_plan_name = _get_override_plan_name(env)
+    if override_plan_name:
+        model_res.metadata.annotations[OVERRIDE_RES_QUOTA_PLAN_ANNO_KEY] = override_plan_name
+
     # 设置上一次部署的状态
     model_res.metadata.annotations[LAST_DEPLOY_STATUS_ANNO_KEY] = _get_last_deploy_status(env, deployment)
 
@@ -670,4 +676,17 @@ def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
         if overlay and overlay.override_proc_res:
             result[overlay.proc_spec.name] = overlay.override_proc_res
 
+    return json.dumps(result) if result else ""
+
+
+def _get_override_plan_name(env: ModuleEnvironment) -> str:
+    """获取管理员在管理端设置的资源限制方案名称，返回方案名称或空字符串"""
+    result = {}
+    queryset = ProcessSpecEnvOverlay.objects.filter(
+        proc_spec__module=env.module,
+        environment_name=env.environment,
+    )
+    for overlay in queryset:
+        if overlay and overlay.override_plan_name:
+            result[overlay.proc_spec.name] = overlay.override_plan_name
     return json.dumps(result) if result else ""

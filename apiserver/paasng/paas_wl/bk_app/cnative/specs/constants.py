@@ -40,6 +40,8 @@ MODULE_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/module-name"
 ENVIRONMENT_ANNO_KEY = "bkapp.paas.bk.tencent.com/environment"
 # 管理员在管理端设置的资源限制注解键名
 OVERRIDE_PROC_RES_ANNO_KEY = "bkapp.paas.bk.tencent.com/proc-res-override"
+# 管理员在管理端设置的资源限制方案注解键名
+OVERRIDE_RES_QUOTA_PLAN_ANNO_KEY = "bkapp.paas.bk.tencent.com/proc-res-quota-plan-override"
 # 注解中存储当前 WlApp 名称的键名
 WLAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/wl-app-name"
 # 注解中存储应用租户 ID

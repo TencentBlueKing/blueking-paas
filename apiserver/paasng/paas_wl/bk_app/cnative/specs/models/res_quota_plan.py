@@ -32,10 +32,13 @@ class ResQuotaPlan(TimestampedModel):
     memory_limit = models.CharField("内存限制 (MiB)", max_length=8)
     cpu_request = models.CharField("CPU 请求 (millicores)", max_length=8)
     memory_request = models.CharField("内存请求 (MiB)", max_length=8)
-    is_active = models.BooleanField("是否启用", default=True)
+    is_active = models.BooleanField("是否启用", default=True, db_index=True)
     is_builtin = models.BooleanField("是否为内置方案", default=False)
 
     tenant_id = tenant_id_field_factory()
+
+    class Meta:
+        ordering = ["created"]
 
     def __str__(self):
         return self.plan_name

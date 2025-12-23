@@ -86,12 +86,13 @@ class Migration(migrations.Migration):
                 ('memory_limit', models.CharField(max_length=8, verbose_name='内存限制 (MiB)')),
                 ('cpu_request', models.CharField(max_length=8, verbose_name='CPU 请求 (millicores)')),
                 ('memory_request', models.CharField(max_length=8, verbose_name='内存请求 (MiB)')),
-                ('is_active', models.BooleanField(default=True, verbose_name='是否启用')),
+                ('is_active', models.BooleanField(db_index=True,default=True, verbose_name='是否启用')),
                 ('is_builtin', models.BooleanField(default=False, verbose_name='是否为内置方案')),
                 ('tenant_id', models.CharField(db_index=True, default='default', help_text='本条数据的所属租户', max_length=32, verbose_name='租户 ID')),
             ],
             options={
                 'abstract': False,
+                'ordering': ['created'],
             },
         ),
 

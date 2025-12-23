@@ -18,6 +18,7 @@
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
+from paas_wl.bk_app.cnative.specs.models import ResQuotaPlan
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
 from paasng.platform.engine.constants import AppEnvName
 
@@ -87,7 +88,29 @@ class ModuleProcessSpecOutputSLZ(serializers.Serializer):
 class EnvOverlayInputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输入序列化器"""
 
+    plan_name = serializers.CharField(help_text="资源配额方案", allow_null=True)
     resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
+
+    def validate_plan_name(self, value):
+        """验证 plan_name 是否存在且激活"""
+        if value and not ResQuotaPlan.objects.filter(plan_name=value, is_active=True).exists():
+            raise serializers.ValidationError(_("资源配额方案 '{plan_name}' 不存在或未启用").format(plan_name=value))
+        return value
+
+    def validate(self, attrs):
+        """验证: plan_name 和 resources 互斥，必须提供其中一个"""
+        plan_name = attrs.get("plan_name")
+        resources = attrs.get("resources")
+
+        # 两者都没有提供
+        if plan_name is None and resources is None:
+            raise serializers.ValidationError(_("必须提供 plan_name 或 resources 其中之一"))
+
+        # 两者都提供了
+        if plan_name is not None and resources is not None:
+            raise serializers.ValidationError(_("plan_name 和 resources 不能同时指定，请选择其一"))
+
+        return attrs
 
 
 class ProcessSpecInputSLZ(serializers.Serializer):

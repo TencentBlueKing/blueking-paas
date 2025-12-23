@@ -16,21 +16,15 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 from django.utils import timezone
 
 from paas_wl.bk_app.applications.constants import ArtifactType
 from paas_wl.bk_app.applications.models import Build
 from paas_wl.infras.cluster.utils import get_image_registry_by_app
-from paasng.utils.moby_distribution.registry.client import (
-    APIEndpoint,
-    DockerRegistryV2Client,
-)
-from paasng.utils.moby_distribution.registry.exceptions import (
-    PermissionDeny,
-    ResourceNotFound,
-)
+from paasng.utils.moby_distribution.registry.client import APIEndpoint, DockerRegistryV2Client
+from paasng.utils.moby_distribution.registry.exceptions import PermissionDeny, ResourceNotFound
 from paasng.utils.moby_distribution.registry.resources.manifests import ManifestRef
 from paasng.utils.moby_distribution.registry.utils import parse_image
 
@@ -45,45 +39,6 @@ def mark_as_latest_artifact(build: "Build"):
     qs = Build.objects.filter(module_id=build.module_id, image=build.image).exclude(uuid=build.uuid)
     qs.update(artifact_deleted=True)
     return
-
-
-def delete_image(
-    build: Build,
-    docker_client: Optional[DockerRegistryV2Client] = None,
-    raise_error: bool = True,
-) -> bool:
-    """delete image associated with the given build. if raise_error is True, exceptions will be raised when deletion fails, otherwise False will be returned
-
-    :param build: Build instance
-    :param raise_error: whether to raise an exception if deletion fails
-    :param docker_client: optional DockerRegistryV2Client instance, if not provided it will be created automatically
-    :raise PermissionDeny: when registry deny the deletion
-    :raise ResourceNotFound: when image not found in registry
-    :raise ValueError: when image tag is missing
-    """
-    image_info = parse_image(build.image)
-
-    if not image_info.tag:
-        logger.error(f"镜像 {build.image} 不包含 tag 信息，无法删除")
-        if raise_error:
-            raise ValueError("Image tag is required for deletion")
-        else:
-            return False
-
-    if docker_client is None:
-        image_registry = get_image_registry_by_app(build.app)
-        docker_client = DockerRegistryV2Client.from_api_endpoint(
-            api_endpoint=APIEndpoint(url=image_registry.host),
-            username=image_registry.username,
-            password=image_registry.password,
-        )
-
-    manifest_ref = ManifestRef(
-        repo=image_info.name,
-        reference=image_info.tag,
-        client=docker_client,
-    )
-    return manifest_ref.delete(raise_not_found=raise_error)
 
 
 class DeletionResult(NamedTuple):
@@ -108,7 +63,7 @@ def delete_redundant_images(
     ).order_by("-created")[max_reserved_num:]
 
     if not builds:
-        logger.info("模块 %s 镜像数量未超过限制, 无需清理", module_id)
+        logger.info(f"module {module_id} image count within limit, no need to clean up")
         return DeletionResult(deleted=0, failed=0)
 
     deleted_count = 0
@@ -125,19 +80,30 @@ def delete_redundant_images(
     for b in builds:
         success = False
         try:
-            delete_image(b, docker_client=docker_client, raise_error=True)
-            success = True
+            image_info = parse_image(b.image)
+            if not image_info.tag:
+                raise ValueError(f"image tag missing, build id: {b.id}, image: {b.image}")  # noqa: TRY301
+
+            manifest_ref = ManifestRef(
+                repo=image_info.name,
+                reference=image_info.tag,
+                client=docker_client,
+            )
+            success = manifest_ref.delete(raise_not_found=True)
         except PermissionDeny:
-            logger.warning("权限不足, 无法删除镜像 %s", b.image)
+            logger.warning(f"delete image {b.image} permission denied, registry: {image_registry.host}")
         except ResourceNotFound:
             # 镜像已不存在，也标记为已删除
             success = True
         except Exception:
-            logger.exception("删除镜像 %s 失败", b.image)
+            logger.exception(f"delete image {b.image} failed, registry: {image_registry.host}")
 
         if success:
             deleted_count += 1
             b.artifact_deleted = True
+            # https://stackoverflow.com/questions/64116500/update-auto-now-field-in-bulk-update
+            # https://docs.djangoproject.com/en/6.0/ref/models/querysets/#bulk-update
+            # bulk_update will not call save method, so auto_now will not work here, manually update
             b.updated = timezone.now()
             success_delete_builds.append(b)
         else:
@@ -145,11 +111,5 @@ def delete_redundant_images(
 
     Build.objects.bulk_update(success_delete_builds, ["artifact_deleted", "updated"])
 
-    logger.info(
-        "模块 %s 镜像清理完成: 总共 %d 个, 成功 %d 个, 失败 %d 个",
-        module_id,
-        deleted_count + failed_count,
-        deleted_count,
-        failed_count,
-    )
+    logger.info(f"module {module_id} image cleanup completed, deleted: {deleted_count}, failed: {failed_count}")
     return DeletionResult(deleted=deleted_count, failed=failed_count)

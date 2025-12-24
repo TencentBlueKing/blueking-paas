@@ -779,8 +779,12 @@ AUTO_CREATE_REGULAR_USER = settings.get("AUTO_CREATE_REGULAR_USER", True)
 MAX_MODULES_COUNT_PER_APPLICATION = settings.get("MAX_MODULES_COUNT_PER_APPLICATION", default=10, cast="@int")
 # 应用单个模块允许创建的最大 process 数量
 MAX_PROCESSES_PER_MODULE = settings.get("MAX_PROCESSES_PER_MODULE", default=16, cast="@int")
-# 单个模块下最多保留的历史镜像数量
+# 自动清理多余镜像功能-单个模块下最多保留的历史镜像数量
 MAX_RESERVED_IMAGES_PER_MODULE = settings.get("MAX_RESERVED_IMAGES_PER_MODULE", default=10, cast="@int")
+# 是否开启每次部署后 自动清理多余镜像功能
+AUTO_DELETE_REDUNDANT_IMAGES_AFTER_DEPLOY = settings.get(
+    "AUTO_DELETE_REDUNDANT_IMAGES_AFTER_DEPLOY", default=False, cast="@bool"
+)
 
 PAAS_LEGACY_DBCONF = get_database_conf(
     settings, encrypted_url_var="PAAS_LEGACY_DATABASE_URL", env_var_prefix="PAAS_LEGACY_", for_tests=RUNNING_TESTS

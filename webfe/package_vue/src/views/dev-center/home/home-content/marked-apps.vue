@@ -145,6 +145,7 @@ export default {
       tableHeaderFilterValue: 'all',
       currentTenantFilters: [], // 当前租户模式过滤条件
       homeMarkedEmptyImg: require('@static/images/home-marked-empty.png'),
+      defaultImg: require('@static/images/default_logo.png'),
     };
   },
   computed: {

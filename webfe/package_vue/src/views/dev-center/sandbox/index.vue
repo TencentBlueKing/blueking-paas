@@ -156,7 +156,6 @@ export default {
       runLog: '',
       isRunNowLoading: false,
       serviceName: '',
-      loadingGif,
       refreshTime: {
         build: 5,
         run: 5,
@@ -206,7 +205,7 @@ export default {
     },
     // 沙箱加载完成（除状态 Ready 外，还需要检查是否可访问，即网络已通）
     isSandboxReady() {
-      return this.sandboxData.status === 'ready' && this.sandboxAccessible && this.isVerifyPassword;
+      return this.sandboxData?.status === 'ready' && this.sandboxAccessible && this.isVerifyPassword;
     },
     // 构建成功
     isBuildSuccess() {

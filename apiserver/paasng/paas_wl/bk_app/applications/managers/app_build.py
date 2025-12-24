@@ -60,7 +60,7 @@ def delete_redundant_images(module_id: int, max_reserved_num: int) -> DeletionRe
     ).order_by("-created")[max_reserved_num:]
 
     if not builds:
-        logger.info(f"module {module_id} image count within limit, no need to clean up")
+        logger.info("Module<%s> image count within limit, no need to clean up", module_id)
         return DeletionResult(deleted=0, failed=0)
 
     deleted_count = 0
@@ -88,12 +88,12 @@ def delete_redundant_images(module_id: int, max_reserved_num: int) -> DeletionRe
             )
             success = manifest_ref.delete(raise_not_found=True)
         except PermissionDeny:
-            logger.warning(f"delete image {b.image} permission denied, registry: {image_registry.host}")
+            logger.warning("delete image %s permission denied, registry: %s", b.image, image_registry.host)
         except ResourceNotFound:
             # 镜像已不存在，也标记为已删除
             success = True
         except Exception:
-            logger.exception(f"delete image {b.image} failed, registry: {image_registry.host}")
+            logger.exception("delete image %s failed, registry: %s", b.image, image_registry.host)
 
         if success:
             deleted_count += 1
@@ -109,6 +109,9 @@ def delete_redundant_images(module_id: int, max_reserved_num: int) -> DeletionRe
     Build.objects.bulk_update(success_delete_builds, ["artifact_deleted", "updated"])
 
     logger.info(
-        f"module {module_id} delete redundant images completed, deleted: {deleted_count}, failed: {failed_count}"
+        "Module<%s> delete redundant images completed, deleted: %d, failed: %d",
+        module_id,
+        deleted_count,
+        failed_count,
     )
     return DeletionResult(deleted=deleted_count, failed=failed_count)

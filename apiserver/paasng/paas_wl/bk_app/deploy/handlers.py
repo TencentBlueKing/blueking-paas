@@ -43,19 +43,23 @@ def delete_redundant_images_after_deploy(sender, deployment: "Deployment", **kwa
     build_id = deployment.build_id
     if deployment.status != JobStatus.SUCCESSFUL.value or not build_id:
         logger.info(
-            f"deployment<{deployment.id}> is not successful or has no build_id, skip deleting redundant images"
+            "Deployment<%s> is not successful or has no build_id, skip deleting redundant images",
+            deployment.id,
         )
         return
 
     try:
         build = Build.objects.get(uuid=build_id)
     except Build.DoesNotExist:
-        logger.info(f"Build<{build_id}> does not exist, skip deleting redundant images")
+        logger.info("Build<%s> does not exist, skip deleting redundant images", build_id)
         return
 
     module_id = build.module_id
     res = delete_redundant_images(module_id=module_id, max_reserved_num=max_reserved_images_num)
 
     logger.info(
-        f"Module<{module_id}> delete redundant images completed after deployment, deleted: {res.deleted}, failed: {res.failed}"
+        "Module<%s> delete redundant images completed after deployment, deleted: %d, failed: %d",
+        module_id,
+        res.deleted,
+        res.failed,
     )

@@ -40,7 +40,7 @@
         <i
           v-if="showPlaintext === false"
           v-bk-tooltips="isPlaintext ? $t('隐藏') : $t('显示')"
-          :class="['paasng-icon mr20', isPlaintext ? 'paasng-insights' : 'paasng-bukeyulan']"
+          :class="['paasng-icon mr20', isPlaintext ? 'paasng-bukeyulan' : 'paasng-insights']"
           @click="isPlaintext = !isPlaintext"
         ></i>
       </div>

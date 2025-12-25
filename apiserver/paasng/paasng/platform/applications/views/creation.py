@@ -291,8 +291,8 @@ class ApplicationCreateViewSet(viewsets.ViewSet):
         source_origin = SourceOrigin.AI_AGENT
         engine_params = {
             "source_origin": source_origin,
-            # TODO AI agent 还没有提供模板，目前是直接使用 Python 插件的模板
-            "source_init_template": "bk-saas-plugin-python",
+            # AI agent 模板
+            "source_init_template": "bk-ai-plugin-python",
         }
         # ai-agent-app 不支持指定集群（使用默认集群）
         env_cluster_names: Dict[str, str] = {}

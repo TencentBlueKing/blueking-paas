@@ -317,7 +317,7 @@
         @submit.prevent="submitRemoveInstance"
       >
         <div class="spacing-x1">
-          {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }}
+          {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入{type}', { type: $t('应用 ID') }) }}
           <code>{{ appCode }}</code>
           {{ $t('确认：') }}
         </div>

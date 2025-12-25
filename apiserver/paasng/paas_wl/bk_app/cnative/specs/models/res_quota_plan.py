@@ -28,10 +28,10 @@ class ResQuotaPlan(TimestampedModel):
     """云原生资源配额方案配置模型"""
 
     plan_name = models.CharField("方案名称", max_length=64, unique=True)
-    cpu_limit = models.CharField("CPU 限制 (millicores)", max_length=8)
-    memory_limit = models.CharField("内存限制 (MiB)", max_length=8)
-    cpu_request = models.CharField("CPU 请求 (millicores)", max_length=8)
-    memory_request = models.CharField("内存请求 (MiB)", max_length=8)
+    cpu_limits = models.CharField("CPU 限制", max_length=8)
+    memory_limits = models.CharField("内存限制", max_length=8)
+    cpu_requests = models.CharField("CPU 请求", max_length=8)
+    memory_requests = models.CharField("内存请求", max_length=8)
     is_active = models.BooleanField("是否启用", default=True, db_index=True)
     is_builtin = models.BooleanField("是否为内置方案", default=False)
 

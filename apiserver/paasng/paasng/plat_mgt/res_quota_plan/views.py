@@ -28,7 +28,7 @@ from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
 
-from .serializers import ResQuotaPlanCreateInputSLZ, ResQuotaPlanOutputSLZ, ResQuotaPlanUpdateInputSLZ
+from .serializers import ResQuotaPlanInputSLZ, ResQuotaPlanOutputSLZ
 
 
 class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
@@ -52,12 +52,12 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],
         operation_description="创建资源配额方案",
-        request_body=ResQuotaPlanCreateInputSLZ,
+        request_body=ResQuotaPlanInputSLZ,
         responses={status.HTTP_201_CREATED: None},
     )
     def create(self, request):
         """创建资源配额方案"""
-        slz = ResQuotaPlanCreateInputSLZ(data=request.data)
+        slz = ResQuotaPlanInputSLZ(data=request.data)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
@@ -75,7 +75,7 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],
         operation_description="更新资源配额方案",
-        request_body=ResQuotaPlanUpdateInputSLZ,
+        request_body=ResQuotaPlanInputSLZ,
         responses={status.HTTP_200_OK: None},
     )
     def update(self, request, pk):
@@ -83,17 +83,16 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
 
         plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
 
-        slz = ResQuotaPlanUpdateInputSLZ(data=request.data, context={"pk": pk})
+        slz = ResQuotaPlanInputSLZ(data=request.data, instance=plan_obj)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
 
-        data_before = ResQuotaPlanUpdateInputSLZ(plan_obj).data
+        data_before = ResQuotaPlanInputSLZ(plan_obj).data
 
         for attr, value in data.items():
             setattr(plan_obj, attr, value)
-
         plan_obj.save()
-        data_after = ResQuotaPlanUpdateInputSLZ(plan_obj).data
+        data_after = ResQuotaPlanInputSLZ(plan_obj).data
 
         add_plat_mgt_audit_record(
             user=request.user,
@@ -114,9 +113,7 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         """删除资源配额方案"""
 
         plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
-
-        data_before = ResQuotaPlanUpdateInputSLZ(plan_obj).data
-
+        data_before = ResQuotaPlanOutputSLZ(plan_obj).data
         plan_obj.delete()
 
         add_plat_mgt_audit_record(

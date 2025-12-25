@@ -31,10 +31,10 @@ class TestResourceQuotaPlanViewSet:
     def sample_plan_data(self):
         return {
             "plan_name": "test-plan",
-            "cpu_limit": "4000m",
-            "memory_limit": "2048Mi",
-            "cpu_request": "1000m",
-            "memory_request": "512Mi",
+            "cpu_limits": "4000m",
+            "memory_limits": "2048Mi",
+            "cpu_requests": "1000m",
+            "memory_requests": "512Mi",
             "is_active": True,
         }
 
@@ -56,8 +56,8 @@ class TestResourceQuotaPlanViewSet:
         assert len(response.data) == 1
         plan = response.data[0]
         assert plan["plan_name"] == sample_plan_data["plan_name"]
-        assert plan["cpu_limit"] == sample_plan_data["cpu_limit"]
-        assert plan["memory_limit"] == sample_plan_data["memory_limit"]
+        assert plan["cpu_limits"] == sample_plan_data["cpu_limits"]
+        assert plan["memory_limits"] == sample_plan_data["memory_limits"]
 
     def test_create_success(self, plat_mgt_api_client, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.list_create")
@@ -72,7 +72,7 @@ class TestResourceQuotaPlanViewSet:
 
     @pytest.mark.parametrize(
         "field",
-        ["cpu_limit", "cpu_request", "memory_limit", "memory_request"],
+        ["cpu_limits", "cpu_requests", "memory_limits", "memory_requests"],
     )
     def test_create_invalid_resource_value(self, plat_mgt_api_client, sample_plan_data, field):
         url = reverse("plat_mgt.res_quota_plans.list_create")
@@ -84,26 +84,26 @@ class TestResourceQuotaPlanViewSet:
         url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
         update_data = sample_plan_data.copy()
         update_data["plan_name"] = "updated-plan"
-        update_data["cpu_limit"] = "8000m"
+        update_data["cpu_limits"] = "8000m"
 
         response = plat_mgt_api_client.put(url, data=update_data)
         assert response.status_code == 200
 
         created_plan.refresh_from_db()
         assert created_plan.plan_name == "updated-plan"
-        assert created_plan.cpu_limit == "8000m"
+        assert created_plan.cpu_limits == "8000m"
 
     def test_update_with_same_name(self, plat_mgt_api_client, created_plan, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
         update_data = sample_plan_data.copy()
-        update_data["cpu_limit"] = "8000m"
+        update_data["cpu_limits"] = "8000m"
 
         response = plat_mgt_api_client.put(url, data=update_data)
         assert response.status_code == 200
 
         created_plan.refresh_from_db()
         assert created_plan.plan_name == sample_plan_data["plan_name"]
-        assert created_plan.cpu_limit == "8000m"
+        assert created_plan.cpu_limits == "8000m"
 
     def test_update_duplicate_name(self, plat_mgt_api_client, created_plan, sample_plan_data):
         another_plan_data = sample_plan_data.copy()

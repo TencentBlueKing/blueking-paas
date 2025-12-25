@@ -26,39 +26,30 @@ class ResQuotaPlanOutputSLZ(serializers.Serializer):
 
     id = serializers.IntegerField()
     plan_name = serializers.CharField()
-    cpu_limit = serializers.CharField()
-    memory_limit = serializers.CharField()
-    cpu_request = serializers.CharField()
-    memory_request = serializers.CharField()
+    cpu_limits = serializers.CharField()
+    memory_limits = serializers.CharField()
+    cpu_requests = serializers.CharField()
+    memory_requests = serializers.CharField()
     is_active = serializers.BooleanField()
     is_builtin = serializers.BooleanField()
 
 
-class ResQuotaPlanBaseInputSLZ(serializers.Serializer):
+class ResQuotaPlanInputSLZ(serializers.Serializer):
     """资源配额方案基础输入序列化器"""
 
     plan_name = serializers.CharField(max_length=64)
-    cpu_limit = serializers.ChoiceField(choices=CPUResourceQuantity.get_choices())
-    memory_limit = serializers.ChoiceField(choices=MemoryResourceQuantity.get_choices())
-    cpu_request = serializers.ChoiceField(choices=CPUResourceQuantity.get_choices())
-    memory_request = serializers.ChoiceField(choices=MemoryResourceQuantity.get_choices())
+    cpu_limits = serializers.ChoiceField(choices=CPUResourceQuantity.get_choices())
+    memory_limits = serializers.ChoiceField(choices=MemoryResourceQuantity.get_choices())
+    cpu_requests = serializers.ChoiceField(choices=CPUResourceQuantity.get_choices())
+    memory_requests = serializers.ChoiceField(choices=MemoryResourceQuantity.get_choices())
     is_active = serializers.BooleanField(required=False, default=True)
 
-
-class ResQuotaPlanCreateInputSLZ(ResQuotaPlanBaseInputSLZ):
-    """资源配额方案创建输入序列化器"""
-
     def validate_plan_name(self, value):
-        if ResQuotaPlan.objects.filter(plan_name=value).exists():
-            raise serializers.ValidationError("资源配额方案名称已存在，请使用其他名称")
-        return value
+        queryset = ResQuotaPlan.objects.filter(plan_name=value)
+        # 更新时排除自身实例
+        if self.instance:
+            queryset = queryset.exclude(id=self.instance.id)
 
-
-class ResQuotaPlanUpdateInputSLZ(ResQuotaPlanBaseInputSLZ):
-    """资源配额方案更新输入序列化器"""
-
-    def validate_plan_name(self, value):
-        # 排除自身实例
-        if ResQuotaPlan.objects.filter(plan_name=value).exclude(id=self.context["pk"]).exists():
+        if queryset.exists():
             raise serializers.ValidationError("资源配额方案名称已存在，请使用其他名称")
         return value

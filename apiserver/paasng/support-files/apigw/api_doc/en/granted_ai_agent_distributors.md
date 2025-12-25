@@ -1,5 +1,5 @@
 ### Function Description  
-Authorize the AI plugin application for plugin users.  
+Authorize the AI plugin application for " plugin distributor " .  
 
 ### Request Parameters  
 

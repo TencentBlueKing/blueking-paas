@@ -1,5 +1,5 @@
 ### Function Description  
-Delete a plugin user (distributor) from the AI plugin.
+Delete a " plugin distributor " from the AI plugin.
 
 ### Request Parameters
 

@@ -56,6 +56,7 @@ class TestCreateAppResource:
                         "resQuotaPlan": None,
                         "autoscaling": None,
                         "probes": None,
+                        "schedule": None,
                     }
                 ],
                 "hooks": None,
@@ -66,8 +67,6 @@ class TestCreateAppResource:
                 "svcDiscovery": None,
                 "configuration": {"env": []},
                 "observability": None,
-                "nodeSelector": None,
-                "tolerations": None,
             },
             "status": {
                 "conditions": [],

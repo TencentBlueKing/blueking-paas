@@ -15,7 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -31,7 +31,6 @@ from .mounts import Mount, MountOverlay
 from .observability import Observability
 from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
 from .processes import Process
-from .scheduling import Toleration
 from .svc_discovery import SvcDiscConfig
 
 
@@ -67,8 +66,6 @@ class BkAppSpec(AllowNotsetModel):
     :param env_overlay: 分环境重写配置
     :param observability: 可观测功能配置
     :param components: 进程组件
-    :param node_selector: 节点选择器
-    :param tolerations: 容忍配置
     """
 
     build: Optional[AppBuildConfig] = None
@@ -82,6 +79,3 @@ class BkAppSpec(AllowNotsetModel):
     env_overlay: BkAppEnvOverlay | NotSetType | None = NOTSET
     observability: Optional[Observability] = None
     components: Optional[List[Component]] = None
-    # Pod scheduling config
-    node_selector: Optional[Dict[str, str]] = None
-    tolerations: Optional[List[Toleration]] = None

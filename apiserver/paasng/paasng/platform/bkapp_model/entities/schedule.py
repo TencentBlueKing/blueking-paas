@@ -33,3 +33,14 @@ class Toleration(BaseModel):
     value: str | None = None
     effect: str | None = None
     toleration_seconds: int | None = None
+
+
+class Schedule(BaseModel):
+    """Pod schedule config
+
+    :param node_selector: Node selector for pod scheduling
+    :param tolerations: Tolerations for pod scheduling
+    """
+
+    node_selector: dict[str, str] | None = None
+    tolerations: list[Toleration] | None = None

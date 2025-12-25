@@ -254,6 +254,38 @@ class ComponentInputSLZ(serializers.Serializer):
         return attrs
 
 
+class TolerationInputSLZ(serializers.Serializer):
+    """Validate the tolerations field."""
+
+    key = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    operator = serializers.ChoiceField(choices=["Equal", "Exists"], required=False, allow_null=True)
+    value = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    effect = serializers.ChoiceField(
+        choices=["NoSchedule", "PreferNoSchedule", "NoExecute"], required=False, allow_null=True
+    )
+    tolerationSeconds = serializers.IntegerField(required=False, allow_null=True, source="toleration_seconds")
+
+
+class ScheduleInputSLZ(serializers.Serializer):
+    """Validate the `schedule` field."""
+
+    nodeSelector = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+        allow_null=True,
+        default=None,
+        source="node_selector",
+        help_text="节点选择器",
+    )
+    tolerations = serializers.ListField(
+        child=TolerationInputSLZ(),
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="容忍配置",
+    )
+
+
 class ProcessInputSLZ(serializers.Serializer):
     """Validate the `processes` field."""
 
@@ -277,6 +309,7 @@ class ProcessInputSLZ(serializers.Serializer):
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
     services = serializers.ListField(child=ProcServiceInputSLZ(), allow_null=True, default=None)
     components = serializers.ListField(child=ComponentInputSLZ(), allow_null=True, default=None)
+    schedule = ScheduleInputSLZ(allow_null=True, default=None)
 
 
 class HooksInputSLZ(serializers.Serializer):
@@ -328,18 +361,6 @@ class ObservabilityInputSLZ(serializers.Serializer):
     monitoring = MonitoringInputSLZ(required=False, allow_null=True)
 
 
-class TolerationInputSLZ(serializers.Serializer):
-    """Validate the tolerations field."""
-
-    key = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    operator = serializers.ChoiceField(choices=["Equal", "Exists"], required=False, allow_null=True)
-    value = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    effect = serializers.ChoiceField(
-        choices=["NoSchedule", "PreferNoSchedule", "NoExecute"], required=False, allow_null=True
-    )
-    tolerationSeconds = serializers.IntegerField(required=False, allow_null=True, source="toleration_seconds")
-
-
 class BkAppSpecInputSLZ(serializers.Serializer):
     """BkApp resource slz in camel-case format"""
 
@@ -353,22 +374,6 @@ class BkAppSpecInputSLZ(serializers.Serializer):
     svcDiscovery = ServiceDiscoveryInputSLZ(source="svc_discovery", default=NOTSET)
     domainResolution = DomainResolutionInputSLZ(source="domain_resolution", default=NOTSET)
     observability = ObservabilityInputSLZ(required=False)
-    # Pod scheduling config
-    nodeSelector = serializers.DictField(
-        child=serializers.CharField(),
-        required=False,
-        allow_null=True,
-        default=None,
-        source="node_selector",
-        help_text="节点选择器，如 {'dedicated': 'bkSaas'}",
-    )
-    tolerations = serializers.ListField(
-        child=TolerationInputSLZ(),
-        required=False,
-        allow_null=True,
-        default=None,
-        help_text="容忍配置列表",
-    )
 
     def to_internal_value(self, data) -> v1alpha2.BkAppSpec:
         d = super().to_internal_value(data)

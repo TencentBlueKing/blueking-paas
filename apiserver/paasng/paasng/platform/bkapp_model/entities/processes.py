@@ -28,6 +28,7 @@ from .components import Component
 from .probes import ProbeSet
 from .proc_service import ProcService
 from .scaling_config import AutoscalingConfig
+from .schedule import Schedule
 
 
 class Process(AllowNotsetModel):
@@ -45,6 +46,7 @@ class Process(AllowNotsetModel):
     :param autoscaling: 自动扩缩容配置
     :param probes: 健康检查配置
     :param components: 进程组件
+    :param schedule: Pod 调度配置
     """
 
     name: str
@@ -62,6 +64,8 @@ class Process(AllowNotsetModel):
 
     probes: Optional[ProbeSet] = None
     components: List[Component] | None = None
+
+    schedule: Optional[Schedule] = None
 
     def __init__(self, **data):
         data["name"] = data["name"].lower()

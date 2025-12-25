@@ -646,18 +646,21 @@ def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironmen
 def apply_cluster_scheduling_config(model_res: crd.BkAppResource, env: ModuleEnvironment):
     """Apply cluster's default scheduling config (nodeSelector and tolerations) to the resource object.
 
+    The scheduling config (nodeSelector and tolerations) should be applied to each process's schedule field.
+
     :param model_res: The model resource object, it will be modified in-place.
     :param env: The environment object.
     """
     cluster = EnvClusterService(env).get_cluster()
 
-    # Apply cluster's default nodeSelector
-    if cluster.default_node_selector:
-        model_res.spec.nodeSelector = cluster.default_node_selector
+    # If no scheduling config is set, skip
+    if not cluster.default_node_selector and not cluster.default_tolerations:
+        return
 
-    # Apply cluster's default tolerations
+    # Build tolerations list if configured
+    tolerations = None
     if cluster.default_tolerations:
-        model_res.spec.tolerations = [
+        tolerations = [
             crd.Toleration(
                 key=t.get("key"),
                 operator=t.get("operator"),
@@ -667,6 +670,15 @@ def apply_cluster_scheduling_config(model_res: crd.BkAppResource, env: ModuleEnv
             )
             for t in cluster.default_tolerations
         ]
+
+    # Apply scheduling config to each process
+    for proc in model_res.spec.processes:
+        # Users cannot define schedule in ModuleProcessSpec, so directly set cluster's default config
+        if cluster.default_node_selector or tolerations:
+            proc.schedule = crd.Schedule(
+                nodeSelector=cluster.default_node_selector,
+                tolerations=tolerations,
+            )
 
 
 def _update_cmd_args_from_wl_build(model_res: crd.BkAppResource, wl_build: WlBuild):

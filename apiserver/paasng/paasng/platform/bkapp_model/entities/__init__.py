@@ -40,7 +40,7 @@ from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResQuotaOver
 from .proc_service import ProcService
 from .processes import Process
 from .scaling_config import AutoscalingConfig
-from .scheduling import Toleration
+from .schedule import Schedule
 from .svc_discovery import SvcDiscConfig, SvcDiscEntryBkSaaS
 
 __all__ = [
@@ -82,5 +82,5 @@ __all__ = [
     # component types
     "Component",
     # scheduling types
-    "Toleration",
+    "Schedule",
 ]

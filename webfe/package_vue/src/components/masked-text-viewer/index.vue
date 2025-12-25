@@ -18,7 +18,7 @@
     <!-- 明文/密文切换按钮 -->
     <i
       v-bk-tooltips="isPlaintext ? $t('隐藏') : $t('显示')"
-      :class="['paasng-icon toggle-icon', isPlaintext ? 'paasng-insights' : 'paasng-bukeyulan']"
+      :class="['paasng-icon toggle-icon', isPlaintext ? 'paasng-bukeyulan' : 'paasng-insights']"
       @click="toggleStatus"
     ></i>
     <!-- 复制按钮 -->

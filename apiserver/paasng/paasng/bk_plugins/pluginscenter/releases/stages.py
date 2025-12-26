@@ -329,7 +329,7 @@ class PipelineStage(BaseStageController):
                 "build_id": self.build.buildId,
                 "version": self.release.version,
                 "version_with_underscores": self.release.version.replace(".", "_"),
-                "bk_username": "admin",
+                "bk_username": settings.ADMIN_USERNAME,
             }
         )
         data = slz.data

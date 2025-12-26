@@ -36,6 +36,13 @@
           class="paasng-icon paasng-general-copy mr20"
           v-copy="value"
         ></i>
+        <!-- 明文/密文 -->
+        <i
+          v-if="showPlaintext === false"
+          v-bk-tooltips="isPlaintext ? $t('隐藏') : $t('显示')"
+          :class="['paasng-icon mr20', isPlaintext ? 'paasng-bukeyulan' : 'paasng-insights']"
+          @click="isPlaintext = !isPlaintext"
+        ></i>
       </div>
       <div
         class="editor-container"
@@ -47,6 +54,7 @@
 
 <script>
 import * as monaco from 'monaco-editor';
+import { convertToMaskedText } from '@/common/utils';
 
 export default {
   name: 'DetailComponentsSideslider',
@@ -87,12 +95,18 @@ export default {
       type: Boolean,
       default: false,
     },
+    // 是否为明文，false 时显示切换按钮
+    showPlaintext: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     return {
       editor: null, // Monaco 编辑器实例
       resizeObserver: null,
       isFullscreen: false,
+      isPlaintext: this.showPlaintext !== false,
     };
   },
   computed: {
@@ -108,8 +122,11 @@ export default {
   watch: {
     // 监听 value 变化并更新编辑器内容
     value(newValue) {
-      if (this.editor && newValue !== this.editor.getValue()) {
-        this.editor.setValue(newValue);
+      if (this.editor) {
+        const displayValue = this.isPlaintext ? newValue : convertToMaskedText(newValue);
+        if (displayValue !== this.editor.getValue()) {
+          this.editor.setValue(displayValue);
+        }
       }
     },
     // 当侧边栏显示时初始化编辑器
@@ -118,6 +135,12 @@ export default {
         this.$nextTick(() => {
           this.init();
         });
+      }
+    },
+    // 监听明文/密文切换
+    isPlaintext() {
+      if (this.editor) {
+        this.updateEditorContent();
       }
     },
   },
@@ -134,8 +157,9 @@ export default {
   methods: {
     // 初始化 Monaco 编辑器
     init() {
+      const displayValue = this.isPlaintext ? this.value : convertToMaskedText(this.value);
       this.editor = monaco.editor.create(this.$refs.editorContainer, {
-        value: this.value,
+        value: displayValue,
         language: this.language,
         theme: this.theme,
         automaticLayout: false,
@@ -157,6 +181,12 @@ export default {
         });
       });
       this.resizeObserver.observe(this.$refs.editorContainer);
+    },
+    // 更新编辑器内容(明文/密文切换)
+    updateEditorContent() {
+      if (!this.editor) return;
+      const displayValue = this.isPlaintext ? this.value : convertToMaskedText(this.value);
+      this.editor.setValue(displayValue);
     },
   },
 };

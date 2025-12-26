@@ -29,7 +29,7 @@ class Command(BaseCommand):
     """Create or update a custom domain for an application.
 
     Example:
-        python manage.py create_custom_domain --app_code bk_cmdb_saas --app_module web \\
+        python manage.py upsert_custom_domain --app_code bk_cmdb_saas --app_module web \
             --app_env prod --domain_name subpath-dev.example.com --path_prefix /cmdb/
     """
 

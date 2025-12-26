@@ -18,81 +18,80 @@
 """Command to create custom domain for application."""
 
 from django.core.management.base import BaseCommand, CommandError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
+from paas_wl.workloads.networking.entrance.serializers import DomainEditableMixin
 from paas_wl.workloads.networking.ingress.models import Domain
-from paasng.platform.applications.models import Application
+from paasng.platform.applications.models import Application, Module
 
 
 class Command(BaseCommand):
-    """Create a custom domain for an application.
-
-    This command allows creating custom domains that bypass normal validation rules,
-    such as domains using the same host as the cluster's built-in domain.
+    """Create or update a custom domain for an application.
 
     Example:
         python manage.py create_custom_domain --app_code bk_cmdb_saas --app_module web \\
             --app_env prod --domain_name subpath-dev.example.com --path_prefix /cmdb/
     """
 
-    help = "Create a custom domain for an application"
+    help = "Create or update a custom domain for an application"
 
     def add_arguments(self, parser):
-        parser.add_argument("--dry-run", action="store_true", help="Dry run without creating the domain")
         parser.add_argument("--app_code", type=str, required=True, help="Application code")
-        parser.add_argument(
-            "--app_module", type=str, help="Module name (defaults to the default module if not specified)"
-        )
+        parser.add_argument("--app_module", type=str, required=True, help="Module name")
         parser.add_argument("--app_env", type=str, required=True, choices=["stag", "prod"], help="Environment name")
-        parser.add_argument("--https_enabled", action="store_true", help="Enable HTTPS for the domain")
         parser.add_argument("--domain_name", type=str, required=True, help="Custom domain name (e.g., example.com)")
         parser.add_argument("--path_prefix", type=str, default="/", help="Path prefix (defaults to '/')")
+        parser.add_argument("--https_enabled", action="store_true", help="Enable HTTPS for the domain")
 
     def handle(
-        self, dry_run, app_code, app_module, app_env, https_enabled, domain_name, path_prefix, *args, **options
+        self,
+        app_code: str,
+        app_module: str,
+        app_env: str,
+        domain_name: str,
+        path_prefix: str,
+        https_enabled: bool,
+        *args,
+        **options,
     ):
         # Get application, module, and environment
         try:
             application = Application.objects.get(code=app_code)
+            module = application.get_module(app_module)
         except Application.DoesNotExist:
             raise CommandError(f"Application '{app_code}' does not exist")
+        except Module.DoesNotExist:
+            raise CommandError(f"Module '{app_module}' does not exist in application '{app_code}'")
 
-        module = application.get_module(app_module)
         environment = module.envs.get(environment=app_env)
 
-        # Normalize path prefix
-        path_prefix = self._normalize_path(path_prefix)
+        # Validate domain data using serializer
+        try:
+            slz = DomainEditableMixin(
+                data={"domain_name": domain_name, "path_prefix": path_prefix, "https_enabled": https_enabled}
+            )
+            slz.is_valid(raise_exception=True)
+            validated_data = slz.validated_data
+            # Use validated and normalized values
+            domain_name = validated_data["name"]
+            path_prefix = validated_data["path_prefix"]
+            https_enabled = validated_data["https_enabled"]
+        except DRFValidationError as e:
+            raise CommandError(f"Validation failed: {e.detail}")
 
-        # Check for existing domain
-        if Domain.objects.filter(
+        # Create or update domain using unique_together fields
+        domain, created = Domain.objects.update_or_create(
+            tenant_id=application.tenant_id,
             name=domain_name,
             path_prefix=path_prefix,
             module_id=module.pk,
             environment_id=environment.pk,
-            https_enabled=https_enabled,
-            tenant_id=application.tenant_id,
-        ).exists():
-            raise CommandError(
-                f"Domain '{domain_name}' with path '{path_prefix}' already exists for {module.name}/{app_env}"
-            )
-
-        # Create domain
-        domain_data = {
-            "name": domain_name,
-            "path_prefix": path_prefix,
-            "module_id": module.pk,
-            "environment_id": environment.pk,
-            "https_enabled": https_enabled,
-            "tenant_id": application.tenant_id,
-        }
-
-        if dry_run:
-            domain = Domain(**domain_data)
-            self.stdout.write(self.style.WARNING("[DRY RUN] Would create custom domain:"))
-        else:
-            domain = Domain.objects.create(**domain_data)
-            self.stdout.write(self.style.SUCCESS("Successfully created custom domain:"))
+            defaults={"https_enabled": https_enabled},
+        )
 
         # Print domain info
+        action = "created" if created else "updated"
+        self.stdout.write(self.style.SUCCESS(f"Successfully {action} custom domain:"))
         self.stdout.write(
             f"  ID: {domain.pk or 'N/A'}\n"
             f"  URL: {domain.protocol}://{domain.name}{path_prefix}\n"
@@ -101,12 +100,3 @@ class Command(BaseCommand):
             f"  Environment: {app_env}\n"
             f"  HTTPS: {https_enabled}"
         )
-
-    @staticmethod
-    def _normalize_path(path: str) -> str:
-        """Normalize path prefix to ensure it starts and ends with '/'."""
-        if not path.startswith("/"):
-            path = f"/{path}"
-        if not path.endswith("/"):
-            path = f"{path}/"
-        return path

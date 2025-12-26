@@ -100,7 +100,7 @@ class UserInterruptedPolicy(AbortPolicy):
         return bool(deployment.release_int_requested_at)
 
 
-class WaitProcedurePoller(TaskPoller):
+class WaitBkAppProcedurePoller(TaskPoller):
     """Base class of process waiting procedure
 
     `params` schema:
@@ -146,7 +146,7 @@ class WaitProcedurePoller(TaskPoller):
         raise NotImplementedError()
 
 
-class WaitAppModelReady(WaitProcedurePoller):
+class WaitAppModelReady(WaitBkAppProcedurePoller):
     """A task poller to query status for fresh AppModelDeploy objects
 
     It takes below params:

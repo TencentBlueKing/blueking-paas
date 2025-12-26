@@ -15,6 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import json
+
 from attrs import asdict, define
 
 from paas_wl.bk_app.cnative.specs.constants import (
@@ -22,6 +24,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     DEFAULT_PROC_CPU_REQUEST,
     DEFAULT_PROC_MEM,
     DEFAULT_PROC_MEM_REQUEST,
+    OVERRIDE_PROC_RES_ANNO_KEY,
     ResQuotaPlan,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
@@ -69,26 +72,26 @@ class ResQuotaReader:
     def __init__(self, res: BkAppResource):
         self.res = res
 
-    def read_all(self, env_name: AppEnvName) -> dict[str, tuple[dict, bool]]:
+    def read_all(self, env_name: AppEnvName) -> dict[str, dict]:
         """Read all ResQuota config defined
 
         :param env_name: Environment name
-        :return: Dict[name of process, (config, whether the config was defined in "envOverlay")],
+        :return: Dict[name of process, config],
           config is {"plan": plan name, "limits": {"cpu":cpu limit, "memory": memory limit},
           "requests": {"cpu":cpu request, "memory": memory request}}
+
+        Note: If override_proc_res is configured in BkAppResource's annotations,
+          it will be applied with the highest priority.
         """
-        results: dict[str, tuple[dict, bool]] = {}
+        results: dict[str, dict] = {}
         for p in self.res.spec.processes:
             plan = p.resQuotaPlan or ResQuotaPlan.P_DEFAULT
-            results[p.name] = (
-                {
-                    "plan": str(plan),
-                    "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[plan]),
-                    # TODO 云原生应用的 requests 取值策略在 operator 中实现. 这里的值并非实际生效值, 仅用于前端展示. 如果需要, 后续校正?
-                    "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[plan]),
-                },
-                False,
-            )
+            results[p.name] = {
+                "plan": str(plan),
+                "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[plan]),
+                # TODO 云原生应用的 requests 取值策略在 operator 中实现. 这里的值并非实际生效值, 仅用于前端展示. 如果需要, 后续校正?
+                "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[plan]),
+            }
 
         if overlay := self.res.spec.envOverlay:
             quotas_overlay = overlay.resQuotas or []
@@ -97,13 +100,22 @@ class ResQuotaReader:
 
         for quotas in quotas_overlay:
             if quotas.envName == env_name:
-                results[quotas.process] = (
-                    {
-                        "plan": quotas.plan,
-                        "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[ResQuotaPlan(quotas.plan)]),
-                        "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[ResQuotaPlan(quotas.plan)]),
-                    },
-                    True,
-                )
+                results[quotas.process] = {
+                    "plan": quotas.plan,
+                    "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[ResQuotaPlan(quotas.plan)]),
+                    "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[ResQuotaPlan(quotas.plan)]),
+                }
+
+        override_config_str = self.res.metadata.annotations.get(OVERRIDE_PROC_RES_ANNO_KEY, "")
+        if not override_config_str:
+            return results
+
+        override_map = json.loads(override_config_str)
+        for proc_name, config in results.items():
+            if override_res := override_map.get(proc_name):
+                if "limits" in override_res:
+                    config["limits"] = override_res["limits"]
+                if "requests" in override_res:
+                    config["requests"] = override_res["requests"]
 
         return results

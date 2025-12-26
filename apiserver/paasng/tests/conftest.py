@@ -777,6 +777,24 @@ def _init_tmpls():
             "runtime_type": RuntimeType.BUILDPACK,
         },
     )
+    Template.objects.get_or_create(
+        name="bk-ai-plugin-python",
+        defaults={
+            "type": TemplateType.PLUGIN,
+            "display_name_zh_cn": "AI 智能体插件（Python）",
+            "display_name_en": "AI Agent Plugin (Python)",
+            "description_zh_cn": "为开发者提供快速创建 AIDev 智能体的能力，并自动对接 AI 小鲸、API 网关",
+            "description_en": "Enables developers to quickly create AIDev agents with automatic integration to AI Xiaojing (AI Assistant) and API Gateway.",
+            "language": "Python",
+            "market_ready": False,
+            "preset_services_config": {"mysql": {}},
+            "blob_url": "",
+            "required_buildpacks": [],
+            "processes": {},
+            "tags": [],
+            "runtime_type": RuntimeType.BUILDPACK,
+        },
+    )
 
 
 @pytest.fixture()

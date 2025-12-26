@@ -259,9 +259,6 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
-# 管理者用户：拥有全量应用权限（经权限中心鉴权）
-ADMIN_USERNAME = settings.get("ADMIN_USERNAME", "admin")
-
 AUTH_USER_MODEL = "bkpaas_auth.User"
 
 AUTHENTICATION_BACKENDS = ["bkpaas_auth.backends.UniversalAuthBackend", "bkpaas_auth.backends.APIGatewayAuthBackend"]
@@ -674,6 +671,11 @@ BK_APP_SECRET = settings.get("BK_APP_SECRET", "")
 
 # 是否启用多租户模式，本配置项仅支持在初次部署时配置，部署后不支持动态调整
 ENABLE_MULTI_TENANT_MODE = settings.get("ENABLE_MULTI_TENANT_MODE", False)
+
+# 管理者用户：拥有全量应用权限（经权限中心鉴权）
+# 多租户模式下使用 bk-admin，非多租户模式下使用 admin（保持向后兼容）
+_DEFAULT_ADMIN_USERNAME = "bk-admin" if ENABLE_MULTI_TENANT_MODE else "admin"
+ADMIN_USERNAME = settings.get("ADMIN_USERNAME", _DEFAULT_ADMIN_USERNAME)
 
 # PaaS 2.0 在权限中心注册的系统ID （并非是平台的 Code）
 IAM_SYSTEM_ID = settings.get("IAM_SYSTEM_ID", default="bk_paas")
@@ -1565,7 +1567,7 @@ FE_FEATURE_SETTINGS_DEV_SANDBOX = settings.get("FE_FEATURE_SETTINGS_DEV_SANDBOX"
 # 是否展示应用可用性保障
 FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL = settings.get("FE_FEATURE_SETTINGS_APP_AVAILABILITY_LEVEL", False)
 # 是否展示 MCP Server 云 API 权限
-FE_FEATURE_SETTINGS_MCP_SERVER_API = settings.get("FE_FEATURE_SETTINGS_MCP_SERVER_API", False)
+FE_FEATURE_SETTINGS_MCP_SERVER_API = settings.get("FE_FEATURE_SETTINGS_MCP_SERVER_API", True)
 
 # FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
 FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])

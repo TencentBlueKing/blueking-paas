@@ -19,7 +19,7 @@
 
 import copy
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from paas_wl.bk_app.cnative.specs.constants import ApiVersion
 from paas_wl.bk_app.cnative.specs.crd.bk_app import AutoscalingOverlay, BkAppResource, ReplicasOverlay
@@ -64,7 +64,7 @@ class BkAppProcScaler:
         if proc_type not in counts:
             raise ProcNotFoundInRes(proc_type)
 
-        cnt = counts[proc_type][0]
+        cnt = counts[proc_type]
         assert cnt is not None, "Replicas in the live environment can not be None"
         return cnt
 
@@ -112,7 +112,7 @@ class BkAppProcScaler:
             if proc_type not in configs:
                 raise ProcNotFoundInRes(proc_type)
 
-            return configs[proc_type][0]
+            return configs[proc_type]
 
     def set_autoscaling(self, proc_type: str, enabled: bool, config: Optional[AutoscalingConfig]):
         """Set the auto-scaling config by process type.
@@ -218,15 +218,14 @@ class ReplicasReader:
     def __init__(self, res: BkAppResource):
         self.res = res
 
-    def read_all(self, env_name: AppEnvName) -> Dict[str, Tuple[Optional[int], bool]]:
+    def read_all(self, env_name: AppEnvName) -> Dict[str, Optional[int]]:
         """Read all replicas count defined
 
         :param env_name: Environment name
-        :return: A dict contains replicas for all processes, value format:
-            (replicas, whether replicas was defined in "envOverlay")
+        :return: A dict contains replicas for all processes
         """
         # Read value from main configuration
-        results = {p.name: (p.replicas, False) for p in self.res.spec.processes}
+        results = {p.name: p.replicas for p in self.res.spec.processes}
 
         # Read value from "envOverlay"
         if overlay := self.res.spec.envOverlay:
@@ -237,7 +236,7 @@ class ReplicasReader:
         for r in replicas_overlay:
             # Only add entries which were defined in main configuration
             if r.envName == env_name.value and r.process in results:
-                results[r.process] = (r.count, True)
+                results[r.process] = r.count
         return results
 
 
@@ -250,24 +249,21 @@ class AutoscalingReader:
     def __init__(self, res: BkAppResource):
         self.res = res
 
-    def read_all(self, env_name: AppEnvName) -> Dict[str, Tuple[Optional[Dict], bool]]:
+    def read_all(self, env_name: AppEnvName) -> Dict[str, Optional[Dict]]:
         """Read all autoscaling config defined
 
         :param env_name: Environment name
-        :return: Dict[name of process, (config, whether the config was defined in "envOverlay")]
+        :return: Dict[name of process, config]
         """
         # Read value from main configuration
         results = {
-            p.name: (
-                {
-                    "min_replicas": c.minReplicas,
-                    "max_replicas": c.maxReplicas,
-                    "policy": c.policy,
-                }
-                if (c := p.autoscaling)
-                else None,
-                False,
-            )
+            p.name: {
+                "min_replicas": c.minReplicas,
+                "max_replicas": c.maxReplicas,
+                "policy": c.policy,
+            }
+            if (c := p.autoscaling)
+            else None
             for p in self.res.spec.processes
         }
 
@@ -280,12 +276,9 @@ class AutoscalingReader:
         for r in autoscaling_overlay:
             # Only add entries which were defined in main configuration
             if r.envName == env_name.value and r.process in results:
-                results[r.process] = (
-                    {
-                        "min_replicas": r.minReplicas,
-                        "max_replicas": r.maxReplicas,
-                        "policy": r.policy,
-                    },
-                    True,
-                )
+                results[r.process] = {
+                    "min_replicas": r.minReplicas,
+                    "max_replicas": r.maxReplicas,
+                    "policy": r.policy,
+                }
         return results

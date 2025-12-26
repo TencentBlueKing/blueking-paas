@@ -76,7 +76,7 @@
       // 控制台输出版本信息
       if (BKPAAS_BUILD_VERSION !== '') {
         console.log(
-          `%c版本信息%c${BKPAAS_BUILD_VERSION}%c >> ${new Date()
+          `%c版本信息%c${decodeURIComponent(BKPAAS_BUILD_VERSION)}%c >> ${new Date()
             .toString()
             .slice(0, 16)}<<`,
           'padding: 2px 5px; background: #ea3636; color: #fff; border-radius: 3px 0 0 3px;',

@@ -25,6 +25,7 @@ from paas_wl.infras.cluster.allocator import ClusterAllocator
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.infras.resources.kube_res.base import Schedule
+from paas_wl.utils.text import b64encode
 from paasng.misc.tools.smart_app.output import make_channel_stream
 from paasng.platform.engine.constants import JobStatus
 
@@ -93,6 +94,13 @@ class SmartAppBuilder:
             "BUILDER_SHIM_IMAGE": settings.SMART_BUILDER_SHIM_IMAGE,
             "PackagingVersion": self.smart_build.packaging_version,
         }
+
+        # 添加缓存配置
+        envs["CACHE_REGISTRY"] = f"{settings.SMART_DOCKER_REGISTRY_HOST}/{settings.SMART_DOCKER_REGISTRY_NAMESPACE}"
+        username, password = settings.SMART_DOCKER_REGISTRY_USERNAME, settings.SMART_DOCKER_REGISTRY_PASSWORD
+        envs["REGISTRY_AUTH"] = (
+            f'{{"{settings.SMART_DOCKER_REGISTRY_HOST}": "Basic {b64encode(f"{username}:{password}")}"}}'
+        )
 
         cluster_name = get_default_cluster_name()
 

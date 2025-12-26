@@ -23,12 +23,10 @@
           slot="value"
           class="json-pretty"
         >
-          <vue-json-pretty
-            class="paas-vue-json-pretty-cls"
+          <MaskedTextViewer
             :data="data[key]"
-            :show-length="true"
-            :expanded="Object.keys(data[key] ?? {})?.length"
-            :highlight-mouseover-node="true"
+            :deep="Object.keys(data[key] ?? {})?.length ? 1 : 0"
+            :plaintext.sync="isConfigPlaintext"
           />
         </div>
         <div
@@ -125,8 +123,7 @@
 
 <script>
 import DetailsRow from '@/components/details-row';
-import VueJsonPretty from 'vue-json-pretty';
-import 'vue-json-pretty/lib/styles.css';
+import MaskedTextViewer from '@/components/masked-text-viewer';
 import JsonEditorVue from 'json-editor-vue';
 import { validateJson } from '../../validators';
 export default {
@@ -148,7 +145,7 @@ export default {
   },
   components: {
     DetailsRow,
-    VueJsonPretty,
+    MaskedTextViewer,
     JsonEditorVue,
   },
   data() {
@@ -163,6 +160,8 @@ export default {
       isEdit: false,
       saveLoading: false,
       valuesJson: {},
+      // 配置的明文/密文状态
+      isConfigPlaintext: false,
       formData: {
         name: '',
         // 所属服务
@@ -297,9 +296,14 @@ export default {
     width: 100%;
   }
   .json-pretty {
+    position: relative;
     padding: 8px;
     background: #f5f7fa;
     border-radius: 2px;
+    /deep/ .masked-text-viewer i.paasng-icon {
+      display: block !important;
+      top: 8px;
+    }
   }
   .edit-btns {
     position: absolute;

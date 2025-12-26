@@ -52,33 +52,33 @@ ensure-apigw() {
     python manage.py sync_apigw_config \
     --api-name "${api_name}" \
     -f support-files/apigw/definition.yaml
-    
+
     # 同步网关环境信息
     python manage.py sync_apigw_stage \
     --api-name "${api_name}" \
     -f support-files/apigw/definition.yaml
-    
+
     # 为应用主动授权
     python manage.py grant_apigw_permissions \
     --api-name "${api_name}" \
     -f support-files/apigw/definition.yaml
-    
+
     # 同步网关资源
     python manage.py sync_apigw_resources \
     --delete \
     --api-name "${api_name}" \
     -f support-files/apigw/resources.yaml
-    
+
     # 同步资源文档
     python manage.py sync_resource_docs_by_archive \
     --api-name "${api_name}" \
-    -f support-files/apigw/definition.yaml  
+    -f support-files/apigw/definition.yaml
 
     # 创建资源版本并发布
     python manage.py create_version_and_release_apigw \
     --api-name "${api_name}" \
     -f support-files/apigw/definition.yaml --generate-sdks
-    
+
     # 获取网关公钥
     python manage.py fetch_apigw_public_key \
     --api-name "${api_name}"
@@ -90,7 +90,7 @@ ensure-apt-buildpack() {
     buildpack_url="$3"
     vendor_url="$4"
     buildpack_name="$5"
-    
+
     # apt
     apt_buildpack_version=v2
     python manage.py manage_buildpack \
@@ -111,12 +111,12 @@ ensure-python-buildpack() {
     buildpack_url="$3"
     vendor_url="$4"
     buildpack_name="$5"
-    
+
     # 默认使用 bkrepo 源
     pip_index_url="${PAAS_BUILDPACK_PYTHON_PIP_INDEX_URL:-${bkrepo_endpoint}/pypi/${bkrepo_project}/pypi/simple/}"
     pip_index_host="$(echo "${bkrepo_endpoint}" | awk -F/ '{print $3}') ${PAAS_PIP_INDEX_HOST:-}"
     python_buildpack_version="${PAAS_PYTHON_BUILDPACK_VERSION:-v213}"
-    
+
     python manage.py manage_buildpack \
     --name "${buildpack_name}" \
     --display_name_zh_cn "Python" \
@@ -141,11 +141,11 @@ ensure-nodejs-buildpack() {
     buildpack_url="$3"
     vendor_url="$4"
     buildpack_name="$5"
-    
+
     # 默认使用 bkrepo 源
     npm_registry="${PAAS_BUILDPACK_NODEJS_BLUEKING_NPM_REGISTRY:-${bkrepo_endpoint}/npm/${bkrepo_project}/npm/}"
     nodejs_buildpack_version="${PAAS_NODEJS_BUILDPACK_VERSION:-v163}"
-    
+
     python manage.py manage_buildpack \
     --name "${buildpack_name}" \
     --display_name_zh_cn "NodeJS" \
@@ -168,7 +168,7 @@ ensure-golang-buildpack() {
     buildpack_url="$3"
     vendor_url="$4"
     buildpack_name="$5"
-    
+
     # golang
     go_buildpack_version="${PAAS_GO_BUILDPACK_VERSION:-v191}"
     python manage.py manage_buildpack \
@@ -191,7 +191,7 @@ ensure-blueking-image() {
     python_buildpack_name="$2"
     nodejs_buildpack_name="$3"
     golang_buildpack_name="$4"
-    
+
     image_name="blueking"
     python manage.py manage_image \
     --type "legacy" \
@@ -230,7 +230,7 @@ ensure-legacy-image() {
     python_buildpack_name="$2"
     nodejs_buildpack_name="$3"
     golang_buildpack_name="$4"
-    
+
     legacy_image_name="legacy-blueking"
     python manage.py manage_image \
     --type "legacy" \
@@ -260,26 +260,26 @@ ensure-runtimes() {
     # 此处需和 paas-stack chart 中 extraInitial.devops 参数中路径一致，否则会导致部署失败
     buildpack_url="${runtimes_url}/buildpacks"
     vendor_url="${runtimes_url}"
-    
+
     # apt
     apt_buildpack_name=bk-buildpack-apt
     ensure-apt-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${buildpack_url}" "${vendor_url}" "${apt_buildpack_name}"
-    
+
     # python
     python_buildpack_name=bk-buildpack-python
     ensure-python-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${buildpack_url}" "${vendor_url}" "${python_buildpack_name}"
-    
+
     # nodejs
     nodejs_buildpack_name=bk-buildpack-nodejs
     ensure-nodejs-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${buildpack_url}" "${vendor_url}" "${nodejs_buildpack_name}"
-    
+
     # golang
     golang_buildpack_name=bk-buildpack-go
     ensure-golang-buildpack "${bkrepo_endpoint}" "${bkrepo_project}" "${buildpack_url}" "${vendor_url}" "${golang_buildpack_name}"
-    
+
     # blueking image
     ensure-blueking-image "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
-    
+
     # legacy blueking image
     ensure-legacy-image "${apt_buildpack_name}" "${python_buildpack_name}" "${nodejs_buildpack_name}" "${golang_buildpack_name}"
 }
@@ -328,8 +328,9 @@ ensure-service(){
 }
 
 migrate-perm(){
-    # admin 用户拥有全量权限，不应占用配额且不需要授权
-    python manage.py migrate_bkpaas3_perm --exclude-users admin
+    # admin/bk-admin 用户拥有全量权限，不应占用配额且不需要授权
+    # 非多租户模式使用 admin，多租户模式使用 bk-admin，为兼容两种模式，同时排除两者
+    python manage.py migrate_bkpaas3_perm --exclude-users admin bk-admin
 }
 
 call_steps ensure-apigw ensure-runtimes-fixtures ensure-init-data ensure-service ensure-smart-image migrate-perm

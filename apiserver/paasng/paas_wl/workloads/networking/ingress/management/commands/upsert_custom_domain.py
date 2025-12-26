@@ -46,17 +46,7 @@ class Command(BaseCommand):
         parser.add_argument("--path_prefix", type=str, default="/", help="Path prefix (defaults to '/')")
         parser.add_argument("--https_enabled", action="store_true", help="Enable HTTPS for the domain")
 
-    def handle(
-        self,
-        app_code: str,
-        app_module: str,
-        app_env: str,
-        domain_name: str,
-        path_prefix: str,
-        https_enabled: bool,
-        *args,
-        **options,
-    ):
+    def handle(self, app_code, app_module, app_env, domain_name, path_prefix, https_enabled, *args, **options):
         # Get application, module, and environment
         try:
             application = Application.objects.get(code=app_code)

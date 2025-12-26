@@ -15,6 +15,25 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from .app_resource import *
-from .mount import *
-from .res_quota_plan import *
+
+from django.urls import re_path
+
+from .views import ResourceQuotaPlanViewSet
+
+urlpatterns = [
+    re_path(
+        r"^api/plat_mgt/res_quota_plans/quantity_options/$",
+        ResourceQuotaPlanViewSet.as_view({"get": "get_quantity_options"}),
+        name="plat_mgt.res_quota_plans.quantity_options",
+    ),
+    re_path(
+        r"^api/plat_mgt/res_quota_plans/(?P<pk>[^/]+)/$",
+        ResourceQuotaPlanViewSet.as_view({"put": "update", "delete": "destroy"}),
+        name="plat_mgt.res_quota_plans.update_destroy",
+    ),
+    re_path(
+        r"^api/plat_mgt/res_quota_plans/$",
+        ResourceQuotaPlanViewSet.as_view({"get": "list", "post": "create"}),
+        name="plat_mgt.res_quota_plans.list_create",
+    ),
+]

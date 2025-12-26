@@ -165,9 +165,10 @@ func BuildPreReleaseHook(bkapp *paasv1alpha2.BkApp, status *paasv1alpha2.HookSta
 						Resources: envs.NewProcResourcesGetter(bkapp).Default(),
 					},
 				},
-				RestartPolicy:    "Never",
-				NodeSelector:     common.BuildNodeSelector(bkapp),
-				Tolerations:      common.BuildTolerations(bkapp),
+				RestartPolicy: "Never",
+				NodeSelector:  common.BuildNodeSelector(bkapp),
+				Tolerations:   common.BuildTolerations(bkapp),
+				// 镜像拉取凭证
 				ImagePullSecrets: common.BuildImagePullSecrets(bkapp),
 			},
 		},

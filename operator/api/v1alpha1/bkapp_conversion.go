@@ -135,17 +135,17 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 		)
 	}
 
-	// Copy NodeSelector and Tolerations
-	_ = copier.CopyWithOption(
-		&dst.Spec.NodeSelector,
-		&src.Spec.NodeSelector,
-		copier.Option{IgnoreEmpty: true, DeepCopy: true},
-	)
-	_ = copier.CopyWithOption(
-		&dst.Spec.Tolerations,
-		&src.Spec.Tolerations,
-		copier.Option{IgnoreEmpty: true, DeepCopy: true},
-	)
+	// Copy Schedule field, extra logics needs because of the pointer type
+	if src.Spec.Schedule == nil {
+		dst.Spec.Schedule = nil
+	} else {
+		dst.Spec.Schedule = &paasv1alpha2.Schedule{}
+		_ = copier.CopyWithOption(
+			&dst.Spec.Schedule,
+			&src.Spec.Schedule,
+			copier.Option{IgnoreEmpty: true, DeepCopy: true},
+		)
+	}
 
 	// Copy Status field
 	_ = copier.CopyWithOption(
@@ -261,17 +261,17 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 		)
 	}
 
-	// Copy NodeSelector and Tolerations
-	_ = copier.CopyWithOption(
-		&dst.Spec.NodeSelector,
-		&src.Spec.NodeSelector,
-		copier.Option{IgnoreEmpty: true, DeepCopy: true},
-	)
-	_ = copier.CopyWithOption(
-		&dst.Spec.Tolerations,
-		&src.Spec.Tolerations,
-		copier.Option{IgnoreEmpty: true, DeepCopy: true},
-	)
+	// Copy Schedule field, extra logics needs because of the pointer type
+	if src.Spec.Schedule == nil {
+		dst.Spec.Schedule = nil
+	} else {
+		dst.Spec.Schedule = &Schedule{}
+		_ = copier.CopyWithOption(
+			&dst.Spec.Schedule,
+			&src.Spec.Schedule,
+			copier.Option{IgnoreEmpty: true, DeepCopy: true},
+		)
+	}
 
 	// Copy Status field
 	_ = copier.CopyWithOption(

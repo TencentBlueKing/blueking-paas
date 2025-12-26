@@ -65,9 +65,11 @@ var _ = Describe("Test selector functions", func() {
 		})
 
 		It("should return user-defined nodeSelector", func() {
-			bkapp.Spec.NodeSelector = map[string]string{
-				"disktype": "ssd",
-				"env":      "production",
+			bkapp.Spec.Schedule = &paasv1alpha2.Schedule{
+				NodeSelector: map[string]string{
+					"disktype": "ssd",
+					"env":      "production",
+				},
 			}
 			result := common.BuildNodeSelector(bkapp)
 			Expect(result).To(Equal(map[string]string{
@@ -84,8 +86,10 @@ var _ = Describe("Test selector functions", func() {
 
 		It("should merge egress and user-defined nodeSelector", func() {
 			bkapp.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey] = "eng-cstate-test"
-			bkapp.Spec.NodeSelector = map[string]string{
-				"disktype": "ssd",
+			bkapp.Spec.Schedule = &paasv1alpha2.Schedule{
+				NodeSelector: map[string]string{
+					"disktype": "ssd",
+				},
 			}
 			result := common.BuildNodeSelector(bkapp)
 			Expect(result).To(Equal(map[string]string{
@@ -96,8 +100,10 @@ var _ = Describe("Test selector functions", func() {
 
 		It("user-defined nodeSelector should take precedence over egress", func() {
 			bkapp.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey] = "eng-cstate-test"
-			bkapp.Spec.NodeSelector = map[string]string{
-				"eng-cstate-test": "2", // Override egress value
+			bkapp.Spec.Schedule = &paasv1alpha2.Schedule{
+				NodeSelector: map[string]string{
+					"eng-cstate-test": "2", // Override egress value
+				},
 			}
 			result := common.BuildNodeSelector(bkapp)
 			Expect(result).To(Equal(map[string]string{
@@ -113,17 +119,19 @@ var _ = Describe("Test selector functions", func() {
 		})
 
 		It("should return user-defined tolerations", func() {
-			bkapp.Spec.Tolerations = []corev1.Toleration{
-				{
-					Key:      "key1",
-					Operator: corev1.TolerationOpEqual,
-					Value:    "value1",
-					Effect:   corev1.TaintEffectNoSchedule,
-				},
-				{
-					Key:      "key2",
-					Operator: corev1.TolerationOpExists,
-					Effect:   corev1.TaintEffectNoExecute,
+			bkapp.Spec.Schedule = &paasv1alpha2.Schedule{
+				Tolerations: []corev1.Toleration{
+					{
+						Key:      "key1",
+						Operator: corev1.TolerationOpEqual,
+						Value:    "value1",
+						Effect:   corev1.TaintEffectNoSchedule,
+					},
+					{
+						Key:      "key2",
+						Operator: corev1.TolerationOpExists,
+						Effect:   corev1.TaintEffectNoExecute,
+					},
 				},
 			}
 			result := common.BuildTolerations(bkapp)

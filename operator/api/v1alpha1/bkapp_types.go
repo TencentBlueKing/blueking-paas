@@ -91,6 +91,13 @@ type AppSpec struct {
 	// +optional
 	Observability *paasv1alpha2.Observability `json:"observability,omitempty"`
 
+	// Schedule holds scheduling related configurations, includes node selector and tolerations.
+	// +optional
+	Schedule *Schedule `json:"schedule,omitempty"`
+}
+
+// Schedule holds scheduling related configurations, includes node selector and tolerations.
+type Schedule struct {
 	// NodeSelector is a selector which must be true for the pod to fit on a node.
 	// Selector which must match a node's labels for the pod to be scheduled on that node.
 	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/

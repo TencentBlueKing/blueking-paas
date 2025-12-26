@@ -36,9 +36,9 @@ func BuildNodeSelector(app *paasv1alpha2.BkApp) map[string]string {
 		}
 	}
 
-	// 2. apply user-defined node selector (takes precedence)
-	if app.Spec.NodeSelector != nil {
-		for k, v := range app.Spec.NodeSelector {
+	// 2. apply user-defined node selector (webhook already guarantees no conflict)
+	if app.Spec.Schedule != nil && app.Spec.Schedule.NodeSelector != nil {
+		for k, v := range app.Spec.Schedule.NodeSelector {
 			result[k] = v
 		}
 	}
@@ -59,8 +59,8 @@ func buildEgressNodeSelector(app *paasv1alpha2.BkApp) map[string]string {
 
 // BuildTolerations returns the tolerations configured in the BkApp spec.
 func BuildTolerations(app *paasv1alpha2.BkApp) []corev1.Toleration {
-	if app.Spec.Tolerations == nil {
+	if app.Spec.Schedule == nil {
 		return nil
 	}
-	return app.Spec.Tolerations
+	return app.Spec.Schedule.Tolerations
 }

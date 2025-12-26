@@ -145,6 +145,7 @@ func BuildProcDeployment(app *paasv1alpha2.BkApp, procName string) (*appsv1.Depl
 					Containers:       buildContainers(proc, envVars, image, pullPolicy, resReq, useCNB),
 					ImagePullSecrets: BuildImagePullSecrets(app),
 					NodeSelector:     common.BuildNodeSelector(app),
+					Tolerations:      common.BuildTolerations(app),
 					// 不默认向 Pod 中挂载 ServiceAccount Token
 					AutomountServiceAccountToken: lo.ToPtr(false),
 				},

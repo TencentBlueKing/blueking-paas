@@ -317,6 +317,9 @@ func (r *BkApp) validateAppSpec() *field.Error {
 	if err := r.validateDomainResolution(); err != nil {
 		return err
 	}
+	if err := r.validateSchedule(); err != nil {
+		return err
+	}
 
 	procCounter := map[string]int{}
 	for idx, proc := range r.Spec.Processes {
@@ -430,6 +433,31 @@ func (r *BkApp) validateDomainResolution() *field.Error {
 			}
 		}
 	}
+	return nil
+}
+
+func (r *BkApp) validateSchedule() *field.Error {
+	if r.Spec.Schedule == nil {
+		return nil
+	}
+	scheduleField := field.NewPath("spec").Child("schedule")
+
+	// Validate NodeSelector conflicts with EgressNodeSelector
+	if egressClusterStateName, ok := r.Annotations[EgressClusterStateNameAnnoKey]; ok {
+		if r.Spec.Schedule.NodeSelector != nil {
+			if _, exists := r.Spec.Schedule.NodeSelector[egressClusterStateName]; exists {
+				return field.Invalid(
+					scheduleField.Child("nodeSelector"),
+					r.Spec.Schedule.NodeSelector,
+					fmt.Sprintf(
+						"nodeSelector key %q conflicts with egress configuration",
+						egressClusterStateName,
+					),
+				)
+			}
+		}
+	}
+
 	return nil
 }
 

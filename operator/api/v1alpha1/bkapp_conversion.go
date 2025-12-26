@@ -135,6 +135,18 @@ func (src *BkApp) ConvertTo(dstRaw conversion.Hub) error {
 		)
 	}
 
+	// Copy Schedule field, extra logics needs because of the pointer type
+	if src.Spec.Schedule == nil {
+		dst.Spec.Schedule = nil
+	} else {
+		dst.Spec.Schedule = &paasv1alpha2.Schedule{}
+		_ = copier.CopyWithOption(
+			&dst.Spec.Schedule,
+			&src.Spec.Schedule,
+			copier.Option{IgnoreEmpty: true, DeepCopy: true},
+		)
+	}
+
 	// Copy Status field
 	_ = copier.CopyWithOption(
 		&dst.Status, &src.Status, copier.Option{IgnoreEmpty: true, DeepCopy: true},
@@ -245,6 +257,18 @@ func (dst *BkApp) ConvertFrom(srcRaw conversion.Hub) error {
 		_ = copier.CopyWithOption(
 			&dst.Spec.EnvOverlay,
 			&src.Spec.EnvOverlay,
+			copier.Option{IgnoreEmpty: true, DeepCopy: true},
+		)
+	}
+
+	// Copy Schedule field, extra logics needs because of the pointer type
+	if src.Spec.Schedule == nil {
+		dst.Spec.Schedule = nil
+	} else {
+		dst.Spec.Schedule = &Schedule{}
+		_ = copier.CopyWithOption(
+			&dst.Spec.Schedule,
+			&src.Spec.Schedule,
 			copier.Option{IgnoreEmpty: true, DeepCopy: true},
 		)
 	}

@@ -311,7 +311,6 @@ class TestProcessesManifestConstructor:
                     "probes": None,
                     "services": None,
                     "components": None,
-                    "schedule": None,
                 }
             ],
             "envOverlay": {

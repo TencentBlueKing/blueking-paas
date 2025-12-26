@@ -671,14 +671,10 @@ def apply_cluster_scheduling_config(model_res: crd.BkAppResource, env: ModuleEnv
             for t in cluster.default_tolerations
         ]
 
-    # Apply scheduling config to each process
-    for proc in model_res.spec.processes:
-        # Users cannot define schedule in ModuleProcessSpec, so directly set cluster's default config
-        if cluster.default_node_selector or tolerations:
-            proc.schedule = crd.Schedule(
-                nodeSelector=cluster.default_node_selector,
-                tolerations=tolerations,
-            )
+    model_res.spec.schedule = crd.Schedule(
+        nodeSelector=cluster.default_node_selector,
+        tolerations=tolerations,
+    )
 
 
 def _update_cmd_args_from_wl_build(model_res: crd.BkAppResource, wl_build: WlBuild):

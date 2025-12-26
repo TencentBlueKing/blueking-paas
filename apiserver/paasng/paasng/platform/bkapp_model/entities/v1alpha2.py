@@ -31,6 +31,7 @@ from .mounts import Mount, MountOverlay
 from .observability import Observability
 from .proc_env_overlays import AutoscalingOverlay, ReplicasOverlay, ResQuotaOverlay
 from .processes import Process
+from .schedule import Schedule
 from .svc_discovery import SvcDiscConfig
 
 
@@ -66,6 +67,7 @@ class BkAppSpec(AllowNotsetModel):
     :param env_overlay: 分环境重写配置
     :param observability: 可观测功能配置
     :param components: 进程组件
+    :param schedule: 调度配置
     """
 
     build: Optional[AppBuildConfig] = None
@@ -79,3 +81,4 @@ class BkAppSpec(AllowNotsetModel):
     env_overlay: BkAppEnvOverlay | NotSetType | None = NOTSET
     observability: Optional[Observability] = None
     components: Optional[List[Component]] = None
+    schedule: Optional[Schedule] = None

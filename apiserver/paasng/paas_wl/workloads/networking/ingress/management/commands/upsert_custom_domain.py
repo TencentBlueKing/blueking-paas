@@ -24,7 +24,7 @@ from django.core.management.base import BaseCommand, CommandError
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.platform.applications.models import Application, Module
 
-# Same regex as DomainEditableMixin, but without UniqueTogetherValidator for idempotency
+# Same regex as DomainEditableMixin.
 DOMAIN_NAME_REGEX = re.compile(r"^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+\.?$")
 PATH_PREFIX_REGEX = re.compile(r"^/([^/]+/?)*$")
 

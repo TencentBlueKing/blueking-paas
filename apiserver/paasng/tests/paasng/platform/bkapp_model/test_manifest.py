@@ -360,7 +360,7 @@ class TestProcessesManifestConstructor:
         data = blank_resource.spec.dict(exclude_none=True, include={"processes"})["processes"][0]
         assert data["components"] == [
             {
-                "properties": '{"env": [{"name": "proc_name", "value": "FOO"}, {"name": ' '"key", "value": "1"}]}',
+                "properties": '{"env": [{"name": "proc_name", "value": "FOO"}, {"name": "key", "value": "1"}]}',
                 "name": "env_overlay",
                 "version": "v1",
             },

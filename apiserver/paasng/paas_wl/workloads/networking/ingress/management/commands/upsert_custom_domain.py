@@ -15,14 +15,17 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-"""Command to create custom domain for application."""
+"""Command to upsert custom domain for application."""
+
+import re
 
 from django.core.management.base import BaseCommand, CommandError
-from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from paas_wl.workloads.networking.entrance.serializers import DomainEditableMixin
 from paas_wl.workloads.networking.ingress.models import Domain
 from paasng.platform.applications.models import Application, Module
+
+DOMAIN_NAME_REGEX = re.compile(r"^[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+\.?$")
+PATH_PREFIX_REGEX = re.compile(r"^/([^/]+/?)*$")
 
 
 class Command(BaseCommand):
@@ -66,18 +69,10 @@ class Command(BaseCommand):
         environment = module.envs.get(environment=app_env)
 
         # Validate domain data using serializer
-        try:
-            slz = DomainEditableMixin(
-                data={"domain_name": domain_name, "path_prefix": path_prefix, "https_enabled": https_enabled}
-            )
-            slz.is_valid(raise_exception=True)
-            validated_data = slz.validated_data
-            # Use validated and normalized values
-            domain_name = validated_data["name"]
-            path_prefix = validated_data["path_prefix"]
-            https_enabled = validated_data["https_enabled"]
-        except DRFValidationError as e:
-            raise CommandError(f"Validation failed: {e.detail}")
+        if not DOMAIN_NAME_REGEX.match(domain_name):
+            raise CommandError(f"Validation failed: Domain name '{domain_name}' format is invalid")
+        if not PATH_PREFIX_REGEX.match(path_prefix):
+            raise CommandError(f"Validation failed: Path prefix '{path_prefix}' format is invalid")
 
         # Create or update domain using unique_together fields
         domain, created = Domain.objects.update_or_create(

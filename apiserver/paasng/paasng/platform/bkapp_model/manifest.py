@@ -662,8 +662,8 @@ def apply_cluster_scheduling_config(model_res: crd.BkAppResource, env: ModuleEnv
     if cluster.default_tolerations:
         tolerations = [
             crd.Toleration(
-                key=t.get("key"),
-                operator=t.get("operator"),
+                key=t["key"],
+                operator=t["operator"],
                 value=t.get("value"),
                 effect=t.get("effect"),
                 tolerationSeconds=t.get("tolerationSeconds"),

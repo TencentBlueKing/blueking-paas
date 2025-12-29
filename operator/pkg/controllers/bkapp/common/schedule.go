@@ -36,7 +36,7 @@ func BuildNodeSelector(app *paasv1alpha2.BkApp) map[string]string {
 		}
 	}
 
-	// 2. apply user-defined node selector (webhook already guarantees no conflict)
+	// 2. apply user-defined node selector (no conflict with egress NodeSelector)
 	if app.Spec.Schedule != nil && app.Spec.Schedule.NodeSelector != nil {
 		for k, v := range app.Spec.Schedule.NodeSelector {
 			result[k] = v

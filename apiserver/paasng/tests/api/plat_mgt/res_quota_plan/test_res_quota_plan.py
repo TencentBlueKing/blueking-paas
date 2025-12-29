@@ -19,9 +19,10 @@
 import pytest
 from django.urls import reverse
 
-from paas_wl.bk_app.cnative.specs.models import ResQuotaPlan
+from paasng.platform.bkapp_model.constants import MAX_PROC_CPU, MAX_PROC_MEM
+from paasng.platform.bkapp_model.models import ResQuotaPlan
 
-pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+pytestmark = pytest.mark.django_db(databases=["default"])
 
 
 class TestResourceQuotaPlanViewSet:
@@ -31,11 +32,8 @@ class TestResourceQuotaPlanViewSet:
     def sample_plan_data(self):
         return {
             "plan_name": "test-plan",
-            "cpu_limits": "4000m",
-            "memory_limits": "2048Mi",
-            "cpu_requests": "1000m",
-            "memory_requests": "512Mi",
-            "is_active": True,
+            "limits": {"cpu": "4000m", "memory": "2048Mi"},
+            "requests": {"cpu": "1000m", "memory": "512Mi"},
         }
 
     @pytest.fixture()
@@ -43,26 +41,18 @@ class TestResourceQuotaPlanViewSet:
         """创建测试用的资源配额方案"""
         return ResQuotaPlan.objects.create(**sample_plan_data)
 
-    def test_list_empty(self, plat_mgt_api_client):
-        url = reverse("plat_mgt.res_quota_plans.list_create")
-        response = plat_mgt_api_client.get(url)
-        assert response.status_code == 200
-        assert response.data == []
-
     def test_list_with_plans(self, plat_mgt_api_client, created_plan, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.list_create")
         response = plat_mgt_api_client.get(url)
+
         assert response.status_code == 200
-        assert len(response.data) == 1
-        plan = response.data[0]
-        assert plan["plan_name"] == sample_plan_data["plan_name"]
-        assert plan["cpu_limits"] == sample_plan_data["cpu_limits"]
-        assert plan["memory_limits"] == sample_plan_data["memory_limits"]
+        assert len(response.data) == 5
 
     def test_create_success(self, plat_mgt_api_client, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.list_create")
         response = plat_mgt_api_client.post(url, data=sample_plan_data)
         assert response.status_code == 201
+
         assert ResQuotaPlan.objects.filter(plan_name=sample_plan_data["plan_name"]).exists()
 
     def test_create_duplicate_name(self, plat_mgt_api_client, sample_plan_data, created_plan):
@@ -70,40 +60,32 @@ class TestResourceQuotaPlanViewSet:
         response = plat_mgt_api_client.post(url, data=sample_plan_data)
         assert response.status_code == 400
 
-    @pytest.mark.parametrize(
-        "field",
-        ["cpu_limits", "cpu_requests", "memory_limits", "memory_requests"],
-    )
-    def test_create_invalid_resource_value(self, plat_mgt_api_client, sample_plan_data, field):
-        url = reverse("plat_mgt.res_quota_plans.list_create")
-        sample_plan_data[field] = "invalid"
-        response = plat_mgt_api_client.post(url, data=sample_plan_data)
-        assert response.status_code == 400
-
     def test_update_success(self, plat_mgt_api_client, created_plan, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
         update_data = sample_plan_data.copy()
         update_data["plan_name"] = "updated-plan"
-        update_data["cpu_limits"] = "8000m"
+        update_data["limits"] = {"cpu": "8000m", "memory": "4096Mi"}
+        update_data["requests"] = {"cpu": "2000m", "memory": "1024Mi"}
 
         response = plat_mgt_api_client.put(url, data=update_data)
         assert response.status_code == 200
 
         created_plan.refresh_from_db()
         assert created_plan.plan_name == "updated-plan"
-        assert created_plan.cpu_limits == "8000m"
+        assert created_plan.limits == {"cpu": "8000m", "memory": "4096Mi"}
+        assert created_plan.requests == {"cpu": "2000m", "memory": "1024Mi"}
 
     def test_update_with_same_name(self, plat_mgt_api_client, created_plan, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
         update_data = sample_plan_data.copy()
-        update_data["cpu_limits"] = "8000m"
+        update_data["limits"] = {"cpu": "8000m", "memory": "4096Mi"}
 
         response = plat_mgt_api_client.put(url, data=update_data)
         assert response.status_code == 200
 
         created_plan.refresh_from_db()
-        assert created_plan.plan_name == sample_plan_data["plan_name"]
-        assert created_plan.cpu_limits == "8000m"
+        assert created_plan.limits == {"cpu": "8000m", "memory": "4096Mi"}
+        assert created_plan.requests == {"cpu": "1000m", "memory": "512Mi"}
 
     def test_update_duplicate_name(self, plat_mgt_api_client, created_plan, sample_plan_data):
         another_plan_data = sample_plan_data.copy()
@@ -128,8 +110,37 @@ class TestResourceQuotaPlanViewSet:
         response = plat_mgt_api_client.delete(url)
         assert response.status_code == 404
 
-    def test_get_quantity_options(self, plat_mgt_api_client):
-        url = reverse("plat_mgt.res_quota_plans.quantity_options")
+    @pytest.mark.parametrize(
+        ("limits", "requests", "expected_status"),
+        [
+            ({"cpu": "1000", "memory": "2048Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
+            ({"cpu": "-1000m", "memory": "2048Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
+            ({"cpu": "xyz0m", "memory": "2048Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
+            ({"cpu": "1000m", "memory": "2048"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
+            ({"cpu": "1000m", "memory": "-2048Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
+            ({"cpu": "1000m", "memory": "xyz0Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
+            # 超过最大值
+            ({"cpu": f"{int(MAX_PROC_CPU[:-1]) + 1}m", "memory": "2048Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
+            # requests 超过 limits
+            ({"cpu": "4000m", "memory": "2048Mi"}, {"cpu": "5000m", "memory": "512Mi"}, 400),
+            # 成功案例：最大允许值
+            ({"cpu": MAX_PROC_CPU, "memory": MAX_PROC_MEM}, {"cpu": MAX_PROC_CPU, "memory": MAX_PROC_MEM}, 201),
+        ],
+    )
+    def test_resource_validation(self, plat_mgt_api_client, limits, requests, expected_status):
+        """统一测试资源配额方案的各种验证场景"""
+        url = reverse("plat_mgt.res_quota_plans.list_create")
+        data = {
+            "plan_name": "validation-test-plan",
+            "limits": limits,
+            "requests": requests,
+        }
+
+        response = plat_mgt_api_client.post(url, data=data)
+        assert response.status_code == expected_status
+
+    def test_list_quantity_options(self, plat_mgt_api_client):
+        url = reverse("plat_mgt.res_quota_plans.list_quantity_options")
         response = plat_mgt_api_client.get(url)
         assert response.status_code == 200
         assert "cpu_resource_quantity" in response.data

@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from jsonfield import JSONField
 
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -43,6 +44,24 @@ from paasng.utils.models import make_json_field
 
 if TYPE_CHECKING:
     from typing import Callable  # noqa: F401
+
+
+DEFAULT_RES_QUOTA_PLAN_NAME = "default"
+
+
+class ResQuotaPlan(TimestampedModel):
+    """
+    [multi-tenancy] This model is not tenant-aware.
+    """
+
+    plan_name = models.CharField("方案名称", max_length=64, unique=True)
+    limits = JSONField(default={})
+    requests = JSONField(default={})
+    is_active = models.BooleanField("是否启用", default=True)
+    is_builtin = models.BooleanField("是否为内置方案", default=False)
+
+    class Meta:
+        ordering = ["created"]
 
 
 def env_overlay_getter_factory(field_name: str):

@@ -70,8 +70,8 @@ urlpatterns = [
     # 平台管理 - 应用进程
     re_path(
         r"^api/plat_mgt/processes/quota_plans/$",
-        views.ApplicationProcessViewSet.as_view({"get": "get_res_quota_plans_options"}),
-        name="plat_mgt.process.res_quota_plans_options",
+        views.ApplicationProcessViewSet.as_view({"get": "list_quota_plans"}),
+        name="plat_mgt.process.list_quota_plans",
     ),
     re_path(
         r"^api/plat_mgt/applications/(?P<app_code>[^/]+)/modules/(?P<module_name>[^/]+)/processes/$",

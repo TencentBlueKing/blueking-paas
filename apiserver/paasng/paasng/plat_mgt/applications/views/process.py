@@ -16,7 +16,6 @@
 # to the current version of the project delivered to anyone in the future.
 
 
-from attrs import asdict
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -25,9 +24,6 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
-from paas_wl.bk_app.cnative.specs.models import ResQuotaPlan as ResQuotaPlanModel
-from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
@@ -37,7 +33,7 @@ from paasng.plat_mgt.applications.serializers import (
     ProcessSpecInputSLZ,
 )
 from paasng.platform.applications.models import Application
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay, ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import SourceOrigin
 
@@ -188,35 +184,17 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_res_quota_plans_options(self, request):
-        """获取资源配额方案选项列表
-        TODO: /api/mres/quota_plans/ 接口的复用, 这里添加用户自定义的 资源方案, 后续重构 resQuotaPlan 时这里需要更改
-        """
+    def list_quota_plans(self, request):
+        """获取资源配额方案选项列表"""
 
-        result = []
-
-        builtin_plans = [
-            {
-                "name": ResQuotaPlan.get_choice_label(plan),
-                "value": str(plan),
-                "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[plan]),
-                "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[plan]),
-            }
-            for plan in ResQuotaPlan.get_values()
-        ]
-
-        custom_plans_qs = ResQuotaPlanModel.objects.filter(is_builtin=False)
-        custom_plans = [
+        result = [
             {
                 "name": plan.plan_name,
                 "value": str(plan.plan_name),
-                "limits": {"cpu": plan.cpu_limit, "memory": plan.memory_limit},
-                "requests": {"cpu": plan.cpu_request, "memory": plan.memory_request},
+                "limits": plan.limits,
+                "requests": plan.requests,
             }
-            for plan in custom_plans_qs
+            for plan in ResQuotaPlan.objects.filter(is_active=True)
         ]
-
-        result.extend(builtin_plans)
-        result.extend(custom_plans)
 
         return Response(result)

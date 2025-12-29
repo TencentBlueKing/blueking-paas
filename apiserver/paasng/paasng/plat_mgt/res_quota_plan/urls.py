@@ -23,8 +23,8 @@ from .views import ResourceQuotaPlanViewSet
 urlpatterns = [
     re_path(
         r"^api/plat_mgt/res_quota_plans/quantity_options/$",
-        ResourceQuotaPlanViewSet.as_view({"get": "get_quantity_options"}),
-        name="plat_mgt.res_quota_plans.quantity_options",
+        ResourceQuotaPlanViewSet.as_view({"get": "list_quantity_options"}),
+        name="plat_mgt.res_quota_plans.list_quantity_options",
     ),
     re_path(
         r"^api/plat_mgt/res_quota_plans/(?P<pk>[^/]+)/$",

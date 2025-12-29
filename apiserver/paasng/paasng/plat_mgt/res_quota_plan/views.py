@@ -16,17 +16,18 @@
 # to the current version of the project delivered to anyone in the future.
 
 from django.shortcuts import get_object_or_404
+from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paas_wl.bk_app.cnative.specs.models import ResQuotaPlan
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
+from paasng.platform.bkapp_model.models import ResQuotaPlan
 
 from .serializers import ResQuotaPlanInputSLZ, ResQuotaPlanOutputSLZ
 
@@ -113,6 +114,10 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         """删除资源配额方案"""
 
         plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
+
+        if plan_obj.is_builtin:
+            return Response({"detail": _("系统内置方案不允许删除")}, status=status.HTTP_400_BAD_REQUEST)
+
         data_before = ResQuotaPlanOutputSLZ(plan_obj).data
         plan_obj.delete()
 
@@ -130,7 +135,7 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         operation_description="获取自定义资源配置的可选项列表 (CPU 和内存的预设值)",
         responses={status.HTTP_200_OK: None},
     )
-    def get_quantity_options(self, request):
+    def list_quantity_options(self, request):
         """获取自定义资源配置的可选项列表 (CPU 和内存的预设值)"""
 
         cpu_resource_quantity = [

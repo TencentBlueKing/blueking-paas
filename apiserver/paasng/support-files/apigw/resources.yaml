@@ -1765,3 +1765,50 @@ paths:
           resourcePermissionRequired: true
         descriptionEn:
         noneSchema: true
+  /system/bk_plugins/ai/{code}/granted_distributors/{distributor_code}/:
+    post:
+      operationId: granted_ai_agent_distributors
+      description: AI 插件应用给插件使用方授权
+      tags:
+      - 蓝鲸应用插件
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /backend/sys/api/bk_plugins/ai/{code}/granted_distributors/{distributor_code}/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true
+    delete:
+      operationId: delete_ai_agent_distributors
+      description: 删除 AI 插件的插件使用方
+      tags:
+      - 蓝鲸应用插件
+      x-bk-apigateway-resource:
+        isPublic: false
+        allowApplyPermission: false
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: delete
+          path: /backend/sys/api/bk_plugins/ai/{code}/granted_distributors/{distributor_code}/
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs: []
+        authConfig:
+          userVerifiedRequired: false
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn:
+        noneSchema: true

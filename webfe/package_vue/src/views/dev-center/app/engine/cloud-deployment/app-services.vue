@@ -269,8 +269,8 @@
           @submit.prevent="submitRemoveInstance"
         >
           <div class="spacing-x1">
-            {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入应用 ID') }}
-            <code>{{ appCode }}</code>
+            {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入{type}', { type: $t('模块名称') }) }}
+            <code>{{ curModuleId }}</code>
             {{ $t('确认：') }}
           </div>
           <div class="ps-form-group">
@@ -292,7 +292,6 @@
             theme="primary"
             :disabled="!formRemoveValidated"
             @click="submitRemoveInstance"
-            class="mr10"
           >
             {{ $t('确定') }}
           </bk-button>
@@ -326,8 +325,8 @@
             class="mb20"
           />
           <div class="spacing-x1">
-            {{ $t('请完整输入应用 ID ') }}
-            <code>{{ appCode }}</code>
+            {{ $t('预发布环境和生产环境的实例都将被删除；该操作不可撤销，请完整输入{type}', { type: $t('模块名称') }) }}
+            <code>{{ curModuleId }}</code>
             {{ $t('确认：') }}
           </div>
           <div class="ps-form-group">
@@ -344,7 +343,6 @@
             :loading="removeSharedDialog.isLoading"
             :disabled="!formRemoveValidated"
             @click="submitRemoveShared"
-            class="mr10"
           >
             {{ $t('确定') }}
           </bk-button>
@@ -466,7 +464,7 @@ export default {
       return this.curAppInfo.application.region;
     },
     formRemoveValidated() {
-      return this.appCode === this.formRemoveConfirmCode;
+      return this.curModuleId === this.formRemoveConfirmCode;
     },
     errorTips() {
       if (this.curData.type === 'bound' && this.delAppDialog.moduleList.length) {

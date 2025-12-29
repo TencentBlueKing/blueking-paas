@@ -24,6 +24,7 @@ import logging
 from typing import TYPE_CHECKING, Optional, Type
 
 import requests
+from django.conf import settings
 from django.utils.module_loading import import_string
 from django.utils.translation import gettext as _
 
@@ -63,7 +64,7 @@ class BaseSvnAuthClient:
 
 class BaseRealSvnAuthClient(BaseSvnAuthClient):
     SVN_SECRET = "32fc6114554e3c53d5952594510021e2"
-    SVN_OPERATE_ERROR_NOTIFIER = "admin"
+    SVN_OPERATE_ERROR_NOTIFIER = settings.ADMIN_USERNAME
     DUMMY = True
     TIMEOUT = 60
     SSL_VERIFY = False

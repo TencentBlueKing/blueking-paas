@@ -65,7 +65,7 @@ class BkCmsiApiGwClient:
         try:
             result = getattr(self.client, method)(json=params)
         except (APIGatewayResponseError, ResponseError) as e:
-            logging.exception("call bk_cmsi api error, method: %s, params: %s", method, params)
+            logger.exception("call bk_cmsi api error, method: %s, params: %s", method, params)
             raise NotificationSendFailedError(f"API request failed: {e}") from e
 
         logger.debug("call bk_cmsi api success, result:%s", result)

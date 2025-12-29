@@ -17,6 +17,7 @@
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from paasng.platform.bkapp_model.constants import MAX_PROC_CPU, MAX_PROC_MEM
 from paasng.platform.bkapp_model.models import ResQuotaPlan
@@ -71,20 +72,18 @@ class ResourceQuotaSLZ(serializers.Serializer):
 class ResQuotaPlanInputSLZ(serializers.Serializer):
     """资源配额方案基础输入序列化器"""
 
-    plan_name = serializers.CharField(max_length=64)
+    plan_name = serializers.CharField(
+        max_length=64,
+        validators=[
+            UniqueValidator(
+                queryset=ResQuotaPlan.objects.all(),
+                message=_("资源配额方案名称已存在，请使用其他名称"),
+            )
+        ],
+    )
     limits = ResourceQuotaSLZ()
     requests = ResourceQuotaSLZ()
     is_active = serializers.BooleanField(required=False, default=True)
-
-    def validate_plan_name(self, value):
-        queryset = ResQuotaPlan.objects.filter(plan_name=value)
-        # 更新时排除自身实例
-        if self.instance:
-            queryset = queryset.exclude(id=self.instance.id)
-
-        if queryset.exists():
-            raise serializers.ValidationError(_("资源配额方案名称已存在，请使用其他名称"))
-        return value
 
     def validate(self, attrs):
         """Validate that requests do not exceed limits."""

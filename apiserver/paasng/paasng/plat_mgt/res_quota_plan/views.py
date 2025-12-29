@@ -90,9 +90,11 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
 
         data_before = ResQuotaPlanInputSLZ(plan_obj).data
 
-        for attr, value in data.items():
-            setattr(plan_obj, attr, value)
+        plan_obj.plan_name = data["plan_name"]
+        plan_obj.limits = data["limits"]
+        plan_obj.requests = data["requests"]
         plan_obj.save()
+
         data_after = ResQuotaPlanInputSLZ(plan_obj).data
 
         add_plat_mgt_audit_record(

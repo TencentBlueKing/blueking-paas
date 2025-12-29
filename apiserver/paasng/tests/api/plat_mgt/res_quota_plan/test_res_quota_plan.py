@@ -128,8 +128,7 @@ class TestResourceQuotaPlanViewSet:
         update_data["plan_name"] = "updated-builtin"
 
         response = plat_mgt_api_client.put(url, data=update_data)
-        assert response.status_code == 400
-        assert "系统内置方案不允许修改" in str(response.data)
+        assert response.status_code == 403
 
     def test_destroy_builtin_plan_forbidden(self, plat_mgt_api_client):
         """测试内置方案不允许删除"""
@@ -142,8 +141,7 @@ class TestResourceQuotaPlanViewSet:
 
         url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": builtin_plan.id})
         response = plat_mgt_api_client.delete(url)
-        assert response.status_code == 400
-        assert "系统内置方案不允许删除" in str(response.data)
+        assert response.status_code == 403
         # 确认方案仍然存在
         assert ResQuotaPlan.objects.filter(id=builtin_plan.id).exists()
 

@@ -49,7 +49,7 @@ class ResourceQuotaSLZ(serializers.Serializer):
             if num <= 0:
                 raise serializers.ValidationError(_("必须为正整数, 如 500m"))
             if num > int(MAX_PROC_CPU[:-1]):
-                raise serializers.ValidationError(_(f"不能超过最大值 {MAX_PROC_CPU}"))
+                raise serializers.ValidationError(_("不能超过最大值 %s") % MAX_PROC_CPU)
         except ValueError:
             raise serializers.ValidationError(_("格式不正确, 必须为正整数加 'm', 如 500m"))
         return value
@@ -63,7 +63,7 @@ class ResourceQuotaSLZ(serializers.Serializer):
             if num <= 0:
                 raise serializers.ValidationError(_("必须为正整数, 如 512Mi"))
             if num > int(MAX_PROC_MEM[:-2]):
-                raise serializers.ValidationError(_(f"不能超过最大值 {MAX_PROC_MEM}"))
+                raise serializers.ValidationError(_("不能超过最大值 %s") % MAX_PROC_MEM)
         except ValueError:
             raise serializers.ValidationError(_("格式不正确, 必须为正整数加 'Mi', 如 512Mi"))
         return value

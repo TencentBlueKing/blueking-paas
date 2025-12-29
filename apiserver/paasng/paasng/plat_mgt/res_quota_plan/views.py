@@ -84,6 +84,9 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
 
         plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
 
+        if plan_obj.is_builtin:
+            return Response({"detail": _("系统内置方案不允许修改")}, status=status.HTTP_403_FORBIDDEN)
+
         slz = ResQuotaPlanInputSLZ(data=request.data, instance=plan_obj)
         slz.is_valid(raise_exception=True)
         data = slz.validated_data
@@ -93,6 +96,7 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         plan_obj.plan_name = data["plan_name"]
         plan_obj.limits = data["limits"]
         plan_obj.requests = data["requests"]
+        plan_obj.is_active = data.get("is_active", plan_obj.is_active)
         plan_obj.save()
 
         data_after = ResQuotaPlanInputSLZ(plan_obj).data
@@ -118,7 +122,7 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
 
         if plan_obj.is_builtin:
-            return Response({"detail": _("系统内置方案不允许删除")}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _("系统内置方案不允许删除")}, status=status.HTTP_403_FORBIDDEN)
 
         data_before = ResQuotaPlanOutputSLZ(plan_obj).data
         plan_obj.delete()

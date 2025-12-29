@@ -400,8 +400,8 @@ class Toleration(BaseModel):
     :param tolerationSeconds: The period of time the toleration tolerates the taint.
     """
 
-    key: str | None = None
-    operator: str | None = None
+    key: str
+    operator: str
     value: str | None = None
     effect: str | None = None
     tolerationSeconds: int | None = None

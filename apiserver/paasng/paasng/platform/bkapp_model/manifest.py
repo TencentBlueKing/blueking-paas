@@ -646,7 +646,7 @@ def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironmen
 def apply_cluster_scheduling_config(model_res: crd.BkAppResource, env: ModuleEnvironment):
     """Apply cluster's default scheduling config (nodeSelector and tolerations) to the resource object.
 
-    The scheduling config (nodeSelector and tolerations) should be applied to each process's schedule field.
+    The scheduling config (nodeSelector and tolerations) is applied to the spec-level schedule field.
 
     :param model_res: The model resource object, it will be modified in-place.
     :param env: The environment object.

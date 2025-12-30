@@ -84,12 +84,15 @@ class DevSandboxQuerySet(models.QuerySet):
         if enable_code_editor:
             code_editor_cfg = CodeEditorConfig(password=generate_password())
 
+        env_vars_dict = {env_var.key: env_var for env_var in env_vars}
+        deduplicated_env_vars = list(env_vars_dict.values())
+
         return super().create(
             code=code,
             module=module,
             owner=owner,
             expired_at=timezone.now() + DEV_SANDBOX_DEFAULT_EXPIRED_DURATION,
-            env_vars=json.dumps([env_var.to_dict() for env_var in env_vars]),
+            env_vars=json.dumps([env_var.to_dict() for env_var in deduplicated_env_vars]),
             version_info=version_info,
             token=generate_password(),
             code_editor_config=code_editor_cfg,

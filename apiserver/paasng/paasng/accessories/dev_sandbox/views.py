@@ -128,7 +128,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         enabled_addons_services = data.get("enabled_addons_services")
         if data["inject_staging_env_vars"]:
             stag_env = module.get_envs(AppEnvironment.STAGING)
-            env_vars.update(get_env_vars_selected_addons(stag_env, enabled_addons_services))
+            env_vars.extend(get_env_vars_selected_addons(stag_env, enabled_addons_services))
 
         dev_sandbox = DevSandbox.objects.create(
             module=module,
@@ -346,4 +346,6 @@ class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         dev_sandbox = self._get_dev_sandbox()
         env_vars = dev_sandbox.list_env_vars()
 
-        return Response(DevSandboxEnvVarsListOutputSLZ(env_vars, many=True).data)
+        return Response(
+            DevSandboxEnvVarsListOutputSLZ([env_var.to_masked_dict() for env_var in env_vars], many=True).data
+        )

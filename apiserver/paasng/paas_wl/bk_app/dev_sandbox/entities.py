@@ -19,7 +19,7 @@ from typing import Dict, List
 
 from attrs import asdict, define, field
 
-from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource, SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 
 
@@ -108,3 +108,41 @@ class CodeEditorConfig:
 
     # 登录密码
     password: str
+
+
+@define
+class DevSandboxEnvVar:
+    """开发沙箱环境变量"""
+
+    key: str
+    value: str
+    source: DevSandboxEnvVarSource
+    sensitive: bool | None = None
+
+    def __attrs_post_init__(self):
+        """
+        若没有指定 sensitive, 则根据 key 自动判断
+        """
+        if self.sensitive is None:
+            if self.key in ["BKPAAS_APP_SECRET"] and self.source == DevSandboxEnvVarSource.STAG:
+                self.sensitive = True
+            else:
+                self.sensitive = False
+
+    def to_dict(self):
+        return asdict(self)
+
+    def to_masked_dict(self):
+        """
+        返回屏蔽敏感信息的字典表示， 可用于 API 输出或日志
+        """
+        data = asdict(self)
+        if self.sensitive:
+            data["value"] = "******"
+        return data
+
+    def __repr__(self):
+        return (
+            f"DevSandboxEnvVar(key={self.key}, value={'******' if self.sensitive else self.value},"
+            f"source={self.source}, sensitive={self.sensitive})"
+        )

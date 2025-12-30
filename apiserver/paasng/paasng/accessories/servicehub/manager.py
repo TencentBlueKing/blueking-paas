@@ -269,7 +269,13 @@ class MixedServiceMgr:
 
             inst = rel.get_instance()
             results.append(
-                EnvVariableGroup(service=rel.get_service(), data=inst.credentials, created_at=inst.create_time)
+                EnvVariableGroup(
+                    service=rel.get_service(),
+                    data=inst.credentials,
+                    created_at=inst.create_time,
+                    should_hidden_fields=inst.should_hidden_fields,
+                    should_remove_fields=inst.should_remove_fields,
+                )
             )
         return results
 
@@ -372,3 +378,5 @@ class EnvVariableGroup:
     service: ServiceObj
     data: Dict[str, str]
     created_at: datetime.datetime | None
+    should_hidden_fields: List[str] | None
+    should_remove_fields: List[str] | None

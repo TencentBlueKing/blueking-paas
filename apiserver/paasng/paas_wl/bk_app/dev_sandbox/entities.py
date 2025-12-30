@@ -144,5 +144,5 @@ class DevSandboxEnvVar:
     def __repr__(self):
         return (
             f"DevSandboxEnvVar(key={self.key}, value={'******' if self.sensitive else self.value},"
-            f"source={self.source}, sensitive={self.sensitive})"
+            f" source={self.source}, sensitive={self.sensitive})"
         )

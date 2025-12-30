@@ -33,7 +33,7 @@ class TestResourceQuotaPlanViewSet:
     @pytest.fixture()
     def sample_plan_data(self):
         return {
-            "plan_name": "test-plan",
+            "name": "test-plan",
             "limits": {"cpu": "4000m", "memory": "2048Mi"},
             "requests": {"cpu": "1000m", "memory": "512Mi"},
         }
@@ -49,15 +49,15 @@ class TestResourceQuotaPlanViewSet:
 
         assert response.status_code == 200
         assert len(response.data) >= 1
-        plan_names = [plan["plan_name"] for plan in response.data]
-        assert created_plan.plan_name in plan_names
+        names = [plan["name"] for plan in response.data]
+        assert created_plan.name in names
 
     def test_create_success(self, plat_mgt_api_client, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.list_create")
         response = plat_mgt_api_client.post(url, data=sample_plan_data)
         assert response.status_code == 201
 
-        assert ResQuotaPlan.objects.filter(plan_name=sample_plan_data["plan_name"]).exists()
+        assert ResQuotaPlan.objects.filter(name=sample_plan_data["name"]).exists()
 
     def test_create_duplicate_name(self, plat_mgt_api_client, sample_plan_data, created_plan):
         url = reverse("plat_mgt.res_quota_plans.list_create")
@@ -67,17 +67,17 @@ class TestResourceQuotaPlanViewSet:
     def test_update_success(self, plat_mgt_api_client, created_plan, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
         update_data = sample_plan_data.copy()
-        update_data["plan_name"] = "updated-plan"
+        update_data["name"] = "updated-plan"
         update_data["limits"] = {"cpu": "8000m", "memory": "4096Mi"}
-        update_data["requests"] = {"cpu": "2000m", "memory": "1024Mi"}
+        update_data["requests"] = {"cpu": "2000m", "memory": "1Gi"}
 
         response = plat_mgt_api_client.put(url, data=update_data)
         assert response.status_code == 200
 
         created_plan.refresh_from_db()
-        assert created_plan.plan_name == "updated-plan"
+        assert created_plan.name == "updated-plan"
         assert created_plan.limits == {"cpu": "8000m", "memory": "4096Mi"}
-        assert created_plan.requests == {"cpu": "2000m", "memory": "1024Mi"}
+        assert created_plan.requests == {"cpu": "2000m", "memory": "1Gi"}
 
     def test_update_with_same_name(self, plat_mgt_api_client, created_plan, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
@@ -93,12 +93,12 @@ class TestResourceQuotaPlanViewSet:
 
     def test_update_duplicate_name(self, plat_mgt_api_client, created_plan, sample_plan_data):
         another_plan_data = sample_plan_data.copy()
-        another_plan_data["plan_name"] = "another-plan"
+        another_plan_data["name"] = "another-plan"
         plan2 = ResQuotaPlan.objects.create(**another_plan_data)
 
         update_url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": plan2.id})
         update_data = another_plan_data.copy()
-        update_data["plan_name"] = created_plan.plan_name
+        update_data["name"] = created_plan.name
 
         response = plat_mgt_api_client.put(update_url, data=update_data)
         assert response.status_code == 400
@@ -117,7 +117,7 @@ class TestResourceQuotaPlanViewSet:
     def test_update_builtin_plan_forbidden(self, plat_mgt_api_client, sample_plan_data):
         """测试内置方案不允许修改"""
         builtin_plan = ResQuotaPlan.objects.create(
-            plan_name="builtin-plan",
+            name="builtin-plan",
             limits={"cpu": "4000m", "memory": "2048Mi"},
             requests={"cpu": "1000m", "memory": "512Mi"},
             is_builtin=True,
@@ -125,7 +125,7 @@ class TestResourceQuotaPlanViewSet:
 
         url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": builtin_plan.id})
         update_data = sample_plan_data.copy()
-        update_data["plan_name"] = "updated-builtin"
+        update_data["name"] = "updated-builtin"
 
         response = plat_mgt_api_client.put(url, data=update_data)
         assert response.status_code == 403
@@ -133,7 +133,7 @@ class TestResourceQuotaPlanViewSet:
     def test_destroy_builtin_plan_forbidden(self, plat_mgt_api_client):
         """测试内置方案不允许删除"""
         builtin_plan = ResQuotaPlan.objects.create(
-            plan_name="builtin-plan-delete",
+            name="builtin-plan-delete",
             limits={"cpu": "4000m", "memory": "2048Mi"},
             requests={"cpu": "1000m", "memory": "512Mi"},
             is_builtin=True,
@@ -154,19 +154,20 @@ class TestResourceQuotaPlanViewSet:
             ({"cpu": "1000m", "memory": "2048"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
             ({"cpu": "1000m", "memory": "-2048Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
             ({"cpu": "1000m", "memory": "xyz0Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
-            # 超过最大值
-            ({"cpu": f"{int(MAX_PROC_CPU[:-1]) + 1}m", "memory": "2048Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
             # requests 超过 limits
             ({"cpu": "4000m", "memory": "2048Mi"}, {"cpu": "5000m", "memory": "512Mi"}, 400),
-            # 成功案例：最大允许值
+            ({"cpu": "4000m", "memory": "2048Mi"}, {"cpu": "1000m", "memory": "3Gi"}, 400),
+            # 最大允许值
             ({"cpu": MAX_PROC_CPU, "memory": MAX_PROC_MEM}, {"cpu": MAX_PROC_CPU, "memory": MAX_PROC_MEM}, 201),
+            # 超过最大值
+            ({"cpu": f"{int(MAX_PROC_CPU[:-1]) + 1}m", "memory": "2048Mi"}, {"cpu": "1000m", "memory": "512Mi"}, 400),
         ],
     )
     def test_resource_validation(self, plat_mgt_api_client, limits, requests, expected_status):
         """统一测试资源配额方案的各种验证场景"""
         url = reverse("plat_mgt.res_quota_plans.list_create")
         data = {
-            "plan_name": f"validation-test-plan-{uuid.uuid4().hex[:8]}",
+            "name": f"validation-test-plan-{uuid.uuid4().hex[:8]}",
             "limits": limits,
             "requests": requests,
         }

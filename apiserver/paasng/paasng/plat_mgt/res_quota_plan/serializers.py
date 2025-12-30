@@ -27,7 +27,7 @@ class ResQuotaPlanOutputSLZ(serializers.Serializer):
     """资源配额方案序列化器"""
 
     id = serializers.IntegerField()
-    plan_name = serializers.CharField()
+    name = serializers.CharField()
     limits = serializers.DictField()
     requests = serializers.DictField()
     is_active = serializers.BooleanField()
@@ -46,39 +46,42 @@ class ResourceQuotaSLZ(serializers.Serializer):
             raise serializers.ValidationError(_("必须以 'm' 为单位, 如 500m"))
         try:
             num = int(value[:-1])
+            max_cpu = int(MAX_PROC_CPU[:-1])
             if num <= 0:
-                raise serializers.ValidationError(_("必须为正整数, 如 500m"))
-            if num > int(MAX_PROC_CPU[:-1]):
+                raise serializers.ValidationError(_("必须为正整数"))
+            if num > max_cpu:
                 raise serializers.ValidationError(_("不能超过最大值 %s") % MAX_PROC_CPU)
         except ValueError:
-            raise serializers.ValidationError(_("格式不正确, 必须为正整数加 'm', 如 500m"))
+            raise serializers.ValidationError(_("格式不正确, 单位前必须为整数"))
+
         return value
 
     def validate_memory(self, value: str) -> str:
-        """Validate memory format: must end with 'Mi' and be a positive integer."""
-        if not value.endswith("Mi"):
-            raise serializers.ValidationError(_("必须以 'Mi' 为单位, 如 512Mi"))
+        """Validate memory format: must end with 'Mi' or 'Gi' and be a positive integer."""
+        if not value.endswith(("Mi", "Gi")):
+            raise serializers.ValidationError(_("必须以 'Mi' 或 'Gi' 为单位, 如 512Mi 或 1Gi"))
+
         try:
-            num = int(value[:-2])
-            if num <= 0:
-                raise serializers.ValidationError(_("必须为正整数, 如 512Mi"))
-            if num > int(MAX_PROC_MEM[:-2]):
+            mem = int(value[:-2])
+            max_mem = int(MAX_PROC_MEM[:-2])
+            if mem <= 0:
+                raise serializers.ValidationError(_("必须为正整数"))
+            mem_mi = mem if value.endswith("Mi") else mem * 1024
+            if mem_mi > max_mem:
                 raise serializers.ValidationError(_("不能超过最大值 %s") % MAX_PROC_MEM)
         except ValueError:
-            raise serializers.ValidationError(_("格式不正确, 必须为正整数加 'Mi', 如 512Mi"))
+            raise serializers.ValidationError(_("格式不正确, 单位前必须为整数"))
+
         return value
 
 
 class ResQuotaPlanInputSLZ(serializers.Serializer):
     """资源配额方案基础输入序列化器"""
 
-    plan_name = serializers.CharField(
+    name = serializers.CharField(
         max_length=64,
         validators=[
-            UniqueValidator(
-                queryset=ResQuotaPlan.objects.all(),
-                message=_("资源配额方案名称已存在，请使用其他名称"),
-            )
+            UniqueValidator(queryset=ResQuotaPlan.objects.all(), message=_("资源配额方案名称已存在，请使用其他名称"))
         ],
     )
     limits = ResourceQuotaSLZ()
@@ -94,9 +97,15 @@ class ResQuotaPlanInputSLZ(serializers.Serializer):
         if cpu_requests > cpu_limits:
             raise serializers.ValidationError({"requests": {"cpu": _("cpu requests 不能超过 cpu limits")}})
 
-        memory_limits = int(limits["memory"][:-2])
-        memory_requests = int(requests["memory"][:-2])
+        # 统一转换为 Mi 进行比较
+        memory_limits = self._parse_memory_to_mi(limits["memory"])
+        memory_requests = self._parse_memory_to_mi(requests["memory"])
         if memory_requests > memory_limits:
             raise serializers.ValidationError({"requests": {"memory": _("memory requests 不能超过 memory limits")}})
 
         return attrs
+
+    def _parse_memory_to_mi(self, memory_str: str) -> int:
+        """Helper method to convert memory string to Mi integer."""
+
+        return int(memory_str[:-2]) if memory_str.endswith("Mi") else int(memory_str[:-2]) * 1024

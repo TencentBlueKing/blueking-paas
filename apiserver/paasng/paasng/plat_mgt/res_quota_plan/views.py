@@ -93,7 +93,7 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
 
         data_before = ResQuotaPlanInputSLZ(plan_obj).data
 
-        plan_obj.plan_name = data["plan_name"]
+        plan_obj.name = data["name"]
         plan_obj.limits = data["limits"]
         plan_obj.requests = data["requests"]
         plan_obj.is_active = data.get("is_active", plan_obj.is_active)

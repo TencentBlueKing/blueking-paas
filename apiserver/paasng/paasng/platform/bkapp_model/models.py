@@ -46,15 +46,12 @@ if TYPE_CHECKING:
     from typing import Callable  # noqa: F401
 
 
-DEFAULT_RES_QUOTA_PLAN_NAME = "default"
-
-
 class ResQuotaPlan(TimestampedModel):
     """
     [multi-tenancy] This model is not tenant-aware.
     """
 
-    plan_name = models.CharField("方案名称", max_length=64, unique=True)
+    name = models.CharField("方案名称", max_length=64, unique=True)
     limits = JSONField(default={})
     requests = JSONField(default={})
     is_active = models.BooleanField("是否启用", default=True)

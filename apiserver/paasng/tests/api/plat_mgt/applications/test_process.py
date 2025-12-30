@@ -182,3 +182,17 @@ class TestApplicationProcessViewSet:
             assert process_data["env_overlays"]["stag"]["resources"]["requests"] == requests
         else:
             assert response.data["code"] == "VALIDATION_ERROR"
+
+    def test_list_quota_plans(self, plat_mgt_api_client):
+        """测试获取资源配额方案选项列表"""
+        url = reverse("plat_mgt.process.list_quota_plans")
+
+        response = plat_mgt_api_client.get(url)
+        assert response.status_code == 200
+
+        assert isinstance(response.data, list)
+        for plan in response.data:
+            assert "name" in plan
+            assert "value" in plan
+            assert "limits" in plan
+            assert "requests" in plan

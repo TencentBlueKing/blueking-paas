@@ -18,6 +18,7 @@
 from typing import Dict, List
 
 from attrs import asdict, define, field
+from django.conf import settings
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource, SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
@@ -124,7 +125,7 @@ class DevSandboxEnvVar:
         若没有指定 sensitive, 则根据 key 自动判断
         """
         if self.sensitive is None:
-            if self.key in ["BKPAAS_APP_SECRET"] and self.source == DevSandboxEnvVarSource.STAG:
+            if self.key in settings.DEV_SANDBOX_SENSITIVE_ENV_VARS and self.source == DevSandboxEnvVarSource.STAG:
                 self.sensitive = True
             else:
                 self.sensitive = False

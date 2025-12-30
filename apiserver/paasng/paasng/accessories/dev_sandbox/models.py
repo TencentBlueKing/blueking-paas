@@ -128,7 +128,7 @@ class DevSandbox(OwnerTimestampedModel):
         results = []
         for env in data:
             try:
-                dev_sanbox_env_var = DevSandboxEnvVar(
+                dev_sandbox_env_var = DevSandboxEnvVar(
                     key=env["key"],
                     value=env["value"],
                     source=env["source"],
@@ -139,7 +139,7 @@ class DevSandbox(OwnerTimestampedModel):
                     "dev_sandbox<%s> key error when parsing dev sandbox env_vars: %s, skip", self.code, env
                 )
             else:
-                results.append(dev_sanbox_env_var)
+                results.append(dev_sandbox_env_var)
 
         return results
 

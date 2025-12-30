@@ -34,7 +34,7 @@ from paasng.platform.engine.deploy.bg_build.utils import get_envs_from_pypi_url
 from paasng.platform.modules.models import Module
 
 
-def generate_env_vars(module: Module) -> list[DevSandboxEnvVar]:
+def generate_env_vars(module: Module) -> List[DevSandboxEnvVar]:
     envs = list_vars_builtin_app_basic(module.application).kv_map
     envs.update(
         {

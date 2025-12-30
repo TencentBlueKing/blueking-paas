@@ -33,8 +33,7 @@ from paasng.plat_mgt.applications.serializers import (
     ProcessSpecInputSLZ,
 )
 from paasng.platform.applications.models import Application
-from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay, ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import SourceOrigin
 
@@ -185,19 +184,17 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_resource_quantity_options(self, request):
-        """获取自定义资源配置的可选项列表（CPU 和内存的预设值）"""
+    def list_quota_plans(self, request):
+        """获取资源配额方案选项列表"""
 
-        cpu_resource_quantity = [
-            {"value": value, "label": label} for value, label in CPUResourceQuantity.get_choices()
+        result = [
+            {
+                "name": plan.plan_name,
+                "value": str(plan.plan_name),
+                "limits": plan.limits,
+                "requests": plan.requests,
+            }
+            for plan in ResQuotaPlan.objects.filter(is_active=True)
         ]
-        memory_resource_quantity = [
-            {"value": value, "label": label} for value, label in MemoryResourceQuantity.get_choices()
-        ]
 
-        result = {
-            "cpu_resource_quantity": cpu_resource_quantity,
-            "memory_resource_quantity": memory_resource_quantity,
-        }
-
-        return Response(result, status=status.HTTP_200_OK)
+        return Response(result)

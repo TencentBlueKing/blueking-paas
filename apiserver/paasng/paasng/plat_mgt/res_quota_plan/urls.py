@@ -15,16 +15,25 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
+
+from django.urls import re_path
+
+from .views import ResourceQuotaPlanViewSet
 
 urlpatterns = [
-    path("", include("paasng.plat_mgt.applications.urls")),
-    path("", include("paasng.plat_mgt.infras.urls")),
-    path("", include("paasng.plat_mgt.overview.urls")),
-    path("", include("paasng.plat_mgt.users.urls")),
-    path("", include("paasng.plat_mgt.config_vars.urls")),
-    path("", include("paasng.plat_mgt.audit.urls")),
-    path("", include("paasng.plat_mgt.res_quota_plan.urls")),
-    path("", include("paasng.plat_mgt.templates.urls")),
-    path("", include("paasng.plat_mgt.sourcectl.urls")),
+    re_path(
+        r"^api/plat_mgt/res_quota_plans/quantity_options/$",
+        ResourceQuotaPlanViewSet.as_view({"get": "list_quantity_options"}),
+        name="plat_mgt.res_quota_plans.list_quantity_options",
+    ),
+    re_path(
+        r"^api/plat_mgt/res_quota_plans/(?P<pk>[^/]+)/$",
+        ResourceQuotaPlanViewSet.as_view({"put": "update", "delete": "destroy"}),
+        name="plat_mgt.res_quota_plans.update_destroy",
+    ),
+    re_path(
+        r"^api/plat_mgt/res_quota_plans/$",
+        ResourceQuotaPlanViewSet.as_view({"get": "list", "post": "create"}),
+        name="plat_mgt.res_quota_plans.list_create",
+    ),
 ]

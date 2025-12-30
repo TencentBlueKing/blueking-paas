@@ -20,6 +20,11 @@ from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 # 为方便用户填写而设计的端口占位符, 并非实际的 shell 环境变量. 在转换成 BkApp 模型时会被平台替换成预设值 settings.CONTAINER_PORT
 PORT_PLACEHOLDER = "${PORT}"
 
+# Maximum resource limitations for each process
+# The same with the limitations in the Operator.
+MAX_PROC_CPU = "48000m"
+MAX_PROC_MEM = "65536Mi"
+
 
 class ExposedTypeName(StrStructuredEnum):
     """与 paas_wl.workloads.networking.constants.ExposedTypeName 重复定义

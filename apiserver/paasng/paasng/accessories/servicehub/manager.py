@@ -378,5 +378,5 @@ class EnvVariableGroup:
     service: ServiceObj
     data: Dict[str, str]
     created_at: datetime.datetime | None
-    should_hidden_fields: List[str] | None
-    should_remove_fields: List[str] | None
+    should_hidden_fields: List[str] | None = None
+    should_remove_fields: List[str] | None = None

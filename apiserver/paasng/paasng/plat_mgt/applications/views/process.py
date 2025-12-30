@@ -189,8 +189,8 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
 
         result = [
             {
-                "name": plan.plan_name,
-                "value": str(plan.plan_name),
+                "name": plan.name,
+                "value": str(plan.name),
                 "limits": plan.limits,
                 "requests": plan.requests,
             }

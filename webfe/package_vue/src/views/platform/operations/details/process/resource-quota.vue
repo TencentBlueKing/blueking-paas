@@ -281,6 +281,7 @@
 <script>
 import DetailsRow from '@/components/details-row';
 import PrefixSelect from './comps/prefix-select.vue';
+import { convertMemoryToBytes } from '@/common/utils';
 
 export default {
   name: 'ResourceQuota',
@@ -403,11 +404,31 @@ export default {
     moduleId() {
       this.resetToViewMode();
     },
+    // 监听 stag 环境 CPU Limit 变化，触发 Request 校验
+    'formData.stag.resources.limits.cpu'() {
+      this.triggerValidation('stagForm', 'stag.resources.requests.cpu');
+    },
+    'formData.stag.resources.limits.memory'() {
+      this.triggerValidation('stagForm', 'stag.resources.requests.memory');
+    },
+    // 监听 prod 环境 CPU Limit 变化，触发 Request 校验
+    'formData.prod.resources.limits.cpu'() {
+      this.triggerValidation('prodForm', 'prod.resources.requests.cpu');
+    },
+    'formData.prod.resources.limits.memory'() {
+      this.triggerValidation('prodForm', 'prod.resources.requests.memory');
+    },
   },
   created() {
     this.init();
   },
   methods: {
+    // 触发指定表单字段的校验
+    triggerValidation(formRef, field) {
+      this.$refs[formRef]?.validateField(field).catch((e) => {
+        console.error(`Validation error on field:`, e);
+      });
+    },
     // 校验 CPU Requests 是否小于等于 Limits
     validateCpuRequest(value, env) {
       const limitValue = this.formData[env].resources.limits.cpu;
@@ -422,8 +443,8 @@ export default {
       const limitValue = this.formData[env].resources.limits.memory;
       if (!value || !limitValue) return true;
       // 将内存值转换为字节数进行比较
-      const requestBytes = this.convertMemoryToBytes(value);
-      const limitBytes = this.convertMemoryToBytes(limitValue);
+      const requestBytes = convertMemoryToBytes(value);
+      const limitBytes = convertMemoryToBytes(limitValue);
       return requestBytes <= limitBytes;
     },
     // 获取资源配额方案名称
@@ -529,23 +550,6 @@ export default {
       } catch (e) {
         this.catchErrorHandler(e);
       }
-    },
-    // 将内存值转换为字节数用于比较
-    convertMemoryToBytes(value) {
-      if (!value) return 0;
-      const units = {
-        Ki: 1024,
-        Mi: 1024 * 1024,
-        Gi: 1024 * 1024 * 1024,
-        Ti: 1024 * 1024 * 1024 * 1024,
-      };
-      const match = value.match(/^(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti)$/);
-      if (match) {
-        const num = parseFloat(match[1]);
-        const unit = match[2];
-        return num * units[unit];
-      }
-      return 0;
     },
     // 处理资源配额方案切换
     handlePlanChange(value, env) {

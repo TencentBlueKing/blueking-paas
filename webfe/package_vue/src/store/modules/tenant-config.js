@@ -143,5 +143,33 @@ export default {
       const url = `${BACKEND_URL}/api/plat_mgt/templates/${templateId}/`;
       return http.delete(url);
     },
+    /**
+     * 应用资源配额-获取方案
+     */
+    getQuotaPlans() {
+      const url = `${BACKEND_URL}/api/plat_mgt/res_quota_plans/`;
+      return http.get(url);
+    },
+    /**
+     * 创建资源配额方案
+     */
+    createQuotaPlan({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/res_quota_plans/`;
+      return http.post(url, data);
+    },
+    /**
+     * 更新资源配额方案
+     */
+    updateQuotaPlan({}, { id, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/res_quota_plans/${id}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除资源配额方案
+     */
+    deleteQuotaPlan({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/res_quota_plans/${id}/`;
+      return http.delete(url);
+    },
   },
 };

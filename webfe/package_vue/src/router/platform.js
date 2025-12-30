@@ -77,6 +77,13 @@ const builtInEnvVariable = () =>
       window.showDeployTip(error);
     });
 
+const cloudNativeAppResourceQuota = () =>
+  import(/* webpackChunkName: 'platform-config' */ '@/views/platform/resource-quota')
+    .then((module) => module)
+    .catch((error) => {
+      window.showDeployTip(error);
+    });
+
 const repositoryConfig = () =>
   import(/* webpackChunkName: 'platform-config' */ '@/views/platform/repository-config')
     .then((module) => module)
@@ -159,6 +166,14 @@ export const platformRouters = [
             { name: 'feature', label: i18n.t('用户特性') },
             { name: 'authorized', label: i18n.t('已授权应用') },
           ],
+        },
+      },
+      {
+        path: 'resource-quota',
+        component: cloudNativeAppResourceQuota,
+        name: 'cloudNativeAppResourceQuota',
+        meta: {
+          title: i18n.t('云原生应用资源配额'),
         },
       },
       {

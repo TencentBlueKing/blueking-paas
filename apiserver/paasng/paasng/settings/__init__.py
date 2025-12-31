@@ -1323,12 +1323,18 @@ SMART_DOCKER_REGISTRY_NAMESPACE = settings.get("SMART_DOCKER_NAMESPACE", "bkpaas
 SMART_DOCKER_REGISTRY_USERNAME = settings.get("SMART_DOCKER_USERNAME", "bkpaas")
 # 用于访问 Registry 的密码
 SMART_DOCKER_REGISTRY_PASSWORD = settings.get("SMART_DOCKER_PASSWORD", "blueking")
-# S-Mart 基础镜像信息
-_SMART_TAG_SUFFIX = "smart"
+# S-Mart slug-pilot 基础镜像信息
 SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
-SMART_IMAGE_TAG = f"{parse_image(settings.get('APP_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
-SMART_CNB_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic"
-SMART_CNB_IMAGE_TAG = f"{parse_image(settings.get('HEROKU_RUNNER_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
+SMART_IMAGE_TAG = f"{parse_image(settings.get('APP_IMAGE', '')).tag or 'latest'}-smart"
+
+# S-Mart CNB 镜像信息
+SMART_CNB_IMAGE_CONF = settings.get("SMART_CNB_IMAGE_CONF", {})
+SMART_CNB_DEFAULT_IMAGE_ID = "default"
+if SMART_CNB_DEFAULT_IMAGE_ID not in SMART_CNB_IMAGE_CONF:
+    SMART_CNB_IMAGE_CONF[SMART_CNB_DEFAULT_IMAGE_ID] = {
+        "name": f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic",
+        "tag": settings.get("SMART_CNB_DEFAULT_IMAGE_TAG", "v1.0.2-smart"),
+    }
 
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))

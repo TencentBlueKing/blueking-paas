@@ -51,8 +51,21 @@ class BaseImageConf(BaseModel):
 class CNBBaseImageConf(BaseModel):
     """cloud native S-Mart 基础镜像配置, 用于配置合并镜像层时的基础镜像"""
 
-    name: str = Field(default=settings.SMART_CNB_IMAGE_NAME, description="云原生基础镜像的名称")
-    tag: str = Field(default=settings.SMART_CNB_IMAGE_TAG, description="云原生基础镜像的标签")
+    image_config: dict = Field(default=settings.SMART_CNB_IMAGE_CONF, description="云原生基础镜像配置")
+
+    def get_name(self, base_image_id: str) -> str:
+        """根据基础镜像 ID, 获取云原生基础镜像名称"""
+        return self._get_field(base_image_id, "name")
+
+    def get_tag(self, base_image_id: str) -> str:
+        """根据基础镜像 ID, 获取云原生基础镜像标签"""
+        return self._get_field(base_image_id, "tag")
+
+    def _get_field(self, base_image_id: str, field: str) -> str:
+        try:
+            return self.image_config[base_image_id][field]
+        except KeyError:
+            raise ValueError(f"Unsupported image_id: {base_image_id}, failed to get image {field}")
 
 
 class Settings(BaseModel):

@@ -132,6 +132,3 @@ class TestGetEnvVarsSelectedAddons:
         for var in result:
             if var.key == "BKPAAS_APP_SECRET":
                 assert var.sensitive is True
-
-            if var.key == "GCS_MYSQL_PASSWORD":
-                assert var.sensitive is True

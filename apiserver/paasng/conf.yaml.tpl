@@ -630,7 +630,7 @@ BK_CI_CLIENT_USERNAME = "blueking"
 
 ## 如果用到 python manage.py push_smart_image, APP_IMAGE 必须设置有效值
 # APP_IMAGE: hub.bktencent.com/blueking/slug-app:v0.0.1
-# SMART_CNB_DEFAULT_IMAGE_TAG: v1.0.2-smart
+
 ## 可以通过 SMART_CNB_IMAGE_CONF 来配置多个基础镜像。 default 通常不需要设置，由平台自动设置
 # SMART_CNB_IMAGE_CONF:
 #   default:

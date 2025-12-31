@@ -58,10 +58,10 @@ class ApplicationFilterBackend(BaseFilterBackend):
         if app_type:
             queryset = queryset.filter(type=app_type)
 
-        # 应用激活状态过滤
-        is_active = params.get("is_active")
-        if is_active is not None:
-            queryset = queryset.filter(is_active=is_active)
+        # 应用状态过滤
+        app_status = params.get("app_status")
+        if app_status is not None:
+            queryset = queryset.filter_by_app_status(app_status)
 
         # 应用分类过滤
         category = params.get("category")

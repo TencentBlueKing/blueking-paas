@@ -736,3 +736,7 @@ class SMartAppExtraInfo(models.Model):
         """设置基础镜像 id"""
         self.artifact_metadata.base_image_id = base_image_id
         self.save(update_fields=["artifact_metadata"])
+
+    def get_base_image_id(self) -> str:
+        """获取基础镜像 id"""
+        return self.artifact_metadata.base_image_id

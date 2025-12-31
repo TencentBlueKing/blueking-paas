@@ -174,12 +174,12 @@ def dispatch_cnb_image_to_registry(
     """Merge image layer to base image, then push the new image to registry"""
     logger.debug("dispatching cnb-image for module '%s', working at '%s'", module.name, workplace)
 
-    mgr = SMartImageManager(module)
-    base_image = mgr.get_cnb_runner_image_info()
-    new_image_info = mgr.get_image_info(tag=stat.version)
-
     if smart_app_extra is None:
         raise RuntimeError("CNB image handler requires smart_app_extra")
+
+    mgr = SMartImageManager(module)
+    base_image = mgr.get_cnb_runner_image_info(base_image_id=smart_app_extra.get_base_image_id())
+    new_image_info = mgr.get_image_info(tag=stat.version)
 
     image_tar = smart_app_extra.get_image_tar(module.name)
 

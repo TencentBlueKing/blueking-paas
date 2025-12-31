@@ -60,7 +60,7 @@ class Command(BaseCommand):
             dest="type_",
             help="image type can be either cnb or legacy",
         )
-        parser.add_argument("--base-image-id", dest="base_image_id", default="default", help="cnb base image id")
+        parser.add_argument("--base-image-id", dest="base_image_id", default="default", help="dest cnb base image id")
         parser.add_argument("--dry-run", dest="dry_run", type=str2bool, help="dry run", default=False)
 
     def handle(self, image: str, type_: str, base_image_id: str, dry_run: bool, *args, **options):

@@ -34,6 +34,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_REGION_ANNO_KEY,
     BKAPP_TENANT_ID_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
+    DEFAULT_RES_QUOTA_PLAN_NAME,
     EGRESS_CLUSTER_STATE_NAME_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -51,7 +52,6 @@ from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SecretSource, VolumeSource
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
-from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.cluster.shim import EnvClusterService
@@ -62,13 +62,14 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ResQuotaPlan
+from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
     ObservabilityConfig,
     ProcessSpecEnvOverlay,
+    ResQuotaPlan,
     SvcDiscConfig,
 )
 from paasng.platform.bkapp_model.utils import (
@@ -263,32 +264,35 @@ class ProcessesManifestConstructor(ManifestConstructor):
         model_res.spec.envOverlay = overlay
 
     @staticmethod
-    def get_quota_plan(spec_plan_name: str) -> ResQuotaPlan:
-        """Get ProcessSpecPlan by name and transform it to ResQuotaPlan"""
-        try:
-            return ResQuotaPlan(spec_plan_name)
-        except ValueError:
-            logger.debug(
-                "unknown ResQuotaPlan value `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name
-            )
+    def get_quota_plan(spec_plan_name: str) -> str:
+        """Get ProcessSpecPlan by name"""
+        active_plan_objs = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
+        if spec_plan_name in active_plan_objs:
+            return spec_plan_name
+
+        logger.debug("unknown ResQuotaPlan value `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name)
 
         try:
             spec_plan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
         except ProcessSpecPlan.DoesNotExist:
-            return ResQuotaPlan.P_DEFAULT
+            return DEFAULT_RES_QUOTA_PLAN_NAME
 
         # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
+        # TODO: 转换逻辑
         limits = spec_plan.get_resource_summary()["limits"]
         expected_limit_memory = parse_quantity(limits.get("memory", "512Mi"))
         quota_plan_memory = sorted(
-            ((parse_quantity(limit.memory), quota_plan) for quota_plan, limit in PLAN_TO_LIMIT_QUOTA_MAP.items()),
+            (
+                (parse_quantity(plan_obj.limits["memory"]), quota_plan)
+                for quota_plan, plan_obj in active_plan_objs.items()
+            ),
             key=itemgetter(0),
         )
         for limit_memory, quota_plan in quota_plan_memory:
             if limit_memory >= expected_limit_memory:
-                return ResQuotaPlan(quota_plan)
+                return quota_plan
         # quota_plan_memory[-1][1] 是内存最大 plan
-        return ResQuotaPlan(quota_plan_memory[-1][1])
+        return quota_plan_memory[-1][1]
 
     def get_command_and_args(self, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
         """Get the command and args from the process_spec object.

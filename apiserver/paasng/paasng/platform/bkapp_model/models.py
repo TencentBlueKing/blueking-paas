@@ -24,6 +24,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
+from paas_wl.bk_app.cnative.specs.procs.res_quota import ResQuotaPlanData, set_res_quota_plan_getter
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -461,3 +462,28 @@ class BkAppManagedFields(TimestampedModel):
 
     class Meta:
         unique_together = ("module", "manager")
+
+
+# Register the callback function for fetching ResQuotaPlan data.
+# This breaks the circular dependency between paas_wl and paasng.platform modules.
+def _get_active_res_quota_plans():
+    """Fetch all active ResQuotaPlan objects and return them as a dict."""
+    return {
+        plan.name: ResQuotaPlanData(
+            name=plan.name,
+            limits=plan.limits,
+            requests=plan.requests,
+            is_active=plan.is_active,
+            is_builtin=plan.is_builtin,
+        )
+        for plan in ResQuotaPlan.objects.filter(is_active=True)
+    }
+
+
+def _register_res_quota_plan_getter():
+    """Register the getter function for ResQuotaPlan data."""
+    set_res_quota_plan_getter(_get_active_res_quota_plans)
+
+
+# Auto-register when this module is imported
+_register_res_quota_plan_getter()

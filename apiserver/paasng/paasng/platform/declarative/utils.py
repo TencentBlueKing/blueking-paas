@@ -22,39 +22,40 @@ from typing import Any
 from blue_krill.cubing_case import shortcuts
 from kubernetes.utils import parse_quantity
 
-from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
-from paasng.platform.bkapp_model.constants import ResQuotaPlan
+from paas_wl.bk_app.cnative.specs.constants import DEFAULT_RES_QUOTA_PLAN_NAME
+from paasng.platform.bkapp_model.models import ResQuotaPlan
 
 logger = logging.getLogger(__name__)
 
 
-def get_quota_plan(spec_plan_name: str) -> ResQuotaPlan:
-    """Get ProcessSpecPlan by name and transform it to ResQuotaPlan"""
+def get_quota_plan(spec_plan_name: str) -> str:
+    """Get ProcessSpecPlan by name"""
     # TODO: fix circular import
     from paas_wl.bk_app.processes.models import ProcessSpecPlan
 
-    try:
-        return ResQuotaPlan(spec_plan_name)
-    except ValueError:
-        logger.debug("unknown ResQuotaPlan value `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name)
+    active_plan_objs = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
+    if spec_plan_name in active_plan_objs:
+        return spec_plan_name
+
+    logger.debug("unknown ResQuotaPlan value `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name)
 
     try:
         spec_plan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
     except ProcessSpecPlan.DoesNotExist:
-        return ResQuotaPlan.P_DEFAULT
+        return DEFAULT_RES_QUOTA_PLAN_NAME
 
     # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
     limits = spec_plan.get_resource_summary()["limits"]
     expected_limit_memory = parse_quantity(limits.get("memory", "512Mi"))
     quota_plan_memory = sorted(
-        ((parse_quantity(limit.memory), quota_plan) for quota_plan, limit in PLAN_TO_LIMIT_QUOTA_MAP.items()),
+        ((parse_quantity(plan_obj.limits["memory"]), quota_plan) for quota_plan, plan_obj in active_plan_objs.items()),
         key=itemgetter(0),
     )
     for limit_memory, quota_plan in quota_plan_memory:
         if limit_memory >= expected_limit_memory:
-            return ResQuotaPlan(quota_plan)
+            return quota_plan
     # quota_plan_memory[-1][1] 是内存最大 plan
-    return ResQuotaPlan(quota_plan_memory[-1][1])
+    return quota_plan_memory[-1][1]
 
 
 def camel_to_snake_case(data: Any) -> Any:

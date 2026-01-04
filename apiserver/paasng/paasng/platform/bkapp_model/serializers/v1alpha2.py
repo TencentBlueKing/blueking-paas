@@ -28,10 +28,10 @@ from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
     ImagePullPolicy,
     NetworkProtocol,
-    ResQuotaPlan,
     ScalingPolicy,
 )
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
+from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.structure import NOTSET
@@ -118,7 +118,19 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
-    plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
+    plan = serializers.CharField(allow_null=True, default=None)
+
+    def validate_plan(self, value):
+        """validate whether plan is a valid ResQuotaPlan"""
+        if value is None:
+            return value
+
+        # TODO 优化?
+        try:
+            ResQuotaPlan.objects.get(name=value, is_active=True)
+        except ResQuotaPlan.DoesNotExist:
+            raise serializers.ValidationError(f"Invalid res quota plan: {value}")
+        return value
 
 
 class AutoscalingSpecInputSLZ(serializers.Serializer):
@@ -259,9 +271,7 @@ class ProcessInputSLZ(serializers.Serializer):
 
     name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     replicas = serializers.IntegerField(min_value=0, allow_null=True, default=NOTSET)
-    resQuotaPlan = serializers.ChoiceField(
-        choices=ResQuotaPlan.get_choices(), allow_null=True, default=None, source="res_quota_plan"
-    )
+    resQuotaPlan = serializers.CharField(allow_null=True, default=None, source="res_quota_plan")
     targetPort = serializers.IntegerField(
         min_value=1,
         max_value=65535,
@@ -277,6 +287,18 @@ class ProcessInputSLZ(serializers.Serializer):
     probes = ProbeSetInputSLZ(allow_null=True, default=None)
     services = serializers.ListField(child=ProcServiceInputSLZ(), allow_null=True, default=None)
     components = serializers.ListField(child=ComponentInputSLZ(), allow_null=True, default=None)
+
+    def validate_resQuotaPlan(self, value):  # noqa: N802
+        """validate whether resQuotaPlan is a valid ResQuotaPlan"""
+        if value is None:
+            return value
+
+        # TODO 优化?
+        try:
+            ResQuotaPlan.objects.get(name=value, is_active=True)
+        except ResQuotaPlan.DoesNotExist:
+            raise serializers.ValidationError(f"Invalid res quota plan: {value}")
+        return value
 
 
 class HooksInputSLZ(serializers.Serializer):

@@ -43,7 +43,6 @@ from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
-from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Component, ProcService
 from paasng.platform.bkapp_model.manifest import (
     AddonsManifestConstructor,
@@ -268,12 +267,12 @@ class TestProcessesManifestConstructor:
     @pytest.mark.parametrize(
         ("plan_name", "expected"),
         [
-            ("", ResQuotaPlan.P_DEFAULT),
-            (settings.DEFAULT_PROC_SPEC_PLAN, ResQuotaPlan.P_DEFAULT),
-            (settings.PREMIUM_PROC_SPEC_PLAN, ResQuotaPlan.P_4C2G),
+            ("", "default"),
+            (settings.DEFAULT_PROC_SPEC_PLAN, "default"),
+            (settings.PREMIUM_PROC_SPEC_PLAN, "4C2G"),
             # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
-            (settings.ULTIMATE_PROC_SPEC_PLAN, ResQuotaPlan.P_4C4G),
-            (ResQuotaPlan.P_4C1G, ResQuotaPlan.P_4C1G),
+            (settings.ULTIMATE_PROC_SPEC_PLAN, "4C4G"),
+            ("4C1G", "4C1G"),
         ],
     )
     def test_get_quota_plan(self, plan_name, expected):

@@ -21,12 +21,12 @@ from typing import Callable, Dict, List, Optional
 
 from kubernetes.utils import parse_quantity
 
-from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.misc.monitoring.metrics.constants import MetricsSeriesType
 from paasng.misc.monitoring.metrics.models import MetricsInstanceResult, get_resource_metric_manager
 from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
 from paasng.platform.applications.models import Application, ModuleEnvironment
+from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName, MetricsType
 from paasng.platform.modules.models import Module
 
@@ -135,8 +135,11 @@ class AppResQuotaCollector:
         self.time_range = MetricSmartTimeRange(step=step, time_range_str=time_range_str)
         # 初始化云原生应用 资源配额方案 -> request 映射表
         self.bkapp_plan_to_request_map = {
-            plan: (self._format_cpu(quota.cpu), self._format_memory(quota.memory))
-            for plan, quota in PLAN_TO_REQUEST_QUOTA_MAP.items()
+            plan_obj.name: (
+                self._format_cpu(plan_obj.requests["cpu"]),
+                self._format_memory(plan_obj.requests["memory"]),
+            )
+            for plan_obj in ResQuotaPlan.objects.filter(is_active=True, is_built_in=True)
         }
 
     def collect(self) -> AppSummary:

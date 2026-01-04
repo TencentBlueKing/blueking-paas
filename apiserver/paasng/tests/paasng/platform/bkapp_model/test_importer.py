@@ -21,7 +21,7 @@ import pytest
 
 from paas_wl.bk_app.cnative.specs.models import Mount
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.constants import ResQuotaPlan, ScalingPolicy
+from paasng.platform.bkapp_model.constants import ScalingPolicy
 from paasng.platform.bkapp_model.entities import AutoscalingConfig, Metric, SvcDiscEntryBkSaaS
 from paasng.platform.bkapp_model.exceptions import ManifestImportError
 from paasng.platform.bkapp_model.importer import import_manifest
@@ -154,7 +154,7 @@ def test_import_with_enum_type(bk_module, base_manifest):
         {
             "name": "web",
             "replicas": 1,
-            "resQuotaPlan": ResQuotaPlan.P_DEFAULT,
+            "resQuotaPlan": "default",
             "autoscaling": {
                 "minReplicas": 1,
                 "maxReplicas": 2,
@@ -164,7 +164,7 @@ def test_import_with_enum_type(bk_module, base_manifest):
     ]
     import_manifest_app_desc(bk_module, base_manifest)
     proc_spec = ModuleProcessSpec.objects.get(module=bk_module, name="web")
-    assert proc_spec.plan_name == ResQuotaPlan.P_DEFAULT.value
+    assert proc_spec.plan_name == "default"
     assert proc_spec.scaling_config == AutoscalingConfig(min_replicas=1, max_replicas=2, policy=ScalingPolicy.DEFAULT)
 
 

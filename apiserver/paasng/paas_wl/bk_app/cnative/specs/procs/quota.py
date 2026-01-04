@@ -17,50 +17,10 @@
 
 import json
 
-from attrs import asdict, define
-
-from paas_wl.bk_app.cnative.specs.constants import (
-    DEFAULT_PROC_CPU,
-    DEFAULT_PROC_CPU_REQUEST,
-    DEFAULT_PROC_MEM,
-    DEFAULT_PROC_MEM_REQUEST,
-    OVERRIDE_PROC_RES_ANNO_KEY,
-    ResQuotaPlan,
-)
+from paas_wl.bk_app.cnative.specs.constants import DEFAULT_RES_QUOTA_PLAN_NAME, OVERRIDE_PROC_RES_ANNO_KEY
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
+from paas_wl.bk_app.cnative.specs.procs.res_quota import get_active_res_quota_plans
 from paasng.platform.engine.constants import AppEnvName
-
-
-@define
-class ResourceQuota:
-    cpu: str
-    memory: str
-
-
-# 资源配额方案到资源限制的映射表
-PLAN_TO_LIMIT_QUOTA_MAP = {
-    ResQuotaPlan.P_DEFAULT: ResourceQuota(
-        cpu=DEFAULT_PROC_CPU,
-        memory=DEFAULT_PROC_MEM,
-    ),
-    ResQuotaPlan.P_4C1G: ResourceQuota(cpu="4000m", memory="1024Mi"),
-    ResQuotaPlan.P_4C2G: ResourceQuota(cpu="4000m", memory="2048Mi"),
-    ResQuotaPlan.P_4C4G: ResourceQuota(cpu="4000m", memory="4096Mi"),
-}
-
-# 资源配额方案到资源请求的映射表
-# CPU REQUEST = 200m
-# MEMORY REQUEST 的计算规则: 当 Limits 大于等于 2048 Mi 时，值为 Limits 的 1/2; 当 Limits 小于 2048 Mi 时，值为 Limits 的 1/4
-# 云原生应用实际的 requests 配置策略在 operator 中实现, 这里的值并非实际生效值
-PLAN_TO_REQUEST_QUOTA_MAP = {
-    ResQuotaPlan.P_DEFAULT: ResourceQuota(
-        cpu=DEFAULT_PROC_CPU_REQUEST,
-        memory=DEFAULT_PROC_MEM_REQUEST,
-    ),
-    ResQuotaPlan.P_4C1G: ResourceQuota(cpu="200m", memory="256Mi"),
-    ResQuotaPlan.P_4C2G: ResourceQuota(cpu="200m", memory="1024Mi"),
-    ResQuotaPlan.P_4C4G: ResourceQuota(cpu="200m", memory="2048Mi"),
-}
 
 
 class ResQuotaReader:
@@ -84,13 +44,17 @@ class ResQuotaReader:
           it will be applied with the highest priority.
         """
         results: dict[str, dict] = {}
+        active_plans = get_active_res_quota_plans()
+
+        default_plan = active_plans[DEFAULT_RES_QUOTA_PLAN_NAME]
         for p in self.res.spec.processes:
-            plan = p.resQuotaPlan or ResQuotaPlan.P_DEFAULT
+            # 如果未指定方案，使用 default 方案
+            plan_name = p.resQuotaPlan or DEFAULT_RES_QUOTA_PLAN_NAME
+            plan_obj = active_plans.get(plan_name, default_plan)
             results[p.name] = {
-                "plan": str(plan),
-                "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[plan]),
-                # TODO 云原生应用的 requests 取值策略在 operator 中实现. 这里的值并非实际生效值, 仅用于前端展示. 如果需要, 后续校正?
-                "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[plan]),
+                "plan": plan_obj.name,
+                "limits": plan_obj.limits,
+                "requests": plan_obj.requests,
             }
 
         if overlay := self.res.spec.envOverlay:
@@ -99,11 +63,12 @@ class ResQuotaReader:
             quotas_overlay = []
 
         for quotas in quotas_overlay:
+            plan_obj = active_plans[quotas.plan]
             if quotas.envName == env_name:
                 results[quotas.process] = {
-                    "plan": quotas.plan,
-                    "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[ResQuotaPlan(quotas.plan)]),
-                    "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[ResQuotaPlan(quotas.plan)]),
+                    "plan": plan_obj.name,
+                    "limits": plan_obj.limits,
+                    "requests": plan_obj.requests,
                 }
 
         override_config_str = self.res.metadata.annotations.get(OVERRIDE_PROC_RES_ANNO_KEY, "")

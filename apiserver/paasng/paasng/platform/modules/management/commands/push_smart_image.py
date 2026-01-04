@@ -33,7 +33,7 @@ from paasng.utils.validators import str2bool
 logger = logging.getLogger(__name__)
 
 
-def get_image_config(image_type: str, base_image_id: str) -> dict[str, str]:
+def get_dest_image(image_type: str, base_image_id: str) -> dict[str, str]:
     if image_type == AppImageType.LEGACY.value:
         return {
             "repo": bksmart_settings.base_image.name,
@@ -68,13 +68,13 @@ class Command(BaseCommand):
             logger.warning("Skipped the step of pushing S-Mart base image to bkrepo!")
             return
 
-        from_image = parse_image(image)
         image_tarball_path = pathlib.Path(tempfile.mktemp())
+        src_image = parse_image(image)
         try:
             ref = ImageRef.from_image(
-                from_repo=from_image.name,
-                from_reference=cast(str, from_image.tag),
-                client=DockerRegistryV2Client.from_api_endpoint(APIEndpoint(url=from_image.domain)),
+                from_repo=src_image.name,
+                from_reference=cast(str, src_image.tag),
+                client=DockerRegistryV2Client.from_api_endpoint(APIEndpoint(url=src_image.domain)),
             )
             ref.save(dest=str(image_tarball_path))
         except Exception:
@@ -83,14 +83,13 @@ class Command(BaseCommand):
             raise
 
         workplace = tempfile.mkdtemp()
-        to_config = get_image_config(type_, base_image_id)
-
+        dest_image = get_dest_image(type_, base_image_id)
         try:
             ref = ImageRef.from_tarball(
                 workplace=pathlib.Path(workplace),
                 src=image_tarball_path,
-                to_repo=to_config["repo"],
-                to_reference=to_config["reference"],
+                to_repo=dest_image["repo"],
+                to_reference=dest_image["reference"],
                 client=bksmart_settings.registry.get_client(),
             )
             ref.push()

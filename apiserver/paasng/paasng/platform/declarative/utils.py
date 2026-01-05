@@ -33,29 +33,34 @@ def get_quota_plan(spec_plan_name: str) -> str:
     # TODO: fix circular import
     from paas_wl.bk_app.processes.models import ProcessSpecPlan
 
-    active_plan_objs = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
-    if spec_plan_name in active_plan_objs:
-        return spec_plan_name
+    active_plans = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
+    plan_obj = active_plans.get(spec_plan_name)
+    if plan_obj:
+        return plan_obj.name
 
-    logger.debug("unknown ResQuotaPlan value `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name)
+    logger.debug("unknown ResQuotaPlan name `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name)
 
     try:
         spec_plan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
     except ProcessSpecPlan.DoesNotExist:
-        return DEFAULT_RES_QUOTA_PLAN_NAME
+        default = active_plans.get(DEFAULT_RES_QUOTA_PLAN_NAME)
+        if not default:
+            raise RuntimeError(f"default res quota plan `{DEFAULT_RES_QUOTA_PLAN_NAME}` not found")
+        return default.name
 
     # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
     limits = spec_plan.get_resource_summary()["limits"]
     expected_limit_memory = parse_quantity(limits.get("memory", "512Mi"))
-    quota_plan_memory = sorted(
-        ((parse_quantity(plan_obj.limits["memory"]), quota_plan) for quota_plan, plan_obj in active_plan_objs.items()),
-        key=itemgetter(0),
+    mem_plan_pairs = sorted(
+        ((parse_quantity(p.limits["memory"]), p) for p in active_plans.values()), key=itemgetter(0)
     )
-    for limit_memory, quota_plan in quota_plan_memory:
-        if limit_memory >= expected_limit_memory:
-            return quota_plan
+    for mem, p in mem_plan_pairs:
+        if mem >= expected_limit_memory:
+            return p.name
+
     # quota_plan_memory[-1][1] 是内存最大 plan
-    return quota_plan_memory[-1][1]
+    plan_obj = mem_plan_pairs[-1][1]
+    return plan_obj.name
 
 
 def camel_to_snake_case(data: Any) -> Any:

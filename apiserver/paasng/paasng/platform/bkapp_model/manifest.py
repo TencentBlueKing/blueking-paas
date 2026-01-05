@@ -43,6 +43,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     MODULE_NAME_ANNO_KEY,
     OVERRIDE_PROC_RES_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
+    RES_QUOTA_PLAN_DETAIL_ANNO_KEY,
     TENANT_GUARD_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
     ApiVersion,
@@ -266,33 +267,35 @@ class ProcessesManifestConstructor(ManifestConstructor):
     @staticmethod
     def get_quota_plan(spec_plan_name: str) -> str:
         """Get ProcessSpecPlan by name"""
-        active_plan_objs = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
-        if spec_plan_name in active_plan_objs:
-            return spec_plan_name
+        active_plans = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
+        plan_obj = active_plans.get(spec_plan_name)
+        if plan_obj:
+            return plan_obj.name
 
-        logger.debug("unknown ResQuotaPlan value `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name)
+        logger.debug("unknown ResQuotaPlan name `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name)
 
         try:
             spec_plan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
         except ProcessSpecPlan.DoesNotExist:
-            return DEFAULT_RES_QUOTA_PLAN_NAME
+            default = active_plans.get(DEFAULT_RES_QUOTA_PLAN_NAME)
+            if not default:
+                raise RuntimeError(f"default res quota plan `{DEFAULT_RES_QUOTA_PLAN_NAME}` not found")
+            return default.name
 
         # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
-        # TODO: 转换逻辑
         limits = spec_plan.get_resource_summary()["limits"]
         expected_limit_memory = parse_quantity(limits.get("memory", "512Mi"))
-        quota_plan_memory = sorted(
-            (
-                (parse_quantity(plan_obj.limits["memory"]), quota_plan)
-                for quota_plan, plan_obj in active_plan_objs.items()
-            ),
-            key=itemgetter(0),
+        mem_plan_pairs = sorted(
+            ((parse_quantity(p.limits["memory"]), p) for p in active_plans.values()), key=itemgetter(0)
         )
-        for limit_memory, quota_plan in quota_plan_memory:
-            if limit_memory >= expected_limit_memory:
-                return quota_plan
+
+        for mem, p in mem_plan_pairs:
+            if mem >= expected_limit_memory:
+                return p.name
+
         # quota_plan_memory[-1][1] 是内存最大 plan
-        return quota_plan_memory[-1][1]
+        plan_obj = mem_plan_pairs[-1][1]
+        return plan_obj.name
 
     def get_command_and_args(self, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
         """Get the command and args from the process_spec object.
@@ -548,6 +551,9 @@ def get_bkapp_resource_for_deploy(
     if override_proc_res_config:
         model_res.metadata.annotations[OVERRIDE_PROC_RES_ANNO_KEY] = override_proc_res_config
 
+    # 设置资源配额方案配置的注解
+    model_res.metadata.annotations[RES_QUOTA_PLAN_DETAIL_ANNO_KEY] = _get_res_quota_plan_config()
+
     # 设置上一次部署的状态
     model_res.metadata.annotations[LAST_DEPLOY_STATUS_ANNO_KEY] = _get_last_deploy_status(env, deployment)
 
@@ -716,5 +722,15 @@ def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
         if not override_proc_res:
             continue
         result[overlay.proc_spec.name] = override_proc_res
+
+    return json.dumps(result) if result else ""
+
+
+def _get_res_quota_plan_config() -> str:
+    """获取资源配额方案配置，返回 JSON 字符串或空字符串"""
+    result = {}
+
+    for plan in ResQuotaPlan.objects.filter(is_active=True):
+        result[plan.name] = {"limits": plan.limits, "requests": plan.requests}
 
     return json.dumps(result) if result else ""

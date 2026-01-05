@@ -31,6 +31,15 @@ import (
 
 var log = logf.Log.WithName("env_overlay")
 
+// predefinedQuotaPlans stores the predefined resource quota plans with their limits.
+// The key is the plan name, and the value is (cpu, memory) limits.
+var predefinedQuotaPlans = map[paasv1alpha2.ResQuotaPlan]struct{ cpu, memory string }{
+	paasv1alpha2.ResQuotaPlan4C1G:    {"4000m", "1024Mi"},
+	paasv1alpha2.ResQuotaPlan4C2G:    {"4000m", "2048Mi"},
+	paasv1alpha2.ResQuotaPlan4C4G:    {"4000m", "4096Mi"},
+	paasv1alpha2.ResQuotaPlanDefault: {config.Global.GetProcDefaultCpuLimit(), config.Global.GetProcDefaultMemLimit()},
+}
+
 // ReplicasGetter get replicas from BkApp object
 type ReplicasGetter struct {
 	bkapp *paasv1alpha2.BkApp
@@ -259,26 +268,51 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 	return r.fromQuotaPlan(procObj.ResQuotaPlan), nil
 }
 
-// fromQuotaPlan try to get resource requirements by the name of quota plan
-func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) corev1.ResourceRequirements {
-	var cpuRaw, memRaw string
-	switch plan {
-	case paasv1alpha2.ResQuotaPlan4C1G:
-		cpuRaw, memRaw = "4000m", "1024Mi"
-	case paasv1alpha2.ResQuotaPlan4C2G:
-		cpuRaw, memRaw = "4000m", "2048Mi"
-	case paasv1alpha2.ResQuotaPlan4C4G:
-		cpuRaw, memRaw = "4000m", "4096Mi"
-	default:
-		cpuRaw, memRaw = config.Global.GetProcDefaultCpuLimit(), config.Global.GetProcDefaultMemLimit()
+// fromQuotaPlan try to get resource requirements by the name of quota plan.
+func (r *ProcResourcesGetter) fromQuotaPlan(
+	plan paasv1alpha2.ResQuotaPlan,
+) corev1.ResourceRequirements {
+	// 1. Try to get from predefined plans
+	if spec, ok := predefinedQuotaPlans[plan]; ok {
+		return r.calculateResources(spec.cpu, spec.memory)
 	}
-	return r.calculateResources(cpuRaw, memRaw)
+
+	// 2. Try to get from annotation ResQuotaPlanConfigAnnoKey
+	if planConfig, found := r.getQuotaPlanFromAnnotation(plan); found {
+		if res, err := r.calculateResourcesByResConfig(*planConfig); err == nil {
+			return *res
+		}
+	}
+
+	// 3. Use default values from global config
+	return r.calculateResources(
+		config.Global.GetProcDefaultCpuLimit(),
+		config.Global.GetProcDefaultMemLimit(),
+	)
+}
+
+// getQuotaPlanFromAnnotation tries to get the quota plan config from annotation.
+// The annotation format is: {"planName": {"limits": {"cpu": "X", "memory": "X"}, "requests": {...}}}
+func (r *ProcResourcesGetter) getQuotaPlanFromAnnotation(
+	planName paasv1alpha2.ResQuotaPlan,
+) (*paasv1alpha2.ProcResSpec, bool) {
+	planConfigs, err := kubeutil.GetJsonAnnotation[paasv1alpha2.ResQuotaPlanConfig](
+		r.bkapp,
+		paasv1alpha2.ResQuotaPlanConfigAnnoKey,
+	)
+	if err == nil {
+		if cfg, ok := planConfigs[string(planName)]; ok {
+			return &cfg, true
+		}
+	}
+
+	return nil, false
 }
 
 // calculateResourcesByResConfig builds resource requirements from override config
 // Note: validation is already done by webhook, but we still check errors for robustness
 func (r *ProcResourcesGetter) calculateResourcesByResConfig(
-	resConfig paasv1alpha2.ProcResOverride,
+	resConfig paasv1alpha2.ProcResSpec,
 ) (*corev1.ResourceRequirements, error) {
 	// Parse limits using unified utility function
 	limitsCPU, limitsMemory, err := quota.ParseResourceSpec(resConfig.Limits.CPU, resConfig.Limits.Memory)

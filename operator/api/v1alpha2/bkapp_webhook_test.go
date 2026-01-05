@@ -1192,6 +1192,118 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 	})
 
+	Context("Test annotations validation - ResQuotaPlanConfig", func() {
+		It("valid ResQuotaPlanConfig - limits only", func() {
+			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+				"4c1g": {
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "4000m",
+						Memory: "1G",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("valid ResQuotaPlanConfig - limits and requests", func() {
+			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+				"4c1g": {
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "4000m",
+						Memory: "1G",
+					},
+					Requests: &paasv1alpha2.ResourceSpec{
+						CPU:    "200m",
+						Memory: "256Mi",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("invalid ResQuotaPlanConfig - missing limits", func() {
+			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+				"1c1g": {
+					Requests: &paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "1G",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("invalid limits resource spec"))
+		})
+
+		It("invalid ResQuotaPlanConfig - invalid cpu in limits", func() {
+			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+				"1c1g-invalid": {
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "invalid-cpu",
+						Memory: "1G",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("invalid"))
+			Expect(err.Error()).To(ContainSubstring("cpu"))
+		})
+
+		It("invalid ResQuotaPlanConfig - invalid memory in limits", func() {
+			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+				"1c1g": {
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "invalid-memory",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("invalid"))
+			Expect(err.Error()).To(ContainSubstring("memory"))
+		})
+
+		It("invalid ResQuotaPlanConfig - requests exceed limits", func() {
+			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+				"1c1g": {
+					Limits: paasv1alpha2.ResourceSpec{
+						CPU:    "1",
+						Memory: "1G",
+					},
+					Requests: &paasv1alpha2.ResourceSpec{
+						CPU:    "2",
+						Memory: "1G",
+					},
+				},
+			}
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+
+			err := bkapp.ValidateCreate()
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("must not exceed limits"))
+		})
+
+		It("no ResQuotaPlanConfig annotation - should pass", func() {
+			// Do not set ResQuotaPlanConfigAnnoKey, should pass
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+	})
+
 	Context("Test schedule nodeSelector validation", func() {
 		It("should pass when no egress annotation is set", func() {
 			bkapp.Spec.Schedule = &paasv1alpha2.Schedule{

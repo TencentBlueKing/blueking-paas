@@ -398,6 +398,7 @@ class BaseEncryptedFieldMixin:
 class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     """
     JSON 类型加密字段
+    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时， 不会进行解密处理, 行为与普通 JSONField 一致
     为了明确某个值是否被加密了， 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
     只会处理 string 并且带有加密标识前缀的值, dict 会下探处理
 
@@ -472,6 +473,7 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
 class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
     """
     Char 类型加密字段
+    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时， 不会进行解密处理, 行为与普通 CharField 一致
     为了明确某个值是否被加密了， 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
 
     :param must_encrypt: 是否必须加密, 为 False 时， 允许明文

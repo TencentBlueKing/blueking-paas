@@ -279,9 +279,14 @@ func (r *ProcResourcesGetter) fromQuotaPlan(
 
 	// 2. Try to get from annotation ResQuotaPlanConfigAnnoKey
 	if planConfig, found := r.getQuotaPlanFromAnnotation(plan); found {
-		if res, err := r.calculateResourcesByResConfig(*planConfig); err == nil {
-			return *res
+		res, err := r.calculateResourcesByResConfig(*planConfig)
+		if err != nil {
+			log.Error(
+				err, "Fail to parse ResQuotaPlan from annotation",
+				"plan", plan, "bkapp", r.bkapp.Name,
+			)
 		}
+		return *res
 	}
 
 	// 3. Use default values from global config

@@ -139,7 +139,7 @@ class AppResQuotaCollector:
                 self._format_cpu(plan_obj.requests["cpu"]),
                 self._format_memory(plan_obj.requests["memory"]),
             )
-            for plan_obj in ResQuotaPlan.objects.filter(is_active=True, is_built_in=True)
+            for plan_obj in ResQuotaPlan.objects.filter(is_active=True, is_builtin=True)
         }
 
     def collect(self) -> AppSummary:

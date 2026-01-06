@@ -728,7 +728,7 @@ def _get_res_quota_plan_config() -> str:
     """获取资源配额方案配置，返回 JSON 字符串或空字符串"""
     result = {}
 
-    for plan in ResQuotaPlan.objects.filter(is_active=True):
+    for plan in ResQuotaPlan.objects.filter(is_active=True, is_builtin=False):
         result[plan.name] = {"limits": plan.limits, "requests": plan.requests}
 
     return json.dumps(result) if result else ""

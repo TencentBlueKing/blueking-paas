@@ -16,10 +16,16 @@
 # to the current version of the project delivered to anyone in the future.
 
 import base64
+import logging
 import re
+from binascii import Error as Base64DecodeError
+from collections import deque
 from typing import List, Optional, Union
 
 import arrow
+from bkcrypto import constants as bkcrypto_constants
+from bkcrypto.asymmetric import options
+from bkcrypto.contrib.basic.ciphers import get_asymmetric_cipher
 from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.core.constants import ProviderType
 from bkpaas_auth.models import user_id_encoder
@@ -39,6 +45,8 @@ from paasng.utils.datetime import convert_timestamp_to_str
 from paasng.utils.file import path_may_escape
 from paasng.utils.sanitizer import clean_html
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
+
+logger = logging.getLogger(__name__)
 
 
 class VerificationCodeField(serializers.RegexField):
@@ -354,4 +362,116 @@ class SafePathField(serializers.RegexField):
             self.fail("escape_risk", path=data)
         if path_may_escape(data):
             self.fail("escape_risk", path=data)
+        return data
+
+
+class BaseEncryptedFieldMixin:
+    """提供 SM2 解密方法"""
+
+    cipher_handler = get_asymmetric_cipher(
+        cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
+        cipher_options={
+            bkcrypto_constants.AsymmetricCipherType.SM2.value: options.SM2AsymmetricOptions(
+                public_key_string=settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY,
+                private_key_string=settings.FRONTEND_ENCRYPT_SM2_PRIVATE_KEY,
+            ),
+        },
+    )
+
+    def decrypt(self, value: str) -> str:
+        try:
+            return self.cipher_handler.decrypt(value)
+        except Base64DecodeError:
+            raise serializers.ValidationError("base64 decode failed")
+        except Exception:
+            logger.exception("decrypt error")
+            raise serializers.ValidationError("decrypt failed")
+
+
+class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
+    """
+    加密 JSONField 反序列化器
+
+    :param max_decrypt_node_num: 最多解密次数
+    :param max_loop_num: 防止无限循环, 其真实含义为处理 dict 类型的值的次数
+    """
+
+    DEFAULT_MAX_DECRYPT_NODE_NUM = 50
+    DEFAULT_MAX_LOOP_NUM = 1000
+
+    default_error_messages = {
+        "max_decrypt_node_num_exceeded": _("Decrypt node number exceeds the limit."),
+        "max_loop_num_exceeded": _("Loop number exceeds the limit."),
+    }
+
+    def __init__(self, **kwargs):
+        self.MAX_DECRYPT_NODE_NUM = kwargs.pop("max_decrypt_node_num", self.DEFAULT_MAX_DECRYPT_NODE_NUM)
+        self.MAX_LOOP_NUM = kwargs.pop("max_loop_num", self.DEFAULT_MAX_LOOP_NUM)
+        super().__init__(**kwargs)
+
+    def recursive_decrypt(self, data):
+        queue = deque([data])
+        loop_cnt = decrypt_node_number = 0
+
+        while queue:
+            current_data = queue.popleft()
+            if isinstance(current_data, dict):
+                for key, value in current_data.copy().items():
+                    if isinstance(value, str) and key.startswith(settings.FRONTEND_ENCRYPT_FIELD_PREFIX):
+                        origin_key = key[len(settings.FRONTEND_ENCRYPT_FIELD_PREFIX) :]
+                        current_data[origin_key] = self.decrypt(value)
+                        decrypt_node_number += 1
+                    elif isinstance(value, dict):
+                        queue.append(value)
+
+            if decrypt_node_number > self.MAX_DECRYPT_NODE_NUM:
+                self.fail("max_decrypt_node_num_exceeded")
+
+            if loop_cnt > self.MAX_LOOP_NUM:
+                self.fail("max_loop_num_exceeded")
+
+            loop_cnt += 1
+
+        return data
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+        return self.recursive_decrypt(data)
+
+
+class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
+    """
+    Char 类型加密字段
+
+    :param must_encrypt: 是否必须加密
+    """
+
+    default_error_messages = {"must_encrypt": _("This field must be encrypted.")}
+
+    def __init__(self, **kwargs):
+        self.must_encrypt = kwargs.pop("must_encrypt", False)
+        if self.must_encrypt:
+            kwargs["required"] = True
+        super().__init__(**kwargs)
+
+    def get_value(self, dictionary):
+        encrypted_field_name = settings.FRONTEND_ENCRYPT_FIELD_PREFIX + self.field_name
+        if encrypted_field_name in dictionary:
+            logger.debug("found encrypted field %s in input data, start decrypting", encrypted_field_name)
+            return dictionary[encrypted_field_name]
+        elif self.must_encrypt:
+            return empty
+
+        return super().get_value(dictionary)
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+        if self.must_encrypt:
+            return self.decrypt(data)
+
+        try:
+            return self.decrypt(data)
+        except serializers.ValidationError:
+            pass
+
         return data

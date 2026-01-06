@@ -1582,3 +1582,18 @@ FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])
 APISERVER_OPERATOR_VERSION_CHECK = settings.get("APISERVER_OPERATOR_VERSION_CHECK", True)
 # apiserver 的版本号
 APISERVER_VERSION = settings.get("APISERVER_VERSION")
+
+# ---------------------------------------------
+#  前端加密配置项
+# ---------------------------------------------
+
+# ENABLE_FRONTEND_ENCRYPTION: 是否启用前端加密
+ENABLE_FRONTEND_ENCRYPT = settings.get("ENABLE_FRONTEND_ENCRYPT", False)
+FRONTEND_ENCRYPT_CIPHER_TYPE = "SM2"
+
+# 可通过以下代码来生成密钥
+# from bkcrypto.contrib.basic.ciphers import get_asymmetric_cipher
+# cipher_handler = get_asymmetric_cipher(cipher_type='SM2')
+FRONTEND_ENCRYPT_SM2_PUBLIC_KEY = settings.get("FRONTEND_ENCRYPT_PUBLIC_KEY")
+FRONTEND_ENCRYPT_SM2_PRIVATE_KEY = settings.get("FRONTEND_ENCRYPT_PRIVATE_KEY")
+FRONTEND_ENCRYPT_FIELD_PREFIX = settings.get("FRONTEND_ENCRYPT_FIELD_PREFIX", "_encrypted_")

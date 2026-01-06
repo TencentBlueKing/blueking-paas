@@ -17,6 +17,9 @@
 
 from django.urls import path
 
-from paasng.misc.plat_config.views import FrontendFeatureViewSet
+from paasng.misc.plat_config.views import FrontendEncryptConfigViewSet, FrontendFeatureViewSet
 
-urlpatterns = [path("api/platform/frontend_features/", FrontendFeatureViewSet.as_view({"get": "get_features"}))]
+urlpatterns = [
+    path("api/platform/frontend_features/", FrontendFeatureViewSet.as_view({"get": "get_features"})),
+    path("api/platform/encrypt_config/", FrontendEncryptConfigViewSet.as_view({"get": "get_encrypt_config"})),
+]

@@ -66,6 +66,7 @@ INSURE_CHECKING_EXCLUDED_VIEWS: Set[str] = {
     "MigrationConfirmViewset.confirm",
     # Non-sensitive APIs
     "FrontendFeatureViewSet.get_features",
+    "FrontendEncryptConfigViewSet.get_encrypt_config",
     "ApplicationMembersViewSet.get_roles",
     "CorpProductViewSet.list",
     "RegionViewSet.retrieve",

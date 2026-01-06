@@ -398,8 +398,8 @@ class BaseEncryptedFieldMixin:
 class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     """
     JSON 类型加密字段
-    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时， 不会进行解密处理, 行为与普通 JSONField 一致
-    为了明确某个值是否被加密了， 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
+    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 JSONField 一致
+    为了明确某个值是否被加密了, 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
     只会处理 string 并且带有加密标识前缀的值, dict 会下探处理
 
     以 FRONTEND_ENCRYPT_FIELD_PREFIX = '_encrypted_', repo_config 被设置为本字段为例:
@@ -410,7 +410,7 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
                 "_encrypted_password": "MH4CIQCk..." # 密文
             }
         }
-    会在 to_internal_value 方法时， 被解密为:
+    会在 to_internal_value 方法时, 被解密为:
         {
             "repo_config": {
                 "username": "Tom",
@@ -431,12 +431,13 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
         "max_loop_num_exceeded": _("Loop number exceeds the limit."),
     }
 
-    def __init__(self, **kwargs):
-        self.MAX_DECRYPT_NODE_NUM = kwargs.pop("max_decrypt_node_num", self.DEFAULT_MAX_DECRYPT_NODE_NUM)
-        self.MAX_LOOP_NUM = kwargs.pop("max_loop_num", self.DEFAULT_MAX_LOOP_NUM)
-        super().__init__(**kwargs)
-
     def recursive_decrypt(self, data):
+        if isinstance(data, str):
+            return self.decrypt(data)
+
+        if not isinstance(data, dict):
+            raise serializers.ValidationError("data should be dict or string")
+
         queue = deque([data])
         loop_cnt = decrypt_node_number = 0
 
@@ -451,10 +452,10 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
                     elif isinstance(value, dict):
                         queue.append(value)
 
-            if decrypt_node_number > self.MAX_DECRYPT_NODE_NUM:
+            if decrypt_node_number > self.DEFAULT_MAX_DECRYPT_NODE_NUM:
                 self.fail("max_decrypt_node_num_exceeded")
 
-            if loop_cnt > self.MAX_LOOP_NUM:
+            if loop_cnt > self.DEFAULT_MAX_LOOP_NUM:
                 self.fail("max_loop_num_exceeded")
 
             loop_cnt += 1
@@ -473,10 +474,10 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
 class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
     """
     Char 类型加密字段
-    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时， 不会进行解密处理, 行为与普通 CharField 一致
-    为了明确某个值是否被加密了， 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
+    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 CharField 一致
+    为了明确某个值是否被加密了, 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
 
-    :param must_encrypt: 是否必须加密, 为 False 时， 允许明文
+    :param must_encrypt: 是否必须加密, 为 False 时, 允许明文
     """
 
     default_error_messages = {"must_encrypt": _("This field must be encrypted.")}

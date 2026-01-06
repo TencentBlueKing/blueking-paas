@@ -1589,11 +1589,15 @@ APISERVER_VERSION = settings.get("APISERVER_VERSION")
 
 # ENABLE_FRONTEND_ENCRYPT: 是否启用前端加密
 ENABLE_FRONTEND_ENCRYPT = settings.get("ENABLE_FRONTEND_ENCRYPT", False)
+# 具体加密使用的算法
 FRONTEND_ENCRYPT_CIPHER_TYPE = "SM2"
 
 # 可通过以下代码来生成密钥
 # from bkcrypto.contrib.basic.ciphers import get_asymmetric_cipher
 # get_asymmetric_cipher(cipher_type='SM2').generate_key_pair()
+# SM2 公钥
 FRONTEND_ENCRYPT_SM2_PUBLIC_KEY = settings.get("FRONTEND_ENCRYPT_SM2_PUBLIC_KEY")
+# SM2 私钥
 FRONTEND_ENCRYPT_SM2_PRIVATE_KEY = settings.get("FRONTEND_ENCRYPT_SM2_PRIVATE_KEY")
+# 加密字段标识前缀
 FRONTEND_ENCRYPT_FIELD_PREFIX = settings.get("FRONTEND_ENCRYPT_FIELD_PREFIX", "_encrypted_")

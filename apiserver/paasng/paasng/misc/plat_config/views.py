@@ -106,5 +106,4 @@ class FrontendEncryptConfigViewSet(ViewSet):
                 }
             )
 
-        slz = EncryptConfigSLZ(encrypt_config)
-        return Response(data=slz.data)
+        return Response(data=EncryptConfigSLZ(encrypt_config).data)

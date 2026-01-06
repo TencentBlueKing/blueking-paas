@@ -628,10 +628,17 @@ BK_CI_CLIENT_USERNAME = "blueking"
 ## 是否使用 DockerRegistryToken 来验证，为 false 时使用 HTTPBasicAuthentication
 # SMART_DOCKER_AUTH_BY_TOKEN: true
 
-## 如果用到 python manage.py push_smart_image, SMART_IMAGE_TAG 和 SMART_CNB_IMAGE_TAG 必须设置有效值
-# SMART_IMAGE_TAG: v0.0.1-smart
-# SMART_CNB_IMAGE_TAG: v0.0.1-smart
+## 如果用到 python manage.py push_smart_image, APP_IMAGE 必须设置有效值
+# APP_IMAGE: hub.bktencent.com/blueking/slug-app:v0.0.1
 
+## 可以通过 SMART_CNB_IMAGE_CONF 来配置多个基础镜像。 未显式设置 default 时, 平台会使用默认配置
+# SMART_CNB_IMAGE_CONF:
+#   default:
+#     name: bkpaas/run-heroku-bionic
+#     tag: v1.0.2
+#   ts4:
+#     name: bkpaas/run-ts4
+#     tag: v1.0.2
 
 ## ------------------------------------ 插件开发中心配置 ------------------------------------
 

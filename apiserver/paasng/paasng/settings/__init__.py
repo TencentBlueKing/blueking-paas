@@ -781,6 +781,12 @@ AUTO_CREATE_REGULAR_USER = settings.get("AUTO_CREATE_REGULAR_USER", True)
 MAX_MODULES_COUNT_PER_APPLICATION = settings.get("MAX_MODULES_COUNT_PER_APPLICATION", default=10, cast="@int")
 # 应用单个模块允许创建的最大 process 数量
 MAX_PROCESSES_PER_MODULE = settings.get("MAX_PROCESSES_PER_MODULE", default=16, cast="@int")
+# 自动清理多余镜像功能-单个模块下最多保留的历史镜像数量
+MAX_RESERVED_IMAGES_PER_MODULE = settings.get("MAX_RESERVED_IMAGES_PER_MODULE", default=10, cast="@int")
+# 是否开启每次部署后 自动清理多余镜像功能
+AUTO_DELETE_REDUNDANT_IMAGES_AFTER_DEPLOY = settings.get(
+    "AUTO_DELETE_REDUNDANT_IMAGES_AFTER_DEPLOY", default=False, cast="@bool"
+)
 
 PAAS_LEGACY_DBCONF = get_database_conf(
     settings, encrypted_url_var="PAAS_LEGACY_DATABASE_URL", env_var_prefix="PAAS_LEGACY_", for_tests=RUNNING_TESTS
@@ -1323,12 +1329,18 @@ SMART_DOCKER_REGISTRY_NAMESPACE = settings.get("SMART_DOCKER_NAMESPACE", "bkpaas
 SMART_DOCKER_REGISTRY_USERNAME = settings.get("SMART_DOCKER_USERNAME", "bkpaas")
 # 用于访问 Registry 的密码
 SMART_DOCKER_REGISTRY_PASSWORD = settings.get("SMART_DOCKER_PASSWORD", "blueking")
-# S-Mart 基础镜像信息
-_SMART_TAG_SUFFIX = "smart"
-SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-pilot"
-SMART_IMAGE_TAG = f"{parse_image(settings.get('APP_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
-SMART_CNB_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic"
-SMART_CNB_IMAGE_TAG = f"{parse_image(settings.get('HEROKU_RUNNER_IMAGE', '')).tag or 'latest'}-{_SMART_TAG_SUFFIX}"
+# S-Mart slug-app 基础镜像信息
+SMART_IMAGE_NAME = f"{SMART_DOCKER_REGISTRY_NAMESPACE}/slug-app"
+SMART_IMAGE_TAG = f"{parse_image(settings.get('APP_IMAGE', '')).tag or 'latest'}"
+
+# S-Mart CNB 镜像信息
+SMART_CNB_IMAGE_CONF = settings.get("SMART_CNB_IMAGE_CONF", {})
+SMART_CNB_DEFAULT_IMAGE_ID = "default"
+if SMART_CNB_DEFAULT_IMAGE_ID not in SMART_CNB_IMAGE_CONF:
+    SMART_CNB_IMAGE_CONF[SMART_CNB_DEFAULT_IMAGE_ID] = {
+        "name": f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic",
+        "tag": "v1.0.2",
+    }
 
 # slugbuilder build 的超时时间, 单位秒
 BUILD_PROCESS_TIMEOUT = int(settings.get("BUILD_PROCESS_TIMEOUT", 60 * 15))

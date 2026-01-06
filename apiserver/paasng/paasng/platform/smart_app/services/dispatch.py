@@ -35,6 +35,7 @@ from paasng.platform.smart_app.services.patcher import patch_smart_tarball
 from paasng.platform.sourcectl.models import SourcePackage, SPStat, SPStoragePolicy
 from paasng.platform.sourcectl.package.uploader import generate_storage_path, upload_to_blob_store
 from paasng.platform.sourcectl.utils import generate_temp_dir, uncompress_directory
+from paasng.utils.dictx import get_items
 from paasng.utils.moby_distribution import ImageJSON, ImageRef, LayerRef
 from paasng.utils.text import remove_prefix
 
@@ -173,12 +174,12 @@ def dispatch_cnb_image_to_registry(
     """Merge image layer to base image, then push the new image to registry"""
     logger.debug("dispatching cnb-image for module '%s', working at '%s'", module.name, workplace)
 
-    mgr = SMartImageManager(module)
-    base_image = mgr.get_cnb_runner_image_info()
-    new_image_info = mgr.get_image_info(tag=stat.version)
-
     if smart_app_extra is None:
         raise RuntimeError("CNB image handler requires smart_app_extra")
+
+    mgr = SMartImageManager(module)
+    base_image = mgr.get_cnb_runner_image_info(base_image_id=smart_app_extra.get_base_image_id())
+    new_image_info = mgr.get_image_info(tag=stat.version)
 
     image_tar = smart_app_extra.get_image_tar(module.name)
 
@@ -231,14 +232,22 @@ def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SM
 
     构建元数据包括:
     - use_cnb 标记
+    - base_image_id 基础镜像 ID. 用于区分不同的基础镜像(run image)
     - 各模块进程的 entrypoints(如果有, 从 artifact.json 解析)
     - 各模块使用的 image_tar(如果有, 从 artifact.json 解析)
 
     artifact.json 格式为:
     {
-       "module1": {"image_tar": "module1.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}},
-       "module2": {"image_tar": "module2.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}}
-     }
+      "version": "1.0"
+      "runtime": {
+          "base_image_id": "ts4",
+          "architecture": "amd64",
+      },
+      "app_artifacts": {
+        "module1": {"image_tar": "module1.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}},
+        "module2": {"image_tar": "module2.tar", "proc_entrypoints": {进程名: 具体的 entrypoint}}
+      }
+    }
     """
     smart_app_extra = SMartAppExtraInfo.objects.get(app=application)
     smart_app_extra.set_use_cnb_flag(True)
@@ -248,9 +257,13 @@ def parse_and_save_cnb_metadata(application: Application, workplace: Path) -> SM
         return smart_app_extra
 
     artifact_json = json.loads(artifact_json_file.read_text())
-    for module_name in artifact_json:
-        smart_app_extra.set_proc_entrypoints(module_name, artifact_json[module_name]["proc_entrypoints"])
-        smart_app_extra.set_image_tar(module_name, artifact_json[module_name]["image_tar"])
+    app_artifacts = artifact_json.get("app_artifacts", {})
+    for module_name in app_artifacts:
+        smart_app_extra.set_proc_entrypoints(module_name, app_artifacts[module_name]["proc_entrypoints"])
+        smart_app_extra.set_image_tar(module_name, app_artifacts[module_name]["image_tar"])
+
+    if base_image_id := get_items(artifact_json, "runtime.base_image_id"):
+        smart_app_extra.set_base_image_id(base_image_id)
 
     return smart_app_extra
 

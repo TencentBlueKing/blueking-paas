@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.conf import settings
 from pydantic import BaseModel, Field
 
 from paasng.utils.structure import prepare_json_field
@@ -25,6 +26,7 @@ class SMartAppArtifactMetadata(BaseModel):
     """记录由 smart-app-builder 工具构建出的 Smart 包的元数据
 
     :param use_cnb: 是否使用 CNB 构建
+    :param base_image_id: 基础镜像 ID. 用于区分不同的基础镜像(run image)
     :param module_image_tars: 模块使用的镜像 tar, 格式为 {模块名: 镜像 tar 名}
     :param module_proc_entrypoints: 模块进程的 entrypoint, 格式为 {模块名: {进程名: entrypoint}}
 
@@ -37,5 +39,6 @@ class SMartAppArtifactMetadata(BaseModel):
     """
 
     use_cnb: bool = False
+    base_image_id: str = settings.SMART_CNB_DEFAULT_IMAGE_ID
     module_image_tars: dict[str, str] = Field(default_factory=dict)
     module_proc_entrypoints: dict[str, dict[str, list[str]]] = Field(default_factory=dict)

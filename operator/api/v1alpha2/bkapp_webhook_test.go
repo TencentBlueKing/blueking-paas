@@ -1191,6 +1191,61 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(err).To(BeNil())
 		})
 	})
+
+	Context("Test schedule nodeSelector validation", func() {
+		It("should pass when no egress annotation is set", func() {
+			bkapp.Spec.Schedule = &paasv1alpha2.Schedule{
+				NodeSelector: map[string]string{
+					"zone": "zone-a",
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("should pass when egress annotation is set but app has no nodeSelector", func() {
+			bkapp.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey] = "eng-cstate-test"
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("should pass when egress annotation is set and app nodeSelector has different keys", func() {
+			bkapp.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey] = "eng-cstate-test"
+			bkapp.Spec.Schedule = &paasv1alpha2.Schedule{
+				NodeSelector: map[string]string{
+					"zone":     "zone-a",
+					"disktype": "ssd",
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+
+		It("should fail when app nodeSelector key conflicts with egress key", func() {
+			egressKey := "eng-cstate-test"
+			bkapp.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey] = egressKey
+			bkapp.Spec.Schedule = &paasv1alpha2.Schedule{
+				NodeSelector: map[string]string{
+					egressKey: "custom-value",
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("conflicts with egress configuration"))
+			Expect(err.Error()).To(ContainSubstring(egressKey))
+		})
+
+		It("should pass when egress annotation value is empty", func() {
+			bkapp.Annotations[paasv1alpha2.EgressClusterStateNameAnnoKey] = ""
+			bkapp.Spec.Schedule = &paasv1alpha2.Schedule{
+				NodeSelector: map[string]string{
+					"any-key": "any-value",
+				},
+			}
+			err := bkapp.ValidateCreate()
+			Expect(err).To(BeNil())
+		})
+	})
 })
 
 var _ = Describe("test webhook.Validator validate process services", func() {

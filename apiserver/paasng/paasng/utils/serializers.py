@@ -429,6 +429,7 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     default_error_messages = {
         "max_decrypt_node_num_exceeded": _("Decrypt node number exceeds the limit."),
         "max_loop_num_exceeded": _("Loop number exceeds the limit."),
+        "invalid_type": _("Invalid type."),
     }
 
     def recursive_decrypt(self, data):
@@ -436,7 +437,7 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
             return self.decrypt(data)
 
         if not isinstance(data, dict):
-            raise serializers.ValidationError("data should be dict or string")
+            self.fail("invalid_type")
 
         queue = deque([data])
         loop_cnt = decrypt_node_number = 0

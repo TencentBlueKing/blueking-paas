@@ -1593,7 +1593,7 @@ FRONTEND_ENCRYPT_CIPHER_TYPE = "SM2"
 
 # 可通过以下代码来生成密钥
 # from bkcrypto.contrib.basic.ciphers import get_asymmetric_cipher
-# cipher_handler = get_asymmetric_cipher(cipher_type='SM2')
+# get_asymmetric_cipher(cipher_type='SM2').generate_key_pair()
 FRONTEND_ENCRYPT_SM2_PUBLIC_KEY = settings.get("FRONTEND_ENCRYPT_PUBLIC_KEY")
 FRONTEND_ENCRYPT_SM2_PRIVATE_KEY = settings.get("FRONTEND_ENCRYPT_PRIVATE_KEY")
 FRONTEND_ENCRYPT_FIELD_PREFIX = settings.get("FRONTEND_ENCRYPT_FIELD_PREFIX", "_encrypted_")

@@ -167,6 +167,7 @@ class EncryptedCharFieldSLZ(serializers.Serializer):
     password = EncryptedCharField(must_encrypt=True)
 
 
+@pytest.mark.skipif(settings.ENABLE_FRONTEND_ENCRYPT is False, reason="need ENABLE_FRONTEND_ENCRYPT")
 class TestEncryptedCharField:
     @pytest.fixture
     def encrypted_value(self):
@@ -207,6 +208,7 @@ class EncryptedJSONFieldSLZ(serializers.Serializer):
     encrypted_json = EncryptedJSONField(max_decrypt_node_num=10, max_loop_num=50)
 
 
+@pytest.mark.skipif(settings.ENABLE_FRONTEND_ENCRYPT is False, reason="need ENABLE_FRONTEND_ENCRYPT")
 class TestEncryptedJSONField:
     @pytest.fixture
     def encrypted_value(self):

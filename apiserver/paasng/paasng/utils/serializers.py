@@ -20,6 +20,7 @@ import logging
 import re
 from binascii import Error as Base64DecodeError
 from collections import deque
+from functools import cached_property
 from typing import List, Optional, Union
 
 import arrow
@@ -368,15 +369,17 @@ class SafePathField(serializers.RegexField):
 class BaseEncryptedFieldMixin:
     """抽取 SM2 公共解密方法, 作为混合类使用"""
 
-    cipher_handler = get_asymmetric_cipher(
-        cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
-        cipher_options={
-            bkcrypto_constants.AsymmetricCipherType.SM2.value: options.SM2AsymmetricOptions(
-                public_key_string=settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY,
-                private_key_string=settings.FRONTEND_ENCRYPT_SM2_PRIVATE_KEY,
-            ),
-        },
-    )
+    @cached_property
+    def cipher_handler(self):
+        return get_asymmetric_cipher(
+            cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
+            cipher_options={
+                bkcrypto_constants.AsymmetricCipherType.SM2.value: options.SM2AsymmetricOptions(
+                    public_key_string=settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY,
+                    private_key_string=settings.FRONTEND_ENCRYPT_SM2_PRIVATE_KEY,
+                ),
+            },
+        )
 
     def decrypt(self, value: str) -> str:
         try:
@@ -454,7 +457,11 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
-        return self.recursive_decrypt(data)
+
+        if settings.ENABLE_FRONTEND_ENCRYPT:
+            return self.recursive_decrypt(data)
+        else:
+            return data
 
 
 class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
@@ -469,14 +476,19 @@ class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
 
     def __init__(self, **kwargs):
         self.must_encrypt = kwargs.pop("must_encrypt", False)
+        self._from_encrypted_field = False
         if self.must_encrypt:
             kwargs["required"] = True
         super().__init__(**kwargs)
 
     def get_value(self, dictionary):
+        if not settings.ENABLE_FRONTEND_ENCRYPT:
+            return super().get_value(dictionary)
+
         encrypted_field_name = settings.FRONTEND_ENCRYPT_FIELD_PREFIX + self.field_name
         if encrypted_field_name in dictionary:
             logger.debug("found encrypted field %s in input data, start decrypting", encrypted_field_name)
+            self._from_encrypted_field = True
             return dictionary[encrypted_field_name]
         elif self.must_encrypt:
             return empty
@@ -485,12 +497,12 @@ class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
-        if self.must_encrypt:
-            return self.decrypt(data)
 
-        try:
+        if not settings.ENABLE_FRONTEND_ENCRYPT:
+            return data
+        elif self.must_encrypt and not self._from_encrypted_field:
+            self.fail("must_encrypt")
+        elif self._from_encrypted_field:
             return self.decrypt(data)
-        except serializers.ValidationError:
-            pass
 
         return data

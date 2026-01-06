@@ -482,8 +482,6 @@ class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
     def __init__(self, **kwargs):
         self.must_encrypt = kwargs.pop("must_encrypt", False)
         self._from_encrypted_field = False
-        if self.must_encrypt:
-            kwargs["required"] = True
         super().__init__(**kwargs)
 
     def get_value(self, dictionary):

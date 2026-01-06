@@ -194,7 +194,7 @@ class TestEncryptedCharField:
         ("data", "ctx"),
         [
             ({"username": "test_value"}, pytest.raises(ValidationError, match="required")),
-            ({"password": "test_value"}, pytest.raises(ValidationError, match="required")),
+            ({"password": "test_value"}, pytest.raises(ValidationError, match="must_encrypt")),
             ({"_encrypted_password": "test_value"}, pytest.raises(ValidationError, match="base64 decode failed")),
         ],
     )
@@ -241,7 +241,7 @@ class TestEncryptedJSONField:
             (11, None, pytest.raises(ValidationError)),
             # 总节点数量边界（不加密）
             (None, 50, nullcontext()),
-            (None, 52, pytest.raises(ValidationError)),
+            (None, 51, pytest.raises(ValidationError)),
         ],
     )
     def test_big_data_decrypt(self, encrypted_value, encrypted_count, dict_count, ctx):

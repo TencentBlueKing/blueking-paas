@@ -31,6 +31,7 @@ from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.core.constants import ProviderType
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator
 from django.utils import timezone
@@ -371,6 +372,9 @@ class BaseEncryptedFieldMixin:
 
     @cached_property
     def cipher_handler(self):
+        if not (settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY and settings.FRONTEND_ENCRYPT_SM2_PRIVATE_KEY):
+            raise ImproperlyConfigured("SM2 public key or private key not set")
+
         return get_asymmetric_cipher(
             cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
             cipher_options={
@@ -395,6 +399,7 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     """
     JSON 类型加密字段
     为了明确某个值是否被加密了， 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
+    只会处理 string 并且带有加密标识前缀的值, dict 会下探处理
 
     以 FRONTEND_ENCRYPT_FIELD_PREFIX = '_encrypted_', repo_config 被设置为本字段为例:
     接收:
@@ -486,12 +491,12 @@ class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
             return super().get_value(dictionary)
 
         encrypted_field_name = settings.FRONTEND_ENCRYPT_FIELD_PREFIX + self.field_name
+        # 先复原状态， 防止一个 SLZ 实例被多次使用时状态污染
+        self._from_encrypted_field = False
         if encrypted_field_name in dictionary:
             logger.debug("found encrypted field %s in input data, start decrypting", encrypted_field_name)
             self._from_encrypted_field = True
             return dictionary[encrypted_field_name]
-        elif self.must_encrypt:
-            return empty
 
         return super().get_value(dictionary)
 

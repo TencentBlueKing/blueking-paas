@@ -125,7 +125,6 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
         if value is None:
             return value
 
-        # TODO 优化?
         try:
             ResQuotaPlan.objects.get(name=value, is_active=True)
         except ResQuotaPlan.DoesNotExist:
@@ -293,7 +292,6 @@ class ProcessInputSLZ(serializers.Serializer):
         if value is None:
             return value
 
-        # TODO 优化?
         try:
             ResQuotaPlan.objects.get(name=value, is_active=True)
         except ResQuotaPlan.DoesNotExist:

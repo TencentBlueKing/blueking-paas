@@ -293,7 +293,7 @@ def initialize_default_proc_spec_plans():
 
     try:
         active_plans = get_active_res_quota_plans()
-    except RuntimeError:
+    except ValueError:
         # Getter not set yet, skip syncing ResQuotaPlan
         logger.warning("ResQuotaPlan getter not set, skip syncing to ProcessSpecPlan")
         return

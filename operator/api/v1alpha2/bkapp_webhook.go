@@ -498,19 +498,8 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 	}
 
 	// 3. 检查资源方案是否是受支持的
-	if !lo.Contains(AllowedResQuotaPlans, proc.ResQuotaPlan) {
-		// 查看资源方案是否在注解中定义
-		resQuotaPlanConfig, err := kubeutil.GetJsonAnnotation[ResQuotaPlanConfig](
-			r, ResQuotaPlanConfigAnnoKey,
-		)
-		if err == nil {
-			if _, found := resQuotaPlanConfig[string(proc.ResQuotaPlan)]; found {
-				return nil
-			}
-		}
-		return field.NotSupported(
-			pField.Child("resQuotaPlan"), proc.ResQuotaPlan, stringx.ToStrArray(AllowedResQuotaPlans),
-		)
+	if err := r.validateResQuotaPlan(pField.Child("resQuotaPlan"), proc.ResQuotaPlan); err != nil {
+		return err
 	}
 
 	// 4. 如果启用扩缩容，需要符合规范
@@ -859,10 +848,8 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		if !lo.Contains(r.getProcNames(), q.Process) {
 			return field.Invalid(resQuotaField.Child("process"), q.Process, "process name is invalid")
 		}
-		if !lo.Contains(AllowedResQuotaPlans, q.Plan) {
-			return field.NotSupported(
-				resQuotaField.Child("plan"), q.Plan, stringx.ToStrArray(AllowedResQuotaPlans),
-			)
+		if err := r.validateResQuotaPlan(resQuotaField.Child("plan"), q.Plan); err != nil {
+			return err
 		}
 	}
 
@@ -922,4 +909,25 @@ func (r *BkApp) validateComponents() *field.Error {
 		}
 	}
 	return nil
+}
+
+func (r *BkApp) validateResQuotaPlan(pPath *field.Path, plan ResQuotaPlan) *field.Error {
+	if lo.Contains(AllowedResQuotaPlans, plan) {
+		return nil
+	}
+
+	resQuotaPlanConfig, err := kubeutil.GetJsonAnnotation[ResQuotaPlanConfig](
+		r, ResQuotaPlanConfigAnnoKey,
+	)
+	if err == nil {
+		if _, found := resQuotaPlanConfig[string(plan)]; found {
+			return nil
+		}
+	}
+
+	supportedPlans := stringx.ToStrArray(AllowedResQuotaPlans)
+	for name := range resQuotaPlanConfig {
+		supportedPlans = append(supportedPlans, name)
+	}
+	return field.NotSupported(pPath, plan, supportedPlans)
 }

@@ -57,10 +57,7 @@ def generate_env_vars(module: Module) -> List[DevSandboxEnvVar]:
     envs["DEV_SERVER_ADDR"] = f":{settings.DEV_SANDBOX_DEVSERVER_PORT}"
     envs["CORS_ALLOW_ORIGINS"] = settings.DEV_SANDBOX_CORS_ALLOW_ORIGINS
 
-    result = [
-        DevSandboxEnvVar(key=key, value=value, source=DevSandboxEnvVarSource.STAG) for key, value in envs.items()
-    ]
-    return result
+    return [DevSandboxEnvVar(key=key, value=value, source=DevSandboxEnvVarSource.STAG) for key, value in envs.items()]
 
 
 def _buildpacks_as_build_env(buildpacks: List[Dict]) -> str:

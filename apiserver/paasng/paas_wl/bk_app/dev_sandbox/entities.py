@@ -22,6 +22,7 @@ from django.conf import settings
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource, SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paasng.utils.masked_curlify import MASKED_CONTENT
 
 
 @define
@@ -113,7 +114,10 @@ class CodeEditorConfig:
 
 @define
 class DevSandboxEnvVar:
-    """开发沙箱环境变量"""
+    """
+    开发沙箱环境变量
+    sensitive 为 None 时， 会走内置的敏感字段判断逻辑
+    """
 
     key: str
     value: str
@@ -139,11 +143,11 @@ class DevSandboxEnvVar:
         """
         data = asdict(self)
         if self.sensitive:
-            data["value"] = "******"
+            data["value"] = MASKED_CONTENT
         return data
 
     def __repr__(self):
         return (
-            f"DevSandboxEnvVar(key={self.key}, value={'******' if self.sensitive else self.value},"
-            f" source={self.source}, sensitive={self.sensitive})"
+            f"DevSandboxEnvVar(key={self.key}, value={MASKED_CONTENT if self.sensitive else self.value},"
+            + f" source={self.source}, sensitive={self.sensitive})"
         )

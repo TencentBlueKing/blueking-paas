@@ -137,7 +137,7 @@ class ApplicationQuerySet(models.QuerySet):
         if app_status == AppStatus.NORMAL:
             return self.filter(last_deployed_date__isnull=False, is_active=True)
         if app_status == AppStatus.OFFLINE:
-            return self.filter(is_active=False)
+            return self.filter(last_deployed_date__isnull=False, is_active=False)
         return self
 
 

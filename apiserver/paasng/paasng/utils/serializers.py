@@ -366,7 +366,7 @@ class SafePathField(serializers.RegexField):
 
 
 class BaseEncryptedFieldMixin:
-    """提供 SM2 解密方法"""
+    """抽取 SM2 公共解密方法, 作为混合类使用"""
 
     cipher_handler = get_asymmetric_cipher(
         cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
@@ -390,7 +390,25 @@ class BaseEncryptedFieldMixin:
 
 class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     """
-    加密 JSONField 反序列化器
+    JSON 类型加密字段
+    为了明确某个值是否被加密了， 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
+
+    以 FRONTEND_ENCRYPT_FIELD_PREFIX = '_encrypted_', repo_config 被设置为本字段为例:
+    接收:
+        {
+            "repo_config": {
+                "username": "Tom",
+                "_encrypted_password": "MH4CIQCk..." # 密文
+            }
+        }
+    会在 to_internal_value 方法时， 被解密为:
+        {
+            "repo_config": {
+                "username": "Tom",
+                "password": "SecretPassword" # 明文
+                "_encrypted_password": "MH4CIQCk..." # 密文
+            }
+        }
 
     :param max_decrypt_node_num: 最多解密次数
     :param max_loop_num: 防止无限循环, 其真实含义为处理 dict 类型的值的次数
@@ -442,8 +460,9 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
 class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
     """
     Char 类型加密字段
+    为了明确某个值是否被加密了， 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
 
-    :param must_encrypt: 是否必须加密
+    :param must_encrypt: 是否必须加密, 为 False 时， 允许明文
     """
 
     default_error_messages = {"must_encrypt": _("This field must be encrypted.")}

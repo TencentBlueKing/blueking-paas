@@ -49,10 +49,9 @@ class TestGetEnvVarsSelectedAddons:
 
     def test_get_env_vars_selected_addons_merge(self, bk_module, bk_stag_env):
         """测试环境变量合并"""
-        result = get_env_vars_selected_addons(bk_stag_env, None)
-        result_dict = {var.key: var.value for var in result}
+        result = {env_var.key: env_var.value for env_var in get_env_vars_selected_addons(bk_stag_env, None)}
 
-        assert result_dict == {
+        assert result == {
             "DB_HOST": "db.com",
             "APP_ENV": "prod",
             "MYSQL_HOST": "mysql.com",
@@ -68,28 +67,30 @@ class TestGetEnvVarsSelectedAddons:
 
         # 测试服务全选的情况
         selected_services = [mysql_service_name, rabbitmq_service_name]
-        result = list_vars_builtin_addons_custom(bk_stag_env, selected_services)
-        result_dict = {var.key: var.value for var in result}
+        result = {
+            env_var.key: env_var.value for env_var in list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        }
 
-        assert result_dict == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306", "MQ_URL": "mq.com"}
+        assert result == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306", "MQ_URL": "mq.com"}
 
         # 测试仅选择一个服务的情况
         selected_services = [mysql_service_name]
-        result = list_vars_builtin_addons_custom(bk_stag_env, selected_services)
-        result_dict = {var.key: var.value for var in result}
-        assert result_dict == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306"}
+        result = {
+            env_var.key: env_var.value for env_var in list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        }
+        assert result == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306"}
 
         # 测试不选择服务的情况
         selected_services = []
-        result = list_vars_builtin_addons_custom(bk_stag_env, selected_services)
-        result_dict = {var.key: var.value for var in result}
-        assert result_dict == {}
+        result = {
+            env_var.key: env_var.value for env_var in list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        }
+        assert result == {}
 
     def test_list_vars_builtin_addons_custom_none_filter(self, bk_module, bk_stag_env):
-        result = list_vars_builtin_addons_custom(bk_stag_env, None)
-        result_dict = {var.key: var.value for var in result}
+        result = {env_var.key: env_var.value for env_var in list_vars_builtin_addons_custom(bk_stag_env, None)}
 
-        assert result_dict == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306", "MQ_URL": "mq.com"}
+        assert result == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306", "MQ_URL": "mq.com"}
 
     def test_get_env_vars_selected_addons_with_selected_services(self, bk_module, bk_stag_env):
         """测试当提供选定的服务名称时的行为"""
@@ -97,11 +98,11 @@ class TestGetEnvVarsSelectedAddons:
         rabbitmq_service_name = "rabbitmq"
 
         selected_services = [mysql_service_name, rabbitmq_service_name]
-        result = get_env_vars_selected_addons(bk_stag_env, selected_services)
+        result = {
+            env_var.key: env_var.value for env_var in get_env_vars_selected_addons(bk_stag_env, selected_services)
+        }
 
-        result_dict = {var.key: var.value for var in result}
-
-        assert result_dict == {
+        assert result == {
             "DB_HOST": "db.com",
             "APP_ENV": "prod",
             "MYSQL_HOST": "mysql.com",
@@ -118,14 +119,13 @@ class TestGetEnvVarsSelectedAddons:
                 "MYSQL_HOST": "old-mysql.com",
             }
 
-            result = get_env_vars_selected_addons(bk_stag_env, None)
-            result_dict = {var.key: var.value for var in result}
+            result = {env_var.key: env_var.value for env_var in get_env_vars_selected_addons(bk_stag_env, None)}
 
             # 验证 MYSQL_HOST 被覆盖
-            assert result_dict["MYSQL_HOST"] == "mysql.com"
-            assert result_dict["DB_HOST"] == "db.com"
+            assert result["MYSQL_HOST"] == "mysql.com"
+            assert result["DB_HOST"] == "db.com"
 
-    def test_get_env_vars_selected_addons_sensitive(self, bk_module, bk_stag_env):
+    def test_get_env_vars_selected_addons_sensitive(self, bk_stag_env):
         """测试敏感字段的标记"""
         result = get_env_vars_selected_addons(bk_stag_env, None)
 

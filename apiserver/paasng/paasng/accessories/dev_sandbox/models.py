@@ -85,7 +85,7 @@ class DevSandboxQuerySet(models.QuerySet):
             code_editor_cfg = CodeEditorConfig(password=generate_password())
 
         env_vars_dict = {env_var.key: env_var for env_var in env_vars}
-        deduplicated_env_vars = list(env_vars_dict.values())
+        deduplicated_env_vars = env_vars_dict.values()
 
         return super().create(
             code=code,
@@ -126,25 +126,15 @@ class DevSandbox(OwnerTimestampedModel):
 
     def list_env_vars(self) -> List[DevSandboxEnvVar]:
         """获取沙箱环境变量"""
-        data = json.loads(self.env_vars)
-
-        results = []
-        for env in data:
-            try:
-                dev_sandbox_env_var = DevSandboxEnvVar(
-                    key=env["key"],
-                    value=env["value"],
-                    source=env["source"],
-                    sensitive=env.get("sensitive"),
-                )
-            except (KeyError, TypeError):
-                logger.exception(
-                    "dev_sandbox<%s> key error when parsing dev sandbox env_vars: %s, skip", self.code, env
-                )
-            else:
-                results.append(dev_sandbox_env_var)
-
-        return results
+        return [
+            DevSandboxEnvVar(
+                key=env_var["key"],
+                value=env_var["value"],
+                source=env_var["source"],
+                sensitive=env_var.get("sensitive"),
+            )
+            for env_var in json.loads(self.env_vars)
+        ]
 
     def upsert_env_var(self, key: str, value: str):
         """更新或新增单个环境变量"""

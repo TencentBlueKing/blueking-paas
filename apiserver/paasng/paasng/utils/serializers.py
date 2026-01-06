@@ -480,23 +480,13 @@ class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
     :param must_encrypt: 是否必须加密, 为 False 时, 允许明文
     """
 
-    default_error_messages = {"must_encrypt": _("This field must be encrypted.")}
-
-    def __init__(self, **kwargs):
-        self.must_encrypt = kwargs.pop("must_encrypt", False)
-        self._from_encrypted_field = False
-        super().__init__(**kwargs)
-
     def get_value(self, dictionary):
         if not settings.ENABLE_FRONTEND_ENCRYPT:
             return super().get_value(dictionary)
 
         encrypted_field_name = settings.FRONTEND_ENCRYPT_FIELD_PREFIX + self.field_name
-        # 先复原状态， 防止一个 SLZ 实例被多次使用时状态污染
-        self._from_encrypted_field = False
         if encrypted_field_name in dictionary:
             logger.debug("found encrypted field %s in input data, start decrypting", encrypted_field_name)
-            self._from_encrypted_field = True
             return dictionary[encrypted_field_name]
 
         return super().get_value(dictionary)
@@ -506,9 +496,5 @@ class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
 
         if not settings.ENABLE_FRONTEND_ENCRYPT:
             return data
-        elif self.must_encrypt and not self._from_encrypted_field:
-            self.fail("must_encrypt")
-        elif self._from_encrypted_field:
-            return self.decrypt(data)
 
-        return data
+        return self.decrypt(data)

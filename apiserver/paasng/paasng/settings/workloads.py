@@ -110,7 +110,6 @@ DEV_SANDBOX_CODE_EDITOR_PORT = settings.get("DEV_SANDBOX_CODE_EDITOR_PORT", 8080
 DEV_SANDBOX_CLUSTER = settings.get("DEV_SANDBOX_CLUSTER", "")
 
 # 沙箱环境变量 - 指定敏感环境变量key, 会脱敏返回给前端
-# 注意： 只会处理平台内置的环境变量, 用户自定义的环境变量不会被脱敏
 DEV_SANDBOX_SENSITIVE_ENV_VARS = settings.get("DEV_SANDBOX_SENSITIVE_ENV_VARS", ["BKPAAS_APP_SECRET"])
 
 # ---------------

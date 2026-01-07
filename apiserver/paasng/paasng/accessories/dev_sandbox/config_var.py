@@ -125,13 +125,12 @@ def list_vars_builtin_addons_custom(
         for field in (group.should_hidden_fields or []) + (group.should_remove_fields or [])
     }
 
-    # sensitive 默认给 None, 而非 False, 避免对 DevSandboxEnvVar.__attrs_post_init__ 逻辑产生影响
     return [
         DevSandboxEnvVar(
             key=key,
             value=value,
             source=DevSandboxEnvVarSource.STAG,
-            sensitive=True if key in sensitive_fields else None,
+            sensitive=key in sensitive_fields,
         )
         for group in var_groups
         for key, value in group.data.items()

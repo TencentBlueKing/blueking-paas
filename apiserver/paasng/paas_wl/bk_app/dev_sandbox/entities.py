@@ -116,32 +116,27 @@ class CodeEditorConfig:
 class DevSandboxEnvVar:
     """
     开发沙箱环境变量
-    sensitive 为 None 时， 会走内置的敏感字段判断逻辑
+    key 在 settings.DEV_SANDBOX_SENSITIVE_ENV_VARS 中时， sensitive 会被强制初始化为 True
     """
 
     key: str
     value: str
     source: DevSandboxEnvVarSource
-    sensitive: bool | None = None
+    sensitive: bool = False
 
     def __attrs_post_init__(self):
-        """
-        若没有指定 sensitive, 则根据 key 自动判断
-        """
-        if self.sensitive is None:
-            if self.key in settings.DEV_SANDBOX_SENSITIVE_ENV_VARS and self.source == DevSandboxEnvVarSource.STAG:
-                self.sensitive = True
-            else:
-                self.sensitive = False
+        self.sensitive = self.sensitive or self.key in settings.DEV_SANDBOX_SENSITIVE_ENV_VARS
 
     def to_dict(self):
-        return asdict(self)
+        data = asdict(self)
+        data.update({"sensitive": self.sensitive})
+        return data
 
     def to_masked_dict(self):
         """
         返回屏蔽敏感信息的字典表示， 可用于 API 输出或日志
         """
-        data = asdict(self)
+        data = self.to_dict()
         if self.sensitive:
             data["value"] = MASKED_CONTENT
         return data

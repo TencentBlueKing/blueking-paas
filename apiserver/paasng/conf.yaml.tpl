@@ -961,9 +961,6 @@ FRONTEND_ENCRYPT_SM2_PUBLIC_KEY = settings.get("FRONTEND_ENCRYPT_SM2_PUBLIC_KEY"
 # SM2 私钥
 FRONTEND_ENCRYPT_SM2_PRIVATE_KEY = settings.get("FRONTEND_ENCRYPT_SM2_PRIVATE_KEY")
 
-# 加密字段标识前缀
-FRONTEND_ENCRYPT_FIELD_PREFIX = settings.get("FRONTEND_ENCRYPT_FIELD_PREFIX", "_encrypted_")
-
 ## ------------------------------------ internal 配置，仅开发项目与特殊环境下使用 ------------------------------------
 
 ## 运维开发相关的 BK-DATA 数据上报相关配置

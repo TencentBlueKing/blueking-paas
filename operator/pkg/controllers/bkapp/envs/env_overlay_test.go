@@ -359,8 +359,8 @@ var _ = Describe("Environment overlay related functions", func() {
 			// Define custom plan in annotation
 			_ = kubeutil.SetJsonAnnotation(
 				bkapp,
-				paasv1alpha2.ResQuotaPlanConfigAnnoKey,
-				paasv1alpha2.ResQuotaPlanConfig{
+				paasv1alpha2.ResQuotaPlansAnnoKey,
+				paasv1alpha2.ResQuotaPlans{
 					"custom-2c2g": {
 						Limits: paasv1alpha2.ResourceSpec{
 							CPU:    "2000m",
@@ -389,8 +389,8 @@ var _ = Describe("Environment overlay related functions", func() {
 			// Define custom plan in annotation without requests
 			_ = kubeutil.SetJsonAnnotation(
 				bkapp,
-				paasv1alpha2.ResQuotaPlanConfigAnnoKey,
-				paasv1alpha2.ResQuotaPlanConfig{
+				paasv1alpha2.ResQuotaPlansAnnoKey,
+				paasv1alpha2.ResQuotaPlans{
 					"custom-1c1g": {
 						Limits: paasv1alpha2.ResourceSpec{
 							CPU:    "1000m",
@@ -419,8 +419,8 @@ var _ = Describe("Environment overlay related functions", func() {
 			// Define custom plan in annotation
 			_ = kubeutil.SetJsonAnnotation(
 				bkapp,
-				paasv1alpha2.ResQuotaPlanConfigAnnoKey,
-				paasv1alpha2.ResQuotaPlanConfig{
+				paasv1alpha2.ResQuotaPlansAnnoKey,
+				paasv1alpha2.ResQuotaPlans{
 					"custom-3c4g": {
 						Limits: paasv1alpha2.ResourceSpec{
 							CPU:    "3000m",
@@ -454,8 +454,8 @@ var _ = Describe("Environment overlay related functions", func() {
 			// Define custom plan but use different name in process
 			_ = kubeutil.SetJsonAnnotation(
 				bkapp,
-				paasv1alpha2.ResQuotaPlanConfigAnnoKey,
-				paasv1alpha2.ResQuotaPlanConfig{
+				paasv1alpha2.ResQuotaPlansAnnoKey,
+				paasv1alpha2.ResQuotaPlans{
 					"custom-plan": {
 						Limits: paasv1alpha2.ResourceSpec{
 							CPU:    "2000m",

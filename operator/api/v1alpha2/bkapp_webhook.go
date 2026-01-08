@@ -259,16 +259,16 @@ func (r *BkApp) validateAnnotations() *field.Error {
 	}
 
 	// 验证传入的资源配额方案注解是否合法
-	resQuotaPlanConfig, err := kubeutil.GetJsonAnnotation[ResQuotaPlanConfig](
-		r, ResQuotaPlanConfigAnnoKey,
+	resQuotaPlans, err := kubeutil.GetJsonAnnotation[ResQuotaPlans](
+		r, ResQuotaPlansAnnoKey,
 	)
 	// 获取资源配额方案注解成功，才需要进行检查
 	if err == nil {
-		for planName, resConf := range resQuotaPlanConfig {
+		for planName, resConf := range resQuotaPlans {
 			if err := validateResourceConfig(resConf); err != nil {
 				return field.Invalid(
-					annosPath.Child(ResQuotaPlanConfigAnnoKey),
-					annotations[ResQuotaPlanConfigAnnoKey],
+					annosPath.Child(ResQuotaPlansAnnoKey),
+					annotations[ResQuotaPlansAnnoKey],
 					fmt.Sprintf("invalid resource config for plan '%s': %s", planName, err.Error()),
 				)
 			}
@@ -278,7 +278,7 @@ func (r *BkApp) validateAnnotations() *field.Error {
 	return nil
 }
 
-func validateResourceConfig(resConf ProcResSpec) error {
+func validateResourceConfig(resConf ProcResources) error {
 	// 解析并验证 Limits
 	limCPU, limMem, err := quota.ParseResourceSpec(resConf.Limits.CPU, resConf.Limits.Memory)
 	if err != nil {
@@ -916,17 +916,17 @@ func (r *BkApp) validateResQuotaPlan(pPath *field.Path, plan ResQuotaPlan) *fiel
 		return nil
 	}
 
-	resQuotaPlanConfig, err := kubeutil.GetJsonAnnotation[ResQuotaPlanConfig](
-		r, ResQuotaPlanConfigAnnoKey,
+	resQuotaPlans, err := kubeutil.GetJsonAnnotation[ResQuotaPlans](
+		r, ResQuotaPlansAnnoKey,
 	)
 	if err == nil {
-		if _, found := resQuotaPlanConfig[string(plan)]; found {
+		if _, found := resQuotaPlans[string(plan)]; found {
 			return nil
 		}
 	}
 
 	supportedPlans := stringx.ToStrArray(AllowedResQuotaPlans)
-	for name := range resQuotaPlanConfig {
+	for name := range resQuotaPlans {
 		supportedPlans = append(supportedPlans, name)
 	}
 	return field.NotSupported(pPath, plan, supportedPlans)

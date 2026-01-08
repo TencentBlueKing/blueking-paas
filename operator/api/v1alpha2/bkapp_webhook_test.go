@@ -1192,9 +1192,9 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 	})
 
-	Context("Test annotations validation - ResQuotaPlanConfig", func() {
-		It("valid ResQuotaPlanConfig - limits only", func() {
-			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+	Context("Test annotations validation - ResQuotaPlans", func() {
+		It("valid ResQuotaPlans - limits only", func() {
+			resQuotaPlans := paasv1alpha2.ResQuotaPlans{
 				"4c1g": {
 					Limits: paasv1alpha2.ResourceSpec{
 						CPU:    "4000m",
@@ -1202,14 +1202,14 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlansAnnoKey, resQuotaPlans)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
 		})
 
-		It("valid ResQuotaPlanConfig - limits and requests", func() {
-			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+		It("valid ResQuotaPlans - limits and requests", func() {
+			resQuotaPlans := paasv1alpha2.ResQuotaPlans{
 				"4c1g": {
 					Limits: paasv1alpha2.ResourceSpec{
 						CPU:    "4000m",
@@ -1221,14 +1221,14 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlansAnnoKey, resQuotaPlans)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
 		})
 
-		It("invalid ResQuotaPlanConfig - missing limits", func() {
-			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+		It("invalid ResQuotaPlans - missing limits", func() {
+			resQuotaPlans := paasv1alpha2.ResQuotaPlans{
 				"1c1g": {
 					Requests: &paasv1alpha2.ResourceSpec{
 						CPU:    "1",
@@ -1236,15 +1236,15 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlansAnnoKey, resQuotaPlans)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
 			Expect(err.Error()).To(ContainSubstring("invalid limits resource spec"))
 		})
 
-		It("invalid ResQuotaPlanConfig - invalid cpu in limits", func() {
-			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+		It("invalid ResQuotaPlans - invalid cpu in limits", func() {
+			resQuotaPlans := paasv1alpha2.ResQuotaPlans{
 				"1c1g-invalid": {
 					Limits: paasv1alpha2.ResourceSpec{
 						CPU:    "invalid-cpu",
@@ -1252,7 +1252,7 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlansAnnoKey, resQuotaPlans)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
@@ -1260,8 +1260,8 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(err.Error()).To(ContainSubstring("cpu"))
 		})
 
-		It("invalid ResQuotaPlanConfig - invalid memory in limits", func() {
-			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+		It("invalid ResQuotaPlans - invalid memory in limits", func() {
+			resQuotaPlans := paasv1alpha2.ResQuotaPlans{
 				"1c1g": {
 					Limits: paasv1alpha2.ResourceSpec{
 						CPU:    "1",
@@ -1269,7 +1269,7 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlansAnnoKey, resQuotaPlans)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
@@ -1277,8 +1277,8 @@ var _ = Describe("test webhook.Validator", func() {
 			Expect(err.Error()).To(ContainSubstring("memory"))
 		})
 
-		It("invalid ResQuotaPlanConfig - requests exceed limits", func() {
-			resQuotaPlanConfig := paasv1alpha2.ResQuotaPlanConfig{
+		It("invalid  ResQuotaPlans - requests exceed limits", func() {
+			resQuotaPlans := paasv1alpha2.ResQuotaPlans{
 				"1c1g": {
 					Limits: paasv1alpha2.ResourceSpec{
 						CPU:    "1",
@@ -1290,7 +1290,7 @@ var _ = Describe("test webhook.Validator", func() {
 					},
 				},
 			}
-			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlanConfigAnnoKey, resQuotaPlanConfig)
+			_ = kubeutil.SetJsonAnnotation(bkapp, paasv1alpha2.ResQuotaPlansAnnoKey, resQuotaPlans)
 
 			err := bkapp.ValidateCreate()
 			Expect(err).NotTo(BeNil())
@@ -1298,7 +1298,7 @@ var _ = Describe("test webhook.Validator", func() {
 		})
 
 		It("no ResQuotaPlanConfig annotation - should pass", func() {
-			// Do not set ResQuotaPlanConfigAnnoKey, should pass
+			// Do not set ResQuotaPlansAnnoKey, should pass
 			err := bkapp.ValidateCreate()
 			Expect(err).To(BeNil())
 		})

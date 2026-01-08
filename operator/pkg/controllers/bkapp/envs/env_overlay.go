@@ -277,7 +277,7 @@ func (r *ProcResourcesGetter) fromQuotaPlan(
 		return r.calculateResources(spec.cpu, spec.memory)
 	}
 
-	// 2. Try to get from annotation ResQuotaPlanConfigAnnoKey
+	// 2. Try to get from annotation ResQuotaPlansAnnoKey
 	if planConfig, found := r.getQuotaPlanFromAnnotation(plan); found {
 		res, err := r.calculateResourcesByResConfig(*planConfig)
 		if err != nil {
@@ -300,10 +300,10 @@ func (r *ProcResourcesGetter) fromQuotaPlan(
 // The annotation format is: {"planName": {"limits": {"cpu": "X", "memory": "X"}, "requests": {...}}}
 func (r *ProcResourcesGetter) getQuotaPlanFromAnnotation(
 	planName paasv1alpha2.ResQuotaPlan,
-) (*paasv1alpha2.ProcResSpec, bool) {
-	planConfigs, err := kubeutil.GetJsonAnnotation[paasv1alpha2.ResQuotaPlanConfig](
+) (*paasv1alpha2.ProcResources, bool) {
+	planConfigs, err := kubeutil.GetJsonAnnotation[paasv1alpha2.ResQuotaPlans](
 		r.bkapp,
-		paasv1alpha2.ResQuotaPlanConfigAnnoKey,
+		paasv1alpha2.ResQuotaPlansAnnoKey,
 	)
 	if err == nil {
 		if cfg, ok := planConfigs[string(planName)]; ok {
@@ -317,7 +317,7 @@ func (r *ProcResourcesGetter) getQuotaPlanFromAnnotation(
 // calculateResourcesByResConfig builds resource requirements from override config
 // Note: validation is already done by webhook, but we still check errors for robustness
 func (r *ProcResourcesGetter) calculateResourcesByResConfig(
-	resConfig paasv1alpha2.ProcResSpec,
+	resConfig paasv1alpha2.ProcResources,
 ) (*corev1.ResourceRequirements, error) {
 	// Parse limits using unified utility function
 	limitsCPU, limitsMemory, err := quota.ParseResourceSpec(resConfig.Limits.CPU, resConfig.Limits.Memory)

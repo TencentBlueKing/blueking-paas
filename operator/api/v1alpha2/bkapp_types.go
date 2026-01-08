@@ -106,8 +106,8 @@ type ResourceSpec struct {
 	Memory string `json:"memory"`
 }
 
-// ProcResSpec defines resource specification for a process
-type ProcResSpec struct {
+// ProcResources defines resource specification for a process
+type ProcResources struct {
 	// Limits describes the maximum amount of compute resources allowed
 	// +kubebuilder:validation:Required
 	Limits ResourceSpec `json:"limits"`
@@ -118,11 +118,11 @@ type ProcResSpec struct {
 }
 
 // OverrideProcResConfig maps process name to its resource override configuration
-type OverrideProcResConfig map[string]ProcResSpec
+type OverrideProcResConfig map[string]ProcResources
 
-// ResQuotaPlanConfig maps resource quota plan name to its resource configuration
+// ResQuotaPlans maps resource quota plan name to its resource configuration
 // Used in annotation to define custom quota plans
-type ResQuotaPlanConfig map[string]ProcResSpec
+type ResQuotaPlans map[string]ProcResources
 
 // AppSpec defines the desired state of BkApp
 type AppSpec struct {

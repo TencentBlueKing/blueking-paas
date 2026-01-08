@@ -19,7 +19,6 @@ import base64
 import logging
 import re
 from binascii import Error as Base64DecodeError
-from collections import deque
 from functools import cached_property
 from typing import List, Optional, Union
 
@@ -44,6 +43,7 @@ from rest_framework.fields import empty, flatten_choices_dict, to_choices_dict
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.datetime import convert_timestamp_to_str
+from paasng.utils.dictx import get_items, set_items
 from paasng.utils.file import path_may_escape
 from paasng.utils.sanitizer import clean_html
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
@@ -389,7 +389,7 @@ class BaseEncryptedFieldMixin:
         try:
             return self.cipher_handler.decrypt(value)
         except Base64DecodeError:
-            raise serializers.ValidationError("base64 decode failed")
+            raise serializers.ValidationError("invalid base64 encoding, decrypt failed")
         except Exception:
             logger.exception("decrypt error")
             raise serializers.ValidationError("decrypt failed")
@@ -398,77 +398,29 @@ class BaseEncryptedFieldMixin:
 class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     """
     JSON 类型加密字段
-    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 JSONField 一致
-    为了明确某个值是否被加密了, 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
-    只会处理 string 并且带有加密标识前缀的值, dict 会下探处理
-
-    以 FRONTEND_ENCRYPT_FIELD_PREFIX = '_encrypted_', repo_config 被设置为本字段为例:
-    接收:
-        {
-            "repo_config": {
-                "username": "Tom",
-                "_encrypted_password": "MH4CIQCk..." # 密文
-            }
-        }
-    会在 to_internal_value 方法时, 被解密为:
-        {
-            "repo_config": {
-                "username": "Tom",
-                "password": "SecretPassword" # 明文
-                "_encrypted_password": "MH4CIQCk..." # 密文
-            }
-        }
-
-    :param max_decrypt_node_num: 最多解密次数
-    :param max_loop_num: 防止无限循环, 其真实含义为处理 dict 类型的值的次数
     """
 
-    DEFAULT_MAX_DECRYPT_NODE_NUM = 50
-    DEFAULT_MAX_LOOP_NUM = 1000
-
-    default_error_messages = {
-        "max_decrypt_node_num_exceeded": _("Decrypt node number exceeds the limit."),
-        "max_loop_num_exceeded": _("Loop number exceeds the limit."),
-        "invalid_type": _("Invalid type."),
-    }
-
-    def recursive_decrypt(self, data):
-        if isinstance(data, str):
-            return self.decrypt(data)
-
-        if not isinstance(data, dict):
-            self.fail("invalid_type")
-
-        queue = deque([data])
-        loop_cnt = decrypt_node_number = 0
-
-        while queue:
-            current_data = queue.popleft()
-            if isinstance(current_data, dict):
-                for key, value in current_data.copy().items():
-                    if isinstance(value, str) and key.startswith(settings.FRONTEND_ENCRYPT_FIELD_PREFIX):
-                        origin_key = key[len(settings.FRONTEND_ENCRYPT_FIELD_PREFIX) :]
-                        current_data[origin_key] = self.decrypt(value)
-                        decrypt_node_number += 1
-                    elif isinstance(value, dict):
-                        queue.append(value)
-
-            if decrypt_node_number > self.DEFAULT_MAX_DECRYPT_NODE_NUM:
-                self.fail("max_decrypt_node_num_exceeded")
-
-            if loop_cnt > self.DEFAULT_MAX_LOOP_NUM:
-                self.fail("max_loop_num_exceeded")
-
-            loop_cnt += 1
-
-        return data
+    def __init__(self, **kwargs):
+        self.allow_missing = kwargs.pop("allow_missing", False)
+        encrypted_fields: list[str] = kwargs.pop("encrypted_fields", [])
+        self.encrypted_fields_path = [field.strip().split(".") for field in encrypted_fields]
+        super().__init__(**kwargs)
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
 
-        if settings.ENABLE_FRONTEND_ENCRYPT:
-            return self.recursive_decrypt(data)
+        if not isinstance(data, dict):
+            self.fail("invalid")
+
+        if not settings.ENABLE_FRONTEND_ENCRYPT:
+            return data
         else:
+            for field_path in self.encrypted_fields_path:
+                encrypt_value = get_items(data, field_path)
+                if encrypt_value is None and self.allow_missing:
+                    continue
+                logger.debug("found encrypted field %s in input data, start decrypting", ".".join(field_path))
+                set_items(data, field_path, self.decrypt(encrypt_value))
             return data
 
 
@@ -477,20 +429,7 @@ class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
     Char 类型加密字段
     NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 CharField 一致
     为了明确某个值是否被加密了, 约定加密了的字段名添加前缀 FRONTEND_ENCRYPT_FIELD_PREFIX
-
-    :param must_encrypt: 是否必须加密, 为 False 时, 允许明文
     """
-
-    def get_value(self, dictionary):
-        if not settings.ENABLE_FRONTEND_ENCRYPT:
-            return super().get_value(dictionary)
-
-        encrypted_field_name = settings.FRONTEND_ENCRYPT_FIELD_PREFIX + self.field_name
-        if encrypted_field_name in dictionary:
-            logger.debug("found encrypted field %s in input data, start decrypting", encrypted_field_name)
-            return dictionary[encrypted_field_name]
-
-        return super().get_value(dictionary)
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)

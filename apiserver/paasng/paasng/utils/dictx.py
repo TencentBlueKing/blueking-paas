@@ -38,3 +38,25 @@ def get_items(obj: Dict[str, Any], paths: Union[List[str], str], default: Any = 
         return reduce(lambda d, k: d[k], paths, obj)
     except (KeyError, IndexError, TypeError):
         return default
+
+
+def set_items(obj: Dict[str, Any], paths: Union[List[str], str], value: Any) -> None:
+    """
+    根据指定的路径向字典中设置对应的值
+
+    :param obj: 字典类型对象
+    :param paths: ['foo', 'bar']
+    :param value: 需要设置的值
+    """
+    if not isinstance(obj, Dict):
+        raise TypeError("only support set items to dict object!")
+
+    if isinstance(paths, str):
+        paths = paths.strip(".").split(".")
+
+    d = obj
+    for key in paths[:-1]:
+        if not isinstance(d[key], Dict) or key not in d:
+            d[key] = {}
+        d = d[key]
+    d[paths[-1]] = value

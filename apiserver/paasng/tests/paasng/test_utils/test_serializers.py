@@ -162,98 +162,88 @@ class TestSafePathField:
         assert slz.is_valid() is False
 
 
+# 默认 SM2 测试密钥对
+DEFAULT_SM2_PUBLIC_KEY = "-----BEGIN EC PRIVATE KEY-----\n\
+MHcCAQEEILhlcnMvtkduaK4wekiZcwyFNPGRDI0Lmiw5wXWun//2oAoGCCqBHM9V\n\
+AYItoUQDQgAEX0sQUHD02rWvy/LmlLCupYWfPRYg/rHljE4QWYiJXwWjha0ASyEY\n\
+N9TLMwleeTf3PXLmO9NmrMONJxz6UQ4GPg==\n-----END EC PRIVATE KEY-----\n"
+DEFAULT_SM2_PRIVATE_KEY = "-----BEGIN PUBLIC KEY-----\n\
+MFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAEX0sQUHD02rWvy/LmlLCupYWfPRYg\n\
+/rHljE4QWYiJXwWjha0ASyEYN9TLMwleeTf3PXLmO9NmrMONJxz6UQ4GPg==\n\
+-----END PUBLIC KEY-----\n"
+
+
+def encrypted_value(value: str):
+    """使用默认的公钥加密一个测试值"""
+    public_key = settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY or DEFAULT_SM2_PUBLIC_KEY
+    private_key = settings.FRONTEND_ENCRYPT_SM2_PRIVATE_KEY or DEFAULT_SM2_PRIVATE_KEY
+
+    cipher = get_asymmetric_cipher(
+        cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
+        cipher_options={
+            bkcrypto_constants.AsymmetricCipherType.SM2.value: SM2AsymmetricOptions(
+                public_key_string=public_key,
+                private_key_string=private_key,
+            ),
+        },
+    )
+    return cipher.encrypt(value)
+
+
 class EncryptedCharFieldSLZ(serializers.Serializer):
     username = EncryptedCharField(required=False)
-    password = EncryptedCharField(must_encrypt=True)
+    password = EncryptedCharField()
 
 
-@pytest.mark.skipif(settings.ENABLE_FRONTEND_ENCRYPT is False, reason="need ENABLE_FRONTEND_ENCRYPT")
 class TestEncryptedCharField:
-    @pytest.fixture
-    def encrypted_value(self):
-        """使用默认的公钥加密一个测试值"""
-
-        cipher = get_asymmetric_cipher(
-            cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
-            cipher_options={
-                bkcrypto_constants.AsymmetricCipherType.SM2.value: SM2AsymmetricOptions(
-                    public_key_string=settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY,
-                    private_key_string=settings.FRONTEND_ENCRYPT_SM2_PRIVATE_KEY,
-                ),
-            },
-        )
-
-        return cipher.encrypt("test_value")
-
-    def test_decrypt(self, encrypted_value):
-        slz = EncryptedCharFieldSLZ(data={settings.FRONTEND_ENCRYPT_FIELD_PREFIX + "password": encrypted_value})
-        slz.is_valid(raise_exception=True)
-        assert slz.validated_data["password"] == "test_value"
-
     @pytest.mark.parametrize(
-        ("data", "ctx"),
+        ("plain_value", "encrypted_value", "ctx"),
         [
-            ({"username": "test_value"}, pytest.raises(ValidationError, match="required")),
-            ({"password": "test_value"}, pytest.raises(ValidationError, match="must_encrypt")),
-            ({"_encrypted_password": "test_value"}, pytest.raises(ValidationError, match="base64 decode failed")),
+            ("test_value", encrypted_value("test_value"), nullcontext("test_value")),
+            ("#/@!>?><09123...。", encrypted_value("#/@!>?><09123...。"), nullcontext()),
+            ("", encrypted_value(""), pytest.raises(ValidationError)),
+            ("test_value", "invalid_encrypted_value", pytest.raises(ValidationError)),
         ],
     )
-    def test_must_encrypt(self, data, ctx):
-        slz = EncryptedCharFieldSLZ(data=data)
+    def test_decrypt(self, plain_value, encrypted_value, ctx):
         with ctx:
+            slz = EncryptedCharFieldSLZ(data={"password": encrypted_value})
             slz.is_valid(raise_exception=True)
+            assert slz.validated_data["password"] == plain_value
 
 
 class EncryptedJSONFieldSLZ(serializers.Serializer):
-    encrypted_json = EncryptedJSONField(max_decrypt_node_num=10, max_loop_num=50)
+    encrypted_json = EncryptedJSONField(encrypted_fields=["password", "user.password"], allow_missing=True)
 
 
-@pytest.mark.skipif(settings.ENABLE_FRONTEND_ENCRYPT is False, reason="need ENABLE_FRONTEND_ENCRYPT")
 class TestEncryptedJSONField:
-    @pytest.fixture
-    def encrypted_value(self):
-        """使用默认的公钥加密一个测试值"""
-        cipher = get_asymmetric_cipher(
-            cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
-            cipher_options={
-                bkcrypto_constants.AsymmetricCipherType.SM2.value: SM2AsymmetricOptions(
-                    public_key_string=settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY,
-                    private_key_string=settings.FRONTEND_ENCRYPT_SM2_PRIVATE_KEY,
-                ),
-            },
-        )
-        return cipher.encrypt("test-value")
-
-    def test_decrypt(self, encrypted_value):
-        slz = EncryptedJSONFieldSLZ(
-            data={
-                "encrypted_json": {"foo": "bar", f"{settings.FRONTEND_ENCRYPT_FIELD_PREFIX}password": encrypted_value}
-            }
-        )
-        assert slz.is_valid()
-        assert slz.validated_data["encrypted_json"]["password"] == "test-value"
-
     @pytest.mark.parametrize(
-        ("encrypted_count", "dict_count", "ctx"),
+        ("slz_input", "slz_output", "ctx"),
         [
-            # 加密节点数量边界
-            (10, None, nullcontext()),
-            (11, None, pytest.raises(ValidationError)),
-            # 总节点数量边界（不加密）
-            (None, 50, nullcontext()),
-            (None, 51, pytest.raises(ValidationError)),
+            (
+                {"foo": "bar", "password": encrypted_value("test_value")},
+                {"foo": "bar", "password": "test_value"},
+                nullcontext(),
+            ),
+            (
+                {"foo": "bar", "password": "invalid_encrypted_value"},
+                None,
+                pytest.raises(ValidationError),
+            ),
+            (
+                {"foo": "bar", "user": {"username": "test", "password": encrypted_value("test_value")}},
+                {"foo": "bar", "user": {"username": "test", "password": "test_value"}},
+                nullcontext(),
+            ),
+            (
+                {"foo": "bar", "user": {"username": "test", "password": "invalid_encrypted_value"}},
+                None,
+                pytest.raises(ValidationError),
+            ),
         ],
     )
-    def test_big_data_decrypt(self, encrypted_value, encrypted_count, dict_count, ctx):
-        if encrypted_count is not None:
-            data = {
-                "encrypted_json": {
-                    f"{settings.FRONTEND_ENCRYPT_FIELD_PREFIX}{idx}": encrypted_value for idx in range(encrypted_count)
-                }
-            }
-        else:
-            data = {"encrypted_json": {f"foo_{idx}": {} for idx in range(dict_count)}}
-
-        slz = EncryptedJSONFieldSLZ(data=data)
+    def test_decrypt(self, slz_input, slz_output, ctx):
+        slz = EncryptedJSONFieldSLZ(data={"encrypted_json": slz_input})
         with ctx:
-            slz.is_valid(raise_exception=True)
+            assert slz.is_valid(raise_exception=True)
+            assert slz.data["encrypted_json"] == slz_output

@@ -159,7 +159,7 @@ class RepoBackendModifySLZ(serializers.Serializer):
     source_control_type = SourceControlField(allow_blank=True, help_text="blank for docker registry")
 
     source_repo_url = serializers.CharField()
-    source_repo_auth_info = EncryptedJSONField(required=False, default={})
+    source_repo_auth_info = EncryptedJSONField(required=False, default={}, encrypted_fields=["password"])
     source_dir = SourceDirField(help_text="Procfile 所在目录, 如果是根目录可不填.")
 
     def validate_source_repo_url(self, value: str) -> str:

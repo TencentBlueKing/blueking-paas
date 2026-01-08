@@ -400,8 +400,8 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     JSON 类型加密字段
     NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 JSONField 一致
 
-    :params encrypted_fields: 需要解密的字段列表，支持嵌套字段，使用点号分隔，如 ["password", "user.password"]
-    :params allow_missing: 是否允许加密字段缺失，默认为 False
+    :params encrypted_fields: 需要解密的字段列表，支持嵌套字段, 使用点号分隔, 如 ["password", "user.password"]
+    :params allow_missing: 是否允许加密字段缺失, 默认为 False. True 时如果加密字段不存在则跳过解密处理
     """
 
     def __init__(self, **kwargs):
@@ -413,19 +413,19 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
 
+        if not settings.ENABLE_FRONTEND_ENCRYPT:
+            return data
+
         if not isinstance(data, dict):
             self.fail("invalid")
 
-        if not settings.ENABLE_FRONTEND_ENCRYPT:
-            return data
-        else:
-            for field_path in self.encrypted_fields_path:
-                encrypt_value = get_items(data, field_path)
-                if encrypt_value is None and self.allow_missing:
-                    continue
-                logger.debug("found encrypted field %s in input data, start decrypting", ".".join(field_path))
-                set_items(data, field_path, self.decrypt(encrypt_value))
-            return data
+        for field_path in self.encrypted_fields_path:
+            encrypt_value = get_items(data, field_path)
+            if encrypt_value is None and self.allow_missing:
+                continue
+            logger.debug("found encrypted field %s in input data, start decrypting", ".".join(field_path))
+            set_items(data, field_path, self.decrypt(encrypt_value))
+        return data
 
 
 class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):

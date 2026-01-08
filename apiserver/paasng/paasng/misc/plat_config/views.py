@@ -101,7 +101,6 @@ class FrontendEncryptConfigViewSet(ViewSet):
             encrypt_config.update(
                 {
                     "public_key": settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY,
-                    "encrypt_field_prefix": settings.FRONTEND_ENCRYPT_FIELD_PREFIX,
                     "encrypt_cipher_type": settings.FRONTEND_ENCRYPT_CIPHER_TYPE,
                 }
             )

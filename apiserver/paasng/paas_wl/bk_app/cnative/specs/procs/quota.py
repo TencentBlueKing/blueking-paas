@@ -46,11 +46,10 @@ class ResQuotaReader:
         results: dict[str, dict] = {}
         active_plans = get_active_res_quota_plans()
 
-        default_plan = active_plans[DEFAULT_RES_QUOTA_PLAN_NAME]
         for p in self.res.spec.processes:
             # 如果未指定方案，使用 default 方案
             plan_name = p.resQuotaPlan or DEFAULT_RES_QUOTA_PLAN_NAME
-            plan_obj = active_plans.get(plan_name, default_plan)
+            plan_obj = active_plans[plan_name]
             results[p.name] = {
                 "plan": plan_obj.name,
                 "limits": plan_obj.limits,

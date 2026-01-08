@@ -43,7 +43,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     MODULE_NAME_ANNO_KEY,
     OVERRIDE_PROC_RES_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
-    RES_QUOTA_PLAN_DETAIL_ANNO_KEY,
+    RES_QUOTA_PLANS_ANNO_KEY,
     TENANT_GUARD_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
     ApiVersion,
@@ -129,7 +129,7 @@ class AccessControlManifestConstructor(ManifestConstructor):
 
     def apply_to(self, model_res: crd.BkAppResource, module: Module):
         try:
-            from paasng.security.access_control.models import ApplicationAccessControlSwitch
+            from paasng.security.access_control.models import ApplicationAccessControlSwitch  # noqa: PLC0415
         except ImportError:
             # The module is not enabled in current edition
             return
@@ -552,7 +552,7 @@ def get_bkapp_resource_for_deploy(
         model_res.metadata.annotations[OVERRIDE_PROC_RES_ANNO_KEY] = override_proc_res_config
 
     # 设置资源配额方案配置的注解
-    model_res.metadata.annotations[RES_QUOTA_PLAN_DETAIL_ANNO_KEY] = _get_res_quota_plan_config()
+    model_res.metadata.annotations[RES_QUOTA_PLANS_ANNO_KEY] = _get_res_quota_plans(model_res, env)
 
     # 设置上一次部署的状态
     model_res.metadata.annotations[LAST_DEPLOY_STATUS_ANNO_KEY] = _get_last_deploy_status(env, deployment)
@@ -724,11 +724,24 @@ def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
     return json.dumps(result) if result else ""
 
 
-def _get_res_quota_plan_config() -> str:
-    """获取资源配额方案配置，返回 JSON 字符串或空字符串"""
-    result = {}
+def _get_res_quota_plans(model_res: crd.BkAppResource, env: ModuleEnvironment) -> str:
+    """从已构建的 BkApp 资源中提取当前环境实际使用的资源配额方案配置, 返回 JSON 字符串或空字符串"""
+    used_plan_names: set[str] = set()
 
-    for plan in ResQuotaPlan.objects.filter(is_active=True, is_builtin=False):
+    for proc in model_res.spec.processes:
+        if proc.resQuotaPlan:
+            used_plan_names.add(proc.resQuotaPlan)
+
+    if model_res.spec.envOverlay and model_res.spec.envOverlay.resQuotas:
+        for res_quota in model_res.spec.envOverlay.resQuotas:
+            if res_quota.envName == env.environment and res_quota.plan:
+                used_plan_names.add(res_quota.plan)
+
+    if not used_plan_names:
+        return ""
+
+    result = {}
+    for plan in ResQuotaPlan.objects.filter(is_active=True, is_builtin=False, name__in=used_plan_names):
         result[plan.name] = {"limits": plan.limits, "requests": plan.requests}
 
     return json.dumps(result) if result else ""

@@ -18,6 +18,7 @@
 from unittest import mock
 
 import pytest
+from django.conf import settings
 
 from paasng.accessories.dev_sandbox.config_var import get_env_vars_selected_addons, list_vars_builtin_addons_custom
 from tests.utils.mocks.services import (
@@ -130,5 +131,5 @@ class TestGetEnvVarsSelectedAddons:
         result = get_env_vars_selected_addons(bk_stag_env, None)
 
         for var in result:
-            if var.key == "BKPAAS_APP_SECRET":
+            if var.key in settings.DEV_SANDBOX_SENSITIVE_ENV_VARS:
                 assert var.sensitive is True

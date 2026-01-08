@@ -17,7 +17,7 @@
 
 import pytest
 
-from paasng.utils.dictx import get_items
+from paasng.utils.dictx import get_items, set_items
 
 
 @pytest.mark.parametrize(
@@ -49,3 +49,30 @@ def test_get_items(obj, paths, default, expected):
 def test_get_items_exceptions(obj, paths, default):
     with pytest.raises(TypeError):
         get_items(obj, paths, default)  # type: ignore
+
+
+@pytest.mark.parametrize(
+    ("obj", "paths", "value"),
+    [
+        ({}, "a.b.c", 1),
+        ({}, ["a", "b", "c"], 1),
+        ({"a": {"b": {"c": 1}}}, "a.b.c", 2),
+        ({"a": {}}, "a.b.c", 3),
+        ({}, "a", 4),
+    ],
+)
+def test_set_items(obj, paths, value):
+    set_items(obj, paths, value)
+    assert get_items(obj, paths) == value
+
+
+@pytest.mark.parametrize(
+    ("obj", "paths", "value"),
+    [
+        (None, "a.b.c", 1),
+        (1, "a", 2),
+    ],
+)
+def test_set_items_exceptions(obj, paths, value):
+    with pytest.raises(TypeError):
+        set_items(obj, paths, value)  # type: ignore

@@ -56,7 +56,7 @@ def set_items(obj: Dict[str, Any], paths: Union[List[str], str], value: Any) -> 
 
     d = obj
     for key in paths[:-1]:
-        if not isinstance(d[key], Dict) or key not in d:
+        if key not in d or not isinstance(d[key], Dict):
             d[key] = {}
         d = d[key]
     d[paths[-1]] = value

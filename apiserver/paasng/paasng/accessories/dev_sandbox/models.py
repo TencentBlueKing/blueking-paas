@@ -131,7 +131,7 @@ class DevSandbox(OwnerTimestampedModel):
                 key=env_var["key"],
                 value=env_var["value"],
                 source=env_var["source"],
-                sensitive=env_var["sensitive"],
+                sensitive=env_var.get("sensitive", False),
             )
             for env_var in json.loads(self.env_vars)
         ]

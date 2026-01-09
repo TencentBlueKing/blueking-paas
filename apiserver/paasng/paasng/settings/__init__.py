@@ -40,6 +40,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
 
+import base64
 import copy
 import os
 import ssl
@@ -1592,10 +1593,33 @@ ENABLE_FRONTEND_ENCRYPT = settings.get("ENABLE_FRONTEND_ENCRYPT", False)
 # 具体加密使用的算法
 FRONTEND_ENCRYPT_CIPHER_TYPE = "SM2"
 
-# 可通过以下代码来生成密钥
-# from bkcrypto.contrib.basic.ciphers import get_asymmetric_cipher
-# get_asymmetric_cipher(cipher_type='SM2').generate_key_pair()
-# SM2 公钥, 形如: `-----BEGIN PUBLIC KEY-----\nBase64( DER(SubjectPublicKeyInfo) )\n-----END PUBLIC KEY-----`
-FRONTEND_ENCRYPT_SM2_PUBLIC_KEY = settings.get("FRONTEND_ENCRYPT_SM2_PUBLIC_KEY")
-# SM2 私钥, 形如 `-----BEGIN EC PRIVATE KEY-----\nBase64( DER(PrivateKeyInfo) )\n-----END EC PRIVATE KEY-----`
-FRONTEND_ENCRYPT_SM2_PRIVATE_KEY = settings.get("FRONTEND_ENCRYPT_SM2_PRIVATE_KEY")
+"""
+建议通过以下代码来生成密钥, 生成后需将 PEM 格式的密钥进行 Base64 编码后再配置
+
+1. 方式一: 使用 python 的 bkcrypto 库生成
+import base64
+from bkcrypto.contrib.basic.ciphers import get_asymmetric_cipher
+private_key, public_key = get_asymmetric_cipher(cipher_type='SM2').generate_key_pair()
+print("sm2_private_key:\n", base64.b64encode(private_key.encode()).decode(), end="\n\n")
+print("sm2_public_key:\n", base64.b64encode(public_key.encode()).decode())
+
+2. 方式二: 使用 openssl 工具生成
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:sm2 -out sm2_pkcs8_private_key.pem
+openssl pkey -in sm2_pkcs8_private_key.pem -pubout -out public_key.pem
+echo "sm2_private_key:" && cat sm2_pkcs8_private_key.pem | base64 -w 0 && echo
+echo "sm2_public_key:" && cat public_key.pem | base64 -w 0 && echo
+"""
+# SM2 公钥, PEM 格式, Base64 编码，加载时解码
+_FRONTEND_ENCRYPT_SM2_PUBLIC_KEY_BASE64 = settings.get("FRONTEND_ENCRYPT_SM2_PUBLIC_KEY_BASE64")
+FRONTEND_ENCRYPT_SM2_PUBLIC_KEY = (
+    base64.b64decode(_FRONTEND_ENCRYPT_SM2_PUBLIC_KEY_BASE64).decode()
+    if _FRONTEND_ENCRYPT_SM2_PUBLIC_KEY_BASE64
+    else None
+)
+# SM2 私钥, PEM 格式, Base64 编码，加载时解码
+_FRONTEND_ENCRYPT_SM2_PRIVATE_KEY_BASE64 = settings.get("FRONTEND_ENCRYPT_SM2_PRIVATE_KEY_BASE64")
+FRONTEND_ENCRYPT_SM2_PRIVATE_KEY = (
+    base64.b64decode(_FRONTEND_ENCRYPT_SM2_PRIVATE_KEY_BASE64).decode()
+    if _FRONTEND_ENCRYPT_SM2_PRIVATE_KEY_BASE64
+    else None
+)

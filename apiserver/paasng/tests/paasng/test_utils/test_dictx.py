@@ -54,11 +54,10 @@ def test_get_items_exceptions(obj, paths, default):
 @pytest.mark.parametrize(
     ("obj", "paths", "value"),
     [
-        ({}, "a.b.c", 1),
-        ({}, ["a", "b", "c"], 1),
+        ({}, "a", 1),
+        ({"a": {}}, ["a", "b"], 1),
+        ({"a": {"b": {}}}, "a.b.c", 3),
         ({"a": {"b": {"c": 1}}}, "a.b.c", 2),
-        ({"a": {}}, "a.b.c", 3),
-        ({}, "a", 4),
     ],
 )
 def test_set_items(obj, paths, value):
@@ -67,12 +66,15 @@ def test_set_items(obj, paths, value):
 
 
 @pytest.mark.parametrize(
-    ("obj", "paths", "value"),
+    ("obj", "paths", "value", "ctx"),
     [
-        (None, "a.b.c", 1),
-        (1, "a", 2),
+        (None, "a.b.c", 1, pytest.raises(TypeError)),
+        (1, "a", 2, pytest.raises(TypeError)),
+        ({"a": 1}, "a.b", 2, pytest.raises(TypeError)),
+        ({}, ["a", "b"], 3, pytest.raises(KeyError)),
+        ({"a": {}}, ["a", "b", "c"], 3, pytest.raises(KeyError)),
     ],
 )
-def test_set_items_exceptions(obj, paths, value):
-    with pytest.raises(TypeError):
+def test_set_items_exceptions(obj, paths, value, ctx):
+    with ctx:
         set_items(obj, paths, value)  # type: ignore

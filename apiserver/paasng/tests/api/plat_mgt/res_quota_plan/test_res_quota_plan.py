@@ -33,7 +33,7 @@ class TestResourceQuotaPlanViewSet:
     @pytest.fixture()
     def sample_plan_data(self):
         return {
-            "name": "test-plan",
+            "name": "testplan",
             "limits": {"cpu": "4000m", "memory": "2048Mi"},
             "requests": {"cpu": "1000m", "memory": "512Mi"},
         }
@@ -67,7 +67,7 @@ class TestResourceQuotaPlanViewSet:
     def test_update_success(self, plat_mgt_api_client, created_plan, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
         update_data = sample_plan_data.copy()
-        update_data["name"] = "updated-plan"
+        update_data["name"] = "updatedplan"
         update_data["limits"] = {"cpu": "8000m", "memory": "4096Mi"}
         update_data["requests"] = {"cpu": "2000m", "memory": "1Gi"}
 
@@ -75,7 +75,7 @@ class TestResourceQuotaPlanViewSet:
         assert response.status_code == 200
 
         created_plan.refresh_from_db()
-        assert created_plan.name == "updated-plan"
+        assert created_plan.name == "updatedplan"
         assert created_plan.limits == {"cpu": "8000m", "memory": "4096Mi"}
         assert created_plan.requests == {"cpu": "2000m", "memory": "1Gi"}
 
@@ -167,7 +167,7 @@ class TestResourceQuotaPlanViewSet:
         """统一测试资源配额方案的各种验证场景"""
         url = reverse("plat_mgt.res_quota_plans.list_create")
         data = {
-            "name": f"validation-test-plan-{uuid.uuid4().hex[:8]}",
+            "name": f"validationTestPlan{uuid.uuid4().hex[:8]}",
             "limits": limits,
             "requests": requests,
         }

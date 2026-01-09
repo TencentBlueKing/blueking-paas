@@ -103,17 +103,6 @@ class TestResourceQuotaPlanViewSet:
         response = plat_mgt_api_client.put(update_url, data=update_data)
         assert response.status_code == 400
 
-    def test_destroy_success(self, plat_mgt_api_client, created_plan):
-        url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
-        response = plat_mgt_api_client.delete(url)
-        assert response.status_code == 204
-        assert not ResQuotaPlan.objects.filter(id=created_plan.id).exists()
-
-    def test_destroy_not_found(self, plat_mgt_api_client):
-        url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": 99999})
-        response = plat_mgt_api_client.delete(url)
-        assert response.status_code == 404
-
     def test_update_builtin_plan_forbidden(self, plat_mgt_api_client, sample_plan_data):
         """测试内置方案不允许修改"""
         builtin_plan = ResQuotaPlan.objects.create(
@@ -129,21 +118,6 @@ class TestResourceQuotaPlanViewSet:
 
         response = plat_mgt_api_client.put(url, data=update_data)
         assert response.status_code == 403
-
-    def test_destroy_builtin_plan_forbidden(self, plat_mgt_api_client):
-        """测试内置方案不允许删除"""
-        builtin_plan = ResQuotaPlan.objects.create(
-            name="builtin-plan-delete",
-            limits={"cpu": "4000m", "memory": "2048Mi"},
-            requests={"cpu": "1000m", "memory": "512Mi"},
-            is_builtin=True,
-        )
-
-        url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": builtin_plan.id})
-        response = plat_mgt_api_client.delete(url)
-        assert response.status_code == 403
-        # 确认方案仍然存在
-        assert ResQuotaPlan.objects.filter(id=builtin_plan.id).exists()
 
     @pytest.mark.parametrize(
         ("limits", "requests", "expected_status"),

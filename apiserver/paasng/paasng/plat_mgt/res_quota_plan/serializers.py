@@ -45,6 +45,9 @@ class ResourceQuotaSLZ(serializers.Serializer):
     cpu = serializers.CharField()
     memory = serializers.CharField()
 
+    class Meta:
+        ref_name = "plat_mgt.ResourceQuotaSLZ"
+
     def validate_cpu(self, value: str) -> str:
         """Validate CPU format: must end with 'm' and be a positive integer."""
 

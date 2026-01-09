@@ -318,7 +318,12 @@ export default {
     // 提交
     async handleSubmit() {
       try {
-        await this.$refs.formRef.validate();
+        const isValid = await this.$refs.formRef
+          .validate()
+          .then(() => true)
+          .catch(() => false);
+        if (!isValid) return;
+
         this.isSubmitting = true;
 
         // 转换表单数据为接口需要的格式

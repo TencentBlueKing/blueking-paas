@@ -68,7 +68,7 @@ export default [
   {
     groupId: 'config',
     name: 'cloudNativeAppResourceQuota',
-    label: i18n.t('云原生应用资源配额'),
+    label: i18n.t('资源方案管理'),
     iconfontName: 'bushu',
     matchRouters: ['cloudNativeAppResourceQuota'],
     destRoute: {

@@ -534,7 +534,7 @@ export default {
     // 获取资源配额方案
     async fetchPlanList() {
       try {
-        const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
+        const res = await this.$store.dispatch('tenantConfig/getProcessQuotaPlans', {});
         this.planList = res;
         this.planList.push({ name: this.$t('自定义'), value: 'custom' });
       } catch (e) {
@@ -567,8 +567,8 @@ export default {
         if (plan) {
           this.formData[env].plan_name = value;
           this.formData[env].resources = {
-            limits: plan.limit || { cpu: '', memory: '' },
-            requests: plan.request || { cpu: '', memory: '' },
+            limits: plan.limits || { cpu: '', memory: '' },
+            requests: plan.requests || { cpu: '', memory: '' },
           };
         } else {
           // 找不到方案，使用空值

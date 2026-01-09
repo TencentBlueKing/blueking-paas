@@ -173,7 +173,7 @@ export const platformRouters = [
         component: cloudNativeAppResourceQuota,
         name: 'cloudNativeAppResourceQuota',
         meta: {
-          title: i18n.t('云原生应用资源配额'),
+          title: i18n.t('资源方案管理'),
         },
       },
       {

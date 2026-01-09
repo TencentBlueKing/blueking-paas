@@ -151,6 +151,13 @@ export default {
       return http.get(url);
     },
     /**
+     * 平台-获取进程资源配额方案
+     */
+    getProcessQuotaPlans() {
+      const url = `${BACKEND_URL}/api/plat_mgt/processes/quota_plans/`;
+      return http.get(url);
+    },
+    /**
      * 创建资源配额方案
      */
     createQuotaPlan({}, { data }) {

@@ -356,7 +356,6 @@ export default {
       } else {
         this.deploymentInfoData = this.deploymentInfoDataBackUp.filter((module) => module.module_name === value);
       }
-      this.init();
     },
     isWatchOfflineing(newVal, oldVal) {
       if (oldVal && !newVal) {

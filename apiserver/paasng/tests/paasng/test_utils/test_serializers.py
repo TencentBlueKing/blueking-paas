@@ -162,22 +162,27 @@ class TestSafePathField:
         assert slz.is_valid() is False
 
 
-# 默认 SM2 测试密钥对
-DEFAULT_SM2_PUBLIC_KEY = "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIOzo3tQc6DUzdt1+rV/SqNxj9OgPxdcnWyXuDUMaR59moAoGCCqBHM9V\nAYItoUQDQgAEU87uYBCj19QKO0cm6kjsBWhEIOeTdlRDjt0OXvh+JUnr7ZoWTyXA\ni/SidN3g4nlz337+iw8T6LC2yGWuUnlQYg==\n-----END EC PRIVATE KEY-----\n"
-DEFAULT_SM2_PRIVATE_KEY = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAEU87uYBCj19QKO0cm6kjsBWhEIOeT\ndlRDjt0OXvh+JUnr7ZoWTyXAi/SidN3g4nlz337+iw8T6LC2yGWuUnlQYg==\n-----END PUBLIC KEY-----\n"
+# SM2 测试密钥对
+SM2_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAEU87uYBCj19QKO0cm6kjsBWhEIOeT\ndlRDjt0OXvh+JUnr7ZoWTyXAi/SidN3g4nlz337+iw8T6LC2yGWuUnlQYg==\n-----END PUBLIC KEY-----\n"
+SM2_PRIVATE_KEY = "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIOzo3tQc6DUzdt1+rV/SqNxj9OgPxdcnWyXuDUMaR59moAoGCCqBHM9V\nAYItoUQDQgAEU87uYBCj19QKO0cm6kjsBWhEIOeTdlRDjt0OXvh+JUnr7ZoWTyXA\ni/SidN3g4nlz337+iw8T6LC2yGWuUnlQYg==\n-----END EC PRIVATE KEY-----\n"
 
 
-def encrypted_value(value: str):
-    """使用默认的公钥加密一个测试值"""
-    public_key = settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY or DEFAULT_SM2_PUBLIC_KEY
-    private_key = settings.FRONTEND_ENCRYPT_SM2_PRIVATE_KEY or DEFAULT_SM2_PRIVATE_KEY
+@pytest.fixture
+def enable_frontend_encrypt():
+    """配置前端加密功能"""
+    settings.ENABLE_FRONTEND_ENCRYPT = True
+    settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY = SM2_PUBLIC_KEY
+    settings.FRONTEND_ENCRYPT_SM2_PRIVATE_KEY = SM2_PRIVATE_KEY
 
+
+def encrypted_value(value: str) -> str:
+    """使用测试密钥加密值"""
     cipher = get_asymmetric_cipher(
         cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
         cipher_options={
             bkcrypto_constants.AsymmetricCipherType.SM2.value: SM2AsymmetricOptions(
-                public_key_string=public_key,
-                private_key_string=private_key,
+                public_key_string=SM2_PUBLIC_KEY,
+                private_key_string=SM2_PRIVATE_KEY,
             ),
         },
     )
@@ -189,11 +194,8 @@ class EncryptedCharFieldSLZ(serializers.Serializer):
     password = EncryptedCharField()
 
 
+@pytest.mark.usefixtures("enable_frontend_encrypt")
 class TestEncryptedCharField:
-    @pytest.fixture(autouse=True)
-    def enable_frontend_encrypt(self, settings):
-        settings.ENABLE_FRONTEND_ENCRYPT = True
-
     @pytest.mark.parametrize(
         ("plain_value", "encrypted_value", "ctx"),
         [
@@ -214,11 +216,8 @@ class EncryptedJSONFieldSLZ(serializers.Serializer):
     encrypted_json = EncryptedJSONField(encrypted_fields=["password", "user.password"], allow_missing=True)
 
 
+@pytest.mark.usefixtures("enable_frontend_encrypt")
 class TestEncryptedJSONField:
-    @pytest.fixture(autouse=True)
-    def enable_frontend_encrypt(self, settings):
-        settings.ENABLE_FRONTEND_ENCRYPT = True
-
     @pytest.mark.parametrize(
         ("slz_input", "slz_output", "ctx"),
         [

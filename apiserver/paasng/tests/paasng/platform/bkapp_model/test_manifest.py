@@ -264,21 +264,6 @@ class TestProcessesManifestConstructor:
         process_web.save()
         return process_web
 
-    @pytest.mark.parametrize(
-        ("plan_name", "expected"),
-        [
-            ("", "default"),
-            (settings.DEFAULT_PROC_SPEC_PLAN, "default"),
-            (settings.PREMIUM_PROC_SPEC_PLAN, "4C2G"),
-            # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
-            (settings.ULTIMATE_PROC_SPEC_PLAN, "4C4G"),
-            ("4C1G", "4C1G"),
-        ],
-    )
-    def test_get_quota_plan(self, plan_name, expected):
-        initialize_default_proc_spec_plans()
-        assert ProcessesManifestConstructor().get_quota_plan(plan_name) == expected
-
     def test_get_command_and_args(self, bk_module, process_web):
         assert ProcessesManifestConstructor().get_command_and_args(process_web) == (
             ["python"],

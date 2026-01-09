@@ -19,11 +19,9 @@ import json
 import logging
 import shlex
 from abc import ABC, abstractmethod
-from operator import itemgetter
 from typing import Dict, List, Optional, Tuple
 
 from django.conf import settings
-from kubernetes.utils.quantity import parse_quantity
 
 from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.applications.models.build import Build as WlBuild
@@ -34,7 +32,6 @@ from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_REGION_ANNO_KEY,
     BKAPP_TENANT_ID_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
-    DEFAULT_RES_QUOTA_PLAN_NAME,
     EGRESS_CLUSTER_STATE_NAME_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -53,7 +50,6 @@ from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SecretSource, VolumeSource
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
-from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding
@@ -129,7 +125,7 @@ class AccessControlManifestConstructor(ManifestConstructor):
 
     def apply_to(self, model_res: crd.BkAppResource, module: Module):
         try:
-            from paasng.security.access_control.models import ApplicationAccessControlSwitch  # noqa: PLC0415
+            from paasng.security.access_control.models import ApplicationAccessControlSwitch
         except ImportError:
             # The module is not enabled in current edition
             return
@@ -205,8 +201,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 args=args,
                 replicas=process_spec.target_replicas,
                 target_port=process_spec.port,
-                # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
-                res_quota_plan=self.get_quota_plan(process_spec.plan_name),
+                res_quota_plan=process_spec.plan_name,
                 autoscaling=process_spec.scaling_config,
                 probes=process_spec.probes.render_port() if process_spec.probes else None,
                 services=([svc.render_port() for svc in process_spec.services] if process_spec.services else None),
@@ -258,44 +253,11 @@ class ProcessesManifestConstructor(ManifestConstructor):
                         crd.ResQuotaOverlay(
                             envName=item.environment_name,
                             process=proc_spec.name,
-                            plan=self.get_quota_plan(item.plan_name),
+                            plan=item.plan_name,
                         ),
                     )
 
         model_res.spec.envOverlay = overlay
-
-    @staticmethod
-    def get_quota_plan(spec_plan_name: str) -> str:
-        """Get ProcessSpecPlan by name"""
-        active_plans = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
-        plan_obj = active_plans.get(spec_plan_name)
-        if plan_obj:
-            return plan_obj.name
-
-        logger.debug("unknown ResQuotaPlan name `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name)
-
-        try:
-            spec_plan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
-        except ProcessSpecPlan.DoesNotExist:
-            default = active_plans.get(DEFAULT_RES_QUOTA_PLAN_NAME)
-            if not default:
-                raise RuntimeError(f"default res quota plan `{DEFAULT_RES_QUOTA_PLAN_NAME}` not found")
-            return default.name
-
-        # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
-        limits = spec_plan.get_resource_summary()["limits"]
-        expected_limit_memory = parse_quantity(limits.get("memory", "512Mi"))
-        mem_plan_pairs = sorted(
-            ((parse_quantity(p.limits["memory"]), p) for p in active_plans.values()), key=itemgetter(0)
-        )
-
-        for mem, p in mem_plan_pairs:
-            if mem >= expected_limit_memory:
-                return p.name
-
-        # quota_plan_memory[-1][1] 是内存最大 plan
-        plan_obj = mem_plan_pairs[-1][1]
-        return plan_obj.name
 
     def get_command_and_args(self, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
         """Get the command and args from the process_spec object.
@@ -741,7 +703,7 @@ def _get_res_quota_plans(model_res: crd.BkAppResource, env: ModuleEnvironment) -
         return ""
 
     result = {}
-    for plan in ResQuotaPlan.objects.filter(is_active=True, is_builtin=False, name__in=used_plan_names):
+    for plan in ResQuotaPlan.objects.filter(name__in=used_plan_names):
         result[plan.name] = {"limits": plan.limits, "requests": plan.requests}
 
     return json.dumps(result) if result else ""

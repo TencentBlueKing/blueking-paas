@@ -28,12 +28,14 @@
       >
         <template slot-scope="{ row }">
           <span v-if="column.prop === 'is_active'">
-            <bk-switcher
-              v-model="row.is_active"
-              theme="primary"
-              :disabled="row.is_builtin || updatingActiveIds[row.id]"
-              @change="(value) => handleActiveChange(value, row)"
-            ></bk-switcher>
+            <span v-bk-tooltips="builtinTooltipConfig(row)">
+              <bk-switcher
+                v-model="row.is_active"
+                theme="primary"
+                :disabled="row.is_builtin || updatingActiveIds[row.id]"
+                @change="(value) => handleActiveChange(value, row)"
+              ></bk-switcher>
+            </span>
           </span>
           <span v-else>{{ getCellValue(row, column.prop) || '--' }}</span>
         </template>
@@ -43,23 +45,27 @@
         :width="200"
       >
         <template slot-scope="{ row }">
-          <bk-button
-            theme="primary"
-            text
-            class="mr10"
-            @click="handleEdit(row)"
-            :disabled="row.is_builtin"
-          >
-            {{ $t('编辑') }}
-          </bk-button>
-          <bk-button
-            theme="primary"
-            text
-            @click="handleDelete(row)"
-            :disabled="row.is_builtin"
-          >
-            {{ $t('删除') }}
-          </bk-button>
+          <span v-bk-tooltips="builtinTooltipConfig(row)">
+            <bk-button
+              theme="primary"
+              text
+              class="mr10"
+              @click="handleEdit(row)"
+              :disabled="row.is_builtin"
+            >
+              {{ $t('编辑') }}
+            </bk-button>
+          </span>
+          <span v-bk-tooltips="builtinTooltipConfig(row)">
+            <bk-button
+              theme="primary"
+              text
+              @click="handleDelete(row)"
+              :disabled="row.is_builtin"
+            >
+              {{ $t('删除') }}
+            </bk-button>
+          </span>
         </template>
       </bk-table-column>
     </bk-table>
@@ -104,19 +110,19 @@ export default {
           prop: 'name',
         },
         {
-          label: 'CPU(Limit)',
+          label: 'CPU(Limits)',
           prop: 'limits.cpu',
         },
         {
-          label: `${this.$t('内存')}(Limit)`,
+          label: `${this.$t('内存')}(Limits)`,
           prop: 'limits.memory',
         },
         {
-          label: 'CPU(Request)',
+          label: 'CPU(Requests)',
           prop: 'requests.cpu',
         },
         {
-          label: `${this.$t('内存')}(Request)`,
+          label: `${this.$t('内存')}(Requests)`,
           prop: 'requests.memory',
         },
         {
@@ -125,6 +131,13 @@ export default {
           'render-header': this.renderHeader,
         },
       ];
+    },
+    // 内置方案禁用操作的 tooltip 配置
+    builtinTooltipConfig() {
+      return (row) => ({
+        content: row.is_builtin ? this.$t('平台内置方案不支持操作') : '',
+        disabled: !row.is_builtin,
+      });
     },
   },
   created() {
@@ -148,7 +161,7 @@ export default {
     renderHeader(h, data) {
       const directive = {
         name: 'bkTooltips',
-        content: this.$t('停用后不影响移绑定的实例，但不能再绑定到新的应用'),
+        content: this.$t('停用后不影响已绑定的实例，但不能再绑定到新的应用'),
         placement: 'top',
       };
       return (

@@ -38,7 +38,7 @@
               <prefix-select
                 v-model="formData.cpu_limit"
                 width="288"
-                prefix="Limit"
+                prefix="Limits"
                 :placeholder="$t('请选择')"
                 :options="cpuOptions"
               />
@@ -50,7 +50,7 @@
               <prefix-select
                 v-model="formData.cpu_request"
                 width="288"
-                prefix="Request"
+                prefix="Requests"
                 :placeholder="$t('请选择')"
                 :options="cpuOptions"
               />
@@ -70,7 +70,7 @@
               <prefix-select
                 v-model="formData.memory_limit"
                 width="288"
-                prefix="Limit"
+                prefix="Limits"
                 :placeholder="$t('请选择')"
                 :options="memoryOptions"
               />
@@ -82,7 +82,7 @@
               <prefix-select
                 v-model="formData.memory_request"
                 width="288"
-                prefix="Request"
+                prefix="Requests"
                 :placeholder="$t('请选择')"
                 :options="memoryOptions"
               />
@@ -284,10 +284,35 @@ export default {
     autoGenerateName() {
       const { cpu_limit, memory_limit } = this.formData;
       if (cpu_limit && memory_limit) {
-        // 从选项中提取纯数字部分用于名称
-        const cpuLabel = this.cpuOptions.find((opt) => opt.value === cpu_limit)?.label || cpu_limit;
-        const memLabel = this.memoryOptions.find((opt) => opt.value === memory_limit)?.label || memory_limit;
-        this.formData.name = `${cpuLabel}_${memLabel}`;
+        // 处理 CPU：所有 CPU 值都是 "xxxm" 格式，转换为核心数
+        let cpuDisplay;
+        if (cpu_limit.endsWith('m')) {
+          const cpuMilliValue = parseInt(cpu_limit.replace('m', ''));
+          const cpuCoreValue = cpuMilliValue / 1000;
+          // 如果是整数核心数，显示整数；否则显示一位小数
+          cpuDisplay = cpuCoreValue % 1 === 0 ? cpuCoreValue.toString() : cpuCoreValue.toFixed(1);
+        } else {
+          cpuDisplay = parseFloat(cpu_limit.replace(/[^0-9.]/g, '')).toString();
+        }
+
+        // 处理内存：所有内存值都是 "xxxMi" 格式
+        let memoryDisplay;
+        if (memory_limit.endsWith('Mi')) {
+          const memoryMiValue = parseInt(memory_limit.replace('Mi', ''));
+          if (memoryMiValue >= 1024 && memoryMiValue % 1024 === 0) {
+            // 如果是 1024 的整数倍，转换为 G
+            const gValue = memoryMiValue / 1024;
+            memoryDisplay = `${gValue}G`;
+          } else {
+            // 否则保持 M 单位
+            memoryDisplay = `${memoryMiValue}M`;
+          }
+        } else {
+          memoryDisplay = memory_limit;
+        }
+
+        // 生成格式：0.1C256M, 1C1G, 4C2G 等
+        this.formData.name = `${cpuDisplay}C${memoryDisplay}`;
       }
     },
     // 校验 CPU Requests 是否小于等于 Limits

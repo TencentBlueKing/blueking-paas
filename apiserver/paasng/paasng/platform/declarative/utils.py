@@ -16,11 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
-from operator import itemgetter
 from typing import Any
 
 from blue_krill.cubing_case import shortcuts
-from kubernetes.utils import parse_quantity
 
 from paas_wl.bk_app.cnative.specs.constants import DEFAULT_RES_QUOTA_PLAN_NAME
 from paasng.platform.bkapp_model.models import ResQuotaPlan
@@ -31,6 +29,7 @@ logger = logging.getLogger(__name__)
 def get_quota_plan(spec_plan_name: str) -> str:
     """Get ProcessSpecPlan by name"""
     # TODO: fix circular import
+    # TODO: 云原生为主, 先当作云原生配置, 没有使用默认普通应用的配置
     from paas_wl.bk_app.processes.models import ProcessSpecPlan
 
     active_plans = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
@@ -41,26 +40,14 @@ def get_quota_plan(spec_plan_name: str) -> str:
     logger.debug("unknown ResQuotaPlan name `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name)
 
     try:
-        spec_plan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
+        spec_plan: ProcessSpecPlan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
     except ProcessSpecPlan.DoesNotExist:
         default = active_plans.get(DEFAULT_RES_QUOTA_PLAN_NAME)
         if not default:
             raise RuntimeError(f"default res quota plan `{DEFAULT_RES_QUOTA_PLAN_NAME}` not found")
         return default.name
 
-    # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
-    limits = spec_plan.get_resource_summary()["limits"]
-    expected_limit_memory = parse_quantity(limits.get("memory", "512Mi"))
-    mem_plan_pairs = sorted(
-        ((parse_quantity(p.limits["memory"]), p) for p in active_plans.values()), key=itemgetter(0)
-    )
-    for mem, p in mem_plan_pairs:
-        if mem >= expected_limit_memory:
-            return p.name
-
-    # quota_plan_memory[-1][1] 是内存最大 plan
-    plan_obj = mem_plan_pairs[-1][1]
-    return plan_obj.name
+    return spec_plan.name
 
 
 def camel_to_snake_case(data: Any) -> Any:

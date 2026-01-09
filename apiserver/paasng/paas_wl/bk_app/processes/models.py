@@ -22,11 +22,8 @@ from django.conf import settings
 from django.db import models
 from jsonfield import JSONField
 
-from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.managers import get_metadata
-from paas_wl.bk_app.cnative.specs.constants import DEFAULT_RES_QUOTA_PLAN_NAME
-from paas_wl.bk_app.cnative.specs.procs.res_quota import get_active_res_quota_plans
-from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
+from paas_wl.bk_app.processes.constants import ProcessTargetStatus
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
@@ -154,10 +151,6 @@ class ProcessSpecManager:
 
         # add spec objects start
         default_process_spec_plan = ProcessSpecPlan.objects.get_by_name(name=settings.DEFAULT_PROC_SPEC_PLAN)
-        if self.wl_app.type == WlAppType.CLOUD_NATIVE:
-            default_process_spec_plan = (
-                ProcessSpecPlan.objects.get_by_name(name=DEFAULT_RES_QUOTA_PLAN_NAME) or default_process_spec_plan
-            )
         adding_procs = [process for name, process in processes_map.items() if name not in existed_procs_name]
 
         def process_spec_builder(process: ProcessTmpl) -> ProcessSpec:
@@ -290,23 +283,3 @@ def initialize_default_proc_spec_plans():
         except ProcessSpecPlan.DoesNotExist:
             logger.info(f"Creating default plan: {name}...")
             ProcessSpecPlan.objects.create(name=name, **config)
-
-    try:
-        active_plans = get_active_res_quota_plans()
-    except ValueError:
-        # Getter not set yet, skip syncing ResQuotaPlan
-        logger.warning("ResQuotaPlan getter not set, skip syncing to ProcessSpecPlan")
-        return
-
-    for plan_name, plan_data in active_plans.items():
-        try:
-            ProcessSpecPlan.objects.get_by_name(name=plan_name)
-            logger.debug(f"Plan: {plan_name} already exists, skip initialization.")
-        except ProcessSpecPlan.DoesNotExist:
-            logger.info(f"Creating default plan: {plan_name}...")
-            ProcessSpecPlan.objects.create(
-                name=plan_name,
-                max_replicas=DEFAULT_CNATIVE_MAX_REPLICAS,
-                limits=plan_data.limits,
-                requests=plan_data.requests,
-            )

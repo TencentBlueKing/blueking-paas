@@ -31,9 +31,10 @@ import (
 
 var log = logf.Log.WithName("env_overlay")
 
-// predefinedQuotaPlans stores the predefined resource quota plans with their limits.
+// legacyResQuotaPlans stores the predefined resource quota plans with their limits.
 // The key is the plan name, and the value is (cpu, memory) limits.
-var predefinedQuotaPlans = map[paasv1alpha2.ResQuotaPlan]struct{ cpu, memory string }{
+// Note: It's only used for legacy support.
+var legacyResQuotaPlans = map[paasv1alpha2.ResQuotaPlan]struct{ cpu, memory string }{
 	paasv1alpha2.ResQuotaPlan4C1G:    {"4000m", "1024Mi"},
 	paasv1alpha2.ResQuotaPlan4C2G:    {"4000m", "2048Mi"},
 	paasv1alpha2.ResQuotaPlan4C4G:    {"4000m", "4096Mi"},
@@ -272,12 +273,7 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 func (r *ProcResourcesGetter) fromQuotaPlan(
 	plan paasv1alpha2.ResQuotaPlan,
 ) corev1.ResourceRequirements {
-	// 1. Try to get from predefined plans
-	if spec, ok := predefinedQuotaPlans[plan]; ok {
-		return r.calculateResources(spec.cpu, spec.memory)
-	}
-
-	// 2. Try to get from annotation ResQuotaPlansAnnoKey
+	// 1. Try to get from annotation ResQuotaPlansAnnoKey
 	if planConfig, found := r.getQuotaPlanFromAnnotation(plan); found {
 		res, err := r.calculateResourcesByResConfig(*planConfig)
 		if err != nil {
@@ -289,11 +285,15 @@ func (r *ProcResourcesGetter) fromQuotaPlan(
 		return *res
 	}
 
+	// 2. Try to get from legacy resQuotaPlans
+	// Note: this is only for legacy support, new quota plans should be defined in annotation
+	if spec, ok := legacyResQuotaPlans[plan]; ok {
+		return r.calculateResources(spec.cpu, spec.memory)
+	}
+
 	// 3. Use default values from global config
-	return r.calculateResources(
-		config.Global.GetProcDefaultCpuLimit(),
-		config.Global.GetProcDefaultMemLimit(),
-	)
+	spec := legacyResQuotaPlans[paasv1alpha2.ResQuotaPlanDefault]
+	return r.calculateResources(spec.cpu, spec.memory)
 }
 
 // getQuotaPlanFromAnnotation tries to get the quota plan config from annotation.

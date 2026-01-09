@@ -190,6 +190,10 @@ class EncryptedCharFieldSLZ(serializers.Serializer):
 
 
 class TestEncryptedCharField:
+    @pytest.fixture(autouse=True)
+    def enable_frontend_encrypt(self, settings):
+        settings.ENABLE_FRONTEND_ENCRYPT = True
+
     @pytest.mark.parametrize(
         ("plain_value", "encrypted_value", "ctx"),
         [
@@ -211,6 +215,10 @@ class EncryptedJSONFieldSLZ(serializers.Serializer):
 
 
 class TestEncryptedJSONField:
+    @pytest.fixture(autouse=True)
+    def enable_frontend_encrypt(self, settings):
+        settings.ENABLE_FRONTEND_ENCRYPT = True
+
     @pytest.mark.parametrize(
         ("slz_input", "slz_output", "ctx"),
         [

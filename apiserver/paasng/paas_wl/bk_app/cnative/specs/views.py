@@ -29,7 +29,6 @@ from rest_framework import status
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from paas_wl.bk_app.cnative.specs.exceptions import GetSourceConfigDataError
@@ -40,7 +39,6 @@ from paas_wl.bk_app.cnative.specs.mounts import (
     check_storage_class_exists,
     init_volume_source_controller,
 )
-from paas_wl.bk_app.cnative.specs.procs.res_quota import get_active_res_quota_plans
 from paas_wl.bk_app.cnative.specs.serializers import (
     AppModelRevisionSerializer,
     CreateMountSourceSLZ,
@@ -49,7 +47,6 @@ from paas_wl.bk_app.cnative.specs.serializers import (
     MountSourceSLZ,
     QueryMountSourcesSLZ,
     QueryMountsSLZ,
-    ResQuotaPlanSLZ,
     UpdateMountSourceSLZ,
     UpsertMountSLZ,
 )
@@ -67,28 +64,6 @@ from paasng.utils.moby_distribution.registry.exceptions import AuthFailed, Permi
 from paasng.utils.moby_distribution.registry.utils import parse_image
 
 logger = logging.getLogger(__name__)
-
-
-class ResQuotaPlanOptionsView(APIView):
-    """资源配额方案 选项视图"""
-
-    @swagger_auto_schema(response_serializer=ResQuotaPlanSLZ(many=True))
-    def get(self, request):
-        active_plans = get_active_res_quota_plans()
-        return Response(
-            data=ResQuotaPlanSLZ(
-                [
-                    {
-                        "name": plan_name,
-                        "value": plan_name,
-                        "limit": plan_data.limits,
-                        "request": plan_data.requests,
-                    }
-                    for plan_name, plan_data in active_plans.items()
-                ],
-                many=True,
-            ).data
-        )
 
 
 class MresVersionViewSet(GenericViewSet, ApplicationCodeInPathMixin):

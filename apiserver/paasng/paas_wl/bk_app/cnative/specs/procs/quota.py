@@ -17,69 +17,98 @@
 
 import json
 
-from paas_wl.bk_app.cnative.specs.constants import DEFAULT_RES_QUOTA_PLAN_NAME, OVERRIDE_PROC_RES_ANNO_KEY
+from attrs import asdict, define
+
+from paas_wl.bk_app.cnative.specs.constants import (
+    DEFAULT_RES_QUOTA_PLAN_NAME,
+    OVERRIDE_PROC_RES_ANNO_KEY,
+    RES_QUOTA_PLANS_ANNO_KEY,
+)
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
-from paas_wl.bk_app.cnative.specs.procs.res_quota import get_active_res_quota_plans
 from paasng.platform.engine.constants import AppEnvName
 
 
-class ResQuotaReader:
-    """Read resQuotaPlan and resQuotas(envOverlay) from app model resource object
+@define
+class ResourceQuota:
+    cpu: str
+    memory: str
 
-    :param res: App model resource object
-    """
+
+# Deprecated: compatible with old data, will be removed in the future
+LEGACY_QUOTA_PLANS = {
+    "default": {
+        "limits": ResourceQuota(cpu="4000m", memory="1024Mi"),
+        "requests": ResourceQuota(cpu="200m", memory="256Mi"),
+    },
+    "4C1G": {
+        "limits": ResourceQuota(cpu="4000m", memory="1024Mi"),
+        "requests": ResourceQuota(cpu="200m", memory="256Mi"),
+    },
+    "4C2G": {
+        "limits": ResourceQuota(cpu="4000m", memory="2048Mi"),
+        "requests": ResourceQuota(cpu="200m", memory="1024Mi"),
+    },
+    "4C4G": {
+        "limits": ResourceQuota(cpu="4000m", memory="4096Mi"),
+        "requests": ResourceQuota(cpu="200m", memory="2048Mi"),
+    },
+}
+
+
+class ResQuotaReader:
+    """Read resource quota plans and environment overlays from BkAppResource"""
 
     def __init__(self, res: BkAppResource):
         self.res = res
+        self._active_plans: dict[str, dict] = self._load_active_plans()
 
     def read_all(self, env_name: AppEnvName) -> dict[str, dict]:
-        """Read all ResQuota config defined
+        """Read all resource quota configs for given environment
 
-        :param env_name: Environment name
-        :return: Dict[name of process, config],
-          config is {"plan": plan name, "limits": {"cpu":cpu limit, "memory": memory limit},
-          "requests": {"cpu":cpu request, "memory": memory request}}
-
-        Note: If override_proc_res is configured in BkAppResource's annotations,
-          it will be applied with the highest priority.
+        :return: {process_name: {plan: str, limits: {cpu, memory}, requests: {cpu, memory}}}
+        Note: OVERRIDE_PROC_RES_ANNO_KEY Annotation overrides have highest priority
         """
         results: dict[str, dict] = {}
-        active_plans = get_active_res_quota_plans()
 
         for p in self.res.spec.processes:
-            # 如果未指定方案，使用 default 方案
+            # if no plan is specified, use the default plan
             plan_name = p.resQuotaPlan or DEFAULT_RES_QUOTA_PLAN_NAME
-            plan_obj = active_plans[plan_name]
-            results[p.name] = {
-                "plan": plan_obj.name,
-                "limits": plan_obj.limits,
-                "requests": plan_obj.requests,
-            }
+            results[p.name] = self._get_plan_quota(plan_name)
 
-        if overlay := self.res.spec.envOverlay:
-            quotas_overlay = overlay.resQuotas or []
-        else:
-            quotas_overlay = []
-
-        for quotas in quotas_overlay:
-            plan_obj = active_plans[quotas.plan]
+        quotas_overlay = self.res.spec.envOverlay.resQuotas if self.res.spec.envOverlay else []
+        for quotas in quotas_overlay or []:
             if quotas.envName == env_name:
-                results[quotas.process] = {
-                    "plan": plan_obj.name,
-                    "limits": plan_obj.limits,
-                    "requests": plan_obj.requests,
-                }
+                results[quotas.process] = self._get_plan_quota(quotas.plan)
 
-        override_config_str = self.res.metadata.annotations.get(OVERRIDE_PROC_RES_ANNO_KEY, "")
-        if not override_config_str:
-            return results
-
-        override_map = json.loads(override_config_str)
-        for proc_name, config in results.items():
-            if override_res := override_map.get(proc_name):
-                if "limits" in override_res:
-                    config["limits"] = override_res["limits"]
-                if "requests" in override_res:
-                    config["requests"] = override_res["requests"]
+        # structure: {process_name: {limits: {...}, requests: {...}}}
+        override_str = self.res.metadata.annotations.get(OVERRIDE_PROC_RES_ANNO_KEY, "")
+        if override_str:
+            override_map: dict[str, dict] = json.loads(override_str)
+            for proc_name, config in results.items():
+                if override_res := override_map.get(proc_name):
+                    if "limits" in override_res:
+                        config["limits"] = override_res["limits"]
+                    if "requests" in override_res:
+                        config["requests"] = override_res["requests"]
 
         return results
+
+    def _get_plan_quota(self, plan_name: str) -> dict:
+        """Get quota config by plan name (annotation plans > legacy plans)"""
+        if plan_name in self._active_plans:
+            plan = self._active_plans[plan_name]
+            return {"plan": plan_name, "limits": plan["limits"], "requests": plan["requests"]}
+
+        # Fallback to legacy plans
+        legacy_plan = LEGACY_QUOTA_PLANS[plan_name]
+        return {
+            "plan": plan_name,
+            "limits": asdict(legacy_plan["limits"]),
+            "requests": asdict(legacy_plan["requests"]),
+        }
+
+    def _load_active_plans(self) -> dict[str, dict]:
+        """Load active plans from annotations"""
+        # structure: {plan_name: {limits: {...}, requests: {...}}}
+        plans_str = self.res.metadata.annotations.get(RES_QUOTA_PLANS_ANNO_KEY, "")
+        return json.loads(plans_str) if plans_str else {}

@@ -29,15 +29,15 @@ logger = logging.getLogger(__name__)
 def get_quota_plan(spec_plan_name: str) -> str:
     """Get ProcessSpecPlan by name"""
     # TODO: fix circular import
-    # TODO: 云原生为主, 先当作云原生配置, 没有使用默认普通应用的配置
     from paas_wl.bk_app.processes.models import ProcessSpecPlan
 
+    # Note: First try to find in ResQuotaPlan, then fallback to ProcessSpecPlan
     active_plans = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
     plan_obj = active_plans.get(spec_plan_name)
     if plan_obj:
         return plan_obj.name
 
-    logger.debug("unknown ResQuotaPlan name `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name)
+    logger.debug("unknown ResQuotaPlan name `%s`, try to get ProcessSpecPlan", spec_plan_name)
 
     try:
         spec_plan: ProcessSpecPlan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)

@@ -71,6 +71,7 @@ from paasng.platform.bkapp_model.models import (
     ProcessSpecEnvOverlay,
     SvcDiscConfig,
 )
+from paasng.platform.bkapp_model.models import ResQuotaPlan as ResQuotaPlanModel
 from paasng.platform.bkapp_model.utils import (
     MergeStrategy,
     merge_env_vars,
@@ -708,7 +709,10 @@ def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
         environment_name=env.environment,
     )
     for overlay in queryset:
-        if overlay and overlay.override_proc_res:
+        if overlay.override_plan_name:
+            plan = ResQuotaPlanModel.objects.get(name=overlay.override_plan_name)
+            result[overlay.proc_spec.name] = {"limits": plan.limits, "requests": plan.requests}
+        elif overlay.override_proc_res:
             result[overlay.proc_spec.name] = overlay.override_proc_res
 
     return json.dumps(result) if result else ""

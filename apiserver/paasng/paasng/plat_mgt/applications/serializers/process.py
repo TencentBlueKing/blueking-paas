@@ -19,6 +19,7 @@ from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
+from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName
 
 
@@ -61,7 +62,8 @@ class EnvOverlayOutputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输出序列化器"""
 
     plan_name = serializers.CharField(help_text="资源配额方案", allow_null=True)
-    resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
+    override_plan_name = serializers.CharField(help_text="管理员配置的资源配额方案名称", allow_null=True)
+    override_proc_res = ResourcesSLZ(help_text="管理员配置的资源配置", allow_null=True)
 
 
 class ProcessSpecOutputSLZ(serializers.Serializer):
@@ -87,7 +89,29 @@ class ModuleProcessSpecOutputSLZ(serializers.Serializer):
 class EnvOverlayInputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输入序列化器"""
 
-    resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
+    override_plan_name = serializers.CharField(help_text="管理员配置的资源配额方案名称", allow_null=True)
+    override_proc_res = ResourcesSLZ(help_text="管理员配置的资源配置", allow_null=True)
+
+    def validate_override_plan_name(self, value):
+        """validate override_plan_name is valid plan name"""
+        if value is None:
+            return value
+
+        if not ResQuotaPlan.objects.filter(name=value).exists():
+            raise serializers.ValidationError(
+                _("无效的资源配额方案名称: {plan_name}").format(plan_name=value),
+            )
+
+        return value
+
+    def validate(self, attrs):
+        """Validate that at least one of override_plan_name or override_proc_res is provided"""
+        override_plan_name = attrs.get("override_plan_name")
+        override_proc_res = attrs.get("override_proc_res")
+
+        if override_plan_name and override_proc_res:
+            raise serializers.ValidationError(_("不能同时提供 override_plan_name 和 override_proc_res"))
+        return attrs
 
 
 class ProcessSpecInputSLZ(serializers.Serializer):

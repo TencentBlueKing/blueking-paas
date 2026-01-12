@@ -204,7 +204,8 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=AppEnvName.get_choices(), null=False, max_length=16
     )
-    # proc-res-override 只能通过后台/API修改
+    # override_plan_name, override_proc_res 只能通过后台/API修改
+    override_plan_name = models.CharField("管理员配置的资源配额方案名称", max_length=32, null=True, blank=True)
     override_proc_res: Optional[Dict[str, Dict[str, str]]] = models.JSONField(
         "管理员配置的资源限制",
         null=True,

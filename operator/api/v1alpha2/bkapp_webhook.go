@@ -912,10 +912,6 @@ func (r *BkApp) validateComponents() *field.Error {
 }
 
 func (r *BkApp) validateResQuotaPlan(pPath *field.Path, plan ResQuotaPlan) *field.Error {
-	if lo.Contains(AllowedResQuotaPlans, plan) {
-		return nil
-	}
-
 	resQuotaPlans, err := kubeutil.GetJsonAnnotation[ResQuotaPlans](
 		r, ResQuotaPlansAnnoKey,
 	)
@@ -925,7 +921,11 @@ func (r *BkApp) validateResQuotaPlan(pPath *field.Path, plan ResQuotaPlan) *fiel
 		}
 	}
 
-	supportedPlans := stringx.ToStrArray(AllowedResQuotaPlans)
+	if lo.Contains(LegacyAllowPlans, plan) {
+		return nil
+	}
+
+	supportedPlans := stringx.ToStrArray(LegacyAllowPlans)
 	for name := range resQuotaPlans {
 		supportedPlans = append(supportedPlans, name)
 	}

@@ -160,8 +160,8 @@ const (
 // AllowedScalingPolicies 允许使用的扩缩容策略
 var AllowedScalingPolicies = []ScalingPolicy{ScalingPolicyDefault}
 
-// AllowedResQuotaPlans 允许使用的资源配额方案
-var AllowedResQuotaPlans = []ResQuotaPlan{
+// LegacyAllowPlans 允许使用的历史资源配额方案
+var LegacyAllowPlans = []ResQuotaPlan{
 	ResQuotaPlanDefault,
 	ResQuotaPlan4C1G,
 	ResQuotaPlan4C2G,

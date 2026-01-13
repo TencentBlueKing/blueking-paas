@@ -55,11 +55,9 @@ func archiveSourceTarball(sourceDir, destTGZ string, procfile map[string]string)
 	return nil
 }
 
-// archiveArtifactTarball 将 app_desc.yaml、logo、.Version 以及 artifact.json (optional) 写入 artifactDir,
-// 再将目录打包成 {app_code}.tgz 并返回其路径. artifact.json 描述模块与镜像 tar, 以及进程 entrypoints 的映射关系
-// 注意：是否生成 artifact.json 由 buildPlan.PackagingVersion 决定:
-//   - v2(新方案，默认): 生成并写入 artifact.json;
-//   - v1(旧方案): 不生成 artifact.json
+// archiveArtifactTarball 将 app_desc.yaml、logo、.Version 以及 artifact.json 写入 artifactDir,
+// 再将目录打包成 {app_code}.tgz 并返回其路径.
+// 注意：无论是 v1(旧方案) 还是 v2(新方案), 都会生成并写入 artifact.json 文件
 func archiveArtifactTarball(buildPlan *plan.BuildPlan, artifactDir string) (string, error) {
 	// 1. 将 app_desc.yaml, logo, .Version 写入 artifactDir
 	appDescName := filepath.Base(buildPlan.AppDescPath)
@@ -79,7 +77,6 @@ func archiveArtifactTarball(buildPlan *plan.BuildPlan, artifactDir string) (stri
 	}
 
 	// 2. 生成并写入 `artifact.json` 到 artifactDir
-	//    说明：writeArtifactJsonFile 会根据 buildPlan.PackagingVersion 决定是否生成该文件
 	if err := writeArtifactJsonFile(buildPlan, artifactDir); err != nil {
 		return "", errors.Wrap(err, "writing artifact.json")
 	}
@@ -142,21 +139,18 @@ func makeRunArgs(appCode string, group *plan.ModuleBuildGroup, moduleSrcTGZ stri
 	return args
 }
 
-// writeArtifactJsonFile 根据 buildPlan 在 artifactDir 写入 artifact.json (如果需要)
-// 行为说明：
-//   - v2(新方案，默认): 生成 artifact.json, 内容包含每个模块对应的镜像 tar 名称和 proc_entrypoints;
-//   - v1(旧方案): 不生成 artifact.json (函数将直接返回 nil)
-//
+// writeArtifactJsonFile 根据 buildPlan 在 artifactDir 写入 artifact.json
 // 输出的 artifact.json 格式示例:
 //
 //	{
-//	  "module1": {"image_tar": "module1.tar", "proc_entrypoints": {"web": ["module1-web"]}},
-//	  "module2": {"image_tar": "module2.tar", "proc_entrypoints": {"api": ["module2-api"]}}
+//	  "version": "1.0",
+//	  "runtime": {"base_image_id": "default", "architecture": "amd64"},
+//	  "app_artifacts": {
+//	    "module1": {"image_tar": "module1.tar", "proc_entrypoints": {"web": ["module1-web"]}},
+//	    "module2": {"image_tar": "module2.tar", "proc_entrypoints": {"api": ["module2-api"]}}
+//	  }
 //	}
 func writeArtifactJsonFile(buildPlan *plan.BuildPlan, artifactDir string) error {
-	if buildPlan.PackagingVersion == "v1" {
-		return nil
-	}
 	moduleArtifact := make(map[string]map[string]any)
 	for _, group := range buildPlan.BuildGroups {
 		for _, name := range group.ModuleNames {
@@ -172,7 +166,17 @@ func writeArtifactJsonFile(buildPlan *plan.BuildPlan, artifactDir string) error 
 		moduleArtifact[moduleName]["proc_entrypoints"] = entrypoints
 	}
 
-	relBytes, err := json.Marshal(moduleArtifact)
+	// Build the new artifact.json structure with version, runtime and app_artifacts
+	artifact := map[string]any{
+		"version": "1.0",
+		"runtime": map[string]string{
+			"base_image_id": buildPlan.BaseImageID,
+			"architecture":  buildPlan.Architecture,
+		},
+		"app_artifacts": moduleArtifact,
+	}
+
+	relBytes, err := json.Marshal(artifact)
 	if err != nil {
 		return err
 	}

@@ -60,6 +60,11 @@ var G = struct {
 	// v1: Each module has its own image tar and Procfile
 	// v2: Modules with the same build configuration share the same image tar, unified proc entrypoints
 	PackagingVersion string
+
+	// BaseImageID is the runtime base image identifier, default is "default"
+	BaseImageID string
+	// Architecture is the target architecture, default is "amd64"
+	Architecture string
 }{Viper: viper.New()}
 
 // SetGlobalConfig set global config
@@ -116,4 +121,10 @@ func SetGlobalConfig() {
 	if G.PackagingVersion != "v1" && G.PackagingVersion != "v2" {
 		log.Fatalf("Invalid PACKAGING_VERSION: %q, must be either \"v1\" or \"v2\"", G.PackagingVersion)
 	}
+
+	G.SetDefault("BASE_IMAGE_ID", "default")
+	G.BaseImageID = G.GetString("BASE_IMAGE_ID")
+
+	G.SetDefault("ARCHITECTURE", "amd64")
+	G.Architecture = G.GetString("ARCHITECTURE")
 }

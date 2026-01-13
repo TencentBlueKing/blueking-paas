@@ -41,6 +41,8 @@ var _ = Describe("writeArtifactJsonFile", func() {
 
 	It("Each module uses its own independent image tar", func() {
 		buildPlan := plan.BuildPlan{
+			BaseImageID:  "ts4",
+			Architecture: "arm64",
 			ProcessCommands: map[string]map[string]string{
 				"module1": {"proc1": "cmd1", "proc2": "cmd2"},
 				"module2": {"proc1": "cmd1", "proc2": "cmd2"},
@@ -60,56 +62,85 @@ var _ = Describe("writeArtifactJsonFile", func() {
 
 		fileContent, _ := os.ReadFile(filepath.Join(artifactJsonDir, "artifact.json"))
 
-		Expect(gjson.GetBytes(fileContent, "module1.image_tar").String()).To(Equal("module1.tar"))
-		Expect(gjson.GetBytes(fileContent, "module2.image_tar").String()).To(Equal("module2.tar"))
+		// Check version and runtime fields
+		Expect(gjson.GetBytes(fileContent, "version").String()).To(Equal("1.0"))
+		Expect(gjson.GetBytes(fileContent, "runtime.base_image_id").String()).To(Equal("ts4"))
+		Expect(gjson.GetBytes(fileContent, "runtime.architecture").String()).To(Equal("arm64"))
+
+		// Check app_artifacts fields
+		Expect(gjson.GetBytes(fileContent, "app_artifacts.module1.image_tar").String()).To(Equal("module1.tar"))
+		Expect(gjson.GetBytes(fileContent, "app_artifacts.module2.image_tar").String()).To(Equal("module2.tar"))
 
 		Expect(
-			gjson.GetBytes(fileContent, "module1.proc_entrypoints.proc1").Array()[0].String(),
+			gjson.GetBytes(fileContent, "app_artifacts.module1.proc_entrypoints.proc1").Array()[0].String(),
 		).To(Equal("module1-proc1"))
 		Expect(
-			gjson.GetBytes(fileContent, "module1.proc_entrypoints.proc2").Array()[0].String(),
+			gjson.GetBytes(fileContent, "app_artifacts.module1.proc_entrypoints.proc2").Array()[0].String(),
 		).To(Equal("module1-proc2"))
 		Expect(
-			gjson.GetBytes(fileContent, "module2.proc_entrypoints.proc1").Array()[0].String(),
+			gjson.GetBytes(fileContent, "app_artifacts.module2.proc_entrypoints.proc1").Array()[0].String(),
 		).To(Equal("module2-proc1"))
 		Expect(
-			gjson.GetBytes(fileContent, "module2.proc_entrypoints.proc2").Array()[0].String(),
+			gjson.GetBytes(fileContent, "app_artifacts.module2.proc_entrypoints.proc2").Array()[0].String(),
 		).To(Equal("module2-proc2"))
 	})
 
 	It("Some module uses the same image tar", func() {
-		buildPlan := plan.BuildPlan{BuildGroups: []*plan.ModuleBuildGroup{
-			{
-				ModuleNames:        []string{"module1", "module2"},
-				OutputImageTarName: "module1.tar",
+		buildPlan := plan.BuildPlan{
+			BaseImageID:  "default",
+			Architecture: "amd64",
+			BuildGroups: []*plan.ModuleBuildGroup{
+				{
+					ModuleNames:        []string{"module1", "module2"},
+					OutputImageTarName: "module1.tar",
+				},
+				{
+					ModuleNames:        []string{"module3"},
+					OutputImageTarName: "module3.tar",
+				},
 			},
-			{
-				ModuleNames:        []string{"module3"},
-				OutputImageTarName: "module3.tar",
-			},
-		}}
+		}
 		Expect(writeArtifactJsonFile(&buildPlan, artifactJsonDir)).To(BeNil())
 
 		fileContent, _ := os.ReadFile(filepath.Join(artifactJsonDir, "artifact.json"))
 
-		Expect(gjson.GetBytes(fileContent, "module1.image_tar").String()).To(Equal("module1.tar"))
-		Expect(gjson.GetBytes(fileContent, "module2.image_tar").String()).To(Equal("module1.tar"))
-		Expect(gjson.GetBytes(fileContent, "module3.image_tar").String()).To(Equal("module3.tar"))
+		// Check version and runtime fields
+		Expect(gjson.GetBytes(fileContent, "version").String()).To(Equal("1.0"))
+		Expect(gjson.GetBytes(fileContent, "runtime.base_image_id").String()).To(Equal("default"))
+		Expect(gjson.GetBytes(fileContent, "runtime.architecture").String()).To(Equal("amd64"))
+
+		// Check app_artifacts fields
+		Expect(gjson.GetBytes(fileContent, "app_artifacts.module1.image_tar").String()).To(Equal("module1.tar"))
+		Expect(gjson.GetBytes(fileContent, "app_artifacts.module2.image_tar").String()).To(Equal("module1.tar"))
+		Expect(gjson.GetBytes(fileContent, "app_artifacts.module3.image_tar").String()).To(Equal("module3.tar"))
 	})
 
-	It("when packaging v1, do not write artifact.json", func() {
-		buildPlan := plan.BuildPlan{BuildGroups: []*plan.ModuleBuildGroup{
-			{
-				ModuleNames:        []string{"module1"},
-				OutputImageTarName: "module1.tar",
+	It("when packaging v1, should also write artifact.json", func() {
+		buildPlan := plan.BuildPlan{
+			BaseImageID:  "default",
+			Architecture: "amd64",
+			BuildGroups: []*plan.ModuleBuildGroup{
+				{
+					ModuleNames:        []string{"module1"},
+					OutputImageTarName: "module1.tar",
+				},
 			},
-		}, PackagingVersion: "v1"}
+			PackagingVersion: "v1",
+		}
 
-		// v1 means writeArtifactJsonFile will do nothing and return nil
+		// v1 should also write artifact.json now
 		Expect(writeArtifactJsonFile(&buildPlan, artifactJsonDir)).To(BeNil())
 
-		// artifact.json should not exist
-		_, err := os.Stat(filepath.Join(artifactJsonDir, "artifact.json"))
-		Expect(os.IsNotExist(err)).To(BeTrue())
+		// artifact.json should exist
+		fileContent, err := os.ReadFile(filepath.Join(artifactJsonDir, "artifact.json"))
+		Expect(err).To(BeNil())
+
+		// Check version and runtime fields
+		Expect(gjson.GetBytes(fileContent, "version").String()).To(Equal("1.0"))
+		Expect(gjson.GetBytes(fileContent, "runtime.base_image_id").String()).To(Equal("default"))
+		Expect(gjson.GetBytes(fileContent, "runtime.architecture").String()).To(Equal("amd64"))
+
+		// Check app_artifacts fields
+		Expect(gjson.GetBytes(fileContent, "app_artifacts.module1.image_tar").String()).To(Equal("module1.tar"))
 	})
 })

@@ -40,8 +40,8 @@ class TestApplicationProcessViewSet:
         proc_spec, _ = ModuleProcessSpec.objects.get_or_create(
             module=bk_module, name="web", defaults={"plan_name": "default", "tenant_id": "default"}
         )
-        ProcessSpecEnvOverlay.objects.create(proc_spec=proc_spec, environment_name="stag")
-        ProcessSpecEnvOverlay.objects.create(proc_spec=proc_spec, environment_name="prod")
+        ProcessSpecEnvOverlay.objects.get_or_create(proc_spec=proc_spec, env_name="stag")
+        ProcessSpecEnvOverlay.objects.get_or_create(proc_spec=proc_spec, env_name="prod")
 
     @pytest.fixture()
     def list_url(self, bk_app, bk_module):

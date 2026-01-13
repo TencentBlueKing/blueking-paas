@@ -67,15 +67,5 @@ def exist_key(obj: Dict[str, Any], paths: List[str] | str) -> bool:
     :param paths: ['foo', 'bar'] 或 ".foo.bar" 或 "foo.bar"
     :return: exists
     """
-    if not isinstance(obj, Dict):
-        raise TypeError("only support check exist key in dict object!")
-
-    if isinstance(paths, str):
-        paths = paths.strip(".").split(".")
-
-    try:
-        reduce(lambda d, k: d[k], paths, obj)
-    except (KeyError, IndexError, TypeError):
-        return False
-
-    return True
+    sentinel = object()
+    return get_items(obj, paths, default=sentinel) is not sentinel

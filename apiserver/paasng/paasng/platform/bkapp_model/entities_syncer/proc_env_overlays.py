@@ -82,7 +82,6 @@ def clean_empty_overlays(module):
         "scaling_config": None,
         "target_replicas": None,
         "plan_name": None,
-        "override_plan_name": None,
         "override_proc_res": None,
     }
 

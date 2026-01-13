@@ -55,6 +55,18 @@ class ResourcesSLZ(serializers.Serializer):
         return attrs
 
 
+class PlanResourcesSLZ(serializers.Serializer):
+    """资源配置 - 方案名称"""
+
+    plan = serializers.CharField(help_text="资源配额方案名称")
+
+    def validate_plan(self, value):
+        """验证 plan 字段"""
+        if not ResQuotaPlan.objects.filter(name=value, is_active=True).exists():
+            raise serializers.ValidationError(_("资源配额方案 {plan} 不存在或未启用").format(plan=value))
+        return value
+
+
 # ============= Output Serializers =============
 
 
@@ -62,8 +74,7 @@ class EnvOverlayOutputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输出序列化器"""
 
     plan_name = serializers.CharField(help_text="资源配额方案", allow_null=True)
-    override_plan_name = serializers.CharField(help_text="管理员配置的资源配额方案名称", allow_null=True)
-    override_proc_res = ResourcesSLZ(help_text="管理员配置的资源配置", allow_null=True)
+    resources = serializers.JSONField(help_text="资源配置", allow_null=True)
 
 
 class ProcessSpecOutputSLZ(serializers.Serializer):
@@ -89,29 +100,31 @@ class ModuleProcessSpecOutputSLZ(serializers.Serializer):
 class EnvOverlayInputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输入序列化器"""
 
-    override_plan_name = serializers.CharField(help_text="管理员配置的资源配额方案名称", allow_null=True)
-    override_proc_res = ResourcesSLZ(help_text="管理员配置的资源配置", allow_null=True)
+    # 资源配额方案支持两种 json 格式:
+    # 1. 直接指定方案名称, 如: {"plan": "4C2G"}
+    # 2. 灵活设置资源限制和请求, 如: {"limits": {"cpu": "2", "memory": "2Gi"}, "requests": {"cpu": "1", "memory": "1Gi"} }
+    resources = serializers.JSONField(help_text="资源配置", allow_null=True)
 
-    def validate_override_plan_name(self, value):
-        """validate override_plan_name is valid plan name"""
+    def validate_resources(self, value):
+        """验证 resources 字段"""
         if value is None:
             return value
 
-        if not ResQuotaPlan.objects.filter(name=value).exists():
-            raise serializers.ValidationError(
-                _("无效的资源配额方案名称: {plan_name}").format(plan_name=value),
-            )
+        if not isinstance(value, dict):
+            raise serializers.ValidationError(_("资源配置必须是一个字典"))
 
-        return value
+        # 格式1: 直接指定方案名称 {"plan": "4C2G"}
+        if "plan" in value:
+            slz = PlanResourcesSLZ(data=value)
+            if not slz.is_valid():
+                raise serializers.ValidationError(slz.errors)
+            return slz.validated_data
 
-    def validate(self, attrs):
-        """Validate that at least one of override_plan_name or override_proc_res is provided"""
-        override_plan_name = attrs.get("override_plan_name")
-        override_proc_res = attrs.get("override_proc_res")
-
-        if override_plan_name and override_proc_res:
-            raise serializers.ValidationError(_("不能同时提供 override_plan_name 和 override_proc_res"))
-        return attrs
+        # 格式2: 灵活设置资源限制和请求 {"limits": {...}, "requests": {...}}
+        slz = ResourcesSLZ(data=value)
+        if not slz.is_valid():
+            raise serializers.ValidationError(slz.errors)
+        return slz.validated_data
 
 
 class ProcessSpecInputSLZ(serializers.Serializer):

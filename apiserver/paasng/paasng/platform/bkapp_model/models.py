@@ -204,14 +204,11 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=AppEnvName.get_choices(), null=False, max_length=16
     )
-    # override_plan_name, override_proc_res 只能通过后台/API修改
-    override_plan_name = models.CharField("管理员配置的资源配额方案名称", max_length=32, null=True, blank=True)
-    override_proc_res: Optional[Dict[str, Dict[str, str]]] = models.JSONField(
-        "管理员配置的资源限制",
-        null=True,
-        blank=True,
-        help_text='格式: {"limits": {"cpu": "2", "memory": "2Gi"}, "requests": {"cpu": "1", "memory": "1Gi"} }',
-    )
+    # override_proc_res 只能通过后台/API修改
+    # 可能的结构:
+    # - 使用灵活设置: {"limits": {"cpu": "2", "memory": "2Gi"},"requests": {"cpu": "1", "memory": "1Gi"}}
+    # - 使用预定义方案 (ResQuotaPlan): {"plan": "default"}
+    override_proc_res = models.JSONField("管理员配置的资源限制", null=True, blank=True)
 
     target_replicas = models.IntegerField("期望副本数", null=True)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)

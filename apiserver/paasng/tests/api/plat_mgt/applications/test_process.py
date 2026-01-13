@@ -64,19 +64,16 @@ class TestApplicationProcessViewSet:
         return _make_url
 
     @staticmethod
-    def _make_update_data(env_name="stag", override_plan_name=None, override_proc_res=None):
+    def _make_update_data(env_name="stag", resources=None):
         """生成更新请求数据"""
-        if override_proc_res is None and override_plan_name is None:
+        if resources is None:
             # 默认使用自定义资源
-            override_proc_res = {
+            resources = {
                 "limits": {"cpu": "2000m", "memory": "1024Mi"},
                 "requests": {"cpu": "200m", "memory": "256Mi"},
             }
-        return {
-            "env_overlays": {
-                env_name: {"override_plan_name": override_plan_name, "override_proc_res": override_proc_res}
-            }
-        }
+
+        return {"env_overlays": {env_name: {"resources": resources}}}
 
     def _get_process_data(self, plat_mgt_api_client, list_url, process_name="web"):
         """获取指定进程的数据"""
@@ -108,24 +105,21 @@ class TestApplicationProcessViewSet:
         assert response.status_code == 400
 
     @pytest.mark.parametrize(
-        ("override_plan_name", "override_proc_res"),
+        "resources",
         [
-            ("4C1G", None),
-            (None, {"limits": {"cpu": "2000m", "memory": "1024Mi"}, "requests": {"cpu": "200m", "memory": "256Mi"}}),
+            {"plan": "4C2G"},
+            {"limits": {"cpu": "2000m", "memory": "1024Mi"}, "requests": {"cpu": "200m", "memory": "256Mi"}},
         ],
         ids=["quota_plan", "custom_resources"],
     )
-    def test_update_resource_success(
-        self, plat_mgt_api_client, bk_module, update_url, list_url, override_plan_name, override_proc_res
-    ):
+    def test_update_resource_success(self, plat_mgt_api_client, bk_module, update_url, list_url, resources):
         """测试更新进程资源配置 - 配额方案/自定义资源"""
-        data = self._make_update_data(override_plan_name=override_plan_name, override_proc_res=override_proc_res)
+        data = self._make_update_data(resources=resources)
         response = plat_mgt_api_client.put(update_url("web"), data=data)
         assert response.status_code == 204
 
         process_data = self._get_process_data(plat_mgt_api_client, list_url)
-        assert process_data["env_overlays"]["stag"]["override_plan_name"] == override_plan_name
-        assert process_data["env_overlays"]["stag"]["override_proc_res"] == override_proc_res
+        assert process_data["env_overlays"]["stag"]["resources"] == resources
 
     def test_update_resource_process_not_found(self, plat_mgt_api_client, update_url):
         """测试更新不存在的进程"""
@@ -154,14 +148,14 @@ class TestApplicationProcessViewSet:
         self, plat_mgt_api_client, update_url, list_url, limits, requests, expected_status
     ):
         """测试资源配额校验 - limits 必须 >= requests"""
-        override_proc_res = {"limits": limits, "requests": requests}
-        data = self._make_update_data(override_proc_res=override_proc_res)
+        resources = {"limits": limits, "requests": requests}
+        data = self._make_update_data(resources=resources)
         response = plat_mgt_api_client.put(update_url("web"), data=data)
         assert response.status_code == expected_status
 
         if expected_status == 204:
             process_data = self._get_process_data(plat_mgt_api_client, list_url)
-            assert process_data["env_overlays"]["stag"]["override_proc_res"] == override_proc_res
+            assert process_data["env_overlays"]["stag"]["resources"] == resources
         else:
             assert response.data["code"] == "VALIDATION_ERROR"
 

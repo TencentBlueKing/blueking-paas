@@ -709,10 +709,26 @@ def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
         environment_name=env.environment,
     )
     for overlay in queryset:
-        if overlay.override_plan_name:
-            plan = ResQuotaPlanModel.objects.get(name=overlay.override_plan_name)
-            result[overlay.proc_spec.name] = {"limits": plan.limits, "requests": plan.requests}
-        elif overlay.override_proc_res:
-            result[overlay.proc_spec.name] = overlay.override_proc_res
+        if not overlay.override_proc_res:
+            continue
+
+        config = overlay.override_proc_res
+        proc_name = overlay.proc_spec.name
+
+        # 直接指定 limits/requests 的配置
+        if "plan" not in config:
+            result[proc_name] = config
+            continue
+
+        # 引用 plan 的格式, 解析为具体的 limits/requests
+        try:
+            plan = ResQuotaPlanModel.objects.get(name=config["plan"])
+            result[proc_name] = {"limits": plan.limits, "requests": plan.requests}
+        except ResQuotaPlanModel.DoesNotExist:
+            logger.warning(
+                "ResQuotaPlan '%s' not found for process '%s', skipping override",
+                config["plan"],
+                proc_name,
+            )
 
     return json.dumps(result) if result else ""

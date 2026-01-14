@@ -19,6 +19,7 @@ from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
+from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName
 
 
@@ -54,6 +55,18 @@ class ResourcesSLZ(serializers.Serializer):
         return attrs
 
 
+class PlanResourcesSLZ(serializers.Serializer):
+    """资源配置 - 方案名称"""
+
+    plan = serializers.CharField(help_text="资源配额方案名称")
+
+    def validate_plan(self, value):
+        """验证 plan 字段"""
+        if not ResQuotaPlan.objects.filter(name=value, is_active=True).exists():
+            raise serializers.ValidationError(_("资源配额方案 {plan} 不存在或未启用").format(plan=value))
+        return value
+
+
 # ============= Output Serializers =============
 
 
@@ -61,7 +74,7 @@ class EnvOverlayOutputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输出序列化器"""
 
     plan_name = serializers.CharField(help_text="资源配额方案", allow_null=True)
-    resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
+    override_proc_res = serializers.JSONField(help_text="资源配置", allow_null=True)
 
 
 class ProcessSpecOutputSLZ(serializers.Serializer):
@@ -87,7 +100,28 @@ class ModuleProcessSpecOutputSLZ(serializers.Serializer):
 class EnvOverlayInputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输入序列化器"""
 
-    resources = ResourcesSLZ(help_text="资源配置", allow_null=True)
+    # 资源配额方案支持两种 json 格式:
+    # 1. 直接指定方案名称, 如: {"plan": "4C2G"}
+    # 2. 灵活设置资源限制和请求, 如: {"limits": {"cpu": "2", "memory": "2Gi"}, "requests": {"cpu": "1", "memory": "1Gi"} }
+    override_proc_res = serializers.JSONField(help_text="资源配置", allow_null=True)
+
+    def validate_override_proc_res(self, value):
+        """验证 override_proc_res 字段"""
+        if value is None:
+            return value
+
+        if not isinstance(value, dict):
+            raise serializers.ValidationError(_("资源配置必须是一个字典"))
+
+        if "plan" in value:
+            slz_class = PlanResourcesSLZ
+        else:
+            slz_class = ResourcesSLZ
+
+        slz = slz_class(data=value)
+        if not slz.is_valid():
+            raise serializers.ValidationError(slz.errors)
+        return slz.validated_data
 
 
 class ProcessSpecInputSLZ(serializers.Serializer):

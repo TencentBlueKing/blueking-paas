@@ -67,6 +67,17 @@ export default [
   },
   {
     groupId: 'config',
+    name: 'cloudNativeAppResourceQuota',
+    label: i18n.t('资源方案管理'),
+    iconfontName: 'bushu',
+    matchRouters: ['cloudNativeAppResourceQuota'],
+    destRoute: {
+      name: 'cloudNativeAppResourceQuota',
+    },
+    sublist: [],
+  },
+  {
+    groupId: 'config',
     name: 'repositoryConfig',
     label: i18n.t('代码库配置'),
     iconfontName: 'daimakupeizhi',

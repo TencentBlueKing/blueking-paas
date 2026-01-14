@@ -33,7 +33,7 @@ class TestResourceQuotaPlanViewSet:
     @pytest.fixture()
     def sample_plan_data(self):
         return {
-            "name": "test-plan",
+            "name": "testplan",
             "limits": {"cpu": "4000m", "memory": "2048Mi"},
             "requests": {"cpu": "1000m", "memory": "512Mi"},
         }
@@ -67,7 +67,7 @@ class TestResourceQuotaPlanViewSet:
     def test_update_success(self, plat_mgt_api_client, created_plan, sample_plan_data):
         url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
         update_data = sample_plan_data.copy()
-        update_data["name"] = "updated-plan"
+        update_data["name"] = "updatedplan"
         update_data["limits"] = {"cpu": "8000m", "memory": "4096Mi"}
         update_data["requests"] = {"cpu": "2000m", "memory": "1Gi"}
 
@@ -75,7 +75,7 @@ class TestResourceQuotaPlanViewSet:
         assert response.status_code == 200
 
         created_plan.refresh_from_db()
-        assert created_plan.name == "updated-plan"
+        assert created_plan.name == "updatedplan"
         assert created_plan.limits == {"cpu": "8000m", "memory": "4096Mi"}
         assert created_plan.requests == {"cpu": "2000m", "memory": "1Gi"}
 
@@ -103,17 +103,6 @@ class TestResourceQuotaPlanViewSet:
         response = plat_mgt_api_client.put(update_url, data=update_data)
         assert response.status_code == 400
 
-    def test_destroy_success(self, plat_mgt_api_client, created_plan):
-        url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": created_plan.id})
-        response = plat_mgt_api_client.delete(url)
-        assert response.status_code == 204
-        assert not ResQuotaPlan.objects.filter(id=created_plan.id).exists()
-
-    def test_destroy_not_found(self, plat_mgt_api_client):
-        url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": 99999})
-        response = plat_mgt_api_client.delete(url)
-        assert response.status_code == 404
-
     def test_update_builtin_plan_forbidden(self, plat_mgt_api_client, sample_plan_data):
         """测试内置方案不允许修改"""
         builtin_plan = ResQuotaPlan.objects.create(
@@ -129,21 +118,6 @@ class TestResourceQuotaPlanViewSet:
 
         response = plat_mgt_api_client.put(url, data=update_data)
         assert response.status_code == 403
-
-    def test_destroy_builtin_plan_forbidden(self, plat_mgt_api_client):
-        """测试内置方案不允许删除"""
-        builtin_plan = ResQuotaPlan.objects.create(
-            name="builtin-plan-delete",
-            limits={"cpu": "4000m", "memory": "2048Mi"},
-            requests={"cpu": "1000m", "memory": "512Mi"},
-            is_builtin=True,
-        )
-
-        url = reverse("plat_mgt.res_quota_plans.update_destroy", kwargs={"pk": builtin_plan.id})
-        response = plat_mgt_api_client.delete(url)
-        assert response.status_code == 403
-        # 确认方案仍然存在
-        assert ResQuotaPlan.objects.filter(id=builtin_plan.id).exists()
 
     @pytest.mark.parametrize(
         ("limits", "requests", "expected_status"),
@@ -167,7 +141,7 @@ class TestResourceQuotaPlanViewSet:
         """统一测试资源配额方案的各种验证场景"""
         url = reverse("plat_mgt.res_quota_plans.list_create")
         data = {
-            "name": f"validation-test-plan-{uuid.uuid4().hex[:8]}",
+            "name": f"validationTestPlan{uuid.uuid4().hex[:8]}",
             "limits": limits,
             "requests": requests,
         }

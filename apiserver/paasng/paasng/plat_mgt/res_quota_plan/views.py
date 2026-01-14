@@ -119,22 +119,9 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
     def destroy(self, request, pk):
         """删除资源配额方案"""
 
-        plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
-
-        if plan_obj.is_builtin:
-            return Response({"detail": _("系统内置方案不允许删除")}, status=status.HTTP_403_FORBIDDEN)
-
-        data_before = ResQuotaPlanOutputSLZ(plan_obj).data
-        plan_obj.delete()
-
-        add_plat_mgt_audit_record(
-            user=request.user,
-            operation=OperationEnum.DELETE,
-            target=OperationTarget.PROCESS_SPEC_PLAN,
-            data_before=DataDetail(data=data_before),
-        )
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        # TODO: 删除暂不支持, 后续需要删除时需要确认有哪些应用引用了这些方案
+        # 如果有引用的应用, 则不允许删除
+        return Response({"detail": _("删除资源配额方案功能暂不支持")}, status=status.HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],

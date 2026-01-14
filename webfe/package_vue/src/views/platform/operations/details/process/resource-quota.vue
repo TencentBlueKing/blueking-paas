@@ -80,9 +80,9 @@
                 >
                   <bk-option
                     v-for="option in planList"
-                    :key="option.value"
-                    :id="option.value"
-                    :name="option.name"
+                    :key="option.name"
+                    :id="option.name"
+                    :name="option.name === 'custom' ? $t('自定义') : option.name"
                   ></bk-option>
                 </bk-select>
                 <i
@@ -183,9 +183,9 @@
                 >
                   <bk-option
                     v-for="option in planList"
-                    :key="option.value"
-                    :id="option.value"
-                    :name="option.name"
+                    :key="option.name"
+                    :id="option.name"
+                    :name="option.name === 'custom' ? $t('自定义') : option.name"
                   ></bk-option>
                 </bk-select>
                 <i
@@ -452,7 +452,7 @@ export default {
       if (this.formData[env].plan_name === 'custom') {
         return this.$t('自定义');
       }
-      const plan = this.planList.find((item) => item.value === this.formData[env].plan_name);
+      const plan = this.planList.find((item) => item.name === this.formData[env].plan_name);
       return plan?.name || this.formData[env].plan_name || '--';
     },
     // 获取 CPU 对应的 label
@@ -536,7 +536,7 @@ export default {
       try {
         const res = await this.$store.dispatch('tenantConfig/getProcessQuotaPlans', {});
         this.planList = res;
-        this.planList.push({ name: this.$t('自定义'), value: 'custom' });
+        this.planList.push({ name: 'custom' });
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -563,7 +563,7 @@ export default {
         this.formData[env].resources = this.createEmptyResources();
       } else {
         // 预设方案，填充预设值
-        const plan = this.planList.find((item) => item.value === value);
+        const plan = this.planList.find((item) => item.name === value);
         if (plan) {
           this.formData[env].plan_name = value;
           this.formData[env].resources = {

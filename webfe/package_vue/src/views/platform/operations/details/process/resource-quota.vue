@@ -80,9 +80,9 @@
                 >
                   <bk-option
                     v-for="option in planList"
-                    :key="option.value"
-                    :id="option.value"
-                    :name="option.name"
+                    :key="option.name"
+                    :id="option.name"
+                    :name="option.name === 'custom' ? $t('自定义') : option.name"
                   ></bk-option>
                 </bk-select>
                 <i
@@ -183,9 +183,9 @@
                 >
                   <bk-option
                     v-for="option in planList"
-                    :key="option.value"
-                    :id="option.value"
-                    :name="option.name"
+                    :key="option.name"
+                    :id="option.name"
+                    :name="option.name === 'custom' ? $t('自定义') : option.name"
                   ></bk-option>
                 </bk-select>
                 <i
@@ -281,6 +281,7 @@
 <script>
 import DetailsRow from '@/components/details-row';
 import PrefixSelect from './comps/prefix-select.vue';
+import { convertMemoryToBytes } from '@/common/utils';
 
 export default {
   name: 'ResourceQuota',
@@ -403,11 +404,31 @@ export default {
     moduleId() {
       this.resetToViewMode();
     },
+    // 监听 stag 环境 CPU Limit 变化，触发 Request 校验
+    'formData.stag.resources.limits.cpu'() {
+      this.triggerValidation('stagForm', 'stag.resources.requests.cpu');
+    },
+    'formData.stag.resources.limits.memory'() {
+      this.triggerValidation('stagForm', 'stag.resources.requests.memory');
+    },
+    // 监听 prod 环境 CPU Limit 变化，触发 Request 校验
+    'formData.prod.resources.limits.cpu'() {
+      this.triggerValidation('prodForm', 'prod.resources.requests.cpu');
+    },
+    'formData.prod.resources.limits.memory'() {
+      this.triggerValidation('prodForm', 'prod.resources.requests.memory');
+    },
   },
   created() {
     this.init();
   },
   methods: {
+    // 触发指定表单字段的校验
+    triggerValidation(formRef, field) {
+      this.$refs[formRef]?.validateField(field).catch((e) => {
+        console.error(`Validation error on field:`, e);
+      });
+    },
     // 校验 CPU Requests 是否小于等于 Limits
     validateCpuRequest(value, env) {
       const limitValue = this.formData[env].resources.limits.cpu;
@@ -422,8 +443,8 @@ export default {
       const limitValue = this.formData[env].resources.limits.memory;
       if (!value || !limitValue) return true;
       // 将内存值转换为字节数进行比较
-      const requestBytes = this.convertMemoryToBytes(value);
-      const limitBytes = this.convertMemoryToBytes(limitValue);
+      const requestBytes = convertMemoryToBytes(value);
+      const limitBytes = convertMemoryToBytes(limitValue);
       return requestBytes <= limitBytes;
     },
     // 获取资源配额方案名称
@@ -431,7 +452,7 @@ export default {
       if (this.formData[env].plan_name === 'custom') {
         return this.$t('自定义');
       }
-      const plan = this.planList.find((item) => item.value === this.formData[env].plan_name);
+      const plan = this.planList.find((item) => item.name === this.formData[env].plan_name);
       return plan?.name || this.formData[env].plan_name || '--';
     },
     // 获取 CPU 对应的 label
@@ -513,9 +534,9 @@ export default {
     // 获取资源配额方案
     async fetchPlanList() {
       try {
-        const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
+        const res = await this.$store.dispatch('tenantConfig/getProcessQuotaPlans', {});
         this.planList = res;
-        this.planList.push({ name: this.$t('自定义'), value: 'custom' });
+        this.planList.push({ name: 'custom' });
       } catch (e) {
         this.catchErrorHandler(e);
       }
@@ -530,23 +551,6 @@ export default {
         this.catchErrorHandler(e);
       }
     },
-    // 将内存值转换为字节数用于比较
-    convertMemoryToBytes(value) {
-      if (!value) return 0;
-      const units = {
-        Ki: 1024,
-        Mi: 1024 * 1024,
-        Gi: 1024 * 1024 * 1024,
-        Ti: 1024 * 1024 * 1024 * 1024,
-      };
-      const match = value.match(/^(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti)$/);
-      if (match) {
-        const num = parseFloat(match[1]);
-        const unit = match[2];
-        return num * units[unit];
-      }
-      return 0;
-    },
     // 处理资源配额方案切换
     handlePlanChange(value, env) {
       if (!value || value === '') {
@@ -559,12 +563,12 @@ export default {
         this.formData[env].resources = this.createEmptyResources();
       } else {
         // 预设方案，填充预设值
-        const plan = this.planList.find((item) => item.value === value);
+        const plan = this.planList.find((item) => item.name === value);
         if (plan) {
           this.formData[env].plan_name = value;
           this.formData[env].resources = {
-            limits: plan.limit || { cpu: '', memory: '' },
-            requests: plan.request || { cpu: '', memory: '' },
+            limits: plan.limits || { cpu: '', memory: '' },
+            requests: plan.requests || { cpu: '', memory: '' },
           };
         } else {
           // 找不到方案，使用空值

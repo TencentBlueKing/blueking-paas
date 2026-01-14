@@ -167,7 +167,7 @@ SM2_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQg
 SM2_PRIVATE_KEY = "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIOzo3tQc6DUzdt1+rV/SqNxj9OgPxdcnWyXuDUMaR59moAoGCCqBHM9V\nAYItoUQDQgAEU87uYBCj19QKO0cm6kjsBWhEIOeTdlRDjt0OXvh+JUnr7ZoWTyXA\ni/SidN3g4nlz337+iw8T6LC2yGWuUnlQYg==\n-----END EC PRIVATE KEY-----\n"
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def enable_frontend_encrypt():
     """配置前端加密功能"""
     settings.ENABLE_FRONTEND_ENCRYPT = True
@@ -204,6 +204,7 @@ class TestEncryptedCharField:
             ("", encrypted_value(""), pytest.raises(ValidationError)),
             ("test_value", "invalid_encrypted_value", pytest.raises(ValidationError)),
         ],
+        ids=["valid_test_value", "valid_special_chars", "empty_string", "invalid_encrypted"],
     )
     def test_decrypt(self, plain_value, encrypted_value, ctx):
         with ctx:
@@ -242,6 +243,7 @@ class TestEncryptedJSONField:
                 pytest.raises(ValidationError),
             ),
         ],
+        ids=["valid_password", "invalid_password", "valid_user_password", "invalid_user_password"],
     )
     def test_decrypt(self, slz_input, slz_output, ctx):
         slz = EncryptedJSONFieldSLZ(data={"encrypted_json": slz_input})

@@ -16,14 +16,21 @@
 # to the current version of the project delivered to anyone in the future.
 
 import base64
+import logging
 import re
+from binascii import Error as Base64DecodeError
+from functools import cached_property
 from typing import List, Optional, Union
 
 import arrow
+from bkcrypto import constants as bkcrypto_constants
+from bkcrypto.asymmetric import options
+from bkcrypto.contrib.basic.ciphers import get_asymmetric_cipher
 from bkpaas_auth import get_user_by_user_id
 from bkpaas_auth.core.constants import ProviderType
 from bkpaas_auth.models import user_id_encoder
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.validators import RegexValidator
 from django.utils import timezone
@@ -36,9 +43,12 @@ from rest_framework.fields import empty, flatten_choices_dict, to_choices_dict
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.datetime import convert_timestamp_to_str
+from paasng.utils.dictx import get_items, set_items
 from paasng.utils.file import path_may_escape
 from paasng.utils.sanitizer import clean_html
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
+
+logger = logging.getLogger(__name__)
 
 
 class VerificationCodeField(serializers.RegexField):
@@ -355,3 +365,82 @@ class SafePathField(serializers.RegexField):
         if path_may_escape(data):
             self.fail("escape_risk", path=data)
         return data
+
+
+class BaseEncryptedFieldMixin:
+    """抽取 SM2 公共解密方法, 作为混合类使用"""
+
+    @cached_property
+    def cipher_handler(self):
+        if settings.FRONTEND_ENCRYPT_CIPHER_TYPE != "SM2":
+            raise ImproperlyConfigured(f"unsupported cipher type: {settings.FRONTEND_ENCRYPT_CIPHER_TYPE}")
+
+        if not (settings.FRONTEND_ENCRYPT_PUBLIC_KEY and settings.FRONTEND_ENCRYPT_PRIVATE_KEY):
+            raise ImproperlyConfigured("SM2 public key or private key not set")
+
+        return get_asymmetric_cipher(
+            cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
+            cipher_options={
+                bkcrypto_constants.AsymmetricCipherType.SM2.value: options.SM2AsymmetricOptions(
+                    public_key_string=settings.FRONTEND_ENCRYPT_PUBLIC_KEY,
+                    private_key_string=settings.FRONTEND_ENCRYPT_PRIVATE_KEY,
+                ),
+            },
+        )
+
+    def decrypt(self, value: str) -> str:
+        try:
+            return self.cipher_handler.decrypt(value)
+        except Base64DecodeError:
+            raise serializers.ValidationError("invalid base64 encoding, decrypt failed")
+        except Exception:
+            logger.exception("decrypt error")
+            raise serializers.ValidationError("decrypt failed")
+
+
+class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
+    """
+    JSON 类型加密字段
+    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 JSONField 一致
+
+    :params encrypted_fields: 需要解密的字段列表，支持嵌套字段, 使用点号分隔, 如 ["password", "user.password"]
+    :params allow_missing: 是否允许加密字段缺失, 默认为 False. True 时如果加密字段不存在则跳过解密处理
+    """
+
+    def __init__(self, **kwargs):
+        self.allow_missing = kwargs.pop("allow_missing", False)
+        encrypted_fields: list[str] = kwargs.pop("encrypted_fields", [])
+        self.encrypted_fields_path = [field.strip().split(".") for field in encrypted_fields]
+        super().__init__(**kwargs)
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+
+        if not settings.ENABLE_FRONTEND_ENCRYPT:
+            return data
+
+        if not isinstance(data, dict):
+            self.fail("invalid")
+
+        for field_path in self.encrypted_fields_path:
+            encrypt_value = get_items(data, field_path)
+            if encrypt_value is None and self.allow_missing:
+                continue
+            logger.debug("found encrypted field %s in input data, start decrypting", ".".join(field_path))
+            set_items(data, field_path, self.decrypt(encrypt_value))
+        return data
+
+
+class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
+    """
+    Char 类型加密字段
+    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 CharField 一致
+    """
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+
+        if not settings.ENABLE_FRONTEND_ENCRYPT:
+            return data
+
+        return self.decrypt(data)

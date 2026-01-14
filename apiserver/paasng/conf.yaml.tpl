@@ -954,6 +954,21 @@ DEV_SANDBOX_CLUSTER: ""
 # FORBIDDEN_REPO_PORTS 包含与代码/镜像仓库相关的敏感端口，配置后，平台将不允许用户填写或注册相关的代码/镜像仓库
 FORBIDDEN_REPO_PORTS = [21, 22, 23]
 
+## ------------------------------------ 前端加密传输配置 ------------------------------------
+
+# ENABLE_FRONTEND_ENCRYPT: 是否启用前端加密
+ENABLE_FRONTEND_ENCRYPT: False
+
+# 具体加密使用的算法
+FRONTEND_ENCRYPT_CIPHER_TYPE: "SM2"
+
+# SM2 密钥生成方式请参考 apiserver/README.md 中的「前端加密配置」章节
+# SM2 公钥, PEM 格式, Base64 编码
+FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64: ""
+
+# SM2 私钥, PEM 格式, Base64 编码
+FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64: ""
+
 ## ------------------------------------ internal 配置，仅开发项目与特殊环境下使用 ------------------------------------
 
 ## 运维开发相关的 BK-DATA 数据上报相关配置

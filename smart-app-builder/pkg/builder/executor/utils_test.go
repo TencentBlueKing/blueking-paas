@@ -41,8 +41,9 @@ var _ = Describe("writeArtifactJsonFile", func() {
 
 	It("Each module uses its own independent image tar", func() {
 		buildPlan := plan.BuildPlan{
-			BaseImageID:  "ts4",
-			Architecture: "arm64",
+			BaseImageID:      "ts4",
+			Architecture:     "arm64",
+			PackagingVersion: "v2",
 			ProcessCommands: map[string]map[string]string{
 				"module1": {"proc1": "cmd1", "proc2": "cmd2"},
 				"module2": {"proc1": "cmd1", "proc2": "cmd2"},
@@ -87,8 +88,9 @@ var _ = Describe("writeArtifactJsonFile", func() {
 
 	It("Some module uses the same image tar", func() {
 		buildPlan := plan.BuildPlan{
-			BaseImageID:  "default",
-			Architecture: "amd64",
+			BaseImageID:      "default",
+			Architecture:     "amd64",
+			PackagingVersion: "v2",
 			BuildGroups: []*plan.ModuleBuildGroup{
 				{
 					ModuleNames:        []string{"module1", "module2"},
@@ -140,7 +142,7 @@ var _ = Describe("writeArtifactJsonFile", func() {
 		Expect(gjson.GetBytes(fileContent, "runtime.base_image_id").String()).To(Equal("default"))
 		Expect(gjson.GetBytes(fileContent, "runtime.architecture").String()).To(Equal("amd64"))
 
-		// Check app_artifacts fields
-		Expect(gjson.GetBytes(fileContent, "app_artifacts.module1.image_tar").String()).To(Equal("module1.tar"))
+		// Check app_artifacts fields is not include
+		Expect(gjson.GetBytes(fileContent, "app_artifacts").Exists()).To(BeFalse())
 	})
 })

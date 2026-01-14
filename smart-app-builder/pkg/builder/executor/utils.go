@@ -150,30 +150,35 @@ func makeRunArgs(appCode string, group *plan.ModuleBuildGroup, moduleSrcTGZ stri
 //	    "module2": {"image_tar": "module2.tar", "proc_entrypoints": {"api": ["module2-api"]}}
 //	  }
 //	}
+//
+// 其中 app_artifacts 字段仅在 v2(新方案) 中存在, v1(旧方案) 不包含该字段
 func writeArtifactJsonFile(buildPlan *plan.BuildPlan, artifactDir string) error {
-	moduleArtifact := make(map[string]map[string]any)
-	for _, group := range buildPlan.BuildGroups {
-		for _, name := range group.ModuleNames {
-			moduleArtifact[name] = map[string]any{"image_tar": group.OutputImageTarName}
-		}
-	}
-
-	for moduleName, procInfo := range buildPlan.ProcessCommands {
-		entrypoints := make(map[string][]string)
-		for procName := range procInfo {
-			entrypoints[procName] = []string{plan.GenerateProcType(moduleName, procName)}
-		}
-		moduleArtifact[moduleName]["proc_entrypoints"] = entrypoints
-	}
-
-	// Build the new artifact.json structure with version, runtime and app_artifacts
 	artifact := map[string]any{
 		"version": "1.0",
 		"runtime": map[string]string{
 			"base_image_id": buildPlan.BaseImageID,
 			"architecture":  buildPlan.Architecture,
 		},
-		"app_artifacts": moduleArtifact,
+	}
+
+	// v2(新方案) 包含 app_artifacts, v1(旧方案) 不包含
+	if buildPlan.PackagingVersion == "v2" {
+		moduleArtifact := make(map[string]map[string]any)
+		for _, group := range buildPlan.BuildGroups {
+			for _, name := range group.ModuleNames {
+				moduleArtifact[name] = map[string]any{"image_tar": group.OutputImageTarName}
+			}
+		}
+
+		for moduleName, procInfo := range buildPlan.ProcessCommands {
+			entrypoints := make(map[string][]string)
+			for procName := range procInfo {
+				entrypoints[procName] = []string{plan.GenerateProcType(moduleName, procName)}
+			}
+			moduleArtifact[moduleName]["proc_entrypoints"] = entrypoints
+		}
+
+		artifact["app_artifacts"] = moduleArtifact
 	}
 
 	relBytes, err := json.Marshal(artifact)

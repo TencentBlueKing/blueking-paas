@@ -29,7 +29,9 @@ smart-app-builder 支持两种 CNB 打包方案:
 
 **artifact.json 说明**
 
-无论是 v1 还是 v2 方案，都会生成 artifact.json 文件，格式如下：
+无论是 v1 还是 v2 方案，都会生成 artifact.json 文件。
+
+v2 方案的 artifact.json 格式如下（包含 `app_artifacts` 字段）：
 
 ```json
 {
@@ -39,6 +41,15 @@ smart-app-builder 支持两种 CNB 打包方案:
     "module1": {"image_tar": "module1.tar", "proc_entrypoints": {"web": ["module1-web"]}},
     "module2": {"image_tar": "module2.tar", "proc_entrypoints": {"api": ["module2-api"]}}
   }
+}
+```
+
+v1 方案的 artifact.json 格式如下（不包含 `app_artifacts` 字段）：
+
+```json
+{
+  "version": "1.0",
+  "runtime": {"base_image_id": "default", "architecture": "amd64"}
 }
 ```
 

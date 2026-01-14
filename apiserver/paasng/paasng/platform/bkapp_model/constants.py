@@ -92,14 +92,14 @@ class CPUResourceQuantity(StrStructuredEnum):
 
 
 class MemoryResourceQuantity(StrStructuredEnum):
-    QUOTA_256_M = EnumField("256Mi", label="256 M")
-    QUOTA_512_M = EnumField("512Mi", label="512 M")
-    QUOTA_1_G = EnumField("1024Mi", label="1 G")
-    QUOTA_2_G = EnumField("2048Mi", label="2 G")
-    QUOTA_4_G = EnumField("4096Mi", label="4 G")
-    QUOTA_8_G = EnumField("8192Mi", label="8 G")
-    QUOTA_16_G = EnumField("16384Mi", label="16 G")
-    QUOTA_32_G = EnumField("32768Mi", label="32 G")
+    QUOTA_256_M = EnumField("256Mi", label="256 Mi")
+    QUOTA_512_M = EnumField("512Mi", label="512 Mi")
+    QUOTA_1_G = EnumField("1024Mi", label="1 Gi")
+    QUOTA_2_G = EnumField("2048Mi", label="2 Gi")
+    QUOTA_4_G = EnumField("4096Mi", label="4 Gi")
+    QUOTA_8_G = EnumField("8192Mi", label="8 Gi")
+    QUOTA_16_G = EnumField("16384Mi", label="16 Gi")
+    QUOTA_32_G = EnumField("32768Mi", label="32 Gi")
 
     def exceeds(self, other: "MemoryResourceQuantity") -> bool:
         """检查当前资源值是否大于另一个资源值"""

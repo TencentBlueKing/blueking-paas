@@ -80,11 +80,13 @@ class ResourceQuotaSLZ(serializers.Serializer):
 class ResQuotaPlanInputSLZ(serializers.Serializer):
     """资源配额方案基础输入序列化器"""
 
-    name = serializers.CharField(
+    name = serializers.RegexField(
+        regex=r"^[a-zA-Z0-9]+$",
         max_length=64,
         validators=[
             UniqueValidator(queryset=ResQuotaPlan.objects.all(), message=_("资源配额方案名称已存在，请使用其他名称"))
         ],
+        error_messages={"invalid": _("名称只能包含数字和英文字符")},
     )
     limits = ResourceQuotaSLZ()
     requests = ResourceQuotaSLZ()

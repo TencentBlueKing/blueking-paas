@@ -708,7 +708,9 @@ def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
         environment_name=env.environment,
     )
     for overlay in queryset:
-        if overlay and overlay.override_proc_res:
-            result[overlay.proc_spec.name] = overlay.override_proc_res
+        override_proc_res = overlay.get_override_proc_res()
+        if not override_proc_res:
+            continue
+        result[overlay.proc_spec.name] = override_proc_res
 
     return json.dumps(result) if result else ""

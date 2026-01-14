@@ -476,5 +476,34 @@ var _ = Describe("Environment overlay related functions", func() {
 			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
 		})
+
+		It("Use legacy quota plan", func() {
+			bkapp.Spec.Processes[0].ResQuotaPlan = paasv1alpha2.ResQuotaPlan4C1G
+
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4000m"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+		})
+
+		It("Use legacy quota plan in envOverlay", func() {
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
+					{EnvName: "stag", Process: "web", Plan: paasv1alpha2.ResQuotaPlan4C2G},
+				},
+			}
+
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4000m"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2048Mi"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
+		})
 	})
 })

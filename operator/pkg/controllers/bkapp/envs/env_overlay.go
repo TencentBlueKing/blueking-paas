@@ -292,6 +292,10 @@ func (r *ProcResourcesGetter) fromQuotaPlan(
 	}
 
 	// 3. Use default values from global config
+	log.Info(
+		"Resource quota plan not found, using default",
+		"plan", plan, "bkapp", r.bkapp.Name,
+	)
 	spec := legacyResQuotaPlans[paasv1alpha2.ResQuotaPlanDefault]
 	return r.calculateResources(spec.cpu, spec.memory)
 }

@@ -74,7 +74,7 @@ class EnvOverlayOutputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输出序列化器"""
 
     plan_name = serializers.CharField(help_text="资源配额方案", allow_null=True)
-    resources = serializers.JSONField(help_text="资源配置", allow_null=True)
+    override_proc_res = serializers.JSONField(help_text="资源配置", allow_null=True)
 
 
 class ProcessSpecOutputSLZ(serializers.Serializer):
@@ -103,10 +103,10 @@ class EnvOverlayInputSLZ(serializers.Serializer):
     # 资源配额方案支持两种 json 格式:
     # 1. 直接指定方案名称, 如: {"plan": "4C2G"}
     # 2. 灵活设置资源限制和请求, 如: {"limits": {"cpu": "2", "memory": "2Gi"}, "requests": {"cpu": "1", "memory": "1Gi"} }
-    resources = serializers.JSONField(help_text="资源配置", allow_null=True)
+    override_proc_res = serializers.JSONField(help_text="资源配置", allow_null=True)
 
-    def validate_resources(self, value):
-        """验证 resources 字段"""
+    def validate_override_proc_res(self, value):
+        """验证 override_proc_res 字段"""
         if value is None:
             return value
 

@@ -40,6 +40,7 @@ YAML 文件和 `settings_local.yaml` 的内容，将其作为配置项使用。�
 - 环境变量可修改字典内的嵌套值，参考文档：https://www.dynaconf.com/envvars/
 """
 
+import base64
 import copy
 import os
 import ssl
@@ -1588,3 +1589,24 @@ FORBIDDEN_REPO_PORTS = settings.get("FORBIDDEN_REPO_PORTS", [])
 APISERVER_OPERATOR_VERSION_CHECK = settings.get("APISERVER_OPERATOR_VERSION_CHECK", True)
 # apiserver 的版本号
 APISERVER_VERSION = settings.get("APISERVER_VERSION")
+
+# ---------------------------------------------
+#  前端加密配置项
+# ---------------------------------------------
+
+# ENABLE_FRONTEND_ENCRYPT: 是否启用前端加密
+ENABLE_FRONTEND_ENCRYPT = settings.get("ENABLE_FRONTEND_ENCRYPT", False)
+# 具体加密使用的算法
+FRONTEND_ENCRYPT_CIPHER_TYPE = "SM2"
+
+# SM2 密钥生成方式请参考 apiserver/README.md 中的「前端加密配置」章节
+# SM2 公钥, PEM 格式, Base64 编码，加载时解码
+_FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64 = settings.get("FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64")
+FRONTEND_ENCRYPT_PUBLIC_KEY = (
+    base64.b64decode(_FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64).decode() if _FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64 else None
+)
+# SM2 私钥, PEM 格式, Base64 编码，加载时解码
+_FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64 = settings.get("FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64")
+FRONTEND_ENCRYPT_PRIVATE_KEY = (
+    base64.b64decode(_FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64).decode() if _FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64 else None
+)

@@ -21,13 +21,37 @@ smart-app-builder 支持两种 CNB 打包方案:
 - v2 版本支持在 apiserver 1.7.x 及其之后的版本部署
 - 镜像共享机制: 采用相同构建方案的模块会共用同一个镜像 tar 文件
 - 进程 entrypoint 规则: 模块进程的 entrypoint 有单独的生成规则，格式为 `模块名-进程名`
-- artifact.json 包含 `image_tar` 和 `proc_entrypoints` 字段
 
 **v1 (旧方案)**
 - v1 版本支持在 apiserver 1.5.x 及其之后的版本部署
 - 镜像独立机制: 每个模块都有独立的镜像 tgz 文件
 - Procfile 规则: 每个模块的 Procfile 直接使用进程名，不包含模块名前缀
-- v1 不生成 artifact.json 文件
+
+**artifact.json 说明**
+
+无论是 v1 还是 v2 方案，都会生成 artifact.json 文件。
+
+v2 方案的 artifact.json 格式如下（包含 `app_artifacts` 字段）：
+
+```json
+{
+  "version": "1.0",
+  "runtime": {"base_image_id": "default", "architecture": "amd64"},
+  "app_artifacts": {
+    "module1": {"image_tar": "module1.tar", "proc_entrypoints": {"web": ["module1-web"]}},
+    "module2": {"image_tar": "module2.tar", "proc_entrypoints": {"api": ["module2-api"]}}
+  }
+}
+```
+
+v1 方案的 artifact.json 格式如下（不包含 `app_artifacts` 字段）：
+
+```json
+{
+  "version": "1.0",
+  "runtime": {"base_image_id": "default", "architecture": "amd64"}
+}
+```
 
 #### 2.1 基于 PIND 构建
 
@@ -71,6 +95,8 @@ docker run -it --rm --privileged \
 - `CACHE_REGISTRY`: (可选) 用于缓存的镜像仓库。设置后, 构建过程会启用缓存功能, 否则不启用。
 - `REGISTRY_AUTH`: (可选) 镜像仓库凭证。如果镜像仓库需要鉴权, 则必须设置此参数。
 - `PACKAGING_VERSION`: (可选) 打包方案版本。支持值: `v1` (旧方案), `v2` (新方案，默认)。详见上文说明。
+- `BASE_IMAGE_ID`: (可选) 运行时基础镜像标识，写入 artifact.json 中。默认值: `default`。
+- `ARCHITECTURE`: (可选) 目标架构，写入 artifact.json 中。默认值: `amd64`。
 
 #### 2.2 基于 DIND 构建
 
@@ -112,6 +138,8 @@ docker run -it --rm --privileged \
 - `CACHE_REGISTRY`: (可选) 用于缓存的镜像仓库。设置后, 构建过程会启用缓存功能, 否则不启用。
 - `REGISTRY_AUTH`: (可选) 镜像仓库凭证。如果镜像仓库需要鉴权, 则必须设置此参数。
 - `PACKAGING_VERSION`: (可选) 打包方案版本。支持值: `v1` (旧方案), `v2` (新方案，默认)。详见上文说明。
+- `BASE_IMAGE_ID`: (可选) 运行时基础镜像标识，写入 artifact.json 中。默认值: `default`。
+- `ARCHITECTURE`: (可选) 目标架构，写入 artifact.json 中。默认值: `amd64`。
 
 #### 2.3 PIND vs DIND
 

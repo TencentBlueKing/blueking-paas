@@ -57,6 +57,10 @@ type BuildPlan struct {
 	BuildGroups []*ModuleBuildGroup
 	// PackagingVersion 打包方案版本 (v1: 旧方案, v2: 新方案)
 	PackagingVersion string
+	// BaseImageID 运行时基础镜像标识, 默认为 "default"
+	BaseImageID string
+	// Architecture 目标架构, 默认为 "amd64"
+	Architecture string
 }
 
 // GenerateProcfile 生成 Procfile (进程名 -> 启动命令) 的映射关系
@@ -145,6 +149,8 @@ func PrepareBuildPlan(sourceDir string) (*BuildPlan, error) {
 		ProcessCommands:  procCommands,
 		BuildGroups:      groups,
 		PackagingVersion: config.G.PackagingVersion,
+		BaseImageID:      config.G.BaseImageID,
+		Architecture:     config.G.Architecture,
 	}
 
 	return plan, nil

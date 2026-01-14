@@ -48,6 +48,11 @@ var G = struct {
 	// CNBBuilderImage is CNB builder image used to build the source code
 	CNBBuilderImage string
 
+	// BaseImageID is the runtime base image identifier, default is "default"
+	BaseImageID string
+	// Architecture is the target architecture, default is "amd64"
+	Architecture string
+
 	// BuildpackType is the type of buildpack to use. Supported values: oci-embedded and tgz, default is oci-embedded
 	BuildpackType string
 
@@ -80,6 +85,12 @@ func SetGlobalConfig() {
 	G.CNBBuilderImage = G.GetString("BUILDER_SHIM_IMAGE")
 	G.CNBRunImageTAR = G.GetString("CNB_RUN_IMAGE_TAR")
 	G.CNBRunImage = G.GetString("CNB_RUN_IMAGE")
+
+	G.SetDefault("BASE_IMAGE_ID", "default")
+	G.BaseImageID = G.GetString("BASE_IMAGE_ID")
+
+	G.SetDefault("ARCHITECTURE", "amd64")
+	G.Architecture = G.GetString("ARCHITECTURE")
 
 	G.SetDefault("BUILDPACK_TYPE", "oci-embedded")
 	G.BuildpackType = G.GetString("BUILDPACK_TYPE")

@@ -113,15 +113,12 @@ class EnvOverlayInputSLZ(serializers.Serializer):
         if not isinstance(value, dict):
             raise serializers.ValidationError(_("资源配置必须是一个字典"))
 
-        # 格式1: 直接指定方案名称 {"plan": "4C2G"}
         if "plan" in value:
-            slz = PlanResourcesSLZ(data=value)
-            if not slz.is_valid():
-                raise serializers.ValidationError(slz.errors)
-            return slz.validated_data
+            slz_class = PlanResourcesSLZ
+        else:
+            slz_class = ResourcesSLZ
 
-        # 格式2: 灵活设置资源限制和请求 {"limits": {...}, "requests": {...}}
-        slz = ResourcesSLZ(data=value)
+        slz = slz_class(data=value)
         if not slz.is_valid():
             raise serializers.ValidationError(slz.errors)
         return slz.validated_data

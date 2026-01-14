@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 import shlex
 from typing import TYPE_CHECKING, Dict, List, Optional
 
@@ -44,6 +45,8 @@ from paasng.utils.models import make_json_field
 
 if TYPE_CHECKING:
     from typing import Callable  # noqa: F401
+
+logger = logging.getLogger(__name__)
 
 
 class ResQuotaPlan(TimestampedModel):
@@ -208,7 +211,7 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     # 可能的结构:
     # - 使用灵活设置: {"limits": {"cpu": "2", "memory": "2Gi"},"requests": {"cpu": "1", "memory": "1Gi"}}
     # - 使用预定义方案 (ResQuotaPlan): {"plan": "default"}
-    override_proc_res = models.JSONField("管理员配置的资源限制", null=True, blank=True)
+    override_proc_res = models.JSONField("管理员配置的资源配额", null=True, blank=True)
 
     target_replicas = models.IntegerField("期望副本数", null=True)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)
@@ -221,6 +224,33 @@ class ProcessSpecEnvOverlay(TimestampedModel):
 
     class Meta:
         unique_together = ("proc_spec", "environment_name")
+
+    def get_override_proc_res(self) -> Dict | None:
+        """Get actual resource override config with limits and requests.
+
+        :returns: A dict like {"limits": {...}, "requests": {...}}, or None if not configured.
+        """
+        if not self.override_proc_res:
+            return None
+
+        config = self.override_proc_res
+
+        # Direct limits/requests config
+        if "plan" not in config:
+            return config
+
+        # Reference to a plan, resolve to actual limits/requests
+        try:
+            plan = ResQuotaPlan.objects.get(name=config["plan"])
+        except ResQuotaPlan.DoesNotExist:
+            logger.warning(
+                "ResQuotaPlan '%s' not found for process '%s', skipping override",
+                config["plan"],
+                self.proc_spec.name,
+            )
+            return None
+        else:
+            return {"limits": plan.limits, "requests": plan.requests}
 
 
 class ModuleDeployHookManager(models.Manager):

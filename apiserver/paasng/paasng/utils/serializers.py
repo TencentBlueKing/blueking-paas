@@ -372,11 +372,11 @@ class BaseEncryptedFieldMixin:
 
     @cached_property
     def cipher_handler(self):
+        if settings.FRONTEND_ENCRYPT_CIPHER_TYPE != "SM2":
+            raise ImproperlyConfigured(f"unsupported cipher type: {settings.FRONTEND_ENCRYPT_CIPHER_TYPE}")
+
         if not (settings.FRONTEND_ENCRYPT_PUBLIC_KEY and settings.FRONTEND_ENCRYPT_PRIVATE_KEY):
             raise ImproperlyConfigured("SM2 public key or private key not set")
-
-        if settings.FRONTEND_ENCRYPT_CIPHER_TYPE not in ["SM2"]:
-            raise ImproperlyConfigured("unsupported cipher type")
 
         return get_asymmetric_cipher(
             cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,

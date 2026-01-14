@@ -513,8 +513,8 @@ def get_bkapp_resource_for_deploy(
     if override_proc_res_config:
         model_res.metadata.annotations[OVERRIDE_PROC_RES_ANNO_KEY] = override_proc_res_config
 
-    # 设置资源配额方案配置的注解
-    model_res.metadata.annotations[RES_QUOTA_PLANS_ANNO_KEY] = _get_res_quota_plans(model_res, env)
+    # 设置资源配额方案配置的注解，用于将方案名称解析为实际的 limits/requests 值
+    model_res.metadata.annotations[RES_QUOTA_PLANS_ANNO_KEY] = _get_res_quota_plans(model_res)
 
     # 设置上一次部署的状态
     model_res.metadata.annotations[LAST_DEPLOY_STATUS_ANNO_KEY] = _get_last_deploy_status(env, deployment)
@@ -688,17 +688,27 @@ def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
     return json.dumps(result) if result else ""
 
 
-def _get_res_quota_plans(model_res: crd.BkAppResource, env: ModuleEnvironment) -> str:
-    """从已构建的 BkApp 资源中提取当前环境实际使用的资源配额方案配置, 返回 JSON 字符串或空字符串"""
+def _get_res_quota_plans(model_res: crd.BkAppResource) -> str:
+    """从已构建的 BkApp 资源中提取所有使用的资源配额方案配置
+
+    该函数会收集 BkApp 资源中所有进程使用的 plan 名称 (包括基础配置和所有环境的覆盖配置),
+    然后从数据库中查询对应的 ResQuotaPlan 记录, 将其 limits 和 requests 配置序列化为 JSON 字符串.
+
+    注意: 如果进程使用的是平台内置方案 (如 "default", "4C1G" 等), 也会被收集并写入.
+
+    :param model_res: BkApp 资源对象
+    :return: JSON 字符串, 格式为 {"plan_name": {"limits": {...}, "requests": {...}}}, 若无可用方案则返回空字符串
+    """
     used_plan_names: set[str] = set()
 
     for proc in model_res.spec.processes:
         if proc.resQuotaPlan:
             used_plan_names.add(proc.resQuotaPlan)
 
+    # 收集所有环境覆盖配置中使用的 plan
     if model_res.spec.envOverlay and model_res.spec.envOverlay.resQuotas:
         for res_quota in model_res.spec.envOverlay.resQuotas:
-            if res_quota.envName == env.environment and res_quota.plan:
+            if res_quota.plan:
                 used_plan_names.add(res_quota.plan)
 
     if not used_plan_names:

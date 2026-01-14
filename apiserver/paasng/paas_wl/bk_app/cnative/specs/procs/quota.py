@@ -65,8 +65,10 @@ class ResQuotaReader:
     def read_all(self, env_name: AppEnvName) -> dict[str, dict]:
         """Read all resource quota configs for given environment
 
-        :return: {process_name: {plan: str, limits: {cpu, memory}, requests: {cpu, memory}}}
         Note: OVERRIDE_PROC_RES_ANNO_KEY Annotation overrides have highest priority
+
+        :param env_name: Environment name
+        :return: {process_name: {plan: str, limits: {cpu, memory}, requests: {cpu, memory}}}
         """
         results: dict[str, dict] = {}
 

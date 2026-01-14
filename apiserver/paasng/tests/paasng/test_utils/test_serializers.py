@@ -171,8 +171,8 @@ SM2_PRIVATE_KEY = "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIOzo3tQc6DUzdt1+rV/Sq
 def enable_frontend_encrypt():
     """配置前端加密功能"""
     settings.ENABLE_FRONTEND_ENCRYPT = True
-    settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY = SM2_PUBLIC_KEY
-    settings.FRONTEND_ENCRYPT_SM2_PRIVATE_KEY = SM2_PRIVATE_KEY
+    settings.FRONTEND_ENCRYPT_PUBLIC_KEY = SM2_PUBLIC_KEY
+    settings.FRONTEND_ENCRYPT_PRIVATE_KEY = SM2_PRIVATE_KEY
 
 
 def encrypted_value(value: str) -> str:

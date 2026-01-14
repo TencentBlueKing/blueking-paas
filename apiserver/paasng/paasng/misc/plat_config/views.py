@@ -100,7 +100,7 @@ class FrontendEncryptConfigViewSet(ViewSet):
         if settings.ENABLE_FRONTEND_ENCRYPT:
             encrypt_config.update(
                 {
-                    "public_key": settings.FRONTEND_ENCRYPT_SM2_PUBLIC_KEY,
+                    "public_key": settings.FRONTEND_ENCRYPT_PUBLIC_KEY,
                     "encrypt_cipher_type": settings.FRONTEND_ENCRYPT_CIPHER_TYPE,
                 }
             )

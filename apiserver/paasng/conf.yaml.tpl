@@ -962,11 +962,12 @@ ENABLE_FRONTEND_ENCRYPT: False
 # 具体加密使用的算法
 FRONTEND_ENCRYPT_CIPHER_TYPE: "SM2"
 
+# SM2 密钥生成方式请参考 apiserver/README.md 中的「前端加密配置」章节
 # SM2 公钥, PEM 格式, Base64 编码
-FRONTEND_ENCRYPT_SM2_PUBLIC_KEY_BASE64: ""
+FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64: ""
 
 # SM2 私钥, PEM 格式, Base64 编码
-FRONTEND_ENCRYPT_SM2_PRIVATE_KEY_BASE64: ""
+FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64: ""
 
 ## ------------------------------------ internal 配置，仅开发项目与特殊环境下使用 ------------------------------------
 

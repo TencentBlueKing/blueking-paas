@@ -5,7 +5,7 @@
   >
     <div
       class="label"
-      :style="{ width: labelWidth + 'px' }"
+      :style="fitContent ? { width: 'fit-content' } : { width: labelWidth + 'px' }"
     >
       <slot name="label">{{ label }}</slot>
     </div>
@@ -37,6 +37,10 @@ export default {
       default: 'center',
     },
     isFull: {
+      type: Boolean,
+      default: false,
+    },
+    fitContent: {
       type: Boolean,
       default: false,
     },

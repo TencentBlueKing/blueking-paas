@@ -404,6 +404,7 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 JSONField 一致
 
     :params encrypted_fields: 需要解密的字段列表，支持嵌套字段, 使用点号分隔, 如 ["password", "user.password"]
+    :params encrypt_enabled_slz: 启用加密解密功能的根 Serializer 名列表, 若不指定则表示全部启用
     """
 
     def __init__(self, **kwargs):

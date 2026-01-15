@@ -130,6 +130,14 @@ export default {
         this.showModuleList = this.moduleInfoList.filter((module) => module.name === this.moduleValue);
       }
     },
+    curAppModuleList: {
+      handler(newList) {
+        if (newList && newList.length > 0) {
+          this.moduleValue = this.currentFilterModule;
+        }
+      },
+      immediate: true,
+    },
   },
 
   created() {

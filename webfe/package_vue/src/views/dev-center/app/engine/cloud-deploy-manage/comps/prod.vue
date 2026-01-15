@@ -113,6 +113,9 @@ export default {
         return module;
       });
     },
+    currentFilterModule() {
+      return this.$route.params?.filterModule || this.$t('全部模块');
+    },
   },
 
   watch: {
@@ -123,9 +126,18 @@ export default {
         this.showModuleList = this.moduleInfoList.filter((module) => module.name === this.moduleValue);
       }
     },
+    curAppModuleList: {
+      handler(newList) {
+        if (newList && newList.length > 0) {
+          this.moduleValue = this.currentFilterModule;
+        }
+      },
+      immediate: true,
+    },
   },
 
   created() {
+    this.moduleValue = this.currentFilterModule;
     this.showModuleList = this.moduleInfoList;
   },
 

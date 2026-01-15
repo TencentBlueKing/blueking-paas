@@ -404,19 +404,35 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 JSONField 一致
 
     :params encrypted_fields: 需要解密的字段列表，支持嵌套字段, 使用点号分隔, 如 ["password", "user.password"]
-    :params allow_missing: 是否允许加密字段缺失, 默认为 False. True 时如果加密字段不存在则跳过解密处理
     """
 
     def __init__(self, **kwargs):
-        self.allow_missing = kwargs.pop("allow_missing", False)
         encrypted_fields: list[str] = kwargs.pop("encrypted_fields", [])
         self.encrypted_fields_path = [field.strip().split(".") for field in encrypted_fields]
+        self.encrypt_enabled_slz: list[str] = kwargs.pop("encrypt_enabled_slz", [])
         super().__init__(**kwargs)
+
+    def get_parent_slz(self) -> Optional[serializers.Serializer]:
+        """
+        获取当前字段所属的 Serializer 实例
+        """
+        parent = self.parent
+        assert parent is not None, "Field must have a parent, may use it in Serializer context?"
+        while parent.parent is not None:
+            parent = parent.parent
+        return parent
+
+    def check_root_slz(self) -> bool:
+        """检查当前字段是否位于指定的根 Serializer 中"""
+        if not self.encrypt_enabled_slz:
+            return True
+        parent_slz = self.get_parent_slz()
+        return parent_slz.__class__.__name__ in self.encrypt_enabled_slz
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
 
-        if not settings.ENABLE_FRONTEND_ENCRYPT:
+        if not (settings.ENABLE_FRONTEND_ENCRYPT and self.check_root_slz()):
             return data
 
         if not isinstance(data, dict):
@@ -424,7 +440,7 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
 
         for field_path in self.encrypted_fields_path:
             encrypt_value = get_items(data, field_path)
-            if encrypt_value is None and self.allow_missing:
+            if encrypt_value is None:
                 continue
             logger.debug("found encrypted field %s in input data, start decrypting", ".".join(field_path))
             set_items(data, field_path, self.decrypt(encrypt_value))

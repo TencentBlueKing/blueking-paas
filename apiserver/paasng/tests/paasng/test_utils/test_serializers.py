@@ -214,7 +214,18 @@ class TestEncryptedCharField:
 
 
 class EncryptedJSONFieldSLZ(serializers.Serializer):
-    encrypted_json = EncryptedJSONField(encrypted_fields=["password", "user.password"], allow_missing=True)
+    encrypted_json = EncryptedJSONField(
+        encrypted_fields=["password", "user.password"],
+        encrypt_enabled_slz=["EncryptedJSONFieldSLZ", "NestedSLZ2"],
+    )
+
+
+class NestedSLZ(serializers.Serializer):
+    data = EncryptedJSONFieldSLZ()
+
+
+class NestedSLZ2(serializers.Serializer):
+    data = EncryptedJSONFieldSLZ()
 
 
 @pytest.mark.usefixtures("enable_frontend_encrypt")
@@ -250,3 +261,29 @@ class TestEncryptedJSONField:
         with ctx:
             assert slz.is_valid(raise_exception=True)
             assert slz.data["encrypted_json"] == slz_output
+
+    @pytest.mark.parametrize(
+        ("slz_cls", "input", "ctx"),
+        [
+            (
+                NestedSLZ,
+                {"data": {"encrypted_json": {"username": "test", "password": "test-value"}}},
+                nullcontext("test-value"),
+            ),
+            (
+                NestedSLZ2,
+                {"data": {"encrypted_json": {"username": "test", "password": "test-value"}}},
+                pytest.raises(ValidationError),
+            ),
+            (
+                NestedSLZ2,
+                {"data": {"encrypted_json": {"username": "test", "password": encrypted_value("test-value")}}},
+                nullcontext("test-value"),
+            ),
+        ],
+    )
+    def test_skip_encrypt(self, slz_cls: serializers.Serializer, input, ctx):
+        slz = slz_cls(data=input)
+        with ctx as expected:
+            slz.is_valid(raise_exception=True)
+            assert slz.validated_data["data"]["encrypted_json"]["password"] == expected

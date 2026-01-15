@@ -214,7 +214,7 @@ class TestEncryptedCharField:
 
 
 class EncryptedJSONFieldSLZ(serializers.Serializer):
-    #  指定 EncryptedJSONFieldSLZ(自身) 和 NestedSLZ2 启用加密
+    # 指定 EncryptedJSONFieldSLZ(自身) 和 NestedSLZ2 启用加密
     encrypted_json = EncryptedJSONField(
         encrypted_fields=["password", "user.password"],
         encrypt_enabled_slz=["EncryptedJSONFieldSLZ", "NestedSLZ2"],

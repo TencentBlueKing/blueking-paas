@@ -31,6 +31,14 @@ class ApplicationType(StrStructuredEnum):
     CLOUD_NATIVE = EnumField("cloud_native", label="云原生应用")
 
 
+class AppStatus(StrStructuredEnum):
+    """Application status for list filtering"""
+
+    NOT_DEPLOYED = EnumField("not_deployed", label=_("未部署"))
+    NORMAL = EnumField("normal", label=_("正常"))
+    OFFLINE = EnumField("offline", label=_("下架"))
+
+
 class ApplicationRole(IntStructuredEnum):
     NOBODY = EnumField(-1, label="无身份用户")
     COLLABORATOR = EnumField(1, label="协作者")

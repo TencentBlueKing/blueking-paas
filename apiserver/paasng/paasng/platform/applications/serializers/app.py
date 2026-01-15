@@ -25,7 +25,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.core.region.states import get_region
-from paasng.platform.applications.constants import AppLanguage, ApplicationType, AvailabilityLevel
+from paasng.platform.applications.constants import AppLanguage, ApplicationType, AppStatus, AvailabilityLevel
 from paasng.platform.applications.exceptions import IntegrityError
 from paasng.platform.applications.models import Application, UserMarkedApplication
 from paasng.platform.applications.operators import get_last_operator
@@ -129,8 +129,13 @@ class UpdateApplicationOutputSLZ(serializers.Serializer):
 
 class SearchApplicationSLZ(serializers.Serializer):
     keyword = serializers.RegexField(RE_APP_SEARCH, max_length=20, default="", allow_blank=False)
-    is_active = serializers.BooleanField(required=False, allow_null=True)
+    app_status = serializers.ChoiceField(required=False, allow_null=True, choices=AppStatus.get_choices())
     prefer_marked = serializers.BooleanField(default=True)
+
+    def validate_app_status(self, value: Optional[str]):
+        if value:
+            return AppStatus(value)
+        return None
 
 
 class IdleModuleEnvSLZ(serializers.Serializer):
@@ -254,7 +259,8 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
 
     valid_order_by_fields = ("code", "created", "latest_operated_at", "name")
     exclude_collaborated = serializers.BooleanField(default=False)
-    is_active = serializers.BooleanField(required=False, allow_null=True)
+    # App status filter: not_deployed / normal / offline
+    app_status = serializers.ChoiceField(required=False, allow_null=True, choices=AppStatus.get_choices())
     region = serializers.ListField(required=False)
     language = serializers.ListField(required=False)
     search_term = serializers.CharField(required=False)
@@ -297,12 +303,22 @@ class ApplicationListDetailedSLZ(serializers.Serializer):
             return ApplicationType(value)
         return None
 
+    def validate_app_status(self, value: Optional[str]):
+        if value:
+            return AppStatus(value)
+        return None
+
 
 class ApplicationListMinimalSLZ(serializers.Serializer):
-    is_active = serializers.BooleanField(required=False, allow_null=True)
+    app_status = serializers.ChoiceField(required=False, allow_null=True, choices=AppStatus.get_choices())
     source_origin = serializers.ChoiceField(
         choices=SourceOrigin.get_choices(), default=None, allow_blank=True, allow_null=True
     )
+
+    def validate_app_status(self, value: Optional[str]):
+        if value:
+            return AppStatus(value)
+        return None
 
 
 class ApplicationGroupFieldSLZ(serializers.Serializer):

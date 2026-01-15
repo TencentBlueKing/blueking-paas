@@ -119,17 +119,21 @@ class TestApplicationListView:
             ({"tenant_id": "tenant1"}, 3, ["global-app1", "single-app1", "single-app2"]),
             ({"type": "default"}, 2, ["global-app2", "global-app1"]),
             ({"app_tenant_mode": "global"}, 2, {"global-app1", "global-app2"}),
-            ({"is_active": "true"}, 3, {"global-app1", "global-app2", "single-app1"}),
+            (
+                {"app_status": "not_deployed"},
+                5,
+                {"global-app1", "global-app2", "single-app1", "single-app2", "single-app3"},
+            ),
             # 测试排序功能
             (
-                {"order_by": ["is_active", "-created"]},
+                {"order_by": ["-created"]},
                 5,
                 ["single-app1", "global-app2", "global-app1", "single-app3", "single-app2"],
             ),
             # 测试组合过滤
-            ({"is_active": "true", "search": "全局"}, 2, {"global-app1", "global-app2"}),
+            ({"app_status": "not_deployed", "search": "全局"}, 2, {"global-app1", "global-app2"}),
             (
-                {"app_tenant_mode": "single", "order_by": ["is_active", "-created"]},
+                {"app_tenant_mode": "single", "order_by": ["-created"]},
                 3,
                 ["single-app1", "single-app3", "single-app2"],
             ),

@@ -32,7 +32,7 @@ from paasng.accessories.publish.market.models import Tag
 from paasng.core.region.models import get_region
 from paasng.core.tenant.constants import AppTenantMode
 from paasng.core.tenant.user import get_tenant
-from paasng.platform.applications.constants import ApplicationType
+from paasng.platform.applications.constants import ApplicationType, AppStatus
 from paasng.platform.applications.models import Application
 from paasng.platform.applications.serializers.app import UpdateApplicationNameSLZ
 from paasng.platform.engine.constants import JobStatus, OperationTypes
@@ -53,7 +53,7 @@ class ApplicationListOutputSLZ(serializers.Serializer):
     app_tenant_mode = serializers.CharField(read_only=True, help_text="应用租户模式")
     type = serializers.SerializerMethodField(read_only=True, help_text="应用类型")
     category = serializers.SerializerMethodField(read_only=True, help_text="应用分类")
-    is_active = serializers.BooleanField(read_only=True, help_text="应用是否处于激活状态")
+    app_status = serializers.SerializerMethodField(read_only=True, help_text="应用部署状态")
     creator = UserNameField()
     created_humanized = HumanizeDateTimeField(source="created")
     created_at = serializers.DateTimeField(read_only=True, source="created")
@@ -74,11 +74,21 @@ class ApplicationListOutputSLZ(serializers.Serializer):
 
         return extra_info.tag.name
 
+    def get_app_status(self, instance: Application) -> str:
+        """获取应用部署状态"""
+        status = AppStatus.OFFLINE
+        if not instance.has_deployed:
+            status = AppStatus.NOT_DEPLOYED
+        elif instance.is_active:
+            status = AppStatus.NORMAL
+
+        return status
+
 
 class ApplicationListFilterInputSLZ(serializers.Serializer):
     """应用列表过滤器序列化器"""
 
-    valid_order_by_fields = {"is_active", "created", "updated"}
+    valid_order_by_fields = {"created", "updated"}
 
     search = serializers.CharField(required=False, help_text="应用名称/ID 关键字搜索")
     name = serializers.CharField(required=False, help_text="应用名称")
@@ -99,6 +109,11 @@ class ApplicationListFilterInputSLZ(serializers.Serializer):
         allow_null=True,
         help_text="应用状态: true(正常) / false(下架), null 或不传表示不进行过滤",
     )
+    app_status = serializers.ChoiceField(
+        required=False,
+        choices=AppStatus.get_choices(),
+        help_text="应用部署状态: not_deployed(未部署) / normal(正常) / offline(下架)",
+    )
     order_by = StringArrayField(required=False, help_text="排序字段")
 
     def validate_order_by(self, fields: List[str]) -> List[str]:
@@ -109,6 +124,11 @@ class ApplicationListFilterInputSLZ(serializers.Serializer):
                 raise ValidationError(f"Invalid order_by field: {field}")
 
         return fields
+
+    def validate_app_status(self, value: Optional[str]):
+        if value:
+            return AppStatus(value)
+        return None
 
 
 class TenantAppStatisticsOutputSLZ(serializers.Serializer):

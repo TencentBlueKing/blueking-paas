@@ -43,7 +43,7 @@ from paasng.platform.sourcectl.version_services import get_version_service
 from paasng.platform.templates.constants import TemplateType
 from paasng.platform.templates.models import Template
 from paasng.utils.i18n.serializers import TranslatedCharField
-from paasng.utils.serializers import EncryptedJSONField, SourceControlField, UserNameField
+from paasng.utils.serializers import SourceControlField, UserNameField
 from paasng.utils.validators import (
     RE_APP_CODE,
     DnsSafeNameValidator,
@@ -272,13 +272,7 @@ class ModuleSourceConfigSLZ(serializers.Serializer):
     source_origin = serializers.ChoiceField(choices=SourceOrigin.get_choices(), default=SourceOrigin.AUTHORIZED_VCS)
     source_control_type = SourceControlField(allow_blank=True, required=False, default=None)
     source_repo_url = serializers.CharField(allow_blank=True, required=False, default=None)
-    source_repo_auth_info = EncryptedJSONField(
-        required=False,
-        allow_null=True,
-        default={},
-        encrypted_fields=["password"],
-        encrypt_enabled_slz=["CreateCNativeModuleSLZ"],
-    )
+    source_repo_auth_info = serializers.JSONField(required=False, allow_null=True, default={})
     source_dir = SourceDirField(help_text="源码目录")
     auto_create_repo = serializers.BooleanField(required=False, default=False, help_text="是否由平台新建代码仓库")
     write_template_to_repo = serializers.BooleanField(

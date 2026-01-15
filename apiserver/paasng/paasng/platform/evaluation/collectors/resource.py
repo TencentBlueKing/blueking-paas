@@ -26,7 +26,6 @@ from paasng.misc.monitoring.metrics.constants import MetricsSeriesType
 from paasng.misc.monitoring.metrics.models import MetricsInstanceResult, get_resource_metric_manager
 from paasng.misc.monitoring.metrics.utils import MetricSmartTimeRange
 from paasng.platform.applications.models import Application, ModuleEnvironment
-from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName, MetricsType
 from paasng.platform.modules.models import Module
 
@@ -133,14 +132,6 @@ class AppResQuotaCollector:
         self.time_range_str = time_range_str
         # 查询历史 7 天的数据，数据采样间隔为 15m，需要注意的是：如果中间发布过，则数据长度可能不足
         self.time_range = MetricSmartTimeRange(step=step, time_range_str=time_range_str)
-        # 初始化云原生应用 资源配额方案 -> request 映射表
-        self.bkapp_plan_to_request_map = {
-            plan_obj.name: (
-                self._format_cpu(plan_obj.requests["cpu"]),
-                self._format_memory(plan_obj.requests["memory"]),
-            )
-            for plan_obj in ResQuotaPlan.objects.filter(is_active=True, is_builtin=True)
-        }
 
     def collect(self) -> AppSummary:
         module_summaries = {module.name: self._calc_module_summary(module) for module in self.app.modules.all()}

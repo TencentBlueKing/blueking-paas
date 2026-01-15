@@ -119,8 +119,11 @@
           :label="$t('上传人')"
           :render-header="$renderHeader"
         >
-          <template slot-scope="props">
-            <span>{{ props.row.operator || '--' }}</span>
+          <template slot-scope="{ row }">
+            <span v-if="isMultiTenantDisplayMode">
+              <bk-user-display-name :user-id="row.operator"></bk-user-display-name>
+            </span>
+            <span v-else>{{ row.operator || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -276,6 +279,7 @@ import appBaseMixin from '@/mixins/app-base-mixin.js';
 import appTopBar from '@/components/paas-app-bar';
 import uploader from '@/components/uploader';
 import KeyValueRow from '@/components/key-value-row';
+import { mapGetters } from 'vuex';
 
 export default {
   components: {
@@ -308,6 +312,7 @@ export default {
     };
   },
   computed: {
+    ...mapGetters(['isMultiTenantDisplayMode']),
     uploadHeader() {
       return {
         name: 'X-CSRFToken',

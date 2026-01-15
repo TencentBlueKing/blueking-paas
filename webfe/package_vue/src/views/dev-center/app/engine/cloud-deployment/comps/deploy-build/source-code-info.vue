@@ -74,8 +74,11 @@
           :label="$t('上传人')"
           :render-header="$renderHeader"
         >
-          <template slot-scope="props">
-            <span>{{ props.row.operator || '--' }}</span>
+          <template slot-scope="{ row }">
+            <span v-if="isMultiTenantDisplayMode">
+              <bk-user-display-name :user-id="row.operator"></bk-user-display-name>
+            </span>
+            <span v-else>{{ row.operator || '--' }}</span>
           </template>
         </bk-table-column>
         <bk-table-column
@@ -95,6 +98,7 @@
 
 <script>
 import appBaseMixin from '@/mixins/app-base-mixin';
+import { mapGetters } from 'vuex';
 
 export default {
   name: 'SourceCodeInfo',
@@ -113,6 +117,9 @@ export default {
         order_by: '',
       },
     };
+  },
+  computed: {
+    ...mapGetters(['isMultiTenantDisplayMode']),
   },
   created() {
     this.getPackageList();

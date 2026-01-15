@@ -133,53 +133,44 @@ export default {
   watch: {
     $route() {
       this.$nextTick(() => {
-        if (this.curAppInfo.role.name !== 'operator') {
-          this.active = 'moduleAddress';
+        // 优先使用 URL 中的 tab 参数
+        const tabFromQuery = this.$route.query.tab;
+        if (tabFromQuery && this.panels.some((panel) => panel.name === tabFromQuery)) {
+          this.active = tabFromQuery;
         } else {
-          this.active = 'user_access_control';
+          this.active = this.curAppInfo.role.name !== 'operator' ? 'moduleAddress' : 'user_access_control';
         }
       });
     },
   },
   mounted() {
     this.initPage = true;
-    this.tab = this.getQueryString('tab');
+    this.tab = this.$route.query.tab;
   },
   methods: {
     handlerDataReady() {
       this.isLoading = false;
     },
-    goModuleManage() {
-      this.$router.push({
-        name: 'moduleManage',
-        params: {
-          id: this.appCode,
-          moduleId: this.curModuleId,
-        },
-      });
-    },
     handleTabChange(v) {
       const label = this.panels.find((item) => item.name === v).label;
       this.sendEventTracking({ id: traceIds[label], action: 'view', category: this.categoryText });
+
+      // 如果是初始化页面，直接设置 active 值
       if (this.initPage) {
         this.active = this.tab || v;
+        this.initPage = false;
       } else {
-        this.active = v;
+        // 非初始化时，通过路由更新来触发 active 的变化
+        this.$router.replace({
+          ...this.$route,
+          query: {
+            ...this.$route.query,
+            tab: v,
+          },
+        });
       }
-      const newUrl = `${this.$route.path}?tab=${this.active}`;
-      window.history.replaceState('', '', newUrl);
-      this.isLoading = true;
-      this.initPage = false;
-    },
 
-    // 获取地址参数
-    getQueryString(name) {
-      const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
-      const r = window.location.search.substr(1).match(reg);
-      if (r != null) {
-        return decodeURIComponent(r[2]);
-      }
-      return null;
+      this.isLoading = true;
     },
   },
 };

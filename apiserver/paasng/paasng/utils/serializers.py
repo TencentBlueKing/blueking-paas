@@ -404,7 +404,8 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 JSONField 一致
 
     :params encrypted_fields: 需要解密的字段列表，支持嵌套字段, 使用点号分隔, 如 ["password", "user.password"]
-    :params enable_encrypt_slz_names: 启用加密解密功能的根 Serializer 名列表, 若不指定则表示全部启用
+    :params enable_encrypt_slz_names: 启用解密功能的根 Serializer 名列表, 若不指定则表示全部启用,
+                                      适用于 A_SLZ 在多个其它 SLZ 中嵌套使用时精确指定要在哪些 SLZ 启用解密
     """
 
     def __init__(self, **kwargs):
@@ -415,7 +416,7 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
 
     def get_parent_slz(self) -> serializers.Serializer:
         """
-        获取当前字段所属的 Serializer 实例
+        获取当前 Field 所在的根 Serializer 实例
         """
         parent = self.parent
         assert parent is not None, "Field must have a parent, may use it in Serializer context?"
@@ -424,7 +425,7 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
         return parent
 
     def check_root_slz(self) -> bool:
-        """检查当前字段是否位于指定的根 Serializer 中"""
+        """检查当前 Field 所在的根 Serializer 是否启用加密解密功能"""
         if not self.enable_encrypt_slz_names:
             return True
         parent_slz = self.get_parent_slz()

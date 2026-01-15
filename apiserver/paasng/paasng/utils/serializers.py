@@ -404,13 +404,13 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
     NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 JSONField 一致
 
     :params encrypted_fields: 需要解密的字段列表，支持嵌套字段, 使用点号分隔, 如 ["password", "user.password"]
-    :params encrypt_enabled_slz: 启用加密解密功能的根 Serializer 名列表, 若不指定则表示全部启用
+    :params encrypt_enabled_slz_names: 启用加密解密功能的根 Serializer 名列表, 若不指定则表示全部启用
     """
 
     def __init__(self, **kwargs):
         encrypted_fields: list[str] = kwargs.pop("encrypted_fields", [])
         self.encrypted_fields_path = [field.strip().split(".") for field in encrypted_fields]
-        self.encrypt_enabled_slz: list[str] = kwargs.pop("encrypt_enabled_slz", [])
+        self.encrypt_enabled_slz_names: list[str] = kwargs.pop("encrypt_enabled_slz_names", [])
         super().__init__(**kwargs)
 
     def get_parent_slz(self) -> serializers.Serializer:
@@ -425,10 +425,10 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
 
     def check_root_slz(self) -> bool:
         """检查当前字段是否位于指定的根 Serializer 中"""
-        if not self.encrypt_enabled_slz:
+        if not self.encrypt_enabled_slz_names:
             return True
         parent_slz = self.get_parent_slz()
-        return parent_slz.__class__.__name__ in self.encrypt_enabled_slz
+        return parent_slz.__class__.__name__ in self.encrypt_enabled_slz_names
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)

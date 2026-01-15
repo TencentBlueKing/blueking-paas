@@ -715,7 +715,7 @@ def _get_res_quota_plans(model_res: crd.BkAppResource) -> str:
         return ""
 
     result = {}
-    for plan in ResQuotaPlan.objects.filter(name__in=used_plan_names):
+    for plan in ResQuotaPlan.objects.filter(name__in=used_plan_names, is_active=True):
         result[plan.name] = {"limits": plan.limits, "requests": plan.requests}
 
     return json.dumps(result) if result else ""

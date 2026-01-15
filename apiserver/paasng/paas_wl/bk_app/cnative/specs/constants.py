@@ -42,7 +42,7 @@ MODULE_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/module-name"
 ENVIRONMENT_ANNO_KEY = "bkapp.paas.bk.tencent.com/environment"
 # 管理员在管理端设置的资源限制注解键名
 OVERRIDE_PROC_RES_ANNO_KEY = "bkapp.paas.bk.tencent.com/proc-res-override"
-# resQuotaPlan 配置注解键名
+# 注解中存储 BkApp CRD 使用的 resQuotaPlan 对应的资源配额配置的键名
 RES_QUOTA_PLANS_ANNO_KEY = "bkapp.paas.bk.tencent.com/res-quota-plans"
 # 注解中存储当前 WlApp 名称的键名
 WLAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/wl-app-name"

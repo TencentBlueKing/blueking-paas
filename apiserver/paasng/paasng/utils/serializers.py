@@ -413,7 +413,7 @@ class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
         self.encrypt_enabled_slz: list[str] = kwargs.pop("encrypt_enabled_slz", [])
         super().__init__(**kwargs)
 
-    def get_parent_slz(self) -> Optional[serializers.Serializer]:
+    def get_parent_slz(self) -> serializers.Serializer:
         """
         获取当前字段所属的 Serializer 实例
         """

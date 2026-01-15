@@ -307,3 +307,8 @@ class TestEncryptedJSONField:
         with ctx as expected:
             slz.is_valid(raise_exception=True)
             assert slz.validated_data["encrypted_json"]["password"] == expected
+
+    def test_no_parent_error(self):
+        field = EncryptedJSONField(encrypt_enabled_slz=["A"])
+        with pytest.raises(AssertionError):
+            field.to_internal_value({"username": "test", "password": "test-value"})

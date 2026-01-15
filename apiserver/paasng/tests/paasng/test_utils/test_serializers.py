@@ -217,7 +217,7 @@ class EncryptedJSONFieldSLZ(serializers.Serializer):
     # 指定 EncryptedJSONFieldSLZ(自身) 和 NestedSLZ2 启用加密
     encrypted_json = EncryptedJSONField(
         encrypted_fields=["password", "user.password"],
-        encrypt_enabled_slz_names=["EncryptedJSONFieldSLZ", "NestedSLZ2"],
+        enable_encrypt_slz_names=["EncryptedJSONFieldSLZ", "NestedSLZ2"],
     )
 
 
@@ -309,6 +309,6 @@ class TestEncryptedJSONField:
             assert slz.validated_data["encrypted_json"]["password"] == expected
 
     def test_no_parent_error(self):
-        field = EncryptedJSONField(encrypt_enabled_slz_names=["A"])
+        field = EncryptedJSONField(enable_encrypt_slz_names=["A"])
         with pytest.raises(AssertionError):
             field.to_internal_value({"username": "test", "password": "test-value"})

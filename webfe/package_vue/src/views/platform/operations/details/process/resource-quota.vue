@@ -74,7 +74,7 @@
         ext-cls="resource-quota-type-form-cls"
       >
         <bk-form-item
-          :label="$t('类选')"
+          :label="$t('类型')"
           :required="true"
         >
           <bk-radio-group v-model="resourceQuotaType">

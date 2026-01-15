@@ -214,6 +214,7 @@ class TestEncryptedCharField:
 
 
 class EncryptedJSONFieldSLZ(serializers.Serializer):
+    #  指定 EncryptedJSONFieldSLZ(自身) 和 NestedSLZ2 启用加密
     encrypted_json = EncryptedJSONField(
         encrypted_fields=["password", "user.password"],
         encrypt_enabled_slz=["EncryptedJSONFieldSLZ", "NestedSLZ2"],
@@ -287,3 +288,22 @@ class TestEncryptedJSONField:
         with ctx as expected:
             slz.is_valid(raise_exception=True)
             assert slz.validated_data["data"]["encrypted_json"]["password"] == expected
+
+    @pytest.mark.parametrize(
+        ("input", "ctx"),
+        [
+            (
+                {"encrypted_json": {"username": "test", "password": "test-value"}},
+                pytest.raises(ValidationError),
+            ),
+            (
+                {"encrypted_json": {"username": "test", "password": encrypted_value("test-value")}},
+                nullcontext("test-value"),
+            ),
+        ],
+    )
+    def test_skip_encrypt2(self, input, ctx):
+        slz = EncryptedJSONFieldSLZ(data=input)
+        with ctx as expected:
+            slz.is_valid(raise_exception=True)
+            assert slz.validated_data["encrypted_json"]["password"] == expected

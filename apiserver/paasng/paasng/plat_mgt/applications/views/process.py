@@ -72,6 +72,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             processes.append(
                 {
                     "name": spec.name,
+                    "plan_name": spec.plan_name,
                     "env_overlays": env_overlays,
                 }
             )

@@ -81,6 +81,7 @@ class ProcessSpecOutputSLZ(serializers.Serializer):
     """单个进程规格输出序列化器"""
 
     name = serializers.CharField(help_text="进程名称")
+    plan_name = serializers.CharField(help_text="资源配额方案")
     env_overlays = serializers.DictField(
         child=EnvOverlayOutputSLZ(), help_text="环境配置覆盖, key 为环境名称", required=False
     )

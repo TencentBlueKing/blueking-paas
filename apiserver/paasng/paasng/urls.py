@@ -26,6 +26,7 @@ patch_datetime_field()
 urlpatterns = [
     re_path(r"^", include("paasng.misc.metrics.urls")),
     re_path(r"^", include("paasng.misc.plat_config.urls")),
+    re_path(r"^", include("paasng.misc.res_quota.urls")),
     re_path(r"^", include("paasng.infras.accounts.urls")),
     re_path(r"^", include("paasng.platform.applications.urls")),
     re_path(r"^", include("paasng.accessories.log.urls")),

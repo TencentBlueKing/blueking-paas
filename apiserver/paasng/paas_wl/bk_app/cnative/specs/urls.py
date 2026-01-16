@@ -31,10 +31,6 @@ urlpatterns = [
         name="api.mres.image_tags.list",
     ),
     re_path(
-        r"api/mres/quota_plans/$",
-        views.ResQuotaPlanOptionsView.as_view(),
-    ),
-    re_path(
         make_app_pattern(r"/mres/volume_mounts/$", include_envs=False),
         views.VolumeMountViewSet.as_view({"get": "list", "post": "create"}),
         name="api.mres.volume_mount",

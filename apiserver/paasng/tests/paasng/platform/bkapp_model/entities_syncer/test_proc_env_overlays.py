@@ -20,7 +20,6 @@ from django_dynamic_fixture import G
 
 from paas_wl.bk_app.processes.models import ProcessSpec
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import (
     AutoscalingConfig,
     AutoscalingOverlay,
@@ -46,7 +45,7 @@ def _setup(bk_module, proc_web, proc_celery):
         proc_spec=proc_web,
         environment_name="stag",
         target_replicas=4,
-        plan_name=ResQuotaPlan.P_DEFAULT,
+        plan_name="default",
         autoscaling=True,
         scaling_config={"min_replicas": 1, "max_replicas": 1, "policy": "default"},
     )
@@ -55,7 +54,7 @@ def _setup(bk_module, proc_web, proc_celery):
         proc_spec=proc_celery,
         environment_name="prod",
         target_replicas=1,
-        plan_name=ResQuotaPlan.P_4C2G,
+        plan_name="4C2G",
         autoscaling=False,
     )
     # Set the record to be manged by APP_DESC
@@ -141,8 +140,8 @@ class Test__sync_env_overlays_res_quotas:
         ret = sync_env_overlays_res_quotas(
             bk_module,
             [
-                ResQuotaOverlay(env_name="prod", process="web", plan=ResQuotaPlan.P_4C4G),
-                ResQuotaOverlay(env_name="prod", process="worker", plan=ResQuotaPlan.P_4C4G),
+                ResQuotaOverlay(env_name="prod", process="web", plan="4C4G"),
+                ResQuotaOverlay(env_name="prod", process="worker", plan="4C4G"),
             ],
             manager=fieldmgr.FieldMgrName.APP_DESC,
         )
@@ -150,8 +149,8 @@ class Test__sync_env_overlays_res_quotas:
         assert ret.created_num == 1
         assert ret.deleted_num == 1
 
-        assert get_overlay_obj(proc_web, "prod").plan_name == ResQuotaPlan.P_4C4G
-        assert get_overlay_obj(proc_celery, "prod").plan_name == ResQuotaPlan.P_4C4G
+        assert get_overlay_obj(proc_web, "prod").plan_name == "4C4G"
+        assert get_overlay_obj(proc_celery, "prod").plan_name == "4C4G"
         assert get_overlay_obj(proc_web, "stag").plan_name is None
 
 

@@ -354,5 +354,156 @@ var _ = Describe("Environment overlay related functions", func() {
 			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
 			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
 		})
+
+		It("Get custom quota plan from annotation - with explicit requests", func() {
+			// Define custom plan in annotation
+			_ = kubeutil.SetJsonAnnotation(
+				bkapp,
+				paasv1alpha2.ResQuotaPlansAnnoKey,
+				paasv1alpha2.ResQuotaPlans{
+					"custom-2c2g": {
+						Limits: paasv1alpha2.ResourceSpec{
+							CPU:    "2000m",
+							Memory: "2Gi",
+						},
+						Requests: &paasv1alpha2.ResourceSpec{
+							CPU:    "500m",
+							Memory: "512Mi",
+						},
+					},
+				},
+			)
+			// Use custom plan in process
+			bkapp.Spec.Processes[0].ResQuotaPlan = "custom-2c2g"
+
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("2000m"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("500m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("512Mi"))).To(BeTrue())
+		})
+
+		It("Get custom quota plan from annotation - limits only, derive requests", func() {
+			// Define custom plan in annotation without requests
+			_ = kubeutil.SetJsonAnnotation(
+				bkapp,
+				paasv1alpha2.ResQuotaPlansAnnoKey,
+				paasv1alpha2.ResQuotaPlans{
+					"custom-1c1g": {
+						Limits: paasv1alpha2.ResourceSpec{
+							CPU:    "1000m",
+							Memory: "1Gi",
+						},
+					},
+				},
+			)
+			// Use custom plan in process
+			bkapp.Spec.Processes[0].ResQuotaPlan = "custom-1c1g"
+
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("1000m"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1Gi"))).To(BeTrue())
+			// Requests should be derived: cpu 200m default, memory 1Gi/4 = 256Mi
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+		})
+
+		It("Get custom quota plan from annotation in envOverlay", func() {
+			// Set environment annotation first
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
+
+			// Define custom plan in annotation
+			_ = kubeutil.SetJsonAnnotation(
+				bkapp,
+				paasv1alpha2.ResQuotaPlansAnnoKey,
+				paasv1alpha2.ResQuotaPlans{
+					"custom-3c4g": {
+						Limits: paasv1alpha2.ResourceSpec{
+							CPU:    "3000m",
+							Memory: "4Gi",
+						},
+						Requests: &paasv1alpha2.ResourceSpec{
+							CPU:    "1000m",
+							Memory: "2Gi",
+						},
+					},
+				},
+			)
+
+			// Use custom plan in envOverlay
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
+					{EnvName: "stag", Process: "web", Plan: "custom-3c4g"},
+				},
+			}
+
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("3000m"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("4Gi"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("1000m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("2Gi"))).To(BeTrue())
+		})
+
+		It("Fallback to default when custom plan not found in annotation", func() {
+			// Define custom plan but use different name in process
+			_ = kubeutil.SetJsonAnnotation(
+				bkapp,
+				paasv1alpha2.ResQuotaPlansAnnoKey,
+				paasv1alpha2.ResQuotaPlans{
+					"custom-plan": {
+						Limits: paasv1alpha2.ResourceSpec{
+							CPU:    "2000m",
+							Memory: "2Gi",
+						},
+					},
+				},
+			)
+			// Use non-existent plan name
+			bkapp.Spec.Processes[0].ResQuotaPlan = "non-existent-plan"
+
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+
+			// Should fallback to default plan
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+		})
+
+		It("Use legacy quota plan", func() {
+			bkapp.Spec.Processes[0].ResQuotaPlan = paasv1alpha2.ResQuotaPlan4C1G
+
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4000m"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("256Mi"))).To(BeTrue())
+		})
+
+		It("Use legacy quota plan in envOverlay", func() {
+			bkapp.SetAnnotations(map[string]string{paasv1alpha2.EnvironmentKey: "stag"})
+			bkapp.Spec.EnvOverlay = &paasv1alpha2.AppEnvOverlay{
+				ResQuotas: []paasv1alpha2.ResQuotaOverlay{
+					{EnvName: "stag", Process: "web", Plan: paasv1alpha2.ResQuotaPlan4C2G},
+				},
+			}
+
+			getter := NewProcResourcesGetter(bkapp)
+			resReq, _ := getter.GetByProc("web")
+
+			Expect(resReq.Limits.Cpu().Equal(resource.MustParse("4000m"))).To(BeTrue())
+			Expect(resReq.Limits.Memory().Equal(resource.MustParse("2048Mi"))).To(BeTrue())
+			Expect(resReq.Requests.Cpu().Equal(resource.MustParse("200m"))).To(BeTrue())
+			Expect(resReq.Requests.Memory().Equal(resource.MustParse("1024Mi"))).To(BeTrue())
+		})
 	})
 })

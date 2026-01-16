@@ -21,7 +21,6 @@ from typing import Callable, Dict, List, Optional
 
 from kubernetes.utils import parse_quantity
 
-from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_REQUEST_QUOTA_MAP
 from paas_wl.bk_app.processes.processes import ProcessManager
 from paasng.misc.monitoring.metrics.constants import MetricsSeriesType
 from paasng.misc.monitoring.metrics.models import MetricsInstanceResult, get_resource_metric_manager
@@ -133,11 +132,6 @@ class AppResQuotaCollector:
         self.time_range_str = time_range_str
         # 查询历史 7 天的数据，数据采样间隔为 15m，需要注意的是：如果中间发布过，则数据长度可能不足
         self.time_range = MetricSmartTimeRange(step=step, time_range_str=time_range_str)
-        # 初始化云原生应用 资源配额方案 -> request 映射表
-        self.bkapp_plan_to_request_map = {
-            plan: (self._format_cpu(quota.cpu), self._format_memory(quota.memory))
-            for plan, quota in PLAN_TO_REQUEST_QUOTA_MAP.items()
-        }
 
     def collect(self) -> AppSummary:
         module_summaries = {module.name: self._calc_module_summary(module) for module in self.app.modules.all()}

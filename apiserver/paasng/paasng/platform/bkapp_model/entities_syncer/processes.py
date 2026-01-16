@@ -17,8 +17,8 @@
 
 from typing import Any, Dict, Iterable, List
 
+from paas_wl.bk_app.cnative.specs.constants import DEFAULT_RES_QUOTA_PLAN_NAME
 from paasng.platform.bkapp_model import fieldmgr
-from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.entities.scaling_config import AutoscalingConfig
 from paasng.platform.bkapp_model.models import ModuleProcessSpec
@@ -58,7 +58,7 @@ def sync_processes(
         defaults: Dict[str, Any] = {
             "proc_command": process.proc_command,
             "port": process.target_port,
-            "plan_name": process.res_quota_plan or ResQuotaPlan.P_DEFAULT,
+            "plan_name": process.res_quota_plan or DEFAULT_RES_QUOTA_PLAN_NAME,
             "probes": process.probes,
             "services": process.services,
             "tenant_id": module.tenant_id,

@@ -30,7 +30,6 @@ from paas_wl.bk_app.cnative.specs.constants import (
     PROC_SERVICES_ENABLED_ANNOTATION_KEY,
     ApiVersion,
     MResPhaseType,
-    ResQuotaPlan,
 )
 from paas_wl.workloads.networking.constants import ExposedTypeName
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
@@ -179,7 +178,7 @@ class BkAppProcess(BaseModel):
     args: List[str] | None = Field(default_factory=list)
     # FIXME: deprecated targetPort, will be removed in the future
     targetPort: int | None = None
-    resQuotaPlan: ResQuotaPlan | None = None
+    resQuotaPlan: str | None = None
     autoscaling: AutoscalingSpec | None = None
     probes: ProbeSet | None = None
     services: List[ProcService] | None = None

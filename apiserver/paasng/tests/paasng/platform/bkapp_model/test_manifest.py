@@ -36,14 +36,12 @@ from paas_wl.bk_app.cnative.specs.constants import (
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
-from paas_wl.bk_app.processes.models import initialize_default_proc_spec_plans
 from paas_wl.core.resource import generate_bkapp_name
 from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.services.models import Plan, Service, ServiceCategory
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
-from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.entities import Component, ProcService
 from paasng.platform.bkapp_model.manifest import (
     AddonsManifestConstructor,
@@ -86,21 +84,6 @@ def blank_resource() -> crd.BkAppResource:
 
 
 @pytest.fixture()
-def blank_resource_with_processes() -> crd.BkAppResource:
-    """A resource object have processes spec."""
-    return crd.BkAppResource(
-        apiVersion=ApiVersion.V1ALPHA2,
-        metadata=ObjectMetadata(name="a-blank-resource"),
-        spec=crd.BkAppSpec(
-            processes=[
-                crd.BkAppProcess(name="worker"),
-                crd.BkAppProcess(name="web"),
-            ]
-        ),
-    )
-
-
-@pytest.fixture()
 def local_service(bk_app):
     """A local service object."""
     service = G(Service, name="mysql", category=G(ServiceCategory), logo_b64="dummy")
@@ -113,7 +96,14 @@ def local_service(bk_app):
 @pytest.fixture()
 def process_web(bk_module) -> ModuleProcessSpec:
     """ProcessSpec for web"""
-    return G(ModuleProcessSpec, module=bk_module, name="web", proc_command="python -m http.server", port=8000)
+    return G(
+        ModuleProcessSpec,
+        module=bk_module,
+        name="web",
+        proc_command="python -m http.server",
+        port=8000,
+        plan_name="default",
+    )
 
 
 @pytest.fixture()
@@ -124,7 +114,7 @@ def process_web_overlay(process_web) -> ProcessSpecEnvOverlay:
         proc_spec=process_web,
         environment_name="stag",
         target_replicas=10,
-        plan_name="Starter",
+        plan_name="4C1G",
         autoscaling=True,
         scaling_config={
             "min_replicas": 1,
@@ -265,21 +255,6 @@ class TestProcessesManifestConstructor:
         process_web.save()
         return process_web
 
-    @pytest.mark.parametrize(
-        ("plan_name", "expected"),
-        [
-            ("", ResQuotaPlan.P_DEFAULT),
-            (settings.DEFAULT_PROC_SPEC_PLAN, ResQuotaPlan.P_DEFAULT),
-            (settings.PREMIUM_PROC_SPEC_PLAN, ResQuotaPlan.P_4C2G),
-            # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
-            (settings.ULTIMATE_PROC_SPEC_PLAN, ResQuotaPlan.P_4C4G),
-            (ResQuotaPlan.P_4C1G, ResQuotaPlan.P_4C1G),
-        ],
-    )
-    def test_get_quota_plan(self, plan_name, expected):
-        initialize_default_proc_spec_plans()
-        assert ProcessesManifestConstructor().get_quota_plan(plan_name) == expected
-
     def test_get_command_and_args(self, bk_module, process_web):
         assert ProcessesManifestConstructor().get_command_and_args(process_web) == (
             ["python"],
@@ -296,7 +271,6 @@ class TestProcessesManifestConstructor:
         ), "The ${PORT:-5000} should be replaced."
 
     def test_integrated(self, bk_module, blank_resource, process_web, process_web_overlay):
-        initialize_default_proc_spec_plans()
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
         assert blank_resource.spec.dict(include={"processes", "envOverlay"}) == {
             "processes": [
@@ -330,15 +304,13 @@ class TestProcessesManifestConstructor:
                     {
                         "envName": "stag",
                         "process": "web",
-                        # The plan name should have been transformed.
-                        "plan": "default",
+                        "plan": "4C1G",
                     }
                 ],
             },
         }
 
     def test_integrated_autoscaling(self, bk_module, blank_resource, process_web_autoscaling):
-        initialize_default_proc_spec_plans()
         ProcessesManifestConstructor().apply_to(blank_resource, bk_module)
         data = blank_resource.spec.dict(include={"processes"})["processes"][0]
         assert data["autoscaling"] == {

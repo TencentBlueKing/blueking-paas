@@ -20,7 +20,6 @@ from typing import List, Optional
 
 from pydantic import Field
 
-from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.utils.procfile import generate_bash_command_with_tokens
 from paasng.utils.structure import NOTSET, AllowNotsetModel, NotSetType
 
@@ -57,7 +56,7 @@ class Process(AllowNotsetModel):
     target_port: Optional[int] = None
 
     replicas: int | NotSetType | None = NOTSET
-    res_quota_plan: Optional[ResQuotaPlan] = None
+    res_quota_plan: Optional[str] = None
     autoscaling: AutoscalingConfig | NotSetType | None = NOTSET
 
     probes: Optional[ProbeSet] = None

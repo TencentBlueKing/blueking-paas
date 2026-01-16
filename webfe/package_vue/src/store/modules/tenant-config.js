@@ -23,7 +23,34 @@ import http from '@/api';
 
 export default {
   namespaced: true,
+  state: {
+    // 加密配置项
+    encryptConfig: {
+      // 是否启用前端加密
+      enabled: false,
+      public_key: null,
+      encrypt_cipher_type: null,
+    },
+  },
+  mutations: {
+    setEncryptConfig(state, config) {
+      state.encryptConfig = config;
+    },
+  },
   actions: {
+    /**
+     * 获取加密配置
+     */
+    async getEncryptConfig({ commit, state }) {
+      // 如果已有配置则不再请求
+      if (state.encryptConfig.public_key) {
+        return state.encryptConfig;
+      }
+      const url = `${BACKEND_URL}/api/platform/encrypt_config/`;
+      const res = await http.get(url);
+      commit('setEncryptConfig', res);
+      return res;
+    },
     /**
      * 获取内置环境变量
      */

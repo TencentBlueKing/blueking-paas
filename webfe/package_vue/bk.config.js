@@ -58,6 +58,13 @@ module.exports = {
       .set('@', path.resolve(__dirname, 'src'))
       .set('@static', path.resolve(__dirname, 'static'));
 
+    // 修复 @blueking/crypto-js-sdk 的 process.versions.node 检测问题
+    config.plugin('defineProcessVersions').use(webpack.DefinePlugin, [
+      {
+        'process.versions': JSON.stringify({}),
+      },
+    ]);
+
     // plugin
     config.plugin('providePlugin').use(webpack.ProvidePlugin, [
       {

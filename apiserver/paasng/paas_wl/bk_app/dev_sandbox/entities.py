@@ -18,9 +18,11 @@
 from typing import Dict, List
 
 from attrs import asdict, define, field
+from django.conf import settings
 
-from paas_wl.bk_app.dev_sandbox.constants import SourceCodeFetchMethod
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource, SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
+from paasng.utils.masked_curlify import MASKED_CONTENT
 
 
 @define
@@ -108,3 +110,39 @@ class CodeEditorConfig:
 
     # 登录密码
     password: str
+
+
+@define
+class DevSandboxEnvVar:
+    """
+    开发沙箱环境变量
+    key 在 settings.DEV_SANDBOX_SENSITIVE_ENV_VARS 中时， sensitive 会被强制初始化为 True
+    """
+
+    key: str
+    value: str
+    source: DevSandboxEnvVarSource
+    sensitive: bool = False
+
+    def __attrs_post_init__(self):
+        self.sensitive = self.sensitive or self.key in settings.DEV_SANDBOX_SENSITIVE_ENV_VARS
+
+    def to_dict(self):
+        data = asdict(self)
+        data.update({"sensitive": self.sensitive})
+        return data
+
+    def to_masked_dict(self):
+        """
+        返回屏蔽敏感信息的字典表示， 可用于 API 输出或日志
+        """
+        data = self.to_dict()
+        if self.sensitive:
+            data["value"] = MASKED_CONTENT
+        return data
+
+    def __repr__(self):
+        return (
+            f"DevSandboxEnvVar(key={self.key}, value={MASKED_CONTENT if self.sensitive else self.value},"
+            + f" source={self.source}, sensitive={self.sensitive})"
+        )

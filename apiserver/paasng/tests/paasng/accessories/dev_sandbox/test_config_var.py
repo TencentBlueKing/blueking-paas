@@ -18,6 +18,7 @@
 from unittest import mock
 
 import pytest
+from django.conf import settings
 
 from paasng.accessories.dev_sandbox.config_var import get_env_vars_selected_addons, list_vars_builtin_addons_custom
 from tests.utils.mocks.services import (
@@ -49,7 +50,7 @@ class TestGetEnvVarsSelectedAddons:
 
     def test_get_env_vars_selected_addons_merge(self, bk_module, bk_stag_env):
         """测试环境变量合并"""
-        result = get_env_vars_selected_addons(bk_stag_env, None)
+        result = {env_var.key: env_var.value for env_var in get_env_vars_selected_addons(bk_stag_env, None)}
 
         assert result == {
             "DB_HOST": "db.com",
@@ -67,22 +68,28 @@ class TestGetEnvVarsSelectedAddons:
 
         # 测试服务全选的情况
         selected_services = [mysql_service_name, rabbitmq_service_name]
-        result = list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        result = {
+            env_var.key: env_var.value for env_var in list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        }
 
         assert result == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306", "MQ_URL": "mq.com"}
 
         # 测试仅选择一个服务的情况
         selected_services = [mysql_service_name]
-        result = list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        result = {
+            env_var.key: env_var.value for env_var in list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        }
         assert result == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306"}
 
         # 测试不选择服务的情况
         selected_services = []
-        result = list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        result = {
+            env_var.key: env_var.value for env_var in list_vars_builtin_addons_custom(bk_stag_env, selected_services)
+        }
         assert result == {}
 
     def test_list_vars_builtin_addons_custom_none_filter(self, bk_module, bk_stag_env):
-        result = list_vars_builtin_addons_custom(bk_stag_env, None)
+        result = {env_var.key: env_var.value for env_var in list_vars_builtin_addons_custom(bk_stag_env, None)}
 
         assert result == {"MYSQL_HOST": "mysql.com", "MYSQL_PORT": "3306", "MQ_URL": "mq.com"}
 
@@ -92,7 +99,9 @@ class TestGetEnvVarsSelectedAddons:
         rabbitmq_service_name = "rabbitmq"
 
         selected_services = [mysql_service_name, rabbitmq_service_name]
-        result = get_env_vars_selected_addons(bk_stag_env, selected_services)
+        result = {
+            env_var.key: env_var.value for env_var in get_env_vars_selected_addons(bk_stag_env, selected_services)
+        }
 
         assert result == {
             "DB_HOST": "db.com",
@@ -111,8 +120,16 @@ class TestGetEnvVarsSelectedAddons:
                 "MYSQL_HOST": "old-mysql.com",
             }
 
-            result = get_env_vars_selected_addons(bk_stag_env, None)
+            result = {env_var.key: env_var.value for env_var in get_env_vars_selected_addons(bk_stag_env, None)}
 
             # 验证 MYSQL_HOST 被覆盖
             assert result["MYSQL_HOST"] == "mysql.com"
             assert result["DB_HOST"] == "db.com"
+
+    def test_get_env_vars_selected_addons_sensitive(self, bk_stag_env):
+        """测试敏感字段的标记"""
+        result = get_env_vars_selected_addons(bk_stag_env, None)
+
+        for var in result:
+            if var.key in settings.DEV_SANDBOX_SENSITIVE_ENV_VARS:
+                assert var.sensitive is True

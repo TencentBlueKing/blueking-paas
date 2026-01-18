@@ -85,8 +85,6 @@ class FrontendFeatureViewSet(ViewSet):
             "MULTI_TENANT_MODE": settings.ENABLE_MULTI_TENANT_MODE,
             # 是否使用蓝鲸日志平台方案
             "BK_LOG": BK_LOG_DEFAULT_ENABLED,
-            # 是否开启前端加密
-            "FRONTEND_ENCRYPTION": settings.ENABLE_FRONTEND_ENCRYPT,
         }
 
         return Response(data={**features_reuses_backend_settings, **fronted_features})
@@ -95,14 +93,9 @@ class FrontendFeatureViewSet(ViewSet):
 class FrontendEncryptConfigViewSet(ViewSet):
     @swagger_auto_schema(tags=["前端特性配置"], responses={200: EncryptConfigInputSLZ()})
     def get_encrypt_config(self, request):
-        encrypt_config = {"enabled": settings.ENABLE_FRONTEND_ENCRYPT}
-
-        if settings.ENABLE_FRONTEND_ENCRYPT:
-            encrypt_config.update(
-                {
-                    "public_key": settings.FRONTEND_ENCRYPT_PUBLIC_KEY,
-                    "encrypt_cipher_type": settings.FRONTEND_ENCRYPT_CIPHER_TYPE,
-                }
-            )
+        encrypt_config = {
+            "public_key": settings.FRONTEND_ENCRYPT_PUBLIC_KEY,
+            "encrypt_cipher_type": settings.FRONTEND_ENCRYPT_CIPHER_TYPE,
+        }
 
         return Response(data=EncryptConfigInputSLZ(encrypt_config).data)

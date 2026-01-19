@@ -28,10 +28,10 @@ from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
     ImagePullPolicy,
     NetworkProtocol,
-    ResQuotaPlan,
     ScalingPolicy,
 )
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
+from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.structure import NOTSET
@@ -43,6 +43,19 @@ from paasng.utils.validators import (
 )
 
 from .serializers import ExecProbeActionSLZ, ExposedTypeSLZ, HTTPHeaderSLZ, TCPSocketProbeActionSLZ
+
+
+def validate_res_quota_plan(value):
+    """Validate whether value is a valid and active ResQuotaPlan name.
+
+    Can be used as a validator in serializer fields via validators=[validate_res_quota_plan].
+    """
+    if value is None:
+        return value
+
+    if not ResQuotaPlan.objects.filter(name=value, is_active=True).exists():
+        raise serializers.ValidationError(f"Resource quota plan '{value}' does not exist or is inactive.")
+    return value
 
 
 class BaseEnvVarFields(serializers.Serializer):
@@ -118,7 +131,7 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
-    plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
+    plan = serializers.CharField(allow_null=True, default=None, validators=[validate_res_quota_plan])
 
 
 class AutoscalingSpecInputSLZ(serializers.Serializer):
@@ -259,8 +272,8 @@ class ProcessInputSLZ(serializers.Serializer):
 
     name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     replicas = serializers.IntegerField(min_value=0, allow_null=True, default=NOTSET)
-    resQuotaPlan = serializers.ChoiceField(
-        choices=ResQuotaPlan.get_choices(), allow_null=True, default=None, source="res_quota_plan"
+    resQuotaPlan = serializers.CharField(
+        allow_null=True, default=None, source="res_quota_plan", validators=[validate_res_quota_plan]
     )
     targetPort = serializers.IntegerField(
         min_value=1,

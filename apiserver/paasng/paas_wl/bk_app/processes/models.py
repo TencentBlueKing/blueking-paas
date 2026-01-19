@@ -18,16 +18,12 @@
 import logging
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
-from cattr import unstructure
 from django.conf import settings
 from django.db import models
 from jsonfield import JSONField
 
-from paas_wl.bk_app.applications.constants import WlAppType
 from paas_wl.bk_app.applications.managers import get_metadata
-from paas_wl.bk_app.cnative.specs.constants import ResQuotaPlan
-from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP, PLAN_TO_REQUEST_QUOTA_MAP
-from paas_wl.bk_app.processes.constants import DEFAULT_CNATIVE_MAX_REPLICAS, ProcessTargetStatus
+from paas_wl.bk_app.processes.constants import ProcessTargetStatus
 from paas_wl.core.app_structure import set_global_get_structure
 from paas_wl.utils.models import TimestampedModel
 from paas_wl.workloads.autoscaling.entities import AutoscalingConfig
@@ -155,10 +151,6 @@ class ProcessSpecManager:
 
         # add spec objects start
         default_process_spec_plan = ProcessSpecPlan.objects.get_by_name(name=settings.DEFAULT_PROC_SPEC_PLAN)
-        if self.wl_app.type == WlAppType.CLOUD_NATIVE:
-            default_process_spec_plan = (
-                ProcessSpecPlan.objects.get_by_name(name=ResQuotaPlan.P_DEFAULT) or default_process_spec_plan
-            )
         adding_procs = [process for name, process in processes_map.items() if name not in existed_procs_name]
 
         def process_spec_builder(process: ProcessTmpl) -> ProcessSpec:
@@ -291,16 +283,3 @@ def initialize_default_proc_spec_plans():
         except ProcessSpecPlan.DoesNotExist:
             logger.info(f"Creating default plan: {name}...")
             ProcessSpecPlan.objects.create(name=name, **config)
-
-    for cnative_plan in ResQuotaPlan.get_values():
-        try:
-            ProcessSpecPlan.objects.get_by_name(name=cnative_plan)
-            logger.debug(f"Plan: {cnative_plan} already exists, skip initialization.")
-        except ProcessSpecPlan.DoesNotExist:
-            logger.info(f"Creating default plan: {cnative_plan}...")
-            ProcessSpecPlan.objects.create(
-                name=cnative_plan,
-                max_replicas=DEFAULT_CNATIVE_MAX_REPLICAS,
-                limits=unstructure(PLAN_TO_LIMIT_QUOTA_MAP[cnative_plan]),
-                requests=unstructure(PLAN_TO_REQUEST_QUOTA_MAP[cnative_plan]),
-            )

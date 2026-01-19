@@ -248,7 +248,7 @@ func (r *BkApp) validateAnnotations() *field.Error {
 				)
 			}
 
-			if err := validateOverrideResourceConfig(resConf); err != nil {
+			if err := validateResourceConfig(resConf); err != nil {
 				return field.Invalid(
 					annosPath.Child(OverrideProcResAnnoKey),
 					annotations[OverrideProcResAnnoKey],
@@ -258,10 +258,27 @@ func (r *BkApp) validateAnnotations() *field.Error {
 		}
 	}
 
+	// 验证传入的资源配额方案注解是否合法
+	resQuotaPlans, err := kubeutil.GetJsonAnnotation[ResQuotaPlans](
+		r, ResQuotaPlansAnnoKey,
+	)
+	// 获取资源配额方案注解成功，才需要进行检查
+	if err == nil {
+		for planName, resConf := range resQuotaPlans {
+			if err := validateResourceConfig(resConf); err != nil {
+				return field.Invalid(
+					annosPath.Child(ResQuotaPlansAnnoKey),
+					annotations[ResQuotaPlansAnnoKey],
+					fmt.Sprintf("invalid resource config for plan '%s': %s", planName, err.Error()),
+				)
+			}
+		}
+	}
+
 	return nil
 }
 
-func validateOverrideResourceConfig(resConf ProcResOverride) error {
+func validateResourceConfig(resConf ProcResources) error {
 	// 解析并验证 Limits
 	limCPU, limMem, err := quota.ParseResourceSpec(resConf.Limits.CPU, resConf.Limits.Memory)
 	if err != nil {
@@ -481,10 +498,8 @@ func (r *BkApp) validateAppProc(proc Process, idx int) *field.Error {
 	}
 
 	// 3. 检查资源方案是否是受支持的
-	if !lo.Contains(AllowedResQuotaPlans, proc.ResQuotaPlan) {
-		return field.NotSupported(
-			pField.Child("resQuotaPlan"), proc.ResQuotaPlan, stringx.ToStrArray(AllowedResQuotaPlans),
-		)
+	if err := r.validateResQuotaPlan(pField.Child("resQuotaPlan"), proc.ResQuotaPlan); err != nil {
+		return err
 	}
 
 	// 4. 如果启用扩缩容，需要符合规范
@@ -833,10 +848,8 @@ func (r *BkApp) validateEnvOverlay() *field.Error {
 		if !lo.Contains(r.getProcNames(), q.Process) {
 			return field.Invalid(resQuotaField.Child("process"), q.Process, "process name is invalid")
 		}
-		if !lo.Contains(AllowedResQuotaPlans, q.Plan) {
-			return field.NotSupported(
-				resQuotaField.Child("plan"), q.Plan, stringx.ToStrArray(AllowedResQuotaPlans),
-			)
+		if err := r.validateResQuotaPlan(resQuotaField.Child("plan"), q.Plan); err != nil {
+			return err
 		}
 	}
 
@@ -896,4 +909,25 @@ func (r *BkApp) validateComponents() *field.Error {
 		}
 	}
 	return nil
+}
+
+func (r *BkApp) validateResQuotaPlan(pPath *field.Path, plan ResQuotaPlan) *field.Error {
+	resQuotaPlans, err := kubeutil.GetJsonAnnotation[ResQuotaPlans](
+		r, ResQuotaPlansAnnoKey,
+	)
+	if err == nil {
+		if _, found := resQuotaPlans[string(plan)]; found {
+			return nil
+		}
+	}
+
+	if lo.Contains(LegacyAllowPlans, plan) {
+		return nil
+	}
+
+	supportedPlans := stringx.ToStrArray(LegacyAllowPlans)
+	for name := range resQuotaPlans {
+		supportedPlans = append(supportedPlans, name)
+	}
+	return field.NotSupported(pPath, plan, supportedPlans)
 }

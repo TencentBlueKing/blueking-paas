@@ -31,6 +31,16 @@ import (
 
 var log = logf.Log.WithName("env_overlay")
 
+// legacyResQuotaPlans stores the predefined resource quota plans with their limits.
+// The key is the plan name, and the value is (cpu, memory) limits.
+// Note: It's only used for legacy support.
+var legacyResQuotaPlans = map[paasv1alpha2.ResQuotaPlan]struct{ cpu, memory string }{
+	paasv1alpha2.ResQuotaPlan4C1G:    {"4000m", "1024Mi"},
+	paasv1alpha2.ResQuotaPlan4C2G:    {"4000m", "2048Mi"},
+	paasv1alpha2.ResQuotaPlan4C4G:    {"4000m", "4096Mi"},
+	paasv1alpha2.ResQuotaPlanDefault: {config.Global.GetProcDefaultCpuLimit(), config.Global.GetProcDefaultMemLimit()},
+}
+
 // ReplicasGetter get replicas from BkApp object
 type ReplicasGetter struct {
 	bkapp *paasv1alpha2.BkApp
@@ -259,26 +269,68 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 	return r.fromQuotaPlan(procObj.ResQuotaPlan), nil
 }
 
-// fromQuotaPlan try to get resource requirements by the name of quota plan
-func (r *ProcResourcesGetter) fromQuotaPlan(plan paasv1alpha2.ResQuotaPlan) corev1.ResourceRequirements {
-	var cpuRaw, memRaw string
-	switch plan {
-	case paasv1alpha2.ResQuotaPlan4C1G:
-		cpuRaw, memRaw = "4000m", "1024Mi"
-	case paasv1alpha2.ResQuotaPlan4C2G:
-		cpuRaw, memRaw = "4000m", "2048Mi"
-	case paasv1alpha2.ResQuotaPlan4C4G:
-		cpuRaw, memRaw = "4000m", "4096Mi"
-	default:
-		cpuRaw, memRaw = config.Global.GetProcDefaultCpuLimit(), config.Global.GetProcDefaultMemLimit()
+// fromQuotaPlan try to get resource requirements by the name of quota plan.
+func (r *ProcResourcesGetter) fromQuotaPlan(
+	plan paasv1alpha2.ResQuotaPlan,
+) corev1.ResourceRequirements {
+	// 1. Try to get from annotation ResQuotaPlansAnnoKey
+	planConfig, err := r.getQuotaPlanFromAnnotation(plan)
+	if err == nil {
+		res, err := r.calculateResourcesByResConfig(*planConfig)
+		if err != nil {
+			log.Error(
+				err, "Fail to parse ResQuotaPlan from annotation",
+				"plan", plan, "bkapp", r.bkapp.Name,
+			)
+		}
+		return *res
 	}
-	return r.calculateResources(cpuRaw, memRaw)
+
+	log.Error(
+		err, "Fail to get quota plan from annotation, will try legacy plans",
+		"plan", plan, "bkapp", r.bkapp.Name,
+	)
+
+	// 2. Try to get from legacy resQuotaPlans
+	// Note: this is only for legacy support, new quota plans should be defined in annotation
+	if spec, ok := legacyResQuotaPlans[plan]; ok {
+		return r.calculateResources(spec.cpu, spec.memory)
+	}
+
+	// 3. Use default values from global config
+	log.Info(
+		"Resource quota plan not found, using default",
+		"plan", plan, "bkapp", r.bkapp.Name,
+	)
+	spec := legacyResQuotaPlans[paasv1alpha2.ResQuotaPlanDefault]
+	return r.calculateResources(spec.cpu, spec.memory)
+}
+
+// getQuotaPlanFromAnnotation tries to get the quota plan config from annotation.
+// The annotation format is: {"planName": {"limits": {"cpu": "X", "memory": "X"}, "requests": {...}}}
+func (r *ProcResourcesGetter) getQuotaPlanFromAnnotation(
+	planName paasv1alpha2.ResQuotaPlan,
+) (*paasv1alpha2.ProcResources, error) {
+	planConfigs, err := kubeutil.GetJsonAnnotation[paasv1alpha2.ResQuotaPlans](
+		r.bkapp,
+		paasv1alpha2.ResQuotaPlansAnnoKey,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, ok := planConfigs[string(planName)]
+	if !ok {
+		return nil, errors.New("plan not found in annotation")
+	}
+
+	return &cfg, nil
 }
 
 // calculateResourcesByResConfig builds resource requirements from override config
 // Note: validation is already done by webhook, but we still check errors for robustness
 func (r *ProcResourcesGetter) calculateResourcesByResConfig(
-	resConfig paasv1alpha2.ProcResOverride,
+	resConfig paasv1alpha2.ProcResources,
 ) (*corev1.ResourceRequirements, error) {
 	// Parse limits using unified utility function
 	limitsCPU, limitsMemory, err := quota.ParseResourceSpec(resConfig.Limits.CPU, resConfig.Limits.Memory)

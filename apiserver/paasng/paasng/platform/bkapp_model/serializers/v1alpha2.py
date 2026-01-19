@@ -31,7 +31,6 @@ from paasng.platform.bkapp_model.constants import (
     ScalingPolicy,
 )
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
-from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName
 from paasng.utils.serializers import IntegerOrCharField, field_env_var_key
 from paasng.utils.structure import NOTSET
@@ -42,20 +41,13 @@ from paasng.utils.validators import (
     PROC_TYPE_PATTERN,
 )
 
-from .serializers import ExecProbeActionSLZ, ExposedTypeSLZ, HTTPHeaderSLZ, TCPSocketProbeActionSLZ
-
-
-def validate_res_quota_plan(value):
-    """Validate whether value is a valid and active ResQuotaPlan name.
-
-    Can be used as a validator in serializer fields via validators=[validate_res_quota_plan].
-    """
-    if value is None:
-        return value
-
-    if not ResQuotaPlan.objects.filter(name=value, is_active=True).exists():
-        raise serializers.ValidationError(f"Resource quota plan '{value}' does not exist or is inactive.")
-    return value
+from .serializers import (
+    ExecProbeActionSLZ,
+    ExposedTypeSLZ,
+    HTTPHeaderSLZ,
+    TCPSocketProbeActionSLZ,
+    validate_res_quota_plan,
+)
 
 
 class BaseEnvVarFields(serializers.Serializer):

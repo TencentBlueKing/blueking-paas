@@ -531,8 +531,8 @@ class TestCreateCloudNativeApp:
                             "name": "web",
                             "command": ["bash", "/app/start_web.sh"],
                             "env_overlay": {
-                                "stag": {"environment_name": "stag", "target_replicas": 1, "plan_name": "2C1G"},
-                                "prod": {"environment_name": "prod", "target_replicas": 2, "plan_name": "2C1G"},
+                                "stag": {"environment_name": "stag", "target_replicas": 1, "plan_name": "4C1G"},
+                                "prod": {"environment_name": "prod", "target_replicas": 2, "plan_name": "4C1G"},
                             },
                         }
                     ],
@@ -580,7 +580,7 @@ class TestCreateCloudNativeApp:
                             "name": "web",
                             "command": ["bash", "/app/start_web.sh"],
                             "env_overlay": {
-                                "stag": {"environment_name": "stag", "target_replicas": 1, "plan_name": "2C1G"},
+                                "stag": {"environment_name": "stag", "target_replicas": 1, "plan_name": "4C1G"},
                             },
                         }
                     ],

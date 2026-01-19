@@ -28,6 +28,7 @@ from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
 from paasng.accessories.proc_components.manager import validate_component_properties
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
+from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
@@ -62,6 +63,14 @@ class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
     autoscaling = serializers.BooleanField(help_text="是否启用自动扩缩容", required=False, default=False)
     scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False, allow_null=True)
+
+    def validate_plan_name(self, value):
+        if not value:
+            return value
+
+        if not ResQuotaPlan.objects.filter(name=value, is_active=True).exists():
+            raise serializers.ValidationError(_("资源配额方案 {plan} 不存在或未启用").format(plan=value))
+        return value
 
 
 class ExposedTypeSLZ(serializers.Serializer):

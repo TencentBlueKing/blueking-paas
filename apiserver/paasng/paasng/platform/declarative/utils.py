@@ -33,8 +33,7 @@ def get_quota_plan(spec_plan_name: str) -> str:
 
     # Note: First try to find in ResQuotaPlan, then fallback to ProcessSpecPlan
     active_plans = {plan_obj.name: plan_obj for plan_obj in ResQuotaPlan.objects.filter(is_active=True)}
-    plan_obj = active_plans.get(spec_plan_name)
-    if plan_obj:
+    if plan_obj := active_plans.get(spec_plan_name):
         return plan_obj.name
 
     logger.debug("unknown ResQuotaPlan name `%s`, try to get ProcessSpecPlan", spec_plan_name)

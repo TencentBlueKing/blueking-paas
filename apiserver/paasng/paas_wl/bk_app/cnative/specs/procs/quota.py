@@ -84,14 +84,16 @@ class ResQuotaReader:
 
         # structure: {process_name: {limits: {...}, requests: {...}}}
         override_str = self.res.metadata.annotations.get(OVERRIDE_PROC_RES_ANNO_KEY, "")
-        if override_str:
-            override_map: dict[str, dict] = json.loads(override_str)
-            for proc_name, config in results.items():
-                if override_res := override_map.get(proc_name):
-                    if "limits" in override_res:
-                        config["limits"] = override_res["limits"]
-                    if "requests" in override_res:
-                        config["requests"] = override_res["requests"]
+        if not override_str:
+            return results
+
+        override_map: dict[str, dict] = json.loads(override_str)
+        for proc_name, config in results.items():
+            if override_res := override_map.get(proc_name):
+                if "limits" in override_res:
+                    config["limits"] = override_res["limits"]
+                if "requests" in override_res:
+                    config["requests"] = override_res["requests"]
 
         return results
 

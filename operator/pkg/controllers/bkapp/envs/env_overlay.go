@@ -274,7 +274,8 @@ func (r *ProcResourcesGetter) fromQuotaPlan(
 	plan paasv1alpha2.ResQuotaPlan,
 ) corev1.ResourceRequirements {
 	// 1. Try to get from annotation ResQuotaPlansAnnoKey
-	if planConfig, found := r.getQuotaPlanFromAnnotation(plan); found {
+	planConfig, err := r.getQuotaPlanFromAnnotation(plan)
+	if err == nil {
 		res, err := r.calculateResourcesByResConfig(*planConfig)
 		if err != nil {
 			log.Error(
@@ -284,6 +285,11 @@ func (r *ProcResourcesGetter) fromQuotaPlan(
 		}
 		return *res
 	}
+
+	log.Error(
+		err, "Fail to get quota plan from annotation, will try legacy plans",
+		"plan", plan, "bkapp", r.bkapp.Name,
+	)
 
 	// 2. Try to get from legacy resQuotaPlans
 	// Note: this is only for legacy support, new quota plans should be defined in annotation
@@ -304,18 +310,21 @@ func (r *ProcResourcesGetter) fromQuotaPlan(
 // The annotation format is: {"planName": {"limits": {"cpu": "X", "memory": "X"}, "requests": {...}}}
 func (r *ProcResourcesGetter) getQuotaPlanFromAnnotation(
 	planName paasv1alpha2.ResQuotaPlan,
-) (*paasv1alpha2.ProcResources, bool) {
+) (*paasv1alpha2.ProcResources, error) {
 	planConfigs, err := kubeutil.GetJsonAnnotation[paasv1alpha2.ResQuotaPlans](
 		r.bkapp,
 		paasv1alpha2.ResQuotaPlansAnnoKey,
 	)
-	if err == nil {
-		if cfg, ok := planConfigs[string(planName)]; ok {
-			return &cfg, true
-		}
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, false
+	cfg, ok := planConfigs[string(planName)]
+	if !ok {
+		return nil, errors.New("plan not found in annotation")
+	}
+
+	return &cfg, nil
 }
 
 // calculateResourcesByResConfig builds resource requirements from override config

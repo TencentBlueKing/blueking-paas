@@ -101,9 +101,10 @@ type ProjectConfig struct {
 	Platform      PlatformConfig      `json:"platform"`
 	IngressPlugin IngressPluginConfig `json:"ingressPlugin"`
 	ResLimits     ResLimitsConfig     `json:"resLimits"`
-	ResRequests   ResRequestsConfig   `json:"resRequests"`
-	Autoscaling   AutoscalingConfig   `json:"autoscaling"`
-	MaxProcesses  int32               `json:"maxProcesses"`
+	// TODO: 统一由 apiserver 侧处理 requests, ProcDefaultCpuRequest 和 ProcDefaultMemRequest 从 operator 侧移除
+	ResRequests  ResRequestsConfig `json:"resRequests"`
+	Autoscaling  AutoscalingConfig `json:"autoscaling"`
+	MaxProcesses int32             `json:"maxProcesses"`
 }
 
 // NewProjectConfig create project config

@@ -24,6 +24,7 @@
     "@blueking/bkui-form": "0.0.23",
     "@blueking/bkui-library": "^0.0.0-beta.6",
     "@blueking/cli-service-webpack": "0.0.0-beta.73",
+    "@blueking/crypto-js-sdk": "0.0.4",
     "@blueking/eslint-config-bk": "^2.1.0-beta.12",
     "@blueking/functional-dependency": "^0.0.1-beta.12",
     "@blueking/log": "^2.1.4",

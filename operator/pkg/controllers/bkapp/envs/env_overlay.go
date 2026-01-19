@@ -229,15 +229,6 @@ func (r *ProcResourcesGetter) Default() corev1.ResourceRequirements {
 // - name: process name
 // - return: <resources requirements>, <error>
 func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequirements, err error) {
-	// Legacy version: try to read resources configs from legacy annotation
-	legacyProcResourcesConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](
-		r.bkapp,
-		paasv1alpha2.LegacyProcResAnnoKey,
-	)
-	if cfg, ok := legacyProcResourcesConfig[name]; ok {
-		return r.calculateResources(cfg["cpu"], cfg["memory"]), nil
-	}
-
 	// Override resource annotation: try to read resources configs from override resource annotation
 	// Format: {"{procName}": {"limits": {"cpu": "200m", "memory": "512Mi"}, "requests": {...}}}
 	overrideConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.OverrideProcResConfig](
@@ -250,6 +241,15 @@ func (r *ProcResourcesGetter) GetByProc(name string) (result corev1.ResourceRequ
 			return result, errors.Wrapf(err, "fail to parse override resource config for process %s", name)
 		}
 		return *res, nil
+	}
+
+	// Legacy version: try to read resources configs from legacy annotation
+	legacyProcResourcesConfig, _ := kubeutil.GetJsonAnnotation[paasv1alpha2.LegacyProcConfig](
+		r.bkapp,
+		paasv1alpha2.LegacyProcResAnnoKey,
+	)
+	if cfg, ok := legacyProcResourcesConfig[name]; ok {
+		return r.calculateResources(cfg["cpu"], cfg["memory"]), nil
 	}
 
 	// Overlay: read the "ResQuotaPlan" field from envOverlay

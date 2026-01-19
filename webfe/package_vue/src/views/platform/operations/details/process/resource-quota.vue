@@ -74,7 +74,7 @@
         ext-cls="resource-quota-type-form-cls"
       >
         <bk-form-item
-          :label="$t('类选')"
+          :label="$t('类型')"
           :required="true"
         >
           <bk-radio-group v-model="resourceQuotaType">
@@ -554,9 +554,24 @@ export default {
     },
     // 初始化表单数据
     initFormData() {
-      if (!this.processData?.env_overlays) return;
+      // env_overlays 为空对象 {} 或不存在时，使用 processData.plan_name 初始化（情况一：以描述文件为准）
+      const envOverlays = this.processData?.env_overlays;
+      const isEnvOverlaysEmpty = !envOverlays || Object.keys(envOverlays).length === 0;
 
-      const { prod, stag } = this.processData.env_overlays;
+      // 兼容接口返回的 env_overlays 为 {} 的情况
+      if (isEnvOverlaysEmpty) {
+        // 情况一：以描述文件为准
+        this.resourceQuotaType = 'file';
+        if (this.processData?.plan_name) {
+          ['stag', 'prod'].forEach((env) => {
+            this.formData[env].plan_name = this.processData.plan_name;
+            this.handlePlanChange(this.processData.plan_name, env);
+          });
+        }
+        return;
+      }
+
+      const { prod, stag } = envOverlays;
 
       // 判断 resourceQuotaType 的初始值
       // 如果 stag 和 prod 的 override_proc_res 都为 null，则为 'file'（以描述文件为准），否则为 'custom'（自定义）
@@ -571,8 +586,10 @@ export default {
       ].forEach(({ env, data }) => {
         if (!data) return;
 
-        // override_proc_res 不为 null 且不为 undefined 表示有资源配额数据
-        if (data.override_proc_res !== null && data.override_proc_res !== undefined) {
+        // override_proc_res 不为 null 且不为 undefined 表示为自定义资源配额
+        const hasOverrideProcRes = data.override_proc_res !== null && data.override_proc_res !== undefined;
+
+        if (hasOverrideProcRes) {
           // 情况三：预设方案，override_proc_res: { plan: '预设方案名称' }
           if (data.override_proc_res.plan) {
             this.formData[env].plan_name = data.override_proc_res.plan;
@@ -596,7 +613,7 @@ export default {
             };
           }
         }
-        // 情况一：以描述文件为准，resources 为 null
+        // 情况一：以描述文件为准
         else if (data.plan_name) {
           this.formData[env].plan_name = data.plan_name;
           this.handlePlanChange(data.plan_name, env);

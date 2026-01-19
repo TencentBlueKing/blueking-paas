@@ -22,6 +22,8 @@ import re
 from django.core.management.base import BaseCommand, CommandError
 
 from paas_wl.workloads.networking.ingress.models import Domain
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.accessories.publish.market.models import MarketConfig
 from paasng.platform.applications.models import Application, Module
 
 # Same regex as DomainEditableMixin.
@@ -46,8 +48,13 @@ class Command(BaseCommand):
         parser.add_argument("--domain_name", type=str, required=True, help="Custom domain name (e.g., example.com)")
         parser.add_argument("--path_prefix", type=str, default="/", help="Path prefix (defaults to '/')")
         parser.add_argument("--https_enabled", action="store_true", help="Enable HTTPS for the domain")
+        parser.add_argument(
+            "--publish_app", action="store_true", help="Publish the app to the market after upserting the domain"
+        )
 
-    def handle(self, app_code, app_module, app_env, domain_name, path_prefix, https_enabled, *args, **options):
+    def handle(
+        self, app_code, app_module, app_env, domain_name, path_prefix, https_enabled, publish_app, *args, **options
+    ):
         # Get application, module, and environment
         try:
             application = Application.objects.get(code=app_code)
@@ -75,14 +82,21 @@ class Command(BaseCommand):
             defaults={"https_enabled": https_enabled},
         )
 
-        # Print domain info
-        action = "created" if created else "updated"
-        self.stdout.write(self.style.SUCCESS(f"Successfully {action} custom domain:"))
+        domain_url = f"{domain.protocol}://{domain.name}{path_prefix}"
         self.stdout.write(
-            f"  ID: {domain.pk or 'N/A'}\n"
-            f"  URL: {domain.protocol}://{domain.name}{path_prefix}\n"
-            f"  Application: {app_code}\n"
-            f"  Module: {module.name}\n"
-            f"  Environment: {app_env}\n"
-            f"  HTTPS: {https_enabled}"
+            self.style.SUCCESS(
+                "Successfully add custom domain:\n",
+                f"  Domain URL: {domain_url}",
+                f"  App Code: {app_code}",
+                f"  Module: {app_module}",
+                f"  Environment: {app_env}",
+            )
         )
+
+        if app_env == "prod" and publish_app:
+            # Publish app to market
+            market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+            market_config.custom_domain_url = domain_url
+            market_config.source_url_type = ProductSourceUrlType.CUSTOM_DOMAIN
+            market_config.save()
+            self.stdout.write(self.style.SUCCESS(f"App '{app_code}' published to market with URL: {domain_url}"))

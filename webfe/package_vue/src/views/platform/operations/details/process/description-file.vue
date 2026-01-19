@@ -81,10 +81,11 @@ export default {
   },
   computed: {
     stagPlanName() {
-      return this.processData?.env_overlays?.stag?.plan_name || '';
+      // 优先使用环境级别的 plan_name，否则使用模块级别的 plan_name
+      return this.processData?.env_overlays?.stag?.plan_name || this.processData?.plan_name || '';
     },
     prodPlanName() {
-      return this.processData?.env_overlays?.prod?.plan_name || '';
+      return this.processData?.env_overlays?.prod?.plan_name || this.processData?.plan_name || '';
     },
   },
 };

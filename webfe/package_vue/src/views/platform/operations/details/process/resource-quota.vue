@@ -74,7 +74,7 @@
         ext-cls="resource-quota-type-form-cls"
       >
         <bk-form-item
-          :label="$t('类选')"
+          :label="$t('类型')"
           :required="true"
         >
           <bk-radio-group v-model="resourceQuotaType">
@@ -580,23 +580,16 @@ export default {
 
       this.resourceQuotaType = isStagNull && isProdNull ? 'file' : 'custom';
 
-      const { prod, stag } = this.processData.env_overlays;
-
-      // 判断 resourceQuotaType 的初始值
-      // 如果 stag 和 prod 的 override_proc_res 都为 null，则为 'file'（以描述文件为准），否则为 'custom'（自定义）
-      const isStagNull = stag?.override_proc_res === null;
-      const isProdNull = prod?.override_proc_res === null;
-
-      this.resourceQuotaType = isStagNull && isProdNull ? 'file' : 'custom';
-
       [
         { env: 'stag', data: stag },
         { env: 'prod', data: prod },
       ].forEach(({ env, data }) => {
         if (!data) return;
 
-        // override_proc_res 不为 null 且不为 undefined 表示有资源配额数据
-        if (data.override_proc_res !== null && data.override_proc_res !== undefined) {
+        // override_proc_res 不为 null 且不为 undefined 表示为自定义资源配额
+        const hasOverrideProcRes = data.override_proc_res !== null && data.override_proc_res !== undefined;
+
+        if (hasOverrideProcRes) {
           // 情况三：预设方案，override_proc_res: { plan: '预设方案名称' }
           if (data.override_proc_res.plan) {
             this.formData[env].plan_name = data.override_proc_res.plan;
@@ -620,7 +613,7 @@ export default {
             };
           }
         }
-        // 情况一：以描述文件为准，resources 为 null
+        // 情况一：以描述文件为准
         else if (data.plan_name) {
           this.formData[env].plan_name = data.plan_name;
           this.handlePlanChange(data.plan_name, env);

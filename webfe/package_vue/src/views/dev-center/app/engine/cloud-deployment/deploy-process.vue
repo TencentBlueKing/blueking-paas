@@ -290,10 +290,10 @@
                             @change="handleChange($event, 'stag')"
                           >
                             <bk-option
-                              v-for="option in resQuotaData"
-                              :id="option"
-                              :key="option"
-                              :name="option"
+                              v-for="option in allQuotaList"
+                              :id="option.name"
+                              :key="option.name"
+                              :name="option.name"
                             />
                           </bk-select>
                           <!-- tips内容不会双向绑定 需要重新渲染 -->
@@ -469,10 +469,10 @@
                             @change="handleChange($event, 'prod')"
                           >
                             <bk-option
-                              v-for="option in resQuotaData"
-                              :id="option"
-                              :key="option"
-                              :name="option"
+                              v-for="option in allQuotaList"
+                              :id="option.name"
+                              :key="option.name"
+                              :name="option.name"
                             />
                           </bk-select>
                           <!-- tips内容不会双向绑定 需要重新渲染 -->
@@ -929,7 +929,8 @@
 
 <script>
 import { cloneDeep } from 'lodash';
-import { RESQUOTADATA, ENV_OVERLAY } from '@/common/constants';
+import { mapState } from 'vuex';
+import { ENV_OVERLAY } from '@/common/constants';
 import userGuide from './comps/user-guide/index.vue';
 import quotaPopver from './comps/quota-popver';
 import deployHook from './deploy-hook';
@@ -980,7 +981,6 @@ export default {
       panels: [],
       processNameActive: 'web', // 选中的进程名
       btnIndex: 0,
-      panelActive: 0,
       formData: {
         name: 'web',
         image: null,
@@ -1001,7 +1001,6 @@ export default {
         env_overlay: ENV_OVERLAY,
         services: [],
       },
-      bkappAnnotations: {},
       allowCreate: true,
       hasDeleteIcon: true,
       processData: [],
@@ -1139,15 +1138,11 @@ export default {
           },
         ],
       },
-      imageCredential: '',
-      targetPortErrTips: '',
-      isTargetPortErrTips: false,
       ifopen: false,
       envsData: [
         { value: 'stag', label: this.$t('预发布环境') },
         { value: 'prod', label: this.$t('生产环境') },
       ],
-      resQuotaData: RESQUOTADATA,
       processDialog: {
         loading: false,
         visiable: false,
@@ -1183,9 +1178,7 @@ export default {
     };
   },
   computed: {
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
+    ...mapState(['localLanguage', 'curAppModule']),
     appCode() {
       return this.$route.params.id;
     },
@@ -1194,9 +1187,6 @@ export default {
     },
     curModuleId() {
       return this.curAppModule?.name;
-    },
-    curAppModule() {
-      return this.$store.state.curAppModule;
     },
     // 镜像
     isCustomImage() {
@@ -1537,8 +1527,6 @@ export default {
       try {
         this.quotaPlansFlag = true;
         const res = await this.$store.dispatch('deploy/fetchQuotaPlans', {});
-        // 默认值
-        this.resQuotaData = res.map((item) => item.name);
 
         // 资源配额数据
         this.allQuotaList = res;
@@ -1547,10 +1535,7 @@ export default {
         // 当前prod资源配额
         this.handleChange(this.formData.env_overlay?.prod?.plan_name || 'default', 'prod');
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       } finally {
         this.quotaPlansFlag = false;
       }
@@ -1568,10 +1553,7 @@ export default {
         });
         this.autoScalDisableConfig[env] = res;
       } catch (e) {
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || e.message || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       }
     },
 
@@ -1658,10 +1640,7 @@ export default {
         this.$store.commit('cloudApi/updatePageEdit', false);
         this.init();
       } catch (error) {
-        this.$paasMessage({
-          theme: 'error',
-          message: error.detail || error.message,
-        });
+        this.catchErrorHandler(e);
       }
     },
 

@@ -16,14 +16,16 @@ limitations under the License.
 We undertake not to change the open source license (MIT license) applicable
 to the current version of the project delivered to anyone in the future.
 """
+
 import logging
 import math
 from typing import Dict, List, Optional
 
 import curlify
 import requests
+from blue_krill.storages.blobstore.bkrepo import safe_urljoin
 from requests.auth import HTTPBasicAuth
-from six.moves.urllib_parse import urljoin
+
 from svc_bk_repo.vendor.exceptions import RequestError
 from svc_bk_repo.vendor.models import RepoQuota
 
@@ -78,7 +80,7 @@ class BKGenericRepoManager:
         :params repo str: 关联的仓库名称
         """
         client = self.get_client()
-        url = urljoin(self.endpoint_url, '/auth/api/user/create/repo')
+        url = safe_urljoin(self.endpoint_url, "/auth/api/user/create/repo")
         data = {
             "admin": False,
             "name": username,
@@ -94,14 +96,14 @@ class BKGenericRepoManager:
     def update_user(self, username: str, password: str, association_users: List[str]):
         """更新用户信息"""
         client = self.get_client()
-        url = urljoin(self.endpoint_url, f'/auth/api/user/{username}')
+        url = safe_urljoin(self.endpoint_url, f"/auth/api/user/{username}")
         data = {"admin": True, "name": username, "pwd": password, "asstUsers": association_users}
         return _validate_resp(client.put(url, json=data))
 
     def delete_user(self, username: str):
         """删除用户"""
         client = self.get_client()
-        url = urljoin(self.endpoint_url, f'/auth/api/user/{username}')
+        url = safe_urljoin(self.endpoint_url, f"/auth/api/user/{username}")
         return _validate_resp(client.delete(url))
 
     def create_repo(self, repo: str, public: bool = False, quota: Optional[int] = None):
@@ -112,7 +114,7 @@ class BKGenericRepoManager:
         :params quota Optional[int]: 仓库配额, 单位字节
         """
         client = self.get_client()
-        url = urljoin(self.endpoint_url, '/repository/api/repo/create')
+        url = safe_urljoin(self.endpoint_url, "/repository/api/repo/create")
         data = {
             "projectId": self.project,
             "name": repo,
@@ -133,7 +135,7 @@ class BKGenericRepoManager:
         :params forced bool: 是否强制删除, 如果为false，当仓库中存在文件时，将无法删除仓库
         """
         client = self.get_client()
-        url = urljoin(self.endpoint_url, f'/repository/api/repo/delete/{self.project}/{repo}?forced={forced}')
+        url = safe_urljoin(self.endpoint_url, f"/repository/api/repo/delete/{self.project}/{repo}?forced={forced}")
         return _validate_resp(client.delete(url))
 
     def get_repo_quota(self, repo: str) -> RepoQuota:
@@ -142,7 +144,7 @@ class BKGenericRepoManager:
         :params repo str: 仓库名
         """
         client = self.get_client()
-        url = urljoin(self.endpoint_url, f'/repository/api/repo/quota/{self.project}/{repo}')
+        url = safe_urljoin(self.endpoint_url, f"/repository/api/repo/quota/{self.project}/{repo}")
         data = _validate_resp(client.get(url))
         return RepoQuota(max_size=data["quota"] or math.inf, used=data["used"])
 
@@ -153,5 +155,5 @@ class BKGenericRepoManager:
         :params quota int: 配额, 单位字节
         """
         client = self.get_client()
-        url = urljoin(self.endpoint_url, f'/repository/api/repo/quota/{self.project}/{repo}')
+        url = safe_urljoin(self.endpoint_url, f"/repository/api/repo/quota/{self.project}/{repo}")
         _validate_resp(client.post(url, data={"quota": quota}))

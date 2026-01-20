@@ -150,6 +150,7 @@ class ModuleProcessSpecViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
                         "target_replicas": spec.get_target_replicas(environment_name),
                         "autoscaling": bool(spec.get_autoscaling(environment_name)),
                         "scaling_config": spec.get_scaling_config(environment_name) or default_scaling_config,
+                        "is_res_overridden": spec.is_res_overridden(environment_name),
                     }
                     for environment_name in AppEnvName
                 },

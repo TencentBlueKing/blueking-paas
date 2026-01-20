@@ -158,6 +158,19 @@ class ModuleProcessSpec(TimestampedModel):
     get_autoscaling = env_overlay_getter_factory("autoscaling")  # type: Callable[[str], bool]
     get_scaling_config = env_overlay_getter_factory("scaling_config")  # type: Callable[[str], Optional[AutoscalingConfig]]
 
+    def is_res_overridden(self, environment_name: str) -> bool:
+        """Check if the resource quota is overridden by admin for the given environment.
+
+        :param environment_name: The environment name to check
+        :returns: True if override_proc_res has a value, False otherwise
+        """
+        try:
+            overlay = self.env_overlays.get(environment_name=environment_name)
+        except ObjectDoesNotExist:
+            return False
+        else:
+            return overlay.override_proc_res is not None
+
 
 class ProcessSpecEnvOverlayManager(models.Manager):
     """Custom manager for ProcessSpecEnvOverlay"""

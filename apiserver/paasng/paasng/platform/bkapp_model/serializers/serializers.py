@@ -76,6 +76,7 @@ class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
     autoscaling = serializers.BooleanField(help_text="是否启用自动扩缩容", required=False, default=False)
     scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False, allow_null=True)
+    is_res_overridden = serializers.BooleanField(help_text="该环境下的资源配额是否被管理员覆盖", read_only=True)
 
 
 class ExposedTypeSLZ(serializers.Serializer):

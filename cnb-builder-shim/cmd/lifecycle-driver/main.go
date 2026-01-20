@@ -139,7 +139,7 @@ func makeEnv(logger logr.Logger) (env []string) {
 			logger.V(2).Info(fmt.Sprintf("skip env var %s", key))
 		}
 	}
-	return env
+	return
 }
 
 func runLifecycle(ctx context.Context, logger logr.Logger, dev bool) {

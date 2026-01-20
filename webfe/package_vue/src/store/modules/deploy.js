@@ -494,7 +494,7 @@ const actions = {
    * 获取进程资源配额方案
    */
   fetchQuotaPlans({}, {}, config = {}) {
-    const url = `${BACKEND_URL}/api/mres/quota_plans/`;
+    const url = `${BACKEND_URL}/api/bkapps/quota_plans/`;
     return http.get(url, config);
   },
 

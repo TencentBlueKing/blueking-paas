@@ -16,6 +16,8 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+/* global require */
+
 export const APP_TYPES = {
   dj18_hello_world: 'backend',
   dj18_with_auth: 'web',
@@ -132,7 +134,6 @@ export const ENV_ENUM = {
   stag: '预发布环境',
 };
 
-export const RESQUOTADATA = ['default', '1C512M', '2C1G', '2C2G', '4C1G', '4C2G'];
 export const PLUGIN_ITSM_APPLY = {
   plugin_id: '插件标识',
   plugin_name: '插件名称',

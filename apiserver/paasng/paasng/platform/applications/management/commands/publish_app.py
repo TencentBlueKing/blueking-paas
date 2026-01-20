@@ -24,6 +24,7 @@ from paasng.accessories.publish.market.models import MarketConfig
 from paasng.platform.applications.models import Application
 
 
+# Deprecated, directly use `upsert_custom_domain`.
 class Command(BaseCommand):
     help = "Add a custom address to the APP and publish it to the market."
 

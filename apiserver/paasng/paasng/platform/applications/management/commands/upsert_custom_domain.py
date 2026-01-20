@@ -20,8 +20,16 @@
 import re
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db import IntegrityError
 
+from paas_wl.workloads.networking.ingress.domains.independent import get_service_name
+from paas_wl.workloads.networking.ingress.exceptions import ValidCertNotFound
+from paas_wl.workloads.networking.ingress.managers import CustomDomainIngressMgr
 from paas_wl.workloads.networking.ingress.models import Domain
+from paas_wl.workloads.networking.ingress.signals import cnative_custom_domain_updated
+from paasng.accessories.publish.market.constant import ProductSourceUrlType
+from paasng.accessories.publish.market.models import MarketConfig
+from paasng.platform.applications.constants import ApplicationType
 from paasng.platform.applications.models import Application, Module
 
 # Same regex as DomainEditableMixin.
@@ -46,43 +54,72 @@ class Command(BaseCommand):
         parser.add_argument("--domain_name", type=str, required=True, help="Custom domain name (e.g., example.com)")
         parser.add_argument("--path_prefix", type=str, default="/", help="Path prefix (defaults to '/')")
         parser.add_argument("--https_enabled", action="store_true", help="Enable HTTPS for the domain")
+        parser.add_argument(
+            "--publish_app", action="store_true", help="Publish the app to the market after upserting the domain"
+        )
 
-    def handle(self, app_code, app_module, app_env, domain_name, path_prefix, https_enabled, *args, **options):
+    def handle(
+        self, app_code, app_module, app_env, domain_name, path_prefix, https_enabled, publish_app, *args, **options
+    ):
         # Get application, module, and environment
         try:
-            application = Application.objects.get(code=app_code)
+            application: Application = Application.objects.get(code=app_code)
             module = application.get_module(app_module)
         except Application.DoesNotExist:
             raise CommandError(f"Application '{app_code}' does not exist")
         except Module.DoesNotExist:
             raise CommandError(f"Module '{app_module}' does not exist in application '{app_code}'")
 
-        environment = module.envs.get(environment=app_env)
-
-        # Validate domain data using serializer
+        env = module.envs.get(environment=app_env)
+        # Validate domain data
         if not DOMAIN_NAME_REGEX.match(domain_name):
             raise CommandError(f"Validation failed: Domain name '{domain_name}' format is invalid")
         if not PATH_PREFIX_REGEX.match(path_prefix):
             raise CommandError(f"Validation failed: Path prefix '{path_prefix}' format is invalid")
 
-        # Create or update domain using unique_together fields
-        domain, created = Domain.objects.update_or_create(
+        domain, _ = Domain.objects.update_or_create(
             tenant_id=application.tenant_id,
             name=domain_name,
             path_prefix=path_prefix,
             module_id=module.pk,
-            environment_id=environment.pk,
+            environment_id=env.pk,
             defaults={"https_enabled": https_enabled},
         )
 
-        # Print domain info
-        action = "created" if created else "updated"
-        self.stdout.write(self.style.SUCCESS(f"Successfully {action} custom domain:"))
+        # Sync domain config to Kubernetes
+        # CNative: Processing is triggered by a signal (TLS not supported yet)
+        # Normal: Directly sync Ingress resources (TLS certificates supported)
+        if application.type == ApplicationType.CLOUD_NATIVE:
+            try:
+                cnative_custom_domain_updated.send(sender=env, env=env)
+            except Exception as e:
+                raise CommandError(f"Failed to deploy networking for cloud-native app: {e}")
+        else:
+            try:
+                service_name = get_service_name(env.wl_app)
+                CustomDomainIngressMgr(domain).sync(default_service_name=service_name)
+            except ValidCertNotFound:
+                raise CommandError("No valid certificate found for enabling HTTPS")
+            except IntegrityError:
+                raise CommandError(f"Domain '{domain_name}' is already in use")
+            except Exception as e:
+                raise CommandError(f"Failed to sync custom domain ingress: {e}")
+
+        domain_url = f"{domain.protocol}://{domain.name}{path_prefix}"
         self.stdout.write(
-            f"  ID: {domain.pk or 'N/A'}\n"
-            f"  URL: {domain.protocol}://{domain.name}{path_prefix}\n"
-            f"  Application: {app_code}\n"
-            f"  Module: {module.name}\n"
-            f"  Environment: {app_env}\n"
-            f"  HTTPS: {https_enabled}"
+            self.style.SUCCESS(
+                f"Successfully add custom domain:\n"
+                f"  Domain URL: {domain_url}\n"
+                f"  App Code: {app_code}\n"
+                f"  Module: {app_module}\n"
+                f"  Environment: {app_env}"
+            )
         )
+
+        if app_env == "prod" and publish_app:
+            # Publish app to market
+            market_config, _ = MarketConfig.objects.get_or_create_by_app(application)
+            market_config.custom_domain_url = domain_url
+            market_config.source_url_type = ProductSourceUrlType.CUSTOM_DOMAIN
+            market_config.save()
+            self.stdout.write(self.style.SUCCESS(f"App '{app_code}' published to market with URL: {domain_url}"))

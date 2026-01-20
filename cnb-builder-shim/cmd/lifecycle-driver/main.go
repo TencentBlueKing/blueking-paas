@@ -139,7 +139,7 @@ func makeEnv(logger logr.Logger) (env []string) {
 			logger.V(2).Info(fmt.Sprintf("skip env var %s", key))
 		}
 	}
-	return
+	return env
 }
 
 func runLifecycle(ctx context.Context, logger logr.Logger, dev bool) {
@@ -205,7 +205,7 @@ func getBuilderSteps(ctx context.Context) []phase.Step {
 	}
 	if *cacheImage != "" {
 		steps = append(steps, phase.MakeRestorerStep(ctx, *lifecycleDir, *cacheImage, *groupPath, *layersDir,
-			*logLevel, *useDaemon, *uid, *gid))
+			*logLevel, *uid, *gid))
 	}
 	steps = append(steps,
 		phase.MakeBuilderStep(ctx, *lifecycleDir, *appDir, *groupPath, *planPath, *layersDir,

@@ -89,18 +89,21 @@ class Command(BaseCommand):
         # Sync domain config to Kubernetes
         # CNative: Processing is triggered by a signal (TLS not supported yet)
         # Normal: Directly sync Ingress resources (TLS certificates supported)
-        try:
-            if application.type == ApplicationType.CLOUD_NATIVE:
+        if application.type == ApplicationType.CLOUD_NATIVE:
+            try:
                 cnative_custom_domain_updated.send(sender=env, env=env)
-            else:
+            except Exception as e:
+                raise CommandError(f"Failed to deploy networking for cloud-native app: {e}")
+        else:
+            try:
                 service_name = get_service_name(env.wl_app)
                 CustomDomainIngressMgr(domain).sync(default_service_name=service_name)
-        except ValidCertNotFound:
-            raise CommandError("No valid certificate found for enabling HTTPS")
-        except IntegrityError:
-            raise CommandError(f"Domain '{domain_name}' is already in use")
-        except Exception as e:
-            raise CommandError(f"Failed to upsert custom domain: {e}")
+            except ValidCertNotFound:
+                raise CommandError("No valid certificate found for enabling HTTPS")
+            except IntegrityError:
+                raise CommandError(f"Domain '{domain_name}' is already in use")
+            except Exception as e:
+                raise CommandError(f"Failed to sync custom domain ingress: {e}")
 
         domain_url = f"{domain.protocol}://{domain.name}{path_prefix}"
         self.stdout.write(

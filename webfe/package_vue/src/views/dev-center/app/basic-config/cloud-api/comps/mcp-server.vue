@@ -71,6 +71,16 @@
             >
               {{ $t(MCP_SERVER_STATUS[row.permission?.status]) || '--' }}
             </span>
+            <bk-button
+              v-if="row.permission?.status === 'pending' && row.permission?.approval_url"
+              theme="primary"
+              text
+              class="ml-6"
+              @click="handleCopyApprovalUrl(row.permission?.approval_url)"
+            >
+              <i class="paasng-icon paasng-link"></i>
+              {{ $t('复制审批链接') }}
+            </bk-button>
           </span>
           <span v-else-if="['name', 'description'].includes(column.prop)">
             <a
@@ -132,6 +142,7 @@ import BatchDialog from './batch-apply-dialog';
 import { paginationFun } from '@/common/utils';
 import { MCP_SERVER_STATUS } from '@/common/constants';
 import { debounce } from 'lodash';
+import { copy } from '@/common/tools';
 
 export default {
   name: 'McpServer',
@@ -375,6 +386,12 @@ export default {
 
     handleAfterLeave() {
       this.applyDialog.visiable = false;
+    },
+
+    // 复制审批链接
+    handleCopyApprovalUrl(url) {
+      if (!url) return;
+      copy(url, this);
     },
 
     // 搜索关键词高亮

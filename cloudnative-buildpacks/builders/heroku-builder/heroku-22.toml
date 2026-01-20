@@ -1,25 +1,9 @@
 description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, NodeJS, Go, Python, Ruby, Apache HTTPD, NGINX and Procfile"
 
-[[buildpacks]]
-  uri = "docker://gcr.io/paketo-buildpacks/go:4.3.3"
-  version = "4.3.3"
 
 [[buildpacks]]
-  uri = "docker://gcr.io/paketo-buildpacks/java-native-image:8.3.0"
-  version = "8.3.0"
-
-[[buildpacks]]
-  uri = "docker://gcr.io/paketo-buildpacks/java:9.4.0"
-  version = "9.4.0"
-
-[[buildpacks]]
-  uri = "docker://gcr.io/paketo-buildpacks/nodejs:1.6.0"
-  version = "1.6.0"
-
-[[buildpacks]]
-  uri = "docker://gcr.io/paketo-buildpacks/procfile:5.6.1"
+  uri = "docker://paketobuildpacks/procfile:5.6.1"
   version = "5.6.1"
-
 
 [[buildpacks]]
   uri = "../../buildpacks/bk-buildpack-python/cnb-buildpack"
@@ -53,12 +37,6 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
 
 [[order]]
   [[order.group]]
-    id = "paketo-buildpacks/go"
-    version = "4.3.3"
-
-
-[[order]]
-  [[order.group]]
     id = "bk-buildpack-python"
     version = "v213"
 
@@ -73,23 +51,6 @@ description = "Ubuntu bionic base image with buildpacks for Java, .NET Core, Nod
   [[order.group]]
     id = "bk-buildpack-go"
     version = "v205"
-
-
-[[order]]
-  [[order.group]]
-    id = "paketo-buildpacks/java-native-image"
-    version = "8.3.0"
-
-
-[[order]]
-  [[order.group]]
-    id = "paketo-buildpacks/java"
-    version = "9.4.0"
-
-[[order]]
-  [[order.group]]
-    id = "paketo-buildpacks/nodejs"
-    version = "1.6.0"
 
 
 [[order]]

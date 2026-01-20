@@ -92,7 +92,7 @@ class SmartAppBuilder:
             "SOURCE_GET_URL": self.source_get_url,
             "DEST_PUT_URL": self.dest_put_url,
             "BUILDER_SHIM_IMAGE": settings.SMART_BUILDER_SHIM_IMAGE,
-            "PackagingVersion": self.smart_build.packaging_version,
+            "PACKAGING_VERSION": self.smart_build.packaging_version,
         }
 
         # 添加缓存配置

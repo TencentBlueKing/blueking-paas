@@ -64,6 +64,7 @@ class ScalingPolicy(StrStructuredEnum):
 
 
 class CPUResourceQuantity(StrStructuredEnum):
+    QUOTA_0_0_5_CORE = EnumField("50m", label="0.05 核")
     QUOTA_0_1_CORE = EnumField("100m", label="0.1 核")
     QUOTA_0_2_CORE = EnumField("200m", label="0.2 核")
     QUOTA_0_5_CORE = EnumField("500m", label="0.5 核")

@@ -398,19 +398,25 @@ class BaseDecryptFieldMixin:
     def decrypt(self, value: str) -> str:
         try:
             return self.cipher_handler.decrypt(value)
+        except ImproperlyConfigured:
+            raise
         except Base64DecodeError:
-            raise serializers.ValidationError("invalid base64 encoding, decrypt failed")
+            raise serializers.ValidationError(_("BASE64解码失败: {value}").format(value=value))
         except Exception:
             logger.exception("decrypt error")
-            raise serializers.ValidationError("decrypt failed")
+            raise serializers.ValidationError(_("后端解密失败"))
 
     def is_encrypted_value(self, value) -> bool:
         """判断是否为加密值格式"""
-        return (
+        if (
             isinstance(value, dict)
-            and value.get(self.ENCRYPTED_FLAG_KEY) is True
             and self.ENCRYPTED_VALUE_KEY in value
-        )
+            and isinstance(value[self.ENCRYPTED_VALUE_KEY], str)
+        ):
+            if value.get(self.ENCRYPTED_FLAG_KEY) is True:
+                return True
+            raise serializers.ValidationError(_("无效的加密值格式: {value}").format(value=value))
+        return False
 
     def decrypt_if_needed(self, value) -> str:
         """如果是加密值格式则解密，否则直接返回原始值"""
@@ -427,6 +433,8 @@ class DecryptableJSONField(BaseDecryptFieldMixin, serializers.JSONField):
 
     MAX_RECURSION_DEPTH = 8
 
+    default_error_messages = {"max_recursion_depth": _("数据嵌套层级过深，最大层级为 {max_depth}")}
+
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
         return self._decrypt_recursive(data, depth=0)
@@ -434,7 +442,7 @@ class DecryptableJSONField(BaseDecryptFieldMixin, serializers.JSONField):
     def _decrypt_recursive(self, data, depth: int):
         """递归遍历数据，解密所有加密值"""
         if depth > self.MAX_RECURSION_DEPTH:
-            raise serializers.ValidationError(f"data nested too deep, max depth is {self.MAX_RECURSION_DEPTH}")
+            self.fail("max_recursion_depth", max_depth=self.MAX_RECURSION_DEPTH)
 
         if self.is_encrypted_value(data):
             return self.decrypt(data[self.ENCRYPTED_VALUE_KEY])

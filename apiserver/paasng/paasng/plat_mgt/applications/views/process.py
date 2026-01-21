@@ -100,7 +100,6 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         # 校验 module 的 source_origin 是否可以修改
         module = get_object_or_404(application.modules, name=module_name)
         if module.source_origin not in [
-            SourceOrigin.CNATIVE_IMAGE.value,
             SourceOrigin.S_MART.value,
             SourceOrigin.AI_AGENT.value,
         ]:

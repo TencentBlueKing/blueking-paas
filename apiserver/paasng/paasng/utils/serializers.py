@@ -371,7 +371,7 @@ class BaseDecryptFieldMixin:
 
     支持两种输入格式:
     - 明文值: 直接传递原始字符串, 如 "the_value"
-    - 加密值: 传递 {"_encrypted": true, "_encrypted_value": "xxxxx"}
+    - 加密值: 例如: {"_encrypted": true, "_encrypted_value": "xxxxx"}
     """
 
     ENCRYPTED_FLAG_KEY = "_encrypted"

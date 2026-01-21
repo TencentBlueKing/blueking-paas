@@ -76,13 +76,11 @@ class ApplicationListOutputSLZ(serializers.Serializer):
 
     def get_app_status(self, instance: Application) -> str:
         """获取应用部署状态"""
-        status = AppStatus.OFFLINE
         if not instance.has_deployed:
-            status = AppStatus.NOT_DEPLOYED
-        elif instance.is_active:
-            status = AppStatus.NORMAL
-
-        return status
+            return AppStatus.NOT_DEPLOYED
+        if instance.is_active:
+            return AppStatus.NORMAL
+        return AppStatus.OFFLINE
 
 
 class ApplicationListFilterInputSLZ(serializers.Serializer):

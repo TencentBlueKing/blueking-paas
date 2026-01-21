@@ -101,7 +101,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         module = get_object_or_404(application.modules, name=module_name)
         if module.source_origin != SourceOrigin.S_MART.value:
             return Response(
-                {"detail": _("该模块的源码来源不支持修改进程资源配置")},
+                {"detail": _("当前仅支持 SMart 应用修改进程资源配额")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

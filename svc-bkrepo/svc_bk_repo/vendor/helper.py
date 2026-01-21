@@ -31,6 +31,10 @@ from svc_bk_repo.vendor.models import RepoQuota
 
 logger = logging.getLogger(__name__)
 
+OP_TYPE_TENANT_ID = "system"
+# API 请求头中用于指定租户 ID 的字段
+API_HERDER_TENANT_ID = "X-Bk-Tenant-Id"
+
 
 def _validate_resp(response: requests.Response) -> Dict:
     """校验响应体"""
@@ -69,6 +73,7 @@ class BKGenericRepoManager:
     def get_client(self) -> requests.Session:
         session = requests.session()
         session.auth = HTTPBasicAuth(username=self.username, password=self.password)
+        session.headers.update({API_HERDER_TENANT_ID: OP_TYPE_TENANT_ID})
         return session
 
     def create_user(self, repo: str, username: str, password: str, association_users: List[str]):

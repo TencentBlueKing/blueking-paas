@@ -64,7 +64,6 @@ from paasng.platform.bkapp_model.models import (
     ModuleProcessSpec,
     ObservabilityConfig,
     ProcessSpecEnvOverlay,
-    ResQuotaPlan,
     SvcDiscConfig,
 )
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
@@ -349,19 +348,13 @@ class TestProcessesManifestConstructor:
             ("4C2G5R", "4C2G"),
             # Case 3: plan_name not found, return default
             ("non-existent-plan", "default"),
+            # Case 4: plan_name (4C5G) exists in ProcessSpecPlan, no exact match,
+            # return the largest memory plan (4C2G) as fallback
+            ("4C5G", "4C4G"),
         ],
     )
     def test_sanitize_plan_name(self, plan_name, expected):
         """Test _sanitize_plan_name with database operations."""
-        # Create or get ResQuotaPlan in database to avoid duplicate key error
-        ResQuotaPlan.objects.get_or_create(
-            name="4C2G",
-            defaults={
-                "limits": {"cpu": "4000m", "memory": "2048Mi"},
-                "requests": {"cpu": "200m", "memory": "1024Mi"},
-            },
-        )
-
         # Create or get ProcessSpecPlan in database (4C2G5R maps to 2Gi memory)
         ProcessSpecPlan.objects.get_or_create(
             name="4C2G5R",
@@ -369,6 +362,16 @@ class TestProcessesManifestConstructor:
                 "max_replicas": 5,
                 "limits": {"memory": "2048Mi", "cpu": "4000m"},
                 "requests": {"memory": "1024Mi", "cpu": "200m"},
+            },
+        )
+
+        # Create or get ProcessSpecPlan (4C5G has 5Gi memory, larger than any ResQuotaPlan)
+        ProcessSpecPlan.objects.get_or_create(
+            name="4C5G",
+            defaults={
+                "max_replicas": 5,
+                "limits": {"memory": "5120Mi", "cpu": "4000m"},
+                "requests": {"memory": "2048Mi", "cpu": "200m"},
             },
         )
 

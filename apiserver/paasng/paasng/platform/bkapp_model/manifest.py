@@ -289,7 +289,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
         """Sanitize the plan name to ensure it is valid in the manifest.
 
         因为 v2 版本的 app_desc.yaml 也需要可以使用到云原生应用,
-        但 v2 版本的资源配额方案名称可能不是使用的 resQuotaPlan, 而是使用的 ProcessSpecPlan
+        但 v2 版本的资源配额方案名称可能不是使用的 ResQuotaPlan, 而是使用的 ProcessSpecPlan
         所以这里需要将其转化为云原生应用可识别的名称
         """
         if ResQuotaPlan.objects.filter(name=plan_name).exists():

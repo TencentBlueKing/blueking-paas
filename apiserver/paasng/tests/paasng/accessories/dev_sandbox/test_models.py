@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 import json
+from typing import Dict, List, cast
 
 import pytest
 
@@ -23,6 +24,14 @@ from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.sourcectl.models import VersionInfo
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
+
+
+def _env_vars_to_dicts(env_vars):
+    return [env_var.to_dict() for env_var in env_vars]
+
+
+def _env_vars_with_sensitive(env_vars: List[Dict[str, str]]):
+    return [{**cast(Dict[str, object], env_var), "is_sensitive": False} for env_var in env_vars]
 
 
 @pytest.fixture()
@@ -41,7 +50,7 @@ def dev_sandbox(bk_cnative_app, bk_module, bk_user) -> DevSandbox:
 class TestDevSandboxModelMethods:
     def test_list_env_vars_empty(self, dev_sandbox):
         """测试获取空环境变量列表"""
-        assert dev_sandbox.list_env_vars() == []
+        assert list(dev_sandbox.list_env_vars()) == []
 
     def test_list_env_vars_with_data(self, dev_sandbox):
         """测试获取有数据的环境变量列表"""
@@ -52,18 +61,21 @@ class TestDevSandboxModelMethods:
         dev_sandbox.env_vars = json.dumps(env_vars)
         dev_sandbox.save()
 
-        assert dev_sandbox.list_env_vars() == env_vars
+        expected = _env_vars_with_sensitive(env_vars)
+        assert _env_vars_to_dicts(dev_sandbox.list_env_vars()) == expected
 
     def test_upsert_env_vars_new(self, dev_sandbox):
         """测试新增环境变量"""
         # 初始环境变量为空
-        assert dev_sandbox.list_env_vars() == []
+        assert list(dev_sandbox.list_env_vars()) == []
 
         # 新增环境变量
         dev_sandbox.upsert_env_var(key="NEW_VAR", value="new_value")
 
         result = dev_sandbox.list_env_vars()
-        assert result == [{"key": "NEW_VAR", "value": "new_value", "source": "custom"}]
+        assert result.map["NEW_VAR"].value == "new_value"
+        assert result.map["NEW_VAR"].source == "custom"
+        assert result.map["NEW_VAR"].is_sensitive is False
 
     def test_upsert_env_vars_update(self, dev_sandbox):
         """测试更新环境变量"""
@@ -80,8 +92,10 @@ class TestDevSandboxModelMethods:
 
         result = dev_sandbox.list_env_vars()
         assert len(result) == 2
-        assert {"key": "EXISTING_VAR", "value": "updated_value", "source": "custom"} in result
-        assert {"key": "ANOTHER_VAR", "value": "value", "source": "custom"} in result
+        assert result.map["EXISTING_VAR"].value == "updated_value"
+        assert result.map["EXISTING_VAR"].source == "custom"
+        assert result.map["ANOTHER_VAR"].value == "value"
+        assert result.map["ANOTHER_VAR"].source == "custom"
 
     def test_delete_env_vars_existing(self, dev_sandbox):
         """测试删除存在的环境变量"""
@@ -98,9 +112,7 @@ class TestDevSandboxModelMethods:
         dev_sandbox.delete_env_var(key="VAR2")
 
         result = dev_sandbox.list_env_vars()
-        assert len(result) == 2
-        assert {"key": "VAR1", "value": "value1", "source": "custom"} in result
-        assert {"key": "VAR3", "value": "value3", "source": "custom"} in result
+        assert result.kv_map == {"VAR1": "value1", "VAR3": "value3"}
 
     def test_delete_env_vars_non_existing(self, dev_sandbox):
         """测试删除不存在的环境变量"""
@@ -116,10 +128,11 @@ class TestDevSandboxModelMethods:
         dev_sandbox.delete_env_var(key="NON_EXISTING")
 
         result = dev_sandbox.list_env_vars()
-        assert result == initial_vars
+        expected = _env_vars_with_sensitive(initial_vars)
+        assert _env_vars_to_dicts(result) == expected
 
     def test_upsert_env_vars_with_source(self, dev_sandbox):
-        """测试新增环境变量时覆盖来源为 custom"""
+        """测试更新环境变量时保留来源"""
         # 设置初始环境变量（包含不同来源）
         initial_vars = [
             {"key": "VAR1", "value": "value1", "source": "stag"},
@@ -134,23 +147,25 @@ class TestDevSandboxModelMethods:
 
         result = dev_sandbox.list_env_vars()
         assert len(result) == 2
-        assert {"key": "VAR1", "value": "updated_value", "source": "custom"} in result
-        assert {"key": "VAR2", "value": "updated_value", "source": "custom"} in result
+        assert result.map["VAR1"].value == "updated_value"
+        assert result.map["VAR1"].source == "stag"
+        assert result.map["VAR2"].value == "updated_value"
+        assert result.map["VAR2"].source == "custom"
 
     def test_delete_env_vars_empty(self, dev_sandbox):
         """测试在空环境变量上删除"""
         # 初始环境变量为空
-        assert dev_sandbox.list_env_vars() == []
+        assert list(dev_sandbox.list_env_vars()) == []
 
         # 删除环境变量
         dev_sandbox.delete_env_var(key="ANY_KEY")
 
-        assert dev_sandbox.list_env_vars() == []
+        assert list(dev_sandbox.list_env_vars()) == []
 
     def test_upsert_env_vars_multiple(self, dev_sandbox):
         """测试多次更新环境变量"""
         # 初始环境变量为空
-        assert dev_sandbox.list_env_vars() == []
+        assert list(dev_sandbox.list_env_vars()) == []
 
         # 多次更新环境变量
         dev_sandbox.upsert_env_var(key="VAR1", value="value1")
@@ -159,5 +174,7 @@ class TestDevSandboxModelMethods:
 
         result = dev_sandbox.list_env_vars()
         assert len(result) == 2
-        assert {"key": "VAR1", "value": "updated_value", "source": "custom"} in result
-        assert {"key": "VAR2", "value": "value2", "source": "custom"} in result
+        assert result.map["VAR1"].value == "updated_value"
+        assert result.map["VAR1"].source == "custom"
+        assert result.map["VAR2"].value == "value2"
+        assert result.map["VAR2"].source == "custom"

@@ -20,7 +20,7 @@ from typing import Dict, List
 from django.conf import settings
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource
-from paas_wl.bk_app.dev_sandbox.entities import DevSandboxEnvVar
+from paas_wl.bk_app.dev_sandbox.entities import DevSandboxEnvVar, DevSandboxEnvVarList, is_sensitive
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
@@ -34,7 +34,7 @@ from paasng.platform.engine.deploy.bg_build.utils import get_envs_from_pypi_url
 from paasng.platform.modules.models import Module
 
 
-def generate_env_vars(module: Module) -> List[DevSandboxEnvVar]:
+def generate_env_vars(module: Module) -> DevSandboxEnvVarList:
     envs = list_vars_builtin_app_basic(module.application).kv_map
     envs.update(
         {
@@ -57,7 +57,7 @@ def generate_env_vars(module: Module) -> List[DevSandboxEnvVar]:
     envs["DEV_SERVER_ADDR"] = f":{settings.DEV_SANDBOX_DEVSERVER_PORT}"
     envs["CORS_ALLOW_ORIGINS"] = settings.DEV_SANDBOX_CORS_ALLOW_ORIGINS
 
-    return [DevSandboxEnvVar(key=key, value=value, source=DevSandboxEnvVarSource.STAG) for key, value in envs.items()]
+    return DevSandboxEnvVarList.from_kv_map(envs, DevSandboxEnvVarSource.STAG)
 
 
 def _buildpacks_as_build_env(buildpacks: List[Dict]) -> str:
@@ -81,32 +81,25 @@ def _buildpacks_as_build_env(buildpacks: List[Dict]) -> str:
 
 def get_env_vars_selected_addons(
     env: ModuleEnvironment, selected_addons_service_names: List[str] | None
-) -> List[DevSandboxEnvVar]:
+) -> DevSandboxEnvVarList:
     """Get environment variables including selected addon services.
 
     :param env: The module environment to read from.
     :param selected_addons_service_names: list of selected addons service.
     """
     _base_vars = UnifiedEnvVarsReader(env).get_kv_map(exclude_sources=[EnvVarSource.BUILTIN_ADDONS])
-    base_vars = [
-        DevSandboxEnvVar(
-            key=key,
-            value=value,
-            source=DevSandboxEnvVarSource.STAG,
-        )
-        for key, value in _base_vars.items()
-    ]
+    base_vars = DevSandboxEnvVarList.from_kv_map(_base_vars, DevSandboxEnvVarSource.STAG)
 
     addon_vars = list_vars_builtin_addons_custom(env, selected_addons_service_names)
 
     # 如果有相同的 key, addon_vars 因为后遍历到， 所以会覆盖 base_vars 中的值
-    result = {item.key: item for item in (base_vars + addon_vars)}
-    return list(result.values())
+    result = {item.key: item for item in (list(base_vars) + list(addon_vars))}
+    return DevSandboxEnvVarList(list(result.values()))
 
 
 def list_vars_builtin_addons_custom(
     env: ModuleEnvironment, selected_addons_service_names: List[str] | None
-) -> List[DevSandboxEnvVar]:
+) -> DevSandboxEnvVarList:
     """Retrieve environment variables for specified addon services.
 
     :param env: The module environment to read from.
@@ -119,19 +112,21 @@ def list_vars_builtin_addons_custom(
     if selected_addons_service_names is not None:
         var_groups = [group for group in var_groups if group.service.name in selected_addons_service_names]
 
-    sensitive_fields = {
-        field
-        for group in var_groups
-        for field in (group.should_hidden_fields or []) + (group.should_remove_fields or [])
-    }
+    env_vars: list[DevSandboxEnvVar] = []
 
-    return [
-        DevSandboxEnvVar(
-            key=key,
-            value=value,
-            source=DevSandboxEnvVarSource.STAG,
-            sensitive=key in sensitive_fields,
-        )
-        for group in var_groups
-        for key, value in group.data.items()
-    ]
+    for var_group in var_groups:
+        hidden = var_group.should_hidden_fields or []
+        removed = var_group.should_remove_fields or []
+
+        sensitive_keys = set(hidden) | set(removed)
+        for key, value in var_group.data.items():
+            env_vars.append(
+                DevSandboxEnvVar(
+                    key=key,
+                    value=value,
+                    source=DevSandboxEnvVarSource.STAG,
+                    is_sensitive=is_sensitive(key, sensitive_keys),
+                )
+            )
+
+    return DevSandboxEnvVarList(env_vars)

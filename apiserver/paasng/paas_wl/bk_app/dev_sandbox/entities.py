@@ -15,14 +15,16 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from typing import Dict, List
+from collections import UserList
+from typing import Collection, Dict, List
 
 from attrs import asdict, define, field
-from django.conf import settings
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource, SourceCodeFetchMethod
 from paas_wl.workloads.release_controller.constants import ImagePullPolicy
 from paasng.utils.masked_curlify import MASKED_CONTENT
+
+from .constants import DEV_SANDBOX_SENSITIVE_ENV_VARS
 
 
 @define
@@ -116,20 +118,16 @@ class CodeEditorConfig:
 class DevSandboxEnvVar:
     """
     开发沙箱环境变量
-    key 在 settings.DEV_SANDBOX_SENSITIVE_ENV_VARS 中时， sensitive 会被强制初始化为 True
+    is_sensitive 需要由创建方显式传入，可用 is_sensitive() 帮助方法统一判断逻辑
     """
 
     key: str
     value: str
     source: DevSandboxEnvVarSource
-    sensitive: bool = False
-
-    def __attrs_post_init__(self):
-        self.sensitive = self.sensitive or self.key in settings.DEV_SANDBOX_SENSITIVE_ENV_VARS
+    is_sensitive: bool = False
 
     def to_dict(self):
         data = asdict(self)
-        data.update({"sensitive": self.sensitive})
         return data
 
     def to_masked_dict(self):
@@ -137,12 +135,54 @@ class DevSandboxEnvVar:
         返回屏蔽敏感信息的字典表示， 可用于 API 输出或日志
         """
         data = self.to_dict()
-        if self.sensitive:
+        if self.is_sensitive:
             data["value"] = MASKED_CONTENT
         return data
 
     def __repr__(self):
         return (
-            f"DevSandboxEnvVar(key={self.key}, value={MASKED_CONTENT if self.sensitive else self.value},"
-            + f" source={self.source}, sensitive={self.sensitive})"
+            f"DevSandboxEnvVar(key={self.key}, value={MASKED_CONTENT if self.is_sensitive else self.value},"
+            + f" source={self.source}, sensitive={self.is_sensitive})"
+        )
+
+
+def is_sensitive(key: str, to_check: Collection[str] | None = None) -> bool:
+    """判断环境变量是否敏感，优先检查显式名单并包含系统内置敏感列表。"""
+    if to_check and key in to_check:
+        return True
+    return key in DEV_SANDBOX_SENSITIVE_ENV_VARS
+
+
+class DevSandboxEnvVarList(UserList):
+    """A list of DevSandboxEnvVar."""
+
+    @property
+    def map(self) -> Dict[str, DevSandboxEnvVar]:
+        return {item.key: item for item in self}
+
+    @property
+    def kv_map(self) -> Dict[str, str]:
+        return {item.key: item.value for item in self}
+
+    @property
+    def masked_list(self) -> List[Dict[str, str]]:
+        return [item.to_masked_dict() for item in self]
+
+    @classmethod
+    def from_kv_map(
+        cls,
+        kv_map: Dict[str, str],
+        source: DevSandboxEnvVarSource,
+        sensitive_fields: Collection[str] | None = None,
+    ) -> "DevSandboxEnvVarList":
+        return cls(
+            [
+                DevSandboxEnvVar(
+                    key=key,
+                    value=value,
+                    source=source,
+                    is_sensitive=is_sensitive(key, sensitive_fields),
+                )
+                for key, value in kv_map.items()
+            ]
         )

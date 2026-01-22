@@ -58,6 +58,7 @@
             <standart-log v-if="tabActive === 'stream'" />
           </bk-tab-panel>
           <bk-tab-panel
+            v-if="!isSubPathEnv"
             name="access"
             :label="$t('访问日志')"
           >
@@ -104,6 +105,10 @@ export default {
     categoryText() {
       return this.isCloudNativeApp ? '云原生应用' : '普通应用';
     },
+    // 是否为子路径部署环境
+    isSubPathEnv() {
+      return (window.BK_SITE_PATH || '/') !== '/' || (window.BK_STATIC_URL || '/') !== '/';
+    },
   },
   watch: {
     tabActive() {
@@ -123,7 +128,8 @@ export default {
     // 存在query参数的情况
     const tabActiveName = this.$route.query.tab;
     if (tabActiveName) {
-      const tabNameList = ['stream', 'access', 'structured'];
+      // 子路径模式下排除 access tab
+      const tabNameList = this.isSubPathEnv ? ['stream', 'structured'] : ['stream', 'access', 'structured'];
       this.tabActive = tabNameList.includes(tabActiveName) ? tabActiveName : 'structured';
     }
     setTimeout(() => {

@@ -147,7 +147,12 @@ class DevSandboxEnvVar:
 
 
 def is_sensitive(key: str, to_check: Collection[str] | None = None) -> bool:
-    """判断环境变量是否敏感，优先检查显式名单并包含系统内置敏感列表。"""
+    """
+    检查key是否为敏感字段: key 是否存在于 DEV_SANDBOX_SENSITIVE_ENV_VARS 和 to_check 中
+
+    :param key: 需要检查的字段名
+    :param to_check: 额外指定的敏感字段集合
+    """
     if to_check and key in to_check:
         return True
     return key in DEV_SANDBOX_SENSITIVE_ENV_VARS

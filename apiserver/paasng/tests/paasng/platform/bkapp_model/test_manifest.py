@@ -36,6 +36,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
 from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
+from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.core.resource import generate_bkapp_name
 from paasng.accessories.servicehub.binding_policy.manager import SvcBindingPolicyManager
 from paasng.accessories.servicehub.manager import mixed_service_mgr
@@ -63,6 +64,7 @@ from paasng.platform.bkapp_model.models import (
     ModuleProcessSpec,
     ObservabilityConfig,
     ProcessSpecEnvOverlay,
+    ResQuotaPlan,
     SvcDiscConfig,
 )
 from paasng.platform.declarative.deployment.controller import DeploymentDescription
@@ -337,6 +339,42 @@ class TestProcessesManifestConstructor:
                 "version": "v1",
             },
         ]
+
+    @pytest.mark.parametrize(
+        ("plan_name", "expected"),
+        [
+            # Case 1: plan_name (4C2G) exists in ResQuotaPlan, return it directly
+            ("4C2G", "4C2G"),
+            # Case 2: plan_name (4C2G5R) exists in ProcessSpecPlan, return mapped name (4C2G)
+            ("4C2G5R", "4C2G"),
+            # Case 3: plan_name not found, return default
+            ("non-existent-plan", "default"),
+        ],
+    )
+    def test_sanitize_plan_name(self, plan_name, expected):
+        """Test _sanitize_plan_name with database operations."""
+        # Create or get ResQuotaPlan in database to avoid duplicate key error
+        ResQuotaPlan.objects.get_or_create(
+            name="4C2G",
+            defaults={
+                "limits": {"cpu": "4000m", "memory": "2048Mi"},
+                "requests": {"cpu": "200m", "memory": "1024Mi"},
+            },
+        )
+
+        # Create or get ProcessSpecPlan in database (4C2G5R maps to 2Gi memory)
+        ProcessSpecPlan.objects.get_or_create(
+            name="4C2G5R",
+            defaults={
+                "max_replicas": 5,
+                "limits": {"memory": "2048Mi", "cpu": "4000m"},
+                "requests": {"memory": "1024Mi", "cpu": "200m"},
+            },
+        )
+
+        constructor = ProcessesManifestConstructor()
+        result = constructor._sanitize_plan_name(plan_name)
+        assert result == expected
 
 
 class TestMountsManifestConstructor:

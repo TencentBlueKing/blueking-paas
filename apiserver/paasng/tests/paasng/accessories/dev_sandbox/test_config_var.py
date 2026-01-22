@@ -100,7 +100,7 @@ class TestGetEnvVarsSelectedAddons:
         if not DEV_SANDBOX_SENSITIVE_ENV_VARS:
             pytest.skip()
 
-        sensitive_key = DEV_SANDBOX_SENSITIVE_ENV_VARS.pop()
+        sensitive_key = next(iter(DEV_SANDBOX_SENSITIVE_ENV_VARS))
         mock_service = ServiceObj(uuid="mock-service", name="mock-service", logo="", is_visible=True)
         var_group = EnvVariableGroup(
             service=mock_service,

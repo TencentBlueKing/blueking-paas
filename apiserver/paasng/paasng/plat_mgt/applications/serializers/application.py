@@ -78,9 +78,9 @@ class ApplicationListOutputSLZ(serializers.Serializer):
         """获取应用部署状态"""
         if not instance.has_deployed:
             return AppStatus.NOT_DEPLOYED
-        if instance.is_active:
-            return AppStatus.NORMAL
-        return AppStatus.OFFLINE
+        if not instance.is_active:
+            return AppStatus.OFFLINE
+        return AppStatus.NORMAL
 
 
 class ApplicationListFilterInputSLZ(serializers.Serializer):

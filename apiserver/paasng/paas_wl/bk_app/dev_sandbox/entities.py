@@ -126,11 +126,11 @@ class DevSandboxEnvVar:
     source: DevSandboxEnvVarSource
     is_sensitive: bool = False
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, str]:
         data = asdict(self)
         return data
 
-    def to_masked_dict(self):
+    def to_masked_dict(self) -> Dict[str, str]:
         """
         返回屏蔽敏感信息的字典表示， 可用于 API 输出或日志
         """
@@ -166,12 +166,16 @@ class DevSandboxEnvVarList(UserList):
         return {item.key: item for item in self}
 
     @property
-    def kv_map(self) -> Dict[str, str]:
+    def kv_map(self):
         return {item.key: item.value for item in self}
 
     @property
-    def masked_list(self) -> List[Dict[str, str]]:
+    def masked_list(self):
         return [item.to_masked_dict() for item in self]
+
+    @property
+    def list(self):
+        return [item.to_dict() for item in self]
 
     @classmethod
     def from_kv_map(

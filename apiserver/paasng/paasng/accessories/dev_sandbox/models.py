@@ -27,7 +27,7 @@ from django.utils import timezone
 from django.utils.crypto import get_random_string
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource
-from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, DevSandboxEnvVar
+from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, DevSandboxEnvVar, DevSandboxEnvVarList
 from paas_wl.utils.models import BkUserField
 from paasng.accessories.dev_sandbox.utils import generate_password
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -124,17 +124,20 @@ class DevSandbox(OwnerTimestampedModel):
         self.expired_at = timezone.now() + DEV_SANDBOX_DEFAULT_EXPIRED_DURATION
         self.save(update_fields=["expired_at", "updated"])
 
-    def list_env_vars(self) -> List[DevSandboxEnvVar]:
+    def list_env_vars(self) -> DevSandboxEnvVarList:
         """获取沙箱环境变量"""
-        return [
-            DevSandboxEnvVar(
-                key=env_var["key"],
-                value=env_var["value"],
-                source=env_var["source"],
-                sensitive=env_var.get("sensitive", False),
-            )
-            for env_var in json.loads(self.env_vars)
-        ]
+        return DevSandboxEnvVarList(
+            [
+                DevSandboxEnvVar(
+                    key=env_var["key"],
+                    value=env_var["value"],
+                    source=env_var["source"],
+                    # get 兼容存量数据
+                    is_sensitive=env_var.get("is_sensitive", False),
+                )
+                for env_var in json.loads(self.env_vars)
+            ]
+        )
 
     def upsert_env_var(self, key: str, value: str):
         """更新或新增单个环境变量"""

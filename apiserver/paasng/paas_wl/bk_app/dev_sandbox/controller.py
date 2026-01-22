@@ -30,7 +30,7 @@ from paas_wl.bk_app.dev_sandbox.conf import (
     DEV_SANDBOX_WORKSPACE,
     DEV_SERVER_NETWORK_CONFIG,
 )
-from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, DevSandboxEnvVar, Runtime, SourceCodeConfig
+from paas_wl.bk_app.dev_sandbox.entities import CodeEditorConfig, Runtime, SourceCodeConfig
 from paas_wl.bk_app.dev_sandbox.exceptions import (
     BuilderDoesNotSupportDevSandbox,
     DevSandboxAlreadyExists,
@@ -52,6 +52,7 @@ from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleN
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 
 if TYPE_CHECKING:
+    from paas_wl.bk_app.dev_sandbox.entities import DevSandboxEnvVarList
     from paasng.accessories.dev_sandbox.models import DevSandbox as DevSandboxModel
 
 logger = logging.getLogger(__name__)
@@ -99,7 +100,7 @@ class DevSandboxController:
 
     def deploy(
         self,
-        envs: list[DevSandboxEnvVar],
+        envs: "DevSandboxEnvVarList",
         source_code_cfg: SourceCodeConfig,
         code_editor_cfg: CodeEditorConfig | None = None,
     ):
@@ -110,12 +111,11 @@ class DevSandboxController:
         :param code_editor_cfg: 代码编辑器配置
         """
         sandbox_name = get_dev_sandbox_name(self.wl_app)
-        env_var_kv_dict = {env.key: env.value for env in envs}
 
         try:
             self.sandbox_mgr.get(self.wl_app, sandbox_name)
         except AppEntityNotFound:
-            self._deploy(env_var_kv_dict, source_code_cfg, code_editor_cfg)
+            self._deploy(envs.kv_map, source_code_cfg, code_editor_cfg)
         else:
             raise DevSandboxAlreadyExists(f"dev sandbox {sandbox_name} already exists")
 

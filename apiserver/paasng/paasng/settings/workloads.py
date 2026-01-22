@@ -109,9 +109,6 @@ DEV_SANDBOX_CODE_EDITOR_PORT = settings.get("DEV_SANDBOX_CODE_EDITOR_PORT", 8080
 # 沙箱部署集群，若不配置则使用默认集群
 DEV_SANDBOX_CLUSTER = settings.get("DEV_SANDBOX_CLUSTER", "")
 
-# 沙箱环境变量 - 指定敏感环境变量key, 会脱敏返回给前端
-DEV_SANDBOX_SENSITIVE_ENV_VARS = settings.get("DEV_SANDBOX_SENSITIVE_ENV_VARS", ["BKPAAS_APP_SECRET"])
-
 # ---------------
 # 资源命名配置
 # ---------------

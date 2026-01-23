@@ -67,7 +67,8 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 if overlay:
                     env_overlays[env_name] = {
                         "plan_name": overlay.plan_name,
-                        "override_proc_res": overlay.override_proc_res,
+                        "override_plan_name": overlay.override_plan_name,
+                        "override_resources": overlay.override_resources,
                     }
             processes.append(
                 {
@@ -121,7 +122,10 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         before_env_overlays = {}
         for env_name in requested_overlays:
             overlay = env_overlays_map.get(env_name)
-            before_env_overlays[env_name] = {"override_proc_res": overlay.override_proc_res if overlay else None}
+            before_env_overlays[env_name] = {
+                "override_plan_name": overlay.override_plan_name if overlay else None,
+                "override_resources": overlay.override_resources if overlay else None,
+            }
 
         # 批量更新
         overlays_to_update = []
@@ -138,7 +142,8 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 overlays_to_create.append(env_overlay)
 
             # 更新配置
-            env_overlay.override_proc_res = overlay_data["override_proc_res"]
+            env_overlay.override_plan_name = overlay_data["override_plan_name"]
+            env_overlay.override_resources = overlay_data["override_resources"]
 
             env_overlay.updated = timezone.now()
             if env_overlay.pk:
@@ -151,7 +156,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         if overlays_to_update:
             ProcessSpecEnvOverlay.objects.bulk_update(
                 overlays_to_update,
-                fields=["override_proc_res", "updated"],
+                fields=["override_plan_name", "override_resources", "updated"],
             )
 
         # 记录审计日志

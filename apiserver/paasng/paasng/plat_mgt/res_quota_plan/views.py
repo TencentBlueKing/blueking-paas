@@ -19,6 +19,8 @@ from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -36,6 +38,7 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
     """资源配额方案管理"""
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
+    pagination_class = LimitOffsetPagination
 
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],
@@ -119,9 +122,29 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
     def destroy(self, request, pk):
         """删除资源配额方案"""
 
-        # TODO: 删除暂不支持, 后续需要删除时需要确认有哪些应用引用了这些方案
-        # 如果有引用的应用, 则不允许删除
-        return Response({"detail": _("删除资源配额方案功能暂不支持")}, status=status.HTTP_400_BAD_REQUEST)
+        plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
+        if plan_obj.is_builtin:
+            raise PermissionDenied(_("系统内置方案不允许删除"))
+
+        if references := plan_obj.get_references():
+            raise ValidationError(
+                {
+                    "message": _("该方案已被应用进程引用, 无法删除"),
+                    "references": references,
+                }
+            )
+
+        data_before = ResQuotaPlanOutputSLZ(plan_obj).data
+        plan_obj.delete()
+
+        add_plat_mgt_audit_record(
+            user=request.user,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.PROCESS_SPEC_PLAN,
+            data_before=DataDetail(data=data_before),
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],

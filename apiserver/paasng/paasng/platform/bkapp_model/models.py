@@ -24,6 +24,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
+from paas_wl.bk_app.processes.constants import ProcessTargetStatus
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -62,6 +63,68 @@ class ResQuotaPlan(TimestampedModel):
 
     class Meta:
         ordering = ["created"]
+
+    def has_references(self) -> bool:
+        """检查该配额方案是否被应用引用"""
+
+        # plan_name 出现在任何一个地方, 就认为是有引用
+        # NOTE: 只要 plan_name 存在于任一配置记录中即视为有引用, 即使该配置已被环境级别的其他方案覆盖
+        return (
+            ModuleProcessSpec.objects.filter(plan_name=self.name).exists()
+            or ProcessSpecEnvOverlay.objects.filter(
+                models.Q(plan_name=self.name) | models.Q(override_plan_name=self.name)
+            ).exists()
+        )
+
+    def get_references(self) -> list[dict]:
+        """获取引用该配额方案的所有进程定义列表"""
+
+        result = []
+        # TODO: 优化查询性能
+        for overlay in ProcessSpecEnvOverlay.objects.filter(
+            models.Q(plan_name=self.name) | models.Q(override_plan_name=self.name)
+        ).select_related("proc_spec__module__application"):
+            spec = overlay.proc_spec
+            if overlay.override_plan_name is not None and overlay.override_plan_name != self.name:
+                continue
+
+            result.append(
+                {
+                    "app_code": spec.module.application.code,
+                    "module_name": spec.module.name,
+                    "env_name": overlay.environment_name,
+                    "process_name": spec.name,
+                    "source": "env_overlay" if overlay.plan_name is None else "admin_override",
+                    "status": ProcessTargetStatus.START.value
+                    if overlay.target_replicas != 0
+                    else ProcessTargetStatus.STOP.value,
+                }
+            )
+
+        for spec in ModuleProcessSpec.objects.filter(plan_name=self.name).select_related("module__application"):
+            module = spec.module
+            for env in module.envs.all():
+                has_override = ProcessSpecEnvOverlay.objects.filter(
+                    proc_spec=spec,
+                    environment_name=env.environment,
+                    plan_name__isnull=False,  # 有 plan_name 覆盖
+                ).exists()
+
+                if not has_override:
+                    result.append(
+                        {
+                            "app_code": module.application.code,
+                            "module_name": module.name,
+                            "env_name": env.environment,
+                            "process_name": spec.name,
+                            "source": "module_spec",
+                            "status": ProcessTargetStatus.START.value
+                            if spec.target_replicas != 0
+                            else ProcessTargetStatus.STOP.value,
+                        }
+                    )
+
+        return result
 
 
 def env_overlay_getter_factory(field_name: str):

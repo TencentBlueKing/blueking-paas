@@ -69,10 +69,11 @@ class ApplicationFilterBackend(BaseFilterBackend):
             queryset = queryset.filter(extra_info__tag_id=category)
 
         # 处理排序
-        # -is_active 始终用于第一排序，确保非活跃应用排在最后
-        order_fields = ["-is_active"]
+        # 仅在未指定 app_status 时才按 -is_active 排序
+        order_fields = ["-is_active"] if params.get("app_status") is None else []
         if order_by := params.get("order_by"):
             order_fields.extend(order_by)
-        queryset = queryset.order_by(*order_fields)
+        if order_fields:
+            queryset = queryset.order_by(*order_fields)
 
         return queryset

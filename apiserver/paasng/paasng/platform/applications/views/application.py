@@ -86,6 +86,11 @@ class ApplicationListViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         params = serializer.data
 
+        # 仅在未指定 app_status 时才按 -is_active 排序
+        order_fields = ["-is_active"] if params.get("app_status") is None else []
+        if order_by := params.get("order_by"):
+            order_fields.append(order_by)
+
         # Get applications by given params
         applications = UserApplicationFilter(request.user).filter(
             app_status=params.get("app_status"),
@@ -94,8 +99,7 @@ class ApplicationListViewSet(viewsets.ViewSet):
             search_term=params.get("search_term"),
             source_origin=params.get("source_origin"),
             type_=params.get("type"),
-            # 已下架的应用默认展示在最末尾
-            order_by=["-is_active", params.get("order_by")],
+            order_by=order_fields,
             app_tenant_mode=params.get("app_tenant_mode"),
         )
 

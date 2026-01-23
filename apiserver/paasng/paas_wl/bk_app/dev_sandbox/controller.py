@@ -52,7 +52,6 @@ from paasng.platform.modules.constants import DEFAULT_ENGINE_APP_PREFIX, ModuleN
 from paasng.platform.modules.helpers import ModuleRuntimeManager
 
 if TYPE_CHECKING:
-    from paas_wl.bk_app.dev_sandbox.entities import DevSandboxEnvVarList
     from paasng.accessories.dev_sandbox.models import DevSandbox as DevSandboxModel
 
 logger = logging.getLogger(__name__)
@@ -100,7 +99,7 @@ class DevSandboxController:
 
     def deploy(
         self,
-        envs: "DevSandboxEnvVarList",
+        envs: Dict[str, str],
         source_code_cfg: SourceCodeConfig,
         code_editor_cfg: CodeEditorConfig | None = None,
     ):
@@ -115,7 +114,7 @@ class DevSandboxController:
         try:
             self.sandbox_mgr.get(self.wl_app, sandbox_name)
         except AppEntityNotFound:
-            self._deploy(envs.kv_map, source_code_cfg, code_editor_cfg)
+            self._deploy(envs, source_code_cfg, code_editor_cfg)
         else:
             raise DevSandboxAlreadyExists(f"dev sandbox {sandbox_name} already exists")
 

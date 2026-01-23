@@ -142,7 +142,7 @@ class DevSandboxViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         # 下发沙箱 k8s 资源
         try:
             DevSandboxController(dev_sandbox).deploy(
-                envs=env_vars,
+                envs=env_vars.kv_map,
                 source_code_cfg=source_code_cfg,
                 code_editor_cfg=dev_sandbox.code_editor_config,
             )

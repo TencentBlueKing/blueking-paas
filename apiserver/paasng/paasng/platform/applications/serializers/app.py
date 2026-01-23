@@ -222,6 +222,7 @@ class ApplicationSLZ(serializers.ModelSerializer):
     config_info = serializers.DictField(read_only=True, help_text="应用的额外状态信息")
     modules = serializers.SerializerMethodField(help_text="应用各模块信息列表")
     extra_info = AppExtraInfoOutputSLZ(help_text="应用额外信息", read_only=True, allow_null=True)
+    app_status = serializers.CharField(read_only=True, help_text="应用状态")
     creator = UserNameField()
     owner = UserNameField()
 

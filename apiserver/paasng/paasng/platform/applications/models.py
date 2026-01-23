@@ -380,6 +380,15 @@ class Application(OwnerTimestampedModel):
         return bool(self.last_deployed_date)
 
     @property
+    def app_status(self) -> "AppStatus":
+        """Get the application status based on deployment and active state"""
+        if not self.last_deployed_date:
+            return AppStatus.NOT_DEPLOYED
+        if not self.is_active:
+            return AppStatus.OFFLINE
+        return AppStatus.NORMAL
+
+    @property
     def config_info(self) -> Dict:
         """获取应用配置信息
 

@@ -78,13 +78,19 @@ class ResQuotaPlan(TimestampedModel):
 
     def get_references(self) -> list[dict]:
         """获取引用该配额方案的所有进程定义列表"""
-
         result = []
-        # TODO: 优化查询性能
-        for overlay in ProcessSpecEnvOverlay.objects.filter(
+
+        # 1. 查询所有相关的 overlay 记录, 使用 select_related 预加载关联数据
+        overlays = ProcessSpecEnvOverlay.objects.filter(
             models.Q(plan_name=self.name) | models.Q(override_plan_name=self.name)
-        ).select_related("proc_spec__module__application"):
+        ).select_related("proc_spec__module__application")
+        # 构建一个集合, 用于快速判断某个 (proc_spec_id, environment_name) 是否存在 overlay 记录
+        overlay_with_plan_name: set[tuple[int, str]] = set()
+        for overlay in overlays:
             spec = overlay.proc_spec
+            if overlay.plan_name is not None:
+                overlay_with_plan_name.add((spec.id, overlay.environment_name))
+
             if overlay.override_plan_name is not None and overlay.override_plan_name != self.name:
                 continue
 
@@ -101,14 +107,28 @@ class ResQuotaPlan(TimestampedModel):
                 }
             )
 
-        for spec in ModuleProcessSpec.objects.filter(plan_name=self.name).select_related("module__application"):
+        # 2. 查询使用该方案的 ModuleProcessSpec 记录, 使用 prefetch_related 预加载关联数据
+        specs = (
+            ModuleProcessSpec.objects.filter(plan_name=self.name)
+            .select_related("module__application")
+            .prefetch_related("module__envs")
+        )
+
+        # 补充查询: 获取这些 spec 相关的所有有 plan_name 的 overlay
+        spec_ids = [spec.id for spec in specs]
+        if spec_ids:
+            additional_overlays = ProcessSpecEnvOverlay.objects.filter(
+                proc_spec_id__in=spec_ids,
+                plan_name__isnull=False,
+            ).values_list("proc_spec_id", "environment_name")
+
+            for proc_spec_id, environment_name in additional_overlays:
+                overlay_with_plan_name.add((proc_spec_id, environment_name))
+
+        for spec in specs:
             module = spec.module
             for env in module.envs.all():
-                has_override = ProcessSpecEnvOverlay.objects.filter(
-                    proc_spec=spec,
-                    environment_name=env.environment,
-                    plan_name__isnull=False,  # 有 plan_name 覆盖
-                ).exists()
+                has_override = (spec.id, env.environment) in overlay_with_plan_name
 
                 if not has_override:
                     result.append(

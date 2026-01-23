@@ -86,7 +86,7 @@ class ApplicationListOutputSLZ(serializers.Serializer):
 class ApplicationListFilterInputSLZ(serializers.Serializer):
     """应用列表过滤器序列化器"""
 
-    valid_order_by_fields = {"created", "updated"}
+    valid_order_by_fields = {"created", "updated", "is_active"}
 
     search = serializers.CharField(required=False, help_text="应用名称/ID 关键字搜索")
     name = serializers.CharField(required=False, help_text="应用名称")

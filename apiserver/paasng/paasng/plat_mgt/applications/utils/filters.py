@@ -70,8 +70,9 @@ class ApplicationFilterBackend(BaseFilterBackend):
 
         # 处理排序
         # -is_active 始终用于第一排序，确保非活跃应用排在最后
-        queryset = queryset.order_by("-is_active")
+        order_fields = ["-is_active"]
         if order_by := params.get("order_by"):
-            queryset = queryset.order_by(*order_by)
+            order_fields.extend(order_by)
+        queryset = queryset.order_by(*order_fields)
 
         return queryset

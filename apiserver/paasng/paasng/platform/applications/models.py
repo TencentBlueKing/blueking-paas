@@ -132,12 +132,17 @@ class ApplicationQuerySet(models.QuerySet):
 
     def filter_by_app_status(self, app_status: AppStatus) -> QuerySet:
         """Filter applications by app status"""
+        # 外链应用永远是 normal 状态
         if app_status == AppStatus.NOT_DEPLOYED:
-            return self.filter(last_deployed_date__isnull=True)
+            return self.filter(last_deployed_date__isnull=True).exclude(type=ApplicationType.ENGINELESS_APP)
         if app_status == AppStatus.NORMAL:
-            return self.filter(last_deployed_date__isnull=False, is_active=True)
+            return self.filter(
+                Q(type=ApplicationType.ENGINELESS_APP) | Q(last_deployed_date__isnull=False, is_active=True)
+            )
         if app_status == AppStatus.OFFLINE:
-            return self.filter(last_deployed_date__isnull=False, is_active=False)
+            return self.filter(last_deployed_date__isnull=False, is_active=False).exclude(
+                type=ApplicationType.ENGINELESS_APP
+            )
         return self
 
 
@@ -382,6 +387,10 @@ class Application(OwnerTimestampedModel):
     @property
     def app_status(self) -> "AppStatus":
         """Get the application status based on deployment and active state"""
+        # 外链应用不需要部署, 永远为正常
+        if self.type == ApplicationType.ENGINELESS_APP:
+            return AppStatus.NORMAL
+
         if not self.last_deployed_date:
             return AppStatus.NOT_DEPLOYED
         if not self.is_active:

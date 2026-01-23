@@ -76,6 +76,10 @@ class ApplicationListOutputSLZ(serializers.Serializer):
 
     def get_app_status(self, instance: Application) -> str:
         """获取应用部署状态"""
+        # 外链应用不需要部署, 永远为正常
+        if instance.type == ApplicationType.ENGINELESS_APP:
+            return AppStatus.NORMAL
+
         if not instance.has_deployed:
             return AppStatus.NOT_DEPLOYED
         if not instance.is_active:

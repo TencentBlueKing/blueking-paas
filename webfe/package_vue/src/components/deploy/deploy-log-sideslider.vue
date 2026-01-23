@@ -10,11 +10,22 @@
       slot="header"
       class="deploy-header"
     >
-      <div style="float: left;">
-        {{ historySideslider.title }}
+      <div style="float: left">
+        <template v-if="isMultiTenantDisplayMode">
+          <span>{{ historySideslider.titlePrefix }}</span>
+          <bk-user-display-name :user-id="historySideslider.operator"></bk-user-display-name>
+          <span>{{ historySideslider.titleSuffix }}</span>
+        </template>
+        <span v-else>{{ historySideslider.title }}</span>
       </div>
-      <div style="float: right;">
-        <bk-button class="mr10" size="small" @click="handleExportLog">{{ $t('下载日志') }}</bk-button>
+      <div style="float: right">
+        <bk-button
+          class="mr10"
+          size="small"
+          @click="handleExportLog"
+        >
+          {{ $t('下载日志') }}
+        </bk-button>
       </div>
     </div>
     <div
@@ -72,7 +83,9 @@
   </bk-sideslider>
 </template>
 
-<script>import deployTimeline from './deploy-timeline';
+<script>
+import deployTimeline from './deploy-timeline';
+import { mapGetters } from 'vuex';
 
 export default {
   components: {
@@ -98,6 +111,9 @@ export default {
       timeLineList: [],
       historySideslider: {
         title: '',
+        titlePrefix: '',
+        titleSuffix: '',
+        operator: '',
         isShow: false,
       },
       errorTips: {},
@@ -109,6 +125,7 @@ export default {
     isMatchedSolutionsFound() {
       return this.errorTips.matched_solutions_found;
     },
+    ...mapGetters(['isMultiTenantDisplayMode']),
   },
 
   mounted() {
@@ -168,7 +185,8 @@ export default {
         return false;
       }
       this.isLogLoading = true;
-      this.logExportUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${params.moduleName || this.moduleId}/deployments/${params.deployment_id}/logs/export`;
+      const moduleId = params.moduleName || this.moduleId;
+      this.logExportUrl = `${BACKEND_URL}/api/bkapps/applications/${this.appCode}/modules/${moduleId}/deployments/${params.deployment_id}/logs/export`;
       try {
         const res = await this.$store.dispatch('deploy/getDeployLog', {
           appCode: this.appCode,
@@ -239,6 +257,60 @@ export default {
       return result;
     },
 
+    /**
+     * 构建环境显示文本
+     * @param {string} environment - 环境类型 (prod/stag)
+     * @returns {string} 环境显示文本
+     */
+    getEnvironmentText(environment) {
+      return environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境');
+    },
+
+    /**
+     * 构建日志标题信息
+     * @param {Object} params - 参数对象
+     * @param {string} params.moduleName - 模块名称
+     * @param {string} params.environment - 环境类型
+     * @param {string} params.operator - 操作者
+     * @param {string} params.time - 操作时间
+     * @param {string} params.logType - 日志类型 ('deploy' | 'offline')
+     * @returns {Object} 包含标题信息的对象
+     */
+    buildLogTitleInfo({ moduleName, environment, operator, time, logType }) {
+      const envText = this.getEnvironmentText(environment);
+
+      if (logType === 'offline') {
+        return {
+          title: `${moduleName} ${this.$t('模块')}${envText}${this.$t('下架日志')} (${operator}${this.$t(
+            '于'
+          )}${time}${this.$t('下架')})`,
+          titlePrefix: `${moduleName} ${this.$t('模块')}${envText}${this.$t('下架日志')} (`,
+          titleSuffix: `${this.$t('于')}${time}${this.$t('下架')})`,
+          operator,
+        };
+      } else {
+        return {
+          title: `${moduleName} ${this.$t('模块')}${envText}${this.$t('部署日志')} ${operator}${this.$t(
+            '于'
+          )}${time}${this.$t('部署')}`,
+          titlePrefix: `${moduleName} ${this.$t('模块')}${envText}${this.$t('部署日志')} `,
+          titleSuffix: `${this.$t('于')}${time}${this.$t('部署')}`,
+          operator,
+        };
+      }
+    },
+
+    /**
+     * 设置侧边栏标题
+     * @param {Object} titleInfo - 标题信息对象
+     */
+    setSidesliderTitle(titleInfo) {
+      this.historySideslider.title = titleInfo.title;
+      this.historySideslider.titlePrefix = titleInfo.titlePrefix;
+      this.historySideslider.titleSuffix = titleInfo.titleSuffix;
+      this.historySideslider.operator = titleInfo.operator;
+    },
+
     handleShowLog(row) {
       this.timeLineList = [];
       this.curDeployLog = '';
@@ -246,17 +318,22 @@ export default {
         return false;
       }
 
-      const operator = row.operator.username;
-      const time = row.created;
-      const moduleName = row.moduleName;
-      if (row.operation_type === 'offline') {
-        const title = `${moduleName}${this.$t(' 模块')}${row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')}${this.$t('下架日志')} (${operator}${this.$t('于')}${time}${this.$t('下架')}`;
-        this.historySideslider.title = title;
+      const { operator, created: time, moduleName, environment, operation_type } = row;
+
+      // 构建标题信息
+      const titleInfo = this.buildLogTitleInfo({
+        moduleName,
+        environment,
+        operator: operator.username,
+        time,
+        logType: operation_type,
+      });
+
+      this.setSidesliderTitle(titleInfo);
+
+      if (operation_type === 'offline') {
         this.curDeployLog = row.logDetail;
       } else {
-        this.historySideslider.title = `${moduleName}${this.$t(' 模块')}${
-          row.environment === 'prod' ? this.$t('生产环境') : this.$t('预发布环境')
-        }${this.$t('部署日志')} ${operator}${this.$t('于')}${time}${this.$t('部署')}`;
         this.getDeployTimeline(row);
         this.getDeployLog(row);
       }
@@ -282,8 +359,8 @@ export default {
     },
 
     handleExportLog() {
-      window.open(this.logExportUrl, '_blank')
-    }
+      window.open(this.logExportUrl, '_blank');
+    },
   },
 };
 </script>

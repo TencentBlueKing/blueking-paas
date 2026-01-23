@@ -17,7 +17,7 @@
 
 import pytest
 
-from paasng.utils.dictx import get_items
+from paasng.utils.dictx import exist_key, get_items, set_items
 
 
 @pytest.mark.parametrize(
@@ -49,3 +49,50 @@ def test_get_items(obj, paths, default, expected):
 def test_get_items_exceptions(obj, paths, default):
     with pytest.raises(TypeError):
         get_items(obj, paths, default)  # type: ignore
+
+
+@pytest.mark.parametrize(
+    ("obj", "paths", "value"),
+    [
+        ({"a": {"b": {"c": 1}}}, "a.b.c", 2),
+        ({"a": {"b": {"c": 1}}}, ".a.b.c", 3),
+        ({"a": {"b": {"c": 1}}}, ["a", "b", "c"], 4),
+        ({"a": {"b": {"c": None}}}, "a.b.c", 1),
+        ({"a": {"b": {}}, "c": 2}, "c", 3),
+        ({"a": {"b": {}}, "c": 2}, "d", 4),
+        ({}, "a", 1),
+    ],
+)
+def test_set_items(obj, paths, value):
+    set_items(obj, paths, value)
+    assert get_items(obj, paths) == value
+
+
+@pytest.mark.parametrize(
+    ("obj", "paths", "value"),
+    [
+        (None, "a.b.c", 2),
+        (None, ["a", "b", "c"], 3),
+        (1, "a", 1),
+    ],
+)
+def test_set_items_exceptions(obj, paths, value):
+    with pytest.raises(TypeError):
+        set_items(obj, paths, value)  # type: ignore
+
+
+@pytest.mark.parametrize(
+    ("obj", "paths", "expected"),
+    [
+        ({"a": {"b": {"c": 1}}}, "a.b.c", True),
+        ({"a": {"b": {"c": 1}}}, ".a.b.c", True),
+        ({"a": {"b": {"c": 1}}}, ["a", "b", "c"], True),
+        ({"a": {"b": {"c": None}}}, "a.b.c", True),
+        ({"a": {"b": {}}, "c": 2}, "c", True),
+        ({"a": {"b": {}}, "c": 2}, "d", False),
+        ({}, "a", False),
+        ({"a": 1}, "", False),
+    ],
+)
+def test_exist_key(obj, paths, expected):
+    assert exist_key(obj, paths) == expected

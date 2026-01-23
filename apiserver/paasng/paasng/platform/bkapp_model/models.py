@@ -15,12 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 import shlex
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from jsonfield import JSONField
 
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
@@ -43,6 +45,23 @@ from paasng.utils.models import make_json_field
 
 if TYPE_CHECKING:
     from typing import Callable  # noqa: F401
+
+logger = logging.getLogger(__name__)
+
+
+class ResQuotaPlan(TimestampedModel):
+    """
+    [multi-tenancy] This model is not tenant-aware.
+    """
+
+    name = models.CharField("方案名称", max_length=64, unique=True)
+    limits = JSONField(default={})
+    requests = JSONField(default={})
+    is_active = models.BooleanField("是否启用", default=True)
+    is_builtin = models.BooleanField("是否为内置方案", default=False)
+
+    class Meta:
+        ordering = ["created"]
 
 
 def env_overlay_getter_factory(field_name: str):
@@ -188,13 +207,11 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=AppEnvName.get_choices(), null=False, max_length=16
     )
-    # proc-res-override 只能通过后台/API修改
-    override_proc_res: Optional[Dict[str, Dict[str, str]]] = models.JSONField(
-        "管理员配置的资源限制",
-        null=True,
-        blank=True,
-        help_text='格式: {"limits": {"cpu": "2", "memory": "2Gi"}, "requests": {"cpu": "1", "memory": "1Gi"} }',
-    )
+    # override_proc_res 只能通过后台/API修改
+    # 可能的结构:
+    # - 使用灵活设置: {"limits": {"cpu": "2", "memory": "2Gi"},"requests": {"cpu": "1", "memory": "1Gi"}}
+    # - 使用预定义方案 (ResQuotaPlan): {"plan": "default"}
+    override_proc_res = models.JSONField("管理员配置的资源配额", null=True, blank=True)
 
     target_replicas = models.IntegerField("期望副本数", null=True)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)
@@ -207,6 +224,33 @@ class ProcessSpecEnvOverlay(TimestampedModel):
 
     class Meta:
         unique_together = ("proc_spec", "environment_name")
+
+    def get_override_proc_res(self) -> Dict | None:
+        """Get actual resource override config with limits and requests.
+
+        :returns: A dict like {"limits": {...}, "requests": {...}}, or None if not configured.
+        """
+        if not self.override_proc_res:
+            return None
+
+        config = self.override_proc_res
+
+        # Direct limits/requests config
+        if "plan" not in config:
+            return config
+
+        # Reference to a plan, resolve to actual limits/requests
+        try:
+            plan = ResQuotaPlan.objects.get(name=config["plan"])
+        except ResQuotaPlan.DoesNotExist:
+            logger.warning(
+                "ResQuotaPlan '%s' not found for process '%s', skipping override",
+                config["plan"],
+                self.proc_spec.name,
+            )
+            return None
+        else:
+            return {"limits": plan.limits, "requests": plan.requests}
 
 
 class ModuleDeployHookManager(models.Manager):

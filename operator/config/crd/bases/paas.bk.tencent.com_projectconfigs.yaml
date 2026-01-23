@@ -255,7 +255,8 @@ spec:
             - procDefaultMemLimit
             type: object
           resRequests:
-            description: ResRequestsConfig contains bkapp resource requests
+            description: 'TODO: 统一由 apiserver 侧处理 requests, ProcDefaultCpuRequest
+              和 ProcDefaultMemRequest 从 operator 侧移除'
             properties:
               procDefaultCPURequest:
                 description: ProcDefaultCPURequest is process's default cpu request

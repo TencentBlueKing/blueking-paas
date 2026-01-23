@@ -17,7 +17,6 @@
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.platform.bkapp_model.constants import ResQuotaPlan
 from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
 
 pytestmark = pytest.mark.django_db
@@ -49,7 +48,7 @@ class TestProcessSpecEnvOverlayManager:
             proc_spec=proc_web,
             environment_name="stag",
             target_replicas=2,
-            plan_name=ResQuotaPlan.P_DEFAULT,
+            plan_name="default",
             autoscaling=True,
             scaling_config={"min_replicas": 1, "max_replicas": 1, "policy": "default"},
         )

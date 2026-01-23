@@ -28,10 +28,24 @@ from paas_wl.workloads.autoscaling.constants import DEFAULT_METRICS
 from paasng.accessories.proc_components.exceptions import ComponentNotFound, ComponentPropertiesInvalid
 from paasng.accessories.proc_components.manager import validate_component_properties
 from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ExposedTypeName, NetworkProtocol
+from paasng.platform.bkapp_model.models import ResQuotaPlan
 from paasng.platform.modules.constants import DeployHookType
 from paasng.utils.dictx import get_items
 from paasng.utils.serializers import IntegerOrCharField
 from paasng.utils.validators import DNS_MAX_LENGTH, DNS_SAFE_PATTERN
+
+
+def validate_res_quota_plan(value):
+    """Validate whether value is a valid and active ResQuotaPlan name.
+
+    Can be used as a validator in serializer fields via validators=[validate_res_quota_plan].
+    """
+    if value is None:
+        return value
+
+    if not ResQuotaPlan.objects.filter(name=value, is_active=True).exists():
+        raise serializers.ValidationError(f"Resource quota plan '{value}' does not exist or is inactive.")
+    return value
 
 
 class GetManifestInputSLZ(serializers.Serializer):
@@ -58,7 +72,7 @@ class ScalingConfigSLZ(serializers.Serializer):
 class ProcessSpecEnvOverlaySLZ(serializers.Serializer):
     """进程配置-单一环境相关配置"""
 
-    plan_name = serializers.CharField(help_text="资源配额方案", required=False)
+    plan_name = serializers.CharField(help_text="资源配额方案", required=False, validators=[validate_res_quota_plan])
     target_replicas = serializers.IntegerField(help_text="副本数量(手动调节)", min_value=0, required=False)
     autoscaling = serializers.BooleanField(help_text="是否启用自动扩缩容", required=False, default=False)
     scaling_config = ScalingConfigSLZ(help_text="自动扩缩容配置", required=False, allow_null=True)

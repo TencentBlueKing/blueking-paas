@@ -42,20 +42,6 @@ class AppModelRevisionSerializer(serializers.ModelSerializer):
         exclude = ("module_id", "yaml_value")
 
 
-class ResourceQuotaSLZ(serializers.Serializer):
-    cpu = serializers.CharField()
-    memory = serializers.CharField()
-
-
-class ResQuotaPlanSLZ(serializers.Serializer):
-    """Serializer for ResQuotaPlan option"""
-
-    name = serializers.CharField(help_text="选项名称")
-    value = serializers.CharField(help_text="选项值")
-    request = ResourceQuotaSLZ(help_text="资源请求")
-    limit = ResourceQuotaSLZ(help_text="资源限制")
-
-
 class ConfigMapSLZ(serializers.Serializer):
     source_config_data = serializers.DictField(
         help_text=_(

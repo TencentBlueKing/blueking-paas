@@ -23,7 +23,34 @@ import http from '@/api';
 
 export default {
   namespaced: true,
+  state: {
+    // 加密配置项
+    encryptConfig: {
+      // 是否启用前端加密
+      enabled: false,
+      public_key: null,
+      encrypt_cipher_type: null,
+    },
+  },
+  mutations: {
+    setEncryptConfig(state, config) {
+      state.encryptConfig = config;
+    },
+  },
   actions: {
+    /**
+     * 获取加密配置
+     */
+    async getEncryptConfig({ commit, state }) {
+      // 如果已有配置则不再请求
+      if (state.encryptConfig.public_key) {
+        return state.encryptConfig;
+      }
+      const url = `${BACKEND_URL}/api/platform/encrypt_config/`;
+      const res = await http.get(url);
+      commit('setEncryptConfig', res);
+      return res;
+    },
     /**
      * 获取内置环境变量
      */
@@ -141,6 +168,41 @@ export default {
      */
     deleteTemplateConfig({}, { templateId }) {
       const url = `${BACKEND_URL}/api/plat_mgt/templates/${templateId}/`;
+      return http.delete(url);
+    },
+    /**
+     * 应用资源配额-获取方案
+     */
+    getQuotaPlans() {
+      const url = `${BACKEND_URL}/api/plat_mgt/res_quota_plans/`;
+      return http.get(url);
+    },
+    /**
+     * 平台-获取进程资源配额方案
+     */
+    getProcessQuotaPlans() {
+      const url = `${BACKEND_URL}/api/plat_mgt/processes/quota_plans/`;
+      return http.get(url);
+    },
+    /**
+     * 创建资源配额方案
+     */
+    createQuotaPlan({}, { data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/res_quota_plans/`;
+      return http.post(url, data);
+    },
+    /**
+     * 更新资源配额方案
+     */
+    updateQuotaPlan({}, { id, data }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/res_quota_plans/${id}/`;
+      return http.put(url, data);
+    },
+    /**
+     * 删除资源配额方案
+     */
+    deleteQuotaPlan({}, { id }) {
+      const url = `${BACKEND_URL}/api/plat_mgt/res_quota_plans/${id}/`;
       return http.delete(url);
     },
   },

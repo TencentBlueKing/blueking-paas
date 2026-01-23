@@ -34,6 +34,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_REGION_ANNO_KEY,
     BKAPP_TENANT_ID_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
+    DEFAULT_RES_QUOTA_PLAN_NAME,
     EGRESS_CLUSTER_STATE_NAME_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -42,6 +43,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     MODULE_NAME_ANNO_KEY,
     OVERRIDE_PROC_RES_ANNO_KEY,
     PA_SITE_ID_ANNO_KEY,
+    RES_QUOTA_PLANS_ANNO_KEY,
     TENANT_GUARD_ANNO_KEY,
     WLAPP_NAME_ANNO_KEY,
     ApiVersion,
@@ -51,9 +53,9 @@ from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SecretSource, VolumeSource
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
-from paas_wl.bk_app.cnative.specs.procs.quota import PLAN_TO_LIMIT_QUOTA_MAP
 from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.core.resource import generate_bkapp_name
+from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding
 from paasng.accessories.log.shim import get_log_collector_type
 from paasng.accessories.servicehub.manager import mixed_service_mgr
@@ -61,13 +63,14 @@ from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.accessories.servicehub.tls import list_provisioned_tls_enabled_rels
 from paasng.accessories.services.utils import gen_addons_cert_mount_dir, gen_addons_cert_secret_name
 from paasng.platform.applications.models import ModuleEnvironment
-from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER, ResQuotaPlan
+from paasng.platform.bkapp_model.constants import PORT_PLACEHOLDER
 from paasng.platform.bkapp_model.entities import Process
 from paasng.platform.bkapp_model.models import (
     DomainResolution,
     ModuleProcessSpec,
     ObservabilityConfig,
     ProcessSpecEnvOverlay,
+    ResQuotaPlan,
     SvcDiscConfig,
 )
 from paasng.platform.bkapp_model.utils import (
@@ -202,8 +205,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 args=args,
                 replicas=process_spec.target_replicas,
                 target_port=process_spec.port,
-                # TODO?: 是否需要使用注解 bkapp.paas.bk.tencent.com/legacy-proc-res-config 存储不支持的 plan
-                res_quota_plan=self.get_quota_plan(process_spec.plan_name),
+                res_quota_plan=self._sanitize_plan_name(process_spec.plan_name),
                 autoscaling=process_spec.scaling_config,
                 probes=process_spec.probes.render_port() if process_spec.probes else None,
                 services=([svc.render_port() for svc in process_spec.services] if process_spec.services else None),
@@ -255,39 +257,11 @@ class ProcessesManifestConstructor(ManifestConstructor):
                         crd.ResQuotaOverlay(
                             envName=item.environment_name,
                             process=proc_spec.name,
-                            plan=self.get_quota_plan(item.plan_name),
+                            plan=self._sanitize_plan_name(item.plan_name),
                         ),
                     )
 
         model_res.spec.envOverlay = overlay
-
-    @staticmethod
-    def get_quota_plan(spec_plan_name: str) -> ResQuotaPlan:
-        """Get ProcessSpecPlan by name and transform it to ResQuotaPlan"""
-        try:
-            return ResQuotaPlan(spec_plan_name)
-        except ValueError:
-            logger.debug(
-                "unknown ResQuotaPlan value `%s`, try to convert ProcessSpecPlan to ResQuotaPlan", spec_plan_name
-            )
-
-        try:
-            spec_plan = ProcessSpecPlan.objects.get_by_name(name=spec_plan_name)
-        except ProcessSpecPlan.DoesNotExist:
-            return ResQuotaPlan.P_DEFAULT
-
-        # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
-        limits = spec_plan.get_resource_summary()["limits"]
-        expected_limit_memory = parse_quantity(limits.get("memory", "512Mi"))
-        quota_plan_memory = sorted(
-            ((parse_quantity(limit.memory), quota_plan) for quota_plan, limit in PLAN_TO_LIMIT_QUOTA_MAP.items()),
-            key=itemgetter(0),
-        )
-        for limit_memory, quota_plan in quota_plan_memory:
-            if limit_memory >= expected_limit_memory:
-                return ResQuotaPlan(quota_plan)
-        # quota_plan_memory[-1][1] 是内存最大 plan
-        return ResQuotaPlan(quota_plan_memory[-1][1])
 
     def get_command_and_args(self, process_spec: ModuleProcessSpec) -> Tuple[List[str], List[str]]:
         """Get the command and args from the process_spec object.
@@ -310,6 +284,42 @@ class ProcessesManifestConstructor(ManifestConstructor):
         # '${PORT:-5000}' is massively used by the app framework, while it can not be used
         # in the spec directly, replace it with normal env var expression.
         return [s.replace("${PORT:-5000}", PORT_PLACEHOLDER) for s in input]
+
+    def _sanitize_plan_name(self, plan_name: str) -> str:
+        """Sanitize the plan name to ensure it is valid in the manifest.
+
+        因为 v2 版本的 app_desc.yaml 也需要可以使用到云原生应用,
+        但 v2 版本的资源配额方案名称可能不是使用的 ResQuotaPlan, 而是使用的 ProcessSpecPlan
+        所以这里需要将其转化为云原生应用可识别的名称
+        """
+        if ResQuotaPlan.objects.filter(name=plan_name).exists():
+            return plan_name
+
+        try:
+            process_spec_plan = ProcessSpecPlan.objects.get_by_name(plan_name)
+        except ProcessSpecPlan.DoesNotExist:
+            return DEFAULT_RES_QUOTA_PLAN_NAME
+
+        # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
+        limits = process_spec_plan.get_resource_summary()["limits"]
+        expected_limit_memory = parse_quantity(limits.get("memory", "512Mi"))
+
+        quota_plan_memory = sorted(
+            [
+                (parse_quantity(plan.limits.get("memory", "0")), plan.name)
+                for plan in ResQuotaPlan.objects.filter(is_active=True)
+                if plan.limits.get("memory")
+            ],
+            key=itemgetter(0),
+        )
+
+        # 找到第一个内存 >= expected_limit_memory 的方案
+        for limit_memory, quota_plan_name in quota_plan_memory:
+            if limit_memory >= expected_limit_memory:
+                return quota_plan_name
+
+        # 都不满足则使用最大内存方案
+        return quota_plan_memory[-1][1]
 
 
 class EnvVarsManifestConstructor(ManifestConstructor):
@@ -543,6 +553,9 @@ def get_bkapp_resource_for_deploy(
     if override_proc_res_config:
         model_res.metadata.annotations[OVERRIDE_PROC_RES_ANNO_KEY] = override_proc_res_config
 
+    # 设置资源配额方案配置的注解，用于将方案名称解析为实际的 limits/requests 值
+    model_res.metadata.annotations[RES_QUOTA_PLANS_ANNO_KEY] = _get_res_quota_plans(model_res)
+
     # 设置上一次部署的状态
     model_res.metadata.annotations[LAST_DEPLOY_STATUS_ANNO_KEY] = _get_last_deploy_status(env, deployment)
 
@@ -555,6 +568,9 @@ def get_bkapp_resource_for_deploy(
 
     # 将出口集群信息注入到 model_res 中
     apply_egress_annotations(model_res, env)
+
+    # 将集群默认的调度配置注入到 model_res 中
+    apply_cluster_scheduling_config(model_res, env)
 
     # 如果模块是通过 buildpack 构建的，则需要更新 hooks 和 processes 中的 command/args
     mgr = ModuleRuntimeManager(env.module)
@@ -639,6 +655,40 @@ def apply_egress_annotations(model_res: crd.BkAppResource, env: ModuleEnvironmen
         model_res.metadata.annotations[EGRESS_CLUSTER_STATE_NAME_ANNO_KEY] = binding.state.name
 
 
+def apply_cluster_scheduling_config(model_res: crd.BkAppResource, env: ModuleEnvironment):
+    """Apply cluster's default scheduling config (nodeSelector and tolerations) to the resource object.
+
+    The scheduling config (nodeSelector and tolerations) is applied to the spec-level schedule field.
+
+    :param model_res: The model resource object, it will be modified in-place.
+    :param env: The environment object.
+    """
+    cluster = EnvClusterService(env).get_cluster()
+
+    # If no scheduling config is set, skip
+    if not cluster.default_node_selector and not cluster.default_tolerations:
+        return
+
+    # Build tolerations list if configured
+    tolerations = None
+    if cluster.default_tolerations:
+        tolerations = [
+            crd.Toleration(
+                key=t["key"],
+                operator=t["operator"],
+                value=t.get("value"),
+                effect=t.get("effect"),
+                tolerationSeconds=t.get("tolerationSeconds"),
+            )
+            for t in cluster.default_tolerations
+        ]
+
+    model_res.spec.schedule = crd.Schedule(
+        nodeSelector=cluster.default_node_selector,
+        tolerations=tolerations,
+    )
+
+
 def _update_cmd_args_from_wl_build(model_res: crd.BkAppResource, wl_build: WlBuild):
     """从 WlBuild 的构建元数据中获取 entrypoint/command, 并将其更新或替换到 model_res 的 hooks 和 processes 配置中,
     确保最终配置符合基于 buildpack 构建的容器镜像运行规范
@@ -670,7 +720,42 @@ def _get_override_proc_res_config(env: ModuleEnvironment) -> str:
         environment_name=env.environment,
     )
     for overlay in queryset:
-        if overlay and overlay.override_proc_res:
-            result[overlay.proc_spec.name] = overlay.override_proc_res
+        override_proc_res = overlay.get_override_proc_res()
+        if not override_proc_res:
+            continue
+        result[overlay.proc_spec.name] = override_proc_res
+
+    return json.dumps(result) if result else ""
+
+
+def _get_res_quota_plans(model_res: crd.BkAppResource) -> str:
+    """从已构建的 BkApp 资源中提取所有使用的资源配额方案配置
+
+    该函数会收集 BkApp 资源中所有进程使用的 plan 名称 (包括基础配置和所有环境的覆盖配置),
+    然后从数据库中查询对应的 ResQuotaPlan 记录, 将其 limits 和 requests 配置序列化为 JSON 字符串.
+
+    注意: 如果进程使用的是平台内置方案 (如 "default", "4C1G" 等), 也会被收集并写入.
+
+    :param model_res: BkApp 资源对象
+    :return: JSON 字符串, 格式为 {"plan_name": {"limits": {...}, "requests": {...}}}, 若无可用方案则返回空字符串
+    """
+    used_plan_names: set[str] = set()
+
+    for proc in model_res.spec.processes:
+        if proc.resQuotaPlan:
+            used_plan_names.add(proc.resQuotaPlan)
+
+    # 收集所有环境覆盖配置中使用的 plan
+    if model_res.spec.envOverlay and model_res.spec.envOverlay.resQuotas:
+        for res_quota in model_res.spec.envOverlay.resQuotas:
+            if res_quota.plan:
+                used_plan_names.add(res_quota.plan)
+
+    if not used_plan_names:
+        return ""
+
+    result = {}
+    for plan in ResQuotaPlan.objects.filter(name__in=used_plan_names, is_active=True):
+        result[plan.name] = {"limits": plan.limits, "requests": plan.requests}
 
     return json.dumps(result) if result else ""

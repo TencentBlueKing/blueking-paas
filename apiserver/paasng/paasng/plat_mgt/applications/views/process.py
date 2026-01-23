@@ -33,8 +33,7 @@ from paasng.plat_mgt.applications.serializers import (
     ProcessSpecInputSLZ,
 )
 from paasng.platform.applications.models import Application
-from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
-from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay
+from paasng.platform.bkapp_model.models import ModuleProcessSpec, ProcessSpecEnvOverlay, ResQuotaPlan
 from paasng.platform.engine.constants import AppEnvName
 from paasng.platform.modules.constants import SourceOrigin
 
@@ -63,21 +62,17 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             # 构建环境覆盖配置
             overlays_map = {o.environment_name: o for o in spec.env_overlays.all()}
             env_overlays = {}
-
             for env_name in AppEnvName.get_values():
                 overlay = overlays_map.get(env_name)
-
-                if overlay and overlay.override_proc_res:
-                    env_overlays[env_name] = {"plan_name": None, "resources": overlay.override_proc_res}
-                else:
+                if overlay:
                     env_overlays[env_name] = {
-                        "plan_name": spec.get_plan_name(env_name),
-                        "resources": None,
+                        "plan_name": overlay.plan_name,
+                        "override_proc_res": overlay.override_proc_res,
                     }
-
             processes.append(
                 {
                     "name": spec.name,
+                    "plan_name": spec.plan_name,
                     "env_overlays": env_overlays,
                 }
             )
@@ -87,7 +82,6 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             "source_origin": module.source_origin,
             "processes": processes,
         }
-
         return Response(ModuleProcessSpecOutputSLZ(result).data)
 
     @swagger_auto_schema(
@@ -105,13 +99,9 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
 
         # 校验 module 的 source_origin 是否可以修改
         module = get_object_or_404(application.modules, name=module_name)
-        if module.source_origin not in [
-            SourceOrigin.CNATIVE_IMAGE.value,
-            SourceOrigin.S_MART.value,
-            SourceOrigin.AI_AGENT.value,
-        ]:
+        if module.source_origin != SourceOrigin.S_MART.value:
             return Response(
-                {"detail": _("该模块的源码来源不支持修改进程资源配置")},
+                {"detail": _("当前仅支持 SMart 应用修改进程资源配额")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -131,12 +121,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         before_env_overlays = {}
         for env_name in requested_overlays:
             overlay = env_overlays_map.get(env_name)
-            if overlay:
-                before_env_overlays[env_name] = {
-                    "resources": overlay.override_proc_res,
-                }
-            else:
-                before_env_overlays[env_name] = {"resources": None}
+            before_env_overlays[env_name] = {"override_proc_res": overlay.override_proc_res if overlay else None}
 
         # 批量更新
         overlays_to_update = []
@@ -153,12 +138,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
                 overlays_to_create.append(env_overlay)
 
             # 更新配置
-            if overlay_data["resources"] is not None:
-                # 使用自定义资源配置
-                env_overlay.override_proc_res = overlay_data["resources"]
-            else:
-                # 清空自定义资源配置
-                env_overlay.override_proc_res = None
+            env_overlay.override_proc_res = overlay_data["override_proc_res"]
 
             env_overlay.updated = timezone.now()
             if env_overlay.pk:
@@ -169,7 +149,10 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             ProcessSpecEnvOverlay.objects.bulk_create(overlays_to_create)
 
         if overlays_to_update:
-            ProcessSpecEnvOverlay.objects.bulk_update(overlays_to_update, fields=["override_proc_res", "updated"])
+            ProcessSpecEnvOverlay.objects.bulk_update(
+                overlays_to_update,
+                fields=["override_proc_res", "updated"],
+            )
 
         # 记录审计日志
         add_plat_mgt_audit_record(
@@ -185,19 +168,16 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_resource_quantity_options(self, request):
-        """获取自定义资源配置的可选项列表（CPU 和内存的预设值）"""
+    def list_quota_plans(self, request):
+        """获取资源配额方案选项列表"""
 
-        cpu_resource_quantity = [
-            {"value": value, "label": label} for value, label in CPUResourceQuantity.get_choices()
+        result = [
+            {
+                "name": plan.name,
+                "limits": plan.limits,
+                "requests": plan.requests,
+            }
+            for plan in ResQuotaPlan.objects.filter(is_active=True)
         ]
-        memory_resource_quantity = [
-            {"value": value, "label": label} for value, label in MemoryResourceQuantity.get_choices()
-        ]
 
-        result = {
-            "cpu_resource_quantity": cpu_resource_quantity,
-            "memory_resource_quantity": memory_resource_quantity,
-        }
-
-        return Response(result, status=status.HTTP_200_OK)
+        return Response(result)

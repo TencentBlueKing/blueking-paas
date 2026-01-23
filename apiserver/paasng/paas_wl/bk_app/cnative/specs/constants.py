@@ -18,14 +18,9 @@
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 from django.utils.translation import gettext_lazy as _
 
-# Default resource limitations for each process
-DEFAULT_PROC_CPU = "4000m"
-DEFAULT_PROC_MEM = "1024Mi"
-# Default resource request for each process
-DEFAULT_PROC_CPU_REQUEST = "200m"
-DEFAULT_PROC_MEM_REQUEST = "256Mi"
-
 DEFAULT_PROCESS_NAME = "web"
+
+DEFAULT_RES_QUOTA_PLAN_NAME = "default"
 
 # 注解中存储当前应用是否启用白名单功能的键名
 ACCESS_CONTROL_ANNO_KEY = "bkapp.paas.bk.tencent.com/access-control"
@@ -47,6 +42,8 @@ MODULE_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/module-name"
 ENVIRONMENT_ANNO_KEY = "bkapp.paas.bk.tencent.com/environment"
 # 管理员在管理端设置的资源限制注解键名
 OVERRIDE_PROC_RES_ANNO_KEY = "bkapp.paas.bk.tencent.com/proc-res-override"
+# 注解中存储 BkApp CRD 使用的 resQuotaPlan 对应的资源配额配置的键名
+RES_QUOTA_PLANS_ANNO_KEY = "bkapp.paas.bk.tencent.com/res-quota-plans"
 # 注解中存储当前 WlApp 名称的键名
 WLAPP_NAME_ANNO_KEY = "bkapp.paas.bk.tencent.com/wl-app-name"
 # 注解中存储应用租户 ID
@@ -137,15 +134,6 @@ class ScalingPolicy(StrStructuredEnum):
 
     # the default autoscaling policy (cpu utilization 85%)
     DEFAULT = EnumField("default")
-
-
-class ResQuotaPlan(StrStructuredEnum):
-    """ResQuotaPlan is used to specify process resource quota"""
-
-    P_DEFAULT = EnumField("default", label="default")
-    P_4C1G = EnumField("4C1G", label="4C1G")
-    P_4C2G = EnumField("4C2G", label="4C2G")
-    P_4C4G = EnumField("4C4G", label="4C4G")
 
 
 class MountEnvName(StrStructuredEnum):

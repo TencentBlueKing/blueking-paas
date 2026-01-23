@@ -20,7 +20,7 @@ import os
 import pathlib
 import shutil
 import tempfile
-from typing import Dict, cast
+from typing import cast
 
 from django.core.management.base import BaseCommand
 
@@ -33,16 +33,20 @@ from paasng.utils.validators import str2bool
 logger = logging.getLogger(__name__)
 
 
-DEST_IMAGE_CONFIGS: Dict[str, Dict] = {
-    AppImageType.CNB.value: {
-        "repo": bksmart_settings.cnb_base_image.name,
-        "reference": bksmart_settings.cnb_base_image.tag,
-    },
-    AppImageType.LEGACY.value: {
-        "repo": bksmart_settings.base_image.name,
-        "reference": bksmart_settings.base_image.tag,
-    },
-}
+def get_dest_image(image_type: str, base_image_id: str) -> dict[str, str]:
+    if image_type == AppImageType.LEGACY.value:
+        return {
+            "repo": bksmart_settings.base_image.name,
+            "reference": bksmart_settings.base_image.tag,
+        }
+
+    if image_type == AppImageType.CNB.value:
+        return {
+            "repo": bksmart_settings.cnb_base_image.get_name(base_image_id),
+            "reference": bksmart_settings.cnb_base_image.get_tag(base_image_id),
+        }
+
+    raise ValueError(f"Unsupported image type: {image_type}")
 
 
 class Command(BaseCommand):
@@ -56,20 +60,21 @@ class Command(BaseCommand):
             dest="type_",
             help="image type can be either cnb or legacy",
         )
+        parser.add_argument("--base-image-id", dest="base_image_id", default="default", help="dest cnb base image id")
         parser.add_argument("--dry-run", dest="dry_run", type=str2bool, help="dry run", default=False)
 
-    def handle(self, image: str, type_: str, dry_run: bool, *args, **options):
+    def handle(self, image: str, type_: str, base_image_id: str, dry_run: bool, *args, **options):
         if dry_run:
             logger.warning("Skipped the step of pushing S-Mart base image to bkrepo!")
             return
 
-        from_image = parse_image(image)
         image_tarball_path = pathlib.Path(tempfile.mktemp())
+        src_image = parse_image(image)
         try:
             ref = ImageRef.from_image(
-                from_repo=from_image.name,
-                from_reference=cast(str, from_image.tag),
-                client=DockerRegistryV2Client.from_api_endpoint(APIEndpoint(url=from_image.domain)),
+                from_repo=src_image.name,
+                from_reference=cast(str, src_image.tag),
+                client=DockerRegistryV2Client.from_api_endpoint(APIEndpoint(url=src_image.domain)),
             )
             ref.save(dest=str(image_tarball_path))
         except Exception:
@@ -78,14 +83,13 @@ class Command(BaseCommand):
             raise
 
         workplace = tempfile.mkdtemp()
-        to_config = DEST_IMAGE_CONFIGS[type_]
-
+        dest_image = get_dest_image(type_, base_image_id)
         try:
             ref = ImageRef.from_tarball(
                 workplace=pathlib.Path(workplace),
                 src=image_tarball_path,
-                to_repo=to_config["repo"],
-                to_reference=to_config["reference"],
+                to_repo=dest_image["repo"],
+                to_reference=dest_image["reference"],
                 client=bksmart_settings.registry.get_client(),
             )
             ref.push()

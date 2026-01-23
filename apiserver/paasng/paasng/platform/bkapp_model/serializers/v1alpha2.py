@@ -28,7 +28,6 @@ from paasng.platform.bkapp_model.constants import (
     PORT_PLACEHOLDER,
     ImagePullPolicy,
     NetworkProtocol,
-    ResQuotaPlan,
     ScalingPolicy,
 )
 from paasng.platform.bkapp_model.entities import Process, v1alpha2
@@ -42,7 +41,13 @@ from paasng.utils.validators import (
     PROC_TYPE_PATTERN,
 )
 
-from .serializers import ExecProbeActionSLZ, ExposedTypeSLZ, HTTPHeaderSLZ, TCPSocketProbeActionSLZ
+from .serializers import (
+    ExecProbeActionSLZ,
+    ExposedTypeSLZ,
+    HTTPHeaderSLZ,
+    TCPSocketProbeActionSLZ,
+    validate_res_quota_plan,
+)
 
 
 class BaseEnvVarFields(serializers.Serializer):
@@ -118,7 +123,7 @@ class ResQuotaOverlayInputSLZ(serializers.Serializer):
 
     envName = serializers.ChoiceField(choices=AppEnvName.get_choices(), source="env_name")
     process = serializers.CharField()
-    plan = serializers.ChoiceField(choices=ResQuotaPlan.get_choices(), allow_null=True, default=None)
+    plan = serializers.CharField(allow_null=True, default=None, validators=[validate_res_quota_plan])
 
 
 class AutoscalingSpecInputSLZ(serializers.Serializer):
@@ -259,8 +264,8 @@ class ProcessInputSLZ(serializers.Serializer):
 
     name = serializers.RegexField(regex=PROC_TYPE_PATTERN, max_length=PROC_TYPE_MAX_LENGTH)
     replicas = serializers.IntegerField(min_value=0, allow_null=True, default=NOTSET)
-    resQuotaPlan = serializers.ChoiceField(
-        choices=ResQuotaPlan.get_choices(), allow_null=True, default=None, source="res_quota_plan"
+    resQuotaPlan = serializers.CharField(
+        allow_null=True, default=None, source="res_quota_plan", validators=[validate_res_quota_plan]
     )
     targetPort = serializers.IntegerField(
         min_value=1,

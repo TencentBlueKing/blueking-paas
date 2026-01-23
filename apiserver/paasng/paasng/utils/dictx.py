@@ -38,3 +38,34 @@ def get_items(obj: Dict[str, Any], paths: Union[List[str], str], default: Any = 
         return reduce(lambda d, k: d[k], paths, obj)
     except (KeyError, IndexError, TypeError):
         return default
+
+
+def set_items(obj: Dict[str, Any], paths: List[str] | str, value: Any) -> None:
+    """
+    根据指定的路径为字典的某个 key 赋值
+
+    :param obj: 字典类型对象
+    :param paths: ['foo', 'bar'] 或 ".foo.bar" 或 "foo.bar"
+    :param value: 待赋的值
+    """
+    if not isinstance(obj, Dict):
+        raise TypeError("only support set items to dict object!")
+
+    if isinstance(paths, str):
+        paths = paths.strip(".").split(".")
+
+    # 最深层一个 dict 对象
+    leaf_obj = reduce(lambda d, k: d[k], paths[:-1], obj)
+    leaf_obj[paths[-1]] = value
+
+
+def exist_key(obj: Dict[str, Any], paths: List[str] | str) -> bool:
+    """
+    检查指定的路径对应的键是否存在
+
+    :param obj: 字典类型对象
+    :param paths: ['foo', 'bar'] 或 ".foo.bar" 或 "foo.bar"
+    :return: exists
+    """
+    sentinel = object()
+    return get_items(obj, paths, default=sentinel) is not sentinel

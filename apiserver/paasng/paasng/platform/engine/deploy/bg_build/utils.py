@@ -20,6 +20,7 @@ import logging
 import os
 import urllib.parse
 from typing import TYPE_CHECKING, Dict, Optional
+from urllib.parse import unquote
 
 from blue_krill.storages.blobstore.base import SignatureType
 from django.conf import settings
@@ -100,18 +101,30 @@ def generate_builder_env_vars(bp: BuildProcess, metadata: BuildMetadata) -> Dict
             # Path to store cache to speed up build process
             CACHE_PATH="%s/%s" % (bucket, cache_path),
             # 以下是新的环境变量, 通过签发 http 协议的变量屏蔽对象存储仓库的实现.
-            # TODO: 将 slug.tgz 抽成常量
-            SLUG_SET_URL=store.generate_presigned_url(
-                key=generate_slug_path(bp) + "/slug.tgz", expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
+            # unquote 的原因是解决 bkrepo 变更后的兼容性问题:
+            # - 由于 bkrepo 对 key 进行了 url 编码, 导致旧 slugbuilder 无法正常运行, 具体影响代码如下
+            #   cache_get_url=$(echo ${CACHE_GET_URL} | sed 's|/cache|/cache/cache.tgz|')
+            SLUG_SET_URL=unquote(
+                store.generate_presigned_url(
+                    key=generate_slug_path(bp) + "/slug.tgz",
+                    expires_in=60 * 60 * 24,
+                    signature_type=SignatureType.UPLOAD,
+                )
             ),
-            SOURCE_GET_URL=store.generate_presigned_url(
-                key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            SOURCE_GET_URL=unquote(
+                store.generate_presigned_url(
+                    key=bp.source_tar_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+                )
             ),
-            CACHE_GET_URL=store.generate_presigned_url(
-                key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+            CACHE_GET_URL=unquote(
+                store.generate_presigned_url(
+                    key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.DOWNLOAD
+                )
             ),
-            CACHE_SET_URL=store.generate_presigned_url(
-                key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
+            CACHE_SET_URL=unquote(
+                store.generate_presigned_url(
+                    key=cache_path, expires_in=60 * 60 * 24, signature_type=SignatureType.UPLOAD
+                )
             ),
             # 设置 slug-pilot 中 build 过程的超时时间(精确到分钟)
             PILOT_BUILDER_TIMEOUT=f"{settings.BUILD_PROCESS_TIMEOUT // 60}m",

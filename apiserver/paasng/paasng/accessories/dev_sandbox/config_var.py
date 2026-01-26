@@ -20,7 +20,7 @@ from typing import Dict, List
 from django.conf import settings
 
 from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource
-from paas_wl.bk_app.dev_sandbox.entities import DevSandboxEnvVar, DevSandboxEnvVarList, is_sensitive
+from paas_wl.bk_app.dev_sandbox.entities import DevSandboxEnvVar, DevSandboxEnvVarList
 from paasng.accessories.servicehub.manager import mixed_service_mgr
 from paasng.accessories.servicehub.sharing import ServiceSharingManager
 from paasng.platform.applications.models import ModuleEnvironment
@@ -121,11 +121,11 @@ def list_vars_builtin_addons_custom(
         sensitive_keys = set(hidden) | set(removed)
         for key, value in var_group.data.items():
             env_vars.append(
-                DevSandboxEnvVar(
+                DevSandboxEnvVar.create(
                     key=key,
                     value=value,
                     source=DevSandboxEnvVarSource.STAG,
-                    is_sensitive=is_sensitive(key, sensitive_keys),
+                    extra_sensitive_fields=sensitive_keys,
                 )
             )
 

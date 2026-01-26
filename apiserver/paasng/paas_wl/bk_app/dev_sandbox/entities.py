@@ -124,13 +124,23 @@ class DevSandboxEnvVar:
     key: str
     value: str
     source: DevSandboxEnvVarSource
-    is_sensitive: bool = False
+    is_sensitive: bool
 
-    def to_dict(self) -> Dict[str, str]:
-        data = asdict(self)
-        return data
+    @classmethod
+    def create(
+        cls,
+        key: str,
+        value: str,
+        source: DevSandboxEnvVarSource,
+        extra_sensitive_fields: Collection[str] | None = None,
+    ) -> "DevSandboxEnvVar":
+        is_sensitive_flag = is_sensitive(key, extra_sensitive_fields)
+        return cls(key=key, value=value, source=source, is_sensitive=is_sensitive_flag)
 
-    def to_masked_dict(self) -> Dict[str, str]:
+    def to_dict(self):
+        return asdict(self)
+
+    def to_masked_dict(self):
         """
         返回屏蔽敏感信息的字典表示， 可用于 API 输出或日志
         """
@@ -182,15 +192,15 @@ class DevSandboxEnvVarList(UserList):
         cls,
         kv_map: Dict[str, str],
         source: DevSandboxEnvVarSource,
-        sensitive_fields: Collection[str] | None = None,
+        extra_sensitive_fields: Collection[str] | None = None,
     ) -> "DevSandboxEnvVarList":
         return cls(
             [
-                DevSandboxEnvVar(
+                DevSandboxEnvVar.create(
                     key=key,
                     value=value,
                     source=source,
-                    is_sensitive=is_sensitive(key, sensitive_fields),
+                    extra_sensitive_fields=extra_sensitive_fields,
                 )
                 for key, value in kv_map.items()
             ]

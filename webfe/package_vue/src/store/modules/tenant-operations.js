@@ -108,7 +108,7 @@ export default {
      * 获取进程资源配额方案
      */
     fetchQuantityOptions() {
-      const url = `${BACKEND_URL}/api/plat_mgt/process_resources/quantity_options/`;
+      const url = `${BACKEND_URL}/api/plat_mgt/res_quota_plans/quantity_options/`;
       return http.get(url);
     },
     /**

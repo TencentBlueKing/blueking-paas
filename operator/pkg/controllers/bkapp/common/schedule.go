@@ -19,13 +19,34 @@
 package common
 
 import (
+	corev1 "k8s.io/api/core/v1"
+
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
 )
 
-// BuildNodeSelector ...
+// BuildNodeSelector builds the node selector for a BkApp by merging user-defined
+// selectors with egress-related selectors. User-defined selectors take precedence.
 func BuildNodeSelector(app *paasv1alpha2.BkApp) map[string]string {
-	// build the node selector from egress config
-	return buildEgressNodeSelector(app)
+	result := make(map[string]string)
+
+	// 1. apply egress node selector if exists
+	if egressSelector := buildEgressNodeSelector(app); egressSelector != nil {
+		for k, v := range egressSelector {
+			result[k] = v
+		}
+	}
+
+	// 2. apply user-defined node selector (no conflict with egress NodeSelector)
+	if app.Spec.Schedule != nil && app.Spec.Schedule.NodeSelector != nil {
+		for k, v := range app.Spec.Schedule.NodeSelector {
+			result[k] = v
+		}
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 // buildEgressNodeSelector build the node selector from egress config
@@ -34,4 +55,12 @@ func buildEgressNodeSelector(app *paasv1alpha2.BkApp) map[string]string {
 		return map[string]string{egressClusterStateName: "1"}
 	}
 	return nil
+}
+
+// BuildTolerations returns the tolerations configured in the BkApp spec.
+func BuildTolerations(app *paasv1alpha2.BkApp) []corev1.Toleration {
+	if app.Spec.Schedule == nil {
+		return nil
+	}
+	return app.Spec.Schedule.Tolerations
 }

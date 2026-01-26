@@ -103,7 +103,7 @@ export default {
       const h = this.$createElement;
       this.$bkInfo({
         title: this.$t('是否删除进程'),
-        extCls: 'delete-process-cls',
+        extCls: 'paas-custom-del-info-cls',
         theme: 'danger',
         width: 480,
         okText: this.$t('删除'),
@@ -159,26 +159,6 @@ export default {
     display: flex;
     flex-wrap: wrap; /* 允许换行 */
     gap: 8px; /* 设置间隔 */
-  }
-}
-</style>
-<style lang="scss">
-.delete-process-cls .bk-info-box .bk-dialog-sub-header.has-sub {
-  padding: 5px 30px 16px !important;
-  font-size: 12px;
-  color: #313238;
-  .label,
-  .tips {
-    color: #63656e;
-  }
-  .tips {
-    display: flex;
-    align-items: center;
-    padding: 0 12px;
-    margin-top: 16px;
-    height: 46px;
-    background: #f5f6fa;
-    border-radius: 2px;
   }
 }
 </style>

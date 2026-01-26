@@ -147,6 +147,17 @@ var _ = Describe("test conversion back and forth", func() {
 						},
 					},
 				},
+				Schedule: &Schedule{
+					NodeSelector: map[string]string{
+						"test": "test",
+					},
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "key1",
+							Operator: corev1.TolerationOpEqual,
+						},
+					},
+				},
 			},
 			Status: AppStatus{
 				Phase: AppRunning,
@@ -302,6 +313,17 @@ var _ = Describe("test conversion back and forth", func() {
 								MaxReplicas: 3,
 								Policy:      paasv1alpha2.ScalingPolicyDefault,
 							},
+						},
+					},
+				},
+				Schedule: &paasv1alpha2.Schedule{
+					NodeSelector: map[string]string{
+						"test": "test",
+					},
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "key1",
+							Operator: corev1.TolerationOpEqual,
 						},
 					},
 				},

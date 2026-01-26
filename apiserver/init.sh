@@ -247,6 +247,7 @@ ensure-legacy-image() {
     python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${golang_buildpack_name}"
 }
 
+# 用于将镜像从外部仓库(如 hub.bktencent.com)推送到 bkrepo
 ensure-smart-image() {
     python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --type legacy --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
     python manage.py push_smart_image --image "${PAAS_HEROKU_RUNNER_IMAGE}" --type cnb --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"

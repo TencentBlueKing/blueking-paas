@@ -20,6 +20,11 @@ from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 # 为方便用户填写而设计的端口占位符, 并非实际的 shell 环境变量. 在转换成 BkApp 模型时会被平台替换成预设值 settings.CONTAINER_PORT
 PORT_PLACEHOLDER = "${PORT}"
 
+# Maximum resource limitations for each process
+# The same with the limitations in the Operator.
+MAX_PROC_CPU = "48000m"
+MAX_PROC_MEM = "65536Mi"
+
 
 class ExposedTypeName(StrStructuredEnum):
     """与 paas_wl.workloads.networking.constants.ExposedTypeName 重复定义
@@ -49,17 +54,6 @@ class ImagePullPolicy(StrStructuredEnum):
     NEVER = EnumField("Never")
 
 
-class ResQuotaPlan(StrStructuredEnum):
-    """duplicated from paas_wl.bk_app.cnative.specs.constants.ResQuotaPlan to decouple dependencies
-    TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
-    """
-
-    P_DEFAULT = EnumField("default", label="default")
-    P_4C1G = EnumField("4C1G", label="4C1G")
-    P_4C2G = EnumField("4C2G", label="4C2G")
-    P_4C4G = EnumField("4C4G", label="4C4G")
-
-
 class ScalingPolicy(StrStructuredEnum):
     """duplicated from paas_wl.bk_app.cnative.specs.constants.ScalingPolicy to decouple dependencies
     TODO 统一放置到一个独立于 paas_wl 和 paasng 的模块下?
@@ -70,6 +64,7 @@ class ScalingPolicy(StrStructuredEnum):
 
 
 class CPUResourceQuantity(StrStructuredEnum):
+    QUOTA_0_0_5_CORE = EnumField("50m", label="0.05 核")
     QUOTA_0_1_CORE = EnumField("100m", label="0.1 核")
     QUOTA_0_2_CORE = EnumField("200m", label="0.2 核")
     QUOTA_0_5_CORE = EnumField("500m", label="0.5 核")
@@ -87,14 +82,14 @@ class CPUResourceQuantity(StrStructuredEnum):
 
 
 class MemoryResourceQuantity(StrStructuredEnum):
-    QUOTA_256_M = EnumField("256Mi", label="256 M")
-    QUOTA_512_M = EnumField("512Mi", label="512 M")
-    QUOTA_1_G = EnumField("1024Mi", label="1 G")
-    QUOTA_2_G = EnumField("2048Mi", label="2 G")
-    QUOTA_4_G = EnumField("4096Mi", label="4 G")
-    QUOTA_8_G = EnumField("8192Mi", label="8 G")
-    QUOTA_16_G = EnumField("16384Mi", label="16 G")
-    QUOTA_32_G = EnumField("32768Mi", label="32 G")
+    QUOTA_256_M = EnumField("256Mi", label="256 Mi")
+    QUOTA_512_M = EnumField("512Mi", label="512 Mi")
+    QUOTA_1_G = EnumField("1024Mi", label="1 Gi")
+    QUOTA_2_G = EnumField("2048Mi", label="2 Gi")
+    QUOTA_4_G = EnumField("4096Mi", label="4 Gi")
+    QUOTA_8_G = EnumField("8192Mi", label="8 Gi")
+    QUOTA_16_G = EnumField("16384Mi", label="16 Gi")
+    QUOTA_32_G = EnumField("32768Mi", label="32 Gi")
 
     def exceeds(self, other: "MemoryResourceQuantity") -> bool:
         """检查当前资源值是否大于另一个资源值"""

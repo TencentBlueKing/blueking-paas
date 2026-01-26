@@ -120,6 +120,32 @@ LOGIN_FULL: ''
 BKAUTH_USER_INFO_APIGW_URL: ''
 ```
 
+### （可选）前端加密配置
+
+如需启用前端加密传输功能，需要配置 SM2 密钥对。生成后需将 PEM 格式的密钥进行 Base64 编码后再配置。
+
+#### 方式一：使用 Python 的 bkcrypto 库生成
+
+```python
+import base64
+from bkcrypto.contrib.basic.ciphers import get_asymmetric_cipher
+
+private_key, public_key = get_asymmetric_cipher(cipher_type='SM2').generate_key_pair()
+print("sm2_private_key:\n", base64.b64encode(private_key.encode()).decode(), end="\n\n")
+print("sm2_public_key:\n", base64.b64encode(public_key.encode()).decode())
+```
+
+#### 方式二：使用 openssl 工具生成
+
+```shell
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:sm2 -out sm2_pkcs8_private_key.pem
+openssl pkey -in sm2_pkcs8_private_key.pem -pubout -out public_key.pem
+echo "sm2_private_key:" && cat sm2_pkcs8_private_key.pem | base64 -w 0 && echo
+echo "sm2_public_key:" && cat public_key.pem | base64 -w 0 && echo
+```
+
+生成后，将 Base64 编码的密钥配置到 `FRONTEND_ENCRYPT_PUBLIC_KEY_BASE64` 和 `FRONTEND_ENCRYPT_PRIVATE_KEY_BASE64` 配置项中, 并开启 `FRONTEND_ENCRYPT_ENABLED` 配置项。
+
 ### 数据库迁移
 
 ```shell

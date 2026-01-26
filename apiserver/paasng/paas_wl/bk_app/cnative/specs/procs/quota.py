@@ -20,12 +20,9 @@ import json
 from attrs import asdict, define
 
 from paas_wl.bk_app.cnative.specs.constants import (
-    DEFAULT_PROC_CPU,
-    DEFAULT_PROC_CPU_REQUEST,
-    DEFAULT_PROC_MEM,
-    DEFAULT_PROC_MEM_REQUEST,
+    DEFAULT_RES_QUOTA_PLAN_NAME,
     OVERRIDE_PROC_RES_ANNO_KEY,
-    ResQuotaPlan,
+    RES_QUOTA_PLANS_ANNO_KEY,
 )
 from paas_wl.bk_app.cnative.specs.crd.bk_app import BkAppResource
 from paasng.platform.engine.constants import AppEnvName
@@ -37,80 +34,60 @@ class ResourceQuota:
     memory: str
 
 
-# 资源配额方案到资源限制的映射表
-PLAN_TO_LIMIT_QUOTA_MAP = {
-    ResQuotaPlan.P_DEFAULT: ResourceQuota(
-        cpu=DEFAULT_PROC_CPU,
-        memory=DEFAULT_PROC_MEM,
-    ),
-    ResQuotaPlan.P_4C1G: ResourceQuota(cpu="4000m", memory="1024Mi"),
-    ResQuotaPlan.P_4C2G: ResourceQuota(cpu="4000m", memory="2048Mi"),
-    ResQuotaPlan.P_4C4G: ResourceQuota(cpu="4000m", memory="4096Mi"),
-}
-
-# 资源配额方案到资源请求的映射表
-# CPU REQUEST = 200m
-# MEMORY REQUEST 的计算规则: 当 Limits 大于等于 2048 Mi 时，值为 Limits 的 1/2; 当 Limits 小于 2048 Mi 时，值为 Limits 的 1/4
-# 云原生应用实际的 requests 配置策略在 operator 中实现, 这里的值并非实际生效值
-PLAN_TO_REQUEST_QUOTA_MAP = {
-    ResQuotaPlan.P_DEFAULT: ResourceQuota(
-        cpu=DEFAULT_PROC_CPU_REQUEST,
-        memory=DEFAULT_PROC_MEM_REQUEST,
-    ),
-    ResQuotaPlan.P_4C1G: ResourceQuota(cpu="200m", memory="256Mi"),
-    ResQuotaPlan.P_4C2G: ResourceQuota(cpu="200m", memory="1024Mi"),
-    ResQuotaPlan.P_4C4G: ResourceQuota(cpu="200m", memory="2048Mi"),
+# Deprecated: compatible with old data, will be removed in the future
+LEGACY_QUOTA_PLANS = {
+    "default": {
+        "limits": ResourceQuota(cpu="4000m", memory="1024Mi"),
+        "requests": ResourceQuota(cpu="200m", memory="256Mi"),
+    },
+    "4C1G": {
+        "limits": ResourceQuota(cpu="4000m", memory="1024Mi"),
+        "requests": ResourceQuota(cpu="200m", memory="256Mi"),
+    },
+    "4C2G": {
+        "limits": ResourceQuota(cpu="4000m", memory="2048Mi"),
+        "requests": ResourceQuota(cpu="200m", memory="1024Mi"),
+    },
+    "4C4G": {
+        "limits": ResourceQuota(cpu="4000m", memory="4096Mi"),
+        "requests": ResourceQuota(cpu="200m", memory="2048Mi"),
+    },
 }
 
 
 class ResQuotaReader:
-    """Read resQuotaPlan and resQuotas(envOverlay) from app model resource object
-
-    :param res: App model resource object
-    """
+    """Read resource quota plans and environment overlays from BkAppResource"""
 
     def __init__(self, res: BkAppResource):
         self.res = res
+        self._active_plans: dict[str, dict] = self._load_active_plans()
 
     def read_all(self, env_name: AppEnvName) -> dict[str, dict]:
-        """Read all ResQuota config defined
+        """Read all resource quota configs for given environment
+
+        Note: OVERRIDE_PROC_RES_ANNO_KEY Annotation overrides have highest priority
 
         :param env_name: Environment name
-        :return: Dict[name of process, config],
-          config is {"plan": plan name, "limits": {"cpu":cpu limit, "memory": memory limit},
-          "requests": {"cpu":cpu request, "memory": memory request}}
-
-        Note: If override_proc_res is configured in BkAppResource's annotations,
-          it will be applied with the highest priority.
+        :return: {process_name: {plan: str, limits: {cpu, memory}, requests: {cpu, memory}}}
         """
         results: dict[str, dict] = {}
+
         for p in self.res.spec.processes:
-            plan = p.resQuotaPlan or ResQuotaPlan.P_DEFAULT
-            results[p.name] = {
-                "plan": str(plan),
-                "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[plan]),
-                # TODO 云原生应用的 requests 取值策略在 operator 中实现. 这里的值并非实际生效值, 仅用于前端展示. 如果需要, 后续校正?
-                "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[plan]),
-            }
+            # if no plan is specified, use the default plan
+            plan_name = p.resQuotaPlan or DEFAULT_RES_QUOTA_PLAN_NAME
+            results[p.name] = self._get_plan_quota(plan_name)
 
-        if overlay := self.res.spec.envOverlay:
-            quotas_overlay = overlay.resQuotas or []
-        else:
-            quotas_overlay = []
-
-        for quotas in quotas_overlay:
+        quotas_overlay = self.res.spec.envOverlay.resQuotas if self.res.spec.envOverlay else []
+        for quotas in quotas_overlay or []:
             if quotas.envName == env_name:
-                results[quotas.process] = {
-                    "plan": quotas.plan,
-                    "limits": asdict(PLAN_TO_LIMIT_QUOTA_MAP[ResQuotaPlan(quotas.plan)]),
-                    "requests": asdict(PLAN_TO_REQUEST_QUOTA_MAP[ResQuotaPlan(quotas.plan)]),
-                }
+                results[quotas.process] = self._get_plan_quota(quotas.plan)
 
-        override_config_str = self.res.metadata.annotations.get(OVERRIDE_PROC_RES_ANNO_KEY, "")
-        if not override_config_str:
+        # structure: {process_name: {limits: {...}, requests: {...}}}
+        override_str = self.res.metadata.annotations.get(OVERRIDE_PROC_RES_ANNO_KEY, "")
+        if not override_str:
             return results
 
-        override_map = json.loads(override_config_str)
+        override_map: dict[str, dict] = json.loads(override_str)
         for proc_name, config in results.items():
             if override_res := override_map.get(proc_name):
                 if "limits" in override_res:
@@ -119,3 +96,23 @@ class ResQuotaReader:
                     config["requests"] = override_res["requests"]
 
         return results
+
+    def _get_plan_quota(self, plan_name: str) -> dict:
+        """Get quota config by plan name (annotation plans > legacy plans)"""
+        if plan_name in self._active_plans:
+            plan = self._active_plans[plan_name]
+            return {"plan": plan_name, "limits": plan["limits"], "requests": plan["requests"]}
+
+        # Fallback to legacy plans
+        legacy_plan = LEGACY_QUOTA_PLANS[plan_name]
+        return {
+            "plan": plan_name,
+            "limits": asdict(legacy_plan["limits"]),
+            "requests": asdict(legacy_plan["requests"]),
+        }
+
+    def _load_active_plans(self) -> dict[str, dict]:
+        """Load active plans from annotations"""
+        # structure: {plan_name: {limits: {...}, requests: {...}}}
+        plans_str = self.res.metadata.annotations.get(RES_QUOTA_PLANS_ANNO_KEY, "")
+        return json.loads(plans_str) if plans_str else {}

@@ -85,9 +85,9 @@
         :render-header="statusRenderHeader"
       >
         <template slot-scope="{ row }">
-          <span :class="['g-dot-default mr8', { success: row.application.is_active }]"></span>
+          <span :class="['g-dot-default mr8', row.application.app_status]"></span>
           <span>
-            {{ row.application?.is_active ? $t('正常') : $t('下架') }}
+            {{ $t(APP_STATUS[row.application.app_status]) }}
           </span>
         </template>
       </bk-table-column>
@@ -127,7 +127,7 @@
 <script>
 import tebleHeaderFilters from '@/components/teble-header-filters';
 import { mapGetters } from 'vuex';
-import { APP_TENANT_MODE } from '@/common/constants';
+import { APP_TENANT_MODE, APP_STATUS } from '@/common/constants';
 
 export default {
   data() {
@@ -138,6 +138,7 @@ export default {
       allMarkedApps: [],
       markedApps: [],
       appTenantMode: APP_TENANT_MODE,
+      APP_STATUS,
       tenantFilters: [
         { text: this.$t('单租户'), value: 'single' },
         { text: this.$t('全租户'), value: 'global' },
@@ -201,7 +202,7 @@ export default {
     },
     // 获取行的 class 名称
     getRowClassName({ row }) {
-      return !row.application.is_active ? 'off-shelf-row' : '';
+      return row.application.app_status === 'offline' ? 'off-shelf-row' : '';
     },
     // 获取收藏的应用列表
     async getMarkedApps() {
@@ -226,8 +227,9 @@ export default {
           iconClass: 'bk-icon icon-funnel',
           filterList: [
             { text: this.$t('全部'), value: 'all' },
+            { text: this.$t('未部署'), value: 'not_deployed' },
             { text: this.$t('正常'), value: 'normal' },
-            { text: this.$t('下架'), value: 'archive' },
+            { text: this.$t('下架'), value: 'offline' },
           ],
         },
         on: {
@@ -243,13 +245,9 @@ export default {
       let filteredApps = this.allMarkedApps;
 
       // 应用状态过滤
-      const statusFilterConditions = {
-        all: () => true,
-        normal: (item) => item.application.is_active,
-        archive: (item) => !item.application.is_active,
-      };
-      const statusFilterFunction = statusFilterConditions[this.tableHeaderFilterValue] || (() => true);
-      filteredApps = filteredApps.filter(statusFilterFunction);
+      if (this.tableHeaderFilterValue !== 'all') {
+        filteredApps = filteredApps.filter((item) => item.application.app_status === this.tableHeaderFilterValue);
+      }
 
       // 应用租户模式过滤
       if (this.currentTenantFilters && this.currentTenantFilters.length > 0) {

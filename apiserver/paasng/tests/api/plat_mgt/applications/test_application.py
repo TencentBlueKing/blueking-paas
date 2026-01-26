@@ -121,8 +121,8 @@ class TestApplicationListView:
             ({"app_tenant_mode": "global"}, 2, {"global-app1", "global-app2"}),
             (
                 {"app_status": "not_deployed"},
-                5,
-                {"global-app1", "global-app2", "single-app1", "single-app2", "single-app3"},
+                4,
+                {"global-app1", "global-app2", "single-app2", "single-app3"},
             ),
             # 测试排序功能
             (

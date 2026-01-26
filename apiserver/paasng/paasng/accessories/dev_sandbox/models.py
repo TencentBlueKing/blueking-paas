@@ -139,7 +139,7 @@ class DevSandbox(OwnerTimestampedModel):
     def upsert_env_var(self, key: str, value: str):
         """更新或新增单个环境变量"""
         env_vars = self.list_env_vars()
-        pre_upsert_env_var = DevSandboxEnvVar(
+        pre_upsert_env_var = DevSandboxEnvVar.create(
             key=key,
             value=value,
             source=DevSandboxEnvVarSource.CUSTOM,

@@ -84,7 +84,7 @@ class TestCreateDevSandbox:
             mock.patch(
                 "paasng.accessories.dev_sandbox.views.get_env_vars_selected_addons",
                 return_value=DevSandboxEnvVarList(
-                    [DevSandboxEnvVar(key="FOO", value="BAR", source=DevSandboxEnvVarSource.STAG)]
+                    [DevSandboxEnvVar.create(key="FOO", value="BAR", source=DevSandboxEnvVarSource.STAG)]
                 ),
             ),
             mock.patch(

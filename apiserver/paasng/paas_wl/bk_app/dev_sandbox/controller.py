@@ -110,7 +110,6 @@ class DevSandboxController:
         :param code_editor_cfg: 代码编辑器配置
         """
         sandbox_name = get_dev_sandbox_name(self.wl_app)
-
         try:
             self.sandbox_mgr.get(self.wl_app, sandbox_name)
         except AppEntityNotFound:

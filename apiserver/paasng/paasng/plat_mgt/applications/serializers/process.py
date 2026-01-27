@@ -129,17 +129,16 @@ class EnvOverlayInputSLZ(serializers.Serializer):
         data.pop("override_resources", None)
 
         # 处理 override_proc_res 字段
-        if "override_proc_res" in data:
-            override_proc_res = data.pop("override_proc_res")
-            if not override_proc_res:
-                data["override_plan_name"] = None
-                data["override_resources"] = None
-            elif "plan" in override_proc_res:
-                data["override_plan_name"] = override_proc_res["plan"]
-                data["override_resources"] = None
-            else:
-                data["override_plan_name"] = None
-                data["override_resources"] = override_proc_res
+        override_proc_res = data.pop("override_proc_res", None)
+        if not override_proc_res:
+            data["override_plan_name"] = None
+            data["override_resources"] = None
+        elif "plan" in override_proc_res:
+            data["override_plan_name"] = override_proc_res["plan"]
+            data["override_resources"] = None
+        else:
+            data["override_plan_name"] = None
+            data["override_resources"] = override_proc_res
 
         return super().to_internal_value(data)
 

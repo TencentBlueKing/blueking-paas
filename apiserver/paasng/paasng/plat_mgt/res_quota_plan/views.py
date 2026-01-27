@@ -20,7 +20,6 @@ from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -38,7 +37,6 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
     """资源配额方案管理"""
 
     permission_classes = [IsAuthenticated, plat_mgt_perm_class(PlatMgtAction.ALL)]
-    pagination_class = LimitOffsetPagination
 
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],

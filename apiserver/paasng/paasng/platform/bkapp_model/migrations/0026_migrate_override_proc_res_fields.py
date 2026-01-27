@@ -41,33 +41,13 @@ def migrate_override_fields_data(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('bkapp_model', '0024_alter_processspecenvoverlay_override_proc_res'),
+        ('bkapp_model', '0025_processspecenvoverlay_override_plan_name_and_more'),
     ]
 
     operations = [
-        # Step 1: Add new fields
-        migrations.AddField(
-            model_name='processspecenvoverlay',
-            name='override_plan_name',
-            field=models.CharField(
-                blank=True,
-                max_length=64,
-                null=True,
-                verbose_name='管理员配置的资源配额方案名称',
-            ),
-        ),
-        migrations.AddField(
-            model_name='processspecenvoverlay',
-            name='override_resources',
-            field=models.JSONField(
-                blank=True,
-                null=True,
-                verbose_name='管理员配置的资源配额',
-            ),
-        ),
-        # Step 2: Migrate data from old fields to new fields
+        # Migrate data from old fields to new fields
         migrations.RunPython(migrate_override_fields_data),
-        # Step 3: Remove old fields
+        # Delete the deprecated field
         migrations.RemoveField(
             model_name='processspecenvoverlay',
             name='override_proc_res',

@@ -103,15 +103,15 @@ class ModuleProcessSpecOutputSLZ(serializers.Serializer):
 class EnvOverlayInputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输入序列化器"""
 
-    # Note: override_plan_name 和 override_resources 二选一使用
+    # Note: override_plan_name 和 override_resources 互斥
     override_plan_name = serializers.CharField(
-        help_text="管理员配置的资源配额方案名称",
+        help_text="资源配额方案名称",
         allow_null=True,
         required=False,
         validators=[validate_res_quota_plan],
     )
     override_resources = ResourcesSLZ(
-        help_text="管理员配置的资源配额",
+        help_text="资源配额",
         allow_null=True,
         required=False,
     )

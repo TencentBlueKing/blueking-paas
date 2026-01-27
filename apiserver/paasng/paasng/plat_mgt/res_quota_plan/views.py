@@ -126,11 +126,11 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
         if plan_obj.is_builtin:
             raise PermissionDenied(_("系统内置方案不允许删除"))
 
-        if references := plan_obj.get_references():
+        if used_by_processes := plan_obj.get_used_by_processes():
             raise ValidationError(
                 {
                     "message": _("该方案已被应用进程引用, 无法删除"),
-                    "references": references,
+                    "used_by_processes": used_by_processes,
                 }
             )
 

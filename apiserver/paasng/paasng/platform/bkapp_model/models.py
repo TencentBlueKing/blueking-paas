@@ -24,7 +24,6 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jsonfield import JSONField
 
-from paas_wl.bk_app.processes.constants import ProcessTargetStatus
 from paas_wl.utils.models import AuditedModel, TimestampedModel
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.platform.applications.models import Application, ModuleEnvironment
@@ -64,19 +63,7 @@ class ResQuotaPlan(TimestampedModel):
     class Meta:
         ordering = ["created"]
 
-    def has_references(self) -> bool:
-        """检查该配额方案是否被应用引用"""
-
-        # plan_name 出现在任何一个地方, 就认为是有引用
-        # NOTE: 只要 plan_name 存在于任一配置记录中即视为有引用, 即使该配置已被环境级别的其他方案覆盖
-        return (
-            ModuleProcessSpec.objects.filter(plan_name=self.name).exists()
-            or ProcessSpecEnvOverlay.objects.filter(
-                models.Q(plan_name=self.name) | models.Q(override_plan_name=self.name)
-            ).exists()
-        )
-
-    def get_references(self) -> list[dict]:
+    def get_used_by_processes(self) -> list[dict]:
         """获取引用该配额方案的所有进程定义列表"""
         result = []
 
@@ -100,10 +87,6 @@ class ResQuotaPlan(TimestampedModel):
                     "module_name": spec.module.name,
                     "env_name": overlay.environment_name,
                     "process_name": spec.name,
-                    "source": "env_overlay" if overlay.plan_name is None else "admin_override",
-                    "status": ProcessTargetStatus.START.value
-                    if overlay.target_replicas != 0
-                    else ProcessTargetStatus.STOP.value,
                 }
             )
 
@@ -137,10 +120,6 @@ class ResQuotaPlan(TimestampedModel):
                             "module_name": module.name,
                             "env_name": env.environment,
                             "process_name": spec.name,
-                            "source": "module_spec",
-                            "status": ProcessTargetStatus.START.value
-                            if spec.target_replicas != 0
-                            else ProcessTargetStatus.STOP.value,
                         }
                     )
 
@@ -290,11 +269,13 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=AppEnvName.get_choices(), null=False, max_length=16
     )
-    # override_plan_name, override_resources 只能通过后台/API修改
-    # override_plan_name 和 override_resources 二选一使用
-    # override_resources 的结构: {"limits": {"cpu": "2", "memory": "2Gi"},"requests": {"cpu": "1", "memory": "1Gi"}}
-    override_plan_name = models.CharField("管理员配置的资源配额方案名称", max_length=64, null=True, blank=True)
-    override_resources = models.JSONField("管理员配置的资源配额", null=True, blank=True)
+    # override_plan_name, override_resources 目前仅由管理员在后台统一配置
+    # override_plan_name 和 override_resources 两个配置互斥, override_plan_name 优先级高于 override_resources
+    # - override_plan_name 实际对应于 ResQuotaPlan model 中的 plan
+    # - override_resources 用于不指定 override_plan_name 时的临时配置方案, 格式如:
+    #   {"limits": {"cpu": "2", "memory": "2Gi"},"requests": {"cpu": "1", "memory": "1Gi"}}
+    override_plan_name = models.CharField("资源配额方案名称", max_length=64, null=True, blank=True)
+    override_resources = models.JSONField("资源配额", null=True, blank=True)
 
     target_replicas = models.IntegerField("期望副本数", null=True)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)
@@ -312,14 +293,11 @@ class ProcessSpecEnvOverlay(TimestampedModel):
         """Get actual resource override config with limits and requests.
 
         Priority:
-        1. override_resources - Direct limits/requests config
-        2. override_plan_name - Reference to a ResQuotaPlan
+        1. override_plan_name - Reference to a ResQuotaPlan
+        2. override_resources - Direct limits/requests config
 
         :returns: A dict like {"limits": {...}, "requests": {...}}, or None if not configured.
         """
-        if self.override_resources:
-            return self.override_resources
-
         if self.override_plan_name:
             try:
                 plan = ResQuotaPlan.objects.get(name=self.override_plan_name)
@@ -332,6 +310,9 @@ class ProcessSpecEnvOverlay(TimestampedModel):
                 return None
             else:
                 return {"limits": plan.limits, "requests": plan.requests}
+
+        if self.override_resources:
+            return self.override_resources
 
         return None
 

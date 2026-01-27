@@ -54,22 +54,25 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         application = get_object_or_404(self.get_queryset(), code=app_code)
         module = get_object_or_404(application.modules, name=module_name)
 
-        proc_specs = list(ModuleProcessSpec.objects.filter(module=module).prefetch_related("env_overlays"))
+        proc_specs = ModuleProcessSpec.objects.filter(module=module).prefetch_related("env_overlays")
 
         # 构建进程列表
         processes = []
         for spec in proc_specs:
             # 构建环境覆盖配置
             overlays_map = {o.environment_name: o for o in spec.env_overlays.all()}
-            env_overlays = {}
-            for env_name in AppEnvName.get_values():
-                overlay = overlays_map.get(env_name)
-                if overlay:
-                    env_overlays[env_name] = {
-                        "plan_name": overlay.plan_name,
-                        "override_plan_name": overlay.override_plan_name,
-                        "override_resources": overlay.override_resources,
-                    }
+            env_overlays = {
+                env_name: {
+                    "plan_name": overlay.plan_name,
+                    "override_proc_res": (
+                        {"plan": overlay.override_plan_name}
+                        if overlay.override_plan_name
+                        else overlay.override_resources
+                    ),
+                }
+                for env_name in AppEnvName.get_values()
+                if (overlay := overlays_map.get(env_name))
+            }
             processes.append(
                 {
                     "name": spec.name,
@@ -113,51 +116,62 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             )
         except ModuleProcessSpec.DoesNotExist:
             return Response({"detail": _(f"进程 {process_name} 不存在")}, status=status.HTTP_404_NOT_FOUND)
-
         # 构建环境覆盖映射
         env_overlays_map = {o.environment_name: o for o in proc_spec.env_overlays.all()}
-        requested_overlays = data["env_overlays"]
+        requested_overlays: dict[str, dict] = data["env_overlays"]
 
-        # 记录更新前状态
+        # 构建更新前的审计日志数据
         before_env_overlays = {}
         for env_name in requested_overlays:
             overlay = env_overlays_map.get(env_name)
-            before_env_overlays[env_name] = {
-                "override_plan_name": overlay.override_plan_name if overlay else None,
-                "override_resources": overlay.override_resources if overlay else None,
-            }
+            if overlay and overlay.override_plan_name:
+                override_proc_res = {"plan": overlay.override_plan_name}
+            elif overlay and overlay.override_resources:
+                override_proc_res = overlay.override_resources
+            else:
+                override_proc_res = None
+            before_env_overlays[env_name] = {"override_proc_res": override_proc_res}
 
-        # 批量更新
+        # 批量更新环境覆盖配置
         overlays_to_update = []
         overlays_to_create = []
-
+        now = timezone.now()
         for env_name, overlay_data in requested_overlays.items():
-            env_overlay = env_overlays_map.get(env_name)
-
-            if not env_overlay:
-                # 创建新的环境覆盖
-                env_overlay = ProcessSpecEnvOverlay(
-                    proc_spec=proc_spec, environment_name=env_name, tenant_id=proc_spec.tenant_id
-                )
-                overlays_to_create.append(env_overlay)
-
-            # 更新配置
-            env_overlay.override_plan_name = overlay_data["override_plan_name"]
-            env_overlay.override_resources = overlay_data["override_resources"]
-
-            env_overlay.updated = timezone.now()
-            if env_overlay.pk:
+            if env_overlay := env_overlays_map.get(env_name):
+                env_overlay.override_plan_name = overlay_data["override_plan_name"]
+                env_overlay.override_resources = overlay_data["override_resources"]
+                env_overlay.updated = now
                 overlays_to_update.append(env_overlay)
-
-        # 批量创建和更新
+            else:
+                overlays_to_create.append(
+                    ProcessSpecEnvOverlay(
+                        proc_spec=proc_spec,
+                        environment_name=env_name,
+                        tenant_id=proc_spec.tenant_id,
+                        override_plan_name=overlay_data["override_plan_name"],
+                        override_resources=overlay_data["override_resources"],
+                        updated=now,
+                    )
+                )
         if overlays_to_create:
             ProcessSpecEnvOverlay.objects.bulk_create(overlays_to_create)
-
         if overlays_to_update:
             ProcessSpecEnvOverlay.objects.bulk_update(
                 overlays_to_update,
                 fields=["override_plan_name", "override_resources", "updated"],
             )
+
+        # 构建更新后的审计日志数据
+        after_env_overlays = {
+            env_name: {
+                "override_proc_res": (
+                    {"plan": overlay_data["override_plan_name"]}
+                    if overlay_data["override_plan_name"]
+                    else overlay_data["override_resources"]
+                )
+            }
+            for env_name, overlay_data in requested_overlays.items()
+        }
 
         # 记录审计日志
         add_plat_mgt_audit_record(
@@ -168,7 +182,7 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             module_name=module_name,
             attribute=process_name,
             data_before=DataDetail(data={"name": process_name, "env_overlays": before_env_overlays}),
-            data_after=DataDetail(data={"name": process_name, "env_overlays": requested_overlays}),
+            data_after=DataDetail(data={"name": process_name, "env_overlays": after_env_overlays}),
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)

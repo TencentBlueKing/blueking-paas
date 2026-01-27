@@ -3104,4 +3104,5 @@ export default {
   切换为代码仓库: 'Switch to Code Repository',
   是否切换为代码仓库: 'Switch to Code Repository?',
   '一旦修改为代码仓库部署后，不能再改回源码包部署。': 'Once changed to code repository deployment, it cannot be reverted to source package deployment.',
+  复制审批链接: 'Copy Approval Link',
 };

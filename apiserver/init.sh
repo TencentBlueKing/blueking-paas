@@ -247,6 +247,12 @@ ensure-legacy-image() {
     python manage.py bind_buildpacks --image "${legacy_image_name}" --buildpack-name "${golang_buildpack_name}"
 }
 
+# 用于将镜像从外部仓库(如 hub.bktencent.com)推送到 bkrepo
+ensure-smart-image() {
+    python manage.py push_smart_image --image "${PAAS_APP_IMAGE}" --type legacy --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
+    python manage.py push_smart_image --image "${PAAS_HEROKU_RUNNER_IMAGE}" --type cnb --dry-run "${PAAS_SKIP_PUSH_SMART_BASE_IMAGE:-False}"
+}
+
 ensure-runtimes() {
     stack="${PAAS_STACK:-heroku-18}"
     bkrepo_endpoint="${PAAS_BLOBSTORE_BKREPO_ENDPOINT%/}"
@@ -328,4 +334,4 @@ migrate-perm(){
     python manage.py migrate_bkpaas3_perm --exclude-users admin bk-admin
 }
 
-call_steps ensure-apigw ensure-runtimes-fixtures ensure-init-data ensure-service migrate-perm
+call_steps ensure-apigw ensure-runtimes-fixtures ensure-init-data ensure-service ensure-smart-image migrate-perm

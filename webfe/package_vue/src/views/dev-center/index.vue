@@ -143,7 +143,7 @@
         >
           <template slot-scope="{ row }">
             <div
-              :class="['star-wrapper', { 'off-shelf': !row.application.is_active }]"
+              :class="['star-wrapper', { 'off-shelf': isOffline(row) }]"
               @click.stop="toggleAppMarked(row)"
             >
               <span
@@ -267,7 +267,7 @@
           :min-width="280"
         >
           <template slot-scope="{ row }">
-            <div :class="['app-name', { 'off-shelf': !row.application.is_active }]">
+            <div :class="['app-name', { 'off-shelf': isOffline(row) }]">
               <img
                 :src="row.application ? (row.application.logo_url ? row.application.logo_url : defaultImg) : defaultImg"
                 class="app-logo"
@@ -291,7 +291,7 @@
           <template slot-scope="{ row, $index }">
             <span
               v-if="row.application.config_info.engine_enabled"
-              :class="['module-name', { 'off-shelf': !row.application.is_active }]"
+              :class="['module-name', { 'off-shelf': isOffline(row) }]"
               @click.stop="handleExpandRow(row)"
             >
               {{ $t('共') }}&nbsp; {{ row.application.modules.length }} &nbsp;{{ $t('个模块') }}
@@ -316,7 +316,7 @@
           v-if="platformFeature.REGION_DISPLAY"
         >
           <template slot-scope="{ row }">
-            <span :class="{ 'off-shelf': !row.application.is_active }">
+            <span :class="{ 'off-shelf': isOffline(row) }">
               {{ $t(row.application.region_name) }}
             </span>
           </template>
@@ -325,11 +325,11 @@
           <template slot-scope="{ row }">
             <!-- 外部版不展示 -->
             <div class="app-type-wrapper">
-              <span :class="{ 'off-shelf': !row.application.is_active }">
+              <span :class="{ 'off-shelf': isOffline(row) }">
                 {{ $t(PAAS_APP_TYPE[row.application.type]) }}
               </span>
               <!-- 是否显示迁移应用icon, 需要后台提供字段 -->
-              <template v-if="row.application.is_active">
+              <template v-if="!isOffline(row)">
                 <div
                   v-if="
                     userFeature.CNATIVE_MGRLEGACY && !noMigrationNeededStatus.includes(row.migration_status?.status)
@@ -371,9 +371,9 @@
           :render-header="statusRenderHeader"
         >
           <template slot-scope="{ row }">
-            <i :class="['dot', { successful: row.application.is_active }]"></i>
-            <span :class="{ 'off-shelf': !row.application.is_active }">
-              {{ row.application.is_active ? $t('正常') : $t('下架') }}
+            <span :class="['g-dot-default mr8', row.application.app_status]"></span>
+            <span :class="{ 'off-shelf': row.application.app_status === 'offline' }">
+              {{ $t(APP_STATUS[row.application.app_status]) }}
             </span>
           </template>
         </bk-table-column>
@@ -490,8 +490,8 @@ import auth from '@/auth';
 import i18n from '@/language/i18n';
 import tebleHeaderFilters from '@/components/teble-header-filters';
 import appMigrationDialog from '@/components/app-migration-dialog';
-import { PAAS_APP_TYPE, APP_TENANT_MODE } from '@/common/constants';
-import { mapGetters } from 'vuex';
+import { PAAS_APP_TYPE, APP_TENANT_MODE, APP_STATUS } from '@/common/constants';
+import { mapGetters, mapState } from 'vuex';
 
 const APP_TYPE_MAP = [
   {
@@ -575,13 +575,10 @@ export default {
       isLoading: true,
       isFirstLoading: true,
       userHasApp: true,
-      minHeight: 550,
       appList: [],
       defaultImg: require('@static/images/default_logo.png'),
       // 搜索条件筛选
       appFilter: {
-        // 显示已下架应用
-        isActive: null,
         // 显示我创建的
         excludeCollaborated: false,
         // 版本选择
@@ -593,28 +590,6 @@ export default {
       // 搜索词
       filterKey: '',
       sortValue: 'code',
-      // fetchParams
-      fetchParams: {
-        // 等于 filterKey
-        search_term: '',
-        // (curPage -1 ) * limit
-        offset: 0,
-        // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
-        exclude_collaborated: false,
-        // 应用状态过滤
-        is_active: null,
-        // limit
-        limit: 0,
-        order_by: 'code',
-      },
-      availableLanguages: ['Python', 'PHP', 'Go', 'NodeJS'],
-      availableRegions: ['ieod', 'tencent', 'clouds'],
-      RegionTranslate: {
-        ieod: this.$t('内部版'),
-        tencent: this.$t('外部版'),
-        clouds: this.$t('混合云版'),
-        default: this.$t('默认'),
-      },
       type: 'default',
       curAppType: '',
       curAppTypeActive: 'all',
@@ -635,6 +610,7 @@ export default {
         limitList: [5, 10, 20, 50],
       },
       PAAS_APP_TYPE,
+      APP_STATUS,
       curAppCreationType: 'all',
       versionFilters: [
         { text: '内部版', value: '内部版' },
@@ -659,15 +635,8 @@ export default {
     };
   },
   computed: {
-    userFeature() {
-      return this.$store.state.userFeature;
-    },
-    platformFeature() {
-      return this.$store.state.platformFeature;
-    },
-    localLanguage() {
-      return this.$store.state.localLanguage;
-    },
+    ...mapState(['userFeature', 'platformFeature', 'localLanguage']),
+    ...mapGetters(['isShowTenant']),
     isEnglishEnv() {
       return this.localLanguage === 'en';
     },
@@ -679,7 +648,6 @@ export default {
         ? this.sortValue.indexOf('-') !== -1
         : !(this.sortValue.indexOf('-') !== -1);
     },
-    ...mapGetters(['isShowTenant']),
   },
   watch: {
     filterKey(newVal, oldVal) {
@@ -690,23 +658,15 @@ export default {
   },
   created() {
     this.handleFilterApp({ text: '操作时间', value: '-latest_operated_at' }, false);
-    if (this.$route.query.is_active) {
-      this.appFilter.isActive = true;
+    if (this.$route.query.app_status) {
+      this.tableHeaderFilterValue = this.$route.query.app_status;
     }
     this.fetchAppList();
   },
-  mounted() {
-    this.handlePageHeight();
-  },
   methods: {
-    handlePageHeight() {
-      const HEADER_HEIGHT = 50;
-      const FOOTER_HEIGHT = 70;
-      const winHeight = window.innerHeight;
-      const contentHeight = winHeight - HEADER_HEIGHT - FOOTER_HEIGHT;
-      if (contentHeight > this.minHeight) {
-        this.minHeight = contentHeight;
-      }
+    // 判断应用是否下架
+    isOffline(row) {
+      return row.application.app_status === 'offline';
     },
 
     deploy(item, subModule) {
@@ -814,44 +774,32 @@ export default {
       this.fetchAppList();
     },
 
-    // 获取 app list
+    // 获取应用列表
     async fetchAppList(page = 1) {
-      let url = `${BACKEND_URL}/api/bkapps/applications/lists/detailed?format=json`;
-      // 筛选,搜索等操作时，强制切到 page 的页码
-      // APP 编程语言， vue-resource 不支持替換 array 的編碼方式（會編碼成 language[], drf 默认配置不能识别 )
-      url = this.concatenateFilters(url);
-      this.fetchParams.order_by = this.sortValue;
-      const params = Object.assign(this.fetchParams, {
+      const params = {
+        format: 'json',
         search_term: this.filterKey,
         offset: (page - 1) * this.pagination.limit,
         limit: this.pagination.limit,
-        // 是否排除拥有协作者权限的应用，默认不排除。如果为 true，意为只返回我创建的
+        order_by: this.sortValue,
         exclude_collaborated: this.appFilter.excludeCollaborated,
-        // 是否是活跃应用
-        is_active: undefined,
-        // 对应类型
         type: this.curAppType,
-      });
+        ...(this.tableHeaderFilterValue !== 'all' && { app_status: this.tableHeaderFilterValue }),
+      };
 
-      // 全部: 不传参数 / 正常: true / 下架: false
-      if (this.tableHeaderFilterValue === 'all') {
-        delete params.is_active;
-      } else if (this.tableHeaderFilterValue === 'normal') {
-        params.is_active = true;
-      } else if (this.tableHeaderFilterValue === 'archive') {
-        params.is_active = false;
-      }
+      // APP 编程语言，vue-resource 不支持替换 array 的编码方式（会编码成 language[], drf 默认配置不能识别）
+      const filterParams = this.concatenateFilters('');
+      const queryString = new URLSearchParams(params).toString();
+      const url = `${BACKEND_URL}/api/bkapps/applications/lists/detailed?${queryString}${filterParams}`;
 
       this.isLoading = true;
-      for (const key in params) {
-        url += `&${key}=${params[key]}`;
-      }
       try {
         const res = await this.$store.dispatch('getAppList', { url });
-        (res.results || []).forEach((item) => {
+        const results = res.results || [];
+        results.forEach((item) => {
           this.$set(item, 'creation_allowed', true);
         });
-        this.appList = res.results || [];
+        this.appList = results;
         this.pagination.count = res.count;
         this.pagination.current = page;
         this.appExtraData = res.extra_data;
@@ -859,10 +807,7 @@ export default {
         this.tableEmptyConf.isAbnormal = false;
       } catch (e) {
         this.tableEmptyConf.isAbnormal = true;
-        this.$paasMessage({
-          theme: 'error',
-          message: e.detail || this.$t('接口异常'),
-        });
+        this.catchErrorHandler(e);
       } finally {
         this.isFirstLoading = false;
         this.isLoading = false;
@@ -899,8 +844,6 @@ export default {
 
     reset() {
       this.appFilter = {
-        // 默认显示所有应用
-        isActive: null,
         // 我创建的
         excludeCollaborated: false,
         languageList: ['Python', 'PHP', 'Go', 'NodeJS'],
@@ -1001,8 +944,9 @@ export default {
           iconClass: 'bk-icon icon-funnel',
           filterList: [
             { text: this.$t('全部'), value: 'all' },
+            { text: this.$t('未部署'), value: 'not_deployed' },
             { text: this.$t('正常'), value: 'normal' },
-            { text: this.$t('下架'), value: 'archive' },
+            { text: this.$t('下架'), value: 'offline' },
           ],
         },
         on: {
@@ -1109,11 +1053,6 @@ $customize-disabled-color: #c4c6cc;
       background-color: #e1ecff;
     }
   }
-}
-
-.shaixuan,
-.shaixuan input {
-  cursor: pointer;
 }
 
 div.choose-panel {
@@ -1373,20 +1312,6 @@ h2.application-title {
       &:hover {
         color: #63656e;
       }
-    }
-  }
-  i.dot {
-    display: inline-block;
-    margin-right: 8px;
-    width: 8px;
-    height: 8px;
-    background: #f0f1f5;
-    border: 1px solid $customize-disabled-color;
-    border-radius: 50%;
-
-    &.successful {
-      background: #e5f6ea;
-      border: 1px solid #3fc06d;
     }
   }
 

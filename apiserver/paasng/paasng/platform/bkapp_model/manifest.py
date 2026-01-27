@@ -19,9 +19,11 @@ import json
 import logging
 import shlex
 from abc import ABC, abstractmethod
+from operator import itemgetter
 from typing import Dict, List, Optional, Tuple
 
 from django.conf import settings
+from kubernetes.utils.quantity import parse_quantity
 
 from paas_wl.bk_app.applications.managers import get_metadata
 from paas_wl.bk_app.applications.models.build import Build as WlBuild
@@ -32,6 +34,7 @@ from paas_wl.bk_app.cnative.specs.constants import (
     BKAPP_REGION_ANNO_KEY,
     BKAPP_TENANT_ID_ANNO_KEY,
     BKPAAS_DEPLOY_ID_ANNO_KEY,
+    DEFAULT_RES_QUOTA_PLAN_NAME,
     EGRESS_CLUSTER_STATE_NAME_ANNO_KEY,
     ENVIRONMENT_ANNO_KEY,
     IMAGE_CREDENTIALS_REF_ANNO_KEY,
@@ -50,6 +53,7 @@ from paas_wl.bk_app.cnative.specs.crd import bk_app as crd
 from paas_wl.bk_app.cnative.specs.crd.bk_app import SecretSource, VolumeSource
 from paas_wl.bk_app.cnative.specs.crd.metadata import ObjectMetadata
 from paas_wl.bk_app.cnative.specs.models import Mount
+from paas_wl.bk_app.processes.models import ProcessSpecPlan
 from paas_wl.core.resource import generate_bkapp_name
 from paas_wl.infras.cluster.shim import EnvClusterService
 from paas_wl.workloads.networking.egress.models import RCStateAppBinding
@@ -201,7 +205,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                 args=args,
                 replicas=process_spec.target_replicas,
                 target_port=process_spec.port,
-                res_quota_plan=process_spec.plan_name,
+                res_quota_plan=self._sanitize_plan_name(process_spec.plan_name),
                 autoscaling=process_spec.scaling_config,
                 probes=process_spec.probes.render_port() if process_spec.probes else None,
                 services=([svc.render_port() for svc in process_spec.services] if process_spec.services else None),
@@ -253,7 +257,7 @@ class ProcessesManifestConstructor(ManifestConstructor):
                         crd.ResQuotaOverlay(
                             envName=item.environment_name,
                             process=proc_spec.name,
-                            plan=item.plan_name,
+                            plan=self._sanitize_plan_name(item.plan_name),
                         ),
                     )
 
@@ -280,6 +284,42 @@ class ProcessesManifestConstructor(ManifestConstructor):
         # '${PORT:-5000}' is massively used by the app framework, while it can not be used
         # in the spec directly, replace it with normal env var expression.
         return [s.replace("${PORT:-5000}", PORT_PLACEHOLDER) for s in input]
+
+    def _sanitize_plan_name(self, plan_name: str) -> str:
+        """Sanitize the plan name to ensure it is valid in the manifest.
+
+        因为 v2 版本的 app_desc.yaml 也需要可以使用到云原生应用,
+        但 v2 版本的资源配额方案名称可能不是使用的 ResQuotaPlan, 而是使用的 ProcessSpecPlan
+        所以这里需要将其转化为云原生应用可识别的名称
+        """
+        if ResQuotaPlan.objects.filter(name=plan_name).exists():
+            return plan_name
+
+        try:
+            process_spec_plan = ProcessSpecPlan.objects.get_by_name(plan_name)
+        except ProcessSpecPlan.DoesNotExist:
+            return DEFAULT_RES_QUOTA_PLAN_NAME
+
+        # Memory 稀缺性比 CPU 要高, 转换时只关注 Memory
+        limits = process_spec_plan.get_resource_summary()["limits"]
+        expected_limit_memory = parse_quantity(limits.get("memory", "512Mi"))
+
+        quota_plan_memory = sorted(
+            [
+                (parse_quantity(plan.limits.get("memory", "0")), plan.name)
+                for plan in ResQuotaPlan.objects.filter(is_active=True)
+                if plan.limits.get("memory")
+            ],
+            key=itemgetter(0),
+        )
+
+        # 找到第一个内存 >= expected_limit_memory 的方案
+        for limit_memory, quota_plan_name in quota_plan_memory:
+            if limit_memory >= expected_limit_memory:
+                return quota_plan_name
+
+        # 都不满足则使用最大内存方案
+        return quota_plan_memory[-1][1]
 
 
 class EnvVarsManifestConstructor(ManifestConstructor):

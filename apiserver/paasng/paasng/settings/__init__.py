@@ -1340,7 +1340,7 @@ SMART_CNB_DEFAULT_IMAGE_ID = "default"
 if SMART_CNB_DEFAULT_IMAGE_ID not in SMART_CNB_IMAGE_CONF:
     SMART_CNB_IMAGE_CONF[SMART_CNB_DEFAULT_IMAGE_ID] = {
         "name": f"{SMART_DOCKER_REGISTRY_NAMESPACE}/run-heroku-bionic",
-        "tag": "v1.0.2",
+        "tag": "v1.0.4",
     }
 
 # slugbuilder build 的超时时间, 单位秒

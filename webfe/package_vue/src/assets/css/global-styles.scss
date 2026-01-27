@@ -83,13 +83,22 @@ $spacing-values: 4, 6, 8, 10, 12, 16, 20, 24;
   background: #f0f1f5;
   border: 1px solid #c4c6cc;
   &.success,
-  &.successful {
+  &.successful,
+  &.normal {
     background: #CBF0DA;
     border: 1px solid #2CAF5E;
   }
   &.failed {
     background: #FFDDDD;
     border: 1px solid #EA3636;
+  }
+  &.not_deployed {
+    background: #ffe8c3;
+    border: 1px solid #ff9c01;
+  }
+  &.offline {
+    background: #f0f1f5;
+    border: 1px solid #c4c6cc;
   }
 }
 /* dot 状态样式 end */

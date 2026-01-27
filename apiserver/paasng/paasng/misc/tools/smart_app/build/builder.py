@@ -28,6 +28,7 @@ from paas_wl.infras.resources.kube_res.base import Schedule
 from paas_wl.utils.text import b64encode
 from paasng.misc.tools.smart_app.output import make_channel_stream
 from paasng.platform.engine.constants import JobStatus
+from paasng.platform.engine.deploy.bg_build.utils import get_envs_from_pypi_url
 
 from .flow import SmartBuildStateMgr
 from .handler import ContainerRuntimeSpec, SmartBuilderTemplate, SmartBuildHandler
@@ -92,7 +93,7 @@ class SmartAppBuilder:
             "SOURCE_GET_URL": self.source_get_url,
             "DEST_PUT_URL": self.dest_put_url,
             "BUILDER_SHIM_IMAGE": settings.SMART_BUILDER_SHIM_IMAGE,
-            "PackagingVersion": self.smart_build.packaging_version,
+            "PACKAGING_VERSION": self.smart_build.packaging_version,
         }
 
         # 添加缓存配置
@@ -101,6 +102,14 @@ class SmartAppBuilder:
         envs["REGISTRY_AUTH"] = (
             f'{{"{settings.SMART_DOCKER_REGISTRY_HOST}": "Basic {b64encode(f"{username}:{password}")}"}}'
         )
+
+        # Inject pip index url
+        if settings.PYTHON_BUILDPACK_PIP_INDEX_URL:
+            envs.update(get_envs_from_pypi_url(settings.PYTHON_BUILDPACK_PIP_INDEX_URL))
+
+        # Inject extra env vars in settings for development purpose
+        if settings.BUILD_EXTRA_ENV_VARS:
+            envs.update(settings.BUILD_EXTRA_ENV_VARS)
 
         cluster_name = get_default_cluster_name()
 

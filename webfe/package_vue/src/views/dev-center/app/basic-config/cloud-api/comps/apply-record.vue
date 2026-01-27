@@ -213,7 +213,7 @@
       <div
         slot="content"
         v-bkloading="{ isLoading: detailLoading }"
-        class="slider-detail-content"
+        class="p-24"
       >
         <section
           v-if="!detailLoading"
@@ -231,6 +231,18 @@
               :style="field.isTextarea ? 'line-height: 22px; padding-top: 10px' : ''"
             >
               {{ field.value || '--' }}
+              <bk-button
+                v-if="
+                  field.isApplyStatus && isMcpService && curRecord.apply_status === 'pending' && curRecord?.approval_url
+                "
+                theme="primary"
+                text
+                class="ml-6"
+                @click="handleCopyApprovalUrl(curRecord.approval_url)"
+              >
+                <i class="paasng-icon paasng-link"></i>
+                {{ $t('复制审批链接') }}
+              </bk-button>
             </div>
           </div>
           <div
@@ -303,6 +315,7 @@
 <script>
 import moment from 'moment';
 import { mapState, mapGetters } from 'vuex';
+import { copy } from '@/common/tools';
 
 export default {
   props: {
@@ -559,6 +572,7 @@ export default {
           label: this.$t('审批状态'),
           value: this.$t(this.curRecord.apply_status_display),
           show: true,
+          isApplyStatus: true,
         },
         {
           label: this.$t('审批内容'),
@@ -802,6 +816,11 @@ export default {
         return [];
       }
     },
+    // 复制审批链接
+    handleCopyApprovalUrl(url) {
+      if (!url) return;
+      copy(url, this);
+    },
   },
 };
 </script>
@@ -880,11 +899,6 @@ span.paasng-reject {
 .applying {
   position: relative;
   top: -1px;
-}
-
-.slider-detail-content {
-  padding: 30px;
-  min-height: calc(100vh - 50px);
 }
 
 .paasng-kv-list {

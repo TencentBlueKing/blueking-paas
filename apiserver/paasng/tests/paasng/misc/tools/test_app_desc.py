@@ -283,8 +283,8 @@ def test_transform_module_spec(spec_input, expected_spec_output):
                         "spec": OrderedDict(
                             {
                                 "addons": [
-                                    {"name": "mysql", "sharedFrom": "default"},
-                                    {"name": "rabbitmq", "sharedFrom": "default"},
+                                    {"name": "mysql", "sharedFromModule": "default"},
+                                    {"name": "rabbitmq", "sharedFromModule": "default"},
                                 ],
                                 "configuration": {
                                     "env": [{"name": "API_KEY", "value": "api_value", "description": "API 密钥"}]

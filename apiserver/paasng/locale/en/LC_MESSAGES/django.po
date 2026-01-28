@@ -4845,8 +4845,8 @@ msgstr "zh-cn"
 
 #: paasng/utils/serializers.py:404
 #, python-brace-format
-msgid "BASE64解码失败: {value}"
-msgstr "BASE64 decode failed: {value}"
+msgid "Base64 解码失败: {value}"
+msgstr "Base64 decode failed: {value}"
 
 #: paasng/utils/serializers.py:407
 msgid "后端解密失败"
@@ -4860,4 +4860,4 @@ msgstr "Invalid encrypted value format: {value}"
 #: paasng/utils/serializers.py:437
 #, python-brace-format
 msgid "数据嵌套层级过深，最大层级为 {max_depth}"
-msgstr "Data nesting is too deep; maximum depth is {max_depth}"
+msgstr "The data nesting level is too deep, with a maximum level of {max_depth}"

@@ -16,19 +16,15 @@
 # to the current version of the project delivered to anyone in the future.
 
 import io
-from binascii import Error as Base64DecodeError
 from unittest import mock
 
 import pytest
 from blue_krill.contextlib import nullcontext
-from django.core.exceptions import ImproperlyConfigured
-from django.test.utils import override_settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.utils.serializers import (
     Base64FileField,
-    BaseDecryptFieldMixin,
     ConfigVarReservedKeyValidator,
     DecryptableCharField,
     DecryptableJSONField,
@@ -163,69 +159,6 @@ class TestSafePathField:
         assert slz.is_valid() is False
 
 
-class TestBaseDecryptFieldMixin:
-    def test_cipher_handler_unsupported_cipher_type(self):
-        mixin = BaseDecryptFieldMixin()
-        with (
-            override_settings(FRONTEND_ENCRYPT_CIPHER_TYPE="RSA"),
-            pytest.raises(ImproperlyConfigured, match="unsupported cipher type"),
-        ):
-            _ = mixin.cipher_handler
-
-    def test_cipher_handler_missing_keys(self):
-        mixin = BaseDecryptFieldMixin()
-        with (
-            override_settings(
-                FRONTEND_ENCRYPT_CIPHER_TYPE="SM2",
-                FRONTEND_ENCRYPT_PUBLIC_KEY="",
-                FRONTEND_ENCRYPT_PRIVATE_KEY="",
-            ),
-            pytest.raises(ImproperlyConfigured, match="SM2 public key or private key not set"),
-        ):
-            _ = mixin.cipher_handler
-
-    @pytest.mark.parametrize(
-        ("side_effect"),
-        [
-            (Base64DecodeError("bad base64")),
-            (Exception("boom")),
-        ],
-    )
-    def test_decrypt_error_handling(self, side_effect):
-        mixin = BaseDecryptFieldMixin()
-        mixin.cipher_handler = mock.Mock(decrypt=mock.Mock(side_effect=side_effect))
-
-        with pytest.raises(ValidationError):
-            mixin.decrypt("encrypted_value")
-
-    @pytest.mark.parametrize(
-        ("value", "expected", "ctx"),
-        [
-            ({"_encrypted": True, "_encrypted_value": "ciphertext"}, True, nullcontext()),
-            ({"_encrypted": True}, False, nullcontext()),
-            ({"_encrypted": False, "_encrypted_value": "ciphertext"}, False, pytest.raises(ValidationError)),
-            ("plain", False, nullcontext()),
-        ],
-    )
-    def test_is_encrypted_value(self, value, expected, ctx):
-        mixin = BaseDecryptFieldMixin()
-        with ctx:
-            assert mixin.is_encrypted_value(value) is expected
-
-    def test_decrypt_if_needed_plain_value(self):
-        mixin = BaseDecryptFieldMixin()
-        with mock.patch.object(mixin, "decrypt", return_value="should_not_call") as decrypt_mock:
-            assert mixin.decrypt_if_needed("plain") == "plain"
-            decrypt_mock.assert_not_called()
-
-    def test_decrypt_if_needed_encrypted_value(self):
-        mixin = BaseDecryptFieldMixin()
-        with mock.patch.object(mixin, "decrypt", return_value="plain") as decrypt_mock:
-            value = {"_encrypted": True, "_encrypted_value": "ciphertext"}
-            assert mixin.decrypt_if_needed(value) == "plain"
-            decrypt_mock.assert_called_once_with("ciphertext")
-
-
 class DecryptableJSONFieldSLZ(serializers.Serializer):
     payload = DecryptableJSONField()
 
@@ -285,3 +218,17 @@ class TestDecryptableCharField:
 
             assert slz.validated_data["value"] == "plain"
             decrypt_mock.assert_called_once_with("cipher")
+
+    @pytest.mark.parametrize(
+        ("value", "expected", "ctx"),
+        [
+            ({"_encrypted": True, "_encrypted_value": "ciphertext"}, True, nullcontext()),
+            ({"_encrypted": True}, False, nullcontext()),
+            ({"_encrypted": False, "_encrypted_value": "ciphertext"}, False, pytest.raises(ValidationError)),
+            ("plain", False, nullcontext()),
+        ],
+    )
+    def test_is_encrypted_value(self, value, expected, ctx):
+        slz = DecryptableCharFieldSLZ(data={"value": value})
+        with ctx:
+            assert slz.fields["value"].is_encrypted_value(value)[0] == expected

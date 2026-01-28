@@ -20,7 +20,7 @@ import logging
 import re
 from binascii import Error as Base64DecodeError
 from functools import cached_property
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import arrow
 from bkcrypto import constants as bkcrypto_constants
@@ -401,27 +401,26 @@ class BaseDecryptFieldMixin:
         except ImproperlyConfigured:
             raise
         except Base64DecodeError:
-            raise serializers.ValidationError(_("BASE64解码失败: {value}").format(value=value))
+            raise serializers.ValidationError(_("Base64 解码失败: {value}").format(value=value))
         except Exception:
             logger.exception("decrypt error")
             raise serializers.ValidationError(_("后端解密失败"))
 
-    def is_encrypted_value(self, value) -> bool:
+    def is_encrypted_value(self, value) -> Tuple[bool, str]:
         """判断是否为加密值格式"""
-        if (
-            isinstance(value, dict)
-            and self.ENCRYPTED_VALUE_KEY in value
-            and isinstance(value[self.ENCRYPTED_VALUE_KEY], str)
-        ):
-            if value.get(self.ENCRYPTED_FLAG_KEY) is True:
-                return True
-            raise serializers.ValidationError(_("无效的加密值格式: {value}").format(value=value))
-        return False
+        match value:
+            case {self.ENCRYPTED_FLAG_KEY: True, self.ENCRYPTED_VALUE_KEY: val}:
+                return True, val
+            case {self.ENCRYPTED_FLAG_KEY: False, self.ENCRYPTED_VALUE_KEY: str()}:
+                raise serializers.ValidationError(_("无效的加密值格式: {value}").format(value=value))
+            case _:
+                return False, value
 
     def decrypt_if_needed(self, value) -> str:
         """如果是加密值格式则解密，否则直接返回原始值"""
-        if self.is_encrypted_value(value):
-            return self.decrypt(value[self.ENCRYPTED_VALUE_KEY])
+        is_encrypted, val = self.is_encrypted_value(value)
+        if is_encrypted:
+            return self.decrypt(val)
         return value
 
 
@@ -444,8 +443,9 @@ class DecryptableJSONField(BaseDecryptFieldMixin, serializers.JSONField):
         if depth > self.MAX_RECURSION_DEPTH:
             self.fail("max_recursion_depth", max_depth=self.MAX_RECURSION_DEPTH)
 
-        if self.is_encrypted_value(data):
-            return self.decrypt(data[self.ENCRYPTED_VALUE_KEY])
+        is_encrypte, val = self.is_encrypted_value(data)
+        if is_encrypte:
+            return self.decrypt(val)
 
         if isinstance(data, dict):
             return {k: self._decrypt_recursive(v, depth + 1) for k, v in data.items()}

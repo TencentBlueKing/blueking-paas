@@ -252,8 +252,8 @@ def test_transform_module_spec(spec_input, expected_spec_output):
                     "source_dir": "src/backend",
                     "language": "Python",
                     "services": [
-                        {"name": "mysql", "share_from": "default"},
-                        {"name": "rabbitmq", "share_from": "default"},
+                        {"name": "mysql", "shared_from": "default"},
+                        {"name": "rabbitmq", "shared_from": "default"},
                     ],
                     "env_variables": [{"key": "API_KEY", "value": "api_value", "description": "API 密钥"}],
                     "processes": {
@@ -283,8 +283,8 @@ def test_transform_module_spec(spec_input, expected_spec_output):
                         "spec": OrderedDict(
                             {
                                 "addons": [
-                                    {"name": "mysql", "shareFrom": "default"},
-                                    {"name": "rabbitmq", "shareFrom": "default"},
+                                    {"name": "mysql", "sharedFrom": "default"},
+                                    {"name": "rabbitmq", "sharedFrom": "default"},
                                 ],
                                 "configuration": {
                                     "env": [{"name": "API_KEY", "value": "api_value", "description": "API 密钥"}]

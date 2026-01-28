@@ -86,9 +86,9 @@ modules:
     language: Python
     services: # 增强服务配置仅对 Smart 应用生效
       - name: mysql
-        share_from: default
+        shared_from: default
       - name: rabbitmq
-        share_from: default
+        shared_from: default
     env_variables:
       - key: FOO
         value: value_of_foo
@@ -197,8 +197,8 @@ modules:
                             "language": "Python",
                             "spec": {
                                 "addons": [
-                                    {"name": "mysql", "shareFrom": "default"},
-                                    {"name": "rabbitmq", "shareFrom": "default"},
+                                    {"name": "mysql", "sharedFrom": "default"},
+                                    {"name": "rabbitmq", "sharedFrom": "default"},
                                 ],
                                 "configuration": {
                                     "env": [
@@ -310,9 +310,9 @@ modules:
     spec:
       addons:
         - name: mysql
-          shareFrom: default
+          sharedFrom: default
         - name: rabbitmq
-          shareFrom: default
+          sharedFrom: default
       configuration:
         env:
           - name: FOO

@@ -1594,6 +1594,8 @@ APISERVER_VERSION = settings.get("APISERVER_VERSION")
 #  前端加密配置项
 # ---------------------------------------------
 
+# ENABLE_FRONTEND_ENCRYPT: 是否启用前端加密
+ENABLE_FRONTEND_ENCRYPT = settings.get("ENABLE_FRONTEND_ENCRYPT", False)
 # 具体加密使用的算法
 FRONTEND_ENCRYPT_CIPHER_TYPE = "SM2"
 

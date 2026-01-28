@@ -956,6 +956,9 @@ FORBIDDEN_REPO_PORTS = [21, 22, 23]
 
 ## ------------------------------------ 前端加密传输配置 ------------------------------------
 
+# ENABLE_FRONTEND_ENCRYPT: 是否启用前端加密
+ENABLE_FRONTEND_ENCRYPT: False
+
 # 具体加密使用的算法
 FRONTEND_ENCRYPT_CIPHER_TYPE: "SM2"
 

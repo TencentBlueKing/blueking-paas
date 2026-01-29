@@ -126,6 +126,12 @@ class EnvOverlayInputSLZ(serializers.Serializer):
         if plan_name and resources:
             raise serializers.ValidationError(_("只能提供 override_plan_name 或 override_resources 其中之一"))
 
+        # 确保互斥: 提供其中一个时, 另一个字段显式设置为 None
+        if plan_name:
+            attrs["override_resources"] = None
+        else:
+            attrs["override_plan_name"] = None
+
         return attrs
 
 

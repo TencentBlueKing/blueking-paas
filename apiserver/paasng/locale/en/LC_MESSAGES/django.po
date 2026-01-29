@@ -4842,3 +4842,22 @@ msgstr "This value does not match the required pattern."
 #: tests/paasng/platform/sourcectl/packages/test_utils.py:42
 msgid "zh-cn"
 msgstr "zh-cn"
+
+#: paasng/utils/serializers.py:404
+#, python-brace-format
+msgid "Base64 解码失败: {value}"
+msgstr "Base64 decode failed: {value}"
+
+#: paasng/utils/serializers.py:407
+msgid "后端解密失败"
+msgstr "Backend decryption failed"
+
+#: paasng/utils/serializers.py:418
+#, python-brace-format
+msgid "无效的加密值格式: {value}"
+msgstr "Invalid encrypted value format: {value}"
+
+#: paasng/utils/serializers.py:437
+#, python-brace-format
+msgid "数据嵌套层级过深，最大层级为 {max_depth}"
+msgstr "The data nesting level is too deep, with a maximum level of {max_depth}"

@@ -20,7 +20,7 @@ import logging
 import re
 from binascii import Error as Base64DecodeError
 from functools import cached_property
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import arrow
 from bkcrypto import constants as bkcrypto_constants
@@ -43,7 +43,6 @@ from rest_framework.fields import empty, flatten_choices_dict, to_choices_dict
 from paasng.infras.accounts.utils import get_user_avatar
 from paasng.platform.sourcectl.source_types import get_sourcectl_types
 from paasng.utils.datetime import convert_timestamp_to_str
-from paasng.utils.dictx import get_items, set_items
 from paasng.utils.file import path_may_escape
 from paasng.utils.sanitizer import clean_html
 from paasng.utils.validators import RE_CONFIG_VAR_KEY
@@ -367,8 +366,16 @@ class SafePathField(serializers.RegexField):
         return data
 
 
-class BaseEncryptedFieldMixin:
-    """抽取 SM2 公共解密方法, 作为混合类使用"""
+class BaseDecryptFieldMixin:
+    """加密字段解密混入类，提供 SM2 解密能力
+
+    支持两种输入格式:
+    - 明文值: 直接传递原始字符串, 如 "the_value"
+    - 加密值: 例如: {"_encrypted": true, "_encrypted_value": "xxxxx"}. "encrypted_value" 是加密后的 hex 字符串再 base64 编码
+    """
+
+    ENCRYPTED_FLAG_KEY = "_encrypted"
+    ENCRYPTED_VALUE_KEY = "_encrypted_value"
 
     @cached_property
     def cipher_handler(self):
@@ -391,56 +398,74 @@ class BaseEncryptedFieldMixin:
     def decrypt(self, value: str) -> str:
         try:
             return self.cipher_handler.decrypt(value)
+        except ImproperlyConfigured:
+            raise
         except Base64DecodeError:
-            raise serializers.ValidationError("invalid base64 encoding, decrypt failed")
+            raise serializers.ValidationError(_("Base64 解码失败: {value}").format(value=value))
         except Exception:
             logger.exception("decrypt error")
-            raise serializers.ValidationError("decrypt failed")
+            raise serializers.ValidationError(_("后端解密失败"))
+
+    def is_encrypted_value(self, value) -> Tuple[bool, Any]:
+        """
+        判断是否为加密值格式
+        合法的加密值格式仅为 {self.ENCRYPTED_FLAG_KEY: True, self.ENCRYPTED_VALUE_KEY: str()}
+        对于包括加密标识键但格式不正确的情况, 抛出异常
+        """
+        match value:
+            case {self.ENCRYPTED_FLAG_KEY: True, self.ENCRYPTED_VALUE_KEY: str() as val}:
+                return True, val
+            case dict() if self.ENCRYPTED_FLAG_KEY in value:
+                # 包含加密标识键但格式不正确的情况, 抛出异常
+                raise serializers.ValidationError(_("无效的加密值格式: {value}").format(value=value))
+
+        return False, value
+
+    def decrypt_if_needed(self, value) -> str:
+        """如果是加密值格式则解密，否则直接返回原始值"""
+        is_encrypted, val = self.is_encrypted_value(value)
+        if is_encrypted:
+            return self.decrypt(val)
+        return value
 
 
-class EncryptedJSONField(BaseEncryptedFieldMixin, serializers.JSONField):
+class DecryptableJSONField(BaseDecryptFieldMixin, serializers.JSONField):
     """
-    JSON 类型加密字段
-    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 JSONField 一致
-
-    :params encrypted_fields: 需要解密的字段列表，支持嵌套字段, 使用点号分隔, 如 ["password", "user.password"]
-    :params allow_missing: 是否允许加密字段缺失, 默认为 False. True 时如果加密字段不存在则跳过解密处理
+    用于接收(部分)加密的 JSON 字段, 递归处理所有值， 最大递归深度为 `self.MAX_RECURSION_DEPTH`
+    加密结构约定及判断规则见 `BaseDecryptFieldMixin.is_encrypted_value`, 若为加密值会先解密
     """
 
-    def __init__(self, **kwargs):
-        self.allow_missing = kwargs.pop("allow_missing", False)
-        encrypted_fields: list[str] = kwargs.pop("encrypted_fields", [])
-        self.encrypted_fields_path = [field.strip().split(".") for field in encrypted_fields]
-        super().__init__(**kwargs)
+    MAX_RECURSION_DEPTH = 8
+
+    default_error_messages = {"max_recursion_depth": _("数据嵌套层级过深，最大层级为 {max_depth}")}
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
+        return self._decrypt_recursive(data, depth=0)
 
-        if not settings.ENABLE_FRONTEND_ENCRYPT:
-            return data
+    def _decrypt_recursive(self, data, depth: int):
+        """递归遍历数据，解密所有加密值"""
+        if depth > self.MAX_RECURSION_DEPTH:
+            self.fail("max_recursion_depth", max_depth=self.MAX_RECURSION_DEPTH)
 
-        if not isinstance(data, dict):
-            self.fail("invalid")
+        is_encrypted, val = self.is_encrypted_value(data)
+        if is_encrypted:
+            return self.decrypt(val)
 
-        for field_path in self.encrypted_fields_path:
-            encrypt_value = get_items(data, field_path)
-            if encrypt_value is None and self.allow_missing:
-                continue
-            logger.debug("found encrypted field %s in input data, start decrypting", ".".join(field_path))
-            set_items(data, field_path, self.decrypt(encrypt_value))
+        if isinstance(data, dict):
+            return {k: self._decrypt_recursive(v, depth + 1) for k, v in data.items()}
+
+        if isinstance(data, list):
+            return [self._decrypt_recursive(item, depth + 1) for item in data]
+
         return data
 
 
-class EncryptedCharField(BaseEncryptedFieldMixin, serializers.CharField):
+class DecryptableCharField(BaseDecryptFieldMixin, serializers.CharField):
     """
-    Char 类型加密字段
-    NOTE: 当 settings.ENABLE_FRONTEND_ENCRYPT 为 False 时, 不会进行解密处理, 行为与普通 CharField 一致
+    用于接收可能被前端加密的字符串字段
+    加密结构约定及判断规则见 `BaseDecryptFieldMixin.is_encrypted_value`, 若为加密值会先解密
     """
 
     def to_internal_value(self, data):
-        data = super().to_internal_value(data)
-
-        if not settings.ENABLE_FRONTEND_ENCRYPT:
-            return data
-
-        return self.decrypt(data)
+        return super().to_internal_value(self.decrypt_if_needed(data))

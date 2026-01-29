@@ -22,7 +22,7 @@ from rest_framework.viewsets import ViewSet
 
 from paas_wl.infras.cluster.constants import BK_LOG_DEFAULT_ENABLED
 
-from .serializers import EncryptConfigInputSLZ
+from .serializers import EncryptConfigOutputSLZ
 
 
 class FrontendFeatureViewSet(ViewSet):
@@ -93,10 +93,11 @@ class FrontendFeatureViewSet(ViewSet):
 
 
 class FrontendEncryptConfigViewSet(ViewSet):
-    @swagger_auto_schema(tags=["前端特性配置"], responses={200: EncryptConfigInputSLZ()})
+    @swagger_auto_schema(tags=["前端特性配置"], responses={200: EncryptConfigOutputSLZ()})
     def get_encrypt_config(self, request):
-        encrypt_config = {"enabled": settings.ENABLE_FRONTEND_ENCRYPT}
-
+        encrypt_config = {
+            "enable_frontend_encrypt": settings.ENABLE_FRONTEND_ENCRYPT,
+        }
         if settings.ENABLE_FRONTEND_ENCRYPT:
             encrypt_config.update(
                 {
@@ -105,4 +106,4 @@ class FrontendEncryptConfigViewSet(ViewSet):
                 }
             )
 
-        return Response(data=EncryptConfigInputSLZ(encrypt_config).data)
+        return Response(data=EncryptConfigOutputSLZ(encrypt_config).data)

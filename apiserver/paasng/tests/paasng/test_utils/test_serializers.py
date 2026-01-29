@@ -223,7 +223,7 @@ class TestDecryptableCharField:
         ("value", "expected", "ctx"),
         [
             ({"_encrypted": True, "_encrypted_value": "ciphertext"}, True, nullcontext()),
-            ({"_encrypted": True}, False, nullcontext()),
+            ({"_encrypted": True}, False, pytest.raises(ValidationError)),
             ({"_encrypted": False, "_encrypted_value": "ciphertext"}, False, pytest.raises(ValidationError)),
             ("plain", False, nullcontext()),
         ],

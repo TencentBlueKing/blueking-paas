@@ -20,7 +20,7 @@ import logging
 import re
 from binascii import Error as Base64DecodeError
 from functools import cached_property
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import arrow
 from bkcrypto import constants as bkcrypto_constants
@@ -406,15 +406,20 @@ class BaseDecryptFieldMixin:
             logger.exception("decrypt error")
             raise serializers.ValidationError(_("后端解密失败"))
 
-    def is_encrypted_value(self, value) -> Tuple[bool, str]:
-        """判断是否为加密值格式"""
+    def is_encrypted_value(self, value) -> Tuple[bool, Any]:
+        """
+        判断是否为加密值格式
+        合法的加密值格式仅为 {self.ENCRYPTED_FLAG_KEY: True, self.ENCRYPTED_VALUE_KEY: str()}
+        对于包括加密标识键但格式不正确的情况, 抛出异常
+        """
         match value:
-            case {self.ENCRYPTED_FLAG_KEY: True, self.ENCRYPTED_VALUE_KEY: val}:
+            case {self.ENCRYPTED_FLAG_KEY: True, self.ENCRYPTED_VALUE_KEY: str() as val}:
                 return True, val
-            case {self.ENCRYPTED_FLAG_KEY: False, self.ENCRYPTED_VALUE_KEY: str()}:
+            case dict() if self.ENCRYPTED_FLAG_KEY in value:
+                # 包含加密标识键但格式不正确的情况, 抛出异常
                 raise serializers.ValidationError(_("无效的加密值格式: {value}").format(value=value))
-            case _:
-                return False, value
+
+        return False, value
 
     def decrypt_if_needed(self, value) -> str:
         """如果是加密值格式则解密，否则直接返回原始值"""
@@ -443,8 +448,8 @@ class DecryptableJSONField(BaseDecryptFieldMixin, serializers.JSONField):
         if depth > self.MAX_RECURSION_DEPTH:
             self.fail("max_recursion_depth", max_depth=self.MAX_RECURSION_DEPTH)
 
-        is_encrypte, val = self.is_encrypted_value(data)
-        if is_encrypte:
+        is_encrypted, val = self.is_encrypted_value(data)
+        if is_encrypted:
             return self.decrypt(val)
 
         if isinstance(data, dict):

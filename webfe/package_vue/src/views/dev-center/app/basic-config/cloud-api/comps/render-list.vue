@@ -354,7 +354,6 @@
     />
     <gateway-dialog
       :show.sync="isShowGatewayDialog"
-      :api-id="id"
       :api-name="name"
       :app-code="appCode"
       @on-api-apply="handleApiSuccessApply"

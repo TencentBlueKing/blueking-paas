@@ -80,10 +80,6 @@ export default {
       type: String,
       default: '',
     },
-    apiId: {
-      type: [String, Number],
-      default: '',
-    },
     apiName: {
       type: String,
       default: '',
@@ -117,7 +113,6 @@ export default {
             reason: this.formData.reason,
             expire_days: this.formData.expired * 30,
             grant_dimension: 'api',
-            gateway_name: this.apiName,
           },
           appCode: this.appCode,
           gatewayName: this.apiName,

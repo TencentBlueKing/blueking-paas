@@ -26,15 +26,32 @@ class Command(BaseCommand):
     help = "Update requests of all builtin resource quota plans."
 
     def add_arguments(self, parser):
-        parser.add_argument("--cpu", type=str, required=True, help="CPU requests (e.g., '200m')")
-        parser.add_argument("--memory", type=str, required=True, help="Memory requests (e.g., '256Mi')")
+        parser.add_argument("--cpu", type=str, required=False, help="CPU requests (e.g., '200m')")
+        parser.add_argument("--memory", type=str, required=False, help="Memory requests (e.g., '256Mi')")
 
     def handle(self, cpu, memory, *args, **options):
-        slz = ResourceQuotaSLZ(data={"cpu": cpu, "memory": memory})
+        if not cpu and not memory:
+            raise CommandError("At least one of --cpu or --memory must be provided")
+
+        # dummy value just for validation
+        input_data = {"cpu": "1m", "memory": "1Mi"}
+        # 用实际值覆盖 dummy value
+        if cpu:
+            input_data["cpu"] = cpu
+        if memory:
+            input_data["memory"] = memory
+
+        slz = ResourceQuotaSLZ(data=input_data)
         if not slz.is_valid():
             raise CommandError(f"Invalid input: {slz.errors}")
 
-        new_requests = slz.validated_data
-        ResQuotaPlan.objects.filter(is_builtin=True).update(requests=new_requests, updated=timezone.now())
+        for plan in ResQuotaPlan.objects.filter(is_builtin=True):
+            if cpu:
+                plan.requests["cpu"] = cpu
+            if memory:
+                plan.requests["memory"] = memory
 
-        self.stdout.write(self.style.SUCCESS(f"Successfully updated builtin plans with requests={new_requests}"))
+            plan.updated = timezone.now()
+            plan.save(update_fields=["requests", "updated"])
+
+        self.stdout.write(self.style.SUCCESS("Successfully update requests of all builtin resource quota plans"))

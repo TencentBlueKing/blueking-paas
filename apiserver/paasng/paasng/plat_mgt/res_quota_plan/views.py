@@ -126,8 +126,8 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
             raise PermissionDenied(_("系统内置方案不允许删除"))
 
         if used_by_processes := plan_obj.get_used_by_processes():
-            raise error_codes.CANNOT_DELETE_RES_QUOTA_PLAN.f(
-                _("该方案已被应用进程引用"), data={"used_by_processes": used_by_processes}
+            raise error_codes.CANNOT_DELETE_RES_QUOTA_PLAN.f(_("该方案已被应用进程引用")).set_data(
+                {"used_by_processes": used_by_processes}
             )
 
         data_before = ResQuotaPlanOutputSLZ(plan_obj).data

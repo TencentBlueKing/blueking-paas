@@ -435,3 +435,12 @@ export const MCP_SERVER_STATUS = {
   pending: '申请中',
   need_apply: '未申请',
 };
+
+/**
+ * 应用状态
+ */
+export const APP_STATUS = {
+  not_deployed: '未部署',
+  normal: '正常',
+  offline: '下架',
+};

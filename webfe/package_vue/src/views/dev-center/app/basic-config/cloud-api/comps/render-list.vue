@@ -434,6 +434,7 @@ export default {
       },
       requestQueue: ['list'],
       judgeIsApplyByGateway: {
+        // v2 字段更名: allow_apply_by_api -> allow_apply_by_gateway
         allow_apply_by_gateway: false,
         reason: '',
       },

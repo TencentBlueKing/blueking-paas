@@ -237,6 +237,7 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     #   {"limits": {"cpu": "2", "memory": "2Gi"},"requests": {"cpu": "1", "memory": "1Gi"}}
     override_plan_name = models.CharField("资源配额方案名称", max_length=64, null=True, blank=True)
     override_resources = models.JSONField("资源配额", null=True, blank=True)
+    override_proc_res = models.JSONField("[deprecated] 资源配额配置, 已不再使用", null=True, blank=True)
 
     target_replicas = models.IntegerField("期望副本数", null=True)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)

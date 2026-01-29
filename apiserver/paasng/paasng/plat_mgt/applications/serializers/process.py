@@ -75,7 +75,8 @@ class EnvOverlayOutputSLZ(serializers.Serializer):
     """进程规格环境配置覆盖输出序列化器"""
 
     plan_name = serializers.CharField(help_text="资源配额方案", allow_null=True)
-    override_proc_res = serializers.JSONField(help_text="资源配置", allow_null=True)
+    override_plan_name = serializers.CharField(help_text="管理员配置的资源配额方案名称", allow_null=True)
+    override_resources = ResourcesSLZ(help_text="管理员配置的资源配额", allow_null=True)
 
 
 class ProcessSpecOutputSLZ(serializers.Serializer):
@@ -100,12 +101,7 @@ class ModuleProcessSpecOutputSLZ(serializers.Serializer):
 
 
 class EnvOverlayInputSLZ(serializers.Serializer):
-    """进程规格环境配置覆盖输入序列化器
-
-    前端通过 override_proc_res 字段传入资源配置，支持两种格式：
-    - {"plan": "2c2g"} -> 转换为 override_plan_name
-    - {"limits": {...}, "requests": {...}} -> 转换为 override_resources
-    """
+    """进程规格环境配置覆盖输入序列化器"""
 
     override_plan_name = serializers.CharField(
         help_text="资源配额方案名称",
@@ -119,28 +115,18 @@ class EnvOverlayInputSLZ(serializers.Serializer):
         required=False,
     )
 
-    def to_internal_value(self, data):
-        """将前端数据转换为内部表示
+    def validate(self, attrs):
+        """验证 override_plan_name 和 override_resources 必须二选一"""
+        plan_name = attrs.get("override_plan_name")
+        resources = attrs.get("override_resources")
 
-        只接受 override_proc_res 字段，将其转换为内部的 override_plan_name 或 override_resources
-        """
-        # 移除用户可能直接传入的内部字段
-        data.pop("override_plan_name", None)
-        data.pop("override_resources", None)
+        if not plan_name and not resources:
+            raise serializers.ValidationError(_("必须提供 override_plan_name 或 override_resources 其中之一"))
 
-        # 处理 override_proc_res 字段
-        override_proc_res = data.pop("override_proc_res", None)
-        if not override_proc_res:
-            data["override_plan_name"] = None
-            data["override_resources"] = None
-        elif "plan" in override_proc_res:
-            data["override_plan_name"] = override_proc_res["plan"]
-            data["override_resources"] = None
-        else:
-            data["override_plan_name"] = None
-            data["override_resources"] = override_proc_res
+        if plan_name and resources:
+            raise serializers.ValidationError(_("只能提供 override_plan_name 或 override_resources 其中之一"))
 
-        return super().to_internal_value(data)
+        return attrs
 
 
 class ProcessSpecInputSLZ(serializers.Serializer):

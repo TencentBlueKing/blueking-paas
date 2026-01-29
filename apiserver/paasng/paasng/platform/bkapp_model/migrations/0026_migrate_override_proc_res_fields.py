@@ -23,9 +23,6 @@ def migrate_override_fields_data(apps, schema_editor):
     for overlay in ProcessSpecEnvOverlay.objects.filter(override_proc_res__isnull=False):
         override_proc_res = overlay.override_proc_res
 
-        if not override_proc_res:
-            continue
-
         # Case 1: Using a predefined plan - {"plan": "default"}
         if 'plan' in override_proc_res:
             overlay.override_plan_name = override_proc_res['plan']
@@ -47,9 +44,4 @@ class Migration(migrations.Migration):
     operations = [
         # Migrate data from old fields to new fields
         migrations.RunPython(migrate_override_fields_data),
-        # Delete the deprecated field
-        migrations.RemoveField(
-            model_name='processspecenvoverlay',
-            name='override_proc_res',
-        ),
     ]

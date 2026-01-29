@@ -19,7 +19,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -29,6 +29,7 @@ from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
 from paasng.platform.bkapp_model.models import ResQuotaPlan
+from paasng.utils.error_codes import error_codes
 
 from .serializers import ResQuotaPlanInputSLZ, ResQuotaPlanOutputSLZ
 
@@ -125,11 +126,8 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
             raise PermissionDenied(_("系统内置方案不允许删除"))
 
         if used_by_processes := plan_obj.get_used_by_processes():
-            raise ValidationError(
-                {
-                    "message": _("该方案已被应用进程引用, 无法删除"),
-                    "used_by_processes": used_by_processes,
-                }
+            raise error_codes.CANNOT_DELETE_RES_QUOTA_PLAN.f(
+                _("该方案已被应用进程引用"), data={"used_by_processes": used_by_processes}
             )
 
         data_before = ResQuotaPlanOutputSLZ(plan_obj).data

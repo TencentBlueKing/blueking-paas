@@ -64,11 +64,8 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
             env_overlays = {
                 env_name: {
                     "plan_name": overlay.plan_name,
-                    "override_proc_res": (
-                        {"plan": overlay.override_plan_name}
-                        if overlay.override_plan_name
-                        else overlay.override_resources
-                    ),
+                    "override_plan_name": overlay.override_plan_name,
+                    "override_resources": overlay.override_resources,
                 }
                 for env_name in AppEnvName.get_values()
                 if (overlay := overlays_map.get(env_name))
@@ -124,13 +121,10 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         before_env_overlays = {}
         for env_name in requested_overlays:
             overlay = env_overlays_map.get(env_name)
-            if overlay and overlay.override_plan_name:
-                override_proc_res = {"plan": overlay.override_plan_name}
-            elif overlay and overlay.override_resources:
-                override_proc_res = overlay.override_resources
-            else:
-                override_proc_res = None
-            before_env_overlays[env_name] = {"override_proc_res": override_proc_res}
+            before_env_overlays[env_name] = {
+                "override_plan_name": overlay.override_plan_name if overlay else None,
+                "override_resources": overlay.override_resources if overlay else None,
+            }
 
         # 批量更新环境覆盖配置
         overlays_to_update = []
@@ -164,11 +158,8 @@ class ApplicationProcessViewSet(viewsets.GenericViewSet):
         # 构建更新后的审计日志数据
         after_env_overlays = {
             env_name: {
-                "override_proc_res": (
-                    {"plan": overlay_data["override_plan_name"]}
-                    if overlay_data["override_plan_name"]
-                    else overlay_data["override_resources"]
-                )
+                "override_plan_name": overlay_data["override_plan_name"],
+                "override_resources": overlay_data["override_resources"],
             }
             for env_name, overlay_data in requested_overlays.items()
         }

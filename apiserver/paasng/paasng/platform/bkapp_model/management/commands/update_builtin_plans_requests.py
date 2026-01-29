@@ -15,7 +15,8 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 
 from paasng.plat_mgt.res_quota_plan.serializers import ResourceQuotaSLZ
 from paasng.platform.bkapp_model.models import ResQuotaPlan
@@ -31,25 +32,9 @@ class Command(BaseCommand):
     def handle(self, cpu, memory, *args, **options):
         slz = ResourceQuotaSLZ(data={"cpu": cpu, "memory": memory})
         if not slz.is_valid():
-            for field, errors in slz.errors.items():
-                for error in errors:
-                    self.stderr.write(self.style.ERROR(f"{field}: {error}"))
-            return
+            raise CommandError(f"Invalid input: {slz.errors}")
 
-        validated_data = slz.validated_data
+        new_requests = slz.validated_data
+        ResQuotaPlan.objects.filter(is_builtin=True).update(requests=new_requests, updated=timezone.now())
 
-        builtin_plans = ResQuotaPlan.objects.filter(is_builtin=True)
-        if not builtin_plans.exists():
-            self.stdout.write(self.style.WARNING("No builtin plans found."))
-            return
-
-        updated_count = 0
-        for plan in builtin_plans:
-            plan.requests = {"cpu": validated_data["cpu"], "memory": validated_data["memory"]}
-            plan.save(update_fields=["requests", "updated"])
-            updated_count += 1
-            self.stdout.write(
-                f"  Updated plan '{plan.name}': requests={{cpu: {validated_data['cpu']}, memory: {validated_data['memory']}}}"
-            )
-
-        self.stdout.write(self.style.SUCCESS(f"Successfully updated {updated_count} builtin plan(s)."))
+        self.stdout.write(self.style.SUCCESS(f"Successfully updated builtin plans with requests={new_requests}"))

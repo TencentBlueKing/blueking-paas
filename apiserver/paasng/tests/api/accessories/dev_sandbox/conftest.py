@@ -17,6 +17,7 @@
 
 import pytest
 
+from paas_wl.bk_app.dev_sandbox.entities import DevSandboxEnvVarList
 from paasng.accessories.dev_sandbox.models import DevSandbox
 from paasng.platform.sourcectl.models import VersionInfo
 
@@ -27,7 +28,7 @@ def bk_dev_sandbox(bk_cnative_app, bk_module, bk_user) -> DevSandbox:
     return DevSandbox.objects.create(
         module=bk_module,
         owner=bk_user,
-        env_vars={},
+        env_vars=DevSandboxEnvVarList([]),
         version_info=version_info,
         enable_code_editor=True,
         enabled_addons_services=[],

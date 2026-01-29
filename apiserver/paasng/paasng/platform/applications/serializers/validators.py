@@ -17,6 +17,7 @@
 
 from typing import Optional
 
+from django.db.models import Q
 from django.dispatch.dispatcher import Signal
 from django.utils.translation import gettext_lazy as _
 from rest_framework.validators import UniqueValidator, ValidationError, qs_exists
@@ -75,6 +76,18 @@ class AppNameUniqueValidator(AppUniqueValidator):
     field_name = "name"
     field_label = "应用名称"
     signal = prepare_use_application_name
+
+    def __call__(self, value, serializer_field):
+        instance = getattr(serializer_field.parent, "instance", None)
+        if not isinstance(instance, Application):
+            instance = serializer_field.parent.context.get("application", None)
+
+        queryset = self.queryset.filter(Q(name__iexact=value) | Q(name_en__iexact=value))
+        queryset = self.exclude_current_instance(queryset, instance)
+        if qs_exists(queryset):
+            raise ValidationError(self.get_message(value), code="unique")
+
+        self.signal_external(value, instance=instance)
 
 
 class AppIDUniqueValidator(AppUniqueValidator):

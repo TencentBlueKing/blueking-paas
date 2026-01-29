@@ -16,21 +16,18 @@
 # to the current version of the project delivered to anyone in the future.
 
 import io
+from unittest import mock
 
 import pytest
-from bkcrypto import constants as bkcrypto_constants
-from bkcrypto.asymmetric.options import SM2AsymmetricOptions
-from bkcrypto.contrib.basic.ciphers import get_asymmetric_cipher
 from blue_krill.contextlib import nullcontext
-from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from paasng.utils.serializers import (
     Base64FileField,
     ConfigVarReservedKeyValidator,
-    EncryptedCharField,
-    EncryptedJSONField,
+    DecryptableCharField,
+    DecryptableJSONField,
     IntegerOrCharField,
     SafePathField,
 )
@@ -162,91 +159,76 @@ class TestSafePathField:
         assert slz.is_valid() is False
 
 
-# SM2 测试密钥对
-SM2_PUBLIC_KEY = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAEU87uYBCj19QKO0cm6kjsBWhEIOeT\ndlRDjt0OXvh+JUnr7ZoWTyXAi/SidN3g4nlz337+iw8T6LC2yGWuUnlQYg==\n-----END PUBLIC KEY-----\n"
-SM2_PRIVATE_KEY = "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIOzo3tQc6DUzdt1+rV/SqNxj9OgPxdcnWyXuDUMaR59moAoGCCqBHM9V\nAYItoUQDQgAEU87uYBCj19QKO0cm6kjsBWhEIOeTdlRDjt0OXvh+JUnr7ZoWTyXA\ni/SidN3g4nlz337+iw8T6LC2yGWuUnlQYg==\n-----END EC PRIVATE KEY-----\n"
+class DecryptableJSONFieldSLZ(serializers.Serializer):
+    payload = DecryptableJSONField()
 
 
-@pytest.fixture(scope="session")
-def enable_frontend_encrypt():
-    """配置前端加密功能"""
-    settings.ENABLE_FRONTEND_ENCRYPT = True
-    settings.FRONTEND_ENCRYPT_PUBLIC_KEY = SM2_PUBLIC_KEY
-    settings.FRONTEND_ENCRYPT_PRIVATE_KEY = SM2_PRIVATE_KEY
-
-
-def encrypted_value(value: str) -> str:
-    """使用测试密钥加密值"""
-    cipher = get_asymmetric_cipher(
-        cipher_type=bkcrypto_constants.AsymmetricCipherType.SM2.value,
-        cipher_options={
-            bkcrypto_constants.AsymmetricCipherType.SM2.value: SM2AsymmetricOptions(
-                public_key_string=SM2_PUBLIC_KEY,
-                private_key_string=SM2_PRIVATE_KEY,
-            ),
-        },
-    )
-    return cipher.encrypt(value)
-
-
-class EncryptedCharFieldSLZ(serializers.Serializer):
-    username = EncryptedCharField(required=False)
-    password = EncryptedCharField()
-
-
-@pytest.mark.usefixtures("enable_frontend_encrypt")
-class TestEncryptedCharField:
-    @pytest.mark.parametrize(
-        ("plain_value", "encrypted_value", "ctx"),
-        [
-            ("test_value", encrypted_value("test_value"), nullcontext("test_value")),
-            ("#/@!>?><09123...。", encrypted_value("#/@!>?><09123...。"), nullcontext()),
-            ("", encrypted_value(""), pytest.raises(ValidationError)),
-            ("test_value", "invalid_encrypted_value", pytest.raises(ValidationError)),
-        ],
-        ids=["valid_test_value", "valid_special_chars", "empty_string", "invalid_encrypted"],
-    )
-    def test_decrypt(self, plain_value, encrypted_value, ctx):
-        with ctx:
-            slz = EncryptedCharFieldSLZ(data={"password": encrypted_value})
+class TestDecryptableJSONField:
+    def test_to_internal_value_decrypts_nested_values(self):
+        slz = DecryptableJSONFieldSLZ(
+            data={
+                "payload": {
+                    "plain": "value",
+                    "secret": {"_encrypted": True, "_encrypted_value": "cipher1"},
+                    "nested": [1, {"_encrypted": True, "_encrypted_value": "cipher2"}],
+                }
+            }
+        )
+        field = slz.fields["payload"]
+        with mock.patch.object(field, "decrypt", side_effect=lambda value: f"dec:{value}") as decrypt_mock:
             slz.is_valid(raise_exception=True)
-            assert slz.validated_data["password"] == plain_value
+
+            assert slz.validated_data["payload"]["secret"] == "dec:cipher1"
+            assert slz.validated_data["payload"]["nested"][1] == "dec:cipher2"
+            decrypt_mock.assert_has_calls([mock.call("cipher1"), mock.call("cipher2")])
+
+    def test_to_internal_value_rejects_too_deep_data(self):
+        slz = DecryptableJSONFieldSLZ(data={"payload": {}})
+        field = slz.fields["payload"]
+
+        # 构造一个过深的 json 数据
+        data: dict = {}
+        current: dict = data
+        for _ in range(field.MAX_RECURSION_DEPTH + 1):
+            current["child"] = {}
+            current = current["child"]
+
+        with (
+            mock.patch.object(field, "decrypt", return_value="dec"),
+            pytest.raises(ValidationError),
+        ):
+            field.to_internal_value(data)
 
 
-class EncryptedJSONFieldSLZ(serializers.Serializer):
-    encrypted_json = EncryptedJSONField(encrypted_fields=["password", "user.password"], allow_missing=True)
+class DecryptableCharFieldSLZ(serializers.Serializer):
+    value = DecryptableCharField()
 
 
-@pytest.mark.usefixtures("enable_frontend_encrypt")
-class TestEncryptedJSONField:
+class TestDecryptableCharField:
+    def test_to_internal_value_plain(self):
+        slz = DecryptableCharFieldSLZ(data={"value": "plain"})
+        slz.is_valid(raise_exception=True)
+        assert slz.validated_data["value"] == "plain"
+
+    def test_to_internal_value_encrypted(self):
+        slz = DecryptableCharFieldSLZ(data={"value": {"_encrypted": True, "_encrypted_value": "cipher"}})
+        field = slz.fields["value"]
+        with mock.patch.object(field, "decrypt", return_value="plain") as decrypt_mock:
+            slz.is_valid(raise_exception=True)
+
+            assert slz.validated_data["value"] == "plain"
+            decrypt_mock.assert_called_once_with("cipher")
+
     @pytest.mark.parametrize(
-        ("slz_input", "slz_output", "ctx"),
+        ("value", "expected", "ctx"),
         [
-            (
-                {"foo": "bar", "password": encrypted_value("test_value")},
-                {"foo": "bar", "password": "test_value"},
-                nullcontext(),
-            ),
-            (
-                {"foo": "bar", "password": "invalid_encrypted_value"},
-                None,
-                pytest.raises(ValidationError),
-            ),
-            (
-                {"foo": "bar", "user": {"username": "test", "password": encrypted_value("test_value")}},
-                {"foo": "bar", "user": {"username": "test", "password": "test_value"}},
-                nullcontext(),
-            ),
-            (
-                {"foo": "bar", "user": {"username": "test", "password": "invalid_encrypted_value"}},
-                None,
-                pytest.raises(ValidationError),
-            ),
+            ({"_encrypted": True, "_encrypted_value": "ciphertext"}, True, nullcontext()),
+            ({"_encrypted": True}, False, pytest.raises(ValidationError)),
+            ({"_encrypted": False, "_encrypted_value": "ciphertext"}, False, pytest.raises(ValidationError)),
+            ("plain", False, nullcontext()),
         ],
-        ids=["valid_password", "invalid_password", "valid_user_password", "invalid_user_password"],
     )
-    def test_decrypt(self, slz_input, slz_output, ctx):
-        slz = EncryptedJSONFieldSLZ(data={"encrypted_json": slz_input})
+    def test_is_encrypted_value(self, value, expected, ctx):
+        slz = DecryptableCharFieldSLZ(data={"value": value})
         with ctx:
-            assert slz.is_valid(raise_exception=True)
-            assert slz.data["encrypted_json"] == slz_output
+            assert slz.fields["value"].is_encrypted_value(value)[0] == expected

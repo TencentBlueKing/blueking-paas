@@ -96,7 +96,7 @@ class FrontendEncryptConfigViewSet(ViewSet):
     @swagger_auto_schema(tags=["前端特性配置"], responses={200: EncryptConfigOutputSLZ()})
     def get_encrypt_config(self, request):
         encrypt_config = {
-            "enable_frontend_encrypt": settings.ENABLE_FRONTEND_ENCRYPT,
+            "enabled": settings.ENABLE_FRONTEND_ENCRYPT,
         }
         if settings.ENABLE_FRONTEND_ENCRYPT:
             encrypt_config.update(

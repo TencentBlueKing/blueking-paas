@@ -1,0 +1,16 @@
+--- buildpack/lib/binaries.sh
++++ buildpack/lib/binaries.sh
+@@ -71,4 +71,14 @@
+     fi
+ 
++    if [[ -n "$NODE_BINARY_MIRROR_URL" ]]; then
++      local mirror_url="${NODE_BINARY_MIRROR_URL%/}/"
++      if [[ "$NODE_BINARY_MIRROR_FLAT" == "true" ]]; then
++        url="${mirror_url}${url##*/}"
++      else
++        url="${url/https:\/\/nodejs.org\/download\/release\//$mirror_url}"
++      fi
++      echo "Using custom mirror url: $url"
++    fi
++
+     echo "Downloading and installing node $number..."

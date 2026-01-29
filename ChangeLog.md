@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v2.3.0
+
+- 新增：bk-buildpack-nodejs 支持从自定义源下载 nodejs 二进制
+
 ## v2.2.0
 
 - 更新：升级 bk-buildpack-go 到 v216

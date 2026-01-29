@@ -22,10 +22,12 @@ pack: ${ROOT}/output patch  ## 打包 buildpack
 .PHONY: patch
 patch:
 	patch buildpack/bin/compile patchs/buildpack/bin/compile.patch
+	patch buildpack/lib/binaries.sh patchs/buildpack/lib/binaries.sh.patch
 
 .PHONY: unpatch
 unpatch:
 	patch -R buildpack/bin/compile patchs/buildpack/bin/compile.patch
+	patch -R buildpack/lib/binaries.sh patchs/buildpack/lib/binaries.sh.patch
 
 
 .PHONY: help

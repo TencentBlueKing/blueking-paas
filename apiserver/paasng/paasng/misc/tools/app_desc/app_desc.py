@@ -141,11 +141,21 @@ def transform_module_spec(spec: OrderedDict[str, Any], key: str, value: Any) -> 
 def transform_services(services: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Transforms the 'services' field of module.
+    The "shared_from"(v2) field is renamed to "sharedFromModule"(v3).
 
     :param services: A list of services from spec_version 2 format.
     :return: Transformed list of services in specVersion 3 format.
     """
-    return [{snake_to_camel(k): v for k, v in service.items()} for service in services]
+    v3_services = []
+    for v2_service in services:
+        v3_service = {}
+        for k, v in v2_service.items():
+            if k == "shared_from":
+                v3_service["sharedFromModule"] = v
+            else:
+                v3_service[snake_to_camel(k)] = v
+        v3_services.append(v3_service)
+    return v3_services
 
 
 def transform_env_variables(env_vars: List[Dict[str, Any]]) -> List[OrderedDict[str, Any]]:

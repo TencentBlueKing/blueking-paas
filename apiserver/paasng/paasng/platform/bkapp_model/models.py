@@ -63,6 +63,29 @@ class ResQuotaPlan(TimestampedModel):
     class Meta:
         ordering = ["created"]
 
+    def get_used_by_processes(self) -> list[dict]:
+        """获取引用该配额方案的所有进程定义列表"""
+        # NOTE: 查询 ModuleProcessSpec 和 ProcessSpecEnvOverlay 中引用该方案的记录
+        # 不需要判断 plan 是否实际生效
+        spec_ids_qs = ModuleProcessSpec.objects.filter(plan_name=self.name).values_list("id", flat=True)
+        overlay_spec_ids_qs = ProcessSpecEnvOverlay.objects.filter(
+            models.Q(plan_name=self.name) | models.Q(override_plan_name=self.name)
+        ).values_list("proc_spec_id", flat=True)
+
+        all_spec_ids = list(spec_ids_qs.union(overlay_spec_ids_qs))
+        if not all_spec_ids:
+            return []
+
+        specs = ModuleProcessSpec.objects.filter(id__in=all_spec_ids).select_related("module__application")
+        return [
+            {
+                "app_code": spec.module.application.code,
+                "module_name": spec.module.name,
+                "process_name": spec.name,
+            }
+            for spec in specs
+        ]
+
 
 def env_overlay_getter_factory(field_name: str):
     """a proxy to get env overlay field"""
@@ -207,11 +230,14 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     environment_name = models.CharField(
         verbose_name=_("环境名称"), choices=AppEnvName.get_choices(), null=False, max_length=16
     )
-    # override_proc_res 只能通过后台/API修改
-    # 可能的结构:
-    # - 使用灵活设置: {"limits": {"cpu": "2", "memory": "2Gi"},"requests": {"cpu": "1", "memory": "1Gi"}}
-    # - 使用预定义方案 (ResQuotaPlan): {"plan": "default"}
-    override_proc_res = models.JSONField("管理员配置的资源配额", null=True, blank=True)
+    # override_plan_name, override_resources 目前仅由管理员在后台统一配置
+    # override_plan_name 和 override_resources 两个配置互斥, override_plan_name 优先级高于 override_resources
+    # - override_plan_name 实际对应于 ResQuotaPlan model 中的 plan
+    # - override_resources 用于不指定 override_plan_name 时的临时配置方案, 格式如:
+    #   {"limits": {"cpu": "2", "memory": "2Gi"},"requests": {"cpu": "1", "memory": "1Gi"}}
+    override_plan_name = models.CharField("资源配额方案名称", max_length=64, null=True, blank=True)
+    override_resources = models.JSONField("资源配额", null=True, blank=True)
+    override_proc_res = models.JSONField("[deprecated] 资源配额配置, 已不再使用", null=True, blank=True)
 
     target_replicas = models.IntegerField("期望副本数", null=True)
     plan_name = models.CharField(help_text="仅存储方案名称", max_length=32, null=True, blank=True)
@@ -228,29 +254,29 @@ class ProcessSpecEnvOverlay(TimestampedModel):
     def get_override_proc_res(self) -> Dict | None:
         """Get actual resource override config with limits and requests.
 
+        Priority:
+        1. override_plan_name - Reference to a ResQuotaPlan
+        2. override_resources - Direct limits/requests config
+
         :returns: A dict like {"limits": {...}, "requests": {...}}, or None if not configured.
         """
-        if not self.override_proc_res:
-            return None
+        if self.override_plan_name:
+            try:
+                plan = ResQuotaPlan.objects.get(name=self.override_plan_name)
+            except ResQuotaPlan.DoesNotExist:
+                logger.warning(
+                    "ResQuotaPlan '%s' not found for process '%s', skipping override",
+                    self.override_plan_name,
+                    self.proc_spec.name,
+                )
+                return None
+            else:
+                return {"limits": plan.limits, "requests": plan.requests}
 
-        config = self.override_proc_res
+        if self.override_resources:
+            return self.override_resources
 
-        # Direct limits/requests config
-        if "plan" not in config:
-            return config
-
-        # Reference to a plan, resolve to actual limits/requests
-        try:
-            plan = ResQuotaPlan.objects.get(name=config["plan"])
-        except ResQuotaPlan.DoesNotExist:
-            logger.warning(
-                "ResQuotaPlan '%s' not found for process '%s', skipping override",
-                config["plan"],
-                self.proc_spec.name,
-            )
-            return None
-        else:
-            return {"limits": plan.limits, "requests": plan.requests}
+        return None
 
 
 class ModuleDeployHookManager(models.Manager):

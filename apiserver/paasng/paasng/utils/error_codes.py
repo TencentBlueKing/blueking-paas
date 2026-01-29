@@ -56,6 +56,8 @@ class ErrorCodes:
     CANNOT_SET_DEFAULT = ErrorCode(_("设置默认访问模块失败"))
     CANNOT_DELETE_MODULE = ErrorCode(_("删除模块失败"))
     CREATE_MODULE_QUOTA_EXCEEDED = ErrorCode(_("模块创建数量已达到配额上限"))
+    # 资源配额方案
+    CANNOT_DELETE_RES_QUOTA_PLAN = ErrorCode(_("删除资源配额方案失败"))
     # 进程操作
     CANNOT_OPERATE_PROCESS = ErrorCode(_("操作进程失败"))
     QUERY_PROCESS_FAILED = ErrorCode(_("获取进程信息失败"))

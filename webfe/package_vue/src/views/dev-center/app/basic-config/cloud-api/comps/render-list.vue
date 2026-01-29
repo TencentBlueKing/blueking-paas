@@ -17,7 +17,7 @@
         </bk-button>
         <template v-if="!isComponentApi">
           <bk-button
-            v-if="!judgeIsApplyByGateway.allow_apply_by_api"
+            v-if="!judgeIsApplyByGateway.allow_apply_by_gateway"
             disabled
           >
             <span
@@ -435,7 +435,7 @@ export default {
       },
       requestQueue: ['list'],
       judgeIsApplyByGateway: {
-        allow_apply_by_api: false,
+        allow_apply_by_gateway: false,
         reason: '',
       },
       statusFilters: [
@@ -545,7 +545,7 @@ export default {
         this.judgeIsApplyByGateway = Object.assign(
           {},
           {
-            allow_apply_by_api: false,
+            allow_apply_by_gateway: false,
             reason: '',
           }
         );
@@ -635,7 +635,7 @@ export default {
 
     handleApiSuccessApply() {
       this.isShowGatewayDialog = false;
-      this.judgeIsApplyByGateway.allow_apply_by_api = false;
+      this.judgeIsApplyByGateway.allow_apply_by_gateway = false;
       this.judgeIsApplyByGateway.reason = this.$t('权限申请中，请联系网关负责人审批');
       this.allChecked = false;
       this.indeterminate = false;
@@ -805,13 +805,14 @@ export default {
         if (this.isComponentApi) {
           params.systemId = payload;
         } else {
-          params.apiId = payload;
+          params.gatewayName = this.name;
         }
         const res = await this.$store.dispatch(`cloudApi/${this.curFetchDispatchMethod}`, params);
-        // this.apiList = Object.freeze(res.data.sort(this.compare('name')))
+        // 新API响应格式：直接返回数据，无 result 层级
+        // this.apiList = Object.freeze(res.sort(this.compare('name')))
         // 网关api，申请/续期处理
-        if (res.data.length) {
-          res.data = res.data.map((v) => {
+        if (res.length) {
+          const apiData = res.map((v) => {
             // 申请
             const apply = formatApplyFun(v.permission_status);
             // 续期
@@ -824,8 +825,10 @@ export default {
               renewTips: renew.tips,
             };
           });
+          this.apiList = Object.freeze(apiData);
+        } else {
+          this.apiList = Object.freeze(res);
         }
-        this.apiList = Object.freeze(res.data);
         this.allData = this.apiList;
         this.filterStatus = [];
         this.initPageConf();
@@ -848,10 +851,11 @@ export default {
       try {
         const params = {
           appCode: this.appCode,
-          apiId: payload,
+          gatewayName: this.name,
         };
+        // 新API响应格式：直接返回数据，无 result 层级
         const res = await this.$store.dispatch('cloudApi/getAllowApplyByApi', params);
-        this.judgeIsApplyByGateway = res.data;
+        this.judgeIsApplyByGateway = res;
       } catch (e) {
         console.warn(e);
       } finally {

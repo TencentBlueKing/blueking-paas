@@ -120,7 +120,7 @@ export default {
             gateway_name: this.apiName,
           },
           appCode: this.appCode,
-          apiId: this.apiId,
+          gatewayName: this.apiName,
         };
         await this.$store.dispatch('cloudApi/apply', params);
         this.$emit('on-api-apply');

@@ -36,14 +36,19 @@ export function sm2Encrypt(msg, publicKey) {
 }
 
 /**
- * 根据加密配置决定是否使用 SM2 加密密码
- * @param {string} password - 待加密的密码
+ * 加密字符串, 并根据加密配置决定是否加密
+ * 约定字符串经过加密后, 变为 object: { _encrypted: true, _encrypted_value: 'Base64 encode hex ciphertext'}
+ * @param {string} str - 待加密的字符串
  * @param {Object} encryptConfig - 加密配置 { enabled: boolean, public_key: string }
- * @returns {string} 加密后的密码或原密码
+ * @returns {Object|string} 加密后的数据(object)或原字符串
  */
-export function getEncryptedPassword(password, encryptConfig) {
-  if (encryptConfig?.enabled && password) {
-    return sm2Encrypt(password, encryptConfig.public_key);
+export function encryptString(str, encryptConfig) {
+  if (encryptConfig?.enabled && str) {
+    const encryptedValue = sm2Encrypt(str, encryptConfig.public_key);
+    return {
+      _encrypted: true,
+      _encrypted_value: encryptedValue,
+    };
   }
-  return password;
+  return str;
 }

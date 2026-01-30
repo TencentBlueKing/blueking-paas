@@ -264,7 +264,7 @@ import { fileDownload } from '@/common/utils';
 import appBaseMixin from '@/mixins/app-base-mixin';
 import dayjs from 'dayjs';
 import { mapState } from 'vuex';
-import { getEncryptedPassword } from '@/common/crypto';
+import { encryptString } from '@/common/crypto';
 
 // 导入所有代码源图片
 const sourceImages = {
@@ -686,7 +686,7 @@ export default {
         if (config && config.authInfo) {
           params.data.source_repo_auth_info = {
             username: config.authInfo.account,
-            password: getEncryptedPassword(config.authInfo.password, this.encryptConfig),
+            password: encryptString(config.authInfo.password, this.encryptConfig),
           };
         }
 

@@ -24,7 +24,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from paasng.accessories.cloudapi_v2.apigateway import serializers
-from paasng.accessories.cloudapi_v2.apigateway.clients import ApiGatewayClient, ESBClient
+from paasng.accessories.cloudapi_v2.apigateway.clients import ApiGatewayClient
 from paasng.infras.accounts.permissions.application import application_perm_class
 from paasng.infras.iam.permissions.resources.application import AppAction
 from paasng.misc.audit.constants import DataType, OperationEnum, OperationTarget, ResultCode
@@ -63,7 +63,7 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
         data = ApiGatewayClient(tenant_id=tenant_id, bk_username=request.user.username).get_gateway(
-            app_code=app.code, gateway_name=gateway_name
+            gateway_name=gateway_name
         )
         return Response(data)
 
@@ -210,7 +210,7 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """查询组件系统列表"""
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        data = ESBClient(tenant_id=tenant_id, bk_username=request.user.username).list_esb_systems(
+        data = ApiGatewayClient(tenant_id=tenant_id, bk_username=request.user.username).list_esb_systems(
             user_auth_type=settings.BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE
         )
         return Response(data)
@@ -226,9 +226,9 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        data = ESBClient(tenant_id=tenant_id, bk_username=request.user.username).list_esb_system_permission_components(
-            app_code=app.code, system_id=system_id, **slz.validated_data
-        )
+        data = ApiGatewayClient(
+            tenant_id=tenant_id, bk_username=request.user.username
+        ).list_esb_system_permission_components(app_code=app.code, system_id=system_id, **slz.validated_data)
         return Response(data)
 
     @swagger_auto_schema(
@@ -242,7 +242,7 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        result = ESBClient(
+        result = ApiGatewayClient(
             tenant_id=tenant_id, bk_username=request.user.username
         ).apply_esb_system_component_permissions(app_code=app.code, system_id=system_id, **slz.validated_data)
 
@@ -277,9 +277,9 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        result = ESBClient(tenant_id=tenant_id, bk_username=request.user.username).renew_esb_component_permissions(
-            app_code=app.code, **slz.validated_data
-        )
+        result = ApiGatewayClient(
+            tenant_id=tenant_id, bk_username=request.user.username
+        ).renew_esb_component_permissions(app_code=app.code, **slz.validated_data)
 
         # 记录审计日志
         try:
@@ -302,9 +302,9 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """已申请的 ESB 组件权限列表"""
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        data = ESBClient(tenant_id=tenant_id, bk_username=request.user.username).list_app_esb_component_permissions(
-            app_code=app.code
-        )
+        data = ApiGatewayClient(
+            tenant_id=tenant_id, bk_username=request.user.username
+        ).list_app_esb_component_permissions(app_code=app.code)
         return Response(data)
 
     @swagger_auto_schema(
@@ -318,7 +318,7 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        data = ESBClient(
+        data = ApiGatewayClient(
             tenant_id=tenant_id, bk_username=request.user.username
         ).list_app_esb_component_permission_apply_records(app_code=app.code, **slz.validated_data)
         return Response(data)
@@ -328,7 +328,7 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         """查询应用权限申请记录详情"""
         app = self.get_application()
         tenant_id = get_tenant_id_for_app(app.code)
-        data = ESBClient(
+        data = ApiGatewayClient(
             tenant_id=tenant_id, bk_username=request.user.username
         ).get_app_esb_component_permission_apply_record(app_code=app.code, record_id=record_id)
         return Response(data)

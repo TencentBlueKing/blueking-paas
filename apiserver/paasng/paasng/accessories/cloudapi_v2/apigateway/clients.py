@@ -69,7 +69,7 @@ class ApiGatewayClient:
 
         return res.get("data", {})
 
-    def get_gateway(self, app_code: str, gateway_name: str) -> dict:
+    def get_gateway(self, gateway_name: str) -> dict:
         """获取单个网关详情"""
         try:
             res = self.client.get_gateway(path_params={"gateway_name": gateway_name})
@@ -166,6 +166,7 @@ class ApiGatewayClient:
         except (APIGatewayResponseError, ResponseError) as e:
             raise ApiGatewayServiceError(f"renew resource permission error: {e}")
 
+        # 这里网关正常会响应 204 No Content, 故不能取 data
         return res
 
     def list_resource_permission_apply_records(self, app_code: str, **kwargs) -> dict:
@@ -192,30 +193,6 @@ class ApiGatewayClient:
             raise ApiGatewayServiceError(f"retrieve resource permission apply record error: {e}")
 
         return res.get("data", {})
-
-
-class ESBClient:
-    """ESB 组件 API 通过 APIGW 提供的 API"""
-
-    def __init__(self, tenant_id: str, bk_username: str):
-        self.tenant_id = tenant_id
-        self.bk_username = bk_username
-        client = Client(endpoint=settings.BK_API_URL_TMPL_FOR_APIGW, stage=STAGE)
-        client.update_headers(self._prepare_headers())
-        self.client = client.api
-
-    def _prepare_headers(self) -> dict:
-        headers = {
-            "x-bkapi-authorization": json.dumps(
-                {
-                    "bk_app_code": settings.BK_APP_CODE,
-                    "bk_app_secret": settings.BK_APP_SECRET,
-                    "bk_username": self.bk_username,
-                }
-            ),
-            API_HERDER_TENANT_ID: self.tenant_id,
-        }
-        return headers
 
     def list_esb_systems(self, user_auth_type: str) -> dict:
         """查询组件系统列表"""
@@ -288,6 +265,7 @@ class ESBClient:
         except (APIGatewayResponseError, ResponseError) as e:
             raise ESBServiceError(f"renew esb component permissions error: {e}")
 
+        # 这里网关正常会响应 204 No Content, 故不能取 data
         return res
 
     def list_app_esb_component_permissions(self, app_code: str) -> dict:

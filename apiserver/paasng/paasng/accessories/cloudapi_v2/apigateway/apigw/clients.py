@@ -161,7 +161,7 @@ class Group(OperationGroup):
 
 
 class Client(APIGatewayClient):
-    """bk-apigateway client for gateway/esb permissions"""
+    """bk-apigateway client"""
 
     _api_name = "bk-apigateway"
 
@@ -172,6 +172,7 @@ class Client(APIGatewayClient):
         operation: Operation,
         response: Response | None,
     ):
+        # 覆写父类方法, 接受非 JSON 类型的响应 对应网关 v2 响应格式
         if response is None:
             return None
 

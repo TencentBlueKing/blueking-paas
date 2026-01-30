@@ -116,21 +116,12 @@ class EnvOverlayInputSLZ(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        """验证 override_plan_name 和 override_resources 必须二选一"""
+        """验证 override_plan_name 和 override_resources 不能同时提供"""
         plan_name = attrs.get("override_plan_name")
         resources = attrs.get("override_resources")
 
-        if not plan_name and not resources:
-            raise serializers.ValidationError(_("必须提供 override_plan_name 或 override_resources 其中之一"))
-
         if plan_name and resources:
             raise serializers.ValidationError(_("只能提供 override_plan_name 或 override_resources 其中之一"))
-
-        # 确保互斥: 提供其中一个时, 另一个字段显式设置为 None
-        if plan_name:
-            attrs["override_resources"] = None
-        else:
-            attrs["override_plan_name"] = None
 
         return attrs
 

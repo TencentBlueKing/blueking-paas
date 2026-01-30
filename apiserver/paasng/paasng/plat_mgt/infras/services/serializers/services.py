@@ -122,7 +122,7 @@ class ServiceCreateSLZ(serializers.Serializer):
 
         return data
 
-    def validate_provider_name(self, provider_name: str) -> str:
+    def validate_provider_name(self, provider_name: str) -> str | None:
         if provider_name:
             return provider_name
 

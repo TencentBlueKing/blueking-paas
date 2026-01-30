@@ -73,6 +73,15 @@ type ResLimitsConfig struct {
 	MaxReplicas int32 `json:"maxReplicas"`
 }
 
+// ResRequestsConfig contains bkapp resource requests
+type ResRequestsConfig struct {
+	// ProcDefaultCPURequest is process's default cpu request
+	ProcDefaultCPURequest string `json:"procDefaultCPURequest"`
+
+	// ProcDefaultMemRequest is process's default memory request
+	ProcDefaultMemRequest string `json:"procDefaultMemRequest"`
+}
+
 // AutoscalingConfig contains the config for autoscaling
 type AutoscalingConfig struct {
 	// Enabled indicates whether autoscaling is enabled
@@ -92,8 +101,10 @@ type ProjectConfig struct {
 	Platform      PlatformConfig      `json:"platform"`
 	IngressPlugin IngressPluginConfig `json:"ingressPlugin"`
 	ResLimits     ResLimitsConfig     `json:"resLimits"`
-	Autoscaling   AutoscalingConfig   `json:"autoscaling"`
-	MaxProcesses  int32               `json:"maxProcesses"`
+	// NOTE: 兼容旧版本中不使用 apiserver 传递配置的场景，ResRequests 字段仍然保留
+	ResRequests  ResRequestsConfig `json:"resRequests"`
+	Autoscaling  AutoscalingConfig `json:"autoscaling"`
+	MaxProcesses int32             `json:"maxProcesses"`
 }
 
 // NewProjectConfig create project config
@@ -112,6 +123,10 @@ func NewProjectConfig() *ProjectConfig {
 	conf.ResLimits.ProcDefaultCPULimit = "4000m"
 	conf.ResLimits.ProcDefaultMemLimit = "1024Mi"
 	conf.ResLimits.MaxReplicas = 5
+
+	// 资源请求默认值
+	conf.ResRequests.ProcDefaultMemRequest = ""
+	conf.ResRequests.ProcDefaultCPURequest = ""
 
 	conf.MaxProcesses = 8
 
@@ -142,6 +157,16 @@ func (p *ProjectConfig) GetProcDefaultCpuLimit() string {
 // GetProcDefaultMemLimit returns the default memory limit of a process
 func (p *ProjectConfig) GetProcDefaultMemLimit() string {
 	return p.ResLimits.ProcDefaultMemLimit
+}
+
+// GetProcDefaultCpuRequest returns the default cpu request of a process
+func (p *ProjectConfig) GetProcDefaultCpuRequest() string {
+	return p.ResRequests.ProcDefaultCPURequest
+}
+
+// GetProcDefaultMemRequest returns the default cpu limit of a process
+func (p *ProjectConfig) GetProcDefaultMemRequest() string {
+	return p.ResRequests.ProcDefaultMemRequest
 }
 
 // GetIngressClassName returns the ingress class name

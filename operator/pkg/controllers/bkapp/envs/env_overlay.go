@@ -373,6 +373,16 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 
 	// 配置 cpu request
 	minCpuQuota, _ := quota.NewQuantity("200m", quota.CPU)
+	// NOTE: 为兼容存量数据, 当配置了 ProcDefaultCpuRequest， 优先使用该值作为 CPU Request 配额
+	procDefaultCpuRequest := config.Global.GetProcDefaultCpuRequest()
+	if procDefaultCpuRequest != "" {
+		cpuRequestOverlay, err := quota.NewQuantity(procDefaultCpuRequest, quota.CPU)
+		if err != nil {
+			log.Error(err, "Fail to set cpu request", "DefaultCpuRequest", procDefaultCpuRequest)
+		} else {
+			minCpuQuota = cpuRequestOverlay
+		}
+	}
 
 	// 配置 mem request
 	var divisor int64 = 2
@@ -381,6 +391,16 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 		divisor = 4
 	}
 	minMemQuota := quota.Div(memQuota, divisor)
+	// NOTE: 为兼容存量数据, 当配置了 ProcDefaultMemRequest，优先使用该值作为 Memory Request 配额
+	procDefaultMemRequest := config.Global.GetProcDefaultMemRequest()
+	if procDefaultMemRequest != "" {
+		memoryRequestOverlay, err := quota.NewQuantity(procDefaultMemRequest, quota.Memory)
+		if err != nil {
+			log.Error(err, "Fail to set memory request", "DefaultMemRequest", procDefaultMemRequest)
+		} else {
+			minMemQuota = memoryRequestOverlay
+		}
+	}
 
 	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{

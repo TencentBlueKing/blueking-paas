@@ -41,6 +41,7 @@ class AppSerializer(serializers.Serializer):
     region = serializers.CharField(required=False)
     bk_app_code = serializers.CharField(required=False)
     bk_app_name = serializers.CharField(required=False)
+    bk_app_name_en = serializers.CharField(required=False)
     market = MarketSerializer(required=False)
 
 
@@ -104,7 +105,7 @@ class ProcessSerializer(serializers.Serializer):
 
 class ServiceSerializer(serializers.Serializer):
     name = serializers.CharField()
-    share_from = serializers.CharField(required=False)
+    shared_from = serializers.CharField(required=False)
 
 
 class ScriptsSerializer(serializers.Serializer):

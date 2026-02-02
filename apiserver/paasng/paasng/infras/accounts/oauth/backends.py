@@ -75,10 +75,9 @@ class OAuth2Backend:
     def __attrs_post_init__(self):
         self.session = self.get_oauth_session()
         # Merge default display info into the the one in settings.
-        display_info_not_set = {}
-        for f, v in self._default_display_info.items():
-            if getattr(self.display_info, f) == "" and v:
-                display_info_not_set[f] = v
+        display_info_not_set = {
+            f: v for f, v in self._default_display_info.items() if getattr(self.display_info, f) == "" and v
+        }
         if display_info_not_set:
             self.display_info = evolve(self.display_info, **display_info_not_set)
 
@@ -245,6 +244,9 @@ class APIGateWayBackend(BlueKingApplicationOauthMixin):
                     env_name=self.env_name,
                     grant_type="authorization_code",
                     rtx=username,
+                    # need_new_token=0: 如果已有 access_token(且过期时间>300s),
+                    # 则直接返回原先的 token 以来降低网关侧的压力
+                    need_new_token=0,
                     **{self.COOKIE_KEY: user_credential},
                 ),
                 headers=self.app_info_headers,

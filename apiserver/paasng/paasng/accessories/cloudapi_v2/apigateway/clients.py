@@ -53,7 +53,7 @@ class ApiGatewayClient:
 
     # ============ 网关 API 相关 ============
 
-    def list_gateways(self, app_code: str, name: str | None = None, fuzzy: bool = True) -> dict:
+    def list_gateways(self, name: str | None = None, fuzzy: bool = True) -> dict:
         """获取网关列表"""
         params = {}
         if name:

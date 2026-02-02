@@ -55,7 +55,7 @@ class ApiGatewayClient:
 
     def list_gateways(self, app_code: str, name: str | None = None, fuzzy: bool = True) -> dict:
         """获取网关列表"""
-        params = None
+        params = {}
         if name:
             params = {
                 "name": name,

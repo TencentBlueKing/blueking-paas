@@ -240,6 +240,28 @@ export default {
         });
         this.getResourceQuotaList();
       } catch (e) {
+        if (e.code === 'CANNOT_DELETE_RES_QUOTA_PLAN') {
+          const detailStr = JSON.stringify(e?.data?.used_by_processes || []);
+          this.$bkMessage({
+            theme: 'error',
+            message: {
+              code: e.status || e.code,
+              overview: e.message || e.detail,
+              suggestion: '',
+              details: detailStr,
+            },
+            actions: [
+              {
+                id: 'assistant',
+                disabled: true,
+              },
+            ],
+            offsetY: 80,
+            ellipsisLine: 2,
+            ellipsisCopy: true,
+          });
+          return;
+        }
         this.catchErrorHandler(e);
       }
     },

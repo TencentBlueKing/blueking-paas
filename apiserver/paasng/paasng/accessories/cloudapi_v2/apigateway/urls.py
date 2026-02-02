@@ -79,43 +79,43 @@ urlpatterns = [
     # 查询组件系统列表
     path(
         "apps/<slug:app_code>/inner/esb/systems/",
-        views.ESBAPIViewSet.as_view({"get": "list_esb_systems"}),
+        views.GatewayAPIViewSet.as_view({"get": "list_esb_systems"}),
         name="api.cloudapi.v2.esb_systems",
     ),
     # 查询系统权限组件
     path(
         "apps/<slug:app_code>/inner/esb/systems/<int:system_id>/permissions/components/",
-        views.ESBAPIViewSet.as_view({"get": "list_esb_system_permission_components"}),
+        views.GatewayAPIViewSet.as_view({"get": "list_esb_system_permission_components"}),
         name="api.cloudapi.v2.esb_system_permission_components",
     ),
     # 创建申请 ESB 组件权限的申请单据
     path(
         "apps/<slug:app_code>/inner/esb/systems/<int:system_id>/permissions/apply/",
-        views.ESBAPIViewSet.as_view({"post": "apply_esb_system_component_permissions"}),
+        views.GatewayAPIViewSet.as_view({"post": "apply_esb_system_component_permissions"}),
         name="api.cloudapi.v2.esb_system_component_permission_apply",
     ),
     # ESB 组件权限续期
     path(
         "apps/<slug:app_code>/inner/esb/systems/permissions/renew/",
-        views.ESBAPIViewSet.as_view({"post": "renew_esb_component_permissions"}),
+        views.GatewayAPIViewSet.as_view({"post": "renew_esb_component_permissions"}),
         name="api.cloudapi.v2.esb_component_permission_renew",
     ),
     # 已申请的 ESB 组件权限列表
     path(
         "apps/<slug:app_code>/inner/esb/systems/permissions/app-permissions/",
-        views.ESBAPIViewSet.as_view({"get": "list_app_esb_component_permissions"}),
+        views.GatewayAPIViewSet.as_view({"get": "list_app_esb_component_permissions"}),
         name="api.cloudapi.v2.app_esb_component_permissions",
     ),
     # 查询应用权限申请记录列表
     path(
         "apps/<slug:app_code>/inner/esb/systems/permissions/apply-records/",
-        views.ESBAPIViewSet.as_view({"get": "list_app_esb_component_permission_apply_records"}),
+        views.GatewayAPIViewSet.as_view({"get": "list_app_esb_component_permission_apply_records"}),
         name="api.cloudapi.v2.esb_component_permission_apply_records",
     ),
     # 查询应用权限申请记录详情
     path(
         "apps/<slug:app_code>/inner/esb/systems/permissions/apply-records/<int:record_id>/",
-        views.ESBAPIViewSet.as_view({"get": "get_app_esb_component_permission_apply_record"}),
+        views.GatewayAPIViewSet.as_view({"get": "get_app_esb_component_permission_apply_record"}),
         name="api.cloudapi.v2.esb_component_permission_apply_record_detail",
     ),
 ]

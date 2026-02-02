@@ -41,6 +41,23 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_CLOUD_API)]
 
+    def _get_app_and_tenant(self):
+        app = self.get_application()
+        tenant_id = get_tenant_id_for_app(app.code)
+        return app, tenant_id
+
+    def _get_client(self, tenant_id, request):
+        return ApiGatewayClient(tenant_id=tenant_id, bk_username=request.user.username)
+
+    def _validate(self, slz_cls, *, data):
+        slz = slz_cls(data=data)
+        slz.is_valid(raise_exception=True)
+        return slz.validated_data
+
+    def _response_with_serializer(self, slz_cls, data, *, many=False):
+        out_slz = slz_cls(data, many=many)
+        return Response(out_slz.data)
+
     @swagger_auto_schema(
         query_serializer=serializers.ListGatewaysInputSLZ,
         responses={200: serializers.ListGatewaysOutputSLZ(many=True)},
@@ -48,16 +65,11 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def list_gateways(self, request, *args, **kwargs):
         """获取网关列表"""
-        slz = serializers.ListGatewaysInputSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
+        validated_data = self._validate(serializers.ListGatewaysInputSLZ, data=request.query_params)
 
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(tenant_id=tenant_id, bk_username=request.user.username).list_gateways(
-            app_code=app.code, **slz.validated_data
-        )
-        out_slz = serializers.ListGatewaysOutputSLZ(data, many=True)
-        return Response(out_slz.data)
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).list_gateways(app_code=app.code, **validated_data)
+        return self._response_with_serializer(serializers.ListGatewaysOutputSLZ, data, many=True)
 
     @swagger_auto_schema(
         responses={200: serializers.GetGatewayOutputSLZ},
@@ -65,13 +77,9 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def get_gateway(self, request, gateway_name: str, *args, **kwargs):
         """获取单个网关详情"""
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(tenant_id=tenant_id, bk_username=request.user.username).get_gateway(
-            gateway_name=gateway_name
-        )
-        out_slz = serializers.GetGatewayOutputSLZ(data)
-        return Response(out_slz.data)
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).get_gateway(gateway_name=gateway_name)
+        return self._response_with_serializer(serializers.GetGatewayOutputSLZ, data)
 
     @swagger_auto_schema(
         query_serializer=serializers.ListGatewayPermissionResourcesInputSLZ,
@@ -80,16 +88,13 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def list_gateway_permission_resources(self, request, gateway_name: str, *args, **kwargs):
         """获取网关资源列表（权限申请用）"""
-        slz = serializers.ListGatewayPermissionResourcesInputSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
+        validated_data = self._validate(serializers.ListGatewayPermissionResourcesInputSLZ, data=request.query_params)
 
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).list_gateway_permission_resources(app_code=app.code, gateway_name=gateway_name, **slz.validated_data)
-        out_slz = serializers.ListGatewayPermissionResourcesOutputSLZ(data, many=True)
-        return Response(out_slz.data)
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).list_gateway_permission_resources(
+            app_code=app.code, gateway_name=gateway_name, **validated_data
+        )
+        return self._response_with_serializer(serializers.ListGatewayPermissionResourcesOutputSLZ, data, many=True)
 
     @swagger_auto_schema(
         responses={200: serializers.CheckIsAllowedApplyByGatewayOutputSLZ},
@@ -97,13 +102,11 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def check_is_allowed_apply_by_gateway(self, request, gateway_name: str, *args, **kwargs):
         """是否允许按网关申请资源权限"""
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).check_is_allowed_apply_by_gateway(app_code=app.code, gateway_name=gateway_name)
-        out_slz = serializers.CheckIsAllowedApplyByGatewayOutputSLZ(data)
-        return Response(out_slz.data)
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).check_is_allowed_apply_by_gateway(
+            app_code=app.code, gateway_name=gateway_name
+        )
+        return self._response_with_serializer(serializers.CheckIsAllowedApplyByGatewayOutputSLZ, data)
 
     @swagger_auto_schema(
         request_body=serializers.ApplyGatewayResourcePermissionInputSLZ,
@@ -112,14 +115,12 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def apply_gateway_resource_permission(self, request, gateway_name: str, *args, **kwargs):
         """网关资源权限申请"""
-        slz = serializers.ApplyGatewayResourcePermissionInputSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
+        validated_data = self._validate(serializers.ApplyGatewayResourcePermissionInputSLZ, data=request.data)
 
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        result = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).apply_gateway_resource_permission(app_code=app.code, gateway_name=gateway_name, **slz.validated_data)
+        app, tenant_id = self._get_app_and_tenant()
+        result = self._get_client(tenant_id, request).apply_gateway_resource_permission(
+            app_code=app.code, gateway_name=gateway_name, **validated_data
+        )
 
         # 记录审计日志
         try:
@@ -140,8 +141,7 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except Exception:
             logger.exception("Failed to add audit record for apply gateway resource permission")
 
-        out_slz = serializers.ApplyGatewayResourcePermissionOutputSLZ(result)
-        return Response(out_slz.data)
+        return self._response_with_serializer(serializers.ApplyGatewayResourcePermissionOutputSLZ, result)
 
     @swagger_auto_schema(
         responses={200: serializers.ListAppResourcePermissionsOutputSLZ(many=True)},
@@ -149,13 +149,9 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def list_app_resource_permissions(self, request, *args, **kwargs):
         """已申请的资源权限列表"""
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(tenant_id=tenant_id, bk_username=request.user.username).list_app_resource_permissions(
-            app_code=app.code
-        )
-        out_slz = serializers.ListAppResourcePermissionsOutputSLZ(data, many=True)
-        return Response(out_slz.data)
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).list_app_resource_permissions(app_code=app.code)
+        return self._response_with_serializer(serializers.ListAppResourcePermissionsOutputSLZ, data, many=True)
 
     @swagger_auto_schema(
         request_body=serializers.RenewResourcePermissionInputSLZ,
@@ -163,14 +159,10 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def renew_resource_permission(self, request, *args, **kwargs):
         """权限续期"""
-        slz = serializers.RenewResourcePermissionInputSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
+        validated_data = self._validate(serializers.RenewResourcePermissionInputSLZ, data=request.data)
 
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        result = ApiGatewayClient(tenant_id=tenant_id, bk_username=request.user.username).renew_resource_permission(
-            app_code=app.code, **slz.validated_data
-        )
+        app, tenant_id = self._get_app_and_tenant()
+        result = self._get_client(tenant_id, request).renew_resource_permission(app_code=app.code, **validated_data)
 
         # 记录审计日志
         try:
@@ -195,16 +187,15 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def list_resource_permission_apply_records(self, request, *args, **kwargs):
         """资源权限申请记录列表"""
-        slz = serializers.ListResourcePermissionApplyRecordsInputSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
+        validated_data = self._validate(
+            serializers.ListResourcePermissionApplyRecordsInputSLZ, data=request.query_params
+        )
 
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).list_resource_permission_apply_records(app_code=app.code, **slz.validated_data)
-        out_slz = serializers.PaginatedPermissionApplyRecordOutputSLZ(data)
-        return Response(out_slz.data)
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).list_resource_permission_apply_records(
+            app_code=app.code, **validated_data
+        )
+        return self._response_with_serializer(serializers.PaginatedPermissionApplyRecordOutputSLZ, data)
 
     @swagger_auto_schema(
         responses={200: serializers.RetrieveResourcePermissionApplyRecordOutputSLZ},
@@ -212,19 +203,11 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def retrieve_resource_permission_apply_record(self, request, record_id: int, *args, **kwargs):
         """资源权限申请记录详情"""
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).retrieve_resource_permission_apply_record(app_code=app.code, record_id=record_id)
-        out_slz = serializers.RetrieveResourcePermissionApplyRecordOutputSLZ(data)
-        return Response(out_slz.data)
-
-
-class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
-    """ESB 组件 API 权限管理"""
-
-    permission_classes = [IsAuthenticated, application_perm_class(AppAction.MANAGE_CLOUD_API)]
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).retrieve_resource_permission_apply_record(
+            app_code=app.code, record_id=record_id
+        )
+        return self._response_with_serializer(serializers.RetrieveResourcePermissionApplyRecordOutputSLZ, data)
 
     @swagger_auto_schema(
         query_serializer=serializers.ListESBSystemsInputSLZ,
@@ -233,13 +216,11 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def list_esb_systems(self, request, *args, **kwargs):
         """查询组件系统列表"""
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(tenant_id=tenant_id, bk_username=request.user.username).list_esb_systems(
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).list_esb_systems(
             user_auth_type=settings.BK_PLUGIN_APIGW_SERVICE_USER_AUTH_TYPE
         )
-        out_slz = serializers.ESBSystemOutputSLZ(data, many=True)
-        return Response(out_slz.data)
+        return self._response_with_serializer(serializers.ESBSystemOutputSLZ, data, many=True)
 
     @swagger_auto_schema(
         query_serializer=serializers.ListESBSystemPermissionComponentsInputSLZ,
@@ -248,16 +229,15 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def list_esb_system_permission_components(self, request, system_id: int, *args, **kwargs):
         """查询系统权限组件"""
-        slz = serializers.ListESBSystemPermissionComponentsInputSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
+        validated_data = self._validate(
+            serializers.ListESBSystemPermissionComponentsInputSLZ, data=request.query_params
+        )
 
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).list_esb_system_permission_components(app_code=app.code, system_id=system_id, **slz.validated_data)
-        out_slz = serializers.ESBComponentOutputSLZ(data, many=True)
-        return Response(out_slz.data)
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).list_esb_system_permission_components(
+            app_code=app.code, system_id=system_id, **validated_data
+        )
+        return self._response_with_serializer(serializers.ESBComponentOutputSLZ, data, many=True)
 
     @swagger_auto_schema(
         request_body=serializers.ApplyESBSystemComponentPermissionsInputSLZ,
@@ -266,14 +246,12 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def apply_esb_system_component_permissions(self, request, system_id: int, *args, **kwargs):
         """创建申请 ESB 组件权限的申请单据"""
-        slz = serializers.ApplyESBSystemComponentPermissionsInputSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
+        validated_data = self._validate(serializers.ApplyESBSystemComponentPermissionsInputSLZ, data=request.data)
 
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        result = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).apply_esb_system_component_permissions(app_code=app.code, system_id=system_id, **slz.validated_data)
+        app, tenant_id = self._get_app_and_tenant()
+        result = self._get_client(tenant_id, request).apply_esb_system_component_permissions(
+            app_code=app.code, system_id=system_id, **validated_data
+        )
 
         # 记录审计日志
         try:
@@ -293,8 +271,7 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         except Exception:
             logger.exception("Failed to add audit record for apply esb component permissions")
 
-        out_slz = serializers.ApplyESBSystemComponentPermissionsOutputSLZ(result)
-        return Response(out_slz.data)
+        return self._response_with_serializer(serializers.ApplyESBSystemComponentPermissionsOutputSLZ, result)
 
     @swagger_auto_schema(
         request_body=serializers.RenewESBComponentPermissionsInputSLZ,
@@ -302,14 +279,12 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def renew_esb_component_permissions(self, request, *args, **kwargs):
         """ESB 组件权限续期"""
-        slz = serializers.RenewESBComponentPermissionsInputSLZ(data=request.data)
-        slz.is_valid(raise_exception=True)
+        validated_data = self._validate(serializers.RenewESBComponentPermissionsInputSLZ, data=request.data)
 
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        result = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).renew_esb_component_permissions(app_code=app.code, **slz.validated_data)
+        app, tenant_id = self._get_app_and_tenant()
+        result = self._get_client(tenant_id, request).renew_esb_component_permissions(
+            app_code=app.code, **validated_data
+        )
 
         # 记录审计日志
         try:
@@ -333,13 +308,9 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def list_app_esb_component_permissions(self, request, *args, **kwargs):
         """已申请的 ESB 组件权限列表"""
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).list_app_esb_component_permissions(app_code=app.code)
-        out_slz = serializers.ESBComponentOutputSLZ(data, many=True)
-        return Response(out_slz.data)
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).list_app_esb_component_permissions(app_code=app.code)
+        return self._response_with_serializer(serializers.ESBComponentOutputSLZ, data, many=True)
 
     @swagger_auto_schema(
         query_serializer=serializers.ListAppESBComponentPermissionApplyRecordsInputSLZ,
@@ -348,16 +319,15 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def list_app_esb_component_permission_apply_records(self, request, *args, **kwargs):
         """查询应用权限申请记录列表"""
-        slz = serializers.ListAppESBComponentPermissionApplyRecordsInputSLZ(data=request.query_params)
-        slz.is_valid(raise_exception=True)
+        validated_data = self._validate(
+            serializers.ListAppESBComponentPermissionApplyRecordsInputSLZ, data=request.query_params
+        )
 
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).list_app_esb_component_permission_apply_records(app_code=app.code, **slz.validated_data)
-        out_slz = serializers.PaginatedESBComponentPermissionApplyRecordOutputSLZ(data)
-        return Response(out_slz.data)
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).list_app_esb_component_permission_apply_records(
+            app_code=app.code, **validated_data
+        )
+        return self._response_with_serializer(serializers.PaginatedESBComponentPermissionApplyRecordOutputSLZ, data)
 
     @swagger_auto_schema(
         responses={200: serializers.GetAppESBComponentPermissionApplyRecordOutputSLZ},
@@ -365,10 +335,8 @@ class ESBAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
     )
     def get_app_esb_component_permission_apply_record(self, request, record_id: int, *args, **kwargs):
         """查询应用权限申请记录详情"""
-        app = self.get_application()
-        tenant_id = get_tenant_id_for_app(app.code)
-        data = ApiGatewayClient(
-            tenant_id=tenant_id, bk_username=request.user.username
-        ).get_app_esb_component_permission_apply_record(app_code=app.code, record_id=record_id)
-        out_slz = serializers.GetAppESBComponentPermissionApplyRecordOutputSLZ(data)
-        return Response(out_slz.data)
+        app, tenant_id = self._get_app_and_tenant()
+        data = self._get_client(tenant_id, request).get_app_esb_component_permission_apply_record(
+            app_code=app.code, record_id=record_id
+        )
+        return self._response_with_serializer(serializers.GetAppESBComponentPermissionApplyRecordOutputSLZ, data)

@@ -101,7 +101,8 @@ type ProjectConfig struct {
 	Platform      PlatformConfig      `json:"platform"`
 	IngressPlugin IngressPluginConfig `json:"ingressPlugin"`
 	ResLimits     ResLimitsConfig     `json:"resLimits"`
-	// TODO: 统一由 apiserver 侧处理 requests, ProcDefaultCpuRequest 和 ProcDefaultMemRequest 从 operator 侧移除
+	// NOTE: ResRequests 是 operator 为 BkApp 设置的默认 resource requests,
+	// 仅当 BkApp 中 ResourceQuota 没有提供 requests 的情况下有效
 	ResRequests  ResRequestsConfig `json:"resRequests"`
 	Autoscaling  AutoscalingConfig `json:"autoscaling"`
 	MaxProcesses int32             `json:"maxProcesses"`

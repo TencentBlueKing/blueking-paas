@@ -101,7 +101,8 @@ type ProjectConfig struct {
 	Platform      PlatformConfig      `json:"platform"`
 	IngressPlugin IngressPluginConfig `json:"ingressPlugin"`
 	ResLimits     ResLimitsConfig     `json:"resLimits"`
-	// NOTE: 兼容旧版本中不使用 apiserver 传递配置的场景，ResRequests 字段仍然保留
+	// NOTE: ResRequests 是 operator 为 BkApp 设置的默认 resource requests,
+	// 仅当 BkApp 中 ResourceQuota 没有提供 requests 的情况下有效
 	ResRequests  ResRequestsConfig `json:"resRequests"`
 	Autoscaling  AutoscalingConfig `json:"autoscaling"`
 	MaxProcesses int32             `json:"maxProcesses"`

@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/testing"
 )
 
@@ -405,11 +406,11 @@ var _ = Describe("test builtin logs", func() {
 
 		Expect(volumeMounts[0].Name).To(Equal(VolumeNameAppLogging))
 		Expect(volumeMounts[0].MountPath).To(Equal(VolumeMountAppLoggingDir))
-		Expect(volumes[0].HostPath.Path).To(HavePrefix(VolumeHostPathAppLoggingDir))
+		Expect(volumes[0].HostPath.Path).To(HavePrefix(config.Global.GetLegacyLogHostPath()))
 
 		Expect(volumeMounts[1].Name).To(Equal(MulModuleVolumeNameAppLogging))
 		Expect(volumeMounts[1].MountPath).To(Equal(MulModuleVolumeMountAppLoggingDir))
-		Expect(volumes[1].HostPath.Path).To(HavePrefix(MulModuleVolumeHostPathAppLoggingDir))
+		Expect(volumes[1].HostPath.Path).To(HavePrefix(config.Global.GetMulModuleLogHostPath()))
 	})
 
 	DescribeTable(

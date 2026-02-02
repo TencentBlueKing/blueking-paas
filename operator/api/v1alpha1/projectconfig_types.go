@@ -88,6 +88,16 @@ type AutoscalingConfig struct {
 	Enabled bool `json:"enabled"`
 }
 
+// LogVolumeConfig contains the config for app logging volumes
+type LogVolumeConfig struct {
+	// LegacyLogHostPath is the host path for legacy app logging volume
+	// Default: /data/bkapp/logs
+	LegacyLogHostPath string `json:"legacyLogHostPath"`
+	// MulModuleLogHostPath is the host path for multi-module app logging volume
+	// Default: /data/bkapp/v3logs
+	MulModuleLogHostPath string `json:"mulModuleLogHostPath"`
+}
+
 //+kubebuilder:object:root=true
 
 // ProjectConfig is the Schema for the project configs API
@@ -100,6 +110,7 @@ type ProjectConfig struct {
 
 	Platform      PlatformConfig      `json:"platform"`
 	IngressPlugin IngressPluginConfig `json:"ingressPlugin"`
+	LogVolume     LogVolumeConfig     `json:"logVolume"`
 	ResLimits     ResLimitsConfig     `json:"resLimits"`
 	// TODO: 统一由 apiserver 侧处理 requests, ProcDefaultCpuRequest 和 ProcDefaultMemRequest 从 operator 侧移除
 	ResRequests  ResRequestsConfig `json:"resRequests"`
@@ -129,6 +140,10 @@ func NewProjectConfig() *ProjectConfig {
 	conf.ResRequests.ProcDefaultCPURequest = ""
 
 	conf.MaxProcesses = 8
+
+	// LogVolume host path defaults
+	conf.LogVolume.LegacyLogHostPath = "/data/bkapp/logs"
+	conf.LogVolume.MulModuleLogHostPath = "/data/bkapp/v3logs"
 
 	return &conf
 }
@@ -186,4 +201,14 @@ func (p *ProjectConfig) GetCustomDomainIngressClassName() string {
 // IsAutoscalingEnabled returns whether autoscaling is enabled
 func (p *ProjectConfig) IsAutoscalingEnabled() bool {
 	return p.Autoscaling.Enabled
+}
+
+// GetLegacyLogHostPath returns the host path for legacy app logging volume
+func (p *ProjectConfig) GetLegacyLogHostPath() string {
+	return p.LogVolume.LegacyLogHostPath
+}
+
+// GetMulModuleLogHostPath returns the host path for multi-module app logging volume
+func (p *ProjectConfig) GetMulModuleLogHostPath() string {
+	return p.LogVolume.MulModuleLogHostPath
 }

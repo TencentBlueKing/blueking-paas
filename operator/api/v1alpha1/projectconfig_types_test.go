@@ -126,4 +126,47 @@ platform:
 		Expect(projCfg.GetIngressClassName()).To(Equal(""))
 		Expect(projCfg.GetCustomDomainIngressClassName()).To(Equal(""))
 	})
+
+	It("test load from file with logVolume config", func() {
+		var projCfg ProjectConfig
+		configContent := `
+apiVersion: paas.bk.tencent.com/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: projectconfig-sample
+platform:
+  bkAppCode: "foo"
+  bkAppSecret: "bar"
+logVolume:
+  legacyLogHostPath: "/custom/logs"
+  mulModuleLogHostPath: "/custom/v3logs"
+`
+		file, err := os.CreateTemp("", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = file.Write([]byte(configContent))
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = ctrl.ConfigFile().AtPath(file.Name()).OfKind(&projCfg).Complete()
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(projCfg.LogVolume.LegacyLogHostPath).To(Equal("/custom/logs"))
+		Expect(projCfg.LogVolume.MulModuleLogHostPath).To(Equal("/custom/v3logs"))
+		Expect(projCfg.GetLegacyLogHostPath()).To(Equal("/custom/logs"))
+		Expect(projCfg.GetMulModuleLogHostPath()).To(Equal("/custom/v3logs"))
+	})
+
+	It("test NewProjectConfig default values", func() {
+		projCfg := NewProjectConfig()
+
+		// LogVolume defaults
+		Expect(projCfg.GetLegacyLogHostPath()).To(Equal("/data/bkapp/logs"))
+		Expect(projCfg.GetMulModuleLogHostPath()).To(Equal("/data/bkapp/v3logs"))
+
+		// Other defaults (existing)
+		Expect(projCfg.ResLimits.ProcDefaultCPULimit).To(Equal("4000m"))
+		Expect(projCfg.ResLimits.ProcDefaultMemLimit).To(Equal("1024Mi"))
+		Expect(projCfg.ResLimits.MaxReplicas).To(Equal(int32(5)))
+		Expect(projCfg.MaxProcesses).To(Equal(int32(8)))
+	})
 })

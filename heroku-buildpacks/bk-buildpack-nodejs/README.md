@@ -47,15 +47,15 @@ export NODE_BINARY_MIRROR_URL="https://bkrepo.example.com/nodejs/"
 
 **示例：**
 
-- **标准模式**（保持目录结构，与原 buildpack 一致）：
-```bash
-export NODE_BINARY_MIRROR_URL="https://bkrepo.example.com/nodejs/"
-# 下载地址: https://bkrepo.example.com/nodejs/v24.6.0/node-v24.6.0-linux-x64.tar.gz
-```
-
 - **平铺模式**（去掉版本目录）：
 ```bash
 export NODE_BINARY_MIRROR_URL="https://bkrepo.example.com/nodejs/"
 export NODE_BINARY_MIRROR_FLAT="true"
 # 下载地址: https://bkrepo.example.com/nodejs/node-v24.6.0-linux-x64.tar.gz
+```
+
+- **标准模式**（保持目录结构，与原 buildpack 一致）：
+```bash
+export NODE_BINARY_MIRROR_URL="https://bkrepo.example.com/nodejs/"
+# 下载地址: https://bkrepo.example.com/nodejs/v24.6.0/node-v24.6.0-linux-x64.tar.gz
 ```

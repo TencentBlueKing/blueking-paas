@@ -4,6 +4,10 @@
 
 - 新增：bk-buildpack-nodejs 支持从自定义源下载 nodejs 二进制
 
+## v2.2.1
+
+- 新增: smart-app-builder 支持旧 cnb 方案的 Smart 包构建
+
 ## v2.2.0
 
 - 更新：升级 bk-buildpack-go 到 v216

@@ -74,7 +74,7 @@ class API(HTTPClient):
 
             exception = self.Exceptions.get(status_code, APIError)
             raise exception(
-                message=json_response["error"], reason=json_response["reason"], reply_code=status_code
+                message=json_response.get("error", str(err)), reason=json_response["reason"], reply_code=status_code
             ) from err
 
     def partial(self, path: "str", method: "str", headers=None) -> "typing.Callable":

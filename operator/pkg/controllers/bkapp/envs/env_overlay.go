@@ -353,28 +353,6 @@ func (r *ProcResourcesGetter) calculateResourcesByResConfig(
 			corev1.ResourceCPU:    *requestsCPU,
 			corev1.ResourceMemory: *requestsMemory,
 		}
-
-		// TODO: 统一由 apiserver 侧处理 requests, ProcDefaultCpuRequest 和 ProcDefaultMemRequest 从 operator 侧移除
-		// Apply default requests from global config if configured (priority over annotation config)
-		procDefaultCpuRequest := config.Global.GetProcDefaultCpuRequest()
-		if procDefaultCpuRequest != "" {
-			cpuRequestOverlay, err := quota.NewQuantity(procDefaultCpuRequest, quota.CPU)
-			if err != nil {
-				log.Error(err, "Fail to set cpu request", "DefaultCpuRequest", procDefaultCpuRequest)
-			} else {
-				requests[corev1.ResourceCPU] = *cpuRequestOverlay
-			}
-		}
-
-		procDefaultMemRequest := config.Global.GetProcDefaultMemRequest()
-		if procDefaultMemRequest != "" {
-			memoryRequestOverlay, err := quota.NewQuantity(procDefaultMemRequest, quota.Memory)
-			if err != nil {
-				log.Error(err, "Fail to set memory request", "DefaultMemRequest", procDefaultMemRequest)
-			} else {
-				requests[corev1.ResourceMemory] = *memoryRequestOverlay
-			}
-		}
 	} else {
 		// If requests are not specified, derive from limits
 		requests = r.calculateResources(resConfig.Limits.CPU, resConfig.Limits.Memory).Requests
@@ -393,10 +371,9 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 	cpuQuota, _ := quota.NewQuantity(cpu, quota.CPU)
 	memQuota, _ := quota.NewQuantity(memory, quota.Memory)
 
-	// TODO: 统一由 apiserver 侧处理 requests, ProcDefaultCpuRequest 和 ProcDefaultMemRequest 从 operator 侧移除
 	// 配置 cpu request
-	// 当配置了 ProcDefaultCpuRequest， 优先使用该值作为 CPU Request 配额
 	minCpuQuota, _ := quota.NewQuantity("200m", quota.CPU)
+	// NOTE: 当配置了 ProcDefaultCpuRequest， 优先使用该值作为 CPU Request 配额
 	procDefaultCpuRequest := config.Global.GetProcDefaultCpuRequest()
 	if procDefaultCpuRequest != "" {
 		cpuRequestOverlay, err := quota.NewQuantity(procDefaultCpuRequest, quota.CPU)
@@ -414,7 +391,7 @@ func (r *ProcResourcesGetter) calculateResources(cpu, memory string) corev1.Reso
 		divisor = 4
 	}
 	minMemQuota := quota.Div(memQuota, divisor)
-	// 当配置了 ProcDefaultMemLimit，优先使用该值作为 Memory Request 配额
+	// NOTE: 当配置了 ProcDefaultMemRequest，优先使用该值作为 Memory Request 配额
 	procDefaultMemRequest := config.Global.GetProcDefaultMemRequest()
 	if procDefaultMemRequest != "" {
 		memoryRequestOverlay, err := quota.NewQuantity(procDefaultMemRequest, quota.Memory)

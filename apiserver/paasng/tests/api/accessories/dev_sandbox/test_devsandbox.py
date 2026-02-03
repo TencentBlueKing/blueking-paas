@@ -23,8 +23,9 @@ from django.urls import reverse
 from rest_framework import status
 
 from paas_wl.bk_app.dev_sandbox.conf import DEV_SANDBOX_WORKSPACE
-from paas_wl.bk_app.dev_sandbox.constants import DevSandboxStatus
+from paas_wl.bk_app.dev_sandbox.constants import DevSandboxEnvVarSource, DevSandboxStatus
 from paas_wl.bk_app.dev_sandbox.controller import DevSandboxDetail, DevSandboxUrls
+from paas_wl.bk_app.dev_sandbox.entities import DevSandboxEnvVar, DevSandboxEnvVarList
 from paasng.platform.sourcectl.models import AlternativeVersion
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
@@ -82,7 +83,9 @@ class TestCreateDevSandbox:
             ),
             mock.patch(
                 "paasng.accessories.dev_sandbox.views.get_env_vars_selected_addons",
-                return_value={"FOO": "BAR"},
+                return_value=DevSandboxEnvVarList(
+                    [DevSandboxEnvVar.create(key="FOO", value="BAR", source=DevSandboxEnvVarSource.STAG)]
+                ),
             ),
             mock.patch(
                 "paasng.accessories.dev_sandbox.views.DevSandboxController.deploy",
@@ -200,8 +203,7 @@ class TestEnvVarsDevSandbox:
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         bk_dev_sandbox.refresh_from_db()
-        updated_env_vars = bk_dev_sandbox.list_env_vars()
-        updated_dict = {item["key"]: item["value"] for item in updated_env_vars}
+        updated_dict = bk_dev_sandbox.list_env_vars().kv_map
 
         assert "NEW_VAR" in updated_dict
         assert updated_dict["NEW_VAR"] == "new_value"
@@ -210,8 +212,7 @@ class TestEnvVarsDevSandbox:
         assert resp.status_code == status.HTTP_204_NO_CONTENT
 
         bk_dev_sandbox.refresh_from_db()
-        final_env_vars = bk_dev_sandbox.list_env_vars()
-        final_dict = {item["key"]: item["value"] for item in final_env_vars}
+        final_dict = bk_dev_sandbox.list_env_vars().kv_map
         assert final_dict["NEW_VAR"] == "updated_value"
 
     def test_upsert_env_vars_sandbox_not_found(self, api_client, bk_cnative_app, bk_module):
@@ -233,7 +234,7 @@ class TestEnvVarsDevSandbox:
         # 添加环境变量
         api_client.post(env_var_url, {"key": "EXISTING_VAR", "value": "value"})
         bk_dev_sandbox.refresh_from_db()
-        assert "EXISTING_VAR" in {item["key"] for item in bk_dev_sandbox.list_env_vars()}
+        assert "EXISTING_VAR" in bk_dev_sandbox.list_env_vars().kv_map
 
         # 删除环境变量
         delete_url = (
@@ -247,9 +248,8 @@ class TestEnvVarsDevSandbox:
 
         # 验证环境变量已被删除
         bk_dev_sandbox.refresh_from_db()
-        env_vars = bk_dev_sandbox.list_env_vars()
-        env_var_keys = {item["key"] for item in env_vars}
-        assert "EXISTING_VAR" not in env_var_keys
+        env_var_dict = bk_dev_sandbox.list_env_vars().kv_map
+        assert "EXISTING_VAR" not in env_var_dict
 
     def test_list_env_vars_success(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):
         url = (
@@ -262,8 +262,8 @@ class TestEnvVarsDevSandbox:
 
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json() == [
-            {"key": "TEST_VAR1", "value": "value1", "source": "custom"},
-            {"key": "TEST_VAR2", "value": "value2", "source": "custom"},
+            {"key": "TEST_VAR1", "value": "value1", "source": "custom", "is_sensitive": False},
+            {"key": "TEST_VAR2", "value": "value2", "source": "custom", "is_sensitive": False},
         ]
 
     def test_list_env_vars_empty(self, api_client, bk_cnative_app, bk_module, bk_dev_sandbox):

@@ -634,9 +634,8 @@ export default {
       this.loading = true;
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, { appCode: this.appCode });
-        // 新 API 响应格式：直接返回数据，无 result 层级
-        // 网关、组件使用 res / MCP使用 res
-        let apiData = this.isMcpService ? this.formatMcpServiceData(res) : res || [];
+        // 网关、组件使用 res.data / MCP使用 res
+        let apiData = this.isMcpService ? this.formatMcpServiceData(res) : res.data || [];
         apiData.forEach((item) => {
           item.type = this.typeValue;
         });

@@ -35,6 +35,7 @@ app:
   region: default
   bk_app_code: "foo-app"
   bk_app_name: 默认应用名称
+  bk_app_name_en: default_app_name
   market:
     category: 运维工具
     introduction: 应用简介
@@ -86,9 +87,9 @@ modules:
     language: Python
     services: # 增强服务配置仅对 Smart 应用生效
       - name: mysql
-        share_from: default
+        shared_from: default
       - name: rabbitmq
-        share_from: default
+        shared_from: default
     env_variables:
       - key: FOO
         value: value_of_foo
@@ -138,6 +139,7 @@ modules:
                         "region": "default",
                         "bkAppCode": "foo-app",
                         "bkAppName": "默认应用名称",
+                        "bkAppNameEn": "default_app_name",
                         "market": {
                             "category": "运维工具",
                             "introduction": "应用简介",
@@ -197,8 +199,8 @@ modules:
                             "language": "Python",
                             "spec": {
                                 "addons": [
-                                    {"name": "mysql", "shareFrom": "default"},
-                                    {"name": "rabbitmq", "shareFrom": "default"},
+                                    {"name": "mysql", "sharedFromModule": "default"},
+                                    {"name": "rabbitmq", "sharedFromModule": "default"},
                                 ],
                                 "configuration": {
                                     "env": [
@@ -248,6 +250,7 @@ app:
   region: default
   bkAppCode: foo-app
   bkAppName: 默认应用名称
+  bkAppNameEn: default_app_name
   market:
     category: 运维工具
     introduction: 应用简介
@@ -310,9 +313,9 @@ modules:
     spec:
       addons:
         - name: mysql
-          shareFrom: default
+          sharedFromModule: default
         - name: rabbitmq
-          shareFrom: default
+          sharedFromModule: default
       configuration:
         env:
           - name: FOO
@@ -364,6 +367,7 @@ app:
   region: default
   bk_app_code: "foo-app"
   bk_app_name: 默认应用名称
+  bk_app_name_en: default_app_name
   market:
     category: 运维工具
     introduction: 应用简介
@@ -412,6 +416,7 @@ module:
                         "region": "default",
                         "bkAppCode": "foo-app",
                         "bkAppName": "默认应用名称",
+                        "bkAppNameEn": "default_app_name",
                         "market": {
                             "category": "运维工具",
                             "introduction": "应用简介",
@@ -466,6 +471,7 @@ app:
   region: default
   bkAppCode: foo-app
   bkAppName: 默认应用名称
+  bkAppNameEn: default_app_name
   market:
     category: 运维工具
     introduction: 应用简介

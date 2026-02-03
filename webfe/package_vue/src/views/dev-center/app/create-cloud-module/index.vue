@@ -642,8 +642,10 @@
 </template>
 
 <script>
+import { mapState } from 'vuex';
 import { APP_LANGUAGES_IMAGE, DEFAULT_APP_SOURCE_CONTROL_TYPES, DEFAULR_LANG_NAME } from '@/common/constants';
 import { cloneDeep, has } from 'lodash';
+import { encryptString } from '@/common/crypto';
 import gitExtend from '@/components/ui/git-extend.vue';
 import repoInfo from '@/components/ui/repo-info.vue';
 import appPreloadMixin from '@/mixins/app-preload';
@@ -830,6 +832,7 @@ export default {
     };
   },
   computed: {
+    ...mapState('tenantConfig', ['encryptConfig']),
     region() {
       return this.curAppInfo.application.region;
     },
@@ -957,6 +960,7 @@ export default {
     },
   },
   async created() {
+    await this.fetchEncryptConfig();
     await this.fetchRegion();
     await this.getLanguageByRegion();
     await this.getCodeTypes();
@@ -976,6 +980,11 @@ export default {
     }
   },
   methods: {
+    // 获取加密配置
+    async fetchEncryptConfig() {
+      await this.$store.dispatch('tenantConfig/getEncryptConfig').catch((e) => this.catchErrorHandler(e));
+    },
+
     handleCodeTypeChange(payload) {
       this.localSourceOrigin = payload;
       if (payload === this.GLOBAL.APP_TYPES.NORMAL_APP) {
@@ -1285,7 +1294,7 @@ export default {
         params.source_config.source_repo_url = this.repoData.url;
         params.source_config.source_repo_auth_info = {
           username: this.repoData.account,
-          password: this.repoData.password,
+          password: encryptString(this.repoData.password, this.encryptConfig),
         };
         params.source_config.source_dir = this.repoData.sourceDir;
       }

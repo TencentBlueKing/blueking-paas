@@ -17,6 +17,8 @@
 
 from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
+DEV_SANDBOX_SENSITIVE_ENV_VARS = {"BKPAAS_APP_SECRET"}
+
 
 class SourceCodeFetchMethod(StrStructuredEnum):
     """源码获取方式"""

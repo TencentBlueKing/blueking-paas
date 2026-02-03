@@ -82,6 +82,9 @@ def clean_empty_overlays(module):
         "scaling_config": None,
         "target_replicas": None,
         "plan_name": None,
+        "override_plan_name": None,
+        "override_resources": None,
+        # [deprecated] override_proc_res 模型字段已经废弃, 但为了防止新增字段后清理过程异常, 保留该字段的检查
         "override_proc_res": None,
     }
 

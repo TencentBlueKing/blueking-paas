@@ -33,7 +33,7 @@
         class="flex-row align-items-start gap-24"
         v-else
       >
-        <!-- 查看态，兼容情况三：预设方案，传 override_proc_res: { plan }，通过 override_proc_res.plan 在 planList 中获取对应的limits、requests -->
+        <!-- 查看态，兼容情况三：预设方案，传 override_plan_name: '预设方案名称'，通过 override_plan_name 在 planList 中获取对应的limits、requests -->
         <SectionContainer
           v-for="env in envList"
           :key="env.key"
@@ -409,6 +409,7 @@ export default {
       isEdit: false,
       // 备份原始数据
       originalFormData: null,
+      originalResourceQuotaType: null,
     };
   },
   computed: {
@@ -486,11 +487,11 @@ export default {
     },
     // 获取资源配额方案名称
     getPlanName(env) {
-      // 情况三：预设方案，override_proc_res: { plan: '预设方案名称' }
+      // 情况三：预设方案，override_plan_name: '预设方案名称'
       const envData = this.processData?.env_overlays?.[env];
-      if (envData?.override_proc_res?.plan) {
-        const plan = this.planList.find((item) => item.name === envData.override_proc_res.plan);
-        return plan?.name || envData.override_proc_res.plan || '--';
+      if (envData?.override_plan_name) {
+        const plan = this.planList.find((item) => item.name === envData.override_plan_name);
+        return plan?.name || envData.override_plan_name || '--';
       }
 
       // 其他情况：从 formData 中获取
@@ -500,16 +501,16 @@ export default {
       const plan = this.planList.find((item) => item.name === this.formData[env].plan_name);
       return plan?.name || this.formData[env].plan_name || '--';
     },
-    // 获取查看态展示的资源数据（兼容情况三：override_proc_res.plan）
+    // 获取查看态展示的资源数据（兼容情况三：override_plan_name）
     getViewResources(env) {
       const envData = this.processData?.env_overlays?.[env];
       if (!envData) {
         return this.createEmptyResources();
       }
 
-      // 情况三：预设方案，override_proc_res: { plan: '预设方案名称' }
-      if (envData.override_proc_res?.plan) {
-        const plan = this.planList.find((item) => item.name === envData.override_proc_res.plan);
+      // 情况三：预设方案，override_plan_name: '预设方案名称'
+      if (envData.override_plan_name) {
+        const plan = this.planList.find((item) => item.name === envData.override_plan_name);
         if (plan) {
           return {
             limits: plan.limits || { cpu: '', memory: '' },
@@ -574,9 +575,9 @@ export default {
       const { prod, stag } = envOverlays;
 
       // 判断 resourceQuotaType 的初始值
-      // 如果 stag 和 prod 的 override_proc_res 都为 null，则为 'file'（以描述文件为准），否则为 'custom'（自定义）
-      const isStagNull = stag?.override_proc_res === null;
-      const isProdNull = prod?.override_proc_res === null;
+      // 如果 stag 和 prod 的 override_plan_name 和 override_resources 都为 null，则为 'file'（以描述文件为准），否则为 'custom'（自定义）
+      const isStagNull = stag?.override_plan_name === null && stag?.override_resources === null;
+      const isProdNull = prod?.override_plan_name === null && prod?.override_resources === null;
 
       this.resourceQuotaType = isStagNull && isProdNull ? 'file' : 'custom';
 
@@ -586,32 +587,27 @@ export default {
       ].forEach(({ env, data }) => {
         if (!data) return;
 
-        // override_proc_res 不为 null 且不为 undefined 表示为自定义资源配额
-        const hasOverrideProcRes = data.override_proc_res !== null && data.override_proc_res !== undefined;
-
-        if (hasOverrideProcRes) {
-          // 情况三：预设方案，override_proc_res: { plan: '预设方案名称' }
-          if (data.override_proc_res.plan) {
-            this.formData[env].plan_name = data.override_proc_res.plan;
-            // 从 planList 中获取对应的 limits 和 requests
-            const plan = this.planList.find((item) => item.name === data.override_proc_res.plan);
-            if (plan) {
-              this.formData[env].resources = {
-                limits: plan.limits || { cpu: '', memory: '' },
-                requests: plan.requests || { cpu: '', memory: '' },
-              };
-            } else {
-              this.formData[env].resources = this.createEmptyResources();
-            }
-          }
-          // 情况二：自定义资源配额，override_proc_res: { limits: {}, requests: {} }
-          else if (data.override_proc_res.limits || data.override_proc_res.requests) {
-            this.formData[env].plan_name = 'custom';
+        // 情况三：预设方案，override_plan_name: '预设方案名称'
+        if (data.override_plan_name) {
+          this.formData[env].plan_name = data.override_plan_name;
+          // 从 planList 中获取对应的 limits 和 requests
+          const plan = this.planList.find((item) => item.name === data.override_plan_name);
+          if (plan) {
             this.formData[env].resources = {
-              limits: data.override_proc_res.limits || { cpu: '', memory: '' },
-              requests: data.override_proc_res.requests || { cpu: '', memory: '' },
+              limits: plan.limits || { cpu: '', memory: '' },
+              requests: plan.requests || { cpu: '', memory: '' },
             };
+          } else {
+            this.formData[env].resources = this.createEmptyResources();
           }
+        }
+        // 情况二：自定义资源配额，override_resources: { limits: {}, requests: {} }
+        else if (data.override_resources?.limits || data.override_resources?.requests) {
+          this.formData[env].plan_name = 'custom';
+          this.formData[env].resources = {
+            limits: data.override_resources.limits || { cpu: '', memory: '' },
+            requests: data.override_resources.requests || { cpu: '', memory: '' },
+          };
         }
         // 情况一：以描述文件为准
         else if (data.plan_name) {
@@ -623,6 +619,7 @@ export default {
     handleEdit() {
       // 备份当前数据
       this.originalFormData = JSON.parse(JSON.stringify(this.formData));
+      this.originalResourceQuotaType = this.resourceQuotaType;
       this.isEdit = true;
     },
     // 取消编辑
@@ -635,6 +632,11 @@ export default {
         // 还原备份的数据
         this.formData = JSON.parse(JSON.stringify(this.originalFormData));
         this.originalFormData = null;
+      }
+      if (this.originalResourceQuotaType !== null) {
+        // 还原备份的类型
+        this.resourceQuotaType = this.originalResourceQuotaType;
+        this.originalResourceQuotaType = null;
       }
       this.isEdit = false;
     },
@@ -690,24 +692,31 @@ export default {
      * @returns {object} - resources 参数
      */
     getResourcesParams(env) {
-      // 情况一：以描述文件为准，resources 传 null
+      // 情况一：以描述文件为准，override_plan_name 和 override_resources 都传 null
       if (this.resourceQuotaType === 'file') {
-        return null;
+        return {
+          override_plan_name: null,
+          override_resources: null,
+        };
       }
 
       const envData = this.formData[env];
 
-      // 情况三：自定义方案，传 resources: { limits: {}, requests: {} }
+      // 情况二：自定义方案，传 override_resources: { limits: {}, requests: {} }，override_plan_name: null
       if (envData.plan_name === 'custom') {
         return {
-          limits: envData.resources.limits,
-          requests: envData.resources.requests,
+          override_plan_name: null,
+          override_resources: {
+            limits: envData.resources.limits,
+            requests: envData.resources.requests,
+          },
         };
       }
 
-      // 情况二：预设方案，传 resources: { plan: '预设方案名称' }
+      // 情况三：预设方案，传 override_plan_name: '预设方案名称'，override_resources: null
       return {
-        plan: envData.plan_name,
+        override_plan_name: envData.plan_name,
+        override_resources: null,
       };
     },
     // 提交
@@ -729,8 +738,10 @@ export default {
       const envOverlays = {};
 
       ['stag', 'prod'].forEach((env) => {
+        const params = this.getResourcesParams(env);
         envOverlays[env] = {
-          override_proc_res: this.getResourcesParams(env),
+          override_plan_name: params.override_plan_name,
+          override_resources: params.override_resources,
         };
       });
 
@@ -750,6 +761,7 @@ export default {
         });
         // 保存成功后清空备份并关闭编辑模式
         this.originalFormData = null;
+        this.originalResourceQuotaType = null;
         this.isEdit = false;
       } catch (e) {
         this.catchErrorHandler(e);

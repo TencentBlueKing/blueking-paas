@@ -19,6 +19,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -28,6 +29,7 @@ from paasng.misc.audit.constants import OperationEnum, OperationTarget
 from paasng.misc.audit.service import DataDetail, add_plat_mgt_audit_record
 from paasng.platform.bkapp_model.constants import CPUResourceQuantity, MemoryResourceQuantity
 from paasng.platform.bkapp_model.models import ResQuotaPlan
+from paasng.utils.error_codes import error_codes
 
 from .serializers import ResQuotaPlanInputSLZ, ResQuotaPlanOutputSLZ
 
@@ -119,9 +121,26 @@ class ResourceQuotaPlanViewSet(viewsets.GenericViewSet):
     def destroy(self, request, pk):
         """删除资源配额方案"""
 
-        # TODO: 删除暂不支持, 后续需要删除时需要确认有哪些应用引用了这些方案
-        # 如果有引用的应用, 则不允许删除
-        return Response({"detail": _("删除资源配额方案功能暂不支持")}, status=status.HTTP_400_BAD_REQUEST)
+        plan_obj = get_object_or_404(ResQuotaPlan, pk=pk)
+        if plan_obj.is_builtin:
+            raise PermissionDenied(_("系统内置方案不允许删除"))
+
+        if used_by_processes := plan_obj.get_used_by_processes():
+            raise error_codes.CANNOT_DELETE_RES_QUOTA_PLAN.f(_("该方案已被应用进程引用")).set_data(
+                {"used_by_processes": used_by_processes}
+            )
+
+        data_before = ResQuotaPlanOutputSLZ(plan_obj).data
+        plan_obj.delete()
+
+        add_plat_mgt_audit_record(
+            user=request.user,
+            operation=OperationEnum.DELETE,
+            target=OperationTarget.PROCESS_SPEC_PLAN,
+            data_before=DataDetail(data=data_before),
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
         tags=["plat_mgt.res_quota_plans"],

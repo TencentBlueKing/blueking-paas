@@ -113,7 +113,7 @@ export default {
     },
 
     /**
-     * ESB组件权限申请 - 不支持跨组件
+     * ESB 组件权限申请 - 不支持跨组件
      * @param {Object} params 请求参数：appCode, systemId, data
      */
     sysApply({}, { appCode, systemId, data }, config = {}) {
@@ -129,7 +129,7 @@ export default {
       return http.post(url, data, config);
     },
 
-    /** ESB组件权限续期 - 支持跨组件
+    /** ESB 组件权限续期 - 支持跨组件
      * @param {Object} params 请求参数：appCode, data
      */
     sysRenewal({}, { appCode, data }, config = {}) {
@@ -147,7 +147,7 @@ export default {
     },
 
     /**
-     * 获取ESB系统列表
+     * 获取 ESB 系统列表
      * @param {Object} params 请求参数：appCode
      */
     getSystems({}, { appCode }, config = {}) {
@@ -156,7 +156,7 @@ export default {
     },
 
     /**
-     * 获取应用ESB组件权限列表
+     * 获取应用 ESB 组件权限列表
      * @param {Object} params 请求参数：appCode
      */
     getSysAppPermissions({}, { appCode }, config = {}) {
@@ -165,7 +165,7 @@ export default {
     },
 
     /**
-     * 获取ESB组件权限申请记录列表
+     * 获取 ESB 组件权限申请记录列表
      * @param {Object} params
      */
     getSysApplyRecords({}, params, config = {}) {
@@ -176,7 +176,7 @@ export default {
     },
 
     /**
-     * 获取ESB组件权限申请记录详情
+     * 获取 ESB 组件权限申请记录详情
      * @param {Object} params 请求参数：appCode, recordId
      */
     getSysApplyRecordDetail({}, { appCode, recordId }, config = {}) {
@@ -185,7 +185,7 @@ export default {
     },
 
     /**
-     * 获取ESB系统权限组件列表
+     * 获取 ESB 系统权限组件列表
      * @param {Object} params 请求参数：appCode, systemId
      */
     getComponents({}, { appCode, systemId }, config = {}) {

@@ -14,12 +14,3 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
-
-from django.urls import include, path
-
-urlpatterns = [
-    # MCP Server 相关
-    path("api/cloudapi-v2/", include("paasng.accessories.cloudapi_v2.mcp_servers.urls")),
-    # 网关 API & ESB 组件 API 相关
-    path("api/cloudapi-v2/", include("paasng.accessories.cloudapi_v2.apigateway.urls")),
-]

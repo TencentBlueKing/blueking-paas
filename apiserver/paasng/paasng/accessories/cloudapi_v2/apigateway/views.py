@@ -68,7 +68,7 @@ class GatewayAPIViewSet(viewsets.ViewSet, ApplicationCodeInPathMixin):
         validated_data = self._validate(serializers.ListGatewaysInputSLZ, data=request.query_params)
 
         app, tenant_id = self._get_app_and_tenant()
-        data = self._get_client(tenant_id, request).list_gateways(app_code=app.code, **validated_data)
+        data = self._get_client(tenant_id, request).list_gateways(**validated_data)
         return self._response_with_serializer(serializers.ListGatewaysOutputSLZ, data, many=True)
 
     @swagger_auto_schema(

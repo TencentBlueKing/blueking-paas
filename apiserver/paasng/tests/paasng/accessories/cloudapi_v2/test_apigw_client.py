@@ -34,7 +34,8 @@ class TestClientHandleResponseContent:
     def test_handle_204_no_content_response(self, client, mocker):
         """
         测试 client 在处理 204 No Content 响应时正常工作
-        v2 网关的响应可能不为 JSON, 而 bkapi_client_core 默认会认为所有响应都是 JSON,  故 patch 了 `_handle_response_content` 方法
+        v2 网关的响应可能不为 JSON, 而 bkapi_client_core 默认会认为所有响应都是 JSON,
+        故 patch 了 `_handle_response_content` 方法
         """
         mock_response = Mock()
         mock_response.status_code = 204

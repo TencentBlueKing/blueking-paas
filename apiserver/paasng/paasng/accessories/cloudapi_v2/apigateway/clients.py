@@ -252,7 +252,7 @@ class ApiGatewayClient:
         app_code: str,
         component_ids: list[int],
         expire_days: int,
-    ) -> dict:
+    ) -> str:
         """ESB 组件权限续期"""
         data: dict[str, Any] = {
             "target_app_code": app_code,
@@ -265,7 +265,7 @@ class ApiGatewayClient:
         except (APIGatewayResponseError, ResponseError) as e:
             raise ESBServiceError(f"renew esb component permissions error: {e}")
 
-        # 这里网关正常会响应 204 No Content, 故不能取 data
+        # 这里网关正常会响应 204 No Content
         return res
 
     def list_app_esb_component_permissions(self, app_code: str) -> dict:

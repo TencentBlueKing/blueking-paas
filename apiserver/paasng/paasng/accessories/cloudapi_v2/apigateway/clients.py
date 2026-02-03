@@ -153,7 +153,7 @@ class ApiGatewayClient:
         app_code: str,
         resource_ids: list[int],
         expire_days: int,
-    ) -> dict:
+    ) -> str:
         """权限续期"""
         data: dict[str, Any] = {
             "target_app_code": app_code,

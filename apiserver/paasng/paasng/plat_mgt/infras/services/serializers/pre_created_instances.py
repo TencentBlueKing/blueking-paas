@@ -20,9 +20,26 @@ from typing import Dict
 from rest_framework import serializers
 
 
+class PreCreatedInstanceBindingPolicyInputSLZ(serializers.Serializer):
+    app_code = serializers.CharField(help_text="应用编码", required=False)
+    module_name = serializers.CharField(help_text="模块名称", required=False)
+    env = serializers.CharField(help_text="环境名称", required=False)
+
+    def to_internal_value(self, data):
+        # 去除空格 和 去除空字符串的键值对
+        result = {}
+        for key, _val in data.items():
+            val = str(_val).strip()
+            if val == "":
+                continue
+            result[key] = val
+        return super().to_internal_value(result)
+
+
 class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     config = serializers.JSONField(help_text="预创建实例的配置")
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
+    binding_policy = PreCreatedInstanceBindingPolicyInputSLZ(help_text="实例绑定策略", required=False, default=dict)
 
 
 class PreCreatedInstanceOutputSLZ(serializers.Serializer):
@@ -32,6 +49,13 @@ class PreCreatedInstanceOutputSLZ(serializers.Serializer):
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
     is_allocated = serializers.BooleanField(help_text="实例是否已被分配")
     tenant_id = serializers.CharField(help_text="租户 id")
+    binding_policy = serializers.SerializerMethodField(help_text="实例绑定策略")
+
+    def get_binding_policy(self, instance) -> Dict:
+        policy = instance.binding_policies.first()
+        if not policy:
+            return {}
+        return PreCreatedInstanceBindingPolicyInputSLZ(policy).data
 
     def to_representation(self, instance) -> Dict:
         result = super().to_representation(instance)

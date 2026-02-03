@@ -137,6 +137,8 @@ class LocalServiceObj(ServiceObj):
 class LocalEngineAppInstanceRel(EngineAppInstanceRel):
     """A relationship between EngineApp and Provisioned instance"""
 
+    db_obj: ServiceEngineAppAttachment
+
     def __init__(self, db_obj: ServiceEngineAppAttachment):
         self.db_obj = db_obj
 

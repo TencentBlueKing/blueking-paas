@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Set
 
 from blue_krill.models.fields import EncryptField
 from django.db import models
+from django.db.models import Case, IntegerField, Q, Value, When
 from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
@@ -29,6 +30,8 @@ from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import ImageField, UuidAuditedModel
 
 if TYPE_CHECKING:
+    from django.db.models.query import QuerySet
+
     from paasng.accessories.services.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
@@ -195,8 +198,84 @@ class PreCreatedInstance(UuidAuditedModel):
         self.is_allocated = False
         self.save(update_fields=["is_allocated"])
 
+    @classmethod
+    def select_for_request(cls, plan: "Plan", params: Dict) -> Optional["PreCreatedInstance"]:
+        """
+        在指定 plan 下，根据 params 选择一个未分配的预创建实例
+        params 若不包括 application_code, env, module_name, 则使用一般的 FIFO 策略进行匹配,
+        并且会排除掉有具体绑定策略的实例
+
+        :param params: 至少包含 application_code, env, module_name 三个字段中的一个或多个字段，用于匹配绑定策略
+        """
+        unallocated_qs = cls.objects.select_for_update().filter(plan=plan, is_allocated=False).order_by("created")
+
+        policy_qs = PreCreatedInstanceBindingPolicy.objects.filter(pre_created_instance__in=unallocated_qs)
+        without_policies_qs = unallocated_qs.exclude(
+            pk__in=PreCreatedInstanceBindingPolicy.objects.values("pre_created_instance")
+        )
+        if not all(k in params for k in ("application_code", "env", "module_name")):
+            logger.warning("missing params to match pre-created instance, use plain FIFO match strategy")
+            return without_policies_qs.first()
+
+        policy = PreCreatedInstanceBindingPolicy.resolve_policy(
+            app_code=params["application_code"],
+            module_name=params["module_name"],
+            env=params["env"],
+            policy_qs=policy_qs,
+        )
+        if not policy:
+            logger.debug("no matching binding policy found, use plain FIFO match strategy")
+            return unallocated_qs.first()
+
+        return policy.pre_created_instance
+
     def __str__(self):
         return "{id}-{plan}".format(plan=repr(self.plan), id=self.uuid)
+
+
+class PreCreatedInstanceBindingPolicy(UuidAuditedModel):
+    pre_created_instance = models.ForeignKey(
+        PreCreatedInstance,
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        blank=True,
+        null=True,
+        related_name="binding_policies",
+    )
+    app_code = models.CharField(max_length=20, null=True)
+    module_name = models.CharField(max_length=20, null=True)
+    env = models.CharField(max_length=16, null=True)
+
+    tenant_id = tenant_id_field_factory(db_index=False)
+
+    @classmethod
+    def resolve_policy(
+        cls, app_code, module_name, env, policy_qs: Optional["QuerySet"] = None
+    ) -> Optional["PreCreatedInstanceBindingPolicy"]:
+        """
+        找到最匹配的绑定策略, 匹配优先级为 app_code > module_name > env, 可以认为是比较 (app_code, module_name, env) 的大小
+        (app_code, module_name, env) 相同时, 返回 created_at 最早的那个
+
+        :param policy_qs: 可选的 QuerySet, 用于指定查询范围
+        """
+        if not policy_qs:
+            policy_qs = cls.objects.filter(pre_created_instance__isallocated=False)
+
+        candidates = policy_qs.filter(
+            Q(app_code=app_code) | Q(app_code__isnull=True),
+            Q(module_name=module_name) | Q(module_name__isnull=True),
+            Q(env=env) | Q(env__isnull=True),
+        ).exclude(app_code__isnull=True, module_name__isnull=True, env__isnull=True)
+
+        if not candidates.exists():
+            return None
+
+        match_weight = (
+            Case(When(app_code=app_code, then=Value(3)), default=Value(0), output_field=IntegerField())
+            + Case(When(module_name=module_name, then=Value(2)), default=Value(0), output_field=IntegerField())
+            + Case(When(env=env, then=Value(1)), default=Value(0), output_field=IntegerField())
+        )
+        return candidates.annotate(match_weight=match_weight).order_by("-match_weight", "created").first()
 
 
 class Plan(UuidAuditedModel):

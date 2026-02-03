@@ -78,8 +78,8 @@ class SmartAppBuilder:
     def start_following_logs(self, builder_name: str):
         """Retrieve the build logs, and check the Pod execution status."""
 
-        namespace = get_default_builder_namespace()
-        cluster_name = get_default_cluster_name()
+        namespace = self._get_default_builder_namespace()
+        cluster_name = self._get_default_cluster_name()
         handler = SmartBuildHandler(get_client_by_cluster_name(cluster_name))
 
         handler.wait_for_logs_readiness(namespace, builder_name, settings.SMART_BUILD_PROCESS_TIMEOUT)
@@ -116,7 +116,7 @@ class SmartAppBuilder:
         if settings.BUILD_EXTRA_ENV_VARS:
             envs.update(settings.BUILD_EXTRA_ENV_VARS)
 
-        cluster_name = get_default_cluster_name()
+        cluster_name = self._get_default_cluster_name()
 
         runtime = ContainerRuntimeSpec(
             image=settings.SMART_BUILDER_IMAGE,
@@ -129,8 +129,8 @@ class SmartAppBuilder:
             node_selector={},
         )
 
-        namespace = get_default_builder_namespace()
-        pod_name = generate_builder_name(self.smart_build)
+        namespace = self._get_default_builder_namespace()
+        pod_name = self._generate_builder_name(self.smart_build)
 
         client = get_client_by_cluster_name(cluster_name)
         NamespacesHandler(client).ensure_namespace(namespace)
@@ -152,29 +152,29 @@ class SmartAppBuilder:
             return
 
         try:
-            namespace = get_default_builder_namespace()
-            cluster_name = get_default_cluster_name()
+            namespace = self._get_default_builder_namespace()
+            cluster_name = self._get_default_cluster_name()
             handler = SmartBuildHandler(get_client_by_cluster_name(cluster_name))
             handler.delete_builder(namespace, builder_name, force=True)
         except Exception:
             # Log but don't raise, cleanup failure should not affect the build result
             logger.exception("Failed to cleanup builder pod %s", builder_name)
 
+    @staticmethod
+    def _get_default_cluster_name() -> str:
+        """Get the default cluster name to run smart builder pods"""
 
-def get_default_cluster_name() -> str:
-    """Get the default cluster name to run smart builder pods"""
+        cluster = ClusterAllocator(AllocationContext.create_for_build_app()).get_default()
+        return cluster.name
 
-    cluster = ClusterAllocator(AllocationContext.create_for_build_app()).get_default()
-    return cluster.name
+    @staticmethod
+    def _generate_builder_name(smart_build: "SmartBuildRecord") -> str:
+        """Get the s-mart builder name"""
 
+        return f"builder-{smart_build.app_code.replace('_', '0us0')}-{smart_build.operator}"
 
-def generate_builder_name(smart_build: "SmartBuildRecord") -> str:
-    """Get the s-mart builder name"""
+    @staticmethod
+    def _get_default_builder_namespace() -> str:
+        """Get the namespace of s-mart builder pod"""
 
-    return f"builder-{smart_build.app_code.replace('_', '0us0')}-{smart_build.operator}"
-
-
-def get_default_builder_namespace() -> str:
-    """Get the namespace of s-mart builder pod"""
-
-    return "smart-app-builder"
+        return "smart-app-builder"

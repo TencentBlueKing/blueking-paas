@@ -28,7 +28,6 @@ from typing import List
 import xlwt
 from django.core.management.base import BaseCommand
 
-from paas_wl.infras.cluster.utils import get_cluster_by_app
 from paasng.platform.evaluation.constants import OperationIssueType
 from paasng.platform.evaluation.models import AppOperationReport
 
@@ -76,12 +75,12 @@ class Command(BaseCommand):
                 for env in module.envs.all():
                     try:
                         wl_app = env.engine_app.to_wl_obj()
-                        cluster = get_cluster_by_app(wl_app)
-                        if cluster.name == cluster_name:
+                        if wl_app.latest_config.cluster == cluster_name:
                             return True
                     except Exception as e:
                         logger.warning(
-                            f"Failed to get cluster info for app {app.code} module {module.name} environment {env.environment}: {e}"
+                            f"Failed to get cluster info for app {app.code} "
+                            f"module {module.name} environment {env.environment}: {e}"
                         )
                         continue
         except Exception as e:

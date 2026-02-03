@@ -99,6 +99,47 @@ export function randomColor(baseColor, count) {
 }
 
 /**
+ * 将错误信息转换为可读的字符串
+ * 处理 message 为对象或数组的情况，避免显示 [object Object]
+ *
+ * @param {string|Object|Array|Error} error 错误对象或错误信息
+ * @param {string} defaultMsg 默认错误信息
+ * @return {string} 格式化后的错误字符串
+ */
+export function formatErrorMessage(error, defaultMsg = '系统出现异常') {
+  if (!error) {
+    return defaultMsg;
+  }
+
+  // 从 Error 对象中提取错误信息
+  const message = (typeof error === 'object' && !Array.isArray(error))
+    ? (error.detail || error.message)
+    : error;
+
+  if (!message) {
+    console.error(error);
+    return defaultMsg;
+  }
+
+  if (typeof message === 'string') {
+    return message;
+  }
+
+  if (Array.isArray(message)) {
+    return message.map(item => formatErrorMessage(item, '')).filter(Boolean).join('; ') || defaultMsg;
+  }
+
+  const msgParts = Object.keys(message)
+    .map((key) => {
+      const val = formatErrorMessage(message[key], '');
+      return val ? `${key}: ${val}` : null;
+    })
+    .filter(Boolean);
+
+  return msgParts.join('; ') || defaultMsg;
+}
+
+/**
  * 异常处理
  *
  * @param {Object} err 错误对象

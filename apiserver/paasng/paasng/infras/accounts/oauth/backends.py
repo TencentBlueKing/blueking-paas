@@ -244,7 +244,7 @@ class APIGateWayBackend(BlueKingApplicationOauthMixin):
                     env_name=self.env_name,
                     grant_type="authorization_code",
                     rtx=username,
-                    # need_new_token=0: 满足一定条件时, 网关会复用旧 token(如有), 以来降低网关侧的压力
+                    # need_new_token=0: 满足一定条件时, 网关会复用旧 token(如有), 以降低网关侧的压力
                     need_new_token=0,
                     **{self.COOKIE_KEY: user_credential},
                 ),

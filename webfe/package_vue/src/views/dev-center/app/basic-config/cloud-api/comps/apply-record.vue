@@ -735,7 +735,7 @@ export default {
       };
       try {
         const res = await this.$store.dispatch(`cloudApi/${this.curDispatchMethod}`, params);
-        // 新API响应格式：直接返回数据，无 result 层级
+        // 新 API 响应格式：直接返回数据，无 result 层级
         const records = this.isMcpService ? this.formatMcpServiceData(res) : res?.results || [];
         records.forEach((item) => {
           item.type = this.typeValue;
@@ -767,7 +767,7 @@ export default {
           appCode: this.appCode,
           recordId: row.id,
         });
-        // 新API响应格式：直接返回数据，无 result 层级
+        // 新 API 响应格式：直接返回数据，无 result 层级
         this.curRecord = Object.assign(this.curRecord, res);
       } catch (e) {
         this.catchErrorHandler(e);

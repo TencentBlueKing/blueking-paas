@@ -109,7 +109,7 @@ export default {
         const res = await this.$store.dispatch(`cloudApi/${method}`, {
           appCode: this.appCode,
         });
-        // 新API响应格式：直接返回数据，无 result 层级
+        // 新 API 响应格式：直接返回数据，无 result 层级
         this.filterList = Object.freeze(res);
         if (this.filterList.length > 0) {
           this.curId = this.filterList[0].id;

@@ -808,9 +808,9 @@ export default {
           params.gatewayName = this.name;
         }
         const res = await this.$store.dispatch(`cloudApi/${this.curFetchDispatchMethod}`, params);
-        // 新API响应格式：直接返回数据，无 result 层级
+        // 新 API 响应格式：直接返回数据，无 result 层级
         // this.apiList = Object.freeze(res.sort(this.compare('name')))
-        // 网关api，申请/续期处理
+        // 网关 api, 申请/续期处理
         if (res.length) {
           const apiData = res.map((v) => {
             // 申请
@@ -853,7 +853,7 @@ export default {
           appCode: this.appCode,
           gatewayName: this.name,
         };
-        // 新API响应格式：直接返回数据，无 result 层级
+        // 新 API 响应格式: 直接返回数据, 无 result 层级
         const res = await this.$store.dispatch('cloudApi/getAllowApplyByApi', params);
         this.judgeIsApplyByGateway = res;
       } catch (e) {

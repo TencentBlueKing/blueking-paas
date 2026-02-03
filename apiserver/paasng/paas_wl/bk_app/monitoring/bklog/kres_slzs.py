@@ -72,7 +72,7 @@ class BKLogConfigSerializer(AppEntitySerializer["BkAppLogConfig"]):
         }
 
 
-class BKLogConfigDeserializer(AppEntityDeserializer["BkAppLogConfig"]):
+class BKLogConfigDeserializer(AppEntityDeserializer["BkAppLogConfig", "WlApp"]):
     api_version = "bk.tencent.com/v1alpha1"
 
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "BkAppLogConfig":

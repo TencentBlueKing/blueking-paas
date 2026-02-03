@@ -85,6 +85,15 @@ class App(UuidAuditedModel):
 
         return get_metadata(self).environment
 
+    def get_client(self):
+        """Get the kube client for this app.
+
+        **This method exists for match KresAppProtocol interface.**
+        """
+        from paas_wl.infras.resources.utils.basic import get_client_by_app
+
+        return get_client_by_app(self)
+
     @property
     def latest_config(self):
         return self.config_set.latest()

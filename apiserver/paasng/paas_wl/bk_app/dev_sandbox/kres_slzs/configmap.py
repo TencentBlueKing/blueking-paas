@@ -47,7 +47,7 @@ class DevSandboxConfigMapSerializer(AppEntitySerializer["DevSandboxConfigMap"]):
         return body
 
 
-class DevSandboxConfigMapDeserializer(AppEntityDeserializer["DevSandboxConfigMap"]):
+class DevSandboxConfigMapDeserializer(AppEntityDeserializer["DevSandboxConfigMap", "WlApp"]):
     """ConfigMap 反序列化器"""
 
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandboxConfigMap":

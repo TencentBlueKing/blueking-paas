@@ -273,7 +273,7 @@ export default {
           },
         },
         gateway: {
-          apiId: this.apiId,
+          gatewayName: this.apiName,
           data: {
             ...commonData,
             ...extendedData,

@@ -53,7 +53,7 @@ dependencies = [
     'cryptography (==43.0.3)',
     'jsonfield (==3.1.0)',
     'whitenoise (==5.3.0)',
-    'sentry_sdk (==0.19.4)',
+    "sentry-sdk (==2.8.0)",
     'blue-krill (==2.0.7)',
     'prometheus-client (==0.14.1)',
     'bkapi-client-core (>=1.1.0,<2.0.0)',

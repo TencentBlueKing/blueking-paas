@@ -17,6 +17,7 @@
 
 import copy
 import datetime
+import re
 import uuid
 from contextlib import ExitStack, contextmanager
 from typing import Any, Callable, ContextManager, Dict, List, Optional
@@ -623,3 +624,26 @@ def create_engine_apps(app: Application, module: Module, environments: List[str]
         # Update metadata
         engine_app_meta_info = ModuleInitializer(module).make_engine_meta_info(env)
         update_metadata_by_env(env, engine_app_meta_info)
+
+
+def _kube_version_component_to_int(value: Any) -> int:
+    """Convert a Kubernetes version component to int.
+
+    The version API returns string fields like "1" and "20+".
+    """
+    if isinstance(value, int):
+        return value
+
+    match = re.match(r"\d+", str(value))
+    if not match:
+        raise ValueError(f"Invalid Kubernetes version component: {value!r}")
+    return int(match.group())
+
+
+def kube_ver_lt(version: Any, target: tuple[int, int]) -> bool:
+    """Return True when kubernetes version is less than target major/minor."""
+    current = (
+        _kube_version_component_to_int(version.major),
+        _kube_version_component_to_int(version.minor),
+    )
+    return current < target

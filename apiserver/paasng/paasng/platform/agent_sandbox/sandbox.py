@@ -16,7 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 import base64
+import logging
 import os
+import re
 import shlex
 import time
 import uuid
@@ -47,6 +49,9 @@ from paasng.platform.applications.models import Application
 # A special marker string to indicate the exit code in the stderr output.
 # Explained: a echo command with this marker is appended to the end of the executed command.
 _EXIT_CODE_MARKER = "__BKPAAS_EXIT_CODE__:"
+_ENV_VAR_KEY_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+logger = logging.getLogger(__name__)
 
 
 class AgentSandboxFactory:
@@ -71,13 +76,19 @@ class AgentSandboxFactory:
             workdir=DEFAULT_WORKDIR,
             image=DEFAULT_IMAGE,
         )
+        sandbox_created = False
         try:
-            NamespacesHandler(self.kres_app.get_client()).ensure_namespace(self.kres_app.namespace)
+            with self.kres_app.get_client() as client:
+                NamespacesHandler(client).ensure_namespace(self.kres_app.namespace)
+
             agent_sandbox_kmodel.create(sandbox)
+            sandbox_created = True
             self._wait_for_running(sandbox.name)
         except ReadTargetStatusTimeout as exc:
+            self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
             raise SandboxCreateTimeout(str(exc)) from exc
         except ApiException as exc:
+            self._cleanup_sandbox_on_create_error(sandbox.name, sandbox_created)
             raise SandboxError("failed to create sandbox pod") from KresAgentSandboxError(str(exc), exc)
         return KubernetesPodSandbox(self.app, sandbox)
 
@@ -94,6 +105,20 @@ class AgentSandboxFactory:
                 target_statuses={PodPhase.RUNNING.value},
                 namespace=self.kres_app.namespace,
                 timeout=self.create_timeout,
+            )
+
+    def _cleanup_sandbox_on_create_error(self, pod_name: str, sandbox_created: bool) -> None:
+        if not sandbox_created:
+            return
+
+        try:
+            agent_sandbox_kmodel.delete_by_name(self.kres_app, pod_name, non_grace_period=True)
+        except (ApiException, AppEntityNotFound):
+            logger.warning(
+                "failed to cleanup sandbox pod after create error, pod_name=%s, namespace=%s",
+                pod_name,
+                self.kres_app.namespace,
+                exc_info=True,
             )
 
 
@@ -208,13 +233,20 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
     def _build_shell_command(self, cmd: list[str] | str, cwd: str, env: dict) -> list[str]:
         """Build the shell command to be executed inside the sandbox."""
         cmd_str = cmd if isinstance(cmd, str) else " ".join(shlex.quote(item) for item in cmd)
-        env_prefix = " ".join(f"{key}={shlex.quote(str(value))}" for key, value in env.items())
+        env_prefix = " ".join(f"{self._validate_env_key(key)}={shlex.quote(str(value))}" for key, value in env.items())
         if env_prefix:
             cmd_str = f"{env_prefix}; {cmd_str}"
         if cwd:
             cmd_str = f"cd {shlex.quote(cwd)} && {cmd_str}"
         cmd_str = f"{cmd_str}; echo {_EXIT_CODE_MARKER}$? 1>&2"
         return ["/bin/sh", "-c", cmd_str]
+
+    @staticmethod
+    def _validate_env_key(key: object) -> str:
+        key_str = str(key)
+        if not _ENV_VAR_KEY_PATTERN.fullmatch(key_str):
+            raise SandboxError(f"invalid environment variable key: {key_str!r}")
+        return key_str
 
     def _stream_exec(self, command: list[str], timeout: int, stdin_data: str | None = None) -> tuple[str, str]:
         """Execute a command inside the sandbox."""

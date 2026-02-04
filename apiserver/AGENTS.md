@@ -19,4 +19,4 @@ You are in the apiserver repo, helping implement features, fix bugs, and refacto
 
 * Run all tests: `pytest --reuse-db -s --maxfail=1 tests/`
 * Run some tests: `pytest --reuse-db -s --maxfail=1 tests/filename.py`
-* ALWAYS prefer specify test files for efficiency.
+* ALWAYS prefer specifying test files for efficiency.

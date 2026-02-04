@@ -6,7 +6,7 @@ from paasng.core.tenant.user import DEFAULT_TENANT_ID
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
 
-def test_create_and_get(tenant_id, bk_stag_env, namespace_maker):
+def test_create_and_get(namespace_maker):
     """Create a sandbox and get it back to test the kmodel functionality."""
     sbx_app = AgentSandboxKresApp(
         paas_app_id="demo-sbx",

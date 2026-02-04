@@ -15,11 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from django.urls import include, path
 
-urlpatterns = [
-    # MCP Server 相关
-    path("api/cloudapi-v2/", include("paasng.accessories.cloudapi_v2.mcp_servers.urls")),
-    # 网关 API & ESB 组件 API 相关
-    path("api/cloudapi-v2/", include("paasng.accessories.cloudapi_v2.apigateway.urls")),
-]
+class ApiGatewayServiceError(Exception):
+    """网关 API 服务调用异常"""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class ESBServiceError(Exception):
+    """ESB 组件 API 服务调用异常"""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message

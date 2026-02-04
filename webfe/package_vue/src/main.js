@@ -28,19 +28,9 @@ import store from '@/store';
 import http from '@/api';
 import auth from '@/auth';
 import { bus } from '@/common/bus';
+import { formatErrorMessage } from '@/common/tools';
 import $ from 'jquery';
 import '@/common/jquery_tools';
-// import {
-//   bkBadge, bkButton, bkLink, bkCheckbox, bkCheckboxGroup, bkCol, bkCollapse,
-// bkCollapseItem, bkContainer, bkDatePicker,
-//   bkDialog, bkDropdownMenu, bkException, bkForm, bkFormItem, bkInfoBox, bkInput, bkLoading, bkMessage,
-//   bkNavigation, bkNavigationMenu, bkNavigationMenuItem, bkNotify, bkOption, bkOptionGroup, bkPagination,
-//   bkPopover, bkProcess, bkProgress, bkRadio, bkRadioGroup,
-//   bkRoundProgress, bkRow, bkSearchSelect, bkSelect, bkOverflowTips,
-//   bkSideslider, bkSlider, bkSteps, bkSwitcher, bkTab, bkTabPanel, bkTable, bkTableColumn, bkTagInput, bkTimePicker,
-//   bkTimeline, bkTransfer, bkTree, bkUpload, bkClickoutside,
-//   bkTooltips, bkSwiper, bkRate, bkAnimateNumber, bkVirtualScroll, bkPopconfirm, bkAlert, bkCard,
-//   bkTag } from 'bk-magic-vue';
 
 import { bkInfoBox, bkMessage, bkNotify } from 'bk-magic-vue';
 import moment from 'moment';
@@ -127,7 +117,7 @@ Vue.prototype.$paasMessage = function (conf) {
 Vue.prototype.catchErrorHandler = function (error) {
   this.$bkMessage({
     theme: 'error',
-    message: error.detail || error.message,
+    message: formatErrorMessage(error),
   });
 };
 

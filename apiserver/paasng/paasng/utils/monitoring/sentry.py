@@ -27,8 +27,7 @@ def init_sentry_sdk():
     from django.conf import settings
 
     if settings.SENTRY_CONFIG:
-        # Remove type ignore when sentry-sdk was upgraded, ref: https://github.com/getsentry/sentry-python/issues/1415
-        sentry_sdk.init(  # type: ignore
+        sentry_sdk.init(
             dsn=settings.SENTRY_CONFIG["dsn"],
             integrations=[DjangoIntegration(), CeleryIntegration(), SqlalchemyIntegration(), RedisIntegration()],
             # Set traces_sample_rate to 1.0 to capture 100%

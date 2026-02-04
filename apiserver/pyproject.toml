@@ -62,7 +62,7 @@ dependencies = [
   'redis (==3.5.3)',
   'requests (==2.32.3)',
   'requests-oauthlib (==1.0.0)',
-  'sentry-sdk (==0.19.4)',
+  "sentry-sdk (==2.8.0)",
   'sqlalchemy (==1.4.52)',
   'svn (==0.3.44)',
   'typing-extensions (==4.11.0)',

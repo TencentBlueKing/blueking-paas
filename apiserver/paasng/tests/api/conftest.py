@@ -15,9 +15,14 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import importlib
 from unittest import mock
 
 import pytest
+from django.urls import clear_url_caches
+
+import paasng.misc.tools.urls
+import paasng.urls
 
 
 def _mock_initialize_vcs_with_template():
@@ -47,3 +52,19 @@ def _mock_bkpaas_auth_middlewares():
         mock.patch("apigw_manager.apigw.authentication.ApiGatewayJWTUserMiddleware", new=FakeMiddleware),
     ):
         yield
+
+
+@pytest.fixture(autouse=True)
+def _enable_smart_app_builder_and_reload_urls(settings):
+    """Enable SMART_APP_BUILDER setting and reload URLs to register smart_app routes."""
+    settings.ENABLE_SMART_APP_BUILDER = True
+    clear_url_caches()
+    importlib.reload(paasng.misc.tools.urls)
+    importlib.reload(paasng.urls)
+
+    yield
+
+    settings.ENABLE_SMART_APP_BUILDER = False
+    clear_url_caches()
+    importlib.reload(paasng.misc.tools.urls)
+    importlib.reload(paasng.urls)

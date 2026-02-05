@@ -22,5 +22,5 @@ urlpatterns = [
     path("", include("paasng.misc.tools.app_desc.urls")),
 ]
 
-if settings.ENABLE_SMART_APP_BUILDER:
+if settings.FE_FEATURE_SETTINGS_SMART_APP_BUILDER:
     urlpatterns.append(path("", include("paasng.misc.tools.smart_app.urls")))

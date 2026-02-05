@@ -11,9 +11,7 @@
       :class="['loader-phase-container', { 'test-phase-container': curStageComponmentType === 'test' }]"
     >
       <!-- 部署信息概览 -->
-      <div
-        class="plugin-release-top"
-      >
+      <div class="plugin-release-top">
         <div class="bg-top">
           <paas-plugin-title
             :name="isOfficialVersion ? $t('发布') : $t('测试')"
@@ -26,7 +24,7 @@
             v-bk-tooltips="{
               content: $t('当前版本{s}，无需终止操作', { s: releaseDisablePrompt }),
               disabled: !disableTerminationRelease,
-              placements: ['bottom']
+              placements: ['bottom'],
             }"
           >
             <bk-button
@@ -41,7 +39,10 @@
           </span>
         </div>
       </div>
-      <section class="content-container" :class="{ 'with-footer': isShowButtonGroup && !isPostedSuccessfully }">
+      <section
+        class="content-container"
+        :class="{ 'with-footer': isShowButtonGroup && !isPostedSuccessfully }"
+      >
         <!-- 只有一个阶段的发布, 不展示发布步骤 -->
         <version-steps
           v-if="!isSingleStage"
@@ -74,9 +75,15 @@
       </section>
 
       <!-- 手动预览与发布完成不展示底部操作按钮组 -->
-      <div class="footer-btn-warp" v-if="isShowButtonGroup && !isPostedSuccessfully">
+      <div
+        class="footer-btn-warp"
+        v-if="isShowButtonGroup && !isPostedSuccessfully"
+      >
         <!-- 构建完成可以进入下一步 -->
-        <bk-popover placement="top" :disabled="nextTips.disabled">
+        <bk-popover
+          placement="top"
+          :disabled="nextTips.disabled"
+        >
           <bk-button
             v-if="!isFinalStage"
             theme="primary"
@@ -93,7 +100,10 @@
               {{ $t('保存') }}
             </template>
           </bk-button>
-          <div slot="content" style="white-space: normal;">
+          <div
+            slot="content"
+            style="white-space: normal"
+          >
             {{ $t(nextTips.content) }}
           </div>
         </bk-popover>
@@ -133,14 +143,12 @@ export default {
   mixins: [pluginBaseMixin],
   data() {
     return {
-      stagesIndex: 0,
       curStep: 1,
       isLoading: true,
       stageData: {},
       pluginDetailedData: {},
       failedMessage: '',
       stepsStatus: '',
-      isFirstStage: false,
       isFinalStage: false,
       // 停止轮询状态
       stopPollingStatus: ['successful', 'failed', 'interrupted'],
@@ -179,14 +187,6 @@ export default {
     },
     status() {
       return this.curRelease.status;
-    },
-    releaseTopHeight() {
-      const topHeight = this.stageId === 'deploy' ? 117 : 117 - 56;
-      // 是否展示steps
-      return !this.isSingleStage ? topHeight : topHeight - 44;
-    },
-    curFirstStep() {
-      return this.curAllStages.length > 0 ? this.curAllStages[0] : {};
     },
     curStageComponmentType() {
       // 根据 invoke_method 字段判断当前步骤
@@ -241,12 +241,9 @@ export default {
     isManualPreview() {
       return this.currentStepId !== this.stageId;
     },
-    versionType() {
-      return this.$route.query.type || 'prod';
-    },
     // 正式版
     isOfficialVersion() {
-      return this.versionType === 'prod';
+      return (this.$route.query.type || 'prod') === 'prod';
     },
     disableTerminationRelease() {
       return !['initial', 'pending'].includes(this.pluginDetailedData.status);
@@ -357,7 +354,7 @@ export default {
           stageId: curStepStageId || this.stageId,
         };
         this.currentStepId = params.stageId;
-        if (Object.values(params).some(value => value === undefined)) {
+        if (Object.values(params).some((value) => value === undefined)) {
           return;
         }
         const res = await this.$store.dispatch('plugin/getPluginReleaseStage', params);
@@ -398,7 +395,7 @@ export default {
     // 设置步骤状态
     setStepsDataStatus() {
       const id = this.pluginDetailedData?.current_stage?.stage_id || this.stageId;
-      const curIndex = this.curAllStages.findIndex(v => v.stage_id === id) + 1;
+      const curIndex = this.curAllStages.findIndex((v) => v.stage_id === id) + 1;
       this.stepAllStages = this.curAllStages.map((v, index) => ({
         ...v,
         // 已完成步骤设置状态
@@ -542,7 +539,7 @@ export default {
       this.isShowButtonGroup = false;
       // 点击返回了这在执行的发布步骤
       const id = this.pluginDetailedData?.current_stage?.stage_id || this.stageId;
-      const curIndex = this.curAllStages.findIndex(v => v.stage_id === id) + 1;
+      const curIndex = this.curAllStages.findIndex((v) => v.stage_id === id) + 1;
       let isPolling = false;
       // 点击步骤为当前执行步骤
       if (curIndex === this.curStep) {
@@ -583,37 +580,37 @@ export default {
 </script>
 <style lang="scss">
 .deploy-action-box {
-    max-width: calc(100% - 100px);
-    margin: 0 auto;
+  max-width: calc(100% - 100px);
+  margin: 0 auto;
 }
 .test-phase-container {
-    max-width: 100%;
+  max-width: 100%;
 }
 .plugin-release-top {
-    .bg-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        height: 52px;
-        padding: 0 24px;
-        background: #fff;
-        box-shadow: 0 3px 4px 0 #0000000a;
-    }
-    .father-wrapper {
-        position: fixed;
-        margin-left: 241px;
-        left: 0;
-        top: 50px;
-        right: 0;
-        padding-bottom: 16px;
-        background: #fff;
-        z-index: 99;
-    }
+  .bg-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    padding: 0 24px;
+    background: #fff;
+    box-shadow: 0 3px 4px 0 #0000000a;
+  }
+  .father-wrapper {
+    position: fixed;
+    margin-left: 241px;
+    left: 0;
+    top: 50px;
+    right: 0;
+    padding-bottom: 16px;
+    background: #fff;
+    z-index: 99;
+  }
 }
 .content-container {
   flex: 1;
   overflow-y: auto;
-  background: #F5F6FA;
+  background: #f5f6fa;
   height: calc(100% - 52px);
   padding: 16px 24px 0;
   &.with-footer {
@@ -632,140 +629,138 @@ export default {
   }
 }
 #release-timeline-box {
-    width: 230px;
-    height: calc(100vh - 288px);
-    overflow-y: auto;
-    &::-webkit-scrollbar {
-        width: 4px;
-        background-color: lighten(transparent, 80%);
-    }
-    &::-webkit-scrollbar-thumb {
-        height: 5px;
-        border-radius: 2px;
-        background-color: #C4C6CC;
-    }
-}
-.steps-warp{
-    width: 80%;
-    margin: 0 auto;
-}
-.failed{
-    background: #FFDDDD !important;
-}
-.release-info-box{
-    padding: 0px 15px;
-    min-height: 40px;
-    background: #E1ECFF;
+  width: 230px;
+  height: calc(100vh - 288px);
+  overflow-y: auto;
+  &::-webkit-scrollbar {
+    width: 4px;
+    background-color: lighten(transparent, 80%);
+  }
+  &::-webkit-scrollbar-thumb {
+    height: 5px;
     border-radius: 2px;
-    margin-bottom: 16px;
-    .time-text{
-        font-size: 12px;
-        color: #63656E;
+    background-color: #c4c6cc;
+  }
+}
+.steps-warp {
+  width: 80%;
+  margin: 0 auto;
+}
+.failed {
+  background: #ffdddd !important;
+}
+.release-info-box {
+  padding: 0px 15px;
+  min-height: 40px;
+  background: #e1ecff;
+  border-radius: 2px;
+  margin-bottom: 16px;
+  .time-text {
+    font-size: 12px;
+    color: #63656e;
+  }
+  .deploy-round-loading {
+    width: 21px;
+    height: 21px;
+  }
+  .ext-cls-btn {
+    border: 1px solid #3a84ff;
+    border-radius: 2px;
+    background: #e1ecff;
+    color: #3a84ff;
+  }
+  .ext-cls-btn:hover {
+    color: #fff;
+    background: #3a84ff !important;
+  }
+  .error-left-warp {
+    .error-icon {
+      color: #ea3636;
+      font-size: 18px;
     }
-    .deploy-round-loading{
-        width: 21px;
-        height: 21px;
-    }
-    .ext-cls-btn{
-        border: 1px solid #3A84FF;
-        border-radius: 2px;
-        background: #E1ECFF;
-        color: #3A84FF;
-    }
-    .ext-cls-btn:hover {
-        color: #fff;
-        background: #3A84FF !important;
-    }
-    .error-left-warp{
-        .error-icon{
-            color: #EA3636;
-            font-size: 18px;
-        }
-    }
-    &.warning {
-        background: #ff9c0129;
-    }
-    &.failed {
-        background: #FFDDDD;
-    }
-    &.interrupted {
-        background: #F5F7FA;
-    }
+  }
+  &.warning {
+    background: #ff9c0129;
+  }
+  &.failed {
+    background: #ffdddd;
+  }
+  &.interrupted {
+    background: #f5f7fa;
+  }
 }
 .success {
-    background: rgba(45, 203, 86, 0.16) !important;
+  background: rgba(45, 203, 86, 0.16) !important;
 }
-.w600{
-    width: 600px;
+.w600 {
+  width: 600px;
 }
-.btn-warp{
-    margin-left: 100px;
-    margin-top: 50px;
+.btn-warp {
+  margin-left: 100px;
+  margin-top: 50px;
 }
 .footer-btn-warp {
-    position: fixed;
-    bottom: 0;
-    left: 241px;
-    // max-width: 1140px;
-    width: 100%;
-    padding-left: 48px;
-    height: 48px;
-    line-height: 48px;
-    background: #FAFBFD;
-    box-shadow: 0 -1px 0 0 #DCDEE5;
-    // background: #FFFFFF;
-    // box-shadow: 1px -2px 4px 0 rgba(0,0,0,0.08);
+  position: fixed;
+  bottom: 0;
+  left: 241px;
+  // max-width: 1140px;
+  width: 100%;
+  padding-left: 48px;
+  height: 48px;
+  line-height: 48px;
+  background: #fafbfd;
+  box-shadow: 0 -1px 0 0 #dcdee5;
 }
-.edit-form-item{
-    margin-bottom: 20px;
+.edit-form-item {
+  margin-bottom: 20px;
 }
-.time-cls{
-    color: #C4C6CC;
+.time-cls {
+  color: #c4c6cc;
 }
 .discontinued {
-    font-size: 14px;
-    i {
-      margin-right: 3px;
-    }
+  font-size: 14px;
+  i {
+    margin-right: 3px;
+  }
 }
 .success-check-wrapper,
 .interrupted-check-wrapper,
 .warning-check-wrapper {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    background: #2dcb56;
-    border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: #2dcb56;
+  border-radius: 50%;
+  line-height: 24px;
+  color: #fff;
+  text-align: center;
+  z-index: 1;
+  i {
+    font-size: 24px;
     line-height: 24px;
-    color: #fff;
-    text-align: center;
-    z-index: 1;
-    i {
-        font-size: 24px;
-        line-height: 24px;
-        font-weight: 500;
-        margin-top: 2px;
-    }
+    font-weight: 500;
+    margin-top: 2px;
+  }
 }
 .warning-check-wrapper {
-    color: #FFB848;
-    background: transparent;
+  color: #ffb848;
+  background: transparent;
 }
 .interrupted-check-wrapper {
-    background-color: #C4C6CC;
-    i {
-        color: #fff;
-        font-size: 16px;
-    }
+  background-color: #c4c6cc;
+  i {
+    color: #fff;
+    font-size: 16px;
+  }
 }
 .info-left-warp .info-time {
-    line-height: 24px;
+  line-height: 24px;
 }
 .visible-range-release {
-  background: #F5F6FA;
+  background: #f5f6fa;
   height: 100%;
   .loader-phase-container,
   .content-container {
@@ -777,38 +772,14 @@ export default {
     padding-top: 0;
   }
 }
-
-.custom-step-cls {
-  .bk-step {
-    &.done,
-    &.current {
-      .bk-step-number,
-      .bk-step-content {
-        cursor: pointer;
-      }
-    }
-    &.done .bk-step-number:hover+.bk-step-content .bk-step-title {
-      color: #3A84FF !important;
-    }
-    &.done .bk-step-content:hover .bk-step-title {
-      color: #3A84FF !important;
-    }
-    &.current .bk-step-number:hover+.bk-step-content .bk-step-title {
-      color: #3A84FF !important;
-    }
-    &.current:hover .bk-step-content:hover .bk-step-title {
-      color: #3A84FF !important;
-    }
-  }
-}
 </style>
 <style>
-    .visible-range-release .editor .ql-snow .ql-formats {
-        line-height: 24px;
-    }
-    .visible-range-release .editor {
-        display: flex;
-        flex-direction: column;
-        height: 300px;
-    }
+.visible-range-release .editor .ql-snow .ql-formats {
+  line-height: 24px;
+}
+.visible-range-release .editor {
+  display: flex;
+  flex-direction: column;
+  height: 300px;
+}
 </style>

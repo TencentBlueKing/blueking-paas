@@ -13,18 +13,38 @@
       @mouseenter="handleMouseenter(item)"
       @mouseleave="handleMouseleave(item)"
     >
-      <round-loading
-        v-if="LOADING_MAP.includes(item.status)"
-        ext-cls="paas-deploy-timeline-loading"
-      />
-      <!-- 无图标默认圆点样式 -->
-      <div
-        v-else
-        class="paas-timeline-node-icon"
-        :class="item.status"
-      />
+      <!-- stage 标题使用 icon -->
+      <template v-if="item.stage">
+        <round-loading
+          v-if="LOADING_MAP.includes(item.status)"
+          ext-cls="paas-deploy-timeline-loading"
+        />
+        <div
+          v-else
+          class="paas-timeline-icon"
+          :style="{ color: getStatusColor(item.status) }"
+        >
+          <i class="paasng-icon paasng-deploy-build"></i>
+        </div>
+      </template>
+      <!-- 子步骤使用默认圆点样式 -->
+      <template v-else>
+        <round-loading
+          v-if="LOADING_MAP.includes(item.status)"
+          ext-cls="paas-deploy-timeline-loading"
+        />
+        <!-- 无图标默认圆点样式 -->
+        <div
+          v-else
+          class="paas-timeline-node-icon"
+          :class="item.status"
+        />
+      </template>
 
-      <div class="paas-timeline-section" :title="item.tag">
+      <div
+        class="paas-timeline-section"
+        :title="item.tag"
+      >
         <div
           v-if="item.tag !== ''"
           :class="[
@@ -49,7 +69,8 @@
     </li>
   </ul>
 </template>
-<script>export default {
+<script>
+export default {
   name: 'PaasDeployTimeline',
   props: {
     list: {
@@ -83,6 +104,22 @@
       LOADING_MAP: ['QUEUE', 'RUNNING', 'REVIEWING', 'PREPARE_ENV', 'LOOP_WAITING', 'CALL_WAITING'],
       // 无需展示时间
       hideTime: ['SKIP', 'UNEXEC'],
+      // 状态颜色配置
+      STATUS_COLORS: {
+        primary: '#3a84ff', // 进行中
+        success: '#3fc06d', // 成功
+        danger: '#ea3636', // 失败
+        warning: '#f6b026', // 取消
+        default: '#c4c6cc', // 跳过
+      },
+      // 状态分组映射
+      STATUS_TYPE_MAP: {
+        primary: ['QUEUE', 'RUNNING', 'REVIEWING', 'PREPARE_ENV', 'LOOP_WAITING', 'CALL_WAITING'],
+        success: ['SUCCEED', 'REVIEW_PROCESSED', 'STAGE_SUCCESS'],
+        danger: ['FAILED', 'TERMINATE', 'HEARTBEAT_TIMEOUT', 'QUALITY_CHECK_FAIL', 'QUEUE_TIMEOUT', 'EXEC_TIMEOUT'],
+        warning: ['CANCELED', 'REVIEW_ABORT', 'TRY_FINALLY', 'QUEUE_CACHE'],
+        default: ['SKIP', 'UNEXEC'],
+      },
     };
   },
   watch: {
@@ -100,7 +137,7 @@
       if (item.stage) {
         this.curHoverItem = Object.assign({}, item);
       } else if (item.parentStage) {
-        const match = this.list.find(timelineItem => timelineItem.stage === item.parentStage);
+        const match = this.list.find((timelineItem) => timelineItem.stage === item.parentStage);
         if (match) {
           this.curHoverItem = Object.assign({}, match);
         }
@@ -124,7 +161,7 @@
       if (item.stage) {
         this.curSelectedItem = Object.assign({}, item);
       } else if (item.parentStage) {
-        const match = this.list.find(timelineItem => timelineItem.stage === item.parentStage);
+        const match = this.list.find((timelineItem) => timelineItem.stage === item.parentStage);
         if (match) {
           this.curSelectedItem = Object.assign({}, match);
         }
@@ -133,30 +170,32 @@
     },
 
     // 添加class
-    makeClass(templateData, index) {
-      const classNames = [];
+    makeClass(templateData) {
+      if (this.disabled) return [];
 
-      if (!this.disabled) {
-        if (templateData.stage) {
-          classNames.push('stage-item');
-        }
-        if (templateData.parentStage) {
-          classNames.push('step-item');
-        }
-        if (templateData.stage && templateData.stage === this.curSelectedItem.stage) {
+      const classNames = [];
+      const { stage, parentStage } = templateData;
+      const activeStage = this.curSelectedItem.stage || this.curHoverItem.stage;
+
+      if (stage) {
+        classNames.push('stage-item');
+        if (stage === activeStage) {
           classNames.push('active-stage-item');
         }
-        if (templateData.stage && templateData.stage === this.curHoverItem.stage) {
-          classNames.push('active-stage-item');
-        }
-        if (templateData.parentStage && templateData.parentStage === this.curSelectedItem.stage) {
-          classNames.push('active-step-item');
-        }
-        if (templateData.parentStage && templateData.parentStage === this.curHoverItem.stage) {
+      }
+      if (parentStage) {
+        classNames.push('step-item');
+        if (parentStage === activeStage) {
           classNames.push('active-step-item');
         }
       }
       return classNames;
+    },
+
+    // 获取状态对应的颜色
+    getStatusColor(status) {
+      const type = Object.keys(this.STATUS_TYPE_MAP).find((key) => this.STATUS_TYPE_MAP[key].includes(status));
+      return this.STATUS_COLORS[type] || this.STATUS_COLORS.default;
     },
   },
 };
@@ -174,7 +213,7 @@
   &::-webkit-scrollbar-thumb {
     height: 5px;
     border-radius: 2px;
-    background-color: #C4C6CC;
+    background-color: #c4c6cc;
   }
 
   .paas-timeline-dot {
@@ -209,9 +248,6 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       vertical-align: top;
-      &.is-weight {
-        font-weight: 700;
-      }
       &.is-default {
         color: #979ba5;
       }
@@ -229,12 +265,11 @@
       background: #fff;
       transform: translateY(-50%);
       z-index: 10;
-      border-top: 2px solid #fff;
-      border-bottom: 2px solid #fff;
       transition: all ease 0.3s;
 
       i {
         font-size: 18px;
+        color: inherit;
       }
       &.is-hover {
         background: #e1ecff;

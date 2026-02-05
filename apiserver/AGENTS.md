@@ -20,3 +20,13 @@ You are in the apiserver repo, helping implement features, fix bugs, and refacto
 * Run all tests: `pytest --reuse-db -s --maxfail=1 tests/`
 * Run some tests: `pytest --reuse-db -s --maxfail=1 tests/filename.py`
 * ALWAYS prefer specifying test files for efficiency.
+
+### Creating new REST APIs
+
+- Use below files as references:
+    - serializers: @paasng/paasng/platform/bkapp_model/serializers/serializers.py
+    - views: @paasng/paasng/platform/bkapp_model/views.py
+
+## Notes
+
+- 2026-02-05: Added agent sandbox create flow in domain layer; tests target domain helpers first.

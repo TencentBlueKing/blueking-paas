@@ -13,23 +13,17 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from blue_krill.data_types.enum import EnumField, StrStructuredEnum
 
 
-class SandboxError(Exception):
-    """The base exception for agent sandbox errors."""
+class SandboxStatus(StrStructuredEnum):
+    """Different status of sandbox."""
 
+    PENDING = EnumField("pending", label="waiting to be run")
+    RUNNING = EnumField("running", label="ready to execute commands")
+    STOPPED = EnumField("stopped", label="stopped and can become running")
+    DELETED = EnumField("deleted", label="deleted and no longer available")
 
-class SandboxCreateTimeout(SandboxError):
-    """Raised when creating a sandbox times out."""
-
-
-class SandboxAlreadyExists(SandboxError):
-    """Raised when a sandbox already exists."""
-
-
-class SandboxFileError(SandboxError):
-    """Raised when file operations in the sandbox fail."""
-
-
-class SandboxExecTimeout(SandboxError):
-    """Raised when executing a command in the sandbox times out."""
+    # Abnormal status
+    ERR_CREATING = EnumField("err_creating", label="unable to create")
+    ERR_DELETING = EnumField("err_deleting", label="unable to delete")

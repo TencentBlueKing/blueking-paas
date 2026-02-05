@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,22 +15,21 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.urls import path
 
-class SandboxError(Exception):
-    """The base exception for agent sandbox errors."""
+from .views import AgentSandboxViewSet
 
+PVAR_UUID = r"(?P<sandbox_id>[0-9a-f-]{32,36})"
 
-class SandboxCreateTimeout(SandboxError):
-    """Raised when creating a sandbox times out."""
-
-
-class SandboxAlreadyExists(SandboxError):
-    """Raised when a sandbox already exists."""
-
-
-class SandboxFileError(SandboxError):
-    """Raised when file operations in the sandbox fail."""
-
-
-class SandboxExecTimeout(SandboxError):
-    """Raised when executing a command in the sandbox times out."""
+urlpatterns = [
+    path(
+        "api/agent_sandbox/applications/<slug:code>/sandboxes/",
+        AgentSandboxViewSet.as_view({"post": "create"}),
+        name="agent_sandbox.create",
+    ),
+    path(
+        "api/agent_sandbox/applications/<slug:code>/sandboxes/<str:sandbox_id>",
+        AgentSandboxViewSet.as_view({"delete": "destroy"}),
+        name="agent_sandbox.destroy",
+    ),
+]

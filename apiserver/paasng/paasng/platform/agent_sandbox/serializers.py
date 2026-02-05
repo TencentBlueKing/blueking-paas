@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,22 +15,31 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from rest_framework import serializers
 
-class SandboxError(Exception):
-    """The base exception for agent sandbox errors."""
-
-
-class SandboxCreateTimeout(SandboxError):
-    """Raised when creating a sandbox times out."""
+from .models import Sandbox
 
 
-class SandboxAlreadyExists(SandboxError):
-    """Raised when a sandbox already exists."""
+class SandboxCreateInputSLZ(serializers.Serializer):
+    """The serializer for creating sandbox."""
+
+    name = serializers.CharField(label="名称", max_length=64, required=False, help_text="不提供则基于 UUID 生成")
+    env = serializers.JSONField(label="环境变量", required=False, default=dict, help_text="用于注入到沙箱内的环境变量")
 
 
-class SandboxFileError(SandboxError):
-    """Raised when file operations in the sandbox fail."""
+class SandboxCreateOutputSLZ(serializers.ModelSerializer):
+    """The serializer for creating sandbox output."""
 
-
-class SandboxExecTimeout(SandboxError):
-    """Raised when executing a command in the sandbox times out."""
+    class Meta:
+        model = Sandbox
+        fields = (
+            "sandbox_id",
+            "name",
+            "snapshot",
+            "target",
+            "env",
+            "cpu",
+            "memory",
+            "status",
+            "created",
+        )

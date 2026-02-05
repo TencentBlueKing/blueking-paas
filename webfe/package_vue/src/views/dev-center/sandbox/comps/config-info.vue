@@ -103,6 +103,7 @@
               v-bk-overflow-tips
             >
               {{ item.is_sensitive ? "******" : item.value || '--' }}
+
             </div>
           </div>
           <div class="actions">

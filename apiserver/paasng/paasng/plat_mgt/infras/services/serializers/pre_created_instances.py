@@ -14,6 +14,7 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import base64
 import json
 from typing import Dict
 
@@ -41,6 +42,21 @@ class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
     binding_policy = PreCreatedInstanceBindingPolicyInputSLZ(help_text="实例绑定策略", required=False, default=dict)
 
+    # 对 config.tls base64 编码
+    def validate_config(self, value):
+        tls_info = value.get("tls")
+        if not isinstance(tls_info, dict):
+            return value
+
+        data = value.copy()
+        tls_info = tls_info.copy()
+        for k in ("cert", "key", "ca"):
+            val = tls_info.get(k)
+            if val:
+                tls_info[k] = base64.b64encode(val.encode()).decode()
+        data["tls"] = tls_info
+        return data
+
 
 class PreCreatedInstanceOutputSLZ(serializers.Serializer):
     plan_id = serializers.CharField(help_text="方案 ID", source="plan.uuid")
@@ -63,4 +79,11 @@ class PreCreatedInstanceOutputSLZ(serializers.Serializer):
         if isinstance(result["config"], str):
             result["config"] = json.loads(result["config"])
 
+        tls_info = result["config"].get("tls")
+        if not (tls_info and isinstance(tls_info, dict)):
+            return result
+
+        for k in ("cert", "key", "ca"):
+            if val := tls_info.get(k):
+                tls_info[k] = base64.b64decode(val.encode()).decode()
         return result

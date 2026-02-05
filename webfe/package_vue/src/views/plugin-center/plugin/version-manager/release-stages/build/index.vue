@@ -1,9 +1,8 @@
 <template>
-  <div :class="['build-stage', { 'build-hide-button-group': !bottomActionBar }, bottomActionBar]">
+  <div :class="['build-stage', { 'build-hide-button-group': !bottomActionBar }]">
     <build-timeline
       :list="timeLineList"
       :disabled="true"
-      class="mt20 ml15 mr15"
       style="min-width: 250px"
     />
     <!-- 日志 -->
@@ -25,7 +24,8 @@
     </div>
   </div>
 </template>
-<script>import buildTimeline from './build-time-line.vue';
+<script>
+import buildTimeline from './build-time-line.vue';
 import stageBaseMixin from '../stage-base-mixin';
 import { bkLog } from '@blueking/log';
 
@@ -91,37 +91,49 @@ export default {
     // 处理左侧数据
     formatBuildLineData() {
       this.timeLineList = [];
-      // stages.length < 2 前端报错
-      if (this.curStages.length === 2) {
-        const { elements } = this.curStages[1].containers[0];
-        // stages[1].containers[0].elements 左侧数据
-        elements.forEach((v) => {
+      // 支持多个 stage 分组展示
+      this.curStages.forEach((stage) => {
+        const container = stage.containers?.[0];
+        if (!container?.elements) return;
+
+        // 添加 stage 分组标题
+        const stageSeconds = Math.floor((stage.elapsed || 0) / 1000);
+        this.timeLineList.push({
+          content: stageSeconds > 0 ? `${stageSeconds > 1 ? stageSeconds : '<1'}s` : '',
+          stage: stage.stageId,
+          status: stage.status,
+          tag: container.name || stage.name,
+        });
+
+        // 添加 stage 下的 elements 子步骤
+        container.elements.forEach((v) => {
+          // 过滤掉后置信息的元素
           if (v.additionalOptions?.elementPostInfo) return;
-          const seconds = Math.floor(v.elapsed / 1000);
+          const seconds = Math.floor((v.elapsed || 0) / 1000);
           this.timeLineList.push({
-            content: `${seconds > 1 ? seconds : '<1'}s`,
-            stage: '',
+            content: seconds > 0 ? `${seconds > 1 ? seconds : '<1'}s` : '',
+            parentStage: stage.stageId,
             status: v.status,
             tag: v.name,
           });
         });
-        // 是否添加后置命令阶段
-        if (this.isPostCommand) {
-          let postCommandStatus = '';
-          const { status } = this.stageData;
-          if (status === 'successful') {
-            postCommandStatus = this.isNext ? 'SUCCEED' : 'RUNNING';
-          } else {
-            // 执行后置命令
-            postCommandStatus = 'POSTCOMMAND';
-          }
-          this.timeLineList.push({
-            content: '',
-            stage: '',
-            status: postCommandStatus,
-            tag: this.$t('执行后置命令'),
-          });
+      });
+      // 是否添加后置命令阶段
+      if (this.isPostCommand) {
+        let postCommandStatus = '';
+        const { status } = this.stageData;
+        if (status === 'successful') {
+          postCommandStatus = this.isNext ? 'SUCCEED' : 'RUNNING';
+        } else {
+          // 执行后置命令
+          postCommandStatus = 'POSTCOMMAND';
         }
+        this.timeLineList.push({
+          content: '',
+          stage: '',
+          status: postCommandStatus,
+          tag: this.$t('执行后置命令'),
+        });
       }
     },
     formatLogs() {
@@ -179,7 +191,7 @@ export default {
   top: 0;
   left: 0;
   right: 0;
-  background: #2A2B2F;
+  background: #2a2b2f;
   border-bottom: 1px solid #000;
   color: #fff;
   border-radius: 2px 2px 0 0;

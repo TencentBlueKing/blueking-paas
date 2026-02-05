@@ -30,6 +30,7 @@ from django.conf import settings
 from django.urls import clear_url_caches, reverse
 
 import paasng.misc.tools.urls
+import paasng.urls
 from paasng.accessories.publish.market.models import MarketConfig, Tag
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
 from paasng.platform.sourcectl.utils import compress_directory
@@ -73,12 +74,14 @@ def _enable_smart_app_builder_and_reload_urls(settings):
     settings.ENABLE_SMART_APP_BUILDER = True
     clear_url_caches()
     importlib.reload(paasng.misc.tools.urls)
+    importlib.reload(paasng.urls)
 
     yield
 
     settings.ENABLE_SMART_APP_BUILDER = False
     clear_url_caches()
     importlib.reload(paasng.misc.tools.urls)
+    importlib.reload(paasng.urls)
 
 
 class TestCreateSMartApp:

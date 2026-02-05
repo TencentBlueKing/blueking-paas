@@ -23,6 +23,7 @@ import pytest
 from django.urls import clear_url_caches, reverse
 
 import paasng.misc.tools.urls
+import paasng.urls
 from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
 from paasng.platform.engine.constants import JobStatus
 from tests.conftest import create_user
@@ -37,12 +38,14 @@ def _enable_smart_app_builder_and_reload_urls(settings):
     settings.ENABLE_SMART_APP_BUILDER = True
     clear_url_caches()
     importlib.reload(paasng.misc.tools.urls)
+    importlib.reload(paasng.urls)
 
     yield
 
     settings.ENABLE_SMART_APP_BUILDER = False
     clear_url_caches()
     importlib.reload(paasng.misc.tools.urls)
+    importlib.reload(paasng.urls)
 
 
 class TestSmartBuildHistoryViewSet:

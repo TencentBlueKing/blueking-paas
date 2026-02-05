@@ -259,7 +259,7 @@ class PreCreatedInstanceBindingPolicy(UuidAuditedModel):
         :param policy_qs: 可选的 QuerySet, 用于指定查询范围
         """
         if not policy_qs:
-            policy_qs = cls.objects.filter(pre_created_instance__isallocated=False)
+            policy_qs = cls.objects.filter(pre_created_instance__is_allocated=False)
 
         candidates = policy_qs.filter(
             Q(app_code=app_code) | Q(app_code__isnull=True),

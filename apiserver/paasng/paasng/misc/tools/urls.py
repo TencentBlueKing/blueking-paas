@@ -15,9 +15,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+from django.conf import settings
 from django.urls import include, path
 
 urlpatterns = [
     path("", include("paasng.misc.tools.app_desc.urls")),
-    path("", include("paasng.misc.tools.smart_app.urls")),
 ]
+
+if settings.ENABLE_SMART_APP_BUILDER:
+    urlpatterns.append(path("", include("paasng.misc.tools.smart_app.urls")))

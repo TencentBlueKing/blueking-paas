@@ -58,6 +58,8 @@ class FrontendFeatureViewSet(ViewSet):
             "MCP_SERVER_API": settings.FE_FEATURE_SETTINGS_MCP_SERVER_API,
             # 是否允许用户自定义持久存储大小
             "PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM": settings.PERSISTENT_STORAGE_SIZE_ALLOW_CUSTOM,
+            # 是否开启构建 S-Mart 包功能
+            "SMART_APP_BUILDER": settings.ENABLE_SMART_APP_BUILDER,
         }
         # 部分前端的特性复用了后端的配置
         features_reuses_backend_settings = {

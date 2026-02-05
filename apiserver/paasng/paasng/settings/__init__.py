@@ -185,6 +185,7 @@ INSTALLED_APPS = [
     "paasng.infras.bkmonitorv3",
     "paasng.platform.declarative",
     "paasng.platform.smart_app",
+    "paasng.platform.agent_sandbox",
     "paasng.bk_plugins.bk_plugins",
     "paasng.bk_plugins.pluginscenter",
     "paasng.bk_plugins.pluginscenter.iam_adaptor",

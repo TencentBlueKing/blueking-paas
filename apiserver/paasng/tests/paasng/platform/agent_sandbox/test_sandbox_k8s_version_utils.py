@@ -15,31 +15,22 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict
+from types import SimpleNamespace
 
-from paas_wl.infras.resources.base.kres import KSecret
-from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
+import pytest
 
-from .constants import SecretType
-from .kres_slzs import SecretDeserializer, SecretSerializer
-
-if TYPE_CHECKING:
-    from paas_wl.bk_app.applications.models.app import WlApp
-
-logger = logging.getLogger(__name__)
+from tests.utils.helpers import kube_ver_lt
 
 
-@dataclass
-class Secret(AppEntity):
-    type: SecretType
-    data: Dict[str, str]
-
-    class Meta:
-        kres_class = KSecret
-        deserializer = SecretDeserializer
-        serializer = SecretSerializer
-
-
-secret_kmodel: "AppEntityManager[Secret, WlApp]" = AppEntityManager(Secret)
+@pytest.mark.parametrize(
+    ("version", "target", "result"),
+    [
+        (SimpleNamespace(major="1", minor="19"), (1, 20), True),
+        (SimpleNamespace(major="1", minor="20"), (1, 20), False),
+        (SimpleNamespace(major="1", minor="20+"), (1, 20), False),
+        (SimpleNamespace(major="1", minor="19+"), (1, 20), True),
+        (SimpleNamespace(major="2", minor="1"), (1, 20), False),
+    ],
+)
+def test_kube_ver_lt(version, target, result):
+    assert kube_ver_lt(version, target) is result

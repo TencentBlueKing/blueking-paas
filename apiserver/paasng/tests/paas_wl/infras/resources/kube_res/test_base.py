@@ -16,6 +16,7 @@
 # to the current version of the project delivered to anyone in the future.
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
@@ -32,6 +33,9 @@ from paas_wl.infras.resources.kube_res.base import (
     GVKConfig,
 )
 from paas_wl.infras.resources.kube_res.exceptions import APIServerVersionIncompatible
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models import WlApp  # noqa: F401
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
 
@@ -67,7 +71,7 @@ class DummyObj(AppEntity):
         deserializer = DummyDeserializer
 
 
-dummy_reader = AppEntityReader(DummyObj)
+dummy_reader: AppEntityReader[DummyObj, "WlApp"] = AppEntityReader(DummyObj)
 
 
 class TestDummyReader:
@@ -95,7 +99,7 @@ class TestDummyReader:
                 next(dummy_reader.watch_by_app(wl_app, timeout_seconds=1))
 
 
-dummy_kmodel = AppEntityManager(DummyObj)
+dummy_kmodel: AppEntityManager[DummyObj, "WlApp"] = AppEntityManager(DummyObj)
 
 
 class TestDummyManager:

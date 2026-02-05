@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -15,31 +14,20 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict
+# ================================
+# Constants for "K8s Pod Sandbox"
+# ================================
 
-from paas_wl.infras.resources.base.kres import KSecret
-from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
-
-from .constants import SecretType
-from .kres_slzs import SecretDeserializer, SecretSerializer
-
-if TYPE_CHECKING:
-    from paas_wl.bk_app.applications.models.app import WlApp
-
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Secret(AppEntity):
-    type: SecretType
-    data: Dict[str, str]
-
-    class Meta:
-        kres_class = KSecret
-        deserializer = SecretDeserializer
-        serializer = SecretSerializer
-
-
-secret_kmodel: "AppEntityManager[Secret, WlApp]" = AppEntityManager(Secret)
+# The Default image for running k8s pod sandbox
+DEFAULT_IMAGE = "python:3.11-alpine"
+# The default working directory in sandbox container
+DEFAULT_WORKDIR = "/workspace"
+# The default command to keep the sandbox pod alive
+DEFAULT_COMMAND = ["/bin/sh", "-c", "sleep 36000"]
+# The default termination grace period seconds for sandbox pod
+DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS = 3
+# The default resource specification for sandbox pod
+DEFAULT_RESOURCES = {
+    "limits": {"cpu": "2000m", "memory": "512Mi"},
+    "requests": {"cpu": "100m", "memory": "128Mi"},
+}

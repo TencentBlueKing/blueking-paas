@@ -17,7 +17,7 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
 from django.utils.functional import lazy
 
@@ -25,6 +25,9 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 from paas_wl.workloads.networking.ingress.entities import PIngressDomain
 from paas_wl.workloads.networking.ingress.kres_slzs.ingress import make_deserializers, make_serializers
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models.app import WlApp
 
 logger = logging.getLogger(__name__)
 
@@ -60,4 +63,4 @@ class ProcessIngress(AppEntity):
         deserializers = lazy(make_deserializers, list)()
 
 
-ingress_kmodel: AppEntityManager[ProcessIngress] = AppEntityManager[ProcessIngress](ProcessIngress)
+ingress_kmodel: AppEntityManager[ProcessIngress, "WlApp"] = AppEntityManager(ProcessIngress)

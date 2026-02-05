@@ -121,7 +121,7 @@ class DevSandboxSerializer(AppEntitySerializer["DevSandbox"]):
         ]
 
 
-class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox"]):
+class DevSandboxDeserializer(AppEntityDeserializer["DevSandbox", "WlApp"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "DevSandbox":
         main_container = kube_data.spec.containers[0]
         envs = {env.name: getattr(env, "value", "") for env in main_container.env}

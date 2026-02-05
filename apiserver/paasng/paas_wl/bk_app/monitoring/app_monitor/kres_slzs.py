@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from paas_wl.bk_app.monitoring.app_monitor.kres_entities import ServiceMonitor
 
 
-class ServiceMonitorDeserializer(AppEntityDeserializer["ServiceMonitor"]):
+class ServiceMonitorDeserializer(AppEntityDeserializer["ServiceMonitor", "WlApp"]):
     api_version = "monitoring.coreos.com/v1"
 
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ServiceMonitor":

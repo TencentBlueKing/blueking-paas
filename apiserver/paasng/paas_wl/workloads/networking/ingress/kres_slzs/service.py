@@ -82,7 +82,7 @@ class ProcessServiceSerializer(AppEntitySerializer["ProcessService"]):
         return body
 
 
-class ProcessServiceDeserializer(AppEntityDeserializer["ProcessService"]):
+class ProcessServiceDeserializer(AppEntityDeserializer["ProcessService", "WlApp"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "ProcessService":
         """Generate a ProcessService object from kubernetes resource"""
         res_name = kube_data.metadata.name

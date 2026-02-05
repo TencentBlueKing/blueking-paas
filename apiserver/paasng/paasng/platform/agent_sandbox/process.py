@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,32 +13,32 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+from abc import ABC, abstractmethod
 
-import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict
-
-from paas_wl.infras.resources.base.kres import KSecret
-from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
-
-from .constants import SecretType
-from .kres_slzs import SecretDeserializer, SecretSerializer
-
-if TYPE_CHECKING:
-    from paas_wl.bk_app.applications.models.app import WlApp
-
-logger = logging.getLogger(__name__)
+from .entities import CodeRunResult, ExecResult
 
 
-@dataclass
-class Secret(AppEntity):
-    type: SecretType
-    data: Dict[str, str]
+class SandboxProcess(ABC):
+    """The process operations abstract interface in agent sandbox."""
 
-    class Meta:
-        kres_class = KSecret
-        deserializer = SecretDeserializer
-        serializer = SecretSerializer
+    @abstractmethod
+    def exec(
+        self, cmd: list[str] | str, cwd: str | None = None, env: dict | None = None, timeout: int = 60
+    ) -> ExecResult:
+        """在沙箱中执行命令"""
+        raise NotImplementedError
 
+    @abstractmethod
+    def code_run(self, content: str, language: str = "Python") -> CodeRunResult:
+        """在沙箱中执行脚本"""
+        raise NotImplementedError
 
-secret_kmodel: "AppEntityManager[Secret, WlApp]" = AppEntityManager(Secret)
+    @abstractmethod
+    def get_logs(self, tail_lines: int | None = None, timestamps: bool = False) -> str:
+        """读取容器日志"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_status(self) -> str:
+        """获取 Pod 状态"""
+        raise NotImplementedError

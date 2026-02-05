@@ -18,8 +18,9 @@
 from unittest import mock
 
 import pytest
+from kubernetes.dynamic import ResourceField
 
-from paas_wl.infras.resources.kube_res.base import ResourceField, ResourceList
+from paas_wl.infras.resources.kube_res.base import ResourceList
 
 
 @pytest.fixture()

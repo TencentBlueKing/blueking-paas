@@ -244,7 +244,8 @@ class APIGateWayBackend(BlueKingApplicationOauthMixin):
                     env_name=self.env_name,
                     grant_type="authorization_code",
                     rtx=username,
-                    # need_new_token=0: 满足一定条件时, 网关会复用旧 token(如有), 以降低网关侧的压力
+                    # need_new_token=0: 如果当前 access_token 是有效的
+                    # 并且过期时间大于一定时间(目前网关侧设置的是 300s), 不会重新生成，会直接返回当前有效的
                     need_new_token=0,
                     **{self.COOKIE_KEY: user_credential},
                 ),

@@ -201,12 +201,14 @@ class PreCreatedInstance(UuidAuditedModel):
     @classmethod
     def select_for_request(cls, plan: "Plan", params: Dict) -> Optional["PreCreatedInstance"]:
         """
+        在指定 plan 下, 根据 params 选择一个未分配的预创建实例, 一般要配合事务使用
 
-        在指定 plan 下，根据 params 选择一个未分配的预创建实例
-        params 若不包括 application_code, env, module_name, 则使用一般的 FIFO 策略进行匹配,
-        并且会排除掉有具体绑定策略的实例
+        匹配顺序为：
+        1) 若 params 缺少 application_code/env/module_name 中任意字段，使用普通 FIFO
+           并排除带有绑定策略的实例
+        2) 若参数齐全，先按绑定策略匹配；若未命中策略，再回退到普通 FIFO
 
-        :param params: 至少包含 application_code, env, module_name 三个字段中的一个或多个字段，用于匹配绑定策略
+        :param params: 至少包含 application_code/env/module_name 之一, 用于匹配绑定策略
         """
         unallocated_qs = cls.objects.select_for_update().filter(plan=plan, is_allocated=False).order_by("created")
 
@@ -254,8 +256,9 @@ class PreCreatedInstanceBindingPolicy(UuidAuditedModel):
         cls, app_code, module_name, env, policy_qs: Optional["QuerySet"] = None
     ) -> Optional["PreCreatedInstanceBindingPolicy"]:
         """
-        找到最匹配的绑定策略, 匹配优先级为 app_code > module_name > env, 可以认为是比较 (app_code, module_name, env) 的大小
-        (app_code, module_name, env) 相同时, 返回 created_at 最早的那个
+        找到最匹配的绑定策略，匹配优先级为 app_code > module_name > env
+        可以理解为按 (app_code, module_name, env) 的匹配程度排序
+        当匹配程度相同时，返回 created_at 最早的那条
 
         :param policy_qs: 可选的 QuerySet, 用于指定查询范围
         """

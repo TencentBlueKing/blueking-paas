@@ -27,7 +27,7 @@ class PreCreatedInstanceBindingPolicyInputSLZ(serializers.Serializer):
     env = serializers.CharField(help_text="环境名称", required=False)
 
     def to_internal_value(self, data):
-        # 去除空格 和 去除空字符串的键值对
+        # 过滤无效的匹配规则
         result = {}
         for key, _val in data.items():
             val = str(_val).strip()

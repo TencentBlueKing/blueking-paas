@@ -201,6 +201,7 @@ class PreCreatedInstance(UuidAuditedModel):
     @classmethod
     def select_for_request(cls, plan: "Plan", params: Dict) -> Optional["PreCreatedInstance"]:
         """
+
         在指定 plan 下，根据 params 选择一个未分配的预创建实例
         params 若不包括 application_code, env, module_name, 则使用一般的 FIFO 策略进行匹配,
         并且会排除掉有具体绑定策略的实例
@@ -227,7 +228,7 @@ class PreCreatedInstance(UuidAuditedModel):
             logger.debug("no matching binding policy found, use plain FIFO match strategy")
             return unallocated_qs.first()
 
-        return policy.pre_created_instance
+        return cls.objects.select_for_update().filter(pk=policy.pre_created_instance.pk, is_allocated=False).first()
 
     def __str__(self):
         return "{id}-{plan}".format(plan=repr(self.plan), id=self.uuid)
@@ -258,7 +259,7 @@ class PreCreatedInstanceBindingPolicy(UuidAuditedModel):
 
         :param policy_qs: 可选的 QuerySet, 用于指定查询范围
         """
-        if not policy_qs:
+        if policy_qs is None:
             policy_qs = cls.objects.filter(pre_created_instance__is_allocated=False)
 
         candidates = policy_qs.filter(

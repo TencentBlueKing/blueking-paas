@@ -67,7 +67,7 @@ class AgentSandboxFactory:
     def create(self) -> "KubernetesPodSandbox":
         """Create a new sandbox.
 
-        :return: The ID of the created sandbox.
+        :return: The sandbox object.
         """
         sandbox_id = str(uuid.uuid4())
         sandbox = AgentSandbox.create(
@@ -78,7 +78,7 @@ class AgentSandboxFactory:
         )
         sandbox_created = False
         try:
-            with self.kres_app.get_client() as client:
+            with self.kres_app.get_kube_api_client() as client:
                 NamespacesHandler(client).ensure_namespace(self.kres_app.namespace)
 
             agent_sandbox_kmodel.create(sandbox)
@@ -99,7 +99,7 @@ class AgentSandboxFactory:
             raise SandboxError("failed to delete sandbox pod") from KresAgentSandboxError(str(exc), exc)
 
     def _wait_for_running(self, pod_name: str) -> None:
-        with self.kres_app.get_client() as client:
+        with self.kres_app.get_kube_api_client() as client:
             kres.KPod(client).wait_for_status(
                 name=pod_name,
                 target_statuses={PodPhase.RUNNING.value},
@@ -219,7 +219,7 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
     def get_logs(self, tail_lines: int | None = None, timestamps: bool = False) -> str:
         """Get the logs of the sandbox."""
         try:
-            with self.kres_app.get_client() as client:
+            with self.kres_app.get_kube_api_client() as client:
                 resp = kres.KPod(client).get_log(
                     name=self.entity.name,
                     namespace=self.namespace,
@@ -235,7 +235,7 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
         cmd_str = cmd if isinstance(cmd, str) else " ".join(shlex.quote(item) for item in cmd)
         env_prefix = " ".join(f"{self._validate_env_key(key)}={shlex.quote(str(value))}" for key, value in env.items())
         if env_prefix:
-            cmd_str = f"{env_prefix}; {cmd_str}"
+            cmd_str = f"export {env_prefix}; {cmd_str}"
         if cwd:
             cmd_str = f"cd {shlex.quote(cwd)} && {cmd_str}"
         cmd_str = f"{cmd_str}; echo {_EXIT_CODE_MARKER}$? 1>&2"
@@ -250,7 +250,7 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
 
     def _stream_exec(self, command: list[str], timeout: int, stdin_data: str | None = None) -> tuple[str, str]:
         """Execute a command inside the sandbox."""
-        with self.kres_app.get_client() as client:
+        with self.kres_app.get_kube_api_client() as client:
             try:
                 resp = kube_stream(
                     CoreV1Api(client).connect_get_namespaced_pod_exec,

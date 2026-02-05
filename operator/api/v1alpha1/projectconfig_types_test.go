@@ -137,9 +137,9 @@ metadata:
 platform:
   bkAppCode: "foo"
   bkAppSecret: "bar"
-logVolume:
-  legacyLogHostPath: "/custom/logs"
-  mulModuleLogHostPath: "/custom/v3logs"
+logHostPath:
+  legacyPath: "/custom/logs"
+  mulModulePath: "/custom/v3logs"
 `
 		file, err := os.CreateTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -150,8 +150,8 @@ logVolume:
 		_, err = ctrl.ConfigFile().AtPath(file.Name()).OfKind(&projCfg).Complete()
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(projCfg.LogVolume.LegacyLogHostPath).To(Equal("/custom/logs"))
-		Expect(projCfg.LogVolume.MulModuleLogHostPath).To(Equal("/custom/v3logs"))
+		Expect(projCfg.LogHostPath.LegacyPath).To(Equal("/custom/logs"))
+		Expect(projCfg.LogHostPath.MulModulePath).To(Equal("/custom/v3logs"))
 		Expect(projCfg.GetLegacyLogHostPath()).To(Equal("/custom/logs"))
 		Expect(projCfg.GetMulModuleLogHostPath()).To(Equal("/custom/v3logs"))
 	})

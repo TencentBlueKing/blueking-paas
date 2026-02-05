@@ -198,22 +198,22 @@ spec:
             - resourceNamespace
             - retryPeriod
             type: object
-          logVolume:
-            description: LogVolumeConfig contains the config for app logging volumes
+          logHostPath:
+            description: AppLogHostPath contains the config for app logging volumes
             properties:
-              legacyLogHostPath:
+              legacyPath:
                 description: |-
-                  LegacyLogHostPath is the host path for legacy app logging volume
+                  LegacyPath is the host path for legacy app logging volume
                   Default: /data/bkapp/logs
                 type: string
-              mulModuleLogHostPath:
+              mulModulePath:
                 description: |-
-                  MulModuleLogHostPath is the host path for multi-module app logging volume
+                  MulModulePath is the host path for multi-module app logging volume
                   Default: /data/bkapp/v3logs
                 type: string
             required:
-            - legacyLogHostPath
-            - mulModuleLogHostPath
+            - legacyPath
+            - mulModulePath
             type: object
           maxProcesses:
             format: int32
@@ -319,7 +319,7 @@ spec:
         required:
         - autoscaling
         - ingressPlugin
-        - logVolume
+        - logHostPath
         - maxProcesses
         - platform
         - resLimits

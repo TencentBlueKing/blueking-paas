@@ -23,11 +23,12 @@ import shlex
 import time
 import uuid
 
+from django.utils import timezone
 from kubernetes.client import CoreV1Api
 from kubernetes.client.exceptions import ApiException
 from kubernetes.stream import stream as kube_stream
 
-from paas_wl.bk_app.agent_sandbox.constants import DEFAULT_IMAGE, DEFAULT_WORKDIR
+from paas_wl.bk_app.agent_sandbox.constants import DEFAULT_SNAPSHOT, DEFAULT_TARGET, DEFAULT_WORKDIR
 from paas_wl.bk_app.agent_sandbox.exceptions import KresAgentSandboxError
 from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandbox, AgentSandboxKresApp, agent_sandbox_kmodel
 from paas_wl.bk_app.deploy.app_res.controllers import NamespacesHandler
@@ -35,14 +36,17 @@ from paas_wl.infras.resources.base import kres
 from paas_wl.infras.resources.base.exceptions import ReadTargetStatusTimeout
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 from paas_wl.utils.constants import PodPhase
+from paasng.platform.agent_sandbox.constants import SandboxStatus
 from paasng.platform.agent_sandbox.entities import CodeRunResult, ExecResult
 from paasng.platform.agent_sandbox.exceptions import (
+    SandboxAlreadyExists,
     SandboxCreateTimeout,
     SandboxError,
     SandboxExecTimeout,
     SandboxFileError,
 )
 from paasng.platform.agent_sandbox.fs import SandboxFS
+from paasng.platform.agent_sandbox.models import Sandbox
 from paasng.platform.agent_sandbox.process import SandboxProcess
 from paasng.platform.applications.models import Application
 
@@ -54,27 +58,104 @@ _ENV_VAR_KEY_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 logger = logging.getLogger(__name__)
 
 
+def create_sandbox(
+    application: Application,
+    creator: str,
+    name: str | None = None,
+    env: dict | None = None,
+) -> Sandbox:
+    """Create an agent sandbox record and its corresponding resources.
+
+    :param application: The application that the sandbox belongs to.
+    :param creator: The creator of the sandbox.
+    :param name: The name of the sandbox, optional.
+    :param env: The environment variables dict, optional.
+    """
+    sandbox_id = uuid.uuid4()
+    env = env or {}
+    if not name:
+        name = f"sbx-{sandbox_id.hex}"
+
+    if Sandbox.objects.filter(tenant_id=application.tenant_id, name=name).exists():
+        raise SandboxAlreadyExists(f"sandbox name {name} already exists")
+
+    sandbox = Sandbox.objects.create(
+        uuid=sandbox_id,
+        application=application,
+        name=name,
+        snapshot=DEFAULT_SNAPSHOT,
+        target=DEFAULT_TARGET,
+        env=env,
+        status=SandboxStatus.PENDING.value,
+        creator=creator,
+        tenant_id=application.tenant_id,
+    )
+
+    factory = AgentSandboxFactory(application, sandbox.target)
+    try:
+        factory.create(
+            name=sandbox.name,
+            sandbox_id=sandbox.uuid.hex,
+            snapshot=sandbox.snapshot,
+        )
+    except SandboxError:
+        sandbox.status = SandboxStatus.ERR_CREATING.value
+        sandbox.save(update_fields=["status"])
+        raise
+
+    # The sandbox started successfully and running.
+    sandbox.status = SandboxStatus.RUNNING.value
+    sandbox.started_at = timezone.now()
+    sandbox.save(update_fields=["status", "started_at", "updated"])
+    return sandbox
+
+
+def delete_sandbox(sandbox: Sandbox) -> None:
+    """Stop and delete a sandbox.
+
+    :param sandbox: The sandbox to delete.
+    """
+    factory = AgentSandboxFactory(sandbox.application, sandbox.target)
+    try:
+        factory.destroy_by_name(sandbox.name)
+    except SandboxError:
+        sandbox.status = SandboxStatus.ERR_DELETING.value
+        sandbox.save(update_fields=["status"])
+        raise
+
+    sandbox.status = SandboxStatus.DELETED.value
+    sandbox.deleted_at = timezone.now()
+    sandbox.save(update_fields=["status", "deleted_at", "updated"])
+
+
 class AgentSandboxFactory:
-    """A factory for creating agent sandboxes."""
+    """A factory for creating agent sandboxes.
+
+    :param app: The application that the sandbox belongs to.
+    :param target: The target that all the sandboxes should run in.
+    """
 
     # The timeout for creating a sandbox, in seconds
     create_timeout = 30
 
-    def __init__(self, app: Application):
+    def __init__(self, app: Application, target: str):
         self.app = app
-        self.kres_app = AgentSandboxKresApp(paas_app_id=app.code, tenant_id=app.tenant_id)
+        self.kres_app = AgentSandboxKresApp(paas_app_id=app.code, tenant_id=app.tenant_id, target=target)
 
-    def create(self) -> "KubernetesPodSandbox":
+    def create(self, name: str, sandbox_id: str, snapshot: str) -> "KubernetesPodSandbox":
         """Create a new sandbox.
 
+        :param name: The name of the sandbox.
+        :param sandbox_id: The ID of the the sandbox.
+        :param snapshot: The snapshot name used for initialize the sandbox.
         :return: The sandbox object.
         """
-        sandbox_id = str(uuid.uuid4())
         sandbox = AgentSandbox.create(
             self.kres_app,
+            name=name,
             sandbox_id=sandbox_id,
             workdir=DEFAULT_WORKDIR,
-            image=DEFAULT_IMAGE,
+            snapshot=snapshot,
         )
         sandbox_created = False
         try:
@@ -92,11 +173,15 @@ class AgentSandboxFactory:
             raise SandboxError("failed to create sandbox pod") from KresAgentSandboxError(str(exc), exc)
         return KubernetesPodSandbox(self.app, sandbox)
 
-    def destroy(self, sbx: "KubernetesPodSandbox") -> None:
+    def destroy_by_name(self, name: str) -> None:
+        """Destroy a sandbox by its name"""
         try:
-            agent_sandbox_kmodel.delete_by_name(self.kres_app, sbx.entity.name, non_grace_period=True)
+            agent_sandbox_kmodel.delete_by_name(self.kres_app, name, non_grace_period=True)
         except ApiException as exc:
             raise SandboxError("failed to delete sandbox pod") from KresAgentSandboxError(str(exc), exc)
+
+    def destroy(self, sbx: "KubernetesPodSandbox") -> None:
+        self.destroy_by_name(sbx.entity.name)
 
     def _wait_for_running(self, pod_name: str) -> None:
         with self.kres_app.get_kube_api_client() as client:
@@ -157,7 +242,7 @@ class KubernetesPodSandbox(SandboxProcess, SandboxFS):
         if language.lower() != "python":
             raise SandboxError(f"unsupported language: {language}")
 
-        filename = os.path.join(self.entity.workdir, f"code_run_{self.entity.sandbox_id[:8]}.py")
+        filename = os.path.join(self.entity.workdir, f"code_run_{self.entity.name[:8]}.py")
         self.upload_file(content.encode(), filename)
         result = self.exec(["python", filename], cwd=self.entity.workdir)
         return CodeRunResult(stdout=result.stdout, stderr=result.stderr, exit_code=result.exit_code)

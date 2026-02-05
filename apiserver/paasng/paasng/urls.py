@@ -66,6 +66,7 @@ urlpatterns = [
     re_path(r"^", include("paasng.misc.tools.urls")),
     re_path("^", include("paasng.accessories.proc_components.urls")),
     re_path(r"^", include("paasng.misc.ai_agent.urls")),
+    re_path(r"^", include("paasng.platform.agent_sandbox.urls")),
     # PaaS Admin system
     re_path(r"^admin42/", include("paas_wl.apis.admin.urls")),
     # 包含 admin42 的全局 404 处理（需放在 admin42 相关路由的最后）

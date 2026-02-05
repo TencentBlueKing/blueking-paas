@@ -13,23 +13,18 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import pytest
+from kubernetes.client.apis import VersionApi
+
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name
+from tests.utils.cluster import CLUSTER_NAME_FOR_TESTING
+from tests.utils.helpers import kube_ver_lt
 
 
-class SandboxError(Exception):
-    """The base exception for agent sandbox errors."""
+@pytest.fixture(scope="session", autouse=True)
+def _skip_if_old_k8s_version(django_db_setup, django_db_blocker):
+    with django_db_blocker.unblock(), get_client_by_cluster_name(CLUSTER_NAME_FOR_TESTING) as k8s_client:
+        k8s_version = VersionApi(k8s_client).get_code()
 
-
-class SandboxCreateTimeout(SandboxError):
-    """Raised when creating a sandbox times out."""
-
-
-class SandboxAlreadyExists(SandboxError):
-    """Raised when a sandbox already exists."""
-
-
-class SandboxFileError(SandboxError):
-    """Raised when file operations in the sandbox fail."""
-
-
-class SandboxExecTimeout(SandboxError):
-    """Raised when executing a command in the sandbox times out."""
+    if kube_ver_lt(k8s_version, (1, 20)):
+        pytest.skip("Skip tests because current k8s version less than 1.20")

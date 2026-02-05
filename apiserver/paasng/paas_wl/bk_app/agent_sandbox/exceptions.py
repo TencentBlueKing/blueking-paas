@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -15,31 +14,10 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict
 
-from paas_wl.infras.resources.base.kres import KSecret
-from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
+class KresAgentSandboxError(Exception):
+    """The error when operating kres resources for agent sandbox."""
 
-from .constants import SecretType
-from .kres_slzs import SecretDeserializer, SecretSerializer
-
-if TYPE_CHECKING:
-    from paas_wl.bk_app.applications.models.app import WlApp
-
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Secret(AppEntity):
-    type: SecretType
-    data: Dict[str, str]
-
-    class Meta:
-        kres_class = KSecret
-        deserializer = SecretDeserializer
-        serializer = SecretSerializer
-
-
-secret_kmodel: "AppEntityManager[Secret, WlApp]" = AppEntityManager(Secret)
+    def __init__(self, message: str, original_exception: Exception | None = None):
+        super().__init__(message)
+        self.original_exception = original_exception

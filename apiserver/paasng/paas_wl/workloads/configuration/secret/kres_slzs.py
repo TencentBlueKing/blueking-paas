@@ -43,7 +43,7 @@ class SecretSerializer(AppEntitySerializer["Secret"]):
         }
 
 
-class SecretDeserializer(AppEntityDeserializer["Secret"]):
+class SecretDeserializer(AppEntityDeserializer["Secret", "WlApp"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "Secret":
         return self.entity_type(
             app=app,

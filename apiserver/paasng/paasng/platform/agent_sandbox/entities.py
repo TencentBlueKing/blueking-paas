@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TencentBlueKing is pleased to support the open source community by making
 # 蓝鲸智云 - PaaS 平台 (BlueKing - PaaS System) available.
 # Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
@@ -14,32 +13,24 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+"""Common entities used in agent sandbox."""
 
-import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict
-
-from paas_wl.infras.resources.base.kres import KSecret
-from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
-
-from .constants import SecretType
-from .kres_slzs import SecretDeserializer, SecretSerializer
-
-if TYPE_CHECKING:
-    from paas_wl.bk_app.applications.models.app import WlApp
-
-logger = logging.getLogger(__name__)
+from attrs import define
 
 
-@dataclass
-class Secret(AppEntity):
-    type: SecretType
-    data: Dict[str, str]
+@define(frozen=True)
+class ExecResult:
+    """单次命令执行结果"""
 
-    class Meta:
-        kres_class = KSecret
-        deserializer = SecretDeserializer
-        serializer = SecretSerializer
+    stdout: str
+    stderr: str
+    exit_code: int
 
 
-secret_kmodel: "AppEntityManager[Secret, WlApp]" = AppEntityManager(Secret)
+@define(frozen=True)
+class CodeRunResult:
+    """单次代码执行结果"""
+
+    stdout: str
+    stderr: str
+    exit_code: int

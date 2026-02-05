@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from paas_wl.workloads.event.kres_entities import Event
 
 
-class EventDeserializer(AppEntityDeserializer["Event"]):
+class EventDeserializer(AppEntityDeserializer["Event", "WlApp"]):
     def deserialize(self, app: WlApp, kube_data: ResourceInstance) -> "Event":
         kube_data_dict = kube_data.to_dict()
         return self.entity_type(

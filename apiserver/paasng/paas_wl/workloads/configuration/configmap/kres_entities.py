@@ -17,13 +17,16 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 from paas_wl.infras.resources.base.kres import KConfigMap
 from paas_wl.infras.resources.kube_res.base import AppEntity, AppEntityManager
 from paas_wl.infras.resources.kube_res.exceptions import AppEntityNotFound
 
 from .kres_slzs import ConfigMapDeserializer, ConfigMapSerializer
+
+if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models.app import WlApp  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +41,7 @@ class ConfigMap(AppEntity):
         serializer = ConfigMapSerializer
 
 
-class ConfigMapManager(AppEntityManager[ConfigMap]):
+class ConfigMapManager(AppEntityManager[ConfigMap, "WlApp"]):
     def __init__(self):
         super().__init__(ConfigMap)
 

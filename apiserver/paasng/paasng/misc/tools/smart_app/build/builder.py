@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
+import logging
 from typing import TYPE_CHECKING, Dict
 
 from django.conf import settings
@@ -37,6 +38,8 @@ if TYPE_CHECKING:
     from paasng.misc.tools.smart_app.models import SmartBuildRecord
     from paasng.misc.tools.smart_app.output import SmartBuildStream
 
+logger = logging.getLogger(__name__)
+
 
 class SmartAppBuilder:
     """The main controller for building a s-mart app package"""
@@ -57,6 +60,7 @@ class SmartAppBuilder:
     def start(self):
         """Start the s-mart building process"""
 
+        builder_name = None
         try:
             self.state_mgr.start()
             # 启动构建进程
@@ -68,13 +72,14 @@ class SmartAppBuilder:
             self.state_mgr.finish(JobStatus.FAILED, str(e))
         finally:
             self.stream.close()
+            self.cleanup_builder_pod(builder_name)
             self.state_mgr.coordinator.release_lock(self.smart_build)
 
     def start_following_logs(self, builder_name: str):
         """Retrieve the build logs, and check the Pod execution status."""
 
-        namespace = get_default_builder_namespace()
-        cluster_name = get_default_cluster_name()
+        namespace = self._get_default_builder_namespace()
+        cluster_name = self._get_default_cluster_name()
         handler = SmartBuildHandler(get_client_by_cluster_name(cluster_name))
 
         handler.wait_for_logs_readiness(namespace, builder_name, settings.SMART_BUILD_PROCESS_TIMEOUT)
@@ -111,7 +116,7 @@ class SmartAppBuilder:
         if settings.BUILD_EXTRA_ENV_VARS:
             envs.update(settings.BUILD_EXTRA_ENV_VARS)
 
-        cluster_name = get_default_cluster_name()
+        cluster_name = self._get_default_cluster_name()
 
         runtime = ContainerRuntimeSpec(
             image=settings.SMART_BUILDER_IMAGE,
@@ -124,8 +129,8 @@ class SmartAppBuilder:
             node_selector={},
         )
 
-        namespace = get_default_builder_namespace()
-        pod_name = generate_builder_name(self.smart_build)
+        namespace = self._get_default_builder_namespace()
+        pod_name = self._generate_builder_name(self.smart_build)
 
         client = get_client_by_cluster_name(cluster_name)
         NamespacesHandler(client).ensure_namespace(namespace)
@@ -140,21 +145,36 @@ class SmartAppBuilder:
         smart_build_handler = SmartBuildHandler(client)
         return smart_build_handler.build_pod(template=builder_template)
 
+    def cleanup_builder_pod(self, builder_name: str | None):
+        """Clean up the builder pod after build process finished"""
 
-def get_default_cluster_name() -> str:
-    """Get the default cluster name to run smart builder pods"""
+        if not builder_name:
+            return
 
-    cluster = ClusterAllocator(AllocationContext.create_for_build_app()).get_default()
-    return cluster.name
+        try:
+            namespace = self._get_default_builder_namespace()
+            cluster_name = self._get_default_cluster_name()
+            handler = SmartBuildHandler(get_client_by_cluster_name(cluster_name))
+            handler.delete_builder(namespace, builder_name, force=True)
+        except Exception:
+            # Log but don't raise, cleanup failure should not affect the build result
+            logger.exception("Failed to cleanup builder pod %s", builder_name)
 
+    @staticmethod
+    def _get_default_cluster_name() -> str:
+        """Get the default cluster name to run smart builder pods"""
 
-def generate_builder_name(smart_build: "SmartBuildRecord") -> str:
-    """Get the s-mart builder name"""
+        cluster = ClusterAllocator(AllocationContext.create_for_build_app()).get_default()
+        return cluster.name
 
-    return f"builder-{smart_build.app_code.replace('_', '0us0')}-{smart_build.operator}"
+    @staticmethod
+    def _generate_builder_name(smart_build: "SmartBuildRecord") -> str:
+        """Get the s-mart builder name"""
 
+        return f"builder-{smart_build.app_code.replace('_', '0us0')}-{smart_build.operator}"
 
-def get_default_builder_namespace() -> str:
-    """Get the namespace of s-mart builder pod"""
+    @staticmethod
+    def _get_default_builder_namespace() -> str:
+        """Get the namespace of s-mart builder pod"""
 
-    return "smart-app-builder"
+        return "smart-app-builder"

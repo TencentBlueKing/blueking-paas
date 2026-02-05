@@ -92,17 +92,17 @@ class SmartBuildHandler(PodScheduleHandler):
             else:
                 logger.debug("Pod %s is not running, deleting", pod_name)
 
-            self._delete_pod(namespace=template.namespace, pod_name=pod_name, grace_period_seconds=0).wait()
+            self.delete_builder(template.namespace, pod_name, force=True)
 
         pod_body = self._construct_pod_body(pod_name, template)
         pod_info, _ = KPod(self.client).create_or_update(pod_name, template.namespace, body=pod_body)
         return pod_info.metadata.name
 
-    def delete_builder(self, namespace: str, name: str):
+    def delete_builder(self, namespace: str, name: str, force: bool = False):
         """Deleting the builder Pod"""
 
         pod_name = self.normalize_builder_name(name)
-        return self._delete_finished_pod(namespace, pod_name, force=False)
+        return self._delete_finished_pod(namespace, pod_name, force=force)
 
     def wait_for_succeeded(self, namespace: str, name: str, timeout: float | None = None, check_period: float = 0.5):
         """Wait for the Pod to complete successfully"""

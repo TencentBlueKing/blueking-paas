@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                         decimal_places=2,
                         default="2",
                         max_digits=10,
-                        verbose_name="CPU 上限（GB）",
+                        verbose_name="CPU 上限（核）",
                     ),
                 ),
                 (

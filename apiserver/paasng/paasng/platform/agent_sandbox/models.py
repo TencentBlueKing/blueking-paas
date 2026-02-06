@@ -34,7 +34,7 @@ class Sandbox(UuidAuditedModel):
 
     target = models.CharField(verbose_name="目标区域", max_length=32, help_text="沙箱所属目标区域（集群）")
     env = models.JSONField(verbose_name="环境变量", default={})
-    cpu = models.DecimalField(verbose_name="CPU 上限（GB）", max_digits=10, decimal_places=2, default="2")
+    cpu = models.DecimalField(verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, default="2")
     memory = models.DecimalField(verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, default="1")
 
     status = models.CharField(verbose_name="状态", max_length=16, default=SandboxStatus.PENDING.value)

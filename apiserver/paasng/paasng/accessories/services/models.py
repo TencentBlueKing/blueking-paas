@@ -201,14 +201,18 @@ class PreCreatedInstance(UuidAuditedModel):
     @classmethod
     def select_for_request(cls, plan: "Plan", params: Dict) -> Optional["PreCreatedInstance"]:
         """
-        在指定 plan 下, 根据 params 选择一个未分配的预创建实例, 一般要配合事务使用
+        在指定 plan 下选择一个未分配的预创建实例 (通常应在事务中调用)
 
-        匹配顺序为：
-        1) 若 params 缺少 application_code/env/module_name 中任意字段，使用普通 FIFO
-           并排除带有绑定策略的实例
-        2) 若参数齐全，先按绑定策略匹配；若未命中策略，再回退到普通 FIFO
+        选择流程：
+        1) 先按创建时间升序 (FIFO) 锁定候选实例 (`select_for_update`)
+        2) 若 `params` 中不包含 `application_code`/`module_name`/`env` 任一字段:
+           回退为“无策略实例优先”的 FIFO (仅从未配置绑定策略的实例中选择)
+        3) 只要 `params` 中包含上述任一字段，就会尝试按绑定策略匹配
+           未命中时再回退为普通 FIFO
 
-        :param params: 至少包含 application_code/env/module_name 之一, 用于匹配绑定策略
+        :param params: 策略匹配参数. 是否进入策略匹配分支由是否包含
+            `application_code`/`module_name`/`env` 任一字段决定
+        :return: 命中的预创建实例；若没有可用实例则返回 None
         """
         unallocated_qs = cls.objects.select_for_update().filter(plan=plan, is_allocated=False).order_by("created")
 

@@ -17,7 +17,7 @@
 
 from django.urls import path
 
-from .views import AgentSandboxViewSet
+from .views import AgentSandboxFSViewSet, AgentSandboxViewSet
 
 PVAR_UUID = r"(?P<sandbox_id>[0-9a-f-]{32,36})"
 
@@ -32,5 +32,26 @@ urlpatterns = [
         "api/agent_sandbox/sandboxes/<str:sandbox_id>",
         AgentSandboxViewSet.as_view({"delete": "destroy"}),
         name="agent_sandbox.destroy",
+    ),
+    # Filesystem related URLs
+    path(
+        "api/agent_sandbox/sandboxes/<str:sandbox_id>/folders/create",
+        AgentSandboxFSViewSet.as_view({"post": "create_folder"}),
+        name="agent_sandbox.fs.create_folder",
+    ),
+    path(
+        "api/agent_sandbox/sandboxes/<str:sandbox_id>/files/upload",
+        AgentSandboxFSViewSet.as_view({"post": "upload_file"}),
+        name="agent_sandbox.fs.upload_file",
+    ),
+    path(
+        "api/agent_sandbox/sandboxes/<str:sandbox_id>/files/delete",
+        AgentSandboxFSViewSet.as_view({"post": "delete_file"}),
+        name="agent_sandbox.fs.delete_file",
+    ),
+    path(
+        "api/agent_sandbox/sandboxes/<str:sandbox_id>/files/download",
+        AgentSandboxFSViewSet.as_view({"get": "download_file"}),
+        name="agent_sandbox.fs.download_file",
     ),
 ]

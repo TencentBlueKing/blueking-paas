@@ -16,7 +16,9 @@
 # to the current version of the project delivered to anyone in the future.
 
 import logging
+from pathlib import PurePosixPath
 
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
@@ -30,8 +32,16 @@ from paasng.platform.agent_sandbox.models import Sandbox
 from paasng.platform.agent_sandbox.sandbox import (
     create_sandbox,
     delete_sandbox,
+    get_sandbox_client,
 )
-from paasng.platform.agent_sandbox.serializers import SandboxCreateInputSLZ, SandboxCreateOutputSLZ
+from paasng.platform.agent_sandbox.serializers import (
+    SandboxCreateFolderInputSLZ,
+    SandboxCreateInputSLZ,
+    SandboxCreateOutputSLZ,
+    SandboxDeleteFileInputSLZ,
+    SandboxDownloadFileInputSLZ,
+    SandboxUploadFileInputSLZ,
+)
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
 from paasng.utils.error_codes import error_codes
 
@@ -81,3 +91,79 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
             logger.exception("Failed to delete agent sandbox")
             raise error_codes.AGENT_SANDBOX_DELETE_FAILED
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AgentSandboxFSViewSet(viewsets.GenericViewSet):
+    """Agent Sandbox 文件系统相关接口"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxCreateFolderInputSLZ(), responses={204: ""})
+    def create_folder(self, request, sandbox_id):
+        """在 Agent Sandbox 中创建目录。"""
+        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxCreateFolderInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            get_sandbox_client(sandbox).create_folder(path=data["path"], mode=data["mode"])
+        except SandboxError:
+            logger.exception("Failed to create folder in sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxUploadFileInputSLZ(), responses={204: ""})
+    def upload_file(self, request, sandbox_id):
+        """上传文件到 Agent Sandbox。"""
+        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxUploadFileInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            get_sandbox_client(sandbox).upload_file(file=data["file"].read(), remote_path=data["path"])
+        except SandboxError:
+            logger.exception("Failed to upload file to sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], request_body=SandboxDeleteFileInputSLZ(), responses={204: ""})
+    def delete_file(self, request, sandbox_id):
+        """删除 Agent Sandbox 中的文件或目录。"""
+        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxDeleteFileInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            get_sandbox_client(sandbox).delete_file(path=data["path"], recursive=data["recursive"])
+        except SandboxError:
+            logger.exception("Failed to delete file in sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(tags=["agent_sandbox"], query_serializer=SandboxDownloadFileInputSLZ(), responses={200: ""})
+    def download_file(self, request, sandbox_id):
+        """下载 Agent Sandbox 中的文件。"""
+        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxDownloadFileInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            content = get_sandbox_client(sandbox).download_file(remote_path=data["path"])
+        except SandboxError:
+            logger.exception("Failed to download file from sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_FILE_OPERATION_FAILED
+
+        filename = PurePosixPath(data["path"]).name or "sandbox-file"
+        response = HttpResponse(content, content_type="application/octet-stream")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Access-Control-Expose-Headers"] = "Content-Disposition"
+        return response
+
+    def _get_sandbox_with_perm(self, request, sandbox_id: str) -> Sandbox:
+        sandbox = get_object_or_404(Sandbox, uuid=sandbox_id, deleted_at__isnull=True)
+        self.check_object_permissions(request, sandbox.application)
+        return sandbox

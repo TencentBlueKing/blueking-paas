@@ -18,4 +18,4 @@ import pytest
 
 @pytest.fixture(scope="session", autouse=True)
 def _skip_if_old_k8s_version(skip_if_old_k8s_version):
-    """Auto-apply shared k8s version skip guard for agent_sandbox tests."""
+    """Auto-apply shared k8s version skip guard for api agent_sandbox tests."""

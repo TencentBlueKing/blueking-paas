@@ -43,3 +43,41 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
             "status",
             "created",
         )
+
+
+class SandboxCreateFolderInputSLZ(serializers.Serializer):
+    """The serializer for creating folder in sandbox."""
+
+    path = serializers.CharField(label="目录路径", help_text="要创建的目录路径")
+    mode = serializers.RegexField(
+        regex=r"^[0-7]{3,4}$",
+        label="目录权限",
+        default="755",
+        required=False,
+        help_text="目录权限（八进制），默认 755",
+    )
+
+
+class SandboxUploadFileInputSLZ(serializers.Serializer):
+    """The serializer for uploading file to sandbox."""
+
+    path = serializers.CharField(label="远端路径", help_text="文件在沙箱中的目标路径")
+    file = serializers.FileField(label="文件", help_text="待上传文件内容")
+
+
+class SandboxDeleteFileInputSLZ(serializers.Serializer):
+    """The serializer for deleting file/folder in sandbox."""
+
+    path = serializers.CharField(label="路径", help_text="待删除文件或目录路径")
+    recursive = serializers.BooleanField(
+        label="递归删除",
+        required=False,
+        default=False,
+        help_text="删除目录时是否递归删除（默认否）",
+    )
+
+
+class SandboxDownloadFileInputSLZ(serializers.Serializer):
+    """The serializer for downloading file from sandbox."""
+
+    path = serializers.CharField(label="路径", help_text="待下载文件路径")

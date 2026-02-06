@@ -32,12 +32,14 @@ from django.core.management import call_command
 from django.db import transaction
 from django.test.utils import override_settings
 from filelock import FileLock
+from kubernetes.client.apis import VersionApi
 from rest_framework.test import APIClient
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from paas_wl.infras.cluster.constants import ClusterAllocationPolicyType
 from paas_wl.infras.cluster.entities import AllocationPolicy
 from paas_wl.infras.cluster.models import APIServer, Cluster, ClusterAllocationPolicy
+from paas_wl.infras.resources.base.base import get_client_by_cluster_name
 from paas_wl.workloads.networking.entrance.addrs import Address, AddressType
 from paasng.accessories.publish.sync_market.handlers import (
     before_finishing_application_creation,
@@ -70,6 +72,7 @@ from tests.utils.helpers import (
     create_cnative_app,
     create_pending_wl_apps,
     initialize_module,
+    kube_ver_lt,
 )
 
 # Install auto-used fixture
@@ -155,6 +158,16 @@ def django_db_setup(django_db_setup, django_db_blocker):  # noqa: PT004
             allocation_policy=AllocationPolicy(env_specific=False, clusters=[cluster.name]),
             tenant_id=cluster.tenant_id,
         )
+
+
+@pytest.fixture(scope="session")
+def skip_if_old_k8s_version(django_db_setup, django_db_blocker):
+    """Skip tests when the configured testing cluster version is lower than 1.20."""
+    with django_db_blocker.unblock(), get_client_by_cluster_name(CLUSTER_NAME_FOR_TESTING) as k8s_client:
+        k8s_version = VersionApi(k8s_client).get_code()
+
+    if kube_ver_lt(k8s_version, (1, 20)):
+        pytest.skip("Skip tests because current k8s version less than 1.20")
 
 
 def pytest_sessionstart(session):

@@ -30,3 +30,4 @@ You are in the apiserver repo, helping implement features, fix bugs, and refacto
 ## Notes
 
 - 2026-02-05: Added agent sandbox create flow in domain layer; tests target domain helpers first.
+- 2026-02-06: In API tests, add docstrings and type hints for fixtures (especially setup fixtures).

@@ -128,6 +128,16 @@ def delete_sandbox(sandbox: Sandbox) -> None:
     sandbox.save(update_fields=["status", "deleted_at", "updated"])
 
 
+def get_sandbox_client(sandbox: Sandbox) -> "KubernetesPodSandbox":
+    """Build a runtime sandbox client from a Sandbox record.
+
+    :param sandbox: The sandbox record.
+    :returns: The runtime sandbox client for process and filesystem operations.
+    """
+    factory = AgentSandboxFactory(sandbox.application, sandbox.target)
+    return factory.get_from_record(sandbox)
+
+
 class AgentSandboxFactory:
     """A factory for creating agent sandboxes.
 
@@ -182,6 +192,20 @@ class AgentSandboxFactory:
 
     def destroy(self, sbx: "KubernetesPodSandbox") -> None:
         self.destroy_by_name(sbx.entity.name)
+
+    def get_from_record(self, sandbox: Sandbox) -> "KubernetesPodSandbox":
+        """Build a runtime sandbox client from a Sandbox record."""
+        try:
+            entity = AgentSandbox.create(
+                self.kres_app,
+                name=sandbox.name,
+                sandbox_id=sandbox.uuid.hex,
+                workdir=DEFAULT_WORKDIR,
+                snapshot=sandbox.snapshot,
+            )
+        except ValueError as exc:
+            raise SandboxError("invalid sandbox configuration") from exc
+        return KubernetesPodSandbox(self.app, entity)
 
     def _wait_for_running(self, pod_name: str) -> None:
         with self.kres_app.get_kube_api_client() as client:

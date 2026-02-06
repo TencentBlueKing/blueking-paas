@@ -41,7 +41,8 @@ class AppUniqueValidator(UniqueValidator):
     def __init__(self, field_name: Optional[str] = None, **kwargs):
         if field_name:
             self.field_name = field_name
-        super().__init__(queryset=Application.default_objects.all(), lookup="exact", **kwargs)
+        lookup = kwargs.pop("lookup", "exact")
+        super().__init__(queryset=Application.default_objects.all(), lookup=lookup, **kwargs)
 
     def __call__(self, value, serializer_field):
         # Determine the existing instance, if this is an update operation.
@@ -65,6 +66,8 @@ class AppUniqueValidator(UniqueValidator):
         except AppFieldValidationError as e:
             if e.reason == "duplicated":
                 raise ValidationError(self.get_message(value), code="unique")
+        except AttributeError:
+            pass
 
     def get_message(self, value) -> str:
         """Get user-friendly error message"""

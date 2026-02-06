@@ -17,6 +17,7 @@
 
 import logging
 from pathlib import PurePosixPath
+from typing import Callable
 
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -35,11 +36,16 @@ from paasng.platform.agent_sandbox.sandbox import (
     get_sandbox_client,
 )
 from paasng.platform.agent_sandbox.serializers import (
+    SandboxCodeRunInputSLZ,
     SandboxCreateFolderInputSLZ,
     SandboxCreateInputSLZ,
     SandboxCreateOutputSLZ,
     SandboxDeleteFileInputSLZ,
     SandboxDownloadFileInputSLZ,
+    SandboxExecInputSLZ,
+    SandboxGetLogsInputSLZ,
+    SandboxGetLogsOutputSLZ,
+    SandboxProcessOutputSLZ,
     SandboxUploadFileInputSLZ,
 )
 from paasng.platform.applications.mixins import ApplicationCodeInPathMixin
@@ -93,8 +99,19 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class AgentSandboxFSViewSet(viewsets.GenericViewSet):
-    """Agent Sandbox 文件系统相关接口"""
+class SandboxPermissionMixin:
+    """The Mixin for checking sandbox permissions."""
+
+    check_object_permissions: Callable
+
+    def _get_sandbox_with_perm(self, request, sandbox_id: str) -> Sandbox:
+        sandbox = get_object_or_404(Sandbox, uuid=sandbox_id, deleted_at__isnull=True)
+        self.check_object_permissions(request, sandbox.application)
+        return sandbox
+
+
+class AgentSandboxFSViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
+    """Agent Sandbox 文件系统相关接口。"""
 
     permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
 
@@ -163,7 +180,69 @@ class AgentSandboxFSViewSet(viewsets.GenericViewSet):
         response["Access-Control-Expose-Headers"] = "Content-Disposition"
         return response
 
-    def _get_sandbox_with_perm(self, request, sandbox_id: str) -> Sandbox:
-        sandbox = get_object_or_404(Sandbox, uuid=sandbox_id, deleted_at__isnull=True)
-        self.check_object_permissions(request, sandbox.application)
-        return sandbox
+
+class AgentSandboxProcessViewSet(SandboxPermissionMixin, viewsets.GenericViewSet):
+    """Agent Sandbox 进程相关接口。"""
+
+    permission_classes = [IsAuthenticated, application_perm_class(AppAction.BASIC_DEVELOP)]
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"], request_body=SandboxExecInputSLZ(), responses={200: SandboxProcessOutputSLZ()}
+    )
+    def exec(self, request, sandbox_id):
+        """在 Agent Sandbox 内执行命令。"""
+        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxExecInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            result = get_sandbox_client(sandbox).exec(
+                cmd=data["cmd"],
+                cwd=data.get("cwd"),
+                env=data["env"],
+                timeout=data["timeout"],
+            )
+        except SandboxError:
+            logger.exception("Failed to execute command in sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED
+        return Response(SandboxProcessOutputSLZ(result).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"],
+        request_body=SandboxCodeRunInputSLZ(),
+        responses={200: SandboxProcessOutputSLZ()},
+    )
+    def code_run(self, request, sandbox_id):
+        """在 Agent Sandbox 内执行代码片段。"""
+        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxCodeRunInputSLZ(data=request.data)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            result = get_sandbox_client(sandbox).code_run(content=data["content"], language=data["language"])
+        except SandboxError:
+            logger.exception("Failed to run code in sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED
+        return Response(SandboxProcessOutputSLZ(result).data)
+
+    @swagger_auto_schema(
+        tags=["agent_sandbox"], query_serializer=SandboxGetLogsInputSLZ(), responses={200: SandboxGetLogsOutputSLZ()}
+    )
+    def logs(self, request, sandbox_id):
+        """读取 Agent Sandbox 日志。"""
+        sandbox = self._get_sandbox_with_perm(request, sandbox_id)
+        slz = SandboxGetLogsInputSLZ(data=request.query_params)
+        slz.is_valid(raise_exception=True)
+        data = slz.validated_data
+
+        try:
+            logs = get_sandbox_client(sandbox).get_logs(
+                tail_lines=data.get("tail_lines"),
+                timestamps=data["timestamps"],
+            )
+        except SandboxError:
+            logger.exception("Failed to get logs from sandbox: %s", sandbox.uuid)
+            raise error_codes.AGENT_SANDBOX_PROCESS_OPERATION_FAILED
+        return Response(SandboxGetLogsOutputSLZ({"logs": logs}).data)

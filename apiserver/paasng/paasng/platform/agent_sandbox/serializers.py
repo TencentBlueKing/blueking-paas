@@ -81,3 +81,72 @@ class SandboxDownloadFileInputSLZ(serializers.Serializer):
     """The serializer for downloading file from sandbox."""
 
     path = serializers.CharField(label="路径", help_text="待下载文件路径")
+
+
+class SandboxExecInputSLZ(serializers.Serializer):
+    """The serializer for executing command in sandbox."""
+
+    cmd = serializers.JSONField(label="命令", help_text="执行命令，支持字符串或字符串列表")
+    cwd = serializers.CharField(
+        label="工作目录",
+        required=False,
+        allow_blank=False,
+        help_text="命令执行目录，不提供时使用沙箱默认工作目录",
+    )
+    env = serializers.JSONField(label="环境变量", required=False, default=dict, help_text="命令执行环境变量")
+    timeout = serializers.IntegerField(
+        label="超时（秒）", required=False, default=60, min_value=1, help_text="执行超时时间"
+    )
+
+    def validate_cmd(self, value):
+        match value:
+            case str() as cmd if cmd.strip():
+                return cmd
+            case list() as items if items and all(isinstance(item, str) and item for item in items):
+                return items
+            case _:
+                raise serializers.ValidationError("cmd must be a non-empty string or a non-empty list of strings")
+
+    def validate_env(self, value):
+        if isinstance(value, dict):
+            return value
+        raise serializers.ValidationError("env must be an object")
+
+
+class SandboxProcessOutputSLZ(serializers.Serializer):
+    """The serializer for command/code execution result in sandbox."""
+
+    stdout = serializers.CharField(label="标准输出", allow_blank=True)
+    stderr = serializers.CharField(label="标准错误", allow_blank=True)
+    exit_code = serializers.IntegerField(label="退出码")
+
+
+class SandboxCodeRunInputSLZ(serializers.Serializer):
+    """The serializer for running code in sandbox."""
+
+    content = serializers.CharField(label="代码内容", help_text="待执行代码")
+    language = serializers.CharField(label="语言", required=False, default="Python", help_text="代码语言，默认 Python")
+
+
+class SandboxGetLogsInputSLZ(serializers.Serializer):
+    """The serializer for getting sandbox logs."""
+
+    tail_lines = serializers.IntegerField(
+        label="返回行数",
+        required=False,
+        min_value=1,
+        max_value=20000,
+        help_text="仅返回最后 N 行日志，不提供则返回全部",
+    )
+    timestamps = serializers.BooleanField(
+        label="时间戳",
+        required=False,
+        default=False,
+        help_text="是否在日志前附加时间戳",
+    )
+
+
+class SandboxGetLogsOutputSLZ(serializers.Serializer):
+    """The serializer for sandbox logs response."""
+
+    logs = serializers.CharField(label="日志内容", allow_blank=True)

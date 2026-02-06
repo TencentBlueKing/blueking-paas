@@ -17,7 +17,7 @@
 
 from django.urls import path
 
-from .views import AgentSandboxFSViewSet, AgentSandboxViewSet
+from .views import AgentSandboxFSViewSet, AgentSandboxProcessViewSet, AgentSandboxViewSet
 
 PVAR_UUID = r"(?P<sandbox_id>[0-9a-f-]{32,36})"
 
@@ -53,5 +53,21 @@ urlpatterns = [
         "api/agent_sandbox/sandboxes/<str:sandbox_id>/files/download",
         AgentSandboxFSViewSet.as_view({"get": "download_file"}),
         name="agent_sandbox.fs.download_file",
+    ),
+    # Process related URLs
+    path(
+        "api/agent_sandbox/sandboxes/<str:sandbox_id>/processes/exec",
+        AgentSandboxProcessViewSet.as_view({"post": "exec"}),
+        name="agent_sandbox.process.exec",
+    ),
+    path(
+        "api/agent_sandbox/sandboxes/<str:sandbox_id>/code_interpreter/run",
+        AgentSandboxProcessViewSet.as_view({"post": "code_run"}),
+        name="agent_sandbox.process.code_run",
+    ),
+    path(
+        "api/agent_sandbox/sandboxes/<str:sandbox_id>/logs",
+        AgentSandboxProcessViewSet.as_view({"get": "logs"}),
+        name="agent_sandbox.process.logs",
     ),
 ]

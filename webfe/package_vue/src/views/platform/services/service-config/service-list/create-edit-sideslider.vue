@@ -17,7 +17,7 @@
     >
       <div class="main">
         <bk-form
-          :label-width="labelWidth"
+          :label-width="120"
           :model="formData"
           :rules="rules"
           ref="formRef"
@@ -100,6 +100,38 @@
               theme="primary"
             ></bk-switcher>
           </bk-form-item>
+          <template v-if="formData.origin === 'local'">
+            <bk-form-item
+              :label="$t('配置项')"
+              :required="true"
+            >
+              <ConfigItemsTable
+                ref="configItemsTableRef"
+                v-model="formData.config.config_items"
+              />
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('支持 TLS')"
+              :desc="$t('环境变量模板中可使用 {{tls}} 引用完整 TLS 配置，或使用 {{tls.ca}} 引用单个字段。')"
+              :required="true"
+            >
+              <bk-switcher
+                v-model="formData.config.tls"
+                theme="primary"
+              ></bk-switcher>
+            </bk-form-item>
+            <bk-form-item
+              :label="$t('环境变量模板')"
+              :required="true"
+              :desc="$t('通过配置环境变量模板，可将增强服务配置信息注入应用环境变量。')"
+            >
+              <EnvTemplateTable
+                :service-id="formData.name"
+                :config-items="formData.config.config_items"
+                @update="handleEnvTemplateUpdate"
+              />
+            </bk-form-item>
+          </template>
           <bk-form-item
             :label="$t('服务介绍')"
             :required="true"
@@ -161,15 +193,53 @@ import sidebarDiffMixin from '@/mixins/sidebar-diff-mixin';
 import { marked } from 'marked';
 import { quillEditor } from 'vue-quill-editor';
 import { TOOLBAR_OPTIONS } from '@/common/constants';
+import ConfigItemsTable from './config-items-table.vue';
+import EnvTemplateTable from './env-template-table.vue';
 import 'quill/dist/quill.core.css';
 import 'quill/dist/quill.snow.css';
 import 'quill/dist/quill.bubble.css';
+
+// 获取默认表单数据
+function getDefaultFormData() {
+  return {
+    logo: '',
+    // 服务ID
+    name: '',
+    // 服务名称
+    display_name: '',
+    // 分类
+    category_id: '',
+    // 配置信息
+    config: {
+      // 配置项
+      config_items: [],
+      // 支持 TLS
+      tls: false,
+      // 环境变量模板
+      template: [],
+    },
+    provider_name: '',
+    // 是否可见
+    is_visible: true,
+    // 服务介绍
+    description: '',
+    // 使用指南
+    instance_tutorial: '',
+    is_active: true,
+    origin: 'local',
+    // available_languages、long_description 后续接口会移出必填特性
+    available_languages: 'Python',
+    long_description: 'test',
+  };
+}
 
 export default {
   name: 'ServiceCreateEditSideslider',
   mixins: [sidebarDiffMixin],
   components: {
     quillEditor,
+    ConfigItemsTable,
+    EnvTemplateTable,
   },
   props: {
     show: {
@@ -209,7 +279,7 @@ export default {
           toolbar: TOOLBAR_OPTIONS,
         },
       },
-      formData: {},
+      formData: getDefaultFormData(),
       submitLoading: false,
       rules: {
         logo: [
@@ -259,38 +329,26 @@ export default {
     localLanguage() {
       return this.$store.state.localLanguage;
     },
-    labelWidth() {
-      return this.localLanguage === 'en' ? 120 : 80;
-    },
   },
   methods: {
     close() {
       this.sidesliderVisible = false;
     },
     reset() {
-      this.formData = {
-        logo: '',
-        // 服务ID
-        name: '',
-        // 服务名称
-        display_name: '',
-        // 分类
-        category_id: '',
-        config: {},
-        provider_name: '',
-        // 是否可见
-        is_visible: true,
-        // 服务介绍
-        description: '',
-        // 使用指南
-        instance_tutorial: '',
-        is_active: true,
-        origin: 'local',
-        // available_languages、long_description 后续接口会移出必填特性
-        available_languages: 'Python',
-        long_description: 'test',
-      };
+      this.formData = getDefaultFormData();
       this.files = [];
+    },
+    // 获取提交用的 config 数据（本地服务返回完整配置，远程服务返回空对象）
+    getSubmitConfig() {
+      if (this.formData.origin !== 'local') {
+        return {};
+      }
+      // 过滤 config_items 中的 isEditing、isNew 字段
+      const config_items = (this.formData.config.config_items || []).map(({ isEditing, isNew, ...rest }) => rest);
+      return {
+        ...this.formData.config,
+        config_items,
+      };
     },
     // 显示侧栏，数据回填
     handleShown() {
@@ -300,6 +358,12 @@ export default {
       if (this.isEdit) {
         this.formData = {
           ...this.data,
+          config: {
+            config_items: [],
+            tls: false,
+            template: [],
+            ...(this.data.config || {}),
+          },
           instance_tutorial: marked(instance_tutorial),
         };
         this.setPreviewImage(name, logo);
@@ -315,6 +379,10 @@ export default {
     },
     handleDelete() {
       this.files = [];
+    },
+    // 更新环境变量模板
+    handleEnvTemplateUpdate(template) {
+      this.formData.config.template = template;
     },
     async quillEditorBlur() {
       // 手动触发校验
@@ -422,21 +490,25 @@ export default {
       }
     },
     // 提交
-    handleSubmit() {
-      this.$refs.formRef.validate().then(
-        () => {
+    async handleSubmit() {
+      let validateArr = [this.$refs.formRef?.validate()];
+      if (this.formData.origin === 'local') {
+        validateArr.push(this.$refs.configItemsTableRef?.validate());
+      }
+      await Promise.all(validateArr)
+        .then(() => {
           // 过滤xss
           const params = {
             ...this.formData,
+            config: this.getSubmitConfig(),
             logo: this.files[0]?.url || '',
             instance_tutorial: xss(this.formData.instance_tutorial),
           };
           this.isEdit ? this.updatePlatformService(params) : this.addPlatformService(params);
-        },
-        (e) => {
+        })
+        .catch((e) => {
           console.error(e);
-        }
-      );
+        });
     },
     // 侧栏关闭前置检查，变更需要离开提示
     async handleBeforeClose() {

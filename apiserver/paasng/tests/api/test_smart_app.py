@@ -17,7 +17,6 @@
 
 """API Testcases for S-Mart applications"""
 
-import importlib
 import shutil
 import tarfile
 from pathlib import Path
@@ -27,10 +26,8 @@ from unittest import mock
 import pytest
 import yaml
 from django.conf import settings
-from django.urls import clear_url_caches, reverse
+from django.urls import reverse
 
-import paasng.misc.tools.urls
-import paasng.urls
 from paasng.accessories.publish.market.models import MarketConfig, Tag
 from paasng.platform.applications.models import Application, SMartAppExtraInfo
 from paasng.platform.sourcectl.utils import compress_directory
@@ -66,22 +63,6 @@ def _mock_dispatch_smart_app():
     ):
         mock_push().config.digest.replace.return_value = ""
         yield
-
-
-@pytest.fixture(autouse=True)
-def _enable_smart_app_builder_and_reload_urls(settings):
-    """Enable FE_FEATURE_SETTINGS_SMART_APP_BUILDER setting and reload URLs to register smart_app routes."""
-    settings.FE_FEATURE_SETTINGS_SMART_APP_BUILDER = True
-    clear_url_caches()
-    importlib.reload(paasng.misc.tools.urls)
-    importlib.reload(paasng.urls)
-
-    yield
-
-    settings.FE_FEATURE_SETTINGS_SMART_APP_BUILDER = False
-    clear_url_caches()
-    importlib.reload(paasng.misc.tools.urls)
-    importlib.reload(paasng.urls)
 
 
 class TestCreateSMartApp:

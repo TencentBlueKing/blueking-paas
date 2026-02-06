@@ -15,37 +15,18 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-import importlib
 import uuid
 from unittest.mock import patch
 
 import pytest
-from django.urls import clear_url_caches, reverse
+from django.urls import reverse
 
-import paasng.misc.tools.urls
-import paasng.urls
 from paasng.misc.tools.smart_app.constants import SourceCodeOriginType
 from paasng.platform.engine.constants import JobStatus
 from tests.conftest import create_user
 from tests.paasng.misc.tools.smart_app.setup_utils import create_fake_smart_build
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture(autouse=True)
-def _enable_smart_app_builder_and_reload_urls(settings):
-    """Enable FE_FEATURE_SETTINGS_SMART_APP_BUILDER setting and reload URLs to register smart_app routes."""
-    settings.FE_FEATURE_SETTINGS_SMART_APP_BUILDER = True
-    clear_url_caches()
-    importlib.reload(paasng.misc.tools.urls)
-    importlib.reload(paasng.urls)
-
-    yield
-
-    settings.FE_FEATURE_SETTINGS_SMART_APP_BUILDER = False
-    clear_url_caches()
-    importlib.reload(paasng.misc.tools.urls)
-    importlib.reload(paasng.urls)
 
 
 class TestSmartBuildHistoryViewSet:

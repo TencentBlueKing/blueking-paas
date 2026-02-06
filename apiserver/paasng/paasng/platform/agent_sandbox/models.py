@@ -33,7 +33,7 @@ class Sandbox(UuidAuditedModel):
     snapshot = models.CharField(verbose_name="快照名字", max_length=128, help_text="沙箱初始化使用的快照（镜像）")
 
     target = models.CharField(verbose_name="目标区域", max_length=32, help_text="沙箱所属目标区域（集群）")
-    env = models.JSONField(verbose_name="环境变量", default={})
+    env = models.JSONField(verbose_name="环境变量", default=dict)
     cpu = models.DecimalField(verbose_name="CPU 上限（核）", max_digits=10, decimal_places=2, default="2")
     memory = models.DecimalField(verbose_name="内存上限（GB）", max_digits=10, decimal_places=2, default="1")
 

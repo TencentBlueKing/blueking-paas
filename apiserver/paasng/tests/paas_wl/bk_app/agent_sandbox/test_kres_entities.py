@@ -21,6 +21,7 @@ def test_create_and_get(namespace_maker):
         sandbox_id="abc123",
         workdir="/app",
         snapshot=DEFAULT_SNAPSHOT,
+        env={"FOO": "BAR"},
     )
     agent_sandbox_kmodel.create(sbx)
 
@@ -30,3 +31,4 @@ def test_create_and_get(namespace_maker):
     assert created_sbx.sandbox_id == sbx.sandbox_id
     assert created_sbx.workdir == sbx.workdir
     assert created_sbx.image == sbx.image
+    assert created_sbx.env == sbx.env

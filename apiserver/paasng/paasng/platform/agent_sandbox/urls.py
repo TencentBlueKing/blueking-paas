@@ -19,8 +19,6 @@ from django.urls import path
 
 from .views import AgentSandboxFSViewSet, AgentSandboxProcessViewSet, AgentSandboxViewSet
 
-PVAR_UUID = r"(?P<sandbox_id>[0-9a-f-]{32,36})"
-
 urlpatterns = [
     path(
         "api/agent_sandbox/applications/<slug:code>/sandboxes/",

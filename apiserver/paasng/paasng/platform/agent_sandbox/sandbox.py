@@ -97,6 +97,7 @@ def create_sandbox(
             name=sandbox.name,
             sandbox_id=sandbox.uuid.hex,
             snapshot=sandbox.snapshot,
+            env=sandbox.env,
         )
     except SandboxError:
         sandbox.status = SandboxStatus.ERR_CREATING.value
@@ -152,12 +153,19 @@ class AgentSandboxFactory:
         self.app = app
         self.kres_app = AgentSandboxKresApp(paas_app_id=app.code, tenant_id=app.tenant_id, target=target)
 
-    def create(self, name: str, sandbox_id: str, snapshot: str) -> "KubernetesPodSandbox":
+    def create(
+        self,
+        name: str,
+        sandbox_id: str,
+        snapshot: str,
+        env: dict[str, str] | None = None,
+    ) -> "KubernetesPodSandbox":
         """Create a new sandbox.
 
         :param name: The name of the sandbox.
         :param sandbox_id: The ID of the the sandbox.
         :param snapshot: The snapshot name used for initialize the sandbox.
+        :param env: The environment variables injected into the sandbox.
         :return: The sandbox object.
         """
         sandbox = AgentSandbox.create(
@@ -166,6 +174,7 @@ class AgentSandboxFactory:
             sandbox_id=sandbox_id,
             workdir=DEFAULT_WORKDIR,
             snapshot=snapshot,
+            env=env,
         )
         sandbox_created = False
         try:
@@ -202,6 +211,7 @@ class AgentSandboxFactory:
                 sandbox_id=sandbox.uuid.hex,
                 workdir=DEFAULT_WORKDIR,
                 snapshot=sandbox.snapshot,
+                env=sandbox.env,
             )
         except ValueError as exc:
             raise SandboxError("invalid sandbox configuration") from exc

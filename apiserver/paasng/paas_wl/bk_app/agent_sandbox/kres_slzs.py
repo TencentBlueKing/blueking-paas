@@ -48,6 +48,7 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
     def _construct_pod_spec(self, obj: "AgentSandbox") -> Dict:
         workdir = obj.workdir or DEFAULT_WORKDIR
         vol_name = "workspace"
+        env = [{"name": key, "value": value} for key, value in obj.env.items()]
         return {
             "restartPolicy": "Never",
             "terminationGracePeriodSeconds": DEFAULT_TERMINATION_GRACE_PERIOD_SECONDS,
@@ -58,6 +59,7 @@ class AgentSandboxSerializer(KresAppEntitySerializer["AgentSandbox"]):
                     "command": DEFAULT_COMMAND,
                     "workingDir": workdir,
                     "resources": DEFAULT_RESOURCES,
+                    "env": env,
                     "volumeMounts": [{"name": vol_name, "mountPath": workdir}],
                 }
             ],
@@ -71,6 +73,12 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
     def deserialize(self, app: "AgentSandboxKresApp", kube_data: ResourceInstance) -> "AgentSandbox":
         main_container = kube_data.spec.containers[0]
         workdir = getattr(main_container, "workingDir", DEFAULT_WORKDIR)
+        # Parse and get env as dict
+        env = {
+            str(item.name): str(getattr(item, "value", ""))
+            for item in (getattr(main_container, "env", None) or [])
+            if getattr(item, "name", None)
+        }
         labels = kube_data.metadata.labels or {}
         _, sandbox_id = AgentSandboxLabels.parse(labels)
 
@@ -80,6 +88,7 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
             sandbox_id=sandbox_id,
             workdir=workdir,
             image=getattr(main_container, "image", DEFAULT_IMAGE),
+            env=env,
             status=self._get_status(kube_data),
         )
 

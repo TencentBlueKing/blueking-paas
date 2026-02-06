@@ -14,7 +14,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from attrs import define
 from django.conf import settings
@@ -81,12 +81,14 @@ class AgentSandbox(KresAppEntity):
     :param sandbox_id: The unique ID of the sandbox.
     :param workdir: The working directory inside the sandbox.
     :param image: The container image used in the sandbox.
+    :param env: The environment variables set in the sandbox.
     :param status: The current status of the sandbox.
     """
 
     sandbox_id: str
     workdir: str
     image: str
+    env: dict[str, str] = field(default_factory=dict)
     status: str = "Pending"
 
     class Meta:
@@ -102,6 +104,7 @@ class AgentSandbox(KresAppEntity):
         sandbox_id: str,
         workdir: str,
         snapshot: str,
+        env: dict[str, str] | None = None,
     ) -> "AgentSandbox":
         """Create an AgentSandbox instance."""
         if snapshot == DEFAULT_SNAPSHOT:
@@ -114,6 +117,7 @@ class AgentSandbox(KresAppEntity):
             sandbox_id=sandbox_id,
             workdir=workdir,
             image=image,
+            env=env or {},
         )
 
 

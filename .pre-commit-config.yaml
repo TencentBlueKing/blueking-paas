@@ -71,3 +71,15 @@ repos:
         name: run make lint for "builder-stack/kaniko-shim"
         entry: bash -c "cd builder-stack/kaniko-shim && make lint"
         files: '^builder-stack/kaniko-shim/'
+      - id: sandbox-daemon-fmt
+        language: system
+        pass_filenames: false
+        name: run make fmt for "sandbox-daemon"
+        entry: bash -c "cd sandbox/daemon && make fmt"
+        files: '^sandbox/daemon'
+      - id: sandbox-daemon-lint
+        language: system
+        name: run make lint for "sandbox-daemon"
+        pass_filenames: false
+        entry: bash -c "cd sandbox/daemon && make lint"
+        files: '^sandbox/daemon'

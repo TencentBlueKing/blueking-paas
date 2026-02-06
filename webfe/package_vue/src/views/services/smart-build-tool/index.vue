@@ -92,11 +92,11 @@
                 ></span>
                 {{ statusMap[row[column.prop]] || row[column.prop] || '--' }}
               </template>
-              <template v-else-if="column.prop === 'source_origin'">
-                <span>{{ sourceTypeMap[row[column.prop]] || '--' }}</span>
-              </template>
               <template v-else-if="column.prop === 'sha256_signature'">
-                <span v-bk-tooltips="{ content: row[column.prop] || '', disabled: !row[column.prop] }">
+                <span
+                  v-dashed
+                  v-bk-tooltips="{ content: row[column.prop] || '', disabled: !row[column.prop] }"
+                >
                   {{ row[column.prop] ? row[column.prop]?.substring(0, 8) : '--' }}
                 </span>
               </template>
@@ -169,10 +169,6 @@ export default {
         keyword: '',
         isAbnormal: false,
       },
-      sourceTypeMap: {
-        repo: this.$t('代码仓库'),
-        package: this.$t('源码包'),
-      },
       // 侧边栏配置
       smartSideConfig: {
         visible: false,
@@ -208,19 +204,20 @@ export default {
           'min-width': 140,
         },
         {
-          label: this.$t('源码来源'),
-          prop: 'source_origin',
+          label: this.$t('应用版本'),
+          prop: 'app_version',
         },
         {
-          label: this.$t('版本号'),
-          prop: 'app_version',
+          label: this.$t('包版本'),
+          prop: 'packaging_version',
+          renderHeader: this.renderHeader,
         },
         {
           label: this.$t('源码包'),
           prop: 'package_name',
         },
         {
-          label: this.$t('摘要'),
+          label: this.$t('源码摘要'),
           prop: 'sha256_signature',
         },
         {
@@ -255,6 +252,26 @@ export default {
     this.getBuildRecords();
   },
   methods: {
+    renderHeader(h, data) {
+      const directive = {
+        content: '包版本',
+        allowHtml: true,
+        html: `
+          <p>V1：${this.$t('支持开发者中心 1.5.x 及以上版本')}</p>
+          <p>V2：${this.$t('支持开发者中心 1.7.x 及以上版本，构建更快、包更小，适合多模块共享代码的场景')}</p>
+        `,
+        placement: 'top',
+        width: 300,
+      };
+      return (
+        <span
+          class="custom-header-cell"
+          v-bk-tooltips={directive}
+        >
+          {data.column.label}
+        </span>
+      );
+    },
     // 下载构建日志
     async downloadBuildLog(row) {
       this.$set(this.downloadLoadingMap, row.uuid, true);
@@ -395,6 +412,13 @@ export default {
   .tool-table-container {
     background-color: #fff;
     padding: 12px 16px;
+  }
+  /deep/ .bk-table-header {
+    .custom-header-cell {
+      text-decoration: underline;
+      text-decoration-style: dashed;
+      text-underline-position: under;
+    }
   }
 }
 </style>

@@ -34,6 +34,7 @@ from typing import (
     Optional,
     Protocol,
     Type,
+    TypeAlias,
     TypeVar,
 )
 
@@ -50,6 +51,7 @@ from paas_wl.infras.resources.kube_res.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from paas_wl.bk_app.applications.models.app import WlApp
     from paas_wl.infras.resources.generation.mapper import MapperPack
 
 logger = logging.getLogger(__name__)
@@ -61,7 +63,7 @@ class KresAppProtocol(Protocol):
     # The namespace of managed resources
     namespace: str
 
-    def get_client(self) -> EnhancedApiClient:
+    def get_kube_api_client(self) -> EnhancedApiClient:
         """Get the kubernetes API client for current app."""
         raise NotImplementedError
 
@@ -389,7 +391,7 @@ class NamespaceScopedReader(Generic[KET, APP]):
     @staticmethod
     def _exc_is_expired_rv(exc: ApiException) -> bool:
         """Check if an exception is raised because of expired ResourceVersion"""
-        # Consider all responses with 401 status code as "resourceVersion expired" type error, stricter
+        # Consider all responses with 410 status code as "resourceVersion expired" type error, stricter
         # checking like `"too old resource version" in exc.reason` sounds cool but it may also introduces
         # other problems in further Kubernetes versions.
         #
@@ -531,7 +533,7 @@ class KresAppEntityReader(Generic[KET, APP]):
     @staticmethod
     def _exc_is_expired_rv(exc: ApiException) -> bool:
         """Check if an exception is raised because of expired ResourceVersion"""
-        # Consider all responses with 401 status code as "resourceVersion expired" type error, stricter
+        # Consider all responses with 410 status code as "resourceVersion expired" type error, stricter
         # checking like `"too old resource version" in exc.reason` sounds cool but it may also introduces
         # other problems in further Kubernetes versions.
         #
@@ -563,7 +565,7 @@ class KresAppEntityReader(Generic[KET, APP]):
         """Return kres object as a context manager which was initialized with kubernetes client, will close all
         connection automatically when exit to avoid connections leaking.
         """
-        with app.get_client() as client:
+        with app.get_kube_api_client() as client:
             yield self.entity_type.Meta.kres_class(client, api_version=api_version)
 
     kres: Callable[..., ContextManager["kres.BaseKresource"]] = contextmanager(_kres)
@@ -721,7 +723,7 @@ class Schedule:
 
 
 # These names starts with "App..." are provided for backward compatibility
-AppEntity = KresAppEntity
+AppEntity: TypeAlias = KresAppEntity["WlApp"]
 AppEntitySerializer = KresAppEntitySerializer
 AppEntityDeserializer = KresAppEntityDeserializer
 AppEntityManager = KresAppEntityManager

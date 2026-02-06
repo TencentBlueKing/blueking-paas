@@ -97,7 +97,7 @@ class AgentSandboxDeserializer(KresAppEntityDeserializer["AgentSandbox", "AgentS
 class AgentSandboxLabels:
     """Generate and parse labels for an agent sandbox Pod."""
 
-    key_app_id = "bkapp.paas.bk.tencent.com/paas-app-id"
+    key_app_id = "bkapp.paas.bk.tencent.com/code"
     key_sandbox_id = "bkapp.paas.bk.tencent.com/sandbox-id"
 
     @classmethod

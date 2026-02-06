@@ -346,4 +346,4 @@ class DevSandboxEnvVarViewSet(GenericViewSet, ApplicationCodeInPathMixin):
         dev_sandbox = self._get_dev_sandbox()
         env_vars = dev_sandbox.list_env_vars()
 
-        return Response(DevSandboxEnvVarsListOutputSLZ(env_vars.masked_list, many=True).data)
+        return Response(DevSandboxEnvVarsListOutputSLZ(env_vars.list, many=True).data)

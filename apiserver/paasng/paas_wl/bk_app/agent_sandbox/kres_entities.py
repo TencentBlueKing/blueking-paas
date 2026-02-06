@@ -53,7 +53,7 @@ class AgentSandboxKresApp:
         self._safe_app_id = self.paas_app_id.replace("_", "0us0")
         self.namespace = f"bk-agent-sbx-{self._safe_app_id}"
 
-    def get_client(self) -> EnhancedApiClient:
+    def get_kube_api_client(self) -> EnhancedApiClient:
         """Get the kubernetes API client for current app."""
         cluster = ClusterAllocator(
             AllocationContext(

@@ -4861,3 +4861,7 @@ msgstr "Invalid encrypted value format: {value}"
 #, python-brace-format
 msgid "数据嵌套层级过深，最大层级为 {max_depth}"
 msgstr "The data nesting level is too deep, with a maximum level of {max_depth}"
+
+#: paasng/plat_mgt/infras/services/serializers/services.py:134
+msgid "本地增强服务必须指定 provider_name"
+msgstr "provider_name is required for local service"

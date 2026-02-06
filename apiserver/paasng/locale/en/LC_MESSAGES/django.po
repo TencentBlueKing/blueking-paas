@@ -4866,6 +4866,14 @@ msgstr "The data nesting level is too deep, with a maximum level of {max_depth}"
 msgid "至少需要指定一个匹配规则"
 msgstr "At least one matching rule must be specified"
 
+#: paasng/plat_mgt/infras/services/serializers/pre_created_instances.py:77
+msgid "POLICY 类型的预创建实例必须指定 binding_policy"
+msgstr "POLICY pre-created instances must specify binding_policy"
+
+#: paasng/plat_mgt/infras/services/serializers/pre_created_instances.py:79
+msgid "FIFO 类型的预创建实例不允许指定 binding_policy"
+msgstr "FIFO pre-created instances must not specify binding_policy"
+
 #: paasng/plat_mgt/infras/services/serializers/services.py:134
 msgid "本地增强服务必须指定 provider_name"
 msgstr "provider_name is required for local service"

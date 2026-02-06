@@ -17,6 +17,7 @@
 
 import logging
 
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -69,12 +70,10 @@ class AgentSandboxViewSet(viewsets.GenericViewSet, ApplicationCodeInPathMixin):
         return Response(SandboxCreateOutputSLZ(sandbox).data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(tags=["agent_sandbox"], responses={status.HTTP_204_NO_CONTENT: ""})
-    def destroy(self, request, code, sandbox_id):
+    def destroy(self, request, sandbox_id):
         """停止并销毁一个 Agent Sandbox"""
-        application = self.get_application()
-        sandbox = Sandbox.objects.filter(application=application, uuid=sandbox_id, deleted_at__isnull=True).first()
-        if not sandbox:
-            raise error_codes.AGENT_SANDBOX_NOT_FOUND
+        sandbox = get_object_or_404(Sandbox, uuid=sandbox_id, deleted_at__isnull=True)
+        self.check_object_permissions(request, sandbox.application)
 
         try:
             delete_sandbox(sandbox)

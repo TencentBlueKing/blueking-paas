@@ -33,7 +33,7 @@ class SandboxCreateOutputSLZ(serializers.ModelSerializer):
     class Meta:
         model = Sandbox
         fields = (
-            "sandbox_id",
+            "uuid",
             "name",
             "snapshot",
             "target",

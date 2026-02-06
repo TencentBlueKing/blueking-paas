@@ -18,7 +18,7 @@
 import logging
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 import requests
@@ -40,7 +40,11 @@ class BkAppSecret:
 
     def __post_init__(self):
         if isinstance(self.created_at, str):
+            # 兼容线上历史数据: 按 UTC 字符串解析, 但保留无时区 datetime(不附加 tzinfo) 以保持现有行为
             self.created_at = datetime.strptime(self.created_at, "%Y-%m-%dT%H:%M:%SZ")  # type: ignore
+        elif isinstance(self.created_at, int):
+            # 适配新版响应时间戳格式
+            self.created_at = datetime.fromtimestamp(self.created_at, tz=timezone.utc)
 
 
 @contextmanager
@@ -99,10 +103,6 @@ class BkOauthClient:
         }
         with wrap_request_exc():
             resp = requests.post(url, json=data, headers=self.headers)
-            # 状态码 409 代表 bk_app_code client 已经存在
-            if resp.status_code in (200, 409):
-                return
-
             self._validate_resp(resp)
 
     def create_app_secret(self, bk_app_code: str):

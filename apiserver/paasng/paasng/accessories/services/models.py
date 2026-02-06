@@ -216,7 +216,7 @@ class PreCreatedInstance(UuidAuditedModel):
         without_policies_qs = unallocated_qs.exclude(
             pk__in=PreCreatedInstanceBindingPolicy.objects.values("pre_created_instance")
         )
-        if not all(k in params for k in ("application_code", "env", "module_name")):
+        if not any(k in params for k in ("application_code", "env", "module_name")):
             logger.warning("missing params to match pre-created instance, use plain FIFO match strategy")
             return without_policies_qs.first()
 
@@ -230,7 +230,7 @@ class PreCreatedInstance(UuidAuditedModel):
             logger.debug("no matching binding policy found, use plain FIFO match strategy")
             return unallocated_qs.first()
 
-        return cls.objects.select_for_update().filter(pk=policy.pre_created_instance.pk, is_allocated=False).first()
+        return unallocated_qs.filter(pk=policy.pre_created_instance.pk, is_allocated=False).first()
 
     def __str__(self):
         return "{id}-{plan}".format(plan=repr(self.plan), id=self.uuid)

@@ -18,6 +18,7 @@ import base64
 import json
 from typing import Dict
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 
@@ -34,6 +35,8 @@ class PreCreatedInstanceBindingPolicyInputSLZ(serializers.Serializer):
             if val == "":
                 continue
             result[key] = val
+        if not result:
+            raise serializers.ValidationError(_("至少需要指定一个匹配规则"))
         return super().to_internal_value(result)
 
 

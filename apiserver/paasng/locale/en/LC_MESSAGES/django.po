@@ -4862,6 +4862,10 @@ msgstr "Invalid encrypted value format: {value}"
 msgid "数据嵌套层级过深，最大层级为 {max_depth}"
 msgstr "The data nesting level is too deep, with a maximum level of {max_depth}"
 
+#: paasng/plat_mgt/infras/services/serializers/pre_created_instances.py:39
+msgid "至少需要指定一个匹配规则"
+msgstr "At least one matching rule must be specified"
+
 #: paasng/plat_mgt/infras/services/serializers/services.py:134
 msgid "本地增强服务必须指定 provider_name"
 msgstr "provider_name is required for local service"

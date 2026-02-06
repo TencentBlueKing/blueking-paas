@@ -20,7 +20,7 @@ import json
 import pytest
 from django_dynamic_fixture import G
 
-from paasng.accessories.services.models import Plan, PreCreatedInstance
+from paasng.accessories.services.models import Plan, PreCreatedInstance, PreCreatedInstanceBindingPolicy
 
 pytestmark = pytest.mark.django_db
 
@@ -77,3 +77,75 @@ class TestResourcePoolProvider:
         else:
             assert PreCreatedInstance.objects.get(pk=pools[0].pk).is_allocated
             assert PreCreatedInstance.objects.count() == len(pools)
+
+
+class TestPreCreatedInstanceBindingPolicy:
+    def test_resolve_policy_match_priority(self, bk_plan):
+        ins_app_env = G(PreCreatedInstance, plan=bk_plan)
+        ins_module_env = G(PreCreatedInstance, plan=bk_plan)
+        ins_env_only = G(PreCreatedInstance, plan=bk_plan)
+
+        policy_app_env = G(
+            PreCreatedInstanceBindingPolicy,
+            pre_created_instance=ins_app_env,
+            app_code="app",
+            module_name=None,
+            env="prod",
+        )
+        policy_module_env = G(
+            PreCreatedInstanceBindingPolicy,
+            pre_created_instance=ins_module_env,
+            app_code=None,
+            module_name="mod",
+            env="prod",
+        )
+        policy_env_only = G(
+            PreCreatedInstanceBindingPolicy,
+            pre_created_instance=ins_env_only,
+            app_code=None,
+            module_name=None,
+            env="prod",
+        )
+
+        # 优先级计算可以认为是比较 (app_code, module_name, env) 的大小, app_code 优先
+        qs = PreCreatedInstanceBindingPolicy.objects.filter(
+            pre_created_instance__in=PreCreatedInstance.objects.filter(plan=bk_plan)
+        )
+        policy = PreCreatedInstanceBindingPolicy.resolve_policy("app", "mod", "prod", qs)
+        assert policy == policy_app_env
+
+        policy = PreCreatedInstanceBindingPolicy.resolve_policy("other", "mod", "prod", qs)
+        assert policy == policy_module_env
+
+        policy = PreCreatedInstanceBindingPolicy.resolve_policy(None, None, "prod", qs)
+        assert policy == policy_env_only
+
+
+class TestPreCreatedInstanceSelectForRequest:
+    def test_missing_params_uses_fifo_without_policies(self, bk_plan):
+        ins_with_policy = G(PreCreatedInstance, plan=bk_plan)
+        ins_without_policy = G(PreCreatedInstance, plan=bk_plan)
+        G(PreCreatedInstanceBindingPolicy, pre_created_instance=ins_with_policy, app_code="app")
+
+        instance = PreCreatedInstance.select_for_request(bk_plan, {})
+        assert instance == ins_without_policy
+
+    @pytest.mark.parametrize(
+        ("policy_env", "expect_policy"),
+        [("prod", True), ("stag", False)],
+    )
+    def test_policy_match_and_fallback(self, bk_plan, policy_env, expect_policy):
+        fifo_first = G(PreCreatedInstance, plan=bk_plan)
+        policy_instance = G(PreCreatedInstance, plan=bk_plan)
+        G(
+            PreCreatedInstanceBindingPolicy,
+            pre_created_instance=policy_instance,
+            app_code="app",
+            module_name="mod",
+            env=policy_env,
+        )
+
+        instance = PreCreatedInstance.select_for_request(
+            bk_plan, {"application_code": "app", "module_name": "mod", "env": "prod"}
+        )
+        assert instance == (policy_instance if expect_policy else fifo_first)

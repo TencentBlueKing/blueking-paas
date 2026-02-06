@@ -18,7 +18,7 @@
 import json
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import ClassVar, Dict, Optional, Set
+from typing import ClassVar, Dict, Set
 
 from django.db import transaction
 from django.utils.translation import gettext as _
@@ -68,12 +68,7 @@ class ResourcePoolProvider(BaseProvider):
 
     def create(self, params: Dict) -> InstanceData:
         with transaction.atomic():
-            instance: Optional[PreCreatedInstance] = (
-                PreCreatedInstance.objects.select_for_update()
-                .filter(plan=self.plan, is_allocated=False)
-                .order_by("created")
-                .first()
-            )
+            instance = PreCreatedInstance.select_for_request(self.plan, params)
             if instance is None:
                 raise ResourceNotEnoughError(_("资源不足, 配置资源实例失败."))
 

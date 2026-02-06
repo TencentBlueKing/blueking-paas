@@ -20,7 +20,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from paasng.accessories.services.models import Plan, PreCreatedInstance, Service
+from paasng.accessories.services.models import Plan, PreCreatedInstance, PreCreatedInstanceBindingPolicy, Service
 from paasng.infras.accounts.permissions.constants import PlatMgtAction
 from paasng.infras.accounts.permissions.plat_mgt import plat_mgt_perm_class
 from paasng.misc.audit.constants import OperationEnum, OperationTarget
@@ -74,8 +74,14 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
             plan=plan,
             config=data["config"],
             credentials=data["credentials"],
+            allocation_type=data["allocation_type"],
             tenant_id=plan.tenant_id,
         )
+        if data.get("binding_policy"):
+            PreCreatedInstanceBindingPolicy.objects.create(
+                pre_created_instance=ins, tenant_id=ins.tenant_id, **data["binding_policy"]
+            )
+
         add_plat_mgt_audit_record(
             user=request.user.pk,
             operation=OperationEnum.CREATE,
@@ -100,7 +106,15 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
 
         instance.config = data["config"]
         instance.credentials = data["credentials"]
+        instance.allocation_type = data["allocation_type"]
         instance.save(update_fields=["config", "credentials"])
+
+        if data.get("binding_policy"):
+            PreCreatedInstanceBindingPolicy.objects.update_or_create(
+                pre_created_instance=instance, tenant_id=instance.tenant_id, defaults=data.get("binding_policy", {})
+            )
+        else:
+            instance.binding_policies.all().delete()
 
         data_after = PreCreatedInstanceOutputSLZ(instance).data
         add_plat_mgt_audit_record(

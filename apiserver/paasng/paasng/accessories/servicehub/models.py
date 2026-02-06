@@ -68,12 +68,16 @@ class ServiceEngineAppAttachment(OwnerTimestampedModel):
         if self.service_instance:
             return self.service_instance
 
-        application_environment = ApplicationEnvironment.objects.get(engine_app=self.engine_app)
+        application_environment = ApplicationEnvironment.objects.select_related("module", "application").get(
+            engine_app=self.engine_app
+        )
         params = {
             "engine_app_name": self.engine_app.name,
             "region": self.engine_app.region,
             "application_code": application_environment.application.code,
             "application_id": application_environment.application.id,
+            "module_name": application_environment.module.name,
+            "env": application_environment.environment,
         }
 
         service_instance = self.service.create_service_instance_by_plan(self.plan, params=params)

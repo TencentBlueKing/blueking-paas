@@ -256,7 +256,7 @@ class PreCreatedInstanceBindingPolicy(UuidAuditedModel):
         cls, app_code, module_name, env, policy_qs: Optional["QuerySet"] = None
     ) -> Optional["PreCreatedInstanceBindingPolicy"]:
         """
-        找到最匹配的绑定策略，匹配优先级为 app_code > module_name > env
+        找到最匹配的绑定策略，匹配优先级为 app_code(3) > module_name(2) > env(1)
         可以理解为按 (app_code, module_name, env) 的匹配程度排序
         当匹配程度相同时，返回 created_at 最早的那条
 

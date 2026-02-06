@@ -74,6 +74,7 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
             plan=plan,
             config=data["config"],
             credentials=data["credentials"],
+            allocation_type=data["allocation_type"],
             tenant_id=plan.tenant_id,
         )
         if data.get("binding_policy"):
@@ -105,6 +106,7 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
 
         instance.config = data["config"]
         instance.credentials = data["credentials"]
+        instance.allocation_type = data["allocation_type"]
         instance.save(update_fields=["config", "credentials"])
 
         if data.get("binding_policy"):

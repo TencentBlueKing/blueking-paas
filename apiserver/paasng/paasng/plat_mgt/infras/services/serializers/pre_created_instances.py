@@ -22,6 +22,8 @@ from typing import Dict
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from paasng.accessories.services.constants import PreCreatedInstanceAllocationType
+
 
 class PreCreatedInstanceBindingPolicyInputSLZ(serializers.Serializer):
     app_code = serializers.CharField(help_text="应用编码", required=False)
@@ -36,30 +38,48 @@ class PreCreatedInstanceBindingPolicyInputSLZ(serializers.Serializer):
             if val == "":
                 continue
             result[key] = val
-        if not result:
-            raise serializers.ValidationError(_("至少需要指定一个匹配规则"))
         return super().to_internal_value(result)
+
+    def validate(self, attrs):
+        if not any(attrs.get(field) for field in ("app_code", "module_name", "env")):
+            raise serializers.ValidationError(_("至少需要指定一个匹配规则"))
+        return super().validate(attrs)
 
 
 class PreCreatedInstanceUpsertSLZ(serializers.Serializer):
     config = serializers.JSONField(help_text="预创建实例的配置")
     credentials = serializers.JSONField(help_text="预创建实例的凭据")
     binding_policy = PreCreatedInstanceBindingPolicyInputSLZ(help_text="实例绑定策略", required=False, default=dict)
+    allocation_type = serializers.ChoiceField(
+        help_text="预创建实例的分配类型",
+        choices=PreCreatedInstanceAllocationType.get_django_choices(),
+    )
 
     # 对 config.tls base64 编码
-    def validate_config(self, value):
-        tls_info = value.get("tls")
-        if not isinstance(tls_info, dict):
-            return value
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
 
-        data = value.copy()
+        tls_info = data.get("cfg", {}).get("tls")
+        if not tls_info or not isinstance(tls_info, dict):
+            return data
+
         tls_info = tls_info.copy()
         for k in ("cert", "key", "ca"):
             val = tls_info.get(k)
             if val:
                 tls_info[k] = base64.b64encode(val.encode()).decode()
-        data["tls"] = tls_info
+        data["cfg"]["tls"] = tls_info
         return data
+
+    def validate(self, attrs):
+        allocation_type = attrs["allocation_type"]
+        has_policy = bool(attrs.get("binding_policy"))
+
+        if allocation_type == PreCreatedInstanceAllocationType.POLICY and not has_policy:
+            raise serializers.ValidationError(_("POLICY 类型的预创建实例必须指定 binding_policy"))
+        if allocation_type == PreCreatedInstanceAllocationType.FIFO and has_policy:
+            raise serializers.ValidationError(_("FIFO 类型的预创建实例不允许指定 binding_policy"))
+        return super().validate(attrs)
 
 
 class PreCreatedInstanceOutputSLZ(serializers.Serializer):

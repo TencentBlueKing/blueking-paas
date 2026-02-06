@@ -25,6 +25,7 @@ from django.db.models import Case, IntegerField, Q, Value, When
 from jsonfield import JSONField
 from translated_fields import TranslatedField, TranslatedFieldWithFallback
 
+from paasng.accessories.services.constants import PreCreatedInstanceAllocationType
 from paasng.core.core.storages.object_storage import service_logo_storage
 from paasng.core.tenant.fields import tenant_id_field_factory
 from paasng.utils.models import ImageField, UuidAuditedModel
@@ -187,6 +188,10 @@ class PreCreatedInstance(UuidAuditedModel):
     plan = models.ForeignKey("Plan", on_delete=models.SET_NULL, db_constraint=False, blank=True, null=True)
     config = JSONField(default=dict, help_text="same of ServiceInstance.config")
     credentials = EncryptField(default="", help_text="same of ServiceInstance.credentials")
+    # see constants.PreCreatedInstanceAllocationType
+    allocation_type = models.CharField(
+        max_length=32, default=PreCreatedInstanceAllocationType.FIFO, help_text="分配类型"
+    )
     is_allocated = models.BooleanField(default=False, help_text="实例是否已被分配")
     tenant_id = tenant_id_field_factory()
 

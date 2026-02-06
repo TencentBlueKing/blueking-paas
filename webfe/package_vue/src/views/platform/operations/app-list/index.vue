@@ -471,6 +471,9 @@ export default {
         this.tableEmptyConf.isAbnormal = false;
         this.updateTableEmptyConfig();
       } catch (e) {
+        if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') {
+          return;
+        }
         this.tableEmptyConf.isAbnormal = true;
         this.catchErrorHandler(e);
       } finally {

@@ -370,6 +370,10 @@ export default {
 
   beforeDestroy() {
     bus.$off('get-release-info');
+    if (this.intervalTimer) {
+      clearTimeout(this.intervalTimer);
+      this.intervalTimer = null;
+    }
   },
 
   mounted() {

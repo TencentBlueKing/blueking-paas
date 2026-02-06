@@ -107,12 +107,12 @@ class PreCreatedInstanceViewSet(viewsets.GenericViewSet):
         instance.credentials = data["credentials"]
         instance.save(update_fields=["config", "credentials"])
 
-        # policy 更新
-        instance.binding_policies.all().delete()
         if data.get("binding_policy"):
-            PreCreatedInstanceBindingPolicy.objects.create(
-                pre_created_instance=instance, tenant_id=instance.tenant_id, **data["binding_policy"]
+            PreCreatedInstanceBindingPolicy.objects.update_or_create(
+                pre_created_instance=instance, tenant_id=instance.tenant_id, defaults=data.get("binding_policy", {})
             )
+        else:
+            instance.binding_policies.all().delete()
 
         data_after = PreCreatedInstanceOutputSLZ(instance).data
         add_plat_mgt_audit_record(

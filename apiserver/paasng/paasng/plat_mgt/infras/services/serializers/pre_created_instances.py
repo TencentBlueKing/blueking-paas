@@ -15,6 +15,7 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import base64
+import binascii
 import json
 from typing import Dict
 
@@ -88,5 +89,8 @@ class PreCreatedInstanceOutputSLZ(serializers.Serializer):
 
         for k in ("cert", "key", "ca"):
             if val := tls_info.get(k):
-                tls_info[k] = base64.b64decode(val.encode()).decode()
+                try:
+                    tls_info[k] = base64.b64decode(val.encode()).decode()
+                except (binascii.Error, UnicodeDecodeError):
+                    tls_info[k] = val
         return result

@@ -116,4 +116,36 @@ class TestPreCreatedInstanceBindingPolicy:
 
         policy = PreCreatedInstanceBindingPolicy.resolve_policy("other", "mod", "prod", qs)
         assert policy == policy_module_env
-        assert policy != policy_env_only
+
+        policy = PreCreatedInstanceBindingPolicy.resolve_policy(None, None, "prod", qs)
+        assert policy == policy_env_only
+
+
+class TestPreCreatedInstanceSelectForRequest:
+    def test_missing_params_uses_fifo_without_policies(self, bk_plan):
+        ins_with_policy = G(PreCreatedInstance, plan=bk_plan)
+        ins_without_policy = G(PreCreatedInstance, plan=bk_plan)
+        G(PreCreatedInstanceBindingPolicy, pre_created_instance=ins_with_policy, app_code="app")
+
+        instance = PreCreatedInstance.select_for_request(bk_plan, {})
+        assert instance == ins_without_policy
+
+    @pytest.mark.parametrize(
+        ("policy_env", "expect_policy"),
+        [("prod", True), ("stag", False)],
+    )
+    def test_policy_match_and_fallback(self, bk_plan, policy_env, expect_policy):
+        fifo_first = G(PreCreatedInstance, plan=bk_plan)
+        policy_instance = G(PreCreatedInstance, plan=bk_plan)
+        G(
+            PreCreatedInstanceBindingPolicy,
+            pre_created_instance=policy_instance,
+            app_code="app",
+            module_name="mod",
+            env=policy_env,
+        )
+
+        instance = PreCreatedInstance.select_for_request(
+            bk_plan, {"application_code": "app", "module_name": "mod", "env": "prod"}
+        )
+        assert instance == (policy_instance if expect_policy else fifo_first)

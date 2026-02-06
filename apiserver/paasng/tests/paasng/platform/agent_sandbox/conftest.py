@@ -13,23 +13,9 @@
 #
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
+import pytest
 
 
-class SandboxError(Exception):
-    """The base exception for agent sandbox errors."""
-
-
-class SandboxCreateTimeout(SandboxError):
-    """Raised when creating a sandbox times out."""
-
-
-class SandboxAlreadyExists(SandboxError):
-    """Raised when a sandbox already exists."""
-
-
-class SandboxFileError(SandboxError):
-    """Raised when file operations in the sandbox fail."""
-
-
-class SandboxExecTimeout(SandboxError):
-    """Raised when executing a command in the sandbox times out."""
+@pytest.fixture(scope="session", autouse=True)
+def _skip_if_old_k8s_version(skip_if_old_k8s_version):
+    """Auto-apply shared k8s version skip guard for agent_sandbox tests."""

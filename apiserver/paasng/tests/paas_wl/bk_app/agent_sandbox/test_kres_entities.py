@@ -1,5 +1,6 @@
 import pytest
 
+from paas_wl.bk_app.agent_sandbox.constants import DEFAULT_SNAPSHOT, DEFAULT_TARGET
 from paas_wl.bk_app.agent_sandbox.kres_entities import AgentSandbox, AgentSandboxKresApp, agent_sandbox_kmodel
 from paasng.core.tenant.user import DEFAULT_TENANT_ID
 
@@ -11,13 +12,16 @@ def test_create_and_get(namespace_maker):
     sbx_app = AgentSandboxKresApp(
         paas_app_id="demo-sbx",
         tenant_id=DEFAULT_TENANT_ID,
+        target=DEFAULT_TARGET,
     )
     namespace_maker.make(sbx_app.namespace)
     sbx = AgentSandbox.create(
         sbx_app,
+        name="abc123",
         sandbox_id="abc123",
         workdir="/app",
-        image="python:3.11-alpine",
+        snapshot=DEFAULT_SNAPSHOT,
+        env={"FOO": "BAR"},
     )
     agent_sandbox_kmodel.create(sbx)
 
@@ -27,3 +31,4 @@ def test_create_and_get(namespace_maker):
     assert created_sbx.sandbox_id == sbx.sandbox_id
     assert created_sbx.workdir == sbx.workdir
     assert created_sbx.image == sbx.image
+    assert created_sbx.env == sbx.env

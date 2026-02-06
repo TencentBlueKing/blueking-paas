@@ -14,22 +14,37 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from types import SimpleNamespace
-
 import pytest
+from rest_framework import serializers
 
-from tests.utils.helpers import kube_ver_lt
+from paasng.platform.agent_sandbox.serializers import SandboxEnvField
+
+
+class DummyEnvSerializer(serializers.Serializer):
+    env = SandboxEnvField(required=False, default=dict)
+
+
+def test_env_must_be_object():
+    slz = DummyEnvSerializer(data={"env": "not-object"})
+
+    assert not slz.is_valid()
+    assert str(slz.errors["env"][0]) == "env must be an object"
 
 
 @pytest.mark.parametrize(
-    ("version", "target", "result"),
-    [
-        (SimpleNamespace(major="1", minor="19"), (1, 20), True),
-        (SimpleNamespace(major="1", minor="20"), (1, 20), False),
-        (SimpleNamespace(major="1", minor="20+"), (1, 20), False),
-        (SimpleNamespace(major="1", minor="19+"), (1, 20), True),
-        (SimpleNamespace(major="2", minor="1"), (1, 20), False),
-    ],
+    "env_value",
+    [{1: "one"}, {"FOO": 1}, {"FOO": "BAR", "COUNT": 1}],
 )
-def test_kube_ver_lt(version, target, result):
-    assert kube_ver_lt(version, target) is result
+def test_env_must_be_string_mapping(env_value):
+    slz = DummyEnvSerializer(data={"env": env_value})
+
+    assert not slz.is_valid()
+    assert str(slz.errors["env"][0]) == "env must be an object of string key-value pairs"
+
+
+def test_env_accepts_string_mapping():
+    env = {"FOO": "BAR", "EMPTY": ""}
+    slz = DummyEnvSerializer(data={"env": env})
+
+    slz.is_valid(raise_exception=True)
+    assert slz.validated_data["env"] == env

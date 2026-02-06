@@ -14,12 +14,12 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from attrs import define
 from django.conf import settings
 
-from paas_wl.bk_app.agent_sandbox.constants import DEFAULT_IMAGE
+from paas_wl.bk_app.agent_sandbox.constants import DEFAULT_IMAGE, DEFAULT_SNAPSHOT, DEFAULT_TARGET
 from paas_wl.bk_app.agent_sandbox.kres_slzs import AgentSandboxDeserializer, AgentSandboxSerializer
 from paas_wl.infras.cluster.entities import AllocationContext
 from paas_wl.infras.cluster.shim import ClusterAllocator
@@ -37,11 +37,14 @@ class AgentSandboxKresApp:
 
     :param paas_app_id: The PaaS application ID.
     :param tenant_id: The tenant ID where the application is located.
+    :param target: The target of the app, this value determines the cluster which the sandboxes
+        will run in.
     :param region: The region of the application, optional.
     """
 
     paas_app_id: str
     tenant_id: str
+    target: str
     region: str = settings.DEFAULT_REGION_NAME
 
     # The namespace where the resources are created
@@ -55,6 +58,9 @@ class AgentSandboxKresApp:
 
     def get_kube_api_client(self) -> EnhancedApiClient:
         """Get the kubernetes API client for current app."""
+        if self.target != DEFAULT_TARGET:
+            raise RuntimeError(f"target unsupported: {self.target}")
+
         cluster = ClusterAllocator(
             AllocationContext(
                 tenant_id=self.tenant_id,
@@ -75,12 +81,14 @@ class AgentSandbox(KresAppEntity):
     :param sandbox_id: The unique ID of the sandbox.
     :param workdir: The working directory inside the sandbox.
     :param image: The container image used in the sandbox.
+    :param env: The environment variables set in the sandbox.
     :param status: The current status of the sandbox.
     """
 
     sandbox_id: str
     workdir: str
-    image: str = DEFAULT_IMAGE
+    image: str
+    env: dict[str, str] = field(default_factory=dict)
     status: str = "Pending"
 
     class Meta:
@@ -92,18 +100,24 @@ class AgentSandbox(KresAppEntity):
     def create(
         cls,
         app: AgentSandboxKresApp,
+        name: str,
         sandbox_id: str,
         workdir: str,
-        image: str,
+        snapshot: str,
+        env: dict[str, str] | None = None,
     ) -> "AgentSandbox":
         """Create an AgentSandbox instance."""
-        name = f"sbx-{app._safe_app_id}-{sandbox_id[:8]}"
+        if snapshot == DEFAULT_SNAPSHOT:
+            image = DEFAULT_IMAGE
+        else:
+            raise ValueError(f"unsupported snapshot: {snapshot}")
         return cls(
             app=app,
             name=name,
             sandbox_id=sandbox_id,
             workdir=workdir,
             image=image,
+            env=env or {},
         )
 
 

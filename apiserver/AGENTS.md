@@ -9,14 +9,24 @@ You are in the apiserver repo, helping implement features, fix bugs, and refacto
 * Unit tests are placed in 'paasng/tests' directory, following pytest conventions.
 * Some design notes can be found in `design_notes/`.
 * When writing tests, always refer to `paasng/tests/conftest.py` for guidance on common fixtures.
+* Keep business logic in the domain layer and keep API layer wiring thin.
 
 ## Coding style
 
 * For Python files, follow PEP-8.
 * For Python files, run `ruff format` to format after edits.
+* In API tests, add docstrings and type hints for fixtures, especially setup fixtures.
+* Preserve in-function guidance comments in test fixtures during refactors (for example setup/teardown hint comments).
 
 ### Running our tests
 
 * Run all tests: `pytest --reuse-db -s --maxfail=1 tests/`
 * Run some tests: `pytest --reuse-db -s --maxfail=1 tests/filename.py`
 * ALWAYS prefer specifying test files for efficiency.
+* Prioritize domain helper tests before higher-level API tests.
+
+### Creating new REST APIs
+
+- Use below files as references:
+    - serializers: @paasng/paasng/platform/bkapp_model/serializers/serializers.py
+    - views: @paasng/paasng/platform/bkapp_model/views.py

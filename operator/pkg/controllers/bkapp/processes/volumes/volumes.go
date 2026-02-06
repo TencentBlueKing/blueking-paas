@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	paasv1alpha2 "bk.tencent.com/paas-app-operator/api/v1alpha2"
+	"bk.tencent.com/paas-app-operator/pkg/config"
 	"bk.tencent.com/paas-app-operator/pkg/controllers/bkapp/envs"
 	"bk.tencent.com/paas-app-operator/pkg/platform/applications"
 )
@@ -38,14 +39,10 @@ import (
 const (
 	// VolumeNameAppLogging 应用日志(legacy)-挂载卷名称
 	VolumeNameAppLogging = "applogs"
-	// VolumeHostPathAppLoggingDir 应用日志(legacy)-宿主机挂载路径
-	VolumeHostPathAppLoggingDir = "/data/bkapp/logs"
 	// VolumeMountAppLoggingDir 应用日志(legacy)-容器内挂载点
 	VolumeMountAppLoggingDir = "/app/logs"
 	// MulModuleVolumeNameAppLogging 应用日志-挂载卷名称
 	MulModuleVolumeNameAppLogging = "appv3logs"
-	// MulModuleVolumeHostPathAppLoggingDir 应用日志-宿主机挂载路径
-	MulModuleVolumeHostPathAppLoggingDir = "/data/bkapp/v3logs"
 	// MulModuleVolumeMountAppLoggingDir 应用日志-容器内挂载点
 	MulModuleVolumeMountAppLoggingDir = "/app/v3logs"
 )
@@ -273,14 +270,14 @@ func GetBuiltinLogsVolumeMounts(bkapp *paasv1alpha2.BkApp) ([]BuiltinLogsVolumeM
 			Name:      VolumeNameAppLogging,
 			MountPath: VolumeMountAppLoggingDir,
 			Source: &corev1.HostPathVolumeSource{
-				Path: path.Join(VolumeHostPathAppLoggingDir, legacyLogPath),
+				Path: path.Join(config.Global.GetLegacyLogHostPath(), legacyLogPath),
 			},
 		},
 		{
 			Name:      MulModuleVolumeNameAppLogging,
 			MountPath: MulModuleVolumeMountAppLoggingDir,
 			Source: &corev1.HostPathVolumeSource{
-				Path: path.Join(MulModuleVolumeHostPathAppLoggingDir, moduleLogPath),
+				Path: path.Join(config.Global.GetMulModuleLogHostPath(), moduleLogPath),
 			},
 		},
 	}, nil

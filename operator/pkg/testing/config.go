@@ -47,3 +47,13 @@ func (c Config) GetCustomDomainIngressClassName() string {
 func (c Config) IsAutoscalingEnabled() bool {
 	return false
 }
+
+// GetLegacyLogHostPath for testing
+func (c Config) GetLegacyLogHostPath() string {
+	return "/data/bkapp/logs"
+}
+
+// GetMulModuleLogHostPath for testing
+func (c Config) GetMulModuleLogHostPath() string {
+	return "/data/bkapp/v3logs"
+}

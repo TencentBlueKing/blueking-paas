@@ -15,7 +15,6 @@
 # We undertake not to change the open source license (MIT license) applicable
 # to the current version of the project delivered to anyone in the future.
 import uuid
-from collections.abc import Generator
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -24,23 +23,6 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 pytestmark = pytest.mark.django_db(databases=["default", "workloads"])
-
-
-@pytest.fixture()
-def sandbox_id(api_client: APIClient, bk_app) -> Generator[str, None, None]:
-    """Call APIs to create an available sandbox and return its ID."""
-    # Crete the sandbox
-    create_url = reverse("agent_sandbox.create", kwargs={"code": bk_app.code})
-    sandbox_name = f"api-sbx-{uuid.uuid4().hex[:8]}"
-    create_resp = api_client.post(create_url, data={"name": sandbox_name})
-    assert create_resp.status_code == status.HTTP_201_CREATED, create_resp.json()
-
-    value = create_resp.json()["uuid"]
-    yield value
-
-    # Destroy the created sandbox
-    destroy_url = reverse("agent_sandbox.destroy", kwargs={"sandbox_id": value})
-    api_client.delete(destroy_url)
 
 
 class TestAgentSandboxFSViewSet:

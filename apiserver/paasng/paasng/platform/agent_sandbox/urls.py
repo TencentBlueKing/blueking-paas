@@ -27,8 +27,9 @@ urlpatterns = [
         AgentSandboxViewSet.as_view({"post": "create"}),
         name="agent_sandbox.create",
     ),
+    # Sandbox URLs by UUID
     path(
-        "api/agent_sandbox/applications/<slug:code>/sandboxes/<str:sandbox_id>",
+        "api/agent_sandbox/sandboxes/<str:sandbox_id>",
         AgentSandboxViewSet.as_view({"delete": "destroy"}),
         name="agent_sandbox.destroy",
     ),

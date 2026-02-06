@@ -235,7 +235,6 @@ class ErrorCodes:
     # Agent sandbox
     AGENT_SANDBOX_CREATE_FAILED = ErrorCode(_("创建 Agent 沙箱失败"))
     AGENT_SANDBOX_ALREADY_EXISTS = ErrorCode(_("Agent 沙箱已存在"), status_code=409)
-    AGENT_SANDBOX_NOT_FOUND = ErrorCode(_("指定的 Agent 沙箱不存在"), status_code=404)
     AGENT_SANDBOX_DELETE_FAILED = ErrorCode(_("删除 Agent 沙箱失败"))
 
     def dump(self, fh=None):

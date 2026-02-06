@@ -17,6 +17,7 @@
 </template>
 
 <script>
+import { mapState } from 'vuex';
 import paasNav from '@/components/paasNav';
 import { processNavData } from '@/common/utils';
 import { psServiceNavInfo } from '@/mixins/ps-static-mixin';
@@ -29,21 +30,38 @@ export default {
   mixins: [psServiceNavInfo],
   data() {
     return {
-      minHeight: 700,
       navCategories: [],
       navItems: [],
       groups: [{ devTools: this.$t('开发者工具') }, { serve: this.$t('服务') }],
     };
   },
+  computed: {
+    ...mapState(['userFeature']),
+  },
+  watch: {
+    'userFeature.SMART_APP_BUILDER': {
+      handler() {
+        this.initNavData();
+      },
+    },
+  },
   mounted() {
-    const result = processNavData(toolsNavigationData);
-    this.navCategories = result.navCategories;
-    this.navItems = result.navItems;
+    this.initNavData();
     document.body.className = 'ps-service-detail';
   },
-
   beforeDestroy() {
     document.body.className = '';
+  },
+  methods: {
+    initNavData() {
+      const navData = JSON.parse(JSON.stringify(toolsNavigationData));
+      const filteredNavData = navData.filter(
+        (item) => item.name !== 'smartBuildTool' || this.userFeature?.SMART_APP_BUILDER !== false
+      );
+      const result = processNavData(filteredNavData);
+      this.navCategories = result.navCategories;
+      this.navItems = result.navItems;
+    },
   },
 };
 </script>

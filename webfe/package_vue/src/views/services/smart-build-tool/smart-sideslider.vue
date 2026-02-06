@@ -31,6 +31,30 @@
           ref="formRef"
         >
           <bk-form-item
+            :label="$t('包版本')"
+            :required="true"
+          >
+            <bk-radio-group
+              v-model="formData.version"
+              class="package-version"
+            >
+              <bk-radio value="v1">
+                <div class="version-item">
+                  V1
+                  <span class="g-tip ml10">{{ $t('支持开发者中心 1.5.x 及以上版本') }}</span>
+                </div>
+              </bk-radio>
+              <bk-radio value="v2">
+                <div class="version-item">
+                  V2
+                  <span class="g-tip ml10">
+                    {{ $t('支持开发者中心 1.7.x 及以上版本，构建更快、包更小，适合多模块共享代码的场景') }}
+                  </span>
+                </div>
+              </bk-radio>
+            </bk-radio-group>
+          </bk-form-item>
+          <bk-form-item
             :label="$t('仓库类型')"
             :property="'type'"
             :required="true"
@@ -167,6 +191,7 @@ export default {
   data() {
     return {
       formData: {
+        version: 'v1',
         type: 'source',
       },
       packageData: null,
@@ -251,7 +276,7 @@ export default {
         const ret = await this.$store.dispatch('tool/smartBuild', {
           data: {
             ...this.packageData,
-            packaging_version: 'v1',
+            packaging_version: this.formData.version,
           },
         });
         this.buildData = ret;
@@ -306,6 +331,20 @@ export default {
           font-size: 28px;
         }
       }
+    }
+  }
+  .package-version {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    .version-item {
+      margin-left: 4px;
+      transform: translateY(1px);
+    }
+    /deep/ .bk-form-radio {
+      display: flex;
+      align-items: center;
+      margin-left: 0 !important;
     }
   }
 }

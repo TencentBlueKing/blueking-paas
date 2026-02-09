@@ -18,7 +18,10 @@
 import pytest
 from django_dynamic_fixture import G
 
-from paas_wl.infras.cluster.constants import ClusterAllocationPolicyCondType, ClusterAllocationPolicyType
+from paas_wl.infras.cluster.constants import (
+    ClusterAllocationPolicyCondType,
+    ClusterAllocationPolicyType,
+)
 from paas_wl.infras.cluster.entities import AllocationContext, AllocationPolicy, AllocationPrecedencePolicy
 from paas_wl.infras.cluster.models import ClusterAllocationPolicy
 from paas_wl.infras.cluster.shim import Cluster, ClusterAllocator
@@ -43,6 +46,11 @@ class TestClusterAllocator:
         G(Cluster, name="tencent-gz0", tenant_id="tencent")
         G(Cluster, name="blueking-sh0", tenant_id=random_tenant_id)
         G(Cluster, name="blueking-sz0", tenant_id=random_tenant_id)
+        G(
+            Cluster,
+            name="sandbox-cluster",
+            tenant_id=random_tenant_id,
+        )
 
     @pytest.fixture
     def _uniform_policy(self, random_tenant_id):
@@ -62,6 +70,10 @@ class TestClusterAllocator:
                 AllocationPrecedencePolicy(
                     matcher={ClusterAllocationPolicyCondType.USERNAME_IN: "zhangsan, lisi"},
                     policy=AllocationPolicy(env_specific=False, clusters=["random-sz0", "random-sz1"]),
+                ),
+                AllocationPrecedencePolicy(
+                    matcher={ClusterAllocationPolicyCondType.USAGE_IS: "agent_sandbox"},
+                    policy=AllocationPolicy(env_specific=False, clusters=["sandbox-cluster"]),
                 ),
                 AllocationPrecedencePolicy(
                     matcher={ClusterAllocationPolicyCondType.REGION_IS: "default"},
@@ -148,3 +160,7 @@ class TestClusterAllocator:
 
         ctx.username = "zhangsan"
         assert ClusterAllocator(ctx).get_default().name == "random-sz0"
+
+        ctx.username = None
+        ctx.usage = "agent_sandbox"
+        assert ClusterAllocator(ctx).get_default().name == "sandbox-cluster"
